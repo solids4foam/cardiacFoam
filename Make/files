@@ -1,0 +1,5 @@
+BuenoOrovioIonicModel/BuenoOrovioIonicModel.C
+
+electroActivationFoam.C
+
+EXE = $(FOAM_USER_APPBIN)/electroActivationFoam
