@@ -111,42 +111,33 @@ int main(int argc, char *argv[])
             VmEqn.solve();
         }
 
-        if (runTime.writeTime())
+        // Update activationTimes field (used in Niederer benchmark)
+        const scalarField& VmI = Vm.primitiveFieldRef();
+        const scalarField& VmOldI = Vm.oldTime().primitiveFieldRef();
+        scalarField& activationTimeI = activationTime.primitiveFieldRef();
+        const scalar oldTime = runTime.value() - runTime.deltaTValue();
+        forAll(activationTimeI, cellI)
         {
-            // Update activationTimes field (used in Niederer benchmark)
-            const scalarField& VmI = Vm.primitiveFieldRef();
-            const scalarField& VmOldI = Vm.oldTime().primitiveFieldRef();
-            scalarField& activationTimeI = activationTime.primitiveFieldRef();
-            const scalar oldTime = runTime.value() - runTime.deltaTValue();
-            forAll(activationTimeI, cellI)
+            if (calculateActivationTime[cellI])
             {
-                if (calculateActivationTime[cellI])
+                if (VmI[cellI] > SMALL)
                 {
-                    if (VmI[cellI] > SMALL)
-                    {
-                        calculateActivationTime[cellI] = false;
+                    calculateActivationTime[cellI] = false;
 
-                        // Use current time
-                        // activationTimeI[cellI] = runTime.value();
-                        if (VmOldI[cellI] > SMALL)
-                        {
-                            // How does this scenario occur?
-                            activationTimeI[cellI] = oldTime;
-                        }
-                        else
-                        {
-                            // Linearly interpolate for more accuracy
-                            const scalar w =
-                                (0.0 - VmOldI[cellI])
-                               /(VmI[cellI] - VmOldI[cellI]);
+                    // Use current time
+                    // activationTimeI[cellI] = runTime.value();
 
-                            activationTimeI[cellI] =
-                                oldTime + w*runTime.deltaTValue();
-                        }
-                    }
+                    // Linearly interpolate for more accuracy
+                    const scalar w =
+                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+
+                    activationTimeI[cellI] = oldTime + w*runTime.deltaTValue();
                 }
             }
+        }
 
+        if (runTime.writeTime())
+        {
             runTime.write();
         }
 
