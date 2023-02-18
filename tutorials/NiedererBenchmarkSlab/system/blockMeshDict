@@ -10,41 +10,61 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     electroActivationFoam;
+scale   0.001;
 
-startFrom       startTime;
+vertices
+(
+    (0 0 0)
+    (20 0 0)
+    (20 3 0)
+    (0 3 0)
+    (0 0 7)
+    (20 0 7)
+    (20 3 7)
+    (0 3 7)
+);
 
-startTime       0;
+blocks
+(
+    // Three uniform, orthogonal meshes are used:
 
-stopAt          endTime;
+    // deltaX = 0.5 mm
+    hex (0 1 2 3 4 5 6 7) (40 6 14) simpleGrading (1 1 1)
 
-endTime         0.15; //0.06;
+    // deltaX = 0.2 mm
+    // hex (0 1 2 3 4 5 6 7) (100 15 35) simpleGrading (1 1 1)
 
-// deltaT = 0.05, 0.01 and 0.005 ms
-deltaT          0.005e-3;
+    // deltaX = 0.1 mm
+    // hex (0 1 2 3 4 5 6 7) (200 30 70) simpleGrading (1 1 1)
+);
 
-writeControl    runTime;
+edges
+(
+);
 
-writeInterval   5e-3;
+boundary
+(
+    walls
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+            (0 4 7 3)
+            (2 6 5 1)
+            (1 5 4 0)
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
 
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable true;
-
+mergePatchPairs
+(
+);
 
 // ************************************************************************* //

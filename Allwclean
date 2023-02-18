@@ -1,0 +1,29 @@
+#!/bin/bash
+cd ${0%/*} || exit 1    # run from this directory
+
+# Check if OpenFOAM/FOAM has been sourced
+if [[ -z "${WM_PROJECT}" ]]
+then
+    echo "Please source the OpenFOAM/FOAM bashrc first!"
+    exit 1
+fi
+
+# Clean libraries
+(cd src && ./Allwclean)
+
+# Clean applications
+(cd applications && ./Allwclean)
+
+# Clean all tutorials
+(cd tutorials && ./Allclean)
+
+# Clear the tutorialsTest directory
+if [[ -d tutorialsTest ]]
+then
+    echo; echo "Removing tutorialsTest"
+    rm -rf tutorialsTest
+fi
+
+# Clear all build logs
+echo; echo "Removing all log.Allwmake build logs"; echo
+find . -name log.Allwmake | xargs rm
