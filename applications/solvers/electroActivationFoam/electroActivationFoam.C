@@ -107,18 +107,34 @@ int main(int argc, char *argv[])
             activeTensionI
         );
 
-        //while (pimple.loop())
+        if (solveVmExplicitly)
         {
             fvScalarMatrix VmEqn
             (
                 beta*Cm*fvm::ddt(Vm)
              ==
-                fvm::laplacian(conductivity, Vm)
+                fvc::laplacian(conductivity, Vm)
               - BuenoOrovioScaleFactor*beta*Cm*ionicCurrent
               + externalStimulusCurrent
             );
 
             VmEqn.solve();
+        }
+        else
+        {
+            //while (pimple.loop())
+            {
+                fvScalarMatrix VmEqn
+                (
+                    beta*Cm*fvm::ddt(Vm)
+                 ==
+                    fvm::laplacian(conductivity, Vm)
+                  - BuenoOrovioScaleFactor*beta*Cm*ionicCurrent
+                  + externalStimulusCurrent
+                );
+
+                VmEqn.solve();
+            }
         }
 
 #       include "updateActivationTimes.H"

@@ -47,6 +47,12 @@ IOdictionary electroActivationProperties
     )
 );
 
+// Read flag for Vm solution
+const Switch solveVmExplicitly
+(
+    electroActivationProperties.lookup("solveVmExplicitly")
+);
+
 Info<< "Reading conductivity\n" << endl;
 const dimensionedSymmTensor conductivity
 (
