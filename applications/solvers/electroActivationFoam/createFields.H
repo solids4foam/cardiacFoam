@@ -214,3 +214,29 @@ volScalarField activationTime
     "zeroGradient"
 );
 boolList calculateActivationTime(mesh.nCells(), true);
+
+// Active tension
+volScalarField activeTension
+(
+    IOobject
+    (
+        "activeTension",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimPressure, 0.0),
+    "zeroGradient"
+);
+
+// Read active tension model dict
+const dictionary& activeTensionModelCoeffs =
+    electroActivationProperties.subDict("activeTensionModelCoeffs");
+
+// Create active tension model ODE system
+NashPanfilovActiveTensionModel activeTensionModel
+(
+    activeTensionModelCoeffs, mesh.nCells()
+);

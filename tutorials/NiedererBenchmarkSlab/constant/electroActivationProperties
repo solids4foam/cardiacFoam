@@ -109,4 +109,17 @@ ionicModelCoeffs
     wInftyStar 0.94;
 }
 
+activeTensionModelCoeffs
+{
+    // ODE solver
+    //solver    Euler;
+    solver    RKF45;
+
+    // Tension parameter
+    kTa       1;
+
+    // Monitor cell ID
+    monitorID 0;
+}
+
 // ************************************************************************* //
