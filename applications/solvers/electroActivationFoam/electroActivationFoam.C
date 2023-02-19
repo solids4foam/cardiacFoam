@@ -40,6 +40,7 @@ Author
 #include "fvOptions.H"
 #include "pimpleControl.H"
 #include "BuenoOrovioIonicModel.H"
+#include "NashPanfilovActiveTensionModel.H"
 #include "boundBox.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -71,7 +72,7 @@ int main(int argc, char *argv[])
     {
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-        // Calculate the ionic model currents and add them to the source
+        // Calculate the ionic model currents
         scalarField& ionicCurrentI = ionicCurrent;
         ionicCurrentI = 0.0;
         ionicModel.calculateCurrent
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
             ionicCurrentI
         );
 
-        // Add stimulus current
+        // Calculate stimulus current
         scalarField& externalStimulusCurrentI = externalStimulusCurrent;
         externalStimulusCurrentI = 0.0;
         if (runTime.value() <= stimulusDuration.value())
@@ -95,6 +96,17 @@ int main(int argc, char *argv[])
             }
         }
 
+        // Calculate the active tension
+        scalarField& activeTensionI = activeTension;
+        activeTensionI = 0.0;
+        activeTensionModel.calculateTension
+        (
+            runTime.value() - runTime.deltaTValue(),
+            runTime.deltaTValue(),
+            Vm.internalField(),
+            activeTensionI
+        );
+
         //while (pimple.loop())
         {
             fvScalarMatrix VmEqn
@@ -103,38 +115,13 @@ int main(int argc, char *argv[])
              ==
                 fvm::laplacian(conductivity, Vm)
               - BuenoOrovioScaleFactor*beta*Cm*ionicCurrent
-              // - ionicCurrent
-              // + beta*externalStimulusCurrent
               + externalStimulusCurrent
             );
 
             VmEqn.solve();
         }
 
-        // Update activationTimes field (used in Niederer benchmark)
-        const scalarField& VmI = Vm.primitiveFieldRef();
-        const scalarField& VmOldI = Vm.oldTime().primitiveFieldRef();
-        scalarField& activationTimeI = activationTime.primitiveFieldRef();
-        const scalar oldTime = runTime.value() - runTime.deltaTValue();
-        forAll(activationTimeI, cellI)
-        {
-            if (calculateActivationTime[cellI])
-            {
-                if (VmI[cellI] > SMALL)
-                {
-                    calculateActivationTime[cellI] = false;
-
-                    // Use current time
-                    // activationTimeI[cellI] = runTime.value();
-
-                    // Linearly interpolate for more accuracy
-                    const scalar w =
-                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
-
-                    activationTimeI[cellI] = oldTime + w*runTime.deltaTValue();
-                }
-            }
-        }
+#       include "updateActivationTimes.H"
 
         if (runTime.writeTime())
         {
