@@ -15,6 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// Implicit or explicit Vm solution
+solveVmExplicitly no;
+
 // Data from literature
 
 // Santiago et al 2018
@@ -115,8 +118,8 @@ activeTensionModelCoeffs
     //solver    Euler;
     solver    RKF45;
 
-    // Tension parameter
-    kTa       1;
+    // Tension parameter (in Pa)
+    kTa       1e3;
 
     // Monitor cell ID
     monitorID 0;
