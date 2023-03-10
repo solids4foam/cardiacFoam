@@ -69,7 +69,7 @@ ionicModelCoeffs
 {
     // Monitor cell index
     // Ionic data for this cell is written to "monitorFile"
-    monitorID 3320;
+    monitorID 0;
 
     // ODE solver
     //solver    Euler;
@@ -114,6 +114,9 @@ ionicModelCoeffs
 
 activeTensionModelCoeffs
 {
+    // Enable calculation of active fibre tension field
+    calculateActiveTension  no;
+
     // ODE solver
     //solver    Euler;
     solver    RKF45;
