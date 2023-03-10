@@ -241,8 +241,16 @@ volScalarField activeTension
 const dictionary& activeTensionModelCoeffs =
     electroActivationProperties.subDict("activeTensionModelCoeffs");
 
-// Create active tension model ODE system
-NashPanfilovActiveTensionModel activeTensionModel
-(
-    activeTensionModelCoeffs, mesh.nCells()
-);
+// Optionally, create active tension model
+autoPtr<NashPanfilovActiveTensionModel> activeTensionModelPtr;
+if (Switch(activeTensionModelCoeffs.lookup("calculateActiveTension")))
+{
+    // Create active tension model ODE system
+    activeTensionModelPtr.set
+    (
+        new NashPanfilovActiveTensionModel
+        (
+            activeTensionModelCoeffs, mesh.nCells()
+        )
+    );
+}

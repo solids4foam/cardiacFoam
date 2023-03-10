@@ -96,16 +96,19 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Calculate the active tension
-        scalarField& activeTensionI = activeTension;
-        activeTensionI = 0.0;
-        activeTensionModel.calculateTension
-        (
-            runTime.value() - runTime.deltaTValue(),
-            runTime.deltaTValue(),
-            Vm.internalField(),
-            activeTensionI
-        );
+        if (activeTensionModelPtr.valid())
+        {
+            // Calculate the active tension
+            scalarField& activeTensionI = activeTension;
+            activeTensionI = 0.0;
+            activeTensionModelPtr->calculateTension
+            (
+                runTime.value() - runTime.deltaTValue(),
+                runTime.deltaTValue(),
+                Vm.internalField(),
+                activeTensionI
+            );
+        }
 
         if (solveVmExplicitly)
         {
