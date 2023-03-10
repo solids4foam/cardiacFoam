@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# If you want to run the solver in parallel, pass the argument "parallel" to
+# this script, e.g. > ./Allrun parallel
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# Create mesh
+runApplication blockMesh
+
+if [[ $1 == "parallel" ]]
+then
+    # Run the solver in serial
+    runApplication solids4Foam
+else
+    # Decompose the mesh
+    runApplication decomposePar
+
+    # Run the solver in parallel
+    runParallel solids4Foam
+
+    # Reconstruct the results
+    runApplication reconstructPar
+fi
