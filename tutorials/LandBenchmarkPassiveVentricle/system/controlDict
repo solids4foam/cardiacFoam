@@ -34,7 +34,7 @@ writeInterval   1;
 
 cycleWrite      0;
 
-writeFormat     ascii;
+writeFormat     binary;
 
 writePrecision  6;
 
@@ -46,13 +46,13 @@ timePrecision   6;
 
 runTimeModifiable no;
 
-functions
-{
-    pointDisp
-    {
-        type          solidPointDisplacement;
-        point         (0.01 0.0005 0.001);
-    }
-}
+// functions
+// {
+//     pointDisp
+//     {
+//         type          solidPointDisplacement;
+//         point         (0.01 0.0005 0.001);
+//     }
+// }
 
 // ************************************************************************* //

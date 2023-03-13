@@ -5,3 +5,7 @@
 
 cleanCase
 rm -rf case.foam postProcessing
+(cd 0 && rm -f alphaRadians dxduHat dxdvHat rs v t alpha dxdu dxdv f0 rl s0 u z)
+
+# Replace t field
+cp 0/org/t 0/t

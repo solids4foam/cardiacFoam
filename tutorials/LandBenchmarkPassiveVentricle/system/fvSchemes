@@ -41,6 +41,7 @@ laplacianSchemes
     default            none;
     laplacian(DD,D)    Gauss linear corrected;
     laplacian(DDD,DD)  Gauss linear corrected;
+    laplacian(t)       Gauss linear corrected;
 }
 
 snGradSchemes

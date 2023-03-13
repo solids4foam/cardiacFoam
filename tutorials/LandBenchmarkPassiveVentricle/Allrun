@@ -14,6 +14,9 @@ runApplication blockMesh
 runApplication extrudeMesh
 runApplication createPatch -overwrite
 
+# Create the fibre field
+runApplication setFibreField
+
 if [[ "$1" == "parallel" ]]
 then
     # Decompose the mesh

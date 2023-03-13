@@ -22,11 +22,17 @@ mechanical
 (
     heartTissue
     {
-        //type            neoHookeanElastic;
-        type            StVenantKirchhoffElastic;
+        type            neoHookeanElastic;
+        //type            StVenantKirchhoffElastic;
         rho             rho [1 -3 0 0 0 0 0] 3000;
         mu              mu [1 -1 -2 0 0 0 0] 10e3;
         K               K [1 -1 -2 0 0 0 0] 20e3;
+
+        // To solve pressure Poisson equation
+        solvePressureEqn                yes;
+
+        // Pressure smoothing scale factor
+        pressureSmoothingScaleFactor 100;
 
         // type            electroMechanicalLaw;
         // rho             rho [1 -3 0 0 0 0 0] 3000;
