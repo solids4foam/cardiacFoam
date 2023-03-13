@@ -6,13 +6,11 @@
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-# Create mesh in four steps:
+# Create mesh in steps:
 #     1. Create slice of a circle
-#     2. Scale circle to be an ellipse
-#     3. Rotationally extrude the slice
-#     4. Remove empty patches
+#     2. Rotationally extrude the slice
+#     3. Remove empty patches
 runApplication blockMesh
-runApplication transformPoints -scale "(1 1 2)"
 runApplication extrudeMesh
 runApplication createPatch -overwrite
 
