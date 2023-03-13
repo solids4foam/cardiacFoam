@@ -26,6 +26,13 @@ solvers
         tolerance       1e-11;
         relTol          0.1;
     }
+    t
+    {
+        solver          PCG;
+        preconditioner  FDIC;
+        tolerance       1e-11;
+        relTol          0.0;
+    }
 }
 
 relaxationFactors
