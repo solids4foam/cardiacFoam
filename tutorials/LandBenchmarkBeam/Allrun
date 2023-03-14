@@ -11,9 +11,6 @@ runApplication blockMesh
 
 if [[ $1 == "parallel" ]]
 then
-    # Run the solver in serial
-    runApplication solids4Foam
-else
     # Decompose the mesh
     runApplication decomposePar
 
@@ -22,4 +19,7 @@ else
 
     # Reconstruct the results
     runApplication reconstructPar
+else
+    # Run the solver in serial
+    runApplication solids4Foam
 fi
