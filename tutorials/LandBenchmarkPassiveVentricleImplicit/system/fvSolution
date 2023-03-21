@@ -19,12 +19,12 @@ FoamFile
 
 solvers
 {
-    "D|DD"
+    "D|DD|sigmaHyd"
     {
         solver          PCG;
         preconditioner  FDIC;
         tolerance       1e-11;
-        relTol          0.1;
+        relTol          0.001;
     }
     t
     {
@@ -41,14 +41,14 @@ relaxationFactors
     // some cases, in particular when there are solidContact boundaries
     equations
     {
-        //D   0.999;
+        "D|DD"   0.9999;
     }
 
     // Under-relaxating the DD field by 0.1-0.9 can improve convergence in some
     // cases
     fields
     {
-        "D|DD"      0.5;
+        "D|DD"      0.7;
     }
 }
 

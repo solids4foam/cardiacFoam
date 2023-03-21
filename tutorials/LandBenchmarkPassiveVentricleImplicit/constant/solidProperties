@@ -20,15 +20,19 @@ FoamFile
 solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
 //solidModel     nonLinearGeometryTotalLagrangian;
 //solidModel     nonLinearGeometryUpdatedLagrangian;
+//solidModel     unsNonLinearGeometryUpdatedLagrangian;
 //solidModel     unsNonLinearGeometryTotalLagrangian;
 
-"nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs|nonLinearGeometryTotalLagrangianCoeffs|nonLinearGeometryUpdatedLagrangianCoeffs|unsNonLinearGeometryTotalLagrangianCoeffs"
+"nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs|nonLinearGeometryTotalLagrangianCoeffs|nonLinearGeometryUpdatedLagrangianCoeffs|unsNonLinearGeometryUpdatedLagrangianCoeffs|unsNonLinearGeometryTotalLagrangianCoeffs"
 {
+    // Linear predictor at the start of each time-step
+    //predictor               yes;
+
     // Maximum number of momentum correctors
     nCorrectors             10000;
 
     // Solution tolerance for displacement
-    solutionTolerance       1e-07;
+    solutionTolerance       1e-06;
 
     // Alternative solution tolerance for displacement
     alternativeTolerance    1e-12; // force use of solutionTolerance
@@ -37,7 +41,14 @@ solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
     //materialTolerance       1e-05;
 
     // Write frequency for the residuals
-    infoFrequency           1000;
+    infoFrequency           100;
+
+    stabilisation
+    {
+        //type         none;
+        type         RhieChow;
+        scaleFactor  1.0;
+    }
 }
 
 // ************************************************************************* //
