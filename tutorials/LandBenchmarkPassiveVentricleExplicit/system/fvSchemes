@@ -1,0 +1,61 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| solids4foam: solid mechanics and fluid-solid interaction simulations        |
+| Version:     v2.0                                                           |
+| Web:         https://solids4foam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+d2dt2Schemes
+{
+    default            none; //Euler; //steadyState;
+}
+
+ddtSchemes
+{
+    //default            steadyState;
+    default            none; //Euler; // for predictor
+    ddt(epsilonVol) Euler;
+}
+
+gradSchemes
+{
+    default            pointCellsLeastSquares;
+    //default            faceLimited pointCellsLeastSquares 1;
+    //default            cellLimited pointCellsLeastSquares 1;
+    //default            edgeCellsLeastSquares;
+}
+
+divSchemes
+{
+    default            Gauss linear;
+}
+
+laplacianSchemes
+{
+    default            Gauss linear skewCorrected;
+    // default            Gauss linear limited 0.5;
+}
+
+snGradSchemes
+{
+    default            skewCorrected;
+    //default            limited 0.5;
+}
+
+interpolationSchemes
+{
+    default            skewCorrected linear;
+}
+
+// ************************************************************************* //
