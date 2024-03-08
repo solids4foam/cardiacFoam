@@ -1,0 +1,30 @@
+#!/bin/bash
+
+for i in {2..7}
+do
+    echo "Mesh $i"
+
+    # Copy base case
+    CASE="mesh$i"
+    cp -r base "${CASE}"
+
+    # Change blockMeshDict
+    cd "${CASE}"
+    cp system/blockMeshDict.$i system/blockMeshDict
+
+    # Create the mesh
+    echo "    Running blockMesh"
+    blockMesh &> log.blockMesh
+
+    # Run the solver in the background
+    echo "    Running solids4Foam"
+    solids4Foam &> log.solids4Foam &
+
+    # Return to the parent directory
+    cd ..
+    echo
+done
+
+echo "Waiting for jobs to complete"
+wait
+echo "All jobs done"
