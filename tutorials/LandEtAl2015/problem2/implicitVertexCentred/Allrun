@@ -1,0 +1,27 @@
+#!/bin/bash
+
+for i in {1..4}
+do
+    echo "Mesh $i"
+
+    # Copy base case
+    CASE="mesh$i"
+    cp -r base "${CASE}"
+
+    # Change blockMeshDict
+    cd "${CASE}"
+    echo "    Replacing the blockMeshDict"
+    cp system/blockMeshDict.$i system/blockMeshDict
+
+    # Run the case in the background
+    echo "    Running ${CASE}"
+    ./Allrun &> log."${CASE}" &
+
+    # Return to the parent directory
+    cd ..
+    echo
+done
+
+echo "Waiting for jobs to complete"
+wait
+echo "All jobs done"

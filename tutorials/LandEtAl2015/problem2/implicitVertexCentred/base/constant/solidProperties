@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | foam-extend: Open Source CFD                    |
+|  \\    /   O peration     | Version:     3.2                                |
+|   \\  /    A nd           | Web:         http://www.foam-extend.org         |
+|    \\/     M anipulation  | For copyright notice see file Copyright         |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      solidProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+solidModel     vertexCentredNonLinTotalLagDisplacementGeometry;
+
+vertexCentredNonLinTotalLagDisplacementGeometryCoeffs
+{
+    // dualMesh needed by setFibreField
+    writeDualMesh yes;
+
+    // Update the stiffness matrix every outer iteration
+    fullNewton yes;
+
+    // Maximum number of Newton-Raphson iterations
+    nCorrectors     100;
+
+    // Include geometric stiffness term in the Jacobian
+    geometricStiffness yes;
+
+    // Fraction of compact edge direction gradient used
+    "zetaImplicit|zeta" 0.01;
+
+    // Tolerance for Newton-Raphson loop
+    solutionTolerance 1e-9;
+
+    // Write linear system to matlab compatible format
+    writeMatlabMatrix no;
+
+    // Scaling of fixed DOF equations
+    //fixedDofScale 1;
+
+    // Line search settings
+    lineSearch yes; // to be fixed when residual is zero everywhere
+    lineSearchRTol 0.5;
+
+    // Use PETSc, else use Eigen SparseLU
+    usePETSc yes;
+    optionsFile "$FOAM_CASE/petscOptions";
+    debugPETSc no;
+}
+
+
+// ************************************************************************* //
