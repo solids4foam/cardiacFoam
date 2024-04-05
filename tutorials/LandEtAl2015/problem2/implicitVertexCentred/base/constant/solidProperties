@@ -33,7 +33,7 @@ vertexCentredNonLinTotalLagDisplacementGeometryCoeffs
     geometricStiffness yes;
 
     // Fraction of compact edge direction gradient used
-    "zetaImplicit|zeta" 0.01;
+    "zetaImplicit|zeta" 0.1;
 
     // Tolerance for Newton-Raphson loop
     solutionTolerance 1e-9;
@@ -50,7 +50,9 @@ vertexCentredNonLinTotalLagDisplacementGeometryCoeffs
 
     // Use PETSc, else use Eigen SparseLU
     usePETSc yes;
-    optionsFile "$FOAM_CASE/petscOptions";
+    //optionsFile "$FOAM_CASE/petscOptions.cg";
+    optionsFile "$FOAM_CASE/petscOptions.gamg";
+    //optionsFile "$FOAM_CASE/petscOptions.mumps";
     debugPETSc no;
 }
 
