@@ -16,10 +16,14 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 
-solidModel     vertexCentredNonLinTotalLagDisplacementGeometry;
+solidModel     vertexCentredNonLinTotalLagGeometry;
 
-vertexCentredNonLinTotalLagDisplacementGeometryCoeffs
+vertexCentredNonLinTotalLagGeometryCoeffs
 {
+    // Solution algorithm: implicitCoupled, implicitSegregated, explicit
+    solutionAlgorithm implicitCoupled;
+    //solutionAlgorithm implicitSegregated;
+
     // dualMesh needed by setFibreField
     writeDualMesh yes;
 
@@ -38,15 +42,18 @@ vertexCentredNonLinTotalLagDisplacementGeometryCoeffs
     // Tolerance for Newton-Raphson loop
     solutionTolerance 1e-9;
 
+    // Residual print-out frequency
+    infoFrequency 1;
+
     // Write linear system to matlab compatible format
-    writeMatlabMatrix no;
+    //writeMatlabMatrix no;
 
     // Scaling of fixed DOF equations
     //fixedDofScale 1;
 
     // Line search settings
-    lineSearch yes; // to be fixed when residual is zero everywhere
-    lineSearchRTol 0.5;
+    lineSearch yes;
+    //lineSearchRTol 0.5;
 
     // Use PETSc, else use Eigen SparseLU
     usePETSc yes;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in {1..4}
+for i in {1..5}
 do
     echo "Mesh $i"
 
@@ -14,8 +14,16 @@ do
     cp system/blockMeshDict.$i system/blockMeshDict
 
     # Run the case in the background
-    echo "    Running ${CASE}"
-    ./Allrun &> log."${CASE}" &
+    if [[ $i -gt 2 ]]
+    then
+        # Run in the foreground
+        echo "    Running ${CASE} in parallel"
+        ./Allrun parallel &> log."${CASE}"
+    else
+        # Run in the background
+        echo "    Running ${CASE} in serial"
+        ./Allrun &> log."${CASE}" &
+    fi
 
     # Return to the parent directory
     cd ..
