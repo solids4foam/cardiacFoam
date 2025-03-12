@@ -1,3 +1,0 @@
-#!/bin/bash
-
-rm -rf mesh[1-9]*
