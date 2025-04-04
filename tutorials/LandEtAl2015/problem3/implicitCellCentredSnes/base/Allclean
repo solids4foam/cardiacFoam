@@ -5,7 +5,7 @@
 
 cleanCase
 rm -rf case.foam postProcessing
-(cd 0 && rm -f el en et f0f alphaRadiansf elf enf etf t)
+(cd 0 && rm -f el en et f0 alphaRadians f0f alphaRadiansf elf enf etf t)
 
 # Replace t field
 \cp 0/org/t 0/t

@@ -1,0 +1,1515 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : solids4Foam
+Date   : Apr 03 2025
+Time   : 11:38:29
+Host   : Aarons-MacBook-Pro.local
+PID    : 9435
+I/O    : uncollated
+Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/problem2/run_Apple_M4_Pro_20250320_154952/hex.hypre.1
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+/*---------------------------------------------------------------------------*\
+|    For further information on the solids4Foam toolbox implementations,      |
+|    please see the following publications:                                   |
+|                                                                             |
+|    P. Cardiff, A Karac, P. De Jaeger, H. Jasak, J. Nagy, A. Ivankovic,      |
+|    Z. Tukovic: An open-source finite volume toolbox for solid mechanics and |
+|    fluid-solid interaction simulations. arXiv:1808.10736v2, 2018, available |
+|    at https://arxiv.org/abs/1808.10736.                                     |
+|                                                                             |
+|    Z. Tukovic, A. Karac, P. Cardiff, H. Jasak, A. Ivankovic: OpenFOAM       |
+|    finite volume solver for fluid-solid interaction.  Transactions of       |
+|    Famena, 42 (3), pp. 1-31, 2018, 10.21278/TOF.42301.                      |
+\*---------------------------------------------------------------------------*/
+
+Selecting physicsModel solidModel
+Selecting solidModel nonLinearGeometryTotalLagrangianTotalDisplacement
+Selecting dynamicFvMesh staticFvMesh
+Creating fixedDisplacement boundary condition
+Creating solidTraction boundary condition
+    pressure is time-varying
+Creating solidTraction boundary condition
+    under-relaxation method: fixed
+No finite volume options present
+Creating the mechanicalModel
+Selecting mechanical law electroMechanicalLaw
+Selecting mechanical law GuccioneElastic
+    Setting `extrapolateValue` to `true` on the inside patch of the D field
+    Setting `extrapolateValue` to `true` on the outside patch of the D field
+Creating tractions function object
+Time = 0.01
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 6.352476680218e-03
+    Initialising the matrix...done
+    Linear solve converged due to CONVERGED_RTOL iterations 267
+  1 SNES Function norm 5.529157500208e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 138
+  2 SNES Function norm 2.142606571466e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 277
+  3 SNES Function norm 1.694037234737e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 139
+  4 SNES Function norm 8.493826587274e-09
+    Linear solve converged due to CONVERGED_RTOL iterations 302
+  5 SNES Function norm 1.837629828213e-13
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+ExecutionTime = 1.1 s  ClockTime = 1 s
+
+Time = 0.02
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 6.618030303121e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 232
+  1 SNES Function norm 1.414216169809e-01
+    Linear solve converged due to CONVERGED_RTOL iterations 115
+  2 SNES Function norm 3.858118045505e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 235
+  3 SNES Function norm 2.572534334842e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 124
+  4 SNES Function norm 9.598389014374e-09
+    Linear solve converged due to CONVERGED_RTOL iterations 266
+  5 SNES Function norm 3.463784611945e-13
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+ExecutionTime = 2.05 s  ClockTime = 2 s
+
+Time = 0.03
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 6.957880189305e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 210
+  1 SNES Function norm 2.234054623885e-01
+    Linear solve converged due to CONVERGED_RTOL iterations 134
+  2 SNES Function norm 1.278049374124e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 239
+  3 SNES Function norm 4.395710648150e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 149
+  4 SNES Function norm 7.993927224282e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 247
+  5 SNES Function norm 7.633333858838e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+ExecutionTime = 3.02 s  ClockTime = 3 s
+
+Time = 0.04
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 7.449677792505e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 213
+  1 SNES Function norm 1.948686881951e-01
+    Linear solve converged due to CONVERGED_RTOL iterations 117
+  2 SNES Function norm 6.161010671813e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  3 SNES Function norm 1.179841934285e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 139
+  4 SNES Function norm 6.014598233428e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 3.71 s  ClockTime = 4 s
+
+Time = 0.05
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 8.129830346691e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 266
+  1 SNES Function norm 9.622268397367e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 113
+  2 SNES Function norm 2.029620744186e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  3 SNES Function norm 2.935863333075e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 128
+  4 SNES Function norm 1.135224439106e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 4.42 s  ClockTime = 4 s
+
+Time = 0.06
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 8.845632988672e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 263
+  1 SNES Function norm 3.630564577824e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 117
+  2 SNES Function norm 5.489629830949e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 2.734213868985e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 129
+  4 SNES Function norm 9.851978305458e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 5.15 s  ClockTime = 5 s
+
+Time = 0.07
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 9.418133377107e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 263
+  1 SNES Function norm 2.384046174238e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 117
+  2 SNES Function norm 2.798475744418e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 5.395981036637e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 140
+  4 SNES Function norm 2.764962136575e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 5.96 s  ClockTime = 6 s
+
+Time = 0.08
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 9.968819718472e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 261
+  1 SNES Function norm 3.119167733139e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 117
+  2 SNES Function norm 3.453477357408e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  3 SNES Function norm 6.391202286909e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 136
+  4 SNES Function norm 4.794204147895e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 6.73 s  ClockTime = 7 s
+
+Time = 0.09
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.066906112267e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 259
+  1 SNES Function norm 3.672404755108e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 116
+  2 SNES Function norm 3.849226645615e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 200
+  3 SNES Function norm 5.067337287629e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 145
+  4 SNES Function norm 3.717325101554e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+ExecutionTime = 7.47 s  ClockTime = 7 s
+
+Time = 0.1
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.144302093321e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 255
+  1 SNES Function norm 2.611438345684e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 126
+  2 SNES Function norm 2.042456458490e-05
+    Linear solve converged due to CONVERGED_RTOL iterations 218
+  3 SNES Function norm 9.952132234475e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 156
+  4 SNES Function norm 4.351170629278e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Max sigmaEq (von Mises stress) = 8631.92
+ExecutionTime = 8.27 s  ClockTime = 8 s
+
+tractions functionObject: writing traction field
+
+Time = 0.11
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.213297931778e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 207
+  1 SNES Function norm 1.396312769729e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 129
+  2 SNES Function norm 5.992988184714e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 200
+  3 SNES Function norm 1.000313818383e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 8.81 s  ClockTime = 9 s
+
+Time = 0.12
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.265831982067e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  1 SNES Function norm 1.004752888537e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 142
+  2 SNES Function norm 4.023804057791e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 239
+  3 SNES Function norm 1.465460811967e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 9.41 s  ClockTime = 9 s
+
+Time = 0.13
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.308270422597e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 206
+  1 SNES Function norm 1.003800096612e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 126
+  2 SNES Function norm 4.928964356622e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 2.044485231190e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 9.98 s  ClockTime = 10 s
+
+Time = 0.14
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.352916618247e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 206
+  1 SNES Function norm 1.060135067477e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 126
+  2 SNES Function norm 6.194220968161e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 221
+  3 SNES Function norm 2.350925166318e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 10.54 s  ClockTime = 10 s
+
+Time = 0.15
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.401450889580e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 206
+  1 SNES Function norm 9.852306374354e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 128
+  2 SNES Function norm 6.999091583987e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 217
+  3 SNES Function norm 2.926832049297e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 11.1 s  ClockTime = 11 s
+
+Time = 0.16
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.447326810268e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 218
+  1 SNES Function norm 8.528190887195e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 143
+  2 SNES Function norm 7.092296783265e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 201
+  3 SNES Function norm 2.500030681240e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 11.73 s  ClockTime = 12 s
+
+Time = 0.17
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.486380670012e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 216
+  1 SNES Function norm 7.631916394273e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 149
+  2 SNES Function norm 7.043768361868e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  3 SNES Function norm 1.413739868272e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 12.36 s  ClockTime = 12 s
+
+Time = 0.18
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.520876714806e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 215
+  1 SNES Function norm 7.310645961879e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 153
+  2 SNES Function norm 7.203889490617e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  3 SNES Function norm 1.125555201806e-09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 12.93 s  ClockTime = 13 s
+
+Time = 0.19
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.554989120516e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  1 SNES Function norm 7.110183766655e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 153
+  2 SNES Function norm 7.385085985652e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 200
+  3 SNES Function norm 9.428150051401e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 13.47 s  ClockTime = 13 s
+
+Time = 0.2
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.589250644183e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  1 SNES Function norm 6.671158149907e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 155
+  2 SNES Function norm 7.294329073366e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  3 SNES Function norm 6.755727259340e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 16938.7
+ExecutionTime = 14.05 s  ClockTime = 14 s
+
+tractions functionObject: writing traction field
+
+Time = 0.21
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.621597828733e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 217
+  1 SNES Function norm 6.085737312781e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 152
+  2 SNES Function norm 6.933287928006e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 194
+  3 SNES Function norm 4.934910451898e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 14.6 s  ClockTime = 15 s
+
+Time = 0.22
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.651061151266e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 213
+  1 SNES Function norm 5.600487865937e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 151
+  2 SNES Function norm 6.516100995853e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 206
+  3 SNES Function norm 4.305117076070e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 15.15 s  ClockTime = 15 s
+
+Time = 0.23
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.678618341176e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 213
+  1 SNES Function norm 5.259186431186e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 151
+  2 SNES Function norm 6.173917543728e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 207
+  3 SNES Function norm 5.797725533924e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 15.7 s  ClockTime = 16 s
+
+Time = 0.24
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.705311274818e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  1 SNES Function norm 4.935081051177e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 150
+  2 SNES Function norm 5.809988969037e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  3 SNES Function norm 3.096244501400e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 16.28 s  ClockTime = 16 s
+
+Time = 0.25
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.731042661093e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 210
+  1 SNES Function norm 4.567256732143e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 148
+  2 SNES Function norm 5.385650279014e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  3 SNES Function norm 3.488644187061e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 16.86 s  ClockTime = 17 s
+
+Time = 0.26
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.755311102579e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  1 SNES Function norm 4.205630523957e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 147
+  2 SNES Function norm 4.897104148050e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 182
+  3 SNES Function norm 1.624725697445e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 17.41 s  ClockTime = 17 s
+
+Time = 0.27
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.778119270856e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  1 SNES Function norm 3.898396594953e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 143
+  2 SNES Function norm 4.473055923104e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 180
+  3 SNES Function norm 2.151936175764e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 17.95 s  ClockTime = 18 s
+
+Time = 0.28
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.799839190145e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  1 SNES Function norm 3.631271383998e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 142
+  2 SNES Function norm 4.076371587829e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 177
+  3 SNES Function norm 3.220194607191e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 18.47 s  ClockTime = 18 s
+
+Time = 0.29
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.820664466420e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  1 SNES Function norm 3.375089649157e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 152
+  2 SNES Function norm 3.688693935165e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 182
+  3 SNES Function norm 1.868863347600e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 19.01 s  ClockTime = 19 s
+
+Time = 0.3
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.840537802193e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 211
+  1 SNES Function norm 3.129114497751e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 155
+  2 SNES Function norm 3.330426025512e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 182
+  3 SNES Function norm 1.469671418937e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 26544.5
+ExecutionTime = 19.57 s  ClockTime = 19 s
+
+tractions functionObject: writing traction field
+
+Time = 0.31
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.859430532367e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  1 SNES Function norm 2.906322726068e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 157
+  2 SNES Function norm 2.999760303155e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  3 SNES Function norm 1.594990354624e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 20.09 s  ClockTime = 20 s
+
+Time = 0.32
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.877448334011e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  1 SNES Function norm 2.708118229167e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 158
+  2 SNES Function norm 2.708952433395e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 179
+  3 SNES Function norm 8.941691283120e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 20.62 s  ClockTime = 21 s
+
+Time = 0.33
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.894707032252e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  1 SNES Function norm 2.526689856018e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 158
+  2 SNES Function norm 2.435085353588e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 177
+  3 SNES Function norm 1.881266105226e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 21.16 s  ClockTime = 21 s
+
+Time = 0.34
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.911249798046e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  1 SNES Function norm 2.358089346974e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 158
+  2 SNES Function norm 2.190581073451e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+  3 SNES Function norm 1.249122155182e-10
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 21.69 s  ClockTime = 22 s
+
+Time = 0.35
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.927094641161e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  1 SNES Function norm 2.203591710840e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 159
+  2 SNES Function norm 1.975104334121e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  3 SNES Function norm 7.814510984369e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 22.23 s  ClockTime = 22 s
+
+Time = 0.36
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.942286254361e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  1 SNES Function norm 2.063547413866e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 160
+  2 SNES Function norm 1.782702613543e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  3 SNES Function norm 5.725810681708e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 22.76 s  ClockTime = 23 s
+
+Time = 0.37
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.956881672757e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 202
+  1 SNES Function norm 1.935743003711e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 161
+  2 SNES Function norm 1.607314118984e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 188
+  3 SNES Function norm 5.123410402026e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 23.29 s  ClockTime = 23 s
+
+Time = 0.38
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.970921906148e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 202
+  1 SNES Function norm 1.818166191488e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 159
+  2 SNES Function norm 1.450490496001e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 186
+  3 SNES Function norm 9.020169329186e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 23.85 s  ClockTime = 24 s
+
+Time = 0.39
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.984434660157e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 201
+  1 SNES Function norm 1.710160259118e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 159
+  2 SNES Function norm 1.311185878564e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 185
+  3 SNES Function norm 8.364971045364e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 24.37 s  ClockTime = 24 s
+
+Time = 0.4
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.997449116665e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 201
+  1 SNES Function norm 1.611239439711e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 160
+  2 SNES Function norm 1.190555972234e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+  3 SNES Function norm 7.363978798833e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 37101.1
+ExecutionTime = 24.93 s  ClockTime = 25 s
+
+tractions functionObject: writing traction field
+
+Time = 0.41
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.009997180187e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 200
+  1 SNES Function norm 1.520446426391e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 161
+  2 SNES Function norm 1.079501214983e-06
+    Linear solve converged due to CONVERGED_RTOL iterations 184
+  3 SNES Function norm 5.317501364109e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 25.46 s  ClockTime = 25 s
+
+Time = 0.42
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.022106830108e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 200
+  1 SNES Function norm 1.436794059673e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 163
+  2 SNES Function norm 9.790581167088e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 187
+  3 SNES Function norm 6.183029289914e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 26 s  ClockTime = 26 s
+
+Time = 0.43
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.033800936532e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 199
+  1 SNES Function norm 1.359622462194e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 165
+  2 SNES Function norm 8.941165962396e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 188
+  3 SNES Function norm 3.244852547053e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 26.54 s  ClockTime = 26 s
+
+Time = 0.44
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.045100583798e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 199
+  1 SNES Function norm 1.288417705029e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 166
+  2 SNES Function norm 8.161203914342e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 188
+  3 SNES Function norm 3.278157148382e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 27.08 s  ClockTime = 27 s
+
+Time = 0.45
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.056026334853e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 198
+  1 SNES Function norm 1.222616805622e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 166
+  2 SNES Function norm 7.476848885630e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  3 SNES Function norm 2.819087756210e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 27.61 s  ClockTime = 28 s
+
+Time = 0.46
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.066597095620e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 198
+  1 SNES Function norm 1.161676744041e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 167
+  2 SNES Function norm 6.833770168306e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  3 SNES Function norm 2.781471847062e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 28.17 s  ClockTime = 28 s
+
+Time = 0.47
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.076829644965e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 197
+  1 SNES Function norm 1.105151042490e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 168
+  2 SNES Function norm 6.276512913313e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  3 SNES Function norm 1.924143237945e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 28.71 s  ClockTime = 29 s
+
+Time = 0.48
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.086739329447e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 196
+  1 SNES Function norm 1.052646638817e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 168
+  2 SNES Function norm 5.790225376833e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 196
+  3 SNES Function norm 2.902023199154e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 29.27 s  ClockTime = 29 s
+
+Time = 0.49
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.096340554557e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 196
+  1 SNES Function norm 1.003826709594e-03
+    Linear solve converged due to CONVERGED_RTOL iterations 168
+  2 SNES Function norm 5.335062712284e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 199
+  3 SNES Function norm 2.621660526062e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 29.82 s  ClockTime = 30 s
+
+Time = 0.5
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.105646704710e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 195
+  1 SNES Function norm 9.583511286427e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 169
+  2 SNES Function norm 4.895276952226e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 196
+  3 SNES Function norm 2.487933808923e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 55119.3
+ExecutionTime = 30.41 s  ClockTime = 30 s
+
+tractions functionObject: writing traction field
+
+Time = 0.51
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.114670081270e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 194
+  1 SNES Function norm 9.159283788427e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 170
+  2 SNES Function norm 4.501082084735e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 196
+  3 SNES Function norm 2.375070084075e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 30.97 s  ClockTime = 31 s
+
+Time = 0.52
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.123422080864e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 193
+  1 SNES Function norm 8.762883131388e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 171
+  2 SNES Function norm 4.172374874520e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 199
+  3 SNES Function norm 2.224109947627e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 31.54 s  ClockTime = 31 s
+
+Time = 0.53
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.131913371646e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 193
+  1 SNES Function norm 8.392003229678e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 171
+  2 SNES Function norm 3.862938216910e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  3 SNES Function norm 2.445621900083e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 32.11 s  ClockTime = 32 s
+
+Time = 0.54
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.140153949785e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 8.044613874168e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 172
+  2 SNES Function norm 3.572903576761e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  3 SNES Function norm 2.447648298357e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 32.68 s  ClockTime = 33 s
+
+Time = 0.55
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.148153173354e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  1 SNES Function norm 7.718871647471e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 172
+  2 SNES Function norm 3.319059967241e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 211
+  3 SNES Function norm 9.889615687774e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 33.26 s  ClockTime = 33 s
+
+Time = 0.56
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.155919834466e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  1 SNES Function norm 7.412939699558e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 173
+  2 SNES Function norm 3.075937736330e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 217
+  3 SNES Function norm 1.373273292276e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 33.83 s  ClockTime = 34 s
+
+Time = 0.57
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.163462233147e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  1 SNES Function norm 7.125306640103e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 175
+  2 SNES Function norm 2.857104973560e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 218
+  3 SNES Function norm 1.695645662810e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 34.41 s  ClockTime = 34 s
+
+Time = 0.58
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.170788225653e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  1 SNES Function norm 6.854623889148e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 178
+  2 SNES Function norm 2.656396318281e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 217
+  3 SNES Function norm 1.108165876648e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 34.98 s  ClockTime = 35 s
+
+Time = 0.59
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.177905261408e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 189
+  1 SNES Function norm 6.599579354535e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  2 SNES Function norm 2.493153006234e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 220
+  3 SNES Function norm 1.236559715353e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 35.57 s  ClockTime = 35 s
+
+Time = 0.6
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.184820421822e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 189
+  1 SNES Function norm 6.358992574109e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  2 SNES Function norm 2.337348942797e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 220
+  3 SNES Function norm 1.099793498403e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 73332.5
+ExecutionTime = 36.16 s  ClockTime = 36 s
+
+tractions functionObject: writing traction field
+
+Time = 0.61
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.191540457074e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 189
+  1 SNES Function norm 6.131882802221e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 180
+  2 SNES Function norm 2.170000538837e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 221
+  3 SNES Function norm 1.065721831390e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 36.74 s  ClockTime = 37 s
+
+Time = 0.62
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.198071815792e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 188
+  1 SNES Function norm 5.917226799975e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 180
+  2 SNES Function norm 2.022069698602e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 221
+  3 SNES Function norm 1.086943899361e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 37.32 s  ClockTime = 37 s
+
+Time = 0.63
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.204420669546e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 187
+  1 SNES Function norm 5.714166903001e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  2 SNES Function norm 1.905490958856e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 222
+  3 SNES Function norm 1.046338073300e-11
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 37.91 s  ClockTime = 38 s
+
+Time = 0.64
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.210592935145e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 185
+  1 SNES Function norm 5.522165555829e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  2 SNES Function norm 1.792390328153e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 224
+  3 SNES Function norm 7.030441389898e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 38.49 s  ClockTime = 38 s
+
+Time = 0.65
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.216594294455e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 178
+  1 SNES Function norm 5.340192003764e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  2 SNES Function norm 1.686415588767e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 225
+  3 SNES Function norm 5.949151351374e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 39.07 s  ClockTime = 39 s
+
+Time = 0.66
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.222430211443e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 174
+  1 SNES Function norm 5.167451378161e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 182
+  2 SNES Function norm 1.600897477676e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 233
+  3 SNES Function norm 5.948668134160e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 39.66 s  ClockTime = 40 s
+
+Time = 0.67
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.228105946633e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 172
+  1 SNES Function norm 5.003834899635e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 184
+  2 SNES Function norm 1.490779544226e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 234
+  3 SNES Function norm 8.526765403504e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 40.24 s  ClockTime = 40 s
+
+Time = 0.68
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.233626569862e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 171
+  1 SNES Function norm 4.848163278481e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 186
+  2 SNES Function norm 1.399155516527e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 234
+  3 SNES Function norm 7.440590223609e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 40.83 s  ClockTime = 41 s
+
+Time = 0.69
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.238996971359e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 169
+  1 SNES Function norm 4.700394910271e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  2 SNES Function norm 1.321482114761e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 223
+  3 SNES Function norm 6.251947268651e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 41.4 s  ClockTime = 41 s
+
+Time = 0.7
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.244221871584e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 170
+  1 SNES Function norm 4.559559794756e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 195
+  2 SNES Function norm 1.242793346204e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 228
+  3 SNES Function norm 4.488789828287e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 90416.2
+ExecutionTime = 42.01 s  ClockTime = 42 s
+
+tractions functionObject: writing traction field
+
+Time = 0.71
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.249305829580e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 173
+  1 SNES Function norm 4.425539300571e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 199
+  2 SNES Function norm 1.183609205950e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 235
+  3 SNES Function norm 5.967421136165e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 42.61 s  ClockTime = 42 s
+
+Time = 0.72
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.254253250675e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 176
+  1 SNES Function norm 4.297821499767e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 201
+  2 SNES Function norm 1.125160805179e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 9.084484682189e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 43.22 s  ClockTime = 43 s
+
+Time = 0.73
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.259068392980e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 177
+  1 SNES Function norm 4.175660507769e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 202
+  2 SNES Function norm 1.067862313530e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 8.820076465777e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 43.83 s  ClockTime = 44 s
+
+Time = 0.74
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.263755373361e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 177
+  1 SNES Function norm 4.059606324939e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  2 SNES Function norm 1.004901997871e-07
+    Linear solve converged due to CONVERGED_RTOL iterations 239
+  3 SNES Function norm 3.318324848595e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 44.45 s  ClockTime = 44 s
+
+Time = 0.75
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.268318172871e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 177
+  1 SNES Function norm 3.948774582326e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 203
+  2 SNES Function norm 9.553199594113e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 239
+  3 SNES Function norm 3.275845305635e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 45.05 s  ClockTime = 45 s
+
+Time = 0.76
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.272760641577e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 175
+  1 SNES Function norm 3.843121162060e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 204
+  2 SNES Function norm 9.012514103832e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 5.818242936199e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 45.66 s  ClockTime = 45 s
+
+Time = 0.77
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.277086503038e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 175
+  1 SNES Function norm 3.742082295947e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 205
+  2 SNES Function norm 8.522131163499e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 243
+  3 SNES Function norm 3.994143861324e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 46.27 s  ClockTime = 46 s
+
+Time = 0.78
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.281299358405e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 174
+  1 SNES Function norm 3.645572064935e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 206
+  2 SNES Function norm 8.158174377067e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 236
+  3 SNES Function norm 5.009937154388e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 46.88 s  ClockTime = 47 s
+
+Time = 0.79
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.285402690401e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 169
+  1 SNES Function norm 3.553378403865e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 209
+  2 SNES Function norm 7.606301224216e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 239
+  3 SNES Function norm 2.356085757675e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 47.48 s  ClockTime = 47 s
+
+Time = 0.8
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.289399866834e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 161
+  1 SNES Function norm 3.464768949726e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 210
+  2 SNES Function norm 7.252505659050e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 238
+  3 SNES Function norm 3.113258161398e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 106216
+ExecutionTime = 48.09 s  ClockTime = 48 s
+
+tractions functionObject: writing traction field
+
+Time = 0.81
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.293294144184e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 176
+  1 SNES Function norm 3.379805950904e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 210
+  2 SNES Function norm 6.892821893365e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 242
+  3 SNES Function norm 2.681612141071e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 48.7 s  ClockTime = 49 s
+
+Time = 0.82
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.297088670838e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 176
+  1 SNES Function norm 3.298715412190e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 212
+  2 SNES Function norm 6.647213766640e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 249
+  3 SNES Function norm 2.363433846485e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 49.33 s  ClockTime = 49 s
+
+Time = 0.83
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.300786490342e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 179
+  1 SNES Function norm 3.220551409942e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 213
+  2 SNES Function norm 6.334999749268e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 251
+  3 SNES Function norm 2.662831458551e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 49.95 s  ClockTime = 50 s
+
+Time = 0.84
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.304390544493e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 181
+  1 SNES Function norm 3.145497987015e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  2 SNES Function norm 6.004339118371e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 255
+  3 SNES Function norm 2.358565326538e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 50.59 s  ClockTime = 50 s
+
+Time = 0.85
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.307903676328e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+  1 SNES Function norm 3.073356148629e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 214
+  2 SNES Function norm 5.727152418032e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 257
+  3 SNES Function norm 2.242631355757e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 51.24 s  ClockTime = 51 s
+
+Time = 0.86
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.311328633089e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+  1 SNES Function norm 3.004154633811e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 216
+  2 SNES Function norm 5.438709419886e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 258
+  3 SNES Function norm 1.611707706667e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 51.88 s  ClockTime = 52 s
+
+Time = 0.87
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.314668069086e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+  1 SNES Function norm 2.937714434346e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 217
+  2 SNES Function norm 5.218256449294e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 263
+  3 SNES Function norm 2.895439018842e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 52.55 s  ClockTime = 52 s
+
+Time = 0.88
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.317924548513e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 186
+  1 SNES Function norm 2.873942706300e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 219
+  2 SNES Function norm 4.986206276815e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 264
+  3 SNES Function norm 2.660617117097e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 53.21 s  ClockTime = 53 s
+
+Time = 0.89
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.321100548229e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 190
+  1 SNES Function norm 2.812875027749e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 220
+  2 SNES Function norm 4.786138120656e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 267
+  3 SNES Function norm 4.160645981598e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 53.88 s  ClockTime = 54 s
+
+Time = 0.9
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.324198460438e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  1 SNES Function norm 2.753783646524e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 221
+  2 SNES Function norm 4.557387510338e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 269
+  3 SNES Function norm 1.799713779130e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 120865
+ExecutionTime = 54.58 s  ClockTime = 54 s
+
+tractions functionObject: writing traction field
+
+Time = 0.91
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.327220595391e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 2.696787874047e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 222
+  2 SNES Function norm 4.344294708125e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 268
+  3 SNES Function norm 2.671193230151e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 55.27 s  ClockTime = 55 s
+
+Time = 0.92
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.330169183953e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 2.641680745457e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 222
+  2 SNES Function norm 4.200797616597e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 273
+  3 SNES Function norm 1.372558947564e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 55.96 s  ClockTime = 56 s
+
+Time = 0.93
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.333046380201e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 2.588479219627e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 223
+  2 SNES Function norm 4.056021316942e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 277
+  3 SNES Function norm 2.401255836153e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 56.65 s  ClockTime = 56 s
+
+Time = 0.94
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.335854263945e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  1 SNES Function norm 2.537197272714e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 224
+  2 SNES Function norm 3.866879908702e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 285
+  3 SNES Function norm 9.442753596549e-13
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 57.33 s  ClockTime = 57 s
+
+Time = 0.95
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.338594843136e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 191
+  1 SNES Function norm 2.487865455299e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 225
+  2 SNES Function norm 3.642924510928e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 281
+  3 SNES Function norm 1.160774758037e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 58.02 s  ClockTime = 58 s
+
+Time = 0.96
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.341270056338e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 2.440267165855e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 226
+  2 SNES Function norm 3.471463196559e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 289
+  3 SNES Function norm 1.556936399245e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 58.72 s  ClockTime = 59 s
+
+Time = 0.97
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.343881775052e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 192
+  1 SNES Function norm 2.394166147284e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 229
+  2 SNES Function norm 3.354741614252e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 293
+  3 SNES Function norm 1.426753083814e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 59.42 s  ClockTime = 59 s
+
+Time = 0.98
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.346431806041e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 193
+  1 SNES Function norm 2.349747114544e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 231
+  2 SNES Function norm 3.228591825379e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 295
+  3 SNES Function norm 1.097498385021e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 60.15 s  ClockTime = 60 s
+
+Time = 0.99
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.348921893552e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 194
+  1 SNES Function norm 2.306690911042e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 233
+  2 SNES Function norm 3.083410182706e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 296
+  3 SNES Function norm 9.810594300514e-13
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+ExecutionTime = 60.87 s  ClockTime = 61 s
+
+Time = 1
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 2.351353721530e-02
+    Linear solve converged due to CONVERGED_RTOL iterations 195
+  1 SNES Function norm 2.265037329256e-04
+    Linear solve converged due to CONVERGED_RTOL iterations 235
+  2 SNES Function norm 3.030966902865e-08
+    Linear solve converged due to CONVERGED_RTOL iterations 297
+  3 SNES Function norm 1.713530048583e-12
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Max sigmaEq (von Mises stress) = 134564
+ExecutionTime = 61.59 s  ClockTime = 61 s
+
+tractions functionObject: writing traction field
+
+The momentum equation converged in all time-steps
+
+
+End
+

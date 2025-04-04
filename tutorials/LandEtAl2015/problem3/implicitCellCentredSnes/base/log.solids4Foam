@@ -1,0 +1,1140 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : solids4Foam
+Date   : Mar 28 2025
+Time   : 13:46:49
+Host   : Aarons-MacBook-Pro.local
+PID    : 5771
+I/O    : uncollated
+Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/implicitCellCentredSnes/base
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+/*---------------------------------------------------------------------------*\
+|    For further information on the solids4Foam toolbox implementations,      |
+|    please see the following publications:                                   |
+|                                                                             |
+|    P. Cardiff, A Karac, P. De Jaeger, H. Jasak, J. Nagy, A. Ivankovic,      |
+|    Z. Tukovic: An open-source finite volume toolbox for solid mechanics and |
+|    fluid-solid interaction simulations. arXiv:1808.10736v2, 2018, available |
+|    at https://arxiv.org/abs/1808.10736.                                     |
+|                                                                             |
+|    Z. Tukovic, A. Karac, P. Cardiff, H. Jasak, A. Ivankovic: OpenFOAM       |
+|    finite volume solver for fluid-solid interaction.  Transactions of       |
+|    Famena, 42 (3), pp. 1-31, 2018, 10.21278/TOF.42301.                      |
+\*---------------------------------------------------------------------------*/
+
+Selecting physicsModel solidModel
+Selecting solidModel nonLinearGeometryTotalLagrangianTotalDisplacement
+Selecting dynamicFvMesh staticFvMesh
+Creating fixedDisplacement boundary condition
+Creating solidTraction boundary condition
+    pressure is time-varying
+Creating solidTraction boundary condition
+    under-relaxation method: fixed
+No finite volume options present
+Creating the mechanicalModel
+Selecting mechanical law electroMechanicalLaw
+Selecting mechanical law GuccioneElastic
+    Setting `extrapolateValue` to `true` on the inside patch of the D field
+    Setting `extrapolateValue` to `true` on the outside patch of the D field
+Creating tractions function object
+Time = 0.01
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 4.511462967408e-03
+    Initialising the matrix...done
+  1 SNES Function norm 3.067112665207e-03
+  2 SNES Function norm 3.196401353175e-05
+  3 SNES Function norm 2.852417699293e-07
+  4 SNES Function norm 2.115213941120e-11
+ExecutionTime = 0.48 s  ClockTime = 0 s
+
+Time = 0.02
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 4.693581025926e-03
+  1 SNES Function norm 3.440757972935e-03
+  2 SNES Function norm 3.117957984972e-03
+  3 SNES Function norm 1.734155308163e-05
+  4 SNES Function norm 8.145241186945e-08
+  5 SNES Function norm 4.832859807490e-12
+ExecutionTime = 0.93 s  ClockTime = 1 s
+
+Time = 0.03
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 4.836938165369e-03
+  1 SNES Function norm 3.951057552805e-03
+  2 SNES Function norm 3.010330370317e-03
+  3 SNES Function norm 2.901707583796e-03
+  4 SNES Function norm 1.264777135283e-05
+  5 SNES Function norm 4.157150719306e-08
+  6 SNES Function norm 2.848138251741e-11
+ExecutionTime = 1.47 s  ClockTime = 1 s
+
+Time = 0.04
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 5.099495850554e-03
+  1 SNES Function norm 3.852840742997e-03
+  2 SNES Function norm 2.600657136140e-03
+  3 SNES Function norm 1.303316614611e-03
+  4 SNES Function norm 4.747777476497e-06
+  5 SNES Function norm 3.781043969470e-09
+  6 SNES Function norm 4.352529806880e-12
+ExecutionTime = 1.99 s  ClockTime = 2 s
+
+Time = 0.05
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 5.509807144197e-03
+  1 SNES Function norm 4.569800309590e-03
+  2 SNES Function norm 2.823227147490e-05
+  3 SNES Function norm 1.116430625395e-07
+  4 SNES Function norm 7.355547668777e-11
+  5 SNES Function norm 3.281752540486e-15
+ExecutionTime = 2.44 s  ClockTime = 2 s
+
+Time = 0.06
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 5.982983359058e-03
+  1 SNES Function norm 2.631611317103e-03
+  2 SNES Function norm 1.068360778017e-05
+  3 SNES Function norm 9.919119993882e-09
+  4 SNES Function norm 2.380932875260e-12
+ExecutionTime = 2.81 s  ClockTime = 3 s
+
+Time = 0.07
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 6.396147653263e-03
+  1 SNES Function norm 2.059541154445e-03
+  2 SNES Function norm 5.664199423728e-06
+  3 SNES Function norm 3.575374836873e-09
+  4 SNES Function norm 3.713925727948e-13
+ExecutionTime = 3.22 s  ClockTime = 3 s
+
+Time = 0.08
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 6.765214779367e-03
+  1 SNES Function norm 2.175189198215e-03
+  2 SNES Function norm 7.444733053661e-06
+  3 SNES Function norm 6.391801051365e-09
+  4 SNES Function norm 8.171602403186e-13
+ExecutionTime = 3.63 s  ClockTime = 4 s
+
+Time = 0.09
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 7.201628986828e-03
+  1 SNES Function norm 2.586857456592e-03
+  2 SNES Function norm 1.174553109736e-05
+  3 SNES Function norm 1.001026899684e-08
+  4 SNES Function norm 1.667991019957e-12
+ExecutionTime = 4.05 s  ClockTime = 4 s
+
+Time = 0.1
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 7.734440114659e-03
+  1 SNES Function norm 2.700467829082e-03
+  2 SNES Function norm 1.342199818902e-05
+  3 SNES Function norm 9.096753207476e-09
+  4 SNES Function norm 3.381663672644e-12
+Max sigmaEq (von Mises stress) = 8033.23
+ExecutionTime = 4.48 s  ClockTime = 4 s
+
+tractions functionObject: writing traction field
+
+Time = 0.11
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 8.285517507063e-03
+  1 SNES Function norm 2.217490002309e-03
+  2 SNES Function norm 9.724508985302e-06
+  3 SNES Function norm 5.182553032563e-09
+  4 SNES Function norm 9.788573061923e-13
+ExecutionTime = 4.9 s  ClockTime = 5 s
+
+Time = 0.12
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 8.763365872837e-03
+  1 SNES Function norm 1.609435654711e-03
+  2 SNES Function norm 6.092641258464e-06
+  3 SNES Function norm 1.726715697990e-09
+  4 SNES Function norm 4.757197473608e-13
+ExecutionTime = 5.31 s  ClockTime = 5 s
+
+Time = 0.13
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 9.127319700470e-03
+  1 SNES Function norm 1.300746970136e-03
+  2 SNES Function norm 4.600684149907e-06
+  3 SNES Function norm 2.807205886301e-09
+  4 SNES Function norm 1.769330568717e-13
+ExecutionTime = 5.73 s  ClockTime = 6 s
+
+Time = 0.14
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 9.426619610868e-03
+  1 SNES Function norm 1.292468941963e-03
+  2 SNES Function norm 4.177237666946e-06
+  3 SNES Function norm 1.718367160192e-09
+  4 SNES Function norm 1.010193186573e-13
+ExecutionTime = 6.17 s  ClockTime = 6 s
+
+Time = 0.15
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 9.745616241639e-03
+  1 SNES Function norm 1.362474173144e-03
+  2 SNES Function norm 4.032760849845e-06
+  3 SNES Function norm 6.031113421417e-10
+  4 SNES Function norm 1.073718069275e-13
+ExecutionTime = 6.59 s  ClockTime = 7 s
+
+Time = 0.16
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.009996468497e-02
+  1 SNES Function norm 1.271680186897e-03
+  2 SNES Function norm 3.344592956510e-06
+  3 SNES Function norm 1.078391292108e-09
+  4 SNES Function norm 9.236164803760e-14
+ExecutionTime = 7.04 s  ClockTime = 7 s
+
+Time = 0.17
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.044084236907e-02
+  1 SNES Function norm 1.044470219101e-03
+  2 SNES Function norm 2.542315775597e-06
+  3 SNES Function norm 2.052981587486e-09
+  4 SNES Function norm 9.748246662149e-14
+ExecutionTime = 7.49 s  ClockTime = 7 s
+
+Time = 0.18
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.072605633591e-02
+  1 SNES Function norm 8.730859639492e-04
+  2 SNES Function norm 1.945717642058e-06
+  3 SNES Function norm 9.373660961215e-10
+  4 SNES Function norm 3.241433960990e-14
+ExecutionTime = 7.96 s  ClockTime = 8 s
+
+Time = 0.19
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.096309882083e-02
+  1 SNES Function norm 8.210414449171e-04
+  2 SNES Function norm 1.816434541345e-06
+  3 SNES Function norm 1.577698653123e-09
+  4 SNES Function norm 3.034837597201e-14
+ExecutionTime = 8.45 s  ClockTime = 8 s
+
+Time = 0.2
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.119122892257e-02
+  1 SNES Function norm 8.183854859624e-04
+  2 SNES Function norm 1.387814850281e-06
+  3 SNES Function norm 1.298354481455e-09
+  4 SNES Function norm 1.647680808625e-14
+Max sigmaEq (von Mises stress) = 17075.4
+ExecutionTime = 8.97 s  ClockTime = 9 s
+
+tractions functionObject: writing traction field
+
+Time = 0.21
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.142800682600e-02
+  1 SNES Function norm 7.765646922820e-04
+  2 SNES Function norm 1.340648005166e-06
+  3 SNES Function norm 7.557011422426e-10
+  4 SNES Function norm 1.500591755940e-14
+ExecutionTime = 9.47 s  ClockTime = 9 s
+
+Time = 0.22
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.165720453551e-02
+  1 SNES Function norm 6.932867260719e-04
+  2 SNES Function norm 1.161509118947e-06
+  3 SNES Function norm 6.492360962181e-10
+  4 SNES Function norm 1.939523165467e-14
+ExecutionTime = 10 s  ClockTime = 10 s
+
+Time = 0.23
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.186071549999e-02
+  1 SNES Function norm 6.255688704723e-04
+  2 SNES Function norm 1.047235400050e-06
+  3 SNES Function norm 5.304858848858e-10
+  4 SNES Function norm 1.042755353807e-14
+ExecutionTime = 10.53 s  ClockTime = 10 s
+
+Time = 0.24
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.204162500827e-02
+  1 SNES Function norm 5.943383864418e-04
+  2 SNES Function norm 9.345764754373e-07
+  3 SNES Function norm 7.425040694515e-10
+  4 SNES Function norm 1.048319084396e-14
+ExecutionTime = 11.05 s  ClockTime = 11 s
+
+Time = 0.25
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.221475003856e-02
+  1 SNES Function norm 5.750787706601e-04
+  2 SNES Function norm 7.774470158609e-07
+  3 SNES Function norm 4.157686216226e-10
+  4 SNES Function norm 1.157410191801e-14
+ExecutionTime = 11.57 s  ClockTime = 12 s
+
+Time = 0.26
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.238538290624e-02
+  1 SNES Function norm 5.438347637144e-04
+  2 SNES Function norm 7.102309552804e-07
+  3 SNES Function norm 3.241533750588e-10
+  4 SNES Function norm 1.062514507295e-14
+ExecutionTime = 12.07 s  ClockTime = 12 s
+
+Time = 0.27
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.254725983564e-02
+  1 SNES Function norm 5.058431404150e-04
+  2 SNES Function norm 6.799999866928e-07
+  3 SNES Function norm 3.515298226886e-10
+  4 SNES Function norm 1.161515924123e-14
+ExecutionTime = 12.59 s  ClockTime = 13 s
+
+Time = 0.28
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.269565998209e-02
+  1 SNES Function norm 4.763473979855e-04
+  2 SNES Function norm 7.117395913130e-07
+  3 SNES Function norm 3.669214562452e-10
+  4 SNES Function norm 1.033483098537e-14
+ExecutionTime = 13.1 s  ClockTime = 13 s
+
+Time = 0.29
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.283366241650e-02
+  1 SNES Function norm 4.567393780229e-04
+  2 SNES Function norm 5.266960186415e-07
+  3 SNES Function norm 2.905471011671e-10
+  4 SNES Function norm 9.801630757069e-15
+ExecutionTime = 13.62 s  ClockTime = 14 s
+
+Time = 0.3
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.296610501446e-02
+  1 SNES Function norm 4.382753877353e-04
+  2 SNES Function norm 4.905771947790e-07
+  3 SNES Function norm 2.965342682528e-10
+  4 SNES Function norm 1.036787561137e-14
+Max sigmaEq (von Mises stress) = 26731.7
+ExecutionTime = 14.17 s  ClockTime = 14 s
+
+tractions functionObject: writing traction field
+
+Time = 0.31
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.309343566097e-02
+  1 SNES Function norm 4.170917563995e-04
+  2 SNES Function norm 4.781620792295e-07
+  3 SNES Function norm 2.142335403690e-10
+  4 SNES Function norm 1.008693540628e-14
+ExecutionTime = 14.71 s  ClockTime = 15 s
+
+Time = 0.32
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.321355135690e-02
+  1 SNES Function norm 3.968260288972e-04
+  2 SNES Function norm 4.969909430600e-07
+  3 SNES Function norm 2.014759204063e-10
+  4 SNES Function norm 1.003430085268e-14
+ExecutionTime = 15.27 s  ClockTime = 15 s
+
+Time = 0.33
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.332616019335e-02
+  1 SNES Function norm 3.803548873360e-04
+  2 SNES Function norm 5.227331743790e-07
+  3 SNES Function norm 2.181956626307e-10
+  4 SNES Function norm 1.005038270697e-14
+ExecutionTime = 15.84 s  ClockTime = 16 s
+
+Time = 0.34
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.343300824181e-02
+  1 SNES Function norm 3.661990067973e-04
+  2 SNES Function norm 5.253297052410e-07
+  3 SNES Function norm 2.312666925882e-10
+  4 SNES Function norm 1.036984330428e-14
+ExecutionTime = 16.39 s  ClockTime = 16 s
+
+Time = 0.35
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.353530235379e-02
+  1 SNES Function norm 3.521570132954e-04
+  2 SNES Function norm 3.844682439430e-07
+  3 SNES Function norm 2.574154498725e-10
+  4 SNES Function norm 1.035260420454e-14
+ExecutionTime = 16.96 s  ClockTime = 17 s
+
+Time = 0.36
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.363284478559e-02
+  1 SNES Function norm 3.384987762528e-04
+  2 SNES Function norm 2.996259752810e-07
+  3 SNES Function norm 2.284213622046e-10
+  4 SNES Function norm 1.025379153233e-14
+ExecutionTime = 17.54 s  ClockTime = 17 s
+
+Time = 0.37
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.372532389126e-02
+  1 SNES Function norm 3.258789887241e-04
+  2 SNES Function norm 2.917244836760e-07
+  3 SNES Function norm 1.470726404421e-10
+  4 SNES Function norm 1.050475973342e-14
+ExecutionTime = 18.12 s  ClockTime = 18 s
+
+Time = 0.38
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.381317180577e-02
+  1 SNES Function norm 3.147577295568e-04
+  2 SNES Function norm 3.608895647000e-07
+  3 SNES Function norm 2.253664269275e-10
+  4 SNES Function norm 1.070664649572e-14
+ExecutionTime = 18.69 s  ClockTime = 19 s
+
+Time = 0.39
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.389705104935e-02
+  1 SNES Function norm 3.046286465529e-04
+  2 SNES Function norm 4.832354199273e-07
+  3 SNES Function norm 2.175155212196e-10
+  4 SNES Function norm 1.083315268322e-14
+ExecutionTime = 19.29 s  ClockTime = 19 s
+
+Time = 0.4
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.397723508362e-02
+  1 SNES Function norm 2.945853296339e-04
+  2 SNES Function norm 4.035298378645e-07
+  3 SNES Function norm 1.622591063722e-10
+  4 SNES Function norm 1.076886997621e-14
+Max sigmaEq (von Mises stress) = 36511.5
+ExecutionTime = 19.89 s  ClockTime = 20 s
+
+tractions functionObject: writing traction field
+
+Time = 0.41
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.405374315919e-02
+  1 SNES Function norm 2.849727422252e-04
+  2 SNES Function norm 3.653296562830e-07
+  3 SNES Function norm 1.938170531733e-10
+  4 SNES Function norm 1.089511349255e-14
+ExecutionTime = 20.49 s  ClockTime = 20 s
+
+Time = 0.42
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.412671998631e-02
+  1 SNES Function norm 2.763094194850e-04
+  2 SNES Function norm 3.019732929657e-07
+  3 SNES Function norm 1.666369793432e-10
+  4 SNES Function norm 1.098339281534e-14
+ExecutionTime = 21.1 s  ClockTime = 21 s
+
+Time = 0.43
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.419645763129e-02
+  1 SNES Function norm 2.682787342750e-04
+  2 SNES Function norm 3.015550467527e-07
+  3 SNES Function norm 1.658447855016e-10
+  4 SNES Function norm 1.093509109845e-14
+ExecutionTime = 21.72 s  ClockTime = 22 s
+
+Time = 0.44
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.426319790503e-02
+  1 SNES Function norm 2.609456874290e-04
+  2 SNES Function norm 3.865623673571e-07
+  3 SNES Function norm 1.610242814294e-10
+  4 SNES Function norm 1.094755592796e-14
+ExecutionTime = 22.37 s  ClockTime = 22 s
+
+Time = 0.45
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.432707530709e-02
+  1 SNES Function norm 2.537687501416e-04
+  2 SNES Function norm 3.254100708654e-07
+  3 SNES Function norm 1.403123738818e-10
+ExecutionTime = 22.8 s  ClockTime = 23 s
+
+Time = 0.46
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.438820878824e-02
+  1 SNES Function norm 2.465077608525e-04
+  2 SNES Function norm 2.930051581705e-07
+  3 SNES Function norm 1.591899830217e-10
+  4 SNES Function norm 1.134389607704e-14
+ExecutionTime = 23.43 s  ClockTime = 23 s
+
+Time = 0.47
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.444675407963e-02
+  1 SNES Function norm 2.401159700612e-04
+  2 SNES Function norm 3.006218689082e-07
+  3 SNES Function norm 1.421144520473e-10
+ExecutionTime = 23.88 s  ClockTime = 24 s
+
+Time = 0.48
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.450287031393e-02
+  1 SNES Function norm 2.340972639825e-04
+  2 SNES Function norm 2.192139683080e-07
+  3 SNES Function norm 1.397156324159e-10
+ExecutionTime = 24.31 s  ClockTime = 24 s
+
+Time = 0.49
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.455668719599e-02
+  1 SNES Function norm 2.283591044742e-04
+  2 SNES Function norm 2.355321711731e-07
+  3 SNES Function norm 9.162175649232e-11
+ExecutionTime = 24.76 s  ClockTime = 25 s
+
+Time = 0.5
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.460831503488e-02
+  1 SNES Function norm 2.229581492103e-04
+  2 SNES Function norm 3.206037466881e-07
+  3 SNES Function norm 1.017411180629e-10
+Max sigmaEq (von Mises stress) = 46128.4
+ExecutionTime = 25.23 s  ClockTime = 25 s
+
+tractions functionObject: writing traction field
+
+Time = 0.51
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.465786391773e-02
+  1 SNES Function norm 2.176933173944e-04
+  2 SNES Function norm 3.170895372121e-07
+  3 SNES Function norm 1.259157353081e-10
+ExecutionTime = 25.66 s  ClockTime = 26 s
+
+Time = 0.52
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.470544400403e-02
+  1 SNES Function norm 2.128154041004e-04
+  2 SNES Function norm 2.842833901380e-07
+  3 SNES Function norm 9.827184223624e-11
+ExecutionTime = 26.1 s  ClockTime = 26 s
+
+Time = 0.53
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.475115719838e-02
+  1 SNES Function norm 2.083131523738e-04
+  2 SNES Function norm 3.168370000096e-07
+  3 SNES Function norm 6.892326358928e-11
+ExecutionTime = 26.56 s  ClockTime = 26 s
+
+Time = 0.54
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.479509574829e-02
+  1 SNES Function norm 2.041085656936e-04
+  2 SNES Function norm 2.969006388289e-07
+  3 SNES Function norm 7.827888075916e-11
+ExecutionTime = 27.01 s  ClockTime = 27 s
+
+Time = 0.55
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.483734632719e-02
+  1 SNES Function norm 1.997588020909e-04
+  2 SNES Function norm 2.895702491342e-07
+  3 SNES Function norm 8.618250801524e-11
+ExecutionTime = 27.48 s  ClockTime = 27 s
+
+Time = 0.56
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.487799210177e-02
+  1 SNES Function norm 1.958771655920e-04
+  2 SNES Function norm 2.314744603435e-07
+  3 SNES Function norm 9.403330895363e-11
+ExecutionTime = 27.94 s  ClockTime = 28 s
+
+Time = 0.57
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.491711181142e-02
+  1 SNES Function norm 1.919424289039e-04
+  2 SNES Function norm 2.081580291058e-07
+  3 SNES Function norm 9.407259603119e-11
+ExecutionTime = 28.42 s  ClockTime = 28 s
+
+Time = 0.58
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.495477902783e-02
+  1 SNES Function norm 1.881408899528e-04
+  2 SNES Function norm 2.004411205693e-07
+  3 SNES Function norm 6.433713916797e-11
+ExecutionTime = 28.9 s  ClockTime = 29 s
+
+Time = 0.59
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.499106274202e-02
+  1 SNES Function norm 1.847356860421e-04
+  2 SNES Function norm 2.347663384228e-07
+  3 SNES Function norm 4.966440211208e-11
+ExecutionTime = 29.41 s  ClockTime = 29 s
+
+Time = 0.6
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.502602815015e-02
+  1 SNES Function norm 1.813783955873e-04
+  2 SNES Function norm 1.894579524847e-07
+  3 SNES Function norm 3.291307928560e-11
+Max sigmaEq (von Mises stress) = 56018.8
+ExecutionTime = 29.94 s  ClockTime = 30 s
+
+tractions functionObject: writing traction field
+
+Time = 0.61
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.505973687988e-02
+  1 SNES Function norm 1.782640390292e-04
+  2 SNES Function norm 1.913561196844e-07
+  3 SNES Function norm 5.844775194504e-11
+ExecutionTime = 30.46 s  ClockTime = 30 s
+
+Time = 0.62
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.509224696693e-02
+  1 SNES Function norm 1.756325025358e-04
+  2 SNES Function norm 2.021657655321e-07
+  3 SNES Function norm 6.591675242842e-11
+ExecutionTime = 30.97 s  ClockTime = 31 s
+
+Time = 0.63
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.512361299128e-02
+  1 SNES Function norm 1.730593351942e-04
+  2 SNES Function norm 1.790770855608e-07
+  3 SNES Function norm 6.381114016690e-11
+ExecutionTime = 31.49 s  ClockTime = 31 s
+
+Time = 0.64
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.515388634001e-02
+  1 SNES Function norm 1.701249389120e-04
+  2 SNES Function norm 1.586673177481e-07
+  3 SNES Function norm 7.233379171348e-11
+ExecutionTime = 32.01 s  ClockTime = 32 s
+
+Time = 0.65
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.518311542062e-02
+  1 SNES Function norm 1.674558253142e-04
+  2 SNES Function norm 2.321489212998e-07
+  3 SNES Function norm 6.074283951341e-11
+ExecutionTime = 32.54 s  ClockTime = 32 s
+
+Time = 0.66
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.521134579028e-02
+  1 SNES Function norm 1.652452361677e-04
+  2 SNES Function norm 2.456562862112e-07
+  3 SNES Function norm 5.483214687149e-11
+ExecutionTime = 33.1 s  ClockTime = 33 s
+
+Time = 0.67
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.523862027207e-02
+  1 SNES Function norm 1.629615358206e-04
+  2 SNES Function norm 2.562022955728e-07
+  3 SNES Function norm 3.305130153653e-11
+ExecutionTime = 33.65 s  ClockTime = 34 s
+
+Time = 0.68
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.526497909513e-02
+  1 SNES Function norm 1.603154485551e-04
+  2 SNES Function norm 2.249215540462e-07
+  3 SNES Function norm 2.949877521458e-11
+ExecutionTime = 34.22 s  ClockTime = 34 s
+
+Time = 0.69
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.529046003778e-02
+  1 SNES Function norm 1.586269068617e-04
+  2 SNES Function norm 1.848157205179e-07
+  3 SNES Function norm 5.483796760684e-11
+ExecutionTime = 34.81 s  ClockTime = 35 s
+
+Time = 0.7
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.531509855346e-02
+  1 SNES Function norm 1.572641791785e-04
+  2 SNES Function norm 2.273050798222e-07
+  3 SNES Function norm 7.273411448769e-11
+Max sigmaEq (von Mises stress) = 65889.9
+ExecutionTime = 35.45 s  ClockTime = 35 s
+
+tractions functionObject: writing traction field
+
+Time = 0.71
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.533892788291e-02
+  1 SNES Function norm 1.556253802698e-04
+  2 SNES Function norm 2.735376533224e-07
+  3 SNES Function norm 5.434985204174e-11
+ExecutionTime = 36.06 s  ClockTime = 36 s
+
+Time = 0.72
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.536197916730e-02
+  1 SNES Function norm 1.530176287424e-04
+  2 SNES Function norm 2.456282964182e-07
+  3 SNES Function norm 3.896628676084e-11
+ExecutionTime = 36.68 s  ClockTime = 37 s
+
+Time = 0.73
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.538428156004e-02
+  1 SNES Function norm 1.506826668897e-04
+  2 SNES Function norm 3.052524058731e-07
+  3 SNES Function norm 2.716359016467e-11
+ExecutionTime = 37.32 s  ClockTime = 37 s
+
+Time = 0.74
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.540586233462e-02
+  1 SNES Function norm 1.488614278346e-04
+  2 SNES Function norm 3.452721497497e-07
+  3 SNES Function norm 4.243665242000e-11
+ExecutionTime = 37.94 s  ClockTime = 38 s
+
+Time = 0.75
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.542674699124e-02
+  1 SNES Function norm 1.468542521667e-04
+  2 SNES Function norm 2.037119802875e-07
+  3 SNES Function norm 3.467647035205e-11
+ExecutionTime = 38.58 s  ClockTime = 38 s
+
+Time = 0.76
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.544695935311e-02
+  1 SNES Function norm 1.454412980653e-04
+  2 SNES Function norm 1.630948421873e-07
+  3 SNES Function norm 3.601655071660e-11
+ExecutionTime = 39.23 s  ClockTime = 39 s
+
+Time = 0.77
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.546652166753e-02
+  1 SNES Function norm 1.441113255899e-04
+  2 SNES Function norm 1.501660835326e-07
+  3 SNES Function norm 3.730576613953e-11
+ExecutionTime = 39.86 s  ClockTime = 40 s
+
+Time = 0.78
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.548545470063e-02
+  1 SNES Function norm 1.418654744649e-04
+  2 SNES Function norm 1.254980366472e-07
+  3 SNES Function norm 5.161649147798e-11
+ExecutionTime = 40.51 s  ClockTime = 40 s
+
+Time = 0.79
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.550377782981e-02
+  1 SNES Function norm 1.403975910046e-04
+  2 SNES Function norm 1.793769529116e-07
+  3 SNES Function norm 4.220907776886e-11
+ExecutionTime = 41.18 s  ClockTime = 41 s
+
+Time = 0.8
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.552150913373e-02
+  1 SNES Function norm 1.384988163098e-04
+  2 SNES Function norm 1.666476601895e-07
+  3 SNES Function norm 4.517846888718e-11
+Max sigmaEq (von Mises stress) = 75763.5
+ExecutionTime = 41.85 s  ClockTime = 42 s
+
+tractions functionObject: writing traction field
+
+Time = 0.81
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.553866547781e-02
+  1 SNES Function norm 1.371530748997e-04
+  2 SNES Function norm 1.796352445082e-07
+  3 SNES Function norm 3.759921705761e-11
+ExecutionTime = 42.54 s  ClockTime = 42 s
+
+Time = 0.82
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.555526259814e-02
+  1 SNES Function norm 1.358275663664e-04
+  2 SNES Function norm 1.269745741848e-07
+  3 SNES Function norm 3.008235209498e-11
+ExecutionTime = 43.25 s  ClockTime = 43 s
+
+Time = 0.83
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.557131518140e-02
+  1 SNES Function norm 1.344803867421e-04
+  2 SNES Function norm 1.153640937754e-07
+  3 SNES Function norm 3.186027428957e-11
+ExecutionTime = 43.96 s  ClockTime = 44 s
+
+Time = 0.84
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.558683694037e-02
+  1 SNES Function norm 1.324980606139e-04
+  2 SNES Function norm 1.143489978668e-07
+  3 SNES Function norm 4.602063535304e-11
+ExecutionTime = 44.66 s  ClockTime = 44 s
+
+Time = 0.85
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.560184068719e-02
+  1 SNES Function norm 1.319133875971e-04
+  2 SNES Function norm 1.965886753078e-07
+  3 SNES Function norm 4.116999115894e-11
+ExecutionTime = 45.4 s  ClockTime = 45 s
+
+Time = 0.86
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.561633840205e-02
+  1 SNES Function norm 1.313921862533e-04
+  2 SNES Function norm 2.616243740446e-07
+  3 SNES Function norm 3.515070346267e-11
+ExecutionTime = 46.13 s  ClockTime = 46 s
+
+Time = 0.87
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.563034129815e-02
+  1 SNES Function norm 1.304492631734e-04
+  2 SNES Function norm 2.588049900809e-07
+  3 SNES Function norm 2.854231035151e-11
+ExecutionTime = 46.85 s  ClockTime = 47 s
+
+Time = 0.88
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.564385988351e-02
+  1 SNES Function norm 1.286822375240e-04
+  2 SNES Function norm 2.645263523178e-07
+  3 SNES Function norm 2.609555388657e-11
+ExecutionTime = 47.56 s  ClockTime = 47 s
+
+Time = 0.89
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.565690401703e-02
+  1 SNES Function norm 1.268385853325e-04
+  2 SNES Function norm 2.098508316424e-07
+  3 SNES Function norm 3.062143785908e-11
+ExecutionTime = 48.32 s  ClockTime = 48 s
+
+Time = 0.9
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.566948296348e-02
+  1 SNES Function norm 1.246194837768e-04
+  2 SNES Function norm 1.607574145213e-07
+  3 SNES Function norm 3.227052827815e-11
+Max sigmaEq (von Mises stress) = 85659.7
+ExecutionTime = 49.15 s  ClockTime = 49 s
+
+tractions functionObject: writing traction field
+
+Time = 0.91
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.568160544212e-02
+  1 SNES Function norm 1.240866624303e-04
+  2 SNES Function norm 2.169176775998e-07
+  3 SNES Function norm 3.336821869791e-11
+ExecutionTime = 49.99 s  ClockTime = 50 s
+
+Time = 0.92
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.569327967255e-02
+  1 SNES Function norm 1.217547956074e-04
+  2 SNES Function norm 1.831063030559e-07
+  3 SNES Function norm 3.939803909452e-11
+ExecutionTime = 50.84 s  ClockTime = 51 s
+
+Time = 0.93
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.570451341751e-02
+  1 SNES Function norm 1.204010670274e-04
+  2 SNES Function norm 1.406711857659e-07
+  3 SNES Function norm 2.481101609540e-11
+ExecutionTime = 51.68 s  ClockTime = 51 s
+
+Time = 0.94
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.571531402101e-02
+  1 SNES Function norm 1.194179943338e-04
+  2 SNES Function norm 1.142031603641e-07
+  3 SNES Function norm 3.579694705458e-11
+ExecutionTime = 52.51 s  ClockTime = 52 s
+
+Time = 0.95
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.572568844387e-02
+  1 SNES Function norm 1.186087523045e-04
+  2 SNES Function norm 1.207277872365e-07
+  3 SNES Function norm 3.132770221241e-11
+ExecutionTime = 53.31 s  ClockTime = 53 s
+
+Time = 0.96
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.573564329560e-02
+  1 SNES Function norm 1.171550333224e-04
+  2 SNES Function norm 1.313000341780e-07
+  3 SNES Function norm 3.312551031132e-11
+ExecutionTime = 54.14 s  ClockTime = 54 s
+
+Time = 0.97
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.574518486311e-02
+  1 SNES Function norm 1.162429978777e-04
+  2 SNES Function norm 1.574358220051e-07
+  3 SNES Function norm 2.226438514745e-11
+ExecutionTime = 54.9 s  ClockTime = 55 s
+
+Time = 0.98
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.575431913721e-02
+  1 SNES Function norm 1.152195872695e-04
+  2 SNES Function norm 1.643781611421e-07
+  3 SNES Function norm 2.126200427455e-11
+ExecutionTime = 55.72 s  ClockTime = 55 s
+
+Time = 0.99
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.576305183500e-02
+  1 SNES Function norm 1.138648388538e-04
+  2 SNES Function norm 1.345894005292e-07
+  3 SNES Function norm 2.240857384715e-11
+ExecutionTime = 56.56 s  ClockTime = 56 s
+
+Time = 1
+
+Solving the momentum equation for D using PETSc SNES
+Linear predictor
+  0 SNES Function norm 1.577138842184e-02
+  1 SNES Function norm 1.131248533659e-04
+  2 SNES Function norm 1.646579083794e-07
+  3 SNES Function norm 3.276943801901e-11
+Max sigmaEq (von Mises stress) = 95577.6
+ExecutionTime = 57.39 s  ClockTime = 57 s
+
+tractions functionObject: writing traction field
+
+The momentum equation converged in all time-steps
+
+
+End
+

@@ -1,0 +1,350 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : extrudeMesh
+Date   : Mar 28 2025
+Time   : 13:46:48
+Host   : Aarons-MacBook-Pro.local
+PID    : 5767
+I/O    : uncollated
+Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/implicitCellCentredSnes/base
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+Selecting extrudeModel sector
+Selected extrudeModel for sector using coeffs 
+{
+    point           ( 0 0 0 );
+    axis            ( 0 0 1 );
+    angle           360;
+}
+
+Extruding from patch using model sector
+Flipping normals before extruding
+Collapsing edges < 1e-09 of bounding box
+
+Extruding patches 1(top) on mesh "/Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/implicitCellCentredSnes/base"
+
+Create mesh for time = 0
+
+Adding overall 0 processor patches.
+Mesh bounding box : (-0.00999132 -0.00999132 -0.02) (0.00999132 0.00999132 0.005)
+        with span : (0.0199826 0.0199826 0.025)
+Merge distance    : 1.99826e-11
+
+Collapsing edges < 1.99826e-11 ...
+
+Merging edge (60 4384) since length 0 << 1.99826e-11
+Merging edge (61 4456) since length 0 << 1.99826e-11
+Merging edge (62 4528) since length 0 << 1.99826e-11
+Merging edge (63 4600) since length 0 << 1.99826e-11
+Merging edge (4384 4385) since length 0 << 1.99826e-11
+Merging edge (4385 4386) since length 0 << 1.99826e-11
+Merging edge (4386 4387) since length 0 << 1.99826e-11
+Merging edge (4387 4388) since length 0 << 1.99826e-11
+Merging edge (4388 4389) since length 0 << 1.99826e-11
+Merging edge (4389 4390) since length 0 << 1.99826e-11
+Merging edge (4390 4391) since length 0 << 1.99826e-11
+Merging edge (4391 4392) since length 0 << 1.99826e-11
+Merging edge (4392 4393) since length 0 << 1.99826e-11
+Merging edge (4393 4394) since length 0 << 1.99826e-11
+Merging edge (4394 4395) since length 0 << 1.99826e-11
+Merging edge (4395 4396) since length 0 << 1.99826e-11
+Merging edge (4396 4397) since length 0 << 1.99826e-11
+Merging edge (4397 4398) since length 0 << 1.99826e-11
+Merging edge (4398 4399) since length 0 << 1.99826e-11
+Merging edge (4399 4400) since length 0 << 1.99826e-11
+Merging edge (4400 4401) since length 0 << 1.99826e-11
+Merging edge (4401 4402) since length 0 << 1.99826e-11
+Merging edge (4402 4403) since length 0 << 1.99826e-11
+Merging edge (4403 4404) since length 0 << 1.99826e-11
+Merging edge (4404 4405) since length 0 << 1.99826e-11
+Merging edge (4405 4406) since length 0 << 1.99826e-11
+Merging edge (4406 4407) since length 0 << 1.99826e-11
+Merging edge (4407 4408) since length 0 << 1.99826e-11
+Merging edge (4408 4409) since length 0 << 1.99826e-11
+Merging edge (4409 4410) since length 0 << 1.99826e-11
+Merging edge (4410 4411) since length 0 << 1.99826e-11
+Merging edge (4411 4412) since length 0 << 1.99826e-11
+Merging edge (4412 4413) since length 0 << 1.99826e-11
+Merging edge (4413 4414) since length 0 << 1.99826e-11
+Merging edge (4414 4415) since length 0 << 1.99826e-11
+Merging edge (4415 4416) since length 0 << 1.99826e-11
+Merging edge (4416 4417) since length 0 << 1.99826e-11
+Merging edge (4417 4418) since length 0 << 1.99826e-11
+Merging edge (4418 4419) since length 0 << 1.99826e-11
+Merging edge (4419 4420) since length 0 << 1.99826e-11
+Merging edge (4420 4421) since length 0 << 1.99826e-11
+Merging edge (4421 4422) since length 0 << 1.99826e-11
+Merging edge (4422 4423) since length 0 << 1.99826e-11
+Merging edge (4423 4424) since length 0 << 1.99826e-11
+Merging edge (4424 4425) since length 0 << 1.99826e-11
+Merging edge (4425 4426) since length 0 << 1.99826e-11
+Merging edge (4426 4427) since length 0 << 1.99826e-11
+Merging edge (4427 4428) since length 0 << 1.99826e-11
+Merging edge (4428 4429) since length 0 << 1.99826e-11
+Merging edge (4429 4430) since length 0 << 1.99826e-11
+Merging edge (4430 4431) since length 0 << 1.99826e-11
+Merging edge (4431 4432) since length 0 << 1.99826e-11
+Merging edge (4432 4433) since length 0 << 1.99826e-11
+Merging edge (4433 4434) since length 0 << 1.99826e-11
+Merging edge (4434 4435) since length 0 << 1.99826e-11
+Merging edge (4435 4436) since length 0 << 1.99826e-11
+Merging edge (4436 4437) since length 0 << 1.99826e-11
+Merging edge (4437 4438) since length 0 << 1.99826e-11
+Merging edge (4438 4439) since length 0 << 1.99826e-11
+Merging edge (4439 4440) since length 0 << 1.99826e-11
+Merging edge (4440 4441) since length 0 << 1.99826e-11
+Merging edge (4441 4442) since length 0 << 1.99826e-11
+Merging edge (4442 4443) since length 0 << 1.99826e-11
+Merging edge (4443 4444) since length 0 << 1.99826e-11
+Merging edge (4444 4445) since length 0 << 1.99826e-11
+Merging edge (4445 4446) since length 0 << 1.99826e-11
+Merging edge (4446 4447) since length 0 << 1.99826e-11
+Merging edge (4447 4448) since length 0 << 1.99826e-11
+Merging edge (4448 4449) since length 0 << 1.99826e-11
+Merging edge (4449 4450) since length 0 << 1.99826e-11
+Merging edge (4450 4451) since length 0 << 1.99826e-11
+Merging edge (4451 4452) since length 0 << 1.99826e-11
+Merging edge (4452 4453) since length 0 << 1.99826e-11
+Merging edge (4453 4454) since length 0 << 1.99826e-11
+Merging edge (4454 4455) since length 0 << 1.99826e-11
+Merging edge (4456 4457) since length 0 << 1.99826e-11
+Merging edge (4457 4458) since length 0 << 1.99826e-11
+Merging edge (4458 4459) since length 0 << 1.99826e-11
+Merging edge (4459 4460) since length 0 << 1.99826e-11
+Merging edge (4460 4461) since length 0 << 1.99826e-11
+Merging edge (4461 4462) since length 0 << 1.99826e-11
+Merging edge (4462 4463) since length 0 << 1.99826e-11
+Merging edge (4463 4464) since length 0 << 1.99826e-11
+Merging edge (4464 4465) since length 0 << 1.99826e-11
+Merging edge (4465 4466) since length 0 << 1.99826e-11
+Merging edge (4466 4467) since length 0 << 1.99826e-11
+Merging edge (4467 4468) since length 0 << 1.99826e-11
+Merging edge (4468 4469) since length 0 << 1.99826e-11
+Merging edge (4469 4470) since length 0 << 1.99826e-11
+Merging edge (4470 4471) since length 0 << 1.99826e-11
+Merging edge (4471 4472) since length 0 << 1.99826e-11
+Merging edge (4472 4473) since length 0 << 1.99826e-11
+Merging edge (4473 4474) since length 0 << 1.99826e-11
+Merging edge (4474 4475) since length 0 << 1.99826e-11
+Merging edge (4475 4476) since length 0 << 1.99826e-11
+Merging edge (4476 4477) since length 0 << 1.99826e-11
+Merging edge (4477 4478) since length 0 << 1.99826e-11
+Merging edge (4478 4479) since length 0 << 1.99826e-11
+Merging edge (4479 4480) since length 0 << 1.99826e-11
+Merging edge (4480 4481) since length 0 << 1.99826e-11
+Merging edge (4481 4482) since length 0 << 1.99826e-11
+Merging edge (4482 4483) since length 0 << 1.99826e-11
+Merging edge (4483 4484) since length 0 << 1.99826e-11
+Merging edge (4484 4485) since length 0 << 1.99826e-11
+Merging edge (4485 4486) since length 0 << 1.99826e-11
+Merging edge (4486 4487) since length 0 << 1.99826e-11
+Merging edge (4487 4488) since length 0 << 1.99826e-11
+Merging edge (4488 4489) since length 0 << 1.99826e-11
+Merging edge (4489 4490) since length 0 << 1.99826e-11
+Merging edge (4490 4491) since length 0 << 1.99826e-11
+Merging edge (4491 4492) since length 0 << 1.99826e-11
+Merging edge (4492 4493) since length 0 << 1.99826e-11
+Merging edge (4493 4494) since length 0 << 1.99826e-11
+Merging edge (4494 4495) since length 0 << 1.99826e-11
+Merging edge (4495 4496) since length 0 << 1.99826e-11
+Merging edge (4496 4497) since length 0 << 1.99826e-11
+Merging edge (4497 4498) since length 0 << 1.99826e-11
+Merging edge (4498 4499) since length 0 << 1.99826e-11
+Merging edge (4499 4500) since length 0 << 1.99826e-11
+Merging edge (4500 4501) since length 0 << 1.99826e-11
+Merging edge (4501 4502) since length 0 << 1.99826e-11
+Merging edge (4502 4503) since length 0 << 1.99826e-11
+Merging edge (4503 4504) since length 0 << 1.99826e-11
+Merging edge (4504 4505) since length 0 << 1.99826e-11
+Merging edge (4505 4506) since length 0 << 1.99826e-11
+Merging edge (4506 4507) since length 0 << 1.99826e-11
+Merging edge (4507 4508) since length 0 << 1.99826e-11
+Merging edge (4508 4509) since length 0 << 1.99826e-11
+Merging edge (4509 4510) since length 0 << 1.99826e-11
+Merging edge (4510 4511) since length 0 << 1.99826e-11
+Merging edge (4511 4512) since length 0 << 1.99826e-11
+Merging edge (4512 4513) since length 0 << 1.99826e-11
+Merging edge (4513 4514) since length 0 << 1.99826e-11
+Merging edge (4514 4515) since length 0 << 1.99826e-11
+Merging edge (4515 4516) since length 0 << 1.99826e-11
+Merging edge (4516 4517) since length 0 << 1.99826e-11
+Merging edge (4517 4518) since length 0 << 1.99826e-11
+Merging edge (4518 4519) since length 0 << 1.99826e-11
+Merging edge (4519 4520) since length 0 << 1.99826e-11
+Merging edge (4520 4521) since length 0 << 1.99826e-11
+Merging edge (4521 4522) since length 0 << 1.99826e-11
+Merging edge (4522 4523) since length 0 << 1.99826e-11
+Merging edge (4523 4524) since length 0 << 1.99826e-11
+Merging edge (4524 4525) since length 0 << 1.99826e-11
+Merging edge (4525 4526) since length 0 << 1.99826e-11
+Merging edge (4526 4527) since length 0 << 1.99826e-11
+Merging edge (4528 4529) since length 0 << 1.99826e-11
+Merging edge (4529 4530) since length 0 << 1.99826e-11
+Merging edge (4530 4531) since length 0 << 1.99826e-11
+Merging edge (4531 4532) since length 0 << 1.99826e-11
+Merging edge (4532 4533) since length 0 << 1.99826e-11
+Merging edge (4533 4534) since length 0 << 1.99826e-11
+Merging edge (4534 4535) since length 0 << 1.99826e-11
+Merging edge (4535 4536) since length 0 << 1.99826e-11
+Merging edge (4536 4537) since length 0 << 1.99826e-11
+Merging edge (4537 4538) since length 0 << 1.99826e-11
+Merging edge (4538 4539) since length 0 << 1.99826e-11
+Merging edge (4539 4540) since length 0 << 1.99826e-11
+Merging edge (4540 4541) since length 0 << 1.99826e-11
+Merging edge (4541 4542) since length 0 << 1.99826e-11
+Merging edge (4542 4543) since length 0 << 1.99826e-11
+Merging edge (4543 4544) since length 0 << 1.99826e-11
+Merging edge (4544 4545) since length 0 << 1.99826e-11
+Merging edge (4545 4546) since length 0 << 1.99826e-11
+Merging edge (4546 4547) since length 0 << 1.99826e-11
+Merging edge (4547 4548) since length 0 << 1.99826e-11
+Merging edge (4548 4549) since length 0 << 1.99826e-11
+Merging edge (4549 4550) since length 0 << 1.99826e-11
+Merging edge (4550 4551) since length 0 << 1.99826e-11
+Merging edge (4551 4552) since length 0 << 1.99826e-11
+Merging edge (4552 4553) since length 0 << 1.99826e-11
+Merging edge (4553 4554) since length 0 << 1.99826e-11
+Merging edge (4554 4555) since length 0 << 1.99826e-11
+Merging edge (4555 4556) since length 0 << 1.99826e-11
+Merging edge (4556 4557) since length 0 << 1.99826e-11
+Merging edge (4557 4558) since length 0 << 1.99826e-11
+Merging edge (4558 4559) since length 0 << 1.99826e-11
+Merging edge (4559 4560) since length 0 << 1.99826e-11
+Merging edge (4560 4561) since length 0 << 1.99826e-11
+Merging edge (4561 4562) since length 0 << 1.99826e-11
+Merging edge (4562 4563) since length 0 << 1.99826e-11
+Merging edge (4563 4564) since length 0 << 1.99826e-11
+Merging edge (4564 4565) since length 0 << 1.99826e-11
+Merging edge (4565 4566) since length 0 << 1.99826e-11
+Merging edge (4566 4567) since length 0 << 1.99826e-11
+Merging edge (4567 4568) since length 0 << 1.99826e-11
+Merging edge (4568 4569) since length 0 << 1.99826e-11
+Merging edge (4569 4570) since length 0 << 1.99826e-11
+Merging edge (4570 4571) since length 0 << 1.99826e-11
+Merging edge (4571 4572) since length 0 << 1.99826e-11
+Merging edge (4572 4573) since length 0 << 1.99826e-11
+Merging edge (4573 4574) since length 0 << 1.99826e-11
+Merging edge (4574 4575) since length 0 << 1.99826e-11
+Merging edge (4575 4576) since length 0 << 1.99826e-11
+Merging edge (4576 4577) since length 0 << 1.99826e-11
+Merging edge (4577 4578) since length 0 << 1.99826e-11
+Merging edge (4578 4579) since length 0 << 1.99826e-11
+Merging edge (4579 4580) since length 0 << 1.99826e-11
+Merging edge (4580 4581) since length 0 << 1.99826e-11
+Merging edge (4581 4582) since length 0 << 1.99826e-11
+Merging edge (4582 4583) since length 0 << 1.99826e-11
+Merging edge (4583 4584) since length 0 << 1.99826e-11
+Merging edge (4584 4585) since length 0 << 1.99826e-11
+Merging edge (4585 4586) since length 0 << 1.99826e-11
+Merging edge (4586 4587) since length 0 << 1.99826e-11
+Merging edge (4587 4588) since length 0 << 1.99826e-11
+Merging edge (4588 4589) since length 0 << 1.99826e-11
+Merging edge (4589 4590) since length 0 << 1.99826e-11
+Merging edge (4590 4591) since length 0 << 1.99826e-11
+Merging edge (4591 4592) since length 0 << 1.99826e-11
+Merging edge (4592 4593) since length 0 << 1.99826e-11
+Merging edge (4593 4594) since length 0 << 1.99826e-11
+Merging edge (4594 4595) since length 0 << 1.99826e-11
+Merging edge (4595 4596) since length 0 << 1.99826e-11
+Merging edge (4596 4597) since length 0 << 1.99826e-11
+Merging edge (4597 4598) since length 0 << 1.99826e-11
+Merging edge (4598 4599) since length 0 << 1.99826e-11
+Merging edge (4600 4601) since length 0 << 1.99826e-11
+Merging edge (4601 4602) since length 0 << 1.99826e-11
+Merging edge (4602 4603) since length 0 << 1.99826e-11
+Merging edge (4603 4604) since length 0 << 1.99826e-11
+Merging edge (4604 4605) since length 0 << 1.99826e-11
+Merging edge (4605 4606) since length 0 << 1.99826e-11
+Merging edge (4606 4607) since length 0 << 1.99826e-11
+Merging edge (4607 4608) since length 0 << 1.99826e-11
+Merging edge (4608 4609) since length 0 << 1.99826e-11
+Merging edge (4609 4610) since length 0 << 1.99826e-11
+Merging edge (4610 4611) since length 0 << 1.99826e-11
+Merging edge (4611 4612) since length 0 << 1.99826e-11
+Merging edge (4612 4613) since length 0 << 1.99826e-11
+Merging edge (4613 4614) since length 0 << 1.99826e-11
+Merging edge (4614 4615) since length 0 << 1.99826e-11
+Merging edge (4615 4616) since length 0 << 1.99826e-11
+Merging edge (4616 4617) since length 0 << 1.99826e-11
+Merging edge (4617 4618) since length 0 << 1.99826e-11
+Merging edge (4618 4619) since length 0 << 1.99826e-11
+Merging edge (4619 4620) since length 0 << 1.99826e-11
+Merging edge (4620 4621) since length 0 << 1.99826e-11
+Merging edge (4621 4622) since length 0 << 1.99826e-11
+Merging edge (4622 4623) since length 0 << 1.99826e-11
+Merging edge (4623 4624) since length 0 << 1.99826e-11
+Merging edge (4624 4625) since length 0 << 1.99826e-11
+Merging edge (4625 4626) since length 0 << 1.99826e-11
+Merging edge (4626 4627) since length 0 << 1.99826e-11
+Merging edge (4627 4628) since length 0 << 1.99826e-11
+Merging edge (4628 4629) since length 0 << 1.99826e-11
+Merging edge (4629 4630) since length 0 << 1.99826e-11
+Merging edge (4630 4631) since length 0 << 1.99826e-11
+Merging edge (4631 4632) since length 0 << 1.99826e-11
+Merging edge (4632 4633) since length 0 << 1.99826e-11
+Merging edge (4633 4634) since length 0 << 1.99826e-11
+Merging edge (4634 4635) since length 0 << 1.99826e-11
+Merging edge (4635 4636) since length 0 << 1.99826e-11
+Merging edge (4636 4637) since length 0 << 1.99826e-11
+Merging edge (4637 4638) since length 0 << 1.99826e-11
+Merging edge (4638 4639) since length 0 << 1.99826e-11
+Merging edge (4639 4640) since length 0 << 1.99826e-11
+Merging edge (4640 4641) since length 0 << 1.99826e-11
+Merging edge (4641 4642) since length 0 << 1.99826e-11
+Merging edge (4642 4643) since length 0 << 1.99826e-11
+Merging edge (4643 4644) since length 0 << 1.99826e-11
+Merging edge (4644 4645) since length 0 << 1.99826e-11
+Merging edge (4645 4646) since length 0 << 1.99826e-11
+Merging edge (4646 4647) since length 0 << 1.99826e-11
+Merging edge (4647 4648) since length 0 << 1.99826e-11
+Merging edge (4648 4649) since length 0 << 1.99826e-11
+Merging edge (4649 4650) since length 0 << 1.99826e-11
+Merging edge (4650 4651) since length 0 << 1.99826e-11
+Merging edge (4651 4652) since length 0 << 1.99826e-11
+Merging edge (4652 4653) since length 0 << 1.99826e-11
+Merging edge (4653 4654) since length 0 << 1.99826e-11
+Merging edge (4654 4655) since length 0 << 1.99826e-11
+Merging edge (4655 4656) since length 0 << 1.99826e-11
+Merging edge (4656 4657) since length 0 << 1.99826e-11
+Merging edge (4657 4658) since length 0 << 1.99826e-11
+Merging edge (4658 4659) since length 0 << 1.99826e-11
+Merging edge (4659 4660) since length 0 << 1.99826e-11
+Merging edge (4660 4661) since length 0 << 1.99826e-11
+Merging edge (4661 4662) since length 0 << 1.99826e-11
+Merging edge (4662 4663) since length 0 << 1.99826e-11
+Merging edge (4663 4664) since length 0 << 1.99826e-11
+Merging edge (4664 4665) since length 0 << 1.99826e-11
+Merging edge (4665 4666) since length 0 << 1.99826e-11
+Merging edge (4666 4667) since length 0 << 1.99826e-11
+Merging edge (4667 4668) since length 0 << 1.99826e-11
+Merging edge (4668 4669) since length 0 << 1.99826e-11
+Merging edge (4669 4670) since length 0 << 1.99826e-11
+Merging edge (4670 4671) since length 0 << 1.99826e-11
+            Uncollapsed edges = 0 / 12492
+    Number of points : 4672
+    Not visited      : 0
+    Not collapsed    : 4380
+    Collapsed        : 292
+
+Collapsing 0 cells
+Assuming full 360 degree axisymmetric case; stitching faces on patches top and top together ...
+
+Writing mesh to "/Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/implicitCellCentredSnes/base/constant/region0"
+
+End
+
