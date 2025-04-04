@@ -406,7 +406,17 @@ int main(int argc, char *argv[])
     f1.write();
 
 
+    //writing out the sheet normal and the sheet directions.
+    //From Eq (15) with an extra calculation for the projection of coordinated.
+    volVectorField n_("n_", (( ( e_mu & en )* en) + ( (e_mu & el ) * el ) ) ^ ( (( e_thetha & en )* en) + ( (e_thetha & el ) * el )) );
+    n_ /= mag(n_);
 
+    volVectorField s_("s_", f1 ^ n_ );
+    s_ /= mag(s_);
+
+    Info<< "Writting n_ and s_" << endl;
+    n_.write();
+    s_.write();
 
 
 

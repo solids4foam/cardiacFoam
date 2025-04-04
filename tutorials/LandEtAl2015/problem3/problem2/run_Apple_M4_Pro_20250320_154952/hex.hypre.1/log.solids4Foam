@@ -9,9 +9,9 @@ Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : solids4Foam
 Date   : Apr 04 2025
-Time   : 16:47:40
+Time   : 17:34:25
 Host   : Aarons-MacBook-Pro.local
-PID    : 29108
+PID    : 32604
 I/O    : uncollated
 Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/problem2/run_Apple_M4_Pro_20250320_154952/hex.hypre.1
 nProcs : 1
@@ -68,7 +68,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 302
   5 SNES Function norm 1.837629828213e-13
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-ExecutionTime = 1.1 s  ClockTime = 1 s
+ExecutionTime = 1.09 s  ClockTime = 1 s
 
 Time = 0.02
 
@@ -86,7 +86,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 266
   5 SNES Function norm 3.463784611945e-13
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-ExecutionTime = 2.02 s  ClockTime = 2 s
+ExecutionTime = 2.03 s  ClockTime = 2 s
 
 Time = 0.03
 
@@ -136,7 +136,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 128
   4 SNES Function norm 1.135224439106e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-ExecutionTime = 4.31 s  ClockTime = 4 s
+ExecutionTime = 4.32 s  ClockTime = 5 s
 
 Time = 0.06
 
@@ -184,7 +184,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 136
   4 SNES Function norm 4.794204147895e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-ExecutionTime = 6.44 s  ClockTime = 7 s
+ExecutionTime = 6.45 s  ClockTime = 7 s
 
 Time = 0.09
 
@@ -200,7 +200,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 145
   4 SNES Function norm 3.717325101554e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-ExecutionTime = 7.13 s  ClockTime = 7 s
+ExecutionTime = 7.15 s  ClockTime = 8 s
 
 Time = 0.1
 
@@ -217,7 +217,7 @@ Linear predictor
   4 SNES Function norm 4.351170629278e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 Max sigmaEq (von Mises stress) = 8631.92
-ExecutionTime = 7.88 s  ClockTime = 8 s
+ExecutionTime = 7.9 s  ClockTime = 8 s
 
 tractions functionObject: writing traction field
 
@@ -233,7 +233,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 200
   3 SNES Function norm 1.000313818383e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 8.39 s  ClockTime = 9 s
+ExecutionTime = 8.42 s  ClockTime = 9 s
 
 Time = 0.12
 
@@ -247,7 +247,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 239
   3 SNES Function norm 1.465460811967e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 8.98 s  ClockTime = 9 s
+ExecutionTime = 8.99 s  ClockTime = 9 s
 
 Time = 0.13
 
@@ -261,7 +261,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 236
   3 SNES Function norm 2.044485231190e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 9.53 s  ClockTime = 10 s
+ExecutionTime = 9.56 s  ClockTime = 10 s
 
 Time = 0.14
 
@@ -303,7 +303,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 201
   3 SNES Function norm 2.500030681240e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 11.19 s  ClockTime = 11 s
+ExecutionTime = 11.18 s  ClockTime = 12 s
 
 Time = 0.17
 
@@ -317,7 +317,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 205
   3 SNES Function norm 1.413739868272e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 11.74 s  ClockTime = 12 s
+ExecutionTime = 11.75 s  ClockTime = 12 s
 
 Time = 0.18
 
@@ -331,7 +331,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 205
   3 SNES Function norm 1.125555201806e-09
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 12.31 s  ClockTime = 12 s
+ExecutionTime = 12.31 s  ClockTime = 13 s
 
 Time = 0.19
 
@@ -345,7 +345,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 200
   3 SNES Function norm 9.428150051401e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 12.87 s  ClockTime = 13 s
+ExecutionTime = 12.86 s  ClockTime = 13 s
 
 Time = 0.2
 
@@ -360,7 +360,7 @@ Linear predictor
   3 SNES Function norm 6.755727259340e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 16938.7
-ExecutionTime = 13.46 s  ClockTime = 14 s
+ExecutionTime = 13.43 s  ClockTime = 14 s
 
 tractions functionObject: writing traction field
 
@@ -376,7 +376,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 194
   3 SNES Function norm 4.934910451898e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 14.02 s  ClockTime = 14 s
+ExecutionTime = 13.97 s  ClockTime = 14 s
 
 Time = 0.22
 
@@ -390,7 +390,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 206
   3 SNES Function norm 4.305117076070e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 14.58 s  ClockTime = 15 s
+ExecutionTime = 14.52 s  ClockTime = 15 s
 
 Time = 0.23
 
@@ -404,7 +404,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 207
   3 SNES Function norm 5.797725533924e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 15.13 s  ClockTime = 15 s
+ExecutionTime = 15.08 s  ClockTime = 15 s
 
 Time = 0.24
 
@@ -418,7 +418,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 205
   3 SNES Function norm 3.096244501400e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 15.69 s  ClockTime = 16 s
+ExecutionTime = 15.65 s  ClockTime = 16 s
 
 Time = 0.25
 
@@ -432,7 +432,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 203
   3 SNES Function norm 3.488644187061e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 16.25 s  ClockTime = 16 s
+ExecutionTime = 16.19 s  ClockTime = 17 s
 
 Time = 0.26
 
@@ -446,7 +446,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 182
   3 SNES Function norm 1.624725697445e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 16.77 s  ClockTime = 17 s
+ExecutionTime = 16.72 s  ClockTime = 17 s
 
 Time = 0.27
 
@@ -460,7 +460,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 180
   3 SNES Function norm 2.151936175764e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 17.3 s  ClockTime = 17 s
+ExecutionTime = 17.26 s  ClockTime = 18 s
 
 Time = 0.28
 
@@ -474,7 +474,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 177
   3 SNES Function norm 3.220194607191e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 17.82 s  ClockTime = 18 s
+ExecutionTime = 17.78 s  ClockTime = 18 s
 
 Time = 0.29
 
@@ -488,7 +488,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 182
   3 SNES Function norm 1.868863347600e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 18.36 s  ClockTime = 18 s
+ExecutionTime = 18.32 s  ClockTime = 19 s
 
 Time = 0.3
 
@@ -503,7 +503,7 @@ Linear predictor
   3 SNES Function norm 1.469671418937e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 26544.5
-ExecutionTime = 18.92 s  ClockTime = 19 s
+ExecutionTime = 18.9 s  ClockTime = 19 s
 
 tractions functionObject: writing traction field
 
@@ -533,7 +533,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 179
   3 SNES Function norm 8.941691283120e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 19.98 s  ClockTime = 20 s
+ExecutionTime = 20.03 s  ClockTime = 20 s
 
 Time = 0.33
 
@@ -547,7 +547,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 177
   3 SNES Function norm 1.881266105226e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 20.52 s  ClockTime = 21 s
+ExecutionTime = 20.61 s  ClockTime = 21 s
 
 Time = 0.34
 
@@ -561,7 +561,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 183
   3 SNES Function norm 1.249122155182e-10
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 21.05 s  ClockTime = 21 s
+ExecutionTime = 21.16 s  ClockTime = 21 s
 
 Time = 0.35
 
@@ -575,7 +575,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 190
   3 SNES Function norm 7.814510984369e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 21.59 s  ClockTime = 22 s
+ExecutionTime = 21.71 s  ClockTime = 22 s
 
 Time = 0.36
 
@@ -589,7 +589,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 191
   3 SNES Function norm 5.725810681708e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 22.16 s  ClockTime = 22 s
+ExecutionTime = 22.26 s  ClockTime = 23 s
 
 Time = 0.37
 
@@ -603,7 +603,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 188
   3 SNES Function norm 5.123410402026e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 22.73 s  ClockTime = 23 s
+ExecutionTime = 22.83 s  ClockTime = 23 s
 
 Time = 0.38
 
@@ -617,7 +617,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 186
   3 SNES Function norm 9.020169329186e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 23.33 s  ClockTime = 23 s
+ExecutionTime = 23.38 s  ClockTime = 24 s
 
 Time = 0.39
 
@@ -631,7 +631,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 185
   3 SNES Function norm 8.364971045364e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 23.92 s  ClockTime = 24 s
+ExecutionTime = 23.91 s  ClockTime = 24 s
 
 Time = 0.4
 
@@ -646,7 +646,7 @@ Linear predictor
   3 SNES Function norm 7.363978798833e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 37101.1
-ExecutionTime = 24.48 s  ClockTime = 25 s
+ExecutionTime = 24.47 s  ClockTime = 25 s
 
 tractions functionObject: writing traction field
 
@@ -662,7 +662,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 184
   3 SNES Function norm 5.317501364109e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 25.02 s  ClockTime = 25 s
+ExecutionTime = 25.03 s  ClockTime = 25 s
 
 Time = 0.42
 
@@ -676,7 +676,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 187
   3 SNES Function norm 6.183029289914e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 25.57 s  ClockTime = 26 s
+ExecutionTime = 25.6 s  ClockTime = 26 s
 
 Time = 0.43
 
@@ -690,7 +690,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 188
   3 SNES Function norm 3.244852547053e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 26.12 s  ClockTime = 26 s
+ExecutionTime = 26.16 s  ClockTime = 26 s
 
 Time = 0.44
 
@@ -704,7 +704,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 188
   3 SNES Function norm 3.278157148382e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 26.68 s  ClockTime = 27 s
+ExecutionTime = 26.71 s  ClockTime = 27 s
 
 Time = 0.45
 
@@ -718,7 +718,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 191
   3 SNES Function norm 2.819087756210e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 27.27 s  ClockTime = 27 s
+ExecutionTime = 27.26 s  ClockTime = 28 s
 
 Time = 0.46
 
@@ -732,7 +732,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 191
   3 SNES Function norm 2.781471847062e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 27.82 s  ClockTime = 28 s
+ExecutionTime = 27.81 s  ClockTime = 28 s
 
 Time = 0.47
 
@@ -746,7 +746,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 191
   3 SNES Function norm 1.924143237945e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 28.39 s  ClockTime = 28 s
+ExecutionTime = 28.37 s  ClockTime = 29 s
 
 Time = 0.48
 
@@ -760,7 +760,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 196
   3 SNES Function norm 2.902023199154e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 28.99 s  ClockTime = 29 s
+ExecutionTime = 28.94 s  ClockTime = 29 s
 
 Time = 0.49
 
@@ -774,7 +774,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 199
   3 SNES Function norm 2.621660526062e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 29.56 s  ClockTime = 30 s
+ExecutionTime = 29.5 s  ClockTime = 30 s
 
 Time = 0.5
 
@@ -789,7 +789,7 @@ Linear predictor
   3 SNES Function norm 2.487933808923e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 55119.3
-ExecutionTime = 30.13 s  ClockTime = 30 s
+ExecutionTime = 30.1 s  ClockTime = 30 s
 
 tractions functionObject: writing traction field
 
@@ -805,7 +805,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 196
   3 SNES Function norm 2.375070084075e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 30.69 s  ClockTime = 31 s
+ExecutionTime = 30.67 s  ClockTime = 31 s
 
 Time = 0.52
 
@@ -819,7 +819,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 199
   3 SNES Function norm 2.224109947627e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 31.26 s  ClockTime = 31 s
+ExecutionTime = 31.23 s  ClockTime = 32 s
 
 Time = 0.53
 
@@ -833,7 +833,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 203
   3 SNES Function norm 2.445621900083e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 31.82 s  ClockTime = 32 s
+ExecutionTime = 31.79 s  ClockTime = 32 s
 
 Time = 0.54
 
@@ -847,7 +847,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 204
   3 SNES Function norm 2.447648298357e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 32.39 s  ClockTime = 32 s
+ExecutionTime = 32.36 s  ClockTime = 33 s
 
 Time = 0.55
 
@@ -861,7 +861,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 211
   3 SNES Function norm 9.889615687774e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 32.95 s  ClockTime = 33 s
+ExecutionTime = 32.93 s  ClockTime = 33 s
 
 Time = 0.56
 
@@ -875,7 +875,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 217
   3 SNES Function norm 1.373273292276e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 33.53 s  ClockTime = 34 s
+ExecutionTime = 33.51 s  ClockTime = 34 s
 
 Time = 0.57
 
@@ -889,7 +889,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 218
   3 SNES Function norm 1.695645662810e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 34.11 s  ClockTime = 34 s
+ExecutionTime = 34.08 s  ClockTime = 34 s
 
 Time = 0.58
 
@@ -903,7 +903,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 217
   3 SNES Function norm 1.108165876648e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 34.68 s  ClockTime = 35 s
+ExecutionTime = 34.66 s  ClockTime = 35 s
 
 Time = 0.59
 
@@ -917,7 +917,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 220
   3 SNES Function norm 1.236559715353e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 35.28 s  ClockTime = 35 s
+ExecutionTime = 35.25 s  ClockTime = 36 s
 
 Time = 0.6
 
@@ -932,7 +932,7 @@ Linear predictor
   3 SNES Function norm 1.099793498403e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 73332.5
-ExecutionTime = 35.87 s  ClockTime = 36 s
+ExecutionTime = 35.85 s  ClockTime = 36 s
 
 tractions functionObject: writing traction field
 
@@ -948,7 +948,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 221
   3 SNES Function norm 1.065721831390e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 36.46 s  ClockTime = 37 s
+ExecutionTime = 36.44 s  ClockTime = 37 s
 
 Time = 0.62
 
@@ -962,7 +962,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 221
   3 SNES Function norm 1.086943899361e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 37.04 s  ClockTime = 37 s
+ExecutionTime = 37.03 s  ClockTime = 37 s
 
 Time = 0.63
 
@@ -976,7 +976,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 222
   3 SNES Function norm 1.046338073300e-11
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 37.64 s  ClockTime = 38 s
+ExecutionTime = 37.62 s  ClockTime = 38 s
 
 Time = 0.64
 
@@ -990,7 +990,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 224
   3 SNES Function norm 7.030441389898e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 38.24 s  ClockTime = 38 s
+ExecutionTime = 38.21 s  ClockTime = 38 s
 
 Time = 0.65
 
@@ -1004,7 +1004,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 225
   3 SNES Function norm 5.949151351374e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 38.83 s  ClockTime = 39 s
+ExecutionTime = 38.8 s  ClockTime = 39 s
 
 Time = 0.66
 
@@ -1018,7 +1018,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 233
   3 SNES Function norm 5.948668134160e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 39.42 s  ClockTime = 39 s
+ExecutionTime = 39.38 s  ClockTime = 40 s
 
 Time = 0.67
 
@@ -1032,7 +1032,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 234
   3 SNES Function norm 8.526765403504e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 40.01 s  ClockTime = 40 s
+ExecutionTime = 39.97 s  ClockTime = 40 s
 
 Time = 0.68
 
@@ -1046,7 +1046,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 234
   3 SNES Function norm 7.440590223609e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 40.62 s  ClockTime = 41 s
+ExecutionTime = 40.57 s  ClockTime = 41 s
 
 Time = 0.69
 
@@ -1060,7 +1060,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 223
   3 SNES Function norm 6.251947268651e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 41.22 s  ClockTime = 41 s
+ExecutionTime = 41.15 s  ClockTime = 41 s
 
 Time = 0.7
 
@@ -1075,7 +1075,7 @@ Linear predictor
   3 SNES Function norm 4.488789828287e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 90416.2
-ExecutionTime = 41.83 s  ClockTime = 42 s
+ExecutionTime = 41.76 s  ClockTime = 42 s
 
 tractions functionObject: writing traction field
 
@@ -1091,7 +1091,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 235
   3 SNES Function norm 5.967421136165e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 42.44 s  ClockTime = 42 s
+ExecutionTime = 42.38 s  ClockTime = 43 s
 
 Time = 0.72
 
@@ -1105,7 +1105,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 236
   3 SNES Function norm 9.084484682189e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 43.06 s  ClockTime = 43 s
+ExecutionTime = 42.98 s  ClockTime = 43 s
 
 Time = 0.73
 
@@ -1119,7 +1119,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 236
   3 SNES Function norm 8.820076465777e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 43.66 s  ClockTime = 44 s
+ExecutionTime = 43.59 s  ClockTime = 44 s
 
 Time = 0.74
 
@@ -1133,7 +1133,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 239
   3 SNES Function norm 3.318324848595e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 44.28 s  ClockTime = 44 s
+ExecutionTime = 44.22 s  ClockTime = 44 s
 
 Time = 0.75
 
@@ -1147,7 +1147,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 239
   3 SNES Function norm 3.275845305635e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 44.89 s  ClockTime = 45 s
+ExecutionTime = 44.83 s  ClockTime = 45 s
 
 Time = 0.76
 
@@ -1161,7 +1161,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 236
   3 SNES Function norm 5.818242936199e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 45.51 s  ClockTime = 46 s
+ExecutionTime = 45.45 s  ClockTime = 46 s
 
 Time = 0.77
 
@@ -1175,7 +1175,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 243
   3 SNES Function norm 3.994143861324e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 46.14 s  ClockTime = 46 s
+ExecutionTime = 46.08 s  ClockTime = 46 s
 
 Time = 0.78
 
@@ -1189,7 +1189,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 236
   3 SNES Function norm 5.009937154388e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 46.76 s  ClockTime = 47 s
+ExecutionTime = 46.68 s  ClockTime = 47 s
 
 Time = 0.79
 
@@ -1203,7 +1203,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 239
   3 SNES Function norm 2.356085757675e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 47.38 s  ClockTime = 47 s
+ExecutionTime = 47.31 s  ClockTime = 48 s
 
 Time = 0.8
 
@@ -1218,7 +1218,7 @@ Linear predictor
   3 SNES Function norm 3.113258161398e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 106216
-ExecutionTime = 47.99 s  ClockTime = 48 s
+ExecutionTime = 47.93 s  ClockTime = 48 s
 
 tractions functionObject: writing traction field
 
@@ -1234,7 +1234,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 242
   3 SNES Function norm 2.681612141071e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 48.62 s  ClockTime = 49 s
+ExecutionTime = 48.56 s  ClockTime = 49 s
 
 Time = 0.82
 
@@ -1248,7 +1248,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 249
   3 SNES Function norm 2.363433846485e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 49.26 s  ClockTime = 49 s
+ExecutionTime = 49.21 s  ClockTime = 49 s
 
 Time = 0.83
 
@@ -1262,7 +1262,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 251
   3 SNES Function norm 2.662831458551e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 49.91 s  ClockTime = 50 s
+ExecutionTime = 49.85 s  ClockTime = 50 s
 
 Time = 0.84
 
@@ -1276,7 +1276,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 255
   3 SNES Function norm 2.358565326538e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 50.58 s  ClockTime = 51 s
+ExecutionTime = 50.5 s  ClockTime = 51 s
 
 Time = 0.85
 
@@ -1290,7 +1290,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 257
   3 SNES Function norm 2.242631355757e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 51.24 s  ClockTime = 51 s
+ExecutionTime = 51.17 s  ClockTime = 51 s
 
 Time = 0.86
 
@@ -1304,7 +1304,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 258
   3 SNES Function norm 1.611707706667e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 51.91 s  ClockTime = 52 s
+ExecutionTime = 51.82 s  ClockTime = 52 s
 
 Time = 0.87
 
@@ -1318,7 +1318,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 263
   3 SNES Function norm 2.895439018842e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 52.57 s  ClockTime = 53 s
+ExecutionTime = 52.49 s  ClockTime = 53 s
 
 Time = 0.88
 
@@ -1332,7 +1332,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 264
   3 SNES Function norm 2.660617117097e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 53.26 s  ClockTime = 53 s
+ExecutionTime = 53.15 s  ClockTime = 53 s
 
 Time = 0.89
 
@@ -1346,7 +1346,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 267
   3 SNES Function norm 4.160645981598e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 53.93 s  ClockTime = 54 s
+ExecutionTime = 53.82 s  ClockTime = 54 s
 
 Time = 0.9
 
@@ -1361,7 +1361,7 @@ Linear predictor
   3 SNES Function norm 1.799713779130e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 120865
-ExecutionTime = 54.62 s  ClockTime = 55 s
+ExecutionTime = 54.52 s  ClockTime = 55 s
 
 tractions functionObject: writing traction field
 
@@ -1377,7 +1377,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 268
   3 SNES Function norm 2.671193230151e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 55.31 s  ClockTime = 55 s
+ExecutionTime = 55.2 s  ClockTime = 55 s
 
 Time = 0.92
 
@@ -1391,7 +1391,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 273
   3 SNES Function norm 1.372558947564e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 55.99 s  ClockTime = 56 s
+ExecutionTime = 55.87 s  ClockTime = 56 s
 
 Time = 0.93
 
@@ -1405,7 +1405,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 277
   3 SNES Function norm 2.401255836153e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 56.68 s  ClockTime = 57 s
+ExecutionTime = 56.56 s  ClockTime = 57 s
 
 Time = 0.94
 
@@ -1419,7 +1419,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 285
   3 SNES Function norm 9.442753596549e-13
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 57.38 s  ClockTime = 57 s
+ExecutionTime = 57.26 s  ClockTime = 57 s
 
 Time = 0.95
 
@@ -1433,7 +1433,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 281
   3 SNES Function norm 1.160774758037e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 58.07 s  ClockTime = 58 s
+ExecutionTime = 57.95 s  ClockTime = 58 s
 
 Time = 0.96
 
@@ -1447,7 +1447,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 289
   3 SNES Function norm 1.556936399245e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 58.79 s  ClockTime = 59 s
+ExecutionTime = 58.66 s  ClockTime = 59 s
 
 Time = 0.97
 
@@ -1461,7 +1461,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 293
   3 SNES Function norm 1.426753083814e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 59.52 s  ClockTime = 60 s
+ExecutionTime = 59.36 s  ClockTime = 60 s
 
 Time = 0.98
 
@@ -1475,7 +1475,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 295
   3 SNES Function norm 1.097498385021e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 60.24 s  ClockTime = 60 s
+ExecutionTime = 60.08 s  ClockTime = 60 s
 
 Time = 0.99
 
@@ -1489,7 +1489,7 @@ Linear predictor
     Linear solve converged due to CONVERGED_RTOL iterations 296
   3 SNES Function norm 9.810594300514e-13
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-ExecutionTime = 60.99 s  ClockTime = 61 s
+ExecutionTime = 60.8 s  ClockTime = 61 s
 
 Time = 1
 
@@ -1504,7 +1504,7 @@ Linear predictor
   3 SNES Function norm 1.713530048583e-12
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 Max sigmaEq (von Mises stress) = 134564
-ExecutionTime = 61.75 s  ClockTime = 62 s
+ExecutionTime = 61.53 s  ClockTime = 62 s
 
 tractions functionObject: writing traction field
 
