@@ -112,10 +112,10 @@ int main(int argc, char *argv[])
 
     // -A: this should be 90 to 90 I think?
     // alpha at the endocardium: SHOULD BE INPUT PARAMETER
-    const scalar alphaEndo = degToRad(90.0);
+    const scalar alphaEndo = degToRad(60.0);
 
     // alpha at the epicardium: SHOULD BE INPUT PARAMETER
-    const scalar alphaEpi = degToRad(-90.0);
+    const scalar alphaEpi = degToRad(-60.0);
 
     // Calculate alphaRadians
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     const volScalarField rs
     (
         "rs",
-	(7 + 3*t) * 0.001
+	(2.5 + 1*t) * 0.01
     );
     Info<< "Writing rs" << endl;
     rs.write();
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     const volScalarField rl
     (
         "rl",
-        (17 + 3* t) * 0.001
+        (9 + 0.7* t) * 0.01
     );
     Info<< "Writing rl" << endl;
     rl.write();
@@ -223,8 +223,8 @@ int main(int argc, char *argv[])
 	scalar z = mesh.C()[cellI].z();
 	scalar uValue, vValue;
 	scalar a, b;
-	a = Foam::sqrt((z * z) + (x * x)) / (rs[cellI]);
-	b = y / (rl[cellI]);
+	a = Foam::sqrt((y * y) + (z * z)) / (rs[cellI]);
+	b = x / (rl[cellI]);
 	uValue = Foam::atan2(a, b);
 	u[cellI] = uValue;
 
@@ -249,8 +249,8 @@ int main(int argc, char *argv[])
 	    scalar y =  mesh.C().boundaryField()[patchI][faceI].y();
 	    scalar z =  mesh.C().boundaryField()[patchI][faceI].z();
 
-	    scalar a = Foam::sqrt((z * z) + (x * x)) / (rs.boundaryField()[patchI][faceI]);
-	    scalar b = y / (rl.boundaryField()[patchI][faceI]);
+	    scalar a = Foam::sqrt((y * y) + (z * z)) / (rs.boundaryField()[patchI][faceI]);
+	    scalar b = x / (rl.boundaryField()[patchI][faceI]);
 
 	    scalar uValue = Foam::atan2(a, b);
 	    u.boundaryFieldRef()[patchI][faceI] = uValue;
@@ -365,9 +365,9 @@ int main(int argc, char *argv[])
     // Loop over all mesh cells to calculate d𝐱/du for each point
     forAll(mesh.C(), cellI) {
       // Calculate the components of d𝐱/du for each i-th sample
-      scalar dx_du_x = rs[cellI] * Foam::cos(u[cellI]) * Foam::cos(v[cellI]); // 𝑟𝑠 * cos(u) * cos(v)
-      scalar dx_du_y = rs[cellI] * Foam::cos(u[cellI]) * Foam::sin(v[cellI]); // 𝑟𝑠 * cos(u) * sin(v)
-      scalar dx_du_z = -rl[cellI] * Foam::sin(u[cellI]);           // -𝑟𝑙 * sin(u)
+      scalar dx_du_z = rs[cellI] * Foam::cos(u[cellI]) * Foam::sin(v[cellI]); // 𝑟𝑠 * cos(u) * cos(v)
+      scalar dx_du_y = rs[cellI] * Foam::cos(u[cellI]) * Foam::cos(v[cellI]); // 𝑟𝑠 * cos(u) * sin(v)
+      scalar dx_du_x = -rl[cellI] * Foam::sin(u[cellI]);           // -𝑟𝑙 * sin(u)
 
       // Assign the value to the dx_du field (as a vector)
       dx_du[cellI] = vector(dx_du_x, dx_du_y, dx_du_z); // Create a vector from the components
@@ -378,11 +378,11 @@ int main(int argc, char *argv[])
 	forAll(dx_du.boundaryField()[patchI], faceI) // Loop over faces in each patch
 	  {
 	    // Compute d𝐱/du components using the same logic as for internal cells
-	    scalar dx_du_x = rs.boundaryField()[patchI][faceI] * Foam::cos(u.boundaryField()[patchI][faceI]) * Foam::cos(v.boundaryField()[patchI][faceI]);
+	    scalar dx_du_z = rs.boundaryField()[patchI][faceI] * Foam::cos(u.boundaryField()[patchI][faceI]) * Foam::sin(v.boundaryField()[patchI][faceI]);
 
-	    scalar dx_du_y = rs.boundaryField()[patchI][faceI] *Foam::cos(u.boundaryField()[patchI][faceI]) *Foam::sin(v.boundaryField()[patchI][faceI]);
+	    scalar dx_du_y = rs.boundaryField()[patchI][faceI] *Foam::cos(u.boundaryField()[patchI][faceI]) *Foam::cos(v.boundaryField()[patchI][faceI]);
 
-	    scalar dx_du_z = -rl.boundaryField()[patchI][faceI] *Foam::sin(u.boundaryField()[patchI][faceI]);
+	    scalar dx_du_x = -rl.boundaryField()[patchI][faceI] *Foam::sin(u.boundaryField()[patchI][faceI]);
 
 	    // Assign the computed vector to the boundary field
 	    dx_du.boundaryFieldRef()[patchI][faceI] = vector(dx_du_x, dx_du_y, dx_du_z);
@@ -413,9 +413,9 @@ int main(int argc, char *argv[])
     // Loop over all mesh cells to calculate d𝐱/du for each point                                                                                           
     forAll(mesh.C() ,cellI) {
       // Calculate the components of d𝐱/du for each i-th sample
-      scalar dx_dv_x = -rs[cellI] * Foam::sin(u[cellI]) * Foam::sin(v[cellI]); // 𝑟𝑠 * cos(u) * cos(v)
-      scalar dx_dv_y = rs[cellI] * Foam::sin(u[cellI]) * Foam::cos(v[cellI]); // 𝑟𝑠 * cos(u) * sin(v)
-      scalar dx_dv_z = 0;           // 0
+      scalar dx_dv_z = rs[cellI] * Foam::sin(u[cellI]) * Foam::cos(v[cellI]); // 𝑟𝑠 * cos(u) * cos(v)
+      scalar dx_dv_y = -rs[cellI] * Foam::sin(u[cellI]) * Foam::sin(v[cellI]); // 𝑟𝑠 * cos(u) * sin(v)
+      scalar dx_dv_x = 0;           // 0
 
       // Assign the value to the dx_du field (as a vector)
       dx_dv[cellI] = vector(dx_dv_x, dx_dv_y, dx_dv_z); // Create a vector from the components
@@ -426,11 +426,11 @@ int main(int argc, char *argv[])
 	forAll(dx_dv.boundaryField()[patchI], faceI) // Loop over faces in each patch
 	  {
 	    // Compute d𝐱/dv components using the same logic as for internal cells
-	    scalar dx_dv_x = -rs.boundaryField()[patchI][faceI] * Foam::sin(u.boundaryField()[patchI][faceI]) * Foam::sin(v.boundaryField()[patchI][faceI]);
+	    scalar dx_dv_z = rs.boundaryField()[patchI][faceI] * Foam::sin(u.boundaryField()[patchI][faceI]) * Foam::cos(v.boundaryField()[patchI][faceI]);
 
-	    scalar dx_dv_y = rs.boundaryField()[patchI][faceI] *Foam::sin(u.boundaryField()[patchI][faceI]) *Foam::cos(v.boundaryField()[patchI][faceI]);
+	    scalar dx_dv_y = -rs.boundaryField()[patchI][faceI] *Foam::sin(u.boundaryField()[patchI][faceI]) *Foam::sin(v.boundaryField()[patchI][faceI]);
 
-	    scalar dx_dv_z = 0.0; // No change in the z-direction
+	    scalar dx_dv_x = 0.0; // No change in the z-direction
 
 	    // Assign the computed vector to the boundary field
 	    dx_dv.boundaryFieldRef()[patchI][faceI] = vector(dx_dv_x, dx_dv_y, dx_dv_z);
@@ -472,8 +472,7 @@ int main(int argc, char *argv[])
 	  {
 	    // Compute f1 using the same logic as for internal cells
 	    f1.boundaryFieldRef()[patchI][faceI] = (dx_du.boundaryField()[patchI][faceI] *Foam::sin(alphaRadians.boundaryField()[patchI][faceI])) + 
-	      (dx_dv.boundaryField()[patchI][faceI] * 
-	       Foam::cos(alphaRadians.boundaryField()[patchI][faceI]));
+	      (dx_dv.boundaryField()[patchI][faceI] * Foam::cos(alphaRadians.boundaryField()[patchI][faceI]));
 	  }
 	  }
     /*    forAll(et.boundaryField(), patchI) // same idea as above but applied to the boundary.        
