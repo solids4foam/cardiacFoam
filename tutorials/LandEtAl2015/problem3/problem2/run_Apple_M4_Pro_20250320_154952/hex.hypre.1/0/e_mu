@@ -12,7 +12,7 @@ FoamFile
     arch        "LSB;label=32;scalar=64";
     class       volVectorField;
     location    "0";
-    object      dx_du;
+    object      e_mu;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
