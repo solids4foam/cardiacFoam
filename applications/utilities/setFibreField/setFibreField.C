@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         IOobject::AUTO_WRITE    // Write the field automatically to disk                                                                                    
         ),
        mesh,
-       dimensionedScalar("u", dimless, 0.0)                                                                                             
+       dimensionedScalar("thetha", dimless, 0.0)                                                                                             
        );
 
     //looping through an updating the mu and thetha values based procedure described in paper
