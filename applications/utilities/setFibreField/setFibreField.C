@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
 
 
     volVectorField f0("f0", f1);
-    f0.write()
+    f0.write();
 
     return 0;
 }
