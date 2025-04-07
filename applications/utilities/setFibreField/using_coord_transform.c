@@ -69,32 +69,50 @@ int main(int argc, char *argv[])
         mesh
     );
 
+    // Solve diffusion equation to calculate the transmural distance (t)
+    // Set fixedValue = 0.0 on the endocardium and fixedValue = 1.0 on the
+    // epicardium, with zeroGradient on other patches
+    // -A: logging that we are solving the diffusion equation for t. We are treating it as a heat propogation throughout the mesh to
+    // get the values within the mesh.
     Info<< "Solving the diffusion equation for t" << endl;
-    
+    // -A: diffusion equation... steady state so just the laplacian? should this be steady state? because of incompressibility?
+    // Does this make sense? for instance should it be steady state? or should the transmural directions evolve?
     fvScalarMatrix tEqn(fvm::laplacian(t));
- 
+    //-A: solving the diffusion equation.
     tEqn.solve();
     Info<< "Writing t" << endl;
-  
+    // -A: saving t values.
     t.write();
 
     // Base direction as per Rossi-Lassila et al. approach
     const vector k(0, 0, 1);
 
+    // Transmural direction
+    //-A: calculating the vector field of the gradient of transmural direction and normalising it
+    //-A: does the below make sense as the transmural direction? Since t is defined initially as the transmural direction? or perhaps this is just used
+    //-A: later to arrive at the transmural direction.
+    volVectorField et("et", fvc::grad(t));
+    et /= (magSqr(et)); // transforming this into dx/dt.
+    et /= mag(et);
 
-    //Note I am just using these to initialise my volVectorFields.
-    volVectorField e("et", fvc::grad(t));
-    e /= mag(e);
-
-    // Normal direction -A: the scalar projection of transmural on k... i.e the part of transmural direction that lies on k.                                
-    volVectorField en("en", k - (k & e)*e);
+    // Normal direction -A: the scalar projection of transmural on k... i.e the part of transmural direction that lies on k.
+    volVectorField en("en", k - (k & et)*et);
     en /= mag(en);
 
-    // Longitudinal direction.... cross product.                                                                                                            
-    volVectorField el("el", en ^ e);
+    // Longitudinal direction.... cross product.
+    volVectorField el("el", en ^ et);
     el /= mag(el);
 
-    //using alpha radians as described in Arostica
+    // writing out the files to each one.
+    Info<< "Writing et, en, el, ec" << endl;
+    et.write();
+    en.write();
+    el.write();
+    
+    //-A: perhaps the above is a decomposition of t into 3 components of the vector... i.e in each direction? but its missing one.
+
+    // -A: this should be 90 to 90 I think?
+    // alpha at the endocardium: SHOULD BE INPUT PARAMETER
     const scalar alphaEndo = degToRad(60.0);
 
     // alpha at the epicardium: SHOULD BE INPUT PARAMETER
@@ -102,6 +120,9 @@ int main(int argc, char *argv[])
 
     // Calculate alphaRadians
 
+    //-A: creating a scalar field called alphaRadians. Linearly interpolating between alpha epi and endo as f varies linearly from 0 to 1 here.
+    // -A: I am not sure if this is supposed to be the alpha(t) from the paper which is defined to be 90 -180 t? or if this is strictly for the rotation
+    // to get the mesh.
     const volScalarField alphaRadians
     (
         "alphaRadians",
@@ -111,6 +132,13 @@ int main(int argc, char *argv[])
     );
     Info<< "Writing alphaRadians" << endl;
     alphaRadians.write();
+
+    // Rotate el about et by alphaRadians to get f
+    // using alpha radians to get f? so I think it is the above?
+    // I think alpha radians may be incorrect here since it should depend on t and is defined by 90 - 180t... but how can we use it to define t if
+    // it is dependent on t? and i dont see a dependence on alpha endo or alpha api for alpha radians in the paper.
+    // I am just trying to think this through here.. it could be correct but I need to make sure.
+    // Perhaps this comes from the formula for f where we have f = n (dx/du)cos(alpha) + n (dx/dv) sin(alpha) since cos and sin vary from 1 to -1?
 
 
     /*
@@ -130,7 +158,7 @@ int main(int argc, char *argv[])
     const volScalarField rs
     (
         "rs",
-	(2.5 + 1*t) * 0.01
+	(2.5 + 1*t) // * 0.01
     );
     Info<< "Writing rs" << endl;
     rs.write();
@@ -139,7 +167,7 @@ int main(int argc, char *argv[])
     const volScalarField rl
     (
         "rl",
-        (9 + 0.7* t) * 0.01
+        (9 + 0.7* t) // * 0.01
     );
     Info<< "Writing rl" << endl;
     rl.write();
@@ -178,10 +206,14 @@ int main(int argc, char *argv[])
     //looping through an updating the mu and thetha values based procedure described in paper
     forAll(mesh.C(), cellI)
       {
-        
-	scalar x =  mesh.C()[cellI].x();
-	scalar y = mesh.C()[cellI].y();
-	scalar z = mesh.C()[cellI].z();
+	// Here I was thinking that x, y,z are supposed to come from the local
+	// coordinate system.
+	//vector m = ((mesh.C()[cellI] & en[cellI]) * en[cellI])
+	  // +((mesh.C()[cellI] & el[cellI]) * el[cellI]);
+	
+	scalar x =  el[cellI].x() + en[cellI].x();
+	scalar y = el[cellI].y() + en[cellI].y();
+	scalar z = el[cellI].z() + el[cellI].z();
 	
 	scalar muValue, thethaValue;
 	scalar a, b;
@@ -207,15 +239,16 @@ int main(int argc, char *argv[])
       {
 	forAll(mu.boundaryField()[patchI], faceI)  // Loop over faces in patch
 	  {
-	    scalar x =  mesh.C().boundaryField()[patchI][faceI].x();
-	    scalar y = mesh.C().boundaryField()[patchI][faceI].y();
-	    scalar z = mesh.C().boundaryField()[patchI][faceI].z();
+	    //I tried to do the same x,y,z from the local coord but got strange results
+	    scalar x =  el.boundaryField()[patchI][faceI].x() + en.boundaryField()[patchI][faceI].x();
+	    scalar y = el.boundaryField()[patchI][faceI].y() + el.boundaryField()[patchI][faceI].y();
+	    scalar z = el.boundaryField()[patchI][faceI].z() + el.boundaryField()[patchI][faceI].z();
 	    scalar a = Foam::sqrt((y * y) + (z * z)) / (rs.boundaryField()[patchI][faceI]);
 	    scalar b = x / (rl.boundaryField()[patchI][faceI]);
 
 	    
 	    scalar muValue = Foam::atan2(a, b);
-	    mu.boundaryFieldRef()[patchI][faceI] = muValue;
+	    mu.boundaryFieldRef()[patchI][faceI] = -muValue;
 
 	    scalar thethaValue;
 
@@ -247,9 +280,9 @@ int main(int argc, char *argv[])
 
       //Below is the derivative of each component of the vector from
       //Eq (12) w.r.t mu.
-      scalar e_mu_z = rs[cellI] * Foam::cos(mu[cellI]) * Foam::sin(thetha[cellI]);
+      scalar e_mu_x = rs[cellI] * Foam::cos(mu[cellI]) * Foam::sin(thetha[cellI]);
       scalar e_mu_y = rs[cellI] * Foam::cos(mu[cellI]) * Foam::cos(thetha[cellI]);
-      scalar e_mu_x = -rl[cellI] * Foam::sin(mu[cellI]);
+      scalar e_mu_z = -rl[cellI] * Foam::sin(mu[cellI]);
 
       // Assign the value to the dx_du field (as a vector)
       e_mu[cellI] = vector(e_mu_x, e_mu_y, e_mu_z); // Create a vector from the components
@@ -260,7 +293,7 @@ int main(int argc, char *argv[])
       {
 	forAll(e_mu.boundaryField()[patchI], faceI)
 	  {
-	    scalar e_mu_z = rs.boundaryField()[patchI][faceI] *
+	    scalar e_mu_x = rs.boundaryField()[patchI][faceI] *
 	                     Foam::cos(mu.boundaryField()[patchI][faceI]) *
 	                     Foam::sin(thetha.boundaryField()[patchI][faceI]);
 
@@ -268,7 +301,7 @@ int main(int argc, char *argv[])
 	                     *Foam::cos(mu.boundaryField()[patchI][faceI])
 	                     *Foam::cos(thetha.boundaryField()[patchI][faceI]);
 
-	    scalar e_mu_x = -rl.boundaryField()[patchI][faceI]
+	    scalar e_mu_z = -rl.boundaryField()[patchI][faceI]
 	                     *Foam::sin(mu.boundaryField()[patchI][faceI]);
 
 	    // Assign the computed vector to the boundary field
@@ -288,9 +321,9 @@ int main(int argc, char *argv[])
     forAll(mesh.C() ,cellI) {
 
       // The following is the derivative for the x,y,z component w.r.t thetha in Eq (12) 
-      scalar e_thetha_z = rs[cellI] * Foam::sin(mu[cellI]) * Foam::cos(thetha[cellI]);
+      scalar e_thetha_x = rs[cellI] * Foam::sin(mu[cellI]) * Foam::cos(thetha[cellI]);
       scalar e_thetha_y = -rs[cellI] * Foam::sin(mu[cellI]) * Foam::sin(thetha[cellI]);
-      scalar e_thetha_x = 0;           // 0
+      scalar e_thetha_z = 0;           // 0
 
       e_thetha[cellI] = vector(e_thetha_x, e_thetha_y, e_thetha_z); // Create a vector from the components
     }
@@ -300,7 +333,7 @@ int main(int argc, char *argv[])
       {
 	forAll(e_thetha.boundaryField()[patchI], faceI)
 	  {
-	    scalar e_thetha_z = rs.boundaryField()[patchI][faceI]
+	    scalar e_thetha_x = rs.boundaryField()[patchI][faceI]
 	                      * Foam::sin(mu.boundaryField()[patchI][faceI])
 	                      * Foam::cos(thetha.boundaryField()[patchI][faceI]);
 
@@ -308,7 +341,7 @@ int main(int argc, char *argv[])
 	                       *Foam::sin(mu.boundaryField()[patchI][faceI])
 	                       *Foam::sin(thetha.boundaryField()[patchI][faceI]);
 
-	    scalar e_thetha_x = 0.0; // No change in the z-direction
+	    scalar e_thetha_z = 0.0; // No change in the z-direction
 
 	    // Assign the computed vector to the boundary field
 	    e_thetha.boundaryFieldRef()[patchI][faceI] = vector(e_thetha_x, e_thetha_y, e_thetha_z);
@@ -327,9 +360,15 @@ int main(int argc, char *argv[])
     // well attempting to at least.
     forAll(mesh.C(), cellI)
     {
-      f1[cellI] = 
-		   ( e_mu[cellI] * Foam::sin(alphaRadians[cellI]))
-		     + ( e_thetha[cellI] * Foam::cos(alphaRadians[cellI])) ;
+      f1[cellI] = (
+		   ((( e_mu[cellI] * Foam::sin(alphaRadians[cellI]))
+		     + ( e_thetha[cellI] * Foam::cos(alphaRadians[cellI]))) & el[cellI] )*el[cellI]
+		   )
+	
+	         + (
+		    ((( e_mu[cellI] * Foam::sin(alphaRadians[cellI])) +
+		      ( e_thetha[cellI] * Foam::cos(alphaRadians[cellI]))) & en[cellI]) * en[cellI]
+		    );
 
     }
 
@@ -338,12 +377,26 @@ int main(int argc, char *argv[])
       {
 	forAll(f1.boundaryField()[patchI], faceI)
 	  {
-	    f1.boundaryFieldRef()[patchI][faceI] = 
-						    
-						     (e_mu.boundaryField()[patchI][faceI]
+	    f1.boundaryFieldRef()[patchI][faceI] = (
+						    (
+						     ((e_mu.boundaryField()[patchI][faceI]
 						       *Foam::sin(alphaRadians.boundaryField()[patchI][faceI])) + 
 						      (e_thetha.boundaryField()[patchI][faceI] *
-						       Foam::cos(alphaRadians.boundaryField()[patchI][faceI]));
+						       Foam::cos(alphaRadians.boundaryField()[patchI][faceI])))&
+						     el.boundaryField()[patchI][faceI]
+						     ) * el.boundaryField()[patchI][faceI]
+						    )
+	      
+	                                         +
+	      (
+	       (
+		((e_mu.boundaryField()[patchI][faceI]
+		  *Foam::sin(alphaRadians.boundaryField()[patchI][faceI])) +
+		  (e_thetha.boundaryField()[patchI][faceI] *
+		   Foam::cos(alphaRadians.boundaryField()[patchI][faceI])))
+		 & en.boundaryField()[patchI][faceI]
+		 ) * en.boundaryField()[patchI][faceI]
+	       );
 	  }
 	  }
 
@@ -353,8 +406,127 @@ int main(int argc, char *argv[])
     f1.write();
 
 
+    //writing out the sheet normal and the sheet directions.
+    //From Eq (15) with an extra calculation for the projection of coordinated.
+    volVectorField n_("n_", (( ( e_mu & en )* en) + ( (e_mu & el ) * el ) ) ^ ( (( e_thetha & en )* en) + ( (e_thetha & el ) * el )) );
+    n_ /= mag(n_);
 
+    volVectorField s_("s_", f1 ^ n_ );
+    s_ /= mag(s_);
+
+    Info<< "Writting n_ and s_" << endl;
+    n_.write();
+    s_.write();
+
+
+
+
+
+    
+
+    /*End of trying new approach */
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    //initialising the f0 to el field
     volVectorField f0("f0", f1);
+    //looping though the values of et for each cell.
+    /*
+    forAll(et, cellI)
+    {
+        const tensor rotT = Ra(et[cellI], alphaRadians[cellI]); //computing the rotation matrix for.. rotation around the longitudinal by alpharadians. 
+        f0[cellI] = transform(-rotT, f0[cellI]); // Applying the rotation.
+    }
+    
+    forAll(et.boundaryField(), patchI) // same idea as above but applied to the boundary.
+    {
+        forAll(et.boundaryField()[patchI], faceI)
+        {
+            const tensor rotT = Ra
+            (
+                et.boundaryField()[patchI][faceI],
+                alphaRadians.boundaryField()[patchI][faceI]
+            );
+            f0.boundaryFieldRef()[patchI][faceI] = transform
+            (
+                -rotT,
+                f0.boundaryField()[patchI][faceI]
+            );
+        }
+	}
+    */
+    f0 /= mag(f0);
+    f0.write();
+
+
+    // Calculate surface fields
+    const surfaceScalarField tf(fvc::interpolate(t));
+
+    // Transmural direction
+    surfaceVectorField etf("etf", fvc::interpolate(fvc::grad(t)));
+    //surfaceVectorField n(mesh.Sf()/mesh.magSf());
+    // etf += fvc::snGrad(t)*n - ((I - sqr(n)) & etf);
+    etf /= mag(etf);
+
+    // Normal direction
+    surfaceVectorField enf("enf", k - (k & etf)*etf);
+    enf /= mag(enf);
+
+    // Longitudinal direction
+    surfaceVectorField elf("elf", enf ^ etf);
+    elf /= mag(elf);
+
+    etf.write();
+    enf.write();
+    elf.write();
+
+    // Calculate alphaRadians
+    const surfaceScalarField alphaRadiansf
+    (
+        "alphaRadiansf",
+        alphaEndo*(1.0 - tf) + alphaEpi*tf
+    );
+    Info<< "Writing alphaRadiansf" << endl;
+    alphaRadiansf.write();
+
+    // Rotate el about et by alphaRadians to get f
+    surfaceVectorField f0f("f0f", elf);
+    forAll(etf, faceI)
+    {
+        const tensor rotT = Ra(etf[faceI], alphaRadiansf[faceI]);
+        f0f[faceI] = transform(-rotT, f0f[faceI]);
+    }
+    forAll(etf.boundaryField(), patchI)
+    {
+        forAll(etf.boundaryField()[patchI], faceI)
+        {
+            const tensor rotT = Ra
+            (
+                etf.boundaryField()[patchI][faceI],
+                alphaRadiansf.boundaryField()[patchI][faceI]
+            );
+            f0f.boundaryFieldRef()[patchI][faceI] = transform
+            (
+                -rotT,
+                f0f.boundaryField()[patchI][faceI]
+            );
+        }
+    }
+
+    f0f.write();
+
+    Info<< "\nEnd\n" << endl;
 
     return 0;
 }
