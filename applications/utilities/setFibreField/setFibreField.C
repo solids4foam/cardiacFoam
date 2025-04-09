@@ -1,4 +1,4 @@
-/*---------A---A------A---------------------------------------------------------*\
+/*--------A---A------A---------------------------------------------------------*\
 License
     This file is part of solids4foam.
 
@@ -41,6 +41,9 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
+    #include "vector.H"
+    #include "tensor.H"
+    #include "cmath"
 
     // Read the transmural distance field
     Info<< "Reading t" << endl;
@@ -68,20 +71,23 @@ int main(int argc, char *argv[])
     t.write();
 
     //using alpha radians as described in Arostica
-    const scalar alphaEndo = 60.0;
+    const scalar fibre_Angle_Endo = 90.0;
 
     // alpha at the epicardium: SHOULD BE INPUT PARAMETER
-    const scalar alphaEpi = -60.0;
+    const scalar fibre_Angle_Epi = -90.0;
 
     const scalar pi = Foam::constant::mathematical::pi;
-    // Calculate alphaRadians Eq (16) of Arostica
+
     const volScalarField alphaRadians
     (
         "alphaRadians",
-        (alphaEndo + (alphaEpi - alphaEndo)*t) * pi/180
+        (fibre_Angle_Endo + (fibre_Angle_Epi - fibre_Angle_Endo)*t) * pi/180
     );
+    
     Info<< "Writing alphaRadians" << endl;
     alphaRadians.write();
+
+    
 
 
     /*
@@ -95,19 +101,11 @@ int main(int argc, char *argv[])
 
     //Constants as defined from Eq's (10-11)
     // with r_long_endo = 9x10^-2
-    const scalar r_long_endo = 9*0.01;
-    // with r_long_epi = 9.7x10^-2
-    const scalar r_long_epi = 9.7*0.01;
-    // with r_short_endo = 2.5x10^-2
-    const scalar r_short_endo = 2.5*0.01;
-    // with r_short_epi = 3.5x10^-2
-    const scalar r_short_epi = 3.5*0.01;
-
     //from Eq (16) of the paper we get rs and rl
     const volScalarField rs
     (
         "rs",
-	r_short_endo + (r_short_epi - r_short_endo)*t
+	7 + 3*t
     );
     Info<< "Writing rs" << endl;
     rs.write();
@@ -116,40 +114,59 @@ int main(int argc, char *argv[])
     const volScalarField rl
     (
         "rl",
-        r_long_endo + (r_long_epi - r_long_endo)*t
+        17 + 3*t
     );
     Info<< "Writing rl" << endl;
     rl.write();
 
     
-    //initialising mu from the paper
-    volScalarField mu
+    //initialising uu from the paper
+    volScalarField uu
       (
        IOobject
        (
-        "mu",                    // Name of the field
+        "uu",                    // Name of the field
         runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
         mesh,                   // Mesh to associate the field with
         IOobject::NO_READ,      // Do not read from disk (no existing file)
         IOobject::AUTO_WRITE    // Write the field automatically to disk
 	),
        mesh,
-       dimensionedScalar("mu", dimless, 0.0) // Mesh to define the field on
+       dimensionedScalar("uu", dimless, 0.0) // Mesh to define the field on
        );
 
-    //Initialising thetha from the paper
-    volScalarField thetha
+    //Initialising vv from the paper
+    volScalarField vv
       (
        IOobject
        (
-        "thetha",                    // Name of the field                                                                                                        
+        "vv",                    // Name of the field                                                                                                        
         runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)                                                                                    
         mesh,                   // Mesh to associate the field with                                                                                         
         IOobject::NO_READ,      // Do not read from disk (no existing file)                                                                                 
         IOobject::AUTO_WRITE    // Write the field automatically to disk                                                                                    
         ),
        mesh,
-       dimensionedScalar("thetha", dimless, 0.0)                                                                                             
+       dimensionedScalar("vv", dimless, 0.0)                                                                                             
+       );
+
+    volScalarField q
+      (
+       IOobject
+       (
+	"q",
+
+	runTime.timeName(),
+
+	mesh,
+
+	IOobject::NO_READ,
+
+	IOobject::AUTO_WRITE
+
+	),
+       mesh,
+       dimensionedScalar("q", dimless, 0.0)
        );
 
     //looping through an updating the mu and thetha values based procedure described in paper
@@ -159,225 +176,64 @@ int main(int argc, char *argv[])
 	scalar x =  mesh.C()[cellI].x();
 	scalar y = mesh.C()[cellI].y();
 	scalar z = mesh.C()[cellI].z();
-	
-	scalar muValue, thethaValue;
-	scalar a, b;
-	a = Foam::sqrt((y * y) + (z * z)) / (rs[cellI]); //parameter given in paper to 
-	b = x / (rl[cellI]);                             // get mu and thetha 
-	muValue = Foam::atan2(a, b);
-	mu[cellI] = muValue;
 
-	if(muValue <= 1e-7)
+	vv[cellI] = Foam::atan2(-y, -x);
+	
+	if(std::abs(Foam::cos(vv[cellI])) > 1e-6)
 	  {
-	    thethaValue = 0.0;
-	    thetha[cellI] = thethaValue;
+	    q[cellI] = x / Foam::cos(vv[cellI]);
 	  }
 	
 	else
 	  {
-	    thethaValue = pi - Foam::atan2(z, - y);
-	    thetha[cellI] = thethaValue;
+	    q[cellI] = y / Foam::sin(vv[cellI]);
+	  }
+
+	uu[cellI] = Foam::acos(z / rl[cellI]);
+
+	if(uu[cellI] > 0)
+	  {
+	    uu[cellI] = -uu[cellI];
 	  }
       }
 
-    forAll(mu.boundaryField(), patchI)  // Loop over boundary patches
+    forAll(mesh.C().boundaryField(), patchI)  // Loop over boundary patches
       {
-	forAll(mu.boundaryField()[patchI], faceI)  // Loop over faces in patch
+	forAll(mesh.C().boundaryField()[patchI], faceI)  // Loop over faces in patch
 	  {
 	    scalar x =  mesh.C().boundaryField()[patchI][faceI].x();
 	    scalar y = mesh.C().boundaryField()[patchI][faceI].y();
 	    scalar z = mesh.C().boundaryField()[patchI][faceI].z();
-	    scalar a = Foam::sqrt((y * y) + (z * z)) / (rs.boundaryField()[patchI][faceI]);
-	    scalar b = x / (rl.boundaryField()[patchI][faceI]);
 
+	    vv.boundaryFieldRef()[patchI][faceI] = Foam::atan2(-y, -x);
 	    
-	    scalar muValue = Foam::atan2(a, b);
-	    mu.boundaryFieldRef()[patchI][faceI] = muValue;
-
-	    scalar thethaValue;
-
-	    if (muValue <= 1e-7)
+	    if (std::abs(Foam::cos(vv.boundaryFieldRef()[patchI][faceI])) > 1e-6)
 	      {
-		thethaValue = 0.0;
-		thetha.boundaryFieldRef()[patchI][faceI] = thethaValue;
+		q.boundaryFieldRef()[patchI][faceI] = x / Foam::cos(vv.boundaryField()[patchI][faceI]);
 	      }
 	    else
 	      {
-		thethaValue = pi -  Foam::atan2(z, - y);
-		thetha.boundaryFieldRef()[patchI][faceI] = thethaValue;
+		q.boundaryFieldRef()[patchI][faceI] = y / Foam::sin(vv.boundaryField()[patchI][faceI]);
+	      }
+
+
+	    uu.boundaryFieldRef()[patchI][faceI] = Foam::acos(z / rl.boundaryField()[patchI][faceI]);
+
+	    if(uu.boundaryFieldRef()[patchI][faceI] > 0)
+	      {
+		uu.boundaryFieldRef()[patchI][faceI] = -uu.boundaryField()[patchI][faceI];
 	      }
 	  }
       }
 
     
-    Info<< "Writing mu" << endl;
-    mu.write();
-    Info<< "Writing thetha" << endl;
-    thetha.write();
-
-
-
-    //initialising e_mu from the paper
-    volVectorField e_mu
-      (
-       IOobject
-       (
-	"e_mu",        // Field name
-	mesh.time().timeName(), // Time directory (still required but not used)
-	mesh,             // Mesh reference
-	IOobject::NO_READ,
-	IOobject::NO_WRITE
-	),
-       mesh,
-       vector::zero
-       );
+    Info<< "Writing uu" << endl;
+    uu.write();
+    Info<< "Writing vv" << endl;
+    vv.write();
+    Info<< "Writing q" << endl;
+    q.write();
     
-    //getting values of e_mu by taking the derivatice of Eq(12) w.r.t mu
-    forAll(mesh.C(), cellI) {
-      //NOTE I have changed the x and z values for the derivative since it
-      //gave more reasonable results.
-
-      //Below is the derivative of each component of the vector from
-      //Eq (12) w.r.t mu.
-      scalar e_mu_z = rs[cellI] * Foam::cos(mu[cellI]) * Foam::sin(thetha[cellI]);
-      scalar e_mu_y = rs[cellI] * Foam::cos(mu[cellI]) * Foam::cos(thetha[cellI]);
-      scalar e_mu_x = -rl[cellI] * Foam::sin(mu[cellI]);
-
-      e_mu[cellI] = vector(e_mu_x, e_mu_y, e_mu_z); // Create a vector from the components
-    }
-
-    //Doing the same procedure for the boundaries
-    forAll(e_mu.boundaryField(), patchI)
-      {
-	forAll(e_mu.boundaryField()[patchI], faceI)
-	  {
-	    scalar e_mu_z = rs.boundaryField()[patchI][faceI] *
-	                     Foam::cos(mu.boundaryField()[patchI][faceI]) *
-	                     Foam::sin(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_mu_y = rs.boundaryField()[patchI][faceI]
-	                     *Foam::cos(mu.boundaryField()[patchI][faceI])
-	                     *Foam::cos(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_mu_x = -rl.boundaryField()[patchI][faceI]
-	                     *Foam::sin(mu.boundaryField()[patchI][faceI]);
-
-	    // Assign the computed vector to the boundary field
-	    e_mu.boundaryFieldRef()[patchI][faceI] = vector(e_mu_x, e_mu_y, e_mu_z);
-	  }
-      }
-
-    e_mu /= mag(e_mu);
-    Info<< "Writing e_mu" << endl;
-    e_mu.write();
-
-
-    //initialising e_thetha from the paper
-    volVectorField e_thetha
-      (
-       IOobject
-       (
-	"e_thetha",        // Field name
-	mesh.time().timeName(), // Time directory (still required but not used)
-	mesh,             // Mesh reference
-	IOobject::NO_READ,
-	IOobject::NO_WRITE
-	),
-       mesh,
-       vector::zero
-       );
-    
-    //filling values of e_thetha by taking the derivative of Eq (12) w.r.t thetha
-    
-    forAll(mesh.C() ,cellI) {
-
-      // The following is the derivative for the x,y,z component w.r.t thetha in Eq (12) 
-      scalar e_thetha_z = rs[cellI] * Foam::sin(mu[cellI]) * Foam::cos(thetha[cellI]);
-      scalar e_thetha_y = -rs[cellI] * Foam::sin(mu[cellI]) * Foam::sin(thetha[cellI]);
-      scalar e_thetha_x = 0;           // 0
-
-      e_thetha[cellI] = vector(e_thetha_x, e_thetha_y, e_thetha_z); // Create a vector from the components
-    }
-
-    //Doing the same procedure for the boundaries
-    forAll(e_thetha.boundaryField(), patchI)
-      {
-	forAll(e_thetha.boundaryField()[patchI], faceI)
-	  {
-	    scalar e_thetha_z = rs.boundaryField()[patchI][faceI]
-	                      * Foam::sin(mu.boundaryField()[patchI][faceI])
-	                      * Foam::cos(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_thetha_y = -rs.boundaryField()[patchI][faceI]
-	                       *Foam::sin(mu.boundaryField()[patchI][faceI])
-	                       *Foam::sin(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_thetha_x = 0.0; // No change in the z-direction
-
-	    // Assign the computed vector to the boundary field
-	    e_thetha.boundaryFieldRef()[patchI][faceI] = vector(e_thetha_x, e_thetha_y, e_thetha_z);
-	  }
-      }
-
-    e_thetha /= mag(e_thetha);
-    Info<< "Writing e_thetha" << endl;
-    e_thetha.write();
-
-    
-    //initialising e_t from the paper
-    volVectorField e_t
-      (
-       IOobject
-       (
-	"e_t",        // Field name
-	mesh.time().timeName(), // Time directory (still required but not used)
-	mesh,             // Mesh reference
-	IOobject::NO_READ,
-	IOobject::NO_WRITE
-	),
-       mesh,
-       vector::zero
-       );
-
-    
-    //calculating the derivative of drl/dt and drs/dt
-    const scalar drl_dt = r_long_epi - r_long_endo;
-    const scalar drs_dt = r_short_epi - r_short_endo;
-
-    //filling the values of e_t by taking the derivative of Eq(12) w.r.t t.
-    forAll(mesh.C() ,cellI) {
-
-      // The following is the derivative for the x,y,z component w.r.t thetha in Eq (12)
-      scalar e_t_z = drs_dt * Foam::sin(mu[cellI]) * Foam::sin(thetha[cellI]);
-      scalar e_t_y = drs_dt * Foam::sin(mu[cellI]) * Foam::cos(thetha[cellI]);
-      scalar e_t_x = drl_dt * Foam::cos(mu[cellI]);
-
-      e_t[cellI] = vector(e_t_x, e_t_y, e_t_z); // Create a vector from the components
-    }
-
-    //Doing the same procedure for the boundaries
-    forAll(e_thetha.boundaryField(), patchI)
-      {
-	forAll(e_thetha.boundaryField()[patchI], faceI)
-	  {
-	    scalar e_t_z = drs_dt
-			      * Foam::sin(mu.boundaryField()[patchI][faceI])
-			      * Foam::sin(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_t_y = drs_dt
-			       *Foam::sin(mu.boundaryField()[patchI][faceI])
-			       *Foam::cos(thetha.boundaryField()[patchI][faceI]);
-
-	    scalar e_t_x = drl_dt * Foam::cos(mu.boundaryField()[patchI][faceI]);
-
-	    // Assign the computed vector to the boundary field
-	    e_t.boundaryFieldRef()[patchI][faceI] = vector(e_t_x, e_t_y, e_t_z);
-	  }
-      }
-
-    e_t /= mag(e_t);
-    Info<< "Writing e_t" << endl;
-    e_t.write();
     
     //Initialising the fibres
     volVectorField f1
@@ -397,10 +253,39 @@ int main(int argc, char *argv[])
     //Calculating the fibres based on Eq (15)
     forAll(mesh.C(), cellI)
     {
-      f1[cellI] = 
-		   ( e_mu[cellI] * Foam::sin(alphaRadians[cellI]))
-		     + ( e_thetha[cellI] * Foam::cos(alphaRadians[cellI])) ;
+      scalar u = uu[cellI];
+      scalar v = vv[cellI];
+      scalar fibre_angle = alphaRadians[cellI];
+      scalar short_r = rs[cellI];
+      scalar long_r = rl[cellI];
 
+
+      vector deriv_dir(Foam::sin(fibre_angle), Foam::cos(fibre_angle), 0.0);
+
+
+      vector Mcol0(
+		   short_r * std::cos(u) * std::cos(v),
+		   short_r * std::cos(u) * std::sin(v),
+		   -long_r * std::sin(u)
+		   );
+      vector Mcol1(
+		   -short_r * std::sin(u) * std::sin(v),
+		   short_r * std::sin(u) * std::cos(v),
+		   0
+		   );
+
+      Mcol0 /= mag(Mcol0);
+      Mcol1 /= mag(Mcol1);
+
+      tensor M(
+	       Mcol0.x(), Mcol1.x(), 0,
+	       Mcol0.y(), Mcol1.y(), 0,
+	       Mcol0.z(), Mcol1.z(), 0
+	       );
+
+      vector fVal = M & deriv_dir;
+
+      f1[cellI] = fVal;
     }
 
     // doing the same procedure for the boundaries
@@ -408,12 +293,42 @@ int main(int argc, char *argv[])
       {
 	forAll(f1.boundaryField()[patchI], faceI)
 	  {
-	    f1.boundaryFieldRef()[patchI][faceI] = 
-						    
-						     (e_mu.boundaryField()[patchI][faceI]
-						       *Foam::sin(alphaRadians.boundaryField()[patchI][faceI])) + 
-						      (e_thetha.boundaryField()[patchI][faceI] *
-						       Foam::cos(alphaRadians.boundaryField()[patchI][faceI]));
+	    scalar u = uu.boundaryField()[patchI][faceI];
+	    scalar v = vv.boundaryField()[patchI][faceI];
+	    scalar fibre_angle = alphaRadians.boundaryField()[patchI][faceI];
+	    scalar short_r = rs.boundaryField()[patchI][faceI];
+	    scalar long_r = rl.boundaryField()[patchI][faceI];
+	    
+
+
+	    vector deriv_dir(Foam::sin(fibre_angle), Foam::cos(fibre_angle), 0.0);
+
+
+	    vector Mcol0(
+			 short_r * std::cos(u) * std::cos(v),
+			 short_r * std::cos(u) * std::sin(v),
+			 -long_r * std::sin(u)
+			 );
+	    vector Mcol1(
+			 -short_r * std::sin(u) * std::sin(v),
+			 short_r * std::sin(u) * std::cos(v),
+			 0
+			 );
+
+	    Mcol0 /= mag(Mcol0);
+	    Mcol1 /= mag(Mcol1);
+
+	    tensor M(
+		     Mcol0.x(), Mcol1.x(), 0,
+		     Mcol0.y(), Mcol1.y(), 0,
+		     Mcol0.z(), Mcol1.z(), 0
+		     );
+
+	    vector fVal = M & deriv_dir;
+
+	    f1.boundaryFieldRef()[patchI][faceI] = fVal;
+	    
+	    
 	  }
 	  }
 
@@ -428,17 +343,7 @@ int main(int argc, char *argv[])
     volVectorField f0("f0", f1);
     f0.write();
 
-
-    //Defining the sheet normal and sheet directions as per Eq (15)
-    volVectorField n_("n_", e_mu ^ e_thetha );
-    n_ /= mag(n_);
-    Info<< "Writting n_" << endl;
-    n_.write();
-
-    volVectorField s_("s_", f0 ^ n_);
-    s_ /= mag(s_);
-    Info<< "Writting s_" <<endl;
-    s_.write();
+    
     
     return 0;
 }
