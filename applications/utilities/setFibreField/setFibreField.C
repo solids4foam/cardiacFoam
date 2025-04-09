@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     const volScalarField rs
     (
         "rs",
-        7 + 3*t
+        0.007 + 0.003*t // careful: use metres!
     );
     Info<< "Writing rs" << endl;
     rs.write();
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
     const volScalarField rl
     (
         "rl",
-        17 + 3*t
+        0.017 + 0.003*t // careful: use metres!
     );
     Info<< "Writing rl" << endl;
     rl.write();
@@ -291,8 +291,9 @@ int main(int argc, char *argv[])
             );
         }
     }
-
     Info<< "Writing uu" << endl;
+    Info<< "    max(uu) = " << max(uu) << nl
+        << "    min(uu) = " << min(uu) << endl;
     uu.write();
     Info<< "Writing vv" << endl;
     vv.write();
