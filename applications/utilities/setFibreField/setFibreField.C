@@ -271,8 +271,8 @@ int main(int argc, char *argv[])
         const scalarField& rsP = rs.boundaryField()[patchI];
         const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
         scalarField& uuP = uu.boundaryFieldRef()[patchI];
-        scalarField& vvP = uu.boundaryFieldRef()[patchI];
-        scalarField& qP = uu.boundaryFieldRef()[patchI];
+        scalarField& vvP = vv.boundaryFieldRef()[patchI];
+        scalarField& qP = q.boundaryFieldRef()[patchI];
         vectorField& f0P = f0.boundaryFieldRef()[patchI];
         forAll(CP, faceI) 
         {
