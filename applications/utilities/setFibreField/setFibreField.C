@@ -117,7 +117,6 @@ int main(int argc, char *argv[])
 
     // Read the transmural distance field
     Info<< "Reading t" << endl;
-
     volScalarField t
     (
         IOobject
@@ -132,22 +131,46 @@ int main(int argc, char *argv[])
     );
 
     Info<< "Solving the diffusion equation for t" << endl;
-
     fvScalarMatrix tEqn(fvm::laplacian(t));
-
     tEqn.solve();
-    Info<< "Writing t" << endl;
 
+    Info<< "Writing t" << endl;
     t.write();
 
+    // Read the input dict for specifying user-changeable parameters
+    Info<< "Reading system/setFibreFieldDict" << endl;
+    IOdictionary dict
+    (
+        IOobject
+        (
+            "setFibreFieldDict",
+            runTime.system(),
+            runTime,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        )
+    );
+
+    // Examples for looking up quantities from a dict
+    // const Switch Land2015(dict.lookup("Land2015"));
+    // const vector myVec(dict.lookup("myVec"));
+    // const word myWord(dict.lookup("banana"));
+    // const int myInt(dict.lookupOrDefault<int("myInt", 4));
+
     // Fibre angle at the inner surface
-    const scalar fibreAngleEndo = 90.0;
+    const scalar fibreAngleEndo
+    (
+        dict.lookupOrDefault<scalar>("fibreAngleEndo", 90.0)
+    );
 
     // Fibre angle at the puter surface
-    const scalar fibreAngleEpi = -90.0;
+    const scalar fibreAngleEpi
+    (
+        dict.lookupOrDefault<scalar>("fibreAngleEpi", -90.0)
+    );
 
+    // Alpha field
     const scalar pi = Foam::constant::mathematical::pi;
-
     const volScalarField alphaRadians
     (
         "alphaRadians",
@@ -158,7 +181,25 @@ int main(int argc, char *argv[])
     alphaRadians.write();
 
 
-    // Creating rs and rs to define other stuff
+    // Read geometry parameters
+    const scalar rShortEndo
+    (
+        dict.lookupOrDefault<scalar>("rShortEndo", 0.007)
+    );
+    const scalar rShortEpi
+    (
+        dict.lookupOrDefault<scalar>("rShortEpi", 0.01)
+    );
+    const scalar rLongEndo
+    (
+        dict.lookupOrDefault<scalar>("rLongEndo", 0.017)
+    );
+    const scalar rLongEpi
+    (
+        dict.lookupOrDefault<scalar>("rLongEpi", 0.02)
+    );
+
+    // Creating rs and rs
 
     // Constants as defined from Eq's (10-11)
     // with r_long_endo = 9x10^-2
@@ -166,20 +207,20 @@ int main(int argc, char *argv[])
     const volScalarField rs
     (
         "rs",
-        0.007 + 0.003*t // careful: use metres!
+        // 0.007 + 0.003*t // careful: use metres!
+        rShortEndo + (rShortEpi - rShortEndo)*t
     );
     Info<< "Writing rs" << endl;
     rs.write();
 
-
     const volScalarField rl
     (
         "rl",
-        0.017 + 0.003*t // careful: use metres!
+        // 0.017 + 0.003*t // careful: use metres!
+        rLongEndo + (rLongEpi - rLongEndo)*t
     );
     Info<< "Writing rl" << endl;
     rl.write();
-
 
     // Initialising uu
     volScalarField uu
@@ -211,6 +252,7 @@ int main(int argc, char *argv[])
         dimensionedScalar("vv", dimless, 0.0)
     );
 
+    // Initialising q
     volScalarField q
     (
         IOobject
@@ -291,13 +333,17 @@ int main(int argc, char *argv[])
             );
         }
     }
-    Info<< "Writing uu" << endl;
-    Info<< "    max(uu) = " << max(uu) << nl
+    Info<< "Writing uu" << nl
+        << "    max(uu) = " << max(uu) << nl
         << "    min(uu) = " << min(uu) << endl;
     uu.write();
-    Info<< "Writing vv" << endl;
+    Info<< "Writing vv" << nl
+        << "    max(vv) = " << max(uu) << nl
+        << "    min(vv) = " << min(uu) << endl;
     vv.write();
-    Info<< "Writing q" << endl;
+    Info<< "Writing q" << nl
+        << "    max(q) = " << max(uu) << nl
+        << "    min(q) = " << min(uu) << endl;
     q.write();
 
     // Write f0
