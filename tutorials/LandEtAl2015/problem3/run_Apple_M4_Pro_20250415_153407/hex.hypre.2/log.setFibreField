@@ -1,0 +1,47 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : setFibreField
+Date   : Apr 15 2025
+Time   : 15:35:00
+Host   : Aarons-MacBook-Pro.local
+PID    : 14537
+I/O    : uncollated
+Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem3/run_Apple_M4_Pro_20250415_153407/hex.hypre.2
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+Reading t
+Solving the diffusion equation for t
+FDICPCG:  Solving for t, Initial residual = 1, Final residual = 5.13608e-13, No Iterations 40
+Writing t
+Reading system/setFibreFieldDict
+Writing alphaRadians
+Writing rs
+Writing rl
+Writing uu
+    max(uu) = max(uu) [0 0 0 0 0 0 0] -1.27762
+    min(uu) = min(uu) [0 0 0 0 0 0 0] -3.06241
+Writing vv
+    max(vv) = max(uu) [0 0 0 0 0 0 0] -1.27762
+    min(vv) = min(uu) [0 0 0 0 0 0 0] -3.06241
+Writing q
+    max(q) = max(uu) [0 0 0 0 0 0 0] -1.27762
+    min(q) = min(uu) [0 0 0 0 0 0 0] -3.06241
+Writing f0
+
+Done
+
