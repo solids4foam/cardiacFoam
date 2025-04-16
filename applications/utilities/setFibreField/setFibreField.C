@@ -33,7 +33,85 @@ Author
 #include "transform.H"
 #include "unitConversion.H"
 
-// * * * * * * * * * * * * * Help Functions  * * * * * * * * * * * * * * * * //
+
+
+
+
+// * * * * * * * * * * * * * H Functions  * * * * * * * * * * * * * * * * //
+
+// Arostica et al. (2025) approach
+// The procedure is ported from the python ellipsoid_fiber_generation.py script available
+// in the cardiac_benchmark_toolkit repository shared on github
+void FibreExpression
+(
+    const scalar x,
+    const scalar y,
+    const scalar z,
+    const scalar rl,
+    const scalar rs,
+    const scalar fibreAngle,
+    scalar& a,
+    scalar& b,
+    scalar& uu,
+    scalar& vv,
+    scalar& q,
+    vector& f
+)
+{
+    // a
+    a = Foam::sqrt((y * y) + (z * z))/rs;
+
+    //b
+    b = x / rl;
+
+    //uu
+    uu = Foam::atan2(a, b);
+    // vv
+    if (mag(uu) < 1e-7)
+    {
+        vv = 0;
+    }
+    else
+    {
+      vv = Foam::constant::mathematical::pi - Foam::atan2(z, -y);
+    }
+
+
+    const vector derivDir
+    (
+        Foam::sin(fibreAngle), Foam::cos(fibreAngle), 0.0
+    );
+
+    vector Mcol0
+    (
+        -rl*std::sin(uu),
+        rs*std::cos(uu)*std::cos(vv),
+        rs*std::cos(uu)*std::sin(vv)
+    );
+    Mcol0 /= mag(Mcol0);
+
+    vector Mcol1
+    (
+        0,
+        -rs*std::sin(uu)*std::sin(vv),
+        rs*std::sin(uu)*std::cos(vv)
+    );
+    Mcol1 /= mag(Mcol1);
+
+    const tensor M
+    (
+        Mcol0.x(), Mcol1.x(), 0,
+        Mcol0.y(), Mcol1.y(), 0,
+        Mcol0.z(), Mcol1.z(), 0
+    );
+
+    f = M & derivDir;
+    f /= mag(f);
+}
+
+
+
+// * * * * * * * * * * * * * H Functions  * * * * * * * * * * * * * * * * //
 
 // Land et al. (2015) approach
 // The procedure is ported from the Matlab xyz_to_fiber.m script available
@@ -54,6 +132,7 @@ void xyzToFibre
 {
     // vv
     vv = Foam::atan2(-y, -x);
+    
 
     // q
     if (mag(Foam::cos(vv)) > 1e-6)
@@ -222,6 +301,35 @@ int main(int argc, char *argv[])
     Info<< "Writing rl" << endl;
     rl.write();
 
+
+    volScalarField a
+    (
+	IOobject
+	(
+	    "a",                    // Name of the field
+	    runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
+	    mesh,                   // Mesh to associate the field with
+	    IOobject::NO_READ,      // Do not read from disk (no existing file)
+	    IOobject::AUTO_WRITE    // Write the field automatically to disk
+	),
+	mesh,
+	dimensionedScalar("a", dimless, 0.0) // Mesh to define the field on
+    );
+
+    volScalarField b
+    (
+	IOobject
+	(
+	    "b",                    // Name of the field
+	    runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
+	    mesh,                   // Mesh to associate the field with
+	    IOobject::NO_READ,      // Do not read from disk (no existing file)
+	    IOobject::AUTO_WRITE    // Write the field automatically to disk
+	),
+	mesh,
+	dimensionedScalar("b", dimless, 0.0) // Mesh to define the field on
+    );
+
     // Initialising uu
     volScalarField uu
     (
@@ -287,52 +395,124 @@ int main(int argc, char *argv[])
     const vectorField& CI = C;
 
     // Looping through an updating the mu and theta values
-    forAll(CI, cellI)
-    {
-        xyzToFibre
-        (
-            CI[cellI].x(),
-            CI[cellI].y(),
-            CI[cellI].z(),
-            rl[cellI],
-            rs[cellI],
-            alphaRadians[cellI],
-            uu[cellI],
-            vv[cellI],
-            q[cellI],
-            f0[cellI]
-        );
+
+    if(fibreAngleEndo == 90.0){
+      forAll(CI, cellI)
+	{
+      
+	  xyzToFibre
+	    (
+	     CI[cellI].x(),
+	     CI[cellI].y(),
+	     CI[cellI].z(),
+	     rl[cellI],
+	     rs[cellI],
+	     alphaRadians[cellI],
+	     uu[cellI],
+	     vv[cellI],
+	     q[cellI],
+	     f0[cellI]
+	     );
+	  
+	}
     }
 
-    // Loop over boundary patches
-    forAll(C.boundaryField(), patchI)
-    {
-        // Loop over faces in patch
-        const vectorField& CP = C.boundaryField()[patchI];
-        const scalarField& rlP = rl.boundaryField()[patchI];
-        const scalarField& rsP = rs.boundaryField()[patchI];
-        const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
-        scalarField& uuP = uu.boundaryFieldRef()[patchI];
-        scalarField& vvP = vv.boundaryFieldRef()[patchI];
-        scalarField& qP = q.boundaryFieldRef()[patchI];
-        vectorField& f0P = f0.boundaryFieldRef()[patchI];
-        forAll(CP, faceI) 
+    if(fibreAngleEndo == 60.0){
+      forAll(CI, cellI)
         {
-            xyzToFibre
+
+          FibreExpression
             (
-                CP[faceI].x(),
-                CP[faceI].y(),
-                CP[faceI].z(),
-                rlP[faceI],
-                rsP[faceI],
-                alphaRadiansP[faceI],
-                uuP[faceI],
-                vvP[faceI],
-                qP[faceI],
-                f0P[faceI]
-            );
+             CI[cellI].x(),
+             CI[cellI].y(),
+             CI[cellI].z(),
+             rl[cellI],
+             rs[cellI],
+             alphaRadians[cellI],
+	     a[cellI],
+	     b[cellI],
+             uu[cellI],
+             vv[cellI],
+             q[cellI],
+             f0[cellI]
+             );
+
         }
     }
+    
+    if(fibreAngleEndo == 90.0){
+      // Loop over boundary patches
+      forAll(C.boundaryField(), patchI)
+	{
+	  // Loop over faces in patch
+	  const vectorField& CP = C.boundaryField()[patchI];
+	  const scalarField& rlP = rl.boundaryField()[patchI];
+	  const scalarField& rsP = rs.boundaryField()[patchI];
+	  const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
+	  scalarField& uuP = uu.boundaryFieldRef()[patchI];
+	  scalarField& vvP = vv.boundaryFieldRef()[patchI];
+	  scalarField& qP = q.boundaryFieldRef()[patchI];
+	  vectorField& f0P = f0.boundaryFieldRef()[patchI];
+	  forAll(CP, faceI) 
+	    {
+	      xyzToFibre
+		(
+		 CP[faceI].x(),
+		 CP[faceI].y(),
+		 CP[faceI].z(),
+		 rlP[faceI],
+		 rsP[faceI],
+		 alphaRadiansP[faceI],
+		 uuP[faceI],
+		 vvP[faceI],
+		 qP[faceI],
+		 f0P[faceI]
+		 );
+	    }
+	}
+    }
+
+
+    else if(fibreAngleEndo == 60.0){
+      // Loop over boundary patches
+      forAll(C.boundaryField(), patchI)
+	{
+	  // Loop over faces in patch
+	  const vectorField& CP = C.boundaryField()[patchI];
+	  const scalarField& rlP = rl.boundaryField()[patchI];
+	  const scalarField& rsP = rs.boundaryField()[patchI];
+	  const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
+	  scalarField& aP = a.boundaryFieldRef()[patchI];
+	  scalarField& bP = b.boundaryFieldRef()[patchI];
+	  scalarField& uuP = uu.boundaryFieldRef()[patchI];
+	  scalarField& vvP = vv.boundaryFieldRef()[patchI];
+	  scalarField& qP = q.boundaryFieldRef()[patchI];
+	  vectorField& f0P = f0.boundaryFieldRef()[patchI];
+	  forAll(CP, faceI)
+	    {
+	      FibreExpression
+		(
+		 CP[faceI].x(),
+		 CP[faceI].y(),
+		 CP[faceI].z(),
+		 rlP[faceI],
+		 rsP[faceI],
+		 alphaRadiansP[faceI],
+		 aP[faceI],
+		 bP[faceI],
+		 uuP[faceI],
+		 vvP[faceI],
+		 qP[faceI],
+		 f0P[faceI]
+		 );
+	    }
+	}
+    }
+    Info<< "Writing a" << nl
+        << "    fibreAngleEndo = " << fibreAngleEndo << nl;
+    a.write();
+    Info<< "Writing b" << nl;
+    b.write();
     Info<< "Writing uu" << nl
         << "    max(uu) = " << max(uu) << nl
         << "    min(uu) = " << min(uu) << endl;

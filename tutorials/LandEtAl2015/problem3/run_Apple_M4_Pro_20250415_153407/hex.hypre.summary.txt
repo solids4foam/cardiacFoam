@@ -1,3 +1,4 @@
 # Mesh Time Mem D_L2 D_Linf S_L2 S_Linf
 1 50 128
 2 737 445
+3 20613 2838

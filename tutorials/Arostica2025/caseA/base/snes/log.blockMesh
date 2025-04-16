@@ -8,10 +8,10 @@
 Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : blockMesh
-Date   : Apr 15 2025
-Time   : 17:39:57
+Date   : Apr 16 2025
+Time   : 11:52:15
 Host   : Aarons-MacBook-Pro.local
-PID    : 26062
+PID    : 39507
 I/O    : uncollated
 Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/Arostica2025/caseA/base/snes
 nProcs : 1

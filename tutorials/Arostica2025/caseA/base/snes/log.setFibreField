@@ -8,10 +8,10 @@
 Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : setFibreField
-Date   : Apr 15 2025
-Time   : 17:39:58
+Date   : Apr 16 2025
+Time   : 11:52:17
 Host   : Aarons-MacBook-Pro.local
-PID    : 26067
+PID    : 39513
 I/O    : uncollated
 Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/Arostica2025/caseA/base/snes
 nProcs : 1
@@ -26,21 +26,24 @@ Create mesh for time = 0
 
 Reading t
 Solving the diffusion equation for t
-FDICPCG:  Solving for t, Initial residual = 0.000140928, Final residual = 4.65621e-13, No Iterations 17
+FDICPCG:  Solving for t, Initial residual = 7.3183e-06, Final residual = 4.49028e-13, No Iterations 15
 Writing t
 Reading system/setFibreFieldDict
 Writing alphaRadians
 Writing rs
 Writing rl
+Writing a
+    fibreAngleEndo = 60
+Writing b
 Writing uu
-    max(uu) = max(uu) [0 0 0 0 0 0 0] -1.20477
-    min(uu) = min(uu) [0 0 0 0 0 0 0] -1.93682
+    max(uu) = max(uu) [0 0 0 0 0 0 0] 3.02101
+    min(uu) = min(uu) [0 0 0 0 0 0 0] 1.28823
 Writing vv
-    max(vv) = max(uu) [0 0 0 0 0 0 0] -1.20477
-    min(vv) = min(uu) [0 0 0 0 0 0 0] -1.93682
+    max(vv) = max(uu) [0 0 0 0 0 0 0] 3.02101
+    min(vv) = min(uu) [0 0 0 0 0 0 0] 1.28823
 Writing q
-    max(q) = max(uu) [0 0 0 0 0 0 0] -1.20477
-    min(q) = min(uu) [0 0 0 0 0 0 0] -1.93682
+    max(q) = max(uu) [0 0 0 0 0 0 0] 3.02101
+    min(q) = min(uu) [0 0 0 0 0 0 0] 1.28823
 Writing f0
 
 Done
