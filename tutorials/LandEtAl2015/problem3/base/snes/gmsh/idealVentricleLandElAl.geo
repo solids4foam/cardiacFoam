@@ -26,3 +26,22 @@ BooleanDifference{ Volume{1}; Delete; }{ Volume{2}; Delete; }
 
 // Extract one eigth of the geometry
 BooleanIntersection{ Volume{1}; Delete; }{ Volume{3}; Delete; }
+
+// Tag the physical volume
+Physical Volume("ventricle") = {1};
+
+// Extract surfaces for boundary patches
+// Get all boundary surfaces of the remaining volume
+out[] = Boundary{ Volume{1}; };
+
+// out[] now contains surfaces of:
+// - inner cavity (inside)
+// - outer wall (outside)
+// - cut surface from the box (fixed)
+
+// Use bounding boxes or IDs to distinguish and name the patches.
+// This depends on your geometry, but assuming Gmsh assigns surface numbers in order,
+// you can check in the GUI or mesh file which corresponds to what.
+Physical Surface("inside") = {out[0]};
+Physical Surface("outside") = {out[1]};
+Physical Surface("fixed") = {out[2]};
