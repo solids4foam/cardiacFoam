@@ -42,6 +42,6 @@ out[] = Boundary{ Volume{1}; };
 // Use bounding boxes or IDs to distinguish and name the patches.
 // This depends on your geometry, but assuming Gmsh assigns surface numbers in order,
 // you can check in the GUI or mesh file which corresponds to what.
-Physical Surface("inside") = {out[0]};
-Physical Surface("outside") = {out[1]};
-Physical Surface("fixed") = {out[2]};
+Physical Surface("inside") = {out[2]};
+Physical Surface("outside") = {out[0]};
+Physical Surface("fixed") = {out[1]};
