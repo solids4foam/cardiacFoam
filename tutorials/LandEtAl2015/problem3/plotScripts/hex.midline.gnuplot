@@ -1,14 +1,14 @@
 set term pdfcairo dashed enhanced
 set datafile separator " "
 
-set output "midline.pdf"
+set output "hex.midline.pdf"
 
 set size ratio -1
 
 set grid
-set xrange [-13.5:0]
-set yrange [-28:5]
-set xtics 5
+set xrange [-8.75:0]
+set yrange [-19:5]
+set xtics 2
 #set xtics add (5, 25, 50)
 set ytics
 #set logscale x
@@ -33,8 +33,9 @@ plot \
 
 # Apex plot
 set output "midline_apex.pdf"
-set xrange [-5:0]
-set yrange [-28:-25]
+set xrange [-2:0]
+set yrange [-15:-13]
+set xtics 2
 set size ratio 1
 plot \
     "hex.hypre.1/midLineDeformed.txt" u (1e3*$1):(1e3*$3) w lp pt 6 ps 1 lc "blue" t "{/Symbol \D}x = 1.26 mm", \
@@ -44,9 +45,9 @@ plot \
 
 # Inflection plot
 set output "midline_inflection.pdf"
-set xrange [-13.4:-12.4]
-set yrange [-9:-2]
-set xtics 0.5
+set xrange [-8.75:-8.25]
+set yrange [-2:2]
+set xtics 0.25
 set size ratio 1
 plot \
     "hex.hypre.1/midLineDeformed.txt" u (1e3*$1):(1e3*$3) w lp pt 6 ps 1 lc "blue" t "{/Symbol \D}x = 1.26 mm", \
