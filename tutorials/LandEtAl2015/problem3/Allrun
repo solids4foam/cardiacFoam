@@ -84,14 +84,9 @@ do
             solids4Foam::runApplication gmsh -3 -format msh2 gmsh/idealVentricleLandElAl.geo
             solids4Foam::runApplication gmshToFoam gmsh/idealVentricleLandElAl.msh
             if [ "$USE_DUALMESH" -eq 1 ]; then
-                mv 0 0.tmp
                 solids4Foam::runApplication polyDualMesh 45 -overwrite
                 solids4Foam::runApplication combinePatchFaces 45 -overwrite
-                mv 0.tmp 0
             fi
-            solids4Foam::runApplication autoPatch 45 -overwrite
-            \cp system/createPatchDict.gmsh system/createPatchDict
-            solids4Foam::runApplication createPatch -overwrite
         else
             # Replace the blockMeshDict file
             if [[ ! -f "system/blockMeshDict.$i" ]]
