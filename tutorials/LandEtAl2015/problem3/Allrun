@@ -16,7 +16,7 @@ source solids4FoamScripts.sh
 
 # Define configurations as space-separated strings
 configs=(
-    "BASE=base/snes NAME=hex.hypre USE_GMSH=1 USE_DUALMESH=1 PETSC_FILE=petscOptions.hypre"
+    "BASE=base/snes NAME=poly.hypre USE_GMSH=1 USE_DUALMESH=1 PETSC_FILE=petscOptions.hypre"
     "BASE=base/snes NAME=hex.hypre PETSC_FILE=petscOptions.hypre"
 )
 # Other approaches
