@@ -34,14 +34,11 @@ Author
 #include "unitConversion.H"
 
 
-
-
-
 // * * * * * * * * * * * * * H Functions  * * * * * * * * * * * * * * * * //
 
 // Arostica et al. (2025) approach
-// The procedure is ported from the python ellipsoid_fiber_generation.py script available
-// in the cardiac_benchmark_toolkit repository shared on github
+// The procedure is ported from the python ellipsoid_fiber_generation.py script
+// available in the cardiac_benchmark_toolkit repository shared on github
 void FibreExpression
 (
     const scalar x,
@@ -66,6 +63,7 @@ void FibreExpression
 
     //uu
     uu = Foam::atan2(a, b);
+
     // vv
     if (mag(uu) < 1e-7)
     {
@@ -73,9 +71,8 @@ void FibreExpression
     }
     else
     {
-      vv = Foam::constant::mathematical::pi - Foam::atan2(z, -y);
+        vv = Foam::constant::mathematical::pi - Foam::atan2(z, -y);
     }
-
 
     const vector derivDir
     (
@@ -132,7 +129,6 @@ void xyzToFibre
 {
     // vv
     vv = Foam::atan2(-y, -x);
-    
 
     // q
     if (mag(Foam::cos(vv)) > 1e-6)
@@ -145,7 +141,9 @@ void xyzToFibre
     }
 
     // u
-    uu = Foam::acos(z/rl);
+    // Careful: acos is only defined between -1 and +1. We need to bound the
+    // argument to guard against round-off error
+    uu = Foam::acos(max(min(z/rl, 1.0), -1.0));
 
     if (uu > 0)
     {
@@ -304,30 +302,30 @@ int main(int argc, char *argv[])
 
     volScalarField a
     (
-	IOobject
-	(
-	    "a",                    // Name of the field
-	    runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
-	    mesh,                   // Mesh to associate the field with
-	    IOobject::NO_READ,      // Do not read from disk (no existing file)
-	    IOobject::AUTO_WRITE    // Write the field automatically to disk
-	),
-	mesh,
-	dimensionedScalar("a", dimless, 0.0) // Mesh to define the field on
+        IOobject
+        (
+            "a",                    // Name of the field
+            runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
+            mesh,                   // Mesh to associate the field with
+            IOobject::NO_READ,      // Do not read from disk (no existing file)
+            IOobject::AUTO_WRITE    // Write the field automatically to disk
+        ),
+        mesh,
+        dimensionedScalar("a", dimless, 0.0) // Mesh to define the field on
     );
 
     volScalarField b
     (
-	IOobject
-	(
-	    "b",                    // Name of the field
-	    runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
-	    mesh,                   // Mesh to associate the field with
-	    IOobject::NO_READ,      // Do not read from disk (no existing file)
-	    IOobject::AUTO_WRITE    // Write the field automatically to disk
-	),
-	mesh,
-	dimensionedScalar("b", dimless, 0.0) // Mesh to define the field on
+        IOobject
+        (
+            "b",                    // Name of the field
+            runTime.timeName(),     // Time directory (e.g., "0", "1", etc.)
+            mesh,                   // Mesh to associate the field with
+            IOobject::NO_READ,      // Do not read from disk (no existing file)
+            IOobject::AUTO_WRITE    // Write the field automatically to disk
+        ),
+        mesh,
+        dimensionedScalar("b", dimless, 0.0) // Mesh to define the field on
     );
 
     // Initialising uu
@@ -398,23 +396,23 @@ int main(int argc, char *argv[])
 
     if(fibreAngleEndo == 90.0){
       forAll(CI, cellI)
-	{
-      
-	  xyzToFibre
-	    (
-	     CI[cellI].x(),
-	     CI[cellI].y(),
-	     CI[cellI].z(),
-	     rl[cellI],
-	     rs[cellI],
-	     alphaRadians[cellI],
-	     uu[cellI],
-	     vv[cellI],
-	     q[cellI],
-	     f0[cellI]
-	     );
-	  
-	}
+        {
+
+          xyzToFibre
+            (
+             CI[cellI].x(),
+             CI[cellI].y(),
+             CI[cellI].z(),
+             rl[cellI],
+             rs[cellI],
+             alphaRadians[cellI],
+             uu[cellI],
+             vv[cellI],
+             q[cellI],
+             f0[cellI]
+             );
+
+        }
     }
 
     if(fibreAngleEndo == 60.0){
@@ -429,8 +427,8 @@ int main(int argc, char *argv[])
              rl[cellI],
              rs[cellI],
              alphaRadians[cellI],
-	     a[cellI],
-	     b[cellI],
+             a[cellI],
+             b[cellI],
              uu[cellI],
              vv[cellI],
              q[cellI],
@@ -439,74 +437,74 @@ int main(int argc, char *argv[])
 
         }
     }
-    
+
     if(fibreAngleEndo == 90.0){
       // Loop over boundary patches
       forAll(C.boundaryField(), patchI)
-	{
-	  // Loop over faces in patch
-	  const vectorField& CP = C.boundaryField()[patchI];
-	  const scalarField& rlP = rl.boundaryField()[patchI];
-	  const scalarField& rsP = rs.boundaryField()[patchI];
-	  const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
-	  scalarField& uuP = uu.boundaryFieldRef()[patchI];
-	  scalarField& vvP = vv.boundaryFieldRef()[patchI];
-	  scalarField& qP = q.boundaryFieldRef()[patchI];
-	  vectorField& f0P = f0.boundaryFieldRef()[patchI];
-	  forAll(CP, faceI) 
-	    {
-	      xyzToFibre
-		(
-		 CP[faceI].x(),
-		 CP[faceI].y(),
-		 CP[faceI].z(),
-		 rlP[faceI],
-		 rsP[faceI],
-		 alphaRadiansP[faceI],
-		 uuP[faceI],
-		 vvP[faceI],
-		 qP[faceI],
-		 f0P[faceI]
-		 );
-	    }
-	}
+        {
+          // Loop over faces in patch
+          const vectorField& CP = C.boundaryField()[patchI];
+          const scalarField& rlP = rl.boundaryField()[patchI];
+          const scalarField& rsP = rs.boundaryField()[patchI];
+          const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
+          scalarField& uuP = uu.boundaryFieldRef()[patchI];
+          scalarField& vvP = vv.boundaryFieldRef()[patchI];
+          scalarField& qP = q.boundaryFieldRef()[patchI];
+          vectorField& f0P = f0.boundaryFieldRef()[patchI];
+          forAll(CP, faceI)
+            {
+              xyzToFibre
+                (
+                 CP[faceI].x(),
+                 CP[faceI].y(),
+                 CP[faceI].z(),
+                 rlP[faceI],
+                 rsP[faceI],
+                 alphaRadiansP[faceI],
+                 uuP[faceI],
+                 vvP[faceI],
+                 qP[faceI],
+                 f0P[faceI]
+                 );
+            }
+        }
     }
 
 
     else if(fibreAngleEndo == 60.0){
       // Loop over boundary patches
       forAll(C.boundaryField(), patchI)
-	{
-	  // Loop over faces in patch
-	  const vectorField& CP = C.boundaryField()[patchI];
-	  const scalarField& rlP = rl.boundaryField()[patchI];
-	  const scalarField& rsP = rs.boundaryField()[patchI];
-	  const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
-	  scalarField& aP = a.boundaryFieldRef()[patchI];
-	  scalarField& bP = b.boundaryFieldRef()[patchI];
-	  scalarField& uuP = uu.boundaryFieldRef()[patchI];
-	  scalarField& vvP = vv.boundaryFieldRef()[patchI];
-	  scalarField& qP = q.boundaryFieldRef()[patchI];
-	  vectorField& f0P = f0.boundaryFieldRef()[patchI];
-	  forAll(CP, faceI)
-	    {
-	      FibreExpression
-		(
-		 CP[faceI].x(),
-		 CP[faceI].y(),
-		 CP[faceI].z(),
-		 rlP[faceI],
-		 rsP[faceI],
-		 alphaRadiansP[faceI],
-		 aP[faceI],
-		 bP[faceI],
-		 uuP[faceI],
-		 vvP[faceI],
-		 qP[faceI],
-		 f0P[faceI]
-		 );
-	    }
-	}
+        {
+          // Loop over faces in patch
+          const vectorField& CP = C.boundaryField()[patchI];
+          const scalarField& rlP = rl.boundaryField()[patchI];
+          const scalarField& rsP = rs.boundaryField()[patchI];
+          const scalarField& alphaRadiansP = alphaRadians.boundaryField()[patchI];
+          scalarField& aP = a.boundaryFieldRef()[patchI];
+          scalarField& bP = b.boundaryFieldRef()[patchI];
+          scalarField& uuP = uu.boundaryFieldRef()[patchI];
+          scalarField& vvP = vv.boundaryFieldRef()[patchI];
+          scalarField& qP = q.boundaryFieldRef()[patchI];
+          vectorField& f0P = f0.boundaryFieldRef()[patchI];
+          forAll(CP, faceI)
+            {
+              FibreExpression
+                (
+                 CP[faceI].x(),
+                 CP[faceI].y(),
+                 CP[faceI].z(),
+                 rlP[faceI],
+                 rsP[faceI],
+                 alphaRadiansP[faceI],
+                 aP[faceI],
+                 bP[faceI],
+                 uuP[faceI],
+                 vvP[faceI],
+                 qP[faceI],
+                 f0P[faceI]
+                 );
+            }
+        }
     }
     Info<< "Writing a" << nl
         << "    fibreAngleEndo = " << fibreAngleEndo << nl;
