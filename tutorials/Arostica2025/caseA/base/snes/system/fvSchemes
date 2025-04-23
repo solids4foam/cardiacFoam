@@ -19,12 +19,17 @@ FoamFile
 
 d2dt2Schemes
 {
-    default                 backward;
+    default                 none;
+    //default                 backward;
+    d2dt2(D)                 Euler;
 }
 
 ddtSchemes
 {
-    default                 backward;
+    default                 none;
+    //default                 backward;
+    d2dt2(D)                Euler;
+    ddt(D)                  Euler;
 }
 
 gradSchemes
