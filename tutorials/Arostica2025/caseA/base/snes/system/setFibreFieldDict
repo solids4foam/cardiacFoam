@@ -14,8 +14,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 paperModel         Arostica2025;
-fibreAngleEndo    60.0;
-fibreAngleEpi     -60.0;
+fibreAngleEndo    -60.0;
+fibreAngleEpi     60.0;
 
 rShortEndo        0.025;
 rShortEpi         0.035;
