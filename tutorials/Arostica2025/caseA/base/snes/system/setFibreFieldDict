@@ -13,7 +13,7 @@ FoamFile
     object      setFibreFieldDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+paperModel         Arostica2025;
 fibreAngleEndo    60.0;
 fibreAngleEpi     -60.0;
 
