@@ -3,9 +3,21 @@
 # Source required functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 source solids4FoamScripts.sh
+export PATH="/Applications/Gmsh.app/Contents/MacOS:$PATH"
+
+# Flags
+# - USE_GMSH
+#     0 : uses blockMesh+extrudeMesh to create a hex-dominant mesh
+#     1 : uses gmsh to create an unstructured tetrahedral mesh, which can
+#         optionally be subsequently converted to a polyhedral mesh
+# - USE_DUALMESH
+#     0 : do not convert the mesh into its dual mesh representation
+#     1 : do convert the mesh into its dual mesh representation. If USE_GMSH=1
+#         then the final mesh will be an unstructured polyhedral mesh
 
 # Define configurations as space-separated strings
 configs=(
+    "BASE=base/snes NAME=poly.hypre USE_GMSH=1 USE_DUALMESH=1 PETSC_FILE=petscOptions.hypre"
     "BASE=base/snes NAME=hex.hypre PETSC_FILE=petscOptions.hypre"
 )
 # Other approaches
@@ -65,30 +77,49 @@ do
         cp -r "../${BASE}" "${CASE}"
         cd "$CASE"
 
-        # Replace the blockMeshDict file
-        if [[ ! -f "system/blockMeshDict.$i" ]]
+        # Mesh generation logic
+        if [ "$USE_GMSH" -eq 1 ]
         then
-            echo "Cannot find ${CASE}/system/blockMeshDict.$i: please add it to ${BASE}/system/"; echo
-            exit 1;
+            # GMSH-specific operations
+            \cp "gmsh/meshSpacing$i.geo" "gmsh/meshSpacing.geo"
+            solids4Foam::runApplication gmsh -3 -format msh2 gmsh/idealVentricleLandElAl.geo
+            solids4Foam::runApplication gmshToFoam gmsh/idealVentricleLandElAl.msh
+            if [ "$USE_DUALMESH" -eq 1 ]; then
+                solids4Foam::runApplication polyDualMesh 45 -overwrite
+                solids4Foam::runApplication combinePatchFaces 45 -overwrite
+            fi
+	    # Apply transformations to match Arostica geometry
+	    solids4Foam::runApplication transformPoints -rotate "((-1 0 0)(0 0 1))" -scale "(4.93884 3.50249 3.50249)"
+
+	   # solids4Foam::runApplication transformPoints -scale "(4.93884 3.50249 3.50249)"
         else
-            echo "Copying ${CASE}/system/blockMeshDict.$i to ${CASE}/system/blockMeshDict"
-            \cp "system/blockMeshDict.$i" system/blockMeshDict
+            # Replace the blockMeshDict file
+            if [[ ! -f "system/blockMeshDict.$i" ]]
+            then
+                echo "Cannot find ${CASE}/system/blockMeshDict.$i: please add it to ${BASE}/system/"; echo
+                exit 1;
+            else
+                echo "Copying ${CASE}/system/blockMeshDict.$i to ${CASE}/system/blockMeshDict"
+                \cp "system/blockMeshDict.$i" system/blockMeshDict
+            fi
+
+            # Replace the extrudeMeshDict file
+            if [[ ! -f "system/extrudeMeshDict.$i" ]]
+            then
+                echo "Cannot find ${CASE}/system/extrudeMeshDict.$i: please add it to ${BASE}/system/"; echo
+                exit 1;
+            else
+                echo "Copying ${CASE}/system/extrudeMeshDict.$i to ${CASE}/system/extrudeMeshDict"
+                \cp "system/extrudeMeshDict.$i" system/extrudeMeshDict
+            fi
+
+            # Create the mesh
+            solids4Foam::runApplication blockMesh
+            solids4Foam::runApplication extrudeMesh
+            solids4Foam::runApplication createPatch -overwrite
         fi
 
-        # Replace the extrudeMeshDict file
-        if [[ ! -f "system/extrudeMeshDict.$i" ]]
-        then
-            echo "Cannot find ${CASE}/system/extrudeMeshDict.$i: please add it to ${BASE}/system/"; echo
-            exit 1;
-        else
-            echo "Copying ${CASE}/system/extrudeMeshDict.$i to ${CASE}/system/extrudeMeshDict"
-            \cp "system/extrudeMeshDict.$i" system/extrudeMeshDict
-        fi
-
-        # Create the mesh
-        solids4Foam::runApplication blockMesh
-        solids4Foam::runApplication extrudeMesh
-        solids4Foam::runApplication createPatch -overwrite
+        # Create the initial fibre field f0
         solids4Foam::runApplication setFibreField
 
         # Update the PETSc options file
