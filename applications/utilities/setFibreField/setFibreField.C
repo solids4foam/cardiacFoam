@@ -51,7 +51,6 @@ void FibreExpression
     scalar& b,
     scalar& uu,
     scalar& vv,
-    scalar& q,
     vector& f
 )
 {
@@ -234,6 +233,10 @@ int main(int argc, char *argv[])
     // const word myWord(dict.lookup("banana"));
     // const int myInt(dict.lookupOrDefault<int("myInt", 4));
 
+    //Adding the paper model variable from the dict
+    const word paperModel(dict.lookupOrDefault<word>("paperModel", "Land2015"));
+
+    
     // Fibre angle at the inner surface
     const scalar fibreAngleEndo
     (
@@ -394,7 +397,7 @@ int main(int argc, char *argv[])
 
     // Looping through an updating the mu and theta values
 
-    if(fibreAngleEndo == 90.0){
+    if(paperModel == "Land2015"){
       forAll(CI, cellI)
         {
 
@@ -413,33 +416,8 @@ int main(int argc, char *argv[])
              );
 
         }
-    }
 
-    if(fibreAngleEndo == 60.0){
-      forAll(CI, cellI)
-        {
-
-          FibreExpression
-            (
-             CI[cellI].x(),
-             CI[cellI].y(),
-             CI[cellI].z(),
-             rl[cellI],
-             rs[cellI],
-             alphaRadians[cellI],
-             a[cellI],
-             b[cellI],
-             uu[cellI],
-             vv[cellI],
-             q[cellI],
-             f0[cellI]
-             );
-
-        }
-    }
-
-    if(fibreAngleEndo == 90.0){
-      // Loop over boundary patches
+      //Doing the same for the boundaries
       forAll(C.boundaryField(), patchI)
         {
           // Loop over faces in patch
@@ -470,9 +448,28 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(paperModel == "Arostica2025"){
+      forAll(CI, cellI)
+        {
 
-    else if(fibreAngleEndo == 60.0){
-      // Loop over boundary patches
+          FibreExpression
+            (
+             CI[cellI].x(),
+             CI[cellI].y(),
+             CI[cellI].z(),
+             rl[cellI],
+             rs[cellI],
+             alphaRadians[cellI],
+             a[cellI],
+             b[cellI],
+             uu[cellI],
+             vv[cellI],
+             f0[cellI]
+             );
+
+        }
+
+      //Doing the same for boundaries
       forAll(C.boundaryField(), patchI)
         {
           // Loop over faces in patch
@@ -484,7 +481,6 @@ int main(int argc, char *argv[])
           scalarField& bP = b.boundaryFieldRef()[patchI];
           scalarField& uuP = uu.boundaryFieldRef()[patchI];
           scalarField& vvP = vv.boundaryFieldRef()[patchI];
-          scalarField& qP = q.boundaryFieldRef()[patchI];
           vectorField& f0P = f0.boundaryFieldRef()[patchI];
           forAll(CP, faceI)
             {
@@ -500,12 +496,12 @@ int main(int argc, char *argv[])
                  bP[faceI],
                  uuP[faceI],
                  vvP[faceI],
-                 qP[faceI],
                  f0P[faceI]
                  );
             }
         }
     }
+
     Info<< "Writing a" << nl
         << "    fibreAngleEndo = " << fibreAngleEndo << nl;
     a.write();
