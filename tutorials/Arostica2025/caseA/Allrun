@@ -4,6 +4,8 @@
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 source solids4FoamScripts.sh
 
+export PATH="/Applications/Gmsh.app/Contents/MacOS:$PATH"
+
 # Flags
 # - USE_GMSH
 #     0 : uses blockMesh+extrudeMesh to create a hex-dominant mesh
@@ -16,8 +18,8 @@ source solids4FoamScripts.sh
 
 # Define configurations as space-separated strings
 configs=(
-    "BASE=base/snes NAME=poly.hypre USE_GMSH=1 USE_DUALMESH=1 PETSC_FILE=petscOptions.hypre"
-    "BASE=base/snes NAME=hex.hypre PETSC_FILE=petscOptions.hypre"
+    "BASE=base/snes NAME=poly.hypre USE_GMSH=1 USE_DUALMESH=1 PETSC_FILE=petscOptions.hypre "
+    "BASE=base/snes NAME=hex.hypre PETSC_FILE=petscOptions.hypre "
 )
 # Other approaches
 #    "BASE=base/segregated NAME=hex.seg"

@@ -5,6 +5,7 @@
 
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
+source solids4FoamScripts.sh
 
 # Create mesh in steps:
 #     1. Create slice of a circle
@@ -13,6 +14,9 @@
 runApplication blockMesh
 runApplication extrudeMesh
 runApplication createPatch -overwrite
+
+#Testing fibres on this case since it shouldnt matter
+runApplication setFibreField
 
 # Run the solver
 if [[ "$1" == "parallel" ]]

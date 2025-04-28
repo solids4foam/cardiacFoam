@@ -2,7 +2,7 @@
 
 ## Overview
 This 3-D problem consists of the inflation and active contraction of an idealisde ventricle, as
-proposed in the Land et al. (2015) benchmark article.
+proposed in problem 3 of the Land et al. (2015) benchmark article.
 ### Mathematical Model
 The ventricles undeformed geometry is defined as the ellipsoid equation seen below. 
 The $\alpha$ parameter is the fibre angle which is set as $-90^\circ$ on the 
@@ -29,7 +29,17 @@ when $u>0$ we set $u=-u$.
 The code for this mathematical set up can be seen in the /applications/utilities/setFibreFields/setFibreFields.c
 file. Specifically it is within the xyz function.
 
-## Instructions
+Active contraction: for this problem, we have an active stress given by a constant, homogenous, second
+order piola kirchoff stress in the fibre direction of 60kPa.:
+$$
+\mathbf{T} = \mathbf{T}_{p} T_{a}\mathbf{f}\mathbf{f}^{T}
+$$
+Where $T_{a} = 60kPa$, $\mathbf{f}$ is the vector of fibre direction and $\mathbf{T}_{p} = 
+\frac{\partial \mathbf{W} }{\partial \mathbf{E}}$
+with $\mathbf{W}(\mathbf{E})$ being the strain energy function. 
+
+The code for this can be found in the solids4foam repository under the Guccione law.
+/## Instructions
 ### Compile `extractIdealisedVentricleResults` Utilty
 The `extractIdealisedVentricleResults` utility is used to extract results from
 the idealised ventricle case.

@@ -16,6 +16,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+libs            ("libsolids4FoamModels.so");
+
 application     solids4Foam;
 
 startFrom       latestTime;

@@ -5,3 +5,5 @@
 
 cleanCase
 rm -rf case.foam postProcessing constant/dualMesh
+rm -rf 0/t
+cp 0/org/t 0/t
