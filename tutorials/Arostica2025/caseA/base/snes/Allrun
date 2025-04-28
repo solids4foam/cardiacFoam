@@ -5,7 +5,6 @@
 
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
-source solids4FoamScripts.sh
 
 # Create mesh in steps:
 #     1. Create slice of a circle
@@ -15,7 +14,13 @@ runApplication blockMesh
 runApplication extrudeMesh
 runApplication createPatch -overwrite
 
-#Testing fibres on this case since it shouldnt matter
+
+#Applying the transformation to the mesh so it matches Arostica.
+transformPoints -rotate "( (-1 0 0) (0 0 1) )"
+transformPoints -scale '(4.93884 3.50249 3.50249)'
+
+#setting FibreFields
+
 runApplication setFibreField
 
 # Run the solver

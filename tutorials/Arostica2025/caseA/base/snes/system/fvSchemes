@@ -13,20 +13,48 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      fvSolution;
+    object      fvSchemes;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-solvers
+d2dt2Schemes
 {
-    t
-    {
-        solver          PCG;
-        preconditioner  FDIC;
-        tolerance       1e-12;
-        relTol          0.0;
-        maxIter         1000;
-    }
+    default                 none;
+    //default                 backward;
+    d2dt2(D)                 Euler;
+}
+
+ddtSchemes
+{
+    default                 none;
+    //default                 backward;
+    d2dt2(D)                Euler;
+    ddt(D)                  Euler;
+}
+
+gradSchemes
+{
+    default                 leastSquaresS4f;
+}
+
+divSchemes
+{
+    default                 Gauss linear;
+}
+
+laplacianSchemes
+{
+    default                 Gauss linear corrected;
+}
+
+snGradSchemes
+{
+    default                 corrected;
+}
+
+interpolationSchemes
+{
+    default                 linear;
 }
 
 // ************************************************************************* //

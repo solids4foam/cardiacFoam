@@ -1,0 +1,80 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : 39362aec25-20240625 OPENFOAM=2312 patch=240625 version=v2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : solids4Foam
+Date   : Apr 02 2025
+Time   : 16:15:11
+Host   : Aarons-MacBook-Pro.local
+PID    : 37414
+I/O    : uncollated
+Case   : /Volumes/OpenFoam/aaronmullen-hales-v2312/run/PHDS1/cardiacFoam/tutorials/LandEtAl2015/problem1/implicitSegregated/base
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+/*---------------------------------------------------------------------------*\
+|    For further information on the solids4Foam toolbox implementations,      |
+|    please see the following publications:                                   |
+|                                                                             |
+|    P. Cardiff, A Karac, P. De Jaeger, H. Jasak, J. Nagy, A. Ivankovic,      |
+|    Z. Tukovic: An open-source finite volume toolbox for solid mechanics and |
+|    fluid-solid interaction simulations. arXiv:1808.10736v2, 2018, available |
+|    at https://arxiv.org/abs/1808.10736.                                     |
+|                                                                             |
+|    Z. Tukovic, A. Karac, P. Cardiff, H. Jasak, A. Ivankovic: OpenFOAM       |
+|    finite volume solver for fluid-solid interaction.  Transactions of       |
+|    Famena, 42 (3), pp. 1-31, 2018, 10.21278/TOF.42301.                      |
+\*---------------------------------------------------------------------------*/
+
+Selecting physicsModel solidModel
+Selecting solidModel nonLinearGeometryTotalLagrangianTotalDisplacement
+Selecting dynamicFvMesh staticFvMesh
+Creating fixedDisplacement boundary condition
+Creating solidTraction boundary condition
+Creating solidTraction boundary condition
+Creating solidTraction boundary condition
+Creating solidTraction boundary condition
+Creating solidTraction boundary condition
+    under-relaxation method: fixed
+No finite volume options present
+Creating the mechanicalModel
+Selecting mechanical law electroMechanicalLaw
+Selecting mechanical law GuccioneElastic
+    Laplacian equation will be solved for pressure
+    pressureSmoothingScaleFactor: 10000
+Creating pointDisp function object
+    region = region0
+    distance from specified point is 0
+Creating traction function object
+Time = 1
+
+Evolving solid solver using an implicit segregated approach
+Solving the total Lagrangian form of the momentum equation for D
+setCellDisplacements: reading cellDisplacements
+Initial Residual Norm = 1
+Initial Solution Norm = 7.16238e-06
+ Iteration       Residual Norm           Step Norm
+[stack trace]
+=============
+#1  Foam::sigFpe::sigHandler(int) in /Volumes/OpenFoam/OpenFOAM-v2312/platforms/darwin64ClangDPInt32Opt/lib/libOpenFOAM.dylib
+#2  _sigtramp in /usr/lib/system/libsystem_platform.dylib
+#3  ?
+#4  Foam::exp(Foam::Field<double>&, Foam::UList<double> const&) in /Volumes/OpenFoam/OpenFOAM-v2312/platforms/darwin64ClangDPInt32Opt/lib/libOpenFOAM.dylib
+#5  Foam::tmp<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh>> Foam::exp<Foam::fvPatchField, Foam::volMesh>(Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> const&) in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/lib/libsolids4FoamModels.dylib
+#6  Foam::GuccioneElastic::correct(Foam::GeometricField<Foam::SymmTensor<double>, Foam::fvPatchField, Foam::volMesh>&) in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/lib/libsolids4FoamModels.dylib
+#7  Foam::electroMechanicalLaw::correct(Foam::GeometricField<Foam::SymmTensor<double>, Foam::fvPatchField, Foam::volMesh>&) in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/lib/libsolids4FoamModels.dylib
+#8  Foam::solidModels::nonLinGeomTotalLagTotalDispSolid::evolveImplicitSegregated() in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/lib/libsolids4FoamModels.dylib
+#9  Foam::solidModels::nonLinGeomTotalLagTotalDispSolid::evolve() in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/lib/libsolids4FoamModels.dylib
+#10  main in ~/OpenFOAM/aaronmullen-hales-v2312/platforms/darwin64ClangDPInt32Opt/bin/solids4Foam
+#11  start in /usr/lib/dyld
+=============

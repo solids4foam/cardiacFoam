@@ -12,21 +12,13 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      fvSolution;
+    location    "constant";
+    object      physicsProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-solvers
-{
-    t
-    {
-        solver          PCG;
-        preconditioner  FDIC;
-        tolerance       1e-12;
-        relTol          0.0;
-        maxIter         1000;
-    }
-}
+// type    fluid;
+type    solid;
+// type    fluidSolidInteraction;
 
 // ************************************************************************* //
