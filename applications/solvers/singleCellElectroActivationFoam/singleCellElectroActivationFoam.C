@@ -39,11 +39,12 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
-#include "tentusscher_noble_noble_panfilov_2004.H"
+// #include <math.h>
+// #include "tentusscher_noble_noble_panfilov_2004.H"
 #include "fvCFD.H"
 #include "interpolationTable.H"
 #include "OFstream.H"
+#include "ionicModelCellML.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -52,26 +53,27 @@ int main(int argc, char *argv[])
     #include "setRootCaseLists.H"
     #include "createTime.H"
 
-    Info<< nl << "Creating STATES array" << endl;
-    scalarList STATES(17, 0.0);
+    // Read electoActivationProperties
+    Info<< "Reading electroActivationProperties\n" << endl;
+    IOdictionary electroActivationProperties
+    (
+        IOobject
+        (
+            "electroActivationProperties",
+            runTime.constant(),
+            runTime,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE
+        )
+    );
 
-    Info<< nl << "Creating CONSTANTS array" << endl;
-    scalarList CONSTANTS(46, 0.0);
-
-    Info<< nl << "Creating ALGEBRAIC array" << endl;
-    scalarList ALGEBRAIC(69, 0.0);
-
-    Info<< nl << "Creating RATES array" << endl;
-    scalarList RATES(17, 0.0);
-
-    Info<< nl << "Calling initConsts" << endl;
-    initConsts(CONSTANTS.data(), RATES.data(), STATES.data());
-
-    Info<< nl
-        << "CONSTANTS = " << CONSTANTS << nl
-        << "STATES = " << STATES << endl;
+    // Create ionicModelCellML object
+    ionicModelCellML ionicModel(electroActivationProperties);
 
     // Create the voltage vs time interpolation table
+    Info<< "Reading timeVsVoltage.txt" << nl
+        << "Note: this file should contain the time in ms and voltage in mV!"
+        << endl;
     interpolationTable<scalar> timeVsVoltage("timeVsVoltage.txt");
 
     // Create a file for the output
@@ -87,60 +89,26 @@ int main(int argc, char *argv[])
         // Time in milliseconds
         const scalar VOI = runTime.value()*1000;
 
-        // Lookup the voltage for this time (time should be in seconds!)
-        const scalar voltage = timeVsVoltage(runTime.value());
+        // Lookup the voltage for this time (time should be in milliseconds!)
+        const scalar voltage = timeVsVoltage(VOI);
 
-        // Set the voltage in the STATES vector
-        STATES[0] = voltage;
+        // Define the time step in ms
+        const scalar deltaT = runTime.deltaTValue()*1000;
 
-        // TODO: we need to solve the ODEs here!
+        // Define the old time in ms
+        const scalar tOld = VOI - deltaT;
 
-        // Compute the rates
-        Info<< "Calling computeRates" << endl;
-        computeRates
-        (
-            VOI,
-            CONSTANTS.data(),
-            RATES.data(),
-            STATES.data(),
-            ALGEBRAIC.data()
-        );
+        // Solve the ionic model ODEs for this time step given the known voltage
+        ionicModel.solve(tOld, deltaT, voltage);
 
-        // Compute the variables
-        Info<< "Calling computeVariables" << endl;
-        computeVariables
-        (
-            VOI,
-            CONSTANTS.data(),
-            RATES.data(),
-            STATES.data(),
-            ALGEBRAIC.data()
-        );
+        // Compute the variables for the given time
+        ionicModel.computeVariables(VOI);
 
-        // Write the results
-        Info<< "Writing the output" << endl;
-        output
-            << VOI;
-        forAll(STATES, i)
-        {
-            output
-                << " " << STATES[i];
-        }
-        forAll(ALGEBRAIC, i)
-        {
-            output
-                << " " << ALGEBRAIC[i];
-        }
-        forAll(RATES, i)
-        {
-            output
-                << " " << RATES[i];
-        }
-        output
-            << endl;
+        // Write the fields to a file
+        ionicModel.write(VOI, output);
     }
 
-    Info<< "The results are printed to output.txt as "
+    Info<< "The results are printed to " << output.name() << " as "
         << "[Time STATES ALGEBRAIC RATES]" << endl;
 
     Info<< "End\n" << endl;

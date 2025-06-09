@@ -1,3 +1,4 @@
+ionicModelCellML.C
 singleCellElectroActivationFoam.C
 
 EXE = $(FOAM_USER_APPBIN)/singleCellElectroActivationFoam

@@ -10,40 +10,24 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "constant";
+    object      electroActivationProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     electroActivationFoam;
+// ODE solver
+solver    RKF45;
 
-startFrom       startTime;
+// Maximum number of steps
+//maxSteps 1000000000;
 
-startTime       0;
+// Relative tolerance
+// Defaults to 1e-4
+//relTol 1e-4;
 
-stopAt          endTime;
-
-endTime         0.4;
-
-deltaT          5e-6;
-
-writeControl    runTime;
-
-writeInterval   1;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable false;
+// Absolute tolerance
+// Defaults to 1e-15
+absTol 1e-15;
 
 
 // ************************************************************************* //
