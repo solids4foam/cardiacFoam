@@ -31,7 +31,7 @@ solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
     optionsFile petscOptions.hypre;
 
     // Predictor D at the start of a new time step using U and A
-    predictor yes;
+    predictor no;
 
     stabilisation
     {

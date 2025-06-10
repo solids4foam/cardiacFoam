@@ -19,12 +19,12 @@ FoamFile
 
 d2dt2Schemes
 {
-    default                 backward;
+    default                 steadyState;
 }
 
 ddtSchemes
 {
-    default                 backward;
+    default                 steadyState;
 }
 
 gradSchemes

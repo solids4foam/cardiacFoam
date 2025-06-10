@@ -10,7 +10,8 @@ for mesh in mesh2 mesh3 mesh4 mesh5; do
     
     if [[ -f "$file" ]]; then
         # Get the dz value: 4th entry of 2nd line
-        dz=$(awk 'NR==2 { print $4 }' "$file")
+	dz=$(awk 'END { print $4 }' "$file")
+        #dz=$#(awk 'NR==2 { print $4 }' "$file")
         echo "$mesh $dz" >> "$output"
     else
         echo "Warning: $file not found"
