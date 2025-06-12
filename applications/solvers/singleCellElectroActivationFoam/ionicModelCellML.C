@@ -68,12 +68,9 @@ Foam::ionicModelCellML::~ionicModelCellML()
 
 void Foam::ionicModelCellML::solve
 (
-    const scalar tOld, const scalar deltaT, const scalar voltage
+    const scalar tOld, const scalar deltaT
 ) const
 {
-    // Set the voltage in the state vector
-    STATES_[0] = voltage;
-
     // Define the start time, end time and initial time step
     const scalar tStart = tOld;
     const scalar tEnd = tOld + deltaT;

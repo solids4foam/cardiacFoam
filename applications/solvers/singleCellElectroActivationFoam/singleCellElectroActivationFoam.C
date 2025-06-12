@@ -70,12 +70,6 @@ int main(int argc, char *argv[])
     // Create ionicModelCellML object
     ionicModelCellML ionicModel(electroActivationProperties);
 
-    // Create the voltage vs time interpolation table
-    Info<< "Reading timeVsVoltage.txt" << nl
-        << "Note: this file should contain the time in ms and voltage in mV!"
-        << endl;
-    interpolationTable<scalar> timeVsVoltage("timeVsVoltage.txt");
-
     // Create a file for the output
     OFstream output("output.txt");
 
@@ -89,9 +83,6 @@ int main(int argc, char *argv[])
         // Time in milliseconds
         const scalar VOI = runTime.value()*1000;
 
-        // Lookup the voltage for this time (time should be in milliseconds!)
-        const scalar voltage = timeVsVoltage(VOI);
-
         // Define the time step in ms
         const scalar deltaT = runTime.deltaTValue()*1000;
 
@@ -99,7 +90,7 @@ int main(int argc, char *argv[])
         const scalar tOld = VOI - deltaT;
 
         // Solve the ionic model ODEs for this time step given the known voltage
-        ionicModel.solve(tOld, deltaT, voltage);
+        ionicModel.solve(tOld, deltaT);
 
         // Compute the variables for the given time
         ionicModel.computeVariables(VOI);

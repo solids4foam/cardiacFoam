@@ -106,11 +106,10 @@ public:
 
     // Member Functions
 
-        //- Solve the ODE system from the time = tOld to time = tOld + deltaT,
-        //  given the voltage
+        //- Solve the ODE system from the time = tOld to time = tOld + deltaT
         virtual void solve
         (
-            const scalar tOld, const scalar deltaT, const scalar voltage
+            const scalar tOld, const scalar deltaT
         ) const;
 
         //- Update ALGEBRAIC for the given time

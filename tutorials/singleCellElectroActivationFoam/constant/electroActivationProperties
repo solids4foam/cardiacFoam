@@ -17,9 +17,10 @@ FoamFile
 
 // ODE solver
 solver    RKF45;
+//solver    Euler;
 
 // Maximum number of steps
-//maxSteps 1000000000;
+maxSteps 1000000000;
 
 // Relative tolerance
 // Defaults to 1e-4
