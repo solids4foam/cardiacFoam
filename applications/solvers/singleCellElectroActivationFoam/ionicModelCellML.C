@@ -46,7 +46,8 @@ Foam::ionicModelCellML::ionicModelCellML(const dictionary& dict)
     STATES_(17, 0.0),
     CONSTANTS_(46, 0.0),
     ALGEBRAIC_(69, 0.0),
-    RATES_(17, 0.0)
+    RATES_(17, 0.0),
+    step_(readScalar(dict.lookup("initialODEStep")))
 {
     Info<< nl << "Calling initConsts" << endl;
     initConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data());
@@ -74,13 +75,18 @@ void Foam::ionicModelCellML::solve
     // Define the start time, end time and initial time step
     const scalar tStart = tOld;
     const scalar tEnd = tOld + deltaT;
-    scalar step = deltaT;
 
     // Take a reference to the initial state
     scalarField& yStart = STATES_;
 
+    scalar step = min(step_, deltaT);
+
     // Solve the ODE system
+    Info<< "step = " << step_ << endl;
     odeSolver_->solve(tStart, tEnd, yStart, step);
+
+    // Update step
+    step_ = step;
 }
 
 

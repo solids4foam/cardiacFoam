@@ -30,5 +30,7 @@ maxSteps 1000000000;
 // Defaults to 1e-15
 absTol 1e-15;
 
+// Initial step size for ODE solver
+initialODEStep 1e-5;
 
 // ************************************************************************* //
