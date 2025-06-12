@@ -79,6 +79,9 @@ class ionicModelCellML
         //- Rates
         mutable scalarField RATES_;
 
+        //- Step size for ODE solver
+        mutable scalar step_;
+
 
     // Private Member Functions
 
