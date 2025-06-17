@@ -43,22 +43,22 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 ionicModelCoeffs
 {
     // ODE solver
-    //solver    RKF45;
-    solver    Euler;
+    solver    RKF45;
+    //solver    Euler;
 
     // Maximum number of steps
     maxSteps 1000000000;
 
     // Relative tolerance
     // Defaults to 1e-4
-    relTol 1e-6;
+    //relTol 1e-6;
 
     // Absolute tolerance
     // Defaults to 1e-15
-    absTol 1e-6;
+    //absTol 1e-6;
 
     // Initial step size for ODE solver
-    initialODEStep 1e-6;
+    initialODEStep 1e-5;
 }
 
 // ************************************************************************* //
