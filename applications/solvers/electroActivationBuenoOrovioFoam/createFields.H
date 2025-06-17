@@ -221,6 +221,20 @@ volScalarField activationTime
 );
 boolList calculateActivationTime(mesh.nCells(), true);
 
+// Activation velocity
+volVectorField activationVelocity
+(
+    IOobject
+    (
+        "activationVelocity",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    fvc::grad(1.0/(activationTime + dimensionedScalar("SMALL", dimTime, SMALL)))
+);
+
 // Active tension
 volScalarField activeTension
 (
