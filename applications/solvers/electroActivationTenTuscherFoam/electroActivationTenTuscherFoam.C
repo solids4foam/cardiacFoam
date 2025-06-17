@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
     while (runTime.loop())
     {
-        Info<< "Time = " << runTime.timeName() << nl << endl;
+        Info<< nl << "Time = " << runTime.timeName() << endl;
 
         // Set the external stimulus current for this time
         scalarField& externalStimulusCurrentI = externalStimulusCurrent;
@@ -105,9 +105,23 @@ int main(int argc, char *argv[])
 
         VmEqn.solve();
 
+#       include "updateActivationTimes.H"
+
         if (runTime.writeTime())
         {
+            // Update the activation velocity
+            activationVelocity =
+                fvc::grad
+                (
+                    1.0
+                   /(
+                       activationTime
+                     + dimensionedScalar("SMALL", dimTime, SMALL)
+                    )
+                );
+
             runTime.write();
+
             runTime.printExecutionTime(Info);
         }
     }
