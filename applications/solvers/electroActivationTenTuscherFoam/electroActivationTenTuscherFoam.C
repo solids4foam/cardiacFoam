@@ -106,10 +106,15 @@ int main(int argc, char *argv[])
         if (runTime.writeTime())
         {
             runTime.write();
+            runTime.printExecutionTime(Info);
         }
     }
 
-    Info<< "End\n" << endl;
+    Info<< nl << endl;
+
+    runTime.printExecutionTime(Info);
+
+    Info<< "End" << nl << endl;
 
     return 0;
 }
