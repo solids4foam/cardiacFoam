@@ -3,4 +3,21 @@
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-runApplication singleCellElectroActivationFoam
+# Create mesh
+runApplication blockMesh
+
+if [[ $1 == "parallel" ]]
+then
+    # Decompose the mesh
+    runApplication decomposePar
+
+    # Run the solver in parallel
+    runParallel electroActivationTenTuscherFoam
+
+    # Reconstruct the results
+    runApplication reconstructPar
+else
+    # Run the solver in serial
+    runApplication electroActivationTenTuscherFoam
+fi
+
