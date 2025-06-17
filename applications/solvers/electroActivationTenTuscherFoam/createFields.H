@@ -140,37 +140,37 @@ const dictionary& ionicModelCoeffs =
 // Create ionicModelCellML object
 ionicModelCellML ionicModel(ionicModelCoeffs, mesh.nCells());
 
-// // Field to record the activation time, which is the time at which each cell
-// // reaches or exceeds a transmembrane voltage of 0.0
-// volScalarField activationTime
-// (
-//     IOobject
-//     (
-//         "activationTime",
-//         runTime.timeName(),
-//         mesh,
-//         IOobject::READ_IF_PRESENT,
-//         IOobject::AUTO_WRITE
-//     ),
-//     mesh,
-//     dimensionedScalar("zero", dimTime, 0.0),
-//     "zeroGradient"
-// );
-// boolList calculateActivationTime(mesh.nCells(), true);
+// Field to record the activation time, which is the time at which each cell
+// reaches or exceeds a transmembrane voltage of 0.0
+volScalarField activationTime
+(
+    IOobject
+    (
+        "activationTime",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimTime, 0.0),
+    "zeroGradient"
+);
+boolList calculateActivationTime(mesh.nCells(), true);
 
-// // Activation velocity
-// volVectorField activationVelocity
-// (
-//     IOobject
-//     (
-//         "activationVelocity",
-//         runTime.timeName(),
-//         mesh,
-//         IOobject::READ_IF_PRESENT,
-//         IOobject::AUTO_WRITE
-//     ),
-//     fvc::grad(1.0/(activationTime + dimensionedScalar("SMALL", dimTime, SMALL)))
-// );
+// Activation velocity
+volVectorField activationVelocity
+(
+    IOobject
+    (
+        "activationVelocity",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    fvc::grad(1.0/(activationTime + dimensionedScalar("SMALL", dimTime, SMALL)))
+);
 
 // Scale factor for Bueno-Orovio
 const dimensionedScalar BuenoOrovioScaleFactor
