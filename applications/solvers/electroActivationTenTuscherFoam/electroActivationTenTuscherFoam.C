@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
                 externalStimulusCurrentI[cellID] += stimulusIntensity.value();
             }
         }
+        externalStimulusCurrent.correctBoundaryConditions();
 
         // Solve the ionic model given the current voltage and calculate the
         // ionic model currents
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
             Vm.internalField(),
             ionicCurrentI
         );
+        ionicCurrent.correctBoundaryConditions();
 
         // Construct and solve the voltage equation given a known ionic current
         // and external stimulus current
