@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
@@ -12,12 +12,12 @@ then
     runApplication decomposePar
 
     # Run the solver in parallel
-    runParallel electroActivationFoam
+    runParallel electroActivationBuenoOrovioFoam
 
     # Reconstruct the results
     runApplication reconstructPar
 else
     # Run the solver in serial
-    runApplication electroActivationFoam
+    runApplication electroActivationBuenoOrovioFoam
 fi
 

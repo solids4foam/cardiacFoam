@@ -25,7 +25,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    elactroActivationFoam
+    electroActivationBuenoOrovioFoam
 
 Description
     Solves the reaction-diffusion equation for muscle electrophysiology
@@ -144,6 +144,17 @@ int main(int argc, char *argv[])
 
         if (runTime.writeTime())
         {
+            // Update the activation velocity
+            activationVelocity =
+                fvc::grad
+                (
+                    1.0
+                   /(
+                       activationTime
+                     + dimensionedScalar("SMALL", dimTime, SMALL)
+                    )
+                );
+
             runTime.write();
         }
 
