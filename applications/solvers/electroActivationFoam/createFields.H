@@ -1,3 +1,4 @@
+const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
 // Transmembrane potential
 volScalarField Vm
 (
@@ -10,7 +11,7 @@ volScalarField Vm
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Vm", dimMass*dimArea/(pow3(dimTime)*dimCurrent), -85.23),
+    dimensionedScalar("Vm", dimVoltage, -0.08523),
     "zeroGradient"
 );
 
@@ -44,7 +45,6 @@ const dimensionedScalar beta
 );
 
 Info<< "Reading membrane capacitance Cm\n" << endl;
-const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
 const dimensionedScalar Cm
 (
     "Cm",
@@ -100,15 +100,9 @@ volScalarField ionicCurrent
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimless/dimTime, 0.0),
+    dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
     "zeroGradient"
 );
-
-// // Scale factor for Bueno-Orovio
-// const dimensionedScalar BuenoOrovioScaleFactor
-// (
-//     "BuenoOrovioScaleFactor", dimVoltage, 84.0
-// );
 
 // External stimulus current
 volScalarField externalStimulusCurrent
@@ -171,4 +165,34 @@ volVectorField activationVelocity
 const dimensionedScalar BuenoOrovioScaleFactor
 (
     "BuenoOrovioScaleFactor", dimVoltage, 1 //84.0
+);
+
+volScalarField uField
+(
+    IOobject
+    (
+        "u",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("u", dimless, 0.0),
+    "zeroGradient"
+);
+
+volScalarField totalJ
+(
+    IOobject
+    (
+        "totalJ",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("totalJ", dimVoltage/dimTime, 0.0), // V/s units
+    "zeroGradient"
 );

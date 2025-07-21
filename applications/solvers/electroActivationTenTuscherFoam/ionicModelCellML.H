@@ -82,6 +82,8 @@ class ionicModelCellML
         //- Step size for ODE solver
         mutable scalarList step_;
 
+        mutable scalar tissue_;
+
 
     // Private Member Functions
 
@@ -154,6 +156,12 @@ public:
             scalarField& dfdt,
             scalarSquareMatrix& dfdy
         ) const;
+
+        //- Getter for tissue flag
+        label tissue() const
+        {
+            return tissue_;
+        }
 };
 
 

@@ -31,6 +31,18 @@ relTol 1e-6;
 absTol 1e-6;
 
 // Initial step size for ODE solver
-initialODEStep 1e-5;
+initialODEStep 1e-4;
+
+
+//Flag for the chosen tissue - epicardium, M-cells or endocardium. 
+
+//tissue  epicardialCells;
+//tissue  mCells;
+tissue  endocardialCells;
+
+//Type of ionic Model - TNNP; Gaur, Courtemanche, Bueno-Orovio
+
+ionicModel BuenoOrovio; 
+
 
 // ************************************************************************* //

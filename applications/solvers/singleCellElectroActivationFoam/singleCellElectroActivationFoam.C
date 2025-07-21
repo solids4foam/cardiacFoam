@@ -44,17 +44,20 @@ Author
 #include "fvCFD.H"
 #include "interpolationTable.H"
 #include "OFstream.H"
-#include "ionicModelCellML.H"
+#include <string>
+#include "ionicModelCellML.H"        // Base class
+#include "autoPtr.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 
 int main(int argc, char *argv[])
 {
     #include "setRootCaseLists.H"
     #include "createTime.H"
 
-    // Read electoActivationProperties
     Info<< "Reading electroActivationProperties\n" << endl;
+
     IOdictionary electroActivationProperties
     (
         IOobject
@@ -67,45 +70,58 @@ int main(int argc, char *argv[])
         )
     );
 
+    // Model selection (e.g., Gaur, TNNP, Courtemanche)
+    
+    word modelName;
+    electroActivationProperties.lookup("ionicModel") >> modelName;
+    
+    Info<< "Using ionic model: " << modelName << nl << endl;
+
+    word tissueName;
+    electroActivationProperties.lookup("tissue") >> tissueName;
+
+    std::string fileName = modelName + "_" + tissueName + "_output.txt";
+    OFstream output(fileName);
+
+   
+
     // Create ionicModelCellML object
     ionicModelCellML ionicModel(electroActivationProperties);
-
-    // Create a file for the output
-    OFstream output("output.txt");
+    
+    // Write header once
+    ionicModel.writeHeader(output);
 
     // Loop through time
     Info<< "\nStarting time loop\n" << endl;
+    
+        while (runTime.loop())
+        {
+            Info<< "Time = " << runTime.timeName() << nl << endl;
+    
+            // Time in milliseconds
+            const scalar VOI = runTime.value()*1000;
+    
+            // Define the time step in ms
+            const scalar deltaT = runTime.deltaTValue()*1000;
+    
+            // Define the old time in ms
+            const scalar tOld = VOI - deltaT;
+    
+            // Solve the ionic model ODEs for this time step given the known voltage
+            ionicModel.solve(tOld, deltaT);
+    
+            // Compute the variables for the given time
+            ionicModel.computeVariables(VOI);
+    
+            // Write the fields to a file
+            ionicModel.write(VOI, output);
+        }
 
-    while (runTime.loop())
-    {
-        Info<< "Time = " << runTime.timeName() << nl << endl;
-
-        // Time in milliseconds
-        const scalar VOI = runTime.value()*1000;
-
-        // Define the time step in ms
-        const scalar deltaT = runTime.deltaTValue()*1000;
-
-        // Define the old time in ms
-        const scalar tOld = VOI - deltaT;
-
-        // Solve the ionic model ODEs for this time step given the known voltage
-        ionicModel.solve(tOld, deltaT);
-
-        // Compute the variables for the given time
-        ionicModel.computeVariables(VOI);
-
-        // Write the fields to a file
-        ionicModel.write(VOI, output);
-    }
-
-    Info<< "The results are printed to " << output.name() << " as "
-        << "[Time STATES ALGEBRAIC RATES]" << endl;
-
-    Info<< "End\n" << endl;
+    Info<< "Simulation complete.\n"
+        << "Results written to: " << output.name() << nl
+        << "Format: [Time STATES ALGEBRAIC RATES]" << nl;
 
     return 0;
 }
-
 
 // ************************************************************************* //

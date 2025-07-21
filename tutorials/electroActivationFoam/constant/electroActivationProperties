@@ -43,7 +43,17 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 ionicModelCoeffs
 {
     // Specify the ionic model
-    type TNNP;
+    ionicModel BuenoOrovio;
+
+    //specify the type of tissue to model
+     tissue  mCells
+      // tissue endocardialCells;
+      //tissue epicardialCells; 
+
+
+    //Initial ODE step;
+    initialODEStep 1e-5;
+
 
     // ODE solver
     solver    RKF45;
@@ -60,7 +70,7 @@ ionicModelCoeffs
     // Defaults to 1e-15
     //absTol 1e-6;
 
-    epicardium no;
+    
 }
 
 // ************************************************************************* //

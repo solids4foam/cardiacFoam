@@ -10,7 +10,7 @@ volScalarField Vm
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Vm", dimMass*dimArea/(pow3(dimTime)*dimCurrent), -85.23),
+    dimensionedScalar("Vm", dimMass*dimArea/(pow3(dimTime)*dimCurrent), -84.0),
     "zeroGradient"
 );
 
@@ -176,7 +176,7 @@ volScalarField ionicCurrent
 // Scale factor for Bueno-Orovio
 const dimensionedScalar BuenoOrovioScaleFactor
 (
-    "BuenoOrovioScaleFactor", dimVoltage, 84.0
+    "BuenoOrovioScaleFactor", dimVoltage, 85.7
 );
 
 // External stimulus current

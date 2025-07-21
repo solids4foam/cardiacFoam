@@ -1,4 +1,4 @@
-/*--------------------------------*- C++ -*----------------------------------*\
+/*--------------------------------*- C++ -*----------------------------------*	\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
 |  \\    /   O peration     | Version:  v1912                                 |
@@ -42,9 +42,13 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 
 ionicModelCoeffs
 {
+	tissue mCells
+	ionicModel TNNP
     // ODE solver
     solver    RKF45;
     //solver    Euler;
+
+    tissue mCells;
 
     // Maximum number of steps
     maxSteps 1000000000;
