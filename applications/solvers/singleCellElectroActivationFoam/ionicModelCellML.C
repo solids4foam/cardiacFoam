@@ -26,8 +26,11 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <math.h>
-#include "tentusscher_noble_noble_panfilov_2004.H"
+#include "BuenoOrovio.H"
 #include "ionicModelCellML.H"
+#include <string>
+
+
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -43,14 +46,38 @@ Foam::ionicModelCellML::ionicModelCellML(const dictionary& dict)
 :
     ODESystem(),
     odeSolver_(ODESolver::New(*this, dict)),
-    STATES_(17, 0.0),
-    CONSTANTS_(46, 0.0),
-    ALGEBRAIC_(69, 0.0),
-    RATES_(17, 0.0),
+    STATES_(NUM_STATES, 0.0),
+    CONSTANTS_(NUM_CONSTANTS, 0.0),
+    ALGEBRAIC_(NUM_ALGEBRAIC, 0.0),
+    RATES_(NUM_STATES, 0.0),
     step_(readScalar(dict.lookup("initialODEStep")))
-{
+
+    
+{ 
+    word tissueName;
+    dict.lookup("tissue") >> tissueName;
+
+    Info << "Tissue Name " << tissueName << endl;
+    tissue_ = (tissueName == "epicardialCells") 
+                    ? 1 
+            : (tissueName == "mCells") 
+                    ? 2            
+            : (tissueName == "endocardialCells")    
+                    ? 3
+            : -1;  //invalid flag 
+
+    if (tissue_ == -1)
+    {
+        FatalErrorInFunction
+            << "Unknown tissue: " << tissueName
+            << nl << exit(FatalError);
+
+    }
+
+    Info << "Tissue flag set to: " << tissue_ << endl;
+    //see if I need to add flog in function as well.
     Info<< nl << "Calling initConsts" << endl;
-    initConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data());
+    BuenoOrovioinitConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data(), tissue_);
 
     Info<< nl
         << "CONSTANTS = " << CONSTANTS_ << nl
@@ -92,23 +119,46 @@ void Foam::ionicModelCellML::solve
 
 void Foam::ionicModelCellML::computeVariables(const scalar t) const
 {
-    ::computeVariables
+    ::BuenoOroviocomputeVariables
     (
         t,
         CONSTANTS_.data(),
         RATES_.data(),
         STATES_.data(),
-        ALGEBRAIC_.data()
+        ALGEBRAIC_.data(),
+        tissue_
     );
 }
 
+void Foam::ionicModelCellML::writeHeader(OFstream& output) const
+{
+    output << "time Vm";
 
+    for (int i = 0; i < NUM_STATES; ++i)
+    {
+        output << " " << STATES_NAMES[i];
+    }
+    for (int i = 0; i < NUM_ALGEBRAIC; ++i)
+    {
+        output << " " << ALGEBRAIC_NAMES[i];
+    }
+    for (int i = 0; i < NUM_STATES; ++i)
+    {
+        output << " RATES_" <<STATES_NAMES[i];
+    }
+
+    output 
+        << endl;
+}
 void Foam::ionicModelCellML::write(const scalar t, OFstream& output) const
 {
+
+    scalar Vm = 85.7 * STATES_[0] - 84;
+
     // Write the results
     Info<< "Writing to " << output.name() << endl;
     output
-        << t;
+        << t << " " << Vm;
     forAll(STATES_, i)
     {
         output
@@ -143,13 +193,14 @@ void Foam::ionicModelCellML::derivatives
     STATES_ = y;
 
     // Calculate the rates using the cellML header file
-    computeRates
+    ::BuenoOroviocomputeVariables
     (
         VOI,
         CONSTANTS_.data(),
         RATES_.data(),
         STATES_.data(),
-        ALGEBRAIC_.data()
+        ALGEBRAIC_.data(),
+        tissue_
     );
 
     // Transfer RATES to dydt

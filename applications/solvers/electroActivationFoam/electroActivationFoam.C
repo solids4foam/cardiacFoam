@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
             beta*Cm*fvm::ddt(Vm)
          ==
             fvm::laplacian(conductivity, Vm)
-          - BuenoOrovioScaleFactor*beta*Cm*ionicCurrent // GET RID OF THIS SCALE FACTOR!
+          - beta*Cm*ionicCurrent
           + externalStimulusCurrent
         );
 
@@ -113,6 +113,8 @@ int main(int argc, char *argv[])
                 );
 
             runTime.write();
+            totalJ.write();
+            uField.write();
 
             runTime.printExecutionTime(Info);
         }

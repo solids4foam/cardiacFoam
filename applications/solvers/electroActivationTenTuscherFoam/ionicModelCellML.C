@@ -29,6 +29,7 @@ License
 #include "tentusscher_noble_noble_panfilov_2004.H"
 #include "ionicModelCellML.H"
 #include "SubField.H"
+#include <string>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -51,19 +52,42 @@ Foam::ionicModelCellML::ionicModelCellML
     CONSTANTS_(46, 0.0),
     ALGEBRAIC_(num),
     RATES_(num),
-    step_(num, readScalar(dict.lookup("initialODEStep")))
+    step_(num, readScalar(dict.lookup("initialODEStep"))),
+    tissue_(-1)  // initialize to invalid flag
 {
+    word tissueName;
+    dict.lookup("tissue") >> tissueName;
+
+    Info << "Tissue Name " << tissueName << endl;
+
+    tissue_ = (tissueName == "epicardialCells") ? 1
+            : (tissueName == "mCells")          ? 2
+            : (tissueName == "endocardialCells") ? 3
+            : -1;  // invalid flag
+
+    if (tissue_ == -1)
+    {
+        FatalErrorInFunction
+            << "Unknown tissue: " << tissueName << nl
+            << exit(FatalError);
+    }
+
+    Info << "Tissue flag set to: " << tissue_ << endl;
+
     // Create the integration point lists
-    Info<< nl << "Calling initConsts" << endl;
+    Info << nl << "Calling initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i, new scalarField(17, 0.0));
         ALGEBRAIC_.set(i, new scalarField(69, 0.0));
         RATES_.set(i, new scalarField(17, 0.0));
+        
+
+
 
         // Initialise the constants (repeatedly! it's ok...) and the rates and
         // states
-        initConsts(CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data());
+        initConsts(CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data(),tissue());
     }
 
     if (debug)
@@ -162,7 +186,8 @@ void Foam::ionicModelCellML::calculateCurrent
             CONSTANTS_.data(),
             RATESI.data(),
             STATESI.data(),
-            ALGEBRAICI.data()
+            ALGEBRAICI.data(),
+            tissue()
         );
 
         // Extract the total ionic current
@@ -285,7 +310,8 @@ void Foam::ionicModelCellML::derivatives
         // STATES.data(),
         dydt.data(),
         const_cast<scalarField&>(y).data(),
-        ALGEBRAIC_TMP.data()
+        ALGEBRAIC_TMP.data(),
+        tissue()
     );
     // Info<< "computeRates end" << endl;
 

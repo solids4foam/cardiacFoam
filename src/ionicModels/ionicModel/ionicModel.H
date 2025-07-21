@@ -45,6 +45,8 @@ Authors
 #include "runTimeSelectionTables.H"
 #include "ODESystem.H"
 #include "ODESolver.H"
+#include "word.H"
+
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -73,6 +75,9 @@ class ionicModel
 
         //- Step size for ODE solver
         mutable scalarList step_;
+
+        //flag for tissue type
+        mutable label tissue_;
 
     // Private Member Functions
 
@@ -150,6 +155,12 @@ public:
             return step_;
         }
 
+        //- Getter for tissue flag
+        label tissue() const
+        {
+            return tissue_;
+        }
+
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
         virtual void calculateCurrent
@@ -197,10 +208,21 @@ public:
                 "Please define this function in the derived class!"
             );
         };
-};
 
+        //This functions are used for the single cell electro-activation solver
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+        // //- Solve the ODE system from the time = tOld to time = tOld + deltaT
+        // virtual void writeHeader(Ostream& os) const = 0;
+        // virtual void solve(const scalar tOld, const scalar deltaT) = 0;
+        // virtual void computeVariables(const scalar VOI) = 0;
+        // virtual void write(const scalar VOI, Ostream& os) const = 0;
+        // // inline virtual label nEqns() const
+        // {
+        //     return NUM_STATES;
+        // }
+    };  
+
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 

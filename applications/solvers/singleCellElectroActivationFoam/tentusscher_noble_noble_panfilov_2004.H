@@ -1,7 +1,8 @@
 /*
    There are a total of 69 entries in the algebraic variable array.
    There are a total of 17 entries in each of the rate and state variable arrays.
-   There are a total of 46 entries in the constant variable array.
+   There are a total of 46 entries in the constant variable array +1 for the flag that defines the tissue being modeled. 
+
  */
 /*
  * VOI is time in component environment (millisecond).
@@ -155,8 +156,100 @@
  * RATES[2] is d/dt Na_i in component sodium_dynamics (millimolar).
  * RATES[1] is d/dt K_i in component potassium_dynamics (millimolar).
  */
+
+ static const char* STATE_NAMES[17] = {
+    "V",        // 0: membrane voltage (millivolt)
+    "K_i",      // 1: intracellular potassium (millimolar)
+    "Na_i",     // 2: intracellular sodium (millimolar)
+    "Ca_i",     // 3: intracellular calcium (millimolar)
+    "Xr1",      // 4: Xr1 gate (dimensionless)
+    "Xr2",      // 5: Xr2 gate (dimensionless)
+    "Xs",       // 6: Xs gate (dimensionless)
+    "m",        // 7: m gate (dimensionless)
+    "h",        // 8: h gate (dimensionless)
+    "j",        // 9: j gate (dimensionless)
+    "d",        // 10: d gate (dimensionless)
+    "f",        // 11: f gate (dimensionless)
+    "fCa",      // 12: fCa gate (dimensionless)
+    "s",        // 13: s gate (dimensionless)
+    "r",        // 14: r gate (dimensionless)
+    "Ca_SR",    // 15: sarcoplasmic reticulum calcium (millimolar)
+    "g"         // 16: g gate (dimensionless)
+};
+static const char* ALGEBRAIC_NAMES[69] = {
+    "i_Stim",                    // 0
+    "xr1_inf",                  // 1
+    "xr2_inf",                  // 2
+    "xs_inf",                   // 3
+    "m_inf",                    // 4
+    "h_inf",                    // 5
+    "j_inf",                    // 6
+    "d_inf",                    // 7
+    "f_inf",                    // 8
+    "alpha_fCa",               // 9
+    "s_inf",                    // 10
+    "r_inf",                    // 11
+    "g_inf",                    // 12
+    "E_Na",                     // 13
+    "alpha_xr1",               // 14
+    "alpha_xr2",               // 15
+    "alpha_xs",                // 16
+    "alpha_m",                 // 17
+    "alpha_h",                 // 18
+    "alpha_j",                 // 19
+    "alpha_d",                 // 20
+    "tau_f",                    // 21
+    "beta_fCa",                // 22
+    "tau_s",                    // 23
+    "tau_r",                    // 24
+    "d_g",                      // 25
+    "E_K",                      // 26
+    "beta_xr1",                // 27
+    "beta_xr2",                // 28
+    "beta_xs",                 // 29
+    "beta_m",                  // 30
+    "beta_h",                  // 31
+    "beta_j",                  // 32
+    "gama_fCa",                // 33
+    "beta_d",                  // 34
+    "E_Ks",                     // 35
+    "tau_xr1",                 // 36
+    "tau_xr2",                 // 37
+    "tau_xs",                  // 38
+    "tau_m",                   // 39
+    "tau_h",                   // 40
+    "tau_j",                   // 41
+    "gamma_d",                 // 42
+    "fCa_inf",                 // 43
+    "E_Ca",                     // 44
+    "tau_d",                   // 45
+    "d_fCa",                   // 46
+    "alpha_K1",                // 47
+    "beta_K1",                 // 48
+    "xK1_inf",                 // 49
+    "i_K1",                     // 50
+    "i_Kr",                     // 51
+    "i_Ks",                     // 52
+    "i_Na",                     // 53
+    "i_b_Na",                   // 54
+    "i_CaL",                    // 55
+    "i_b_Ca",                   // 56
+    "i_to",                     // 57
+    "i_NaK",                    // 58
+    "i_NaCa",                   // 59
+    "i_p_Ca",                   // 60
+    "i_p_K",                    // 61
+    "i_rel",                    // 62
+    "i_up",                     // 63
+    "i_leak",                   // 64
+    "ddt_Ca_i_total",           // 65
+    "ddt_Ca_sr_total",          // 66
+    "f_JCa_i_free",             // 67
+    "f_JCa_sr_free"             // 68
+};
+
 void
-initConsts(double* CONSTANTS, double* RATES, double *STATES)
+TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
 {
 STATES[0] = -86.2;
 CONSTANTS[0] = 8.314;
@@ -179,7 +272,11 @@ CONSTANTS[13] = 5.405;
 CONSTANTS[14] = 0.096;
 STATES[4] = 0;
 STATES[5] = 1;
-CONSTANTS[15] = 0.062;
+//Conditional tissue conductance Gks
+CONSTANTS[15] = (tissueFlag == 2)
+          ? 0.062
+          : 0.245;
+
 STATES[6] = 0;
 CONSTANTS[16] = 14.838;
 STATES[7] = 0;
@@ -191,7 +288,11 @@ STATES[10] = 0;
 STATES[11] = 1;
 STATES[12] = 1;
 CONSTANTS[19] = 0.000592;
-CONSTANTS[20] = 0.294;
+//Conditional tissue conductance Gto
+CONSTANTS[20] = (tissueFlag == 3)
+          ? 0.073
+          : 0.294;
+
 STATES[13] = 1;
 STATES[14] = 0;
 CONSTANTS[21] = 1.362;
@@ -223,13 +324,21 @@ CONSTANTS[44] = 1094;
 CONSTANTS[45] = 2.00000;
 }
 void
-computeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag)
 {
 ALGEBRAIC[8] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/7.00000));
 ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[0])/10.0000));
 RATES[11] = (ALGEBRAIC[8] - STATES[11])/ALGEBRAIC[21];
-ALGEBRAIC[10] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/5.00000));
-ALGEBRAIC[23] =  85.0000*exp(- pow(STATES[0]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[0] - 20.0000)/5.00000))+3.00000;
+
+//Conditional tissue flag for the Ito current
+ALGEBRAIC[10] = (tissueFlag == 1) 
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+    : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
+
+ALGEBRAIC[23] = (tissueFlag == 1)
+     ? 85.0000*exp(- pow(STATES[0]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[0] - 20.0000)/5.00000))+3.00000
+     : 1000.0000*exp(- pow(STATES[0]+67.0000, 2.00000)/1000.000)+8.00000;
+
 RATES[13] = (ALGEBRAIC[10] - STATES[13])/ALGEBRAIC[23];
 ALGEBRAIC[11] = 1.00000/(1.00000+exp((20.0000 - STATES[0])/6.00000));
 ALGEBRAIC[24] =  9.50000*exp(- pow(STATES[0]+40.0000, 2.00000)/1800.00)+0.800000;
@@ -290,7 +399,10 @@ ALGEBRAIC[47] = 0.100000/(1.00000+exp( 0.0600000*((STATES[0] - ALGEBRAIC[26]) - 
 ALGEBRAIC[48] = ( 3.00000*exp( 0.000200000*((STATES[0] - ALGEBRAIC[26])+100.000))+ 1.00000*exp( 0.100000*((STATES[0] - ALGEBRAIC[26]) - 10.0000)))/(1.00000+exp( - 0.500000*(STATES[0] - ALGEBRAIC[26])));
 ALGEBRAIC[49] = ALGEBRAIC[47]/(ALGEBRAIC[47]+ALGEBRAIC[48]);
 ALGEBRAIC[50] =  CONSTANTS[13]*ALGEBRAIC[49]* pow((CONSTANTS[10]/5.40000), 1.0 / 2)*(STATES[0] - ALGEBRAIC[26]);
+
+//Conditional tissue conductance Ito
 ALGEBRAIC[57] =  CONSTANTS[20]*STATES[14]*STATES[13]*(STATES[0] - ALGEBRAIC[26]);
+
 ALGEBRAIC[51] =  CONSTANTS[14]* pow((CONSTANTS[10]/5.40000), 1.0 / 2)*STATES[4]*STATES[5]*(STATES[0] - ALGEBRAIC[26]);
 ALGEBRAIC[35] =  (( CONSTANTS[0]*CONSTANTS[1])/CONSTANTS[2])*log((CONSTANTS[10]+ CONSTANTS[9]*CONSTANTS[11])/(STATES[1]+ CONSTANTS[9]*STATES[2]));
 ALGEBRAIC[52] =  CONSTANTS[15]*pow(STATES[6], 2.00000)*(STATES[0] - ALGEBRAIC[35]);
@@ -313,12 +425,20 @@ ALGEBRAIC[68] = 1.00000/(1.00000+( CONSTANTS[42]*CONSTANTS[43])/pow(STATES[15]+C
 RATES[15] =  ALGEBRAIC[66]*ALGEBRAIC[68];
 }
 void
-computeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag)
 {
 ALGEBRAIC[8] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/7.00000));
 ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[0])/10.0000));
-ALGEBRAIC[10] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/5.00000));
-ALGEBRAIC[23] =  85.0000*exp(- pow(STATES[0]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[0] - 20.0000)/5.00000))+3.00000;
+
+//Conditional tissue flag for the Ito current
+ALGEBRAIC[10] = (tissueFlag == 1) 
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+    : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
+
+ALGEBRAIC[23] = (tissueFlag == 1)
+     ? 85.0000*exp(- pow(STATES[0]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[0] - 20.0000)/5.00000))+3.00000
+     : 1000.0000*exp(- pow(STATES[0]+67.0000, 2.00000)/1000.000)+8.00000;
+
 ALGEBRAIC[11] = 1.00000/(1.00000+exp((20.0000 - STATES[0])/6.00000));
 ALGEBRAIC[24] =  9.50000*exp(- pow(STATES[0]+40.0000, 2.00000)/1800.00)+0.800000;
 ALGEBRAIC[12] = (STATES[3]<0.000350000 ? 1.00000/(1.00000+pow(STATES[3]/0.000350000, 6.00000)) : 1.00000/(1.00000+pow(STATES[3]/0.000350000, 16.0000)));

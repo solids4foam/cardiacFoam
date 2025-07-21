@@ -30,7 +30,8 @@ License
 #include "tentusscher_noble_noble_panfilov_2004.H"
 #include "TNNP.H"
 #include "addToRunTimeSelectionTable.H"
-#include "Switch.H"
+#include "ionicModel.H"
+//#include "Switch.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -58,7 +59,7 @@ Foam::TNNP::TNNP
     RATES_(num)
 {
     // Read the epicardium flag
-    const Switch epicardiumFlag(dict.lookup("epicardium"));
+    //const Switch epicardiumFlag(dict.lookup("epicardium"));
 
     // Create the integration point lists
     Info<< nl << "Calling initConsts" << endl;
@@ -70,10 +71,9 @@ Foam::TNNP::TNNP
 
         // Initialise the constants (repeatedly! it's ok...) and the rates and
         // states
-        initConsts
+        TNNPinitConsts
         (
-            CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data(),
-            bool(epicardiumFlag)
+            CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data(), tissue()
         );
     }
 
@@ -156,13 +156,14 @@ void Foam::TNNP::calculateCurrent
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         // Calculate the three currents
-        ::computeVariables
+        ::TNNPcomputeVariables
         (
             tEnd,
             CONSTANTS_.data(),
             RATESI.data(),
             STATESI.data(),
-            ALGEBRAICI.data()
+            ALGEBRAICI.data(),
+            tissue()
         );
 
         // Extract the total ionic current
@@ -184,7 +185,7 @@ void Foam::TNNP::derivatives
     scalarField ALGEBRAIC_TMP(69, 0.0);
 
     // Calculate the rates using the cellML header file
-    ::computeRates
+    ::TNNPcomputeRates
     (
         t,
         CONSTANTS_.data(),
@@ -192,7 +193,8 @@ void Foam::TNNP::derivatives
         // STATES.data(),
         dydt.data(),
         const_cast<scalarField&>(y).data(),
-        ALGEBRAIC_TMP.data()
+        ALGEBRAIC_TMP.data(),
+        tissue()
     );
 }
 

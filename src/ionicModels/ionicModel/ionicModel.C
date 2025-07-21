@@ -27,6 +27,7 @@ License
 
 #include "ionicModel.H"
 
+
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
@@ -46,8 +47,32 @@ Foam::ionicModel::ionicModel
     ODESystem(),
     odeSolver_(),
     dict_(dict),
-    step_(num, initialDeltaT)
-{}
+    step_(num, initialDeltaT),
+    tissue_(-1)  // initialize to invalid flag
+{
+    word tissueName;
+    dict.lookup("tissue") >> tissueName;
+
+    Info << "Tissue Name " << tissueName << endl;
+
+    tissue_ = (tissueName == "epicardialCells") ? 1
+            : (tissueName == "mCells")          ? 2
+            : (tissueName == "endocardialCells") ? 3
+            : -1;  // invalid flag
+
+    if (tissue_ == -1)
+    {
+        FatalErrorInFunction
+            << "Unknown tissue: " << tissueName << nl
+            << exit(FatalError);
+    }
+
+    Info << "Tissue flag set to: " << tissue_ << endl;
+
+
+
+
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
@@ -60,7 +85,7 @@ Foam::ionicModel::New
     const scalar initialDeltaT
 )
 {
-    const word modelType(dict.lookup("type"));
+    const word modelType(dict.lookup("ionicModel"));
 
     Info<< "Selecting ionic model " << modelType << endl;
 

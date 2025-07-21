@@ -12,12 +12,12 @@ then
     runApplication decomposePar
 
     # Run the solver in parallel
-    runParallel electroActivationTenTuscherFoam
+    runParallel electroActivationFoam
 
     # Reconstruct the results
     runApplication reconstructPar
 else
     # Run the solver in serial
-    runApplication electroActivationTenTuscherFoam
+    runApplication electroActivationFoam
 fi
 

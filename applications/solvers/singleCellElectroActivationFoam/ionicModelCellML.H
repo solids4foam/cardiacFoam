@@ -43,7 +43,6 @@ Author
 
 #ifndef ionicModelCellML_H
 #define ionicModelCellML_H
-
 #include "ionicModelCellML.H"
 #include "ODESystem.H"
 #include "ODESolver.H"
@@ -82,6 +81,9 @@ class ionicModelCellML
         //- Step size for ODE solver
         mutable scalar step_;
 
+        //flag for tissue type
+        mutable scalar tissue_;
+
 
     // Private Member Functions
 
@@ -118,13 +120,14 @@ public:
         //- Update ALGEBRAIC for the given time
         virtual void computeVariables(const scalar t) const;
 
+        void writeHeader(OFstream& output) const;
         //- Write fields to the given file given the current time
         void write(const scalar t, OFstream& output) const;
 
         //- Number of ODE's to solve
         inline virtual label nEqns() const
         {
-            return 17;
+            return 4;
         }
 
         //- Derivatives of each ODE with respect to the primary unknown in that

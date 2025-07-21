@@ -242,7 +242,7 @@ void Foam::BuenoOrovioIonicModel::derivatives
       + (tauW2Minus_ - tauW1Minus_)*(1.0 + tanh(kWMinus_*(u - uWMinus_)))/2.0;
     const scalar tauS =
         (1.0 - heaviside(u - thetaW_))*tauS1_ + heaviside(u - thetaW_)*tauS2_;
-    const scalar vInfty = pos(thetaVMinus_ - u);
+    const scalar vInfty = heaviside(thetaVMinus_ - u);
     const scalar wInfty =
         (1.0 - heaviside(u - thetaO_))*(1.0 - u/tauWInfty_)
       + heaviside(u - thetaO_)*wInftyStar_;

@@ -1,6 +1,4 @@
 EXE_INC = \
-    -I../../../src/BuenoOrovioIonicModel/lnInclude \
-    -I../../../src/NashPanfilovActiveTensionModel/lnInclude \
     -I$(LIB_SRC)/ODE/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude
