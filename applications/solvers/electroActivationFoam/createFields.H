@@ -11,7 +11,7 @@ volScalarField Vm
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Vm", dimVoltage, -0.08523),
+    dimensionedScalar("Vm", dimVoltage, -0.08323),
     "zeroGradient"
 );
 
@@ -167,7 +167,7 @@ const dimensionedScalar BuenoOrovioScaleFactor
     "BuenoOrovioScaleFactor", dimVoltage, 1 //84.0
 );
 
-volScalarField uField
+volScalarField uBO
 (
     IOobject
     (
@@ -182,17 +182,4 @@ volScalarField uField
     "zeroGradient"
 );
 
-volScalarField totalJ
-(
-    IOobject
-    (
-        "totalJ",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedScalar("totalJ", dimVoltage/dimTime, 0.0), // V/s units
-    "zeroGradient"
-);
+

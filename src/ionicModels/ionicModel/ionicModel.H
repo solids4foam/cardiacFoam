@@ -168,7 +168,9 @@ public:
             const scalar stepStartTime,
             const scalar timeStep,
             const scalarField& voltage,
-            scalarField& result
+            scalarField& results
+            //scalarField& result2
+
         )
         {
             notImplemented("WIP");

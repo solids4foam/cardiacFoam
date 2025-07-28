@@ -42,8 +42,8 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 
 ionicModelCoeffs
 {
-	tissue mCells
-	ionicModel TNNP
+	tissue mCells;
+	ionicModel TNNP;
     // ODE solver
     solver    RKF45;
     //solver    Euler;
