@@ -107,19 +107,34 @@ public:
 
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
-        virtual void calculateCurrent
+        // virtual void calculateCurrent
+        // (
+
+        //     const scalar stepStartTime,
+        //     const scalar timeStep,
+        //     const scalarField& voltage,
+        //     scalarField& result,
+        //     scalarField& uField,
+        //     scalarField& totalJ
+
+        // );
+        // In BuenoOrovio.H inside the class Foam::BuenoOrovio:
+
+        void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& result
-        );
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& totalJ
+            //scalarField& uField
+        ) ;
+
 
         //- Number of ODE's to solve
         virtual label nEqns() const
         {
             return NUM_STATES;
-        }
+        };
 
         //- Derivatives of each ODE with respect to the primary unknown in that
         //  equation

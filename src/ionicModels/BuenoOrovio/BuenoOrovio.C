@@ -99,9 +99,11 @@ void Foam::BuenoOrovio::calculateCurrent
     const scalar deltaT,
     const scalarField& Vm,
     scalarField& totalJ
+    //scalarField& uField
 )   
 {
-    const label nIntegrationPoints = STATES_.size();  
+    const label nIntegrationPoints = STATES_.size(); 
+
 
     if (totalJ.size() != nIntegrationPoints)
     {
@@ -127,6 +129,8 @@ void Foam::BuenoOrovio::calculateCurrent
 
             // Update the voltage
             STATESI[u]= (1000*Vm[integrationPtI] + 84)/85.7;
+
+            //uField[integrationPtI] = (1000*Vm[integrationPtI] + 84)/85.7;
             
             //ODE solver with time in ms
             const scalar tStart = stepStartTime;

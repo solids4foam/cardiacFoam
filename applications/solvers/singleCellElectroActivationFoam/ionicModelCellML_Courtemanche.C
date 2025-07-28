@@ -77,6 +77,7 @@ Foam::ionicModelCellML::ionicModelCellML(const dictionary& dict)
     //see if I need to add flog in function as well.
     Info<< nl << "Calling initConsts" << endl;
     CourtemancheinitConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data(), tissue_);
+    Info << "After initConsts, STATES_.size() = " << STATES_.size() << endl;
 
     Info<< nl
         << "CONSTANTS = " << CONSTANTS_ << nl
@@ -108,6 +109,16 @@ void Foam::ionicModelCellML::solve
     scalar step = min(step_, deltaT);
 
     // Solve the ODE system
+    Info << "STATES_.size() = " << STATES_.size() << endl;
+
+    if (STATES_.size() > ina_j)
+    {
+        Info << "Initial gating states at t = " << tStart << ":\n"
+            << "  ina_m = " << STATES_[ina_m] << "\n"
+            << "  ina_h = " << STATES_[ina_h] << "\n"
+            << "  ina_j = " << STATES_[ina_j] << endl;
+        }
+
     Info<< "step = " << step_ << endl;
     odeSolver_->solve(tStart, tEnd, yStart, step);
 
@@ -128,6 +139,7 @@ void Foam::ionicModelCellML::computeVariables(const scalar t) const
         tissue_
     );
 }
+
 
 void Foam::ionicModelCellML::writeHeader(OFstream& output) const
 {

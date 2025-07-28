@@ -43,7 +43,6 @@ Author
 
 #ifndef ionicModelCellML_H
 #define ionicModelCellML_H
-
 #include "ionicModelCellML.H"
 #include "ODESystem.H"
 #include "ODESolver.H"

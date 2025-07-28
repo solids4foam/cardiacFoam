@@ -74,7 +74,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
         CONSTANTS[stimulusStart]= 20.0;     // Start time of pulse in ms
         CONSTANTS[stimulusDuration]= 0.2;      // Pulse duration in ms
         CONSTANTS[stimulusPeriod]= 1000.0;    // Time between pulses in ms
-        CONSTANTS[stimulusAmplitude]= -85;    // Amplitude of stimulus
+        CONSTANTS[stimulusAmplitude]= -52;    // Amplitude of stimulus
 
         CONSTANTS[uO] = 0;
         CONSTANTS[uU] = (tissueFlag == 1) ? 1.55 : (tissueFlag == 2) ? 1.61 : 1.56;

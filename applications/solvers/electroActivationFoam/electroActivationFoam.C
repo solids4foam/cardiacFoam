@@ -74,6 +74,10 @@ int main(int argc, char *argv[])
         // Solve the ionic model given the current voltage and calculate the
         // ionic model currents
         scalarField& ionicCurrentI = ionicCurrent;
+        //scalarField& uBOI= uBO;
+
+
+        //uBOI = 0.0;
         ionicCurrentI = 0.0;
         ionicModel->calculateCurrent
         (
@@ -81,8 +85,10 @@ int main(int argc, char *argv[])
             runTime.deltaTValue(),
             Vm.internalField(),
             ionicCurrentI
+            //uBOI
         );
         ionicCurrent.correctBoundaryConditions();
+        uBO.correctBoundaryConditions();
 
         // Construct and solve the voltage equation given a known ionic current
         // and  external stimulus current
@@ -113,9 +119,6 @@ int main(int argc, char *argv[])
                 );
 
             runTime.write();
-            totalJ.write();
-            uField.write();
-
             runTime.printExecutionTime(Info);
         }
     }

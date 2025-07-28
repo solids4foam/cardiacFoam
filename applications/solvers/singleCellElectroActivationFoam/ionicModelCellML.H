@@ -43,6 +43,7 @@ Author
 
 #ifndef ionicModelCellML_H
 #define ionicModelCellML_H
+
 #include "ionicModelCellML.H"
 #include "ODESystem.H"
 #include "ODESolver.H"
@@ -127,7 +128,7 @@ public:
         //- Number of ODE's to solve
         inline virtual label nEqns() const
         {
-            return 4;
+            return 29;
         }
 
         //- Derivatives of each ODE with respect to the primary unknown in that

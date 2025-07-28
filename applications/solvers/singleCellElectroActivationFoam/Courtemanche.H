@@ -84,6 +84,12 @@ void
 CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
 {
 
+    /* stimulus */
+    CONSTANTS[AC_amplitude] = -92 ; //-2.0 * 4618.0;
+    CONSTANTS[AC_stimulus_start]     = 20.0;     // Start time of pulse in ms
+    CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
+    CONSTANTS[AC_stimulus_period]    = 1000;    // Time between pulses in ms
+
     /* ca_buffers */
     CONSTANTS[AC_CMDN_max] = 0.05;
     CONSTANTS[AC_CSQN_max] = 10.0;
@@ -143,11 +149,7 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
     CONSTANTS[AC_KmNai] = 10.0;
     CONSTANTS[AC_sigma] = (exp(CONSTANTS[AC_Nao] / 67.3) - 1.0) / 7.0;
     
-    /* stimulus */
-    CONSTANTS[AC_amplitude] = 2.0 * -4618.0;
-    CONSTANTS[AC_stimulus_start]     = 50.0;     // Start time of pulse in ms
-    CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
-    CONSTANTS[AC_stimulus_period]    = 1000;    // Time between pulses in ms
+
 
     
     /* cajsr */
@@ -314,7 +316,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_I_stim] = (
         (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] >= CONSTANTS[AC_stimulus_start]) &&
         (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] <= CONSTANTS[AC_stimulus_start] + CONSTANTS[AC_stimulus_duration])
-        ? CONSTANTS[AC_amplitude]/CONSTANTS[AC_Cm]
+        ? CONSTANTS[AC_amplitude]
         : 0.0
     );
     
@@ -406,7 +408,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[calcium_Cai] = AV_B1 / AV_B2;
     
     /* membrane */
-    ALGEBRAIC[AV_I_ion] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa];
+    ALGEBRAIC[AV_I_ion] =ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa];
     RATES[membrane_V] = -(ALGEBRAIC[AV_I_ion] + CONSTANTS[AC_I_diff] + ALGEBRAIC[AV_I_stim]);
     
     /* potassium */

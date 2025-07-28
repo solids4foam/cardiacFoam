@@ -136,7 +136,7 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
 { 
     CONSTANTS[AC_stimulus_start]     = 20.0;     // Start time of pulse in ms
     CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
-    CONSTANTS[AC_stimulus_period]    = 500.0;    // Time between pulses in ms
+    CONSTANTS[AC_stimulus_period]    = 1000.0;    // Time between pulses in ms
     CONSTANTS[AC_stimulus_amplitude] = -80.0;    // Amplitude of stimulus
         
     CONSTANTS[AC_F] = 96485.0;

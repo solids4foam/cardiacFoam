@@ -43,11 +43,11 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 ionicModelCoeffs
 {
     // Specify the ionic model
-    ionicModel BuenoOrovio;
+    ionicModel TNNP;
 
     //specify the type of tissue to model
-     tissue  mCells
-      // tissue endocardialCells;
+     tissue  mCells;
+       //tissue endocardialCells;
       //tissue epicardialCells; 
 
 
@@ -56,8 +56,8 @@ ionicModelCoeffs
 
 
     // ODE solver
-    solver    RKF45;
-    //solver    Euler;
+    //solver    RKF45;
+    solver    Euler;
 
     // Maximum number of steps
     maxSteps 1000000000;

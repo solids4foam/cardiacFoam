@@ -26,10 +26,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <math.h>
-#include "BuenoOrovio.H"
+#include "Gaur.H"
 #include "ionicModelCellML.H"
 #include <string>
-
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -77,7 +76,7 @@ Foam::ionicModelCellML::ionicModelCellML(const dictionary& dict)
     Info << "Tissue flag set to: " << tissue_ << endl;
     //see if I need to add flog in function as well.
     Info<< nl << "Calling initConsts" << endl;
-    BuenoOrovioinitConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data(), tissue_);
+    GaurinitConsts(CONSTANTS_.data(), RATES_.data(), STATES_.data(), tissue_);
 
     Info<< nl
         << "CONSTANTS = " << CONSTANTS_ << nl
@@ -107,6 +106,8 @@ void Foam::ionicModelCellML::solve
     scalarField& yStart = STATES_;
 
     scalar step = min(step_, deltaT);
+    // Solve the ODE system
+    Info << "STATES_.size() = " << STATES_.size() << endl;
 
     // Solve the ODE system
     Info<< "step = " << step_ << endl;
@@ -119,7 +120,7 @@ void Foam::ionicModelCellML::solve
 
 void Foam::ionicModelCellML::computeVariables(const scalar t) const
 {
-    ::BuenoOroviocomputeVariables
+    ::GaurcomputeVariables
     (
         t,
         CONSTANTS_.data(),
@@ -132,7 +133,7 @@ void Foam::ionicModelCellML::computeVariables(const scalar t) const
 
 void Foam::ionicModelCellML::writeHeader(OFstream& output) const
 {
-    output << "time Vm";
+    output << "time";
 
     for (int i = 0; i < NUM_STATES; ++i)
     {
@@ -144,7 +145,7 @@ void Foam::ionicModelCellML::writeHeader(OFstream& output) const
     }
     for (int i = 0; i < NUM_STATES; ++i)
     {
-        output << " RATES_" <<STATES_NAMES[i];
+        output << "RATES_" << STATES_NAMES[i];
     }
 
     output 
@@ -152,13 +153,10 @@ void Foam::ionicModelCellML::writeHeader(OFstream& output) const
 }
 void Foam::ionicModelCellML::write(const scalar t, OFstream& output) const
 {
-
-    scalar Vm = 85.7 * STATES_[0] - 84;
-
     // Write the results
     Info<< "Writing to " << output.name() << endl;
     output
-        << t << " " << Vm;
+        << t;
     forAll(STATES_, i)
     {
         output
@@ -193,7 +191,7 @@ void Foam::ionicModelCellML::derivatives
     STATES_ = y;
 
     // Calculate the rates using the cellML header file
-    ::BuenoOroviocomputeVariables
+    ::GaurcomputeVariables
     (
         VOI,
         CONSTANTS_.data(),
