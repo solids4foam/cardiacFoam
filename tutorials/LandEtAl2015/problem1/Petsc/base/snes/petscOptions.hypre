@@ -21,6 +21,7 @@
 #-ksp_monitor
 #-ksp_view
 -ksp_converged_reason
+-pc_type right
 
 # Preconditioner - LU
 # Good for small/medium cases but will require large amounts of memory for

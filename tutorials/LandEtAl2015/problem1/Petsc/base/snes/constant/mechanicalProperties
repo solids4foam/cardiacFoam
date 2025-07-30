@@ -44,10 +44,10 @@ mechanical
             bulkModulus     bulkModulus [1 -1 -2 0 0 0 0] 2e5;
 
             // To solve pressure Poisson equation
-            //solvePressureEqn yes;
+            solvePressureEqn yes;
 
             // Pressure smoothing scale factor
-            //pressureSmoothingScaleFactor 1e4;
+            pressureSmoothingScaleFactor 1e4;
         }
     }
 );

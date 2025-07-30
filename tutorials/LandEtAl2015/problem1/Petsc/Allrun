@@ -4,7 +4,7 @@
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 source solids4FoamScripts.sh
 
-for i in {2..5}
+for i in {2..7}
 do
     echo "Mesh $i"
 

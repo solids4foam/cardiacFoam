@@ -5,7 +5,7 @@ output="dz_values.dat"
 echo "# mesh dz" > "$output"
 
 # Loop through mesh2 to mesh5
-for mesh in mesh2 mesh3 mesh4 mesh5; do
+for mesh in mesh2 mesh3 mesh4 mesh5 mesh6; do
     file="$mesh/postProcessing/0/solidPointDisplacement_pointDisp.dat"
     
     if [[ -f "$file" ]]; then

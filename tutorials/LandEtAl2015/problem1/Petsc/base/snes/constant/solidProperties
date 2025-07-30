@@ -20,7 +20,16 @@ FoamFile
 //solidModel     linearGeometryTotalDisplacement;
 solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
 
-"linearGeometryTotalDisplacementCoeffs|nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs"
+//solidModel     linGeomTotalDispSolid;
+//solidModel     linearGeometryTotalDisplacement;
+//solidModel     linearGeometryPressureDisplacement;
+//"linearGeometryTotalDisplacementCoeffs|nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs"
+
+//"linGeomTotalDispSolidCoeffs|linearGeometryTotalDisplacementSolidCoeffs"
+//linearGeometryTotalDisplacementCoeffs
+//"linGeomTotalDispCoeffs|linearGeometryTotalDisplacementCoeffs"
+//"linearGeometryPressureDisplacementSolidCoeffs|linearGeometryPressureDisplacementCoeffs"
+"nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs|nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs" 
 {
     // Solution algorithm
     //solutionAlgorithm implicitSegregated;
