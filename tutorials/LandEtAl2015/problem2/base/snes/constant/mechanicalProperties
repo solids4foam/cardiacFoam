@@ -40,7 +40,7 @@ mechanical
             // In this case, the properties are isotropic so the fibre direction
             // does not matter; we pick the z direction for symmetry but it
             // should not matter
-            uniformFibreField yes;
+            uniformFibreField no;
             f0              (0 0 1);
 
             // The bulk modulus acts as a penalty factor to enforce

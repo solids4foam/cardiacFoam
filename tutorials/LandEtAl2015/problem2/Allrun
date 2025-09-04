@@ -90,6 +90,8 @@ do
         solids4Foam::runApplication extrudeMesh
         solids4Foam::runApplication createPatch -overwrite
 
+	#checking to see if fibres dont matter
+	solids4Foam::runApplication setFibreField
         # Update the PETSc options file
         if [ -n "${PETSC_FILE}" ]; then
             sed -i "/^\s*optionsFile /s|^.*|    optionsFile ${PETSC_FILE};|" constant/solidProperties

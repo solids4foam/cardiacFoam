@@ -1,0 +1,40 @@
+#!/bin/bash                                                                                                                                                 
+
+# Source required functions                                                                                                                                 
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+source solids4FoamScripts.sh
+
+for i in {2..7}
+do
+    echo "Mesh $i"
+
+    # Copy base case                                                                        
+    CASE="mesh$i"
+    cp -r base/snes "${CASE}"
+
+    # Change blockMeshDict                                                                                                                                  
+    cd "${CASE}"
+    cp system/blockMeshDict.$i system/blockMeshDict
+
+    #Running the script
+    ./Allrun
+
+    # Return to the parent directory                                                                                                                        
+    cd ..
+    echo
+done
+
+echo "Waiting for jobs to complete"
+wait
+echo "All jobs finised"
+
+#extracting displacements
+./extractDz.sh
+
+echo "Waiting for data file"
+wait
+echo "Plotting data"
+
+gnuplot plotScripts/dz.gnuplot
+
+
