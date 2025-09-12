@@ -29,13 +29,47 @@ IOdictionary electroActivationProperties
     )
 );
 
-Info<< "Reading conductivity\n" << endl;
-const dimensionedSymmTensor conductivity
+Info<< "Reading conductivity" << endl;
+volTensorField conductivity
 (
-    "conductivity",
-    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-    electroActivationProperties
+    IOobject
+    (
+        "conductivity",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedTensor
+    (
+        "zero",
+        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+        tensor::zero
+    )
 );
+
+// Check if we actually read it, otherwise assign constant value
+if (!conductivity.headerOk())
+{
+    Info<< "conductivity not found on disk, using conductivity from "
+        << electroActivationProperties.name() << nl << endl;
+
+    conductivity =
+        dimensionedTensor
+        (
+            dimensionedSymmTensor
+            (
+                "conductivity",
+                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+                electroActivationProperties
+            ) & tensor(I)
+        );
+}
+else
+{
+    Info<< "conductivity field read from " << runTime.timeName() << nl << endl;;
+}
 
 Info<< "Reading cellular surface-to-volume ratio beta\n" << endl;
 const dimensionedScalar beta
