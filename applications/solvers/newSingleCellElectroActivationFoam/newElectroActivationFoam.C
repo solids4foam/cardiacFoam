@@ -25,40 +25,35 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    singleCellElectroActivationFoam
+    newElectroActivationFoam
 
 Description
-    This solver is a driver for a single cell electrophysiology model from
-    cellml.org. In this case, it is used to drive the Ten Tusscher, Noble,
-    Noble, Panfilov, 2004 model.
+    TO BE UPDATED SIMAO!!!!! Our new single cell solver!
+    
 
-    The user provides the transmembrane voltage vs time as an input.
+    Solves the reaction-diffusion equation for muscle electrophysiology
+    stemming from the mono-domain approach, where the ionic model is run-time
+    selectable.
 
-Author
+Authors
     Philip Cardiff, UCD.
-    Simao Nieto de Castro, UCD.
+    Simão Nieto de Castro, UCD.
 
 \*---------------------------------------------------------------------------*/
 
-// #include <math.h>
-// #include "tentusscher_noble_noble_panfilov_2004.H"
 #include "fvCFD.H"
-#include "interpolationTable.H"
-#include "OFstream.H"
-#include <string>
-#include "ionicModelCellML.H"        // Base class
-#include "autoPtr.H"
+#include "ionicModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 
 int main(int argc, char *argv[])
 {
     #include "setRootCaseLists.H"
     #include "createTime.H"
 
+    // Create commonly used dimensionSets for convenience
+    // Read electoActivationProperties
     Info<< "Reading electroActivationProperties\n" << endl;
-
     IOdictionary electroActivationProperties
     (
         IOobject
@@ -71,58 +66,50 @@ int main(int argc, char *argv[])
         )
     );
 
-    // Model selection (e.g., Gaur, TNNP, Courtemanche)
-    
-    word modelName;
-    electroActivationProperties.lookup("ionicModel") >> modelName;
-    
-    Info<< "Using ionic model: " << modelName << nl << endl;
-
-    word tissueName;
-    electroActivationProperties.lookup("tissue") >> tissueName;
-
-    std::string fileName = modelName + "_" + tissueName + "_output.txt";
-    OFstream output(fileName);
-
-   
+    // Read ionic model dict
+    const dictionary& ionicModelCoeffs =
+        electroActivationProperties.subDict("ionicModelCoeffs");
 
     // Create ionicModelCellML object
-    ionicModelCellML ionicModel(electroActivationProperties);
-    
-    // Write header once
-    ionicModel.writeHeader(output);
+    autoPtr<ionicModel> ionicModel =
+        ionicModel::New
+        (
+            ionicModelCoeffs,
+            1, // number of integration points
+            runTime.deltaTValue(),
+            true // solve Vm equation within ODE system
+        );
 
     // Loop through time
     Info<< "\nStarting time loop\n" << endl;
-    
-        while (runTime.loop())
-        {
-            Info<< "Time = " << runTime.timeName() << nl << endl;
-    
-            // Time in milliseconds
-            const scalar VOI = runTime.value()*1000;
-    
-            // Define the time step in ms
-            const scalar deltaT = runTime.deltaTValue()*1000;
-    
-            // Define the old time in ms
-            const scalar tOld = VOI - deltaT;
-    
-            // Solve the ionic model ODEs for this time step given the known voltage
-            ionicModel.solve(tOld, deltaT);
-    
-            // Compute the variables for the given time
-            ionicModel.computeVariables(VOI);
-    
-            // Write the fields to a file
-            ionicModel.write(VOI, output);
-        }
 
-    Info<< "Simulation complete.\n"
-        << "Results written to: " << output.name() << nl
-        << "Format: [Time STATES ALGEBRAIC RATES]" << nl;
+    while (runTime.loop())
+    {
+        Info<< nl << "Time = " << runTime.timeName() << endl;
+
+
+        // Solve the ionic model given the current voltage and calculate the
+        // ionic model currents
+
+        scalarField dummyVmField(1, 0);
+        scalarField dummyIonicCurrentField(1, 0);
+        ionicModel->calculateCurrent
+        (
+            runTime.value() - runTime.deltaTValue(),
+            runTime.deltaTValue(),
+            dummyVmField,
+            dummyIonicCurrentField
+        );
+    }
+
+    Info<< nl << endl;
+
+    runTime.printExecutionTime(Info);
+
+    Info<< "End" << nl << endl;
 
     return 0;
 }
+
 
 // ************************************************************************* //
