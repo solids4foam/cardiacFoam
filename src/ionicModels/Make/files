@@ -1,8 +1,8 @@
 ionicModel/ionicModel.C
-TNNP/TNNP.C
+/*TNNP/TNNP.C*/
 Gaur/Gaur.C
-Courtemanche/Courtemanche.C
-BuenoOrovio/BuenoOrovio.C
+/*Courtemanche/Courtemanche.C
+BuenoOrovio/BuenoOrovio.C*/
 
 
 LIB = $(FOAM_USER_LIBBIN)/libionicModels

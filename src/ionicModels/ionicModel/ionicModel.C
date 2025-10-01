@@ -41,14 +41,18 @@ namespace Foam
 
 Foam::ionicModel::ionicModel
 (
-    const dictionary& dict, const label num, const scalar initialDeltaT
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
 )
 :
     ODESystem(),
     odeSolver_(),
     dict_(dict),
     step_(num, initialDeltaT),
-    tissue_(-1)  // initialize to invalid flag
+    tissue_(-1),  // initialize to invalid flag
+    solveVmWithinODESolver_(solveVmWithinODESolver)
 {
     word tissueName;
     dict.lookup("tissue") >> tissueName;
@@ -82,7 +86,8 @@ Foam::ionicModel::New
 (
     const dictionary& dict,
     const label nIntegrationPoints,
-    const scalar initialDeltaT
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
 )
 {
     const word modelType(dict.lookup("ionicModel"));
@@ -104,7 +109,7 @@ Foam::ionicModel::New
 
     return autoPtr<ionicModel>
     (
-        ctorPtr(dict, nIntegrationPoints, initialDeltaT)
+        ctorPtr(dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
     );
 }
 

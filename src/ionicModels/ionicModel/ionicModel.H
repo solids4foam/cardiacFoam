@@ -46,6 +46,7 @@ Authors
 #include "ODESystem.H"
 #include "ODESolver.H"
 #include "word.H"
+#include "Switch.H"
 
 
 
@@ -76,8 +77,15 @@ class ionicModel
         //- Step size for ODE solver
         mutable scalarList step_;
 
-        //flag for tissue type
+        //- Flag for tissue type
         mutable label tissue_;
+
+        //- Flag for enable the update of the transmembrane voltage within the
+        //  the ionic model ODE solver. For example, if calling for a single
+        //  cell, then the governing voltage PDE becomes an ODE so you would
+        //  enable this flag
+        mutable Switch solveVmWithinODESolver_;
+
 
     // Private Member Functions
 
@@ -105,9 +113,10 @@ public:
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
-                const scalar initialDeltaT
+                const scalar initialDeltaT,
+                const Switch solveVmWithinODESolver
             ),
-            (dict, nIntegrationPoints, initialDeltaT)
+            (dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
         );
 
     // Selectors
@@ -117,7 +126,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
         );
 
     // Constructors
@@ -128,7 +138,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
         );
 
 
@@ -159,6 +170,12 @@ public:
         label tissue() const
         {
             return tissue_;
+        }
+
+        //- Getter for tissue flag
+        const Switch& solveVmWithinODESolver() const
+        {
+            return solveVmWithinODESolver_;
         }
 
         //- Solve and ODE system for the start time, the time-step and the

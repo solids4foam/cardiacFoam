@@ -95,7 +95,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
         );
 
 
