@@ -260,7 +260,7 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
 
 
 void
-GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag)
+GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
 {
 
     double AV_Bcacsr;
@@ -708,5 +708,9 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     //ALGEBRAIC[AV_Iion] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + 
     //ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_ITo_ITo] + ALGEBRAIC[AV_INaCa]  + ALGEBRAIC[AV_INaK_INaK] + 
     //ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
-    //RATES[cell_v] = -ALGEBRAIC[AV_Iion] - ALGEBRAIC[AV_I_stim]; 
+
+    if (solveVmWithinODESolver)
+    {
+        RATES[cell_v] = -ALGEBRAIC[AV_Iion] - ALGEBRAIC[AV_I_stim];
+    }
 }

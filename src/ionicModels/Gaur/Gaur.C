@@ -50,10 +50,13 @@ namespace Foam
 
 Foam::Gaur::Gaur
 (
-    const dictionary& dict, const label num, const scalar initialDeltaT
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT),
+    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
@@ -155,7 +158,8 @@ void Foam::Gaur::calculateCurrent
                 RATESI.data(),
                 STATESI.data(),
                 ALGEBRAICI.data(),
-                tissue()
+                tissue(),
+                solveVmWithinODESolver()
             );
 
             // Extract the total ionic current
@@ -189,7 +193,8 @@ void Foam::Gaur::derivatives
         dydt.data(),
         const_cast<scalarField&>(y).data(),
         ALGEBRAIC_TMP.data(),
-        tissue()
+        tissue(),
+        solveVmWithinODESolver()
     );
 }
 
