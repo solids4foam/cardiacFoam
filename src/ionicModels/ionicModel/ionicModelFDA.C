@@ -25,21 +25,21 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "ionicModel.H"
+#include "ionicModelFDA.H"
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    defineTypeNameAndDebug(ionicModel, 0);
-    defineRunTimeSelectionTable(ionicModel, dictionary);
+    defineTypeNameAndDebug(ionicModelFDA, 0);
+    defineRunTimeSelectionTable(ionicModelFDA, dictionary);
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::ionicModel::ionicModel
+Foam::ionicModelFDA::ionicModelFDA
 (
     const dictionary& dict,
     const label num,
@@ -58,25 +58,18 @@ Foam::ionicModel::ionicModel
 
 }
 
-void Foam::ionicModel::setTissueFromDict()
+void Foam::ionicModelFDA::setTissueFromDict()
 {
     word tissueName;
-    dict_.lookup("tissue") >> tissueName;
+    dict_.lookup("dimension") >> tissueName;
     
 
     List <word> tissues = supportedTissues();
 
-    if (tissues.size() == 1)
-    {
-        tissueName = tissues[0];
-        Info << "Atrial model or ventricular myocyte model with no endo-mcell-epi distinction "
-             << tissueName << ". Overriding input tissue." << endl;
-    }
 
-    tissue_ = (tissueName == "epicardialCells") ? 1
-            : (tissueName == "mCells")          ? 2
-            : (tissueName == "endocardialCells") ? 3
-            : (tissueName == "myocyte") ? 4
+    tissue_ = (tissueName == "1D") ? 1
+            : (tissueName == "2D") ? 2
+            : (tissueName == "3D") ? 3
             : -1;  // invalid flag
 
     if (tissue_ == -1 || !tissues.contains(tissueName))
@@ -94,8 +87,8 @@ void Foam::ionicModel::setTissueFromDict()
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::ionicModel>
-Foam::ionicModel::New
+Foam::autoPtr<Foam::ionicModelFDA>
+Foam::ionicModelFDA::New
 (
     const dictionary& dict,
     const label nIntegrationPoints,
@@ -120,7 +113,7 @@ Foam::ionicModel::New
         )   << exit(FatalIOError);
     }
 
-    return autoPtr<ionicModel>
+    return autoPtr<ionicModelFDA>
     (
         ctorPtr(dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
     );
@@ -129,7 +122,7 @@ Foam::ionicModel::New
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::ionicModel::~ionicModel()
+Foam::ionicModelFDA::~ionicModelFDA()
 {}
 
 

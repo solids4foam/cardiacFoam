@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroActivationProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+conductivity [-1 -3 3 0 0 2 0] (0.1013212 0 0 0.1013212 0 0.1013212);
+
+// Cellular membrane surface-to-volume ratio [1/m]
+Chi  [0 -1 0 0 0 0 0] 3;
+
+// Cellular membrane capacitance [F/m^2]
+Cm    [-1 -4 4 0 0 2 0] 2;
+
+
+
+
+ionicModelCoeffs
+{
+    // Specify the ionic model
+    ionicModel manufacturedFDA;
+
+    //specify the type of tissue to model
+    dimension "1D";
+
+    //Initial ODE step;
+    initialODEStep 1e-5;
+
+
+    // ODE solver
+    solver    RKF45;
+    //solver    Euler;
+
+    // Maximum number of steps
+    maxSteps 1000000000;
+
+    // Relative tolerance
+    // Defaults to 1e-4
+    //relTol 1e-6;
+
+    // Absolute tolerance
+    // Defaults to 1e-15
+    //absTol 1e-6;
+
+    
+}
+
+// ************************************************************************* //
