@@ -24,13 +24,13 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ionicModel
+    Foam::ionicModelFDA
 
 Description
     Abstract base class for ionic models.
 
 SourceFiles
-    ionicModel.C
+    ionicModelFDA.C
 
 Authors
     Philip Cardiff, UCD.
@@ -38,16 +38,17 @@ Authors
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef ionicModel_H
-#define ionicModel_H
+#ifndef ionicModelFDA_H
+#define ionicModelFDA_H
 
-#include "ionicModel.H"
+#include "ionicModelFDA.H"
 #include "runTimeSelectionTables.H"
 #include "ODESystem.H"
 #include "ODESolver.H"
 #include "word.H"
 #include "Switch.H"
 #include "OFstream.H"
+#include "volFields.H"
 
 
 
@@ -61,7 +62,7 @@ namespace Foam
                          Class ionicModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class ionicModel
+class ionicModelFDA
 :
     public ODESystem
 {
@@ -91,10 +92,10 @@ class ionicModel
     // Private Member Functions
 
         //- No copy construct
-        ionicModel(const ionicModel&) = delete;
+        ionicModelFDA(const ionicModelFDA&) = delete;
 
         //- No copy assignment
-        void operator=(const ionicModel&) = delete;
+        void operator=(const ionicModelFDA&) = delete;
 
 protected:
         void setTissueFromDict();
@@ -105,7 +106,7 @@ protected:
 public:
 
     //- Runtime type information
-    TypeName("ionicModel");
+    TypeName("ionicModelFDA");
 
 
     // Declare run-time constructor selection table
@@ -114,7 +115,7 @@ public:
         declareRunTimeSelectionTable
         (
             autoPtr,
-            ionicModel,
+            ionicModelFDA,
             dictionary,
             (
                 const dictionary& dict,
@@ -128,7 +129,7 @@ public:
     // Selectors
 
         //- Create a ionic model
-        static autoPtr<ionicModel> New
+        static autoPtr<ionicModelFDA> New
         (
             const dictionary& dict,
             const label nIntegrationPoints,
@@ -140,7 +141,7 @@ public:
 
         //- Construct given a dictionary, the number of integration points and a
         //  initial time step for the ODE solver
-        ionicModel
+        ionicModelFDA
         (
             const dictionary& dict,
             const label nIntegrationPoints,
@@ -150,7 +151,7 @@ public:
 
 
     //- Destructor
-    virtual ~ionicModel();
+    virtual ~ionicModelFDA();
 
 
     // Member Functions
@@ -191,7 +192,23 @@ public:
             const scalar stepStartTime,
             const scalar timeStep,
             const scalarField& voltage,
-            scalarField& IonicCurrent
+            scalarField& IonicCurrent,
+            scalarField& gating1,
+            scalarField& gating2,
+            scalarField& gating3
+        )
+        {
+            notImplemented("WIP");
+        }
+        
+        
+        virtual void initializeFields
+        (
+            volScalarField& Vm,
+            volScalarField& u1,
+            volScalarField& u2,
+            volScalarField& u3,
+            const volVectorField& C
         )
         {
             notImplemented("WIP");
@@ -201,7 +218,7 @@ public:
         //Supported words by the solver 
         virtual List<word> supportedTissues() const
         {
-            return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+            return {"1D", "2D", "3D"};
         }
 
         virtual void writeHeader(OFstream& os) const 

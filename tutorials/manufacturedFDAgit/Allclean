@@ -1,0 +1,16 @@
+
+#!/bin/bash
+
+# Enable extended globbing
+shopt -s extglob
+
+# Delete everything that contains a number except "0"
+rm -rf !("0"|*[^0-9]*)
+Rm -r 0.*
+
+
+rm -rf processor*
+
+rm -f log.*
+
+
