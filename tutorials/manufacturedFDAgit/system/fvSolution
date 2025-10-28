@@ -21,27 +21,24 @@ solvers
     {
         solver          PCG;
         preconditioner  DIC;
-        tolerance       1e-11;
+        tolerance       1e-14;
         relTol          0.0;
     }
 }
 
-// PIMPLE
-// {
-//     nCorrectors     1000;
-//     // nNonOrthogonalCorrectors 0;
-//     // pRefCell        0;
-//     // pRefValue       0;
+PIMPLE
+{
+    nOuterCorrectors     5;
 
-//     residualControl
-//     {
-//         Vm
-//         {
-//             relTol          0.0;
-//             tolerance       1e-6;
-//         }
-//     }
-// }
+    residualControl
+    {
+        Vm
+        {
+            relTol          0.0;
+            tolerance       1e-12;
+        }
+    }
+}
 
 
 // ************************************************************************* //

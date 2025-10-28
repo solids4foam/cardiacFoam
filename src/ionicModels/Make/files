@@ -4,5 +4,8 @@ Gaur/Gaur.C
 /*Courtemanche/Courtemanche.C
 BuenoOrovio/BuenoOrovio.C*/
 
+ionicModel/ionicModelFDA.C
+manufacturedFDA/manufacturedFDA.C
+
 
 LIB = $(FOAM_USER_LIBBIN)/libionicModels

@@ -31,9 +31,10 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModelFDA.H"
 #include "fieldInit.H"
-//Only needs strings for the header writing 
+//Only needs strings for the header writing
 //#include <string>
 
+#include "manufacturedFields.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -58,16 +59,18 @@ Foam::manufacturedFDA::manufacturedFDA
 :
     ionicModelFDA(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
+    STATES_OLD_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
-    RATES_(num)  
-{ 
-   
+    RATES_(num)
+{
+
     //see if I need to add flog in function as well.
     Info<< nl << "Calling FDA test Constants" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i, new scalarField(NUM_STATES, 0.0));
+        STATES_OLD_.set(i, new scalarField(NUM_STATES, 0.0));
         ALGEBRAIC_.set(i, new scalarField(NUM_ALGEBRAIC, 0.0));
         RATES_.set(i, new scalarField(NUM_STATES, 0.0));
 
@@ -77,11 +80,14 @@ Foam::manufacturedFDA::manufacturedFDA
         // states
         manufacturedFDAinitConsts
         (
-            CONSTANTS_.data(), 
-            RATES_[i].data(), 
-            STATES_[i].data(), 
+            CONSTANTS_.data(),
+            RATES_[i].data(),
+            STATES_[i].data(),
             tissue()
         );
+
+        // Initialise old time STATES
+        STATES_OLD_[i] = STATES_[i];
     }
 
     Info<< nl
@@ -126,7 +132,7 @@ void Foam::manufacturedFDA::initializeFields(
         double z = coord.z();
 
         double VmVal, uu1, uu2, uu3;
-        u_init(x, y, z, VmVal, uu1, uu2, uu3, tissue());  
+        u_init(x, y, z, VmVal, uu1, uu2, uu3, tissue());
 
         Vm[celli]  = VmVal;
         u1m[celli] = uu1;
@@ -150,6 +156,9 @@ void Foam::manufacturedFDA::initializeFields(
         STATESI[u1] = u1m[i];
         STATESI[u2] = u2m[i];
         STATESI[u3] = u3m[i];
+
+        // Copy to old-time STATES
+        STATES_OLD_[i] = STATESI;
     }
     //correct boundary conditions
     Vm.correctBoundaryConditions();
@@ -188,71 +197,97 @@ void Foam::manufacturedFDA::calculateCurrent
             << "Vm.size() != nIntegrationPoints" << abort(FatalError);
     }
 
+    // Reset states to their old time values
+    // This allows the use of PIMPLE-type outer iterations within the solver,
+    // i.e. this ODE solver can then potentially be called multiple times in the
+    // same time step
+    Info<< "STATES_ = " << STATES_ << endl;
+
+    STATES_ = STATES_OLD_;
+
+    Info<< "STATES_ = " << STATES_ << endl;
+
+    // Debug - calculate true solutions
+    // I don't have access to the mesh so I will hard-code the coordinates
+    // scalarField exactU1(STATES_.size());
+    // scalarField exactU2(STATES_.size());
+    // scalarField exactU3(STATES_.size());
+    // scalarField x(STATES_.size());
+    // const scalar dx = 1.0/scalar(STATES_.size());
+    // forAll(x, i)
+    // {
+    //     x[i] = (scalar(i) + 0.5)*dx;
+    // }
+    // computeManufacturedU(exactU1, exactU2, exactU3, x, stepStartTime + deltaT);
+    // scalarField exactIion(STATES_.size());;
+    // computeIion
+    // (
+    //     exactIion, exactU1, exactU2, exactU3, Vm,
+    //     CONSTANTS_[Cm], CONSTANTS_[Beta], CONSTANTS_[Chi]
+    // );
 
 
 
     label monitorCell = 0;
+
     forAll(STATES_, integrationPtI)
     {
+        // Take a reference to the variables for this integration point
+        scalarField& STATESI = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI = RATES_[integrationPtI];
 
-            // Take a reference to the variables for this integration point
-            scalarField& STATESI = STATES_[integrationPtI];
-            scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-            scalarField& RATESI = RATES_[integrationPtI];
+        const scalar tStart = stepStartTime;
+        const scalar tEnd = (stepStartTime + deltaT);
 
-        
+        // Set step to deltaT
+        scalar& step = ionicModelFDA::step()[integrationPtI];
 
-            const scalar tStart = stepStartTime;
-            const scalar tEnd = (stepStartTime + deltaT);
-            
-            // Set step to deltaT
-            scalar& step = ionicModelFDA::step()[integrationPtI];
-        
-            //clamp the step, or just leave it to the solver
-            step = min(step, deltaT);
+        // Update the voltage used by the ODE solver - THIS WAS MISSING
+        STATESI[V] = Vm[integrationPtI];
 
-            if (integrationPtI == monitorCell)
-            {
-                Info<< "integrationPtI = " << integrationPtI
-                    << " | t = " << tStart
-                    << " → " << tEnd
-                    << " | step = " << step
-                    << " | Vm = " << STATESI[V]
-                    << " | u1 = " << STATESI[u1]
-                    << " | u2 = " << STATESI[u2]
-                    << " | u3 = " << STATESI[u3]
-                    << endl;
-            }
+        //clamp the step, or just leave it to the solver
+        step = min(step, deltaT);
 
-            // Update ODE system
-            odeSolver().solve(tStart, tEnd, STATESI, step);
+        if (integrationPtI == monitorCell)
+        {
+            Info<< "integrationPtI = " << integrationPtI
+                << " | t = " << tStart
+                << " → " << tEnd
+                << " | step = " << step
+                << " | Vm = " << STATESI[V]
+                << " | u1 = " << STATESI[u1]
+                << " | u2 = " << STATESI[u2]
+                << " | u3 = " << STATESI[u3]
+                << endl;
+        }
 
-            // Calculate the three currents
-            ::manufacturedFDAcomputeVariables
-            (
-                tEnd,
-                CONSTANTS_.data(),
-                RATESI.data(),
-                STATESI.data(),
-                ALGEBRAICI.data(),
-                tissue(),
-                solveVmWithinODESolver()
-            );
+        // Update ODE system
+        odeSolver().solve(tStart, tEnd, STATESI, step);
 
-            Im[integrationPtI] = ALGEBRAICI[Iion];
-            u1m[integrationPtI]= STATESI[u1];
-            u2m[integrationPtI]= STATESI[u2];
-            u3m[integrationPtI]= STATESI[u3];
-            
+        // Calculate the three currents
+        ::manufacturedFDAcomputeVariables
+        (
+            tEnd,
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
 
+        Im[integrationPtI] = ALGEBRAICI[Iion];
+        u1m[integrationPtI]= STATESI[u1];
+        u2m[integrationPtI]= STATESI[u2];
+        u3m[integrationPtI]= STATESI[u3];
     }
-
 }
 
 
 void Foam::manufacturedFDA::writeHeader(OFstream& output) const
 {
-    
+
     output << "time Vm";
 
     for (int i = 0; i < NUM_STATES; ++i)
@@ -276,7 +311,7 @@ void Foam::manufacturedFDA::write(const scalar t, OFstream& output) const
 
     output
         << t << " " << Vm;
-        
+
     // States
     forAll(STATES_[0], j)
     {
@@ -309,20 +344,28 @@ void Foam::manufacturedFDA::derivatives
 {
     scalarField ALGEBRAIC_TMP(1, 0.0);
 
-    // Calculate the rates using the cellML header file
-    ::manufacturedFDAcomputeVariables 
+    compute_f_RHS_point
     (
-        t,
-        CONSTANTS_.data(),
-        // RATES.data(),
-        // STATES.data(),
-        dydt.data(),
-        const_cast<scalarField&>(y).data(),
-        ALGEBRAIC_TMP.data(),
-        tissue(),
-        solveVmWithinODESolver()
+        dydt[1],
+        dydt[2],
+        dydt[3],
+        y[1],
+        y[2],
+        y[3],
+        y[0]
     );
+
+    // // Calculate the rates using the cellML header file
+    // ::manufacturedFDAcomputeVariables
+    // (
+    //     t,
+    //     CONSTANTS_.data(),
+    //     // RATES.data(),
+    //     // STATES.data(),
+    //     dydt.data(),
+    //     const_cast<scalarField&>(y).data(),
+    //     ALGEBRAIC_TMP.data(),
+    //     tissue(),
+    //     solveVmWithinODESolver()
+    // );
 }
-
-
-
