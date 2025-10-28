@@ -65,6 +65,9 @@ class manufacturedFDA
         //- States
         mutable PtrList<scalarField> STATES_;
 
+        //- States - old time
+        mutable PtrList<scalarField> STATES_OLD_;
+
         //- Constants
         mutable scalarField CONSTANTS_;
 
@@ -151,6 +154,18 @@ public:
             const scalarField& y,
             scalarField& dydt
         ) const;
+
+        //- Reset STATES to STATES_OLD
+        virtual void resetStatesToStatesOld() const
+        {
+            STATES_ = STATES_OLD_;
+        }
+
+        //- Update STATES_OLD from STATES
+        virtual void updateStatesOld() const
+        {
+            STATES_OLD_ = STATES_;
+        }
 };
 
 

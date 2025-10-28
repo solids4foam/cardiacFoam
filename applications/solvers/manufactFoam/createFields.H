@@ -1,5 +1,5 @@
-#include "fvCFD.H"
 const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
+
 // Transmembrane potential
 volScalarField Vm
 (
@@ -16,8 +16,17 @@ volScalarField Vm
     "zeroGradient"
 );
 
+Info<< "Setting initial conditions for V" << endl;
+computeManufacturedV
+(
+    Vm.primitiveFieldRef(),
+    mesh.C().component(vector::X),
+    runTime.value()
+);
+Vm.correctBoundaryConditions();
 
 // --- Create fields
+// PC: why do we need u1, u2 and u3 at the solver level?
 Info<< "Creating fields for ionic model gating variables\n" << endl;
 
 volScalarField u1
@@ -65,6 +74,18 @@ volScalarField u3
       "zeroGradient"
 );
 
+Info<< "Setting initial conditions for u1, u2 and u3" << endl;
+computeManufacturedU
+(
+    u1.primitiveFieldRef(),
+    u2.primitiveFieldRef(),
+    u3.primitiveFieldRef(),
+    mesh.C().component(vector::X),
+    runTime.value()
+);
+u1.correctBoundaryConditions();
+u2.correctBoundaryConditions();
+u3.correctBoundaryConditions();
 
 
 // ************************************************************************* //
@@ -103,23 +124,6 @@ volTensorField conductivity
         tensor::zero
     )
 );
-(
-    IOobject
-    (
-        "conductivity",
-        runTime.timeName(),
-        mesh,
-        IOobject::READ_IF_PRESENT,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedTensor
-    (
-        "zero",
-        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-        tensor::zero
-    )
-);
 
 // Check if we actually read it, otherwise assign constant value
 if (!conductivity.headerOk())
@@ -140,7 +144,7 @@ if (!conductivity.headerOk())
 }
 else
 {
-    Info<< "conductivity field read from " << runTime.timeName() << nl << endl;;
+    Info<< "conductivity field read from " << runTime.timeName() << nl << endl;
 }
 
 Info<< "Reading cellular surface-to-volume ratio \n" << endl;

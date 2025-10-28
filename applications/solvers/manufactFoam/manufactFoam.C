@@ -40,7 +40,10 @@ Authors
 
 #include "fvCFD.H"
 #include "ionicModelFDA.H"
-#include "fieldInit.H" 
+#include "fieldInit.H"
+#include "pimpleControl.H"
+#include "manufacturedFields.H"
+#include "manufacturedFDA.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -49,25 +52,38 @@ int main(int argc, char *argv[])
     #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
+
+    pimpleControl pimple(mesh);
+
     #include "createFields.H"
-    
+
+    computeAndPrintErrors
+    (
+        Vm, u1, u2, u3, mesh.C().component(vector::X), runTime.value()
+    );
+
+    // Initialise fields
     ionicModelFDA->initializeFields
     (
-        Vm, 
-        u1, 
-        u2, 
-        u3, 
+        Vm,
+        u1,
+        u2,
+        u3,
         mesh.C()
     );
-    // Initial write of fields
-    // Force write of initialized fields at t=0
-    Vm.write();
-    u1.write();
-    u2.write();
-    u3.write();
-    runTime.write();
+    // // Initial write of fields
+    // // Force write of initialized fields at t=0
+    // Vm.write();
+    // u1.write();
+    // u2.write();
+    // u3.write();
+    // runTime.write();
+    // Info<< "conductivity[0] = " << conductivity[0] << nl
+    Info<< "conductivity = " << conductivity << nl
+        << "chi = " << chi << nl
+        << "Cm = " << Cm << endl;
 
-Info << "Initial fields written to 0/ directory\n" << endl;
+    Info << "Initial fields written to 0/ directory\n" << endl;
 
     // Loop through time
     Info<< "\nStarting time loop\n" << endl;
@@ -76,47 +92,83 @@ Info << "Initial fields written to 0/ directory\n" << endl;
     {
         Info<< nl << "Time = " << runTime.timeName() << endl;
 
-        
-        // Solve the ionic model for the manufactured solutions with 3 gating variable.
-        scalarField& ionicCurrentI = ionicCurrent;
-        scalarField& u1I = u1;
-        scalarField& u2I = u2;
-        scalarField& u3I = u3;
+        // Update the old-time STATES within the ionic model
+        refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
 
+        while (pimple.loop())
+        {
+            // Before solving the ionic model, reset its state to the old time
+            refCast<manufacturedFDA>(*ionicModelFDA).resetStatesToStatesOld();
 
-        ionicCurrentI = 0.0;
-        u1I = 0.0;
-        u2I = 0.0;
-        u3I = 0.0;
-        ionicModelFDA->calculateCurrent
-        (
-            runTime.value() - runTime.deltaTValue(),
-            runTime.deltaTValue(),
-            Vm.internalField(),
-            ionicCurrentI,
-            u1I,
-            u2I,
-            u3I
+            // Solve the ionic model for the manufactured solutions with 3 gating variable.
+            scalarField& ionicCurrentI = ionicCurrent;
+            scalarField& u1I = u1;
+            scalarField& u2I = u2;
+            scalarField& u3I = u3;
 
-        );
-        Vm.correctBoundaryConditions();
-        u1.correctBoundaryConditions();
-        u2.correctBoundaryConditions();
-        u3.correctBoundaryConditions();
+            ionicCurrentI = 0.0;
+            u1I = 0.0;
+            u2I = 0.0;
+            u3I = 0.0;
+            ionicModelFDA->calculateCurrent
+            (
+                runTime.value() - runTime.deltaTValue(),
+                runTime.deltaTValue(),
+                Vm.internalField(),
+                ionicCurrentI,
+                u1I,
+                u2I,
+                u3I
+            );
+            Vm.correctBoundaryConditions();
+            u1.correctBoundaryConditions();
+            u2.correctBoundaryConditions();
+            u3.correctBoundaryConditions();
 
-        // Construct and solve the voltage equation given a known ionic current
-        // and  external stimulus current
-        fvScalarMatrix VmEqn
-        (
-            chi*Cm*fvm::ddt(Vm)
-         ==
-            fvm::laplacian(conductivity, Vm)
-          - chi*ionicCurrent
-        );
+            // TESTING - enforce exact u1, u2, u3, and ionicCurrent
+            // computeManufacturedU
+            // (
+            //     u1.primitiveFieldRef(),
+            //     u2.primitiveFieldRef(),
+            //     u3.primitiveFieldRef(),
+            //     mesh.C().component(vector::X),
+            //     runTime.value()
+            // );
+            // u1.correctBoundaryConditions();
+            // u2.correctBoundaryConditions();
+            // u3.correctBoundaryConditions();
+            // computeIion
+            // (
+            //     ionicCurrentI,
+            //     u1I,
+            //     u2I,
+            //     u3I,
+            //     Vm,
+            //     Cm.value(),
+            //     -1.1, // beta
+            //     chi.value()
+            // );
+            // ionicCurrent.correctBoundaryConditions();
 
-        VmEqn.solve();
+            // Construct and solve the voltage equation given a known ionic current
+            // and  external stimulus current
+            fvScalarMatrix VmEqn
+            (
+                chi*Cm*fvm::ddt(Vm)
+             ==
+                fvm::laplacian(conductivity, Vm)
+              - chi*ionicCurrent
+            );
+
+            VmEqn.solve();
+        }
+
         runTime.write();
-        
+
+        computeAndPrintErrors
+        (
+            Vm, u1, u2, u3, mesh.C().component(vector::X), runTime.value()
+        );
     }
 
     Info<< nl << endl;
