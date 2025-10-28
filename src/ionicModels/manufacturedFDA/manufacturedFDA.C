@@ -201,11 +201,11 @@ void Foam::manufacturedFDA::calculateCurrent
     // This allows the use of PIMPLE-type outer iterations within the solver,
     // i.e. this ODE solver can then potentially be called multiple times in the
     // same time step
-    Info<< "STATES_ = " << STATES_ << endl;
+    //Info<< "STATES_ = " << STATES_ << endl;
 
     STATES_ = STATES_OLD_;
 
-    Info<< "STATES_ = " << STATES_ << endl;
+    //Info<< "STATES_ = " << STATES_ << endl;
 
     // Debug - calculate true solutions
     // I don't have access to the mesh so I will hard-code the coordinates
