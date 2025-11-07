@@ -121,16 +121,41 @@ public:
 
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
+
+
+
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& result0,
-            scalarField& result1,
-            scalarField& result2,
-            scalarField& result3
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
         );
+        virtual void calculateGating
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        );
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        );
+
+
         virtual void initializeFields
         (
             volScalarField& Vm,
@@ -139,7 +164,7 @@ public:
             volScalarField& u3,
             const volVectorField& C
         );
-        
+
         //- Number of ODE's to solve
         virtual label nEqns() const
         {
