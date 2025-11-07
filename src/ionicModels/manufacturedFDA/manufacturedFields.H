@@ -101,6 +101,23 @@ inline void computeIion
     }
 }
 
+inline void computeIion_point
+(
+    scalar& Iion,
+    const scalar u1,
+    const scalar u2,
+    const scalar u3,
+    const scalar V,
+    const scalar Cm,
+    const scalar beta,
+    const scalar chi
+)
+{
+    const scalar term1 = -(Cm / 2.0) * (u1 + u3 - V) * Foam::pow(u2, 2) * (V - u3);
+    const scalar term2 = (beta / chi) * (V - u3);
+    Iion = term1 + term2;
+}
+
 inline void computeAndPrintErrors
 (
     const scalarField& Vm,

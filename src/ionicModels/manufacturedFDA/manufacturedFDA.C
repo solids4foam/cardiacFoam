@@ -112,7 +112,8 @@ Foam::List<Foam::word> Foam::manufacturedFDA::supportedTissues() const
 
 
  // --- Initialize OpenFOAM fields and ODE states ---
-void Foam::manufacturedFDA::initializeFields(
+void Foam::manufacturedFDA::initializeFields
+(
     volScalarField& Vm,
     volScalarField& u1m,
     volScalarField& u2m,
@@ -125,7 +126,7 @@ void Foam::manufacturedFDA::initializeFields(
     {
 
         const vector& coord = C[celli];
-        Info << "C size: " << C.size() << ", Vm size: " << Vm.size() << nl;
+        //Info << "C size: " << C.size() << ", Vm size: " << Vm.size() << nl;
 
         double x = coord.x();
         double y = coord.y();
@@ -139,13 +140,13 @@ void Foam::manufacturedFDA::initializeFields(
         u2m[celli] = uu2;
         u3m[celli] = uu3;
 
-        Info << "Cell " << celli
-             << " x=" << x << " y=" << y << " z=" << z
-             << " Vm=" << Vm[celli]
-             << " u1=" << u1m[celli]
-             << " u2=" << u2m[celli]
-             << " u3=" << u3m[celli]
-             << endl;
+        // Info << "Cell " << celli
+        //      << " x=" << x << " y=" << y << " z=" << z
+        //      << " Vm=" << Vm[celli]
+        //      << " u1=" << u1m[celli]
+        //      << " u2=" << u2m[celli]
+        //      << " u3=" << u3m[celli]
+        //      << endl;
     }
 
     // Initialize STATES_ array for ODE solver
@@ -166,7 +167,21 @@ void Foam::manufacturedFDA::initializeFields(
     u2m.correctBoundaryConditions();
     u3m.correctBoundaryConditions();
 
-    Info << "Boundary conditions corrected for Vm, u1m, u2m, and u3m." << endl;
+    Info<< "Boundary conditions corrected for Vm, u1m, u2m, and u3m." << endl;
+
+    // Info<< "In initFields " << nl
+    //     << "u1m " << u1m << endl;
+    // computeAndPrintErrors
+    // (
+    //     Vm,
+    //     u1m,
+    //     u2m,
+    //     u3m,
+    //     C.component(vector::X),
+    //     0.0 // time
+    // );
+    // FatalError
+    //     << "stop in initFields" << abort(FatalError);
 }
 
 
@@ -226,7 +241,19 @@ void Foam::manufacturedFDA::calculateCurrent
     //     CONSTANTS_[Cm], CONSTANTS_[Beta], CONSTANTS_[Chi]
     // );
 
-
+    // Info<< "stepStartTime = " << stepStartTime << nl
+    //     << "u1m " << u1m << endl;
+    // computeAndPrintErrors
+    // (
+    //     Vm,
+    //     u1m,
+    //     u2m,
+    //     u3m,
+    //     x,
+    //     stepStartTime // + deltaT
+    // );
+    // // FatalError
+    //     << "stop" << abort(FatalError);
 
     label monitorCell = 0;
 
@@ -264,6 +291,19 @@ void Foam::manufacturedFDA::calculateCurrent
 
         // Update ODE system
         odeSolver().solve(tStart, tEnd, STATESI, step);
+
+        // // Debug - hard code Euler method
+        // scalar f1, f2, f3;
+        // compute_f_RHS_point(f1, f2, f3, STATESI[u1], STATESI[u2], STATESI[u3], STATESI[V]);
+        // STATESI[u1] += deltaT*f1;
+        // STATESI[u2] += deltaT*f2;
+        // STATESI[u3] += deltaT*f3;
+
+        // computeIion_point
+        // (
+        //     ALGEBRAICI[Iion], STATESI[u1], STATESI[u2], STATESI[u3], STATESI[V],
+        //     CONSTANTS_[Cm], CONSTANTS_[Beta], CONSTANTS_[Chi]
+        // );
 
         // Calculate the three currents
         ::manufacturedFDAcomputeVariables
@@ -342,30 +382,30 @@ void Foam::manufacturedFDA::derivatives
     scalarField& dydt
 ) const
 {
-    scalarField ALGEBRAIC_TMP(1, 0.0);
+    scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
-    compute_f_RHS_point
-    (
-        dydt[1],
-        dydt[2],
-        dydt[3],
-        y[1],
-        y[2],
-        y[3],
-        y[0]
-    );
-
-    // // Calculate the rates using the cellML header file
-    // ::manufacturedFDAcomputeVariables
+    // compute_f_RHS_point
     // (
-    //     t,
-    //     CONSTANTS_.data(),
-    //     // RATES.data(),
-    //     // STATES.data(),
-    //     dydt.data(),
-    //     const_cast<scalarField&>(y).data(),
-    //     ALGEBRAIC_TMP.data(),
-    //     tissue(),
-    //     solveVmWithinODESolver()
+    //     dydt[1],
+    //     dydt[2],
+    //     dydt[3],
+    //     y[1],
+    //     y[2],
+    //     y[3],
+    //     y[0]
     // );
+
+    // Calculate the rates using the cellML header file
+    ::manufacturedFDAcomputeVariables
+    (
+        t,
+        CONSTANTS_.data(),
+        // RATES.data(),
+        // STATES.data(),
+        dydt.data(),
+        const_cast<scalarField&>(y).data(),
+        ALGEBRAIC_TMP.data(),
+        tissue(),
+        solveVmWithinODESolver()
+    );
 }
