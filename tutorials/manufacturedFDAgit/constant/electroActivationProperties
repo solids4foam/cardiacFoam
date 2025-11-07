@@ -14,10 +14,13 @@ FoamFile
     object      electroActivationProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//Conductivity
 
-// This should be 1.1/pi^2, not 1/pi^2
-// conductivity [-1 -3 3 0 0 2 0] (0.1013212 0 0 0.1013212 0 0.1013212);
-conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.111453302 0 0.111453302);
+//conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0 0 0); //1D
+conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0); 	    //2D
+//conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355); //3D
+
+
 
 // Cellular membrane surface-to-volume ratio [1/m]
 Chi  [0 -1 0 0 0 0 0] 3;
@@ -25,7 +28,7 @@ Chi  [0 -1 0 0 0 0 0] 3;
 // Cellular membrane capacitance [F/m^2]
 Cm    [-1 -4 4 0 0 2 0] 2;
 
-
+solveExplicit yes;
 
 
 ionicModelCoeffs
@@ -34,7 +37,10 @@ ionicModelCoeffs
     ionicModel manufacturedFDA;
 
     //specify the type of tissue to model
-    dimension "1D";
+    //dimension "1D"; 
+    dimension "2D";
+    //dimension "3D";  
+
 
     //Initial ODE step;
     initialODEStep 1e-5;

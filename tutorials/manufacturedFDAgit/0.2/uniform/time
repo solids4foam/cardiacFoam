@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
+|  \\    /   O peration     | Version:  2412                                  |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -9,45 +9,22 @@ FoamFile
 {
     version     2.0;
     format      ascii;
+    arch        "LSB;label=32;scalar=64";
     class       dictionary;
-    location    "system";
-    object      fvSchemes;
+    location    "0.2/uniform";
+    object      time;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-ddtSchemes
-{
-    //default         CrankNicolson 1.0;
-    //default         backward; // 2nd order
-    // default         Euler; // 1st order
-    default none;
-    ddt(Vm) backward;
-}
+value           0.200000000000066153;
 
-gradSchemes
-{
-    default         Gauss linear; //leastSquares;
-}
+name            "0.2";
 
-divSchemes
-{
-    default         none;
-}
+index           22826;
 
-laplacianSchemes
-{
-    default         Gauss linear corrected;
-}
+deltaT          8.76194e-06;
 
-interpolationSchemes
-{
-    default         linear;
-}
-
-snGradSchemes
-{
-    default         corrected;
-}
+deltaT0         8.76194e-06;
 
 
 // ************************************************************************* //

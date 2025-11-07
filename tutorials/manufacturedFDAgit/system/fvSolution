@@ -21,23 +21,23 @@ solvers
     {
         solver          PCG;
         preconditioner  DIC;
-        tolerance       1e-14;
+        tolerance       1e-15;
         relTol          0.0;
     }
 }
 
 PIMPLE
 {
-    nOuterCorrectors     5;
+    nOuterCorrectors     2;
 
-    residualControl
-    {
-        Vm
-        {
-            relTol          0.0;
-            tolerance       1e-12;
-        }
-    }
+    // residualControl
+    // {
+    //     Vm
+    //     {
+    //         relTol          0.0;
+    //         tolerance       1e-10;
+    //     }
+    // }
 }
 
 
