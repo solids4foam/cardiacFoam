@@ -28,9 +28,9 @@ License
 #include <math.h>
 #include "manufacturedFDA.H"
 #include "manufacturedFDA_2014.H"
+#include "manufacturedFDA_2014Names.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModelFDA.H"
-#include "fieldInit.H"
 //Only needs strings for the header writing
 //#include <string>
 
@@ -112,6 +112,7 @@ Foam::List<Foam::word> Foam::manufacturedFDA::supportedTissues() const
 
 
  // --- Initialize OpenFOAM fields and ODE states ---
+
 void Foam::manufacturedFDA::initializeFields
 (
     volScalarField& Vm,
@@ -121,33 +122,16 @@ void Foam::manufacturedFDA::initializeFields
     const volVectorField& C
 )
 {
-    // Initialize OpenFOAM fields
-    forAll(C, celli)
-    {
+    // Get the coordinates as scalarFields
+    scalarField X = C.component(vector::X);
+    scalarField Y = C.component(vector::Y);
+    scalarField Z = C.component(vector::Z);
 
-        const vector& coord = C[celli];
-        //Info << "C size: " << C.size() << ", Vm size: " << Vm.size() << nl;
-
-        double x = coord.x();
-        double y = coord.y();
-        double z = coord.z();
-
-        double VmVal, uu1, uu2, uu3;
-        u_init(x, y, z, VmVal, uu1, uu2, uu3, tissue());
-
-        Vm[celli]  = VmVal;
-        u1m[celli] = uu1;
-        u2m[celli] = uu2;
-        u3m[celli] = uu3;
-
-        // Info << "Cell " << celli
-        //      << " x=" << x << " y=" << y << " z=" << z
-        //      << " Vm=" << Vm[celli]
-        //      << " u1=" << u1m[celli]
-        //      << " u2=" << u2m[celli]
-        //      << " u3=" << u3m[celli]
-        //      << endl;
-    }
+    const scalar t = 0.0;
+    
+    // Compute manufactured fields
+    computeManufacturedV(Vm, X, Y, Z, t, tissue());
+    computeManufacturedU(u1m, u2m, u3m, X, Y, Z, t, tissue());
 
     // Initialize STATES_ array for ODE solver
     forAll(STATES_, i)
@@ -161,33 +145,143 @@ void Foam::manufacturedFDA::initializeFields
         // Copy to old-time STATES
         STATES_OLD_[i] = STATESI;
     }
-    //correct boundary conditions
+
+    // Correct boundary conditions
     Vm.correctBoundaryConditions();
     u1m.correctBoundaryConditions();
     u2m.correctBoundaryConditions();
     u3m.correctBoundaryConditions();
 
     Info<< "Boundary conditions corrected for Vm, u1m, u2m, and u3m." << endl;
+}
+void Foam::manufacturedFDA::calculateCurrent
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im,
+    scalarField& u1m,
+    scalarField& u2m,
+    scalarField& u3m
+)
+{
+    
+    STATES_ = STATES_OLD_;
+    const scalar tStart = stepStartTime; 
+    const scalar tEnd = (stepStartTime + deltaT);
+    label monitorCell = 0;
 
-    // Info<< "In initFields " << nl
-    //     << "u1m " << u1m << endl;
-    // computeAndPrintErrors
-    // (
-    //     Vm,
-    //     u1m,
-    //     u2m,
-    //     u3m,
-    //     C.component(vector::X),
-    //     0.0 // time
-    // );
-    // FatalError
-    //     << "stop in initFields" << abort(FatalError);
+
+    forAll(STATES_, integrationPtI)
+    {
+        scalarField& STATESI = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI = RATES_[integrationPtI];
+
+        
+        // 1️⃣ Update Vm for this point
+        STATESI[V] = Vm[integrationPtI];
+
+        // 2️⃣ Compute rates based on current Vm and gating vars
+        ::manufacturedFDAcomputeVariables
+        (
+            stepStartTime,
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
+
+        if (integrationPtI == monitorCell)
+        {
+            Info<< "integrationPtI = " << integrationPtI
+                << " | t = " << tStart
+                << " → " << tEnd
+                << " | Vm = " << STATESI[V]
+                << " | u1 = " << STATESI[u1]
+                << " | u2 = " << STATESI[u2]
+                << " | Iion = " << ALGEBRAICI[Iion]
+                << endl;
+        }
+        
+        // 4️⃣ Compute Iion
+        Im[integrationPtI] = ALGEBRAICI[Iion];
+
+    }
+    
+}
+
+void Foam::manufacturedFDA::calculateGating
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im,
+    scalarField& u1m,
+    scalarField& u2m,
+    scalarField& u3m
+)
+{
+    
+    STATES_ = STATES_OLD_;
+    const scalar tStart = stepStartTime; 
+    const scalar tEnd = (stepStartTime + deltaT);
+    label monitorCell = 0;
+
+
+    forAll(STATES_, integrationPtI)
+    {
+        scalarField& STATESI = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI = RATES_[integrationPtI];
+
+        
+        // 1️⃣ Update Vm for this point
+        STATESI[V] = Vm[integrationPtI];
+
+        // 2️⃣ Compute rates based on current Vm and gating vars
+        ::manufacturedFDAcomputeVariables
+        (
+            stepStartTime,
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
+
+        STATESI[u1] += deltaT * RATESI[u1];
+        STATESI[u2] += deltaT * RATESI[u2];
+        STATESI[u3] += deltaT * RATESI[u3];
+
+        if (integrationPtI == monitorCell)
+            {
+                Info<< "integrationPtI = " << integrationPtI
+                    << " | t = " << tStart
+                    << " → " << tEnd
+                    << " | Vm = " << STATESI[V]
+                    << " | u1 = " << STATESI[u1]
+                    << " | u2 = " << STATESI[u2]
+                    << " | Iion = " << ALGEBRAICI[Iion]
+                    << endl;
+            }
+
+        
+        // 3️⃣ Explicitly integrate gating ODEs
+        u1m[integrationPtI] = STATESI[u1];
+        u2m[integrationPtI] = STATESI[u2];
+        u3m[integrationPtI] = STATESI[u3];
+        
+    }
+    
 }
 
 
 
-
-void Foam::manufacturedFDA::calculateCurrent
+void Foam::manufacturedFDA::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -220,41 +314,6 @@ void Foam::manufacturedFDA::calculateCurrent
 
     STATES_ = STATES_OLD_;
 
-    //Info<< "STATES_ = " << STATES_ << endl;
-
-    // Debug - calculate true solutions
-    // I don't have access to the mesh so I will hard-code the coordinates
-    // scalarField exactU1(STATES_.size());
-    // scalarField exactU2(STATES_.size());
-    // scalarField exactU3(STATES_.size());
-    // scalarField x(STATES_.size());
-    // const scalar dx = 1.0/scalar(STATES_.size());
-    // forAll(x, i)
-    // {
-    //     x[i] = (scalar(i) + 0.5)*dx;
-    // }
-    // computeManufacturedU(exactU1, exactU2, exactU3, x, stepStartTime + deltaT);
-    // scalarField exactIion(STATES_.size());;
-    // computeIion
-    // (
-    //     exactIion, exactU1, exactU2, exactU3, Vm,
-    //     CONSTANTS_[Cm], CONSTANTS_[Beta], CONSTANTS_[Chi]
-    // );
-
-    // Info<< "stepStartTime = " << stepStartTime << nl
-    //     << "u1m " << u1m << endl;
-    // computeAndPrintErrors
-    // (
-    //     Vm,
-    //     u1m,
-    //     u2m,
-    //     u3m,
-    //     x,
-    //     stepStartTime // + deltaT
-    // );
-    // // FatalError
-    //     << "stop" << abort(FatalError);
-
     label monitorCell = 0;
 
     forAll(STATES_, integrationPtI)
@@ -274,7 +333,7 @@ void Foam::manufacturedFDA::calculateCurrent
         STATESI[V] = Vm[integrationPtI];
 
         //clamp the step, or just leave it to the solver
-        step = min(step, deltaT);
+        //step = min(step, deltaT);
 
         if (integrationPtI == monitorCell)
         {
@@ -285,27 +344,13 @@ void Foam::manufacturedFDA::calculateCurrent
                 << " | Vm = " << STATESI[V]
                 << " | u1 = " << STATESI[u1]
                 << " | u2 = " << STATESI[u2]
-                << " | u3 = " << STATESI[u3]
+                << " | Iion = " << ALGEBRAICI[Iion]
                 << endl;
         }
 
         // Update ODE system
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // // Debug - hard code Euler method
-        // scalar f1, f2, f3;
-        // compute_f_RHS_point(f1, f2, f3, STATESI[u1], STATESI[u2], STATESI[u3], STATESI[V]);
-        // STATESI[u1] += deltaT*f1;
-        // STATESI[u2] += deltaT*f2;
-        // STATESI[u3] += deltaT*f3;
-
-        // computeIion_point
-        // (
-        //     ALGEBRAICI[Iion], STATESI[u1], STATESI[u2], STATESI[u3], STATESI[V],
-        //     CONSTANTS_[Cm], CONSTANTS_[Beta], CONSTANTS_[Chi]
-        // );
-
-        // Calculate the three currents
         ::manufacturedFDAcomputeVariables
         (
             tEnd,
@@ -318,9 +363,11 @@ void Foam::manufacturedFDA::calculateCurrent
         );
 
         Im[integrationPtI] = ALGEBRAICI[Iion];
+
         u1m[integrationPtI]= STATESI[u1];
         u2m[integrationPtI]= STATESI[u2];
         u3m[integrationPtI]= STATESI[u3];
+
     }
 }
 
@@ -384,18 +431,6 @@ void Foam::manufacturedFDA::derivatives
 {
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
-    // compute_f_RHS_point
-    // (
-    //     dydt[1],
-    //     dydt[2],
-    //     dydt[3],
-    //     y[1],
-    //     y[2],
-    //     y[3],
-    //     y[0]
-    // );
-
-    // Calculate the rates using the cellML header file
     ::manufacturedFDAcomputeVariables
     (
         t,

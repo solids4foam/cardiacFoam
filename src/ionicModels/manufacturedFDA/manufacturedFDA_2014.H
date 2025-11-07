@@ -54,12 +54,4 @@ manufacturedFDAcomputeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[u3] = 0;
     ALGEBRAIC[Iion] =  - (CONSTANTS[Cm]/2.0) * (STATES[u1] + STATES[u3] - STATES[V])  * pow(STATES[u2], 2) * (STATES[V] - STATES[u3]) + (CONSTANTS[Beta] * (STATES[V] - STATES[u3])) / CONSTANTS[Chi];
 
-    // std::cout
-    //     << "u1 = " << u1
-    //         << "\nu2 = " << u2
-    //         << "\nu3 = " << u3
-    //         << "\nV = " << V
-    //         << "\nbeta = " << Beta
-    //         << "\nChi2 = " << Chi
-    //         << "\nCm = " << Cm << std::endl;
 }
