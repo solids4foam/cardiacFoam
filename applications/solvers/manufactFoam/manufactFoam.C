@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 
     const int dim = ionicModelFDA->tissue();
     Info << dim << endl;
-    const int N = int(std::pow(mesh.nCells(), 1.0 / dim));
+    const int N(Foam::pow(returnReduce(mesh.nCells(), sumOp<int>()), 1.0/dim));
     Info << N << endl;
     const scalar cfl = 0.1;
     const scalarField x(mesh.C().component(vector::X));
@@ -89,12 +89,16 @@ int main(int argc, char *argv[])
         dt = cfl * dx*dx / max(conductivity.component(tensor::XX)).value(); // sigma;
         nsteps = int(std::ceil(runTime.endTime().value() / dt));
         dt = runTime.endTime().value() / double(nsteps); // snap to hit Tfinal
+
+        // Sync the dt across processors
+        reduce(dt, maxOp<scalar>());
+
         runTime.setDeltaT(dt);
 
         while (runTime.loop())
         {
-            
             refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
+
             // --- 1️⃣ Compute Iion for PDE solve using old Vm ---
             ionicModelFDA->calculateCurrent
             (
@@ -106,14 +110,14 @@ int main(int argc, char *argv[])
             );
             Iion.correctBoundaryConditions();
 
-        
+
             // --- 2️⃣ Solve diffusion PDE ---
             solve
             (
                 chi*Cm*fvm::ddt(Vm) == fvc::laplacian(conductivity, Vm) - chi*Iion
             );
 
-            // --- 3️⃣ Advance gating variables using FDA with new Vm old states ---
+
             ionicModelFDA->calculateGating(
                 runTime.value() - runTime.deltaTValue(), // stepStartTime
                 runTime.deltaTValue(),                  // deltaT
@@ -122,13 +126,14 @@ int main(int argc, char *argv[])
                 u1, u2, u3                              // update gating variables
             );
 
+            //Pout<< __FILE__<< __LINE__ << endl;
 
             u1.correctBoundaryConditions();
             u2.correctBoundaryConditions();
             u3.correctBoundaryConditions();
 
             runTime.write();
-            }
+        }
         }
     else // solve implicit
         {
@@ -216,8 +221,8 @@ int main(int argc, char *argv[])
             dx,
             dt,
             nsteps,
-            solveExplicit,
-            ""    
+            solveExplicit //,
+            //""
         );
 
     Info<< "End" << nl << endl;
@@ -227,12 +232,11 @@ int main(int argc, char *argv[])
 
 
 
-    
 
-    
+
+
 
 
 
 
 // ************************************************************************* //
-
