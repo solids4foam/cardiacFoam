@@ -159,10 +159,11 @@ inline void computeAndPrintErrors
     const scalar dx,
     const scalar dt,
     const int nsteps,
-    const bool solveExplicit,
-    const std::string& filename = ""
+    const bool solveExplicit //,
+    //const std::string& filename = ""
 )
 {
+    // Pout<< __FILE__<< __LINE__ << endl;
     // Manufactured (exact) fields
     scalarField Vex, u1ex, u2ex, u3ex;
     computeManufacturedV(Vex, x, y, z, t, dimension);
@@ -170,7 +171,6 @@ inline void computeAndPrintErrors
 
     auto computeNorms = [&](const scalarField& num, const scalarField& exact)
     {
-        const label n = num.size();
         scalar sumAbs = 0.0, sumSq = 0.0, maxAbs = 0.0;
         forAll(num, i)
         {
@@ -179,6 +179,13 @@ inline void computeAndPrintErrors
             sumSq  += diff*diff;
             if (diff > maxAbs) maxAbs = diff;
         }
+        // Sync sumAbs
+        reduce(maxAbs, maxOp<scalar>());
+        reduce(sumAbs, sumOp<scalar>());
+        reduce(sumSq, sumOp<scalar>());
+        label n = num.size();
+        reduce(n, sumOp<int>());
+
         scalar L1 = sumAbs / n;
         scalar L2 = Foam::sqrt(sumSq / n);
         scalar Linf = maxAbs;
@@ -210,19 +217,27 @@ inline void computeAndPrintErrors
 
         
 
-    
-    std::string outFilename = filename;
-    if (outFilename.empty())
+    // std::string outFilename = filename;
+    // if (outFilename.empty())
+    if (Pstream::master())
     {
-        std::stringstream filenameSS;
-        filenameSS << N << "_cells_" << (solveExplicit ? "explicit" : "implicit") << ".dat";
-        outFilename = filenameSS.str();
+        // Pstream:nProcs()
+        // Pstream:myProcNum()
+        // Pstream::parRun()
 
-        std::ofstream fout(outFilename, std::ios::out | std::ios::app);
-        if (fout.is_open())
+        // std::stringstream filenameSS;
+        // filenameSS << N << "_cells_" << (solveExplicit ? "explicit" : "implicit") << ".dat";
+        // outFilename = filenameSS.str();
+        fileName outFilename
+        (
+            Foam::name(N) + "_cells_"
+          + word(solveExplicit ? "explicit" : "implicit") + ".dat"
+        );
+
+        //        std::ofstream fout(outFilename, std::ios::out | std::ios::app);
+        OFstream fout(outFilename);
+        // if (fout.is_open())
         {
-            
-
             fout << "Manufactured-solution error summary (t = " << t << "):\n";
             fout << "Field     L1-error       L2-error       Linf-error\n";
             fout << "Vm     " << L1_V   << "   " << L2_V   << "   " << Linf_V << "\n";
@@ -240,12 +255,12 @@ inline void computeAndPrintErrors
             fout << "Final simulation time = " << t << "\n";
             fout << "-------------------\n\n";
 
-            fout.close();
+            // fout.close();
         }
-        else
-        {
-            Info << "Warning: Could not open file " << filename << " for writing.\n";
-        }
+        // else
+        // {
+        //     Info << "Warning: Could not open file " << filename << " for writing.\n";
+        // }
     }
 }
 
