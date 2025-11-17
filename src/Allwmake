@@ -1,5 +1,5 @@
 #!/bin/bash
 cd ${0%/*} || exit 1    # run from this directory
 
-//wmake -j -s libso NashPanfilovActiveTensionModel
+#wmake -j -s libso NashPanfilovActiveTensionModel
 wmake -j -s libso ionicModels
