@@ -216,8 +216,7 @@ int main(int argc, char *argv[])
             dx,
             dt,
             nsteps,
-            solveExplicit,
-            ""    
+            solveExplicit
         );
 
     Info<< "End" << nl << endl;
