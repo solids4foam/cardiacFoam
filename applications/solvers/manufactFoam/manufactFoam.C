@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
     const double totalCells = returnReduce(mesh.nCells(), sumOp<int>());
     Info << "Total number of cells: " << totalCells << endl;
     const int N = std::round(Foam::pow(totalCells, 1.0 / dim));
+
     const scalar cfl = 0.1;
     const scalarField x(mesh.C().component(vector::X));
     const double dx = 1.0 / double(N);
@@ -114,12 +115,14 @@ int main(int argc, char *argv[])
 	    );
 	    Iion.correctBoundaryConditions();
 
+            //Pout<< __FILE__<< __LINE__ << endl;
 
 	    // --- 2️⃣ Solve diffusion PDE ---
 	    solve
 	    (
 		chi*Cm*fvm::ddt(Vm) == fvc::laplacian(conductivity, Vm) - chi*Iion
 	    );
+
 
 
 	    ionicModelFDA->calculateGating(
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
 	    runTime.write();
 	}
 	}
+
     else // solve implicit
 	{
 	// Info<< "deltaT (before) = " << runTime.deltaTValue() << endl;
@@ -200,6 +204,7 @@ int main(int argc, char *argv[])
 	}
 
 	scalar Tfinal = runTime.value();
+
 
 	computeAndPrintErrors
 	(
