@@ -1,0 +1,169 @@
+const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
+// Transmembrane potential
+volScalarField Vm
+(
+    IOobject
+    (
+        "Vm",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("Vm", dimVoltage, -0.08323),
+    "zeroGradient"
+);
+
+// Create commonly used dimensionSets for convenience
+// Read electoActivationProperties
+Info<< "Reading electroActivationProperties\n" << endl;
+IOdictionary electroActivationProperties
+(
+    IOobject
+    (
+        "electroActivationProperties",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ_IF_MODIFIED,
+        IOobject::NO_WRITE
+    )
+);
+
+Info<< "Reading conductivity\n" << endl;
+const dimensionedSymmTensor conductivity
+(
+    "conductivity",
+    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+    electroActivationProperties
+);
+
+Info<< "Reading cellular surface-to-volume ratio beta\n" << endl;
+const dimensionedScalar chi
+(
+    "chi", dimArea/dimVolume, electroActivationProperties
+);
+
+Info<< "Reading membrane capacitance Cm\n" << endl;
+const dimensionedScalar Cm
+(
+    "Cm",
+    dimCurrent*dimTime/(dimVoltage*dimArea),
+    electroActivationProperties
+);
+
+// Find cells in the stimulus volume
+Info<< "Reading stimulus location \n" << endl;
+boundBox bb
+(
+    point(electroActivationProperties.lookup("stimulusLocationMin")),
+    point(electroActivationProperties.lookup("stimulusLocationMax"))
+);
+
+labelHashSet stimCellSet;
+forAll(mesh.C(), cellI)
+{
+    if (bb.contains(mesh.C()[cellI]))
+    {
+        stimCellSet.insert(cellI);
+    }
+}
+const labelList stimulusCellIDs = stimCellSet.toc();
+Info<< "Number of cells in the stimulus volume: "
+    << stimulusCellIDs.size() << endl;
+
+Info<< "Reading stimulus duration\n" << endl;
+const dimensionedScalar stimulusDuration
+(
+    "stimulusDuration", dimTime, electroActivationProperties
+);
+
+Info<< "Reading stimulus intensity\n" << endl;
+// Per unit area as we multiply by the cellular surface-to-volume ratio
+const dimensionedScalar stimulusIntensity
+(
+    "stimulusIntensity",
+    // dimCurrent/dimArea,
+    dimCurrent/dimVolume,
+    electroActivationProperties
+);
+
+// Ionic source term
+volScalarField ionicCurrent
+(
+    IOobject
+    (
+        "ionicCurrent",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+    "zeroGradient"
+);
+
+// External stimulus current
+volScalarField externalStimulusCurrent
+(
+    IOobject
+    (
+        "externalStimulusCurrent",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    // dimensionedScalar("sourceTerm", dimCurrent/dimArea, 0.0),
+    dimensionedScalar("sourceTerm", dimCurrent/dimVolume, 0.0),
+    "zeroGradient"
+);
+
+// Read ionic model dict
+const dictionary& ionicModelCoeffs =
+    electroActivationProperties.subDict("ionicModelCoeffs");
+
+// Create ionicModelCellML object
+autoPtr<newionicModel> newionicModel =
+    newionicModel::New(ionicModelCoeffs, mesh.nCells(), runTime.deltaTValue());
+
+// Field to record the activation time, which is the time at which each cell
+// reaches or exceeds a transmembrane voltage of 0.0
+volScalarField activationTime
+(
+    IOobject
+    (
+        "activationTime",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimTime, 0.0),
+    "zeroGradient"
+);
+boolList calculateActivationTime(mesh.nCells(), true);
+
+// Activation velocity
+volVectorField activationVelocity
+(
+    IOobject
+    (
+        "activationVelocity",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    fvc::grad(1.0/(activationTime + dimensionedScalar("SMALL", dimTime, SMALL)))
+);
+// ************************************************************************* //
+
+
+
+
+
+
