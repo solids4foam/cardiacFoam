@@ -52,10 +52,13 @@ namespace Foam
 
 Foam::BuenoOrovio::BuenoOrovio
 (
-    const dictionary& dict, const label num, const scalar initialDeltaT
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT),
+    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
@@ -93,6 +96,13 @@ Foam::BuenoOrovio::~BuenoOrovio()
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissues() const
+{
+    return {"epicardialCells", "mCells", "endocardialCells"};
+}
+
+
 void Foam::BuenoOrovio::calculateCurrent
 (
     const scalar stepStartTime,
@@ -102,6 +112,7 @@ void Foam::BuenoOrovio::calculateCurrent
     //scalarField& uField
 )   
 {
+    label monitorCell = 0; 
     const label nIntegrationPoints = STATES_.size(); 
 
 
@@ -139,6 +150,7 @@ void Foam::BuenoOrovio::calculateCurrent
             // Set step to deltaT
             scalar& step = ionicModel::step()[integrationPtI];
 
+
             // Update ODE system
             odeSolver().solve(tStart, tEnd, STATESI, step);
             // Calculate the three currents
@@ -149,12 +161,26 @@ void Foam::BuenoOrovio::calculateCurrent
                 RATESI.data(),
                 STATESI.data(),
                 ALGEBRAICI.data(),
-                tissue()
+                tissue(), 
+                solveVmWithinODESolver()
             );
 
+            
+
         //Derivatives inside the ODE are in 1/ms, also Jx, total J need to come in V/s, so I need to multiply by the conversion factor of Vm in mv and 1000
-         
-        totalJ[integrationPtI]= 85.7 * (ALGEBRAICI[Jfi] + ALGEBRAICI[Jso] + ALGEBRAICI[Jsi]); // now this is V/s units
+        
+        totalJ[integrationPtI]= 85.7 * (ALGEBRAICI[Jfi] + ALGEBRAICI[Jso] + ALGEBRAICI[Jsi]); 
+
+        if (integrationPtI == monitorCell)
+            {
+                Info<< "integrationPtI = " << integrationPtI
+                    << " | t = " << tStart
+                    << " → " << tEnd
+                    << " | step = " << step
+                    << " | Vm = " << (STATESI[u]* 85.7 - 84)/1000
+                    << " | Iion = " << 85.7 * (ALGEBRAICI[Jfi] + ALGEBRAICI[Jso] + ALGEBRAICI[Jsi])
+                    << endl;
+            }
         
 
     }
@@ -175,80 +201,66 @@ void Foam::BuenoOrovio::derivatives
     (
         t,
         CONSTANTS_.data(),
-        // RATES.data(),
-        // STATES.data(),
         dydt.data(),
         const_cast<scalarField&>(y).data(),
         ALGEBRAIC_TMP.data(),
-        tissue()
+        tissue(),
+        solveVmWithinODESolver()
     );
 }
 
 
-// void Foam::BuenoOrovio::jacobian
-// (
-//     const scalar t,
-//     const scalarField& y,
-//     scalarField& dfdt,
-//     scalarSquareMatrix& dfdy
-// ) const
-// {
-//     notImplemented("void jacobian(...)");
-// }
+void Foam::BuenoOrovio::writeHeader(OFstream& output) const
+{
+
+    output << "time Vm";
+
+    for (int i = 0; i < NUM_STATES; ++i)
+        output << " " << BuenoOrovioSTATES_NAMES[i];
+
+    for (int i = 0; i < NUM_ALGEBRAIC; ++i)
+        output << " " << BuenoOrovioALGEBRAIC_NAMES[i];
+
+    for (int i = 0; i < NUM_STATES; ++i)
+        output << " RATES_" << BuenoOrovioSTATES_NAMES[i];
+
+    output << endl;
+}
+
+
+void Foam::BuenoOrovio::write(const scalar t, OFstream& output) const
+
+{
+
+    scalar Vm = STATES_[0][0];
+
+    output
+        << t << " " << Vm;
+
+    // States
+    forAll(STATES_[0], j)
+    {
+        output << " " << STATES_[0][j];
+    }
+
+    // Algebraic variables
+    forAll(ALGEBRAIC_[0], j)
+    {
+        output << " " << ALGEBRAIC_[0][j];
+    }
+
+    // Rates
+    forAll(RATES_[0], j)
+    {
+        output << " " << RATES_[0][j];
+    }
+
+
+output << endl;
+}
 
 // ************************************************************************* //
 
 
-/*---------------------------------------------------------------------------*\
-This two functions are related to the single cell solver. I still need to undrstand the best way to implement it 
-but I would say, since it has a slighly diferent solver.C file, it will have a different src?
-I dontkn know because the models are the same, maybe just the ionic model files differ. 
 
-
-void Foam::ionicModelCellML::writeHeader(OFstream& output) const
-{
-    output << "time";
-
-    for (int i = 0; i < NUM_STATES; ++i)
-    {
-        output << " " << STATES_NAMES[i];
-    }
-    for (int i = 0; i < NUM_ALGEBRAIC; ++i)
-    {
-        output << " " << ALGEBRAIC_NAMES[i];
-    }
-    for (int i = 0; i < NUM_STATES; ++i)
-    {
-        output << "RATES_ " << STATES_NAMES[i];
-    }
-
-    output 
-        << endl;
-}
-void Foam::ionicModelCellML::write(const scalar t, OFstream& output) const
-{
-    // Write the results
-    Info<< "Writing to " << output.name() << endl;
-    output
-        << t;
-    forAll(STATES_, i)
-    {
-        output
-            << " " << STATES_[i];
-    }
-    forAll(ALGEBRAIC_, i)
-    {
-        output
-            << " " << ALGEBRAIC_[i];
-    }
-    forAll(RATES_, i)
-    {
-        output
-            << " " << RATES_[i];
-    }
-    output
-        << endl;
-}
-
-\*---------------------------------------------------------------------------*/
 

@@ -333,7 +333,7 @@ void Foam::manufacturedFDA::solveODE
         STATESI[V] = Vm[integrationPtI];
 
         //clamp the step, or just leave it to the solver
-        //step = min(step, deltaT);
+        step = min(step, deltaT);
 
         if (integrationPtI == monitorCell)
         {

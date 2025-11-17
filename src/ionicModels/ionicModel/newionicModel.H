@@ -38,17 +38,16 @@ Authors
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef ionicModel_H
-#define ionicModel_H
+#ifndef newionicModel_H
+#define newionicModel_H
 
-#include "ionicModel.H"
 #include "runTimeSelectionTables.H"
 #include "ODESystem.H"
 #include "ODESolver.H"
 #include "word.H"
 #include "Switch.H"
 #include "OFstream.H"
-
+#include "volFields.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -61,7 +60,7 @@ namespace Foam
                          Class ionicModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class ionicModel
+class newionicModel
 :
     public ODESystem
 {
@@ -91,10 +90,10 @@ class ionicModel
     // Private Member Functions
 
         //- No copy construct
-        ionicModel(const ionicModel&) = delete;
+        newionicModel(const newionicModel&) = delete;
 
         //- No copy assignment
-        void operator=(const ionicModel&) = delete;
+        void operator=(const newionicModel&) = delete;
 
 protected:
         void setTissueFromDict();
@@ -114,7 +113,7 @@ public:
         declareRunTimeSelectionTable
         (
             autoPtr,
-            ionicModel,
+            newionicModel,
             dictionary,
             (
                 const dictionary& dict,
@@ -128,7 +127,7 @@ public:
     // Selectors
 
         //- Create a ionic model
-        static autoPtr<ionicModel> New
+        static autoPtr<newionicModel> New
         (
             const dictionary& dict,
             const label nIntegrationPoints,
@@ -140,7 +139,7 @@ public:
 
         //- Construct given a dictionary, the number of integration points and a
         //  initial time step for the ODE solver
-        ionicModel
+        newionicModel
         (
             const dictionary& dict,
             const label nIntegrationPoints,
@@ -150,7 +149,7 @@ public:
 
 
     //- Destructor
-    virtual ~ionicModel();
+    virtual ~newionicModel();
 
 
     // Member Functions
@@ -178,34 +177,54 @@ public:
             return tissue_;
         }
 
-        //- Getter for tissue flag
+        //- Getter for 1 cell inside the CellML ODE
         const Switch& solveVmWithinODESolver() const
         {
             return solveVmWithinODESolver_;
         }
 
+
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
-        virtual void calculateCurrentSC
-        (
-            const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& IonicCurrent
-        )
-        {
-            notImplemented("WIP");
-        }
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
             const scalar timeStep,
             const scalarField& voltage,
-            scalarField& IonicCurrent
+            scalarField& Im,
+            Field<Field<double>>& STATES
         )
         {
             notImplemented("WIP");
         }
+
+        virtual void calculateGating
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<double>>& STATES   
+        )
+ 
+        {
+            notImplemented("WIP");
+        }
+
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<double>>& STATES
+
+  
+        )
+        {
+            notImplemented("WIP");
+        }
+
 
         //Supported words by the solver 
         virtual List<word> supportedTissues() const
@@ -221,7 +240,6 @@ public:
         {
 
         }
-
 
 
         //- Number of ODE's to solve
@@ -269,4 +287,3 @@ public:
 #endif
 
 // ************************************************************************* //
-

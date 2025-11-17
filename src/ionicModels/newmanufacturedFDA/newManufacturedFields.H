@@ -1,5 +1,5 @@
-#ifndef MANUFACTUREDFIELDS_H
-#define MANUFACTUREDFIELDS_H
+#ifndef NEWMANUFACTUREDFIELDS_H
+#define NEWMANUFACTUREDFIELDS_H
 
 #include "scalarField.H"
 #include "mathematicalConstants.H"

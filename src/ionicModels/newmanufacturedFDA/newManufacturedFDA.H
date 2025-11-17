@@ -24,14 +24,14 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::TNNP
+    Foam::manufacturedFDA
 
 Description
     Wrapper class for calling from the cellML ionic model for the ten Tusscher,
     Noble, Noble, Panfilov, 2004, model.
 
 SourceFiles
-    TNNP.C
+    manufacturedFDA.C
 
 Author
     Philip Cardiff, UCD.
@@ -39,10 +39,12 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef TNNP_H
-#define TNNP_H
+#ifndef newManufacturedFDA_H
+#define newManufacturedFDA_H
 
-#include "ionicModel.H"
+#include "newionicModel.H"
+#include "OFstream.H"
+#include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -50,17 +52,20 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class TNNP Declaration
+                         Class manufacturedFDA Declaration
 \*---------------------------------------------------------------------------*/
 
-class TNNP
+class newmanufacturedFDA
 :
-    public ionicModel
+    public newionicModel
 {
     // Private Data
 
         //- States
         mutable PtrList<scalarField> STATES_;
+
+        //- States - old time
+        mutable PtrList<scalarField> STATES_OLD_;
 
         //- Constants
         mutable scalarField CONSTANTS_;
@@ -75,45 +80,79 @@ class TNNP
     // Private Member Functions
 
         //- No copy construct
-        TNNP(const TNNP&) = delete;
+        newmanufacturedFDA(const newmanufacturedFDA&) = delete;
 
         //- No copy assignment
-        void operator=(const TNNP&) = delete;
+        void operator=(const newmanufacturedFDA&) = delete;
 
 
 public:
 
     //- Runtime type information
-    TypeName("TNNP");
+    TypeName("newmanufacturedFDA");
+
+
+    //override the only available tissue in this model
+    virtual List<word> supportedTissues() const;
 
     // Constructors
 
         //- Construct given a dictionary, the number of integration points and a
         //  initial time step for the ODE solver
-        TNNP
+        newmanufacturedFDA
         (
             const dictionary& dict,
             const label nIntegrationPoints,
             const scalar initialDeltaT,
-            const Switch solveVmWithinODESolver
+            const Switch solveVmWithinODESolver = false
         );
 
 
     //- Destructor
-    virtual ~TNNP();
+    virtual ~newmanufacturedFDA();
 
 
     // Member Functions
 
+        virtual void writeHeader(OFstream& output) const;
+        //- Write fields to the given file given the current time
+        virtual void write(const scalar t, OFstream& output) const;
+
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
+
+
+
+
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& result
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<double>>& STATES
+
         );
+        virtual void calculateGating
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<double>>& STATES
+
+
+        );
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<double>>& STATES
+ 
+        );
+
 
         //- Number of ODE's to solve
         virtual label nEqns() const
@@ -130,13 +169,18 @@ public:
             scalarField& dydt
         ) const;
 
-        //- Write column headers to output file
-        virtual void writeHeader(OFstream& output) const;
+        //- Reset STATES to STATES_OLD
+        virtual void resetStatesToStatesOld() const
+        {
+            STATES_ = STATES_OLD_;
+        }
 
-    //- Write one line of output (time + STATES + ALGEBRAIC + RATES)
-        virtual void write(const scalar t, OFstream& output) const;
+        //- Update STATES_OLD from STATES
+        virtual void updateStatesOld() const
+        {
+            STATES_OLD_ = STATES_;
+        }
 };
-
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
