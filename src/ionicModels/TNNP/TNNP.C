@@ -27,11 +27,12 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <math.h>
-#include "tentusscher_noble_noble_panfilov_2004.H"
+#include "TNNP_2004.H"
 #include "TNNP.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 //#include "Switch.H"
+
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -49,40 +50,60 @@ namespace Foam
 
 Foam::TNNP::TNNP
 (
-    const dictionary& dict, const label num, const scalar initialDeltaT
+    const dictionary& dict,
+     const label num, 
+     const scalar initialDeltaT, 
+     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT),
+    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
-    CONSTANTS_(47, 0.0),
+    STATES_OLD_(num),
+    CONSTANTS_(50, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
 {
-    // Read the epicardium flag
-    //const Switch epicardiumFlag(dict.lookup("epicardium"));
+    
 
-    // Create the integration point lists
-    Info<< nl << "Calling initConsts" << endl;
+
     forAll(STATES_, i)
     {
         STATES_.set(i, new scalarField(17, 0.0));
         ALGEBRAIC_.set(i, new scalarField(69, 0.0));
         RATES_.set(i, new scalarField(17, 0.0));
 
-        // Initialise the constants (repeatedly! it's ok...) and the rates and
-        // states
+        const dictionary& stimulus = dict.subDict("stimulusParameters");
+
         TNNPinitConsts
         (
-            CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data(), tissue()
+            CONSTANTS_.data(), RATES_[i].data(), STATES_[i].data(), tissue(), stimulus
         );
+        {
+            // --- Read stimulus parameters from the dictionary ---
+            if (!stimulus.found("stim_start")
+             || !stimulus.found("stim_period_S1")
+             || !stimulus.found("stim_duration")
+             || !stimulus.found("stim_amplitude"))
+            {
+                FatalErrorInFunction
+                    << "Missing entries in 'stimulusParameters' sub-dictionary"
+                    << abort(FatalError);
+            }
+    
+            CONSTANTS_[5] = readScalar(stimulus.lookup("stim_start"));
+            CONSTANTS_[6] = readScalar(stimulus.lookup("stim_period_S1"));
+            CONSTANTS_[7] = readScalar(stimulus.lookup("stim_duration"));
+            CONSTANTS_[8] = readScalar(stimulus.lookup("stim_amplitude"));
+            CONSTANTS_[46]  = readScalar(stimulus.lookup("nstim1"));         
+            CONSTANTS_[47] = readScalar(stimulus.lookup("stim_period_S2")); 
+            CONSTANTS_[48] = readScalar(stimulus.lookup("nstim2"));         
+        }
     }
-
-    if (debug)
-    {
-        Info<< nl
-            << "CONSTANTS = " << CONSTANTS_ << endl;
-    }
+    Info<< nl << "Initialize ODE constants: " << endl;
+    Info<< nl << CONSTANTS_ << endl;
 }
+    
+
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -94,7 +115,7 @@ Foam::TNNP::~TNNP()
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 
-void Foam::TNNP::calculateCurrent
+void Foam::TNNP::calculateCurrentSC
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -102,77 +123,76 @@ void Foam::TNNP::calculateCurrent
     scalarField& totalJ
 )
 {
+
     const label nIntegrationPoints = STATES_.size();
+    label monitorCell = 0;
 
-    if (totalJ.size() != nIntegrationPoints)
-    {
-        FatalErrorInFunction
-            << "totalJ.size() != nIntegrationPoints" << abort(FatalError);
-    }
+    const scalar tStart = stepStartTime*1000;
+    const scalar tEnd = (stepStartTime + deltaT)*1000;
 
-    if (Vm.size() != nIntegrationPoints)
-    {
-        FatalErrorInFunction
-            << "Vm.size() != nIntegrationPoints" << abort(FatalError);
-    }
-
-    // Update the ODE system for each integration point
-    // TODO: this only makes sense if the time-stpe is solved once: otherwise I
-    // need to store the old values and only update them for new time-steps
     forAll(STATES_, integrationPtI)
     {
-        // Info<< "integrationPtI = " << integrationPtI << endl;
 
         // Take a reference to the variables for this integration point
         scalarField& STATESI = STATES_[integrationPtI];
         scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
         scalarField& RATESI = RATES_[integrationPtI];
 
-        // Update the voltage
-        STATESI[0] = Vm[integrationPtI]*1000;
 
-        // Truncate the fields so voltage is ignored
-        // scalarField STATES_TRUNCATEDI(STATESI.size() - 1, 0);
-        // for (int i = 1; i < STATESI.size(); ++i)
-        // {
-        //     STATES_TRUNCATEDI[i - 1] = STATESI[i];
-        // }
+        if (!solveVmWithinODESolver())
+        {
+            // Vm is evolved by the ODE solver
+            STATESI[0] = Vm[integrationPtI]*1000;
+        }
+        else
+        {
+            // Set step to deltaT
+            scalar& step = ionicModel::step()[integrationPtI];
 
-        // Info<< "STATES = " << STATESI << nl
-        //     << "ALGEBRAICI = " << ALGEBRAICI << nl
-        //     << "RATESI = " << RATESI << endl;
-            // << "STATES_TRUNCATEDI = " << STATES_TRUNCATEDI << endl;
-            
-        // Set t to the initial time and step size
-        // Note: ODE solves updates these so we re-create them for each point
-        // scalar t = stepStartTime;
-        const scalar tStart = stepStartTime*1000;
-        const scalar tEnd = (stepStartTime + deltaT)*1000;
+            step = min(step, deltaT*1000);
 
-         // Set step to deltaT
-        scalar& step = ionicModel::step()[integrationPtI];
+            // Update ODE system
+            odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update ODE system
-        odeSolver().solve(tStart, tEnd, STATESI, step);
+            // Calculate the three currents
+            ::TNNPcomputeVariables
+            (
+                tEnd,
+                CONSTANTS_.data(),
+                RATESI.data(),
+                STATESI.data(),
+                ALGEBRAICI.data(),
+                tissue(),
+                solveVmWithinODESolver()
+            );
+            if (integrationPtI == monitorCell)
+            {
+                Info<< "integrationPtI = " << integrationPtI
+                    << " | t = " << tStart
+                    << " → " << tEnd
+                    << " | Vm = " << STATESI[0]
+                    << " | Iion = " << ALGEBRAICI[50] + ALGEBRAICI[57] + ALGEBRAICI[51] + ALGEBRAICI[52]
+                    + ALGEBRAICI[55] + ALGEBRAICI[58] + ALGEBRAICI[53] + ALGEBRAICI[54]
+                    + ALGEBRAICI[59] + ALGEBRAICI[56] + ALGEBRAICI[61] + ALGEBRAICI[60]
+                    << endl;
+            }
 
-        // Calculate the three currents
-        ::TNNPcomputeVariables
-        (
-            tEnd,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue()
-        );
-
-        // Extract the total ionic current
-        totalJ[integrationPtI] =
-            ALGEBRAICI[50] + ALGEBRAICI[57] + ALGEBRAICI[51] + ALGEBRAICI[52]
-          + ALGEBRAICI[55] + ALGEBRAICI[58] + ALGEBRAICI[53] + ALGEBRAICI[54]
-          + ALGEBRAICI[59] + ALGEBRAICI[56] + ALGEBRAICI[61] + ALGEBRAICI[60];
+            // Extract the total ionic current
+            totalJ[integrationPtI] =
+                ALGEBRAICI[50] + ALGEBRAICI[57] + ALGEBRAICI[51] + ALGEBRAICI[52]
+            + ALGEBRAICI[55] + ALGEBRAICI[58] + ALGEBRAICI[53] + ALGEBRAICI[54]
+            + ALGEBRAICI[59] + ALGEBRAICI[56] + ALGEBRAICI[61] + ALGEBRAICI[60];
+        }
     }
 }
+
+
+
+
+
+
+
+
 
 
 void Foam::TNNP::derivatives
@@ -194,8 +214,60 @@ void Foam::TNNP::derivatives
         dydt.data(),
         const_cast<scalarField&>(y).data(),
         ALGEBRAIC_TMP.data(),
-        tissue()
+        tissue(), 
+        solveVmWithinODESolver()
     );
+}
+
+
+void Foam::TNNP::writeHeader(OFstream& output) const
+{
+    output << "Time Vm";
+
+    for (int i = 0; i < 17; ++i)
+        output << " " << TNNP_STATES_NAMES[i];
+
+    for (int i = 0; i < 69; ++i)
+        output << " " << TNNP_ALGEBRAIC_NAMES[i];
+
+    for (int i = 0; i < 17; ++i)
+        output << " RATES_" << TNNP_STATES_NAMES[i];
+
+    output << endl;
+}
+
+
+void Foam::TNNP::write(const scalar t, OFstream& output) const
+
+{
+
+    output.precision(8);     
+    output.setf(std::ios::scientific);
+    scalar Vm = STATES_[0][0];
+
+    output
+        << t << " " << Vm;
+
+    // States
+    forAll(STATES_[0], j)
+    {
+        output << " " << STATES_[0][j];
+    }
+
+    // Algebraic variables
+    forAll(ALGEBRAIC_[0], j)
+    {
+        output << " " << ALGEBRAIC_[0][j];
+    }
+
+    // Rates
+    forAll(RATES_[0], j)
+    {
+        output << " " << RATES_[0][j];
+    }
+
+
+output << endl;
 }
 
 

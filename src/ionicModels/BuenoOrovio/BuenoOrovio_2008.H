@@ -76,7 +76,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
 
 
 void
-BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag)
+BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
 {
     using Foam::heaviside;
         //Time Constants currents 
@@ -126,8 +126,12 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         RATES[s] = ((1.0 + tanh(CONSTANTS[kS] * (STATES[u] - CONSTANTS[uS]))) / 2.0 - STATES[s]) / tauS;
 
-        RATES[u] = 0 ;// -ALGEBRAIC[Jfi] - ALGEBRAIC[Jso] - ALGEBRAIC[Jsi];
+        RATES[u] = 0.0;
         
+        // if (solveVmWithinODESolver)
+        // {
+        //         [u] = -ALGEBRAIC[Jfi] - ALGEBRAIC[Jso] - ALGEBRAIC[Jsi];
+        // }
 
 }
 

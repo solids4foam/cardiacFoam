@@ -186,6 +186,16 @@ public:
 
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
+        virtual void calculateCurrentSC
+        (
+            const scalar stepStartTime,
+            const scalar timeStep,
+            const scalarField& voltage,
+            scalarField& IonicCurrent
+        )
+        {
+            notImplemented("WIP");
+        }
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
@@ -196,7 +206,6 @@ public:
         {
             notImplemented("WIP");
         }
-
 
         //Supported words by the solver 
         virtual List<word> supportedTissues() const
@@ -260,3 +269,4 @@ public:
 #endif
 
 // ************************************************************************* //
+

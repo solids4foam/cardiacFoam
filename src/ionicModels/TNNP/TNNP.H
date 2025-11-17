@@ -94,7 +94,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver
         );
 
 
@@ -128,7 +129,14 @@ public:
             const scalarField& y,
             scalarField& dydt
         ) const;
+
+        //- Write column headers to output file
+        virtual void writeHeader(OFstream& output) const;
+
+    //- Write one line of output (time + STATES + ALGEBRAIC + RATES)
+        virtual void write(const scalar t, OFstream& output) const;
 };
+
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

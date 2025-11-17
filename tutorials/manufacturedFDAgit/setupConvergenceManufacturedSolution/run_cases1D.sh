@@ -7,7 +7,7 @@ echo "🧹 Cleaning case"
 ./Allclean
 
 echo "🚀 Running "
-./Allrun 
+./Allrun parallel
 
 echo "✍️ extracting errors in main"
 

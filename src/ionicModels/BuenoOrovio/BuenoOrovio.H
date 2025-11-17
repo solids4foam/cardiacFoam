@@ -44,6 +44,8 @@ Author
 
 #include "ionicModel.H"
 #include "BuenoOrovio_2008Names.H"
+#include "OFstream.H"
+#include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -62,6 +64,9 @@ class BuenoOrovio
 
         //- States
         mutable PtrList<scalarField> STATES_;
+
+        //- States - old time
+        mutable PtrList<scalarField> STATES_OLD_;
 
         //- Constants
         mutable scalarField CONSTANTS_;
@@ -87,6 +92,10 @@ public:
     //- Runtime type information
     TypeName("BuenoOrovio");
 
+
+    //override the only available tissue in this model
+    virtual List<word> supportedTissues() const;
+
     // Constructors
 
         //- Construct given a dictionary, the number of integration points and a
@@ -95,7 +104,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
         );
 
 
@@ -105,36 +115,62 @@ public:
 
     // Member Functions
 
+        virtual void writeHeader(OFstream& output) const;
+        //- Write fields to the given file given the current time
+        virtual void write(const scalar t, OFstream& output) const;
+
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
-        // virtual void calculateCurrent
-        // (
 
-        //     const scalar stepStartTime,
-        //     const scalar timeStep,
-        //     const scalarField& voltage,
-        //     scalarField& result,
-        //     scalarField& uField,
-        //     scalarField& totalJ
 
-        // );
-        // In BuenoOrovio.H inside the class Foam::BuenoOrovio:
 
-        void calculateCurrent
+        virtual void calculateCurrent
         (
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
             scalarField& totalJ
-            //scalarField& uField
-        ) ;
+        );
 
+        /*
+        virtual void calculateGating
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        );
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        );
+
+
+        virtual void initializeFields
+        (
+            volScalarField& Vm,
+            volScalarField& u1,
+            volScalarField& u2,
+            volScalarField& u3,
+            const volVectorField& C
+        );
+        
+        */
 
         //- Number of ODE's to solve
         virtual label nEqns() const
         {
             return NUM_STATES;
-        };
+        }
 
         //- Derivatives of each ODE with respect to the primary unknown in that
         //  equation
@@ -144,6 +180,18 @@ public:
             const scalarField& y,
             scalarField& dydt
         ) const;
+
+        //- Reset STATES to STATES_OLD
+        virtual void resetStatesToStatesOld() const
+        {
+            STATES_ = STATES_OLD_;
+        }
+
+        //- Update STATES_OLD from STATES
+        virtual void updateStatesOld() const
+        {
+            STATES_OLD_ = STATES_;
+        }
 };
 
 
