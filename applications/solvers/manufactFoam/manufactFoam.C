@@ -44,6 +44,9 @@ Authors
 #include "pimpleControl.H"
 #include "manufacturedFields.H"
 #include "manufacturedFDA.H"
+#include <cmath>
+
+
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -61,22 +64,23 @@ int main(int argc, char *argv[])
     // Initialise fields
     ionicModelFDA->initializeFields
     (
-        Vm,
-        u1,
-        u2,
-        u3,
-        mesh.C()
+	Vm,
+	u1,
+	u2,
+	u3,
+	mesh.C()
     );
 
     const Switch solveExplicit
     (
-        electroActivationProperties.lookup("solveExplicit")
+	electroActivationProperties.lookup("solveExplicit")
     );
 
     const int dim = ionicModelFDA->tissue();
     Info << dim << endl;
-    const int N = int(std::pow(mesh.nCells(), 1.0 / dim));
-    Info << N << endl;
+    const double totalCells = returnReduce(mesh.nCells(), sumOp<int>());
+    Info << "Total number of cells: " << totalCells << endl;
+    const int N = std::round(Foam::pow(totalCells, 1.0 / dim));
     const scalar cfl = 0.1;
     const scalarField x(mesh.C().component(vector::X));
     const double dx = 1.0 / double(N);
@@ -85,140 +89,135 @@ int main(int argc, char *argv[])
 
     if (solveExplicit)
     {
-        // Explicit diffusion stability
-        dt = cfl * dx*dx / max(conductivity.component(tensor::XX)).value(); // sigma;
-        nsteps = int(std::ceil(runTime.endTime().value() / dt));
-        dt = runTime.endTime().value() / double(nsteps); // snap to hit Tfinal
-        runTime.setDeltaT(dt);
+	// Explicit diffusion stability
+	dt = cfl * dx*dx / max(conductivity.component(tensor::XX)).value();
+	nsteps = int(std::ceil(runTime.endTime().value() / dt));
+	dt = runTime.endTime().value() / double(nsteps); // snap to hit Tfinal
 
-        while (runTime.loop())
-        {
-            
-            refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
-            // --- 1️⃣ Compute Iion for PDE solve using old Vm ---
-            ionicModelFDA->calculateCurrent
-            (
-                runTime.value() - runTime.deltaTValue(), // stepStartTime
-                runTime.deltaTValue(),                  // deltaT
-                Vm.internalField(),                     // input Vm_old
-                Iion,                                   // output Iion
-                u1, u2, u3                              // output gating vars (not advanced yet)
-            );
-            Iion.correctBoundaryConditions();
+	// Sync the dt across processors
+	reduce(dt, maxOp<scalar>());
 
-        
-            // --- 2️⃣ Solve diffusion PDE ---
-            solve
-            (
-                chi*Cm*fvm::ddt(Vm) == fvc::laplacian(conductivity, Vm) - chi*Iion
-            );
+	runTime.setDeltaT(dt);
 
-            // --- 3️⃣ Advance gating variables using FDA with new Vm old states ---
-            ionicModelFDA->calculateGating(
-                runTime.value() - runTime.deltaTValue(), // stepStartTime
-                runTime.deltaTValue(),                  // deltaT
-                Vm.internalField(),                     // input Vm_new
-                Iion,                                   // output Iion (optional update)
-                u1, u2, u3                              // update gating variables
-            );
+	while (runTime.loop())
+	{
+	    refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
+
+	    // --- 1️⃣ Compute Iion for PDE solve using old Vm ---
+	    ionicModelFDA->calculateCurrent
+	    (
+		runTime.value() - runTime.deltaTValue(), // stepStartTime
+		runTime.deltaTValue(),                  // deltaT
+		Vm.internalField(),                     // input Vm_old
+		Iion,                                   // output Iion
+		u1, u2, u3                              // output gating vars (not advanced yet)
+	    );
+	    Iion.correctBoundaryConditions();
 
 
-            u1.correctBoundaryConditions();
-            u2.correctBoundaryConditions();
-            u3.correctBoundaryConditions();
+	    // --- 2️⃣ Solve diffusion PDE ---
+	    solve
+	    (
+		chi*Cm*fvm::ddt(Vm) == fvc::laplacian(conductivity, Vm) - chi*Iion
+	    );
 
-            runTime.write();
-            }
-        }
+
+	    ionicModelFDA->calculateGating(
+		runTime.value() - runTime.deltaTValue(), // stepStartTime
+		runTime.deltaTValue(),                  // deltaT
+		Vm.internalField(),                     // input Vm_new
+		Iion,                                   // output Iion (optional update)
+		u1, u2, u3                              // update gating variables
+	    );
+
+	    //Pout<< __FILE__<< __LINE__ << endl;
+
+	    u1.correctBoundaryConditions();
+	    u2.correctBoundaryConditions();
+	    u3.correctBoundaryConditions();
+
+	    runTime.write();
+	}
+	}
     else // solve implicit
-        {
-        // Info<< "deltaT (before) = " << runTime.deltaTValue() << endl;
-        // runTime.setDeltaT(dt);
-        // Info<< "deltaT (after) = " << runTime.deltaTValue() << endl;
+	{
+	// Info<< "deltaT (before) = " << runTime.deltaTValue() << endl;
+	// runTime.setDeltaT(dt);
+	// Info<< "deltaT (after) = " << runTime.deltaTValue() << endl;
 
-        while (runTime.loop())
-        {
-            Info<< nl << "Time = " << runTime.value() << endl;
+	while (runTime.loop())
+	{
+	    Info<< nl << "Time = " << runTime.value() << endl;
 
-            // Update ionic current explicitly
-            refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
-            Info << "calculate Iion" << endl;
-            // --- 1️⃣ Compute Iion for PDE solve using old Vm ---
-            ionicModelFDA->calculateCurrent
-            (
-                runTime.value() - runTime.deltaTValue(), // stepStartTime
-                runTime.deltaTValue(),                  // deltaT
-                Vm.internalField(),                     // input Vm_old
-                Iion,                                   // output Iion
-                u1, u2, u3                              // output gating vars (not advanced yet)
-            );
-            Iion.correctBoundaryConditions();
+	    // Update ionic current explicitly
+	    refCast<manufacturedFDA>(*ionicModelFDA).updateStatesOld();
+	    Info << "calculate Iion" << endl;
+	    // --- 1️⃣ Compute Iion for PDE solve using old Vm ---
+	    ionicModelFDA->calculateCurrent
+	    (
+		runTime.value() - runTime.deltaTValue(), // stepStartTime
+		runTime.deltaTValue(),                  // deltaT
+		Vm.internalField(),                     // input Vm_old
+		Iion,                                   // output Iion
+		u1, u2, u3                              // output gating vars (not advanced yet)
+	    );
+	    Iion.correctBoundaryConditions();
 
-            // Outer iteration implicit loop
-            while (pimple.loop())
-            {
-                // Update Vm
-                solve
-                (
-                    chi*Cm*fvm::ddt(Vm)
-                 == fvm::laplacian(conductivity, Vm)
-                  - chi*Iion
-                );
-            }
+	    // Outer iteration implicit loop
+	    while (pimple.loop())
+	    {
+		// Update Vm
+		solve
+		(
+		    chi*Cm*fvm::ddt(Vm)
+		 == fvm::laplacian(conductivity, Vm)
+		  - chi*Iion
+		);
+	    }
 
-            // Update ionic model explicitly
+	    // Update ionic model explicitly
 
-            // Update the old-time STATES within the ionic model
-            //// Before solving the ionic model, reset its state to the old time
-            refCast<manufacturedFDA>(*ionicModelFDA).resetStatesToStatesOld();
-            ionicModelFDA->solveODE
-            (
-                runTime.value() - runTime.deltaTValue(),
-                runTime.deltaTValue(),
-                Vm.internalField(),
-                Iion,
-                u1,
-                u2,
-                u3
-            );
-            Vm.correctBoundaryConditions();
-            u1.correctBoundaryConditions();
-            u2.correctBoundaryConditions();
-            u3.correctBoundaryConditions();
-
-
-        }
-        }
+	    // Update the old-time STATES within the ionic model
+	    //// Before solving the ionic model, reset its state to the old time
+	    refCast<manufacturedFDA>(*ionicModelFDA).resetStatesToStatesOld();
+	    ionicModelFDA->solveODE
+	    (
+		runTime.value() - runTime.deltaTValue(),
+		runTime.deltaTValue(),
+		Vm.internalField(),
+		Iion,
+		u1,
+		u2,
+		u3
+	    );
+	    Vm.correctBoundaryConditions();
+	    u1.correctBoundaryConditions();
+	    u2.correctBoundaryConditions();
+	    u3.correctBoundaryConditions();
 
 
-        Info << "\nSimulation summary:\n";
-        Info << "-------------------\n";
-        Info << "Number of cells (N)   = " << N << nl;
-        Info << "Solver type           = " << (solveExplicit ? "Explicit" : "Implicit") << nl;
-        Info << "Grid spacing (dx)     = " << dx << nl;
-        Info << "Time step (dt)        = " << dt << nl;
-        Info << "Number of steps       = " << nsteps << nl;
-        Info << "Final simulation time = " << runTime.value() << nl;
-        Info << "-------------------\n" << endl;
-        scalar Tfinal = runTime.value();
+	}
+	}
 
-        computeAndPrintErrors
-        (
-            Vm.internalField(),
-            u1.internalField(),
-            u2.internalField(),
-            mesh.C().component(vector::X),
-            mesh.C().component(vector::Y),
-            mesh.C().component(vector::Z),
-            Tfinal,
-            dim,            // dimension
-            N,
-            dx,
-            dt,
-            nsteps,
-            solveExplicit,
-            ""    
-        );
+	scalar Tfinal = runTime.value();
+
+	computeAndPrintErrors
+	(
+	    Vm.internalField(),
+	    u1.internalField(),
+	    u2.internalField(),
+	    mesh.C().component(vector::X),
+	    mesh.C().component(vector::Y),
+	    mesh.C().component(vector::Z),
+	    Tfinal,
+	    dim,            // dimension
+	    N,
+	    dx,
+	    dt,
+	    nsteps,
+	    solveExplicit //,
+	    //""
+	);
 
     Info<< "End" << nl << endl;
 
@@ -227,12 +226,11 @@ int main(int argc, char *argv[])
 
 
 
-    
 
-    
+
+
 
 
 
 
 // ************************************************************************* //
-
