@@ -97,13 +97,15 @@ class ionicModelFDA
         //- No copy assignment
         void operator=(const ionicModelFDA&) = delete;
 
-protected:
-        void setTissueFromDict();
+
+        
 
 
 
         
 public:
+
+    void setTissueFromDict();
 
     //- Runtime type information
     TypeName("ionicModelFDA");
@@ -187,20 +189,48 @@ public:
 
         //- Solve and ODE system for the start time, the time-step and the
         //  voltage. Then place the result in the integration point result list
+
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& IonicCurrent,
-            scalarField& gating1,
-            scalarField& gating2,
-            scalarField& gating3
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
         )
         {
             notImplemented("WIP");
         }
         
+        virtual void calculateGating
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        )
+        {
+            notImplemented("WIP");
+        }
+
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            scalarField& u1m,
+            scalarField& u2m,
+            scalarField& u3m
+        )
+        {
+            notImplemented("WIP");
+        }
         
         virtual void initializeFields
         (

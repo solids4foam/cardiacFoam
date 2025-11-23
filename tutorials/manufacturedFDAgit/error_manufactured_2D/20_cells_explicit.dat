@@ -1,0 +1,18 @@
+Manufactured-solution error summary (t = 0.2):
+Field     L1-error       L2-error       Linf-error
+Vm     0.000644074   0.000790555   0.00160773
+u1     0.000220593   0.000287175   0.000746804
+u2     0.000236889   0.000258879   0.000484003
+-------------------------------------------------
+
+
+Simulation summary:
+-------------------
+Number of cells (N)   = 20
+Solver type           = Explicit
+Grid spacing (dx)     = 0.05
+Time step (dt)        = 0.00222222
+Number of steps       = 90
+Final simulation time = 0.2
+-------------------
+
