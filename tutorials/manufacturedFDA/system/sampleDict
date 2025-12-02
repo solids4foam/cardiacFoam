@@ -1,0 +1,49 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+/*--------------------------------*- C++ -*----------------------------------*\
+| Minimal sampleDict for OpenFOAM 2412                                      |
+\*---------------------------------------------------------------------------*/
+ FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      sampleDict;
+}
+
+functions
+{
+    lineProbes
+    {
+        type            probes;
+        libs            ("libsampling.so");
+
+        probeLocations
+        (
+            (0 0.05 0.05)
+            (0.2 0.05 0.05)
+            (0.4 0.05 0.05)
+            (0.6 0.05 0.05)
+            (0.8 0.05 0.05)
+            (1.0 0.05 0.05)
+        );
+
+        fields
+        (
+            Vm
+            u1
+            u2
+            u3
+            ionicCurrent
+        );
+
+        writeControl    runTime;
+        writeInterval   1e-5;
+    }
+}
