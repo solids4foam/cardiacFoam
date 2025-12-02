@@ -1,0 +1,22 @@
+#!/bin/bash
+cd ${0%/*} || exit 1    # run from this directory
+
+#!/bin/bash
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Build only manufactFoam and newmanufactFoam
+#echo "Compiling manufactFoam..."
+wmake solvers/manufactFoam
+
+
+wmake solvers/singleCellElectroActivationFoam
+
+wmake solvers/newelectroFoam
+
+
+
+
+#wmake all solvers
+
+
+wmake all utilities
