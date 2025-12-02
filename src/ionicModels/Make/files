@@ -1,0 +1,14 @@
+ionicModel/ionicModelFDA.C
+ionicModel/ionicModel.C
+genericWriter/ionicModelIO.C
+
+manufacturedFDA/manufacturedFDA.C
+tmanufacturedFDA/tmanufacturedFDA.C
+TNNP/TNNP.C
+Gaur/Gaur.C
+Courtemanche/Courtemanche.C
+BuenoOrovio/BuenoOrovio.C
+
+
+
+LIB = $(FOAM_USER_LIBBIN)/libionicModels
