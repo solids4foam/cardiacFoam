@@ -26,6 +26,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ionicModel.H"
+#include "ionicSelector.H"
+
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -54,80 +56,19 @@ Foam::ionicModel::ionicModel
     tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    // Load exportedVariables list into variableExport_
     if (dict_.found("exportedVariables"))
-    {
-        dict_.lookup("exportedVariables") >> variableExport_;
-    }
+    dict_.lookup("exportedVariables") >> variableExport_;
+
 }
-
-void Foam::ionicModel::setTissueFromDict()
-
+void::Foam::ionicModel::setTissueFromDict()
 {
-     // --- First: check model override ---
-     if (enforceModelTissue())
-     {
-         tissue_ = enforcedTissueFlag();
-         Info<< "Tissue forced by model → " << enforcedTissueName() <<nl;
-         return;
-     }
-    // --- Otherwise: read from dictionary ---
-    bool hasTissue    = dict_.found("tissue");
-    bool hasDimension = dict_.found("dimension");
-
-    if (!hasTissue && !hasDimension)
-    {
-        FatalErrorInFunction
-            << "Dictionary must specify either 'tissue' or 'dimension'."
-            << exit(FatalError);
-    }
-    if (hasTissue && hasDimension)
-    {
-        FatalErrorInFunction
-            << "Dictionary cannot specify BOTH 'tissue' and 'dimension'."
-            << exit(FatalError);
-    }
-    word name;
-    if (hasTissue)
-    {
-        dict_.lookup("tissue") >> name;
-
-        if (!supportedTissueTypes().contains(name))
-        {
-            FatalErrorInFunction
-                << "Unsupported tissue '" << name << "'. Allowed: "
-                << supportedTissueTypes()
-                << exit(FatalError);
-        }
-
-        tissue_ = (name=="epicardialCells")  ? 1 :
-                  (name=="mCells")           ? 2 :
-                  (name=="endocardialCells") ? 3 :
-                  (name=="myocyte")          ? 4 : -1;
-    }
-    else // dimension
-    {
-        dict_.lookup("dimension") >> name;
-
-        if (!supportedDimensions().contains(name))
-        {
-            FatalErrorInFunction
-                << "Unsupported dimension '" << name << "'. Allowed: "
-                << supportedDimensions()
-                << exit(FatalError);
-        }
-
-        tissue_ = (name=="1D") ? 1 :
-                  (name=="2D") ? 2 :
-                  (name=="3D") ? 3 : -1;
-    }
-
-    Info<< "Selected " << name
-        << " → internal tissue flag = " << tissue_ << nl;
+    tissue_ =
+        ionicSelector::selectTissueOrDimension
+        (
+            dict_, hasManufacturedSolution(),
+            supportedTissueTypes(), supportedDimensions()
+        );
 }
-
-
-
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
@@ -141,8 +82,6 @@ Foam::ionicModel::New
 )
 {
     const word modelType(dict.lookup("ionicModel"));
-    
-
     Info<< "Selecting ionic model: " << modelType << endl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);

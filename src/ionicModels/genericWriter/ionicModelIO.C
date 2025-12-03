@@ -2,6 +2,73 @@
 
 namespace Foam {
 
+    fileName ionicModelIO::createOutputFile
+    (
+        const dictionary& dict,
+        const word& modelName,
+        const word& tissueName,
+        const Time& runTime
+    )
+    {
+        label s1 = readLabel(dict.lookup("stim_period_S1"));
+        label s2 = dict.found("stim_period_S2")
+                    ? readLabel(dict.lookup("stim_period_S2"))
+                    : -1;
+    
+        const bool protocolMode = (s2 > 0);
+    
+        if (protocolMode)
+        {
+            return runTime.path()
+                / (modelName + "_" + tissueName + "_"
+                + name(s1) + "-" + name(s2) + "ms.txt");
+        }
+        else
+        {
+            return runTime.path()
+                / (modelName + "_" + tissueName + ".txt");
+        }
+    }
+    
+    bool ionicModelIO::shouldWriteStep
+    (
+        const dictionary& dict,
+        const scalar currentTime
+    )
+    {
+        label s2 = dict.found("stim_period_S2")
+            ? readLabel(dict.lookup("stim_period_S2"))
+            : -1;
+    
+        const bool protocolMode = (s2 > 0);
+    
+        if (!protocolMode)
+        {
+            // Regular pacing → always write
+            return true;
+        }
+    
+        // S1–S2 protocol: only write after 8 seconds
+        return currentTime > 8.0;
+    }
+    
+    void ionicModelIO::writeTimestep
+    (
+        ionicModel& model,
+        OFstream& os,
+        const dictionary& dict,
+        const Time& runTime
+    )
+    {
+        if (!shouldWriteStep(dict, runTime.value()))
+        {
+            return;
+        }
+    
+        model.write(runTime.value(), os);
+    }
+    
+    
     void ionicModelIO::loadStimulusConstants
     (
         const dictionary& dict,

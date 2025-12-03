@@ -1,6 +1,7 @@
 ionicModel/ionicModelFDA.C
 ionicModel/ionicModel.C
 genericWriter/ionicModelIO.C
+ionicModel/ionicSelector.C
 
 manufacturedFDA/manufacturedFDA.C
 tmanufacturedFDA/tmanufacturedFDA.C

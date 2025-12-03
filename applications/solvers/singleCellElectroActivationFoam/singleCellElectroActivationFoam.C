@@ -29,22 +29,17 @@ Application
 
 Description
     This solver is a driver for a single cell electrophysiology model from
-    cellml.org. In this case, it is used to drive the Ten Tusscher, Noble,
-    Noble, Panfilov, 2004 model.
-
-    The user provides the transmembrane voltage vs time as an input.
+    cellml.org. 
+    The user provides an external stimulus through the stimulus protocol dictionary.
 
 Author
     Philip Cardiff, UCD.
     Simao Nieto de Castro, UCD.
 
 \*---------------------------------------------------------------------------*/
-
 #include "fvCFD.H"
 #include "ionicModel.H"
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "ionicModelIO.H"
 
 int main(int argc, char *argv[])
 {
@@ -52,97 +47,58 @@ int main(int argc, char *argv[])
     #include "createTime.H"
     #include "createFields.H"
 
-
-    // Create ionicModelCellML object
+    // Create ionic model
     autoPtr<ionicModel> ionicModel =
-    ionicModel::New
-    (
-        solutionVariablesMemory,
-        1, //one integration point
-        runTime.deltaTValue(),
-        true // solve Vm equation within ODE system
-    );
+        ionicModel::New
+        (
+            solutionVariablesMemory,
+            1, // one integration point
+            runTime.deltaTValue(),
+            true // solve Vm equation within ODE system
+        );
+
     word modelName;
     solutionVariablesMemory.lookup("ionicModel") >> modelName;
-    word tissueName;
-    solutionVariablesMemory.lookup("tissue") >> tissueName;
-    // Read pacing parameters
-    label s1, s2;
-    solutionVariablesMemory.lookup("stim_period_S1") >> s1;
-    solutionVariablesMemory.lookup("stim_period_S2") >> s2;
-    // Detect protocol
-    bool protocolMode = (s2 > 0);
-    // Build output filename
-    Foam::fileName modelOutputFile;
-    if (protocolMode)
-    {
-        // S1-S2 protocol naming
-        Foam::word s1Str = Foam::name(s1);
-        Foam::word s2Str = Foam::name(s2);
 
-        modelOutputFile =
-            runTime.path()
-            / (modelName + "_"
-            + tissueName + "_"
-            + s1Str + "-" + s2Str + "ms.txt");
+    fileName outFile =
+        ionicModelIO::createOutputFile
+        (
+            solutionVariablesMemory,modelName,
+            ionicModel->tissueName(), runTime
+        );
 
-        Info << "Detected S1-S2 protocol: S1=" << s1
-            << " ms, S2=" << s2 << " ms" << endl;
-    }
-    else
-    {
-        // Regular pacing naming
-        modelOutputFile =
-            runTime.path()
-            / (modelName + "_" + tissueName+ ".txt");
-
-        Info << "Detected periodic pacing: BCL=" << s1 << " ms" << endl;
-    }
-
-    // Open output file
-    Foam::OFstream output(modelOutputFile);
-
-    // Write header
+    OFstream output(outFile);
     ionicModel->writeHeader(output);
+
+
+
+    //Loop for the ODE solver
 
     while (runTime.loop())
     {
         Info<< nl << "Time = " << runTime.timeName() << endl;
 
-        // Allocate states storage for 1 cell
         Field<Field<scalar>> dummyStates(1);
         dummyStates[0].setSize(ionicModel->nEqns());
         scalarField dummyVmField(1, 0);
         scalarField dummyIonicCurrentField(1, 0);
 
-        // Solve the ionic model given the current voltage and calculate the
-        // ionic model currents
+
         ionicModel->solveODE
         (
             runTime.value() - runTime.deltaTValue(),
             runTime.deltaTValue(),
-            dummyVmField,
-            dummyIonicCurrentField,
+            dummyVmField, dummyIonicCurrentField,
             dummyStates
         );
 
-        if (protocolMode)
-        {
-            // S1–S2 protocol normally writes after a long warm-up window
-            if (runTime.value() > 8)
-            {
-                ionicModel->write(runTime.value(), output);
-            }
-        }
-        else
-        {
-            ionicModel->write(runTime.value(), output);
-        }
+        ionicModelIO::writeTimestep
+            (*ionicModel, output,solutionVariablesMemory, runTime);
     }
-    
-    Info<< nl << endl;
+
+    Info<< nl;
     runTime.printExecutionTime(Info);
-    Info<< "End" << nl << endl;
+    Info<< "End" << nl;
     Info<< "Results written to: " << output.name() << nl;
     Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
 
@@ -150,4 +106,3 @@ int main(int argc, char *argv[])
 }
 
 
-// ************************************************************************* //

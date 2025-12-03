@@ -225,24 +225,19 @@ public:
             return {"1D", "2D", "3D"};
         }
         
-        // --- Tissue override mechanism (default: off) ---
-        virtual bool enforceModelTissue() const { return false; }
-        virtual word enforcedTissueName() const { return ""; }
-        virtual label enforcedTissueFlag() const { return -1; }
 
         virtual word tissueName() const
         {
-            if (enforceModelTissue())
-                return enforcedTissueName();
 
-            const label t = tissue_;
+        const label t = tissue_;
 
-            return (t == 1) ? "epicardialCells" :
-                (t == 2) ? "mCells" :
-                (t == 3) ? "endocardialCells" :
-                (t == 4) ? "myocyte" :
-                            "unknown";
+        return (t == 1) ? "epicardialCells" :
+            (t == 2) ? "mCells" :
+            (t == 3) ? "endocardialCells" :
+            (t == 4) ? "myocyte" :
+                        "unknown";
         }
+
 
 
         virtual void writeHeader(OFstream& os) const 
@@ -318,3 +313,4 @@ public:
 #endif
 
 // ************************************************************************* //
+
