@@ -75,7 +75,7 @@ void implicitLoopHandler::implicitLoop
         (
             chi*Cm * fvm::ddt(Vm)
           == fvm::laplacian(conductivity, Vm)
-           - chi*Cm*Iion
+           - chi*Cm * Iion
            + externalStimulusCurrent
         );
     }

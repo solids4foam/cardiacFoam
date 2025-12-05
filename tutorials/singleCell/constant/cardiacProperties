@@ -34,9 +34,9 @@ conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
 // Specify the ionic model
 
 //	ionicModel TNNP;
-
-//	ionicModel Courtemanche;
-ionicModel  BuenoOrovio;
+//	ionicModel Gaur;
+	ionicModel Courtemanche;
+//ionicModel  BuenoOrovio;
 
 //specify the type of tissue or dimension (for FDA solutions )to model
 

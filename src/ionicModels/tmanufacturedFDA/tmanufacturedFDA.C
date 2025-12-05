@@ -31,8 +31,7 @@ License
 #include "tmanufacturedFDA_2014Names.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
-//Only needs strings for the header writing
-//#include <string>
+#include "ionicModelIO.H"
 
 #include "tmanufacturedFields.H"
 #include "volFields.H"
@@ -65,15 +64,15 @@ Foam::tmanufacturedFDA::tmanufacturedFDA
     ALGEBRAIC_(num),
     RATES_(num)
 {
-
-    //see if I need to add flog in function as well.
+    ionicModel::setTissueFromDict();
+    //see if integrationPtI need to add flog in function as well.
     Info<< nl << "Calling FDA test Constants" << endl;
-    forAll(STATES_, i)
+    forAll(STATES_, integrationPtI)
     {
-        STATES_.set(i, new scalarField(NUM_STATES, 0.0));
-        STATES_OLD_.set(i, new scalarField(NUM_STATES, 0.0));
-        ALGEBRAIC_.set(i, new scalarField(NUM_ALGEBRAIC, 0.0));
-        RATES_.set(i, new scalarField(NUM_STATES, 0.0));
+        STATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
+        STATES_OLD_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
+        ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
+        RATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
 
 
 
@@ -82,11 +81,11 @@ Foam::tmanufacturedFDA::tmanufacturedFDA
         tmanufacturedFDAinitConsts
         (
             CONSTANTS_.data(),
-            RATES_[i].data(),
-            STATES_[i].data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data(),
             tissue()
         );
-        STATES_OLD_[i] = STATES_[i];
+        STATES_OLD_[integrationPtI] = STATES_[integrationPtI];
     }
 
     Info<< nl
@@ -103,7 +102,7 @@ Foam::tmanufacturedFDA::~tmanufacturedFDA()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::List<Foam::word> Foam::tmanufacturedFDA::supportedTissueTypes() const
+Foam::List<Foam::word> Foam::tmanufacturedFDA::supportedDimensions() const
 
 {
     return {"1D", "2D", "3D"};
@@ -155,18 +154,17 @@ void Foam::tmanufacturedFDA::calculateCurrent
     Field<Field<scalar>>& states
 )
 {
+    const label monitorCell = 0;
     STATES_ = STATES_OLD_;
     const scalar tStart = stepStartTime;
-    const scalar tEnd   = stepStartTime + deltaT;
-    const label monitorCell = 0;
 
-    forAll(STATES_, i)
+    forAll(STATES_, integrationPtI)
     {
-        scalarField& S = STATES_[i];
-        scalarField& A = ALGEBRAIC_[i];
-        scalarField& R = RATES_[i];
+        scalarField& S = STATES_[integrationPtI];
+        scalarField& A = ALGEBRAIC_[integrationPtI];
+        scalarField& R = RATES_[integrationPtI];
 
-        S[V] = Vm[i];
+        S[V] = Vm[integrationPtI];
 
         ::tmanufacturedFDAcomputeVariables
         (
@@ -179,33 +177,11 @@ void Foam::tmanufacturedFDA::calculateCurrent
             solveVmWithinODESolver()
         );
 
-        if (i == monitorCell)
-        {
-            Info<< "integrationPtI = " << i
-                << " | t = " << tStart
-                << " → " << tEnd
-                << " | Vm = " << S[V]
-                << " | u1 = " << S[u1]
-                << " | u2 = " << S[u2]
-                << " | Iion = " << A[Iion]
-                << endl;
-        }
-
-        Im[i] = A[Iion];
+        Im[integrationPtI] = A[Iion];
+        if (integrationPtI == monitorCell)
+        {debugPrintFields(integrationPtI, tStart, 0, 0);}
     }
 }
-
-// void Foam::tmanufacturedFDA::calculateGating
-// (
-//     const scalar stepStartTime,
-//     const scalar deltaT,
-//     const scalarField& Vm,
-//     scalarField& Im,
-//     Field<Field<scalar>>& states
-// )
-// {
-
-// }
 
 void Foam::tmanufacturedFDA::solveODE
 (
@@ -216,32 +192,25 @@ void Foam::tmanufacturedFDA::solveODE
     Field<Field<scalar>>& states
 )
 {
-    STATES_ = STATES_OLD_;
+    //STATES_ = STATES_OLD_;
     const scalar tStart = stepStartTime;
     const scalar tEnd   = tStart + deltaT;
     const label monitorCell = 0;
 
-    forAll(STATES_, i)
+    forAll(STATES_, integrationPtI)
     {
-        scalarField& S = STATES_[i];
-        scalarField& A = ALGEBRAIC_[i];
-        scalarField& R = RATES_[i];
+        scalarField& S = STATES_[integrationPtI];
+        scalarField& A = ALGEBRAIC_[integrationPtI];
+        scalarField& R = RATES_[integrationPtI];
 
-        scalar& h = ionicModel::step()[i];
-        S[V] = Vm[i];
+        scalar& h = ionicModel::step()[integrationPtI];
+
+        S[V] = Vm[integrationPtI];
         h = min(h, deltaT);
 
-        if (i == monitorCell)
-        {
-            Info<< "solveODE: i=" << i
-                << " | t = " << tStart << " → " << tEnd
-                << " | step = " << h
-                << " | Vm = " << S[V]
-                << " | u1 = " << S[u1]
-                << " | u2 = " << S[u2]
-                << " | Iion = " << A[Iion]
-                << endl;
-        }
+        if (integrationPtI == monitorCell)
+            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
+
 
         odeSolver().solve(tStart, tEnd, S, h);
 
@@ -255,174 +224,12 @@ void Foam::tmanufacturedFDA::solveODE
             tissue(),
             solveVmWithinODESolver()
         );
+        if (integrationPtI == monitorCell)
+            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
 
-        Im[i] = A[Iion];
-
-        // u1m[i] = S[u1];
-        // u2m[i] = S[u2];
-        // u3m[i] = S[u3];
+        Im[integrationPtI] = A[Iion];
     }
 }
-
-
-// ------------------------------------------------------------------------- //
-//  Manufactured export
-// ------------------------------------------------------------------------- //
-
-void Foam::tmanufacturedFDA::exportManufacturedStates
-(
-    volScalarField& VmMS,
-    volScalarField& u1MS,
-    volScalarField& u2MS,
-    volScalarField& u3MS
-) const
-{
-    forAll(STATES_, i)
-    {
-        const scalarField& S = STATES_[i];
-        VmMS[i] = S[V];
-        u1MS[i] = S[u1];
-        u2MS[i] = S[u2];
-        u3MS[i] = S[u3];
-    }
-
-    VmMS.correctBoundaryConditions();
-    u1MS.correctBoundaryConditions();
-    u2MS.correctBoundaryConditions();
-    u3MS.correctBoundaryConditions();
-}
-Foam::wordList Foam::tmanufacturedFDA::exportedFieldNames() const
-{
-    // If user defined a list in "exportedVariables", use it
-    if (variableExport_.size())
-    {
-        return variableExport_;
-    }
-
-    // Default: export all manufactured states + algebraic Iion
-    Foam::wordList names;
-
-    for (Foam::label i = 0; i < NUM_STATES; ++i)
-    {
-        names.append(tmanufacturedFDASTATES_NAMES[i]);
-    }
-
-    for (Foam::label j = 0; j < NUM_ALGEBRAIC; ++j)
-    {
-        names.append(tmanufacturedFDAALGEBRAIC_NAMES[j]);
-    }
-
-    return names;
-}
-void Foam::tmanufacturedFDA::exportStates
-(
-    const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
-)
-{
-    const Foam::wordList names = exportedFieldNames();
-
-    if (outFields.size() != names.size())
-    {
-        WarningInFunction
-            << "exportStates: expected " << names.size()
-            << " fields, got " << outFields.size() << endl;
-        return;
-    }
-
-    // Loop over all cells
-    forAll(STATES_, cellI)
-    {
-        const scalarField& S = STATES_[cellI];      // states
-        const scalarField& A = ALGEBRAIC_[cellI];   // algebraics
-
-        // For each requested export variable
-        for (Foam::label k = 0; k < names.size(); ++k)
-        {
-            Foam::volScalarField& fld = *outFields[k];
-            const Foam::word& name = names[k];
-
-            bool matched = false;
-
-            // ----- MATCH STATE VARIABLES (V, u1, u2, u3) -----
-            for (Foam::label s = 0; s < NUM_STATES; ++s)
-            {
-                if (name == tmanufacturedFDASTATES_NAMES[s])
-                {
-                    fld[cellI] = S[s];
-                    matched = true;
-                    break;
-                }
-            }
-
-            // ----- MATCH ALGEBRAIC VARIABLES (Iion) -----
-            if (!matched)
-            {
-                for (Foam::label a = 0; a < NUM_ALGEBRAIC; ++a)
-                {
-                    if (name == tmanufacturedFDAALGEBRAIC_NAMES[a])
-                    {
-                        fld[cellI] = A[a];
-                        matched = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!matched)
-            {
-                WarningInFunction
-                    << "Unknown variable '" << name
-                    << "' in exportedVariables for tmanufacturedFDA" << endl;
-            }
-        }
-    }
-
-    // Correct boundaries for each exported field
-    for (Foam::label k = 0; k < names.size(); ++k)
-    {
-        outFields[k]->correctBoundaryConditions();
-    }
-}
-
-
-// ------------------------------------------------------------------------- //
-//  IO
-// ------------------------------------------------------------------------- //
-
-void Foam::tmanufacturedFDA::writeHeader(OFstream& os) const
-{
-    os << "time Vm";
-
-    for (int i=0;i<NUM_STATES;++i)
-        os << " " << tmanufacturedFDASTATES_NAMES[i];
-
-    for (int i=0;i<NUM_ALGEBRAIC;++i)
-        os << " " << tmanufacturedFDAALGEBRAIC_NAMES[i];
-
-    for (int i=0;i<NUM_STATES;++i)
-        os << " RATES_" << tmanufacturedFDASTATES_NAMES[i];
-
-    os << endl;
-}
-
-void Foam::tmanufacturedFDA::write(const scalar t, OFstream& os) const
-{
-    os << t << " " << STATES_[0][0];
-
-    forAll(STATES_[0], j)
-        os << " " << STATES_[0][j];
-
-    forAll(ALGEBRAIC_[0], j)
-        os << " " << ALGEBRAIC_[0][j];
-
-    forAll(RATES_[0], j)
-        os << " " << RATES_[0][j];
-
-    os << endl;
-}
-
-
 void Foam::tmanufacturedFDA::derivatives
 (
     const scalar t,
@@ -443,4 +250,77 @@ void Foam::tmanufacturedFDA::derivatives
         solveVmWithinODESolver()
     );
 }
+
+void Foam::tmanufacturedFDA::updateStatesOld() const
+{
+    saveStateSnapshot(STATES_, STATES_OLD_);
+}
+
+void Foam::tmanufacturedFDA::resetStatesToStatesOld() const
+{
+    restoreStateSnapshot(STATES_, STATES_OLD_);
+}
+
+// ------------------------------------------------------------------------- //
+//  Writing logic for 1D-3D manufactured solution
+
+    //exporting always 3 fields for manufactured computation
+    Foam::wordList Foam::tmanufacturedFDA::exportedFieldNames() const
+    {
+        
+        Foam::wordList names;
+        names.append("u1");
+        names.append("u2");
+        names.append("u3");
+        return names;
+    }
+
+
+    Foam::wordList Foam::tmanufacturedFDA::debugPrintedNames() const
+    {
+        return ionicModelIO::exportedFieldNames
+        (
+            debugVarNames_,
+            tmanufacturedFDASTATES_NAMES, NUM_STATES,
+            tmanufacturedFDAALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+
+void Foam::tmanufacturedFDA::exportStates
+(
+    const Field<Field<scalar>>&,
+    List<volScalarField*>& outFields
+)
+{
+    ionicModelIO::exportStateFields
+    (
+        STATES_,ALGEBRAIC_,
+        exportedFieldNames(),
+        tmanufacturedFDASTATES_NAMES,NUM_STATES,
+        tmanufacturedFDAALGEBRAIC_NAMES,NUM_ALGEBRAIC,
+        outFields
+    );
+}
+
+void Foam::tmanufacturedFDA::debugPrintFields
+(
+    label cellI,
+    scalar t1,
+    scalar t2,
+    scalar step
+) const
+{
+    ionicModelIO::debugPrintFields
+    (
+        STATES_, ALGEBRAIC_,
+        debugPrintedNames(),
+        tmanufacturedFDASTATES_NAMES, NUM_STATES,
+        tmanufacturedFDAALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+        cellI,t1,t2,step
+    );
+}
+
+
+
+
 // ************************************************************************* //

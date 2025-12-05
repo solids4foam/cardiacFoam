@@ -57,9 +57,12 @@ Foam::ionicModel::ionicModel
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
     if (dict_.found("exportedVariables"))
-    dict_.lookup("exportedVariables") >> variableExport_;
+        dict_.lookup("exportedVariables") >> variableExport_;
 
+    if (dict_.found("debugPrintVariables"))
+        dict_.lookup("debugPrintVariables") >> debugVarNames_;  
 }
+
 void::Foam::ionicModel::setTissueFromDict()
 {
     tissue_ =

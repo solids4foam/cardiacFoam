@@ -40,7 +40,7 @@ public:
         const Time& runTime
     );
 
-    // load stimulus constants (unchanged)
+    // load stimulus constants
     static void loadStimulusConstants
     (
         const dictionary& dict,
@@ -55,7 +55,7 @@ public:
         label nstim2
     );
 
-    // Existing generic writer (unchanged)
+    // Existing generic writer 
     typedef scalar (*VmTransform)(const scalarField&);
     
     static void writeHeader
@@ -96,6 +96,36 @@ public:
         int nAlg,
         List<volScalarField*>& outFields
     );
+    static void debugPrintFields
+    (
+        const PtrList<scalarField>& STATES,
+        const PtrList<scalarField>& ALGEBRAIC,
+        const wordList& names,
+        const char* const stateNames[],
+        int nStates,
+        const char* const algNames[],
+        int nAlg,
+        label cellI,
+        scalar t1,
+        scalar t2,
+        scalar step
+    );
+
+
+    // Map variable names to STATE or ALGEBRAIC indices
+    static void mapVariableNames
+    (
+    const wordList& names,
+    const char* const stateNames[],
+    int nStates,
+    const char* const algNames[],
+    int nAlg,
+    List<label>& stateIndex,
+    List<label>& algIndex
+    );
+
+    
+
 };
 
 }

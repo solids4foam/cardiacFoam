@@ -6,13 +6,13 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 Application
-    newManufacturedFoam
+    newelectroFoam
 
 Description
     Solves the reaction-diffusion equation for muscle electrophysiology
     (monodomain), with a run-time selectable ionic model.
 
-    This version is kept generic:
+    generic model agnostic solver:
       - The solver only knows Vm is the transmembrane potential.
       - All ionic state indexing is encapsulated in the ionic model.
       - Manufactured-solution checking is done via a model-provided export
@@ -52,56 +52,44 @@ implicitLoopHandler implicitHandler(mesh, ionicModel());
 notsureLoopHandler notsureHandler(mesh, ionicModel());
 
 // External state storage: one N-state vector per cell.
-
 const label nStates = ionicModel->nEqns();
 Field<Field<scalar>> states
 (
-    mesh.nCells(),
-    Field<scalar>(nStates, 0.0)
+    mesh.nCells(),Field<scalar>(nStates, 0.0)
 );
-// -------------------------------------------------------------
-// Mesh spacing (dx), dimension (dim), and MS-specific N
-// -------------------------------------------------------------
-scalar dx = Foam::cbrt(mesh.V().average().value());
-int dim = 0;                                  // spatial dimension                           
-// Determine mesh dimension once
-{
-    dim = mesh.nGeometricD();
-    Info << "Mesh geometric dimension = " << dim << nl;
-}
 
 //Initialization
-if (ionicModel->hasManufacturedSolution())
-    msHandler.initializeManufactured(Vm, u1, u2, u3);
-else
-    msHandler.initializeNonManufactured();
-
-dx  = msHandler.dx();
-dim = msHandler.dim();
-
 pimpleControl pimple(mesh);
-const Switch solveExplicit(solutionVariablesMemory.lookup("solveExplicit"));
-const scalar CFL = readScalar(solutionVariablesMemory.lookup("CFL"));
+//structured mesh initialization
+scalar dx  = Foam::cbrt(mesh.V().average().value());
+int dim = mesh.nGeometricD(); 
 
-//test for different solver
-Switch notsure(0);     // default = off
-if (solutionVariablesMemory.found("notsure"))
-{
-    notsure = Switch(solutionVariablesMemory.lookup("notsure"));
-}
-
-// Global dt and nsteps
 scalar dt = runTime.deltaTValue();
 int nsteps = int( std::ceil(runTime.endTime().value() / dt));
 
-Info << "Exporting fields:" << ionicModel->exportedFieldNames() << endl;
+if (ionicModel->hasManufacturedSolution())
+    msHandler.initializeManufactured(Vm, outFields, dx ,dim); 
 
 
+    
+//Solver choice
+const Switch solveExplicit(solutionVariablesMemory.lookup("solveExplicit"));
+//test for different solver
+Switch notsure(0);     // default = off
+if (solutionVariablesMemory.found("notsure"))
+  notsure = Switch(solutionVariablesMemory.lookup("notsure"));
+
+
+
+const wordList exportNames = ionicModel->exportedFieldNames();
+if (!exportNames.empty())
+    {Info<< "Exporting fields: " << exportNames << nl;}
 
 // =============== CASE 1: EXPLICIT SOLVER ====================
-
 if (solveExplicit)
 {
+    const scalar CFL = readScalar(solutionVariablesMemory.lookup("CFL"));
+
     explicitHandler.initializeExplicit
     (
         dt,
@@ -141,9 +129,7 @@ if (solveExplicit)
         runTime.write();
     }
 }
-
 else if (notsure)   
-
 // =============== CASE 2: NOT SURE SOLVER ====================
 {
     Info << "\nUsing NOT-SURE solver mode\n" << endl;
@@ -176,10 +162,7 @@ else if (notsure)
         runTime.write();
     }
 }
-
-
 // =============== CASE 3: IMPLICIT SOLVER ====================
-
 else
 {
     Info << "\nUsing implicit solver\n" << endl;
@@ -212,11 +195,10 @@ else
         runTime.write();
     }
 }
-
-// Manufactured-solution post-processing
+  // Manufactured-solution post-processing
 if (ionicModel->hasManufacturedSolution())
 {
-    msHandler.postProcess(Vm, u1, u2, u3, dt, nsteps, solveExplicit);
+    msHandler.postProcess(Vm, outFields, dt, nsteps, solveExplicit);
 }
 
 Info << "End" << nl << endl;

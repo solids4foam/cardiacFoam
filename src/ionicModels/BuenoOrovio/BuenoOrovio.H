@@ -165,11 +165,12 @@ class BuenoOrovio
     
     
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-    
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
                     // Override to provide variable names for export
             virtual Foam::wordList exportedFieldNames() const override;
+            virtual wordList debugPrintedNames() const override;
+
 
             // Override to export the variables
             virtual void exportStates
@@ -177,6 +178,16 @@ class BuenoOrovio
                 const Field<Field<scalar>>&,
                 List<volScalarField*>&
             ) override;
+
+            // Override to print variables in solver
+            void debugPrintFields
+            (
+                label cellI,
+                scalar t1,
+                scalar t2,
+                scalar step
+            ) const override;
+
 
 };
 

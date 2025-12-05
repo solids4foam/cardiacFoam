@@ -10,7 +10,7 @@ manufacturedSolutionHandler::manufacturedSolutionHandler
 )
 :
     mesh_(mesh),
-    ionicModel_(model),   // <--- reference bound here
+    ionicModel_(model),  
     dx_(0.0),
     dim_(0),
     N_(1)
@@ -22,43 +22,32 @@ manufacturedSolutionHandler::manufacturedSolutionHandler
 void manufacturedSolutionHandler::initializeManufactured
 (
     volScalarField& Vm,
-    volScalarField& u1,
-    volScalarField& u2,
-    volScalarField& u3
+    List<volScalarField*>& outFields,
+    scalar dxstructured,
+    int dim
 )
 {
-    Info << "Initializing manufactured-solution analytic fields..." << nl;
+    Info << "Manufactured solution needs to export u1,u2,u3 always for error computation" << nl;
 
-    // Analytic initialization from tmanufacturedFields
+    // Get exported variable names from the ionic model
+    Foam::wordList names = ionicModel_.exportedFieldNames();
+    
+    const label iu1 = names.find("u1");
+    const label iu2 = names.find("u2");
+    const label iu3 = names.find("u3");
+
+    volScalarField& u1 = *outFields[iu1];
+    volScalarField& u2 = *outFields[iu2];
+    volScalarField& u3 = *outFields[iu3];
+
+    // Analytic initialization from tmanufacturedFields via the ionic model
     ionicModel_.initializeFields(Vm, u1, u2, u3, mesh_.C());
-
-    // Manufactured-solution domain dimension
-    dim_ = ionicModel_.tissue();
-
+    dim_ = dim;     // from the mesh-based general dimension
+    dx_  = dxstructured;      // the generalized dx you computed in main()      
     const double totalCells =
-        returnReduce(mesh_.nCells(), sumOp<int>());
+         returnReduce(mesh_.nCells(), sumOp<int>());
 
     N_ = std::round(Foam::pow(totalCells, 1.0/dim_));
-
-    dx_ = 1.0 / scalar(N_);
-
-    Info << "MS initialized: totalCells=" << totalCells
-         << " N=" << N_
-         << " dx=" << dx_
-         << " dim=" << dim_
-         << nl;
-}
-
-
-// 2. NON-manufactured INITIALIZATION
-// ===============================================================
-void manufacturedSolutionHandler::initializeNonManufactured()
-{
-    dx_ = Foam::cbrt(mesh_.V().average().value());
-    dim_ = mesh_.nGeometricD();
-
-    Info << "Non-MS run: structured avg dx = " << dx_
-         << ", dim = " << dim_ << nl;
 }
 
 
@@ -67,9 +56,7 @@ void manufacturedSolutionHandler::initializeNonManufactured()
 void manufacturedSolutionHandler::postProcess
 (
     const volScalarField& Vm,
-    const volScalarField& u1,
-    const volScalarField& u2,
-    const volScalarField& u3,
+    const List<volScalarField*>& outFields,
     const scalar dt,
     const int nsteps,
     const bool solveExplicit
@@ -77,28 +64,27 @@ void manufacturedSolutionHandler::postProcess
 {
     Info << "\nCalculating manufactured-solution errors..." << nl;
 
+    // Lookup u1 and u2 from exported fields (numerical solution)
+    Foam::wordList names = ionicModel_.exportedFieldNames();
+
+    const label iu1 = names.find("u1");
+    const label iu2 = names.find("u2");
+    
+    const volScalarField& u1 = *outFields[iu1];
+    const volScalarField& u2 = *outFields[iu2];
+
     scalarField x = mesh_.C().component(vector::X);
     scalarField y = mesh_.C().component(vector::Y);
     scalarField z = mesh_.C().component(vector::Z);
 
-    volScalarField VmMS(Vm); VmMS.rename("VmMS");
-    volScalarField u1MS(u1); u1MS.rename("u1MS");
-    volScalarField u2MS(u2); u2MS.rename("u2MS");
-    volScalarField u3MS(u3); u3MS.rename("u3MS");
-
-    // Manufactured-solution export (analytic fields)
-    refCast<tmanufacturedFDA>(ionicModel_).exportManufacturedStates
-    (
-        VmMS, u1MS, u2MS, u3MS
-    );
-
     const scalar Tfinal = Vm.time().value();
 
+    // Compare numerical Vm,u1,u2 with analytic manufactured solution
     computeAndPrintErrors
     (
-        VmMS.internalField(),
-        u1MS.internalField(),
-        u2MS.internalField(),
+        Vm.internalField(),
+        u1.internalField(),
+        u2.internalField(),
         x, y, z,
         Tfinal,
         ionicModel_.tissue(),

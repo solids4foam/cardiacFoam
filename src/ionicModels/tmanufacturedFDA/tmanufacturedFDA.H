@@ -94,7 +94,7 @@ public:
 
 
     //override the only available tissue in this model
-    virtual List<word> supportedTissueTypes() const override;
+    virtual List<word> supportedDimensions() const override;
 
 
     // Constructors
@@ -116,9 +116,9 @@ public:
 
     // Member Functions
 
-        virtual void writeHeader(OFstream& output) const override;
+        //virtual void writeHeader(OFstream& output) const override;
         //- Write fields to the given file given the current time
-        virtual void write(const scalar t, OFstream& output) const override;
+        //virtual void write(const scalar t, OFstream& output) const override;
 
         virtual bool hasManufacturedSolution() const override
         {
@@ -133,15 +133,6 @@ public:
             scalarField& Im,
             Field<Field<scalar>>& states
         ) override;
-        
-        // virtual void calculateGating
-        // (
-        //     const scalar stepStartTime,
-        //     const scalar deltaT,
-        //     const scalarField& Vm,
-        //     scalarField& Im,
-        //     Field<Field<scalar>>& states
-        // ) override;
         
         virtual void solveODE
         (
@@ -177,34 +168,30 @@ public:
             scalarField& dydt
         ) const override;
 
-        virtual void exportManufacturedStates
-        (
-            volScalarField& VmMS,
-            volScalarField& u1MS,
-            volScalarField& u2MS,
-            volScalarField& u3MS
-        ) const;
-
-        // Export selected variables (V, u1, u2, u3, Iion)
+        void updateStatesOld() const;
+        void resetStatesToStatesOld() const;
+        // Override to provide variable names for export
         virtual Foam::wordList exportedFieldNames() const override;
+        virtual wordList debugPrintedNames() const override;
 
+
+        // Override to export the variables
         virtual void exportStates
         (
             const Field<Field<scalar>>&,
             List<volScalarField*>&
         ) override;
 
-        // Reset STATES to STATES_OLD (no external buffer)
-        virtual void resetStatesToStatesOld() const
-        {
-            STATES_ = STATES_OLD_;
-        }
+        // Override to print variables in solver
+        void debugPrintFields
+        (
+            label cellI,
+            scalar t1,
+            scalar t2,
+            scalar step
+        ) const override;
 
-        // Update STATES_OLD from STATES
-        virtual void updateStatesOld() const
-        {
-            STATES_OLD_ = STATES_;
-        }
+
 
         
 };

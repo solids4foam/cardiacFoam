@@ -60,7 +60,9 @@ Foam::BuenoOrovio::BuenoOrovio
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
+    
 {
+    ionicModel::setTissueFromDict();
     Info<< nl << "Initialize Bueno Orovio constants:" << nl;
     forAll(STATES_, i)
     {
@@ -80,10 +82,8 @@ Foam::BuenoOrovio::BuenoOrovio
 
         ionicModelIO::loadStimulusConstants
         (
-            dict, CONSTANTS_,
-            stim_start, stim_period_S1,
-            stim_duration, stim_amplitude,
-            nstim1, stim_period_S2, nstim2
+            dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration, 
+            stim_amplitude, nstim1, stim_period_S2, nstim2
         );
     }
     Info<< CONSTANTS_ << nl;
@@ -109,10 +109,7 @@ Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissueTypes() const
 }
 
 
-// ------------------------------------------------------------------------- //
 //  Explicit split: calculateCurrent (Iion only, no state update)
-// ------------------------------------------------------------------------- //
-
 void Foam::BuenoOrovio::calculateCurrent
 (
     const scalar stepStartTime,
@@ -122,10 +119,7 @@ void Foam::BuenoOrovio::calculateCurrent
     Field<Field<scalar>>& states
 )
 {
-    // stepStartTime, deltaT are in seconds; BuenoOrovio uses ms
     const scalar tStart = stepStartTime * 1000.0;
-    const label monitorCell = 500;
-
     if (Im.size() != Vm.size())
     {
         FatalErrorInFunction
@@ -141,13 +135,6 @@ void Foam::BuenoOrovio::calculateCurrent
 
         // Vm in the CellML code is in mV
         STATESI[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
-
-        if (integrationPtI == monitorCell)
-        {
-            Info<< "calculateCurrent: Vm[mV] before computeVariables = "
-                << STATESI[0] << nl;
-        }
-
         ::BuenoOroviocomputeVariables
         (
             tStart,
@@ -158,39 +145,18 @@ void Foam::BuenoOrovio::calculateCurrent
             tissue(),
             solveVmWithinODESolver()
         );
-
-        if (integrationPtI == monitorCell)
-        {
-            Info<< "calculateCurrent: iPt = " << integrationPtI
-                << " | t = " << tStart
-                << " | Vm = " << (STATESI[0] * 85.7 - 84)
-                << " | u = " << STATESI[u]
-                << " | v = " << STATESI[v]
-                << " | w = " << STATESI[w]
-                << " | s= " << STATESI[s]
-                << " | Jion = " << ALGEBRAICI[Jion]
-                << nl;
-        }
-
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        // Optionally export internal states to the external buffer
-        if (states[integrationPtI].size() >= NUM_STATES)
-        {
-            for (label s = 0; s < NUM_STATES; ++s)
-            {
-                states[integrationPtI][s] = STATESI[s];
-            }
-        }
+        //copy internal STATES to memory external state buffer. 
+        //---------Currently with no use. -------------// 
+        //----can easily be expanded for all variables------//
+        copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
-// ------------------------------------------------------------------------- //
-//  Implicit path: solve ODE system via OpenFOAM ODESolver
-//  (used in the implicit Vm branch of newelectroFoam)
-// ------------------------------------------------------------------------- //
 
+// solve ODE system via OpenFOAM ODESolver
 void Foam::BuenoOrovio::solveODE
 (
     const scalar stepStartTime,
@@ -221,15 +187,8 @@ void Foam::BuenoOrovio::solveODE
 
         // Clamp ODE step
         h = min(h, deltaT * 1000.0);
-
         if (integrationPtI == monitorCell)
-        {
-            Info<< "solveODE: i=" << integrationPtI
-                << " | t = " << tStart << " → " << tEnd
-                << " | step = " << h
-                << " | Vm = " << (STATESI[0] * 85.7 - 84)
-                << nl;
-        }
+            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
 
         // Advance the ODE system
         odeSolver().solve(tStart, tEnd, STATESI, h);
@@ -247,31 +206,19 @@ void Foam::BuenoOrovio::solveODE
         );
 
         if (integrationPtI == monitorCell)
-        {
-            Info<< "solveODE: i=" << integrationPtI
-                << " | Vm = " << STATESI[0] * 85.7 - 84
-                << " | Jion = " << ALGEBRAICI[Jion]
-                << " | dVdt = " << RATESI[0]
-                << nl;
-        }
+            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        // Export states if requested
-        if (states[integrationPtI].size() >= NUM_STATES)
-        {
-            for (label s = 0; s < NUM_STATES; ++s)
-            {
-                states[integrationPtI][s] = STATESI[s];
-            }
-        }
+        //copy internal STATES to memory external state buffer. 
+        //---------Currently with no use. -------------// 
+        //----can easily be expanded for all variables------//
+        copyInternalToExternal(STATES_, states, NUM_STATES);
+
     }
 }
 
-// ------------------------------------------------------------------------- //
-//  ODE RHS (used by OpenFOAM ODE solvers)
-// ------------------------------------------------------------------------- //
 
 void Foam::BuenoOrovio::derivatives
 (
@@ -295,9 +242,20 @@ void Foam::BuenoOrovio::derivatives
     );
 }
 
+void Foam::BuenoOrovio::updateStatesOld(const Field<Field<scalar>>&) const
+{
+    saveStateSnapshot(STATES_, STATES_OLD_);
+}
+
+void Foam::BuenoOrovio::resetStatesToStatesOld(Field<Field<scalar>>&) const
+{
+    restoreStateSnapshot(STATES_, STATES_OLD_);
+}
+
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
-// ------------------------------------------------------------------------- //
+
+//Writing functions for singleCell implementation
 Foam::wordList Foam::BuenoOrovio::exportedFieldNames() const
     {
         return ionicModelIO::exportedFieldNames
@@ -307,6 +265,16 @@ Foam::wordList Foam::BuenoOrovio::exportedFieldNames() const
             BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     } 
+
+    Foam::wordList Foam::BuenoOrovio::debugPrintedNames() const
+    {
+        return ionicModelIO::exportedFieldNames
+        (
+            debugVarNames_,
+            BuenoOrovioSTATES_NAMES, NUM_STATES,
+            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 
 void Foam::BuenoOrovio::exportStates
 (
@@ -324,7 +292,27 @@ void Foam::BuenoOrovio::exportStates
     );
 }
 
+void Foam::BuenoOrovio::debugPrintFields
+(
+    label cellI,
+    scalar t1,
+    scalar t2,
+    scalar step
+) const
+{
+    ionicModelIO::debugPrintFields
+    (
+        STATES_, ALGEBRAIC_,
+        debugPrintedNames(),
+        BuenoOrovioSTATES_NAMES, NUM_STATES,
+        BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+        cellI,t1,t2,step
+    );
+}
 
+
+
+//Writing functions for singleCell implementation
 void Foam::BuenoOrovio::writeHeader(OFstream& os) const
 {
     ionicModelIO::writeHeader(
@@ -349,30 +337,8 @@ void Foam::BuenoOrovio::write(const scalar t, OFstream& os) const
 }
 
 
-// ------------------------------------------------------------------------- //
-//  State sync (used by manufactured / restart logic)
-// ------------------------------------------------------------------------- //
 
-void Foam::BuenoOrovio::updateStatesOld
-(
-    const Field<Field<scalar>>& states
-) const
-{
-    forAll(states, i)
-    {
-        STATES_OLD_[i] = STATES_[i];
-    }
-}
-void Foam::BuenoOrovio::resetStatesToStatesOld
-(
-    Field<Field<scalar>>& states
-) const
-{
-    forAll(states, i)
-    {
-        STATES_[i] = STATES_OLD_[i];
-    }
-}
+
 
 
 

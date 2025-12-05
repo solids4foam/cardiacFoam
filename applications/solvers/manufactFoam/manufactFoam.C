@@ -179,7 +179,6 @@ int main(int argc, char *argv[])
 		 == fvm::laplacian(conductivity, Vm)
 		  - chi*Iion
 		);
-		}
 	    
 
 	    // Update ionic model explicitly
@@ -202,6 +201,7 @@ int main(int argc, char *argv[])
 	    u2.correctBoundaryConditions();
 	    u3.correctBoundaryConditions();
 
+	}
 	}
 	}
 

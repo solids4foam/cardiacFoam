@@ -1,3 +1,5 @@
+
+//Read objects for the monodomain equation: physical variables and material properties.
 const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
 
 volScalarField Vm
@@ -15,53 +17,44 @@ volScalarField Vm
     "zeroGradient"
 );
 
- volScalarField u1
- (
-     IOobject
-     (
-         "u1",
-         runTime.timeName(),
-         mesh,
-         IOobject::READ_IF_PRESENT,
-         IOobject::AUTO_WRITE
-     ),
-     mesh,
-     dimensionedScalar("u1", dimless, 0.0),
-       "zeroGradient"
- );
 
- volScalarField u2
- (
-     IOobject
-     (
-         "u2",
-         runTime.timeName(),
-         mesh,
-         IOobject::READ_IF_PRESENT,
-         IOobject::AUTO_WRITE
-     ),
-     mesh,
-     dimensionedScalar("u2", dimless, 0.0),
-       "zeroGradient"
- );
+volScalarField Iion
+(
+IOobject
+(
+"ionicCurrent",
+runTime.timeName(),
+mesh,
+IOobject::NO_READ,
+IOobject::AUTO_WRITE
+),
+mesh,
+dimensionedScalar("zero", dimVoltage/ dimTime, 0.0),
+"zeroGradient"
+);
 
- volScalarField u3
- (
-     IOobject
-     (
-         "u3",
-         runTime.timeName(),
-         mesh,
-         IOobject::READ_IF_PRESENT,
-         IOobject::AUTO_WRITE
-     ),
-     mesh,
-     dimensionedScalar("u3", dimless, 0.0),
-       "zeroGradient"
- );
- 
 
-// ************************************************************************* //
+// External stimulus current
+volScalarField externalStimulusCurrent
+(
+IOobject
+(
+    "externalStimulusCurrent",
+    runTime.timeName(),
+    mesh,
+    IOobject::READ_IF_PRESENT,
+    IOobject::AUTO_WRITE
+),
+mesh,
+// dimensionedScalar("sourceTerm", dimCurrent/dimArea, 0.0),
+dimensionedScalar("sourceTerm", dimCurrent/dimVolume, 0.0),
+"zeroGradient"
+);
+
+
+
+
+
 
 // Create dictionaries for cardiac properties, stimulus conditions and solver parameters
 
@@ -216,23 +209,6 @@ Info<< "conductivity field read from " << runTime.timeName() << nl << endl;
 }
 Info<< "---------------------------------------------" << nl;
 
-// External stimulus current
-volScalarField externalStimulusCurrent
-(
-IOobject
-(
-    "externalStimulusCurrent",
-    runTime.timeName(),
-    mesh,
-    IOobject::READ_IF_PRESENT,
-    IOobject::AUTO_WRITE
-),
-mesh,
-// dimensionedScalar("sourceTerm", dimCurrent/dimArea, 0.0),
-dimensionedScalar("sourceTerm", dimCurrent/dimVolume, 0.0),
-"zeroGradient"
-);
-
 
 //Merge the dictionaries and create a memory object to read all properties.
 dictionary solutionVariablesMemory(cardiacProperties);
@@ -243,24 +219,6 @@ solutionVariablesMemory.merge(stimulusProtocol);
 autoPtr<ionicModel> ionicModel =
 ionicModel::New(solutionVariablesMemory, mesh.nCells(), runTime.deltaTValue());
 
-
-
-//Read objects for the monodomain equation: physical variables and material properties.
-
-volScalarField Iion
-(
-IOobject
-(
-"ionicCurrent",
-runTime.timeName(),
-mesh,
-IOobject::NO_READ,
-IOobject::AUTO_WRITE
-),
-mesh,
-dimensionedScalar("zero", dimVoltage/ dimTime, 0.0),
-"zeroGradient"
-);
 
 
 // Field to record the activation time, which is the time at which each cell

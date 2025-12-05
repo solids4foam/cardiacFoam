@@ -203,6 +203,7 @@ namespace Foam {
         return Foam::wordList();
     }
 
+
     void Foam::ionicModelIO::exportStateFields
     (
         const PtrList<scalarField>& STATES,
@@ -215,23 +216,105 @@ namespace Foam {
         List<volScalarField*>& outFields
     )
     {
-        if (outFields.size() != exportedNames.size())
+        // 1. mapping
+        List<label> stateIndex, algIndex;
+        mapVariableNames
+        (
+            exportedNames,
+            stateNames, nStates,
+            algNames,  nAlg,
+            stateIndex,
+            algIndex
+        );
+    
+        // 2. Populate volScalarFields
+        forAll(STATES, cellI)
         {
-            FatalErrorInFunction
-                << "exportStateFields: expected " << exportedNames.size()
-                << " fields, got " << outFields.size()
-                << exit(FatalError);
+            const scalarField& S = STATES[cellI];
+            const scalarField& A = ALGEBRAIC[cellI];
+    
+            forAll(outFields, k)
+            {
+                if (stateIndex[k] >= 0)
+                    (*outFields[k])[cellI] = S[stateIndex[k]];
+                else
+                    (*outFields[k])[cellI] = A[algIndex[k]];
+            }
         }
+    
+        // 3. Boundaries
+        forAll(outFields, k)
+            outFields[k]->correctBoundaryConditions();
+    }
 
-        // Precompute mapping name → state or algebraic index
-        List<label> stateIndex(exportedNames.size(), -1);
-        List<label> algIndex(exportedNames.size(), -1);
+    void Foam::ionicModelIO::debugPrintFields
+    (
+        const PtrList<scalarField>& STATES,
+        const PtrList<scalarField>& ALGEBRAIC,
+        const wordList& printedNames,
+        const char* const stateNames[],
+        int nStates,
+        const char* const algNames[],
+        int nAlg,
+        label cellI,
+        scalar t1,
+        scalar t2,
+        scalar step
+    )
+    {
+        if (printedNames.empty())
+            return;
 
-        forAll(exportedNames, k)
+        // Map names → indices
+        List<label> stateIndex, algIndex;
+        mapVariableNames
+        (
+            printedNames,
+            stateNames, nStates,
+            algNames,  nAlg,
+            stateIndex,
+            algIndex
+        );
+
+        const scalarField& S = STATES[cellI];
+        const scalarField& A = ALGEBRAIC[cellI];
+        // Header line
+        Info<< "DEBUG cell=" << cellI
+            << " t=" << t1 << "→" << t2;
+
+        if (step >= 0)
+            Info<< " step=" << step;
+
+        // Print each selected variable
+        forAll(printedNames, k)
         {
-            const word& name = exportedNames[k];
+            if (stateIndex[k] >= 0)
+                {Info<< " " << printedNames[k] << "=" << S[stateIndex[k]];}
+            else
+                {Info<< " " << printedNames[k] << "=" << A[algIndex[k]];}
+        }
+        Info<< nl;
+    }
 
-            // Match STATE variables
+    void Foam::ionicModelIO::mapVariableNames
+    (
+        const wordList& names,
+        const char* const stateNames[],
+        int nStates,
+        const char* const algNames[],
+        int nAlg,
+        List<label>& stateIndex,
+        List<label>& algIndex
+    )
+    {
+        stateIndex.setSize(names.size(), -1);
+        algIndex.setSize(names.size(), -1);
+
+        forAll(names, k)
+        {
+            const word& name = names[k];
+
+            // Match STATE variable
             for (label s = 0; s < nStates; ++s)
             {
                 if (name == stateNames[s])
@@ -241,7 +324,7 @@ namespace Foam {
                 }
             }
 
-            // Match ALGEBRAIC variables
+            // Match ALGEBRAIC variable
             for (label a = 0; a < nAlg; ++a)
             {
                 if (name == algNames[a])
@@ -252,38 +335,14 @@ namespace Foam {
             }
 
             FatalErrorInFunction
-                << "Unknown variable '" << name
-                << "' in exportedVariables list"
+                << "Unknown debug variable: " << name
                 << exit(FatalError);
 
         mapped:;
         }
-
-        // Populate volScalarFields
-        forAll(STATES, cellI)
-        {
-            const scalarField& S = STATES[cellI];
-            const scalarField& A = ALGEBRAIC[cellI];
-
-            forAll(outFields, k)
-            {
-                if (stateIndex[k] >= 0)
-                {
-                    (*outFields[k])[cellI] = S[stateIndex[k]];
-                }
-                else
-                {
-                    (*outFields[k])[cellI] = A[algIndex[k]];
-                }
-            }
-        }
-
-        // Fix boundaries
-        forAll(outFields, k)
-            outFields[k]->correctBoundaryConditions();
     }
-
 }
+
 
 
 
