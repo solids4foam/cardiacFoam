@@ -35,6 +35,7 @@ FoamFile
 
 	ionicModel tmanufacturedFDA;
 		exportedVariables (u1 u2 u3);
+		debugPrintVariables (V u1 u2 u3 Iion);
 
 
 //solution for the manufactured solution initialization and ionic model constants
