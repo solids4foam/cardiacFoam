@@ -194,9 +194,9 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
 
         if (solveVmWithinODESolver)
-        {
-            RATES[u] = -ALGEBRAIC[Jion] - ALGEBRAIC[Istim];
-        }
+            {
+                RATES[u] = -ALGEBRAIC[Jion] - ALGEBRAIC[Istim];
+            }
 }
         
 

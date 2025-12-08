@@ -1,14 +1,16 @@
-ionicModel/ionicModelFDA.C
+ ionicModel/ionicModelFDA.C
 ionicModel/ionicModel.C
 genericWriter/ionicModelIO.C
 ionicModel/ionicSelector.C
 
 manufacturedFDA/manufacturedFDA.C
 tmanufacturedFDA/tmanufacturedFDA.C
+
 TNNP/TNNP.C
 Gaur/Gaur.C
 Courtemanche/Courtemanche.C
 BuenoOrovio/BuenoOrovio.C
+PerisYague/PerisYague.C
 
 
 

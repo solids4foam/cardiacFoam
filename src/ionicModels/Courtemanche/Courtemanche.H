@@ -98,9 +98,6 @@ public:
     {
         return {}; //No dimensions flag 
     } 
-    virtual bool enforceModelTissue() const override { return true; }
-    virtual word enforcedTissueName() const override { return "myocyte"; }
-    virtual label enforcedTissueFlag() const override { return 4; }
 
 
     // Constructors
@@ -164,10 +161,12 @@ public:
 
 
         virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-
         virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
+                // Override to provide variable names for export
         virtual Foam::wordList exportedFieldNames() const override;
+        virtual wordList debugPrintedNames() const override;
+
 
         // Override to export the variables
         virtual void exportStates
@@ -176,17 +175,22 @@ public:
             List<volScalarField*>&
         ) override;
 
+        // Override to print variables in solver
+        void debugPrintFields
+        (
+            label cellI,
+            scalar t1,
+            scalar t2,
+            scalar step
+        ) const override;
+
 
 };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
+}
+    
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
 
 // ************************************************************************* //
-

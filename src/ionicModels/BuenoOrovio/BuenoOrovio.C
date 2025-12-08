@@ -156,7 +156,6 @@ void Foam::BuenoOrovio::calculateCurrent
 }
 
 
-// solve ODE system via OpenFOAM ODESolver
 void Foam::BuenoOrovio::solveODE
 (
     const scalar stepStartTime,
@@ -183,15 +182,15 @@ void Foam::BuenoOrovio::solveODE
             STATESI[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
         }
         // Per-cell adaptive time step (in ms) for the ODE solver
-        scalar& h = ionicModel::step()[integrationPtI];
+        scalar& step = ionicModel::step()[integrationPtI];
 
         // Clamp ODE step
-        h = min(h, deltaT * 1000.0);
+        step = min(step, deltaT * 1000.0);
         if (integrationPtI == monitorCell)
-            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
+            {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Advance the ODE system
-        odeSolver().solve(tStart, tEnd, STATESI, h);
+        odeSolver().solve(tStart, tEnd, STATESI, step);
 
         // Update ALGEBRAIC (incl. Jion) and RATES at tEnd
         ::BuenoOroviocomputeVariables
@@ -206,7 +205,7 @@ void Foam::BuenoOrovio::solveODE
         );
 
         if (integrationPtI == monitorCell)
-            {debugPrintFields(integrationPtI, tStart, tEnd, h);}
+            {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;

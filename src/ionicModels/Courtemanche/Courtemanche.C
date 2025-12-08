@@ -110,7 +110,6 @@ Foam::List<Foam::word> Foam::Courtemanche::supportedTissueTypes() const
 {
     return {"myocyte"};
 }
-
 void Foam::Courtemanche::calculateCurrent
 (
     const scalar stepStartTime,
@@ -120,10 +119,7 @@ void Foam::Courtemanche::calculateCurrent
     Field<Field<scalar>>& states
 )
 {
-    // stepStartTime, deltaT are in seconds; Courtemanche uses ms
     const scalar tStart = stepStartTime * 1000.0;
-    const label monitorCell = 500;
-
     if (Im.size() != Vm.size())
     {
         FatalErrorInFunction
@@ -139,13 +135,6 @@ void Foam::Courtemanche::calculateCurrent
 
         // Vm in the CellML code is in mV
         STATESI[0] = Vm[integrationPtI] * 1000.0;
-
-        if (integrationPtI == monitorCell)
-        {
-            Info<< "calculateCurrent: Vm[mV] before computeVariables = "
-                << STATESI[0] << nl;
-        }
-
         ::CourtemanchecomputeVariables
         (
             tStart,
@@ -156,29 +145,17 @@ void Foam::Courtemanche::calculateCurrent
             tissue(),
             solveVmWithinODESolver()
         );
-
-        if (integrationPtI == monitorCell)
-        {
-            Info<< "calculateCurrent: iPt = " << integrationPtI
-                << " | t = " << tStart
-                << " | Vm = " << STATESI[0]
-                << " | Iion_cm = " << ALGEBRAICI[Iion_cm]
-                << nl;
-        }
-
-        // Iion_cm (index 69) is the total ionic current density used by the PDE
+        // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
 
-        // Optionally export internal states to the external buffer
-        if (states[integrationPtI].size() >= NUM_STATES)
-        {
-            for (label s = 0; s < NUM_STATES; ++s)
-            {
-                states[integrationPtI][s] = STATESI[s];
-            }
-        }
+        //copy internal STATES to memory external state buffer. 
+        //---------Currently with no use. -------------// 
+        //----can easily be expanded for all variables------//
+        copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
+
+
 
 // ------------------------------------------------------------------------- //
 //  Solve ODE with mixed singleCell implementation and 1D-3D condition
@@ -204,20 +181,18 @@ void Foam::Courtemanche::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
+        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
-            //Vm comming from the PDE
-            STATESI[membrane_V] = Vm[integrationPtI]*1000;
+            STATESI[0] = Vm[integrationPtI]*1000.0;
         }
-        
-        // Clamp time step
-        step = min(step, deltaT * 1000);
 
-        
-        // Advance ODE system
+        // Clamp time step (ms)
+        step = min(step, deltaT * 1000.0);
+        // Advance ODE system for all states
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics after solve
+        // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::CourtemanchecomputeVariables
         (
             tEnd,
@@ -228,30 +203,14 @@ void Foam::Courtemanche::solveODE
             tissue(),
             solveVmWithinODESolver()
         );
-
         if (integrationPtI == monitorCell)
-        {
-            Info<< "solveODE: integrationPtI=" << integrationPtI
-                << " | t = " << tStart << " → " << tEnd
-                << " | step = " << step
-                << " | Vm = " << STATESI[membrane_V]
-                << " | Iion = " << ALGEBRAICI[Iion_cm]
-                << " | Iext = " << ALGEBRAICI[AV_I_stim]
-                << " | dVdt = " << RATESI[membrane_V]
-                << endl;
-        }
+        {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
+        // Total ionic current density used by PDE
+        Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+        //----can easily be expanded for all variables------//
+        copyInternalToExternal(STATES_, states, NUM_STATES);
 
-        Im[integrationPtI] = ALGEBRAICI[Iion_cm];
-
-        // Export some states back if requested
-        if (states[integrationPtI].size() >= NUM_STATES)
-        {
-            for (label s = 0; s < NUM_STATES; ++s)
-            {
-                states[integrationPtI][s] = STATESI[s];
-            }
-        }
     }
 }
 
@@ -262,26 +221,35 @@ void Foam::Courtemanche::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated code
+    // Must match NUM_ALGEBRAIC from the generated Courtemanche code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::CourtemanchecomputeVariables
     (
         t,
         CONSTANTS_.data(),
-        dydt.data(),                              // RATES
-        const_cast<scalarField&>(y).data(),       // STATES
-        ALGEBRAIC_TMP.data(),                     // ALGEBRAIC
+        dydt.data(),                              // RATES (output)
+        const_cast<scalarField&>(y).data(),       // STATES (input)
+        ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
     );
-
 }
 
+void Foam::Courtemanche::updateStatesOld(const Field<Field<scalar>>&) const
+{
+    saveStateSnapshot(STATES_, STATES_OLD_);
+}
+
+void Foam::Courtemanche::resetStatesToStatesOld(Field<Field<scalar>>&) const
+{
+    restoreStateSnapshot(STATES_, STATES_OLD_);
+}
 
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
-// ------------------------------------------------------------------------- //
+
+//Writing functions for singleCell implementation
 Foam::wordList Foam::Courtemanche::exportedFieldNames() const
     {
         return ionicModelIO::exportedFieldNames
@@ -291,6 +259,16 @@ Foam::wordList Foam::Courtemanche::exportedFieldNames() const
             CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     } 
+
+    Foam::wordList Foam::Courtemanche::debugPrintedNames() const
+    {
+        return ionicModelIO::exportedFieldNames
+        (
+            debugVarNames_,
+            CourtemancheSTATES_NAMES, NUM_STATES,
+            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 
 void Foam::Courtemanche::exportStates
 (
@@ -308,55 +286,46 @@ void Foam::Courtemanche::exportStates
     );
 }
 
+void Foam::Courtemanche::debugPrintFields
+(
+    label cellI,
+    scalar t1,
+    scalar t2,
+    scalar step
+) const
+{
+    ionicModelIO::debugPrintFields
+    (
+        STATES_, ALGEBRAIC_,
+        debugPrintedNames(),
+        CourtemancheSTATES_NAMES, NUM_STATES,
+        CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+        cellI,t1,t2,step
+    );
+}
+
+
+
+//Writing functions for singleCell implementation
 void Foam::Courtemanche::writeHeader(OFstream& os) const
 {
     ionicModelIO::writeHeader(
         os,
-        CourtemancheSTATES_NAMES, NUM_STATES,
-        CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        CourtemancheSTATES_NAMES,NUM_STATES,
+        CourtemancheALGEBRAIC_NAMES,NUM_ALGEBRAIC
     );
 }
 
-
-static Foam::scalar CO_VM(const Foam::scalarField& S)
+static Foam::scalar Courtemanche_vm(const Foam::scalarField& S)
 {
     return S[0];
 }
-
 void Foam::Courtemanche::write(const scalar t, OFstream& os) const
 {
     ionicModelIO::write(
-        t,
-        os,
-        STATES_,
-        ALGEBRAIC_,
+        t,os,
+        STATES_,ALGEBRAIC_,
         RATES_,
-        CO_VM
+        Courtemanche_vm
     );
 }
-
-
-// ------------------------------------------------------------------------- //
-//  State sync
-// ------------------------------------------------------------------------- //
-
-void Foam::Courtemanche::updateStatesOld
-(
-    const Field<Field<scalar>>& states
-) const
-{
-    forAll(states, i)
-        STATES_OLD_[i] = STATES_[i];
-}
-
-void Foam::Courtemanche::resetStatesToStatesOld
-(
-    Field<Field<scalar>>& states
-) const
-{
-    forAll(states, i)
-        STATES_[i] = STATES_OLD_[i];
-}
-
-
-

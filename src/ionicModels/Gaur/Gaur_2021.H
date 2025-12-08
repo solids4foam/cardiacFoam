@@ -765,4 +765,4 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
         RATES[cell_v] = 0.0;
     }
     
-    }
+}
