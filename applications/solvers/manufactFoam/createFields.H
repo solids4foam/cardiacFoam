@@ -140,10 +140,10 @@ IOdictionary electroActivationProperties
 Info<< "Reading cellular surface-to-volume ratio \n" << endl;
 const dimensionedScalar chi
 (
-    "Chi", dimArea/dimVolume, electroActivationProperties
+    "chi", dimArea/dimVolume, electroActivationProperties
 );
 
-Info<< "Chi = " << chi.value() << chi.dimensions() << endl;
+Info<< "chi = " << chi.value() << chi.dimensions() << endl;
 
 Info<< "Reading membrane capacitance Cm\n" << endl;
 const dimensionedScalar Cm

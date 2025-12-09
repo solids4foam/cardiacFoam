@@ -26,6 +26,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ionicModel.H"
+#include "ionicSelector.H"
+
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -51,46 +53,25 @@ Foam::ionicModel::ionicModel
     odeSolver_(),
     dict_(dict),
     step_(num, initialDeltaT),
-    tissue_(-1),  // initialize to invalid flag
+    tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    setTissueFromDict(); 
+    if (dict_.found("exportedVariables"))
+        dict_.lookup("exportedVariables") >> variableExport_;
 
+    if (dict_.found("debugPrintVariables"))
+        dict_.lookup("debugPrintVariables") >> debugVarNames_;  
 }
 
-void Foam::ionicModel::setTissueFromDict()
+void::Foam::ionicModel::setTissueFromDict()
 {
-    word tissueName;
-    dict_.lookup("tissue") >> tissueName;
-    
-
-    List <word> tissues = supportedTissues();
-
-    if (tissues.size() == 1)
-    {
-        tissueName = tissues[0];
-        Info << "Atrial model or ventricular myocyte model with no endo-mcell-epi distinction "
-             << tissueName << ". Overriding input tissue." << endl;
-    }
-
-    tissue_ = (tissueName == "epicardialCells") ? 1
-            : (tissueName == "mCells")          ? 2
-            : (tissueName == "endocardialCells") ? 3
-            : (tissueName == "myocyte") ? 4
-            : -1;  // invalid flag
-
-    if (tissue_ == -1 || !tissues.contains(tissueName))
-    {
-        FatalErrorInFunction
-            << "Unknown or unsupported tissue: " << tissueName << nl
-            << "Supported tissues are: " << tissues << nl
-            << exit(FatalError);
-    }
-    Info << "Tissue Name set to: " << tissueName << endl;
-    Info << "Tissue flag set to: " << tissue_ << endl;
-    
+    tissue_ =
+        ionicSelector::selectTissueOrDimension
+        (
+            dict_, hasManufacturedSolution(),
+            supportedTissueTypes(), supportedDimensions()
+        );
 }
-
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
@@ -104,8 +85,7 @@ Foam::ionicModel::New
 )
 {
     const word modelType(dict.lookup("ionicModel"));
-
-    Info<< "Selecting ionic model " << modelType << endl;
+    Info<< "Selecting ionic model: " << modelType << endl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
@@ -120,10 +100,11 @@ Foam::ionicModel::New
         )   << exit(FatalIOError);
     }
 
-    return autoPtr<ionicModel>
+    return autoPtr<ionicModel> 
     (
         ctorPtr(dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
     );
+
 }
 
 

@@ -16,7 +16,12 @@ enum CONSTANTS_INDEX{
     AC_trpnmax, AC_vcell, AC_vcsr, AC_vhalf_d, AC_vhalff, AC_vjsr, AC_vmyo, AC_vmyo1,
     AC_vmyo1frac, AC_vmyo2, AC_vnsr, AC_vnsr1, AC_vnsr2, AC_vss, AC_wca, AC_wna,
     AC_wnaca, AC_zca, AC_zk, AC_zna, 
-    AC_stimulus_start,AC_stimulus_period , AC_stimulus_duration, AC_stimulus_amplitude, NUM_CONSTANTS
+
+    stim_start, stim_duration, stim_amplitude,  
+    stim_period_S1, nstim1,        
+    stim_period_S2, nstim2,
+
+    NUM_CONSTANTS
 }; 
 
 enum STATES_INDEX{
@@ -49,12 +54,13 @@ enum STATES_INDEX{
     CICR_A,
     ICaL_fs,
     ICaL_ff,
+
     NUM_STATES
 };
 
 
 enum ALGEBRAIC_INDEX{  
-    AV_Iion,
+    Iion_cm,
     AV_I_stim,  
     AV_ICaK,    
     AV_ICaL_ICaL,    
@@ -71,13 +77,14 @@ enum ALGEBRAIC_INDEX{
     AV_INaK_INaK,    
     AV_INaL_INaL,    
     AV_INab_INab,   
-     AV_ITo_ITo,    
-     AV_IpCa_IpCa,
-     NUM_ALGEBRAIC
+    AV_ITo_ITo,    
+    AV_IpCa_IpCa,
+
+    NUM_ALGEBRAIC
 };
 
 void
-GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag);
+GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag);
+GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
 

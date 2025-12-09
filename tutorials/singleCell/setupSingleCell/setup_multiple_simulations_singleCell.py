@@ -1,57 +1,81 @@
 import subprocess
 from pathlib import Path
 import pandas as pd
-from itertools import product
 import shutil
 from singleCellinteractivePlots import post_processing_single_cell
+from main_singleCell import IONIC_MODELS
 
+# -------------------------------------------------------------------
+# Paths / Configuration
+# -------------------------------------------------------------------
 
-# Configuration
+# Folder where this Python script lives (setupSingleCell/)
+SCRIPT_DIR = Path(__file__).resolve().parent
+# Base OpenFOAM case directory (parent of setupSingleCell/)
+BASE_DIR = SCRIPT_DIR.parent
+
 CONFIG = {
-    "run_cases_script": Path.cwd() / "run_cases.sh",
-     "output_folder": Path.cwd().parent / "outputSingleCell"
+    # run_cases.sh is in setupSingleCell/
+    "run_cases_script": SCRIPT_DIR / "run_cases.sh",
+    # where to collect all .txt outputs
+    "output_folder": BASE_DIR / "singleCellOutputs",
 }
 
-# Parameter sets
-TISSUE_TYPES = ["mCells", "endocardialCells", "epicardialCells", "myocyte"]
-IONIC_MODELS = ["BuenoOrovio", "TNNP", "Gaur", "Courtemanche"]
-IONIC_MODELS = ["BuenoOrovio", "TNNP"]
-TISSUE_TYPES = ["mCells"]
+# -------------------------------------------------------------------
+# Ionic models and their tissue types
+# (Make sure these names match what your OpenFOAM dictionaries expect!)
+# -------------------------------------------------------------------
 
+IONIC_MODEL_TISSUE_MAP = {
+    "TNNP": ["epicardialCells", "mCells", "endocardialCells"],
+    "BuenoOrovio": ["epicardialCells", "mCells", "endocardialCells"],
+    "Gaur": ["myocyte"],
+    "Courtemanche": ["myocyte"] }
+
+# Name of the properties file inside constant/
+# Change this to "electroActivationProperties" if that's the actual filename.
+PROPERTIES_FILE_NAME = "cardiacProperties"
+
+
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
 
 def update_electro_properties(electro_file: Path, tissue: str, ionic_model: str) -> None:
-    """Update electroActivationProperties with tissue and ionic model."""
+    """
+    Update the tissue and ionicModel entries in the properties file.
+
+    It assumes lines like:
+        tissue      something;
+        ionicModel  something;
+    and replaces them with the selected tissue / ionic model.
+    """
+    if not electro_file.exists():
+        raise FileNotFoundError(f"Properties file not found: {electro_file}")
+
     lines = electro_file.read_text().splitlines(keepends=True)
+
     with electro_file.open("w") as f:
         for line in lines:
-            if line.strip().startswith("tissue") and not line.strip().startswith("//"):
-                f.write(f"tissue  {tissue};\n")
-            elif line.strip().startswith("ionicModel") and not line.strip().startswith("//"):
+            stripped = line.strip()
+
+            if stripped.startswith("tissue") and not stripped.startswith("//"):
+                f.write(f"tissue      {tissue};\n")
+            elif stripped.startswith("ionicModel") and not stripped.startswith("//"):
                 f.write(f"ionicModel  {ionic_model};\n")
             else:
                 f.write(line)
 
 
-import shutil
-from pathlib import Path
-
-def copy_filter_output(output_folder_name: str, extension: str = ".txt"):
+def copy_filter_output(output_folder: Path, extension: str = ".txt") -> None:
     """
-    Copies all files with the given extension from the parent directory
-    into a subfolder (created if needed) inside the parent directory,
-    then deletes the originals after successful copy.
-
-    Args:
-        output_folder_name (str): Name of the destination folder in the parent directory.
-        extension (str): File extension filter (default: '.txt').
+    Copy all files with given extension from the base case directory
+    into 'output_folder', then delete originals.
     """
-    parent_dir = Path.cwd().parent
-    output_folder = parent_dir / output_folder_name
-
-    # Ensure the destination folder exists
+    parent_dir = BASE_DIR
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n📁 Scanning parent directory: {parent_dir}")
+    print(f"\n📁 Scanning base directory for '{extension}' files: {parent_dir}")
     files = list(parent_dir.glob(f"*{extension}"))
 
     if not files:
@@ -61,8 +85,8 @@ def copy_filter_output(output_folder_name: str, extension: str = ".txt"):
     for f in files:
         dest = output_folder / f.name
         try:
-            shutil.copy2(f, dest)  # preserves metadata
-            f.unlink()  # delete the original file
+            shutil.copy2(f, dest)
+            f.unlink()
             print(f"✅ Moved: {f.name} → {dest}")
         except Exception as e:
             print(f"❌ Failed to move {f.name}: {e}")
@@ -70,36 +94,52 @@ def copy_filter_output(output_folder_name: str, extension: str = ".txt"):
     print(f"\n✅ All {extension} files moved to {output_folder}")
 
 
-def run_single_cell_cases():
-    base_dir = Path.cwd().parent
-    print(f"Base directory: {base_dir}")
-    tissue_path = base_dir / "constant" / "electroActivationProperties"
 
-    combinations = list(product(TISSUE_TYPES, IONIC_MODELS))
-    total = len(combinations)
 
-    for i, (tissue, ionic_model) in enumerate(combinations, start=1):
-        print("\n==========================================")
-        print(f"▶ Simulation {i}/{total}")
+def run_single_cell_cases() -> None:
+    print(f"Base (OpenFOAM case) directory: {BASE_DIR}")
+
+    # Properties file inside the base case directory
+    tissue_file = BASE_DIR / "constant" / PROPERTIES_FILE_NAME
+    print(f"Using properties file: {tissue_file}")
+
+    # Build (tissue, model) combinations dynamically
+    pairs = []
+    for model in IONIC_MODELS:
+        for tissue in IONIC_MODEL_TISSUE_MAP[model]:
+            pairs.append((tissue, model))
+
+    print(f"\nRunning {len(pairs)} simulations...\n")
+
+    for i, (tissue, model) in enumerate(pairs, start=1):
+        print("==========================================")
+        print(f"▶ Simulation {i}/{len(pairs)}")
         print(f"   Tissue type : {tissue}")
-        print(f"   Ionic model : {ionic_model}")
+        print(f"   Ionic model : {model}")
         print("==========================================\n")
 
-        update_electro_properties(tissue_path, tissue, ionic_model)
+        # 1) Update constant/<properties file> with current tissue + model
+        update_electro_properties(tissue_file, tissue, model)
 
-        # Run case
-        subprocess.run(
-            ["bash", "-l", str(CONFIG["run_cases_script"]), str(base_dir)],
-            check=True
-        )
+        # 2) Call run_cases.sh with BASE_DIR (which contains Allclean/Allrun)
+        try:
+            subprocess.run(
+                ["bash", "-l", str(CONFIG["run_cases_script"]), str(BASE_DIR)],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            print("❌ Error while running run_cases.sh")
+            print("   Command:", e.cmd)
+            print("   Return code:", e.returncode)
+            # Optional: re-raise if you want the script to stop
+            raise
 
-    print("✅ All single-cell runs completed.")
+    print("\n✅ All single-cell runs completed.")
+
+
+# -------------------------------------------------------------------
 
 if __name__ == "__main__":
-    #run_single_cell_cases()
-    #copy_filter_output(CONFIG["output_folder"])
+    run_single_cell_cases()
+    copy_filter_output(CONFIG["output_folder"])
     post_processing_single_cell(CONFIG["output_folder"])
-    
-
-
-

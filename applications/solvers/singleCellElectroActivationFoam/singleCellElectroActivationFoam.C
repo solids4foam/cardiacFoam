@@ -29,100 +29,80 @@ Application
 
 Description
     This solver is a driver for a single cell electrophysiology model from
-    cellml.org. In this case, it is used to drive the Ten Tusscher, Noble,
-    Noble, Panfilov, 2004 model.
-
-    The user provides the transmembrane voltage vs time as an input.
+    cellml.org. 
+    The user provides an external stimulus through the stimulus protocol dictionary.
 
 Author
     Philip Cardiff, UCD.
     Simao Nieto de Castro, UCD.
 
 \*---------------------------------------------------------------------------*/
-
-// #include <math.h>
-// #include "tentusscher_noble_noble_panfilov_2004.H"
 #include "fvCFD.H"
-#include "interpolationTable.H"
-#include "OFstream.H"
-#include <string>
-#include "ionicModelCellML.H"        // Base class
-#include "autoPtr.H"
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+#include "ionicModel.H"
+#include "ionicModelIO.H"
 
 int main(int argc, char *argv[])
 {
     #include "setRootCaseLists.H"
     #include "createTime.H"
+    #include "createFields.H"
 
-    Info<< "Reading electroActivationProperties\n" << endl;
-
-    IOdictionary electroActivationProperties
-    (
-        IOobject
+    // Create ionic model
+    autoPtr<ionicModel> ionicModel =
+        ionicModel::New
         (
-            "electroActivationProperties",
-            runTime.constant(),
-            runTime,
-            IOobject::MUST_READ_IF_MODIFIED,
-            IOobject::NO_WRITE
-        )
-    );
+            solutionVariablesMemory,
+            1, // one integration point
+            runTime.deltaTValue(),
+            true // solve Vm equation within ODE system
+        );
 
-    // Model selection (e.g., Gaur, TNNP, Courtemanche)
-    
     word modelName;
-    electroActivationProperties.lookup("ionicModel") >> modelName;
-    
-    Info<< "Using ionic model: " << modelName << nl << endl;
+    solutionVariablesMemory.lookup("ionicModel") >> modelName;
 
-    word tissueName;
-    electroActivationProperties.lookup("tissue") >> tissueName;
+    fileName outFile =
+        ionicModelIO::createOutputFile
+        (
+            solutionVariablesMemory,modelName,
+            ionicModel->tissueName(), runTime
+        );
 
-    std::string fileName = modelName + "_" + tissueName + "_output.txt";
-    OFstream output(fileName);
+    OFstream output(outFile);
+    ionicModel->writeHeader(output);
 
-   
 
-    // Create ionicModelCellML object
-    ionicModelCellML ionicModel(electroActivationProperties);
-    
-    // Write header once
-    ionicModel.writeHeader(output);
 
-    // Loop through time
-    Info<< "\nStarting time loop\n" << endl;
-    
-        while (runTime.loop())
-        {
-            Info<< "Time = " << runTime.timeName() << nl << endl;
-    
-            // Time in milliseconds
-            const scalar VOI = runTime.value()*1000;
-    
-            // Define the time step in ms
-            const scalar deltaT = runTime.deltaTValue()*1000;
-    
-            // Define the old time in ms
-            const scalar tOld = VOI - deltaT;
-    
-            // Solve the ionic model ODEs for this time step given the known voltage
-            ionicModel.solve(tOld, deltaT);
-    
-            // Compute the variables for the given time
-            ionicModel.computeVariables(VOI);
-    
-            // Write the fields to a file
-            ionicModel.write(VOI, output);
-        }
+    //Loop for the ODE solver
 
-    Info<< "Simulation complete.\n"
-        << "Results written to: " << output.name() << nl
-        << "Format: [Time STATES ALGEBRAIC RATES]" << nl;
+    while (runTime.loop())
+    {
+        Info<< nl << "Time = " << runTime.timeName() << endl;
+
+        Field<Field<scalar>> dummyStates(1);
+        dummyStates[0].setSize(ionicModel->nEqns());
+        scalarField dummyVmField(1, 0);
+        scalarField dummyIonicCurrentField(1, 0);
+
+
+        ionicModel->solveODE
+        (
+            runTime.value() - runTime.deltaTValue(),
+            runTime.deltaTValue(),
+            dummyVmField, dummyIonicCurrentField,
+            dummyStates
+        );
+
+        ionicModelIO::writeTimestep
+            (*ionicModel, output,solutionVariablesMemory, runTime);
+    }
+
+    Info<< nl;
+    runTime.printExecutionTime(Info);
+    Info<< "End" << nl;
+    Info<< "Results written to: " << output.name() << nl;
+    Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
 
     return 0;
 }
 
-// ************************************************************************* //
+

@@ -1,4 +1,6 @@
 #include "Courtemanche_1998Names.H"
+#include "dictionary.H"
+
 
 const char* CourtemancheSTATES_NAMES[NUM_STATES] = {
     "membrane_V",       // Membrane voltage
@@ -38,12 +40,12 @@ const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_IbNa",     // Background sodium current
     "AV_IpCa",     // Calcium pump current
     "AV_Ito",      // Transient outward potassium current
-    "AV_I_ion",    // Total ionic current
+    "Iion_cm",    // Total ionic current
     "AV_I_stim"    // External stimulus current
 };
 
 void
-CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
+CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag,  const Foam::dictionary& stimulus)
 {
 
     /* ca_buffers */
@@ -105,11 +107,11 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
     CONSTANTS[AC_KmNai] = 10.0;
     CONSTANTS[AC_sigma] = (exp(CONSTANTS[AC_Nao] / 67.3) - 1.0) / 7.0;
     
-    /* stimulus */
-    CONSTANTS[AC_amplitude] = 2.0 * -4618.0;
-    CONSTANTS[AC_stimulus_start]     = 50.0;     // Start time of pulse in ms
-    CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
-    CONSTANTS[AC_stimulus_period]    = 1000;    // Time between pulses in ms
+    // /* stimulus */
+    // CONSTANTS[AC_amplitude] = 2.0 * -4618.0;
+    // CONSTANTS[AC_stimulus_start]     = 50.0;     // Start time of pulse in ms
+    // CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
+    // CONSTANTS[AC_stimulus_period]    = 1000;    // Time between pulses in ms
 
     
     /* cajsr */
@@ -169,7 +171,7 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
 
 
 void
-CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag)
+CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
 {
     double AV_B1;
     double AV_B2;
@@ -241,7 +243,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_I_up = CONSTANTS[AC_I_up_max] / (1.0 + CONSTANTS[AC_K_up] / STATES[calcium_Cai]);
     AV_I_up_leak = CONSTANTS[AC_I_up_max] * STATES[calcium_CaUp] / CONSTANTS[AC_Ca_up_max];
     
-
+    //std::cout << "CURRENTS " << __LINE__ << std::endl;
     
     /* ical */
     AV_ical_d_inf = 1.0 / (1.0 + exp((STATES[membrane_V] + 10.0) / -8.0));
@@ -272,13 +274,6 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_EK = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Ko] / STATES[potassium_Ki]);
     AV_ENa = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Nao] / STATES[sodium_Nai]);
     
-    /* stimulus */
-    ALGEBRAIC[AV_I_stim] = (
-        (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] >= CONSTANTS[AC_stimulus_start]) &&
-        (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] <= CONSTANTS[AC_stimulus_start] + CONSTANTS[AC_stimulus_duration])
-        ? CONSTANTS[AC_amplitude]/CONSTANTS[AC_Cm]
-        : 0.0
-    );
     
     /* cajsr */
     AV_I_rel = CONSTANTS[AC_K_rel] * pow(STATES[cajsr_u], 2.0) * STATES[cajsr_v] * STATES[cajsr_w] * (STATES[calcium_CaRel] - STATES[calcium_Cai]);
@@ -368,7 +363,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[calcium_Cai] = AV_B1 / AV_B2;
     
     /* membrane */
-    //ALGEBRAIC[AV_I_ion] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa];
+    ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa];
     //RATES[membrane_V] = -(ALGEBRAIC[AV_I_ion] + CONSTANTS[AC_I_diff] + ALGEBRAIC[AV_I_stim]);
     
     /* potassium */
@@ -378,4 +373,76 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[sodium_Nai] = (-3.0 * ALGEBRAIC[AV_INaK] - (3.0 * ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_INa])) * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
     
 
+    // S1–S2 STIMULUS LOGIC
+    //std::cout << "CURRENTS " << __LINE__ << std::endl;
+// ------------------------------------------------------------
+// S1–S2 stimulus logic (Courtemanche version)
+// ------------------------------------------------------------
+if (solveVmWithinODESolver)
+{
+    double I_stim = 0.0;
+
+    const double tStart  = CONSTANTS[stim_start];
+    const double T1      = CONSTANTS[stim_period_S1];
+    const double tDur    = CONSTANTS[stim_duration];
+    const double Istim   = CONSTANTS[stim_amplitude];
+    const int    n1      = static_cast<int>(CONSTANTS[nstim1]);
+
+    const double T2      = CONSTANTS[stim_period_S2];
+    const int    n2      = static_cast<int>(CONSTANTS[nstim2]);
+
+    // ---------------------- S1 ----------------------
+    if (T1 > 0.0 && n1 > 0)
+    {
+        // avoid VOI / 0
+        double phase_S1 = VOI - floor(VOI/T1)*T1;
+
+        bool in_S1 =
+        (
+            phase_S1 >= tStart &&
+            phase_S1 <= tStart + tDur &&
+            VOI <= tStart + T1*n1
+        );
+
+        if (in_S1)
+        {
+            I_stim = Istim;
+        }
+    }
+
+    // ---------------------- S2 ----------------------
+    if (I_stim == 0.0 && T2 > 0.0 && n2 > 0 && n1 > 0)
+    {
+        double tS1End = tStart + T1*n1;
+
+        bool in_S2_total_window =
+        (
+            VOI >= tS1End &&
+            VOI <= tS1End + n2*T2
+        );
+
+        if (in_S2_total_window)
+        {
+            double phase = fmod(VOI - tS1End, T2);
+
+            if (phase <= tDur)
+            {
+                I_stim = Istim;
+            }
+        }
+    }
+
+    // Store algebraic external current
+    ALGEBRAIC[AV_I_stim] = I_stim;
+
+    // Vm equation
+    RATES[membrane_V] = -(ALGEBRAIC[Iion_cm] + ALGEBRAIC[AV_I_stim]);
+
 }
+else
+{
+    RATES[membrane_V] = 0.0;
+}
+
+}
+

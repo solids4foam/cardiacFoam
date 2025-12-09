@@ -1,0 +1,103 @@
+./Allwmake: line 4: //wmake: No such file or directory
+Compiling enabled on 14 cores
+wmake libso ionicModels
+    ln: ./lnInclude
+    dep: BuenoOrovio.C
+    dep: Courtemanche.C
+    dep: Gaur.C
+    dep: tmanufacturedFDA.C
+    dep: manufacturedFDA.C
+    dep: ionicModel.C
+    dep: TNNP.C
+    dep: ionicModelIO.C
+    dep: ionicModelFDA.C
+    Ctoo: ionicModelFDA.C
+    Ctoo: ionicModel.C
+    Ctoo: ionicModelIO.C
+    Ctoo: Gaur.C
+    Ctoo: tmanufacturedFDA.C
+    Ctoo: manufacturedFDA.C
+    Ctoo: BuenoOrovio.C
+    Ctoo: Courtemanche.C
+    Ctoo: TNNP.C
+In file included from Courtemanche/Courtemanche.C:29:
+Courtemanche/Courtemanche_1998.H:178:12: warning: variable 'AV_Ca_CMDN' set but not used [-Wunused-but-set-variable]
+  178 |     double AV_Ca_CMDN;
+      |            ^
+Courtemanche/Courtemanche_1998.H:179:12: warning: variable 'AV_Ca_CSQN' set but not used [-Wunused-but-set-variable]
+  179 |     double AV_Ca_CSQN;
+      |            ^
+Courtemanche/Courtemanche_1998.H:180:12: warning: variable 'AV_Ca_TRPN' set but not used [-Wunused-but-set-variable]
+  180 |     double AV_Ca_TRPN;
+      |            ^
+In file included from BuenoOrovio/BuenoOrovio.C:29:
+BuenoOrovio/BuenoOrovio.H:93:9: warning: 'type' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   93 |         TypeName("BuenoOrovio");
+      |         ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+lnInclude/ionicModel.H:107:5: note: overridden virtual function is here
+  107 |     TypeName("ionicModel");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+In file included from TNNP/TNNP.C:29:
+TNNP/TNNP.H:93:5: warning: 'type' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   93 |     TypeName("TNNP");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+lnInclude/ionicModel.H:107:5: note: overridden virtual function is here
+  107 |     TypeName("ionicModel");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+In file included from tmanufacturedFDA/tmanufacturedFDA.C:29:
+tmanufacturedFDA/tmanufacturedFDA.H:93:5: warning: 'type' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   93 |     TypeName("tmanufacturedFDA");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+lnInclude/ionicModel.H:107:5: note: overridden virtual function is here
+  107 |     TypeName("ionicModel");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+In file included from Courtemanche/Courtemanche.C:30:
+Courtemanche/Courtemanche.H:94:5: warning: 'type' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   94 |     TypeName("Courtemanche");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+lnInclude/ionicModel.H:107:5: note: overridden virtual function is here
+  107 |     TypeName("ionicModel");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+In file included from Gaur/Gaur.C:29:
+Gaur/Gaur.H:92:5: warning: 'type' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   92 |     TypeName("Gaur");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+lnInclude/ionicModel.H:107:5: note: overridden virtual function is here
+  107 |     TypeName("ionicModel");
+      |     ^
+/Volumes/OpenFOAM-v2412/src/OpenFOAM/lnInclude/typeInfo.H:72:25: note: expanded from macro 'TypeName'
+   72 |     virtual const word& type() const { return typeName; }
+      |                         ^
+1 warning generated.
+1 warning generated.
+1 warning generated.
+4 warnings generated.
+1 warning generated.
+    link: /Users/simaocastro/OpenFOAM/simaocastro-v2412/platforms/darwin64ClangDPInt32Opt/lib/libionicModels.dylib
