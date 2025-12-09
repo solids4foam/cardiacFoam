@@ -25,73 +25,191 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+#!/usr/bin/env python3
+"""
+Master controller for Manufactured-Solution Convergence Testing.
 
-from setup_multiple_simulations_manufactured_solution import select_simulation_parameters, run_simulation_cases
-from post_processing_manufactured import organize_dat_files, read_error_dat_files, compute_convergence_rates, plot_errors, plot_errors_implicit_explicit, plot_Vm_across_dimensions
+Provides a command-line interface similar to main_setup_Niederer:
+
+    python main_setup_convergence.py all
+    python main_setup_convergence.py sim
+    python main_setup_convergence.py post
+
+Optional flags:
+
+    --case PATH           Override case folder
+    --dimension 1D 2D 3D  Limit to specific dimensions
+
+This script orchestrates:
+  ✓ Simulation parameter selection
+  ✓ Dictionary modification
+  ✓ Launching OpenFOAM runs
+  ✓ Automatic error extraction & convergence plotting
+"""
+
+import argparse
+from pathlib import Path
+import pandas as pd
+import numpy as np
+from pathlib import Path
 
 
+from setup_multiple_simulations_manufactured_solution import (
+    select_simulation_parameters,
+    run_simulation_cases,
+)
+from post_processing_manufactured import (
+    organize_dat_files,
+    read_error_dat_files,
+    compute_convergence_rates,
+    plot_errors_implicit_explicit,
+    plot_Vm_across_dimensions,
+)
 
+# --------------------- CONFIGURATION ----------------------------
 
-# Configuration constants
-CONFIG = {
+DEFAULT_CONFIG = {
     "case_file": Path.cwd().parent / "case.foam",
-    "run_cases_script": Path.cwd() / "run_cases1D.sh",
+    "run_cases_script": Path.cwd() / "run_cases.sh",
 }
-      
-    
-DX_VALUES = [10,20,40,80,160,320]# number of cells
-#DX_VALUES = [10,20,40,80,160]# number of cells
-#DT_VALUES = [1,1,1,1,1,1] # Define for implicit solver only. Keep same size list for explicit
-#DT_VALUES = [1e-3, 1e-3,5e-4,5e-4,2e-4,1e-4]  # ms
-DT_VALUES = [0.00892857,0.00224215,0.000560538, 0.000140174, 3.50471e-05, 8.76201e-06]  # s
-#DT_VALUES = [0.00892857,0.00224215,0.000560538, 0.000140174, 3.50471e-05]  # s
+
+NUMBER_CELLS = [10, 20, 40, 80, 160, 320]
+DT_VALUES = [
+    0.00892857, 0.00224215, 0.000560538,
+    0.000140174, 3.50471e-05, 8.76201e-06
+]
+
+DIMENSION_ALL = ["1D", "2D", "3D"]
+SOLVER_TYPES = ["implicit"]
 
 
-TISSUE_TYPES = [ "2D"] 
-FOLDER_NAME = [ "error_manufactured_2D_implicit_ODE"] 
-"""
-Update the Allrun for the specific blockMesh.{dimension} you want for now.
-"""
+BASE_DIR = Path(__file__).resolve().parent.parent
+OUTPUT_FOLDER = BASE_DIR / "error_manufactured_all_dim"
 
 
-def main():
-    selected_combinations = select_simulation_parameters(DX_VALUES, DT_VALUES, piecewise=True)
+# ================================================================
+# --------------------- SIMULATION STAGE --------------------------
+# ================================================================
+
+def stage_simulations(case, dimension_override=None):
+    print("\n=== Running MANUFACTURED SOLUTION SIMULATIONS ===\n")
+
+    # Determine dimensions to run
+    if dimension_override:
+        dimensions = [dimension_override]
+        print(f"⮞ Restricting to dimension: {dimension_override}")
+    else:
+        dimensions = DIMENSION_ALL
+        print("⮞ Running ALL dimensions:", DIMENSION_ALL)
+
+    CONFIG = DEFAULT_CONFIG.copy()
+    CONFIG["case_file"] = Path(case) if case else DEFAULT_CONFIG["case_file"]
+
+    # Select dt/dx combinations
+    selected_combinations = select_simulation_parameters(
+        NUMBER_CELLS, DT_VALUES, piecewise=True
+    )
+
     if selected_combinations is None or selected_combinations.empty:
-        print("No simulation parameters selected. Exiting.")
+        print("❌ No simulation parameters selected. Aborting simulation stage.")
         return
 
-    run_simulation_cases(selected_combinations, CONFIG, TISSUE_TYPES)
+    # Run all cases
+    run_simulation_cases(
+        selected_combinations,
+        CONFIG,
+        dimensions,
+        SOLVER_TYPES
+    )
 
-    dfs = []  # store DataFrames for 1D, 2D, 3D.
+    print("\n✔ Simulation stage complete.\n")
 
-    for tissue_type, folder_name in zip(TISSUE_TYPES, FOLDER_NAME):
-        print(f"\n=== Processing {tissue_type} ({folder_name}) ===")
 
-        organize_dat_files(folder_name)
-        df = read_error_dat_files(folder_name)
-        dfs.append(df)
+# --------------------- POSTPROCESSING STAGE ---------------------
+def stage_postprocess(dimension_override=None, folder_name=None):
+    print("\n=== MANUFACTURED SOLUTION POST-PROCESSING ===\n")
 
-        if df is None or df.empty:
-            print(f"No data found for {tissue_type}. Skipping.")
-            continue
+    if folder_name is None:
+        print("❌ ERROR: No output folder specified.")
+        return
 
-        print(df)
+    # Convert to absolute path for debugging clarity
+    folder = Path(folder_name).resolve()
+    print(f"[DEBUG] Initial folder path (resolved): {folder}")
 
-        # Individual plots per tissue type
-        #plot_errors(df, solver_type="Explicit")
-        #plot_errors(df, solver_type="Implicit")
-        plot_errors_implicit_explicit(df, tissue_type)
+    # Organize .dat files according to your existing logic
+    organize_dat_files(folder)
 
-        # Convergence rates
-        rates = compute_convergence_rates(df)
-        print(f"\nConvergence rates for {tissue_type}:")
-        print(rates)
+    # Print full folder path to verify location
+    print(f"[DEBUG] After organize_dat_files, using folder: {folder}")
 
-    # --- Combined Vm plot across tissue types ---
-    print("\n=== Plotting Vm comparison across tissues ===")
-    plot_Vm_across_dimensions(dfs, TISSUE_TYPES)
+    # Now read the .dat files (also prints its own debug messages)
+    print(f"⮞ Reading .dat files from: {folder}")
 
-        
+    df = read_error_dat_files(folder)
+
+    if df is None or df.empty:
+        print(f"❌ No error files found in: {folder}")
+        return
+
+    # Dimension filtering
+    if dimension_override:
+        df = df[df["Dimension"] == dimension_override]
+        if df.empty:
+            print(f"⚠ No data found for dimension {dimension_override} in folder: {folder}")
+            return
+        print(f"⮞ Filtering only dimension: {dimension_override}")
+
+    # Compute convergence
+    print("\n📉 Convergence rates:")
+    print(compute_convergence_rates(df))
+
+    # Plot Vm across dimensions
+    print("\n📊 Plotting Vm error across dimensions\n")
+    plot_Vm_across_dimensions(df)
+
+    # Plot explicit vs implicit
+    print("\n📊 Plotting implicit vs explicit per dimension\n")
+    plot_errors_implicit_explicit(df)
+
+    print("\n✔ Post-processing complete.\n")
+
+
+
+# ------------------------- CLI HANDLER ---------------------------
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Manufactured-solution convergence pipeline")
+    parser.add_argument("action", choices=["sim", "post", "all"],
+                        help="Choose: sim, post, or all")
+    parser.add_argument("--case", type=str, default=None,
+                        help="Override OpenFOAM case directory")
+    parser.add_argument("--dimension", type=str, choices=["1D", "2D", "3D"],
+                        default=None,
+                        help="Run only for a specific dimension")
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    print("\n--- MANUFACTURED SOLUTION CONTROLLER ---\n")
+    print(f"Action    : {args.action}")
+    print(f"Case      : {args.case or 'default'}")
+    print(f"Dimension : {args.dimension or 'all'}\n")
+
+    if args.action == "sim":
+        stage_simulations(args.case, args.dimension)
+
+    elif args.action == "post":
+        stage_postprocess(args.dimension, OUTPUT_FOLDER)
+
+    elif args.action == "all":
+        stage_simulations(args.case, args.dimension)
+        stage_postprocess(args.dimension, OUTPUT_FOLDER)
+
+    print("\n🎉 Completed successfully.\n")
 
 
 if __name__ == "__main__":
