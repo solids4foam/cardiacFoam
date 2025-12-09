@@ -155,10 +155,21 @@
  * RATES[15] is d/dt Ca_SR in component calcium_dynamics (millimolar).
  * RATES[2] is d/dt Na_i in component sodium_dynamics (millimolar).
  * RATES[1] is d/dt K_i in component potassium_dynamics (millimolar).
+ * 
+ * Adding 3 constant for multiple stimuli support:
+ * CONSTANTS[46] is nstim1 in component membrane (dimensionless).
+ * CONSTANTS[47] is stim_period_S2 in component membrane (millisecond).
+ * CONSTANTS[48] is nstim2 in component membrane (dimensionless).
+ * Adding a Algebraic variable for Iion output:
+ * ALGEBRAIC[69] is Iion in component membrane (picoA_per_picoF).
+ * 
  */
 
 #include "dictionary.H"
 #include "scalar.H"
+#include "TNNP_2004Names.H"
+
+
  static const char* TNNP_STATES_NAMES[17] = {
     "V",        // 0: membrane voltage (millivolt)
     "K_i",      // 1: intracellular potassium (millimolar)
@@ -178,8 +189,8 @@
     "Ca_SR",    // 15: sarcoplasmic reticulum calcium (millimolar)
     "g"         // 16: g gate (dimensionless)
 };
-static const char* TNNP_ALGEBRAIC_NAMES[69] = {
-    "i_Stim",                    // 0
+static const char* TNNP_ALGEBRAIC_NAMES[70] = {
+    "I_stim",                    // 0
     "xr1_inf",                  // 1
     "xr2_inf",                  // 2
     "xs_inf",                   // 3
@@ -247,7 +258,8 @@ static const char* TNNP_ALGEBRAIC_NAMES[69] = {
     "ddt_Ca_i_total",           // 65
     "ddt_Ca_sr_total",          // 66
     "f_JCa_i_free",             // 67
-    "f_JCa_sr_free"             // 68
+    "f_JCa_sr_free",            // 68
+    "Iion_cm"                   // 69
 };
 
 void
@@ -258,7 +270,7 @@ STATES[0] = -86.2;
 CONSTANTS[0] = 8.314;
 CONSTANTS[1] = 310;
 CONSTANTS[2] = 96.485;
-CONSTANTS[3] = 185;
+CONSTANTS[3] = 185; 
 CONSTANTS[4] = 16404;
 
 // CONSTANTS[5] = 20;
@@ -329,10 +341,6 @@ CONSTANTS[43] = 0.3;
 CONSTANTS[44] = 1094;
 CONSTANTS[45] = 2.00000;
 
-//Added stimulus parameters for S1-S2 protocol
-// CONSTANTS[46]  = nstim1          // number of S1 pulses
-// CONSTANTS[47] = stim_period_S2  // period for S2 pulses
-//CONSTANTS[48] = nstim2          // number of S2 pulses
 }
 void
 TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
@@ -423,35 +431,60 @@ ALGEBRAIC[56] =  CONSTANTS[19]*(STATES[0] - ALGEBRAIC[44]);
 ALGEBRAIC[61] = ( CONSTANTS[32]*(STATES[0] - ALGEBRAIC[26]))/(1.00000+exp((25.0000 - STATES[0])/5.98000));
 ALGEBRAIC[60] = ( CONSTANTS[30]*STATES[3])/(STATES[3]+CONSTANTS[31]);
 
-ALGEBRAIC[0] =
-(
-    // S1 pulses
-    (VOI - floor(VOI/CONSTANTS[6])*CONSTANTS[6] >= CONSTANTS[5] &&
-     VOI - floor(VOI/CONSTANTS[6])*CONSTANTS[6] <= CONSTANTS[5] + CONSTANTS[7] &&
-     VOI <= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46]
-    )
-    ? CONSTANTS[8]
-    : (
-        // S2 pulses
-        (VOI >= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46] &&
-         VOI <= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46] + CONSTANTS[48]*CONSTANTS[47] &&
-         fmod(VOI - (CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46]), CONSTANTS[47]) <= CONSTANTS[7]
-        )
-        ? CONSTANTS[8] 
-        : 0.0
-    )
-);
-// Original single stimulus current
-//ALGEBRAIC[0] = (VOI -  floor(VOI/CONSTANTS[6])*CONSTANTS[6]>=CONSTANTS[5]&&VOI -  floor(VOI/CONSTANTS[6])*CONSTANTS[6]<=CONSTANTS[5]+CONSTANTS[7] ? CONSTANTS[8] : 0.00000);
+ALGEBRAIC[69] = ALGEBRAIC[50]+ALGEBRAIC[57]+ALGEBRAIC[51]+
+                ALGEBRAIC[52]+ALGEBRAIC[55]+ALGEBRAIC[58]+
+                ALGEBRAIC[53]+ALGEBRAIC[54]+ALGEBRAIC[59]+
+                ALGEBRAIC[56]+ALGEBRAIC[61]+ALGEBRAIC[60];
 
 if (solveVmWithinODESolver)
 {
-    RATES[0] = -(
-        ALGEBRAIC[50]+ALGEBRAIC[57]+ALGEBRAIC[51]+
-        ALGEBRAIC[52]+ALGEBRAIC[55]+ALGEBRAIC[58]+
-        ALGEBRAIC[53]+ALGEBRAIC[54]+ALGEBRAIC[59]+
-        ALGEBRAIC[56]+ALGEBRAIC[61]+ALGEBRAIC[60]+ALGEBRAIC[0]
+
+    double I_stim = 0.0;
+
+    // --- S1 window ---
+    double phase_S1 = VOI - floor(VOI/CONSTANTS[6])*CONSTANTS[6];
+    bool in_S1 =
+    (
+        phase_S1 >= CONSTANTS[5] &&
+        phase_S1 <= CONSTANTS[5] + CONSTANTS[7] &&
+        VOI <= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46]
     );
+    if (in_S1)
+    {
+        I_stim = CONSTANTS[8];
+    }
+    else
+    {
+        // --- S2 window (ONLY if valid) ---
+        double T2  = CONSTANTS[47];
+        int    n2  = CONSTANTS[48];
+
+        if (T2 > 0.0 && n2 > 0)
+        {
+            double tS1End = CONSTANTS[5]
+                        + CONSTANTS[6]*CONSTANTS[46];
+
+            bool in_S2_total_window =
+            (
+                VOI >= tS1End &&
+                VOI <= tS1End + n2*T2
+            );
+
+            if (in_S2_total_window)
+            {
+                double phase = fmod(VOI - tS1End, T2);
+
+                if (phase <= CONSTANTS[7])
+                {
+                    I_stim = CONSTANTS[8];
+                }
+            }
+        }
+    }
+
+    ALGEBRAIC[0] = I_stim;
+
+    RATES[0] = -(ALGEBRAIC[69]+ALGEBRAIC[0]);
 }
 else
 {
@@ -474,6 +507,7 @@ RATES[15] =  ALGEBRAIC[66]*ALGEBRAIC[68];
 void
 TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
 {
+
 ALGEBRAIC[8] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/7.00000));
 ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[0])/10.0000));
 
@@ -552,28 +586,10 @@ ALGEBRAIC[67] = 1.00000/(1.00000+( CONSTANTS[40]*CONSTANTS[41])/pow(STATES[3]+CO
 ALGEBRAIC[66] =  (CONSTANTS[4]/CONSTANTS[44])*(ALGEBRAIC[63] - (ALGEBRAIC[62]+ALGEBRAIC[64]));
 ALGEBRAIC[68] = 1.00000/(1.00000+( CONSTANTS[42]*CONSTANTS[43])/pow(STATES[15]+CONSTANTS[43], 2.00000));
 
+ALGEBRAIC[69] = ALGEBRAIC[50]+ALGEBRAIC[57]+ALGEBRAIC[51]+
+                ALGEBRAIC[52]+ALGEBRAIC[55]+ALGEBRAIC[58]+
+                ALGEBRAIC[53]+ALGEBRAIC[54]+ALGEBRAIC[59]+
+                ALGEBRAIC[56]+ALGEBRAIC[61]+ALGEBRAIC[60];
 
-
-ALGEBRAIC[0] =
-(
-    // S1 pulses
-    (VOI - floor(VOI/CONSTANTS[6])*CONSTANTS[6] >= CONSTANTS[5] &&
-     VOI - floor(VOI/CONSTANTS[6])*CONSTANTS[6] <= CONSTANTS[5] + CONSTANTS[7] &&
-     VOI <= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46]
-    )
-    ? CONSTANTS[8]
-    : (
-        // S2 pulses
-        (VOI >= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46] &&
-         VOI <= CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46] + CONSTANTS[48]*CONSTANTS[47] &&
-         fmod(VOI - (CONSTANTS[5] + CONSTANTS[6]*CONSTANTS[46]), CONSTANTS[47]) <= CONSTANTS[7]
-        )
-        ? CONSTANTS[8] 
-        : 0.0
-    )
-);
-
-// Original single stimulus current
-//ALGEBRAIC[0] = (VOI -  floor(VOI/CONSTANTS[6])*CONSTANTS[6]>=CONSTANTS[5]&&VOI -  floor(VOI/CONSTANTS[6])*CONSTANTS[6]<=CONSTANTS[5]+CONSTANTS[7] ? CONSTANTS[8] : 0.00000);
 
 }

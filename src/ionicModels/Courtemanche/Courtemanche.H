@@ -27,8 +27,8 @@ Class
     Foam::Courtemanche
 
 Description
-    Wrapper class for calling from the cellML ionic model for the ten Tusscher,
-    Noble, Noble, Panfilov, 2004, model.
+    Wrapper class for calling from the cellML ionic model for the Courtemanche
+    ionic model 1998.
 
 SourceFiles
     Courtemanche.C
@@ -43,7 +43,10 @@ Author
 #define Courtemanche_H
 
 #include "ionicModel.H"
+#include "OFstream.H"
+#include "volFields.H"
 #include "Courtemanche_1998Names.H"
+#include "dictionary.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,7 +54,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class Courtemanche Declaration
+                         Class manufacturedFDA Declaration
 \*---------------------------------------------------------------------------*/
 
 class Courtemanche
@@ -62,6 +65,9 @@ class Courtemanche
 
         //- States
         mutable PtrList<scalarField> STATES_;
+
+        //- States - old time
+        mutable PtrList<scalarField> STATES_OLD_;
 
         //- Constants
         mutable scalarField CONSTANTS_;
@@ -86,6 +92,13 @@ public:
 
     //- Runtime type information
     TypeName("Courtemanche");
+    
+    virtual List<word> supportedTissueTypes() const override;
+    virtual List<word> supportedDimensions() const override
+    {
+        return {}; //No dimensions flag 
+    } 
+
 
     // Constructors
 
@@ -95,7 +108,8 @@ public:
         (
             const dictionary& dict,
             const label nIntegrationPoints,
-            const scalar initialDeltaT
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
         );
 
 
@@ -105,18 +119,33 @@ public:
 
     // Member Functions
 
-        //- Solve and ODE system for the start time, the time-step and the
-        //  voltage. Then place the result in the integration point result list
+        virtual void writeHeader(OFstream& output) const override;
+        //- Write fields to the given file given the current time
+        virtual void write(const scalar t, OFstream& output) const override;
+
+
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& result
-        );
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<scalar>>& states
+        ) override;
+        
+        
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<scalar>>& states
+        ) override;
+        
 
         //- Number of ODE's to solve
-        virtual label nEqns() const
+        virtual label nEqns() const override
         {
             return NUM_STATES;
         }
@@ -128,14 +157,38 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const;
+        ) const override;
+
+
+        virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
+        virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
+
+                // Override to provide variable names for export
+        virtual Foam::wordList exportedFieldNames() const override;
+        virtual wordList debugPrintedNames() const override;
+
+
+        // Override to export the variables
+        virtual void exportStates
+        (
+            const Field<Field<scalar>>&,
+            List<volScalarField*>&
+        ) override;
+
+        // Override to print variables in solver
+        void debugPrintFields
+        (
+            label cellI,
+            scalar t1,
+            scalar t2,
+            scalar step
+        ) const override;
+
+
 };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
+}
+    
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif

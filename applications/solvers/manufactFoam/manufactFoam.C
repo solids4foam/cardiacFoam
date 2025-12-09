@@ -47,6 +47,8 @@ Authors
 #include <cmath>
 
 
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
@@ -62,16 +64,16 @@ int main(int argc, char *argv[])
     // Initialise fields
     ionicModelFDA->initializeFields
     (
-        Vm,
-        u1,
-        u2,
-        u3,
-        mesh.C()
+	Vm,
+	u1,
+	u2,
+	u3,
+	mesh.C()
     );
 
     const Switch solveExplicit
     (
-        electroActivationProperties.lookup("solveExplicit")
+	electroActivationProperties.lookup("solveExplicit")
     );
 
     const int dim = ionicModelFDA->tissue();
@@ -85,11 +87,13 @@ int main(int argc, char *argv[])
     const double dx = 1.0 / double(N);
     scalar dt = runTime.deltaTValue();
     int nsteps = int(std::ceil(runTime.endTime().value() / dt));
+	
 
     if (solveExplicit)
     {
 	// Explicit diffusion stability
 	dt = cfl * dx*dx / max(conductivity.component(tensor::XX)).value();
+	dt = 4.81914e-05;
 	nsteps = int(std::ceil(runTime.endTime().value() / dt));
 	dt = runTime.endTime().value() / double(nsteps); // snap to hit Tfinal
 
@@ -175,7 +179,7 @@ int main(int argc, char *argv[])
 		 == fvm::laplacian(conductivity, Vm)
 		  - chi*Iion
 		);
-	    }
+	    
 
 	    // Update ionic model explicitly
 
@@ -197,7 +201,7 @@ int main(int argc, char *argv[])
 	    u2.correctBoundaryConditions();
 	    u3.correctBoundaryConditions();
 
-
+	}
 	}
 	}
 
@@ -237,4 +241,3 @@ int main(int argc, char *argv[])
 
 
 // ************************************************************************* //
-

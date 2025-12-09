@@ -43,6 +43,9 @@ Author
 #define TNNP_H
 
 #include "ionicModel.H"
+#include "OFstream.H"
+#include "volFields.H"
+#include "TNNP_2004Names.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -50,7 +53,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class TNNP Declaration
+                         Class manufacturedFDA Declaration
 \*---------------------------------------------------------------------------*/
 
 class TNNP
@@ -61,6 +64,9 @@ class TNNP
 
         //- States
         mutable PtrList<scalarField> STATES_;
+
+        //- States - old time
+        mutable PtrList<scalarField> STATES_OLD_;
 
         //- Constants
         mutable scalarField CONSTANTS_;
@@ -86,6 +92,16 @@ public:
     //- Runtime type information
     TypeName("TNNP");
 
+
+    //override the only available tissue in this model
+    virtual List<word> supportedTissueTypes() const override;
+    virtual List<word> supportedDimensions() const override
+    {
+        return {}; //No dimensions flag 
+    } 
+
+
+
     // Constructors
 
         //- Construct given a dictionary, the number of integration points and a
@@ -95,7 +111,7 @@ public:
             const dictionary& dict,
             const label nIntegrationPoints,
             const scalar initialDeltaT,
-            const Switch solveVmWithinODESolver
+            const Switch solveVmWithinODESolver = false
         );
 
 
@@ -105,20 +121,35 @@ public:
 
     // Member Functions
 
-        //- Solve and ODE system for the start time, the time-step and the
-        //  voltage. Then place the result in the integration point result list
+        virtual void writeHeader(OFstream& output) const override;
+        //- Write fields to the given file given the current time
+        virtual void write(const scalar t, OFstream& output) const override;
+
+
         virtual void calculateCurrent
         (
             const scalar stepStartTime,
-            const scalar timeStep,
-            const scalarField& voltage,
-            scalarField& result
-        );
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<scalar>>& states
+        ) override;
+        
+        
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im,
+            Field<Field<scalar>>& states
+        ) override;
+        
 
         //- Number of ODE's to solve
-        virtual label nEqns() const
+        virtual label nEqns() const override
         {
-            return 17;
+            return NUM_STATES;
         }
 
         //- Derivatives of each ODE with respect to the primary unknown in that
@@ -128,23 +159,41 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const;
+        ) const override;
 
-        //- Write column headers to output file
-        virtual void writeHeader(OFstream& output) const;
 
-    //- Write one line of output (time + STATES + ALGEBRAIC + RATES)
-        virtual void write(const scalar t, OFstream& output) const;
+        virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
+        virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
+
+                // Override to provide variable names for export
+        virtual Foam::wordList exportedFieldNames() const override;
+        virtual wordList debugPrintedNames() const override;
+
+
+        // Override to export the variables
+        virtual void exportStates
+        (
+            const Field<Field<scalar>>&,
+            List<volScalarField*>&
+        ) override;
+
+        // Override to print variables in solver
+        void debugPrintFields
+        (
+            label cellI,
+            scalar t1,
+            scalar t2,
+            scalar step
+        ) const override;
+
+
 };
 
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
+}
+    
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
 
 // ************************************************************************* //
+

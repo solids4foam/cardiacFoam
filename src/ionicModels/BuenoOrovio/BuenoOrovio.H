@@ -27,8 +27,8 @@ Class
     Foam::BuenoOrovio
 
 Description
-    Wrapper class for calling from the cellML ionic model for the ten Tusscher,
-    Noble, Noble, Panfilov, 2004, model.
+    Wrapper class for calling from the cellML ionic model for the Bueno Orovio
+    2008 reduced ionic model.
 
 SourceFiles
     BuenoOrovio.C
@@ -87,118 +87,113 @@ class BuenoOrovio
         void operator=(const BuenoOrovio&) = delete;
 
 
-public:
+        public:
 
-    //- Runtime type information
-    TypeName("BuenoOrovio");
-
-
-    //override the only available tissue in this model
-    virtual List<word> supportedTissues() const;
-
-    // Constructors
-
-        //- Construct given a dictionary, the number of integration points and a
-        //  initial time step for the ODE solver
-        BuenoOrovio
-        (
-            const dictionary& dict,
-            const label nIntegrationPoints,
-            const scalar initialDeltaT,
-            const Switch solveVmWithinODESolver = false
-        );
-
-
-    //- Destructor
-    virtual ~BuenoOrovio();
-
-
-    // Member Functions
-
-        virtual void writeHeader(OFstream& output) const;
-        //- Write fields to the given file given the current time
-        virtual void write(const scalar t, OFstream& output) const;
-
-        //- Solve and ODE system for the start time, the time-step and the
-        //  voltage. Then place the result in the integration point result list
-
-
-
-        virtual void calculateCurrent
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& totalJ
-        );
-
-        /*
-        virtual void calculateGating
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            scalarField& u1m,
-            scalarField& u2m,
-            scalarField& u3m
-        );
-        virtual void solveODE
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            scalarField& u1m,
-            scalarField& u2m,
-            scalarField& u3m
-        );
-
-
-        virtual void initializeFields
-        (
-            volScalarField& Vm,
-            volScalarField& u1,
-            volScalarField& u2,
-            volScalarField& u3,
-            const volVectorField& C
-        );
-        
-        */
-
-        //- Number of ODE's to solve
-        virtual label nEqns() const
+        //- Runtime type information
+        TypeName("BuenoOrovio");
+    
+    
+        //override the only available tissue in this model
+        virtual List<word> supportedTissueTypes() const override;
+        virtual List<word> supportedDimensions() const override
         {
-            return NUM_STATES;
-        }
+            return {}; //No dimensions flag 
+        } 
+    
+    
+    
+        // Constructors
+    
+            //- Construct given a dictionary, the number of integration points and a
+            //  initial time step for the ODE solver
+            BuenoOrovio
+            (
+                const dictionary& dict,
+                const label nIntegrationPoints,
+                const scalar initialDeltaT,
+                const Switch solveVmWithinODESolver = false
+            );
+    
+    
+        //- Destructor
+        virtual ~BuenoOrovio();
+    
+    
+        // Member Functions
+    
+            virtual void writeHeader(OFstream& output) const override;
+            //- Write fields to the given file given the current time
+            virtual void write(const scalar t, OFstream& output) const override;
 
-        //- Derivatives of each ODE with respect to the primary unknown in that
-        //  equation
-        virtual void derivatives
-        (
-            const scalar t,
-            const scalarField& y,
-            scalarField& dydt
-        ) const;
+            
+    
+    
+            virtual void calculateCurrent
+            (
+                const scalar stepStartTime,
+                const scalar deltaT,
+                const scalarField& Vm,
+                scalarField& Im,
+                Field<Field<scalar>>& states
+            ) override;
+            
+            
+            virtual void solveODE
+            (
+                const scalar stepStartTime,
+                const scalar deltaT,
+                const scalarField& Vm,
+                scalarField& Im,
+                Field<Field<scalar>>& states
+            ) override;
+            
+    
+            //- Number of ODE's to solve
+            virtual label nEqns() const override
+            {
+                return NUM_STATES;
+            }
+    
+            //- Derivatives of each ODE with respect to the primary unknown in that
+            //  equation
+            virtual void derivatives
+            (
+                const scalar t,
+                const scalarField& y,
+                scalarField& dydt
+            ) const override;
+    
+    
+            virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
+            virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
-        //- Reset STATES to STATES_OLD
-        virtual void resetStatesToStatesOld() const
-        {
-            STATES_ = STATES_OLD_;
-        }
+                    // Override to provide variable names for export
+            virtual Foam::wordList exportedFieldNames() const override;
+            virtual wordList debugPrintedNames() const override;
 
-        //- Update STATES_OLD from STATES
-        virtual void updateStatesOld() const
-        {
-            STATES_OLD_ = STATES_;
-        }
+
+            // Override to export the variables
+            virtual void exportStates
+            (
+                const Field<Field<scalar>>&,
+                List<volScalarField*>&
+            ) override;
+
+            // Override to print variables in solver
+            void debugPrintFields
+            (
+                label cellI,
+                scalar t1,
+                scalar t2,
+                scalar step
+            ) const override;
+
+
 };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
+}
+    
+    
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif

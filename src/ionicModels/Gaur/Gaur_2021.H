@@ -1,4 +1,3 @@
-
 #include "Gaur_2021Names.H"
 
 const char* GaurSTATES_NAMES[NUM_STATES] = {
@@ -37,7 +36,7 @@ const char* GaurSTATES_NAMES[NUM_STATES] = {
 
 
 static const char* GaurALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
-    "AV_Iion",
+    "Iion_cm",
     "AV_I_stim",
     "AV_ICaK",
     "AV_ICaL_ICaL",
@@ -61,13 +60,12 @@ static const char* GaurALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 
 
 void
-GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
+GaurinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
+
+
 { 
-    CONSTANTS[AC_stimulus_start]     = 20.0;     // Start time of pulse in ms
-    CONSTANTS[AC_stimulus_duration]  = 0.5;      // Pulse duration in ms
-    CONSTANTS[AC_stimulus_period]    = 500.0;    // Time between pulses in ms
-    CONSTANTS[AC_stimulus_amplitude] = -80.0;    // Amplitude of stimulus
-        
+    // CONSTANTS[stimulus_amplitude] = -80.0;    // Amplitude of stimulus
+
     CONSTANTS[AC_F] = 96485.0;
     CONSTANTS[AC_R] = 8314.0;
     CONSTANTS[AC_T] = 310.0;
@@ -444,15 +442,6 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     AV_JdiffK = (STATES[ionic_concentrations_kss] - STATES[ionic_concentrations_ki]) / 2.0;
     AV_JdiffNa = (STATES[ionic_concentrations_nass] - STATES[ionic_concentrations_nai]) / 2.0;
     
-    /* stimulus */
-    ALGEBRAIC[AV_I_stim] = (
-        (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] >= CONSTANTS[AC_stimulus_start]) &&
-        (VOI - floor(VOI / CONSTANTS[AC_stimulus_period]) * CONSTANTS[AC_stimulus_period] <= CONSTANTS[AC_stimulus_start] + CONSTANTS[AC_stimulus_duration])
-        ? CONSTANTS[AC_stimulus_amplitude]
-        : 0.0
-    );
-    
-    
     /* CaMK */
     AV_EK = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_ko] / STATES[ionic_concentrations_ki]);
     AV_ENa = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_nao] / STATES[ionic_concentrations_nai]);
@@ -705,12 +694,75 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     AV_Jrel2_inf = ((AV_Rel2 > 0.0) ? 1.0 * (250.0 * AV_Rel2 * (1.0 + 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaMK] / AV_CaMKa, 8.0)))) / (1.0 + pow(0.75 / STATES[ionic_concentrations_cacsr], 8.0)) : 0.0);
     RATES[CICR_Jrel1] = (AV_Jrel1_inf - STATES[CICR_Jrel1]) / AV_tau_Jrel1;
     RATES[CICR_Jrel2] = (AV_Jrel2_inf - STATES[CICR_Jrel2]) / AV_tau_Jrel2;
-    //ALGEBRAIC[AV_Iion] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + 
-    //ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_ITo_ITo] + ALGEBRAIC[AV_INaCa]  + ALGEBRAIC[AV_INaK_INaK] + 
-    //ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
+
+    ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + 
+    ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_ITo_ITo] + ALGEBRAIC[AV_INaCa]  + ALGEBRAIC[AV_INaK_INaK] + 
+    ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
 
     if (solveVmWithinODESolver)
     {
-        RATES[cell_v] = -ALGEBRAIC[AV_Iion] - ALGEBRAIC[AV_I_stim];
+        double I_stim = 0.0;
+    
+        const double tStart  = CONSTANTS[stim_start];
+        const double T1      = CONSTANTS[stim_period_S1];
+        const double tDur    = CONSTANTS[stim_duration];
+        const double Istim   = CONSTANTS[stim_amplitude];
+        const int    n1      = static_cast<int>(CONSTANTS[nstim1]);
+    
+        const double T2      = CONSTANTS[stim_period_S2];
+        const int    n2      = static_cast<int>(CONSTANTS[nstim2]);
+    
+        // ---------------------- S1 ----------------------
+        if (T1 > 0.0 && n1 > 0)
+        {
+            // avoid VOI / 0
+            double phase_S1 = VOI - floor(VOI/T1)*T1;
+    
+            bool in_S1 =
+            (
+                phase_S1 >= tStart &&
+                phase_S1 <= tStart + tDur &&
+                VOI <= tStart + T1*n1
+            );
+    
+            if (in_S1)
+            {
+                I_stim = Istim;
+            }
+        }
+    
+        // ---------------------- S2 ----------------------
+        if (I_stim == 0.0 && T2 > 0.0 && n2 > 0 && n1 > 0)
+        {
+            double tS1End = tStart + T1*n1;
+    
+            bool in_S2_total_window =
+            (
+                VOI >= tS1End &&
+                VOI <= tS1End + n2*T2
+            );
+    
+            if (in_S2_total_window)
+            {
+                double phase = fmod(VOI - tS1End, T2);
+    
+                if (phase <= tDur)
+                {
+                    I_stim = Istim;
+                }
+            }
+        }
+    
+        // Store algebraic external current
+        ALGEBRAIC[AV_I_stim] = I_stim;
+    
+        // Vm equation
+        RATES[cell_v] = -(ALGEBRAIC[Iion_cm] + ALGEBRAIC[AV_I_stim]);
+    
     }
+    else
+    {
+        RATES[cell_v] = 0.0;
+    }
+    
 }

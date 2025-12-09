@@ -41,7 +41,6 @@ Authors
 #ifndef ionicModelFDA_H
 #define ionicModelFDA_H
 
-#include "ionicModelFDA.H"
 #include "runTimeSelectionTables.H"
 #include "ODESystem.H"
 #include "ODESolver.H"

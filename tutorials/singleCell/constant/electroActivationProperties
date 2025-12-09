@@ -14,38 +14,69 @@ FoamFile
     object      electroActivationProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//Conductivity. The 1D and 2D use only the respective dimension of the tensor. 
 
+conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355); //3D
+
+
+
+// Cellular membrane surface-to-volume ratio [1/m]
+chi  [0 -1 0 0 0 0 0] 3;
+
+// Cellular membrane capacitance [F/m^2]
+Cm    [-1 -4 4 0 0 2 0] 2;
+
+solveExplicit yes;
+
+
+ionicModelCoeffs
+{
     // Specify the ionic model
-     //ionicModel Courtemanche;
-//ionicModel Gaur;
-ionicModel  TNNP;
 
+    //ionicModel tmanufacturedFDA;
+    ionicModel etTNNP;
 
-    //specify the type of tissue to model
-tissue  mCells;
-tissue  mCells;
-
-
+    //specify the type of tissue
+	
+     tissue mCells;
 
 
     //Initial ODE step;
-    initialODEStep 1e-6;
+    initialODEStep 1e-5;
+
 
     // ODE solver
-    //solver    RKF45;
-   solver    Euler;
+    solver    RKF45;
+    //solver    Euler;
 
     // Maximum number of steps
     maxSteps 1000000000;
 
     // Relative tolerance
     // Defaults to 1e-4
-relTol 1e-6;
+    //relTol 1e-6;
 
     // Absolute tolerance
     // Defaults to 1e-15
- absTol 1e-6;
+    //absTol 1e-6;
 
-    
+    stimulusParameters // component membrane
+	{
+	stim_start  	20;	//(millisecond)
+	stim_duration   1;	//(millisecond)
+	stim_amplitude  -50;	//(picoA_per_picoF)
+
+
+    //S1 protocol 
+	stim_period_S1  1000;
+	nstim1  10;
+
+    //S2 protocol
+	stim_period_S2  250;
+	nstim2  2;
+ 
+		
+	}
+}
 
 // ************************************************************************* //

@@ -12,6 +12,7 @@ const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Jfi", // Fast sodium current
     "Jso", // Slow sodium current
     "Jsi",  // Slow inactivation current
+    "Jion", // total current
     "Istim" // Stimulus current
 };
 
@@ -20,14 +21,8 @@ const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 // M tissueFlag = 2
 // ENDO tissueFlag = 3
 void
-BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag)
+BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
-
-        //Stimulus
-        CONSTANTS[stimulusStart]= 20.0;     // Start time of pulse in ms
-        CONSTANTS[stimulusDuration]= 0.2;      // Pulse duration in ms
-        CONSTANTS[stimulusPeriod]= 1000.0;    // Time between pulses in ms
-        CONSTANTS[stimulusAmplitude]= -85;    // Amplitude of stimulus
 
         CONSTANTS[uO] = 0;
         CONSTANTS[uU] = (tissueFlag == 1) ? 1.55 : (tissueFlag == 2) ? 1.61 : 1.56;
@@ -67,7 +62,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
         CONSTANTS[tauWInfty] = (tissueFlag == 1) ? 0.07 : (tissueFlag == 2) ? 0.01 : 0.0273;
         CONSTANTS[wInftyStar] = (tissueFlag == 1) ? 0.94 : (tissueFlag == 2) ? 0.5 : 0.78;
 
-        // Initial values for the hating variables
+        // Initial values for the gating variables
         STATES[u] = 0; 
         STATES[v] = 1.0;
         STATES[w] = 1.0;
@@ -76,7 +71,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
 
 
 void
-BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
+BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
 {
     using Foam::heaviside;
         //Time Constants currents 
@@ -96,8 +91,10 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         ALGEBRAIC[Jsi] = -heaviside(STATES[u] - CONSTANTS[thetaW])
                     * STATES[w] * STATES[s] / CONSTANTS[tauSi];
+        
+        ALGEBRAIC[Jion] = ALGEBRAIC[Jfi] + ALGEBRAIC[Jso] + ALGEBRAIC[Jsi];
 
-
+        //std::cout << "CURRENTS " << __LINE__ << std::endl;
         // Time constants for gating variables
         double tauVMinus = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaVMinus])) * CONSTANTS[tauV1Minus]
                         + heaviside(STATES[u] - CONSTANTS[thetaVMinus]) * CONSTANTS[tauV2Minus];
@@ -127,13 +124,81 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
         RATES[s] = ((1.0 + tanh(CONSTANTS[kS] * (STATES[u] - CONSTANTS[uS]))) / 2.0 - STATES[s]) / tauS;
 
         RATES[u] = 0.0;
-        
-        // if (solveVmWithinODESolver)
-        // {
-        //         [u] = -ALGEBRAIC[Jfi] - ALGEBRAIC[Jso] - ALGEBRAIC[Jsi];
-        // }
 
+
+
+        //  S1–S2 STIMULUS LOGIC  
+        // -------------------------------------------------------------
+        double I_stim = 0.0;
+
+        double T1 = CONSTANTS[stim_period_S1];
+        int    n1 = CONSTANTS[nstim1];
+
+        double T2 = CONSTANTS[stim_period_S2];
+        int    n2 = CONSTANTS[nstim2];
+
+        double tStart = CONSTANTS[stim_start];
+        double tDur   = CONSTANTS[stim_duration];
+        double amp    = CONSTANTS[stim_amplitude] / 85.7;
+
+        bool enable_S1 = (T1 > 0.0 && n1 > 0);
+
+        if (enable_S1)
+        {
+            // Safe: only executed when T1 > 0 → no divide-by-zero
+            double phase_S1 = VOI - floor(VOI / T1) * T1;
+
+            bool in_S1 =
+            (
+                phase_S1 >= tStart &&
+                phase_S1 <= tStart + tDur &&
+                VOI <= tStart + T1 * n1
+            );
+
+            if (in_S1)
+            {
+                I_stim = amp;
+            }
+        }
+        else
+        {
+            // S1 disabled: do nothing
+        }
+
+        bool enable_S2 = (T2 > 0.0 && n2 > 0);
+
+        if (I_stim == 0.0 && enable_S2)
+        {
+            double tS1End = tStart + T1 * n1;   // safe even if T1 or n1 = 0
+
+            bool in_S2_total_window =
+            (
+                VOI >= tS1End &&
+                VOI <= tS1End + n2 * T2
+            );
+
+            if (in_S2_total_window)
+            {
+                // Safe: only executed when T2 > 0 → no divide-by-zero in fmod
+                double phase_S2 = fmod(VOI - tS1End, T2);
+
+                if (phase_S2 <= tDur)
+                {
+                    I_stim = amp;
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        ALGEBRAIC[Istim] = I_stim;
+
+
+        if (solveVmWithinODESolver)
+            {
+                RATES[u] = -ALGEBRAIC[Jion] - ALGEBRAIC[Istim];
+            }
 }
+        
 
 
 
