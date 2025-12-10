@@ -1,3 +1,7 @@
 electroActivationFoam.C
+manufacturedSolutionHandler.C
+explicitLoopHandler.C
+implicitLoopHandler.C
+notsure.C
 
 EXE = $(FOAM_USER_APPBIN)/electroActivationFoam
