@@ -270,7 +270,7 @@ Foam::wordList Foam::BuenoOrovio::exportedFieldNames() const
 void Foam::BuenoOrovio::exportStates
 (
     const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
+    PtrList<volScalarField>& outFields
 )
 {
     ionicModelIO::exportStateFields

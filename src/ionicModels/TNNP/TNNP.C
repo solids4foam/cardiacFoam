@@ -273,7 +273,7 @@ Foam::wordList Foam::TNNP::exportedFieldNames() const
 void Foam::TNNP::exportStates
 (
     const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
+    PtrList<volScalarField>& outFields
 )
 {
     ionicModelIO::exportStateFields

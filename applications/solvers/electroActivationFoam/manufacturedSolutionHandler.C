@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "manufacturedSolutionHandler.H"
 #include "tmanufacturedFields.H"
 
@@ -22,7 +41,7 @@ manufacturedSolutionHandler::manufacturedSolutionHandler
 void manufacturedSolutionHandler::initializeManufactured
 (
     volScalarField& Vm,
-    List<volScalarField*>& outFields,
+    PtrList<volScalarField>& outFields,
     scalar dxstructured,
     int dim
 )
@@ -36,9 +55,9 @@ void manufacturedSolutionHandler::initializeManufactured
     const label iu2 = names.find("u2");
     const label iu3 = names.find("u3");
 
-    volScalarField& u1 = *outFields[iu1];
-    volScalarField& u2 = *outFields[iu2];
-    volScalarField& u3 = *outFields[iu3];
+    volScalarField& u1 = outFields[iu1];
+    volScalarField& u2 = outFields[iu2];
+    volScalarField& u3 = outFields[iu3];
 
     // Analytic initialization from tmanufacturedFields via the ionic model
     ionicModel_.initializeFields(Vm, u1, u2, u3, mesh_.C());
@@ -56,7 +75,7 @@ void manufacturedSolutionHandler::initializeManufactured
 void manufacturedSolutionHandler::postProcess
 (
     const volScalarField& Vm,
-    const List<volScalarField*>& outFields,
+    const PtrList<volScalarField>& outFields,
     const scalar dt,
     const int nsteps,
     const bool solveExplicit
@@ -70,12 +89,12 @@ void manufacturedSolutionHandler::postProcess
     const label iu1 = names.find("u1");
     const label iu2 = names.find("u2");
 
-    const volScalarField& u1 = *outFields[iu1];
-    const volScalarField& u2 = *outFields[iu2];
+    const volScalarField& u1 = outFields[iu1];
+    const volScalarField& u2 = outFields[iu2];
 
-    scalarField x = mesh_.C().component(vector::X);
-    scalarField y = mesh_.C().component(vector::Y);
-    scalarField z = mesh_.C().component(vector::Z);
+    const scalarField x = mesh_.C().component(vector::X);
+    const scalarField y = mesh_.C().component(vector::Y);
+    const scalarField z = mesh_.C().component(vector::Z);
 
     const scalar Tfinal = Vm.time().value();
 

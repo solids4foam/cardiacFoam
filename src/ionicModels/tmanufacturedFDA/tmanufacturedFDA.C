@@ -281,7 +281,7 @@ void Foam::tmanufacturedFDA::resetStatesToStatesOld() const
 void Foam::tmanufacturedFDA::exportStates
 (
     const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
+    PtrList<volScalarField>& outFields
 )
 {
     ionicModelIO::exportStateFields

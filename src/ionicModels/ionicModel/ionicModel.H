@@ -310,26 +310,23 @@ public:
 
 
 //-------------------------------Print Export and write ---------------------//
-        //Write and export from internal variables functions
-            //singleCell
+        // Write and export from internal variables functions
+        // singleCell
         virtual void writeHeader(OFstream& os) const
-        {
-        }
+        {}
 
         virtual void write(const scalar t, OFstream& os) const
-        {
-        }
+        {}
 
-            //3D vol fields(defined for states, algebraic and rates.)
+        // 3D vol fields(defined for states, algebraic and rates.)
         virtual void exportStates
         (
             const Field<Field<scalar>>&,
-            List<volScalarField*>&
+            PtrList<volScalarField>&
         )
-        {
-        }
+        {}
 
-            // Printing function
+        // Printing function
         virtual void debugPrintFields
         (
             label,
