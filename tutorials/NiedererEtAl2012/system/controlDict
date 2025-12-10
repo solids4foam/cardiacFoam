@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     newelectroFoam;
+application     electroActivationFoam;
 
 startFrom       startTime;
 
