@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
@@ -78,7 +70,7 @@ Foam::Gaur::Gaur
         GaurinitConsts
         (
             CONSTANTS_.data(),
-            RATES_[i].data(), 
+            RATES_[i].data(),
             STATES_[i].data(),
             tissue(),dict
         );
@@ -92,11 +84,11 @@ Foam::Gaur::Gaur
         );
     }
     Info<< CONSTANTS_ << nl;
-   
+
     label i0 = rand() % STATES_.size();
     Info<< "initial states:" << nl;
     Info<< STATES_[i0] << nl;
-   
+
 }
 
 
@@ -137,7 +129,7 @@ void Foam::Gaur::calculateCurrent
         scalarField& RATESI     = RATES_[integrationPtI];
 
         // Update voltage for this integration point
-        STATESI[cell_v] = Vm[integrationPtI] * 1000; 
+        STATESI[cell_v] = Vm[integrationPtI] * 1000;
 
         ::GaurcomputeVariables
         (
@@ -152,7 +144,7 @@ void Foam::Gaur::calculateCurrent
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
 
-        //copy internal STATES to memory external state buffer. 
+        //copy internal STATES to memory external state buffer.
         //----can easily be expanded for all variables------//
         copyInternalToExternal(STATES_, states, NUM_STATES);
 
@@ -262,7 +254,7 @@ Foam::wordList Foam::Gaur::exportedFieldNames() const
             GaurSTATES_NAMES, NUM_STATES,
             GaurALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
-    } 
+    }
 
     Foam::wordList Foam::Gaur::debugPrintedNames() const
     {

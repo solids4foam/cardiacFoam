@@ -7,7 +7,7 @@
 class explicitLoopHandler
 {
 private:
-    const fvMesh& mesh_;
+    // const fvMesh& mesh_;
     ionicModel& ionicModel_;
 
     // Cached solver parameters

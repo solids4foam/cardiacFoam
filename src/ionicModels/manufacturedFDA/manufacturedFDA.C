@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
@@ -128,7 +120,7 @@ void Foam::manufacturedFDA::initializeFields
     scalarField Z = C.component(vector::Z);
 
     const scalar t = 0.0;
-    
+
     // Compute manufactured fields
     computeManufacturedV(Vm, X, Y, Z, t, tissue());
     computeManufacturedU(u1m, u2m, u3m, X, Y, Z, t, tissue());
@@ -165,9 +157,9 @@ void Foam::manufacturedFDA::calculateCurrent
     scalarField& u3m
 )
 {
-    
+
     STATES_ = STATES_OLD_;
-    const scalar tStart = stepStartTime; 
+    const scalar tStart = stepStartTime;
     const scalar tEnd = (stepStartTime + deltaT);
     label monitorCell = 0;
 
@@ -178,7 +170,7 @@ void Foam::manufacturedFDA::calculateCurrent
         scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
         scalarField& RATESI = RATES_[integrationPtI];
 
-        
+
         // 1️⃣ Update Vm for this point
         STATESI[V] = Vm[integrationPtI];
 
@@ -205,12 +197,12 @@ void Foam::manufacturedFDA::calculateCurrent
                 << " | Iion = " << ALGEBRAICI[Iion]
                 << endl;
         }
-        
+
         // 4️⃣ Compute Iion
         Im[integrationPtI] = ALGEBRAICI[Iion];
 
     }
-    
+
 }
 
 void Foam::manufacturedFDA::calculateGating
@@ -224,9 +216,9 @@ void Foam::manufacturedFDA::calculateGating
     scalarField& u3m
 )
 {
-    
+
     STATES_ = STATES_OLD_;
-    const scalar tStart = stepStartTime; 
+    const scalar tStart = stepStartTime;
     const scalar tEnd = (stepStartTime + deltaT);
     label monitorCell = 0;
 
@@ -237,7 +229,7 @@ void Foam::manufacturedFDA::calculateGating
         scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
         scalarField& RATESI = RATES_[integrationPtI];
 
-        
+
         // 1️⃣ Update Vm for this point
         STATESI[V] = Vm[integrationPtI];
 
@@ -269,14 +261,14 @@ void Foam::manufacturedFDA::calculateGating
                     << endl;
             }
 
-        
+
         // 3️⃣ Explicitly integrate gating ODEs
         u1m[integrationPtI] = STATESI[u1];
         u2m[integrationPtI] = STATESI[u2];
         u3m[integrationPtI] = STATESI[u3];
-        
+
     }
-    
+
 }
 
 

@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
@@ -75,7 +67,7 @@ Foam::Courtemanche::Courtemanche
         CourtemancheinitConsts
         (
             CONSTANTS_.data(),
-            RATES_[i].data(), 
+            RATES_[i].data(),
             STATES_[i].data(),
             tissue(),dict
         );
@@ -148,8 +140,8 @@ void Foam::Courtemanche::calculateCurrent
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
 
-        //copy internal STATES to memory external state buffer. 
-        //---------Currently with no use. -------------// 
+        //copy internal STATES to memory external state buffer.
+        //---------Currently with no use. -------------//
         //----can easily be expanded for all variables------//
         copyInternalToExternal(STATES_, states, NUM_STATES);
     }
@@ -258,7 +250,7 @@ Foam::wordList Foam::Courtemanche::exportedFieldNames() const
             CourtemancheSTATES_NAMES, NUM_STATES,
             CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
-    } 
+    }
 
     Foam::wordList Foam::Courtemanche::debugPrintedNames() const
     {

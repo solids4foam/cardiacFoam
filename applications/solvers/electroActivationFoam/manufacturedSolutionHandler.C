@@ -6,11 +6,11 @@
 manufacturedSolutionHandler::manufacturedSolutionHandler
 (
     const fvMesh& mesh,
-    ionicModel& model     
+    ionicModel& model
 )
 :
     mesh_(mesh),
-    ionicModel_(model),  
+    ionicModel_(model),
     dx_(0.0),
     dim_(0),
     N_(1)
@@ -31,7 +31,7 @@ void manufacturedSolutionHandler::initializeManufactured
 
     // Get exported variable names from the ionic model
     Foam::wordList names = ionicModel_.exportedFieldNames();
-    
+
     const label iu1 = names.find("u1");
     const label iu2 = names.find("u2");
     const label iu3 = names.find("u3");
@@ -43,7 +43,7 @@ void manufacturedSolutionHandler::initializeManufactured
     // Analytic initialization from tmanufacturedFields via the ionic model
     ionicModel_.initializeFields(Vm, u1, u2, u3, mesh_.C());
     dim_ = dim;     // from the mesh-based general dimension
-    dx_  = dxstructured;      // the generalized dx you computed in main()      
+    dx_  = dxstructured;      // the generalized dx you computed in main()
     const double totalCells =
          returnReduce(mesh_.nCells(), sumOp<int>());
 
@@ -69,7 +69,7 @@ void manufacturedSolutionHandler::postProcess
 
     const label iu1 = names.find("u1");
     const label iu2 = names.find("u2");
-    
+
     const volScalarField& u1 = *outFields[iu1];
     const volScalarField& u2 = *outFields[iu2];
 

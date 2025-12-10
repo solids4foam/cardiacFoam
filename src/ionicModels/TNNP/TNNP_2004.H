@@ -1,7 +1,7 @@
 /*
    There are a total of 69 entries in the algebraic variable array.
    There are a total of 17 entries in each of the rate and state variable arrays.
-   There are a total of 46 entries in the constant variable array +1 for the flag that defines the tissue being modeled. 
+   There are a total of 46 entries in the constant variable array +1 for the flag that defines the tissue being modeled.
 
  */
 /*
@@ -155,14 +155,14 @@
  * RATES[15] is d/dt Ca_SR in component calcium_dynamics (millimolar).
  * RATES[2] is d/dt Na_i in component sodium_dynamics (millimolar).
  * RATES[1] is d/dt K_i in component potassium_dynamics (millimolar).
- * 
+ *
  * Adding 3 constant for multiple stimuli support:
  * CONSTANTS[46] is nstim1 in component membrane (dimensionless).
  * CONSTANTS[47] is stim_period_S2 in component membrane (millisecond).
  * CONSTANTS[48] is nstim2 in component membrane (dimensionless).
  * Adding a Algebraic variable for Iion output:
  * ALGEBRAIC[69] is Iion in component membrane (picoA_per_picoF).
- * 
+ *
  */
 
 #include "dictionary.H"
@@ -270,7 +270,7 @@ STATES[0] = -86.2;
 CONSTANTS[0] = 8.314;
 CONSTANTS[1] = 310;
 CONSTANTS[2] = 96.485;
-CONSTANTS[3] = 185; 
+CONSTANTS[3] = 185;
 CONSTANTS[4] = 16404;
 
 // CONSTANTS[5] = 20;
@@ -350,8 +350,8 @@ ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+
 RATES[11] = (ALGEBRAIC[8] - STATES[11])/ALGEBRAIC[21];
 
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[10] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+ALGEBRAIC[10] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
 
 ALGEBRAIC[23] = (tissueFlag == 1)
@@ -512,8 +512,8 @@ ALGEBRAIC[8] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/7.00000));
 ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[0])/10.0000));
 
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[10] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+ALGEBRAIC[10] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
 
 ALGEBRAIC[23] = (tissueFlag == 1)

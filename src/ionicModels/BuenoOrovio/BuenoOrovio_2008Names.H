@@ -9,14 +9,14 @@ enum CONSTANTS_INDEX{
     stim_start, stim_duration, stim_amplitude,
     stim_period_S1, nstim1,
     stim_period_S2, nstim2,
-    NUM_CONSTANTS 
+    NUM_CONSTANTS
 };
 enum STATES_INDEX{
     u, // Membrane voltage
     v, // Fast sodium activation variable
     w, // Slow sodium activation variable
     s, // Slow inactivation variable
-    NUM_STATES 
+    NUM_STATES
 };
 enum ALGEBRAIC_INDEX{
     Jfi, // Fast sodium current
@@ -24,7 +24,7 @@ enum ALGEBRAIC_INDEX{
     Jsi, // Slow inactivation current
     Jion, // total current
     Istim, // Stimulus current
-    NUM_ALGEBRAIC 
+    NUM_ALGEBRAIC
 };
 
 void
@@ -43,4 +43,3 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
 
 
-    

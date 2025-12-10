@@ -1,21 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-Application
-    electroActivationFoam
+License
+    This file is part of cardiacFoam.
 
-Description
- Generic model-agnostic solver for cardiac electrophysiology  based on the
- monodomain reaction–diffusion equation.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
- The solver:
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
-   • Treats Vm solely as the transmembrane potential; no assumptions are
-     made about ionic state variables.
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
    • Delegates all ionic-model state indexing and ODE evaluation to the
      run-time selectable ionicModel.
@@ -37,7 +35,6 @@ Authors
  \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
-#include "tmanufacturedFDA.H"
 #include "manufacturedSolutionHandler.H" // helper class for manufactured solution
 #include "explicitLoopHandler.H"         // helper class for explicit Loop
 #include "implicitLoopHandler.H"         // helper class for implicit Loop

@@ -3,7 +3,7 @@
 
 #include "fvCFD.H"
 #include "ionicModel.H"
-#include "tmanufacturedFDA.H"
+//#include "tmanufacturedFDA.H"
 
 class manufacturedSolutionHandler
 {
@@ -21,13 +21,13 @@ public:
 
     void initializeManufactured
     (
-        volScalarField& Vm, 
-        List<volScalarField*>& outFields, 
-        scalar dxstructured, 
+        volScalarField& Vm,
+        List<volScalarField*>& outFields,
+        scalar dxstructured,
         int dim
     );
 
-    
+
     // Manufactured-solution error post-processing
     void postProcess
     (

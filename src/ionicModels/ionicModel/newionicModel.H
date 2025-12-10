@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
     Foam::ionicModel
@@ -100,7 +92,7 @@ protected:
 
 
 
-        
+
 public:
 
     //- Runtime type information
@@ -204,9 +196,9 @@ public:
             const scalar deltaT,
             const scalarField& Vm,
             scalarField& Im,
-            Field<Field<double>>& STATES   
+            Field<Field<double>>& STATES
         )
- 
+
         {
             notImplemented("WIP");
         }
@@ -219,24 +211,24 @@ public:
             scalarField& Im,
             Field<Field<double>>& STATES
 
-  
+
         )
         {
             notImplemented("WIP");
         }
 
 
-        //Supported words by the solver 
+        //Supported words by the solver
         virtual List<word> supportedTissues() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
         }
 
-        virtual void writeHeader(OFstream& os) const 
+        virtual void writeHeader(OFstream& os) const
         {
 
         }
-        virtual void write(const scalar t, OFstream& os) const 
+        virtual void write(const scalar t, OFstream& os) const
         {
 
         }
@@ -276,7 +268,7 @@ public:
                 "Please define this function in the derived class!"
             );
         };
-    };  
+    };
 
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
