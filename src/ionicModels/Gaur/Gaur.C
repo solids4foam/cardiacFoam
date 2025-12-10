@@ -269,7 +269,7 @@ Foam::wordList Foam::Gaur::exportedFieldNames() const
 void Foam::Gaur::exportStates
 (
     const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
+    PtrList<volScalarField>& outFields
 )
 {
     ionicModelIO::exportStateFields

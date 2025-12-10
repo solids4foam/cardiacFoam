@@ -168,7 +168,7 @@ public:
         virtual void exportStates
         (
             const Field<Field<scalar>>&,
-            List<volScalarField*>&
+            PtrList<volScalarField>&
         );
 
         // Override to print variables in solver

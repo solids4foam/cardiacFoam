@@ -94,7 +94,7 @@ public:
         int nStates,
         const char* const algNames[],
         int nAlg,
-        List<volScalarField*>& outFields
+        PtrList<volScalarField>& outFields
     );
     static void debugPrintFields
     (

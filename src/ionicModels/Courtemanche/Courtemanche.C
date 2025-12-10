@@ -265,7 +265,7 @@ Foam::wordList Foam::Courtemanche::exportedFieldNames() const
 void Foam::Courtemanche::exportStates
 (
     const Field<Field<scalar>>&,
-    List<volScalarField*>& outFields
+    PtrList<volScalarField>& outFields
 )
 {
     ionicModelIO::exportStateFields
