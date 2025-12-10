@@ -1,5 +1,5 @@
 #include "implicitLoopHandler.H"
-#include "tmanufacturedFDA.H"   
+#include "tmanufacturedFDA.H"
 
 implicitLoopHandler::implicitLoopHandler
 (
@@ -7,7 +7,7 @@ implicitLoopHandler::implicitLoopHandler
     ionicModel& model
 )
 :
-    mesh_(mesh),
+    // mesh_(mesh),
     ionicModel_(model)
 {}
 
@@ -95,6 +95,6 @@ void implicitLoopHandler::implicitLoop
             Vm.internalField(),    // Vm_new
             Iion,
             states
-        ); 
-    
+        );
+
 }

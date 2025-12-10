@@ -1,6 +1,6 @@
 #pragma once
 
-enum CONSTANTS_INDEX{ 
+enum CONSTANTS_INDEX{
     AC_Acap, AC_Ageo, AC_BSLmax, AC_BSRmax, AC_CaMKo, AC_ECl, AC_F, AC_GK1,
     AC_GKb, AC_GKr, AC_GKs, AC_GNa, AC_GNaL, AC_Gncx, AC_GpCa, AC_Gto,
     AC_H, AC_Khp, AC_Kki, AC_Kko, AC_KmBSL, AC_KmBSR, AC_KmCaAct, AC_KmCaM,
@@ -15,14 +15,14 @@ enum CONSTANTS_INDEX{
     AC_qca, AC_qna, AC_rad, AC_tau_gap, AC_tau_hl, AC_tauoff, AC_tauon,
     AC_trpnmax, AC_vcell, AC_vcsr, AC_vhalf_d, AC_vhalff, AC_vjsr, AC_vmyo, AC_vmyo1,
     AC_vmyo1frac, AC_vmyo2, AC_vnsr, AC_vnsr1, AC_vnsr2, AC_vss, AC_wca, AC_wna,
-    AC_wnaca, AC_zca, AC_zk, AC_zna, 
+    AC_wnaca, AC_zca, AC_zk, AC_zna,
 
-    stim_start, stim_duration, stim_amplitude,  
-    stim_period_S1, nstim1,        
+    stim_start, stim_duration, stim_amplitude,
+    stim_period_S1, nstim1,
     stim_period_S2, nstim2,
 
     NUM_CONSTANTS
-}; 
+};
 
 enum STATES_INDEX{
     cell_v,
@@ -59,25 +59,25 @@ enum STATES_INDEX{
 };
 
 
-enum ALGEBRAIC_INDEX{  
+enum ALGEBRAIC_INDEX{
     Iion_cm,
-    AV_I_stim,  
-    AV_ICaK,    
-    AV_ICaL_ICaL,    
-    AV_ICaNa,    
-    AV_ICab_ICab,    
-    AV_IK1_IK1,    
-    AV_IKb_IKb,    
-    AV_IKr_IKr,    
-    AV_IKs_IKs,    
-    AV_INa,    
-    AV_INaCa_i_INaCa_i,    
-    AV_INaCa_ss_INaCa_ss, 
-    AV_INaCa,   
-    AV_INaK_INaK,    
-    AV_INaL_INaL,    
-    AV_INab_INab,   
-    AV_ITo_ITo,    
+    AV_I_stim,
+    AV_ICaK,
+    AV_ICaL_ICaL,
+    AV_ICaNa,
+    AV_ICab_ICab,
+    AV_IK1_IK1,
+    AV_IKb_IKb,
+    AV_IKr_IKr,
+    AV_IKs_IKs,
+    AV_INa,
+    AV_INaCa_i_INaCa_i,
+    AV_INaCa_ss_INaCa_ss,
+    AV_INaCa,
+    AV_INaK_INaK,
+    AV_INaL_INaL,
+    AV_INab_INab,
+    AV_ITo_ITo,
     AV_IpCa_IpCa,
 
     NUM_ALGEBRAIC

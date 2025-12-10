@@ -97,7 +97,7 @@ enum STATES_INDEX {
 
 
 enum ALGEBRAIC_INDEX {
-    I_stim,          
+    I_stim,
     xr1_inf,
     xr2_inf,
     xs_inf,

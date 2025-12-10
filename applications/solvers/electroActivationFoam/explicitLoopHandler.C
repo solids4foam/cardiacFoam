@@ -1,5 +1,5 @@
 #include "explicitLoopHandler.H"
-#include "tmanufacturedFDA.H"  
+#include "tmanufacturedFDA.H"
 
 explicitLoopHandler::explicitLoopHandler
 (
@@ -7,7 +7,7 @@ explicitLoopHandler::explicitLoopHandler
     ionicModel& model
 )
 :
-    mesh_(mesh),
+    // mesh_(mesh),
     ionicModel_(model),
     dx_(0.0),
     dim_(0),
@@ -71,7 +71,7 @@ void explicitLoopHandler::initializeExplicit
 
     // nsteps recomputed in solver; we leave it untouched here
     (void)nsteps;
-} 
+}
 
 //----------------------------------------------------------------------
 // Perform a single explicit step
@@ -152,7 +152,7 @@ void explicitLoopHandler::explicitLoop
         Vm.internalField(),    // Vm_new
         Iion,
         states
-    ); 
+    );
 
 }
 

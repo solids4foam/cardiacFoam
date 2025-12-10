@@ -14,9 +14,9 @@ namespace Foam {
         label s2 = dict.found("stim_period_S2")
                     ? readLabel(dict.lookup("stim_period_S2"))
                     : -1;
-    
+
         const bool protocolMode = (s2 > 0);
-    
+
         if (protocolMode)
         {
             return runTime.path()
@@ -29,7 +29,7 @@ namespace Foam {
                 / (modelName + "_" + tissueName + ".txt");
         }
     }
-    
+
     bool ionicModelIO::shouldWriteStep
     (
         const dictionary& dict,
@@ -39,19 +39,19 @@ namespace Foam {
         label s2 = dict.found("stim_period_S2")
             ? readLabel(dict.lookup("stim_period_S2"))
             : -1;
-    
+
         const bool protocolMode = (s2 > 0);
-    
+
         if (!protocolMode)
         {
             // Regular pacing → always write
             return true;
         }
-    
+
         // S1–S2 protocol: only write after 8 seconds
         return currentTime > 8.0;
     }
-    
+
     void ionicModelIO::writeTimestep
     (
         ionicModel& model,
@@ -64,11 +64,11 @@ namespace Foam {
         {
             return;
         }
-    
+
         model.write(runTime.value(), os);
     }
-    
-    
+
+
     void ionicModelIO::loadStimulusConstants
     (
         const dictionary& dict,
@@ -89,7 +89,7 @@ namespace Foam {
             "stim_duration",
             "stim_amplitude"
         };
-    
+
         for (const char* k : requiredKeys)
         {
             if (!dict.found(k))
@@ -99,12 +99,12 @@ namespace Foam {
                     << exit(FatalError);
             }
         }
-    
+
         CONSTANTS[stim_start]      = readScalar(dict.lookup("stim_start"));
         CONSTANTS[stim_period_S1]  = readScalar(dict.lookup("stim_period_S1"));
         CONSTANTS[stim_duration]   = readScalar(dict.lookup("stim_duration"));
         CONSTANTS[stim_amplitude]  = readScalar(dict.lookup("stim_amplitude"));
-    
+
         // Optional keys
         if (dict.found("nstim1"))
             CONSTANTS[nstim1] = readScalar(dict.lookup("nstim1"));
@@ -114,7 +114,7 @@ namespace Foam {
             CONSTANTS[nstim2] = readScalar(dict.lookup("nstim2"));
     }
 
-    
+
 
     void ionicModelIO::writeHeader
     (
@@ -226,13 +226,13 @@ namespace Foam {
             stateIndex,
             algIndex
         );
-    
+
         // 2. Populate volScalarFields
         forAll(STATES, cellI)
         {
             const scalarField& S = STATES[cellI];
             const scalarField& A = ALGEBRAIC[cellI];
-    
+
             forAll(outFields, k)
             {
                 if (stateIndex[k] >= 0)
@@ -241,7 +241,7 @@ namespace Foam {
                     (*outFields[k])[cellI] = A[algIndex[k]];
             }
         }
-    
+
         // 3. Boundaries
         forAll(outFields, k)
             outFields[k]->correctBoundaryConditions();
@@ -346,4 +346,4 @@ namespace Foam {
 
 
 
-    
+

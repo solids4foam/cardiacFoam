@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
     Foam::ionicModel
@@ -190,7 +182,7 @@ public:
             const scalar initialDeltaT,
             const Switch solveVmWithinODESolver = false
         );
-        
+
 
 
     //- Destructor
@@ -305,7 +297,7 @@ public:
             (t == 4) ? "myocyte" :
                         "unknown";
         }
-            //dimension in manufactured 
+            //dimension in manufactured
         virtual bool hasManufacturedSolution() const
         {
         return false;   // Default: no manufactured solution
@@ -315,16 +307,16 @@ public:
         {
             return {"1D", "2D", "3D"};
         }
-        
+
 
 //-------------------------------Print Export and write ---------------------//
         //Write and export from internal variables functions
             //singleCell
-        virtual void writeHeader(OFstream& os) const 
+        virtual void writeHeader(OFstream& os) const
         {
         }
 
-        virtual void write(const scalar t, OFstream& os) const 
+        virtual void write(const scalar t, OFstream& os) const
         {
         }
 
@@ -336,7 +328,7 @@ public:
         )
         {
         }
-        
+
             // Printing function
         virtual void debugPrintFields
         (
@@ -357,12 +349,12 @@ public:
         }
         virtual wordList debugPrintedNames() const
         {
-            return debugVarNames_.size() 
-                ? debugVarNames_ 
+            return debugVarNames_.size()
+                ? debugVarNames_
                 : wordList();
         }
 
-    };  
+    };
 
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

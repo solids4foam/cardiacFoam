@@ -1,7 +1,7 @@
 /*
    There are a total of 69 entries in the algebraic variable array.
    There are a total of 17 entries in each of the rate and state variable arrays.
-   There are a total of 46 entries in the constant variable array +1 for the flag that defines the tissue being modeled. 
+   There are a total of 46 entries in the constant variable array +1 for the flag that defines the tissue being modeled.
 
  */
 /*
@@ -331,8 +331,8 @@ ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+
 RATES[11] = (ALGEBRAIC[8] - STATES[11])/ALGEBRAIC[21];
 
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[10] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+ALGEBRAIC[10] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
 
 ALGEBRAIC[23] = (tissueFlag == 1)
@@ -431,8 +431,8 @@ ALGEBRAIC[8] = 1.00000/(1.00000+exp((STATES[0]+20.0000)/7.00000));
 ALGEBRAIC[21] =  1125.00*exp(- pow(STATES[0]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[0])/10.0000));
 
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[10] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000)) 
+ALGEBRAIC[10] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[0] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[0] + 28.0000) / 6.00000));
 
 ALGEBRAIC[23] = (tissueFlag == 1)

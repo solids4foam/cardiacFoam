@@ -1,27 +1,19 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2025 AUTHOR,AFFILIATION
--------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
@@ -60,7 +52,7 @@ Foam::BuenoOrovio::BuenoOrovio
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
-    
+
 {
     ionicModel::setTissueFromDict();
     Info<< nl << "Initialize Bueno Orovio constants:" << nl;
@@ -75,14 +67,14 @@ Foam::BuenoOrovio::BuenoOrovio
         BuenoOrovioinitConsts
         (
             CONSTANTS_.data(),
-            RATES_[i].data(), 
+            RATES_[i].data(),
             STATES_[i].data(),
             tissue(),dict
         );
 
         ionicModelIO::loadStimulusConstants
         (
-            dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration, 
+            dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
             stim_amplitude, nstim1, stim_period_S2, nstim2
         );
     }
@@ -148,8 +140,8 @@ void Foam::BuenoOrovio::calculateCurrent
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        //copy internal STATES to memory external state buffer. 
-        //---------Currently with no use. -------------// 
+        //copy internal STATES to memory external state buffer.
+        //---------Currently with no use. -------------//
         //----can easily be expanded for all variables------//
         copyInternalToExternal(STATES_, states, NUM_STATES);
     }
@@ -175,7 +167,7 @@ void Foam::BuenoOrovio::solveODE
         scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
         scalarField& RATESI     = RATES_[integrationPtI];
 
-        
+
         // Vm fed into the cell model in mV
         if (!solveVmWithinODESolver())
         {
@@ -210,8 +202,8 @@ void Foam::BuenoOrovio::solveODE
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        //copy internal STATES to memory external state buffer. 
-        //---------Currently with no use. -------------// 
+        //copy internal STATES to memory external state buffer.
+        //---------Currently with no use. -------------//
         //----can easily be expanded for all variables------//
         copyInternalToExternal(STATES_, states, NUM_STATES);
 
@@ -263,7 +255,7 @@ Foam::wordList Foam::BuenoOrovio::exportedFieldNames() const
             BuenoOrovioSTATES_NAMES, NUM_STATES,
             BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
-    } 
+    }
 
     Foam::wordList Foam::BuenoOrovio::debugPrintedNames() const
     {
