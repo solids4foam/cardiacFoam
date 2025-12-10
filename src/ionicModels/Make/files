@@ -3,7 +3,6 @@ ionicModel/ionicModel.C
 genericWriter/ionicModelIO.C
 ionicModel/ionicSelector.C
 
-manufacturedFDA/manufacturedFDA.C
 tmanufacturedFDA/tmanufacturedFDA.C
 
 TNNP/TNNP.C
