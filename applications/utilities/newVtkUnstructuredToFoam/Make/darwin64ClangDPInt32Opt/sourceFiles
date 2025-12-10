@@ -1,5 +1,0 @@
-SOURCE = \
-vtkUnstructuredReader.C \
-newVtkUnstructuredToFoam.C \
-
-# sources
