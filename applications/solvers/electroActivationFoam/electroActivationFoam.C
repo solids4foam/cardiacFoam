@@ -15,18 +15,25 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
-   • Delegates all ionic-model state indexing and ODE evaluation to the
-     run-time selectable ionicModel.
+Solver
+    electroActivationFoam
 
-   • Supports multiple time-integration strategies (explicit, implicit)
-     via dedicated loop-handler classes.
+Description
+    Generic model-agnostic solver for cardiac electrophysiology
+    based on the monodomain reaction–diffusion equation. The solver:
 
-   • Provides infrastructure for manufactured-solution verification through
-     model-supplied export functions, avoiding any solver-side indexing of
-     ionic states.
+    - Delegates all ionic-model state indexing and ODE evaluation to the
+      run-time selectable ionicModel.
 
-   • Stores ionic state vectors externally (one N-state vector per cell),
-     ensuring complete separation between solver logic and model detail.
+    - Supports multiple time-integration strategies (explicit, implicit)
+      via dedicated loop-handler classes.
+
+    - Provides infrastructure for manufactured-solution verification through
+      model-supplied export functions, avoiding any solver-side indexing of
+      ionic states.
+
+    - Stores ionic state vectors externally (one N-state vector per cell),
+      ensuring complete separation between solver logic and model detail.
 
 Authors
    Simão Nieto de Castro, UCD.

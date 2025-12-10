@@ -1,5 +1,25 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "explicitLoopHandler.H"
 #include "tmanufacturedFDA.H"
+#include "fvm.H"
 
 explicitLoopHandler::explicitLoopHandler
 (
@@ -92,7 +112,7 @@ void explicitLoopHandler::explicitLoop
     const volTensorField& conductivity
 )
 {
-    // // 0) Manufactured-specific: store "old" internal states
+    // 0) Manufactured-specific: store "old" internal states
     if (ionicModel_.hasManufacturedSolution())
     {
         refCast<tmanufacturedFDA>(ionicModel_).updateStatesOld();
@@ -130,21 +150,21 @@ void explicitLoopHandler::explicitLoop
 
     solve
     (
-        chi*Cm * fvm::ddt(Vm)
-        == fvm::laplacian(conductivity, Vm)
-        - chi*Cm*Iion
-        + externalStimulusCurrent
+        chi*Cm*fvm::ddt(Vm)
+     == fvm::laplacian(conductivity, Vm)
+      - chi*Cm*Iion
+      + externalStimulusCurrent
     );
 
     Vm.correctBoundaryConditions();
 
-//4) Manufactured-specific: reset internal states back to OLD
+    // 4) Manufactured-specific: reset internal states back to OLD
     if (ionicModel_.hasManufacturedSolution())
     {
         refCast<tmanufacturedFDA>(ionicModel_).resetStatesToStatesOld();
     }
 
-// 5) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
+    // 5) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
     ionicModel_.solveODE
     (
         t0,
