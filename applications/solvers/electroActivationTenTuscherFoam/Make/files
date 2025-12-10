@@ -1,4 +1,0 @@
-ionicModelCellML.C
-electroActivationTenTuscherFoam.C
-
-EXE = $(FOAM_USER_APPBIN)/electroActivationTenTuscherFoam
