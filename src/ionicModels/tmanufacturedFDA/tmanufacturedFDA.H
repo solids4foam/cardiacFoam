@@ -85,8 +85,8 @@ public:
     TypeName("tmanufacturedFDA");
 
 
-    //override the only available tissue in this model
-    virtual List<word> supportedDimensions() const override;
+    // Override the only available tissue in this model
+    virtual List<word> supportedDimensions() const;
 
 
     // Constructors
@@ -108,11 +108,8 @@ public:
 
     // Member Functions
 
-        //virtual void writeHeader(OFstream& output) const override;
-        //- Write fields to the given file given the current time
-        //virtual void write(const scalar t, OFstream& output) const override;
 
-        virtual bool hasManufacturedSolution() const override
+        virtual bool hasManufacturedSolution() const
         {
             return true;
         }
@@ -124,7 +121,7 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        ) override;
+        );
 
         virtual void solveODE
         (
@@ -133,7 +130,7 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        ) override;
+        );
 
         void initializeFields
         (
@@ -142,11 +139,11 @@ public:
             volScalarField& u2,
             volScalarField& u3,
             const volVectorField& C
-        ) override;
+        );
 
 
         //- Number of ODE's to solve
-        virtual label nEqns() const override
+        virtual label nEqns() const
         {
             return NUM_STATES;
         }
@@ -158,13 +155,13 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const override;
+        ) const;
 
         void updateStatesOld() const;
         void resetStatesToStatesOld() const;
-        // Override to provide variable names for export
-        virtual Foam::wordList exportedFieldNames() const override;
-        virtual wordList debugPrintedNames() const override;
+        // to provide variable names for export
+        virtual Foam::wordList exportedFieldNames() const;
+        virtual wordList debugPrintedNames() const;
 
 
         // Override to export the variables
@@ -172,7 +169,7 @@ public:
         (
             const Field<Field<scalar>>&,
             List<volScalarField*>&
-        ) override;
+        );
 
         // Override to print variables in solver
         void debugPrintFields
@@ -181,11 +178,7 @@ public:
             scalar t1,
             scalar t2,
             scalar step
-        ) const override;
-
-
-
-
+        ) const;
 };
 
 

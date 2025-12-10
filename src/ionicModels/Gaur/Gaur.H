@@ -83,8 +83,8 @@ public:
     //- Runtime type information
     TypeName("Gaur");
 
-    virtual List<word> supportedTissueTypes() const override;
-    virtual List<word> supportedDimensions() const override
+    virtual List<word> supportedTissueTypes() const;
+    virtual List<word> supportedDimensions() const
     {
         return {}; //No dimensions flag
     }
@@ -109,9 +109,9 @@ public:
 
     // Member Functions
 
-        virtual void writeHeader(OFstream& output) const override;
+        virtual void writeHeader(OFstream& output) const;
         //- Write fields to the given file given the current time
-        virtual void write(const scalar t, OFstream& output) const override;
+        virtual void write(const scalar t, OFstream& output) const;
 
 
         virtual void calculateCurrent
@@ -121,7 +121,7 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        ) override;
+        );
 
 
         virtual void solveODE
@@ -131,11 +131,11 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        ) override;
+        );
 
 
         //- Number of ODE's to solve
-        virtual label nEqns() const override
+        virtual label nEqns() const
         {
             return NUM_STATES;
         }
@@ -147,15 +147,15 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const override;
+        ) const;
 
 
         virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
         virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
                 // Override to provide variable names for export
-        virtual Foam::wordList exportedFieldNames() const override;
-        virtual wordList debugPrintedNames() const override;
+        virtual Foam::wordList exportedFieldNames() const;
+        virtual wordList debugPrintedNames() const;
 
 
         // Override to export the variables
@@ -163,7 +163,7 @@ public:
         (
             const Field<Field<scalar>>&,
             List<volScalarField*>&
-        ) override;
+        );
 
         // Override to print variables in solver
         void debugPrintFields
@@ -172,7 +172,7 @@ public:
             scalar t1,
             scalar t2,
             scalar step
-        ) const override;
+        ) const;
 
 
 };
