@@ -39,7 +39,7 @@ Authors
    Simão Nieto de Castro, UCD.
    Philip Cardiff, UCD.
 
- \*---------------------------------------------------------------------------*/
+\*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
 #include "manufacturedSolutionHandler.H" // helper class for manufactured solution
@@ -49,7 +49,6 @@ Authors
 #include "pimpleControl.H"
 #include "Field.H"
 #include "volFields.H"
-#include <cmath>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -80,7 +79,7 @@ int main(int argc, char* argv[])
     int dim = mesh.nGeometricD();
 
     scalar dt = runTime.deltaTValue();
-    int nsteps = int( std::ceil(runTime.endTime().value() / dt));
+    int nsteps = int(ceil(runTime.endTime().value()/dt));
 
     if (ionicModel->hasManufacturedSolution())
     {
