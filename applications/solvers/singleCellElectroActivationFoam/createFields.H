@@ -11,11 +11,11 @@ IOdictionary cardiacProperties
     )
 );
 Info<< "Reading numerical solver properties\n" << endl;
-IOdictionary numericalsolverProperties
+IOdictionary timeIntegrationProperties
 (
     IOobject
     (
-        "numericalsolverProperties",
+        "timeIntegrationProperties",
         runTime.constant(),
         runTime,
         IOobject::MUST_READ_IF_MODIFIED,
@@ -38,11 +38,5 @@ IOdictionary stimulusProtocol
 
 //Merge the dictionaries and create a memory object to read all properties.
 dictionary solutionVariablesMemory(cardiacProperties);
-solutionVariablesMemory.merge(numericalsolverProperties);
+solutionVariablesMemory.merge(timeIntegrationProperties);
 solutionVariablesMemory.merge(stimulusProtocol);
-
-
-
-
-
-

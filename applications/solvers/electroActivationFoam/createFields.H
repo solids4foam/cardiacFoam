@@ -110,11 +110,11 @@ if (mesh.nGeometricD() == 3)
 }
 
 Info<< "Reading numerical solver properties\n" << endl;
-IOdictionary numericalsolverProperties
+IOdictionary timeIntegrationProperties
 (
     IOobject
     (
-        "numericalsolverProperties",
+        "timeIntegrationProperties",
         runTime.constant(),
         mesh,
         IOobject::MUST_READ_IF_MODIFIED,
@@ -200,7 +200,7 @@ Info<< "---------------------------------------------" << nl;
 
 // Merge the dictionaries and create a memory object to read all properties
 dictionary solutionVariablesMemory(cardiacProperties);
-solutionVariablesMemory.merge(numericalsolverProperties);
+solutionVariablesMemory.merge(timeIntegrationProperties);
 solutionVariablesMemory.merge(stimulusProtocol);
 
 // Create ionicModelCellML object
