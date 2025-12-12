@@ -21,3 +21,4 @@ forAll(activationTimeI, cellI)
         }
     }
 }
+activationTime.correctBoundaryConditions();
