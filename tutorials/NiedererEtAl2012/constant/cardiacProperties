@@ -43,7 +43,7 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 
 	
 exportedVariables (u v w s Jfi Jion);
-debugPrintVariables (u v w s Jfi Jion);
+//debugPrintVariables (u v w s Jfi Jion);
 
 
 
