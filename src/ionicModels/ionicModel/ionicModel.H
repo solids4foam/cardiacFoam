@@ -100,19 +100,23 @@ protected:
         THe higher order solver will use them so probably will be set as public.*/
 
         // Copies STATES_ → states external buffer
-        inline void copyInternalToExternal
-        (
-            const PtrList<scalarField>& internal,
-            Field<Field<scalar>>& external,
-            const label nStates
-        ) const
-        {
-            forAll(internal, i)
-            {
-                if (external[i].size() >= nStates)
-                    external[i] = internal[i];
-            }
-        }
+        // inline void copyInternalToExternal
+        // (
+        //     const PtrList<scalarField>& internal,
+        //     Field<Field<scalar>>& external,
+        //     const label nStates
+        // ) const
+        // {
+            // This is VERY expensive: disable for now. If we really need this
+            // functionality, we should find a way tha avoids such copies
+            // forAll(internal, i)
+            // {
+            //     if (external[i].size() >= nStates)
+            //     {
+            //         external[i] = internal[i];
+            //     }
+            // }
+        // }
 
         // Copies current STATES_ → STATES_OLD_
         inline void saveStateSnapshot
