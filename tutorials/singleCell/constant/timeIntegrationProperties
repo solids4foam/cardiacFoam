@@ -15,38 +15,23 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//Solver characteristics
-
-solveExplicit no;
-notsure	      no;
-
-CFL  	      0.1;
-
-
+// PDE-ODE solution algorithm
+solveExplicit yes;
 
 // ODE solver
+// solver    RKF45;
+solver    Euler;
 
-	solver    RKF45;
-//	solver    Euler;
-
-
-
-//ODE solver parameters
-
-    	initialODEStep 1e-5;
-	maxSteps 1000000000;
+// ODE solver parameters
+initialODEStep 1e-5;
+maxSteps 1000000000;
 
 // Relative tolerance
-
-// 	Defaults to 1e-4
-//	relTol 1e-6;
+// Defaults to 1e-4
+// relTol 1e-6;
 
 // Absolute tolerance
-
-// 	Defaults to 1e-15
-//	absTol 1e-6;
-
-
-
+// Defaults to 1e-15
+absTol 1e-6;
 
 // ************************************************************************* //
