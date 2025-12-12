@@ -143,7 +143,7 @@ void Foam::BuenoOrovio::calculateCurrent
         //copy internal STATES to memory external state buffer.
         //---------Currently with no use. -------------//
         //----can easily be expanded for all variables------//
-        copyInternalToExternal(STATES_, states, NUM_STATES);
+        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -204,9 +204,9 @@ void Foam::BuenoOrovio::solveODE
 
         //copy internal STATES to memory external state buffer.
         //---------Currently with no use. -------------//
-        //----can easily be expanded for all variables------//
-        copyInternalToExternal(STATES_, states, NUM_STATES);
 
+        //----can easily be expanded for all variables------//
+        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 

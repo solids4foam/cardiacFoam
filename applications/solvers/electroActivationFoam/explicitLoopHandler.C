@@ -20,6 +20,7 @@ License
 #include "explicitLoopHandler.H"
 #include "tmanufacturedFDA.H"
 #include "fvm.H"
+#include "fvc.H"
 
 explicitLoopHandler::explicitLoopHandler
 (
@@ -151,7 +152,7 @@ void explicitLoopHandler::explicitLoop
     solve
     (
         chi*Cm*fvm::ddt(Vm)
-     == fvm::laplacian(conductivity, Vm)
+     == fvc::laplacian(conductivity, Vm)
       - chi*Cm*Iion
       + externalStimulusCurrent
     );

@@ -142,8 +142,9 @@ void Foam::Courtemanche::calculateCurrent
 
         //copy internal STATES to memory external state buffer.
         //---------Currently with no use. -------------//
+
         //----can easily be expanded for all variables------//
-        copyInternalToExternal(STATES_, states, NUM_STATES);
+        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -200,9 +201,9 @@ void Foam::Courtemanche::solveODE
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
-        //----can easily be expanded for all variables------//
-        copyInternalToExternal(STATES_, states, NUM_STATES);
 
+        //----can easily be expanded for all variables------//
+        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
