@@ -16,49 +16,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-numberOfSubdomains  12;
-
-//- Keep owner and neighbour on same processor for faces in zones:
-// preserveFaceZones (heater solid1 solid3);
-
-// Face zones which need to be present on all CPUs in its entirety
-// globalFaceZones (ggiInside ggiOutside);
-
-//- Keep owner and neighbour on same processor for faces in patches:
-//  (makes sense only for cyclic patches)
-//preservePatches (cyclic_left_right);
+numberOfSubdomains  6;
 
 method          scotch;
-// method          hierarchical;
-//method          simple;
-// method          scotch;
-// method          manual;
-
-simpleCoeffs
-{
-    n           (2 2 1);
-    delta       0.001;
-}
-
-hierarchicalCoeffs
-{
-    n           (2 2 1);
-    delta       0.001;
-    order       xyz;
-}
-
-metisCoeffs
-{
- /*
-    processorWeights
-    (
-        1
-        1
-        1
-        1
-    );
-  */
-}
 
 scotchCoeffs
 {
@@ -72,19 +32,5 @@ scotchCoeffs
     //writeGraph  true;
     //strategy "b";
 }
-
-manualCoeffs
-{
-    dataFile    "cellDecomposition";
-}
-
-//// Is the case distributed
-//distributed     yes;
-//// Per slave (so nProcs-1 entries) the directory above the case.
-//roots
-//(
-//    "/tmp"
-//    "/tmp"
-//);
 
 // ************************************************************************* //

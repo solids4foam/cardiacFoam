@@ -23,22 +23,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.04; //0.15;
+endTime    	0.08;
 
-// Three time-steps are used:
-
-// deltaT = 0.05 ms
-// deltaT          0.05e-3;
-
-// deltaT = 0.01 ms
-// deltaT          0.01e-3;
-
-// deltaT = 0.005 ms
-deltaT          0.005e-3;
+deltaT          1e-05;
 
 writeControl    runTime;
 
-writeInterval   1e-3; //5e-3;
+writeInterval   1e-3;
 
 purgeWrite      0;
 
@@ -56,3 +47,5 @@ runTimeModifiable false;
 
 
 // ************************************************************************* //
+
+

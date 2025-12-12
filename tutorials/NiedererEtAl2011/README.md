@@ -1,50 +1,105 @@
-# Case description
-This is the cardiac tissue electrophysiology simulation benchmark from Niederer et al. (2011) Verification of cardiac tissue electrophysiology simulators using an N-version benchmark, Phil. Trans. R. Soc. A (2011) 369, 4331–4351 doi:10.1098/rsta.2011.0139.
+# electroActivationFoam tutorial: Niederer et al. (2011) slab benchmark
 
-The case consists of a cuboid domain, which is externally stimulated in one corner, and the time taken for the depolarisation wave to reach the far corner is measured. Niederer et al. (2011) present the results from eleven separate groups, some of which use finite element implementations and some of which use finite difference codes; none use the finite volume method; as such, this would appear to be the first application of the finite volume method to this problem.
+This tutorial demonstrates the use of **electroActivationFoam** to reproduce the
+cardiac tissue electrophysiology benchmark proposed by **Niederer et al. (2011)**,
+which is widely used to verify cardiac electrophysiology simulators.
 
-# Geometry
-20 × 7 × 3 mm cuboid.
+The benchmark is described in:
 
-# Mesh
-The benchmark proposes three cell widths:
- - 0.5 mm
- - 0.2 mm
- - 0.1 mm
+> S. A. Niederer et al.,  
+> *Verification of cardiac tissue electrophysiology simulators using an N-version benchmark*,  
+> Philosophical Transactions of the Royal Society A, 369:4331–4351, 2011.
 
-For the current case, these can be changed in `system/blockMeshDict`.
+---
 
-# Time-step
-The benchmark proposes three time-step sizes:
- - 0.05 ms
- - 0.01 ms
- - 0.005 ms
+## Benchmark overview
 
-For the current case, these can be changed in `system/controlDict`.
+The Niederer et al. benchmark defines a **monodomain electrophysiology problem**
+on a simple slab geometry with well-specified material parameters, stimulation
+protocol, and evaluation metrics. The purpose is **code verification**, not model
+validation.
 
-# Governing equations
+Key characteristics of the benchmark:
 
-The electrophysiology is governed by a scalar reaction-diffusion partial differential equation derived from the monodomain assumption. The primary unknown is the scalar transmembrane voltage, representing the voltage difference between the inside and outside of the cardiac cells. The reaction term is governed by an ionic model, which expresses a local current in terms of the transmembrane voltage and internal "gating" variables; these ionic models are governed by multiple ordinary differential equations. The Niederer et al. (2011) benchmark stimulates the use of the ten Tusscher & Panfilov ionic model; however, as a starting point, the current case uses the simpler, minimal ionic model by Bueno-Orovio, governed by three ordinary differential equations. The Bueno-Orovio parameters have been chosen to mimic the more complex ten Tusscher & Panfilov model.
+- **Geometry:** rectangular slab (20 × 7 × 3 mm)
+- **Model:** monodomain reaction–diffusion equation
+- **Conductivity:** transversely isotropic
+- **Cell model:** human ventricular epicardial cell
+- **Stimulus:** localised cuboid stimulus applied at one corner
+- **Metric:** activation time (first crossing of 0 mV)
 
-# Fields
+---
 
-The initial conditions and boundary conditions for the primary unknown - transmembrane voltage `Vm` - are found in `0/Vm`.
+## Case structure
 
-The electrophysiological and ionic model parameters are given in `constant/electroActivationProperties`; in addition, numerical settings for solving the ionic model equations are found in the same file.
+```
+NiedererEtAl2011/
+├── 0
+│   └── Vm
+├── constant
+│   ├── cardiacProperties
+│   ├── timeIntegrationProperties
+│   └── stimulusProtocol
+├── system
+│   ├── blockMeshDict
+│   ├── controlDict
+│   ├── decomposeParDict
+│   ├── fvSchemes
+│   └── fvSolution
+├── setupNiedererEtAl2012
+│   └── post-processing and reference scripts
+├── Allrun
+└── Allclean
+```
 
-# Expected results
-Activation times are plotted on the plane with normal (-1.05e-05 1.4E-4 3.E-5) and origin (0 0 0.007).
+---
 
-# How to run the case
-To run the case, execute the included `Allrun` script, e.g.
+## Cardiac model and material parameters
 
-    > ./Allrun
+The file `constant/cardiacProperties` defines the electrophysiology model and
+material parameters consistent with Niederer et al. (2011), including anisotropic
+conductivity, membrane capacitance, surface-to-volume ratio, ionic model choice,
+and tissue type.
 
-The `Allrun` script creates the mesh using `blockMesh` and then runs the `electroActivationFoam` solver. Alternatively, the mesh and solver can be run manually, e.g.
+---
 
-    > blockMesh
-    > electroActivationFoam
+## Time integrations settings
 
-For example, after updating the mesh density in `system/blockMeshDict`, the mesh can be regenerated with `blockMesh`. The results and mesh are cleared using the included `Allclean` script:
+The file `constant/timeIntegrationProperties` controls the numerical strategy,
+including explicit/implicit coupling, CFL limits, ODE solver selection, and
+integration tolerances.
 
-    > ./Allclean
+---
+
+## Stimulation protocol
+
+The file `constant/stimulusProtocol` defines a localised cuboid stimulus applied
+at one corner of the slab for 2 ms, matching the benchmark definition.
+
+---
+
+## Running the tutorial
+
+```bash
+./Allrun
+```
+
+To clean the case:
+
+```bash
+./Allclean
+```
+
+---
+
+## Post-processing and verification
+
+Results can be post-processed to extract activation times and compared against
+published benchmark data or other simulation codes.
+
+---
+
+## Purpose
+
+This tutorial is intended for solver verification, regression testing, and
+educational use, rather than physiological prediction.

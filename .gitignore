@@ -58,6 +58,8 @@ lnInclude
 .DS_Store
 
 # build folders - anywhere
+darwin*Gcc*/
+darwin*Clang*/
 linux*Gcc*/
 linux*Icc*/
 darwin*Gcc*/

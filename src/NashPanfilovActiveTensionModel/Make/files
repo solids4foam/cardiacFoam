@@ -1,3 +1,0 @@
-NashPanfilovActiveTensionModel.C
-
-LIB = $(FOAM_USER_LIBBIN)/libNashPanfilovActiveTensionModel
