@@ -28,18 +28,37 @@ Application
     singleCellElectroActivationFoam
 
 Description
-    This solver is a driver for a single cell electrophysiology model from
-    cellml.org. 
-    The user provides an external stimulus through the stimulus protocol dictionary.
+    Single-cell electrophysiology solver based on OpenFOAM.
+
+    This solver advances a single cardiac cell model in time using a
+    run-time selectable ionic model. In contrast to electroActivationFoam,
+    no spatial voltage PDE is solved; instead, the transmembrane voltage
+    Vm is integrated directly as part of the ionic model ODE system.
+
+    The solver is primarily intended for:
+      - single-cell action potential simulations,
+      - testing and validation of ionic models,
+      - debugging and development of electrophysiology model components.
+
+    External stimulation is prescribed via a stimulus protocol dictionary.
+    Output is written as time series of states, algebraic variables and rates
+    using ionicModelIO.
+
+    This solver represents a special case of electroActivationFoam. Future
+    versions of electroActivationFoam are expected to support single-cell
+    operation directly, at which point this solver may be deprecated.
 
 Author
-    Philip Cardiff, UCD.
     Simao Nieto de Castro, UCD.
+    Philip Cardiff, UCD.
 
 \*---------------------------------------------------------------------------*/
+
 #include "fvCFD.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
 {
@@ -96,11 +115,14 @@ int main(int argc, char *argv[])
             (*ionicModel, output,solutionVariablesMemory, runTime);
     }
 
-    Info<< nl;
+    Info<< nl
+        << "Results written to: " << output.name() << nl
+        << "Format: [Time STATES ALGEBRAIC RATES]" << nl
+        << endl;
+
     runTime.printExecutionTime(Info);
-    Info<< "End" << nl;
-    Info<< "Results written to: " << output.name() << nl;
-    Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
+
+    Info<< "End" << nl << endl;
 
     return 0;
 }

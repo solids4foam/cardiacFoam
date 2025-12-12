@@ -185,6 +185,9 @@ int main(int argc, char* argv[])
         msHandler.postProcess(Vm, outFields, dt, nsteps, solveExplicit);
     }
 
+    runTime.printExecutionTime(Info);
+
     Info<< "End" << nl << endl;
+
     return 0;
 }
