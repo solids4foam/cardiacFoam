@@ -1,4 +1,7 @@
-// Transmembrane potential
+// Define voltage dimesions for convenience
+const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
+
+// Trans-membrane voltage
 volScalarField Vm
 (
     IOobject
@@ -10,174 +13,26 @@ volScalarField Vm
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Vm", dimMass*dimArea/(pow3(dimTime)*dimCurrent), -85.23),
+    dimensionedScalar("Vm", dimVoltage, -0.084),
     "zeroGradient"
 );
 
-
-// Normalised transmembrane potential
-// Info<< "Reading field u\n" << endl;
-// volScalarField u
-// (
-//     IOobject
-//     (
-//         "u",
-//         runTime.timeName(),
-//         mesh,
-//         IOobject::MUST_READ,
-//         IOobject::AUTO_WRITE
-//     ),
-//     mesh
-// );
-
-// Create commonly used dimensionSets for convenience
-const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
-
-// Read electoActivationProperties
-Info<< "Reading electroActivationProperties\n" << endl;
-IOdictionary electroActivationProperties
-(
-    IOobject
-    (
-        "electroActivationProperties",
-        runTime.constant(),
-        mesh,
-        IOobject::MUST_READ_IF_MODIFIED,
-        IOobject::NO_WRITE
-    )
-);
-
-// Read flag for Vm solution
-const Switch solveVmExplicitly
-(
-    electroActivationProperties.lookup("solveVmExplicitly")
-);
-
-Info<< "Reading conductivity\n" << endl;
-const dimensionedSymmTensor conductivity
-(
-    "conductivity",
-    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-    electroActivationProperties
-);
-
-Info<< "Reading cellular surface-to-volume ratio beta\n" << endl;
-const dimensionedScalar beta
-(
-    "beta", dimArea/dimVolume, electroActivationProperties
-);
-
-Info<< "Reading membrane capacitance Cm\n" << endl;
-const dimensionedScalar Cm
-(
-    "Cm",
-    // pow4(dimTime)*sqr(dimCurrent)/(dimMass*sqr(dimArea)),
-    dimCurrent*dimTime/(dimVoltage*dimArea),
-    electroActivationProperties
-);
-
-// Info<< "Reading diffusion coefficient D\n" << endl;
-// const dimensionedScalar D
-// (
-//     "D", dimArea/dimTime, electroActivationProperties
-// );
-
-// Find cells in the stimulus volume
-Info<< "Reading stimulus location \n" << endl;
-boundBox bb
-(
-    point(electroActivationProperties.lookup("stimulusLocationMin")),
-    point(electroActivationProperties.lookup("stimulusLocationMax"))
-);
-
-labelHashSet stimCellSet;
-forAll(mesh.C(), cellI)
-{
-    if (bb.contains(mesh.C()[cellI]))
-    {
-        stimCellSet.insert(cellI);
-    }
-}
-const labelList stimulusCellIDs = stimCellSet.toc();
-Info<< "Number of cells in the stimulus volume: "
-    << stimulusCellIDs.size() << endl;
-
-Info<< "Reading stimulus duration\n" << endl;
-const dimensionedScalar stimulusDuration
-(
-    "stimulusDuration", dimTime, electroActivationProperties
-);
-
-Info<< "Reading stimulus intensity\n" << endl;
-// Per unit area as we multiply by the cellular surface-to-volume ratio
-const dimensionedScalar stimulusIntensity
-(
-    "stimulusIntensity",
-    // dimCurrent/dimArea,
-    dimCurrent/dimVolume,
-    electroActivationProperties
-);
-
-// Find the closest cell to the stimulus location
-// label stimulusLocationCellID = -1;
-// {
-//     scalar minDist = GREAT;
-//     const vectorField& CI = mesh.C();
-//     forAll(CI, cellI)
-//     {
-//         const scalar dist = mag(CI[cellI] - stimulusLocation);
-
-//         if (dist < minDist)
-//         {
-//             minDist = dist;
-//             stimulusLocationCellID = cellI;
-//         }
-//     }
-
-//     // Ensure only one processor has the closest point
-//     const scalar globalMinDist = returnReduce(minDist, minOp<scalar>());
-//     if (mag(globalMinDist - minDist) > SMALL)
-//     {
-//         // This proc does not have the global minDist
-//         stimulusLocationCellID = -1;
-//     }
-
-//     // Check that at least one processor found a cell
-//     if (returnReduce(stimulusLocationCellID, maxOp<label>()) == -1)
-//     {
-//         FatalError
-//             << "Problem finding the stimulus location cellID"
-//             << abort(FatalError);
-//     }
-// }
-
-// Ionic source term
-volScalarField ionicCurrent
+// Ionic current
+volScalarField Iion
 (
     IOobject
     (
         "ionicCurrent",
         runTime.timeName(),
         mesh,
-        IOobject::READ_IF_PRESENT,
+        IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
     mesh,
-    // dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
-    // dimensionedScalar("zero", dimCurrent/dimArea, 0.0),
-    // dimensionedScalar
-    // (
-    //     "zero", dimMass*dimArea/(sqr(sqr(dimTime))*dimCurrent), 0.0
-    // ),
-    dimensionedScalar("zero", dimless/dimTime, 0.0),
+    dimensionedScalar("zero", dimVoltage/ dimTime, 0.0),
     "zeroGradient"
 );
 
-// Scale factor for Bueno-Orovio
-const dimensionedScalar BuenoOrovioScaleFactor
-(
-    "BuenoOrovioScaleFactor", dimVoltage, 84.0
-);
 
 // External stimulus current
 volScalarField externalStimulusCurrent
@@ -191,17 +46,169 @@ volScalarField externalStimulusCurrent
         IOobject::AUTO_WRITE
     ),
     mesh,
-    // dimensionedScalar("sourceTerm", dimCurrent/dimArea, 0.0),
-    dimensionedScalar("sourceTerm", dimCurrent/dimVolume, 0.0),
+    dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
     "zeroGradient"
 );
 
-// Read ionic model dict
-const dictionary& ionicModelCoeffs =
-    electroActivationProperties.subDict("ionicModelCoeffs");
+Info<< "Reading stimulus protocol\n" << endl;
+IOdictionary stimulusProtocol
+(
+    IOobject
+    (
+        "stimulusProtocol",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ_IF_MODIFIED,
+        IOobject::NO_WRITE
+    )
+);
 
-// Create ionic model ODE system
-BuenoOrovioIonicModel ionicModel(ionicModelCoeffs, mesh.nCells());
+// Read external stimulus from a bounding box
+// Find cells in the stimulus volume
+boundBox bb
+(
+    point(stimulusProtocol.lookup("stimulusLocationMin")),
+    point(stimulusProtocol.lookup("stimulusLocationMax"))
+);
+
+labelHashSet stimCellSet;
+
+forAll(mesh.C(), cellI)
+{
+    if (bb.contains(mesh.C()[cellI]))
+    {
+        stimCellSet.insert(cellI);
+    }
+}
+const labelList stimulusCellIDs = stimCellSet.toc();
+
+const dimensionedScalar stimulusDuration
+(
+    "stimulusDuration", dimTime, stimulusProtocol
+);
+
+const dimensionedScalar stimulusIntensity
+(
+    "stimulusIntensity", dimCurrent/dimVolume, stimulusProtocol
+);
+
+// Only print stimulus info if this is a 3D mesh
+if (mesh.nGeometricD() == 3)
+{
+    Info<< "---------------------------------------------" << nl
+        << "3D mesh detected — stimulus parameters:"       << nl
+        << "Stimulus bounding box: " << bb                 << nl
+        << "Number of cells in stimulus region: "
+        << stimulusCellIDs.size()                          << nl
+        << "Stimulus duration: "
+        << stimulusDuration.value() << " "
+        << stimulusDuration.dimensions()                   << nl
+        << "Stimulus intensity: "
+        << stimulusIntensity.value() << " "
+        << stimulusIntensity.dimensions()                  << nl
+        << "---------------------------------------------" << endl;
+}
+
+Info<< "Reading numerical solver properties\n" << endl;
+IOdictionary timeIntegrationProperties
+(
+    IOobject
+    (
+        "timeIntegrationProperties",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ_IF_MODIFIED,
+        IOobject::NO_WRITE
+    )
+);
+Info<< "---------------------------------------------" << nl;
+
+Info<< "Reading tissue properties\n" << endl;
+IOdictionary cardiacProperties
+(
+    IOobject
+    (
+        "cardiacProperties",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ_IF_MODIFIED,
+        IOobject::NO_WRITE
+    )
+);
+
+const dimensionedScalar chi
+(
+    "chi", dimArea/dimVolume, cardiacProperties
+);
+
+Info<< "Reading surface-to-volume ratio chi = " << chi.value()
+    <<"  "<< chi.dimensions() << endl;
+const dimensionedScalar Cm
+(
+    "Cm",
+    dimCurrent*dimTime/(dimVoltage*dimArea),
+    cardiacProperties
+);
+Info<< "Reading membrane capacitance Cm = " << Cm.value()  <<"  " << Cm.dimensions()  << endl;
+
+
+Info<< "Reading conductivity D:" << endl;
+volTensorField conductivity
+(
+    IOobject
+    (
+        "conductivity",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedTensor
+    (
+        "zero",
+        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+        tensor::zero
+    )
+);
+
+// Check if we actually read it, otherwise assign constant value
+if (!conductivity.headerOk())
+{
+    Info<< "\nconductivity not found on disk, using conductivity from "
+        << cardiacProperties.name() << nl << endl;
+
+    conductivity =
+        dimensionedTensor
+        (
+            dimensionedSymmTensor
+            (
+                "conductivity",
+                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+                cardiacProperties
+            ) & tensor(I)
+        );
+
+    Info<< "Conductivity tensor (cell 0): " << conductivity[0] << nl;
+}
+else
+{
+    Info<< "conductivity field read from " << runTime.timeName() << nl << endl;
+}
+Info<< "---------------------------------------------" << nl;
+
+
+// Merge the dictionaries and create a memory object to read all properties
+dictionary solutionVariablesMemory(cardiacProperties);
+solutionVariablesMemory.merge(timeIntegrationProperties);
+solutionVariablesMemory.merge(stimulusProtocol);
+
+// Create ionicModelCellML object
+autoPtr<ionicModel> ionicModel =
+    ionicModel::New
+    (
+        solutionVariablesMemory, mesh.nCells(), runTime.deltaTValue()
+    );
 
 // Field to record the activation time, which is the time at which each cell
 // reaches or exceeds a transmembrane voltage of 0.0
@@ -219,38 +226,46 @@ volScalarField activationTime
     dimensionedScalar("zero", dimTime, 0.0),
     "zeroGradient"
 );
+
 boolList calculateActivationTime(mesh.nCells(), true);
 
-// Active tension
-volScalarField activeTension
+// Activation velocity
+volVectorField activationVelocity
 (
     IOobject
     (
-        "activeTension",
+        "activationVelocity",
         runTime.timeName(),
         mesh,
         IOobject::READ_IF_PRESENT,
         IOobject::AUTO_WRITE
     ),
-    mesh,
-    dimensionedScalar("zero", dimPressure, 0.0),
-    "zeroGradient"
+    fvc::grad(1.0/(activationTime + dimensionedScalar("SMALL", dimTime, SMALL)))
 );
 
-// Read active tension model dict
-const dictionary& activeTensionModelCoeffs =
-    electroActivationProperties.subDict("activeTensionModelCoeffs");
+// Allocate volScalarFields for export
+PtrList<volScalarField> outFields;
+const wordList names = ionicModel->exportedFieldNames();
+outFields.setSize(names.size());
 
-// Optionally, create active tension model
-autoPtr<NashPanfilovActiveTensionModel> activeTensionModelPtr;
-if (Switch(activeTensionModelCoeffs.lookup("calculateActiveTension")))
+forAll(names, i)
 {
-    // Create active tension model ODE system
-    activeTensionModelPtr.set
+    outFields.set
     (
-        new NashPanfilovActiveTensionModel
+        i,
+        new volScalarField
         (
-            activeTensionModelCoeffs, mesh.nCells()
+            IOobject
+            (
+                names[i],
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh,
+            dimensionSet(0,0,0,0,0,0,0),
+            zeroGradientFvPatchScalarField::typeName
         )
     );
 }

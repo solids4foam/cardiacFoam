@@ -1,5 +1,4 @@
 #!/bin/bash
 cd ${0%/*} || exit 1    # run from this directory
 
-wmake libso BuenoOrovioIonicModel
-wmake libso NashPanfilovActiveTensionModel
+wmake $* libso ionicModels
