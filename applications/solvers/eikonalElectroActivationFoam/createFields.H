@@ -169,9 +169,6 @@ volVectorField u("u", c0*a);
 // Update the phiU term
 surfaceScalarField phiU("phiU", (fvc::interpolate(u) & mesh.Sf()));
 
-// Explicit correction term related to the nonlinear term linearisation
-volScalarField corr("corr", c0*(G - (a & gradPsi)));
-
 Info<< "Reading timeIntegrationProperties\n" << endl;
 IOdictionary timeIntegrationProperties
 (
