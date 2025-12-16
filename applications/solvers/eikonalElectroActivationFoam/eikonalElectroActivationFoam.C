@@ -115,7 +115,6 @@ int main(int argc, char* argv[])
 
         // Optional field relaxation
         psi.relax();
-
     }
 
     Info<< nl;
