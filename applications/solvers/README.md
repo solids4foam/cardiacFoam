@@ -6,6 +6,7 @@ built on top of the `ionicModels` library.
 ```
 solvers/
 ├── electroActivationFoam
+├── eikonalElectroActivationFoam
 └── singleCellElectroActivationFoam
 ```
 
@@ -28,7 +29,38 @@ Key features include:
 - Support for manufactured solutions (verification),
 - Activation-time tracking.
 
-This solver is intended for **1D/2D/3D tissue simulations**.
+This solver is intended for **1D/2D/3D tissue simulations** where full
+electrophysiological dynamics are required.
+
+---
+
+## eikonalElectroActivationFoam
+
+`eikonalElectroActivationFoam` is a **reduced-order electrophysiology solver**
+for computing **activation times only**, based on an anisotropic
+eikonal–diffusion formulation.
+
+Instead of solving for the transmembrane voltage, the solver computes an
+activation time field by solving a steady nonlinear eikonal–diffusion equation,
+providing a computationally inexpensive approximation of the electrical wavefront
+propagation.
+
+Key features include:
+
+- Anisotropic propagation via a conductivity (metric) tensor,
+- Support for fibre-based conduction,
+- Prescribed activation times on selected regions or patches,
+- An optional stabilised Picard (defect-correction) formulation to improve
+  convergence of the nonlinear solve.
+
+This solver is intended for:
+
+- Rapid estimation of activation times,
+- Large-scale or parameter-sweep studies,
+- Providing activation-time input to downstream electrophysiology or
+  electrocardiographic models.
+
+It does **not** model transmembrane voltage dynamics or ionic currents.
 
 ---
 
@@ -52,21 +84,32 @@ This solver is primarily intended for:
 
 ## Relationship between the solvers
 
-`singleCellElectroActivationFoam` is effectively a **special case** of
-`electroActivationFoam`:
+The three solvers address **different levels of electrophysiological modelling**:
 
-- Both use the same `ionicModel` infrastructure,
-- The difference is whether `Vm` is solved via a PDE or as part of the ODE system.
+- `electroActivationFoam`  
+  Full tissue-scale electrophysiology (monodomain PDE + ionic ODEs).
 
-In the future, `electroActivationFoam` is expected to support a single-cell mode
-directly. When this is implemented, `singleCellElectroActivationFoam` will likely
-be deprecated and removed.
+- `eikonalElectroActivationFoam`  
+  Reduced-order model computing activation times only, without voltage or ionic
+  dynamics.
+
+- `singleCellElectroActivationFoam`  
+  Zero-dimensional single-cell simulations for ionic-model development and
+  testing.
+
+`singleCellElectroActivationFoam` can be viewed as a special case of
+`electroActivationFoam` in which spatial coupling is removed. In the future,
+`electroActivationFoam` may support a native single-cell mode, in which case
+`singleCellElectroActivationFoam` may be deprecated.
 
 ---
 
 ## Notes
 
-- Both solvers rely on the `ionicModels` library for all ionic-model logic.
-- Selection of the ionic model and stimulus protocol is done via dictionaries
+- `electroActivationFoam` and `singleCellElectroActivationFoam` rely on the
+  `ionicModels` library for all ionic-model logic.
+- `eikonalElectroActivationFoam` does not use ionic models, but shares geometry,
+  material parameter, and stimulus concepts with the full solver.
+- Selection of models, parameters, and numerical options is done via dictionaries
   at run-time.
-- The solvers follow standard OpenFOAM build and execution patterns.
+- All solvers follow standard OpenFOAM build and execution patterns.

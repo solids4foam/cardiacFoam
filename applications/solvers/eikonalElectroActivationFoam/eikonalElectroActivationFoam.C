@@ -43,9 +43,15 @@ Description
         M     is the anisotropic conductivity (or metric) tensor constructed
               from myocardial fibre directions.
 
-    The equation is solved iteratively using a finite-volume discretisation,
-    with the nonlinear metric term treated explicitly to obtain a steady
-    viscosity solution of the eikonal equation.
+    The equation is solved iteratively using a finite-volume discretisation.
+    Two solution strategies are provided: a simple Picard iteration in which
+    the nonlinear eikonal metric term is treated explicitly, and an optional
+    stabilised Picard (defect-correction) formulation in which a linearised
+    advection operator, derived from the nonlinear eikonal term, is included
+    implicitly to improve convergence. The selection between these approaches
+    is controlled by the eikonalAdvectionDiffusionApproach switch; in both
+    cases, the original steady eikonal–diffusion equation is recovered at
+    convergence.
 
     Prescribed activation times may be imposed on selected regions or patches
     to represent electrical stimuli, while zero-gradient conditions are applied
@@ -110,36 +116,34 @@ int main(int argc, char* argv[])
             // Update the phiU term
             phiU = (fvc::interpolate(u) & mesh.Sf());
 
-            // Calculate the explicit correction term
-            corr = c0*(G - (a & gradPsi));
-
-            // Construct the eikonal-diffusion equation
-            // Eq 6.14 in Quarteroni et al.
-            // Note: the second line represents an implicit linearisation of the
-            // co*G nonlinear term, while corr on the fourth line represents the
-            // explicit correction from this linearisation
-            // We use SuSp to avoid diagonal weakening from div(phiU)
+            // Construct the eikonal–diffusion equation (Eq. 6.14 in Quarteroni
+            // et al.)
+            //
+            // The equation is written in a stabilised Picard (defect-
+            // correction) form.
+            // The implicit advection operator on the LHS is derived from a
+            // linearisation of the nonlinear eikonal term c0*G, but is used
+            // here purely to improve convergence. The corresponding explicit
+            // advection term on the RHS ensures that, at convergence of the
+            // outer iterations, the original eikonal–diffusion equation is
+            // recovered exactly.
+            //
+            // The SuSp formulation is used to avoid diagonal weakening arising from
+            // div(phiU), improving robustness of the linear solve.
             fvScalarMatrix psiEqn
             (
               - fvm::laplacian(M, psi)
               + fvm::div(phiU, psi) + fvm::SuSp(-fvc::div(phiU), psi)
-             == one - corr
+             == one
+              + fvc::div(phiU, psi) - fvc::div(phiU)*psi
+              - c0*G
             );
 
             // Enforce psi to be zero for the stimulus cells
             psiEqn.setValues(stimulusCellIDs, 0.0);
 
-            // Optional equation relaxation
-            // psiEqn.relax
-            // (
-            //     mesh.equationRelaxationFactor("asymmetric_" + psi.name())
-            // );
-
             // Solve the system for psi
             psiEqn.solve("asymmetric_" + psi.name());
-
-            // Optional field relaxation
-            psi.relax();
         }
         else
         {
@@ -160,9 +164,6 @@ int main(int argc, char* argv[])
 
             // Solve the system for psi
             psiEqn.solve();
-
-            // Optional field relaxation
-            psi.relax();
         }
     }
 
