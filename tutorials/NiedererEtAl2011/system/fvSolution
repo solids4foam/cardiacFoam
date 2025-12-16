@@ -31,6 +31,16 @@ solvers
         preconditioner  DIC;
         tolerance       1e-11;
         relTol          0.1;
+        maxIter         100;
+    }
+
+    "asymmetric_psi|asymmetric_psiFinal"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-11;
+        relTol          0.1;
+        maxIter         100;
     }
 }
 
@@ -54,10 +64,6 @@ relaxationFactors
     equations
     {
         psi    0.9;
-    }
-    fields
-    {
-        //psi    0.5;
     }
 }
 

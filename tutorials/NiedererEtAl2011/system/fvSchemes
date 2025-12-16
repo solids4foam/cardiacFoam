@@ -30,6 +30,7 @@ gradSchemes
 divSchemes
 {
     default         none;
+    div(phiU,psi)   Gauss linear;
 }
 
 laplacianSchemes

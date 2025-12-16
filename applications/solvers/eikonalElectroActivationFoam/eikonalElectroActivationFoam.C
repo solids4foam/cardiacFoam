@@ -92,29 +92,78 @@ int main(int argc, char* argv[])
         // Update the gradient
         gradPsi = fvc::grad(psi);
 
-        // Calculate the nonlinear term
-        G = sqrt((gradPsi & (M & gradPsi)) + smallG);
+        // Update w term
+        w = M & gradPsi;
 
-        // Construct the eikonal-diffusion equation
-        // Eq 6.14 in Quarteroni et al.
-        fvScalarMatrix psiEqn
-        (
-          - fvm::laplacian(M, psi)
-          + c0*G
-         == one
-        );
+        // Update the nonlinear term
+        G = sqrt((gradPsi & w) + smallG);
 
-        // Optional equation relaxation
-        psiEqn.relax();
+        // Solve eikonal equation
+        if (eikonalAdvectionDiffusionApproach)
+        {
+            // Update a term
+            a = w/G;
 
-        // Enforce psi to be zero for the stimulus cells
-        psiEqn.setValues(stimulusCellIDs, 0.0);
+            // Update the u term
+            u = c0*a;
 
-        // Solve the system for psi
-        psiEqn.solve();
+            // Update the phiU term
+            phiU = (fvc::interpolate(u) & mesh.Sf());
 
-        // Optional field relaxation
-        psi.relax();
+            // Calculate the explicit correction term
+            corr = c0*(G - (a & gradPsi));
+
+            // Construct the eikonal-diffusion equation
+            // Eq 6.14 in Quarteroni et al.
+            // Note: the second line represents an implicit linearisation of the
+            // co*G nonlinear term, while corr on the fourth line represents the
+            // explicit correction from this linearisation
+            // We use SuSp to avoid diagonal weakening from div(phiU)
+            fvScalarMatrix psiEqn
+            (
+              - fvm::laplacian(M, psi)
+              + fvm::div(phiU, psi) + fvm::SuSp(-fvc::div(phiU), psi)
+             == one - corr
+            );
+
+            // Enforce psi to be zero for the stimulus cells
+            psiEqn.setValues(stimulusCellIDs, 0.0);
+
+            // Optional equation relaxation
+            // psiEqn.relax
+            // (
+            //     mesh.equationRelaxationFactor("asymmetric_" + psi.name())
+            // );
+
+            // Solve the system for psi
+            psiEqn.solve("asymmetric_" + psi.name());
+
+            // Optional field relaxation
+            psi.relax();
+        }
+        else
+        {
+            // Construct the eikonal-diffusion equation, where the nonlinear
+            // term c0*G is treated entirely as an explicit deferred correction
+            fvScalarMatrix psiEqn
+            (
+              - fvm::laplacian(M, psi)
+              + c0*G
+             == one
+            );
+
+            // Optional equation relaxation
+            psiEqn.relax();
+
+            // Enforce psi to be zero for the stimulus cells
+            psiEqn.setValues(stimulusCellIDs, 0.0);
+
+            // Solve the system for psi
+            psiEqn.solve();
+
+            // Optional field relaxation
+            psi.relax();
+        }
     }
 
     Info<< nl;

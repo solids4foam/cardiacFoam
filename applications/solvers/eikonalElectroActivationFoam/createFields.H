@@ -145,14 +145,48 @@ Info<< "M tensor field:" << nl
     << "    min(M) = " << min(M).value() << nl
     << "    average(M) = " << average(M).value() << endl;
 
+// M & gradPsi term
+volVectorField w("w", M & gradPsi);
+
 // Define a small constant to add to the nonlinear term G
 const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
-// Calculate the nonlinear source term
-volScalarField G("G", sqrt((gradPsi & (M & gradPsi)) + smallG));
+// Calculate the nonlinear term
+volScalarField G("G", sqrt((gradPsi & w) + smallG));
 
 // Read reference velocity
 const dimensionedScalar c0("c0", cardiacProperties);
 
 // Create unit dimensioned scalar
 const dimensionedScalar one("one", dimless, 1.0);
+
+// Term related to the linearisation of c0*G
+volVectorField a("a", w/G);
+
+// Term related to the linearisation of c0*G
+volVectorField u("u", c0*a);
+
+// Update the phiU term
+surfaceScalarField phiU("phiU", (fvc::interpolate(u) & mesh.Sf()));
+
+// Explicit correction term related to the nonlinear term linearisation
+volScalarField corr("corr", c0*(G - (a & gradPsi)));
+
+Info<< "Reading timeIntegrationProperties\n" << endl;
+IOdictionary timeIntegrationProperties
+(
+    IOobject
+    (
+        "timeIntegrationProperties",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ_IF_MODIFIED,
+        IOobject::NO_WRITE
+    )
+);
+
+// Lookup solution algorithm
+const Switch eikonalAdvectionDiffusionApproach
+(
+    timeIntegrationProperties.lookup("eikonalAdvectionDiffusionApproach")
+);
