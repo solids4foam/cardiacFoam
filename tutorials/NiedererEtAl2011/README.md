@@ -54,40 +54,52 @@ NiedererEtAl2011/
 
 ---
 
-## Cardiac model and material parameters
+## Solver options
 
-The file `constant/cardiacProperties` defines the electrophysiology model and
-material parameters consistent with Niederer et al. (2011), including anisotropic
-conductivity, membrane capacitance, surface-to-volume ratio, ionic model choice,
-and tissue type.
+This case can be run using either:
 
----
+- **`electroActivationFoam`**  
+  A full **monodomain reaction–diffusion solver**, reproducing the Niederer et al.
+  benchmark as originally defined. This option is **more accurate** but
+  computationally more expensive.
 
-## Time integrations settings
+- **`eikonalElectroActivationFoam`**  
+  A simplified **eikonal-based solver** that computes activation times directly
+  by solving an anisotropic eikonal–diffusion equation. This option is
+  **significantly cheaper**, but neglects detailed transmembrane dynamics and is
+  intended for rapid estimation of activation times rather than full
+  electrophysiological modelling.
 
-The file `constant/timeIntegrationProperties` controls the numerical strategy,
-including explicit/implicit coupling, CFL limits, ODE solver selection, and
-integration tolerances.
-
----
-
-## Stimulation protocol
-
-The file `constant/stimulusProtocol` defines a localised cuboid stimulus applied
-at one corner of the slab for 2 ms, matching the benchmark definition.
+The eikonal solver uses the same geometry, material parameters, and stimulus
+location, but replaces the monodomain PDE with a steady nonlinear eikonal
+formulation.
 
 ---
 
 ## Running the tutorial
 
+By default, the tutorial runs the **monodomain solver** in serial:
+
 ```bash
 ./Allrun
 ```
 
-To clean the case:
+To run the **eikonal solver** instead:
 
 ```bash
-./Allclean
+./Allrun eikonal
+```
+
+To run either solver in parallel:
+
+```bash
+./Allrun parallel
+```
+
+or, for the eikonal solver in parallel:
+
+```bash
+./Allrun eikonal parallel
 ```
 
 ---
