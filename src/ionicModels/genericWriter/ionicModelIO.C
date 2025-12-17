@@ -99,7 +99,7 @@ namespace Foam {
         int nStates,
         const char* const algNames[],
         int nAlg,
-        List<volScalarField*>& outFields
+        PtrList<volScalarField>& outFields
     )
     {
         // 1. mapping
@@ -112,25 +112,31 @@ namespace Foam {
             stateIndex,
             algIndex
         );
-    
+
         // 2. Populate volScalarFields
         forAll(STATES, cellI)
         {
             const scalarField& S = STATES[cellI];
             const scalarField& A = ALGEBRAIC[cellI];
-    
+
             forAll(outFields, k)
             {
                 if (stateIndex[k] >= 0)
-                    (*outFields[k])[cellI] = S[stateIndex[k]];
+                {
+                    outFields[k][cellI] = S[stateIndex[k]];
+                }
                 else
-                    (*outFields[k])[cellI] = A[algIndex[k]];
+                {
+                    outFields[k][cellI] = A[algIndex[k]];
+                }
             }
         }
-    
+
         // 3. Boundaries
         forAll(outFields, k)
-            outFields[k]->correctBoundaryConditions();
+        {
+            outFields[k].correctBoundaryConditions();
+        }
     }
 
     void Foam::ionicModelIO::debugPrintFields
@@ -227,6 +233,7 @@ namespace Foam {
         mapped:;
         }
     }
+
     void Foam::ionicModelIO::writeOneSweepRow
     (
         OFstream& os,
