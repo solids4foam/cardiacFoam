@@ -9,14 +9,14 @@ enum CONSTANTS_INDEX{
     stim_start, stim_duration, stim_amplitude,
     stim_period_S1, nstim1,
     stim_period_S2, nstim2,
-    NUM_CONSTANTS
+    NUM_CONSTANTS 
 };
 enum STATES_INDEX{
     u, // Membrane voltage
     v, // Fast sodium activation variable
     w, // Slow sodium activation variable
     s, // Slow inactivation variable
-    NUM_STATES
+    NUM_STATES 
 };
 enum ALGEBRAIC_INDEX{
     Jfi, // Fast sodium current
@@ -24,13 +24,26 @@ enum ALGEBRAIC_INDEX{
     Jsi, // Slow inactivation current
     Jion, // total current
     Istim, // Stimulus current
-    NUM_ALGEBRAIC
+    
+    tauSo,      // 5  τ_so
+    tauO,       // 6  τ_o
+    tauVMinus,  // 7  τ_v⁻
+    tauWMinus,  // 8  τ_w⁻
+    tauS,       // 9  τ_s
+    vInfty,     // 10 v∞
+    wInfty,     // 11 w∞
+    NUM_ALGEBRAIC 
 };
 
 void
 BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
 BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
+
+
+
+
+
 
 
 
