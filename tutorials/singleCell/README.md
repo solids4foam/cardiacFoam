@@ -39,6 +39,8 @@ singleCell/
 │   ├── electroActivationProperties
 │   ├── stimulusProtocol
 │   └── timeIntegrationProperties
+│   └── sweepCurrents
+
 ├── system
 │   ├── blockMeshDict
 │   └── controlDict
@@ -97,11 +99,12 @@ This enables standard single-cell pacing and restitution studies.
 ---
 ### SweepCurrents
 
-The variables dependent on voltage for each ionicModel can be acessed in `constant/sweepCurrents`
-
--Voltage interval (-80 to + 40)
-
-This enables ionicModel checks and comparisons of variables that define each current.
+The dictionary to acess to run the sweepCurrent utility besides ionicModel and tissue type, the user decides: 
+- Voltage interval (typicaly -80 to + 40) Note that BuenoOrovio has dimensionless u, i.e 0 to +1.5
+- number of points to interpolate
+This enables ionicModel checks and comparisons of variables that define some currents. 
+-  steady state gating
+-  time constant tau
 
 ---
 
