@@ -32,8 +32,6 @@ This setup is useful for:
 
 ```
 singleCell/
-├── 0
-│   └── Vm
 ├── constant
 │   ├── cardiacProperties
 │   ├── electroActivationProperties
