@@ -70,6 +70,7 @@ The class provides:
   - `supportedDimensions()`
   - `hasManufacturedSolution()`
   - `writeHeader(...)`, `write(...)`
+  - `writeSweepHeder(...)`, , `writeOneSweepRow(...)`
   - `exportStates(...)`
   - `debugPrintFields(...)`
   - `exportedFieldNames()`, `debugPrintedNames()`
@@ -88,7 +89,6 @@ BuenoOrovio/
 ├── BuenoOrovio_2008.H        # Generated ODE system
 ├── BuenoOrovio_2008Names.H   # Enums and variable names
 ├── BuenoOrovio.H, BuenoOrovio.C
-├── fieldInit.H
 └── heaviside.H
 ```
 
@@ -116,7 +116,6 @@ Gaur/
 
 ```
 TNNP/
-├── tentusscher_noble_noble_panfilov_2004.H
 ├── TNNP_2004.H
 ├── TNNP_2004Names.H
 ├── TNNP.C
