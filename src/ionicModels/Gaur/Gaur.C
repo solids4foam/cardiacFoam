@@ -23,9 +23,9 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
-//Only needs strings for the header writing
-//#include <string>
+#include "stimulusIO.H"
 #include "volFields.H"
+#include "HashTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -74,14 +74,14 @@ Foam::Gaur::Gaur
             STATES_[i].data(),
             tissue(),dict
         );
-
-        ionicModelIO::loadStimulusConstants
-        (
-            dict, CONSTANTS_,
-            stim_start, stim_period_S1,
-            stim_duration, stim_amplitude,
-            nstim1, stim_period_S2, nstim2
-        );
+        if (!utilitiesMode())
+        {
+            stimulusIO::loadStimulusProtocol
+            (
+                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
+                stim_amplitude, nstim1, stim_period_S2, nstim2
+            );
+        }
     }
     Info<< CONSTANTS_ << nl;
 
@@ -145,7 +145,6 @@ void Foam::Gaur::calculateCurrent
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
 
         //copy internal STATES to memory external state buffer.
-
         //----can easily be expanded for all variables------//
         //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
@@ -325,5 +324,65 @@ void Foam::Gaur::write(const scalar t, OFstream& os) const
     );
 }
 
+void Foam::Gaur::sweepCurrent
+(
+    const word& currentName,
+    scalar Vmin,
+    scalar Vmax,
+    label nPts,
+    const fileName& outputFile
+) const
+{
+    // Retrieve dependency variables
+    const auto& depMap = GaurDependencyMap();
 
+    if (!depMap.found(currentName))
+    {
+        FatalErrorInFunction
+            << "Unknown current: " << currentName << nl
+            << "Available currents: " << depMap.toc() << nl
+            << exit(FatalError);
+    }
 
+    const wordList& deps = depMap[currentName];
+    OFstream os(outputFile);
+    // Write sweep header: V,<deps...>
+    ionicModelIO::writeSweepHeader(os, deps);
+
+    // Working arrays from integration point 0
+    scalarField STATESI = STATES_[0];
+    scalarField RATESI(NUM_STATES, 0.0);
+    scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+
+    // Voltage sweep
+    for (label i = 0; i < nPts; ++i)
+    {
+        scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
+
+        // Reset all states to baseline
+        STATESI = STATES_[0];
+
+        // Overwrite membrane voltage (dimensionless in BO2008)
+        STATESI[0] = V;
+
+        ::GaurcomputeVariables
+        (
+            0.0,                       // VOI
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
+
+        ionicModelIO::writeOneSweepRow
+        (
+            os, V, deps,STATESI,ALGI,
+            GaurSTATES_NAMES, NUM_STATES,
+            GaurALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+    Info<< "Sweep for " << currentName
+        << " written to " << outputFile << nl;
+}

@@ -172,6 +172,8 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
                 RATES[u] = -ALGEBRAIC[Jion] - ALGEBRAIC[Istim];
             }
 }
+   
+
 
         //std::cout << "CURRENTS " << __LINE__ << std::endl;
    

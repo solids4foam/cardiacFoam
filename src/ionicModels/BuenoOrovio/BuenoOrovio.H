@@ -40,12 +40,11 @@ Author
 #include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class BuenoOrovio Declaration
+                         Class Bueno Orovio Declaration
 \*---------------------------------------------------------------------------*/
 
 class BuenoOrovio
@@ -141,7 +140,7 @@ class BuenoOrovio
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const
+            virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
@@ -160,8 +159,8 @@ class BuenoOrovio
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
                     // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const;
-            virtual wordList debugPrintedNames() const;
+            virtual Foam::wordList exportedFieldNames() const override;
+            virtual wordList debugPrintedNames() const override;
 
 
             // Override to export the variables
@@ -200,3 +199,4 @@ class BuenoOrovio
 #endif
 
 // ************************************************************************* //
+
