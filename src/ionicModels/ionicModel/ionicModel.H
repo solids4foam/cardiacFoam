@@ -90,10 +90,6 @@ class ionicModel
 protected:
         virtual void setTissueFromDict();
         wordList variableExport_;
-
-        // // Debug settings
-        // bool debugMode_ = false;
-        // label monitorCell_ = -1;
         wordList debugVarNames_;
 
         /*NOTE: currently protected, each means they are only visible by the derived class.
@@ -350,13 +346,28 @@ public:
         }
         virtual wordList debugPrintedNames() const
         {
-            return debugVarNames_.size()
-                ? debugVarNames_
+            return debugVarNames_.size() 
+                ? debugVarNames_ 
                 : wordList();
         }
 
-    };
+        virtual void sweepCurrent
+        (
+            const word& currentName,
+            scalar Vmin,
+            scalar Vmax,
+            label nPts,
+            const fileName& outputFile
+        ) const
+        {
+            FatalErrorInFunction
+                << "sweepCurrent not implemented for ionic model "
+                << typeName << exit(FatalError);
+        }
+        bool utilitiesMode() const;
 
+
+    };  
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
