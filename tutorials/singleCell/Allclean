@@ -1,6 +1,7 @@
 #!/bin/bash
 
-rm -rf log.* *.txt
+rm -rf log.* 
+
 
 for d in [0-9]*; do
   [ -d "$d" ] && [ "$d" != "0" ] && rm -rf "$d"

@@ -63,7 +63,7 @@ CELL_TYPE_MAP = {
     "mCells": "Myo",
     "epicardialCells": "Epi",
     "endocardialCells": "Endo",
-    "myocyte": " Cell"
+    "myocyte": " "
 }
 
 
@@ -110,49 +110,45 @@ def load_simulation_data(filename):
 
 def categorize_columns(header, n_states, model_name=None):
 
-    states = header[1:n_states+1]
-    rates = header[-n_states:]
-    algebraic = header[n_states+1:-n_states]
+    if model_name == "BuenoOrovio":
+
+        states = header[1:n_states+2]              
+        rates = header[-n_states:]                
+        algebraic = header[n_states+2:-n_states]  
+        # Optional: you can adjust if algebraic length is wrong
+    else:
+        states = header[1:n_states+1]
+        rates = header[-n_states:]
+        algebraic = header[n_states+1:-n_states]
 
     return states, rates, algebraic
 
+
 def select_variables(states, algebraic, rates, file_name):
     print(f"Selecting variables for file: {file_name}\n")
+    selected_states = checkboxlist_dialog(
+        title=f"States ({file_name})",
+        text="Select State Variables:",
+        values=[(s,s) for s in states]
+    ).run() or []
 
-    while True:
-        # --- User Selection ---
-        selected_states = checkboxlist_dialog(
-            title=f"States ({file_name})",
-            text="Select State Variables:",
-            values=[(s, s) for s in states]
-        ).run() or []
+    selected_algebraic = checkboxlist_dialog(
+        title=f"Algebraic ({file_name})",
+        text="Select Algebraic Variables:",
+        values=[(a,a) for a in algebraic]
+    ).run() or []
 
-        selected_algebraic = checkboxlist_dialog(
-            title=f"Algebraic ({file_name})",
-            text="Select Algebraic Variables:",
-            values=[(a, a) for a in algebraic]
-        ).run() or []
+    selected_rates = checkboxlist_dialog(
+        title=f"Rates ({file_name})",
+        text="Select Rate Variables:",
+        values=[(r,r) for r in rates]
+    ).run() or []
 
-        selected_rates = checkboxlist_dialog(
-            title=f"Rates ({file_name})",
-            text="Select Rate Variables:",
-            values=[(r, r) for r in rates]
-        ).run() or []
-
-        # --- Check if NOTHING was selected ---
-        if not selected_states and not selected_algebraic and not selected_rates:
-            print(f"\n⚠️ WARNING: No variables selected for '{file_name}'.")
-            print("   Please select at least one variable.\n")
-            # loop back to selection, no return
-            continue
-
-        # Otherwise, selection is valid -> return it
-        return {
-            "States": selected_states,
-            "Algebraic": selected_algebraic,
-            "Rates": selected_rates
-        }
-
+    return {
+        "States": selected_states,
+        "Algebraic": selected_algebraic,
+        "Rates": selected_rates
+    }
 
 def rename_legends(variable_list):
     """Ask user to rename variables; Enter keeps default."""

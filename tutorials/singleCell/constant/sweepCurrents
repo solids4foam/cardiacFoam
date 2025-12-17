@@ -9,33 +9,22 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      Vm;
+    class       dictionary;
+    location    "constant";
+    object      sweepCurrents;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [1 2 -3 0 0 -1 0];
+ionicModel  Gaur;
 
-internalField   uniform -0.08523;
+currents  
+(
+INa
+ICaL
+);
 
-boundaryField
-{
-    inlet
-    {
-        type fixedValue;
-	value uniform -0.020;
+Vmin     -80;
+Vmax      40;
+points    300;
 
-    }
-
-    outlet
-    {
-        type zeroGradient;
-    }
-
-    sides
-    {
-        type empty;
-    }
-}
-
-// ************************************************************************* //
+tissue    myocyte;

@@ -63,7 +63,8 @@ Foam::TNNP::TNNP
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
+        // 🔑 First, set tissue using base logic + overrides
+        ionicModel::setTissueFromDict(); 
         TNNPinitConsts
         (
             CONSTANTS_.data(),
@@ -225,7 +226,7 @@ void Foam::TNNP::derivatives
     // Must match NUM_ALGEBRAIC from the generated TNNP code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
-    ::TNNPcomputeVariables
+    ::TNNPcomputeRates
     (
         t,
         CONSTANTS_.data(),

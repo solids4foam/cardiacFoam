@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 # Ionic models and their tissue types
-IONIC_MODELS = ["TNNP", "Gaur", "Courtemanche", "BuenoOrovio"]
+IONIC_MODELS = ["TNNP"]
 
 
 # PATHS (relative to this script's folder)
