@@ -95,6 +95,15 @@ specification of:
 This enables standard single-cell pacing and restitution studies.
 
 ---
+### SweepCurrents
+
+The variables dependent on voltage for each ionicModel can be acessed in `constant/sweepCurrents`
+
+-Voltage interval (-80 to + 40)
+
+This enables ionicModel checks and comparisons of variables that define each current.
+
+---
 
 ## Running the case
 
