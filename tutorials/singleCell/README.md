@@ -100,11 +100,13 @@ This enables standard single-cell pacing and restitution studies.
 ### SweepCurrents
 
 The dictionary to acess to run the sweepCurrent utility besides ionicModel and tissue type, the user decides: 
-- Voltage interval (typicaly -80 to + 40) Note that BuenoOrovio has dimensionless u, i.e 0 to +1.5
-- number of points to interpolate
+- Voltage interval (typicaly -80 to + 40),
+- number of points to interpolate,
 This enables ionicModel checks and comparisons of variables that define some currents. 
 -  steady state gating
--  time constant tau
+-  time constant tau,
+
+Note that BuenoOrovio has dimensionless u - i.e 0 to +1.5
 
 ---
 
