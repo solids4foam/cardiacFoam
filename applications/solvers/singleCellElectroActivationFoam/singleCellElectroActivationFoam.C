@@ -57,8 +57,7 @@ Author
 #include "fvCFD.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "stimulusIO.H"
 
 int main(int argc, char *argv[])
 {
@@ -80,14 +79,14 @@ int main(int argc, char *argv[])
     solutionVariablesMemory.lookup("ionicModel") >> modelName;
 
     fileName outFile =
-        ionicModelIO::createOutputFile
-        (
-            solutionVariablesMemory,modelName,
-            ionicModel->tissueName(), runTime
+        runTime.path()
+      / (
+            modelName + "_" + ionicModel->tissueName() + "_" +
+            stimulusIO::protocolSuffix(solutionVariablesMemory) +".txt"
         );
 
-    OFstream output(outFile);
-    ionicModel->writeHeader(output);
+     OFstream output(outFile);
+     ionicModel->writeHeader(output);
 
 
 
@@ -101,30 +100,31 @@ int main(int argc, char *argv[])
         dummyStates[0].setSize(ionicModel->nEqns());
         scalarField dummyVmField(1, 0);
         scalarField dummyIonicCurrentField(1, 0);
-
+        scalar t0 = runTime.value() - runTime.deltaTValue();
+        scalar dt = runTime.deltaTValue();
+        scalar t1 = t0 + dt;
 
         ionicModel->solveODE
         (
-            runTime.value() - runTime.deltaTValue(),
-            runTime.deltaTValue(),
+            t0,
+            dt,
             dummyVmField, dummyIonicCurrentField,
             dummyStates
         );
 
-        ionicModelIO::writeTimestep
-            (*ionicModel, output,solutionVariablesMemory, runTime);
+        if (stimulusIO::shouldWriteStep(t0, t1, solutionVariablesMemory,false))
+                {ionicModel->write(runTime.value(), output);}
     }
 
-    Info<< nl
-        << "Results written to: " << output.name() << nl
-        << "Format: [Time STATES ALGEBRAIC RATES]" << nl
-        << endl;
-
+    Info<< nl;
     runTime.printExecutionTime(Info);
-
-    Info<< "End" << nl << endl;
+    Info<< "End" << nl;
+    Info<< "Results written to: " << output.name() << nl;
+    Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
 
     return 0;
+    
 }
+
 
 
