@@ -2,120 +2,6 @@
 
 namespace Foam {
 
-    fileName ionicModelIO::createOutputFile
-    (
-        const dictionary& dict,
-        const word& modelName,
-        const word& tissueName,
-        const Time& runTime
-    )
-    {
-        label s1 = readLabel(dict.lookup("stim_period_S1"));
-        label s2 = dict.found("stim_period_S2")
-                    ? readLabel(dict.lookup("stim_period_S2"))
-                    : -1;
-
-        const bool protocolMode = (s2 > 0);
-
-        if (protocolMode)
-        {
-            return runTime.path()
-                / (modelName + "_" + tissueName + "_"
-                + name(s1) + "-" + name(s2) + "ms.txt");
-        }
-        else
-        {
-            return runTime.path()
-                / (modelName + "_" + tissueName + ".txt");
-        }
-    }
-
-    bool ionicModelIO::shouldWriteStep
-    (
-        const dictionary& dict,
-        const scalar currentTime
-    )
-    {
-        label s2 = dict.found("stim_period_S2")
-            ? readLabel(dict.lookup("stim_period_S2"))
-            : -1;
-
-        const bool protocolMode = (s2 > 0);
-
-        if (!protocolMode)
-        {
-            // Regular pacing → always write
-            return true;
-        }
-
-        // S1–S2 protocol: only write after 8 seconds
-        return currentTime > 8.0;
-    }
-
-    void ionicModelIO::writeTimestep
-    (
-        ionicModel& model,
-        OFstream& os,
-        const dictionary& dict,
-        const Time& runTime
-    )
-    {
-        if (!shouldWriteStep(dict, runTime.value()))
-        {
-            return;
-        }
-
-        model.write(runTime.value(), os);
-    }
-
-
-    void ionicModelIO::loadStimulusConstants
-    (
-        const dictionary& dict,
-        scalarField& CONSTANTS,
-        label stim_start,
-        label stim_period_S1,
-        label stim_duration,
-        label stim_amplitude,
-        label nstim1,
-        label stim_period_S2,
-        label nstim2
-    )
-    {
-        const char* requiredKeys[] =
-        {
-            "stim_start",
-            "stim_period_S1",
-            "stim_duration",
-            "stim_amplitude"
-        };
-
-        for (const char* k : requiredKeys)
-        {
-            if (!dict.found(k))
-            {
-                FatalErrorInFunction
-                    << "Missing required stimulus key: " << k
-                    << exit(FatalError);
-            }
-        }
-
-        CONSTANTS[stim_start]      = readScalar(dict.lookup("stim_start"));
-        CONSTANTS[stim_period_S1]  = readScalar(dict.lookup("stim_period_S1"));
-        CONSTANTS[stim_duration]   = readScalar(dict.lookup("stim_duration"));
-        CONSTANTS[stim_amplitude]  = readScalar(dict.lookup("stim_amplitude"));
-
-        // Optional keys
-        if (dict.found("nstim1"))
-            CONSTANTS[nstim1] = readScalar(dict.lookup("nstim1"));
-        if (dict.found("stim_period_S2"))
-            CONSTANTS[stim_period_S2] = readScalar(dict.lookup("stim_period_S2"));
-        if (dict.found("nstim2"))
-            CONSTANTS[nstim2] = readScalar(dict.lookup("nstim2"));
-    }
-
-
-
     void ionicModelIO::writeHeader
     (
         OFstream& os,
@@ -213,7 +99,7 @@ namespace Foam {
         int nStates,
         const char* const algNames[],
         int nAlg,
-        PtrList<volScalarField>& outFields
+        List<volScalarField*>& outFields
     )
     {
         // 1. mapping
@@ -226,31 +112,25 @@ namespace Foam {
             stateIndex,
             algIndex
         );
-
+    
         // 2. Populate volScalarFields
         forAll(STATES, cellI)
         {
             const scalarField& S = STATES[cellI];
             const scalarField& A = ALGEBRAIC[cellI];
-
+    
             forAll(outFields, k)
             {
                 if (stateIndex[k] >= 0)
-                {
-                    outFields[k][cellI] = S[stateIndex[k]];
-                }
+                    (*outFields[k])[cellI] = S[stateIndex[k]];
                 else
-                {
-                    outFields[k][cellI] = A[algIndex[k]];
-                }
+                    (*outFields[k])[cellI] = A[algIndex[k]];
             }
         }
-
+    
         // 3. Boundaries
         forAll(outFields, k)
-        {
-            outFields[k].correctBoundaryConditions();
-        }
+            outFields[k]->correctBoundaryConditions();
     }
 
     void Foam::ionicModelIO::debugPrintFields
@@ -347,9 +227,62 @@ namespace Foam {
         mapped:;
         }
     }
-}
+    void Foam::ionicModelIO::writeOneSweepRow
+    (
+        OFstream& os,
+        scalar V,
+        const wordList& deps,
+        const scalarField& STATES,
+        const scalarField& ALG,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg
+    )
+    {
+        List<label> stateIndex, algIndex;
+    
+        mapVariableNames(
+            deps,
+            stateNames, nStates,
+            algNames, nAlg,
+            stateIndex, algIndex
+        );
+    
+        os << V;
+    
+        forAll(deps, i)
+        {
+            if (stateIndex[i] >= 0)
+                os << "," << STATES[stateIndex[i]];
+            else if (algIndex[i] >= 0)
+                os << "," << ALG[algIndex[i]];
+            else
+                os << ",0";
+        }
+        os << nl;
+    }
+    void Foam::ionicModelIO::writeSweepHeader
+    (
+        OFstream& os,
+        const wordList& deps
+    )
+    {
+        os << "V";
+        forAll(deps, i)
+        {
+            os << "," << deps[i];
+        }
+        os << nl;
+    }
+
+
+
+} // End namespace Foam
 
 
 
 
 
+
+    

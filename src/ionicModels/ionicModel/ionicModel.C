@@ -107,3 +107,9 @@ Foam::ionicModel::~ionicModel()
 
 
 // ************************************************************************* //
+
+bool Foam::ionicModel::utilitiesMode() const
+{
+return dict_.found("utilities") && readBool(dict_.lookup("utilities"));
+}
+

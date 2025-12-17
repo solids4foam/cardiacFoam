@@ -15,49 +15,10 @@ class ionicModelIO
 {
 public:
 
-    // Create output filename based on model/tissue/S1-S2 protocol
-    static fileName createOutputFile
-    (
-        const dictionary& dict,
-        const word& modelName,
-        const word& tissueName,
-        const Time& runTime
-    );
 
-    // Decide if this timestep should be written
-    static bool shouldWriteStep
-    (
-        const dictionary& dict,
-        const scalar currentTime
-    );
-
-    // Write a timestep (handles protocol logic)
-    static void writeTimestep
-    (
-        ionicModel& model,
-        OFstream& os,
-        const dictionary& dict,
-        const Time& runTime
-    );
-
-    // load stimulus constants
-    static void loadStimulusConstants
-    (
-        const dictionary& dict,
-        scalarField& CONSTANTS,
-
-        label stim_start,
-        label stim_period_S1,
-        label stim_duration,
-        label stim_amplitude,
-        label nstim1,
-        label stim_period_S2,
-        label nstim2
-    );
-
-    // Existing generic writer
+    // Existing generic writer 
     typedef scalar (*VmTransform)(const scalarField&);
-
+    
     static void writeHeader
     (
         OFstream& os,
@@ -94,7 +55,7 @@ public:
         int nStates,
         const char* const algNames[],
         int nAlg,
-        PtrList<volScalarField>& outFields
+        List<volScalarField*>& outFields
     );
     static void debugPrintFields
     (
@@ -124,7 +85,28 @@ public:
     List<label>& algIndex
     );
 
+    static void writeOneSweepRow
+    (
+        OFstream& os,
+        scalar V,
+        const wordList& deps,
+        const scalarField& STATES,
+        const scalarField& ALG,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg
+    );
 
+    static void writeSweepHeader
+    (
+    OFstream& os,
+    const wordList& deps
+    );
+
+    
+
+    
 
 };
 
