@@ -86,8 +86,8 @@ class BuenoOrovio
 
 
         //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const;
-        virtual List<word> supportedDimensions() const
+        virtual List<word> supportedTissueTypes() const override;
+        virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
         }
@@ -113,9 +113,9 @@ class BuenoOrovio
 
         // Member Functions
 
-            virtual void writeHeader(OFstream& output) const;
+            virtual void writeHeader(OFstream& output) const override;
             //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const;
+            virtual void write(const scalar t, OFstream& output) const override;
 
 
 
@@ -127,7 +127,7 @@ class BuenoOrovio
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             virtual void solveODE
@@ -137,7 +137,7 @@ class BuenoOrovio
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             //- Number of ODE's to solve
@@ -153,7 +153,7 @@ class BuenoOrovio
                 const scalar t,
                 const scalarField& y,
                 scalarField& dydt
-            ) const;
+            ) const override;
 
 
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
@@ -169,7 +169,7 @@ class BuenoOrovio
             (
                 const Field<Field<scalar>>&,
                 PtrList<volScalarField>&
-            );
+            ) override;
 
             // Override to print variables in solver
             void debugPrintFields
@@ -178,7 +178,16 @@ class BuenoOrovio
                 scalar t1,
                 scalar t2,
                 scalar step
-            ) const;
+            ) const override;
+
+            virtual void sweepCurrent
+            (
+                const word& currentName,
+                scalar Vmin,
+                scalar Vmax,
+                label nPts,
+                const fileName& outputFile
+            ) const override;
 
 
 };

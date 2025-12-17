@@ -247,8 +247,7 @@ public:
             volScalarField& u3,
             const volVectorField& C
         )
-        {
-        }
+        {}
 
         //- Jacobian for solving the coupled system of ODEs
         virtual void jacobian
@@ -334,8 +333,7 @@ public:
             scalar,
             scalar
         ) const
-        {
-        }
+        {}
 
         // Return names of variables to export
         virtual wordList exportedFieldNames() const
