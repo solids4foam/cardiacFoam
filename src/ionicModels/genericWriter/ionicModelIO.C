@@ -2,7 +2,7 @@
 
 namespace Foam {
 
-    void ionicModelIO::writeHeader
+    void Foam::ionicModelIO::writeHeader
     (
         OFstream& os,
         const char* const stateNames[],
@@ -12,19 +12,16 @@ namespace Foam {
     )
     {
         os << "time Vm";
-
         // States
         for (int i = 1; i < nStates; ++i)
         {
             os << " " << stateNames[i];
         }
-
         // Algebraic
         for (int i = 0; i < nAlg; ++i)
         {
             os << " " << algNames[i];
         }
-
         // Rates
         for (int i = 0; i < nStates; ++i)
         {
@@ -34,8 +31,24 @@ namespace Foam {
         os << endl;
     }
 
+    void Foam::ionicModelIO::writeSelectedHeader
+    (
+        OFstream& os,
+        const wordList& exportedNames
+    )
+    {
+        os << "time";
 
-    void ionicModelIO::write
+        forAll(exportedNames, k)
+        {
+            os << " " << exportedNames[k];
+        }
+
+        os << nl;
+    }
+
+
+    void Foam::ionicModelIO::write
     (
         scalar t,
         OFstream& os,
@@ -73,9 +86,57 @@ namespace Foam {
         os << endl;
     }
 
+    void Foam::ionicModelIO::writeSelected
+    (
+        const scalar t,
+        OFstream& os,
+        const PtrList<scalarField>& STATES,
+        const PtrList<scalarField>& ALGEBRAIC,
+        const wordList& exportedNames,
+        const char* const stateNames[],
+        int nStates,
+        const char* const algNames[],
+        int nAlg
+    )
+    {
+        // 1. mapping (same as exportStateFields)
+        List<label> stateIndex, algIndex;
+
+        mapVariableNames
+        (
+            exportedNames,
+            stateNames, nStates,
+            algNames,  nAlg,
+            stateIndex,
+            algIndex
+        );
+
+        // 2. single cell only
+        const scalarField& S = STATES[0];
+        const scalarField& A = ALGEBRAIC[0];
+
+        // 3. write
+        os << t;
+
+        forAll(stateIndex, k)
+        {
+            if (stateIndex[k] >= 0)
+            {
+                os << " " << S[stateIndex[k]];
+            }
+            else
+            {
+                os << " " << A[algIndex[k]];
+            }
+        }
+
+        os << nl;
+    }
+
+
     Foam::wordList Foam::ionicModelIO::exportedFieldNames
     (
-    const wordList& userList,
+        const wordList& userList,
         const char* const stateNames[],
         label nStates,
         const char* const algNames[],
@@ -233,6 +294,12 @@ namespace Foam {
         mapped:;
         }
     }
+
+
+
+
+
+
 
     void Foam::ionicModelIO::writeOneSweepRow
     (

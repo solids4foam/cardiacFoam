@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
     word modelName;
     solutionVariablesMemory.lookup("ionicModel") >> modelName;
 
+
     fileName outFile =
         runTime.path()
       / (
@@ -86,8 +87,17 @@ int main(int argc, char *argv[])
         );
 
      OFstream output(outFile);
-     ionicModel->writeHeader(output);
+     output.setf(std::ios::fixed);
+     output.precision(7);
+     // Extract the names of the fields to be exported
+    const wordList exportNames = ionicModel->exportedFieldNames();
+    if (!exportNames.empty())
+    {
+        Info<< "Exporting fields: " << exportNames << nl;
+    }
 
+     ionicModel->writeHeader(output);
+    
 
 
     //Loop for the ODE solver

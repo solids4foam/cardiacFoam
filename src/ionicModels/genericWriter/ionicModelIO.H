@@ -27,6 +27,13 @@ public:
         const char* const algNames[],
         int nAlg
     );
+    static void writeSelectedHeader
+    (
+    OFstream& os,
+    const wordList& exportedNames
+    );
+
+
     static void write
     (
         scalar t,
@@ -36,6 +43,20 @@ public:
         const PtrList<scalarField>& RATES,
         VmTransform transformVm
     );
+
+    static void writeSelected
+    (
+    const scalar t,
+    OFstream& os,
+    const PtrList<scalarField>& STATES,
+    const PtrList<scalarField>& ALGEBRAIC,
+    const wordList& exportedNames,
+    const char* const stateNames[],
+    label nStates,
+    const char* const algNames[],
+    label nAlg
+    );
+
 
     static wordList exportedFieldNames
     (
