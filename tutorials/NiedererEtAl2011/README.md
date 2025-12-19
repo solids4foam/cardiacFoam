@@ -47,6 +47,7 @@ NiedererEtAl2011/
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setupNiedererEtAl2012
+│   └── automated simulation pipeline
 │   └── post-processing and reference scripts
 ├── Allrun
 └── Allclean
@@ -108,6 +109,9 @@ or, for the eikonal solver in parallel:
 
 Results can be post-processed to extract activation times and compared against
 published benchmark data or other simulation codes.
+The code presented in the setup runs several simulations and run the post-process
+for mesh and time dependant activation times. 
+
 
 ---
 
