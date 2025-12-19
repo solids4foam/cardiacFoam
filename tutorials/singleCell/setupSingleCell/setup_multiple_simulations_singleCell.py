@@ -17,7 +17,6 @@ BASE_DIR = SCRIPT_DIR.parent
 CONFIG = {
     # run_cases.sh is in setupSingleCell/
     "run_cases_script": SCRIPT_DIR / "run_cases.sh",
-
     # where to collect all .txt outputs
     "output_folder": BASE_DIR / "singleCellOutputs",
 }
@@ -148,7 +147,7 @@ def run_single_cell_cases() -> None:
     # Properties file inside the base case directory
     tissue_file = BASE_DIR / "constant" / PROPERTIES_FILE_NAME
     stimulus_file = BASE_DIR / "constant" / STIMULUS_FILE_NAME
-    print(f"Using properties file: {tissue_file}")
+    print(f"Using properties file: {tissue_file} and stimulus file: {stimulus_file}")
 
     # Build (tissue, model) combinations dynamically
     pairs = []

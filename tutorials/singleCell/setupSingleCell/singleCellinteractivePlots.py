@@ -108,18 +108,12 @@ def load_simulation_data(filename):
     df = pd.DataFrame(data, columns=header)
     return df, header
 
-def categorize_columns(header, n_states, model_name=None):
+def categorize_columns(header, n_states):
 
-    if model_name == "BuenoOrovio":
-
-        states = header[1:n_states+2]              
-        rates = header[-n_states:]                
-        algebraic = header[n_states+2:-n_states]  
-        # Optional: you can adjust if algebraic length is wrong
-    else:
-        states = header[1:n_states+1]
-        rates = header[-n_states:]
-        algebraic = header[n_states+1:-n_states]
+    
+    states = header[1:n_states+1]
+    rates = header[-n_states:]
+    algebraic = header[n_states+1:-n_states]
 
     return states, rates, algebraic
 
