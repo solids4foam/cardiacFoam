@@ -308,30 +308,61 @@ void Foam::BuenoOrovio::debugPrintFields
 }
 
 
-
-//Writing functions for singleCell implementation
 void Foam::BuenoOrovio::writeHeader(OFstream& os) const
 {
-    ionicModelIO::writeHeader(
-        os,
-        BuenoOrovioSTATES_NAMES,NUM_STATES,
-        BuenoOrovioALGEBRAIC_NAMES,NUM_ALGEBRAIC
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelectedHeader(os, names);
+    }
+    else
+    {
+        ionicModelIO::writeHeader
+        (
+            os,
+            BuenoOrovioSTATES_NAMES, NUM_STATES,
+            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 }
+
+
 
 static Foam::scalar BO_vm(const Foam::scalarField& S)
 {
     return S[0] * 85.7 - 84.0;
 }
+
 void Foam::BuenoOrovio::write(const scalar t, OFstream& os) const
 {
-    ionicModelIO::write(
-        t,os,
-        STATES_,ALGEBRAIC_,
-        RATES_,
-        BO_vm
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelected
+        (
+            t, os,
+            STATES_, ALGEBRAIC_,
+            names,
+            BuenoOrovioSTATES_NAMES, NUM_STATES,
+            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+    else
+    {
+        ionicModelIO::write
+        (
+            t,
+            os,
+            STATES_, ALGEBRAIC_, RATES_,
+            BO_vm
+        );
+    }
 }
+
+
+
 
 void Foam::BuenoOrovio::sweepCurrent
 (

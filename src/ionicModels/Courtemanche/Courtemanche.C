@@ -302,29 +302,57 @@ void Foam::Courtemanche::debugPrintFields
 
 
 
-//Writing functions for singleCell implementation
 void Foam::Courtemanche::writeHeader(OFstream& os) const
 {
-    ionicModelIO::writeHeader(
-        os,
-        CourtemancheSTATES_NAMES,NUM_STATES,
-        CourtemancheALGEBRAIC_NAMES,NUM_ALGEBRAIC
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelectedHeader(os, names);
+    }
+    else
+    {
+        ionicModelIO::writeHeader
+        (
+            os,
+            CourtemancheSTATES_NAMES, NUM_STATES,
+            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 }
 
 static Foam::scalar Courtemanche_vm(const Foam::scalarField& S)
 {
     return S[0];
 }
+
 void Foam::Courtemanche::write(const scalar t, OFstream& os) const
 {
-    ionicModelIO::write(
-        t,os,
-        STATES_,ALGEBRAIC_,
-        RATES_,
-        Courtemanche_vm
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelected
+        (
+            t, os,
+            STATES_, ALGEBRAIC_,
+            names,
+            CourtemancheSTATES_NAMES, NUM_STATES,
+            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+    else
+    {
+        ionicModelIO::write
+        (
+            t,
+            os,
+            STATES_, ALGEBRAIC_, RATES_,
+            Courtemanche_vm
+        );
+    }
 }
+
 
 
 void Foam::Courtemanche::sweepCurrent
