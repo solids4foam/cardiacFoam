@@ -2,7 +2,6 @@ ionicModel/ionicModel.C
 genericWriter/ionicModelIO.C
 genericWriter/stimulusIO.C
 ionicModel/ionicSelector.C
-genericWriter/stimulusIO.C
 
 tmanufacturedFDA/tmanufacturedFDA.C
 

@@ -300,30 +300,56 @@ void Foam::Gaur::debugPrintFields
 
 
 
-//Writing functions for singleCell implementation
 void Foam::Gaur::writeHeader(OFstream& os) const
 {
-    ionicModelIO::writeHeader(
-        os,
-        GaurSTATES_NAMES,NUM_STATES,
-        GaurALGEBRAIC_NAMES,NUM_ALGEBRAIC
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelectedHeader(os, names);
+    }
+    else
+    {
+        ionicModelIO::writeHeader
+        (
+            os,
+            GaurSTATES_NAMES, NUM_STATES,
+            GaurALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 }
 
 static Foam::scalar Gaur_vm(const Foam::scalarField& S)
 {
     return S[0];
 }
+
 void Foam::Gaur::write(const scalar t, OFstream& os) const
 {
-    ionicModelIO::write(
-        t,os,
-        STATES_,ALGEBRAIC_,
-        RATES_,
-        Gaur_vm
-    );
-}
+    const wordList names = exportedFieldNames();
 
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelected
+        (
+            t, os,
+            STATES_, ALGEBRAIC_,
+            names,
+            GaurSTATES_NAMES, NUM_STATES,
+            GaurALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+    else
+    {
+        ionicModelIO::write
+        (
+            t,
+            os,
+            STATES_, ALGEBRAIC_, RATES_,
+            Gaur_vm
+        );
+    }
+}
 void Foam::Gaur::sweepCurrent
 (
     const word& currentName,

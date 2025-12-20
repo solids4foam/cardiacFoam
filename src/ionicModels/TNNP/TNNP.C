@@ -308,28 +308,55 @@ void Foam::TNNP::debugPrintFields
 
 
 
-//Writing functions for singleCell implementation
+
 void Foam::TNNP::writeHeader(OFstream& os) const
 {
-    ionicModelIO::writeHeader(
-        os,
-        TNNP_STATES_NAMES,NUM_STATES,
-        TNNP_ALGEBRAIC_NAMES,NUM_ALGEBRAIC
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelectedHeader(os, names);
+    }
+    else
+    {
+        ionicModelIO::writeHeader
+        (
+            os,
+            TNNP_STATES_NAMES, NUM_STATES,
+            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
 }
 
 static Foam::scalar TNNP_vm(const Foam::scalarField& S)
 {
     return S[0];
 }
+
 void Foam::TNNP::write(const scalar t, OFstream& os) const
 {
-    ionicModelIO::write(
-        t,os,
-        STATES_,ALGEBRAIC_,
-        RATES_,
-        TNNP_vm
-    );
+    const wordList names = exportedFieldNames();
+
+    if (!names.empty())
+    {
+        ionicModelIO::writeSelected
+        (
+            t, os,
+            STATES_, ALGEBRAIC_,
+            names,
+            TNNP_STATES_NAMES, NUM_STATES,
+            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
+        );
+    }
+    else
+    {
+        ionicModelIO::write
+        (
+            t,os,
+            STATES_,ALGEBRAIC_,
+            RATES_,TNNP_vm
+        );
+    }
 }
 
 
