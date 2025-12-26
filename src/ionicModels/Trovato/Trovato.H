@@ -16,13 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Gaur
+    Foam::Trovato
 
 Description
-    Wrapper class for calling from the cellML ionic model for the Gaur model.
+    Wrapper class for calling from the cellML ionic model for the Trovato model.
 
 SourceFiles
-    Gaur.C
+    Trovato.C
 
 Author
     Philip Cardiff, UCD.
@@ -30,13 +30,13 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Gaur_H
-#define Gaur_H
+#ifndef Trovato_H
+#define Trovato_H
 
 #include "ionicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "Gaur_2021Names.H"
+#include "Trovato_2019Names.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -44,10 +44,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class Gaur Declaration
+                         Class Trovato Declaration
 \*---------------------------------------------------------------------------*/
 
-class Gaur
+class Trovato
 :
     public ionicModel
 {
@@ -72,16 +72,16 @@ class Gaur
     // Private Member Functions
 
         //- No copy construct
-        Gaur(const Gaur&) = delete;
+        Trovato(const Trovato&) = delete;
 
         //- No copy assignment
-        void operator=(const Gaur&) = delete;
+        void operator=(const Trovato&) = delete;
 
 
         public:
 
         //- Runtime type information
-        TypeName("Gaur");
+        TypeName("Trovato");
 
 
         //override the only available tissue in this model
@@ -97,7 +97,7 @@ class Gaur
 
             //- Construct given a dictionary, the number of integration points and a
             //  initial time step for the ODE solver
-            Gaur
+            Trovato
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
@@ -107,7 +107,7 @@ class Gaur
 
 
         //- Destructor
-        virtual ~Gaur();
+        virtual ~Trovato();
 
 
         // Member Functions
