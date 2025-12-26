@@ -16,13 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Gaur
+    Foam::Fabbri
 
 Description
-    Wrapper class for calling from the cellML ionic model for the Gaur model.
+    Wrapper class for calling from the cellML ionic model for the Fabbri model.
 
 SourceFiles
-    Gaur.C
+    Fabbri.C
 
 Author
     Philip Cardiff, UCD.
@@ -30,13 +30,13 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Gaur_H
-#define Gaur_H
+#ifndef Fabbri_H
+#define Fabbri_H
 
 #include "ionicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "Gaur_2021Names.H"
+#include "Fabbri_2017Names.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -44,10 +44,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class Gaur Declaration
+                         Class Fabbri Declaration
 \*---------------------------------------------------------------------------*/
 
-class Gaur
+class Fabbri
 :
     public ionicModel
 {
@@ -72,16 +72,16 @@ class Gaur
     // Private Member Functions
 
         //- No copy construct
-        Gaur(const Gaur&) = delete;
+        Fabbri(const Fabbri&) = delete;
 
         //- No copy assignment
-        void operator=(const Gaur&) = delete;
+        void operator=(const Fabbri&) = delete;
 
 
         public:
 
         //- Runtime type information
-        TypeName("Gaur");
+        TypeName("Fabbri");
 
 
         //override the only available tissue in this model
@@ -97,7 +97,7 @@ class Gaur
 
             //- Construct given a dictionary, the number of integration points and a
             //  initial time step for the ODE solver
-            Gaur
+            Fabbri
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
@@ -107,7 +107,7 @@ class Gaur
 
 
         //- Destructor
-        virtual ~Gaur();
+        virtual ~Fabbri();
 
 
         // Member Functions

@@ -16,13 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Gaur
+    Foam::ToRORd_dynCl
 
 Description
-    Wrapper class for calling from the cellML ionic model for the Gaur model.
+    Wrapper class for calling from the cellML ionic model for the ToRORd_dynCl model.
 
 SourceFiles
-    Gaur.C
+    ToRORd_dynCl.C
 
 Author
     Philip Cardiff, UCD.
@@ -30,13 +30,13 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Gaur_H
-#define Gaur_H
+#ifndef ToRORd_dynCl_H
+#define ToRORd_dynCl_H
 
 #include "ionicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "Gaur_2021Names.H"
+#include "ToRORd_dynCl_2023Names.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -44,10 +44,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class Gaur Declaration
+                         Class ToRORd_dynCl Declaration
 \*---------------------------------------------------------------------------*/
 
-class Gaur
+class ToRORd_dynCl
 :
     public ionicModel
 {
@@ -72,16 +72,16 @@ class Gaur
     // Private Member Functions
 
         //- No copy construct
-        Gaur(const Gaur&) = delete;
+        ToRORd_dynCl(const ToRORd_dynCl&) = delete;
 
         //- No copy assignment
-        void operator=(const Gaur&) = delete;
+        void operator=(const ToRORd_dynCl&) = delete;
 
 
         public:
 
         //- Runtime type information
-        TypeName("Gaur");
+        TypeName("ToRORd_dynCl");
 
 
         //override the only available tissue in this model
@@ -97,7 +97,7 @@ class Gaur
 
             //- Construct given a dictionary, the number of integration points and a
             //  initial time step for the ODE solver
-            Gaur
+            ToRORd_dynCl
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
@@ -107,7 +107,7 @@ class Gaur
 
 
         //- Destructor
-        virtual ~Gaur();
+        virtual ~ToRORd_dynCl();
 
 
         // Member Functions
