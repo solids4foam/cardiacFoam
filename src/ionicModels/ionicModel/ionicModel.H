@@ -40,6 +40,7 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
+#include "electromechanicsFeedbackProvider.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -54,7 +55,8 @@ namespace Foam
 
 class ionicModel
 :
-    public ODESystem
+    public ODESystem,
+    public CouplingSignalProvider
 {
     // Private Data
 
@@ -191,6 +193,11 @@ public:
 
 //-----------------------Member Functions ---------------------//
 
+        /// --- CouplingSignalProvider interface ---
+        bool hasSignal(CouplingSignal s) const override;
+        scalar signal(label i, CouplingSignal s) const override;
+        
+
 //-----------------------Solver Functions ---------------------//
         //- ODE solver
         ODESolver& odeSolver()
@@ -214,7 +221,7 @@ public:
         )= 0;
 
         //- Number of ODE's to solve
-        virtual label nEqns() const = 0;
+        virtual label nEqns() const override = 0;
 
         //- Derivatives of each ODE with respect to the primary unknown in that
         //  equation - right side of the equation
@@ -223,7 +230,7 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const = 0;
+        ) const override = 0;
 
 
         //- Solve and ODE system for the start time, the time-step and the
@@ -256,7 +263,7 @@ public:
             const scalarField& y,
             scalarField& dfdt,
             scalarSquareMatrix& dfdy
-        ) const
+        ) const override
         {
             notImplemented
             (
@@ -375,4 +382,3 @@ public:
 #endif
 
 // ************************************************************************* //
-

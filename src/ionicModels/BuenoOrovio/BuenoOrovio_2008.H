@@ -163,7 +163,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         RATES[s] = ((1.0 + tanh(CONSTANTS[kS] * (STATES[u] - CONSTANTS[uS]))) / 2.0 - STATES[s]) / ALGEBRAIC[tauS];
 
-        RATES[u] = 0.0;
 
         ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
 
