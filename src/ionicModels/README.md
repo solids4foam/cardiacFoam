@@ -27,7 +27,6 @@ ionicModels/
 ├── TNNP/               # Ten Tusscher–Noble–Noble–Panfilov 2004 model
 ├── tmanufacturedFDA/   # Manufactured-solution / FDA verification model
 ├── ionicModel/         # Base class, selectors, utility functions
-├── genericWriter/      # Common I/O for single-cell and 3D output
 ├── Make/               # Build system files
 └── README.md
 ```
@@ -137,7 +136,7 @@ tmanufacturedFDA/
 
 ## I/O utilities: `ionicModelIO`
 
-Located in `genericWriter/`.
+Located in `../genericWriter/`.
 
 This module centralises:
 
