@@ -1,34 +1,94 @@
 #!/bin/bash
 
 # Usage:
-#   ./plot.sh        -> plots the latest txt file
-#   ./plot.sh all    -> plots all txt files
+#   ./plotVoltage.sh
+#   ./plotVoltage.sh AV_u
+#   ./plotVoltage.sh all AV_u
+
+mode="latest"
+var=""
 
 if [ "$1" == "all" ]; then
-    files=$(ls -t *.txt 2>/dev/null)
-    if [ -z "$files" ]; then
-        echo "No .txt files found in $(pwd)."
-        exit 1
-    fi
-    echo "Plotting all txt files..."
-    gnuplot -persist <<EOF
-set title "Voltage Plot: All Files"
-set xlabel "Time"
-set ylabel "Voltage (mV)"
-plot for [f in system('ls -t *.txt')] f using 1:2 with lines title f
-EOF
+    mode="all"
+    var="$2"
 else
-    # Default: plot the most recent txt file
-    latest=$(ls -t *.txt 2>/dev/null | head -n 1)
-    if [ -z "$latest" ]; then
-        echo "No .txt files found in $(pwd)."
-        exit 1
+    var="$1"
+fi
+
+# Select files
+if [ "$mode" == "all" ]; then
+    files=$(ls -t *.txt 2>/dev/null)
+else
+    files=$(ls -t *.txt 2>/dev/null | head -n 1)
+fi
+
+if [ -z "$files" ]; then
+    echo "No .txt files found in $(pwd)."
+    exit 1
+fi
+
+ref=$(echo "$files" | head -n 1)
+
+# Print header (so user sees available variables)
+echo "--------------------------------------------------"
+echo "Header of $ref:"
+head -n 1 "$ref"
+echo "--------------------------------------------------"
+
+# Voltage column (assumed column 2 as before)
+vcol=2
+
+# Optional variable column (by header name)
+if [ -n "$var" ]; then
+    col=$(awk -v v="$var" '
+    NR==1{
+      for(i=1;i<=NF;i++){
+        if($i==v){print i; exit}
+      }
+      exit
+    }' "$ref")
+
+    if [ -z "$col" ]; then
+        echo "Variable '$var' not found in header."
+        exit 2
     fi
-    echo "Plotting $latest ..."
-    gnuplot -persist <<EOF
-set title "Voltage Plot: $latest"
+fi
+
+echo "Plotting files:"
+echo "$files"
+
+# Build gnuplot plot commands for Vm and optional var
+if [ "$mode" == "all" ]; then
+    vmPlotCmd="plot for [f in system('ls -t *.txt')] f using 1:${vcol} with lines title f"
+    if [ -n "$var" ]; then
+        varPlotCmd="plot for [f in system('ls -t *.txt')] f using 1:${col} with lines title f"
+    fi
+else
+    vmPlotCmd="plot \"${ref}\" using 1:${vcol} with lines title \"Vm\""
+    if [ -n "$var" ]; then
+        varPlotCmd="plot \"${ref}\" using 1:${col} with lines title \"${var}\""
+    fi
+fi
+
+# Plot Vm (window 1)
+gnuplot -persist <<EOF
+set term qt font "DejaVu Sans,10"
+set title "Voltage Plot (Vm)"
 set xlabel "Time"
 set ylabel "Voltage (mV)"
-plot "$latest" using 1:2 with lines title "Vm"
+set key outside
+${vmPlotCmd}
+EOF
+
+# Plot var separately (window 2), only if requested
+if [ -n "$var" ]; then
+    echo "Also plotting '$var' separately (column $col)"
+    gnuplot -persist <<EOF
+set term qt font "DejaVu Sans,10"
+set title "Variable Plot (${var})"
+set xlabel "Time"
+set ylabel "${var}"
+set key outside
+${varPlotCmd}
 EOF
 fi
