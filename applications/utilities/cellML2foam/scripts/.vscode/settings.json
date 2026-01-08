@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "Gaur.C": "cpp",
+        "Trovato.C": "cpp",
+        "Grandi.C": "cpp",
+        "Stewart.C": "cpp",
+        "ORd.C": "cpp",
+        "Fabbri.C": "cpp",
+        "NashPanfilovActiveTensionModel.C": "cpp",
+        "NashPanfilovActiveTension.C": "cpp"
+    }
+}
