@@ -1,0 +1,12 @@
+
+
+activeTensionModel/activeTensionModel.C
+
+
+
+
+NashPanfilov/NashPanfilov.C
+
+
+
+LIB = $(FOAM_USER_LIBBIN)/libactiveTensionModels
