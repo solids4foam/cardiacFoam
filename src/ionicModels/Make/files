@@ -1,7 +1,6 @@
 ionicModel/ionicModel.C
-genericWriter/ionicModelIO.C
-genericWriter/stimulusIO.C
 ionicModel/ionicSelector.C
+
 
 tmanufacturedFDA/tmanufacturedFDA.C
 
@@ -15,6 +14,8 @@ Trovato/Trovato.C
 ORd/ORd.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
+AlievPanfilov/AlievPanfilov.C
+
 
 
 /*PerisYague/PerisYague.C*/
