@@ -154,6 +154,10 @@ class BuenoOrovio
                 scalarField& dydt
             ) const override;
 
+            // CouplingSignalProvider
+            virtual bool hasSignal(const CouplingSignal s) const override;
+            virtual scalar signal(const label i, const CouplingSignal s) const override;
+
 
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
@@ -199,4 +203,3 @@ class BuenoOrovio
 #endif
 
 // ************************************************************************* //
-

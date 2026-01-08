@@ -118,6 +118,7 @@ void Foam::BuenoOrovio::calculateCurrent
 )
 {
     const scalar tStart = stepStartTime * 1000.0;
+
     if (Im.size() != Vm.size())
     {
         FatalErrorInFunction
@@ -133,6 +134,7 @@ void Foam::BuenoOrovio::calculateCurrent
 
         // Vm in the CellML code is in mV
         STATESI[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
+
         ::BuenoOroviocomputeVariables
         (
             tStart,
@@ -143,7 +145,7 @@ void Foam::BuenoOrovio::calculateCurrent
             tissue(),
             solveVmWithinODESolver()
         );
-        // Jion  is the total ionic current density used by the PDE
+        // Jion is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
         //copy internal STATES to memory external state buffer.
@@ -425,6 +427,42 @@ void Foam::BuenoOrovio::sweepCurrent
     }
     Info<< "Sweep for " << currentName
         << " written to " << outputFile << nl;
+
+}
+
+
+
+//-------COupling signals--------//
+bool Foam::BuenoOrovio::hasSignal(const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Act:
+        case CouplingSignal::Vm:
+            return true;
+        default:
+            return false;
+    }
+}
+
+Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Act:
+            return STATES_[i][0];
+        case CouplingSignal::Vm:
+            return BO_vm(STATES_[i]);
+        default:
+            break;
+    }
+    FatalErrorInFunction
+        << "Requested coupling signal "
+        << static_cast<int>(s)
+        << " from BuenoOrovio, but this signal is not available."
+        << abort(FatalError);
+
+    return 0.0;
 }
 
 
