@@ -1,5 +1,7 @@
 EXE_INC = \
     -I../../../src/ionicModels/lnInclude \
+    -I../../../src/genericWriter/lnInclude \
+    -I../../../src/couplingModels/lnInclude \
     -I$(LIB_SRC)/ODE/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude
