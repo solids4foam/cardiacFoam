@@ -96,7 +96,7 @@ def main() -> None:
     if not args.skip_scar:
         run_step([
             py,
-            str(ROOT / "scar_fibrosis" / "scar_vtk.py"),
+            str(Path(__file__).resolve().parents[1] / "scar_creator" / "scar_vtk.py"),
             "--full-mesh", args.scar_full_mesh,
             "--selection", args.scar_selection,
             "--output", args.scar_output,

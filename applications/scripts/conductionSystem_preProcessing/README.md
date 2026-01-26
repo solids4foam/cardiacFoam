@@ -13,7 +13,7 @@ Utilities for conduction system pre-processing (Purkinje, diffusivity, scar, con
 - `lib/` core algorithms (Purkinje slab tagging, diffusion tensor, scar)
 - `utils/` VTK parsing, inspection, conversion helpers
 - `output/` default outputs
-- `purkinje_network/purkinje_slab/purkinje_vtk.py`, `diffusivity/diffusionTensor_vtk.py`, `scar_fibrosis/scar_vtk.py`, `fileConversion/ASCIIlegacyToVtkUnstructured.py` command-line tools
+- `purkinje_network/purkinje_slab/purkinje_vtk.py`, `diffusivity/diffusionTensor_vtk.py`, `../scar_creator/scar_vtk.py`, `fileConversion/ASCIIlegacyToVtkUnstructured.py` command-line tools
 
 # CLIs
 
@@ -60,7 +60,7 @@ Inputs:
 Tag scar cells using a selection mesh and change the scar area for 0 zero diffusivity in scar cells.
 
 ```
-python scar_fibrosis/scar_vtk.py --full-mesh output/purkinjeLayer_Diffusivity_IDsGlobal.vtk --selection output/scar_tissue_region.vtu --output output/purkinjeLayer_Diffusivity_scar.vtk --scar-value 1.0 --diffusivity-scale 0.1
+python ../scar_creator/scar_vtk.py --full-mesh output/purkinjeLayer_Diffusivity_IDsGlobal.vtk --selection output/scar_tissue_region.vtu --output output/purkinjeLayer_Diffusivity_scar.vtk --scar-value 1.0 --diffusivity-scale 0.1
 ```
 Output: VTK with `Scar` in `CELL_DATA` (and `Diffusivity` scaled in scar cells when present).
 
@@ -84,5 +84,5 @@ Override per-run with CLI flags where available.
 # Recommended Workflow
 1) `purkinje_network/purkinje_slab/purkinje_vtk.py` (optional)
 2) `diffusivity/diffusionTensor_vtk.py`
-3) `scar_fibrosis/scar_vtk.py`
+3) `../scar_creator/scar_vtk.py`
 4) `fileConversion/ASCIIlegacyToVtkUnstructured.py` (if you need a separate conversion/inspection step)
