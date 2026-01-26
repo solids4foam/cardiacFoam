@@ -63,24 +63,88 @@ IOdictionary stimulusProtocol
     )
 );
 
-// Read external stimulus from a bounding box
-// Find cells in the stimulus volume
-boundBox bb
-(
-    point(stimulusProtocol.lookup("stimulusLocationMin")),
-    point(stimulusProtocol.lookup("stimulusLocationMax"))
-);
+// Read external stimulus from one or more bounding boxes
+List<boundBox> stimulusBoxes;
+List<scalar> stimulusStartTimes;
 
+if
+(
+    stimulusProtocol.found("stimulusLocationMinList")
+ && stimulusProtocol.found("stimulusLocationMaxList")
+)
+{
+    List<point> mins;
+    List<point> maxs;
+    stimulusProtocol.lookup("stimulusLocationMinList") >> mins;
+    stimulusProtocol.lookup("stimulusLocationMaxList") >> maxs;
+
+    if (mins.size() != maxs.size())
+    {
+        FatalErrorInFunction
+            << "stimulusLocationMinList and stimulusLocationMaxList must "
+            << "have the same size."
+            << abort(FatalError);
+    }
+
+    stimulusBoxes.setSize(mins.size());
+    forAll(mins, i)
+    {
+        stimulusBoxes[i] = boundBox(mins[i], maxs[i]);
+    }
+}
+else
+{
+    stimulusBoxes.setSize(1);
+    stimulusBoxes[0] = boundBox
+    (
+        point(stimulusProtocol.lookup("stimulusLocationMin")),
+        point(stimulusProtocol.lookup("stimulusLocationMax"))
+    );
+}
+
+if (stimulusProtocol.found("stimulusStartTimeList"))
+{
+    stimulusProtocol.lookup("stimulusStartTimeList") >> stimulusStartTimes;
+    if (stimulusStartTimes.size() != stimulusBoxes.size())
+    {
+        FatalErrorInFunction
+            << "stimulusStartTimeList must have the same size as "
+            << "the stimulus box list."
+            << abort(FatalError);
+    }
+}
+else
+{
+    stimulusStartTimes.setSize(stimulusBoxes.size());
+    const scalar startTime =
+        stimulusProtocol.lookupOrDefault<scalar>("stimulusStartTime", 0.0);
+    forAll(stimulusStartTimes, i)
+    {
+        stimulusStartTimes[i] = startTime;
+    }
+}
+
+List<labelHashSet> stimCellSets(stimulusBoxes.size());
 labelHashSet stimCellSet;
 
 forAll(mesh.C(), cellI)
 {
-    if (bb.contains(mesh.C()[cellI]))
+    const point& c = mesh.C()[cellI];
+    forAll(stimulusBoxes, bI)
     {
-        stimCellSet.insert(cellI);
+        if (stimulusBoxes[bI].contains(c))
+        {
+            stimCellSets[bI].insert(cellI);
+            stimCellSet.insert(cellI);
+            break;
+        }
     }
 }
-const labelList stimulusCellIDs = stimCellSet.toc();
+List<labelList> stimulusCellIDsList(stimulusBoxes.size());
+forAll(stimulusBoxes, bI)
+{
+    stimulusCellIDsList[bI] = stimCellSets[bI].toc();
+}
 
 const dimensionedScalar stimulusDuration
 (
@@ -97,12 +161,13 @@ if (mesh.nGeometricD() == 3)
 {
     Info<< "---------------------------------------------" << nl
         << "3D mesh detected — stimulus parameters:"       << nl
-        << "Stimulus bounding box: " << bb                 << nl
+        << "Stimulus boxes: " << stimulusBoxes.size()      << nl
         << "Number of cells in stimulus region: "
-        << stimulusCellIDs.size()                          << nl
+        << stimCellSet.size()                              << nl
         << "Stimulus duration: "
         << stimulusDuration.value() << " "
         << stimulusDuration.dimensions()                   << nl
+        << "Stimulus start time(s): " << stimulusStartTimes << nl
         << "Stimulus intensity: "
         << stimulusIntensity.value() << " "
         << stimulusIntensity.dimensions()                  << nl

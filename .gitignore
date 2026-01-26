@@ -93,5 +93,7 @@ SunOS*Gcc*/
 *.tgz
 *.gtgz
 
-# end-of-file
-applications/scripts/conductionSystem_preProcessing/ASCIIlegacy.vtk
+
+# Generated mesh / field data (VTK)
+*.vtk
+*.vtu
