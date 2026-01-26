@@ -128,9 +128,18 @@ def interactive_remove_blank_lines(filepath, output_file=None):
 
     print(f"\nRemoved {len(indices_to_remove)} blank lines. Output written to '{output_file}'.")
 
+def remove_blank_lines(filepath, output_file=None):
+    """Remove all blank lines from a file (non-interactive)."""
+    with open(filepath, "r") as f:
+        lines = f.readlines()
 
+    new_lines = [line for line in lines if line.strip() != ""]
+    if output_file is None:
+        output_file = filepath
+    with open(output_file, "w") as f:
+        f.writelines(new_lines)
 
-
+    print(f"\nRemoved {len(lines) - len(new_lines)} blank lines. Output written to '{output_file}'.")
 
 
 def plot_mesh_surface(mesh: pv.DataSet, scalar_name: str = None, opacity: float = 0.5, cmap: str = "viridis", save_screenshot: str = None):

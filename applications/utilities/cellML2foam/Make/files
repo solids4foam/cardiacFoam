@@ -1,3 +1,0 @@
-cellML2foam.C
-
-EXE = $(FOAM_USER_APPBIN)/cellML2foam

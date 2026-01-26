@@ -1,8 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import sys
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).parent
+SRC_DIR = SCRIPT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from pipeline import (
     detect_start_stage,
@@ -99,7 +104,6 @@ Check the existing examples in the cardiacFoam library in src/ionicModels.
 
 
 
-
 ============================================================
 """
     )
@@ -169,7 +173,7 @@ def main():
             model=args.model,
             verbose=args.verbose,
         )
-        
+
         if stages is not None:
             foam_banner(args, start, stages)
             # Only create ionic folder if we reached openfoam
@@ -194,15 +198,10 @@ def main():
                 print(f"    Moved:   {len(sort_result['moved'])} files")
             print_manual_steps_notice()
 
-            
-
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
 
-    
-    
+
 if __name__ == "__main__":
     main()
-
-

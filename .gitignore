@@ -94,3 +94,4 @@ SunOS*Gcc*/
 *.gtgz
 
 # end-of-file
+applications/scripts/conductionSystem_preProcessing/ASCIIlegacy.vtk
