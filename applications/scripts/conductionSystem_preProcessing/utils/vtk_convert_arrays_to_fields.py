@@ -18,9 +18,10 @@ def write_tensors(vals):
     return out
 
 # --- Parse FIELD arrays inside a section ---
-def parse_field_arrays(lines, i, current_section):
+def parse_field_arrays(lines, i, current_section, drop_arrays=None):
     converted_blocks = []
     keep_arrays = []
+    drop_arrays = drop_arrays or set()
 
     field_header = lines[i].strip()
     tokens = field_header.split()
@@ -36,6 +37,10 @@ def parse_field_arrays(lines, i, current_section):
     i += 1
 
     for arr_idx in range(n_arrays):
+        if i >= len(lines):
+            break
+        while i < len(lines) and lines[i].strip() == "":
+            i += 1
         if i >= len(lines):
             break
         hdr = lines[i].strip()
@@ -65,6 +70,11 @@ def parse_field_arrays(lines, i, current_section):
         if current_section not in ("POINT_DATA", "CELL_DATA"):
             print(f"  WARNING: This array is outside POINT_DATA/CELL_DATA and will NOT be converted for OpenFOAM")
 
+        # Drop arrays explicitly requested
+        if name in drop_arrays:
+            print(f"Removed FIELD array '{name}' in section {current_section}.")
+            continue
+
         # Convert if valid
         if current_section in ("POINT_DATA", "CELL_DATA") and ncomp in (1, 3, 9):
             if ncomp == 1:
@@ -90,6 +100,8 @@ def convert_vtk_file(infile, outfile):
     out = []
     i = 0
     current_section = None
+    current_section_count = None
+    drop_scalar_arrays = {"vtkGhostType", "vtkOriginalPointIds", "vtkOriginalCellIds"}
 
     while i < len(lines):
         line = lines[i]
@@ -97,14 +109,50 @@ def convert_vtk_file(infile, outfile):
 
         # Track sections
         if stripped.startswith("POINT_DATA") or stripped.startswith("CELL_DATA"):
-            current_section = stripped.split()[0]
+            tokens = stripped.split()
+            current_section = tokens[0]
+            try:
+                current_section_count = int(tokens[1]) if len(tokens) > 1 else None
+            except ValueError:
+                current_section_count = None
             out.append(line)
             i += 1
             continue
 
+        # Drop GLOBAL_IDS blocks (OpenFOAM reader does not support them)
+        if stripped.startswith("GLOBAL_IDS"):
+            if current_section_count is None:
+                print("Warning: GLOBAL_IDS encountered without a valid POINT_DATA/CELL_DATA count; skipping line only.")
+                i += 1
+                continue
+            i += 1
+            _, i = read_values(lines, i, current_section_count)
+            print(f"Removed GLOBAL_IDS block with {current_section_count} entries.")
+            continue
+
+        # Drop selected SCALARS arrays (e.g., vtkGhostType, vtkOriginalPointIds)
+        if stripped.startswith("SCALARS"):
+            tokens = stripped.split()
+            name = tokens[1] if len(tokens) > 1 else ""
+            if name in drop_scalar_arrays:
+                i += 1  # skip SCALARS header
+                if i < len(lines) and lines[i].strip().startswith("LOOKUP_TABLE"):
+                    i += 1  # skip lookup table line
+                if current_section_count is None:
+                    print(f"Warning: SCALARS {name} encountered without a valid POINT_DATA/CELL_DATA count; skipping data read.")
+                else:
+                    _, i = read_values(lines, i, current_section_count)
+                print(f"Removed SCALARS '{name}' with {current_section_count if current_section_count is not None else 'unknown'} entries.")
+                continue
+
         # Handle FIELD
         if stripped.startswith("FIELD"):
-            converted_blocks, keep_arrays, i = parse_field_arrays(lines, i, current_section)
+            converted_blocks, keep_arrays, i = parse_field_arrays(
+                lines,
+                i,
+                current_section,
+                drop_arrays=drop_scalar_arrays,
+            )
             out.extend(converted_blocks)
             if keep_arrays:
                 print(f"Arrays not converted in FIELD: {keep_arrays}")
@@ -120,4 +168,3 @@ def convert_vtk_file(infile, outfile):
         f.writelines(out)
 
     print(f"Converted file written to {outfile}")
-
