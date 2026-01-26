@@ -105,7 +105,8 @@ void explicitLoopHandler::explicitLoop
     volScalarField& Iion,
     Field<Field<scalar>>& states,
     volScalarField& externalStimulusCurrent,
-    const labelList& stimulusCellIDs,
+    const List<labelList>& stimulusCellIDsList,
+    const List<scalar>& stimulusStartTimes,
     const scalar stimulusIntensity,
     const scalar stimulusDuration,
     const dimensionedScalar& chi,
@@ -123,8 +124,15 @@ void explicitLoopHandler::explicitLoop
     scalarField& externalStimulusCurrentI = externalStimulusCurrent;
     externalStimulusCurrentI = 0.0;
 
-    if (t0 <= stimulusDuration)
+    forAll(stimulusCellIDsList, bI)
     {
+        const scalar tStart = stimulusStartTimes[bI];
+        if (t0 < tStart || t0 > (tStart + stimulusDuration))
+        {
+            continue;
+        }
+
+        const labelList& stimulusCellIDs = stimulusCellIDsList[bI];
         forAll(stimulusCellIDs, cI)
         {
             const label id = stimulusCellIDs[cI];
@@ -176,5 +184,4 @@ void explicitLoopHandler::explicitLoop
     );
 
 }
-
 
