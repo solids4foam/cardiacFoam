@@ -1,0 +1,5 @@
+electroMechFoam.C
+implicitLoopHandler.C
+explicitLoopHandler.C
+
+EXE = $(FOAM_USER_APPBIN)/electroMechFoam

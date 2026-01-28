@@ -143,11 +143,48 @@ namespace Foam {
         label nAlg
     )
     {
-        if (userList.size())
+        if (!userList.size())
         {
-            return userList;
+            return Foam::wordList();
         }
-        return Foam::wordList();
+
+        wordList filtered;
+        forAll(userList, k)
+        {
+            const word& name = userList[k];
+            bool found = false;
+            for (label i = 0; i < nStates; ++i)
+            {
+                if (name == stateNames[i])
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                for (label i = 0; i < nAlg; ++i)
+                {
+                    if (name == algNames[i])
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (found)
+            {
+                filtered.append(name);
+            }
+            else
+            {
+                WarningInFunction
+                    << "Ignoring unknown ionic model variable '" << name
+                    << "'." << nl;
+            }
+        }
+
+        return filtered;
     }
 
 

@@ -103,4 +103,53 @@ void activeTensionIO::exportStateFields
     }
 }
 
+void activeTensionIO::debugPrintFields
+(
+    const wordList& printedNames,
+    const wordList& availableNames,
+    const scalarField& values,
+    label cellI,
+    scalar t1,
+    scalar t2,
+    scalar step
+)
+{
+    if (printedNames.empty())
+    {
+        return;
+    }
+
+    Info<< "DEBUG cell=" << cellI
+        << " t=" << t1 << "->" << t2;
+
+    if (step >= 0)
+    {
+        Info<< " step=" << step;
+    }
+
+    forAll(printedNames, k)
+    {
+        const word& name = printedNames[k];
+        label idx = -1;
+        forAll(availableNames, i)
+        {
+            if (availableNames[i] == name)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx < 0)
+        {
+            Info<< " " << name << "=<unknown>";
+        }
+        else
+        {
+            Info<< " " << name << "=" << values[idx];
+        }
+    }
+    Info<< nl;
+}
+
 } // End namespace Foam

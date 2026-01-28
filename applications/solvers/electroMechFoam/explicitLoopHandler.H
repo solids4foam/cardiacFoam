@@ -17,24 +17,47 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef implicitLoopHandler_H
-#define implicitLoopHandler_H
+#ifndef explicitLoopHandler_H
+#define explicitLoopHandler_H
 
 #include "ionicModel.H"
-#include "pimpleControl.H"
+
 
 using namespace Foam;
 
 
-class implicitLoopHandler
+class explicitLoopHandler
 {
 private:
     ionicModel& ionicModel_;
 
-public:
-    explicit implicitLoopHandler(const fvMesh& mesh, ionicModel& model);
+    // Cached solver parameters
+    scalar dx_;
+    int dim_;
+    scalar Def_max_;
 
-    void implicitLoop
+    // Internal helper: compute dt stability limit
+    scalar computeStableDt(const scalar CFL) const;
+
+public:
+    explicitLoopHandler(const fvMesh& mesh, ionicModel& model);
+
+    // Precompute dx, dim, Def_max and update dt
+    void initializeExplicit
+    (
+        scalar& dt,
+        int& nsteps,
+        const scalar chiVal,
+        const scalar CmVal,
+        const volTensorField& conductivity,
+        const scalar CFL,
+        const scalar dx,
+        const int dim
+
+    );
+
+    // Perform one explicit time step
+    void explicitLoop
     (
         const scalar t0,
         const scalar dt,
@@ -48,8 +71,7 @@ public:
         const scalar stimulusDuration,
         const dimensionedScalar& chi,
         const dimensionedScalar& Cm,
-        const volTensorField& conductivity,
-        pimpleControl& pimple
+        const volTensorField& conductivity
     );
 };
 

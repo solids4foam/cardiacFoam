@@ -19,6 +19,7 @@ License
 
 
 #include "NashPanfilov.H"
+#include "activeTensionIO.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -81,6 +82,7 @@ void Foam::NashPanfilov::calculateTension
     scalar step         = dt ;
 
     const CouplingSignalProvider& p = provider();
+    const label monitorCell = 0;
 
     forAll(internalVariables_, integrationPtI)
     {
@@ -92,16 +94,30 @@ void Foam::NashPanfilov::calculateTension
 
         act = p.signal(integrationPtI, CouplingSignal::Act);
 
-        Info<< "NashPanfilov::calculateTension t=" << tEnd
-            << " act=" << act
-            << " Ta=" << Ta_i << nl;
-        
-    
-
         // Advance ODE system (Ta evolves, act is held constant via dydt[1]=0)
         odeSolver_->solve(tStart, tEnd, yStart, step);
 
         Ta[integrationPtI] = Ta_i;
+
+        const wordList printedNames = debugPrintedNames();
+        if (!printedNames.empty() && integrationPtI == monitorCell)
+        {
+            wordList availableNames(2);
+            availableNames[0] = "Ta";
+            availableNames[1] = "Act";
+            scalarField values(2);
+            values[0] = Ta_i;
+            values[1] = act;
+            activeTensionIO::debugPrintFields(
+                printedNames,
+                availableNames,
+                values,
+                integrationPtI,
+                tStart,
+                tEnd,
+                step
+            );
+        }
     }
 }
 
@@ -125,8 +141,6 @@ void Foam::NashPanfilov::derivatives
 
     dTadt = epsilonU*(kTa_*act - Ta);
 
-    Info<< "NashPanfilov::derivatives epsilonU=" << epsilonU
-        << " dTadt=" << dTadt << nl;
 }
 
 void Foam::NashPanfilov::jacobian

@@ -39,6 +39,17 @@ public:
         const wordList& exportedNames,
         PtrList<volScalarField>& outFields
     );
+
+    static void debugPrintFields
+    (
+        const wordList& printedNames,
+        const wordList& availableNames,
+        const scalarField& values,
+        label cellI,
+        scalar t1,
+        scalar t2,
+        scalar step
+    );
 };
 
 } // End namespace Foam

@@ -18,6 +18,7 @@
 #include "label.H"
 #include "Switch.H"
 #include "error.H"
+#include "wordList.H"
 
 #include "electromechanicsFeedbackProvider.H"
 
@@ -32,6 +33,8 @@ protected:
 
     // Optional pointer to coupling signal provider (typically ionicModel or adapter)
     const CouplingSignalProvider* providerPtr_;
+    wordList debugVarNames_;
+    wordList exportVarNames_;
 
 
 public:
@@ -53,7 +56,17 @@ public:
         dict_(dict),
         nIntegrationPoints_(nIntegrationPoints),
         providerPtr_(nullptr)
-    {}
+    {
+        if (dict_.found("ActiveTensionModel_debugPrint"))
+            dict_.lookup("ActiveTensionModel_debugPrint") >> debugVarNames_;
+        else if (dict_.found("debugPrintVariables"))
+            dict_.lookup("debugPrintVariables") >> debugVarNames_;
+
+        if (dict_.found("ActiveTensionModel_export"))
+            dict_.lookup("ActiveTensionModel_export") >> exportVarNames_;
+        else if (dict_.found("exportedVariables"))
+            dict_.lookup("exportedVariables") >> exportVarNames_;
+    }
 
     virtual ~activeTensionModel() = default;
 
@@ -101,6 +114,20 @@ public:
     label nIntegrationPoints() const
     {
         return nIntegrationPoints_;
+    }
+
+    virtual wordList debugPrintedNames() const
+    {
+        return debugVarNames_.size()
+            ? debugVarNames_
+            : wordList();
+    }
+
+    virtual wordList exportedFieldNames() const
+    {
+        return exportVarNames_.size()
+            ? exportVarNames_
+            : wordList();
     }
 
     // Main API: update active tension for all points

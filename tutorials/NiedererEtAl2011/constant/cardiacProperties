@@ -41,9 +41,12 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 //      ionicModel  Courtemanche;
 //      ionicModel  Gaur;
 
+// Variables to print in terminal (ionic model)
 
-exportedVariables (u v w s Jfi Jion);
-// debugPrintVariables (u v w s Jfi Jion);
+IonicModelVariables_export (u v w s Jfi Jion);
+IonicModelVariables_debugPrint (u v w s Jfi Jion);
+
+
 
 //specify the type of tissue or dimension
 
@@ -51,11 +54,18 @@ tissue  epicardialCells;
 // tissue endocardialCells;
 // tissue epicardiacCells;
 
-// c0 is a scaled conduction parameter (units T^{-1/2}), calibrated
-// such that c0*sqrt(M_l) equals the prescribed physical fibre
-// conduction velocity for a planar wavefront
-// c0 is only used by eikonalElectroActivationFoam
-c0    [0 0 -0.5 0 0 0 0] 40;
+
 
 
 // ************************************************************************* //
+
+Eikonal Equation
+
+c0    [0 0 -0.5 0 0 0 0] 40;
+
+
+// c0 is a scaled conduction parameter (units T^{-1/2}), calibrated
+
+// such that c0*sqrt(M_l) equals the prescribed physical fibre
+// conduction velocity for a planar wavefront
+
