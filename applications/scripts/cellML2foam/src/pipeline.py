@@ -21,11 +21,17 @@ def detect_start_stage(input_path: Path) -> str:
 
 def validate_pipeline(start: str, end: str):
     if start not in STAGES:
-        raise ValueError(f"Invalid start stage: {start}")
+        raise ValueError(
+            f"Invalid start stage: {start}. Available stages: {', '.join(STAGES)}"
+        )
     if end not in STAGES:
-        raise ValueError(f"Invalid end stage: {end}")
+        raise ValueError(
+            f"Invalid end stage: {end}. Available stages: {', '.join(STAGES)}"
+        )
     if STAGES.index(start) > STAGES.index(end):
-        raise ValueError(f"Invalid pipeline: {start} → {end}")
+        raise ValueError(
+            f"Invalid pipeline: {start} → {end}. Available stages: {', '.join(STAGES)}"
+        )
 
 
 def resolve_pipeline(start: str, end: str):
@@ -122,7 +128,29 @@ def run_coccinelle(sim_c: Path, cocci_file: Path, verbose=False):
 
 # Stage: ansic→ openfoam (mapping_variables.py)
 # ------------------------------------------------------------
-def run_mapping_variables(sim_c: Path, model: str, year: str, verbose=False):
+def split_model_spec(model_spec: str):
+    if model_spec is None:
+        return None, None
+
+    base = model_spec
+    kind = "ionic"
+    if ":" in model_spec:
+        base, kind = model_spec.rsplit(":", 1)
+
+    kind_norm = kind.strip().lower()
+    if kind_norm in ("ionic",):
+        kind = "ionic"
+    elif kind_norm in ("activetension", "active_tension", "active"):
+        kind = "activeTension"
+    else:
+        raise ValueError(
+            f"Unknown model kind '{kind}'. Use ':ionic' or ':activeTension'."
+        )
+
+    return base, kind
+
+
+def run_mapping_variables(sim_c: Path, model: str, year: str, model_kind: str, verbose=False):
     state_map = Path("state_map.txt")
     if not state_map.exists():
         raise FileNotFoundError(
@@ -139,7 +167,19 @@ def run_mapping_variables(sim_c: Path, model: str, year: str, verbose=False):
         print(f"     state_map     : {state_map}")
         print(f"     output        : {output_h}")
 
-    run_mapping(str(sim_c), output_h, verbose=verbose)
+    include_tissue_flag = model_kind == "ionic"
+    include_iion = model_kind == "ionic"
+    include_istim = model_kind == "ionic"
+    include_stimulus = model_kind == "ionic"
+    run_mapping(
+        str(sim_c),
+        output_h,
+        verbose=verbose,
+        include_tissue_flag=include_tissue_flag,
+        include_istim=include_istim,
+        include_iion=include_iion,
+        include_stimulus=include_stimulus,
+    )
 
 
 # ------------------------------------------------------------
@@ -244,12 +284,12 @@ def run_pipeline(
                 
                 To finish the process, please write the command:
                 
-                ./cellML2foam --from ansic --to openfoam --model <ModelName_Year> ansic/sim.c 
-                ./cellML2foam --from mmt --to openfoam --model <ModelName_Year>  <ModelName>.mmt
+                ./cellML2foam --from ansic --to openfoam --model <ModelName_Year>[:ionic|activeTension] ansic/sim.c 
+                ./cellML2foam --from mmt --to openfoam --model <ModelName_Year>[:ionic|activeTension] <ModelName>.mmt
 
                 Example:
 
-                ./cellML2foam --from ansic --to openfoam --model ToRORd_2023 ansic/sim.c
+                ./cellML2foam --from ansic --to openfoam --model ToRORd_2023:ionic ansic/sim.c
 
                 """
                 )
@@ -258,15 +298,17 @@ def run_pipeline(
             if model is None:
                 raise ValueError(
                     "Model name required for OpenFOAM generation.\n"
-                    "Use --model <ModelName_Year>"
+                    "Use --model <ModelName_Year>[:ionic|activeTension]"
                 )
 
-            if "_" not in model:
+            model_base, model_kind = split_model_spec(model)
+
+            if "_" not in model_base:
                 raise ValueError(
-                    "--model must be of the form <ModelName>_<Year>"
+                    "--model must be of the form <ModelName>_<Year>[:ionic|activeTension]"
                 )
 
-            name, year = model.rsplit("_", 1)
+            name, year = model_base.rsplit("_", 1)
             if not year.isdigit():
                 raise ValueError("Year in --model must be numeric")
 
@@ -289,6 +331,7 @@ def run_pipeline(
                 sim_c=current,
                 model=name,
                 year=year,
+                model_kind=model_kind,
                 verbose=verbose,
             )
             return result

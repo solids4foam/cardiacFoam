@@ -6,7 +6,7 @@ from collections import OrderedDict
 DEBUG = False
 
 # Extra constants that are not part of updateConstants()
-EXTRA_CONSTANTS = [
+STIMULUS_CONSTANTS = [
     "stim_start",
     "stim_duration",
     "stim_amplitude",
@@ -14,10 +14,6 @@ EXTRA_CONSTANTS = [
     "nstim1",
     "stim_period_S2",
     "nstim2",
-]
-EXTRA_ALGEBRAIC = [
-    "Istim",
-    "Iion_cm",
 ]
 
 
@@ -103,9 +99,17 @@ def load_state_map(fname="state_map.txt"):
     mapping = {}
     with open(fname) as f:
         for line in f:
-            if line.strip():
-                idx, name = line.split()
-                mapping[int(idx)] = name
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            parts = stripped.split()
+            if len(parts) < 2:
+                raise ValueError(
+                    f"Invalid state_map line (need: <index> <name>): {line.rstrip()}"
+                )
+            idx = parts[0]
+            name = parts[1]
+            mapping[int(idx)] = name
     return mapping
 
 
@@ -188,7 +192,7 @@ def extract_body_only(func_text):
 # Step 5: Extract CONSTANTS from updateConstants()
 # ============================================================
 
-def extract_constants_from_update_constants(src):
+def extract_constants_from_update_constants(src, include_stimulus):
     block = extract_function(src, "updateConstants")
     pattern = re.compile(r"\bCONSTANTS\[([A-Za-z_][A-Za-z0-9_]*)\]")
     names = OrderedDict()
@@ -196,8 +200,9 @@ def extract_constants_from_update_constants(src):
     for m in pattern.finditer(block):
         names[m.group(1)] = None
 
-    for c in EXTRA_CONSTANTS:
-        names.setdefault(c, None)
+    if include_stimulus:
+        for c in STIMULUS_CONSTANTS:
+            names.setdefault(c, None)
 
     return list(names.keys())
 
@@ -205,37 +210,71 @@ def extract_constants_from_update_constants(src):
 # Step 6: Rewrite function signatures
 # ============================================================
 
-def rewrite_init_consts_signature(src, model_id):
+def rewrite_init_consts_signature(src, model_id, include_tissue_flag=True, include_stimulus=True):
     pattern = re.compile(
         r"void\s*\n?\s*updateConstants\s*\([^)]*\)\s*\{",
         re.MULTILINE,
     )
 
-    replacement = (
-        f"void\n"
-        f"{model_id}initConsts("
-        f"double* CONSTANTS, double* RATES, double* STATES, "
-        f"int tissueFlag, const Foam::dictionary& stimulus"
-        f")\n{{"
-    )
+    if include_tissue_flag and include_stimulus:
+        replacement = (
+            f"void\n"
+            f"{model_id}initConsts("
+            f"double* CONSTANTS, double* RATES, double* STATES, "
+            f"int tissueFlag, const Foam::dictionary& stimulus"
+            f")\n{{"
+        )
+    elif include_tissue_flag:
+        replacement = (
+            f"void\n"
+            f"{model_id}initConsts("
+            f"double* CONSTANTS, double* RATES, double* STATES, "
+            f"int tissueFlag"
+            f")\n{{"
+        )
+    elif include_stimulus:
+        replacement = (
+            f"void\n"
+            f"{model_id}initConsts("
+            f"double* CONSTANTS, double* RATES, double* STATES, "
+            f"const Foam::dictionary& stimulus"
+            f")\n{{"
+        )
+    else:
+        replacement = (
+            f"void\n"
+            f"{model_id}initConsts("
+            f"double* CONSTANTS, double* RATES, double* STATES"
+            f")\n{{"
+        )
 
     return pattern.sub(replacement, src, count=1)
 
 
-def rewrite_compute_variables_signature(src, model_id):
+def rewrite_compute_variables_signature(src, model_id, include_tissue_flag=True):
     pattern = re.compile(
         r"static\s+int\s+rhs\s*\([^)]*\)\s*\{",
         re.MULTILINE,
     )
 
-    replacement = (
-        f"void\n"
-        f"{model_id}computeVariables("
-        f"double VOI, double* CONSTANTS, double* RATES, "
-        f"double* STATES, double* ALGEBRAIC, "
-        f"int tissueFlag, bool solveVmWithinODESolver"
-        f")\n{{"
-    )
+    if include_tissue_flag:
+        replacement = (
+            f"void\n"
+            f"{model_id}computeVariables("
+            f"double VOI, double* CONSTANTS, double* RATES, "
+            f"double* STATES, double* ALGEBRAIC, "
+            f"int tissueFlag, bool solveVmWithinODESolver"
+            f")\n{{"
+        )
+    else:
+        replacement = (
+            f"void\n"
+            f"{model_id}computeVariables("
+            f"double VOI, double* CONSTANTS, double* RATES, "
+            f"double* STATES, double* ALGEBRAIC, "
+            f"bool solveVmWithinODESolver"
+            f")\n{{"
+        )
 
     return pattern.sub(replacement, src, count=1)
 
@@ -266,42 +305,78 @@ def emit_names_array(f, array, enum, symbols):
     f.write("};\n\n")
 
 
-def emit_function_prototypes(f, model_id):
-    f.write(
-        f"""
+def emit_function_prototypes(f, model_id, include_tissue_flag, include_stimulus):
+    if include_tissue_flag and include_stimulus:
+        f.write(
+            f"""
 void
 {model_id}initConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
 {model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
 """
-    )
+        )
+    elif include_tissue_flag:
+        f.write(
+            f"""
+void
+{model_id}initConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag);
 
-
-def emit_openfoam_algebraic_tail():
-    return """
-
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
-
-    if (solveVmWithinODESolver)
-    {
-        RATES[0] = -ALGEBRAIC[Iion_cm] - ALGEBRAIC[Istim];
-    }
+void
+{model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
 """
+        )
+    elif include_stimulus:
+        f.write(
+            f"""
+void
+{model_id}initConsts(double* CONSTANTS,double* RATES,double* STATES,const Foam::dictionary& stimulus);
+
+void
+{model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,bool solveVmWithinODESolver);
+"""
+        )
+    else:
+        f.write(
+            f"""
+void
+{model_id}initConsts(double* CONSTANTS,double* RATES,double* STATES);
+
+void
+{model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,bool solveVmWithinODESolver);
+"""
+        )
 
 
-def generate_header(fname, states, algebraic, constants, model_name):
+def emit_openfoam_algebraic_tail(include_istim: bool, include_iion: bool):
+    lines = []
+    if include_istim:
+        lines.append("    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);")
+    if include_iion:
+        lines.append("")
+        lines.append("    if (solveVmWithinODESolver)")
+        lines.append("    {")
+        lines.append("        RATES[0] = -ALGEBRAIC[Iion_cm] - ALGEBRAIC[Istim];")
+        lines.append("    }")
+
+    if not lines:
+        return ""
+
+    return "\n\n" + "\n".join(lines) + "\n"
+
+
+def generate_header(fname, states, algebraic, constants, model_name, include_tissue_flag, include_stimulus):
     with open(fname, "w") as f:
         f.write("#pragma once\n\n")
         emit_enum(f, "STATES_INDEX", states)
         emit_enum(f, "ALGEBRAIC_INDEX", algebraic)
         emit_enum(f, "CONSTANTS_INDEX", constants)
-        emit_function_prototypes(f, model_name)
+        emit_function_prototypes(f, model_name, include_tissue_flag, include_stimulus)
 
 
 # Final C assembly
 # ============================================================
-def build_final_c(init_block, computeVariables_block, init_values_block):
+def build_final_c(init_block, computeVariables_block, init_values_block, include_istim: bool, include_iion: bool):
 
     # Ensure correct headers
     init_block = normalize_void_signature(init_block)
@@ -331,14 +406,22 @@ def build_final_c(init_block, computeVariables_block, init_values_block):
         compute_header
         + "\n"
         + compute_body
-        + emit_openfoam_algebraic_tail()
+        + emit_openfoam_algebraic_tail(include_istim, include_iion)
         + "\n}\n"
     )
 
     return final_init + "\n\n" + final_compute
 
 
-def run_mapping(input_c, output_c, verbose: bool = False):
+def run_mapping(
+    input_c,
+    output_c,
+    verbose: bool = False,
+    include_tissue_flag: bool = True,
+    include_istim: bool = True,
+    include_iion: bool = True,
+    include_stimulus: bool = True,
+):
     global DEBUG
     DEBUG = verbose
     model_name, year = parse_model_from_output(output_c)
@@ -351,15 +434,20 @@ def run_mapping(input_c, output_c, verbose: bool = False):
     mapping = load_state_map()
 
     rewritten = rewrite_states_rates(src, mapping)
-    rewritten = rewrite_init_consts_signature(rewritten, model_name)
-    rewritten = rewrite_compute_variables_signature(rewritten, model_name)
+    rewritten = rewrite_init_consts_signature(rewritten, model_name, include_tissue_flag, include_stimulus)
+    rewritten = rewrite_compute_variables_signature(rewritten, model_name, include_tissue_flag)
 
     states = states_from_map(mapping)
     algebraic = extract_names(rewritten, "ALGEBRAIC")
-    for name in EXTRA_ALGEBRAIC:
+    extra_algebraic = []
+    if include_istim:
+        extra_algebraic.append("Istim")
+    if include_iion:
+        extra_algebraic.append("Iion_cm")
+    for name in extra_algebraic:
         if name not in algebraic:
             algebraic.append(name)
-    constants = extract_constants_from_update_constants(src)
+    constants = extract_constants_from_update_constants(src, include_stimulus)
 
     init_block = extract_function(rewritten, f"{model_name}initConsts")
     computeVariables_block = extract_function(
@@ -369,18 +457,27 @@ def run_mapping(input_c, output_c, verbose: bool = False):
 
     debug(computeVariables_block, verbose)
 
-    final_c = build_final_c(init_block, computeVariables_block, init_vals)
+    final_c = build_final_c(
+        init_block,
+        computeVariables_block,
+        init_vals,
+        include_istim,
+        include_iion,
+    )
 
     with open(output_c, "w") as f:
         f.write(f'#include "{output_h}"\n')
-        f.write('#include "stimulusIO.H"\n\n')
+        if include_istim:
+            f.write('#include "stimulusIO.H"\n')
+        f.write("\n")
         emit_names_array(f, f"{model_name}STATES_NAMES", "STATES", states)
         emit_names_array(f, f"{model_name}ALGEBRAIC_NAMES", "ALGEBRAIC", algebraic)
         emit_dependency_map(f, model_name)
-        emit_compute_istim(f)
+        if include_istim:
+            emit_compute_istim(f)
         f.write(final_c)
 
-    generate_header(output_h, states, algebraic, constants, model_name)
+    generate_header(output_h, states, algebraic, constants, model_name, include_tissue_flag, include_stimulus)
 
     debug(f"Wrote: {output_c}", verbose)
     debug(f"Wrote: {output_h}", verbose)

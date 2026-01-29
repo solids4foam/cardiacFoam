@@ -8,15 +8,16 @@ def instantiate_model_template(
     model: str,
     year: int,
     outdir: Path,
+    template_prefix: str,
 ):
     text = template_file.read_text(encoding="utf-8")
 
     # Support explicit placeholders and legacy tokens
     text = Template(text).safe_substitute(MODEL=model, YEAR=str(year))
-    text = text.replace("genericModel", model)
+    text = text.replace(template_prefix, model)
     text = text.replace("YYYY", str(year))
 
-    new_name = template_file.name.replace("genericModel", model)
+    new_name = template_file.name.replace(template_prefix, model)
     out_file = outdir / new_name
     out_file.write_text(text, encoding="utf-8")
 
@@ -26,6 +27,7 @@ def sort_folder(
     model: str,
     year: int,
     outdir: Path,
+    model_kind: str = "ionic",
     verbose: bool = False,
 ):
 
@@ -36,8 +38,11 @@ def sort_folder(
 
     script_dir = Path(__file__).resolve().parent
     template_dir = script_dir / "derivedClass_templates"
+    template_prefix = "ionicGenericModel"
+    if model_kind == "activeTension":
+        template_prefix = "activeTensionGenericModel"
 
-    templates = sorted(template_dir.glob("genericModel.*"))
+    templates = sorted(template_dir.glob(f"{template_prefix}.*"))
     if not templates:
         raise FileNotFoundError(f"No templates found in {template_dir}")
 
@@ -53,6 +58,7 @@ def sort_folder(
             model=model,
             year=year,
             outdir=ionic_dir,
+            template_prefix=template_prefix,
         ))
 
     # Copy generated headers

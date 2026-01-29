@@ -18,8 +18,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <math.h>
-#include "genericModel.H"
-#include "genericModel_YYYY.H"
+#include "ionicGenericModel.H"
+#include "ionicGenericModel_YYYY.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
@@ -31,16 +31,16 @@ License
 
 namespace Foam
 {
-    defineTypeNameAndDebug(genericModel, 0);
+    defineTypeNameAndDebug(ionicGenericModel, 0);
     addToRunTimeSelectionTable
     (
-        ionicModel, genericModel, dictionary
+        ionicModel, ionicGenericModel, dictionary
     );
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::genericModel::genericModel
+Foam::ionicGenericModel::ionicGenericModel
 (
     const dictionary& dict,
     const label num,
@@ -58,7 +58,7 @@ Foam::genericModel::genericModel
 
     // 🔑 First, set tissue using base logic + overrides
     ionicModel::setTissueFromDict();
-    Info<< nl << "Calling genericModel initConsts" << endl;
+    Info<< nl << "Calling ionicGenericModel initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -67,7 +67,7 @@ Foam::genericModel::genericModel
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
         // Initialise constants, states and rates from generated code
-        genericModelinitConsts
+        ionicGenericModelinitConsts
         (
             CONSTANTS_.data(),
             RATES_[i].data(),
@@ -95,19 +95,19 @@ Foam::genericModel::genericModel
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::genericModel::~genericModel()
+Foam::ionicGenericModel::~ionicGenericModel()
 {}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::List<Foam::word> Foam::genericModel::supportedTissueTypes() const
+Foam::List<Foam::word> Foam::ionicGenericModel::supportedTissueTypes() const
 {
     return {"myocyte"};
 }
 
 
-void Foam::genericModel::calculateCurrent
+void Foam::ionicGenericModel::calculateCurrent
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -131,7 +131,7 @@ void Foam::genericModel::calculateCurrent
         // Update voltage for this integration point
         STATESI[cell_v] = Vm[integrationPtI] * 1000;
 
-        ::genericModelcomputeVariables
+        ::ionicGenericModelcomputeVariables
         (
             tStart,
             CONSTANTS_.data(),
@@ -154,7 +154,7 @@ void Foam::genericModel::calculateCurrent
 // ------------------------------------------------------------------------- //
 //  Solve ODE with mixed singleCell implementation and 1D-3D condition
 // ------------------------------------------------------------------------- //
-void Foam::genericModel::solveODE
+void Foam::ionicGenericModel::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -187,7 +187,7 @@ void Foam::genericModel::solveODE
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         // Update algebraics and rates at tEnd (includes Iion and I_stim)
-        ::genericModelcomputeVariables
+        ::ionicGenericModelcomputeVariables
         (
             tEnd,
             CONSTANTS_.data(),
@@ -208,17 +208,17 @@ void Foam::genericModel::solveODE
     }
 }
 
-void Foam::genericModel::derivatives
+void Foam::ionicGenericModel::derivatives
 (
     const scalar t,
     const scalarField& y,
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated genericModel code
+    // Must match NUM_ALGEBRAIC from the generated ionicGenericModel code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
-    ::genericModelcomputeVariables
+    ::ionicGenericModelcomputeVariables
     (
         t,
         CONSTANTS_.data(),
@@ -230,12 +230,12 @@ void Foam::genericModel::derivatives
     );
 }
 
-void Foam::genericModel::updateStatesOld(const Field<Field<scalar>>&) const
+void Foam::ionicGenericModel::updateStatesOld(const Field<Field<scalar>>&) const
 {
     saveStateSnapshot(STATES_, STATES_OLD_);
 }
 
-void Foam::genericModel::resetStatesToStatesOld(Field<Field<scalar>>&) const
+void Foam::ionicGenericModel::resetStatesToStatesOld(Field<Field<scalar>>&) const
 {
     restoreStateSnapshot(STATES_, STATES_OLD_);
 }
@@ -244,27 +244,27 @@ void Foam::genericModel::resetStatesToStatesOld(Field<Field<scalar>>&) const
 //  Writing logic in singleCell and 3D simulations
 
 //Writing functions for singleCell implementation
-Foam::wordList Foam::genericModel::exportedFieldNames() const
+Foam::wordList Foam::ionicGenericModel::exportedFieldNames() const
     {
         return ionicModelIO::exportedFieldNames
         (
             variableExport_,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            ionicGenericModelSTATES_NAMES, NUM_STATES,
+            ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     }
 
-    Foam::wordList Foam::genericModel::debugPrintedNames() const
+    Foam::wordList Foam::ionicGenericModel::debugPrintedNames() const
     {
         return ionicModelIO::exportedFieldNames
         (
             debugVarNames_,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            ionicGenericModelSTATES_NAMES, NUM_STATES,
+            ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     }
 
-void Foam::genericModel::exportStates
+void Foam::ionicGenericModel::exportStates
 (
     const Field<Field<scalar>>&,
     PtrList<volScalarField>& outFields
@@ -274,13 +274,13 @@ void Foam::genericModel::exportStates
     (
         STATES_,ALGEBRAIC_,
         exportedFieldNames(),
-        genericModelSTATES_NAMES,NUM_STATES,
-        genericModelALGEBRAIC_NAMES,NUM_ALGEBRAIC,
+        ionicGenericModelSTATES_NAMES,NUM_STATES,
+        ionicGenericModelALGEBRAIC_NAMES,NUM_ALGEBRAIC,
         outFields
     );
 }
 
-void Foam::genericModel::debugPrintFields
+void Foam::ionicGenericModel::debugPrintFields
 (
     label cellI,
     scalar t1,
@@ -292,15 +292,15 @@ void Foam::genericModel::debugPrintFields
     (
         STATES_, ALGEBRAIC_,
         debugPrintedNames(),
-        genericModelSTATES_NAMES, NUM_STATES,
-        genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+        ionicGenericModelSTATES_NAMES, NUM_STATES,
+        ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC,
         cellI,t1,t2,step
     );
 }
 
 
 
-void Foam::genericModel::writeHeader(OFstream& os) const
+void Foam::ionicGenericModel::writeHeader(OFstream& os) const
 {
     const wordList names = exportedFieldNames();
 
@@ -313,18 +313,18 @@ void Foam::genericModel::writeHeader(OFstream& os) const
         ionicModelIO::writeHeader
         (
             os,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            ionicGenericModelSTATES_NAMES, NUM_STATES,
+            ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     }
 }
 
-static Foam::scalar genericModel_vm(const Foam::scalarField& S)
+static Foam::scalar ionicGenericModel_vm(const Foam::scalarField& S)
 {
     return S[0];
 }
 
-void Foam::genericModel::write(const scalar t, OFstream& os) const
+void Foam::ionicGenericModel::write(const scalar t, OFstream& os) const
 {
     const wordList names = exportedFieldNames();
 
@@ -335,8 +335,8 @@ void Foam::genericModel::write(const scalar t, OFstream& os) const
             t, os,
             STATES_, ALGEBRAIC_,
             names,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            ionicGenericModelSTATES_NAMES, NUM_STATES,
+            ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     }
     else
@@ -346,11 +346,11 @@ void Foam::genericModel::write(const scalar t, OFstream& os) const
             t,
             os,
             STATES_, ALGEBRAIC_, RATES_,
-            genericModel_vm
+            ionicGenericModel_vm
         );
     }
 }
-void Foam::genericModel::sweepCurrent
+void Foam::ionicGenericModel::sweepCurrent
 (
     const word& currentName,
     scalar Vmin,
@@ -360,7 +360,7 @@ void Foam::genericModel::sweepCurrent
 ) const
 {
     // Retrieve dependency variables
-    const auto& depMap = genericModelDependencyMap();
+    const auto& depMap = ionicGenericModelDependencyMap();
 
     if (!depMap.found(currentName))
     {
@@ -391,7 +391,7 @@ void Foam::genericModel::sweepCurrent
         // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[0] = V;
 
-        ::genericModelcomputeVariables
+        ::ionicGenericModelcomputeVariables
         (
             0.0,                       // VOI
             CONSTANTS_.data(),
@@ -405,8 +405,8 @@ void Foam::genericModel::sweepCurrent
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            ionicGenericModelSTATES_NAMES, NUM_STATES,
+            ionicGenericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
         );
     }
     Info<< "Sweep for " << currentName

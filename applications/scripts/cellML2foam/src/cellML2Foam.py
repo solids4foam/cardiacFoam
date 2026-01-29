@@ -5,13 +5,14 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-SRC_DIR = SCRIPT_DIR / "src"
+SRC_DIR = SCRIPT_DIR
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from pipeline import (
     detect_start_stage,
     run_pipeline,
+    split_model_spec,
 )
 from sort_folder import sort_folder
 
@@ -30,7 +31,60 @@ def foam_banner(args, start, stages):
     print("")
 
 
-def print_manual_steps_notice():
+def print_manual_steps_notice(model_kind: str):
+    if model_kind == "activeTension":
+        print(
+            """
+============================================================
+MANUAL STEPS REQUIRED
+============================================================
+
+The generated OpenFOAM active tension model requires manual edits
+before it is ready for use.
+
+1) Ca equation consistency
+-----------------------------------------------
+Check for the Ca equation and make sure it is properly defined
+in both Model.C and Model_Year.H.
+
+2) Model requirements in Model.H
+-----------------------------------------------
+Update the Requirements flags in Model.H to match your model inputs
+(Vm, Act, Ca). For example:
+
+    Requirements r;
+    r.needVm  = true;
+    r.needAct = true;
+    r.needCai = true;
+
+3) Remove unused time terms
+-----------------------------------------------
+Remove unused time from model.H and modelNames.H and replace with VOI
+
+    Examples: AV_<variable>, t, pace, t_end
+
+    Hint: During compilation, ones should appear if not used.
+
+4) Hash table for voltage, Act, or Ca dependence
+-----------------------------------------------
+If the model has dependence on Vm, Act, or Ca parameters,
+implement the hash table lookup in <ModelName_Year>.H.
+    Example:
+
+        {"INa",
+              Foam::wordList
+              ({
+                  "m_inf","h_inf","j_inf",
+                  "tau_m","tau_h","tau_j"
+               })}
+
+Check the existing examples in the cardiacFoam library in src/ionicModels.
+
+============================================================
+"""
+        )
+        return
+
     print(
         """
 ============================================================
@@ -99,10 +153,6 @@ for Vm existing in <ModelName_Year>.H.
                })}
                
 Check the existing examples in the cardiacFoam library in src/ionicModels.
-
-
-
-
 
 ============================================================
 """
@@ -179,24 +229,27 @@ def main():
             # Only create ionic folder if we reached openfoam
         if args.to == "openfoam":
             if args.model is None:
-                raise ValueError("--model <ModelName_Year> is required")
+                raise ValueError("--model <ModelName_Year>[:ionic|activeTension] is required")
 
-            if "_" not in args.model:
-                raise ValueError("--model must be ModelName_Year")
+            model_base, model_kind = split_model_spec(args.model)
 
-            model, year = args.model.rsplit("_", 1)
+            if "_" not in model_base:
+                raise ValueError("--model must be ModelName_Year[:ionic|activeTension]")
+
+            model, year = model_base.rsplit("_", 1)
             year = int(year)
 
             sort_result = sort_folder(
                 model=model,
                 year=year,
                 outdir=args.outdir,
+                model_kind=model_kind,
                 verbose=args.verbose,
             )
             if args.verbose:
                 print(f"    Created: {len(sort_result['created'])} files")
                 print(f"    Moved:   {len(sort_result['moved'])} files")
-            print_manual_steps_notice()
+            print_manual_steps_notice(model_kind)
 
     except Exception as e:
         print(f"Error: {e}")

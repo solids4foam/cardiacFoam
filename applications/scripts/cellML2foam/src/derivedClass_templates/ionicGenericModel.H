@@ -16,13 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::genericModel
+    Foam::ionicGenericModel
 
 Description
-    Wrapper class for calling from the cellML ionic model for the genericModel model.
+    Wrapper class for calling from the cellML ionic model for the ionicGenericModel model.
 
 SourceFiles
-    genericModel.C
+    ionicGenericModel.C
 
 Author
     Philip Cardiff, UCD.
@@ -30,13 +30,13 @@ Author
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef genericModel_H
-#define genericModel_H
+#ifndef ionicGenericModel_H
+#define ionicGenericModel_H
 
 #include "ionicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "genericModel_YYYYNames.H"
+#include "ionicGenericModel_YYYYNames.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -44,10 +44,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class genericModel Declaration
+                         Class ionicGenericModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class genericModel
+class ionicGenericModel
 :
     public ionicModel
 {
@@ -72,16 +72,16 @@ class genericModel
     // Private Member Functions
 
         //- No copy construct
-        genericModel(const genericModel&) = delete;
+        ionicGenericModel(const ionicGenericModel&) = delete;
 
         //- No copy assignment
-        void operator=(const genericModel&) = delete;
+        void operator=(const ionicGenericModel&) = delete;
 
 
         public:
 
         //- Runtime type information
-        TypeName("genericModel");
+        TypeName("ionicGenericModel");
 
 
         //override the only available tissue in this model
@@ -97,7 +97,7 @@ class genericModel
 
             //- Construct given a dictionary, the number of integration points and a
             //  initial time step for the ODE solver
-            genericModel
+            ionicGenericModel
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
@@ -107,7 +107,7 @@ class genericModel
 
 
         //- Destructor
-        virtual ~genericModel();
+        virtual ~ionicGenericModel();
 
 
         // Member Functions

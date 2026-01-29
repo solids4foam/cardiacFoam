@@ -26,13 +26,13 @@ If `spatch` is unavailable, the pipeline will fail at the ansic → openfoam ste
 Run the utility from this directory:
 
 ```
-cd /Users/simaocastro/cardiacFoam/applications/utilities/cellML2foam
+cd /Users/simaocastro/cardiacFoam/applications/scripts/cellML2foam
 ```
 
 ### 1) Convert CellML to MMT
 
 ```
-cellML2foam --from cellml --to mmt path/to/model.cellml
+./cellML2foam --from cellml --to mmt path/to/model.cellml
 ```
 
 This writes `model.mmt`.
@@ -52,13 +52,17 @@ Open the `.mmt` or `ansic/sim.c` and list the initial states in order. Create
 ### 3) Generate OpenFOAM code
 
 ```
-cellML2foam --from mmt --to openfoam --model ModelName_Year model.mmt
+./cellML2foam --from mmt --to openfoam --model ModelName_Year[:ionic|activeTension] model.mmt
 ```
 
 Example:
 
 ```
-cellML2foam --from mmt --to openfoam --model NashPanfilov_2004 nash_panfilov_2004.mmt
+./cellML2foam --from mmt --to openfoam --model NashPanfilov_2004:ionic nash_panfilov_2004.mmt
+
+For active tension models:
+
+./cellML2foam --from mmt --to openfoam --model Niederer-Hunter-Smith_2006:activeTension Niederer_et_al_2006.mmt
 ```
 
 This produces:
@@ -71,4 +75,3 @@ This produces:
 
 - The utility expects `state_map.txt` to be in the **current working directory**.
 - The `--model` value must be `ModelName_Year` and the year must be numeric.
-
