@@ -40,7 +40,6 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "electromechanicsFeedbackProvider.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -55,8 +54,7 @@ namespace Foam
 
 class ionicModel
 :
-    public ODESystem,
-    public CouplingSignalProvider
+    public ODESystem
 {
     // Private Data
 
@@ -190,12 +188,6 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
-
-//-----------------------Member Functions ---------------------//
-
-        /// --- CouplingSignalProvider interface ---
-        bool hasSignal(CouplingSignal s) const override;
-        scalar signal(label i, CouplingSignal s) const override;
         
 
 //-----------------------Solver Functions ---------------------//
