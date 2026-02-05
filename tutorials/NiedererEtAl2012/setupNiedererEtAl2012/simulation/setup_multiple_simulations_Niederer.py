@@ -217,7 +217,7 @@ def run_simulation_cases(selected_combinations: pd.DataFrame) -> None:
     controlDict_path = base_dir / "system" / "controlDict"
     blockMeshDict_path = base_dir / "system" / "blockMeshDict"
     tissue_path = base_dir / "constant" / "cardiacProperties"
-    solver_path = base_dir / "constant" / "numericalsolverProperties"
+    solver_path = base_dir / "constant" / "timeIntegrationProperties"
     run_cases_path = CONFIG["run_cases_script"]
 
 

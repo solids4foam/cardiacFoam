@@ -69,7 +69,7 @@ CONFIG = {
 # ===============================================================
 # PARAMETER SWEEP CONFIGURATION
 # ===============================================================
-DX_VALUES = [0.5, 0.2, 0.1]                     # mm ------ This is a map for a structured blockMesh.   
+DX_VALUES = [0.5, 0.2, 0.1]                     # mm ------ This is a map for a structured blockMesh following rectangle dimensions.  
 DX_VALUES = [0.5, 0.2]                                   
 DT_VALUES = [0.05, 0.01, 0.005]                 # ms
 DT_VALUES = [0.05] 

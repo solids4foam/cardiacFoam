@@ -50,7 +50,7 @@ IonicModelVariables_debugPrint (Ca_i);
 
 //specify the type of tissue or dimension
 
-tissue  	epicardialCells;
+tissue  epicardialCells;
 //tissue 	endocardialCells;
 //tissue 		myocyte;
 

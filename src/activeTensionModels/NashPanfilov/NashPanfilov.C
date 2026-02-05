@@ -91,7 +91,7 @@ void Foam::NashPanfilov::calculateTension
 
     const scalar tStart = t;
     const scalar tEnd   = t + dt;
-    scalar step         = dt ;
+    scalar step         = dt;
 
     const CouplingSignalProvider& p = provider();
     const label monitorCell = 0;
@@ -105,7 +105,7 @@ void Foam::NashPanfilov::calculateTension
         scalar& Ta_i  = STATESI[::Ta];
         scalar act    = p.signal(integrationPtI, CouplingSignal::Act);
         currentAct_ = act;
-        STATESI[::u] = act;
+        ALGEBRAICI[::AV_u] = act;
 
 
         // Advance ODE system
@@ -140,8 +140,7 @@ void Foam::NashPanfilov::derivatives
 {
 
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
-    scalarField STATES_TMP(y);
-    STATES_TMP[::u] = currentAct_;
+    ALGEBRAIC_TMP[::AV_u] = currentAct_;
 
 
     NashPanfilovcomputeVariables
@@ -149,8 +148,8 @@ void Foam::NashPanfilov::derivatives
         t,
         CONSTANTS_.data(),
         dydt.data(),                              // RATES (output)
-        STATES_TMP.data(),                        // STATES (input)
-        ALGEBRAIC_TMP.data()                     // ALGEBRAIC (scratch)
+        const_cast<scalarField&>(y).data(),       // STATES (input)
+        ALGEBRAIC_TMP.data()                    // ALGEBRAIC (scratch)
     );
 
 }

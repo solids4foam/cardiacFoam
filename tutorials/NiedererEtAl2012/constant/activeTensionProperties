@@ -9,26 +9,26 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      Vm;
+    class       dictionary;
+    location    "constant";
+    object      activeTensionProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [1 2 -3 0 0 -1 0];
 
-internalField   uniform -0.08523;
+//activeTensionProperties
 
-boundaryField
-{
-    walls
-    {
-        type            zeroGradient;
-    }
 
-    frontAndBack
-    {
-        type            empty;
-    }
-}
+activeTensionModel    NiedererHunterSmith;
 
-// ************************************************************************* //
+// Variables to print in terminal (active tension)
+
+ActiveTensionModel_export (AV_Ca_i Ta AV_Tension AV_Q AV_J_TRPN);
+
+ActiveTensionModel_debugPrint (AV_Ca_i AV_Tension AV_Q AV_J_TRPN);
+
+
+
+// Model-specific coefficients (if required by that model)
+//kTa                  8;
+//initialTa            0.0;

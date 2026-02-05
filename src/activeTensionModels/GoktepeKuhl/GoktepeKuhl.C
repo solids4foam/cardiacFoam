@@ -90,9 +90,9 @@ void Foam::GoktepeKuhl::calculateTension
             << "Ta.size() != nIntegrationPoints" << abort(FatalError);
     }
 
-    const scalar tStart = 100*t;
-    const scalar tEnd   = 100*(t + dt)  ;
-    scalar step         = 100*dt ;
+    const scalar tStart = t * 1000/12.9;
+    const scalar tEnd   = (t + dt) * 1000/12.9;
+    scalar step         = dt * 1000/12.9; ;
 
     const CouplingSignalProvider& p = provider();
     const label monitorCell = 0;
@@ -108,7 +108,7 @@ void Foam::GoktepeKuhl::calculateTension
         scalar act2   = p.signal(integrationPtI, CouplingSignal::Act);
         currentVm_ = act;
         currentAct_ = act2;
-        ALGEBRAICI[::AV_Vm] = act; // Convert to mV
+        ALGEBRAICI[::AV_Vm] = act;
         ALGEBRAICI[::AV_u] = act2;
 
 
