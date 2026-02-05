@@ -70,7 +70,7 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
 
     /* recovery_variable */
     ALGEBRAIC[AV_eps] = CONSTANTS[AC_epsilon] + CONSTANTS[AC_mu1] * STATES[recovery_r] / (CONSTANTS[AC_mu2] + STATES[u]);
-    RATES[recovery_r] = ALGEBRAIC[AV_eps] * (-STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
+    RATES[recovery_r] = ALGEBRAIC[AV_eps] * ( - STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
     
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];

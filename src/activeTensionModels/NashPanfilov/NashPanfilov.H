@@ -1,8 +1,8 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+  \\      /  F ield         | cardiacFoam
    \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
+    \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 \*---------------------------------------------------------------------------*/
@@ -15,8 +15,8 @@
 #include "ODESolver.H"
 #include "PtrList.H"
 #include "scalarField.H"
-#include "OFstream.H"
 #include "dictionary.H"
+#include "NashPanfilov_2004Names.H"
 
 namespace Foam
 {
@@ -32,15 +32,15 @@ class NashPanfilov
 
 private:
 
-    // ODE solver
     autoPtr<ODESolver> odeSolver_;
 
-    // Internal variables per integration point:
-    // y = [Ta, act]
-    PtrList<scalarField> internalVariables_;
+    // States, algebraics, and rates per integration point (ionic-style layout)
+    PtrList<scalarField> STATES_;
+    PtrList<scalarField> ALGEBRAIC_;
+    PtrList<scalarField> RATES_;
 
-    // Model parameter(s)
-    scalar kTa_;
+    mutable scalarField CONSTANTS_;
+    scalar currentAct_;
 
 public:
 
@@ -51,12 +51,10 @@ public:
 
     virtual ~NashPanfilov() = default;
 
-    // --- activeTensionModel API ---
-
     virtual Requirements requirements() const override
     {
         Requirements r;
-        r.needAct = true; 
+        r.needAct = true;
         return r;
     }
 
@@ -68,11 +66,9 @@ public:
         scalarField& Ta
     ) override;
 
-    // --- ODESystem API ---
-
     virtual label nEqns() const override
     {
-        return 1;
+        return NUM_STATES;
     }
 
     virtual void derivatives
@@ -90,11 +86,21 @@ public:
         scalarSquareMatrix& dfdy
     ) const override;
 
+    virtual wordList availableFieldNames() const override;
+    virtual void fieldValues(const label i, scalarField& values) const override;
 
+    void debugPrintFields
+    (
+        const label cellI,
+        const scalar t1,
+        const scalar t2,
+        const scalar step,
+        const scalar act
+    ) const;
 };
 
 } // End namespace Foam
 
 #endif
 
-
+// ************************************************************************* //

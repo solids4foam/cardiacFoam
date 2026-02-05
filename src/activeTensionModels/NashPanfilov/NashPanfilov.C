@@ -17,10 +17,14 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include <cmath>
 
 #include "NashPanfilov.H"
+#include "NashPanfilov_2004.H"
 #include "activeTensionIO.H"
 #include "addToRunTimeSelectionTable.H"
+
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
@@ -40,19 +44,32 @@ Foam::NashPanfilov::NashPanfilov
     activeTensionModel(dict, num),
     ODESystem(),
     odeSolver_(ODESolver::New(*this, dict_)),
-    internalVariables_(num),
-    kTa_(dict.lookupOrDefault<scalar>("kTa", 47.9))
+    STATES_(num),
+    ALGEBRAIC_(num),
+    RATES_(num),
+    CONSTANTS_(NUM_CONSTANTS, 0.0),
+    currentAct_(0.0)
 {
-    // Lookup initial Ta
-    const scalar initialTa(dict.lookupOrDefault<scalar>("initialTa", 0.0143524));
-
-    forAll(internalVariables_, integrationPtI)
+    Info<< nl << "Initialize NashPanfilov constants:" << nl;
+    forAll(STATES_, integrationPtI)
     {
-        // y = [Ta, act]
-        internalVariables_.set(integrationPtI, new scalarField(nEqns() + 1, 0.0));
-        internalVariables_[integrationPtI][0] = initialTa; // Ta
-        internalVariables_[integrationPtI][1] = 0.0;       // act
+        STATES_.set(integrationPtI,     new scalarField(NUM_STATES, 0.0));
+        ALGEBRAIC_.set(integrationPtI,  new scalarField(NUM_ALGEBRAIC, 0.0));
+        RATES_.set(integrationPtI,      new scalarField(NUM_STATES, 0.0));
+
+        NashPanfilovinitConsts
+        (
+            CONSTANTS_.data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data()
+        );
+
     }
+    Info<< CONSTANTS_ << nl;
+
+    label i0 = rand() % STATES_.size();
+    Info<< "initial states:" << nl;
+    Info<< STATES_[i0] << nl;
 }
 
 
@@ -72,11 +89,6 @@ void Foam::NashPanfilov::calculateTension
             << "Ta.size() != nIntegrationPoints" << abort(FatalError);
     }
 
-    // (Optional) ensure provider exists + required signals exist
-    // Usually call this once from the driver, but safe to call here too.
-    // validateProvider();
-
-    // interpret t as "current time", integrate from t-dt to t
     const scalar tStart = t;
     const scalar tEnd   = t + dt;
     scalar step         = dt ;
@@ -84,39 +96,36 @@ void Foam::NashPanfilov::calculateTension
     const CouplingSignalProvider& p = provider();
     const label monitorCell = 0;
 
-    forAll(internalVariables_, integrationPtI)
+    forAll(STATES_, integrationPtI)
     {
-        scalarField& yStart = internalVariables_[integrationPtI];
+        scalarField& STATESI    = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI     = RATES_[integrationPtI];
 
-        // y = [Ta, act]
-        scalar& Ta_i  = yStart[0];
-        scalar& act   = yStart[1];
+        scalar& Ta_i  = STATESI[::Ta];
+        scalar act    = p.signal(integrationPtI, CouplingSignal::Act);
+        currentAct_ = act;
+        STATESI[::u] = act;
 
-        act = p.signal(integrationPtI, CouplingSignal::Act);
 
-        // Advance ODE system (Ta evolves, act is held constant via dydt[1]=0)
-        odeSolver_->solve(tStart, tEnd, yStart, step);
+        // Advance ODE system
+        odeSolver_->solve(tStart, tEnd, STATESI, step);
+
+        NashPanfilovcomputeVariables
+        (
+            tEnd,
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data()
+        );
 
         Ta[integrationPtI] = Ta_i;
 
         const wordList printedNames = debugPrintedNames();
         if (!printedNames.empty() && integrationPtI == monitorCell)
         {
-            wordList availableNames(2);
-            availableNames[0] = "Ta";
-            availableNames[1] = "Act";
-            scalarField values(2);
-            values[0] = Ta_i;
-            values[1] = act;
-            activeTensionIO::debugPrintFields(
-                printedNames,
-                availableNames,
-                values,
-                integrationPtI,
-                tStart,
-                tEnd,
-                step
-            );
+            debugPrintFields(integrationPtI, tStart, tEnd, step, act);
         }
     }
 }
@@ -129,19 +138,23 @@ void Foam::NashPanfilov::derivatives
     scalarField& dydt
 ) const
 {
-    const scalar& Ta  = y[0];
-    const scalar& act = y[1];
 
-    scalar& dTadt = dydt[0];
+    scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
+    scalarField STATES_TMP(y);
+    STATES_TMP[::u] = currentAct_;
 
-    //What do I do to the state rate that comes from ionicMOdel ??? ls
-    dydt[1] = 0.0;
 
-    scalar epsilonU = (act > 0.05 ? 10.0 : 1.0);
-
-    dTadt = epsilonU*(kTa_*act - Ta);
+    NashPanfilovcomputeVariables
+    (
+        t,
+        CONSTANTS_.data(),
+        dydt.data(),                              // RATES (output)
+        STATES_TMP.data(),                        // STATES (input)
+        ALGEBRAIC_TMP.data()                     // ALGEBRAIC (scratch)
+    );
 
 }
+
 
 void Foam::NashPanfilov::jacobian
 (
@@ -153,3 +166,103 @@ void Foam::NashPanfilov::jacobian
 {
     notImplemented("Foam::NashPanfilov::jacobian(...)");
 }
+
+void Foam::NashPanfilov::debugPrintFields
+(
+    const label cellI,
+    const scalar t1,
+    const scalar t2,
+    const scalar step,
+    const scalar act
+) const
+{
+    const wordList printedNames = debugPrintedNames();
+    if (printedNames.empty())
+    {
+        return;
+    }
+
+    const label nAvailable = NUM_STATES + NUM_ALGEBRAIC + NUM_STATES + 1;
+    wordList availableNames(nAvailable);
+    scalarField values(nAvailable);
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        availableNames[i] = NashPanfilovSTATES_NAMES[i];
+        values[i] = STATES_[cellI][i];
+    }
+
+    for (label i = 0; i < NUM_ALGEBRAIC; ++i)
+    {
+        const label idx = NUM_STATES + i;
+        availableNames[idx] = NashPanfilovALGEBRAIC_NAMES[i];
+        values[idx] = ALGEBRAIC_[cellI][i];
+    }
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        const label idx = NUM_STATES + NUM_ALGEBRAIC + i;
+        availableNames[idx] =
+            word("RATES_") + word(NashPanfilovSTATES_NAMES[i]);
+        values[idx] = RATES_[cellI][i];
+    }
+
+    availableNames[nAvailable - 1] = "Act";
+    values[nAvailable - 1] = act;
+
+    activeTensionIO::debugPrintFields
+    (
+        printedNames,
+        availableNames,
+        values,
+        cellI,
+        t1,
+        t2,
+        step
+    );
+}
+
+Foam::wordList Foam::NashPanfilov::availableFieldNames() const
+{
+    wordList names(NUM_STATES + NUM_ALGEBRAIC + NUM_STATES);
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        names[i] = NashPanfilovSTATES_NAMES[i];
+    }
+
+    for (label i = 0; i < NUM_ALGEBRAIC; ++i)
+    {
+        names[NUM_STATES + i] = NashPanfilovALGEBRAIC_NAMES[i];
+    }
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        names[NUM_STATES + NUM_ALGEBRAIC + i] =
+            word("RATES_") + word(NashPanfilovSTATES_NAMES[i]);
+    }
+
+    return names;
+}
+
+void Foam::NashPanfilov::fieldValues(const label i, scalarField& values) const
+{
+    values.setSize(NUM_STATES + NUM_ALGEBRAIC + NUM_STATES);
+
+    for (label s = 0; s < NUM_STATES; ++s)
+    {
+        values[s] = STATES_[i][s];
+    }
+
+    for (label a = 0; a < NUM_ALGEBRAIC; ++a)
+    {
+        values[NUM_STATES + a] = ALGEBRAIC_[i][a];
+    }
+
+    for (label r = 0; r < NUM_STATES; ++r)
+    {
+        values[NUM_STATES + NUM_ALGEBRAIC + r] = RATES_[i][r];
+    }
+}
+
+// ************************************************************************* //

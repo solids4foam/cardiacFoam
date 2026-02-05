@@ -36,23 +36,23 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 
 // Specify the ionic model
 
-//      ionicModel  TNNP;
-        ionicModel  BuenoOrovio;
+      ionicModel  TNNP;
+//        ionicModel  BuenoOrovio;
 //      ionicModel  Courtemanche;
 //      ionicModel  Gaur;
 
 // Variables to print in terminal (ionic model)
 
-IonicModelVariables_export (u v w s Jfi Jion);
-IonicModelVariables_debugPrint (u v w s Jfi Jion);
+IonicModelVariables_export (Ca_i);
+IonicModelVariables_debugPrint (Ca_i);
 
 
 
 //specify the type of tissue or dimension
 
-tissue  epicardialCells;
-// tissue endocardialCells;
-// tissue epicardiacCells;
+tissue  	epicardialCells;
+//tissue 	endocardialCells;
+//tissue 		myocyte;
 
 
 

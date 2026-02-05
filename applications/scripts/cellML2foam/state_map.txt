@@ -1,0 +1,5 @@
+0 Ca_i_TRPN 			  
+1 tropomyosin_z                        
+2 Cross_Bridges_Q1                    
+3 Cross_Bridges_Q2                     
+4 Cross_Bridges_Q3                     

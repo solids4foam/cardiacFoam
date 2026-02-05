@@ -189,6 +189,9 @@ class TNNP
                 const fileName& outputFile
             ) const override;
 
+            virtual bool hasSignal(const CouplingSignal s) const override;
+            virtual scalar signal(const label i, const CouplingSignal s) const override;
+
 
 };
 
@@ -200,5 +203,4 @@ class TNNP
 #endif
 
 // ************************************************************************* //
-
 

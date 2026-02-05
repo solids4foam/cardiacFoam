@@ -21,6 +21,6 @@ FoamFile
 
 activeTensionModel    NashPanfilov;
 
-// Model-specific coefficients (if required by that model)
-//kTa                  8;
-//initialTa            0.0;
+
+
+

@@ -144,12 +144,37 @@ int main(int argc, char* argv[])
                 lambda,
                 Ta
             );
-            activeTensionIO::exportStateFields
-            (
-                Ta,
-                activeTensionNames,
-                activeTensionOutFields
-            );
+            if (!activeTensionNames.empty())
+            {
+                const wordList available = activeTensionModel->availableFieldNames();
+                List<label> map(activeTensionNames.size(), -1);
+                forAll(activeTensionNames, i)
+                {
+                    map[i] = available.find(activeTensionNames[i]);
+                }
+
+                scalarField values;
+                forAll(Ta, cellI)
+                {
+                    activeTensionModel->fieldValues(cellI, values);
+                    forAll(activeTensionOutFields, i)
+                    {
+                        scalarField& field = activeTensionOutFields[i].primitiveFieldRef();
+                        if (map[i] >= 0 && map[i] < values.size())
+                        {
+                            field[cellI] = values[map[i]];
+                        }
+                        else
+                        {
+                            field[cellI] = 0.0;
+                        }
+                    }
+                }
+                forAll(activeTensionOutFields, i)
+                {
+                    activeTensionOutFields[i].correctBoundaryConditions();
+                }
+            }
 
             #include "updateActivationTimes.H"
 
@@ -193,12 +218,37 @@ int main(int argc, char* argv[])
                 lambda,
                 Ta
             );
-            activeTensionIO::exportStateFields
-            (
-                Ta,
-                activeTensionNames,
-                activeTensionOutFields
-            );
+            if (!activeTensionNames.empty())
+            {
+                const wordList available = activeTensionModel->availableFieldNames();
+                List<label> map(activeTensionNames.size(), -1);
+                forAll(activeTensionNames, i)
+                {
+                    map[i] = available.find(activeTensionNames[i]);
+                }
+
+                scalarField values;
+                forAll(Ta, cellI)
+                {
+                    activeTensionModel->fieldValues(cellI, values);
+                    forAll(activeTensionOutFields, i)
+                    {
+                        scalarField& field = activeTensionOutFields[i].primitiveFieldRef();
+                        if (map[i] >= 0 && map[i] < values.size())
+                        {
+                            field[cellI] = values[map[i]];
+                        }
+                        else
+                        {
+                            field[cellI] = 0.0;
+                        }
+                    }
+                }
+                forAll(activeTensionOutFields, i)
+                {
+                    activeTensionOutFields[i].correctBoundaryConditions();
+                }
+            }
 
             #include "updateActivationTimes.H"
 

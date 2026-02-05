@@ -358,8 +358,17 @@ forAll(names, i)
     );
 }
 
-// Active tension output fields (Ta only for now)
-const wordList activeTensionNames(1, word("Ta"));
+// Active tension output fields (agnostic)
+wordList activeTensionNames = activeTensionModel->exportedFieldNames();
+if (activeTensionNames.empty())
+{
+    activeTensionNames = activeTensionModel->availableFieldNames();
+}
+if (activeTensionNames.empty())
+{
+    activeTensionNames.setSize(1);
+    activeTensionNames[0] = "Ta";
+}
 PtrList<volScalarField> activeTensionOutFields;
 activeTensionOutFields.setSize(activeTensionNames.size());
 

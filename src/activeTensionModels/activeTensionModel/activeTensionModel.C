@@ -10,6 +10,7 @@
 \*---------------------------------------------------------------------------*/
 
 #include "activeTensionModel.H"
+#include "activeTensionIO.H"
 
 namespace Foam
 {
@@ -77,6 +78,55 @@ void activeTensionModel::validateProvider() const
     if (req.needVm)       require(CouplingSignal::Vm,       "Vm");
     if (req.needAct)      require(CouplingSignal::Act,      "Act");
     if (req.needCai)      require(CouplingSignal::Cai,      "Cai");
+}
+
+void activeTensionModel::writeHeader(OFstream& os) const
+{
+    wordList names = exportedFieldNames();
+    if (names.empty())
+    {
+        names = availableFieldNames();
+    }
+
+    if (!names.empty())
+    {
+        activeTensionIO::writeHeader(os, names);
+    }
+    else
+    {
+        os << "# t Ta" << nl;
+    }
+}
+
+void activeTensionModel::write(const scalar t, OFstream& os) const
+{
+    scalarField values;
+    fieldValues(0, values);
+
+    if (values.empty())
+    {
+        os << t << " " << 0.0 << nl;
+        return;
+    }
+
+    wordList names = exportedFieldNames();
+    if (names.empty())
+    {
+        activeTensionIO::write(t, os, values);
+        return;
+    }
+
+    wordList available = availableFieldNames();
+    scalarField selected(names.size(), 0.0);
+    forAll(names, i)
+    {
+        label idx = available.find(names[i]);
+        if (idx >= 0 && idx < values.size())
+        {
+            selected[i] = values[idx];
+        }
+    }
+    activeTensionIO::write(t, os, selected);
 }
 
 } // namespace Foam

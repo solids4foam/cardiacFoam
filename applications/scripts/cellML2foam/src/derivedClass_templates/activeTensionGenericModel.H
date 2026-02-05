@@ -33,9 +33,10 @@ class activeTensionGenericModel
 private:
 
     autoPtr<ODESolver> odeSolver_;
-    PtrList<scalarField> internalVariables_;
-    PtrList<scalarField> algebraicVariables_;
-    scalarField constants_;
+    PtrList<scalarField> STATES_;
+    PtrList<scalarField> ALGEBRAIC_;
+    PtrList<scalarField> RATES_;
+    mutable scalarField CONSTANTS_;
 
 public:
 
@@ -81,6 +82,18 @@ public:
         scalarField& dfdt,
         scalarSquareMatrix& dfdy
     ) const override;
+
+    virtual wordList availableFieldNames() const override;
+    virtual void fieldValues(const label i, scalarField& values) const override;
+
+    void debugPrintFields
+    (
+        const label cellI,
+        const scalar t1,
+        const scalar t2,
+        const scalar step,
+        const scalar act
+    ) const;
 };
 
 } // End namespace Foam

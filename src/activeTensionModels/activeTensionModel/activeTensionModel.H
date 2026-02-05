@@ -19,6 +19,7 @@
 #include "Switch.H"
 #include "error.H"
 #include "wordList.H"
+#include "OFstream.H"
 
 #include "electromechanicsFeedbackProvider.H"
 
@@ -147,6 +148,19 @@ public:
         const scalarField& y,
         scalarField& dydt
     ) const = 0;
+
+    virtual wordList availableFieldNames() const
+    {
+        return wordList();
+    }
+
+    virtual void fieldValues(const label, scalarField& values) const
+    {
+        values.clear();
+    }
+
+    virtual void writeHeader(OFstream& os) const;
+    virtual void write(const scalar t, OFstream& os) const;
 
      
 

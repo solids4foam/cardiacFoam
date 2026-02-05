@@ -24,22 +24,7 @@ wordList activeTensionIO::exportedFieldNames
         return defaultNames;
     }
 
-    wordList filtered;
-    forAll(userList, i)
-    {
-        if (userList[i] == "Ta")
-        {
-            filtered.append(userList[i]);
-        }
-        else
-        {
-            WarningInFunction
-                << "Ignoring unknown active tension field '" << userList[i]
-                << "'. Only 'Ta' is supported." << nl;
-        }
-    }
-
-    return filtered.size() ? filtered : defaultNames;
+    return userList;
 }
 
 

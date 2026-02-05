@@ -59,6 +59,7 @@ Author
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "activeTensionModel.H"
+#include "activeTensionIO.H"
 
 int main(int argc, char *argv[])
 {
@@ -102,6 +103,22 @@ int main(int argc, char *argv[])
     ionicOutput.setf(std::ios::fixed);
     ionicOutput.precision(7);
 
+    // Extract the names of the fields to be exported
+    const wordList ionicExportNames = ionicModel->exportedFieldNames();
+    if (!ionicExportNames.empty())
+    {
+        Info<< "Exporting fields: " << ionicExportNames << nl;
+    }
+    const wordList ionicDebugNames = ionicModel->debugPrintedNames();
+    if (!ionicDebugNames.empty())
+    {
+        Info<< "Debug printing fields: " << ionicDebugNames << nl;
+    }
+
+    ionicModel->writeHeader(ionicOutput);
+
+
+
     word activeTensionModelName;
     solutionVariablesMemory.lookup("activeTensionModel") >> activeTensionModelName;
 
@@ -115,17 +132,20 @@ int main(int argc, char *argv[])
     OFstream taOutput(activeTensionOutFile);
     taOutput.setf(std::ios::fixed);
     taOutput.precision(7);
-    taOutput << "# t Ta" << nl;
-
-     // Extract the names of the fields to be exported
-    const wordList exportNames = ionicModel->exportedFieldNames();
-    if (!exportNames.empty())
+    // Extract the names of the active tension fields to be exported
+    const wordList activeTensionExportNames = activeTensionModel->exportedFieldNames();
+    if (!activeTensionExportNames.empty())
     {
-        Info<< "Exporting fields: " << exportNames << nl;
+        Info<< "Exporting fields: " << activeTensionExportNames << nl;
+    }
+    const wordList activeTensionDebugNames = activeTensionModel->debugPrintedNames();
+    if (!activeTensionDebugNames.empty())
+    {
+        Info<< "Debug printing fields: " << activeTensionDebugNames << nl;
     }
 
-    ionicModel->writeHeader(ionicOutput);
-
+    activeTensionModel->writeHeader(taOutput);
+    
 
     // Loop for the ODE solver
     scalarField lambda(1, 1.0);
@@ -158,16 +178,10 @@ int main(int argc, char *argv[])
             Ta
         );
 
-        Info<< "t=" << runTime.value()
-        << " act=" << ionicModel->signal(0, CouplingSignal::Act)
-        << " vm="  << ionicModel->signal(0, CouplingSignal::Vm)
-        << " Ta="  << Ta[0] << nl;
-
-
         if (stimulusIO::shouldWriteStep(t0, t1, solutionVariablesMemory, false))
         {
-            taOutput << runTime.value() << " " << Ta[0] <<  nl;
             ionicModel->write(runTime.value(), ionicOutput);
+            activeTensionModel->write(runTime.value(), taOutput);
         }
     }
 
@@ -178,7 +192,7 @@ int main(int argc, char *argv[])
     Info<< "1. Ionic Model: " << ionicOutput.name() << nl;
     Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
     Info<< "2. Active Tension: " << taOutput.name() << nl;
-    Info<< "Format: [Time Ta]" << nl;
+    Info<< "Format: [Time STATES ALGEBRAIC RATES]" << nl;
 
     return 0;
 

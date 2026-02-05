@@ -33,15 +33,17 @@ stimulusLocationMax    (1.5e-3 1.5e-3 7e-3);
 //stimulus constants
 
 	stim_start  	20;	//(millisecond)
-	stim_duration   1.5;	//(millisecond)
-	stim_amplitude  0.4;	//(picoA_per_picoF)
+	stim_duration   1;	//(millisecond)
+	stim_amplitude  0.5; 	//(picoA_per_picoF)
 
 
 
 //S1 protocol 
 
-	stim_period_S1  77.5;
-	nstim1  4;
+//	stim_period_S1  500;
+	stim_period_S1  77.5 for the AlievPanfilov Model
+
+	nstim1  6;
 
 
 

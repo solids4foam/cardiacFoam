@@ -42,23 +42,30 @@ Foam::activeTensionGenericModel::activeTensionGenericModel
     activeTensionModel(dict, num),
     ODESystem(),
     odeSolver_(ODESolver::New(*this, dict_)),
-    internalVariables_(num),
-    algebraicVariables_(num),
-    constants_(NUM_CONSTANTS, 0.0)
+    STATES_(num),
+    ALGEBRAIC_(num),
+    RATES_(num),
+    CONSTANTS_(NUM_CONSTANTS, 0.0)
 {
-    forAll(internalVariables_, integrationPtI)
+    Info<< nl << "Initialize activeTensionGenericModel constants:" << nl;
+    forAll(STATES_, integrationPtI)
     {
-        internalVariables_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
-        algebraicVariables_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
+        STATES_.set(integrationPtI,    new scalarField(NUM_STATES, 0.0));
+        ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
+        RATES_.set(integrationPtI,     new scalarField(NUM_STATES, 0.0));
 
-        scalarField rates(NUM_STATES, 0.0);
         activeTensionGenericModelinitConsts
         (
-            constants_.data(),
-            rates.data(),
-            internalVariables_[integrationPtI].data()
+            CONSTANTS_.data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data()
         );
     }
+    Info<< CONSTANTS_ << nl;
+
+    label i0 = rand() % STATES_.size();
+    Info<< "initial states:" << nl;
+    Info<< STATES_[i0] << nl;
 }
 
 
@@ -82,50 +89,38 @@ void Foam::activeTensionGenericModel::calculateTension
     const scalar tEnd   = t + dt;
     scalar step         = dt;
 
+    const CouplingSignalProvider& p = provider();
     const label monitorCell = 0;
 
-    forAll(internalVariables_, integrationPtI)
+    forAll(STATES_, integrationPtI)
     {
-        scalarField& yStart = internalVariables_[integrationPtI];
-        scalarField& alg    = algebraicVariables_[integrationPtI];
+        scalarField& STATESI    = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI     = RATES_[integrationPtI];
+
+        scalar& Ta_i  = STATESI[::Ta];
+        scalar& act   = STATESI[::u];
+
+        act = p.signal(integrationPtI, CouplingSignal::Act);
 
         // Advance ODE system
-        odeSolver_->solve(tStart, tEnd, yStart, step);
+        odeSolver_->solve(tStart, tEnd, STATESI, step);
 
-        scalarField rates(NUM_STATES, 0.0);
         activeTensionGenericModelcomputeVariables
         (
             tEnd,
-            constants_.data(),
-            rates.data(),
-            yStart.data(),
-            alg.data(),
-            false
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data()
         );
 
-        Ta[integrationPtI] = alg[AV_Tension];
+        Ta[integrationPtI] = Ta_i;
 
         const wordList printedNames = debugPrintedNames();
         if (!printedNames.empty() && integrationPtI == monitorCell)
         {
-            wordList availableNames(2);
-            availableNames[0] = "Ta";
-            availableNames[1] = "Act";
-
-            scalarField values(2);
-            values[0] = Ta[integrationPtI];
-            values[1] = Act[integrationPtI];
-
-            activeTensionIO::debugPrintFields
-            (
-                printedNames,
-                availableNames,
-                values,
-                integrationPtI,
-                tStart,
-                tEnd,
-                step
-            );
+            debugPrintFields(integrationPtI, tStart, tEnd, step, act);
         }
     }
 }
@@ -139,16 +134,18 @@ void Foam::activeTensionGenericModel::derivatives
 ) const
 {
     scalarField alg(NUM_ALGEBRAIC, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
 
     activeTensionGenericModelcomputeVariables
     (
         t,
-        constants_.data(),
-        dydt.data(),
+        CONSTANTS_.data(),
+        rates.data(),
         const_cast<scalarField&>(y).data(),
-        alg.data(),
-        false
+        alg.data()
     );
+
+    dydt[::Ta] = rates[::Ta];
 }
 
 
@@ -161,6 +158,89 @@ void Foam::activeTensionGenericModel::jacobian
 ) const
 {
     notImplemented("Foam::activeTensionGenericModel::jacobian(...)");
+}
+
+void Foam::activeTensionGenericModel::debugPrintFields
+(
+    const label cellI,
+    const scalar t1,
+    const scalar t2,
+    const scalar step,
+    const scalar act
+) const
+{
+    const wordList printedNames = debugPrintedNames();
+    if (printedNames.empty())
+    {
+        return;
+    }
+
+    const label nAvailable = NUM_STATES + NUM_ALGEBRAIC + 1;
+    wordList availableNames(nAvailable);
+    scalarField values(nAvailable);
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        availableNames[i] = activeTensionGenericModelSTATES_NAMES[i];
+        values[i] = STATES_[cellI][i];
+    }
+
+    for (label i = 0; i < NUM_ALGEBRAIC; ++i)
+    {
+        const label idx = NUM_STATES + i;
+        availableNames[idx] = activeTensionGenericModelALGEBRAIC_NAMES[i];
+        values[idx] = ALGEBRAIC_[cellI][i];
+    }
+
+    availableNames[nAvailable - 1] = "Act";
+    values[nAvailable - 1] = act;
+
+    activeTensionIO::debugPrintFields
+    (
+        printedNames,
+        availableNames,
+        values,
+        cellI,
+        t1,
+        t2,
+        step
+    );
+}
+
+Foam::wordList Foam::activeTensionGenericModel::availableFieldNames() const
+{
+    wordList names(NUM_STATES + NUM_ALGEBRAIC);
+
+    for (label i = 0; i < NUM_STATES; ++i)
+    {
+        names[i] = activeTensionGenericModelSTATES_NAMES[i];
+    }
+
+    for (label i = 0; i < NUM_ALGEBRAIC; ++i)
+    {
+        names[NUM_STATES + i] = activeTensionGenericModelALGEBRAIC_NAMES[i];
+    }
+
+    return names;
+}
+
+void Foam::activeTensionGenericModel::fieldValues
+(
+    const label i,
+    scalarField& values
+) const
+{
+    values.setSize(NUM_STATES + NUM_ALGEBRAIC);
+
+    for (label s = 0; s < NUM_STATES; ++s)
+    {
+        values[s] = STATES_[i][s];
+    }
+
+    for (label a = 0; a < NUM_ALGEBRAIC; ++a)
+    {
+        values[NUM_STATES + a] = ALGEBRAIC_[i][a];
+    }
 }
 
 // ************************************************************************* //
