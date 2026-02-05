@@ -1,0 +1,34 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      activeTensionProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+//activeTensionProperties
+
+
+activeTensionModel    NiedererHunterSmith;
+
+// Variables to print in terminal (active tension)
+
+ActiveTensionModel_export (AV_Ca_i Ta AV_Tension AV_Q AV_J_TRPN);
+
+ActiveTensionModel_debugPrint (AV_Ca_i AV_Tension AV_Q AV_J_TRPN);
+
+
+
+// Model-specific coefficients (if required by that model)
+//kTa                  8;
+//initialTa            0.0;
