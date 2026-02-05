@@ -115,25 +115,25 @@ return dict_.found("utilities") && readBool(dict_.lookup("utilities"));
 }
 
 
-// bool Foam::ionicModel::hasSignal(const CouplingSignal) const
-// {
-//     // Base class provides no coupling signals by default
-//     return false;
-// }
+bool Foam::ionicModel::hasSignal(const CouplingSignal) const
+{
+    // Base class provides no coupling signals by default
+    return false;
+}
 
-// Foam::scalar Foam::ionicModel::signal
-// (
-//     const label,
-//     const CouplingSignal s
-// ) const
-// {
-//     FatalErrorInFunction
-//         << "Requested coupling signal "
-//         << static_cast<int>(s)
-//         << " from ionicModel, but this ionic model does not provide it."
-//         << nl
-//         << "You must override hasSignal() and signal() in the derived ionic model."
-//         << abort(FatalError);
+Foam::scalar Foam::ionicModel::signal
+(
+    const label,
+    const CouplingSignal s
+) const
+{
+    FatalErrorInFunction
+        << "Requested coupling signal "
+        << static_cast<int>(s)
+        << " from ionicModel, but this ionic model does not provide it."
+        << nl
+        << "You must override hasSignal() and signal() in the derived ionic model."
+        << abort(FatalError);
 
-//     return 0.0;
-// }
+    return 0.0;
+}
