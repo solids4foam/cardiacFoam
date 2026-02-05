@@ -36,9 +36,9 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 
 // Specify the ionic model
 
-	ionicModel  AlievPanfilov;
+//	ionicModel  AlievPanfilov;
 //       ionicModel  TNNP;
-//      ionicModel  BuenoOrovio;
+      ionicModel  BuenoOrovio;
 //      ionicModel  Courtemanche;
 //      ionicModel  Gaur;
 
@@ -49,8 +49,8 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 
 //specify the type of tissue or dimension
 
- 	tissue myocyte;
-//	tissue mCells;
+//	tissue myocyte;
+	tissue mCells;
 // 	tissue endocardialCells;
 // 	tissue epicardiacCells;
 

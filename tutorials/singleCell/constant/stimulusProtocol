@@ -25,7 +25,7 @@ FoamFile
 	
 	//NOTE: introduce module of amplitude.
 	//stim_amplitude  -52;	//(picoA_per_picoF) (TNNP)
-stim_amplitude   0.4;
+	stim_amplitude   0.4;
 
 
 
@@ -33,7 +33,7 @@ stim_amplitude   0.4;
 //S1 protocol 
 
 	stim_period_S1  1000;
-	nstim1  2;
+	nstim1  4;
 
 
 
