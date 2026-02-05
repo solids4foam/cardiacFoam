@@ -41,6 +41,7 @@ Authors
 #include "OFstream.H"
 #include "volFields.H"
 
+#include "electromechanicsFeedbackProvider.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -54,7 +55,8 @@ namespace Foam
 
 class ionicModel
 :
-    public ODESystem
+    public ODESystem,
+    public CouplingSignalProvider
 {
     // Private Data
 
@@ -188,7 +190,12 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
-        
+//-----------------------Member Functions ---------------------//
+
+    /// --- CouplingSignalProvider interface ---
+    bool hasSignal(CouplingSignal s) const override;
+    scalar signal(label i, CouplingSignal s) const override;
+    
 
 //-----------------------Solver Functions ---------------------//
         //- ODE solver

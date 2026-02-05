@@ -3,7 +3,7 @@ ionicModel/ionicSelector.C
 
 tmanufacturedFDA/tmanufacturedFDA.C
 
-/*TNNP/TNNP.C
+TNNP/TNNP.C
 Gaur/Gaur.C
 Grandi/Grandi.C
 Courtemanche/Courtemanche.C
@@ -14,7 +14,7 @@ ORd/ORd.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
 AlievPanfilov/AlievPanfilov.C
-*/
+
 
 
 

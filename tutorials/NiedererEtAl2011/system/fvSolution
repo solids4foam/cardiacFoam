@@ -51,7 +51,7 @@ PIMPLE
 
     residualControl
     {
-        psi
+         "Vm|psi"
         {
             relTol          0.0;
             tolerance       1e-6;
