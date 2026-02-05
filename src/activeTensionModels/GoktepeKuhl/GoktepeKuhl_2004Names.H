@@ -2,13 +2,13 @@
 
 enum STATES_INDEX {
     Ta,
-    AV_u,
     NUM_STATES
 };
 
 enum ALGEBRAIC_INDEX { 
     AV_e,
     AV_Vm,
+    AV_u,
     NUM_ALGEBRAIC
 };
 

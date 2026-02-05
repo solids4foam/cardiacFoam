@@ -90,9 +90,9 @@ void Foam::GoktepeKuhl::calculateTension
             << "Ta.size() != nIntegrationPoints" << abort(FatalError);
     }
 
-    const scalar tStart = t;
-    const scalar tEnd   = (t + dt)  ;
-    scalar step         = dt ;
+    const scalar tStart = 100*t;
+    const scalar tEnd   = 100*(t + dt)  ;
+    scalar step         = 100*dt ;
 
     const CouplingSignalProvider& p = provider();
     const label monitorCell = 0;

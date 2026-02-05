@@ -1,13 +1,13 @@
 #include "GoktepeKuhl_2004Names.H"
 
 static const char* GoktepeKuhlSTATES_NAMES[NUM_STATES] = {
-    "Ta",
-    "AV_u"
+    "Ta"
 };
 
 static const char* GoktepeKuhlALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_e",
-    "AV_Vm"
+    "AV_Vm",
+    "AV_u"
 };
 
 
@@ -39,7 +39,7 @@ GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES)
    
     /* initial conditions */
     STATES[Ta] = 0.0;
-    STATES[AV_u]= 0.0;
+    //STATES[AV_u]= 0.0;
 }
 
 
@@ -54,9 +54,9 @@ GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
         + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0])
         * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_Vm] - CONSTANTS[AC_Vshift])));
 
-    RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[AV_u] - STATES[Ta]);
+    RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * ALGEBRAIC[AV_u] - STATES[Ta]);
 
-    STATES[AV_u]=0; // u is updated in the ionic model
+    //ALGEBRAIC[AV_u]=0; // u is updated in the ionic model
     
     
  
