@@ -1,9 +1,11 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -21,15 +23,11 @@ stimulusLocationMinList ( (0 0 0) (7e-3 0 0) );
 stimulusLocationMaxList ( (1.0e-3 20.0e-3 0.1e-3) (10.0e-3 8.0e-3 0.1e-3) );
 stimulusStartTimeList   ( 0.0 0.34 );
 
-
-
 // External stimulus current characteristics
 
 stimulusDuration    [0 0 1 0 0 0 0] 3e-3;
 
 stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
-
-
 
 //Read to run only
 //stimulus constants
@@ -38,14 +36,10 @@ stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
 	stim_duration   0;	//(millisecond)
 	stim_amplitude  0;	//(picoA_per_picoF)
 
-
-
-//S1 protocol 
+//S1 protocol
 
 	stim_period_S1  0;
 	nstim1  0;
-
-
 
 //S2 protocol
 

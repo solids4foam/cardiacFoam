@@ -1,9 +1,11 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -15,9 +17,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-
 //activeTensionProperties
-
 
 activeTensionModel    NiedererHunterSmith;
 
@@ -26,8 +26,6 @@ activeTensionModel    NiedererHunterSmith;
 ActiveTensionModel_export (AV_Ca_i Ta AV_Tension AV_Q AV_J_TRPN);
 
 ActiveTensionModel_debugPrint (AV_Ca_i AV_Tension AV_Q AV_J_TRPN);
-
-
 
 // Model-specific coefficients (if required by that model)
 //kTa                  8;

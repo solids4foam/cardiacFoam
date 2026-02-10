@@ -1,9 +1,11 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -15,33 +17,25 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//Conductivity. The 1D and 2D use only the respective dimension of the tensor. 
+//Conductivity. The 1D and 2D use only the respective dimension of the tensor.
 
 conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761); //3D
-
 
 // Cellular membrane surface-to-volume ratio [1/m]
 
 	chi  [0 -1 0 0 0 0 0] 140000;
 
-
 // Cellular membrane capacitance [F/m^2]
 
 	Cm    [-1 -4 4 0 0 2 0] 0.01;
-
-
 
 // Specify the ionic model
 
 ionicModel  Courtemanche;
 
-
 //specify the type of tissue or dimension (for FDA solutions )to model
 
 //	tissue myocyte;	
 tissue      myocyte;
-
- 
-
 
 // ************************************************************************* //
