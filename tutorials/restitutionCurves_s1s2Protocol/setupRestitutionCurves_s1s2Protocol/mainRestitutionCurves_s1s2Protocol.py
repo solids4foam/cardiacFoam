@@ -94,7 +94,7 @@ def run_postprocessing():
         restitution_curves(
             base_dir=CASE_ROOT,
             output_folder=OUTPUT_FOLDER,
-            ionic_model=model,          
+            ionic_model=model,
             tissue_types=mapped_tissue,
             show_plots=SEE_PLOTS_DURING_POSTPROCESSING,
         )

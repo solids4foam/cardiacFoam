@@ -23,7 +23,7 @@ FoamFile
 
 	stim_start  	20;	//(millisecond)
 	stim_duration   1;	//(millisecond)
-	
+
 	//NOTE: introduce module of amplitude.
 	//stim_amplitude  -52;	//(picoA_per_picoF) (TNNP)
 stim_amplitude   0.4;

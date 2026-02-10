@@ -53,7 +53,7 @@ PS: Niederer Stimulus in VolField
 
  1. External stimulus current intensity [A/m^2]
  2. Per A/m^2 is calculated as A/m^3 * beta (above)
-	
+
 	stimulusIntensity   [0 -2 0 0 0 1 0] 0.000000357142857;
 	External stimulus current intensity [A/m^3]
  	50000 micro A/cm3 == 50000 A/m3

@@ -10,7 +10,7 @@ def float_to_str(value):
     s = s.rstrip('0').rstrip('.')  # remove trailing zeros and dot
     s = s.replace('.', '')  # remove decimal point entirely
     return s
-  
+
 
 def extract_activation_data(case_path, points_file, output_dir, dx=None, dt=None,tissue = None, ionicModel = None, solver = None):
     #Define strings to pass for writing my csv files. 0.001 = 0001
@@ -19,7 +19,7 @@ def extract_activation_data(case_path, points_file, output_dir, dx=None, dt=None
 
     """
     Extracts activation data from an OpenFOAM case using ParaView (pvpython).
-    
+
     Parameters:
     - case_path: Path to the .foam file (e.g. "/path/to/case.foam")
     - points_file: Path to Niederer points TXT file
@@ -28,7 +28,7 @@ def extract_activation_data(case_path, points_file, output_dir, dx=None, dt=None
     """
     paraview.simple._DisableFirstRenderCameraReset()
 
-    
+
 
     # Load OpenFOAM case
     casefoam = OpenFOAMReader(registrationName='casefoam', FileName=case_path)
