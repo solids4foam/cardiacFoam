@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm log.*
+rm -f log.*
 
 for d in [0-9]*; do
   [ -d "$d" ] && [ "$d" != "0" ] && rm -rf "$d"
