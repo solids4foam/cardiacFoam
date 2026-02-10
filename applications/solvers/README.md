@@ -3,7 +3,7 @@
 This directory contains OpenFOAM-based solvers for cardiac electrophysiology,
 built on top of the `ionicModels` library.
 
-```
+```bash
 solvers/
 ├── electroActivationFoam
 ├── eikonalElectroActivationFoam
