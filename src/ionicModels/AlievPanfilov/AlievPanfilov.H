@@ -85,8 +85,8 @@ class AlievPanfilov
 
 
         //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const override;
-        virtual List<word> supportedDimensions() const override
+        virtual List<word> supportedTissueTypes() const;
+        virtual List<word> supportedDimensions() const
         {
             return {}; //No dimensions flag
         }
@@ -111,16 +111,16 @@ class AlievPanfilov
 
 
         // CouplingSignalProvider
-        virtual bool hasSignal(const CouplingSignal s) const override;
-        virtual scalar signal(const label i, const CouplingSignal s) const override;
+        virtual bool hasSignal(const CouplingSignal s) const;
+        virtual scalar signal(const label i, const CouplingSignal s) const;
 
 
         // Member Functions
 
 
-            virtual void writeHeader(OFstream& output) const override;
+            virtual void writeHeader(OFstream& output) const;
             //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const override;
+            virtual void write(const scalar t, OFstream& output) const;
 
 
             virtual void calculateCurrent
@@ -130,7 +130,7 @@ class AlievPanfilov
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            ) override;
+            );
 
 
             virtual void solveODE
@@ -140,11 +140,11 @@ class AlievPanfilov
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            ) override;
+            );
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const override
+            virtual label nEqns() const
             {
                 return NUM_STATES;
             }
@@ -156,7 +156,7 @@ class AlievPanfilov
                 const scalar t,
                 const scalarField& y,
                 scalarField& dydt
-            ) const override;
+            ) const;
 
 
 
@@ -164,8 +164,8 @@ class AlievPanfilov
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
                     // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const override;
-            virtual wordList debugPrintedNames() const override;
+            virtual Foam::wordList exportedFieldNames() const;
+            virtual wordList debugPrintedNames() const;
 
 
             // Override to export the variables
@@ -173,7 +173,7 @@ class AlievPanfilov
             (
                 const Field<Field<scalar>>&,
                 PtrList<volScalarField>&
-            ) override;
+            );
 
             // Override to print variables in solver
             void debugPrintFields
@@ -182,7 +182,7 @@ class AlievPanfilov
                 scalar t1,
                 scalar t2,
                 scalar step
-            ) const override;
+            ) const;
 
             virtual void sweepCurrent
             (
@@ -191,7 +191,7 @@ class AlievPanfilov
                 scalar Vmax,
                 label nPts,
                 const fileName& outputFile
-            ) const override;
+            ) const;
 
 
 };
