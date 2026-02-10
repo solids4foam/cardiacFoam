@@ -1,5 +1,6 @@
-# Build and test cardiacFoam using Docker containers
-# Adapted from solids4foam actions
+# Build cardiacFoam against prebuilt solids4foam Docker images
+# Uses solids4foam v2.3 images to avoid rebuilding dependencies in CI
+
 name: Build and test
 
 on:
@@ -10,25 +11,30 @@ jobs:
   build-and-test:
     name: Build on ${{ matrix.container-image.name }}
     runs-on: ubuntu-22.04
+
     strategy:
+      fail-fast: false
       matrix:
         container-image:
           # --------------------------------------------------
-          # OpenFOAM.com + PETSc
+          # solids4foam v2.3 images (OpenFOAM.com)
           # --------------------------------------------------
-          - name: "OpenFOAM-v2512-PETSc"
-            image: "philippic/openfoam-v2512:ubuntu-22.04-petsc-no-openmp-system-blas"
-            source: "/usr/lib/openfoam/openfoam2512/etc/bashrc"
+          - name: "solids4foam-v2.3-OpenFOAM-v2312"
+            image: "solids4foam/solids4foam:v2.3-openfoam-v2312-latest"
+            source: "/lib/openfoam/openfoam2312/etc/bashrc"
+            solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
-          - name: "OpenFOAM-v2412-PETSc"
-            image: "philippic/openfoam-v2412:ubuntu-22.04-petsc-no-openmp-system-blas"
-            source: "/usr/lib/openfoam/openfoam2412/etc/bashrc"
+          - name: "solids4foam-v2.3-OpenFOAM-v2412"
+            image: "solids4foam/solids4foam:v2.3-openfoam-v2412-latest"
+            source: "/lib/openfoam/openfoam2412/etc/bashrc"
+            solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
-          - name: "OpenFOAM-v2312-PETSc"
-            image: "philippic/openfoam-v2312:ubuntu-22.04-petsc-no-openmp-system-blas"
-            source: "/usr/lib/openfoam/openfoam2312/etc/bashrc"
+          - name: "solids4foam-v2.3-OpenFOAM-v2512"
+            image: "solids4foam/solids4foam:v2.3-openfoam-v2512-latest"
+            source: "/lib/openfoam/openfoam2512/etc/bashrc"
+            solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
     container:
@@ -38,16 +44,23 @@ jobs:
         HOME: ${{ github.workspace }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout cardiacFoam
+        uses: actions/checkout@v4
+        with:
+          submodules: false
 
-      - name: Allwmake
+      - name: Build cardiacFoam
         shell: bash -l {0}
         run: |
+          echo "Sourcing OpenFOAM environment"
           source ${{ matrix.container-image.source }}
-          export S4F_NO_FILE_FIXES=1; ./Allwmake ${{ matrix.container-image.buildflags }}
+
+          echo "Using solids4foam from Docker image"
+          export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+
+          ./Allwmake ${{ matrix.container-image.buildflags }}
 
       - name: PETSc sanity check
-        if: contains(matrix.container-image.name, 'PETSc')
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
