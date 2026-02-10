@@ -26,8 +26,10 @@ If `spatch` is unavailable, the pipeline will fail at the ansic → openfoam ste
 Run the utility from this directory:
 
 ```bash
-cd /Users/simaocastro/cardiacFoam/applications/utilities/cellML2foam
+cd $(CARDIAC_INST_DIR)/applications/utilities/cellML2foam
 ```
+
+where `$CARDIACFOAM_INST_DIR` is the location (address) of the cardiacFoam installation.
 
 ### 1) Convert CellML to MMT
 
