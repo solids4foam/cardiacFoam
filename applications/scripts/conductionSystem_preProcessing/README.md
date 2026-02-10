@@ -46,7 +46,7 @@ Inputs:
 Add diffusion tensors (optionally scaled in Purkinje cells), then convert + clean.
 
 ```
-python diffusivity/diffusionTensor_vtk.py --input ASCIIlegacy.vtk 
+python diffusivity/diffusionTensor_vtk.py --input ASCIIlegacy.vtk
 python diffusivity/diffusionTensor_vtk.py --input output/purkinjeLayer.vtk --output output/Diffusion_purkinjeLayer.vtk --purkinje-mult 2.0
 ```
 Output: VTK with `Diffusivity` in `CELL_DATA`, converted and cleaned for OpenFOAM.

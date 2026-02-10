@@ -42,7 +42,7 @@ Jsi
 
 //specify the type of tissue or dimension (for FDA solutions )to model
 
-//	tissue myocyte;	
+//	tissue myocyte;
 tissue      endocardialCells;
 
 // ************************************************************************* //

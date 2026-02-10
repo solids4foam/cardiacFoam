@@ -56,7 +56,7 @@ USAGE
 printHeader() {
     cat<<HEADER
 /*--------------------------------*- C++ -*----------------------------------*\\
-| cardiacFoam: solid mechanics and fluid-solid interaction simulations        |
+| cardiacFoam: the OpenFOAM heart project                                     |
 | Version:     ${cardiacFoamVersion}                                                           |
 | Web:         https://cardiacFoam.github.io                                  |
 | Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |

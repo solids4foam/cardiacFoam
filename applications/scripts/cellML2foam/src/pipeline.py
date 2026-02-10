@@ -103,7 +103,7 @@ def run_coccinelle(sim_c: Path, cocci_file: Path, verbose=False):
 
     cmd = [
         "spatch",
-        "--in-place", 
+        "--in-place",
         str(cocci_file),
         str(sim_c),
     ]
@@ -218,9 +218,9 @@ def run_pipeline(
                 4. Create 'state_map.txt' in this directory
                 5. Re-run the tool using:
 
-            
+
                 ============================================================
-                
+
                 Please name the output H file using the following format:
 
                     <ModelName>_<Year>.H
@@ -241,10 +241,10 @@ def run_pipeline(
                 - The year must be numeric
 
                 ============================================================
-                
+
                 To finish the process, please write the command:
-                
-                ./cellML2foam --from ansic --to openfoam --model <ModelName_Year> ansic/sim.c 
+
+                ./cellML2foam --from ansic --to openfoam --model <ModelName_Year> ansic/sim.c
                 ./cellML2foam --from mmt --to openfoam --model <ModelName_Year>  <ModelName>.mmt
 
                 Example:
