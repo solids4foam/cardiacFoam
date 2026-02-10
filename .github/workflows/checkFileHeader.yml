@@ -17,16 +17,16 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v38
 
-      - name: Run the solids4FoamChangeCopyright.sh script on added files
+      - name: Run the cardiacFoamChangeCopyright.sh script on added files
         run: |
           # Run the script on each added file
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
 
             extension="${file##*.}"
-            chmod +x ./applications/scripts/solids4FoamChangeCopyright.sh
+            chmod +x ./applications/scripts/cardiacFoamChangeCopyright.sh
 
             if [ "$extension" == "H" ] || [ "$extension" == "C" ]; then
               echo "Checking: $file"
-              ./applications/scripts/solids4FoamChangeCopyright.sh "$file"
+              ./applications/scripts/cardiacFoamChangeCopyright.sh "$file"
             fi
           done
