@@ -32,7 +32,7 @@ fi
 (cd applications && ./Allwmake $* 2>&1 | tee log.Allwmake)
 
 # Check if the build succeeded
-echo "Checking if the installation was a success:"
+echo; echo "Checking if the installation was a success:"
 N_ERRORS_1=$(find . -name log.Allwmake | xargs grep "Error " | wc -l)
 N_ERRORS_2=$(find . -name log.Allwmake | xargs grep "Stop." | wc -l)
 if [[ $N_ERRORS_1 -gt 0 ]] || [[ $N_ERRORS_2 -gt 0 ]]
