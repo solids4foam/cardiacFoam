@@ -881,7 +881,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
         {
             string line;
             inFile.getLine(line);
-            ISpanStream is(line);
+            IStringStream is(line);
 
             word dataName(is);
             word dataType(is);
@@ -917,7 +917,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             // 'NORMALS Normals float'
             string line;
             inFile.getLine(line);
-            ISpanStream is(line);
+            IStringStream is(line);
 
             word dataName(is);
             word dataType(is);
@@ -966,7 +966,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             // 'NORMALS Normals float'
             string line;
             inFile.getLine(line);
-            ISpanStream is(line);
+            IStringStream is(line);
 
             word dataName(is);
             word dataType(is);
@@ -1027,7 +1027,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             // 'TEXTURE_COORDINATES TCoords 2 float'
             string line;
             inFile.getLine(line);
-            ISpanStream is(line);
+            IStringStream is(line);
 
             word dataName(is);          //"Tcoords"
             label dim(readLabel(is));

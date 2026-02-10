@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     );
 
     // More precision (for points data)
-    IOstream::minPrecision(10);
+    IOstream::defaultPrecision(10);
 
     Info<< "Writing mesh ..." << endl;
 
