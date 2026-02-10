@@ -158,7 +158,7 @@ class AlievPanfilov
                 scalarField& dydt
             ) const override;
 
-        
+
 
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;

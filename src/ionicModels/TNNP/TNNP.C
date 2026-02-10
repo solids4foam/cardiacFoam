@@ -64,7 +64,7 @@ Foam::TNNP::TNNP
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
         // 🔑 First, set tissue using base logic + overrides
-        ionicModel::setTissueFromDict(); 
+        ionicModel::setTissueFromDict();
         TNNPinitConsts
         (
             CONSTANTS_.data(),
