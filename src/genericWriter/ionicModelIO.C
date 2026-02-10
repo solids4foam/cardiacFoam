@@ -352,16 +352,16 @@ namespace Foam {
     )
     {
         List<label> stateIndex, algIndex;
-    
+
         mapVariableNames(
             deps,
             stateNames, nStates,
             algNames, nAlg,
             stateIndex, algIndex
         );
-    
+
         os << V;
-    
+
         forAll(deps, i)
         {
             if (stateIndex[i] >= 0)
@@ -396,4 +396,4 @@ namespace Foam {
 
 
 
-    
+

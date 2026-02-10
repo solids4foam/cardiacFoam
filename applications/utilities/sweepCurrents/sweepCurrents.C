@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     autoPtr<ionicModel> modelPtr =
         ionicModel::New(sweepDict, 1, 0.01, false);
 
-    ionicModel& model = modelPtr(); 
+    ionicModel& model = modelPtr();
 
     wordList currents;
     sweepDict.lookup("currents") >> currents;
