@@ -103,14 +103,14 @@ def load_simulation_data(filename):
 
     with open(filename, 'r') as f:
         header = f.readline().strip().split()
-    
+
     data = np.loadtxt(filename, skiprows=1)
     df = pd.DataFrame(data, columns=header)
     return df, header
 
 def categorize_columns(header, n_states):
 
-    
+
     states = header[1:n_states+1]
     rates = header[-n_states:]
     algebraic = header[n_states+1:-n_states]

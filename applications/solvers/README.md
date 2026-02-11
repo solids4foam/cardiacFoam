@@ -3,7 +3,7 @@
 This directory contains OpenFOAM-based solvers for cardiac electrophysiology,
 built on top of the `ionicModels` library.
 
-```
+```bash
 solvers/
 ├── electroActivationFoam
 ├── eikonalElectroActivationFoam
@@ -86,14 +86,14 @@ This solver is primarily intended for:
 
 The three solvers address **different levels of electrophysiological modelling**:
 
-- `electroActivationFoam`  
+- `electroActivationFoam`
   Full tissue-scale electrophysiology (monodomain PDE + ionic ODEs).
 
-- `eikonalElectroActivationFoam`  
+- `eikonalElectroActivationFoam`
   Reduced-order model computing activation times only, without voltage or ionic
   dynamics.
 
-- `singleCellElectroActivationFoam`  
+- `singleCellElectroActivationFoam`
   Zero-dimensional single-cell simulations for ionic-model development and
   testing.
 

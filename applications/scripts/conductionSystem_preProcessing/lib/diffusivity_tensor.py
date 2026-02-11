@@ -12,7 +12,7 @@ Functions:
                                        purkinje_name="purkinjeLayer",
                                        tensor_name="Diffusivity")
         Add a 3x3 diffusion tensor for each cell in the mesh based on the local
-        fiber, sheet, and Purkinje layer information. 
+        fiber, sheet, and Purkinje layer information.
         Can be extended for atria.
 """
 

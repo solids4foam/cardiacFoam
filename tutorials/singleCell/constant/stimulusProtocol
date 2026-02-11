@@ -1,9 +1,11 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -17,30 +19,23 @@ FoamFile
 
 //Stimulus protocol for singleCell Models and for 3D voltage sources based on location/Cell ID
 
-
 //stimulus constants
 
 	stim_start  	20;	//(millisecond)
 	stim_duration   1;	//(millisecond)
-	
+
 	//NOTE: introduce module of amplitude.
 	//stim_amplitude  -52;	//(picoA_per_picoF) (TNNP)
 stim_amplitude   0.4;
 
-
-
-
-//S1 protocol 
+//S1 protocol
 
 	stim_period_S1  1000;
 	nstim1  2;
-
-
 
 //S2 protocol
 
 	stim_period_S2  0;
 	nstim2  0;
- 
 
 // ************************************************************************* //

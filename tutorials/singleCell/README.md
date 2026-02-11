@@ -30,7 +30,7 @@ This setup is useful for:
 
 ## Case structure
 
-```
+```bash
 singleCell/
 ├── constant
 │   ├── cardiacProperties
@@ -64,7 +64,8 @@ The ionic model is selected in `constant/cardiacProperties`, for example:
 ionicModel  BuenoOrovio;
 ```
 
-Any model registered with the `ionicModels` library can be used - write `banana` (or any other word) and run the solver to see a list of available models.
+Any model registered with the `ionicModels` library can be used - write `banana`
+ (or any other word) and run the solver to see a list of available models.
 
 ---
 
@@ -95,16 +96,19 @@ specification of:
 This enables standard single-cell pacing and restitution studies.
 
 ---
+
 ### SweepCurrents
 
-The dictionary to acess to run the sweepCurrent utility besides ionicModel and tissue type, the user decides: 
+The dictionary to acess to run the sweepCurrent utility besides ionicModel and
+ tissue type, the user decides:
+
 - Voltage interval (typicaly -80 to + 40),
 - number of points to interpolate.
 
 This enables ionicModel checks and comparisons of variables that define some currents.
 
--  steady state gating,
--  time constant tau.
+- steady state gating,
+- time constant tau.
 
 Note that BuenoOrovio has dimensionless u - i.e 0 to +1.5
 

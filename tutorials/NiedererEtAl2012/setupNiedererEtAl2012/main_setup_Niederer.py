@@ -61,7 +61,7 @@ CONFIG = {
     # Input files
     "points_file": SETUP_ROOT / "simulation" / "Niederer_Points.txt",
     # Benchmark reference
-    "excel_reference": SETUP_ROOT / "postProcessing" / 
+    "excel_reference": SETUP_ROOT / "postProcessing" /
                        "Niederer_graphs_webplotdigitilizer_points_slab" /
                        "WebPlotDigitilizerdata.xlsx",
 }
@@ -69,15 +69,15 @@ CONFIG = {
 # ===============================================================
 # PARAMETER SWEEP CONFIGURATION
 # ===============================================================
-DX_VALUES = [0.5, 0.2, 0.1]                     # mm ------ This is a map for a structured blockMesh following rectangle dimensions.  
-DX_VALUES = [0.5, 0.2]                                   
+DX_VALUES = [0.5, 0.2, 0.1]                     # mm ------ This is a map for a structured blockMesh following rectangle dimensions.
+DX_VALUES = [0.5, 0.2]
 DT_VALUES = [0.05, 0.01, 0.005]                 # ms
-DT_VALUES = [0.05] 
-TISSUE_TYPES = ["epicardialCells"]              
-IONIC_MODEL = ["TNNP"] 
+DT_VALUES = [0.05]
+TISSUE_TYPES = ["epicardialCells"]
+IONIC_MODEL = ["TNNP"]
 SOLVER = ["explicit", "implicit"]
 OUTPUT_FOLDER = CASE_ROOT / "testSolvers"
-                        
+
 
 
 # ===============================================================

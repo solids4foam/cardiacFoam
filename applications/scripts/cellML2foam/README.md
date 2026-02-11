@@ -25,13 +25,15 @@ If `spatch` is unavailable, the pipeline will fail at the ansic → openfoam ste
 
 Run the utility from this directory:
 
+```bash
+cd $(CARDIAC_INST_DIR)/applications/utilities/cellML2foam
 ```
-cd /Users/simaocastro/cardiacFoam/applications/utilities/cellML2foam
-```
+
+where `$CARDIACFOAM_INST_DIR` is the location (address) of the cardiacFoam installation.
 
 ### 1) Convert CellML to MMT
 
-```
+```bash
 cellML2foam --from cellml --to mmt path/to/model.cellml
 ```
 
@@ -42,7 +44,7 @@ This writes `model.mmt`.
 Open the `.mmt` or `ansic/sim.c` and list the initial states in order. Create
 `state_map.txt` in this directory, for example:
 
-```
+```text
 0   V
 1   CaMKt
 2   Nai
@@ -51,13 +53,13 @@ Open the `.mmt` or `ansic/sim.c` and list the initial states in order. Create
 
 ### 3) Generate OpenFOAM code
 
-```
+```bash
 cellML2foam --from mmt --to openfoam --model ModelName_Year model.mmt
 ```
 
 Example:
 
-```
+```bash
 cellML2foam --from mmt --to openfoam --model NashPanfilov_2004 nash_panfilov_2004.mmt
 ```
 
@@ -71,4 +73,3 @@ This produces:
 
 - The utility expects `state_map.txt` to be in the **current working directory**.
 - The `--model` value must be `ModelName_Year` and the year must be numeric.
-
