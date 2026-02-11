@@ -15,9 +15,9 @@ class ionicModelIO
 public:
 
 
-    // Existing generic writer 
+    // Existing generic writer
     typedef scalar (*VmTransform)(const scalarField&);
-    
+
     static void writeHeader
     (
         OFstream& os,
@@ -124,9 +124,9 @@ public:
     const wordList& deps
     );
 
-    
 
-    
+
+
 
 };
 

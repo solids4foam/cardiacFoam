@@ -131,7 +131,7 @@ void Foam::AlievPanfilov::calculateCurrent
         scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
         scalarField& RATESI     = RATES_[integrationPtI];
 
-    
+
         STATESI[0] = (Vm[integrationPtI] * 1000.0 + 80)/100;
         ::AlievPanfilovcomputeVariables
         (

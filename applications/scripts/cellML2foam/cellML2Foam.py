@@ -43,9 +43,9 @@ before it is ready for use.
 1) Define ALGEBRAIC[Iion_cm]
 --------------------------------
 You must define the transmembrane ionic current as the sum of
-all ionic currents in the model. 
+all ionic currents in the model.
 
-    Hint: Look for the definition of RATES[V] 
+    Hint: Look for the definition of RATES[V]
 
 Example (illustrative):
 
@@ -84,11 +84,11 @@ Please inspect the functions and:
     tissueFlag == 2 : mid
     tissueFlag == 3 : epi
 
-4) Hash table for voltage dependance 
+4) Hash table for voltage dependance
 -----------------------------------------------
-If the model has voltage dependance on parameters 
-(e.g., gatingvariables), you just need to implement the hash table lookup 
-for Vm existing in <ModelName_Year>.H. 
+If the model has voltage dependance on parameters
+(e.g., gatingvariables), you just need to implement the hash table lookup
+for Vm existing in <ModelName_Year>.H.
     Example:
 
         {"INa",
@@ -97,7 +97,7 @@ for Vm existing in <ModelName_Year>.H.
                   "m_inf","h_inf","j_inf",
                   "tau_m","tau_h","tau_j"
                })}
-               
+
 Check the existing examples in the cardiacFoam library in src/ionicModels.
 
 

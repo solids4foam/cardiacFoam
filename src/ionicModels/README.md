@@ -19,7 +19,7 @@ The goals of the library are:
 
 ## Directory structure
 
-```
+```bash
 ionicModels/
 ├── BuenoOrovio/        # Bueno-Orovio et al. 2008 model
 ├── Courtemanche/       # Courtemanche et al. 1998 model
@@ -83,7 +83,7 @@ behaviour.
 
 ### BuenoOrovio (2008)
 
-```
+```vash
 BuenoOrovio/
 ├── BuenoOrovio_2008.H        # Generated ODE system
 ├── BuenoOrovio_2008Names.H   # Enums and variable names
@@ -93,7 +93,7 @@ BuenoOrovio/
 
 ### Courtemanche (1998)
 
-```
+```bash
 Courtemanche/
 ├── Courtemanche_1998.H
 ├── Courtemanche_1998Names.H
@@ -103,7 +103,7 @@ Courtemanche/
 
 ### Gaur (2021)
 
-```
+```vash
 Gaur/
 ├── Gaur_2021.H
 ├── Gaur_2021Names.H
@@ -113,7 +113,7 @@ Gaur/
 
 ### TNNP (2004)
 
-```
+```bash
 TNNP/
 ├── TNNP_2004.H
 ├── TNNP_2004Names.H
@@ -123,7 +123,7 @@ TNNP/
 
 ### Manufactured FDA model
 
-```
+```bash
 tmanufacturedFDA/
 ├── tmanufacturedFDA_2014.H
 ├── tmanufacturedFDA_2014Names.H
@@ -165,6 +165,7 @@ This module centralises:
 ## Adding a new ionic model
 
 Steps:
+
 1. Generate ODE code (usually from CellML).
 2. Create new directory with wrapper `.H/.C`.
 3. Implement overrides of `solveODE`, `calculateCurrent`, `derivatives`, `nEqns`.

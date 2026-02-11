@@ -38,7 +38,7 @@ public:
         scalar stim_period_S2,
         label  nstim2
     );
-    
+
 
     // Determine whether we should output this timestep (protocol-based)
     static bool shouldWriteStep

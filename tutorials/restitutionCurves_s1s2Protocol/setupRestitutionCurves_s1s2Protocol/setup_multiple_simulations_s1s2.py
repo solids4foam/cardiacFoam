@@ -112,7 +112,7 @@ def run_s1s2_simulation(
     tissue_file = base_dir / "constant" / PROPERTIES_FILE_NAME
     stimulus_file = base_dir / "constant" / STIMULUS_FILE_NAME
 
-   
+
     total = len(s2_intervals)
     for i, s2_intervals in enumerate(s2_intervals, start=1):
         print("\n==========================================")

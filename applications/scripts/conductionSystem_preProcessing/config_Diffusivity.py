@@ -12,7 +12,7 @@ PURKINJE_TRANSMURAL_MAX = 0.1
 
     #Tags for LV and RV in uvc_intraventricular field (Check fields list to confirm)
 LV_INTRAVENTRICULAR_TAG = -1
-RV_INTRAVENTRICULAR_TAG =  1 
+RV_INTRAVENTRICULAR_TAG =  1
 
     #Named for the cell data field tagging Purkinje elements
 PURKINJE_FIELD_NAME = "purkinjeLayer"

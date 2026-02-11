@@ -329,11 +329,11 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_KmCaMK] = 0.15;
     CONSTANTS[AC_aCaMK] = 0.05;
     CONSTANTS[AC_bCaMK] = 0.00068;
-    
+
     /* IpCa */
     CONSTANTS[AC_GpCa] = 0.0005;
     CONSTANTS[AC_KmCap] = 0.0005;
-    
+
     /* cell_geometry */
     CONSTANTS[AC_L] = 0.01;
     CONSTANTS[AC_rad] = 0.0011;
@@ -344,20 +344,20 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_vmyo] = 0.68 * CONSTANTS[AC_vcell];
     CONSTANTS[AC_vnsr] = 0.0552 * CONSTANTS[AC_vcell];
     CONSTANTS[AC_vss] = 0.02 * CONSTANTS[AC_vcell];
-    
+
     /* diff */
     CONSTANTS[AC_tauCa] = 0.2;
     CONSTANTS[AC_tauCl] = 2.0;
     CONSTANTS[AC_tauK] = 2.0;
     CONSTANTS[AC_tauNa] = 2.0;
 
-    
+
     /* extracellular */
     CONSTANTS[AC_cao] = 1.8;
     CONSTANTS[AC_clo] = 150.0;
     CONSTANTS[AC_ko] = 5.0;
     CONSTANTS[AC_nao] = 140.0;
-    
+
     /* physical_constants */
     CONSTANTS[AC_F] = 96485.0;
     CONSTANTS[AC_R] = 8314.0;
@@ -366,41 +366,41 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_zcl] = -1.0;
     CONSTANTS[AC_zk] = 1.0;
     CONSTANTS[AC_zna] = 1.0;
-    
+
     /* SERCA */
     CONSTANTS[AC_Jup_b] = 1.0;
     CONSTANTS[AC_upScale] = ((tissueFlag == 1) ? 1.3 : 1.0);
-    
+
     /* reversal_potentials */
     CONSTANTS[AC_PKNa] = 0.01833;
-    
+
     /* ICl */
     CONSTANTS[AC_Fjunc] = 1.0;
     CONSTANTS[AC_GClCa] = 0.2843;
     CONSTANTS[AC_GClb] = 0.00198;
     CONSTANTS[AC_KdClCa] = 0.1;
-    
+
     /* IK1 */
     CONSTANTS[AC_GK1_b] = 0.6992;
     CONSTANTS[AC_GK1] = ((tissueFlag == 1) ? CONSTANTS[AC_GK1_b] * 1.2 : ((tissueFlag == 2.0) ? CONSTANTS[AC_GK1_b] * 1.3 : CONSTANTS[AC_GK1_b]));
-    
+
     /* IKb */
     CONSTANTS[AC_GKb_b] = 0.0189;
     CONSTANTS[AC_GKb] = ((tissueFlag == 1) ? CONSTANTS[AC_GKb_b] * 0.6 : CONSTANTS[AC_GKb_b]);
-    
+
     /* IKs */
     CONSTANTS[AC_GKs_b] = 0.0011;
     CONSTANTS[AC_GKs] = ((tissueFlag == 1) ? CONSTANTS[AC_GKs_b] * 1.4 : CONSTANTS[AC_GKs_b]);
-    
+
     /* INa */
     CONSTANTS[AC_GNa] = 11.7802;
-    
+
     /* INaL */
     CONSTANTS[AC_GNaL_b] = 0.0279;
     CONSTANTS[AC_thL] = 200.0;
     CONSTANTS[AC_GNaL] = ((tissueFlag == 1) ? CONSTANTS[AC_GNaL_b] * 0.6 : CONSTANTS[AC_GNaL_b]);
     CONSTANTS[AC_thLp] = 3.0 * CONSTANTS[AC_thL];
-    
+
     /* I_katp */
     CONSTANTS[AC_A_atp] = 2.0;
     CONSTANTS[AC_K_atp] = 0.25;
@@ -409,12 +409,12 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_gkatp] = 4.3195;
     CONSTANTS[AC_akik] = pow(CONSTANTS[AC_ko] / CONSTANTS[AC_K_o_n], 0.24);
     CONSTANTS[AC_bkik] = 1.0 / (1.0 + pow(CONSTANTS[AC_A_atp] / CONSTANTS[AC_K_atp], 2.0));
-    
+
     /* Ito */
     CONSTANTS[AC_EKshift] = 0.0;
     CONSTANTS[AC_Gto_b] = 0.16;
     CONSTANTS[AC_Gto] = ((tissueFlag == 1) ? CONSTANTS[AC_Gto_b] * 2.0 : ((tissueFlag == 2.0) ? CONSTANTS[AC_Gto_b] * 2.0 : CONSTANTS[AC_Gto_b]));
-    
+
     /* ICaL */
     CONSTANTS[AC_Aff] = 0.6;
     CONSTANTS[AC_ICaL_fractionSS] = 0.8;
@@ -438,16 +438,16 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_gamma_nao] = exp(-CONSTANTS[AC_constA] * 1.0 * (sqrt(CONSTANTS[AC_Io]) / (1.0 + sqrt(CONSTANTS[AC_Io])) - 0.3 * CONSTANTS[AC_Io]));
     CONSTANTS[AC_PCaKp] = 0.0003574 * CONSTANTS[AC_PCap];
     CONSTANTS[AC_PCaNap] = 0.00125 * CONSTANTS[AC_PCap];
-    
+
     /* ICab */
     CONSTANTS[AC_PCab] = 5.91940000000000005e-08;
-    
+
     /* IKr */
     CONSTANTS[AC_GKr_b] = 0.0321;
     CONSTANTS[AC_alpha_1] = 0.154375;
     CONSTANTS[AC_beta_1] = 0.1911;
     CONSTANTS[AC_GKr] = ((tissueFlag == 1) ? CONSTANTS[AC_GKr_b] * 1.3 : ((tissueFlag == 2.0) ? CONSTANTS[AC_GKr_b] * 0.8 : CONSTANTS[AC_GKr_b]));
-    
+
     /* INaCa */
     CONSTANTS[AC_Gncx_b] = 0.0034;
     CONSTANTS[AC_INaCa_fractionSS] = 0.35;
@@ -476,7 +476,7 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_h12_ss] = 1.0 / CONSTANTS[AC_h10_ss];
     CONSTANTS[AC_k1_i] = CONSTANTS[AC_h12_i] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
     CONSTANTS[AC_k1_ss] = CONSTANTS[AC_h12_ss] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
-    
+
     /* INaK */
     CONSTANTS[AC_H] = 1e-07;
     CONSTANTS[AC_Khp] = 1.698e-07;
@@ -504,10 +504,10 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_a2] = CONSTANTS[AC_k2p];
     CONSTANTS[AC_a4] = CONSTANTS[AC_k4p] * CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp] / (1.0 + CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp]);
     CONSTANTS[AC_b1] = CONSTANTS[AC_k1m] * CONSTANTS[AC_MgADP];
-    
+
     /* INab */
     CONSTANTS[AC_PNab] = 1.9239e-09;
-    
+
     /* intracellular_ions */
     CONSTANTS[AC_BSLmax] = 1.124;
     CONSTANTS[AC_BSRmax] = 0.047;
@@ -520,8 +520,8 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_kmtrpn] = 0.0005;
     CONSTANTS[AC_trpnmax] = 0.07;
     CONSTANTS[AC_cmdnmax] = ((tissueFlag == 1) ? CONSTANTS[AC_cmdnmax_b] * 1.3 : CONSTANTS[AC_cmdnmax_b]);
-    
-    
+
+
     /* ryr */
     CONSTANTS[AC_Jrel_b] = 1.5378;
     CONSTANTS[AC_bt] = 4.75;
@@ -534,32 +534,32 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
 
     STATES[V]          = tissueSelect(tissueFlag, -89.74808, -91.33918, -90.74563);
     STATES[CaMKt]      = tissueSelect(tissueFlag, 1.10e-02, 2.01882e-02, 1.27e-02);
-    
+
     STATES[Nai]        = tissueSelect(tissueFlag, 12.39736, 15.94867, 13.40062);
     STATES[Nass]       = tissueSelect(tissueFlag, 12.3977,  15.94922, 13.40094);
     STATES[Ki]         = tissueSelect(tissueFlag, 147.7115, 156.7131, 152.3639);
     STATES[Kss]        = tissueSelect(tissueFlag, 147.7114, 156.7130, 152.3638);
-    
+
     STATES[Cass]       = tissueSelect(tissueFlag, 6.50e-05, 6.64e-05, 5.75e-05);
     STATES[Cansr]      = tissueSelect(tissueFlag, 1.528001, 2.012225, 1.806794);
     STATES[Cajsr]      = tissueSelect(tissueFlag, 1.525693, 2.016415, 1.805047);
     STATES[Cai]        = tissueSelect(tissueFlag, 7.45e-05, 8.30e-05, 6.62e-05);
-    
+
     STATES[Cli]        = tissueSelect(tissueFlag, 29.20698, 48.91277, 34.31721);
     STATES[Clss]       = tissueSelect(tissueFlag, 29.20696, 48.91274, 34.31719);
-    
+
     /* INa */
     STATES[INa_m]      = tissueSelect(tissueFlag, 6.52e-04, 4.62e-04, 5.25e-04);
     STATES[INa_h]      = tissueSelect(tissueFlag, 0.8473267, 0.8739077, 0.8645148);
     STATES[INa_j]      = tissueSelect(tissueFlag, 0.8471657, 0.8737841, 0.8644571);
     STATES[INa_hp]     = tissueSelect(tissueFlag, 0.7018454, 0.7478972, 0.7313656);
     STATES[INa_jp]     = tissueSelect(tissueFlag, 0.8469014, 0.8735375, 0.8643527);
-    
+
     /* INaL */
     STATES[INaL_mL]    = tissueSelect(tissueFlag, 1.35e-04, 9.99e-05, 1.12e-04);
     STATES[INaL_hL]    = tissueSelect(tissueFlag, 0.5566017, 0.5986118, 0.5916536);
     STATES[INaL_hLp]   = tissueSelect(tissueFlag, 0.3115491, 0.3339899, 0.3476812);
-    
+
     /* Ito */
     STATES[Ito_a]      = tissueSelect(tissueFlag, 8.90e-04, 7.99e-04, 8.32e-04);
     STATES[Ito_iF]     = tissueSelect(tissueFlag, 0.9996716, 0.9997514, 0.9997242);
@@ -567,7 +567,7 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     STATES[Ito_ap]     = tissueSelect(tissueFlag, 4.53e-04, 4.07e-04, 4.24e-04);
     STATES[Ito_iFp]    = tissueSelect(tissueFlag, 0.9996716, 0.9997514, 0.9997242);
     STATES[Ito_iSp]    = tissueSelect(tissueFlag, 0.6620692, 0.6351927, 0.9997241);
-    
+
     /* ICaL */
     STATES[ICaL_d]     = tissueSelect(tissueFlag, 1.59e-31, -8.33e-30, -2.49e-36);
     STATES[ICaL_ff]    = tissueSelect(tissueFlag, 1.0, 1.0, 1.0);
@@ -579,22 +579,22 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     STATES[ICaL_fcafp] = tissueSelect(tissueFlag, 1.0, 1.0, 1.0);
     STATES[ICaL_nca_ss]= tissueSelect(tissueFlag, 4.90e-04, 5.34e-04, 3.05e-04);
     STATES[ICaL_nca_i] = tissueSelect(tissueFlag, 8.33e-04, 1.26e-03, 5.27e-04);
-    
+
     /* IKr */
     STATES[IKr_C1]     = tissueSelect(tissueFlag, 0.9982511, 0.9983451, 0.9984733);
     STATES[IKr_C2]     = tissueSelect(tissueFlag, 7.94e-04, 7.09e-04, 7.39e-04);
     STATES[IKr_C3]     = tissueSelect(tissueFlag, 6.53e-04, 5.91e-04, 6.03e-04);
     STATES[IKr_I]      = tissueSelect(tissueFlag, 9.80e-06, 1.06e-05, 5.68e-06);
     STATES[IKr_O]      = tissueSelect(tissueFlag, 2.92e-04, 3.45e-04, 1.79e-04);
-    
+
     /* IKs */
     STATES[IKs_xs1]    = tissueSelect(tissueFlag, 0.243959, 0.2642293, 0.2233584);
     STATES[IKs_xs2]    = tissueSelect(tissueFlag, 1.59e-04, 1.33e-04, 1.42e-04);
-    
+
     /* RyR */
     STATES[Jrel_np]    = tissueSelect(tissueFlag, 1.81e-22, -1.30e-21, 6.78e-25);
     STATES[Jrel_p]     = tissueSelect(tissueFlag, 4.36e-21, -7.61e-20, -1.58e-23);
-    
+
 
 }
 void
@@ -604,50 +604,50 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_CaMKb] = CONSTANTS[AC_CaMKo] * (1.0 - STATES[CaMKt]) / (1.0 + CONSTANTS[AC_KmCaM] / STATES[Cass]);
     ALGEBRAIC[AV_CaMKa] = ALGEBRAIC[AV_CaMKb] + STATES[CaMKt];
     RATES[CaMKt] = CONSTANTS[AC_aCaMK] * ALGEBRAIC[AV_CaMKb] * (ALGEBRAIC[AV_CaMKb] + STATES[CaMKt]) - CONSTANTS[AC_bCaMK] * STATES[CaMKt];
-    
+
     /* IpCa */
     ALGEBRAIC[AV_IpCa_IpCa] = CONSTANTS[AC_GpCa] * STATES[Cai] / (CONSTANTS[AC_KmCap] + STATES[Cai]);
-    
+
     /* diff */
     ALGEBRAIC[AV_Jdiff] = (STATES[Cass] - STATES[Cai]) / CONSTANTS[AC_tauCa];
     ALGEBRAIC[AV_JdiffCl] = (STATES[Clss] - STATES[Cli]) / CONSTANTS[AC_tauNa];
     ALGEBRAIC[AV_JdiffK] = (STATES[Kss] - STATES[Ki]) / CONSTANTS[AC_tauK];
     ALGEBRAIC[AV_JdiffNa] = (STATES[Nass] - STATES[Nai]) / CONSTANTS[AC_tauNa];
-    
-    
+
+
     /* trans_flux */
     ALGEBRAIC[AV_Jtr] = (STATES[Cansr] - STATES[Cajsr]) / 60.0;
-    
+
     /* SERCA */
     ALGEBRAIC[AV_Jleak] = 0.0048825 * STATES[Cansr] / 15.0;
     ALGEBRAIC[AV_fJupp] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_Jupnp] = CONSTANTS[AC_upScale] * 0.005425 * STATES[Cai] / (STATES[Cai] + 0.00092);
     ALGEBRAIC[AV_Jupp] = CONSTANTS[AC_upScale] * 2.75 * 0.005425 * STATES[Cai] / (STATES[Cai] + 0.00092 - 0.00017);
     ALGEBRAIC[AV_Jup] = CONSTANTS[AC_Jup_b] * ((1.0 - ALGEBRAIC[AV_fJupp]) * ALGEBRAIC[AV_Jupnp] + ALGEBRAIC[AV_fJupp] * ALGEBRAIC[AV_Jupp] - ALGEBRAIC[AV_Jleak]);
-    
+
     /* reversal_potentials */
     ALGEBRAIC[AV_ECl] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zcl] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_clo] / STATES[Cli]);
     ALGEBRAIC[AV_EClss] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zcl] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_clo] / STATES[Clss]);
     ALGEBRAIC[AV_EK] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_ko] / STATES[Ki]);
     ALGEBRAIC[AV_ENa] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zna] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_nao] / STATES[Nai]);
     ALGEBRAIC[AV_EKs] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk] * CONSTANTS[AC_F]) * log((CONSTANTS[AC_ko] + CONSTANTS[AC_PKNa] * CONSTANTS[AC_nao]) / (STATES[Ki] + CONSTANTS[AC_PKNa] * STATES[Nai]));
-    
+
     /* ICl */
     ALGEBRAIC[AV_IClCa_junc] = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_GClCa] / (1.0 + CONSTANTS[AC_KdClCa] / STATES[Cass]) * (STATES[V] - ALGEBRAIC[AV_EClss]);
     ALGEBRAIC[AV_IClCa_sl] = (1.0 - CONSTANTS[AC_Fjunc]) * CONSTANTS[AC_GClCa] / (1.0 + CONSTANTS[AC_KdClCa] / STATES[Cai]) * (STATES[V] - ALGEBRAIC[AV_ECl]);
     ALGEBRAIC[AV_IClb] = CONSTANTS[AC_GClb] * (STATES[V] - ALGEBRAIC[AV_ECl]);
     ALGEBRAIC[AV_IClCa] = ALGEBRAIC[AV_IClCa_junc] + ALGEBRAIC[AV_IClCa_sl];
-    
+
     /* IK1 */
     ALGEBRAIC[AV_aK1] = 4.094 / (1.0 + exp(0.1217 * (STATES[V] - ALGEBRAIC[AV_EK] - 49.934)));
     ALGEBRAIC[AV_bK1] = (15.72 * exp(0.0674 * (STATES[V] - ALGEBRAIC[AV_EK] - 3.257)) + exp(0.0618 * (STATES[V] - ALGEBRAIC[AV_EK] - 594.31))) / (1.0 + exp(-0.1629 * (STATES[V] - ALGEBRAIC[AV_EK] + 14.207)));
     ALGEBRAIC[AV_K1ss] = ALGEBRAIC[AV_aK1] / (ALGEBRAIC[AV_aK1] + ALGEBRAIC[AV_bK1]);
     ALGEBRAIC[AV_IK1_IK1] = CONSTANTS[AC_GK1] * sqrt(CONSTANTS[AC_ko] / 5.0) * ALGEBRAIC[AV_K1ss] * (STATES[V] - ALGEBRAIC[AV_EK]);
-    
+
     /* IKb */
     ALGEBRAIC[AV_xkb] = 1.0 / (1.0 + exp(-(STATES[V] - 10.8968) / 23.9871));
     ALGEBRAIC[AV_IKb_IKb] = CONSTANTS[AC_GKb] * ALGEBRAIC[AV_xkb] * (STATES[V] - ALGEBRAIC[AV_EK]);
-    
+
     /* IKs */
     ALGEBRAIC[AV_KsCa] = 1.0 + 0.6 / (1.0 + pow(3.8e-05 / STATES[Cai], 1.4));
     ALGEBRAIC[AV_txs1] = 817.3 + 1.0 / (0.0002326 * exp((STATES[V] + 48.28) / 17.8) + 0.001292 * exp(-(STATES[V] + 210.0) / 230.0));
@@ -657,7 +657,7 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[IKs_xs1] = (ALGEBRAIC[AV_xs1ss] - STATES[IKs_xs1]) / ALGEBRAIC[AV_txs1];
     ALGEBRAIC[AV_IKs_IKs] = CONSTANTS[AC_GKs] * ALGEBRAIC[AV_KsCa] * STATES[IKs_xs1] * STATES[IKs_xs2] * (STATES[V] - ALGEBRAIC[AV_EKs]);
     RATES[IKs_xs2] = (ALGEBRAIC[AV_xs2ss] - STATES[IKs_xs2]) / ALGEBRAIC[AV_txs2];
-    
+
     /* INa */
     ALGEBRAIC[AV_ah] = ((STATES[V] >= -40.0) ? 0.0 : 0.057 * exp(-(STATES[V] + 80.0) / 6.8));
     ALGEBRAIC[AV_aj] = ((STATES[V] >= -40.0) ? 0.0 : (-25428.0 * exp(0.2444 * STATES[V]) - 6.948e-06 * exp(-0.04391 * STATES[V])) * (STATES[V] + 37.78) / (1.0 + exp(0.311 * (STATES[V] + 79.23))));
@@ -678,7 +678,7 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[INa_hp] = (ALGEBRAIC[AV_hssp] - STATES[INa_hp]) / ALGEBRAIC[AV_th];
     RATES[INa_j] = (ALGEBRAIC[AV_jss] - STATES[INa_j]) / ALGEBRAIC[AV_tj];
     RATES[INa_jp] = (ALGEBRAIC[AV_jss] - STATES[INa_jp]) / ALGEBRAIC[AV_tjp];
-    
+
     /* INaL */
     ALGEBRAIC[AV_fINaLp] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_hLss] = 1.0 / (1.0 + exp((STATES[V] + 87.61) / 7.488));
@@ -689,10 +689,10 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[INaL_mL] = (ALGEBRAIC[AV_mLss] - STATES[INaL_mL]) / ALGEBRAIC[AV_tmL];
     ALGEBRAIC[AV_INaL_INaL] = CONSTANTS[AC_GNaL] * (STATES[V] - ALGEBRAIC[AV_ENa]) * STATES[INaL_mL] * ((1.0 - ALGEBRAIC[AV_fINaLp]) * STATES[INaL_hL] + ALGEBRAIC[AV_fINaLp] * STATES[INaL_hLp]);
     RATES[INaL_hLp] = (ALGEBRAIC[AV_hLssp] - STATES[INaL_hLp]) / CONSTANTS[AC_thLp];
-    
+
     /* I_katp */
     ALGEBRAIC[AV_I_katp_I_katp] = CONSTANTS[AC_fkatp] * CONSTANTS[AC_gkatp] * CONSTANTS[AC_akik] * CONSTANTS[AC_bkik] * (STATES[V] - ALGEBRAIC[AV_EK]);
-    
+
     /* Ito */
     ALGEBRAIC[AV_fItop] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_AiF] = 1.0 / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] - 213.6) / 151.2));
@@ -719,7 +719,7 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_Ito_Ito] = CONSTANTS[AC_Gto] * (STATES[V] - ALGEBRAIC[AV_EK]) * ((1.0 - ALGEBRAIC[AV_fItop]) * STATES[Ito_a] * ALGEBRAIC[AV_i] + ALGEBRAIC[AV_fItop] * STATES[Ito_ap] * ALGEBRAIC[AV_ip]);
     RATES[Ito_iFp] = (ALGEBRAIC[AV_iss] - STATES[Ito_iFp]) / ALGEBRAIC[AV_tiFp];
     RATES[Ito_iSp] = (ALGEBRAIC[AV_iss] - STATES[Ito_iSp]) / ALGEBRAIC[AV_tiSp];
-    
+
     /* ICaL */
     ALGEBRAIC[AV_Afcaf] = 0.3 + 0.6 / (1.0 + exp((STATES[V] - 10.0) / 10.0));
     ALGEBRAIC[AV_Ii] = 0.5 * (STATES[Nai] + STATES[Ki] + STATES[Cli] + 4.0 * STATES[Cai]) / 1000.0;
@@ -760,10 +760,10 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[ICaL_ffp] = (ALGEBRAIC[AV_fss] - STATES[ICaL_ffp]) / ALGEBRAIC[AV_tffp];
     RATES[ICaL_nca_i] = ALGEBRAIC[AV_anca_i] * CONSTANTS[AC_k2n] - STATES[ICaL_nca_i] * ALGEBRAIC[AV_km2n];
     RATES[ICaL_nca_ss] = ALGEBRAIC[AV_anca_ss] * CONSTANTS[AC_k2n] - STATES[ICaL_nca_ss] * ALGEBRAIC[AV_km2n];
-    
+
     /* IKr */
     ALGEBRAIC[AV_IKr_IKr] = CONSTANTS[AC_GKr] * sqrt(CONSTANTS[AC_ko] / 5.0) * STATES[IKr_O] * (STATES[V] - ALGEBRAIC[AV_EK]);
-    
+
     /* INaCa */
     ALGEBRAIC[AV_allo_i] = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / STATES[Cai], 2.0));
     ALGEBRAIC[AV_allo_ss] = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / STATES[Cass], 2.0));
@@ -775,11 +775,11 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_h6_ss] = 1.0 / ALGEBRAIC[AV_h4_ss];
     ALGEBRAIC[AV_k6_i] = ALGEBRAIC[AV_h6_i] * STATES[Cai] * CONSTANTS[AC_kcaon];
     ALGEBRAIC[AV_k6_ss] = ALGEBRAIC[AV_h6_ss] * STATES[Cass] * CONSTANTS[AC_kcaon];
-    
+
     /* INaK */
     ALGEBRAIC[AV_P] = CONSTANTS[AC_eP] / (1.0 + CONSTANTS[AC_H] / CONSTANTS[AC_Khp] + STATES[Nai] / CONSTANTS[AC_Knap] + STATES[Ki] / CONSTANTS[AC_Kxkur]);
     ALGEBRAIC[AV_b3] = CONSTANTS[AC_k3m] * ALGEBRAIC[AV_P] * CONSTANTS[AC_H] / (1.0 + CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp]);
-    
+
     /* intracellular_ions */
     RATES[Cansr] = ALGEBRAIC[AV_Jup] - ALGEBRAIC[AV_Jtr] * CONSTANTS[AC_vjsr] / CONSTANTS[AC_vnsr];
     RATES[Cli] = (ALGEBRAIC[AV_IClb] + ALGEBRAIC[AV_IClCa_sl]) * CONSTANTS[AC_Acap] / (CONSTANTS[AC_F] * CONSTANTS[AC_vmyo]) + ALGEBRAIC[AV_JdiffCl] * CONSTANTS[AC_vss] / CONSTANTS[AC_vmyo];
@@ -787,12 +787,12 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_Bcajsr] = 1.0 / (1.0 + CONSTANTS[AC_csqnmax] * CONSTANTS[AC_kmcsqn] / pow(CONSTANTS[AC_kmcsqn] + STATES[Cajsr], 2.0));
     ALGEBRAIC[AV_Bcass] = 1.0 / (1.0 + CONSTANTS[AC_BSRmax] * CONSTANTS[AC_KmBSR] / pow(CONSTANTS[AC_KmBSR] + STATES[Cass], 2.0) + CONSTANTS[AC_BSLmax] * CONSTANTS[AC_KmBSL] / pow(CONSTANTS[AC_KmBSL] + STATES[Cass], 2.0));
     ALGEBRAIC[AV_Bcai] = 1.0 / (1.0 + CONSTANTS[AC_cmdnmax] * CONSTANTS[AC_kmcmdn] / pow(CONSTANTS[AC_kmcmdn] + STATES[Cai], 2.0) + CONSTANTS[AC_trpnmax] * CONSTANTS[AC_kmtrpn] / pow(CONSTANTS[AC_kmtrpn] + STATES[Cai], 2.0));
-    
+
     /* membrane */
     ALGEBRAIC[AV_vffrt] = STATES[V] * CONSTANTS[AC_F] * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]);
     ALGEBRAIC[AV_vfrt] = STATES[V] * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]);
 
-    
+
     /* ryr */
     ALGEBRAIC[AV_fJrelp] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_Jrel] = CONSTANTS[AC_Jrel_b] * ((1.0 - ALGEBRAIC[AV_fJrelp]) * STATES[Jrel_np] + ALGEBRAIC[AV_fJrelp] * STATES[Jrel_p]);
@@ -800,7 +800,7 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_tau_rel] = ((ALGEBRAIC[AV_tau_rel_b] < 0.001) ? 0.001 : ALGEBRAIC[AV_tau_rel_b]);
     ALGEBRAIC[AV_tau_relp_b] = CONSTANTS[AC_btp] / (1.0 + 0.0123 / STATES[Cajsr]);
     ALGEBRAIC[AV_tau_relp] = ((ALGEBRAIC[AV_tau_relp_b] < 0.001) ? 0.001 : ALGEBRAIC[AV_tau_relp_b]);
-    
+
     /* *remaining* */
     ALGEBRAIC[AV_PhiCaK_i] = 1.0 * ALGEBRAIC[AV_vffrt] * (ALGEBRAIC[AV_gamma_ki] * STATES[Ki] * exp(1.0 * ALGEBRAIC[AV_vfrt]) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (exp(1.0 * ALGEBRAIC[AV_vfrt]) - 1.0);
     ALGEBRAIC[AV_PhiCaK_ss] = 1.0 * ALGEBRAIC[AV_vffrt] * (ALGEBRAIC[AV_gamma_kss] * STATES[Kss] * exp(1.0 * ALGEBRAIC[AV_vfrt]) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (exp(1.0 * ALGEBRAIC[AV_vfrt]) - 1.0);
@@ -916,10 +916,10 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     RATES[Cass] = ALGEBRAIC[AV_Bcass] * (-(ALGEBRAIC[AV_ICaL_ss] - 2.0 * ALGEBRAIC[AV_INaCa_ss]) * CONSTANTS[AC_Acap] / (2.0 * CONSTANTS[AC_F] * CONSTANTS[AC_vss]) + ALGEBRAIC[AV_Jrel] * CONSTANTS[AC_vjsr] / CONSTANTS[AC_vss] - ALGEBRAIC[AV_Jdiff]);
     RATES[Nai] = -(ALGEBRAIC[AV_INa_INa] + ALGEBRAIC[AV_INaL_INaL] + 3.0 * ALGEBRAIC[AV_INaCa_i] + ALGEBRAIC[AV_ICaNa_i] + 3.0 * ALGEBRAIC[AV_INaK_INaK] + ALGEBRAIC[AV_INab_INab]) * CONSTANTS[AC_Acap] / (CONSTANTS[AC_F] * CONSTANTS[AC_vmyo]) + ALGEBRAIC[AV_JdiffNa] * CONSTANTS[AC_vss] / CONSTANTS[AC_vmyo];
     RATES[Nass] = -(ALGEBRAIC[AV_ICaNa_ss] + 3.0 * ALGEBRAIC[AV_INaCa_ss]) * CONSTANTS[AC_Acap] / (CONSTANTS[AC_F] * CONSTANTS[AC_vss]) - ALGEBRAIC[AV_JdiffNa];
-    
-    
+
+
     ALGEBRAIC[Iion_cm]= (ALGEBRAIC[AV_INa_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_Ito_Ito] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_INaCa_i] + ALGEBRAIC[AV_INaCa_ss] + ALGEBRAIC[AV_INaK_INaK] + ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab] + ALGEBRAIC[AV_IClCa] + ALGEBRAIC[AV_IClb] + ALGEBRAIC[AV_I_katp_I_katp]);
-    
+
     ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
 
     if (solveVmWithinODESolver)
