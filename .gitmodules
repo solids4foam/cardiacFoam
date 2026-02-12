@@ -1,0 +1,3 @@
+[submodule "modules/solids4foam"]
+	path = modules/solids4foam
+	url = https://github.com/solids4foam/solids4foam.git
