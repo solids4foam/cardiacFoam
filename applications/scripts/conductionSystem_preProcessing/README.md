@@ -1,88 +1,80 @@
-# conductionSystem_preProcessing
+# Conduction System Preprocessing
 
-Utilities for conduction system pre-processing (Purkinje, diffusivity, scar, conversion). The focus is on:
-- tagging a Purkinje layer from UVC fields
-- adding diffusion tensors
-- converting FIELD arrays to SCALARS/VECTORS/TENSORS and cleaning blank lines
+User-facing tools for Purkinje preprocessing (slab + fractal), diffusivity tensors,
+and scar tagging.
 
-# Requirements
-- Python packages: `pyvista`, `numpy`
-- Input VTK must be legacy ASCII
+## Structure
 
-# Folder Map
-- `lib/` core algorithms (Purkinje slab tagging, diffusion tensor, scar)
-- `utils/` VTK parsing, inspection, conversion helpers
-- `output/` default outputs
-- `purkinje_network/purkinje_slab/purkinje_vtk.py`, `diffusivity/diffusionTensor_vtk.py`, `../scar_creator/scar_vtk.py`, `fileConversion/ASCIIlegacyToVtkUnstructured.py` command-line tools
+- `conduction_system_generation.py` — main driver (uses `--steps` CLI)
+- `scripts/` — individual entrypoints:
+  - `purkinje_slab.py`
+  - `purkinje_fractal.py`
+  - `diffusivity_vtk.py`
+  - `scar_vtk.py`
+  - `tagEndoEpi_fromUVC.py`
+- `configs/` — user defaults and run plan
+- `inputs/meshes/` — input meshes
+- `src/conduction_preproc/` — implementation code
+- `outputs/` — generated results (created at runtime)
+- `videoEditorPurkinje/render_purkinje_frames.py` — ParaView pvpython rendering + GIFs
 
-# CLIs
+## Quick Start
 
-## conductionSystem_Generation.py
-Run the full pipeline (Purkinje slab → diffusivity → scar → conversion).
+Run the main driver:
 
-```
-python conductionSystem_Generation.py
-```
-
-Common overrides:
-```
-python conductionSystem_Generation.py --input ASCIIlegacy.vtk --purkinje-output output/purkinjeLayer.vtk --diffusivity-output output/Diffusion_purkinjeLayer.vtk
+```bash
+python3 conduction_system_generation.py --steps diffusivity purkinje_slab
 ```
 
+Run a single tool:
 
-## purkinje_vtk.py
-Create a Purkinje layer using UVC fields.
-
+```bash
+python3 scripts/purkinje_slab.py
+python3 scripts/diffusivity_vtk.py
+python3 scripts/scar_vtk.py
+python3 scripts/purkinje_fractal.py
+python3 scripts/purkinje_fractal.py --input outputs/ASCIIlegacy_DiffusionTensor_endo_epi_surface.vtk
+python3 scripts/tagEndoEpi_fromUVC.py
 ```
-python purkinje_network/purkinje_slab/purkinje_vtk.py --mode layer --input ASCIIlegacy.vtk
-python purkinje_network/purkinje_slab/purkinje_vtk.py --mode layer --input ASCIIlegacy.vtk --output output/purkinjeLayer.vtk
+By default the fractal run opens an interactive viewer after VTUs are written.
+To skip it:
+
+```bash
+python3 scripts/purkinje_fractal.py --no-view-final
 ```
-Output: VTK with `purkinjeLayer` in `CELL_DATA`.
 
-Inputs:
-- `POINT_DATA`: `uvc_transmural`, `uvc_intraventricular`
+## Configuration
 
-## diffusionTensor_vtk.py
-Add diffusion tensors (optionally scaled in Purkinje cells), then convert + clean.
+Use `conduction_system_generation.py --steps ...` to control which steps run.
+Each solver reads its default input/output paths from its own config in `configs/`.
 
-```
-python diffusivity/diffusionTensor_vtk.py --input ASCIIlegacy.vtk 
-python diffusivity/diffusionTensor_vtk.py --input output/purkinjeLayer.vtk --output output/Diffusion_purkinjeLayer.vtk --purkinje-mult 2.0
-```
-Output: VTK with `Diffusivity` in `CELL_DATA`, converted and cleaned for OpenFOAM.
+If you want to understand the detailed logic for a step, see the corresponding
+script in `scripts/` or the implementation in `src/conduction_preproc/`.
 
-Inputs:
-- `CELL_DATA`: `fiber`, `sheet`
-- Optional `CELL_DATA`: `purkinjeLayer` (defaults to zeros if missing)
+## Pipeline Order (Why it matters)
 
+When running multiple steps, follow:
 
-## scar_vtk.py
-Tag scar cells using a selection mesh and change the scar area for 0 zero diffusivity in scar cells.
+1) `diffusivity`
+2) `purkinje_slab`
+3) `scar`
+4) `convert`
 
-```
-python ../scar_creator/scar_vtk.py --full-mesh output/purkinjeLayer_Diffusivity_IDsGlobal.vtk --selection output/scar_tissue_region.vtu --output output/purkinjeLayer_Diffusivity_scar.vtk --scar-value 1.0 --diffusivity-scale 0.1
-```
-Output: VTK with `Scar` in `CELL_DATA` (and `Diffusivity` scaled in scar cells when present).
+Reason: `purkinje_slab` scales the `Diffusivity` tensor for tagged cells (using
+the multiplier in `configs/purkinjeSlab_config.py`), and `scar` can further
+scale the tensor inside scar cells using `DIFFUSIVITY_SCAR_MULTIPLIER` from
+`configs/scar_config.py`. Running out of order means those tensors won't be
+modified as intended.
 
-Inputs:
-- `CELL_DATA`: `GlobalCellIds` on full mesh and selection
-- Optional `CELL_DATA`: `Diffusivity` (scaled in scar cells)
+## Surface Tagging (Endo/Epi)
 
+`scripts/tagEndoEpi_fromUVC.py` tags LV/RV endocardium and epicardium using
+`uvc_transmural` and `uvc_intraventricular` point data. The core implementation
+lives in `src/conduction_preproc/tagging/tag_endo_epi_surface.py`. The surface
+output is triangulated and saved as an unstructured surface; the volume-mapped
+output stays as a volume mesh.
 
-## ASCIIlegacyToVtkUnstructured.py
-Inspect and convert FIELD arrays, then remove blank lines.
-
-```
-python fileConversion/ASCIIlegacyToVtkUnstructured.py --input ASCIIlegacy.vtk --output output/converted.vtk
-```
-Output: converted VTK + printed field summary.
-
-# Config Defaults
-`config_Diffusivity.py` and `config_purkinjeSlab.py` store default parameters used by the CLIs.
-Override per-run with CLI flags where available.
-
-# Recommended Workflow
-1) `purkinje_network/purkinje_slab/purkinje_vtk.py` (optional)
-2) `diffusivity/diffusionTensor_vtk.py`
-3) `../scar_creator/scar_vtk.py`
-4) `fileConversion/ASCIIlegacyToVtkUnstructured.py` (if you need a separate conversion/inspection step)
+Defaults for surface/volume outputs and the optional seed point live in
+`configs/tag_endo_epi_surface_config.py`. If you see boundary artifacts, try
+setting a `SEED_POINT` (or `--seed-point`) to grow the inside-shared region
+from a known location.

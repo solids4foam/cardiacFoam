@@ -16,14 +16,6 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 
-// Niederer et al 2011 transversely isotropic conductivity [S/m]
-// sigmaX = 0.1334177215;
-// sigmaY/Z = 0.01760617761;
-
-
-conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
-//conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.133417721 0 0.133417721);
-
 // Cellular membrane surface-to-volume ratio [1/m]
 
 chi   [0 -1 0 0 0 0 0] 140000;
@@ -36,16 +28,16 @@ Cm     [-1 -4 4 0 0 2 0] 0.01;
 
 // Specify the ionic model
 
-        ionicModel  TNNP;
-//      ionicModel  BuenoOrovio;
+//        ionicModel  TNNP;
+      ionicModel  BuenoOrovio;
 //      ionicModel  Courtemanche;
 //      ionicModel  Gaur;
 
-exportedVariables (Ca_i K_i);
-debugPrintVariables (Ca_i K_i);
+//exportedVariables (Ca_i K_i);
+//debugPrintVariables (Ca_i K_i);
 
-//exportedVariables (u v w s Jfi Jion);
-//debugPrintVariables (u v w s Jfi Jion);
+exportedVariables (u v w s Jfi Jion);
+debugPrintVariables (u v w s Jfi Jion);
 
 //specify the type of tissue or dimension
 

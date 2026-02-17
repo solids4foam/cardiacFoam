@@ -19,7 +19,7 @@ FoamFile
 solveExplicit no;
 
 // Max courant number
-CFL           0.1;
+CFL           0.2;
 
 // ODE solver
 solver    RKF45;

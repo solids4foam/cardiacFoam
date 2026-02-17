@@ -17,8 +17,8 @@ FoamFile
 
 // External stimulus current location
 
-stimulusLocationMin    (0 0 5.5e-3);
-stimulusLocationMax    (1.5e-3 1.5e-3 7e-3);
+stimulusLocationMin   (0.0451863  0.0653133 0.348809);
+stimulusLocationMax   (0.0505503  0.0735264 0.358402);
 
 
 // External stimulus current characteristics
@@ -26,7 +26,6 @@ stimulusLocationMax    (1.5e-3 1.5e-3 7e-3);
 stimulusDuration    [0 0 1 0 0 0 0] 2e-3;
 
 stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
-//stimulusIntensity   [0 -3 0 0 0 1 0] 5000000;
 
 
 //Read to run only
@@ -62,4 +61,3 @@ PS: Niederer Stimulus in VolField
 	External stimulus current intensity [A/m^3]
  	50000 micro A/cm3 == 50000 A/m3
 */
-
