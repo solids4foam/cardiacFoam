@@ -3,13 +3,11 @@ scar.py
 
 Helpers to tag scar cells and optionally zero diffusivity tensors.
 """
-import numpy as np
-import pyvista as pv
 
 
 def add_scar_from_selection(
-    full_mesh: pv.DataSet,
-    selection_mesh: pv.DataSet,
+    full_mesh,
+    selection_mesh,
     id_array: str = "GlobalCellIds",
     scar_name: str = "Scar",
     diffusivity_name: str = "Diffusivity",
@@ -50,6 +48,8 @@ def add_scar_from_selection(
             f"selection_mesh has no CellData '{id_array}'. "
             "In ParaView, run 'Generate Global IDs' BEFORE extracting selection."
         )
+
+    import numpy as np
 
     full_ids = np.asarray(full_mesh.cell_data[id_array])
     sel_ids = np.unique(np.asarray(selection_mesh.cell_data[id_array]))

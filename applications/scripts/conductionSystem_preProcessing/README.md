@@ -15,6 +15,9 @@ and scar tagging.
 - `configs/` — user defaults and run plan
 - `inputs/meshes/` — input meshes
 - `src/conduction_preproc/` — implementation code
+  - `pipeline/` — step registry/context/runner
+  - `steps/` — internal step implementations (`diffusivity`, `scar`)
+  - `io/` — shared field checks + VTK post-processing
 - `outputs/` — generated results (created at runtime)
 - `videoEditorPurkinje/render_purkinje_frames.py` — ParaView pvpython rendering + GIFs
 

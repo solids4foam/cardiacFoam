@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from conduction_preproc.utils.vtk_utils import inspect_fields, remove_blank_lines
+from conduction_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
 from conduction_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file
 
 
@@ -21,12 +21,12 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"Inspecting input: {args.input}")
-    inspect_fields(args.input)
+    inspect_vtk(args.input)
     convert_vtk_file(args.input, args.output)
-    remove_blank_lines(args.output, args.output)
+    postprocess_vtk_output(args.output, convert_fields=False, remove_blanks=True)
     print(f"Converted file written to {args.output} (blank lines removed)")
     print(f"Inspecting output: {args.output}")
-    inspect_fields(args.output)
+    inspect_vtk(args.output)
 
 
 if __name__ == "__main__":

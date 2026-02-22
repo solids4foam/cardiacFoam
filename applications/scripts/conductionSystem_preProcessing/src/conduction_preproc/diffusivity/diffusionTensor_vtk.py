@@ -1,8 +1,4 @@
-"""
-diffusivity_cli.py
-
-Standalone CLI to add a diffusivity tensor and optionally convert FIELD arrays.
-"""
+"""Standalone CLI to add a diffusivity tensor."""
 import argparse
 import sys
 from pathlib import Path
@@ -10,22 +6,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "configs"))
-import pyvista as pv
 
 from Diffusivity_config import (  # noqa: E402
     Ventricular_DF,
     Ventricular_DS,
     Ventricular_DN,
 )
-from conduction_preproc.lib.diffusivity_tensor import (  # noqa: E402
-    add_diffusivity_tensor_ventricles,
-)
-from conduction_preproc.utils.vtk_convert_arrays_to_fields import (  # noqa: E402
-    convert_vtk_file,
-)
-from conduction_preproc.utils.vtk_utils import (  # noqa: E402
-    remove_blank_lines,
-    inspect_fields,
+from conduction_preproc.steps.diffusivity import (  # noqa: E402
+    DiffusivityOptions,
+    run_diffusivity,
 )
 
 
@@ -48,50 +37,31 @@ def main() -> None:
     parser.add_argument("--no-inspect", action="store_true", help="Skip inspecting fields before/after.")
     args = parser.parse_args()
 
-    if not args.no_inspect:
-        print("\n-------------------------\nInspecting Input Fields\n-------------------------")
-        inspect_fields(args.input)
-
-    mesh = pv.read(args.input)
-    has_purkinje = "purkinjeLayer" in mesh.cell_data
-    if has_purkinje:
-        print(
-            "Warning: purkinjeLayer found in input. "
-            "Preferred order is diffusivity -> purkinje_slab."
-        )
     if args.output is None:
+        import pyvista as pv
+
+        mesh = pv.read(args.input)
+        has_purkinje = "purkinjeLayer" in mesh.cell_data
         args.output = (
             "outputs/Diffusion_purkinjeLayer.vtk"
             if has_purkinje
             else "outputs/Diffusion.vtk"
         )
-    purkinje_mult = 1.0 if args.purkinje_mult is None else args.purkinje_mult
-    mesh = add_diffusivity_tensor_ventricles(
-        mesh, args.df, args.ds, args.dn, purkinje_mult=purkinje_mult
-    )
-    mesh.save(args.output, binary=False)
-    if has_purkinje and args.purkinje_mult is not None:
-        print(
-            "Added diffusivity tensor with PURKINJE layer scaled by "
-            f"{args.purkinje_mult}x ventricular diffusion."
+
+    result = run_diffusivity(
+        DiffusivityOptions(
+            input_path=args.input,
+            output_path=args.output,
+            df=args.df,
+            ds=args.ds,
+            dn=args.dn,
+            purkinje_mult=args.purkinje_mult,
+            inspect=not args.no_inspect,
+            convert_fields=not args.no_convert_fields,
+            remove_blank_lines=not args.no_remove_blank_lines,
         )
-    else:
-        print("Added diffusivity tensor (no purkinjeLayer present).")
-    print(f"Mesh saved to {args.output} and is ready for OpenFOAM.")
-
-    if not args.no_remove_blank_lines or not args.no_convert_fields:
-        print("\n-------------------------\nPost-processing VTK\n-------------------------")
-
-    if not args.no_remove_blank_lines:
-        remove_blank_lines(args.output, args.output)
-
-    if not args.no_convert_fields:
-        convert_vtk_file(args.output, args.output)
-        print("Converted FIELD arrays to SCALARS/VECTORS/TENSORS.")
-
-    if not args.no_inspect:
-        print("\n-------------------------\nInspecting Output Fields\n-------------------------")
-        inspect_fields(args.output)
+    )
+    print(f"Mesh saved to {result.output_mesh} and is ready for OpenFOAM.")
 
 
 if __name__ == "__main__":

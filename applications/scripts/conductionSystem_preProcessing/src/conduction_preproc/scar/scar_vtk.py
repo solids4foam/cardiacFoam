@@ -9,9 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-import pyvista as pv
 
-from conduction_preproc.lib.scar import add_scar_from_selection
+from conduction_preproc.steps.scar import ScarOptions, run_scar
 
 
 def main() -> None:
@@ -71,32 +70,46 @@ def main() -> None:
         action="store_true",
         help="Print available cell data arrays for both meshes.",
     )
+    parser.add_argument(
+        "--no-convert-fields",
+        action="store_true",
+        help="Skip converting FIELD arrays.",
+    )
+    parser.add_argument(
+        "--no-remove-blank-lines",
+        action="store_true",
+        help="Skip removing blank lines.",
+    )
+    parser.add_argument(
+        "--no-inspect",
+        action="store_true",
+        help="Skip inspecting fields before/after.",
+    )
     args = parser.parse_args()
 
-    full = pv.read(args.full_mesh)
-    sel = pv.read(args.selection)
-
     if args.print_arrays:
+        import pyvista as pv
+
+        full = pv.read(args.full_mesh)
+        sel = pv.read(args.selection)
         print("Full mesh cell data arrays:", list(full.cell_data.keys()))
         print("Selection cell data arrays:", list(sel.cell_data.keys()))
 
-    full, scar_mask = add_scar_from_selection(
-        full,
-        sel,
-        id_array=args.id_array,
-        scar_name=args.scar_name,
-        diffusivity_name=args.diffusivity_name,
-        scar_value=args.scar_value,
-        diffusivity_scale=args.diffusivity_scale,
-        return_mask=True,
+    run_scar(
+        ScarOptions(
+            full_mesh_path=args.full_mesh,
+            selection_path=args.selection,
+            output_path=args.output,
+            id_array=args.id_array,
+            scar_name=args.scar_name,
+            scar_value=args.scar_value,
+            diffusivity_name=args.diffusivity_name,
+            diffusivity_scale=args.diffusivity_scale,
+            inspect=not args.no_inspect,
+            convert_fields=not args.no_convert_fields,
+            remove_blank_lines=not args.no_remove_blank_lines,
+        )
     )
-
-    print("Scar cells:", int(scar_mask.sum()), "out of", full.n_cells)
-
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    full.save(str(output_path), binary=False)
-    print(f"Scar-tagged mesh written to {output_path}")
 
 
 if __name__ == "__main__":

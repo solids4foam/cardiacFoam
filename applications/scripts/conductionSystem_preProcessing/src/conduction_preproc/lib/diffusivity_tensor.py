@@ -15,14 +15,12 @@ Functions:
         fiber, sheet, and Purkinje layer information. 
         Can be extended for atria.
 """
-
-import numpy as np
-
-
 def normalize(v):
     """
     Normalize a 3D vector.
     """
+    import numpy as np
+
     norm = np.linalg.norm(v)
     return v / norm if norm > 0 else np.zeros_like(v)
 
@@ -59,6 +57,7 @@ def add_diffusivity_tensor_ventricles(mesh, D_f, D_s, D_n,
         Mesh with new cell_data[tensor_name] added.
     """
     print("\n-------------------------\nAdding Diffusivity Tensor\n-------------------------")
+    import numpy as np
 
     fiber_vecs = mesh.cell_data[fiber_name]
     sheet_vecs = mesh.cell_data[sheet_name]

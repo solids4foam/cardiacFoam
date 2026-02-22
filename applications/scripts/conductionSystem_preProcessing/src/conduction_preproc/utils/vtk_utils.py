@@ -13,7 +13,6 @@ Functions:
     interactive_remove_blank_lines(filepath, output_file=None)
         Interactively remove extra blank lines from an ASCII VTK file to make it valid for OpenFOAM reader.
 """
-import pyvista as pv
 
 def read_values(lines, i, nvals):
     vals = []
@@ -142,7 +141,7 @@ def remove_blank_lines(filepath, output_file=None):
     print(f"\nRemoved {len(lines) - len(new_lines)} blank lines. Output written to '{output_file}'.")
 
 
-def plot_mesh_surface(mesh: pv.DataSet, scalar_name: str = None, opacity: float = 0.5, cmap: str = "viridis", save_screenshot: str = None):
+def plot_mesh_surface(mesh, scalar_name: str = None, opacity: float = 0.5, cmap: str = "viridis", save_screenshot: str = None):
     """
     Plot only the surface of a mesh for faster visualization.
 
@@ -159,6 +158,8 @@ def plot_mesh_surface(mesh: pv.DataSet, scalar_name: str = None, opacity: float 
     save_screenshot : str, optional
         File path to save a screenshot instead of showing interactively.
     """
+    import pyvista as pv
+
     # Extract only the outer surface
     surface = mesh.extract_surface()
 
@@ -177,5 +178,4 @@ def plot_mesh_surface(mesh: pv.DataSet, scalar_name: str = None, opacity: float 
         print(f"Screenshot saved to {save_screenshot}")
     else:
         plotter.show()
-
 

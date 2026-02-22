@@ -22,7 +22,7 @@ sys.path.insert(0, str(SRC))
 sys.path.insert(0, str(ROOT / "configs"))
 
 from purkinjeSlab_config import INPUT, OUTPUT  # noqa: E402
-from conduction_preproc.purkinje_network.purkinje_slab.purkinje_slab import (  # noqa: E402
+from conduction_preproc.purkinje_network.purkinje_fractal.purkinje_slab import (  # noqa: E402
     main as slab_main,
 )
 

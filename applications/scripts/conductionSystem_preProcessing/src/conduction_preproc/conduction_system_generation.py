@@ -8,6 +8,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from conduction_preproc.pipeline import register_default_steps
+from conduction_preproc.pipeline.context import StepContext
+from conduction_preproc.pipeline.runner import run_registered_step
+
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parents[1]
 
@@ -164,6 +168,7 @@ def main() -> None:
         help="Config for fractal-tree generation.",
     )
     args = parser.parse_args()
+    register_default_steps()
 
     py = sys.executable
     steps = normalize_steps([s.lower() for s in args.steps])
@@ -237,7 +242,7 @@ def main() -> None:
         if step == "purkinje_slab":
             run_step([
                 py,
-                str(ROOT / "purkinje_network" / "purkinje_slab" / "purkinje_slab.py"),
+                str(ROOT / "purkinje_network" / "purkinje_fractal" / "purkinje_slab.py"),
                 "--input", current_mesh,
                 "--output", args.purkinje_output,
             ])
@@ -271,25 +276,55 @@ def main() -> None:
             continue
 
         if step == "diffusivity":
-            run_step([
-                py,
-                str(ROOT / "diffusivity" / "diffusionTensor_vtk.py"),
-                "--input", current_mesh,
-                "--output", args.diffusivity_output,
-            ])
-            current_mesh = args.diffusivity_output
+            result = run_registered_step(
+                "diffusivity",
+                StepContext(
+                    project_root=PROJECT_ROOT,
+                    current_mesh=current_mesh,
+                    output_dir=output_dir,
+                    options={
+                        "input_path": current_mesh,
+                        "output_path": args.diffusivity_output,
+                        "df": cfg_diff.Ventricular_DF,
+                        "ds": cfg_diff.Ventricular_DS,
+                        "dn": cfg_diff.Ventricular_DN,
+                        "purkinje_mult": None,
+                        "inspect": False,
+                        "convert_fields": True,
+                        "remove_blank_lines": True,
+                    },
+                ),
+            )
+            current_mesh = result.output_mesh or args.diffusivity_output
             continue
 
         if step == "scar":
             full_mesh = args.scar_full_mesh or current_mesh
-            run_step([
-                py,
-                str(PROJECT_ROOT / "scripts" / "scar_vtk.py"),
-                "--full-mesh", full_mesh,
-                "--selection", args.scar_selection,
-                "--output", args.scar_output,
-            ])
-            current_mesh = args.scar_output
+            diffusivity_scale = 1.0
+            if getattr(cfg_scar, "DIFFUSIVITY_MODE", "").lower() == "constant":
+                diffusivity_scale = float(getattr(cfg_scar, "DIFFUSIVITY_SCAR_MULTIPLIER", 0.0))
+            result = run_registered_step(
+                "scar",
+                StepContext(
+                    project_root=PROJECT_ROOT,
+                    current_mesh=full_mesh,
+                    output_dir=output_dir,
+                    options={
+                        "full_mesh_path": full_mesh,
+                        "selection_path": args.scar_selection,
+                        "output_path": args.scar_output,
+                        "id_array": "GlobalCellIds",
+                        "scar_name": "Scar",
+                        "scar_value": 1.0,
+                        "diffusivity_name": "Diffusivity",
+                        "diffusivity_scale": diffusivity_scale,
+                        "inspect": False,
+                        "convert_fields": True,
+                        "remove_blank_lines": True,
+                    },
+                ),
+            )
+            current_mesh = result.output_mesh or args.scar_output
             continue
 
         if step == "convert":
