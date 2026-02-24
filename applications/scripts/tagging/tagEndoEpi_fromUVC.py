@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""Tag endocardial/epicardial surfaces from UVC fields.
+"""Tag endocardial/epicardial surfaces from UVC fields."""
 
-Inputs:
-- Legacy ASCII VTK (volume or surface) with POINT_DATA:
-  - uvc_transmural
-  - uvc_intraventricular
-
-Outputs:
-- outputs/<input>_endo_epi_surface.vtk (surface tags, unstructured)
-- outputs/<input>_complementary_endocardium_epicardium_label.vtk (optional)
-- outputs/<input>_endo_epi_volume.vtk (optional volume-mapped tags)
-
-Main:
-- Thin wrapper around cardiac_preproc.tagging.tag_endo_epi_surface.
-- Optional interactive seed picking with ``--pick-seed``.
-"""
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import sys
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))
+SRC = ROOT / "cardiac_preproc" / "src"
+DEFAULT_CONFIG = Path(__file__).resolve().with_name("tag_endo_epi_surface_config.py")
+
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from cardiac_preproc.tagging.tag_endo_epi_surface import main  # noqa: E402
+
+
+def _load_config(path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(path.stem, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load config from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _extract_input_arg(args: list[str]) -> str | None:
@@ -35,6 +35,10 @@ def _extract_input_arg(args: list[str]) -> str | None:
         if token.startswith("--input="):
             return token.split("=", 1)[1]
     return None
+
+
+def _has_flag(args: list[str], name: str) -> bool:
+    return any(token == name for token in args)
 
 
 def _has_seed_arg(args: list[str]) -> bool:
@@ -88,22 +92,32 @@ def _pick_seed_point(input_vtk: str) -> str:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument(
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="Path to tagging config file.")
+    pre_parser.add_argument(
         "--pick-seed",
         action="store_true",
         help="Open an interactive window to pick --seed-point on the surface.",
     )
-    parsed, remaining = parser.parse_known_args()
+    pre_args, remaining = pre_parser.parse_known_args()
+    cfg = _load_config(Path(pre_args.config))
 
-    if parsed.pick_seed and not _has_seed_arg(remaining):
+    if pre_args.pick_seed and not _has_seed_arg(remaining):
         input_vtk = _extract_input_arg(remaining)
         if not input_vtk:
             raise SystemExit("`--pick-seed` requires `--input <mesh.vtk>`.")
         seed_str = _pick_seed_point(input_vtk)
         print(f"Picked seed point: {seed_str}")
-        # Use --arg=value form so negative coordinates are not parsed as flags.
         remaining.append(f"--seed-point={seed_str}")
+
+    config_seed = getattr(cfg, "SHARED_BOUNDARY_SEED", None)
+    if config_seed and not _has_seed_arg(remaining):
+        remaining.append(f"--seed-point={config_seed}")
+
+    if not getattr(cfg, "COMPLEMENTARY_SURFACE_OUTPUT", True) and not _has_flag(remaining, "--no-surface-output"):
+        remaining.append("--no-surface-output")
+    if not getattr(cfg, "EXTRACT_VOLUME_OUTPUT", False) and not _has_flag(remaining, "--no-volume-output"):
+        remaining.append("--no-volume-output")
 
     sys.argv = [sys.argv[0], *remaining]
     main()

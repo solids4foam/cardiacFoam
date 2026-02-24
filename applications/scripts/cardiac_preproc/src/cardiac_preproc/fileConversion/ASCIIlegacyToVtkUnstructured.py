@@ -4,11 +4,6 @@ convert_inspect_cli.py
 Standalone CLI to inspect a VTK file and convert FIELD arrays to standard VTK data.
 """
 import argparse
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
 
 from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
 from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file

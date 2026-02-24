@@ -2,7 +2,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES_ORGANIZE = ROOT.parent / "filesOrganize"
+FILES_ORGANIZE = ROOT / "filesOrganize"
 OUTPUTS = FILES_ORGANIZE / "cardiac_preproc" / "outputs"
 
 INPUT = str(OUTPUTS / "purkinjeLayer_Diffusivity_scar.vtk")

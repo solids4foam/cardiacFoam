@@ -14,29 +14,23 @@ Main:
 - Tags LV/RV endo, epi, shared boundary, and overlap diagnostics.
 """
 import argparse
-import sys
 from pathlib import Path
 
-import numpy as np
-import pyvista as pv
+try:
+    import numpy as np
+    import pyvista as pv
+except ModuleNotFoundError:
+    np = None  # type: ignore[assignment]
+    pv = None  # type: ignore[assignment]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-sys.path.insert(0, str(PROJECT_ROOT / "configs"))
 
-from cardiac_preproc.utils.vtk_utils import inspect_fields, remove_blank_lines  # noqa: E402
-from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file  # noqa: E402
+from cardiac_preproc.utils.vtk_utils import inspect_fields, remove_blank_lines
+from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file
 
-try:
-    from tag_endo_epi_surface_config import (  # type: ignore
-        COMPLEMENTARY_SURFACE_OUTPUT,
-        EXTRACT_VOLUME_OUTPUT,
-        SHARED_BOUNDARY_SEED,
-    )
-except ImportError:
-    COMPLEMENTARY_SURFACE_OUTPUT = True
-    EXTRACT_VOLUME_OUTPUT = True
-    SHARED_BOUNDARY_SEED = None
+DEFAULT_COMPLEMENTARY_SURFACE_OUTPUT = True
+DEFAULT_EXTRACT_VOLUME_OUTPUT = False
+DEFAULT_SHARED_BOUNDARY_SEED = None
 
 
 def surface_point_ids(surface: pv.DataSet, mesh: pv.DataSet) -> np.ndarray:
@@ -409,7 +403,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--seed-point",
-        default=SHARED_BOUNDARY_SEED,
+        default=DEFAULT_SHARED_BOUNDARY_SEED,
         help="Seed point as 'x,y,z' to grow inside-shared region on LV epi.",
     )
     parser.add_argument(
@@ -428,6 +422,10 @@ def main() -> None:
         help="Skip writing volume-mapped output.",
     )
     args = parser.parse_args()
+    if np is None or pv is None:
+        raise RuntimeError(
+            "Missing dependencies for tagging CLI. Install numpy and pyvista to run this command."
+        )
 
     print("\n-------------------------\nInspecting Input Fields\n-------------------------")
     inspect_fields(args.input)
@@ -435,7 +433,7 @@ def main() -> None:
         print(
             "Seed point: not set. "
             "Inside-shared boundary growth is disabled. "
-            "If boundary artifacts appear, set --seed-point (see tag_endo_epi_surface_config.py)."
+            "If boundary artifacts appear, set --seed-point."
         )
 
     print("\n-------------------------\nTagging Endocardium (LV/RV)\n-------------------------")
@@ -586,7 +584,7 @@ def main() -> None:
     complementary_surface = complementary_surface.triangulate()
 
     input_stem = Path(args.input).stem
-    extract_volume_output = EXTRACT_VOLUME_OUTPUT and not args.no_volume_output
+    extract_volume_output = DEFAULT_EXTRACT_VOLUME_OUTPUT and not args.no_volume_output
 
     output_path = (
         Path(args.output)
@@ -606,7 +604,7 @@ def main() -> None:
     remove_blank_lines(str(output_path), str(output_path))
     print(f"Converted and cleaned {output_path}")
 
-    extract_complementary_output = COMPLEMENTARY_SURFACE_OUTPUT and not args.no_surface_output
+    extract_complementary_output = DEFAULT_COMPLEMENTARY_SURFACE_OUTPUT and not args.no_surface_output
     if extract_complementary_output:
         complementary_path = output_path.with_name(
             f"{input_stem}_endo_epi_surface_complementary.vtk"
