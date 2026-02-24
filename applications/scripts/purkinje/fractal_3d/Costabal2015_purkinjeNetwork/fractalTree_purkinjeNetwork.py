@@ -202,17 +202,20 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "--input",
-    default=str(Path(__file__).resolve().parents[4] / "inputs" / "meshes" / "biv_ellipsoid.msh"),
-    help="Path to the input mesh file (defaults to inputs/meshes/biv_ellipsoid.msh).",
+    default=str(
+        Path(__file__).resolve().parents[3]
+        / "filesOrganize"
+        / "cardiac_preproc"
+        / "inputs"
+        / "meshes"
+        / "biv_ellipsoid.msh"
+    ),
+    help="Path to the input mesh file (defaults to filesOrganize/cardiac_preproc/inputs/meshes/biv_ellipsoid.msh).",
 )
 parser.add_argument(
     "--config",
-    default=str(
-        Path(__file__).resolve().parents[4]
-        / "configs"
-        / "purkinjeFractalTree_config.py"
-    ),
-    help="Path to combined config file (defaults to configs/purkinjeFractalTree_config.py).",
+    default=str(Path(__file__).resolve().parents[1] / "purkinjeFractalTree_config.py"),
+    help="Path to combined config file (defaults to ../purkinjeFractalTree_config.py).",
 )
 parser.add_argument(
     "--debug-plot",

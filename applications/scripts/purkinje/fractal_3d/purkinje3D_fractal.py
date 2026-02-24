@@ -3,7 +3,7 @@
 
 Inputs:
 - Triangulated surface mesh with ENDO_LV/ENDO_RV tags (ASCII legacy VTK or gmsh).
-- Surface tag mapping in configs/purkinjeFractalTree_config.py.
+- Surface tag mapping in purkinje/fractal_3d/purkinjeFractalTree_config.py.
 
 Outputs:
 - Fractal tree node/line files and geometry VTK under outputs/.

@@ -48,7 +48,6 @@ Current boundary:
 - Slab stays integrated in `cardiac_preproc` steps.
 - Fractal remains in:
   - `purkinje/fractal_3d/Costabal2015_purkinjeNetwork/`
-  - `cardiac_preproc/src/cardiac_preproc/purkinje_network/Costabal2015_purkinjeNetwork/`
 
 No fractal-core move in this draft.
 
@@ -60,7 +59,8 @@ Scripts should stay thin wrappers:
 - call step/domain modules
 
 Current state:
-- `diffusivity_vtk.py`, `scar_vtk.py`, `purkinje_slab.py` follow this pattern.
+- `diffusivity/diffusivity.py`, `scar/scar.py`, and `purkinje/slab/slab.py`
+  follow this pattern.
 
 ## Next Refactor Iteration (Suggested)
 

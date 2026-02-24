@@ -14,14 +14,14 @@ surface mesh.
 
 - Mesh: a triangulated surface with LV/RV tags (VTK/VTU recommended). Default:
   `inputs/meshes/ASCIIlegacy_biventricular_endo_epi_surface_triangulate.vtk`.
-- Config: `configs/purkinjeFractalTree_config.py` (Python file with parameters).
+- Config: `../purkinjeFractalTree_config.py` (Python file with parameters).
 
 The mesh must contain surface tags named (mapped in config):
 - `ENDO_LV` (required)
 - `ENDO_RV` (required)
 - `EPI` (optional; used only for plotting)
 
-## Configuration parameters (`configs/purkinjeFractalTree_config.py`)
+## Configuration parameters (`../purkinjeFractalTree_config.py`)
 
 - `lv_filename`, `rv_filename`: output file name bases.
 - `lv_seed`, `rv_seed`: initial seed points (nearest mesh vertex is used).
@@ -44,13 +44,13 @@ If `*_save_frames` is enabled, per-iteration frames are also saved.
 ## Usage
 
 ```bash
-python3 fractalTree_purkinjeNetwork.py --input <surface.vtk> --config ../../../../configs/purkinjeFractalTree_config.py
+python3 fractalTree_purkinjeNetwork.py --input <surface.vtk> --config ../purkinjeFractalTree_config.py
 ```
 
 Optional arguments:
 
 ```bash
-python3 fractalTree_purkinjeNetwork.py --input ../../../../inputs/meshes/biv_ellipsoid.msh --config ../../../../configs/purkinjeFractalTree_config.py
+python3 fractalTree_purkinjeNetwork.py --input ../../../../filesOrganize/cardiac_preproc/inputs/meshes/biv_ellipsoid.msh --config ../purkinjeFractalTree_config.py
 ```
 By default the script opens an interactive viewer after the final VTUs are written.
 Use `--no-view-final` to skip it.

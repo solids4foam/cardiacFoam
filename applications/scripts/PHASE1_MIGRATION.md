@@ -7,7 +7,9 @@ Phase 1 keeps old entrypoints working while defining the new canonical architect
 - `diffusivity/diffusivity.py`
 - `scar/scar.py`
 - `purkinje/slab/slab.py`
-- `cardiac_preproc/conduction_system_generation.py` (pipeline CLI)
+- `tagging/tagEndoEpi_fromUVC.py`
+- `conversion/ASCIIlegacyToVtkUnstructured.py`
+- `conduction_system_generation.py` (pipeline CLI)
 
 ## Canonical Engine API
 
@@ -22,13 +24,15 @@ Phase 1 keeps old entrypoints working while defining the new canonical architect
 - `cardiac_preproc/src/cardiac_preproc/lib/*`
 - `cardiac_preproc/src/cardiac_preproc/pipeline/*`
 
-## Compatibility Layer Kept in Phase 1
+## Compatibility Layer Status
 
-- `cardiac_preproc/scripts/*.py`
-- `cardiac_preproc/src/cardiac_preproc/cli/*.py`
-- `cardiac_preproc/src/cardiac_preproc/engine.py` (shim)
+- `cardiac_preproc/scripts/{diffusivity_vtk.py,scar_vtk.py,purkinje_slab.py,purkinje_fractal.py}`: removed in cleanup.
+- `cardiac_preproc/scripts/tagEndoEpi_fromUVC.py`: moved to `tagging/tagEndoEpi_fromUVC.py`.
+- `cardiac_preproc/configs/*`: moved to top-level product-owned config folders.
+- `cardiac_preproc/src/cardiac_preproc/cli/*`: removed in cleanup.
+- `cardiac_preproc/src/cardiac_preproc/engine.py`: removed in cleanup.
 
-These files forward execution to canonical entrypoints and exist to avoid breaking existing user scripts.
+Canonical entrypoints should be used directly.
 
 ## Data Policy
 
