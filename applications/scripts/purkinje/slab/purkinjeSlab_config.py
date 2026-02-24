@@ -1,0 +1,26 @@
+"""Configuration for Purkinje slab tagging."""
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+FILES_ORGANIZE = ROOT / "filesOrganize"
+CARDIAC_INPUTS = FILES_ORGANIZE / "cardiac_preproc" / "inputs" / "meshes"
+CARDIAC_OUTPUTS = FILES_ORGANIZE / "cardiac_preproc" / "outputs"
+
+PURKINJE_TRANSMURAL_MIN = 0.0
+PURKINJE_TRANSMURAL_MAX = 0.1
+
+LV_INTRAVENTRICULAR_TAG = -1
+RV_INTRAVENTRICULAR_TAG = 1
+
+PURKINJE_FIELD_NAME = "purkinjeLayer"
+PURKINJE_DIFFUSION_MULTIPLIER = 4.0
+
+WALL_TAG_NAME = None
+WALL_TAG_VALUE = None
+
+INFLATE_SEED_POINT = None
+INFLATE_INSIDE_TAG_NAME = "inside_shared_boundary"
+
+INPUT = str(CARDIAC_INPUTS / "ASCIIlegacy.vtk")
+OUTPUT = str(CARDIAC_OUTPUTS / "purkinjeLayer.vtk")

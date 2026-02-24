@@ -1,0 +1,149 @@
+[[model]]
+author: Myokit CellML 1 API
+name: Niederer_et_al_2006
+# Initial values
+intracellular_ion_concentrations.TRPN =  6.75931398649999987e-2
+tropomyosin.z                         =  1.44179378369999993e-2
+Cross_Bridges.Q_1                     = 0
+Cross_Bridges.Q_2                     = 0
+Cross_Bridges.Q_3                     = 0
+
+[Cross_Bridges]
+A_1 = -29
+    in [1]
+A_2 = 138
+    in [1]
+A_3 = 129
+    in [1]
+Q = Q_1 + Q_2 + Q_3
+    in [1]
+dot(Q_1) = A_1 * Myofilaments.dExtensionRatiodt - alpha_1 * Q_1
+    in [1]
+dot(Q_2) = A_2 * Myofilaments.dExtensionRatiodt - alpha_2 * Q_2
+    in [1]
+dot(Q_3) = A_3 * Myofilaments.dExtensionRatiodt - alpha_3 * Q_3
+    in [1]
+Tension = piecewise(Q < 0, isometric_tension.T_0 * (a * Q + 1) / (1 - Q), isometric_tension.T_0 * (1 + (a + 2) * Q) / (1 + Q))
+    in [Pa (1e+06)]
+a = 0.35
+    in [1]
+alpha_1 = 0.03 [mS/uF]
+    in [mS/uF]
+alpha_2 = 0.13 [mS/uF]
+    in [mS/uF]
+alpha_3 = 0.625 [mS/uF]
+    in [mS/uF]
+
+[Myofilaments]
+ExtensionRatio = piecewise(environment.time > 300000 [ms], 1, 1)
+    in [1]
+dExtensionRatiodt = 0 [mS/uF]
+    in [mS/uF]
+lambda = piecewise(ExtensionRatio > 0.8 and ExtensionRatio <= 1.15, ExtensionRatio, ExtensionRatio > 1.15, 1.15, 0.8)
+    in [1]
+lambda_prev = ExtensionRatio
+    in [1]
+
+[environment]
+time = 0 [ms] bind time
+    in [ms]
+
+[filament_overlap]
+beta_0 = 4.9
+    in [1]
+overlap = 1 + beta_0 * (Myofilaments.lambda - 1)
+    in [1]
+
+[intracellular_ion_concentrations]
+Ca_b = troponin.Ca_TRPN_Max - TRPN
+    in [mM]
+Ca_i = piecewise(environment.time < 1 [ms], 1000 *  1.84330000000000010e-7 [mM], environment.time >= 10 [ms] and environment.time < 15 [ms], 1000 * (1.055 [mM] * (environment.time / 1000 [ms])^3 - 0.03507 [mM] * (environment.time / 1000 [ms])^2 + 0.0003992 [mM] * environment.time / 1000 [ms] - 1.356e-6 [mM]), environment.time >= 15 [ms] and environment.time < 55 [ms], 1000 * (0.014 [mM] * (environment.time / 1000 [ms])^3 - 0.002555 [mM] * (environment.time / 1000 [ms])^2 + 0.0001494 [mM] * environment.time / 1000 [ms] - 1.428e-6 [mM]), environment.time >= 55 [ms] and environment.time < 250 [ms], 1000 * (1.739e-5 [mM] * (environment.time / 1000 [ms])^3 - 3.209e-6 [mM] * (environment.time / 1000 [ms])^2 - 5.689e-6 [mM] * environment.time / 1000 [ms] + 1.719e-6 [mM]), environment.time >= 250 [ms] and environment.time < 490 [ms], 1000 * (0.0001321 [mM] * (environment.time / 1000 [ms])^4 - 0.0002197 [mM] * (environment.time / 1000 [ms])^3 + 0.0001374 [mM] * (environment.time / 1000 [ms])^2 - 3.895e-5 [mM] * environment.time / 1000 [ms] + 4.441e-6 [mM]), 1000 *  1.21480000000000000e-7 [mM])
+    in [mM]
+dot(TRPN) = troponin.J_TRPN
+    in [mM]
+
+[isometric_tension]
+T_0 = length_independent_tension.T_Base * filament_overlap.overlap
+    in [Pa (1e+06)]
+
+[length_independent_tension]
+T_Base = T_ref * tropomyosin.z / tropomyosin.z_max
+    in [Pa (1e+06)]
+T_ref = 56.2 [Pa (1e+06)]
+    in [Pa (1e+06)]
+
+[thinfilaments]
+
+[tropomyosin]
+Ca_50 = Ca_50ref * (1 + beta_1 * (Myofilaments.lambda - 1))
+    in [mM]
+Ca_50ref = 0.00105 [mM]
+    in [mM]
+Ca_TRPN_50 = Ca_50 * troponin.Ca_TRPN_Max / (Ca_50 + troponin.k_Ref_off / troponin.k_on * (1 - (1 + filament_overlap.beta_0 * (Myofilaments.lambda - 1)) * 0.5 / troponin.gamma_trpn))
+    in [mM]
+K_1 = alpha_r2 * z_p^(n_Rel - 1) * n_Rel * K_z^n_Rel / (z_p^n_Rel + K_z^n_Rel)^2
+    in [mS/uF]
+K_2 = alpha_r2 * z_p^n_Rel / (z_p^n_Rel + K_z^n_Rel) * (1 - n_Rel * K_z^n_Rel / (z_p^n_Rel + K_z^n_Rel))
+    in [mS/uF]
+K_z = 0.15
+    in [1]
+alpha_0 = 0.008 [mS/uF]
+    in [mS/uF]
+alpha_Tm = alpha_0 * (intracellular_ion_concentrations.Ca_b / Ca_TRPN_50)^n_Hill
+    in [mS/uF]
+alpha_r1 = 0.002 [mS/uF]
+    in [mS/uF]
+alpha_r2 = 0.00175 [mS/uF]
+    in [mS/uF]
+beta_1 = -4
+    in [1]
+beta_Tm = alpha_r1 + alpha_r2 * z^(n_Rel - 1) / (z^n_Rel + K_z^n_Rel)
+    in [mS/uF]
+n_Hill = 3
+    in [1]
+n_Rel = 3
+    in [1]
+dot(z) = alpha_Tm * (1 - z) - beta_Tm * z
+    in [1]
+z_max = (alpha_0 / (Ca_TRPN_50 / troponin.Ca_TRPN_Max)^n_Hill - K_2) / (alpha_r1 + K_1 + alpha_0 / (Ca_TRPN_50 / troponin.Ca_TRPN_Max)^n_Hill)
+    in [1]
+z_p = 0.85
+    in [1]
+
+[troponin]
+Ca_TRPN_Max = 0.07 [mM]
+    in [mM]
+J_TRPN = (Ca_TRPN_Max - intracellular_ion_concentrations.TRPN) * k_off - intracellular_ion_concentrations.Ca_i * intracellular_ion_concentrations.TRPN * k_on
+    in [mM/ms]
+gamma_trpn = 2
+    in [1]
+k_Ref_off = 0.2 [mS/uF]
+    in [mS/uF]
+k_off = piecewise(1 - Cross_Bridges.Tension / (gamma_trpn * length_independent_tension.T_ref) > 0.1, k_Ref_off * (1 - Cross_Bridges.Tension / (gamma_trpn * length_independent_tension.T_ref)), k_Ref_off * 0.1)
+    in [mS/uF]
+k_on = 100 [1/mM/ms]
+    in [1/mM/ms]
+
+[[protocol]]
+# Level  Start    Length   Period   Multiplier
+1.0      100.0    0.5      1000.0   0
+
+[[script]]
+import matplotlib.pyplot as plt
+import myokit
+
+# Get model and protocol, create simulation
+m = get_model()
+p = get_protocol()
+s = myokit.Simulation(m, p)
+
+# Run simulation
+d = s.run(1000)
+
+# Display the results
+var = next(m.states()).qname()
+plt.figure()
+plt.plot(d.time(), d[var])
+plt.title(var)
+plt.show()
+
