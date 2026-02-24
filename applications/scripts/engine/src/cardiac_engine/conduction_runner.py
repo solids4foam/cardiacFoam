@@ -88,7 +88,7 @@ def _print_requirements(steps: list[str], paths: dict) -> None:
         print(f"  mesh: {mesh} (triangulated surface, ENDO_LV/ENDO_RV tags)")
         print(f"  config: {cfg}")
         if video.get("enabled"):
-            print("  video: enabled (videoEditorPurkinje/render_purkinje_frames.py via pvpython)")
+            print("  video: enabled (cardiac_core/io/videoEditorPurkinje/render_purkinje_frames.py via pvpython)")
 
 
 def _default_output_dir(outputs_root: Path) -> Path:

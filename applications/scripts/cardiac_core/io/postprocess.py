@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file
-from cardiac_preproc.utils.vtk_utils import inspect_fields, remove_blank_lines
+from cardiac_core.utils.vtk_convert_arrays_to_fields import convert_vtk_file
+from cardiac_core.utils.vtk_utils import inspect_fields, remove_blank_lines
 
 
 def inspect_vtk(path: str, title: str | None = None) -> None:

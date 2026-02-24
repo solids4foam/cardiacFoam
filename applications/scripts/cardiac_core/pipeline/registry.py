@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from cardiac_preproc.pipeline.context import StepContext, StepResult
+from cardiac_core.pipeline.context import StepContext, StepResult
 
 StepRunner = Callable[[StepContext], StepResult]
 

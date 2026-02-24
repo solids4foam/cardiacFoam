@@ -17,12 +17,12 @@ Upper runtime facade lives in:
   - `conversion.py`
   - `config_conversion.py`
 - `../filesOrganize/` — centralized data assets (inputs/outputs/VTK files)
-- `src/cardiac_preproc/` — implementation code
+- `./` — implementation code
   - `pipeline/` — step registry/context/runner
   - `steps/` — internal step implementations (`diffusivity`, `scar`)
   - `io/` — shared field checks + VTK post-processing
 - `../filesOrganize/cardiac_preproc/outputs/` — generated results
-- `videoEditorPurkinje/render_purkinje_frames.py` — ParaView pvpython rendering + GIFs
+- `io/videoEditorPurkinje/render_purkinje_frames.py` — ParaView pvpython rendering + GIFs
 
 Product-facing Purkinje wrappers live in:
 
@@ -69,7 +69,7 @@ Each solver reads defaults from colocated product configs:
 - `../purkinje/slab/config_slab.py`
 
 If you want to understand the detailed logic for a step, see the corresponding
-canonical module or the implementation in `src/cardiac_preproc/`.
+canonical module or the implementation in `cardiac_core/`.
 
 ## Pipeline Order (Why it matters)
 
@@ -90,7 +90,7 @@ modified as intended.
 
 `../tagging/tagging.py` tags LV/RV endocardium and epicardium using
 `uvc_transmural` and `uvc_intraventricular` point data. The core implementation
-lives in `src/cardiac_preproc/tagging/tag_endo_epi_surface.py`. The surface
+lives in `cardiac_core/tagging/tag_endo_epi_surface.py`. The surface
 output is triangulated and saved as an unstructured surface; the volume-mapped
 output stays as a volume mesh.
 

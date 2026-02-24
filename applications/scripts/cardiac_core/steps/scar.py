@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cardiac_preproc.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
-from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
-from cardiac_preproc.scar.model import add_scar_from_selection
-from cardiac_preproc.pipeline.context import StepContext, StepResult
+from cardiac_core.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
+from cardiac_core.io.postprocess import inspect_vtk, postprocess_vtk_output
+from cardiac_core.scar.model import add_scar_from_selection
+from cardiac_core.pipeline.context import StepContext, StepResult
 
 
 @dataclass

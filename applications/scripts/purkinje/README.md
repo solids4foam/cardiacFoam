@@ -9,10 +9,10 @@ child domains:
 
 The compute engine remains centralized in:
 
-- `cardiac_preproc/src/cardiac_preproc/`
+- `cardiac_core/`
 
 Design rule:
 
 - `purkinje/*` folders are product-facing modules and wrappers.
-- `cardiac_preproc` contains reusable engine/domain logic and orchestration.
+- `cardiac_core` contains reusable engine/domain logic and orchestration.
 - `engine/` contains the upper shared runtime facade.

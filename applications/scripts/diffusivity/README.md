@@ -13,4 +13,4 @@ Config (colocated with CLI):
 
 Core step implementation:
 
-- `../cardiac_preproc/src/cardiac_preproc/steps/diffusivity.py`
+- `../cardiac_core/steps/diffusivity.py`

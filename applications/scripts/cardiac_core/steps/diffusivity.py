@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cardiac_preproc.io.field_checks import require_cell_fields
-from cardiac_preproc.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
-from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
-from cardiac_preproc.diffusivity.tensor import add_diffusivity_tensor_ventricles
-from cardiac_preproc.pipeline.context import StepContext, StepResult
+from cardiac_core.io.field_checks import require_cell_fields
+from cardiac_core.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
+from cardiac_core.io.postprocess import inspect_vtk, postprocess_vtk_output
+from cardiac_core.diffusivity.tensor import add_diffusivity_tensor_ventricles
+from cardiac_core.pipeline.context import StepContext, StepResult
 
 
 @dataclass

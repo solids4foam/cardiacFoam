@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from cardiac_preproc.pipeline import register_default_steps
-from cardiac_preproc.pipeline.context import StepContext, StepResult
-from cardiac_preproc.pipeline.runner import run_registered_step
+from cardiac_core.pipeline import register_default_steps
+from cardiac_core.pipeline.context import StepContext, StepResult
+from cardiac_core.pipeline.runner import run_registered_step
 
 
 @dataclass

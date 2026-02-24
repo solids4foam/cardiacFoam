@@ -10,13 +10,13 @@ from pathlib import Path
 from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "cardiac_preproc" / "src"
+SRC = ROOT
 DEFAULT_CONFIG = Path(__file__).resolve().with_name("config_scar.py")
 
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from cardiac_preproc.steps.scar import ScarOptions, run_scar  # noqa: E402
+from cardiac_core.steps.scar import ScarOptions, run_scar  # noqa: E402
 
 
 def _load_config(path: Path) -> ModuleType:

@@ -7,12 +7,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "cardiac_preproc" / "src"
+SRC = ROOT
 
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from cardiac_preproc.fileConversion.ASCIIlegacyToVtkUnstructured import main  # noqa: E402
+from cardiac_core.fileConversion.ASCIIlegacyToVtkUnstructured import main  # noqa: E402
 
 
 if __name__ == "__main__":

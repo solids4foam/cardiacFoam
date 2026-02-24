@@ -4,7 +4,7 @@ This module is the Purkinje slab product-facing entrypoint.
 
 Engine implementation lives in:
 
-- `cardiac_preproc/src/cardiac_preproc/steps/purkinje_slab.py`
+- `cardiac_core/steps/purkinje_slab.py`
 
 Product CLI:
 
@@ -24,4 +24,4 @@ Usage:
 python3 purkinje/slab/slab.py --help
 ```
 
-Core implementation remains in `cardiac_preproc/src/cardiac_preproc/steps/purkinje_slab.py`.
+Core implementation remains in `cardiac_core/steps/purkinje_slab.py`.

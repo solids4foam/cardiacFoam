@@ -10,13 +10,13 @@ from pathlib import Path
 from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "cardiac_preproc" / "src"
+SRC = ROOT
 DEFAULT_CONFIG = Path(__file__).resolve().with_name("config_tagging.py")
 
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from cardiac_preproc.tagging.tag_endo_epi_surface import main  # noqa: E402
+from cardiac_core.tagging.tag_endo_epi_surface import main  # noqa: E402
 
 
 def _load_config(path: Path) -> ModuleType:

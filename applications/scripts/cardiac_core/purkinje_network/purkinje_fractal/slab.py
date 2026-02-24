@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pyvista as pv
 
-from cardiac_preproc.tagging.tag_endo_epi_surface import (
+from cardiac_core.tagging.tag_endo_epi_surface import (
     map_surface_tags_to_volume,
     tag_inside_shared_boundary,
     tag_shared_boundary,

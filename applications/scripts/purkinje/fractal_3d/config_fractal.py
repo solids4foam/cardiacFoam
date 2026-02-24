@@ -48,8 +48,8 @@ VIDEO = {
     "pvpython": "pvpython",
     "script": str(
         ROOT
-        / "purkinje"
-        / "fractal_3d"
+        / "cardiac_core"
+        / "io"
         / "videoEditorPurkinje"
         / "render_purkinje_frames.py"
     ),

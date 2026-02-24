@@ -12,4 +12,4 @@ Primary API:
 
 The core domain/step implementations remain in:
 
-- `../cardiac_preproc/src/cardiac_preproc/`
+- `../cardiac_core/`

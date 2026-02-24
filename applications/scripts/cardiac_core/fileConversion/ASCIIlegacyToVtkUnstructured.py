@@ -5,8 +5,8 @@ Standalone CLI to inspect a VTK file and convert FIELD arrays to standard VTK da
 """
 import argparse
 
-from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
-from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file
+from cardiac_core.io.postprocess import inspect_vtk, postprocess_vtk_output
+from cardiac_core.utils.vtk_convert_arrays_to_fields import convert_vtk_file
 
 
 def main() -> None:

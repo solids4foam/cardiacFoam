@@ -17,20 +17,20 @@ Phase 1 keeps old entrypoints working while defining the new canonical architect
 - `engine/src/cardiac_engine/conduction_runner.py` (pipeline orchestration)
 - `engine/src/cardiac_engine/paths.py` (single source of repository/data paths)
 
-## Core Domain Code (kept in cardiac_preproc)
+## Core Domain Code (kept in cardiac_core)
 
-- `cardiac_preproc/src/cardiac_preproc/steps/*`
-- `cardiac_preproc/src/cardiac_preproc/io/*`
-- `cardiac_preproc/src/cardiac_preproc/diffusivity/*`
-- `cardiac_preproc/src/cardiac_preproc/scar/*`
-- `cardiac_preproc/src/cardiac_preproc/pipeline/*`
+- `cardiac_core/steps/*`
+- `cardiac_core/io/*`
+- `cardiac_core/diffusivity/*`
+- `cardiac_core/scar/*`
+- `cardiac_core/pipeline/*`
 
 ## Cleanup Status
 
-- `cardiac_preproc/scripts/*`: removed in cleanup.
-- `cardiac_preproc/configs/*`: removed in cleanup.
-- `cardiac_preproc/src/cardiac_preproc/cli/*`: removed in cleanup.
-- `cardiac_preproc/src/cardiac_preproc/engine.py`: removed in cleanup.
+- `cardiac_preproc/scripts/*`: removed in cleanup (legacy layout).
+- `cardiac_preproc/configs/*`: removed in cleanup (legacy layout).
+- `cardiac_core/cli/*`: removed in cleanup.
+- `cardiac_core/engine.py`: removed in cleanup.
 
 Canonical entrypoints are used directly.
 

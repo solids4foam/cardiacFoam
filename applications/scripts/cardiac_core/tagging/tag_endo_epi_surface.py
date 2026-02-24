@@ -25,8 +25,8 @@ except ModuleNotFoundError:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-from cardiac_preproc.utils.vtk_utils import inspect_fields, remove_blank_lines
-from cardiac_preproc.utils.vtk_convert_arrays_to_fields import convert_vtk_file
+from cardiac_core.utils.vtk_utils import inspect_fields, remove_blank_lines
+from cardiac_core.utils.vtk_convert_arrays_to_fields import convert_vtk_file
 
 DEFAULT_COMPLEMENTARY_SURFACE_OUTPUT = True
 DEFAULT_EXTRACT_VOLUME_OUTPUT = False

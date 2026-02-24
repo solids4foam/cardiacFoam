@@ -1,6 +1,6 @@
 # First-Draft Refactor Architecture
 
-Scope: `cardiac_preproc`, `purkinje/density_mapper`, `purkinje/fractal_3d`  
+Scope: `cardiac_core`, `purkinje/density_mapper`, `purkinje/fractal_3d`  
 Constraint: keep fractal core where it is (no relocation yet).
 
 ## Core 1: VTK Handler Layer
@@ -12,7 +12,7 @@ Responsibilities:
 - field validation and introspection
 
 Current placement:
-- `cardiac_preproc/src/cardiac_preproc/io/`
+- `cardiac_core/io/`
   - `vtk_mesh.py` for shared read/write
   - `postprocess.py` for cleanup
   - `field_checks.py` for required field validation
@@ -30,13 +30,13 @@ Responsibilities:
 - pure step execution with explicit options and deterministic outputs
 
 Current placement:
-- `cardiac_preproc/src/cardiac_preproc/steps/`
+- `cardiac_core/steps/`
   - `diffusivity.py`
   - `scar.py`
   - `purkinje_slab.py`
 
 Pipeline registration:
-- `cardiac_preproc/src/cardiac_preproc/pipeline/__init__.py`
+- `cardiac_core/pipeline/__init__.py`
 
 ## Core 3: Purkinje Generation Strategies
 
@@ -45,7 +45,7 @@ Two tracks:
 2. Fractal generation (active development track).
 
 Current boundary:
-- Slab stays integrated in `cardiac_preproc` steps.
+- Slab stays integrated in `cardiac_core` steps.
 - Fractal remains in:
   - `purkinje/fractal_3d/Costabal2015_purkinjeNetwork/`
 
@@ -64,7 +64,7 @@ Current state:
 
 ## Next Refactor Iteration (Suggested)
 
-1. Extract a shared VTK domain package used by both `cardiac_preproc` and `purkinje_density`.
+1. Extract a shared VTK domain package used by both `cardiac_core` and `purkinje_density`.
 2. Move endocardial area computation into a dedicated reusable module (not inside UI/workbench files).
 3. Add integration tests for full step chains:
    - `diffusivity -> purkinje_slab -> scar -> convert`
