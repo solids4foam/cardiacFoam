@@ -11,8 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 
-from cardiac_engine.paths import resolve_paths
-from cardiac_engine.runtime import CardiacPreprocEngine
+from .paths import resolve_paths
+from .runtime import CardiacPreprocEngine
 
 
 def _load_config(path: Path) -> ModuleType:

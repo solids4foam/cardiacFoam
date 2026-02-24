@@ -2,7 +2,6 @@
 
 ## Top-Level Layout
 
-- `engine/`: upper-layer shared runtime facade (`cardiac_engine` package).
 - `purkinje/`: Purkinje product surface with three child modules:
   - `density_mapper/`
   - `fractal_3d/`
@@ -22,7 +21,7 @@
 - Stable product-oriented entrypoints.
 - Includes sibling product wrappers: `diffusivity/`, `scar/`.
 
-2. Engine Runtime Layer (`engine/src/cardiac_engine`)
+2. Engine Runtime Layer (`cardiac_core/engine`)
 - High-level facade and orchestration API surface.
 
 3. Core Domain Layer (`cardiac_core`)
@@ -37,7 +36,7 @@
 
 The preferred execution API is step-oriented and engine-centered:
 
-- `cardiac_engine.CardiacPreprocEngine`
+- `cardiac_core.engine.CardiacPreprocEngine`
 - `cardiac_core.steps.diffusivity.run_diffusivity(...)`
 - `cardiac_core.steps.scar.run_scar(...)`
 - `cardiac_core.steps.purkinje_slab.run_purkinje_slab(...)`

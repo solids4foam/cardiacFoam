@@ -13,9 +13,9 @@ Phase 1 keeps old entrypoints working while defining the new canonical architect
 
 ## Canonical Engine API
 
-- `engine/src/cardiac_engine/runtime.py` (`CardiacPreprocEngine`)
-- `engine/src/cardiac_engine/conduction_runner.py` (pipeline orchestration)
-- `engine/src/cardiac_engine/paths.py` (single source of repository/data paths)
+- `cardiac_core/engine/runtime.py` (`CardiacPreprocEngine`)
+- `cardiac_core/engine/conduction_runner.py` (pipeline orchestration)
+- `cardiac_core/engine/paths.py` (single source of repository/data paths)
 
 ## Core Domain Code (kept in cardiac_core)
 
@@ -46,4 +46,4 @@ Legacy folder locations keep symlinks for compatibility during Phase 1.
 
 1. Remove compatibility wrappers and shims.
 2. Remove deprecated import paths.
-3. Keep only canonical `engine` + product CLIs + core domain packages.
+3. Keep only canonical `cardiac_core/engine` + product CLIs + core domain packages.

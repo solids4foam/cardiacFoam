@@ -5,7 +5,7 @@ Purkinje slab/fractal orchestration).
 
 Upper runtime facade lives in:
 
-- `../engine/src/cardiac_engine/`
+- `../cardiac_core/engine/`
 
 ## Structure
 

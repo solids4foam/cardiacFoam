@@ -8,14 +8,11 @@ from pathlib import Path
 
 SCRIPTS_ROOT = Path(__file__).resolve().parent
 CARDIAC_CORE_ROOT = SCRIPTS_ROOT / "cardiac_core"
-ENGINE_SRC = SCRIPTS_ROOT / "engine" / "src"
 
-if str(ENGINE_SRC) not in sys.path:
-    sys.path.insert(0, str(ENGINE_SRC))
-if str(CARDIAC_CORE_ROOT) not in sys.path:
-    sys.path.insert(0, str(CARDIAC_CORE_ROOT))
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
 
-from cardiac_engine import run_pipeline_cli  # noqa: E402
+from cardiac_core.engine import run_pipeline_cli  # noqa: E402
 
 
 def main() -> None:
