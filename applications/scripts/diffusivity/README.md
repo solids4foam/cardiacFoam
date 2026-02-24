@@ -9,7 +9,7 @@ CLI:
 
 Config (colocated with CLI):
 
-- `Diffusivity_config.py`
+- `config_diffusivity.py`
 
 Core step implementation:
 

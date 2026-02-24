@@ -11,7 +11,7 @@ from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "cardiac_preproc" / "src"
-DEFAULT_CONFIG = Path(__file__).resolve().with_name("scar_config.py")
+DEFAULT_CONFIG = Path(__file__).resolve().with_name("config_scar.py")
 
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))

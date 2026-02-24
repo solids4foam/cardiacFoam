@@ -11,11 +11,11 @@ Upper runtime facade lives in:
 
 - `../conduction_system_generation.py` — top-level main driver (uses `--steps` CLI)
 - `../tagging/` — top-level endo/epi tagging entrypoint + config:
-  - `tagEndoEpi_fromUVC.py`
-  - `tag_endo_epi_surface_config.py`
+  - `tagging.py`
+  - `config_tagging.py`
 - `../conversion/` — top-level conversion entrypoint + config:
-  - `ASCIIlegacyToVtkUnstructured.py`
-  - `convert_config.py`
+  - `conversion.py`
+  - `config_conversion.py`
 - `../filesOrganize/` — centralized data assets (inputs/outputs/VTK files)
 - `src/cardiac_preproc/` — implementation code
   - `pipeline/` — step registry/context/runner
@@ -49,24 +49,24 @@ Run a single tool:
 python3 ../purkinje/slab/slab.py
 python3 ../diffusivity/diffusivity.py
 python3 ../scar/scar.py
-python3 ../purkinje/fractal_3d/purkinje3D_fractal.py
-python3 ../purkinje/fractal_3d/purkinje3D_fractal.py --input ../filesOrganize/cardiac_preproc/outputs/ASCIIlegacy_DiffusionTensor_endo_epi_surface.vtk
-python3 ../tagging/tagEndoEpi_fromUVC.py
+python3 ../purkinje/fractal_3d/fractal.py
+python3 ../purkinje/fractal_3d/fractal.py --input ../filesOrganize/cardiac_preproc/outputs/ASCIIlegacy_DiffusionTensor_endo_epi_surface.vtk
+python3 ../tagging/tagging.py
 ```
 By default the fractal run opens an interactive viewer after VTUs are written.
 To skip it:
 
 ```bash
-python3 ../purkinje/fractal_3d/purkinje3D_fractal.py --no-view-final
+python3 ../purkinje/fractal_3d/fractal.py --no-view-final
 ```
 
 ## Configuration
 
 Use `../conduction_system_generation.py --steps ...` to control which steps run.
 Each solver reads defaults from colocated product configs:
-- `../diffusivity/Diffusivity_config.py`
-- `../scar/scar_config.py`
-- `../purkinje/slab/purkinjeSlab_config.py`
+- `../diffusivity/config_diffusivity.py`
+- `../scar/config_scar.py`
+- `../purkinje/slab/config_slab.py`
 
 If you want to understand the detailed logic for a step, see the corresponding
 canonical module or the implementation in `src/cardiac_preproc/`.
@@ -81,20 +81,20 @@ When running multiple steps, follow:
 4) `convert`
 
 Reason: `purkinje_slab` scales the `Diffusivity` tensor for tagged cells (using
-the multiplier in `../purkinje/slab/purkinjeSlab_config.py`), and `scar` can further
+the multiplier in `../purkinje/slab/config_slab.py`), and `scar` can further
 scale the tensor inside scar cells using `DIFFUSIVITY_SCAR_MULTIPLIER` from
-`../scar/scar_config.py`. Running out of order means those tensors won't be
+`../scar/config_scar.py`. Running out of order means those tensors won't be
 modified as intended.
 
 ## Surface Tagging (Endo/Epi)
 
-`../tagging/tagEndoEpi_fromUVC.py` tags LV/RV endocardium and epicardium using
+`../tagging/tagging.py` tags LV/RV endocardium and epicardium using
 `uvc_transmural` and `uvc_intraventricular` point data. The core implementation
 lives in `src/cardiac_preproc/tagging/tag_endo_epi_surface.py`. The surface
 output is triangulated and saved as an unstructured surface; the volume-mapped
 output stays as a volume mesh.
 
 Defaults for surface/volume outputs and the optional seed point live in
-`../tagging/tag_endo_epi_surface_config.py`. If you see boundary artifacts, try
+`../tagging/config_tagging.py`. If you see boundary artifacts, try
 setting `SHARED_BOUNDARY_SEED` (or `--seed-point`) to grow the inside-shared region
 from a known location.

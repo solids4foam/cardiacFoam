@@ -12,7 +12,7 @@ Product CLI:
 
 Config (colocated with CLI):
 
-- `purkinjeSlab_config.py`
+- `config_slab.py`
 
 Compatibility wrapper:
 

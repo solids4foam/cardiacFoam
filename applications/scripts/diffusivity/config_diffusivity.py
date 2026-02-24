@@ -7,7 +7,6 @@ FILES_ORGANIZE = ROOT / "filesOrganize"
 CARDIAC_INPUTS = FILES_ORGANIZE / "cardiac_preproc" / "inputs" / "meshes"
 CARDIAC_OUTPUTS = FILES_ORGANIZE / "cardiac_preproc" / "outputs"
 
-# Diffusivities (ventricular tissue) in SI units: S/m.
 Ventricular_DF = 0.1143
 Ventricular_DS = 0.052
 Ventricular_DN = 0.016

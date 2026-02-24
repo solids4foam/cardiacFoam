@@ -214,8 +214,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--config",
-    default=str(Path(__file__).resolve().parents[1] / "purkinjeFractalTree_config.py"),
-    help="Path to combined config file (defaults to ../purkinjeFractalTree_config.py).",
+    default=str(Path(__file__).resolve().parents[1] / "config_fractal.py"),
+    help="Path to combined config file (defaults to ../config_fractal.py).",
 )
 parser.add_argument(
     "--debug-plot",

@@ -47,8 +47,8 @@ Product CLIs live in:
 - `diffusivity/diffusivity.py`
 - `scar/scar.py`
 - `purkinje/slab/slab.py`
-- `tagging/tagEndoEpi_fromUVC.py`
-- `conversion/ASCIIlegacyToVtkUnstructured.py`
+- `tagging/tagging.py`
+- `conversion/conversion.py`
 
 They delegate into shared `cardiac_preproc.steps.*` engine functions.
 

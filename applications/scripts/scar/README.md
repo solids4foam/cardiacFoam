@@ -9,7 +9,7 @@ CLI:
 
 Config (colocated with CLI):
 
-- `scar_config.py`
+- `config_scar.py`
 
 Core step implementation:
 

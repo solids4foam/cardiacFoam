@@ -11,7 +11,7 @@ from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "cardiac_preproc" / "src"
-DEFAULT_CONFIG = Path(__file__).resolve().with_name("purkinjeSlab_config.py")
+DEFAULT_CONFIG = Path(__file__).resolve().with_name("config_slab.py")
 
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))

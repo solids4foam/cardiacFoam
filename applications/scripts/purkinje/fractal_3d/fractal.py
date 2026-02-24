@@ -3,7 +3,7 @@
 
 Inputs:
 - Triangulated surface mesh with ENDO_LV/ENDO_RV tags (ASCII legacy VTK or gmsh).
-- Surface tag mapping in purkinje/fractal_3d/purkinjeFractalTree_config.py.
+- Surface tag mapping in purkinje/fractal_3d/config_fractal.py.
 
 Outputs:
 - Fractal tree node/line files and geometry VTK under outputs/.
@@ -22,7 +22,7 @@ CONFIGS = ROOT
 
 sys.path.insert(0, str(CONFIGS))
 
-from purkinjeFractalTree_config import MESH  # noqa: E402
+from config_fractal import MESH  # noqa: E402
 
 
 def main() -> None:
@@ -30,7 +30,7 @@ def main() -> None:
     parser.add_argument("--input", default=MESH, help="Input mesh.")
     parser.add_argument(
         "--config",
-        default=str(ROOT / "purkinjeFractalTree_config.py"),
+        default=str(ROOT / "config_fractal.py"),
         help="Config file.",
     )
     args, unknown = parser.parse_known_args()
