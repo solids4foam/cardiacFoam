@@ -17,6 +17,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from cardiac_core.steps.purkinje_slab import PurkinjeSlabOptions, run_purkinje_slab  # noqa: E402
+from cardiac_core.engine.paths import resolve_paths  # noqa: E402
 
 
 def _load_config(path: Path) -> ModuleType:
@@ -29,6 +30,7 @@ def _load_config(path: Path) -> ModuleType:
 
 
 def main() -> None:
+    paths = resolve_paths(project_root=ROOT / "cardiac_core")
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
         "--config",
@@ -42,8 +44,18 @@ def main() -> None:
         description="Purkinje slab tagging CLI.",
         parents=[pre_parser],
     )
-    parser.add_argument("--input", default=cfg.INPUT, metavar="INPUT_VTK", help="Input VTK file.")
-    parser.add_argument("--output", default=cfg.OUTPUT, metavar="OUTPUT_VTK", help="Output VTK file.")
+    parser.add_argument(
+        "--input",
+        default=getattr(cfg, "INPUT", str(paths.default_input_mesh)),
+        metavar="INPUT_VTK",
+        help="Input VTK file.",
+    )
+    parser.add_argument(
+        "--output",
+        default=getattr(cfg, "OUTPUT", str(paths.default_outputs_root / "02_purkinje_slab.vtk")),
+        metavar="OUTPUT_VTK",
+        help="Output VTK file.",
+    )
     parser.add_argument("--transmural-min", type=float, default=None, metavar="MIN_DEPTH", help="Min transmural.")
     parser.add_argument("--transmural-max", type=float, default=None, metavar="MAX_DEPTH", help="Max transmural.")
     parser.add_argument("--lv-value", type=int, default=None, metavar="LV_TAG", help="LV tag in uvc_intraventricular.")

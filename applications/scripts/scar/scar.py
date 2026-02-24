@@ -17,6 +17,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from cardiac_core.steps.scar import ScarOptions, run_scar  # noqa: E402
+from cardiac_core.engine.paths import resolve_paths  # noqa: E402
 
 
 def _load_config(path: Path) -> ModuleType:
@@ -29,6 +30,7 @@ def _load_config(path: Path) -> ModuleType:
 
 
 def main() -> None:
+    paths = resolve_paths(project_root=ROOT / "cardiac_core")
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
         "--config",
@@ -47,9 +49,24 @@ def main() -> None:
         description="Add scar tags from a selection mesh.",
         parents=[pre_parser],
     )
-    parser.add_argument("--full-mesh", default=cfg.FULL_MESH, metavar="FULL_MESH_VTK", help="Full mesh VTK file.")
-    parser.add_argument("--selection", default=cfg.SELECTION, metavar="SELECTION_VTU", help="Selection mesh VTU file.")
-    parser.add_argument("--output", default=cfg.OUTPUT, metavar="OUTPUT_VTK", help="Output VTK file.")
+    parser.add_argument(
+        "--full-mesh",
+        default=getattr(cfg, "FULL_MESH", str(paths.default_outputs_root / "02_purkinje_slab.vtk")),
+        metavar="FULL_MESH_VTK",
+        help="Full mesh VTK file.",
+    )
+    parser.add_argument(
+        "--selection",
+        default=getattr(cfg, "SELECTION", str(paths.default_scar_selection)),
+        metavar="SELECTION_VTU",
+        help="Selection mesh VTU file.",
+    )
+    parser.add_argument(
+        "--output",
+        default=getattr(cfg, "OUTPUT", str(paths.default_outputs_root / "03_scar.vtk")),
+        metavar="OUTPUT_VTK",
+        help="Output VTK file.",
+    )
     parser.add_argument("--id-array", default="GlobalCellIds", metavar="ID_ARRAY", help="Cell data array name for global cell IDs.")
     parser.add_argument("--scar-name", default="Scar", metavar="SCAR_NAME", help="Cell data array name for the scar tag.")
     parser.add_argument("--scar-value", type=float, default=1.0, metavar="SCAR_VALUE", help="Value assigned to scar cells.")

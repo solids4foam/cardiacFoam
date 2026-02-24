@@ -153,40 +153,39 @@ def run_pipeline_from_args(*, project_root: Path, args: argparse.Namespace) -> N
     cfg_purkinje = _load_config(paths.purkinje_slab_config) if "purkinje_slab" in steps else None
     cfg_diff = _load_config(paths.diffusivity_config) if "diffusivity" in steps else None
     cfg_scar = _load_config(paths.scar_config) if "scar" in steps else None
-    cfg_convert = _load_config(paths.convert_config) if "convert" in steps else None
     cfg_fractal = _load_config(paths.purkinje_fractal_config) if "purkinje_fractal" in steps else None
-
-    requirements: dict[str, dict[str, str]] = {}
-    if cfg_purkinje is not None:
-        requirements["purkinje_slab"] = {"input": cfg_purkinje.INPUT, "output": cfg_purkinje.OUTPUT}
-    if cfg_diff is not None:
-        requirements["diffusivity"] = {"input": cfg_diff.INPUT, "output": cfg_diff.OUTPUT}
-    if cfg_scar is not None:
-        requirements["scar"] = {
-            "full_mesh": cfg_scar.FULL_MESH,
-            "selection": cfg_scar.SELECTION,
-            "output": cfg_scar.OUTPUT,
-        }
-    if cfg_convert is not None:
-        requirements["convert"] = {"input": cfg_convert.INPUT, "output": cfg_convert.OUTPUT}
-    if cfg_fractal is not None:
-        requirements["purkinje_fractal"] = {"mesh": cfg_fractal.MESH, "config": str(paths.purkinje_fractal_config)}
-    _print_requirements(steps, requirements)
 
     output_dir = Path(args.output_dir) if args.output_dir else _default_output_dir(paths.default_outputs_root)
     output_dir.mkdir(parents=True, exist_ok=True)
     engine = CardiacPreprocEngine(project_root=project_root, output_dir=output_dir)
 
-    if args.purkinje_output is None and cfg_purkinje is not None:
-        args.purkinje_output = cfg_purkinje.OUTPUT
-    if args.diffusivity_output is None and cfg_diff is not None:
-        args.diffusivity_output = cfg_diff.OUTPUT
-    if args.scar_selection is None and cfg_scar is not None:
-        args.scar_selection = cfg_scar.SELECTION
-    if args.scar_output is None and cfg_scar is not None:
-        args.scar_output = cfg_scar.OUTPUT
-    if args.converted_output is None and cfg_convert is not None:
-        args.converted_output = cfg_convert.OUTPUT
+    if args.diffusivity_output is None:
+        args.diffusivity_output = str(output_dir / "01_diffusivity.vtk")
+    if args.purkinje_output is None:
+        args.purkinje_output = str(output_dir / "02_purkinje_slab.vtk")
+    if args.scar_selection is None:
+        args.scar_selection = str(paths.default_scar_selection)
+    if args.scar_output is None:
+        args.scar_output = str(output_dir / "03_scar.vtk")
+    if args.converted_output is None:
+        args.converted_output = str(output_dir / "04_convert.vtk")
+
+    requirements: dict[str, dict[str, str]] = {}
+    if cfg_purkinje is not None:
+        requirements["purkinje_slab"] = {"input": args.input, "output": args.purkinje_output}
+    if cfg_diff is not None:
+        requirements["diffusivity"] = {"input": args.input, "output": args.diffusivity_output}
+    if cfg_scar is not None:
+        requirements["scar"] = {
+            "full_mesh": args.scar_full_mesh or args.purkinje_output,
+            "selection": args.scar_selection,
+            "output": args.scar_output,
+        }
+    if "convert" in steps:
+        requirements["convert"] = {"input": args.scar_output, "output": args.converted_output}
+    if cfg_fractal is not None:
+        requirements["purkinje_fractal"] = {"mesh": cfg_fractal.MESH, "config": str(paths.purkinje_fractal_config)}
+    _print_requirements(steps, requirements)
 
     current_mesh = args.input
     for step in steps:

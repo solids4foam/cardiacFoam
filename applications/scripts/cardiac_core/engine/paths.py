@@ -21,6 +21,7 @@ class RepoPaths:
     convert_runner: Path
 
     default_input_mesh: Path
+    default_scar_selection: Path
     default_fractal_mesh: Path
     default_outputs_root: Path
 
@@ -40,6 +41,7 @@ def resolve_paths(*, project_root: Path) -> RepoPaths:
         convert_config=scripts_root / "conversion" / "config_conversion.py",
         convert_runner=scripts_root / "conversion" / "conversion.py",
         default_input_mesh=files_organize / "cardiac_preproc" / "inputs" / "meshes" / "ASCIIlegacy.vtk",
+        default_scar_selection=files_organize / "cardiac_preproc" / "outputs" / "scar_tissue_region.vtu",
         default_fractal_mesh=files_organize / "cardiac_preproc" / "inputs" / "meshes" / "biv_ellipsoid.msh",
         default_outputs_root=files_organize / "cardiac_preproc" / "outputs",
     )

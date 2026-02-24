@@ -17,6 +17,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from cardiac_core.steps.diffusivity import DiffusivityOptions, run_diffusivity  # noqa: E402
+from cardiac_core.engine.paths import resolve_paths  # noqa: E402
 
 
 def _load_config(path: Path) -> ModuleType:
@@ -29,6 +30,7 @@ def _load_config(path: Path) -> ModuleType:
 
 
 def main() -> None:
+    paths = resolve_paths(project_root=ROOT / "cardiac_core")
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
         "--config",
@@ -42,8 +44,18 @@ def main() -> None:
         description="Add diffusivity tensor to a VTK mesh.",
         parents=[pre_parser],
     )
-    parser.add_argument("--input", default=cfg.INPUT, metavar="INPUT_VTK", help="Input VTK file.")
-    parser.add_argument("--output", default=cfg.OUTPUT, metavar="OUTPUT_VTK", help="Output VTK file.")
+    parser.add_argument(
+        "--input",
+        default=getattr(cfg, "INPUT", str(paths.default_input_mesh)),
+        metavar="INPUT_VTK",
+        help="Input VTK file.",
+    )
+    parser.add_argument(
+        "--output",
+        default=getattr(cfg, "OUTPUT", str(paths.default_outputs_root / "01_diffusivity.vtk")),
+        metavar="OUTPUT_VTK",
+        help="Output VTK file.",
+    )
     parser.add_argument(
         "--df",
         type=float,
@@ -77,18 +89,10 @@ def main() -> None:
     parser.add_argument("--no-inspect", action="store_true", help="Skip inspecting fields before/after.")
     args = parser.parse_args()
 
-    output = args.output
-    if output == cfg.OUTPUT and output is None:
-        import pyvista as pv
-
-        mesh = pv.read(args.input)
-        has_purkinje = "purkinjeLayer" in mesh.cell_data
-        output = "outputs/Diffusion_purkinjeLayer.vtk" if has_purkinje else "outputs/Diffusion.vtk"
-
     result = run_diffusivity(
         DiffusivityOptions(
             input_path=args.input,
-            output_path=output,
+            output_path=args.output,
             df=args.df,
             ds=args.ds,
             dn=args.dn,
