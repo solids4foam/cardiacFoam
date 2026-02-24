@@ -1,8 +1,0 @@
- 
-From a group of .png. Normally created from a from a VTU or VTK set in paraview.
-
-
-ffmpeg -i rv_fractal_tree_generation.%04d.png -vf palettegen palette.png
-
- ffmpeg -framerate <NUMBER HERE> -i lv_fractal_tree_generation.%04d.png -i palette.png \
-  -lavfi paletteuse purkinje_lv.gif
