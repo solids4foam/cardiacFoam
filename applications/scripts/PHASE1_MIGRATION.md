@@ -21,7 +21,8 @@ Phase 1 keeps old entrypoints working while defining the new canonical architect
 
 - `cardiac_preproc/src/cardiac_preproc/steps/*`
 - `cardiac_preproc/src/cardiac_preproc/io/*`
-- `cardiac_preproc/src/cardiac_preproc/lib/*`
+- `cardiac_preproc/src/cardiac_preproc/diffusivity/*`
+- `cardiac_preproc/src/cardiac_preproc/scar/*`
 - `cardiac_preproc/src/cardiac_preproc/pipeline/*`
 
 ## Cleanup Status

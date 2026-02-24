@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from cardiac_preproc.io.field_checks import require_cell_fields
 from cardiac_preproc.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
 from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
-from cardiac_preproc.lib.diffusivity_tensor import add_diffusivity_tensor_ventricles
+from cardiac_preproc.diffusivity.tensor import add_diffusivity_tensor_ventricles
 from cardiac_preproc.pipeline.context import StepContext, StepResult
 
 

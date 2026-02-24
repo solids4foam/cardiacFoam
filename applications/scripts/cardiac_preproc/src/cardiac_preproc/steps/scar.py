@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from cardiac_preproc.io.vtk_mesh import read_vtk_mesh, write_vtk_ascii
 from cardiac_preproc.io.postprocess import inspect_vtk, postprocess_vtk_output
-from cardiac_preproc.lib.scar import add_scar_from_selection
+from cardiac_preproc.scar.model import add_scar_from_selection
 from cardiac_preproc.pipeline.context import StepContext, StepResult
 
 
