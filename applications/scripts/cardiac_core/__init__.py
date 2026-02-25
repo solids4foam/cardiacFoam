@@ -1,1 +1,0 @@
-"""cardiac_core package."""
