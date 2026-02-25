@@ -1,0 +1,61 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      cardiacProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+// Niederer et al 2011 transversely isotropic conductivity [S/m]
+// sigmaX = 0.1334177215;
+// sigmaY/Z = 0.01760617761;
+
+
+conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
+//conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.133417721 0 0.133417721);
+
+// Cellular membrane surface-to-volume ratio [1/m]
+
+chi   [0 -1 0 0 0 0 0] 140000;
+
+
+// Cellular membrane capacitance [F/m^2]
+
+Cm     [-1 -4 4 0 0 2 0] 0.01;
+
+
+// Specify the ionic model
+
+//      ionicModel  TNNP;
+        ionicModel  BuenoOrovio;
+//      ionicModel  Courtemanche;
+//      ionicModel  Gaur;
+
+
+exportedVariables (u v w s Jfi Jion);
+// debugPrintVariables (u v w s Jfi Jion);
+
+//specify the type of tissue or dimension
+
+tissue  epicardialCells;
+// tissue endocardialCells;
+// tissue epicardiacCells;
+
+// c0 is a scaled conduction parameter (units T^{-1/2}), calibrated
+// such that c0*sqrt(M_l) equals the prescribed physical fibre
+// conduction velocity for a planar wavefront
+// c0 is only used by eikonalElectroActivationFoam
+c0    [0 0 -0.5 0 0 0 0] 40;
+
+
+// ************************************************************************* //
