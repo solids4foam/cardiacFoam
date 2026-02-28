@@ -21,10 +21,12 @@ then
     echo
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/solids4foam"
 else
-    echo "ERROR: solids4foam not found."
-    echo "Set SOLIDS4FOAM_INST_DIR or initialise submodules:"
+    echo "NOTE: solids4foam not found."
+    echo "To us solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
     echo "  git submodule update --init --recursive"
-    return 1 2>/dev/null || exit 1
+
+    # Use physicsModel from modules
+    SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
 fi
 
 echo "Using SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
