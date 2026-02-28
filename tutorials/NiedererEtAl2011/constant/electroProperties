@@ -10,44 +10,42 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "constant";
+    object      electroProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs            ("libelectroModels.so");
+electroModel monoDomainElectro;
+//electroModel eikonalDiffusionElectro;
+//electroModel singleCellElectro;
 
-application     cardiacFoam;
+monoDomainElectroCoeffs
+{
+    solutionAlgorithm explicit;
+    //solutionAlgorithm implicit;
 
-startFrom       startTime;
+    #include "cardiacProperties";
+    #include "stimulusProtocol";
+    #include "timeIntegrationProperties";
 
-startTime       0;
+    infoFrequency 1;
+}
 
-stopAt          endTime;
+eikonalDiffusionElectroCoeffs
+{
+    // eikonal-advection-diffusion approach (yes) or eikonal-diffusion
+    // approach (no)
+    eikonalAdvectionDiffusionApproach yes;
 
-endTime    	0.08;
+    #include "cardiacProperties";
+    #include "stimulusProtocol";
+}
 
-deltaT          1e-05;
-
-writeControl    runTime;
-
-writeInterval   1e-3;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable false;
-
+singleCellElectroCoeffs
+{
+    #include "cardiacProperties";
+    #include "stimulusProtocol";
+    #include "timeIntegrationProperties"
+}
 
 // ************************************************************************* //
-
-

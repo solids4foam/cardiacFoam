@@ -107,9 +107,6 @@ class eikonalDiffusionElectro
         //- Indices of the cells to stimulate
         labelList stimulusCellIDs_;
 
-        //- Cardiac properties dictionary
-        const dictionary& cardiacProperties_;
-
         //- Surface-to-volume ratio
         const dimensionedScalar chi_;
 
