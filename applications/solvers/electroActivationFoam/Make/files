@@ -1,6 +1,0 @@
-electroActivationFoam.C
-manufacturedSolutionHandler.C
-explicitLoopHandler.C
-implicitLoopHandler.C
-
-EXE = $(FOAM_USER_APPBIN)/electroActivationFoam
