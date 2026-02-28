@@ -64,7 +64,7 @@ Foam::TNNP::TNNP
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
         // 🔑 First, set tissue using base logic + overrides
-        ionicModel::setTissueFromDict();
+        ionicModel::setTissueFromDict(); 
         TNNPinitConsts
         (
             CONSTANTS_.data(),
@@ -423,6 +423,38 @@ void Foam::TNNP::sweepCurrent
         << " written to " << outputFile << nl;
 }
 
+//-------Coupling signals--------//
+bool Foam::TNNP::hasSignal(const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Vm:
+        case CouplingSignal::Cai:
+            return true;
+        default:
+            return false;
+    }
+}
+
+Foam::scalar Foam::TNNP::signal(const label i, const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Vm:
+            return TNNP_vm(STATES_[i]);
+        case CouplingSignal::Cai:
+            return STATES_[i][::Ca_i];
+        default:
+            break;
+    }
+    FatalErrorInFunction
+        << "Requested coupling signal "
+        << static_cast<int>(s)
+        << " from TNNP, but this signal is not available."
+        << abort(FatalError);
+
+    return 0.0;
+}
 
 
 

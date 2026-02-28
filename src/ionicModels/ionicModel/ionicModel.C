@@ -49,10 +49,14 @@ Foam::ionicModel::ionicModel
     tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    if (dict_.found("exportedVariables"))
+    if (dict_.found("IonicModelVariables_export"))
+        dict_.lookup("IonicModelVariables_export") >> variableExport_;
+    else if (dict_.found("exportedVariables"))
         dict_.lookup("exportedVariables") >> variableExport_;
 
-    if (dict_.found("debugPrintVariables"))
+    if (dict_.found("IonicModelVariables_debugPrint"))
+        dict_.lookup("IonicModelVariables_debugPrint") >> debugVarNames_;
+    else if (dict_.found("debugPrintVariables"))
         dict_.lookup("debugPrintVariables") >> debugVarNames_;
 }
 

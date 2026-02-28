@@ -152,10 +152,10 @@ CourtemancheDependencyMap()
 
             { "Ib",
               Foam::wordList({ "AV_IbNa","AV_IbCa" }) },
-
+            
             { "CaJSR_w",
                 Foam::wordList({ "AV_cajsr_w_inf", "AV_cajsr_w_tau"}) },
-
+             
             { "Iion_cm",
               Foam::wordList
               ({
@@ -198,52 +198,52 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
     CONSTANTS[AC_Km_CSQN] = 0.8;
     CONSTANTS[AC_Km_TRPN] = 0.0005;
     CONSTANTS[AC_TRPN_max] = 0.07;
-
+    
     /* cansr */
     CONSTANTS[AC_Ca_up_max] = 15.0;
     CONSTANTS[AC_I_up_max] = 0.005;
     CONSTANTS[AC_K_up] = 0.00092;
-
+    
     /* extra */
     CONSTANTS[AC_Cao] = 1.8;
     CONSTANTS[AC_Ko] = 5.4;
     CONSTANTS[AC_Nao] = 140.0;
-
+    
     /* geom */
     CONSTANTS[AC_Cm] = 100.0;
     CONSTANTS[AC_V_cell] = 20100.0;
     CONSTANTS[AC_V_i] = CONSTANTS[AC_V_cell] * 0.68;
     CONSTANTS[AC_V_rel] = 0.0048 * CONSTANTS[AC_V_cell];
     CONSTANTS[AC_V_up] = 0.0552 * CONSTANTS[AC_V_cell];
-
+    
     /* ical */
     CONSTANTS[AC_ECaL] = 65.0;
     CONSTANTS[AC_gCaL] = 0.12375;
     CONSTANTS[AC_ical_fCa_tau] = 2.0;
-
+    
     /* ipca */
     CONSTANTS[AC_IpCa_max] = 0.275;
-
+    
     /* itr */
     CONSTANTS[AC_tau_tr] = 180.0;
-
+    
     /* phys */
     CONSTANTS[AC_F] = 96.4867;
     CONSTANTS[AC_R] = 8.3143;
     CONSTANTS[AC_T] = 310.0;
     CONSTANTS[AC_RTF] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F];
     CONSTANTS[AC_FRT] = 1.0 / CONSTANTS[AC_RTF];
-
+    
     /* temp */
     CONSTANTS[AC_KQ10] = 3.0;
-
+    
     /* inaca */
     CONSTANTS[AC_INaCa_max] = 1600.0;
     CONSTANTS[AC_KmCa] = 1.38;
     CONSTANTS[AC_KmNa] = 87.5;
     CONSTANTS[AC_g] = 0.35;
     CONSTANTS[AC_ksat] = 0.1;
-
+    
     /* inak */
     CONSTANTS[AC_INaK_max] = 5.99338739999999981e-01;
     CONSTANTS[AC_KmKo] = 1.5;
@@ -251,35 +251,35 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
     CONSTANTS[AC_sigma] = (exp(CONSTANTS[AC_Nao] / 67.3) - 1.0) / 7.0;
 
 
-
+    
     /* cajsr */
     CONSTANTS[AC_K_rel] = 30.0;
     CONSTANTS[AC_c1] = 3.41749999999999983e-13;
     CONSTANTS[AC_c2] = 1.367e-15;
     CONSTANTS[AC_cajsr_u_tau] = 8.0;
-
+    
     /* ib */
     CONSTANTS[AC_gbCa] = 0.001131;
     CONSTANTS[AC_gbNa] = 6.74437500000000015e-04;
-
+    
     /* ik1 */
     CONSTANTS[AC_gK1] = 0.09;
-
+    
     /* ikr */
     CONSTANTS[AC_gKr] = 2.94117649999999994e-02;
-
+    
     /* iks */
     CONSTANTS[AC_gKs] = 1.29411759999999987e-01;
-
+    
     /* ikur */
     CONSTANTS[AC_gKur_base] = 0.005;
-
+    
     /* ina */
     CONSTANTS[AC_gNa] = 7.8;
-
+    
     /* ito */
     CONSTANTS[AC_gto] = 0.1652;
-
+    
     /* membrane */
     CONSTANTS[AC_I_diff] = 0.0;
 
@@ -359,13 +359,13 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_Ca_CMDN = CONSTANTS[AC_CMDN_max] * STATES[calcium_Cai] / (STATES[calcium_Cai] + CONSTANTS[AC_Km_CMDN]);
     AV_Ca_CSQN = CONSTANTS[AC_CSQN_max] * STATES[calcium_CaRel] / (STATES[calcium_CaRel] + CONSTANTS[AC_Km_CSQN]);
     AV_Ca_TRPN = CONSTANTS[AC_TRPN_max] * STATES[calcium_Cai] / (STATES[calcium_Cai] + CONSTANTS[AC_Km_TRPN]);
-
+    
     /* cansr */
     AV_I_up = CONSTANTS[AC_I_up_max] / (1.0 + CONSTANTS[AC_K_up] / STATES[calcium_Cai]);
     AV_I_up_leak = CONSTANTS[AC_I_up_max] * STATES[calcium_CaUp] / CONSTANTS[AC_Ca_up_max];
-
+    
     //std::cout << "CURRENTS " << __LINE__ << std::endl;
-
+    
     /* ical */
     ALGEBRAIC[AV_ical_d_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 10.0) / -8.0));
     ALGEBRAIC[AV_ical_d_tau] = ((fabs(STATES[membrane_V] + 10.0) < 1e-06) ? 1.0 / (6.24 * 2.0 * 0.035) : (1.0 - exp((STATES[membrane_V] + 10.0) / -6.24)) / (0.035 * (STATES[membrane_V] + 10.0) * (1.0 + exp((STATES[membrane_V] + 10.0) / -6.24))));
@@ -376,26 +376,26 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_ical_fCa_inf = 1.0 / (1.0 + STATES[calcium_Cai] / 0.00035);
     RATES[ical_fCa] = (AV_ical_fCa_inf - STATES[ical_fCa]) / CONSTANTS[AC_ical_fCa_tau];
     ALGEBRAIC[AV_ICaL] = CONSTANTS[AC_gCaL] * STATES[ical_d] * STATES[ical_f] * STATES[ical_fCa] * (STATES[membrane_V] - CONSTANTS[AC_ECaL]);
-
+    
     /* ipca */
     ALGEBRAIC[AV_IpCa] = CONSTANTS[AC_IpCa_max] * STATES[calcium_Cai] / (0.0005 + STATES[calcium_Cai]);
-
+    
     /* itr */
     AV_I_tr = (STATES[calcium_CaUp] - STATES[calcium_CaRel]) / CONSTANTS[AC_tau_tr];
-
+    
     /* inaca */
     ALGEBRAIC[AV_INaCa] = CONSTANTS[AC_INaCa_max] * (exp(CONSTANTS[AC_g] * STATES[membrane_V] * CONSTANTS[AC_FRT]) * pow(STATES[sodium_Nai], 3.0) * CONSTANTS[AC_Cao] - exp((CONSTANTS[AC_g] - 1.0) * STATES[membrane_V] * CONSTANTS[AC_FRT]) * pow(CONSTANTS[AC_Nao], 3.0) * STATES[calcium_Cai]) / ((pow(CONSTANTS[AC_KmNa], 3.0) + pow(CONSTANTS[AC_Nao], 3.0)) * (CONSTANTS[AC_KmCa] + CONSTANTS[AC_Cao]) * (1.0 + CONSTANTS[AC_ksat] * exp((CONSTANTS[AC_g] - 1.0) * STATES[membrane_V] * CONSTANTS[AC_FRT])));
-
+    
     /* inak */
     ALGEBRAIC[AV_fNaK] = 1.0 / (1.0 + 0.1245 * exp(-0.1 * STATES[membrane_V] * CONSTANTS[AC_FRT]) + 0.0365 * CONSTANTS[AC_sigma] * exp(-STATES[membrane_V] * CONSTANTS[AC_FRT]));
     ALGEBRAIC[AV_INaK] = CONSTANTS[AC_INaK_max] * ALGEBRAIC[AV_fNaK] * CONSTANTS[AC_Ko] / (CONSTANTS[AC_Ko] + CONSTANTS[AC_KmKo]) / (1.0 + pow(CONSTANTS[AC_KmNai] / STATES[sodium_Nai], 1.5));
-
+    
     /* nernst */
     AV_ECa = 0.5 * CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Cao] / STATES[calcium_Cai]);
     AV_EK = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Ko] / STATES[potassium_Ki]);
     AV_ENa = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Nao] / STATES[sodium_Nai]);
-
-
+    
+    
     /* cajsr */
     AV_I_rel = CONSTANTS[AC_K_rel] * pow(STATES[cajsr_u], 2.0) * STATES[cajsr_v] * STATES[cajsr_w] * (STATES[calcium_CaRel] - STATES[calcium_Cai]);
     ALGEBRAIC[AV_cajsr_w_inf] = 1.0 - 1.0 / (1.0 + exp(-(STATES[membrane_V] - 40.0) / 17.0));
@@ -409,14 +409,14 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_cajsr_v_inf = 1.0 - pow(1.0 + exp(-(AV_Fn - 0.2 * CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]), -1.0);
     AV_cajsr_v_tau = 1.91 + 2.09 / (1.0 + exp(-(AV_Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
     RATES[cajsr_v] = (AV_cajsr_v_inf - STATES[cajsr_v]) / AV_cajsr_v_tau;
-
+    
     /* ib */
     ALGEBRAIC[AV_IbCa] = CONSTANTS[AC_gbCa] * (STATES[membrane_V] - AV_ECa);
     ALGEBRAIC[AV_IbNa] = CONSTANTS[AC_gbNa] * (STATES[membrane_V] - AV_ENa);
-
+    
     /* ik1 */
     ALGEBRAIC[AV_IK1] = CONSTANTS[AC_gK1] * (STATES[membrane_V] - AV_EK) / (1.0 + exp(0.07 * (STATES[membrane_V] + 80.0)));
-
+    
     /* ikr */
     ALGEBRAIC[AV_IKr] = CONSTANTS[AC_gKr] * STATES[ikr_xr] * (STATES[membrane_V] - AV_EK) / (1.0 + exp((STATES[membrane_V] + 15.0) / 22.4));
     ALGEBRAIC[AV_ikr_xr_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 14.1) / -6.5));
@@ -424,7 +424,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_ikr_xr_tau_beta = 7.3898e-05 * ((fabs(STATES[membrane_V] - 3.3328) < 1e-07) ? 5.1237 : (STATES[membrane_V] - 3.3328) / (exp((STATES[membrane_V] - 3.3328) / 5.1237) - 1.0));
     ALGEBRAIC[AV_ikr_xr_tau] = 1.0 / (AV_ikr_xr_tau_alpha + AV_ikr_xr_tau_beta);
     RATES[ikr_xr] = (ALGEBRAIC[AV_ikr_xr_inf] - STATES[ikr_xr]) / ALGEBRAIC[AV_ikr_xr_tau];
-
+    
     /* iks */
     ALGEBRAIC[AV_IKs] = CONSTANTS[AC_gKs] * pow(STATES[iks_xs], 2.0) * (STATES[membrane_V] - AV_EK);
     ALGEBRAIC[AV_iks_xs_inf] = 1.0 / sqrt(1.0 + exp((STATES[membrane_V] - 19.9) / -12.7));
@@ -432,7 +432,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_iks_xs_tau_beta = 3.5e-05 * ((fabs(STATES[membrane_V] - 19.9) < 1e-06) ? 9.0 : (STATES[membrane_V] - 19.9) / (exp((STATES[membrane_V] - 19.9) / 9.0) - 1.0));
     ALGEBRAIC[AV_iks_xs_tau] = 0.5 / (AV_iks_xs_tau_alpha + AV_iks_xs_tau_beta);
     RATES[iks_xs] = (ALGEBRAIC[AV_iks_xs_inf] - STATES[iks_xs]) / ALGEBRAIC[AV_iks_xs_tau];
-
+    
     /* ikur */
     ALGEBRAIC[AV_gKur] = CONSTANTS[AC_gKur_base] * (1.0 + 10.0 / (1.0 + exp((STATES[membrane_V] - 15.0) / -13.0)));
     ALGEBRAIC[AV_ikur_ua_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 30.3) / -9.6));
@@ -446,7 +446,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_ikur_ui_tau] = 1.0 / (AV_ikur_ui_tau_alpha + AV_ikur_ui_tau_beta) / CONSTANTS[AC_KQ10];
     RATES[ikur_ui] = (ALGEBRAIC[AV_ikur_ui_inf] - STATES[ikur_ui]) / ALGEBRAIC[AV_ikur_ui_tau];
     ALGEBRAIC[AV_IKur] = ALGEBRAIC[AV_gKur] * pow(STATES[ikur_ua], 3.0) * STATES[ikur_ui] * (STATES[membrane_V] - AV_EK);
-
+    
     /* ina */
     ALGEBRAIC[AV_INa] = CONSTANTS[AC_gNa] * pow(STATES[ina_m], 3.0) * STATES[ina_h] * STATES[ina_j] * (STATES[membrane_V] - AV_ENa);
     AV_ina_h_alpha = ((STATES[membrane_V] < -40.0) ? 0.135 * exp((STATES[membrane_V] + 80.0) / -6.8) : 0.0);
@@ -468,7 +468,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_ina_m_tau] = 1.0 / (AV_ina_m_alpha + AV_ina_m_beta);
     RATES[ina_m] = (ALGEBRAIC[AV_ina_m_inf] - STATES[ina_m]) / ALGEBRAIC[AV_ina_m_tau];
 
-
+    
     /* ito */
     ALGEBRAIC[AV_Ito] = CONSTANTS[AC_gto] * pow(STATES[ito_oa], 3.0) * STATES[ito_oi] * (STATES[membrane_V] - AV_EK);
     AV_ito_oa_alpha = 0.65 / (exp((STATES[membrane_V] + 10.0) / -8.5) + exp((STATES[membrane_V] - 30.0) / -59.0));
@@ -476,29 +476,29 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_ito_oa_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 20.47) / -17.54));
     ALGEBRAIC[AV_ito_oa_tau] = 1.0 / (AV_ito_oa_alpha + AV_ito_oa_beta) / CONSTANTS[AC_KQ10];
     RATES[ito_oa] = (ALGEBRAIC[AV_ito_oa_inf] - STATES[ito_oa]) / ALGEBRAIC[AV_ito_oa_tau];
-
+    
     AV_ito_oi_alpha = 1.0 / (18.53 + exp((STATES[membrane_V] + 113.7) / 10.95));
     AV_ito_oi_beta = 1.0 / (35.56 + exp((STATES[membrane_V] + 1.26) / -7.44));
     ALGEBRAIC[AV_ito_oi_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 43.1) / 5.3));
     ALGEBRAIC[AV_ito_oi_tau] = 1.0 / (AV_ito_oi_alpha + AV_ito_oi_beta) / CONSTANTS[AC_KQ10];
     RATES[ito_oi] = (ALGEBRAIC[AV_ito_oi_inf] - STATES[ito_oi]) / ALGEBRAIC[AV_ito_oi_tau];
-
+    
     /* calcium */
     RATES[calcium_CaRel] = (AV_I_tr - AV_I_rel) * pow(1.0 + CONSTANTS[AC_CSQN_max] * CONSTANTS[AC_Km_CSQN] / pow(STATES[calcium_CaRel] + CONSTANTS[AC_Km_CSQN], 2.0), -1.0);
     RATES[calcium_CaUp] = AV_I_up - (AV_I_up_leak + AV_I_tr * CONSTANTS[AC_V_rel] / CONSTANTS[AC_V_up]);
     AV_B1 = (2.0 * ALGEBRAIC[AV_INaCa] - (ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IbCa])) * CONSTANTS[AC_Cm] / (2.0 * CONSTANTS[AC_V_i] * CONSTANTS[AC_F]) + (CONSTANTS[AC_V_up] * (AV_I_up_leak - AV_I_up) + AV_I_rel * CONSTANTS[AC_V_rel]) / CONSTANTS[AC_V_i];
     AV_B2 = 1.0 + CONSTANTS[AC_TRPN_max] * CONSTANTS[AC_Km_TRPN] / pow(STATES[calcium_Cai] + CONSTANTS[AC_Km_TRPN], 2.0) + CONSTANTS[AC_CMDN_max] * CONSTANTS[AC_Km_CMDN] / pow(STATES[calcium_Cai] + CONSTANTS[AC_Km_CMDN], 2.0);
     RATES[calcium_Cai] = AV_B1 / AV_B2;
-
+    
     /* membrane */
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa];
-
+    
     /* potassium */
     RATES[potassium_Ki] = (2.0 * ALGEBRAIC[AV_INaK] - (ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_Ito] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[Istim])) * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
-
+    
     /* sodium */
     RATES[sodium_Nai] = (-3.0 * ALGEBRAIC[AV_INaK] - (3.0 * ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_INa])) * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
-
+    
 
     RATES[membrane_V] = 0.0;
 

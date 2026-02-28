@@ -180,7 +180,7 @@ eikonalDiffusionElectro::eikonalDiffusionElectro
 
 bool eikonalDiffusionElectro::evolve()
 {
-    Info<< "Evolving fluid model: " << this->type() << endl;
+    Info<< "Evolving electro model: " << this->type() << endl;
 
     // Define convenient dimensioned scalars
     const dimensionedScalar one("one", dimless, 1.0);

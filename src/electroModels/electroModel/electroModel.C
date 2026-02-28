@@ -20,6 +20,7 @@ License
 #include "electroModel.H"
 #include "addToRunTimeSelectionTable.H"
 
+
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
@@ -27,7 +28,21 @@ namespace Foam
     defineTypeNameAndDebug(electroModel, 0);
     defineRunTimeSelectionTable(electroModel, dictionary);
     addToRunTimeSelectionTable(physicsModel, electroModel, physicsModel);
+
+    const Enum<electroModel::solutionAlgorithm>
+    electroModel::solutionAlgorithmNames_
+    ({
+        {
+            electroModel::solutionAlgorithm::IMPLICIT,
+            "implicit"
+        },
+        {
+            electroModel::solutionAlgorithm::EXPLICIT,
+            "explicit"
+        },
+    });
 }
+
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -100,7 +115,11 @@ Foam::electroModel::electroModel
         )
     ),
     electroProperties_(subDict(type + "Coeffs")),
-    pimplePtr_()
+    pimplePtr_(),
+    solutionAlgorithm_
+    (
+        solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
+    )
 {}
 
 
