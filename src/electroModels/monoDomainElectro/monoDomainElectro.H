@@ -120,9 +120,6 @@ class monoDomainElectro
         //  a cell
         boolList calculateActivationTime_;
 
-        //- Activation velocity
-        volVectorField activationVelocity_;
-
         //- Ionic model output fields
         PtrList<volScalarField> outFields_;
 
