@@ -246,16 +246,6 @@ bool monoDomainElectro::evolveExplicit()
     {
         // Extract states for visualisation
         ionicModelPtr_->exportStates(states_, outFields_);
-
-        activationVelocity_ =
-            fvc::grad
-            (
-                1.0
-               /(
-                   activationTime_
-                 + dimensionedScalar("SMALL", dimTime, SMALL)
-               )
-            );
     }
 
     // Re-enable OpenFOAM linear solver output
@@ -327,16 +317,6 @@ bool monoDomainElectro::evolveImplicit()
     {
         // Extract states for visualisation
         ionicModelPtr_->exportStates(states_, outFields_);
-
-        activationVelocity_ =
-            fvc::grad
-            (
-                1.0
-               /(
-                   activationTime_
-                 + dimensionedScalar("SMALL", dimTime, SMALL)
-               )
-            );
     }
 
     return true;
@@ -415,21 +395,6 @@ monoDomainElectro::monoDomainElectro
         "zeroGradient"
     ),
     calculateActivationTime_(mesh().nCells(), true),
-    activationVelocity_
-    (
-        IOobject
-        (
-            "activationVelocity",
-            runTime.timeName(),
-            mesh(),
-            IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
-        ),
-        fvc::grad
-        (
-            1.0/(activationTime_ + dimensionedScalar("SMALL", dimTime, SMALL))
-        )
-    ),
     outFields_(),
     ionicModelPtr_
     (
