@@ -68,7 +68,7 @@ tmp<volTensorField> eikonalDiffusionElectro::initialiseConductivity() const
     if (!result.headerOk())
     {
         Info<< "\nconductivity not found on disk, using conductivity from "
-            << cardiacProperties_.name() << nl << endl;
+            << electroProperties().name() << nl << endl;
 
         result =
             dimensionedTensor
@@ -77,7 +77,7 @@ tmp<volTensorField> eikonalDiffusionElectro::initialiseConductivity() const
                 (
                     "conductivity",
                     pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                    cardiacProperties_
+                    electroProperties()
                 ) & tensor(I)
             );
 
@@ -121,14 +121,13 @@ eikonalDiffusionElectro::eikonalDiffusionElectro
     ),
     gradPsi_(fvc::grad(psi_)),
     stimulusCellIDs_(0),
-    cardiacProperties_(electroProperties().subDict("cardiacProperties")),
-    chi_("chi", dimArea/dimVolume, cardiacProperties_),
-    Cm_("Cm",dimCurrent*dimTime/(dimVoltage*dimArea), cardiacProperties_),
+    chi_("chi", dimArea/dimVolume, electroProperties()),
+    Cm_("Cm",dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties()),
     conductivity_(initialiseConductivity()),
     M_("M", conductivity_/(chi_*Cm_)),
     w_("w", M_ & gradPsi_),
     G_("G", sqrt((gradPsi_ & w_) + dimensionedScalar("smallG", dimTime, SMALL))),
-    c0_("c0", cardiacProperties_),
+    c0_("c0", electroProperties()),
     a_("a", w_/G_),
     u_("u", c0_*a_),
     phiU_("phiU", (fvc::interpolate(u_) & mesh().Sf())),
@@ -138,19 +137,12 @@ eikonalDiffusionElectro::eikonalDiffusionElectro
         electroProperties().lookup("eikonalAdvectionDiffusionApproach")
     )
 {
-    // Initialise stimulusCellIDs
-    Info<< "Reading stimulus protocol\n" << endl;
-    const dictionary& stimulusProtocol
-    (
-        electroProperties().subDict("stimulusProtocol")
-    );
-
     // Read external stimulus from a bounding box
     // Find cells in the stimulus volume
     const boundBox bb
     (
-        point(stimulusProtocol.lookup("stimulusLocationMin")),
-        point(stimulusProtocol.lookup("stimulusLocationMax"))
+        point(electroProperties().lookup("stimulusLocationMin")),
+        point(electroProperties().lookup("stimulusLocationMax"))
     );
 
     labelHashSet stimCellSet;

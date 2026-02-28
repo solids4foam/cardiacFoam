@@ -253,7 +253,9 @@ namespace Foam {
     )
     {
         if (printedNames.empty())
+        {
             return;
+        }
 
         // Map names → indices
         List<label> stateIndex, algIndex;
@@ -268,20 +270,27 @@ namespace Foam {
 
         const scalarField& S = STATES[cellI];
         const scalarField& A = ALGEBRAIC[cellI];
+
         // Header line
         Info<< "DEBUG cell=" << cellI
             << " t=" << t1 << "→" << t2;
 
         if (step >= 0)
+        {
             Info<< " step=" << step;
+        }
 
         // Print each selected variable
         forAll(printedNames, k)
         {
             if (stateIndex[k] >= 0)
-                {Info<< " " << printedNames[k] << "=" << S[stateIndex[k]];}
+            {
+                Info<< " " << printedNames[k] << "=" << S[stateIndex[k]];
+            }
             else
-                {Info<< " " << printedNames[k] << "=" << A[algIndex[k]];}
+            {
+                Info<< " " << printedNames[k] << "=" << A[algIndex[k]];
+            }
         }
         Info<< nl;
     }

@@ -1,9 +1,11 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -16,7 +18,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // PDE-ODE solution algorithm
-solveExplicit no;
+solveExplicit    no;
 
 // Max courant number
 CFL           0.1;
@@ -37,5 +39,11 @@ maxSteps 1000000000;
 // Defaults to 1e-15
 // absTol 1e-6;
 
+// For eikonalElectroActivationFoam, two forms of the eikonal equation can be
+// solved: an eikonal-diffusion equation or an eikonal-advection-diffusion
+// This flag dictates which one is solved. Both should give the same result but
+// the eikonal-advection-diffusion equation should converge faster as it
+// includes an implicit linearisation of the nonlinear term
+eikonalAdvectionDiffusionApproach yes;
 
 // ************************************************************************* //

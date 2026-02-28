@@ -118,7 +118,9 @@ Foam::electroModel::electroModel
     pimplePtr_(),
     solutionAlgorithm_
     (
-        solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
+        electroProperties_.found("solutionAlgorithm")
+      ? solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
+      : solutionAlgorithm::EXPLICIT
     )
 {}
 

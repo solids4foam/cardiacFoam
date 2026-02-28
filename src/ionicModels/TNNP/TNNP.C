@@ -64,7 +64,7 @@ Foam::TNNP::TNNP
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
         // 🔑 First, set tissue using base logic + overrides
-        ionicModel::setTissueFromDict(); 
+        ionicModel::setTissueFromDict();
         TNNPinitConsts
         (
             CONSTANTS_.data(),
@@ -205,8 +205,14 @@ void Foam::TNNP::solveODE
             tissue(),
             solveVmWithinODESolver()
         );
-        if (integrationPtI == monitorCell)
-        {debugPrintFields(integrationPtI, tStart, tEnd, step);}
+
+        if (debug)
+        {
+            if (integrationPtI == monitorCell)
+            {
+                debugPrintFields(integrationPtI, tStart, tEnd, step);
+            }
+        }
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
@@ -455,9 +461,3 @@ Foam::scalar Foam::TNNP::signal(const label i, const CouplingSignal s) const
 
     return 0.0;
 }
-
-
-
-
-
-

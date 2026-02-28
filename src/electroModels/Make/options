@@ -20,6 +20,7 @@ endif
 EXE_INC = \
     $(VERSION_SPECIFIC_INC) \
     -I../ionicModels/lnInclude \
+    -I../genericWriter/lnInclude \
     -I../couplingModels \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
@@ -35,6 +36,7 @@ LIB_LIBS = \
     $(VERSION_SPECIFIC_LIBS) \
     -L$(FOAM_MODULE_LIBBIN) \
     -lionicModels \
+    -lgenericWriter \
     -lsolids4FoamModels \
     -lfiniteVolume \
     -lmeshTools \

@@ -7,6 +7,10 @@ then
     . "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments
 fi
 
+# Check and define SOLIDS4FOAM_INST_DIR
+source "../etc/resolveSolids4Foam.sh"
+
+echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
 wmake $targetType libso electroModels
