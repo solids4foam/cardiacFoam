@@ -27,6 +27,9 @@ else
 
     # Use physicsModel from modules
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
+
+    # Create required lnInclude
+    wmakeLnInclude $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
 fi
 
 echo "Using SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
