@@ -128,6 +128,41 @@ void monoDomainElectro::updateExternalStimulusCurrent
 }
 
 
+void monoDomainElectro::updateActivationTime
+(
+    volScalarField& activationTime,
+    boolList& calculateActivationTime,
+    const volScalarField& Vm
+) const
+{
+    // Update activationTime field
+    const scalarField& VmI = Vm;
+    const scalarField& VmOldI = Vm.oldTime();
+    boolList& calculateActivationTimeI = calculateActivationTime;
+    scalarField& activationTimeI = activationTime.primitiveFieldRef();
+    const scalar oldTime = runTime().value() - runTime().deltaTValue();
+    const scalar deltaT = runTime().deltaTValue();
+    forAll(activationTimeI, cellI)
+    {
+        if (calculateActivationTimeI[cellI])
+        {
+            if (VmI[cellI] > SMALL)
+            {
+                calculateActivationTimeI[cellI] = false;
+
+                // Linearly interpolate for more accuracy
+                const scalar w =
+                    (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+
+                activationTimeI[cellI] = oldTime + w*deltaT;
+            }
+        }
+    }
+
+    activationTime.correctBoundaryConditions();
+}
+
+
 bool monoDomainElectro::evolveExplicit()
 {
     if (time().timeIndex() == 1)
@@ -204,36 +239,23 @@ bool monoDomainElectro::evolveExplicit()
     );
 
     // 5) Update post-processing fields
+
+    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+
     if (runTime().outputTime())
     {
         // Extract states for visualisation
         ionicModelPtr_->exportStates(states_, outFields_);
 
-        // Update activationTime field
-        const scalarField& VmI = Vm_;
-        const scalarField& VmOldI = Vm_.oldTime();
-        boolList& calculateActivationTimeI = calculateActivationTime_;
-        scalarField& activationTimeI = activationTime_.primitiveFieldRef();
-        const scalar oldTime = runTime().value() - runTime().deltaTValue();
-        const scalar deltaT = runTime().deltaTValue();
-        forAll(activationTimeI, cellI)
-        {
-            if (calculateActivationTimeI[cellI])
-            {
-                if (VmI[cellI] > SMALL)
-                {
-                    calculateActivationTimeI[cellI] = false;
-
-                    // Linearly interpolate for more accuracy
-                    const scalar w =
-                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
-
-                    activationTimeI[cellI] = oldTime + w*deltaT;
-                }
-            }
-        }
-
-        activationTime_.correctBoundaryConditions();
+        activationVelocity_ =
+            fvc::grad
+            (
+                1.0
+               /(
+                   activationTime_
+                 + dimensionedScalar("SMALL", dimTime, SMALL)
+               )
+            );
     }
 
     // Re-enable OpenFOAM linear solver output
@@ -298,36 +320,23 @@ bool monoDomainElectro::evolveImplicit()
     );
 
     // 5) Update post-processing fields
+
+    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+
     if (runTime().outputTime())
     {
         // Extract states for visualisation
         ionicModelPtr_->exportStates(states_, outFields_);
 
-        // Update activationTime field
-        const scalarField& VmI = Vm_;
-        const scalarField& VmOldI = Vm_.oldTime();
-        boolList& calculateActivationTimeI = calculateActivationTime_;
-        scalarField& activationTimeI = activationTime_.primitiveFieldRef();
-        const scalar oldTime = runTime().value() - runTime().deltaTValue();
-        const scalar deltaT = runTime().deltaTValue();
-        forAll(activationTimeI, cellI)
-        {
-            if (calculateActivationTimeI[cellI])
-            {
-                if (VmI[cellI] > SMALL)
-                {
-                    calculateActivationTimeI[cellI] = false;
-
-                    // Linearly interpolate for more accuracy
-                    const scalar w =
-                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
-
-                    activationTimeI[cellI] = oldTime + w*deltaT;
-                }
-            }
-        }
-
-        activationTime_.correctBoundaryConditions();
+        activationVelocity_ =
+            fvc::grad
+            (
+                1.0
+               /(
+                   activationTime_
+                 + dimensionedScalar("SMALL", dimTime, SMALL)
+               )
+            );
     }
 
     return true;

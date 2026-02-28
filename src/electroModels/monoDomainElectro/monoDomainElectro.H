@@ -153,6 +153,14 @@ class monoDomainElectro
             const scalar t0
         ) const;
 
+        //- Update the activation time
+        void updateActivationTime
+        (
+            volScalarField& activationTime,
+            boolList& calculateActivationTime,
+            const volScalarField& Vm
+        ) const;
+
         //- Evolve the electro model using an explicit algorithm
         virtual bool evolveExplicit();
 
