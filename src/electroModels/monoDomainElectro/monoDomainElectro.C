@@ -21,7 +21,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvc.H"
 #include "fvm.H"
-
+#include "IOmanip.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -96,6 +96,163 @@ tmp<volTensorField> monoDomainElectro::initialiseConductivity() const
 }
 
 
+void monoDomainElectro::updateExternalStimulusCurrent
+(
+    volScalarField& externalStimulusCurrent,
+    const List<stimulus>& externalStimulus,
+    const scalar t0
+) const
+{
+    scalarField& externalStimulusCurrentI = externalStimulusCurrent;
+    externalStimulusCurrentI = 0.0;
+
+    forAll(externalStimulus, stimI)
+    {
+        const stimulus& curStim = externalStimulus[stimI];
+
+        const scalar tStart = curStim.startTime_;
+        if (t0 < tStart || t0 > (tStart + curStim.duration_))
+        {
+            continue;
+        }
+
+        const labelList& stimulusCellIDs = curStim.cellIDs_;
+        forAll(stimulusCellIDs, cI)
+        {
+            const label id = stimulusCellIDs[cI];
+            externalStimulusCurrentI[id] = curStim.intensity_;
+        }
+    }
+
+    externalStimulusCurrent.correctBoundaryConditions();
+}
+
+
+bool monoDomainElectro::evolveExplicit()
+{
+    if (time().timeIndex() == 1)
+    {
+        Info<< "Solving the mono-domain equation for Vm using an explicit "
+            << "approach" << nl
+            << setw(20) << "Simulation Time"
+            << setw(20) << "Clock Time"
+            << setw(20) << "Min Vm"
+            << setw(20) << "Max Vm" << endl;
+    }
+
+    physicsModel::printInfo() = bool
+    (
+        time().timeIndex() % infoFrequency_ == 0
+     || mag(time().value() - time().endTime().value()) < SMALL
+    );
+
+    if (physicsModel::printInfo())
+    {
+        Info<< setw(20) <<time().value()
+            << setw(20) << time().elapsedClockTime()
+            << setw(20) << min(Vm_).value()
+            << setw(20) << max(Vm_).value() << endl;
+
+        physicsModel::printInfo() = false;
+    }
+
+    // Disable OpenFOAM linear solver output
+    const label debugOrg = SolverPerformance<scalar>::debug;
+    SolverPerformance<scalar>::debug = 0;
+
+    //nsteps = int(std::ceil(runTime.endTime().value()/dt));
+
+    // Current time step
+    const scalar dt = runTime().deltaTValue();
+
+    // Old time
+    const scalar t0 = runTime().value() - dt;
+
+    // 1) Set the external stimulus
+    updateExternalStimulusCurrent
+    (
+        externalStimulusCurrent_, externalStimulus_, t0
+    );
+
+    // 2) Update the ionic current using OLD Vm
+    ionicModelPtr_->calculateCurrent
+    (
+        t0,
+        dt,
+        Vm_.oldTime(),
+        Iion_,
+        states_
+    );
+    Iion_.correctBoundaryConditions();
+
+    // 3) Solve the Vm equation
+    solve
+    (
+        chi_*Cm_*fvm::ddt(Vm_)
+     == fvc::laplacian(conductivity_, Vm_)
+      - chi_*Cm_*Iion_
+      + externalStimulusCurrent_
+    );
+
+    // 4) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
+    // PHILIP -> we can merge 2 and 4, i.e. update current once per time step
+    ionicModelPtr_->solveODE
+    (
+        t0,
+        dt,
+        Vm_,    // Vm_new
+        Iion_,
+        states_
+    );
+
+    // 5) Update post-processing fields
+    if (runTime().outputTime())
+    {
+        // Extract states for visualisation
+        ionicModelPtr_->exportStates(states_, outFields_);
+
+        // Update activationTime field
+        const scalarField& VmI = Vm_;
+        const scalarField& VmOldI = Vm_.oldTime();
+        boolList& calculateActivationTimeI = calculateActivationTime_;
+        scalarField& activationTimeI = activationTime_.primitiveFieldRef();
+        const scalar oldTime = runTime().value() - runTime().deltaTValue();
+        const scalar deltaT = runTime().deltaTValue();
+        forAll(activationTimeI, cellI)
+        {
+            if (calculateActivationTimeI[cellI])
+            {
+                if (VmI[cellI] > SMALL)
+                {
+                    calculateActivationTimeI[cellI] = false;
+
+                    // Linearly interpolate for more accuracy
+                    const scalar w =
+                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+
+                    activationTimeI[cellI] = oldTime + w*deltaT;
+                }
+            }
+        }
+
+        activationTime_.correctBoundaryConditions();
+    }
+
+    // Re-enable OpenFOAM linear solver output
+    SolverPerformance<scalar>::debug = debugOrg;
+
+    return true;
+}
+
+
+bool monoDomainElectro::evolveImplicit()
+{
+    Info<< "Evolving electro model implicitly: " << this->type() << endl;
+        
+    return true;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 monoDomainElectro::monoDomainElectro
@@ -148,20 +305,65 @@ monoDomainElectro::monoDomainElectro
         "zeroGradient"
     ),
     externalStimulus_(),
-    cardiacProperties_(electroProperties().subDict("cardiacProperties")),
+    // cardiacProperties_(electroProperties().subDict("cardiacProperties")),
+    cardiacProperties_(electroProperties()),
     chi_("chi", dimArea/dimVolume, cardiacProperties_),
     Cm_("Cm",dimCurrent*dimTime/(dimVoltage*dimArea), cardiacProperties_),
     conductivity_(initialiseConductivity()),
+    activationTime_
+    (
+        IOobject
+        (
+            "activationTime",
+            runTime.timeName(),
+            mesh(),
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        mesh(),
+        dimensionedScalar("zero", dimTime, 0.0),
+        "zeroGradient"
+    ),
+    calculateActivationTime_(mesh().nCells(), true),
+    activationVelocity_
+    (
+        IOobject
+        (
+            "activationVelocity",
+            runTime.timeName(),
+            mesh(),
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        fvc::grad
+        (
+            1.0/(activationTime_ + dimensionedScalar("SMALL", dimTime, SMALL))
+        )
+    ),
+    outFields_(),
     ionicModelPtr_
     (
-        electroProperties().subDict("ionicModel"),
-        mesh().nCells(),
-        runTime.deltaTValue()
+        ionicModel::New
+        (
+            electroProperties(),
+            mesh().nCells(),
+            runTime.deltaTValue()
+        )
+    ),
+    states_
+    (
+        mesh().nCells(), scalarField(ionicModelPtr_->nEqns(), 0.0)
+    ),
+    setDeltaT_(true),
+    infoFrequency_
+    (
+        electroProperties().lookupOrDefault<label>("infoFrequency", 1)
     )
 {
     // Initialise the external stimulii
     const dictionary& stimulusProtocol =
-        electroProperties().subDict("stimulusProtocol");
+        // electroProperties().subDict("stimulusProtocol");
+        electroProperties();
 
     // Read external stimulus from one or more bounding boxes
     List<boundBox> stimulusBoxes;
@@ -232,10 +434,10 @@ monoDomainElectro::monoDomainElectro
 
     List<labelHashSet> stimCellSets(stimulusBoxes.size());
     labelHashSet stimCellSet;
-
-    forAll(mesh.C(), cellI)
+    const vectorField& CI = mesh().C();
+    forAll(CI, cellI)
     {
-        const point& c = mesh.C()[cellI];
+        const point& c = CI[cellI];
         forAll(stimulusBoxes, bI)
         {
             if (stimulusBoxes[bI].contains(c))
@@ -258,19 +460,19 @@ monoDomainElectro::monoDomainElectro
     );
 
     // Set the number of stimulii
-    externalStimulus_.setSize(mins.size());
+    externalStimulus_.setSize(stimulusBoxes.size());
 
     // Initialise each stimulii
     forAll(stimulusBoxes, bI)
     {
         externalStimulus_[bI].cellIDs_ = stimCellSets[bI].toc();
         externalStimulus_[bI].startTime_ = stimulusStartTimes[bI];
-        externalStimulus_[bI].duration_ = stimulusDuration;
-        externalStimulus_[bI].stimulusIntensity_ = stimulusIntensity;
+        externalStimulus_[bI].duration_ = stimulusDuration.value();
+        externalStimulus_[bI].intensity_ = stimulusIntensity.value();
     }
 
     // Only print stimulus info if this is a 3D mesh
-    if (mesh.nGeometricD() == 3)
+    if (mesh().nGeometricD() == 3)
     {
         Info<< "---------------------------------------------" << nl
             << "3D mesh detected — stimulus parameters:"       << nl
@@ -291,98 +493,99 @@ monoDomainElectro::monoDomainElectro
     Info<< "Surface-to-volume ratio chi = " << chi_ << nl
         << "Membrane capacitance Cm = " << Cm_ << nl
         << "M tensor field:" << endl;
+
+    // Set output fields
+    const wordList names = ionicModelPtr_->exportedFieldNames();
+    outFields_.setSize(names.size());
+    forAll(names, i)
+    {
+        outFields_.set
+        (
+            i,
+            new volScalarField
+            (
+                IOobject
+                (
+                    names[i],
+                    runTime.timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::AUTO_WRITE
+                ),
+                mesh(),
+                dimless,
+                "zeroGradient"
+            )
+        );
+    }
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+void monoDomainElectro::setDeltaT(Time& runTime)
+{
+    // Update the time step
+    if (solutionAlg() == solutionAlgorithm::EXPLICIT && setDeltaT_)
+    {
+        setDeltaT_ = false;
+
+        // Unit face normals
+        surfaceVectorField n("n", mesh().Sf());
+        n /= mesh().magSf();
+
+        // Interpolate the conductivity to the faces and take the normal
+        // component and divide by chi and Cm
+        const scalarField Df
+        (
+            (n & (n & fvc::interpolate(conductivity_)))/(chi_*Cm_)
+        );
+        
+        // Lookup the desired Courant number
+        const scalar maxCo =
+            runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.5);
+
+        // Use the face delta coeffs as measures of the local cell size
+        const scalarField dx(1.0/mesh().deltaCoeffs());
+
+        // Compute stable dt for every face and take the minium
+        scalar newDeltaT = maxCo*gMin(sqr(dx)/Df);
+
+        Info<< "Setting deltaT = " << newDeltaT
+            << ", maxCo = " << maxCo << endl;
+
+        runTime.setDeltaT(newDeltaT);
+    }
+}
+
+
 bool monoDomainElectro::evolve()
 {
-    Info<< "Evolving fluid model: " << this->type() << endl;
-
-    /*
-    // Define convenient dimensioned scalars
-    const dimensionedScalar one("one", dimless, 1.0);
-    const dimensionedScalar smallG("smallG", dimTime, SMALL);
-
-    while (pimple().loop())
+    if (solutionAlg() == solutionAlgorithm::IMPLICIT)
     {
-        // Update the gradient
-        gradPsi_ = fvc::grad(psi_);
-
-        // Update w term
-        w_ = M_ & gradPsi_;
-
-        // Update the nonlinear term
-        G_ = sqrt((gradPsi_ & w_) + smallG);
-
-        // Solve eikonal equation
-        if (eikonalAdvectionDiffusionApproach_)
-        {
-            // Update a term
-            a_ = w_/G_;
-
-            // Update the u term
-            u_ = c0_*a_;
-
-            // Update the phiU term
-            phiU_ = (fvc::interpolate(u_) & mesh().Sf());
-
-            // Update div(phiU)
-            divPhiU_ = fvc::div(phiU_);
-
-            // Construct the eikonal–diffusion equation (Eq. 6.14 in Quarteroni
-            // et al.)
-            //
-            // The equation is written in a stabilised Picard (defect-
-            // correction) form.
-            // The implicit advection operator on the LHS is derived from a
-            // linearisation of the nonlinear eikonal term c0*G, but is used
-            // here purely to improve convergence. The corresponding explicit
-            // advection term on the RHS ensures that, at convergence of the
-            // outer iterations, the original eikonal–diffusion equation is
-            // recovered exactly.
-            //
-            // The SuSp formulation is used to avoid diagonal weakening arising from
-            // div(phiU), improving robustness of the linear solve.
-            fvScalarMatrix psiEqn
-            (
-              - fvm::laplacian(M_, psi_)
-              + fvm::div(phiU_, psi_) + fvm::SuSp(-divPhiU_, psi_)
-             == one
-              + fvc::div(phiU_, psi_) - divPhiU_*psi_
-              - c0_*G_
-            );
-
-            // Enforce psi to be zero for the stimulus cells
-            psiEqn.setValues(stimulusCellIDs_, 0.0);
-
-            // Solve the system for psi
-            psiEqn.solve("asymmetric_" + psi_.name());
-        }
-        else
-        {
-            // Construct the eikonal-diffusion equation, where the nonlinear
-            // term c0*G is treated entirely as an explicit deferred correction
-            fvScalarMatrix psiEqn
-            (
-              - fvm::laplacian(M_, psi_)
-              + c0_*G_
-             == one
-            );
-
-            // Optional equation relaxation
-            psiEqn.relax();
-
-            // Enforce psi to be zero for the stimulus cells
-            psiEqn.setValues(stimulusCellIDs_, 0.0);
-
-            // Solve the system for psi
-            psiEqn.solve();
-        }
+        return evolveImplicit();
     }
-        */
-        
-    return 0;
+    else if (solutionAlg() == solutionAlgorithm::EXPLICIT)
+    {
+        return evolveExplicit();
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "Unrecognised solution algorithm. Available options are "
+            << electroModel::solutionAlgorithmNames_
+               [
+                   electroModel::solutionAlgorithm::IMPLICIT
+               ]
+            << ", "
+            << electroModel::solutionAlgorithmNames_
+               [
+                   electroModel::solutionAlgorithm::EXPLICIT
+               ]
+            << endl;
+    }
+
+    // Keep compiler happy
+    return true;
 }
 
 

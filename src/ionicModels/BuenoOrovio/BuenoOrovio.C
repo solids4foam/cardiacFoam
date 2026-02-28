@@ -167,6 +167,7 @@ void Foam::BuenoOrovio::solveODE
 {
     const scalar tStart = stepStartTime * 1000.0;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000.0;
+    const bool doDebugPrint = !debugPrintedNames().empty();
     const label monitorCell = 0;
 
     forAll(STATES_, integrationPtI)
@@ -186,7 +187,7 @@ void Foam::BuenoOrovio::solveODE
 
         // Clamp ODE step
         step = min(step, deltaT * 1000.0);
-        if (integrationPtI == monitorCell)
+        if (doDebugPrint && integrationPtI == monitorCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Advance the ODE system
@@ -204,7 +205,7 @@ void Foam::BuenoOrovio::solveODE
             solveVmWithinODESolver()
         );
 
-        if (integrationPtI == monitorCell)
+        if (doDebugPrint && integrationPtI == monitorCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -464,8 +465,6 @@ Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) co
 
     return 0.0;
 }
-
-
 
 
 

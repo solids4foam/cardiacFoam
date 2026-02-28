@@ -87,8 +87,8 @@ class Courtemanche
 
 
         //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const;
-        virtual List<word> supportedDimensions() const
+        virtual List<word> supportedTissueTypes() const override;
+        virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
         }
@@ -114,9 +114,9 @@ class Courtemanche
 
         // Member Functions
 
-            virtual void writeHeader(OFstream& output) const;
+            virtual void writeHeader(OFstream& output) const override;
             //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const;
+            virtual void write(const scalar t, OFstream& output) const override;
 
 
 
@@ -128,7 +128,7 @@ class Courtemanche
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             virtual void solveODE
@@ -138,11 +138,11 @@ class Courtemanche
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const
+            virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
@@ -154,15 +154,15 @@ class Courtemanche
                 const scalar t,
                 const scalarField& y,
                 scalarField& dydt
-            ) const;
+            ) const override;
 
 
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
                     // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const;
-            virtual wordList debugPrintedNames() const;
+            virtual Foam::wordList exportedFieldNames() const override;
+            virtual wordList debugPrintedNames() const override;
 
 
             // Override to export the variables
@@ -170,7 +170,7 @@ class Courtemanche
             (
                 const Field<Field<scalar>>&,
                 PtrList<volScalarField>&
-            );
+            ) override;
 
             // Override to print variables in solver
             void debugPrintFields
@@ -179,7 +179,7 @@ class Courtemanche
                 scalar t1,
                 scalar t2,
                 scalar step
-            ) const;
+            ) const override;
 
             virtual void sweepCurrent
             (
@@ -188,7 +188,7 @@ class Courtemanche
                 scalar Vmax,
                 label nPts,
                 const fileName& outputFile
-            ) const;
+            ) const override;
 
 
 };

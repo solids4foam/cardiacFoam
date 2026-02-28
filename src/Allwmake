@@ -8,6 +8,6 @@ then
 fi
 
 wmake $targetType libso genericWriter
-
 wmake $targetType libso ionicModels
+wmake $targetType libso electroModels
 

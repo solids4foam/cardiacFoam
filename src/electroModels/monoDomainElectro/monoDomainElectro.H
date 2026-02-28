@@ -129,11 +129,35 @@ class monoDomainElectro
         //- Run-time selectable ionic model
         autoPtr<ionicModel> ionicModelPtr_;
 
+        // External state storage for the ionic model
+        Field<Field<scalar>> states_;
+
+        //- Flag for tracking if the time step size has been set
+        bool setDeltaT_;
+
+        //- Frequency to write time step information to the standard output
+        //  A value of N means write every N time steps
+        label infoFrequency_;
+
 
     // Private Member Functions
 
         //- Initialise the conductivity
         tmp<volTensorField> initialiseConductivity() const;
+
+        //- Update the external stimulus current field
+        void updateExternalStimulusCurrent
+        (
+            volScalarField& externalStimulusCurrent,
+            const List<stimulus>& externalStimulus,
+            const scalar t0
+        ) const;
+
+        //- Evolve the electro model using an explicit algorithm
+        virtual bool evolveExplicit();
+
+        //- Evolve the electro model using an implicit algorithm
+        virtual bool evolveImplicit();
 
         //- Disallow default bitwise copy construct
         monoDomainElectro(const monoDomainElectro&);
@@ -166,6 +190,9 @@ public:
     // Member Functions
 
         // Edit
+
+            //- Update the size of the time-step
+            virtual void setDeltaT(Time& runTime);
 
             //- Evolve the electro model
             virtual bool evolve();

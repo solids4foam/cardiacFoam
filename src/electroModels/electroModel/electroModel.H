@@ -38,6 +38,7 @@ SourceFiles
 #include "surfaceFields.H"
 #include "pimpleControl.H"
 #include "dimVoltage.H"
+#include "Enum.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -54,6 +55,20 @@ class electroModel
     public physicsModel,
     public IOdictionary
 {
+public:
+
+        //- Solution algorithms
+        enum solutionAlgorithm
+        {
+            IMPLICIT,
+            EXPLICIT
+        };
+
+        //- Solution algorithm names
+        static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+
+private:
+
     // Private data
 
         //- Mesh
@@ -64,6 +79,10 @@ class electroModel
 
         //- Pimple control for monitoring the convergence of the outer loop
         mutable autoPtr<pimpleControl> pimplePtr_;
+
+        //- Solution algorithm, e.g. implicit, explicit
+        //  This enum is used by some of the electro models but not all
+        const solutionAlgorithm solutionAlgorithm_;
 
 
     // Private Member Functions
@@ -96,6 +115,12 @@ protected:
 
         //- Return non-const acess to the pimple control
         pimpleControl& pimple();
+
+        //- Const access to the solution algorithm enum
+        const solutionAlgorithm& solutionAlg() const
+        {
+            return solutionAlgorithm_;
+        }
 
 public:
 

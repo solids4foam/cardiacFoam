@@ -1,10 +1,6 @@
 #!/bin/bash
 cd ${0%/*} || exit 1    # run from this directory
 
-wclean ionicModels
-
-
-wclean activeTensionModels
-
-
 wclean genericWriter
+wclean ionicModels
+wclean electroModels

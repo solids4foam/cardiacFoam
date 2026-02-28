@@ -40,8 +40,8 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
-
 #include "electromechanicsFeedbackProvider.H"
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -190,12 +190,13 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
+
 //-----------------------Member Functions ---------------------//
 
-    /// --- CouplingSignalProvider interface ---
-    bool hasSignal(CouplingSignal s) const;
-    scalar signal(label i, CouplingSignal s) const;
-
+        /// --- CouplingSignalProvider interface ---
+        bool hasSignal(CouplingSignal s) const override;
+        scalar signal(label i, CouplingSignal s) const override;
+        
 
 //-----------------------Solver Functions ---------------------//
         //- ODE solver
@@ -220,7 +221,7 @@ public:
         )= 0;
 
         //- Number of ODE's to solve
-        virtual label nEqns() const = 0;
+        virtual label nEqns() const override = 0;
 
         //- Derivatives of each ODE with respect to the primary unknown in that
         //  equation - right side of the equation
@@ -229,7 +230,7 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const = 0;
+        ) const override = 0;
 
 
         //- Solve and ODE system for the start time, the time-step and the
@@ -262,7 +263,7 @@ public:
             const scalarField& y,
             scalarField& dfdt,
             scalarSquareMatrix& dfdy
-        ) const
+        ) const override
         {
             notImplemented
             (
@@ -350,8 +351,8 @@ public:
         }
         virtual wordList debugPrintedNames() const
         {
-            return debugVarNames_.size()
-                ? debugVarNames_
+            return debugVarNames_.size() 
+                ? debugVarNames_ 
                 : wordList();
         }
 
@@ -371,7 +372,7 @@ public:
         bool utilitiesMode() const;
 
 
-    };
+    };  
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
