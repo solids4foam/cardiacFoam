@@ -160,8 +160,6 @@ bool monoDomainElectro::evolveExplicit()
     const label debugOrg = SolverPerformance<scalar>::debug;
     SolverPerformance<scalar>::debug = 0;
 
-    //nsteps = int(std::ceil(runTime.endTime().value()/dt));
-
     // Current time step
     const scalar dt = runTime().deltaTValue();
 
@@ -247,8 +245,91 @@ bool monoDomainElectro::evolveExplicit()
 
 bool monoDomainElectro::evolveImplicit()
 {
-    Info<< "Evolving electro model implicitly: " << this->type() << endl;
-        
+    if (time().timeIndex() == 1)
+    {
+        Info<< "Solving the mono-domain equation for Vm using an implicit "
+            << "approach" << endl;
+    }
+
+    // Current time step
+    const scalar dt = runTime().deltaTValue();
+
+    // Old time
+    const scalar t0 = runTime().value() - dt;
+
+    // 1) Set the external stimulus
+    updateExternalStimulusCurrent
+    (
+        externalStimulusCurrent_, externalStimulus_, t0
+    );
+
+    // 2) Update the ionic current using OLD Vm
+    ionicModelPtr_->calculateCurrent
+    (
+        t0,
+        dt,
+        Vm_.oldTime(),
+        Iion_,
+        states_
+    );
+    Iion_.correctBoundaryConditions();
+
+    // 3) Solve the Vm equation implicitly - no ODE update inside
+    while (pimple().loop())
+    {
+        solve
+        (
+            chi_*Cm_*fvm::ddt(Vm_)
+         == fvm::laplacian(conductivity_, Vm_)
+          - chi_*Cm_*Iion_
+          + externalStimulusCurrent_
+        );
+    }
+
+    // 4) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
+    // PHILIP -> we can merge 2 and 4, i.e. update current once per time step
+    ionicModelPtr_->solveODE
+    (
+        t0,
+        dt,
+        Vm_,    // Vm_new
+        Iion_,
+        states_
+    );
+
+    // 5) Update post-processing fields
+    if (runTime().outputTime())
+    {
+        // Extract states for visualisation
+        ionicModelPtr_->exportStates(states_, outFields_);
+
+        // Update activationTime field
+        const scalarField& VmI = Vm_;
+        const scalarField& VmOldI = Vm_.oldTime();
+        boolList& calculateActivationTimeI = calculateActivationTime_;
+        scalarField& activationTimeI = activationTime_.primitiveFieldRef();
+        const scalar oldTime = runTime().value() - runTime().deltaTValue();
+        const scalar deltaT = runTime().deltaTValue();
+        forAll(activationTimeI, cellI)
+        {
+            if (calculateActivationTimeI[cellI])
+            {
+                if (VmI[cellI] > SMALL)
+                {
+                    calculateActivationTimeI[cellI] = false;
+
+                    // Linearly interpolate for more accuracy
+                    const scalar w =
+                        (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+
+                    activationTimeI[cellI] = oldTime + w*deltaT;
+                }
+            }
+        }
+
+        activationTime_.correctBoundaryConditions();
+    }
+
     return true;
 }
 
@@ -539,10 +620,10 @@ void monoDomainElectro::setDeltaT(Time& runTime)
         (
             (n & (n & fvc::interpolate(conductivity_)))/(chi_*Cm_)
         );
-        
+
         // Lookup the desired Courant number
         const scalar maxCo =
-            runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.5);
+            runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.1);
 
         // Use the face delta coeffs as measures of the local cell size
         const scalarField dx(1.0/mesh().deltaCoeffs());
