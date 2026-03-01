@@ -270,7 +270,7 @@ def plot_line_csvs(folder='.', excel_path=None):
         template="plotly_white",
         showlegend=True
     )
-    
+
 
     # --- SAVE INITIAL PLOT (CSV only) ---
     fig_initial = deepcopy(fig)

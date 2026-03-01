@@ -6,8 +6,8 @@ which is widely used to verify cardiac electrophysiology simulators.
 
 The benchmark is described in:
 
-> S. A. Niederer et al.,  
-> *Verification of cardiac tissue electrophysiology simulators using an N-version benchmark*,  
+> S. A. Niederer et al.,
+> *Verification of cardiac tissue electrophysiology simulators using an N-version benchmark*,
 > Philosophical Transactions of the Royal Society A, 369:4331–4351, 2011.
 
 ---
@@ -58,12 +58,12 @@ NiedererEtAl2011/
 
 This case can be run using either:
 
-- **`electroActivationFoam`**  
+- **`electroActivationFoam`**
   A full **monodomain reaction–diffusion solver**, reproducing the Niederer et al.
   benchmark as originally defined. This option is **more accurate** but
   computationally more expensive.
 
-- **`eikonalElectroActivationFoam`**  
+- **`eikonalElectroActivationFoam`**
   A simplified **eikonal-based solver** that computes activation times directly
   by solving an anisotropic eikonal–diffusion equation. This option is
   **significantly cheaper**, but neglects detailed transmembrane dynamics and is

@@ -46,7 +46,7 @@ enum STATES_INDEX {
     IKs_xs2,
     Jrel_np,
     Jrel_p,
-    
+
     NUM_STATES
 };
 
