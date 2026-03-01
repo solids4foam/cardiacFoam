@@ -42,8 +42,6 @@ jobs:
     container:
       image: ${{ matrix.container-image.image }}
       options: --user 1001
-      env:
-        HOME: ${{ github.workspace }}
 
     steps:
       - name: Checkout cardiacFoam
