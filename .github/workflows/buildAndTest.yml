@@ -41,7 +41,7 @@ jobs:
 
     container:
       image: ${{ matrix.container-image.image }}
-      options: --user 1001
+      options: --user 0
 
     steps:
       - name: Checkout cardiacFoam
