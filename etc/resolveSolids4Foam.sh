@@ -12,6 +12,21 @@ export _SOLIDS4FOAM_RESOLVED=1
 # Directory containing this script
 _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Force lightweight mode if requested
+if [ "${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-0}" = "1" ]; then
+    SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
+
+    wmakeLnInclude $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
+
+    echo "Using lightweight physicsModel (forced)"
+    echo "SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
+    echo
+
+    export SOLIDS4FOAM_INST_DIR
+    return 0 2>/dev/null || exit 0
+fi
+
 if [ -n "$SOLIDS4FOAM_INST_DIR" ] && [ -d "$SOLIDS4FOAM_INST_DIR" ]
 then
     # Do nothing
