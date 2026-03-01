@@ -196,7 +196,7 @@ public:
         /// --- CouplingSignalProvider interface ---
         bool hasSignal(CouplingSignal s) const;
         scalar signal(label i, CouplingSignal s) const;
-        
+
 
 //-----------------------Solver Functions ---------------------//
         //- ODE solver
@@ -351,8 +351,8 @@ public:
         }
         virtual wordList debugPrintedNames() const
         {
-            return debugVarNames_.size() 
-                ? debugVarNames_ 
+            return debugVarNames_.size()
+                ? debugVarNames_
                 : wordList();
         }
 
@@ -372,7 +372,7 @@ public:
         bool utilitiesMode() const;
 
 
-    };  
+    };
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam

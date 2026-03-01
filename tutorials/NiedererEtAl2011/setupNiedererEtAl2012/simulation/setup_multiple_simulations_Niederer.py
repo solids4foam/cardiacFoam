@@ -3,9 +3,9 @@
 Automated Electrophysiology Simulation Runner (:contentReference[oaicite:0]{index=0} model)
 ================================================================================
 
-This script provides an automated pipeline to run and test cardiac electrophysiology 
-simulations (slab model from :contentReference[oaicite:1]{index=1}) using the 
-:contentReference[oaicite:2]{index=2} solver and post-process the results using 
+This script provides an automated pipeline to run and test cardiac electrophysiology
+simulations (slab model from :contentReference[oaicite:1]{index=1}) using the
+:contentReference[oaicite:2]{index=2} solver and post-process the results using
 :contentReference[oaicite:3]{index=3}.
 
 Main workflow:
@@ -16,7 +16,7 @@ Main workflow:
    - Update `controlDict` with the chosen Δt.
    - Update `cardiacProperties` with the selected tissue type.
 3. Runs the case using a helper shell script (`run_cases.sh`).
-4. Exports activation times along a line and specific points via 
+4. Exports activation times along a line and specific points via
    `Export_Paraview_Niederer.py` using `pvpython`.
 5. Results are saved in a folder named after the model (default: "Niederer_Activation_time").
 
