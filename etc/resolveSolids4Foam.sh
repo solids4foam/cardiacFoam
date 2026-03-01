@@ -13,11 +13,13 @@ export _SOLIDS4FOAM_RESOLVED=1
 _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Force lightweight mode if requested
-if [ "${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-0}" = "1" ]; then
+if [ "${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-0}" = "1" ]
+then
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
-    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
 
-    wmakeLnInclude $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
+    # Build light-weight physics model replacement
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
+    wmake libso $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
 
     echo "Using lightweight physicsModel (forced)"
     echo "SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
