@@ -3,6 +3,13 @@ SOLIDS4FOAM_ROOT := $(SOLIDS4FOAM_INST_DIR)
 sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
 sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
 
+ifeq ($(USE_LIGHTWEIGHT_PHYSICSMODEL),1)
+    VERSION_SPECIFIC_INC += -DUSE_LIGHTWEIGHT_PHYSICSMODEL
+    VERSION_SPECIFIC_LIBS += -lphysicsModel
+else
+    VERSION_SPECIFIC_LIBS += -lsolids4FoamModels
+endif
+
 ifdef S4F_USE_GFORTRAN
     GFORTRAN_LIBS = \
         -lgfortran \
@@ -12,7 +19,6 @@ endif
 
 EXE_INC = \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
-    -I$(SOLIDS4FOAM_ROOT)/src/blockCoupledSolids4FoamTools/lnInclude \
     $(VERSION_SPECIFIC_INC) \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
@@ -23,6 +29,6 @@ EXE_INC = \
 
 EXE_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
-    -lsolids4FoamModels \
+    $(VERSION_SPECIFIC_LIBS) \
     -lelectroModels \
     $(GFORTRAN_LIBS)

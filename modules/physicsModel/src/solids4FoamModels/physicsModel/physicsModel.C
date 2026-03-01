@@ -53,6 +53,8 @@ Foam::physicsModel::physicsModel
         )
     ),
     runTime_(runTime),
+    fluidMeshPtr_(),
+    solidMeshPtr_(),
     printInfo_(true)
 {}
 

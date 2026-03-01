@@ -546,8 +546,7 @@ monoDomainElectro::monoDomainElectro
 
     // Write parameters
     Info<< "Surface-to-volume ratio chi = " << chi_ << nl
-        << "Membrane capacitance Cm = " << Cm_ << nl
-        << "M tensor field:" << endl;
+        << "Membrane capacitance Cm = " << Cm_ << nl << endl;
 
     // Set output fields
     const wordList names = ionicModelPtr_->exportedFieldNames();
