@@ -176,7 +176,7 @@ This allows the same codebase to seamlessly support both:
 To run the Niederer benchmark slab case:
 
 ```bash
-cd tutorials/NiedererBenchmarkSlab
+cd tutorials/NiedererEtAl2011
 ./Allrun
 ```
 
