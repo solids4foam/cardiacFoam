@@ -193,5 +193,5 @@ Contributions, feedback, and collaboration are very welcome.
 
 ## Contact
 
-For questions or collaboration inquiries, please email  
+For questions or collaboration inquiries, please email
 [philip.cardiff@ucd.ie]
