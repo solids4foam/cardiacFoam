@@ -3,6 +3,13 @@ SOLIDS4FOAM_ROOT := $(SOLIDS4FOAM_INST_DIR)
 sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
 sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
 
+ifeq ($(USE_LIGHTWEIGHT_PHYSICSMODEL),1)
+    VERSION_SPECIFIC_INC += -DUSE_LIGHTWEIGHT_PHYSICSMODEL
+    VERSION_SPECIFIC_LIBS += -lphysicsModel
+else
+    VERSION_SPECIFIC_LIBS += -lsolids4FoamModels
+endif
+
 ifdef PETSC_DIR
     ifneq (,$(findstring -DFOAMEXTEND, $(VERSION_SPECIFIC_INC)))
         include $(RULES)/mplib$(WM_MPLIB)
@@ -37,7 +44,6 @@ LIB_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
     -lionicModels \
     -lgenericWriter \
-    -lsolids4FoamModels \
     -lfiniteVolume \
     -lmeshTools \
     -ldynamicFvMesh \

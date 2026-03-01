@@ -8,7 +8,9 @@ then
 fi
 
 # Check and define SOLIDS4FOAM_INST_DIR
-source "../etc/resolveSolids4Foam.sh"
+if [ -z "${_SOLIDS4FOAM_RESOLVED:-}" ]; then
+    source "../etc/resolveSolids4Foam.sh"
+fi
 
 echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
 wmake $targetType libso genericWriter

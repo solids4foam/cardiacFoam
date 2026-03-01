@@ -15,11 +15,13 @@ _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -n "$SOLIDS4FOAM_INST_DIR" ] && [ -d "$SOLIDS4FOAM_INST_DIR" ]
 then
     # Do nothing
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=0
     echo
 elif [ -d "$_thisDir/../modules/solids4foam" ]
 then
     echo
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/solids4foam"
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=0
 else
     echo "NOTE: solids4foam not found."
     echo "To us solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
@@ -28,8 +30,9 @@ else
     # Use physicsModel from modules
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
 
-    # Create required lnInclude
-    wmakeLnInclude $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
+    # Build light-weight physics model replacement
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
+    wmake libso $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
 fi
 
 echo "Using SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
