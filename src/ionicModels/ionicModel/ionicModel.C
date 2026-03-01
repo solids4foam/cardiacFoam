@@ -136,7 +136,7 @@ Foam::scalar Foam::ionicModel::signal
         << static_cast<int>(s)
         << " from ionicModel, but this ionic model does not provide it."
         << nl
-        << "You must override hasSignal() and signal() in the derived ionic model."
+        << "You must hasSignal() and signal() in the derived ionic model."
         << abort(FatalError);
 
     return 0.0;
