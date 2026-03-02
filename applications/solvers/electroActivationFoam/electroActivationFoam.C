@@ -49,6 +49,7 @@ Authors
 #include "pimpleControl.H"
 #include "Field.H"
 #include "volFields.H"
+#include "solverStartupLog.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -89,12 +90,8 @@ int main(int argc, char* argv[])
     // Solution methodology flag
     const Switch solveExplicit(solutionVariablesMemory.lookup("solveExplicit"));
 
-    // Extract the names of the fields to be exported
-    const wordList exportNames = ionicModel->exportedFieldNames();
-    if (!exportNames.empty())
-    {
-        Info<< "Exporting fields: " << exportNames << nl;
-    }
+    ionicModel->logExportedFieldSelection();
+    Foam::solverStartupLog::logSolverMode(solveExplicit);
 
     // =============== CASE 1: EXPLICIT SOLVER ====================
     if (solveExplicit)
@@ -141,14 +138,15 @@ int main(int argc, char* argv[])
 
             #include "updateActivationTimes.H"
 
+            Info<< nl << "Time = " << runTime.timeName();
+            Info<< endl;
+
             runTime.write();
         }
     }
     // =============== CASE 2: IMPLICIT SOLVER ====================
     else
     {
-        Info<< "\nUsing implicit solver\n" << endl;
-
         while (runTime.loop())
         {
             const scalar currentTime = runTime.value();
@@ -177,6 +175,8 @@ int main(int argc, char* argv[])
 
             #include "updateActivationTimes.H"
 
+            Info<< nl << "Time = " << runTime.timeName();
+            Info<< endl;
             runTime.write();
         }
     }

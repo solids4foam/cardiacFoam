@@ -10,9 +10,37 @@
 namespace Foam
 {
 
+class StimulusProtocol
+{
+public:
+    scalar stimStart;
+    scalar stimPeriodS1;
+    scalar stimDuration;
+    scalar stimAmplitude;
+    label nStim1;
+    scalar stimPeriodS2;
+    label nStim2;
+
+    StimulusProtocol()
+    :
+        stimStart(0.0),
+        stimPeriodS1(0.0),
+        stimDuration(0.0),
+        stimAmplitude(0.0),
+        nStim1(0),
+        stimPeriodS2(0.0),
+        nStim2(0)
+    {}
+};
+
 class stimulusIO
 {
 public:
+
+    static StimulusProtocol loadStimulusProtocol
+    (
+        const dictionary& dict
+    );
 
     static void loadStimulusProtocol
     (
@@ -30,6 +58,12 @@ public:
     static scalar computeStimulus
     (
         scalar t,
+        const StimulusProtocol& stim
+    );
+
+    static scalar computeStimulus
+    (
+        scalar t,
         scalar stim_start,
         scalar stim_period_S1,
         scalar stim_duration,
@@ -39,16 +73,6 @@ public:
         label  nstim2
     );
     
-
-    // Determine whether we should output this timestep (protocol-based)
-    static bool shouldWriteStep
-    (
-        scalar tBegin,
-        scalar tEnd,
-        const dictionary& dict,
-        bool utilitiesMode
-    );
-
 
     static word protocolSuffix(const dictionary& dict);
 

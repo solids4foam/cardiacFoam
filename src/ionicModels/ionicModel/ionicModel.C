@@ -78,8 +78,6 @@ Foam::ionicModel::New
 )
 {
     const word modelType(dict.lookup("ionicModel"));
-    Info<< "Selecting ionic model: " << modelType << endl;
-
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (!ctorPtr)
@@ -114,6 +112,39 @@ bool Foam::ionicModel::utilitiesMode() const
 return dict_.found("utilities") && readBool(dict_.lookup("utilities"));
 }
 
+bool Foam::ionicModel::startupLogEnabled() const
+{
+    return dict_.lookupOrDefault<Switch>("startupLog", true);
+}
+
+Foam::label Foam::ionicModel::sampleIntegrationPoint
+(
+    const label nPoints
+) const
+{
+    if (nPoints <= 0)
+    {
+        return 0;
+    }
+
+    const label requested = dict_.lookupOrDefault<label>("initSampleCell", 0);
+
+    return max(label(0), min(requested, nPoints - 1));
+}
+
+void Foam::ionicModel::logExportedFieldSelection() const
+{
+    if (!startupLogEnabled())
+    {
+        return;
+    }
+
+    const wordList exportNames = exportedFieldNames();
+    if (!exportNames.empty())
+    {
+        Info<< "Exporting fields: " << exportNames << nl;
+    }
+}
 
 bool Foam::ionicModel::hasSignal(const CouplingSignal) const
 {

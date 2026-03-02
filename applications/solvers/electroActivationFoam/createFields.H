@@ -50,7 +50,7 @@ volScalarField externalStimulusCurrent
     "zeroGradient"
 );
 
-Info<< "Reading stimulus protocol\n" << endl;
+Foam::solverStartupLog::readingDictionary("stimulus protocol");
 IOdictionary stimulusProtocol
 (
     IOobject
@@ -174,7 +174,7 @@ if (mesh.nGeometricD() == 3)
         << "---------------------------------------------" << endl;
 }
 
-Info<< "Reading numerical solver properties\n" << endl;
+Foam::solverStartupLog::readingDictionary("numerical solver properties");
 IOdictionary timeIntegrationProperties
 (
     IOobject
@@ -186,9 +186,9 @@ IOdictionary timeIntegrationProperties
         IOobject::NO_WRITE
     )
 );
-Info<< "---------------------------------------------" << nl;
+Foam::solverStartupLog::sectionDivider();
 
-Info<< "Reading tissue properties\n" << endl;
+Foam::solverStartupLog::readingDictionary("tissue properties");
 IOdictionary cardiacProperties
 (
     IOobject
@@ -260,7 +260,7 @@ else
 {
     Info<< "conductivity field read from " << runTime.timeName() << nl << endl;
 }
-Info<< "---------------------------------------------" << nl;
+Foam::solverStartupLog::sectionDivider();
 
 
 // Merge the dictionaries and create a memory object to read all properties

@@ -79,6 +79,48 @@ class Courtemanche
         //- No copy assignment
         void operator=(const Courtemanche&) = delete;
 
+protected:
+        virtual const PtrList<scalarField>* ioStatesPtr() const override
+        {
+            return &STATES_;
+        }
+
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+        {
+            return &ALGEBRAIC_;
+        }
+
+        virtual const PtrList<scalarField>* ioRatesPtr() const override
+        {
+            return &RATES_;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual label ioNumConstants() const override
+        {
+            return NUM_CONSTANTS;
+        }
+
+        virtual const char* const* ioConstantNames() const override;
+
+        virtual const char* const* ioStateNames() const override;
+
+        virtual label ioNumStates() const override
+        {
+            return NUM_STATES;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const override;
+
+        virtual label ioNumAlgebraic() const override
+        {
+            return NUM_ALGEBRAIC;
+        }
+
 
         public:
 
@@ -113,13 +155,6 @@ class Courtemanche
 
 
         // Member Functions
-
-            virtual void writeHeader(OFstream& output) const override;
-            //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const override;
-
-
-
 
             virtual void calculateCurrent
             (
@@ -160,27 +195,6 @@ class Courtemanche
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
-                    // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const override;
-            virtual wordList debugPrintedNames() const override;
-
-
-            // Override to export the variables
-            virtual void exportStates
-            (
-                const Field<Field<scalar>>&,
-                PtrList<volScalarField>&
-            ) override;
-
-            // Override to print variables in solver
-            void debugPrintFields
-            (
-                label cellI,
-                scalar t1,
-                scalar t2,
-                scalar step
-            ) const override;
-
             virtual void sweepCurrent
             (
                 const word& currentName,
@@ -189,6 +203,8 @@ class Courtemanche
                 label nPts,
                 const fileName& outputFile
             ) const override;
+
+            virtual wordList availableSweepCurrents() const override;
 
 
 };
@@ -201,5 +217,3 @@ class Courtemanche
 #endif
 
 // ************************************************************************* //
-
-

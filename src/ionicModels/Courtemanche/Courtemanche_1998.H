@@ -81,6 +81,58 @@ const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Istim"
 };
 
+const char* CourtemancheCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_CMDN_max",
+    "AC_CSQN_max",
+    "AC_Ca_up_max",
+    "AC_Cao",
+    "AC_Cm",
+    "AC_ECaL",
+    "AC_F",
+    "AC_FRT",
+    "AC_INaCa_max",
+    "AC_INaK_max",
+    "AC_I_diff",
+    "AC_I_up_max",
+    "AC_IpCa_max",
+    "AC_KQ10",
+    "AC_K_rel",
+    "AC_K_up",
+    "AC_KmCa",
+    "AC_KmKo",
+    "AC_KmNa",
+    "AC_KmNai",
+    "AC_Km_CMDN",
+    "AC_Km_CSQN",
+    "AC_Km_TRPN",
+    "AC_Ko",
+    "AC_Nao",
+    "AC_R",
+    "AC_RTF",
+    "AC_T",
+    "AC_TRPN_max",
+    "AC_V_cell",
+    "AC_V_i",
+    "AC_V_rel",
+    "AC_V_up",
+    "AC_c1",
+    "AC_c2",
+    "AC_cajsr_u_tau",
+    "AC_g",
+    "AC_gCaL",
+    "AC_gK1",
+    "AC_gKr",
+    "AC_gKs",
+    "AC_gKur_base",
+    "AC_gNa",
+    "AC_gbCa",
+    "AC_gbNa",
+    "AC_gto",
+    "AC_ical_fCa_tau",
+    "AC_ksat",
+    "AC_sigma",
+    "AC_tau_tr",
+};
 static inline const Foam::HashTable<Foam::wordList>&
 CourtemancheDependencyMap()
 {
@@ -88,6 +140,15 @@ CourtemancheDependencyMap()
     (
         {
             { "INa",
+              Foam::wordList
+              ({
+                  "AV_INa",
+                  "ina_m","ina_h","ina_j",
+                  "AV_ina_m_inf","AV_ina_m_tau",
+                  "AV_ina_h_inf","AV_ina_h_tau",
+                  "AV_ina_j_inf","AV_ina_j_tau"
+              }) },
+            { "I_Na",
               Foam::wordList
               ({
                   "AV_INa",
@@ -105,8 +166,24 @@ CourtemancheDependencyMap()
                   "AV_ical_d_inf","AV_ical_d_tau",
                   "AV_ical_f_inf","AV_ical_f_tau"
               }) },
+            { "I_CaL",
+              Foam::wordList
+              ({
+                  "AV_ICaL",
+                  "ical_d","ical_f","ical_fCa",
+                  "AV_ical_d_inf","AV_ical_d_tau",
+                  "AV_ical_f_inf","AV_ical_f_tau"
+              }) },
 
             { "Ito",
+              Foam::wordList
+              ({
+                  "AV_Ito",
+                  "ito_oa","ito_oi",
+                  "AV_ito_oa_inf","AV_ito_oa_tau",
+                  "AV_ito_oi_inf","AV_ito_oi_tau"
+              }) },
+            { "I_to",
               Foam::wordList
               ({
                   "AV_Ito",
@@ -124,8 +201,24 @@ CourtemancheDependencyMap()
                   "AV_ikur_ui_inf","AV_ikur_ui_tau",
                   "AV_gKur"
               }) },
+            { "I_Kur",
+              Foam::wordList
+              ({
+                  "AV_IKur",
+                  "ikur_ua","ikur_ui",
+                  "AV_ikur_ua_inf","AV_ikur_ua_tau",
+                  "AV_ikur_ui_inf","AV_ikur_ui_tau",
+                  "AV_gKur"
+              }) },
 
             { "IKr",
+              Foam::wordList
+              ({
+                  "AV_IKr",
+                  "ikr_xr",
+                  "AV_ikr_xr_inf","AV_ikr_xr_tau"
+              }) },
+            { "I_Kr",
               Foam::wordList
               ({
                   "AV_IKr",
@@ -140,23 +233,64 @@ CourtemancheDependencyMap()
                   "iks_xs",
                   "AV_iks_xs_inf","AV_iks_xs_tau"
               }) },
+            { "I_Ks",
+              Foam::wordList
+              ({
+                  "AV_IKs",
+                  "iks_xs",
+                  "AV_iks_xs_inf","AV_iks_xs_tau"
+              }) },
 
             { "IK1",
+              Foam::wordList({ "AV_IK1" }) },
+            { "I_K1",
               Foam::wordList({ "AV_IK1" }) },
 
             { "INaK",
               Foam::wordList({ "AV_INaK","AV_fNaK" }) },
+            { "I_NaK",
+              Foam::wordList({ "AV_INaK","AV_fNaK" }) },
 
             { "INaCa",
+              Foam::wordList({ "AV_INaCa" }) },
+            { "I_NaCa",
               Foam::wordList({ "AV_INaCa" }) },
 
             { "Ib",
               Foam::wordList({ "AV_IbNa","AV_IbCa" }) },
+            { "IbNa",
+              Foam::wordList({ "AV_IbNa" }) },
+            { "IbCa",
+              Foam::wordList({ "AV_IbCa" }) },
+            { "I_bNa",
+              Foam::wordList({ "AV_IbNa" }) },
+            { "I_bCa",
+              Foam::wordList({ "AV_IbCa" }) },
+            { "IpCa",
+              Foam::wordList({ "AV_IpCa" }) },
+            { "I_pCa",
+              Foam::wordList({ "AV_IpCa" }) },
             
             { "CaJSR_w",
                 Foam::wordList({ "AV_cajsr_w_inf", "AV_cajsr_w_tau"}) },
              
             { "Iion_cm",
+              Foam::wordList
+              ({
+                  "AV_INa","AV_IK1","AV_Ito","AV_IKur",
+                  "AV_IKr","AV_IKs","AV_ICaL",
+                  "AV_IpCa","AV_INaK","AV_INaCa",
+                  "AV_IbNa","AV_IbCa","Iion_cm"
+              }) },
+            { "Iion",
+              Foam::wordList
+              ({
+                  "AV_INa","AV_IK1","AV_Ito","AV_IKur",
+                  "AV_IKr","AV_IKs","AV_ICaL",
+                  "AV_IpCa","AV_INaK","AV_INaCa",
+                  "AV_IbNa","AV_IbCa","Iion_cm"
+              }) },
+            { "I_ion",
               Foam::wordList
               ({
                   "AV_INa","AV_IK1","AV_Ito","AV_IKur",
@@ -170,19 +304,13 @@ CourtemancheDependencyMap()
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
 
@@ -309,7 +437,7 @@ CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tis
 
 
 void
-CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
+CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     double AV_B1;
     double AV_B2;
@@ -502,7 +630,7 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
 
     RATES[membrane_V] = 0.0;
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
         {
@@ -510,4 +638,3 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
         }
 
 }
-

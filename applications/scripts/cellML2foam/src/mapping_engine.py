@@ -6,15 +6,7 @@ from collections import OrderedDict
 DEBUG = False
 
 # Extra constants that are not part of updateConstants()
-EXTRA_CONSTANTS = [
-    "stim_start",
-    "stim_duration",
-    "stim_amplitude",
-    "stim_period_S1",
-    "nstim1",
-    "stim_period_S2",
-    "nstim2",
-]
+EXTRA_CONSTANTS = []
 EXTRA_ALGEBRAIC = [
     "Istim",
     "Iion_cm",
@@ -59,19 +51,9 @@ def parse_model_from_output(output_c):
 def emit_compute_istim(f):
     f.write(
         """
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim(Foam::scalar t, const Foam::StimulusProtocol& stimulus)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 """
     )
@@ -233,7 +215,8 @@ def rewrite_compute_variables_signature(src, model_id):
         f"{model_id}computeVariables("
         f"double VOI, double* CONSTANTS, double* RATES, "
         f"double* STATES, double* ALGEBRAIC, "
-        f"int tissueFlag, bool solveVmWithinODESolver"
+        f"int tissueFlag, bool solveVmWithinODESolver, "
+        f"const Foam::StimulusProtocol& stimulus"
         f")\n{{"
     )
 
@@ -273,7 +256,7 @@ void
 {model_id}initConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-{model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
+{model_id}computeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver,const Foam::StimulusProtocol& stimulus);
 """
     )
 
@@ -281,7 +264,7 @@ void
 def emit_openfoam_algebraic_tail():
     return """
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {
@@ -292,7 +275,8 @@ def emit_openfoam_algebraic_tail():
 
 def generate_header(fname, states, algebraic, constants, model_name):
     with open(fname, "w") as f:
-        f.write("#pragma once\n\n")
+        f.write("#pragma once\n")
+        f.write('#include "stimulusIO.H"\n\n')
         emit_enum(f, "STATES_INDEX", states)
         emit_enum(f, "ALGEBRAIC_INDEX", algebraic)
         emit_enum(f, "CONSTANTS_INDEX", constants)

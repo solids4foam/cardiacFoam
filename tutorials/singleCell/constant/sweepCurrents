@@ -28,3 +28,4 @@ Vmax      40;
 points    300;
 
 tissue    myocyte;
+outputExtension txt;

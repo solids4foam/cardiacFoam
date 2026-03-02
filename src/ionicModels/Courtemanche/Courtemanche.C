@@ -57,7 +57,6 @@ Foam::Courtemanche::Courtemanche
 {
     // 🔑 First, set tissue using base logic + overrides
     ionicModel::setTissueFromDict();
-    Info<< nl << "Calling Courtemanche initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -75,19 +74,10 @@ Foam::Courtemanche::Courtemanche
         );
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
         
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -139,6 +129,8 @@ void Foam::Courtemanche::calculateCurrent
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
@@ -167,7 +159,7 @@ void Foam::Courtemanche::solveODE
 {
     const scalar tStart = stepStartTime * 1000;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -198,8 +190,10 @@ void Foam::Courtemanche::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -229,7 +223,9 @@ void Foam::Courtemanche::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
+    ,
+            stimulusProtocol()
+        );
 }
 
 void Foam::Courtemanche::updateStatesOld(const Field<Field<scalar>>&) const
@@ -245,115 +241,20 @@ void Foam::Courtemanche::resetStatesToStatesOld(Field<Field<scalar>>&) const
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::Courtemanche::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            CourtemancheSTATES_NAMES, NUM_STATES,
-            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::Courtemanche::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            CourtemancheSTATES_NAMES, NUM_STATES,
-            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::Courtemanche::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::Courtemanche::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        CourtemancheSTATES_NAMES,NUM_STATES,
-        CourtemancheALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return CourtemancheSTATES_NAMES;
 }
 
-void Foam::Courtemanche::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::Courtemanche::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        CourtemancheSTATES_NAMES, NUM_STATES,
-        CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return CourtemancheCONSTANTS_NAMES;
 }
 
-
-
-void Foam::Courtemanche::writeHeader(OFstream& os) const
+const char* const* Foam::Courtemanche::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            CourtemancheSTATES_NAMES, NUM_STATES,
-            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return CourtemancheALGEBRAIC_NAMES;
 }
-
-static Foam::scalar Courtemanche_vm(const Foam::scalarField& S)
-{
-    return S[0];
-}
-
-void Foam::Courtemanche::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            CourtemancheSTATES_NAMES, NUM_STATES,
-            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            Courtemanche_vm
-        );
-    }
-}
-
-
 
 void Foam::Courtemanche::sweepCurrent
 (
@@ -384,6 +285,7 @@ void Foam::Courtemanche::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -405,16 +307,22 @@ void Foam::Courtemanche::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             CourtemancheSTATES_NAMES, NUM_STATES,
-            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
 }
 
+Foam::wordList Foam::Courtemanche::availableSweepCurrents() const
+{
+    return CourtemancheDependencyMap().toc();
+}

@@ -44,9 +44,7 @@ singleCell/
 │   └── controlDict
 ├── plotVoltage
 ├── setupSingleCell
-│   ├── main_singleCell.py
 │   ├── run_cases.sh
-│   ├── setup_multiple_simulations_singleCell.py
 │   └── singleCellinteractivePlots.py
 ├── Allrun
 └── Allclean
@@ -100,6 +98,7 @@ This enables standard single-cell pacing and restitution studies.
 The dictionary to acess to run the sweepCurrent utility besides ionicModel and tissue type, the user decides: 
 - Voltage interval (typicaly -80 to + 40),
 - number of points to interpolate.
+- output extension (default `txt`, set `outputExtension csv;` for legacy format).
 
 This enables ionicModel checks and comparisons of variables that define some currents.
 
@@ -107,6 +106,14 @@ This enables ionicModel checks and comparisons of variables that define some cur
 -  time constant tau.
 
 Note that BuenoOrovio has dimensionless u - i.e 0 to +1.5
+
+To plot sweep outputs, use:
+
+```bash
+./plotSweep --all-vars
+./plotSweep --all-vars --exclude AV_tau_h
+./plotSweep all AV_INa
+```
 
 ---
 
@@ -148,13 +155,11 @@ This provides a quick visual check of:
 
 ### Advanced analysis
 
-The `setupSingleCell` directory contains Python utilities for:
+The `setupSingleCell` directory contains helper scripts used by the
+centralized `openfoam_driver` workflow:
 
-- Running multiple single-cell simulations,
-- Automating parameter sweeps,
-- Generating interactive plots of voltage and state variables.
-
-These scripts are useful for systematic model analysis and development.
+- `run_cases.sh` for execution,
+- `singleCellinteractivePlots.py` for post-processing.
 
 ---
 

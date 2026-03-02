@@ -506,6 +506,36 @@ def restitution_curves(
 
 
 
+def run_postprocessing(
+    *,
+    output_dir: str,
+    setup_root: str | None = None,
+    **kwargs,
+) -> None:
+    """PostprocessTask-compatible entry point for the openfoam_driver framework.
+
+    Called by the driver engine after all S1–S2 simulations complete.
+    Expected kwargs:
+        ionic_models  (list[str])        - Models to post-process.
+        tissue_map    (dict[str, list])  - Tissue types per ionic model.
+        show_plots    (bool)             - Whether to display plots interactively.
+    """
+    ionic_models: list[str] = kwargs.get("ionic_models", [])
+    tissue_map: dict[str, list[str]] = kwargs.get("tissue_map", {})
+    show_plots: bool = kwargs.get("show_plots", False)
+
+    output_dir_path = Path(output_dir)
+    for model in ionic_models:
+        tissues = list(tissue_map.get(model, []))
+        postprocess_one_ionic_model(
+            base_dir=output_dir_path.parent,
+            output_folder=output_dir_path.name,
+            ionic_model=model,
+            tissues=tissues,
+            show_plot=show_plots,
+        )
+
+
 if __name__ == "__main__":
     raise SystemExit(
         "This module must be imported and called from mainS1-S2protocol.py"

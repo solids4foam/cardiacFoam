@@ -1,26 +1,16 @@
 from pathlib import Path
-import re
+import sys
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+TUTORIALS_ROOT = Path(__file__).resolve().parents[3]
+if str(TUTORIALS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TUTORIALS_ROOT))
 
-# -----------------------------------------------------------
-# Extract DX and DT
-# -----------------------------------------------------------
-def extract_dx_dt(filename):
-    """Extract ΔX and ΔT from filename like DX5 / DT005."""
-    dx_match = re.search(r'DX(\d+)', filename)
-    dt_match = re.search(r'DT(\d+)', filename)
-
-    if dx_match and dt_match:
-        dx = int(dx_match.group(1)) / 10.0
-        dt_raw = dt_match.group(1)
-        dt = int(dt_raw) / (10 ** (len(dt_raw) - 1))
-        return dx, dt
-
-    return float("inf"), float("inf")
+from openfoam_driver.postprocessing.plotting_common import extract_dx_dt
+from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plotly_html
 
 
 # -----------------------------------------------------------
@@ -92,10 +82,10 @@ def load_point_geometry_from_sample(folder):
     return xs, ys, zs
 
 
-def plot_3d_points_and_grid(folder="."):
+def plot_3d_points_and_grid(folder=".", show: bool = True):
     all_data = load_all_point_files(folder)
     if not all_data:
-        return
+        return None
 
     earliest = find_earliest_point(all_data)
     num_points = len(all_data[0]["activation"])
@@ -190,13 +180,36 @@ def plot_3d_points_and_grid(folder="."):
 
         scene_id += 1
 
-    fig.update_layout(
+    apply_plotly_layout(
+        fig,
         height=900,
         width=1600,
-        title="3D Activation Surfaces"
+        title="3D Activation Surfaces",
+        xaxis_title="",
+        yaxis_title="",
+        showlegend=False,
     )
 
-    fig.show()
+    output_html = Path(folder) / "activation_surfaces_3d.html"
+    write_plotly_html(fig, output_html)
+    if show:
+        fig.show()
+    return output_html
+
+
+def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
+    del setup_root
+    output_html = plot_3d_points_and_grid(output_dir, show=False)
+    if output_html is None:
+        return []
+    return [
+        {
+            "path": str(output_html),
+            "label": "Niederer point activation surfaces",
+            "kind": "plot",
+            "format": "html",
+        }
+    ]
 
 
 # -----------------------------------------------------------

@@ -142,6 +142,124 @@ static const char* FabbriALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm",
 };
 
+static const char* FabbriCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_EC50_SR",
+    "AC_HSR",
+    "AC_MaxSR",
+    "AC_MinSR",
+    "AC_kiCa",
+    "AC_kim",
+    "AC_koCa",
+    "AC_kom",
+    "AC_ks",
+    "AC_CM_tot",
+    "AC_CQ_tot",
+    "AC_Mgi",
+    "AC_TC_tot",
+    "AC_TMC_tot",
+    "AC_kb_CM",
+    "AC_kb_CQ",
+    "AC_kb_TC",
+    "AC_kb_TMC",
+    "AC_kb_TMM",
+    "AC_kf_CM",
+    "AC_kf_CQ",
+    "AC_kf_TC",
+    "AC_kf_TMC",
+    "AC_kf_TMM",
+    "AC_L_cell",
+    "AC_L_sub",
+    "AC_R_cell",
+    "AC_V_i_part",
+    "AC_V_jsr_part",
+    "AC_V_nsr_part",
+    "AC_V_cell",
+    "AC_V_sub",
+    "AC_V_i",
+    "AC_V_jsr",
+    "AC_V_nsr",
+    "AC_ACh",
+    "AC_Iso_1_uM",
+    "AC_Km_fCa",
+    "AC_alpha_fCa",
+    "AC_K_up",
+    "AC_P_up_basal",
+    "AC_b_up",
+    "AC_slope_up",
+    "AC_tau_dif_Ca",
+    "AC_tau_tr",
+    "AC_P_up",
+    "AC_V_holding",
+    "AC_V_test",
+    "AC_t_holding",
+    "AC_t_test",
+    "AC_Cao",
+    "AC_Ki",
+    "AC_Ko",
+    "AC_Nao",
+    "AC_C",
+    "AC_F",
+    "AC_Membrane_R",
+    "AC_T",
+    "AC_clamp_mode",
+    "AC_RTONF",
+    "AC_Nai_clamp",
+    "AC_ACh_block",
+    "AC_i_CaL_Iso_increase",
+    "AC_P_CaL",
+    "AC_Iso_shift_dL",
+    "AC_Iso_slope_dL",
+    "AC_V_dL",
+    "AC_k_dL",
+    "AC_k_fL",
+    "AC_shift_fL",
+    "AC_P_CaT",
+    "AC_offset_fT",
+    "AC_ACh_on",
+    "AC_g_KACh",
+    "AC_alpha_a",
+    "AC_g_Kr",
+    "AC_g_Ks_",
+    "AC_g_Ks",
+    "AC_i_Ks_n_gate_Iso_shift",
+    "AC_g_Kur",
+    "AC_g_Na",
+    "AC_g_Na_L",
+    "AC_K1ni",
+    "AC_K1no",
+    "AC_K2ni",
+    "AC_K2no",
+    "AC_K3ni",
+    "AC_K3no",
+    "AC_K_NaCa",
+    "AC_Kci",
+    "AC_Kcni",
+    "AC_Kco",
+    "AC_Qci",
+    "AC_Qco",
+    "AC_Qn",
+    "AC_blockade_NaCa",
+    "AC_k34",
+    "AC_i_NaK_Iso_increase",
+    "AC_Km_Kp",
+    "AC_Km_Nap",
+    "AC_i_NaK_max",
+    "AC_delta_m",
+    "AC_Km_f",
+    "AC_alpha",
+    "AC_blockade",
+    "AC_g_f",
+    "AC_G_f",
+    "AC_G_f_K",
+    "AC_G_f_Na",
+    "AC_g_f_K",
+    "AC_g_f_Na",
+    "AC_ACh_shift",
+    "AC_i_f_y_gate_Iso_shift",
+    "AC_y_shift",
+    "AC_g_to",
+    "AC_E_K",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 FabbriDependencyMap()
@@ -149,25 +267,70 @@ FabbriDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
+        {"INa", Foam::wordList({"AV_i_Na_i_Na","AV_i_Na_","INa_m_gate_m","INa_h_gate_h","AV_m_infinity","AV_h_infinity","AV_tau_m","AV_tau_h"})},
+        {"I_Na", Foam::wordList({"AV_i_Na_i_Na","AV_i_Na_","INa_m_gate_m","INa_h_gate_h","AV_m_infinity","AV_h_infinity","AV_tau_m","AV_tau_h"})},
+        {"AV_i_Na_i_Na", Foam::wordList({"AV_i_Na_i_Na","AV_i_Na_","INa_m_gate_m","INa_h_gate_h","AV_m_infinity","AV_h_infinity","AV_tau_m","AV_tau_h"})},
+
+        {"INaL", Foam::wordList({"AV_i_Na_L","INa_h_gate_h"})},
+        {"I_NaL", Foam::wordList({"AV_i_Na_L","INa_h_gate_h"})},
+        {"AV_i_Na_L", Foam::wordList({"AV_i_Na_L","INa_h_gate_h"})},
+
+        {"ICaL", Foam::wordList({"AV_i_CaL_i_CaL","ICaL_dL_gate_dL","ICaL_fL_gate_fL","ICaL_fCa_gate_fCa","AV_dL_infinity","AV_fL_infinity","AV_fCa_infinity","AV_tau_dL","AV_tau_fL","AV_tau_fCa"})},
+        {"I_CaL", Foam::wordList({"AV_i_CaL_i_CaL","ICaL_dL_gate_dL","ICaL_fL_gate_fL","ICaL_fCa_gate_fCa","AV_dL_infinity","AV_fL_infinity","AV_fCa_infinity","AV_tau_dL","AV_tau_fL","AV_tau_fCa"})},
+        {"AV_i_CaL_i_CaL", Foam::wordList({"AV_i_CaL_i_CaL","ICaL_dL_gate_dL","ICaL_fL_gate_fL","ICaL_fCa_gate_fCa","AV_dL_infinity","AV_fL_infinity","AV_fCa_infinity","AV_tau_dL","AV_tau_fL","AV_tau_fCa"})},
+
+        {"ICaT", Foam::wordList({"AV_i_CaT_i_CaT","ICaT_dT_gate_dT","ICaT_fT_gate_fT","AV_dT_infinity","AV_fT_infinity","AV_tau_dT","AV_tau_fT"})},
+        {"I_CaT", Foam::wordList({"AV_i_CaT_i_CaT","ICaT_dT_gate_dT","ICaT_fT_gate_fT","AV_dT_infinity","AV_fT_infinity","AV_tau_dT","AV_tau_fT"})},
+        {"AV_i_CaT_i_CaT", Foam::wordList({"AV_i_CaT_i_CaT","ICaT_dT_gate_dT","ICaT_fT_gate_fT","AV_dT_infinity","AV_fT_infinity","AV_tau_dT","AV_tau_fT"})},
+
+        {"IKr", Foam::wordList({"AV_i_Kr_i_Kr","IKr_pa_gate_paS","IKr_pa_gate_paF","IKr_pi_gate_piy","AV_pa_infinity","AV_pi_infinity","AV_tau_paF","AV_tau_paS","AV_tau_pi"})},
+        {"I_Kr", Foam::wordList({"AV_i_Kr_i_Kr","IKr_pa_gate_paS","IKr_pa_gate_paF","IKr_pi_gate_piy","AV_pa_infinity","AV_pi_infinity","AV_tau_paF","AV_tau_paS","AV_tau_pi"})},
+        {"AV_i_Kr_i_Kr", Foam::wordList({"AV_i_Kr_i_Kr","IKr_pa_gate_paS","IKr_pa_gate_paF","IKr_pi_gate_piy","AV_pa_infinity","AV_pi_infinity","AV_tau_paF","AV_tau_paS","AV_tau_pi"})},
+
+        {"IKs", Foam::wordList({"AV_i_Ks_i_Ks","IKs_n_gate_n","AV_n_infinity","AV_tau_n"})},
+        {"I_Ks", Foam::wordList({"AV_i_Ks_i_Ks","IKs_n_gate_n","AV_n_infinity","AV_tau_n"})},
+        {"AV_i_Ks_i_Ks", Foam::wordList({"AV_i_Ks_i_Ks","IKs_n_gate_n","AV_n_infinity","AV_tau_n"})},
+
+        {"IKur", Foam::wordList({"AV_i_Kur_i_Kur","IKur_rKur_gate_r_Kur","IKur_sKur_gate_s_Kur","AV_r_Kur_infinity","AV_s_Kur_infinity","AV_tau_r_Kur","AV_tau_s_Kur"})},
+        {"I_Kur", Foam::wordList({"AV_i_Kur_i_Kur","IKur_rKur_gate_r_Kur","IKur_sKur_gate_s_Kur","AV_r_Kur_infinity","AV_s_Kur_infinity","AV_tau_r_Kur","AV_tau_s_Kur"})},
+        {"AV_i_Kur_i_Kur", Foam::wordList({"AV_i_Kur_i_Kur","IKur_rKur_gate_r_Kur","IKur_sKur_gate_s_Kur","AV_r_Kur_infinity","AV_s_Kur_infinity","AV_tau_r_Kur","AV_tau_s_Kur"})},
+
+        {"IKACh", Foam::wordList({"AV_i_KACh_i_KACh","IKACh_a_gate_a","AV_a_infinity","AV_tau_a"})},
+        {"I_KACh", Foam::wordList({"AV_i_KACh_i_KACh","IKACh_a_gate_a","AV_a_infinity","AV_tau_a"})},
+        {"AV_i_KACh_i_KACh", Foam::wordList({"AV_i_KACh_i_KACh","IKACh_a_gate_a","AV_a_infinity","AV_tau_a"})},
+
+        {"INaK", Foam::wordList({"AV_i_NaK_i_NaK"})},
+        {"I_NaK", Foam::wordList({"AV_i_NaK_i_NaK"})},
+        {"AV_i_NaK_i_NaK", Foam::wordList({"AV_i_NaK_i_NaK"})},
+
+        {"INaCa", Foam::wordList({"AV_i_NaCa_i_NaCa"})},
+        {"I_NaCa", Foam::wordList({"AV_i_NaCa_i_NaCa"})},
+        {"AV_i_NaCa_i_NaCa", Foam::wordList({"AV_i_NaCa_i_NaCa"})},
+
+        {"If", Foam::wordList({"AV_i_f_i_f","If_y_gate_y","AV_y_infinity","AV_tau_y","AV_i_fNa","AV_i_fK"})},
+        {"I_f", Foam::wordList({"AV_i_f_i_f","If_y_gate_y","AV_y_infinity","AV_tau_y","AV_i_fNa","AV_i_fK"})},
+        {"AV_i_f_i_f", Foam::wordList({"AV_i_f_i_f","If_y_gate_y","AV_y_infinity","AV_tau_y","AV_i_fNa","AV_i_fK"})},
+
+        {"Ito", Foam::wordList({"AV_i_to_i_to","Ito_q_gate_q","Ito_r_gate_r","AV_q_infinity","AV_r_infinity","AV_tau_q","AV_tau_r"})},
+        {"I_to", Foam::wordList({"AV_i_to_i_to","Ito_q_gate_q","Ito_r_gate_r","AV_q_infinity","AV_r_infinity","AV_tau_q","AV_tau_r"})},
+        {"AV_i_to_i_to", Foam::wordList({"AV_i_to_i_to","Ito_q_gate_q","Ito_r_gate_r","AV_q_infinity","AV_r_infinity","AV_tau_q","AV_tau_r"})},
+
+        {"Iion", Foam::wordList({"AV_i_f_i_f","AV_i_Kr_i_Kr","AV_i_Ks_i_Ks","AV_i_to_i_to","AV_i_NaK_i_NaK","AV_i_NaCa_i_NaCa","AV_i_Na_i_Na","AV_i_CaL_i_CaL","AV_i_CaT_i_CaT","AV_i_KACh_i_KACh","AV_i_Kur_i_Kur","Iion_cm"})},
+        {"I_ion", Foam::wordList({"AV_i_f_i_f","AV_i_Kr_i_Kr","AV_i_Ks_i_Ks","AV_i_to_i_to","AV_i_NaK_i_NaK","AV_i_NaCa_i_NaCa","AV_i_Na_i_Na","AV_i_CaL_i_CaL","AV_i_CaT_i_CaT","AV_i_KACh_i_KACh","AV_i_Kur_i_Kur","Iion_cm"})},
+        {"Iion_cm", Foam::wordList({"AV_i_f_i_f","AV_i_Kr_i_Kr","AV_i_Ks_i_Ks","AV_i_to_i_to","AV_i_NaK_i_NaK","AV_i_NaCa_i_NaCa","AV_i_Na_i_Na","AV_i_CaL_i_CaL","AV_i_CaT_i_CaT","AV_i_KACh_i_KACh","AV_i_Kur_i_Kur","Iion_cm"})}
         }
     );
 
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 void
 FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
@@ -386,7 +549,7 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
 
 
 void
-FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* Ca_SR_release */
     ALGEBRAIC[AV_P_tot] = STATES[SR_R] + STATES[SR_O] + STATES[SR_I] + STATES[SR_RI];
@@ -590,7 +753,7 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
 
     
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {

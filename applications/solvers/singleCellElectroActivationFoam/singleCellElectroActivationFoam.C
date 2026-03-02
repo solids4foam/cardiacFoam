@@ -58,6 +58,7 @@ Author
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
+#include "solverStartupLog.H"
 
 int main(int argc, char *argv[])
 {
@@ -89,12 +90,7 @@ int main(int argc, char *argv[])
      OFstream output(outFile);
      output.setf(std::ios::fixed);
      output.precision(7);
-     // Extract the names of the fields to be exported
-    const wordList exportNames = ionicModel->exportedFieldNames();
-    if (!exportNames.empty())
-    {
-        Info<< "Exporting fields: " << exportNames << nl;
-    }
+    ionicModel->logExportedFieldSelection();
 
      ionicModel->writeHeader(output);
     
@@ -104,8 +100,6 @@ int main(int argc, char *argv[])
 
     while (runTime.loop())
     {
-        Info<< nl << "Time = " << runTime.timeName() << endl;
-
         Field<Field<scalar>> dummyStates(1);
         dummyStates[0].setSize(ionicModel->nEqns());
         scalarField dummyVmField(1, 0);
@@ -122,9 +116,11 @@ int main(int argc, char *argv[])
             dummyStates
         );
 
-        if (stimulusIO::shouldWriteStep(t0, t1, solutionVariablesMemory,false))
+
+        if (ionicModelIO::shouldWriteStep(t0, t1, solutionVariablesMemory, false))
                 {ionicModel->write(runTime.value(), output);}
     }
+
 
     Info<< nl;
     runTime.printExecutionTime(Info);
@@ -135,6 +131,3 @@ int main(int argc, char *argv[])
     return 0;
     
 }
-
-
-

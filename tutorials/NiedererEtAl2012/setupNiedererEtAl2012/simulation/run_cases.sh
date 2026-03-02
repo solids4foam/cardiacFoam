@@ -1,15 +1,17 @@
 #!/bin/bash
 
-cd "$1"
-source /Volumes/OpenFOAM-v2412/etc/bashrc
+set -euo pipefail
 
-echo "🧹 Cleaning case"
-./Allclean
+CASE_DIR="${1:-}"
+if [[ -z "$CASE_DIR" ]]; then
+    echo "Usage: ./run_cases.sh <caseDir>" >&2
+    exit 1
+fi
 
-echo "🚀 Running parallel"
-./Allrun parallel
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMON_RUNNER="$SCRIPT_DIR/../../../openfoam_driver/scripts/run_case.sh"
 
-echo "✍️ Touching case.foam for paraview"
-touch case.foam
-
-
+exec "$COMMON_RUNNER" \
+    --case-dir "$CASE_DIR" \
+    --parallel \
+    --touch-case-foam

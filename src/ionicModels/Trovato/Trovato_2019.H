@@ -253,6 +253,152 @@ static const char* TrovatoALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm",
 };
 
+static const char* TrovatoCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_CaMKo",
+    "AC_KmCaM",
+    "AC_KmCaMK",
+    "AC_aCaMK",
+    "AC_bCaMK",
+    "AC_IP3_IP3",
+    "AC_k0",
+    "AC_k0a",
+    "AC_k1",
+    "AC_k1a",
+    "AC_k2",
+    "AC_k2a",
+    "AC_tauip3",
+    "AC_GpCa",
+    "AC_KmCap",
+    "AC_L",
+    "AC_greekpi",
+    "AC_rad",
+    "AC_Ageo",
+    "AC_vcell",
+    "AC_Acap",
+    "AC_vcsr",
+    "AC_vjsr",
+    "AC_vmyo",
+    "AC_vnsr",
+    "AC_vsl",
+    "AC_vss",
+    "AC_gaptau",
+    "AC_sstau",
+    "AC_cao",
+    "AC_ko",
+    "AC_nao",
+    "AC_F",
+    "AC_R",
+    "AC_T",
+    "AC_zca",
+    "AC_zk",
+    "AC_zna",
+    "AC_Gncx",
+    "AC_KmCaAct",
+    "AC_kasymm",
+    "AC_kcaoff",
+    "AC_kcaon",
+    "AC_kna1",
+    "AC_kna2",
+    "AC_kna3",
+    "AC_qca",
+    "AC_qna",
+    "AC_wca",
+    "AC_wna",
+    "AC_wnaca",
+    "AC_h10_i",
+    "AC_h10_ss",
+    "AC_k2_i",
+    "AC_k2_ss",
+    "AC_k5_i",
+    "AC_k5_ss",
+    "AC_h11_i",
+    "AC_h11_ss",
+    "AC_h12_i",
+    "AC_h12_ss",
+    "AC_k1_i",
+    "AC_k1_ss",
+    "AC_H",
+    "AC_Khp",
+    "AC_Kki",
+    "AC_Kko",
+    "AC_Kmgatp",
+    "AC_Knai0",
+    "AC_Knao0",
+    "AC_Knap",
+    "AC_Kxkur",
+    "AC_MgADP",
+    "AC_MgATP",
+    "AC_Pnak",
+    "AC_delta",
+    "AC_eP",
+    "AC_k1m",
+    "AC_k1p",
+    "AC_k2m",
+    "AC_k2p",
+    "AC_k3m",
+    "AC_k3p",
+    "AC_k4m",
+    "AC_k4p",
+    "AC_a2",
+    "AC_a4",
+    "AC_b1",
+    "AC_dkmplbbar",
+    "AC_dqupcamkbar",
+    "AC_kmup",
+    "AC_nsrbar",
+    "AC_PKNa",
+    "AC_GCaT",
+    "AC_GK1",
+    "AC_GKr",
+    "AC_GKs",
+    "AC_Ahf",
+    "AC_GNa",
+    "AC_hssV1",
+    "AC_hssV2",
+    "AC_mssV1",
+    "AC_mssV2",
+    "AC_mtD1",
+    "AC_mtD2",
+    "AC_mtV1",
+    "AC_mtV2",
+    "AC_mtV3",
+    "AC_mtV4",
+    "AC_Ahs",
+    "AC_GfK",
+    "AC_GfNa",
+    "AC_Gsus",
+    "AC_Gto",
+    "AC_GNaL",
+    "AC_thL",
+    "AC_thLp",
+    "AC_Aff",
+    "AC_Kmn",
+    "AC_PCa",
+    "AC_k2n",
+    "AC_tjca",
+    "AC_Afs",
+    "AC_PCaK",
+    "AC_PCaNa",
+    "AC_PCap",
+    "AC_PCaKp",
+    "AC_PCaNap",
+    "AC_PCab",
+    "AC_PNab",
+    "AC_BSLmax",
+    "AC_BSRmax",
+    "AC_KmBSL",
+    "AC_KmBSR",
+    "AC_cm",
+    "AC_cmdnmax",
+    "AC_cmdnmaxsl",
+    "AC_csqnmax",
+    "AC_csqnmaxsl",
+    "AC_kmcmdn",
+    "AC_kmcsqn",
+    "AC_kmtrpn",
+    "AC_trpnmax",
+    "AC_trpnmaxsl",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 TrovatoDependencyMap()
@@ -260,25 +406,91 @@ TrovatoDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
+        {"INa", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+        {"I_Na", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+        {"AV_INa_INa", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+
+        {"INaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+        {"I_NaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+        {"AV_INaL_INaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+
+        {"Ito", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+        {"I_to", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+        {"AV_Ito_Ito", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+
+        {"Isus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+        {"I_sus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+        {"AV_Isus_Isus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+
+        {"If", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+        {"I_f", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+        {"AV_If_If", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+
+        {"ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+        {"I_CaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+        {"AV_ICaL_ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+
+        {"ICaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+        {"I_CaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+        {"AV_ICaT_ICaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+
+        {"ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+        {"I_CaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+        {"AV_ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+
+        {"ICaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+        {"I_CaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+        {"AV_ICaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+
+        {"IKr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+        {"I_Kr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+        {"AV_IKr_IKr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+
+        {"IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+        {"I_Ks", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+        {"AV_IKs_IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+
+        {"IK1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+        {"I_K1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+        {"AV_IK1_IK1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+
+        {"INaCa", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_JncxNa_i","AV_JncxCa_i","AV_JncxNa_ss","AV_JncxCa_ss"})},
+        {"I_NaCa", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_JncxNa_i","AV_JncxCa_i","AV_JncxNa_ss","AV_JncxCa_ss"})},
+        {"AV_INaCa_i_INaCa_i", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_JncxNa_i","AV_JncxCa_i"})},
+        {"AV_INaCa_ss", Foam::wordList({"AV_INaCa_ss","AV_JncxNa_ss","AV_JncxCa_ss"})},
+
+        {"INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"I_NaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"AV_INaK_INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+
+        {"INab", Foam::wordList({"AV_INab_INab"})},
+        {"I_Nab", Foam::wordList({"AV_INab_INab"})},
+        {"AV_INab_INab", Foam::wordList({"AV_INab_INab"})},
+
+        {"ICab", Foam::wordList({"AV_ICab_ICab"})},
+        {"I_Cab", Foam::wordList({"AV_ICab_ICab"})},
+        {"AV_ICab_ICab", Foam::wordList({"AV_ICab_ICab"})},
+
+        {"IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"I_pCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"AV_IpCa_IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+
+        {"Iion", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"I_ion", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"Iion_cm", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})}
         }
     );
 
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 void
 TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
@@ -529,7 +741,7 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
 
 
 void
-TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* CaMK */
     ALGEBRAIC[AV_CaMKb] = CONSTANTS[AC_CaMKo] * (1.0 - STATES[CaMKt]) / (1.0 + CONSTANTS[AC_KmCaM] / STATES[Cass]);
@@ -831,7 +1043,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
 
     
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {

@@ -214,9 +214,6 @@ inline void computeAndPrintErrors
          << "u2     " << L1_u2 << "   " << L2_u2 << "   " << Linf_u2 << nl
          << "-------------------------------------------------\n" << endl;
 
-
-
-
     // std::string outFilename = filename;
     // if (outFilename.empty())
     if (Pstream::master())
@@ -267,4 +264,3 @@ inline void computeAndPrintErrors
 } // namespace Foam
 
 #endif
-

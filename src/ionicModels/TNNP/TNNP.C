@@ -55,7 +55,7 @@ Foam::TNNP::TNNP
     ALGEBRAIC_(num),
     RATES_(num)
 {
-    Info<< nl << "Initialize TNNP constants:" << nl;
+    ionicModel::setTissueFromDict();
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -63,8 +63,6 @@ Foam::TNNP::TNNP
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // 🔑 First, set tissue using base logic + overrides
-        ionicModel::setTissueFromDict(); 
         TNNPinitConsts
         (
             CONSTANTS_.data(),
@@ -75,18 +73,9 @@ Foam::TNNP::TNNP
 
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -103,6 +92,21 @@ Foam::List<Foam::word> Foam::TNNP::supportedTissueTypes() const
 {
     // All three tissue variants are supported in the generated code
     return {"endocardialCells", "mCells", "epicardialCells"};
+}
+
+const char* const* Foam::TNNP::ioStateNames() const
+{
+    return TNNP_STATES_NAMES;
+}
+
+const char* const* Foam::TNNP::ioConstantNames() const
+{
+    return TNNP_CONSTANTS_NAMES;
+}
+
+const char* const* Foam::TNNP::ioAlgebraicNames() const
+{
+    return TNNP_ALGEBRAIC_NAMES;
 }
 
 
@@ -140,6 +144,8 @@ void Foam::TNNP::calculateCurrent
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
@@ -163,7 +169,7 @@ void Foam::TNNP::solveODE
 {
     const scalar tStart = stepStartTime * 1000;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -194,6 +200,8 @@ void Foam::TNNP::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
         ::TNNPcomputeRates
         (
@@ -204,8 +212,10 @@ void Foam::TNNP::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -235,7 +245,9 @@ void Foam::TNNP::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
+    ,
+            stimulusProtocol()
+        );
 }
 
 void Foam::TNNP::updateStatesOld(const Field<Field<scalar>>&) const
@@ -250,115 +262,6 @@ void Foam::TNNP::resetStatesToStatesOld(Field<Field<scalar>>&) const
 
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
-
-//Writing functions for singleCell implementation
-Foam::wordList Foam::TNNP::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            TNNP_STATES_NAMES, NUM_STATES,
-            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::TNNP::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            TNNP_STATES_NAMES, NUM_STATES,
-            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::TNNP::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
-{
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        TNNP_STATES_NAMES,NUM_STATES,
-        TNNP_ALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
-}
-
-void Foam::TNNP::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
-{
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        TNNP_STATES_NAMES, NUM_STATES,
-        TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
-}
-
-
-
-
-void Foam::TNNP::writeHeader(OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            TNNP_STATES_NAMES, NUM_STATES,
-            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-}
-
-static Foam::scalar TNNP_vm(const Foam::scalarField& S)
-{
-    return S[0];
-}
-
-void Foam::TNNP::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            TNNP_STATES_NAMES, NUM_STATES,
-            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,os,
-            STATES_,ALGEBRAIC_,
-            RATES_,TNNP_vm
-        );
-    }
-}
-
 
 void Foam::TNNP::sweepCurrent
 (
@@ -389,6 +292,7 @@ void Foam::TNNP::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -410,22 +314,25 @@ void Foam::TNNP::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             TNNP_STATES_NAMES, NUM_STATES,
-            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            TNNP_ALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
 }
 
-
-
-
+Foam::wordList Foam::TNNP::availableSweepCurrents() const
+{
+    return TNNPDependencyMap().toc();
+}
 
 
 

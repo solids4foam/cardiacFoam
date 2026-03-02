@@ -25,38 +25,71 @@ const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "wInfty"     // 11
 };
 
+const char* BuenoOrovioCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "uO",
+    "uU",
+    "thetaV",
+    "thetaW",
+    "thetaVMinus",
+    "thetaO",
+    "tauV1Minus",
+    "tauV2Minus",
+    "tauVPlus",
+    "tauW1Minus",
+    "tauW2Minus",
+    "kWMinus",
+    "uWMinus",
+    "tauWPlus",
+    "tauFi",
+    "tauO1",
+    "tauO2",
+    "tauSo1",
+    "tauSo2",
+    "kSo",
+    "uSo",
+    "tauS1",
+    "tauS2",
+    "kS",
+    "uS",
+    "tauSi",
+    "tauWInfty",
+    "wInftyStar",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 BuenoOrovioDependencyMap()
 {
     static const Foam::HashTable<Foam::wordList> dep
     (
-        { 
-        {"Jfi",Foam::wordList({"Jfi"})},
-        {"Jso",Foam::wordList({"tauO","tauSo","Jso"})},
-        {"Jsi", Foam::wordList ({"Jsi"})},
-        {"Jion", Foam::wordList({"Jfi","Jso","Jsi","Jion"})},
-        {"v", Foam::wordList({"vInfty","tauVMinus"})},
-        {"w", Foam::wordList({"wInfty","tauWMinus"})},
-        {"s", Foam::wordList({"tauS"})} ,  
+        {
+        // Canonical BO2008 names
+        {"Jfi", Foam::wordList({"Jfi", "v", "RATES_v"})},
+        {"Jso", Foam::wordList({"Jso", "tauO", "tauSo"})},
+        {"Jsi", Foam::wordList({"Jsi", "w", "s", "RATES_s"})},
+        {"Jion", Foam::wordList({"Jfi", "Jso", "Jsi", "Jion"})},
+        {"v", Foam::wordList({"v", "vInfty", "tauVMinus", "RATES_v"})},
+        {"w", Foam::wordList({"w", "wInfty", "tauWMinus", "RATES_w"})},
+        {"s", Foam::wordList({"s", "tauS", "RATES_s"})},
+
+        // CellML / alternative current naming fallbacks
+        {"I_fi", Foam::wordList({"Jfi", "v", "RATES_v"})},
+        {"I_so", Foam::wordList({"Jso", "tauO", "tauSo"})},
+        {"I_si", Foam::wordList({"Jsi", "w", "s", "RATES_s"})},
+        {"Iion", Foam::wordList({"Jfi", "Jso", "Jsi", "Jion"})},
+        {"I_ion", Foam::wordList({"Jfi", "Jso", "Jsi", "Jion"})},
+        {"Iion_cm", Foam::wordList({"Jfi", "Jso", "Jsi", "Jion"})}
         }
     );
 
     return dep;
 }
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
 
@@ -112,7 +145,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
 
 
 void
-BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     using Foam::heaviside;
         //Time Constants currents 
@@ -164,7 +197,7 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
         RATES[s] = ((1.0 + tanh(CONSTANTS[kS] * (STATES[u] - CONSTANTS[uS]))) / 2.0 - STATES[s]) / ALGEBRAIC[tauS];
 
 
-        ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+        ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
         if (solveVmWithinODESolver)
             {
@@ -176,7 +209,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         //std::cout << "CURRENTS " << __LINE__ << std::endl;
    
-
 
 
 

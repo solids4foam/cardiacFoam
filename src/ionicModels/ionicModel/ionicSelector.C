@@ -54,7 +54,6 @@ namespace Foam {
                     << exit(FatalError);
             }
 
-            Info<< "Using tissue '" << t << "'" << nl;
             return tissueFlag(t);
         }
     }

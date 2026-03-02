@@ -28,6 +28,7 @@ Author
 #include "argList.H"
 #include "Time.H"
 #include "IOdictionary.H"
+#include "Switch.H"
 #include "ionicModel.H"
 
 using namespace Foam;
@@ -59,17 +60,67 @@ int main(int argc, char *argv[])
         ionicModel::New(sweepDict, 1, 0.01, false);
 
     ionicModel& model = modelPtr(); 
+    const wordList availableCurrents = model.availableSweepCurrents();
+
+    const bool listCurrentsOnly =
+        bool(sweepDict.lookupOrDefault<Switch>("listCurrentsOnly", false))
+     || bool(sweepDict.lookupOrDefault<Switch>("listCurrents", false));
+
+    if (listCurrentsOnly)
+    {
+        Info<< "Available sweep currents for model " << modelName
+            << " (" << availableCurrents.size() << "):" << nl;
+
+        if (availableCurrents.empty())
+        {
+            Info<< "  (none available in dependency map)" << nl;
+        }
+        else
+        {
+            forAll(availableCurrents, i)
+            {
+                Info<< "  - " << availableCurrents[i] << nl;
+            }
+        }
+
+        Info<< "\nCompleted.\n";
+        return 0;
+    }
 
     wordList currents;
-    sweepDict.lookup("currents") >> currents;
+    if (sweepDict.found("currents"))
+    {
+        sweepDict.lookup("currents") >> currents;
+    }
+    else
+    {
+        currents = availableCurrents;
+    }
+
+    if (currents.empty())
+    {
+        FatalErrorInFunction
+            << "No currents provided for sweepCurrents." << nl
+            << "Set 'currents (...)' in constant/sweepCurrents, or set"
+            << " listCurrentsOnly true to print available names."
+            << exit(FatalError);
+    }
 
     scalar Vmin = readScalar(sweepDict.lookup("Vmin"));
     scalar Vmax = readScalar(sweepDict.lookup("Vmax"));
     label  nPts = readLabel(sweepDict.lookup("points"));
+    word outputExtension =
+        sweepDict.lookupOrDefault<word>("outputExtension", "txt");
+
+    if (!outputExtension.empty() && outputExtension[0] == '.')
+    {
+        outputExtension = outputExtension.substr(1);
+    }
 
     for (const word& I : currents)
     {
-        fileName out = modelName + "_" + tissue +"_" + I + "_sweep.csv";
+        fileName out =
+            modelName + "_" + tissue +"_" + I + "_sweep." + outputExtension;
 
         Info<< "Sweeping " << I << " → " << out << nl;
 
@@ -79,4 +130,3 @@ int main(int argc, char *argv[])
     Info<< "\nCompleted.\n";
     return 0;
 }
-
