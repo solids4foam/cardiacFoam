@@ -1,115 +1,149 @@
-# Electrophysiology solvers
+# electroModels
 
-This directory contains OpenFOAM-based solvers for cardiac electrophysiology,
-built on top of the `ionicModels` library.
+This directory contains the **electroModels library** for cardiac electrophysiology
+in cardiacFoam. It replaces the earlier solver-based structure with a **modular,
+run-time selectable model framework**, following the same design philosophy as
+solids4foam (e.g. `solidModels`, `fluidModels`).
+
+---
+
+## Overview
+
+Instead of separate solvers for different electrophysiology formulations,
+cardiacFoam now provides a **single solver framework** with **run-time selectable
+electroModels**.
+
+Each electroModel encapsulates a specific formulation, such as:
+
+- Monodomain reaction–diffusion
+- Eikonal–diffusion activation
+- Single-cell ionic dynamics
+
+This approach improves:
+
+- Code reuse
+- Extensibility
+- Consistency with solids4foam design patterns
+
+---
+
+## Library structure
 
 ```bash
-solvers/
-├── electroActivationFoam
-├── eikonalElectroActivationFoam
-└── singleCellElectroActivationFoam
+electroModels/
+├── electroModel/                 # Base class
+├── monoDomainElectro/            # Monodomain PDE + ionic ODEs
+├── eikonalDiffusionElectro/      # Eikonal–diffusion model
+├── singleCellElectro/            # 0D ionic model driver
+├── lnInclude/                   # OpenFOAM linking headers
+└── Make/
 ```
 
 ---
 
-## electroActivationFoam
+## electroModel (base class)
 
-`electroActivationFoam` is the main electrophysiology solver.
-It solves a **coupled PDE–ODE system**:
+`electroModel` defines the **common interface** for all electrophysiology models.
 
-- **PDE:** reaction–diffusion equation for the transmembrane voltage `Vm`
-  (e.g. monodomain formulation),
-- **ODEs:** ionic cell model equations, provided at run-time via
-  `Foam::ionicModel`.
+Responsibilities include:
 
-Key features include:
+- Managing fields (e.g. transmembrane voltage `Vm`)
+- Handling time integration
+- Interfacing with ionic models (where applicable)
+- Providing a consistent API to the solver
 
-- Run-time selectable ionic models,
-- Explicit and implicit time-integration paths,
-- Support for manufactured solutions (verification),
-- Activation-time tracking.
-
-This solver is intended for **1D/2D/3D tissue simulations** where full
-electrophysiological dynamics are required.
+All specific models derive from this base class and are selected at run-time.
 
 ---
 
-## eikonalElectroActivationFoam
+## monoDomainElectro
 
-`eikonalElectroActivationFoam` is a **reduced-order electrophysiology solver**
-for computing **activation times only**, based on an anisotropic
-eikonal–diffusion formulation.
+Implements the **monodomain reaction–diffusion equation**:
 
-Instead of solving for the transmembrane voltage, the solver computes an
-activation time field by solving a steady nonlinear eikonal–diffusion equation,
-providing a computationally inexpensive approximation of the electrical wavefront
-propagation.
+- Solves for transmembrane voltage `Vm`
+- Couples to ionic models (`ionicModels` library)
+- Supports tissue-scale simulations (1D/2D/3D)
 
-Key features include:
-
-- Anisotropic propagation via a conductivity (metric) tensor,
-- Support for fibre-based conduction,
-- Prescribed activation times on selected regions or patches,
-- An optional stabilised Picard (defect-correction) formulation to improve
-  convergence of the nonlinear solve.
-
-This solver is intended for:
-
-- Rapid estimation of activation times,
-- Large-scale or parameter-sweep studies,
-- Providing activation-time input to downstream electrophysiology or
-  electrocardiographic models.
-
-It does **not** model transmembrane voltage dynamics or ionic currents.
+This corresponds to the functionality previously provided by
+`electroActivationFoam`.
 
 ---
 
-## singleCellElectroActivationFoam
+## eikonalDiffusionElectro
 
-`singleCellElectroActivationFoam` is a **single-cell driver** for ionic models.
+Implements a **reduced-order eikonal–diffusion model**:
 
-In this case, the voltage equation is no longer a PDE; instead:
-
-- The transmembrane voltage `Vm` is solved **inside the ionic model ODE system**,
-- The solver advances a **single integration point** in time,
-- Results are written as a time series using `ionicModelIO`.
-
-This solver is primarily intended for:
-
-- Testing and validating ionic models,
-- Reproducing single-cell action potential traces,
-- Debugging and development.
+- Computes activation times only
+- Does not solve for voltage or ionic currents
+- Suitable for fast propagation simulations and large-scale studies
 
 ---
 
-## Relationship between the solvers
+## singleCellElectro
 
-The three solvers address **different levels of electrophysiological modelling**:
+Implements a **zero-dimensional (0D) single-cell model**:
 
-- `electroActivationFoam`
-  Full tissue-scale electrophysiology (monodomain PDE + ionic ODEs).
+- Solves ionic model ODEs only
+- No spatial coupling (no PDE)
+- Used for testing and validating ionic models
 
-- `eikonalElectroActivationFoam`
-  Reduced-order model computing activation times only, without voltage or ionic
-  dynamics.
+This corresponds to the previous `singleCellElectroActivationFoam`.
 
-- `singleCellElectroActivationFoam`
-  Zero-dimensional single-cell simulations for ionic-model development and
-  testing.
+---
 
-`singleCellElectroActivationFoam` can be viewed as a special case of
-`electroActivationFoam` in which spatial coupling is removed. In the future,
-`electroActivationFoam` may support a native single-cell mode, in which case
-`singleCellElectroActivationFoam` may be deprecated.
+## Run-time selection
+
+Electrophysiology models are selected at run-time via dictionaries, e.g.:
+
+```plaintext
+electroModel   monoDomainElectro;
+```
+
+This mirrors the solids4foam approach:
+
+```plaintext
+solidModel     linearElastic;
+fluidModel     incompressible;
+```
+
+---
+
+## Design philosophy
+
+The electroModels framework:
+
+- Follows the **run-time selection mechanism** used in OpenFOAM
+- Mirrors the **modular physics design of solids4foam**
+- Enables easy addition of new electrophysiology formulations
+- Avoids duplication of solver infrastructure
+
+---
+
+## Relationship to ionicModels
+
+- `monoDomainElectro` and `singleCellElectro` use the `ionicModels` library
+- `eikonalDiffusionElectro` does not require ionic models
 
 ---
 
 ## Notes
 
-- `electroActivationFoam` and `singleCellElectroActivationFoam` rely on the
-  `ionicModels` library for all ionic-model logic.
-- `eikonalElectroActivationFoam` does not use ionic models, but shares geometry,
-  material parameter, and stimulus concepts with the full solver.
-- Selection of models, parameters, and numerical options is done via dictionaries
-  at run-time.
-- All solvers follow standard OpenFOAM build and execution patterns.
+- The solver layer is now thin and delegates physics to electroModels
+- Future extensions (e.g. bidomain) can be implemented as additional
+  electroModels
+- This structure enables tighter coupling with solids4foam in future
+
+---
+
+## Summary
+
+| Model                  | Description                                 |
+|------------------------|---------------------------------------------|
+| monoDomainElectro      | Full PDE + ionic ODEs                       |
+| eikonalDiffusionElectro| Activation times only                       |
+| singleCellElectro      | 0D ionic model                              |
+
+---
+
+This refactoring aligns cardiacFoam with modern OpenFOAM and solids4foam
+design practices, improving maintainability and extensibility.
