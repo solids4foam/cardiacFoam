@@ -205,8 +205,14 @@ void Foam::TNNP::solveODE
             tissue(),
             solveVmWithinODESolver()
         );
-        if (integrationPtI == monitorCell)
-        {debugPrintFields(integrationPtI, tStart, tEnd, step);}
+
+        if (debug)
+        {
+            if (integrationPtI == monitorCell)
+            {
+                debugPrintFields(integrationPtI, tStart, tEnd, step);
+            }
+        }
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
@@ -423,9 +429,35 @@ void Foam::TNNP::sweepCurrent
         << " written to " << outputFile << nl;
 }
 
+//-------Coupling signals--------//
+bool Foam::TNNP::hasSignal(const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Vm:
+        case CouplingSignal::Cai:
+            return true;
+        default:
+            return false;
+    }
+}
 
+Foam::scalar Foam::TNNP::signal(const label i, const CouplingSignal s) const
+{
+    switch (s)
+    {
+        case CouplingSignal::Vm:
+            return TNNP_vm(STATES_[i]);
+        case CouplingSignal::Cai:
+            return STATES_[i][::Ca_i];
+        default:
+            break;
+    }
+    FatalErrorInFunction
+        << "Requested coupling signal "
+        << static_cast<int>(s)
+        << " from TNNP, but this signal is not available."
+        << abort(FatalError);
 
-
-
-
-
+    return 0.0;
+}

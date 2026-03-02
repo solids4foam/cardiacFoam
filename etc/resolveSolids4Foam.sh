@@ -12,19 +12,44 @@ export _SOLIDS4FOAM_RESOLVED=1
 # Directory containing this script
 _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Force lightweight mode if requested
+if [ "${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-0}" = "1" ]
+then
+    SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
+
+    # Build light-weight physics model replacement
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
+    wmake libso $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
+
+    echo "Using lightweight physicsModel (forced)"
+    echo "SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
+    echo
+
+    export SOLIDS4FOAM_INST_DIR
+    return 0 2>/dev/null || exit 0
+fi
+
 if [ -n "$SOLIDS4FOAM_INST_DIR" ] && [ -d "$SOLIDS4FOAM_INST_DIR" ]
 then
     # Do nothing
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=0
     echo
 elif [ -d "$_thisDir/../modules/solids4foam" ]
 then
     echo
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/solids4foam"
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=0
 else
-    echo "ERROR: solids4foam not found."
-    echo "Set SOLIDS4FOAM_INST_DIR or initialise submodules:"
+    echo "NOTE: solids4foam not found."
+    echo "To us solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
     echo "  git submodule update --init --recursive"
-    return 1 2>/dev/null || exit 1
+
+    # Use physicsModel from modules
+    SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/physicsModel"
+
+    # Build light-weight physics model replacement
+    export USE_LIGHTWEIGHT_PHYSICSMODEL=1
+    wmake libso $SOLIDS4FOAM_INST_DIR/src/solids4FoamModels
 fi
 
 echo "Using SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"

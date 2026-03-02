@@ -83,7 +83,7 @@ behaviour.
 
 ### BuenoOrovio (2008)
 
-```vash
+```bash
 BuenoOrovio/
 ├── BuenoOrovio_2008.H        # Generated ODE system
 ├── BuenoOrovio_2008Names.H   # Enums and variable names
@@ -103,7 +103,7 @@ Courtemanche/
 
 ### Gaur (2021)
 
-```vash
+```bash
 Gaur/
 ├── Gaur_2021.H
 ├── Gaur_2021Names.H

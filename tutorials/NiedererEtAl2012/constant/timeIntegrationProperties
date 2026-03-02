@@ -18,7 +18,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // PDE-ODE solution algorithm
-solveExplicit    no;
+solveExplicit    yes;
 
 // Max courant number
 CFL           0.1;

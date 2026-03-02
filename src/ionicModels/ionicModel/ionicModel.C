@@ -49,10 +49,14 @@ Foam::ionicModel::ionicModel
     tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    if (dict_.found("exportedVariables"))
+    if (dict_.found("IonicModelVariables_export"))
+        dict_.lookup("IonicModelVariables_export") >> variableExport_;
+    else if (dict_.found("exportedVariables"))
         dict_.lookup("exportedVariables") >> variableExport_;
 
-    if (dict_.found("debugPrintVariables"))
+    if (dict_.found("IonicModelVariables_debugPrint"))
+        dict_.lookup("IonicModelVariables_debugPrint") >> debugVarNames_;
+    else if (dict_.found("debugPrintVariables"))
         dict_.lookup("debugPrintVariables") >> debugVarNames_;
 }
 
@@ -132,7 +136,7 @@ Foam::scalar Foam::ionicModel::signal
         << static_cast<int>(s)
         << " from ionicModel, but this ionic model does not provide it."
         << nl
-        << "You must override hasSignal() and signal() in the derived ionic model."
+        << "You must hasSignal() and signal() in the derived ionic model."
         << abort(FatalError);
 
     return 0.0;

@@ -1,0 +1,53 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Allrun script for cardiac activation tutorials
+#
+# Usage examples:
+#   ./Allrun                         -> monodomain solver, serial
+#   ./Allrun eikonal                 -> eikonal solver, serial
+#   ./Allrun parallel                -> monodomain solver, parallel
+#   ./Allrun eikonal parallel        -> eikonal solver, parallel
+#-------------------------------------------------------------------------------
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# -------------------------
+# User-selectable options
+# -------------------------
+
+solver="electroActivationFoam"   # default: monodomain
+parallelRun=false
+
+# Parse arguments
+for arg in "$@"; do
+    case "$arg" in
+        eikonal)
+            solver="eikonalElectroActivationFoam"
+            ;;
+        parallel)
+            parallelRun=true
+            ;;
+    esac
+done
+
+echo "Running solver: $solver"
+echo "Parallel run:  $parallelRun"
+
+# -------------------------
+# Mesh generation
+# -------------------------
+
+runApplication blockMesh
+
+# -------------------------
+# Run solver
+# -------------------------
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel $solver
+    runApplication reconstructPar
+else
+    runApplication $solver
+fi
