@@ -40,8 +40,8 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
-
 #include "electromechanicsFeedbackProvider.H"
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -190,11 +190,12 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
+
 //-----------------------Member Functions ---------------------//
 
-    /// --- CouplingSignalProvider interface ---
-    bool hasSignal(CouplingSignal s) const;
-    scalar signal(label i, CouplingSignal s) const;
+        /// --- CouplingSignalProvider interface ---
+        bool hasSignal(CouplingSignal s) const;
+        scalar signal(label i, CouplingSignal s) const;
 
 
 //-----------------------Solver Functions ---------------------//

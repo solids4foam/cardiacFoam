@@ -1,0 +1,3 @@
+physicsModel/physicsModel.C
+
+LIB = $(FOAM_MODULE_LIBBIN)/libphysicsModel

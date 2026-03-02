@@ -1,0 +1,15 @@
+#!/bin/bash
+cd "${0%/*}" || exit  # Run from this directory
+
+# Parse arguments for library compilation
+if [ -f "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments ]
+then
+    . "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments
+fi
+
+# Check and define SOLIDS4FOAM_INST_DIR
+if [ -z "${_SOLIDS4FOAM_RESOLVED:-}" ]; then
+    source "../../../etc/resolveSolids4Foam.sh"
+fi
+
+wmake $targetType

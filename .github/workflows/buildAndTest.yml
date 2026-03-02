@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build on ${{ matrix.container-image.name }}
+    name: Build on ${{ matrix.container-image.name }} (${{ matrix.mode }})
     runs-on: ubuntu-22.04
 
     strategy:
@@ -37,11 +37,11 @@ jobs:
             solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
+        mode: [with-solids4foam, lightweight]
+
     container:
       image: ${{ matrix.container-image.image }}
-      options: --user 1001
-      env:
-        HOME: ${{ github.workspace }}
+      options: --user 0
 
     steps:
       - name: Checkout cardiacFoam
@@ -52,11 +52,22 @@ jobs:
       - name: Build cardiacFoam
         shell: bash -l {0}
         run: |
+          # Ensure the correct HOME is used so solids4foam libs are visible
+          echo "Fixing HOME"
+          export HOME=/root
+
           echo "Sourcing OpenFOAM environment"
           source ${{ matrix.container-image.source }}
 
-          echo "Using solids4foam from Docker image"
-          export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
+            echo "Using solids4foam from Docker image"
+            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
+          else
+            echo "Using lightweight physicsModel"
+            unset SOLIDS4FOAM_INST_DIR
+            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          fi
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
@@ -66,3 +77,21 @@ jobs:
           source ${{ matrix.container-image.source }}
           echo "PETSC_DIR = $PETSC_DIR"
           test -d "$PETSC_DIR/include"
+
+      - name: Debug resolution
+        shell: bash -l {0}
+        run: |
+          source ${{ matrix.container-image.source }}
+
+          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
+            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
+          else
+            unset SOLIDS4FOAM_INST_DIR
+            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          fi
+
+          source etc/resolveSolids4Foam.sh
+
+          echo "Resolved SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
+          echo "USE_LIGHTWEIGHT_PHYSICSMODEL=$USE_LIGHTWEIGHT_PHYSICSMODEL"
