@@ -7,7 +7,7 @@ echo "🧹 Cleaning case"
 ./Allclean
 
 echo "🚀 Running single Cell Solver"
-./Allrun
+./Allrun 
 
 
 

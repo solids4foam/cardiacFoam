@@ -1,0 +1,702 @@
+{
+  "tutorial": "restitutionCurves_s1s2Protocol",
+  "case_root": "/Users/simaocastro/cardiacFoamEP/tutorials/restitutionCurves_s1s2Protocol",
+  "setup_root": "/Users/simaocastro/cardiacFoamEP/tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol",
+  "output_dir": "/Users/simaocastro/cardiacFoamEP/tutorials/restitutionCurves_s1s2Protocol/postProcessing",
+  "dry_run": true,
+  "results": [
+    {
+      "case_id": "BuenoOrovio_mCells_S2_1500",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 1500
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_1200",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 1200
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_1000",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 1000
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_800",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 800
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_600",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 600
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_400",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 400
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_390",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 390
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_380",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 380
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_370",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 370
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_360",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 360
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_350",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 350
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_340",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 340
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_330",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 330
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_320",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 320
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_310",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 310
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_300",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 300
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_290",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 290
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_280",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 280
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_270",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 270
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_260",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 260
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells_S2_250",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells",
+        "s2Interval": 250
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_1500",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 1500
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_1200",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 1200
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_1000",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 1000
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_800",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 800
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_600",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 600
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_400",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 400
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_390",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 390
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_380",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 380
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_370",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 370
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_360",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 360
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_350",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 350
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_340",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 340
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_330",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 330
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_320",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 320
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_310",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 310
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_300",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 300
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_290",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 290
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_280",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 280
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_270",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 270
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_260",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 260
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells_S2_250",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells",
+        "s2Interval": 250
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_1500",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 1500
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_1200",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 1200
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_1000",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 1000
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_800",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 800
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_600",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 600
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_400",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 400
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_390",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 390
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_380",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 380
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_370",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 370
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_360",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 360
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_350",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 350
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_340",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 340
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_330",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 330
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_320",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 320
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_310",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 310
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_300",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 300
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_290",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 290
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_280",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 280
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_270",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 270
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_260",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 260
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells_S2_250",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "s2Interval": 250
+      },
+      "error": null
+    }
+  ]
+}

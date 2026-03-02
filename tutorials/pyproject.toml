@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cardiacfoam-tutorials-driver"
+version = "0.1.0"
+description = "Reusable Python-spec driver for OpenFOAM tutorial automation."
+readme = "openfoam_driver/README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "cardiacFoam contributors" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+post = [
+  "matplotlib>=3.7",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "plotly>=5.0",
+  "prompt-toolkit>=3.0",
+  "openpyxl>=3.1",
+]
+
+[project.scripts]
+foamctl = "openfoam_driver.cli:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["openfoam_driver*"]

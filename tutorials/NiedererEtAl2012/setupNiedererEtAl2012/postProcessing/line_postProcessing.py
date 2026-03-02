@@ -1,24 +1,28 @@
 import glob
 import os
-import re
+import sys
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.colors as pc
 from copy import deepcopy
+from pathlib import Path
+from typing import Any
+
+TUTORIALS_ROOT = Path(__file__).resolve().parents[3]
+if str(TUTORIALS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TUTORIALS_ROOT))
+
+from openfoam_driver.postprocessing.plotting_common import (
+    build_visibility_mask,
+    extract_dx_dt,
+    lighten_hex_color,
+    rename_cardiacfoam_trace,
+)
+from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plotly_html
 
 
 # ----------------------------------------------------------
 # --- Helper Functions -------------------------------------
 # ----------------------------------------------------------
-
-def lighten_color(color, amount):
-    """Lighten a color by amount (0=none, 1=white)."""
-    r, g, b = pc.hex_to_rgb(color)
-    R = int(r + (255 - r) * amount)
-    G = int(g + (255 - g) * amount)
-    B = int(b + (255 - b) * amount)
-    return f"rgb({R},{G},{B})"
-
 
 # Base colors per DX group
 DX_COLORS = {
@@ -53,20 +57,6 @@ def clean_csv_data(line_data):
         cleaned[filename] = df.drop(columns=to_drop)
 
     return cleaned
-
-
-def extract_dx_dt(filename):
-    """Extract ΔX and ΔT from filename like DX5 / DT005."""
-    dx_match = re.search(r'DX(\d+)', filename)
-    dt_match = re.search(r'DT(\d+)', filename)
-
-    if dx_match and dt_match:
-        dx = int(dx_match.group(1)) / 10.0
-        dt_raw = dt_match.group(1)
-        dt = int(dt_raw) / (10 ** (len(dt_raw) - 1))
-        return dx, dt
-
-    return float("inf"), float("inf")
 
 
 def load_excel_data(excel_path):
@@ -117,7 +107,7 @@ def add_excel_traces(fig, df_excel, num_cols):
 # --- UPDATED FUNCTION: dynamic DT shading per DX ----------
 # ----------------------------------------------------------
 
-def add_csv_traces(fig, sorted_items, extract_dx_dt, dt_target=None):
+def add_csv_traces(fig, sorted_items, dt_target=None):
     """Add CardiacFoam CSV traces, return indices of traces matching dt_target."""
     matching_indices = []
 
@@ -152,7 +142,7 @@ def add_csv_traces(fig, sorted_items, extract_dx_dt, dt_target=None):
         count = len(dt_list)
         shade_amount = dt_index / max(count - 1, 1)* 0.4  # 0 → darkest, 1 → lightest
 
-        color = lighten_color(base_color, shade_amount)
+        color = lighten_hex_color(base_color, shade_amount)
 
         fig.add_trace(go.Scatter(
             x=df[x_col] * 1000,
@@ -177,21 +167,13 @@ def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
     """Add the Niederer-vs-CSV toggle button with reversible behavior."""
 
     toggle_set = set(excel_indices + csv_indices)
-    visibility_toggle = [(i in toggle_set) for i in range(len(fig.data))]
+    visibility_toggle = build_visibility_mask(toggle_set, len(fig.data))
+    visibility_initial = build_visibility_mask(
+        set(range(len(fig.data))).difference(excel_indices),
+        len(fig.data),
+    )
 
-    visibility_initial = []
-    for i in range(len(fig.data)):
-        if i in excel_indices:
-            visibility_initial.append(False)
-        else:
-            visibility_initial.append(True)
-
-    cleaned_names = []
-    for trace in fig.data:
-        name = trace.name
-        if ", ΔT=" in name:
-            name = name.split(", ΔT=")[0] + " cardiacFoam"
-        cleaned_names.append(name)
+    cleaned_names = [rename_cardiacfoam_trace(trace.name) for trace in fig.data]
 
     original_names = [trace.name for trace in fig.data]
 
@@ -228,10 +210,11 @@ def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
 # --- Main Function ----------------------------------------
 # ----------------------------------------------------------
 
-def plot_line_csvs(folder='.', excel_path=None):
+def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
     """Main plotting function (logic unchanged, just organized)."""
 
-    line_data = load_csv_files(folder)
+    output_folder = Path(folder)
+    line_data = load_csv_files(str(output_folder))
     cleaned_data = clean_csv_data(line_data)
 
     sorted_items = sorted(cleaned_data.items(), key=lambda item: extract_dx_dt(item[0]))
@@ -257,12 +240,13 @@ def plot_line_csvs(folder='.', excel_path=None):
         excel_indices = []
         dt_target = None
 
-    csv_indices = add_csv_traces(fig, sorted_items, extract_dx_dt, dt_target)
+    csv_indices = add_csv_traces(fig, sorted_items, dt_target=dt_target)
 
     if has_excel:
         add_toggle_button(fig, excel_indices, csv_indices, dt_target)
 
-    fig.update_layout(
+    apply_plotly_layout(
+        fig,
         title="Activation time in diagonal line: Niederer N-benchmark",
         xaxis_title="Distance along diagonal line (mm)",
         yaxis_title="Activation Time (ms)",
@@ -270,7 +254,7 @@ def plot_line_csvs(folder='.', excel_path=None):
         template="plotly_white",
         showlegend=True
     )
-
+    
 
     # --- SAVE INITIAL PLOT (CSV only) ---
     fig_initial = deepcopy(fig)
@@ -281,7 +265,7 @@ def plot_line_csvs(folder='.', excel_path=None):
         else:
             fig_initial.data[i].visible = True
 
-    fig_initial.write_html("cardiacFoam_allSimulations.html")
+    write_plotly_html(fig_initial, output_folder / "cardiacFoam_allSimulations.html")
 
 
 
@@ -296,13 +280,39 @@ def plot_line_csvs(folder='.', excel_path=None):
 
     # Remove DT and add "cardiacFoam" in label for CSV traces
     for tr in fig_compare.data:
-        if ", ΔT=" in tr.name:
-            tr.name = tr.name.split(", ΔT=")[0] + " cardiacFoam"
+        tr.name = rename_cardiacfoam_trace(tr.name)
 
-    fig_compare.write_html("Niederer_vs_cardiacFoam.html")
+    write_plotly_html(fig_compare, output_folder / "Niederer_vs_cardiacFoam.html")
 
-    fig.show()
+    if show:
+        fig.show()
     return fig
+
+
+def run_postprocessing(
+    *,
+    output_dir: str,
+    setup_root: str | None = None,
+    excel_path: str | None = None,
+    **_: object,
+):
+    del setup_root
+    plot_line_csvs(folder=output_dir, excel_path=excel_path, show=False)
+    artifacts: list[dict[str, Any]] = [
+        {
+            "path": str(Path(output_dir) / "cardiacFoam_allSimulations.html"),
+            "label": "Niederer line: all simulations",
+            "kind": "plot",
+            "format": "html",
+        },
+        {
+            "path": str(Path(output_dir) / "Niederer_vs_cardiacFoam.html"),
+            "label": "Niederer line: benchmark comparison",
+            "kind": "plot",
+            "format": "html",
+        },
+    ]
+    return artifacts
 
 
 # ----------------------------------------------------------
@@ -314,5 +324,3 @@ if __name__ == "__main__":
         folder='.',
         excel_path='Niederer_graphs_webplotdigitilizer_points_slab/WebPlotDigitilizerdata.xlsx'
     )
-
-
