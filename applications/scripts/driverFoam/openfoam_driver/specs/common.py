@@ -7,6 +7,16 @@ from pathlib import Path
 from ..core.runtime.mutators import update_foam_entry
 
 
+def _single_cell_stimulus_scope(
+    scope: str | list[str] | tuple[str, ...] | None,
+) -> str | tuple[str, ...]:
+    if scope is None:
+        return "singleCellStimulus"
+    if isinstance(scope, str):
+        return (scope, "singleCellStimulus")
+    return tuple(scope) + ("singleCellStimulus",)
+
+
 def repo_root_default() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:
@@ -159,7 +169,7 @@ def set_stimulus_amplitude(
         electro_properties_path,
         "stim_amplitude",
         amplitude,
-        scope=scope,
+        scope=_single_cell_stimulus_scope(scope),
     )
 
 
@@ -188,7 +198,7 @@ def set_s1_period(
         electro_properties_path,
         "stim_period_S1",
         s1_interval_ms,
-        scope=scope,
+        scope=_single_cell_stimulus_scope(scope),
     )
 
 
@@ -202,7 +212,7 @@ def set_s2_period(
         electro_properties_path,
         "stim_period_S2",
         s2_interval_ms,
-        scope=scope,
+        scope=_single_cell_stimulus_scope(scope),
     )
 
 
@@ -212,7 +222,12 @@ def set_n_stim1(
     *,
     scope: str | list[str] | tuple[str, ...] | None = None,
 ) -> None:
-    update_foam_entry(electro_properties_path, "nstim1", n, scope=scope)
+    update_foam_entry(
+        electro_properties_path,
+        "nstim1",
+        n,
+        scope=_single_cell_stimulus_scope(scope),
+    )
 
 
 def set_n_stim2(
@@ -221,7 +236,12 @@ def set_n_stim2(
     *,
     scope: str | list[str] | tuple[str, ...] | None = None,
 ) -> None:
-    update_foam_entry(electro_properties_path, "nstim2", n, scope=scope)
+    update_foam_entry(
+        electro_properties_path,
+        "nstim2",
+        n,
+        scope=_single_cell_stimulus_scope(scope),
+    )
 
 
 def set_write_after_time(

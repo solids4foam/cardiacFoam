@@ -5,3 +5,4 @@
 
 cleanCase
 rm -rf case.foam monitorFile postProcessing
+rm -f log.*

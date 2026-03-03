@@ -74,7 +74,7 @@ Units are **ms** for time and **mm** for space.
 | `ionic_models` | `string[]` | Ionic models to sweep. |
 | `ionic_model_tissue_map` | `object` | Map: model -> list of tissues. |
 | `stimulus_map` | `object` | Map: model -> stimulus amplitude. |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Parent sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). Single-cell stimulus keys are written under `singleCellStimulus` inside this scope. |
 | `output_glob` | `string` | Pattern for files collected into output dir (default `*.txt`). |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
 | `postprocess_script_relpath` | `string` | Setup-relative Python postprocess script. |
@@ -103,18 +103,20 @@ Units are **ms** for time and **mm** for space.
 | `ionic_model_tissue_map` | `object` | Map: model -> list of tissues. |
 | `dt_values` | `float[]` | Time-step values (**ms**). |
 | `dx_values` | `float[]` | Spatial resolution values (**mm**). |
-| `solvers` | `string[]` | Solver list (`explicit`, `implicit`). |
+| `solvers` | `string[]` | Solver list (`explicit`, `implicit`). Default in this spec is `implicit` for stability. |
 | `slab_size_mm` | `float[3]` | Fixed slab size `(x, y, z)` in **mm** used to derive hex resolution from `dx`. |
-| `end_time_by_dx` | `object` | Map: `dx` -> end time (**ms**). |
+| `end_time_by_dx` | `object` | Map: `dx` -> end time (**s**). |
 | `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `monoDomainElectroCoeffs`). |
 | `control_dict_relpath` | `string` | Case-relative path to `controlDict`. |
 | `block_mesh_dict_relpath` | `string` | Case-relative path to `blockMeshDict`. |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
-| `paraview_script_relpath` | `string` | Setup-relative ParaView export script. |
-| `points_file_relpath` | `string` | Setup-relative points file for sampling. |
-| `case_foam_relpath` | `string` | Case-relative `.foam` file path. |
-| `pvpython_env_var` | `string` | Environment variable name used for pvpython path lookup. |
-| `pvpython_executable` | `string` | Fallback absolute pvpython path. |
+| `points_function_object_name` | `string` | Function object name used for point probes (default `Niedererpoints`). |
+| `line_function_object_name` | `string` | Function object name used for line probes (default `Niedererlines`). |
+| `sampled_field` | `string` | Sampled field name (default `activationTime`). |
+| `sampled_points` | `array` | Point definitions `[(label, x, y, z), ...]` written to points CSV. |
+| `line_start` | `float[3]` | Line start coordinate in meters. |
+| `line_end` | `float[3]` | Line end coordinate in meters. |
+| `line_n_points` | `int` | Number of probe samples along the line. |
 | `line_postprocess_relpath` | `string` | Setup-relative line postprocess script. |
 | `points_postprocess_relpath` | `string` | Setup-relative points postprocess script. |
 | `excel_reference_relpath` | `string` | Setup-relative Excel reference path. |
@@ -132,7 +134,7 @@ Units are **ms** for time and **mm** for space.
 | `s2_intervals_ms` | `int[]` | S2 intervals (**ms**). |
 | `n_s1` | `int` | Number of S1 beats. |
 | `n_s2` | `int` | Number of S2 beats. |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Parent sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). Single-cell stimulus keys are written under `singleCellStimulus` inside this scope. |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
 | `control_dict_relpath` | `string` | Case-relative path to `controlDict`. |
 | `postprocess_script_relpath` | `string` | Setup-relative Python postprocess script. |
@@ -152,8 +154,6 @@ Remaining setup-folder dependencies are postprocess/export assets:
 
 ### `NiedererEtAl2012/setupNiedererEtAl2012`
 
-- `simulation/exportParaview_Niederer.py`
-- `simulation/Niederer_Points.txt`
 - `postProcessing/line_postProcessing.py`
 - `postProcessing/points_postProcessing.py`
 - `postProcessing/Niederer_graphs_webplotdigitilizer_points_slab/WebPlotDigitilizerdata.xlsx`

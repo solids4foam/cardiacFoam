@@ -6,19 +6,6 @@
   "dry_run": true,
   "results": [
     {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.05_DX0.5",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.05,
-        "dx_mm": 0.5,
-        "solver": "explicit"
-      },
-      "error": null
-    },
-    {
       "case_id": "implicit_TNNP_epicardialCells_DT0.05_DX0.5",
       "status": "planned",
       "duration_s": 0.0,
@@ -32,27 +19,27 @@
       "error": null
     },
     {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.05_DX0.2",
+      "case_id": "implicit_TNNP_epicardialCells_DT0.025_DX0.5",
       "status": "planned",
       "duration_s": 0.0,
       "params": {
         "ionicModel": "TNNP",
         "tissue": "epicardialCells",
-        "dt_ms": 0.05,
-        "dx_mm": 0.2,
-        "solver": "explicit"
+        "dt_ms": 0.025,
+        "dx_mm": 0.5,
+        "solver": "implicit"
       },
       "error": null
     },
     {
-      "case_id": "implicit_TNNP_epicardialCells_DT0.05_DX0.2",
+      "case_id": "implicit_TNNP_epicardialCells_DT0.0125_DX0.5",
       "status": "planned",
       "duration_s": 0.0,
       "params": {
         "ionicModel": "TNNP",
         "tissue": "epicardialCells",
-        "dt_ms": 0.05,
-        "dx_mm": 0.2,
+        "dt_ms": 0.0125,
+        "dx_mm": 0.5,
         "solver": "implicit"
       },
       "error": null
