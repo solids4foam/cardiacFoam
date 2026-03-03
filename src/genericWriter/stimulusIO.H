@@ -6,6 +6,7 @@
 #include "dictionary.H"
 #include "word.H"
 #include "OFstream.H"
+#include "boundBox.H"
 
 namespace Foam
 {
@@ -33,10 +34,30 @@ public:
     {}
 };
 
+class MonodomainStimulusProtocol
+{
+public:
+    List<boundBox> boxes;
+    List<scalar> startTimes;
+    List<scalar> durations;
+    List<scalar> intensities;
+
+    MonodomainStimulusProtocol()
+    :
+        boxes(0),
+        startTimes(0),
+        durations(0),
+        intensities(0)
+    {}
+};
+
 class stimulusIO
 {
 public:
 
+    // Load single-cell S1/S2 protocol from "singleCellStimulus"
+    // sub-dictionary. If the sub-dictionary is absent, default to a
+    // no-stimulus protocol (all zeros).
     static StimulusProtocol loadStimulusProtocol
     (
         const dictionary& dict
@@ -72,7 +93,16 @@ public:
         scalar stim_period_S2,
         label  nstim2
     );
-    
+
+    // Return true when any S1/S2 pacing branch can generate a non-zero pulse.
+    static bool hasActiveStimulus(const StimulusProtocol& stim);
+
+    // Parse monodomain spatial stimulus entries from "monodomainStimulus".
+    // If the sub-dictionary is absent, returns an empty protocol.
+    static MonodomainStimulusProtocol loadMonodomainStimulusProtocol
+    (
+        const dictionary& dict
+    );
 
     static word protocolSuffix(const dictionary& dict);
 

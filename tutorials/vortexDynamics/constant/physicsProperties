@@ -10,62 +10,11 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "constant";
+    object      physicsProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     cardiacFoam;
-
-startFrom       startTime;
-
-startTime       0;
-
-stopAt          endTime;
-
-endTime    0.2;
-
-deltaT    1.25e-05;
-
-maxCo 		0.1;
-
-writeControl    runTime;
-
-writeInterval   5e-3;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable false;
-
-
+type electroModel;
 
 // ************************************************************************* //
-
-
-functions
-{
-    smokeCheck
-    {
-        #include "smokeCheck"
-    }
-
-    Niedererpoints
-    {
-        #include "Niedererpoints"
-    }
-
-    Niedererlines
-    {
-        #include "Niedererlines"
-    }
-}

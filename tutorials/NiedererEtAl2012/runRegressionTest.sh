@@ -135,10 +135,6 @@ else
     runApplication cardiacFoam
 fi
 
-# Run post-processing function object for the smoke-test window
+# Regression protocol for this case: smokeCheck only.
 runApplication -o postProcess -func smokeCheck
-runApplication -o postProcess -func Niedererpoints -latestTime
-runApplication -o postProcess -func Niedererlines -latestTime
-
-# Compare post-processing output against reference values
 checkSmokeCheckResults || exit 1

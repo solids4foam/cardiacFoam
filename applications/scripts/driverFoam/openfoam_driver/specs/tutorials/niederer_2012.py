@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import os
+import csv
+import math
 import re
 import subprocess
 from collections.abc import Mapping, Sequence
@@ -19,6 +20,32 @@ from ..common import (
     set_tissue,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
+
+DEFAULT_POINTS_FUNCTION_OBJECT = getattr(
+    defaults, "NIEDERER_POINTS_FUNCTION_OBJECT", "Niedererpoints"
+)
+DEFAULT_LINE_FUNCTION_OBJECT = getattr(
+    defaults, "NIEDERER_LINE_FUNCTION_OBJECT", "Niedererlines"
+)
+DEFAULT_SAMPLED_FIELD = getattr(defaults, "NIEDERER_SAMPLED_FIELD", "activationTime")
+DEFAULT_SAMPLED_POINTS = getattr(
+    defaults,
+    "NIEDERER_POINTS",
+    (
+        ("P1", 0.0, 0.0, 0.007),
+        ("P2", 0.0, 0.0, 0.0),
+        ("P3", 0.019999, 0.0, 0.007),
+        ("P4", 0.019999, 0.0, 0.0),
+        ("P5", 0.0, 0.003, 0.007),
+        ("P6", 0.0, 0.003, 0.0),
+        ("P7", 0.019999, 0.003, 0.007),
+        ("P8", 0.019999, 0.003, 0.0),
+        ("P9", 0.01, 0.0015, 0.0035),
+    ),
+)
+DEFAULT_LINE_START = getattr(defaults, "NIEDERER_LINE_START", (0.0, 0.0, 0.007))
+DEFAULT_LINE_END = getattr(defaults, "NIEDERER_LINE_END", (0.02, 0.003, 0.0))
+DEFAULT_LINE_N_POINTS = int(getattr(defaults, "NIEDERER_LINE_NUM_POINTS", 101))
 
 
 def _closest_key(mapping: dict[float, object], value: float) -> float:
@@ -151,7 +178,8 @@ def _apply_case(
     solver = str(case.params["solver"])
 
     _replace_blockmesh_resolution(block_mesh_dict, dx_mm, slab_size_mm=slab_size_mm)
-    set_delta_t(control_dict, dt_ms)
+    # Input dt is provided in milliseconds in the JSON/spec settings.
+    set_delta_t(control_dict, dt_ms * 1.0e-3)
     _update_end_time(control_dict, dx_mm, end_time_by_dx=end_time_by_dx)
     set_tissue(electro_properties, tissue, scope=electro_properties_scope)
     set_ionic_model(electro_properties, ionic_model, scope=electro_properties_scope)
@@ -162,6 +190,161 @@ def _apply_case(
     )
 
 
+def _float_to_case_tag(value: float) -> str:
+    tag = f"{value:.7f}".rstrip("0").rstrip(".").replace(".", "")
+    return tag or "0"
+
+
+def _read_latest_probe_values(
+    *,
+    postprocess_root: Path,
+    function_object_name: str,
+    sampled_field: str,
+) -> list[float]:
+    function_root = postprocess_root / function_object_name
+    if not function_root.exists():
+        raise FileNotFoundError(
+            f"Missing functionObject output folder: {function_root}"
+        )
+
+    time_dirs: list[tuple[float, Path]] = []
+    for child in function_root.iterdir():
+        if not child.is_dir():
+            continue
+        try:
+            time_value = float(child.name)
+        except ValueError:
+            continue
+        time_dirs.append((time_value, child))
+
+    if not time_dirs:
+        raise FileNotFoundError(
+            f"No numeric time folders found in: {function_root}"
+        )
+
+    _, latest_time_dir = max(time_dirs, key=lambda item: item[0])
+    sampled_file = latest_time_dir / sampled_field
+    if not sampled_file.exists():
+        raise FileNotFoundError(f"Missing sampled field file: {sampled_file}")
+
+    numeric_rows: list[list[float]] = []
+    for line in sampled_file.read_text().splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        try:
+            numeric_rows.append([float(token) for token in stripped.split()])
+        except ValueError:
+            continue
+
+    if not numeric_rows or len(numeric_rows[-1]) < 2:
+        raise ValueError(f"No probe values found in {sampled_file}")
+
+    return numeric_rows[-1][1:]
+
+
+def _write_points_csv(
+    *,
+    output_dir: Path,
+    file_name: str,
+    sampled_points: Sequence[tuple[str, float, float, float]],
+    activation_values: Sequence[float],
+) -> None:
+    if len(sampled_points) != len(activation_values):
+        raise ValueError(
+            f"Points count mismatch: expected {len(sampled_points)}, got {len(activation_values)}"
+        )
+
+    output_file = output_dir / file_name
+    with output_file.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["Label", "Points:0", "Points:1", "Points:2", "activationTime"])
+        for (label, x, y, z), activation_time in zip(sampled_points, activation_values):
+            writer.writerow([label, x, y, z, activation_time])
+
+
+def _write_line_csv(
+    *,
+    output_dir: Path,
+    file_name: str,
+    activation_values: Sequence[float],
+    line_start: Sequence[float],
+    line_end: Sequence[float],
+    expected_n_points: int,
+) -> None:
+    if len(activation_values) != expected_n_points:
+        raise ValueError(
+            f"Line sample count mismatch: expected {expected_n_points}, got {len(activation_values)}"
+        )
+
+    x0, y0, z0 = [float(value) for value in line_start]
+    x1, y1, z1 = [float(value) for value in line_end]
+    line_length = math.dist((x0, y0, z0), (x1, y1, z1))
+    n_intervals = max(expected_n_points - 1, 1)
+
+    output_file = output_dir / file_name
+    with output_file.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["activationTime", "arc_length", "Points_0", "Points_1", "Points_2"])
+        for index, activation_time in enumerate(activation_values):
+            t = index / n_intervals
+            x = x0 + t * (x1 - x0)
+            y = y0 + t * (y1 - y0)
+            z = z0 + t * (z1 - z0)
+            arc_length = t * line_length
+            writer.writerow([activation_time, arc_length, x, y, z])
+
+
+def _export_openfoam_samples(
+    *,
+    case_root: Path,
+    output_dir: Path,
+    case: CaseConfig,
+    points_function_object_name: str,
+    line_function_object_name: str,
+    sampled_field: str,
+    sampled_points: Sequence[tuple[str, float, float, float]],
+    line_start: Sequence[float],
+    line_end: Sequence[float],
+    line_n_points: int,
+) -> None:
+    postprocess_root = case_root / "postProcessing"
+    points_values = _read_latest_probe_values(
+        postprocess_root=postprocess_root,
+        function_object_name=points_function_object_name,
+        sampled_field=sampled_field,
+    )
+    line_values = _read_latest_probe_values(
+        postprocess_root=postprocess_root,
+        function_object_name=line_function_object_name,
+        sampled_field=sampled_field,
+    )
+
+    dx_tag = _float_to_case_tag(float(case.params["dx_mm"]))
+    dt_tag = _float_to_case_tag(float(case.params["dt_ms"]))
+    solver = str(case.params["solver"])
+    ionic_model = str(case.params["ionicModel"])
+    tissue = str(case.params["tissue"])
+
+    points_file_name = f"{solver}_{ionic_model}_{tissue}_points_DT{dt_tag}_DX{dx_tag}.csv"
+    line_file_name = f"{solver}_{ionic_model}_{tissue}_line_DT{dt_tag}_DX{dx_tag}.csv"
+
+    _write_points_csv(
+        output_dir=output_dir,
+        file_name=points_file_name,
+        sampled_points=sampled_points,
+        activation_values=points_values,
+    )
+    _write_line_csv(
+        output_dir=output_dir,
+        file_name=line_file_name,
+        activation_values=line_values,
+        line_start=line_start,
+        line_end=line_end,
+        expected_n_points=line_n_points,
+    )
+
+
 def _run_case(
     case_root: Path,
     setup_root: Path,
@@ -169,33 +352,23 @@ def _run_case(
     *,
     tutorials_root: Path | None = None,
     run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    paraview_script_relpath: Path = defaults.PARAVIEW_SCRIPT_RELPATH,
-    points_file_relpath: Path = defaults.POINTS_FILE_RELPATH,
     output_relpath: Path = defaults.OUTPUT_RELPATH,
-    case_foam_relpath: Path = defaults.CASE_FOAM_RELPATH,
-    pvpython_env_var: str = defaults.PVPYTHON_ENV_VAR,
-    pvpython_executable: Path = defaults.PVPYTHON_EXECUTABLE,
+    points_function_object_name: str = DEFAULT_POINTS_FUNCTION_OBJECT,
+    line_function_object_name: str = DEFAULT_LINE_FUNCTION_OBJECT,
+    sampled_field: str = DEFAULT_SAMPLED_FIELD,
+    sampled_points: Sequence[tuple[str, float, float, float]] = DEFAULT_SAMPLED_POINTS,
+    line_start: Sequence[float] = DEFAULT_LINE_START,
+    line_end: Sequence[float] = DEFAULT_LINE_END,
+    line_n_points: int = DEFAULT_LINE_N_POINTS,
 ) -> None:
+    del setup_root
+
     run_script = resolve_run_script_path(
         tutorials_root=tutorials_root,
         run_script_relpath=run_script_relpath,
     )
-    paraview_script = setup_root / paraview_script_relpath
-    points_file = setup_root / points_file_relpath
     output_dir = case_root / output_relpath
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    pvpython_path = Path(
-        os.environ.get(
-            pvpython_env_var,
-            str(pvpython_executable),
-        )
-    )
-    if not pvpython_path.exists():
-        raise FileNotFoundError(
-            f"pvpython executable not found at '{pvpython_path}'. "
-            f"Set {pvpython_env_var} to your ParaView pvpython binary."
-        )
 
     subprocess.run(
         [
@@ -209,31 +382,18 @@ def _run_case(
         ],
         check=True,
     )
-    case_foam = case_root / case_foam_relpath
-    case_foam.touch()
 
-    subprocess.run(
-        [
-            str(pvpython_path),
-            str(paraview_script),
-            "--case",
-            str(case_foam),
-            "--points",
-            str(points_file),
-            "--outdir",
-            str(output_dir),
-            "--dx",
-            str(case.params["dx_mm"]),
-            "--dt",
-            str(case.params["dt_ms"]),
-            "--tissue",
-            str(case.params["tissue"]),
-            "--ionicModel",
-            str(case.params["ionicModel"]),
-            "--solver",
-            str(case.params["solver"]),
-        ],
-        check=True,
+    _export_openfoam_samples(
+        case_root=case_root,
+        output_dir=output_dir,
+        case=case,
+        points_function_object_name=points_function_object_name,
+        line_function_object_name=line_function_object_name,
+        sampled_field=sampled_field,
+        sampled_points=sampled_points,
+        line_start=line_start,
+        line_end=line_end,
+        line_n_points=line_n_points,
     )
 
 
@@ -277,7 +437,7 @@ def make_spec(
     ionic_model_tissue_map: Mapping[str, Sequence[str]] = defaults.IONIC_MODEL_TISSUE_MAP,
     dt_values: Sequence[float] = defaults.DT_VALUES,
     dx_values: Sequence[float] = defaults.DX_VALUES,
-    solvers: Sequence[str] = defaults.SOLVERS,
+    solvers: Sequence[str] = ("implicit",),
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
     end_time_by_dx: Mapping[float, float] = defaults.END_TIME_BY_DX,
@@ -285,11 +445,13 @@ def make_spec(
     block_mesh_dict_relpath: str | Path = defaults.BLOCK_MESH_DICT_RELPATH,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    paraview_script_relpath: str | Path = defaults.PARAVIEW_SCRIPT_RELPATH,
-    points_file_relpath: str | Path = defaults.POINTS_FILE_RELPATH,
-    case_foam_relpath: str | Path = defaults.CASE_FOAM_RELPATH,
-    pvpython_env_var: str = defaults.PVPYTHON_ENV_VAR,
-    pvpython_executable: str | Path = defaults.PVPYTHON_EXECUTABLE,
+    points_function_object_name: str = DEFAULT_POINTS_FUNCTION_OBJECT,
+    line_function_object_name: str = DEFAULT_LINE_FUNCTION_OBJECT,
+    sampled_field: str = DEFAULT_SAMPLED_FIELD,
+    sampled_points: Sequence[tuple[str, float, float, float]] = DEFAULT_SAMPLED_POINTS,
+    line_start: Sequence[float] = DEFAULT_LINE_START,
+    line_end: Sequence[float] = DEFAULT_LINE_END,
+    line_n_points: int = DEFAULT_LINE_N_POINTS,
     line_postprocess_relpath: str | Path = defaults.LINE_POSTPROCESS_RELPATH,
     points_postprocess_relpath: str | Path = defaults.POINTS_POSTPROCESS_RELPATH,
     excel_reference_relpath: str | Path = defaults.EXCEL_REFERENCE_RELPATH,
@@ -330,10 +492,6 @@ def make_spec(
     block_mesh_dict_path = Path(block_mesh_dict_relpath)
     electro_properties_path = Path(electro_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    paraview_script_path = Path(paraview_script_relpath)
-    points_file_path = Path(points_file_relpath)
-    case_foam_path = Path(case_foam_relpath)
-    pvpython_path = Path(pvpython_executable)
     line_postprocess_path = Path(line_postprocess_relpath)
     points_postprocess_path = Path(points_postprocess_relpath)
     excel_reference_path = Path(excel_reference_relpath)
@@ -372,12 +530,14 @@ def make_spec(
             _run_case,
             tutorials_root=tutorials_root,
             run_script_relpath=run_script_path,
-            paraview_script_relpath=paraview_script_path,
-            points_file_relpath=points_file_path,
             output_relpath=output_relpath,
-            case_foam_relpath=case_foam_path,
-            pvpython_env_var=pvpython_env_var,
-            pvpython_executable=pvpython_path,
+            points_function_object_name=points_function_object_name,
+            line_function_object_name=line_function_object_name,
+            sampled_field=sampled_field,
+            sampled_points=sampled_points,
+            line_start=line_start,
+            line_end=line_end,
+            line_n_points=line_n_points,
         ),
         collect_outputs=None,
         postprocess=partial(
@@ -390,9 +550,10 @@ def make_spec(
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={
-            "notes": "Niederer Et Al. 2012 slab benchmark sweep.",
-            "pvpython_env": pvpython_env_var,
-            "pvpython_executable": str(pvpython_path),
+            "notes": (
+                "Niederer Et Al. 2012 slab benchmark sweep "
+                "with OpenFOAM functionObject sampling."
+            ),
             "dx_values": dx_values_list,
             "dt_values": dt_values_list,
             "slab_size_mm": slab_size_mm_list,
@@ -404,9 +565,14 @@ def make_spec(
             "electro_properties_relpath": str(electro_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "run_script_relpath": str(run_script_path),
-            "paraview_script_relpath": str(paraview_script_path),
-            "points_file_relpath": str(points_file_path),
             "output_relpath": str(output_relpath),
+            "points_function_object_name": points_function_object_name,
+            "line_function_object_name": line_function_object_name,
+            "sampled_field": sampled_field,
+            "sampled_points_count": len(sampled_points),
+            "line_start": [float(value) for value in line_start],
+            "line_end": [float(value) for value in line_end],
+            "line_n_points": line_n_points,
             "line_postprocess_relpath": str(line_postprocess_path),
             "points_postprocess_relpath": str(points_postprocess_path),
             "excel_reference_relpath": str(excel_reference_path),

@@ -22,6 +22,7 @@ License
 #include "fvc.H"
 #include "fvm.H"
 #include "IOmanip.H"
+#include "stimulusIO.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -120,7 +121,7 @@ void monoDomainElectro::updateExternalStimulusCurrent
         forAll(stimulusCellIDs, cI)
         {
             const label id = stimulusCellIDs[cI];
-            externalStimulusCurrentI[id] = curStim.intensity_;
+            externalStimulusCurrentI[id] += curStim.intensity_;
         }
     }
 
@@ -415,133 +416,105 @@ monoDomainElectro::monoDomainElectro
         electroProperties().lookupOrDefault<label>("infoFrequency", 1)
     )
 {
-    // Initialise the external stimulii
-    const dictionary& stimulusProtocol =
-        // electroProperties().subDict("stimulusProtocol");
-        electroProperties();
+    const Switch allowIonicStimulusInMonodomain =
+        electroProperties().lookupOrDefault<Switch>
+        (
+            "allowIonicStimulusInMonodomain",
+            false
+        );
 
-    // Read external stimulus from one or more bounding boxes
-    List<boundBox> stimulusBoxes;
-    List<scalar> stimulusStartTimes;
-
-    if
-    (
-        stimulusProtocol.found("stimulusLocationMinList")
-     && stimulusProtocol.found("stimulusLocationMaxList")
-    )
+    const StimulusProtocol& ionicStim = ionicModelPtr_->stimulusProtocol();
+    if (stimulusIO::hasActiveStimulus(ionicStim))
     {
-        const List<point> mins
-        (
-            stimulusProtocol.lookup("stimulusLocationMinList")
-        );
-        const List<point> maxs
-        (
-            stimulusProtocol.lookup("stimulusLocationMaxList")
-        );
-
-        if (mins.size() != maxs.size())
+        if (!allowIonicStimulusInMonodomain)
         {
             FatalErrorInFunction
-                << "stimulusLocationMinList and stimulusLocationMaxList must "
-                << "have the same size."
+                << "Detected active ionic-model stimulus protocol while using "
+                << "monoDomainElectro." << nl
+                << "This can unintentionally combine ionic and PDE external "
+                << "stimulation." << nl
+                << "Either disable ionic protocol keys "
+                << "(stim_*, nstim*) or set "
+                << "allowIonicStimulusInMonodomain true to override."
                 << abort(FatalError);
         }
 
-        stimulusBoxes.setSize(mins.size());
-        forAll(mins, i)
-        {
-            stimulusBoxes[i] = boundBox(mins[i], maxs[i]);
-        }
-    }
-    else
-    {
-        stimulusBoxes.setSize(1);
-        stimulusBoxes[0] = boundBox
-        (
-            point(stimulusProtocol.lookup("stimulusLocationMin")),
-            point(stimulusProtocol.lookup("stimulusLocationMax"))
-        );
+        Info<< "Warning: active ionic-model stimulus is enabled in "
+            << "monoDomainElectro (allowIonicStimulusInMonodomain=true)."
+            << endl;
     }
 
-    if (stimulusProtocol.found("stimulusStartTimeList"))
-    {
-        stimulusProtocol.lookup("stimulusStartTimeList")
-            >> stimulusStartTimes;
+    // Initialise external stimuli strictly from the monodomainStimulus
+    // sub-dictionary.
+    const MonodomainStimulusProtocol monodomainStimulus =
+        stimulusIO::loadMonodomainStimulusProtocol(electroProperties());
 
-        if (stimulusStartTimes.size() != stimulusBoxes.size())
-        {
-            FatalErrorInFunction
-                << "stimulusStartTimeList must have the same size as "
-                << "the stimulus box list."
-                << abort(FatalError);
-        }
-    }
-    else
+    if (monodomainStimulus.boxes.size() > 0)
     {
-        stimulusStartTimes.setSize(stimulusBoxes.size());
-        const scalar startTime =
-            stimulusProtocol.lookupOrDefault<scalar>("stimulusStartTime", 0.0);
-        forAll(stimulusStartTimes, i)
+        List<labelHashSet> stimCellSets(monodomainStimulus.boxes.size());
+        labelHashSet stimCellSet;
+        const vectorField& CI = mesh().C();
+        forAll(CI, cellI)
         {
-            stimulusStartTimes[i] = startTime;
-        }
-    }
-
-    List<labelHashSet> stimCellSets(stimulusBoxes.size());
-    labelHashSet stimCellSet;
-    const vectorField& CI = mesh().C();
-    forAll(CI, cellI)
-    {
-        const point& c = CI[cellI];
-        forAll(stimulusBoxes, bI)
-        {
-            if (stimulusBoxes[bI].contains(c))
+            const point& c = CI[cellI];
+            forAll(monodomainStimulus.boxes, bI)
             {
-                stimCellSets[bI].insert(cellI);
-                stimCellSet.insert(cellI);
-                break;
+                if (monodomainStimulus.boxes[bI].contains(c))
+                {
+                    stimCellSets[bI].insert(cellI);
+                    stimCellSet.insert(cellI);
+                }
             }
         }
+
+        // Set the number of stimulii
+        externalStimulus_.setSize(monodomainStimulus.boxes.size());
+
+        // Initialise each stimulii
+        forAll(monodomainStimulus.boxes, bI)
+        {
+            externalStimulus_[bI].cellIDs_ = stimCellSets[bI].toc();
+            externalStimulus_[bI].startTime_ = monodomainStimulus.startTimes[bI];
+            externalStimulus_[bI].duration_ = monodomainStimulus.durations[bI];
+            externalStimulus_[bI].intensity_ = monodomainStimulus.intensities[bI];
+
+            if (externalStimulus_[bI].cellIDs_.size() == 0)
+            {
+                WarningInFunction
+                    << "Stimulus box index " << bI
+                    << " does not contain any mesh cells."
+                    << nl;
+            }
+        }
+
+        // Only print stimulus info if this is a 3D mesh
+        if (mesh().nGeometricD() == 3)
+        {
+            Info<< "---------------------------------------------" << nl
+                << "Stimulus source dictionary: monodomainStimulus" << nl
+                << "3D mesh detected — stimulus parameters:"       << nl
+                << "Stimulus boxes: " << monodomainStimulus.boxes.size() << nl
+                << "Number of cells in stimulus region: "
+                << stimCellSet.size()                              << nl
+                << "Stimulus duration list: " << monodomainStimulus.durations
+                << nl
+                << "Stimulus start time(s): " << monodomainStimulus.startTimes
+                << nl
+                << "Stimulus intensity list: "
+                << monodomainStimulus.intensities << nl
+                << "---------------------------------------------" << endl;
+        }
     }
-
-    const dimensionedScalar stimulusDuration
-    (
-        "stimulusDuration", dimTime, stimulusProtocol
-    );
-
-    const dimensionedScalar stimulusIntensity
-    (
-        "stimulusIntensity", dimCurrent/dimVolume, stimulusProtocol
-    );
-
-    // Set the number of stimulii
-    externalStimulus_.setSize(stimulusBoxes.size());
-
-    // Initialise each stimulii
-    forAll(stimulusBoxes, bI)
+    else
     {
-        externalStimulus_[bI].cellIDs_ = stimCellSets[bI].toc();
-        externalStimulus_[bI].startTime_ = stimulusStartTimes[bI];
-        externalStimulus_[bI].duration_ = stimulusDuration.value();
-        externalStimulus_[bI].intensity_ = stimulusIntensity.value();
-    }
+        externalStimulus_.setSize(0);
 
-    // Only print stimulus info if this is a 3D mesh
-    if (mesh().nGeometricD() == 3)
-    {
-        Info<< "---------------------------------------------" << nl
-            << "3D mesh detected — stimulus parameters:"       << nl
-            << "Stimulus boxes: " << stimulusBoxes.size()      << nl
-            << "Number of cells in stimulus region: "
-            << stimCellSet.size()                              << nl
-            << "Stimulus duration: "
-            << stimulusDuration.value() << " "
-            << stimulusDuration.dimensions()                   << nl
-            << "Stimulus start time(s): " << stimulusStartTimes << nl
-            << "Stimulus intensity: "
-            << stimulusIntensity.value() << " "
-            << stimulusIntensity.dimensions()                  << nl
-            << "---------------------------------------------" << endl;
+        if (mesh().nGeometricD() == 3)
+        {
+            Info<< "No monodomainStimulus sub-dictionary provided. "
+                << "Defaulting to zero external stimulus current."
+                << endl;
+        }
     }
 
     // Write parameters

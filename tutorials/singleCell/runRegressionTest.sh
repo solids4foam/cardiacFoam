@@ -90,11 +90,5 @@ checkSingleCellResults()
 
 runApplication cardiacFoam
 
-# Compare single-cell trace against reference checkpoints
+# Compare single-cell trace against regression checkpoints
 checkSingleCellResults || exit 1
-
-if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
-    echo "Skipping plotVoltage (CF_SKIP_PLOTS=1)."
-else
-    ./plotVoltage
-fi
