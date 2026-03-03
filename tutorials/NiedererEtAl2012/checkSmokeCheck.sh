@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -euo pipefail
+
+caseDir="$(cd "${0%/*}" && pwd)"
+refFile="${caseDir}/system/smokeCheck.reference"
+postDir="${caseDir}/postProcessing/smokeCheck/0"
+
+if [ ! -f "${refFile}" ]; then
+    echo "Reference file not found: ${refFile}"
+    exit 1
+fi
+
+if [ ! -d "${postDir}" ]; then
+    echo "Post-processing directory not found: ${postDir}"
+    exit 1
+fi
+
+nFail=0
+nCheck=0
+
+while read -r field time expected tolerance; do
+    if [ -z "${field}" ] || [[ "${field}" == \#* ]]; then
+        continue
+    fi
+
+    dataFile="${postDir}/${field}"
+    if [ ! -f "${dataFile}" ]; then
+        echo "FAIL: missing output file ${dataFile}"
+        nFail=$((nFail + 1))
+        nCheck=$((nCheck + 1))
+        continue
+    fi
+
+    actual="$(
+        awk -v target="${time}" '
+            BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
+            $1 !~ /^#/ && NF >= 2 {
+                d = $1 - target;
+                if (d < 0) d = -d;
+                if (d < bestDiff) {
+                    bestDiff = d;
+                    actual = $2;
+                    found = 1;
+                }
+            }
+            END {
+                if (found && bestDiff <= 1e-9) {
+                    print actual;
+                    exit 0;
+                }
+                exit 1;
+            }
+        ' "${dataFile}"
+    )" || true
+
+    nCheck=$((nCheck + 1))
+
+    if [ -z "${actual}" ]; then
+        echo "FAIL: ${field} at t=${time} not found in ${dataFile}"
+        nFail=$((nFail + 1))
+        continue
+    fi
+
+    if awk -v a="${actual}" -v e="${expected}" -v t="${tolerance}" '
+        BEGIN {
+            d = a - e;
+            if (d < 0) d = -d;
+            exit !(d <= t);
+        }
+    '; then
+        echo "PASS: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+    else
+        echo "FAIL: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+        nFail=$((nFail + 1))
+    fi
+done < "${refFile}"
+
+echo "smokeCheck comparison: ${nCheck} checks, ${nFail} failures"
+
+if [ "${nFail}" -ne 0 ]; then
+    exit 1
+fi

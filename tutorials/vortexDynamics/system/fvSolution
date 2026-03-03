@@ -44,7 +44,7 @@ solvers
     }
 }
 
-// PIMPLE settings for eikonalElectroActivationFoam
+// PIMPLE settings for cardiacFoam
 PIMPLE
 {
     nOuterCorrectors    1000;

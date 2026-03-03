@@ -11,6 +11,11 @@ const char* tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion"
 };
 
+const char* tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "Cm",
+    "Beta",
+    "Chi",
+};
 
 // Dim 1
 // Dim 2

@@ -77,6 +77,58 @@ class BuenoOrovio
         //- No copy assignment
         void operator=(const BuenoOrovio&) = delete;
 
+protected:
+        static scalar transformedVm(const scalarField& S)
+        {
+            return S[0] * 85.7 - 84.0;
+        }
+
+        virtual ionicModelIO::VmTransform ioVmTransform() const override
+        {
+            return &BuenoOrovio::transformedVm;
+        }
+
+        virtual const PtrList<scalarField>* ioStatesPtr() const override
+        {
+            return &STATES_;
+        }
+
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+        {
+            return &ALGEBRAIC_;
+        }
+
+        virtual const PtrList<scalarField>* ioRatesPtr() const override
+        {
+            return &RATES_;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual label ioNumConstants() const override
+        {
+            return NUM_CONSTANTS;
+        }
+
+        virtual const char* const* ioConstantNames() const override;
+
+        virtual const char* const* ioStateNames() const override;
+
+        virtual label ioNumStates() const override
+        {
+            return NUM_STATES;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const override;
+
+        virtual label ioNumAlgebraic() const override
+        {
+            return NUM_ALGEBRAIC;
+        }
+
 
         public:
 
@@ -85,8 +137,8 @@ class BuenoOrovio
 
 
         //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const;
-        virtual List<word> supportedDimensions() const
+        virtual List<word> supportedTissueTypes() const override;
+        virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
         }
@@ -112,13 +164,6 @@ class BuenoOrovio
 
         // Member Functions
 
-            virtual void writeHeader(OFstream& output) const;
-            //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const;
-
-
-
-
             virtual void calculateCurrent
             (
                 const scalar stepStartTime,
@@ -126,7 +171,7 @@ class BuenoOrovio
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             virtual void solveODE
@@ -136,11 +181,11 @@ class BuenoOrovio
                 const scalarField& Vm,
                 scalarField& Im,
                 Field<Field<scalar>>& states
-            );
+            ) override;
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const
+            virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
@@ -152,36 +197,15 @@ class BuenoOrovio
                 const scalar t,
                 const scalarField& y,
                 scalarField& dydt
-            ) const;
+            ) const override;
 
             // CouplingSignalProvider
-            virtual bool hasSignal(const CouplingSignal s) const;
-            virtual scalar signal(const label i, const CouplingSignal s) const;
+            virtual bool hasSignal(const CouplingSignal s) const override;
+            virtual scalar signal(const label i, const CouplingSignal s) const override;
 
 
             virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
             virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
-
-                    // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const;
-            virtual wordList debugPrintedNames() const;
-
-
-            // Override to export the variables
-            virtual void exportStates
-            (
-                const Field<Field<scalar>>&,
-                PtrList<volScalarField>&
-            );
-
-            // Override to print variables in solver
-            void debugPrintFields
-            (
-                label cellI,
-                scalar t1,
-                scalar t2,
-                scalar step
-            ) const;
 
             virtual void sweepCurrent
             (
@@ -190,7 +214,9 @@ class BuenoOrovio
                 scalar Vmax,
                 label nPts,
                 const fileName& outputFile
-            ) const;
+            ) const override;
+
+            virtual wordList availableSweepCurrents() const override;
 
 
 };

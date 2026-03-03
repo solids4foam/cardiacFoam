@@ -58,7 +58,6 @@ Foam::Fabbri::Fabbri
 
     // 🔑 First, set tissue using base logic + overrides
     ionicModel::setTissueFromDict();
-    Info<< nl << "Calling Fabbri initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -76,18 +75,9 @@ Foam::Fabbri::Fabbri
         );
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 
 }
 
@@ -140,6 +130,8 @@ void Foam::Fabbri::calculateCurrent
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
         // Jion  is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
@@ -165,7 +157,7 @@ void Foam::Fabbri::solveODE
 {
     const scalar tStart = stepStartTime * 1000;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -196,8 +188,10 @@ void Foam::Fabbri::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -227,7 +221,9 @@ void Foam::Fabbri::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
+    ,
+            stimulusProtocol()
+        );
 }
 
 void Foam::Fabbri::updateStatesOld(const Field<Field<scalar>>&) const
@@ -243,113 +239,21 @@ void Foam::Fabbri::resetStatesToStatesOld(Field<Field<scalar>>&) const
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::Fabbri::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            FabbriSTATES_NAMES, NUM_STATES,
-            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::Fabbri::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            FabbriSTATES_NAMES, NUM_STATES,
-            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::Fabbri::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::Fabbri::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        FabbriSTATES_NAMES,NUM_STATES,
-        FabbriALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return FabbriSTATES_NAMES;
 }
 
-void Foam::Fabbri::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::Fabbri::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        FabbriSTATES_NAMES, NUM_STATES,
-        FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return FabbriCONSTANTS_NAMES;
 }
 
-
-
-void Foam::Fabbri::writeHeader(OFstream& os) const
+const char* const* Foam::Fabbri::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            FabbriSTATES_NAMES, NUM_STATES,
-            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return FabbriALGEBRAIC_NAMES;
 }
 
-static Foam::scalar Fabbri_vm(const Foam::scalarField& S)
-{
-    return S[0];
-}
-
-void Foam::Fabbri::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            FabbriSTATES_NAMES, NUM_STATES,
-            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            Fabbri_vm
-        );
-    }
-}
 void Foam::Fabbri::sweepCurrent
 (
     const word& currentName,
@@ -379,6 +283,7 @@ void Foam::Fabbri::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -400,15 +305,22 @@ void Foam::Fabbri::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             FabbriSTATES_NAMES, NUM_STATES,
-            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            FabbriALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
+}
+
+Foam::wordList Foam::Fabbri::availableSweepCurrents() const
+{
+    return FabbriDependencyMap().toc();
 }

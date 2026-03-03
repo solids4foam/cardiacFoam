@@ -20,6 +20,7 @@ License
 #include "singleCellElectro.H"
 #include "addToRunTimeSelectionTable.H"
 #include "stimulusIO.H"
+#include "OSspecific.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -44,7 +45,6 @@ singleCellElectro::singleCellElectro
 )
 :
     electroModel(typeName, runTime, region),
-    // cardiacProperties_(electroProperties().subDict("cardiacProperties")),
     cardiacProperties_(electroProperties()),
     ionicModelPtr_
     (
@@ -59,8 +59,11 @@ singleCellElectro::singleCellElectro
     outputPtr_()
 {
     // Create the output file
+    const fileName outputDir(runTime.path()/"postProcessing");
+    mkDir(outputDir);
+
     const fileName outFile =
-        runTime.path()/ionicModelPtr_->type() + "_"
+        outputDir/ionicModelPtr_->type() + "_"
       + ionicModelPtr_->tissueName() + "_"
       + stimulusIO::protocolSuffix(electroProperties()) +".txt";
 
@@ -109,7 +112,7 @@ bool singleCellElectro::evolve()
         dummyStates
     );
 
-    if (stimulusIO::shouldWriteStep(t0, t1, electroProperties(), false))
+    if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false))
     {
         ionicModelPtr_->write(runTime().value(), outputPtr_.ref());
     }

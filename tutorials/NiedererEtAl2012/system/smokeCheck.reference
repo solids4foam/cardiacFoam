@@ -1,0 +1,7 @@
+# field          time    expected        tolerance
+Vm               0.055   -0.0665434      1e-4
+Vm               0.06     0.0159434      1e-4
+ionicCurrent     0.055    1.55185        1e-4
+ionicCurrent     0.06     1.44671        1e-4
+activationTime   0.055    0              1e-6
+activationTime   0.06     0.0559663      1e-4

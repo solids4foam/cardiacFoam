@@ -1,4 +1,5 @@
 #pragma once
+#include "stimulusIO.H"
 
 enum STATES_INDEX {
     V,
@@ -46,7 +47,7 @@ enum STATES_INDEX {
     IKs_xs2,
     Jrel_np,
     Jrel_p,
-
+    
     NUM_STATES
 };
 
@@ -440,20 +441,12 @@ enum CONSTANTS_INDEX {
     AC_a_rel,
     AC_btp,
     AC_a_relp,
-    stim_start,
-    stim_duration,
-    stim_amplitude,
-    stim_period_S1,
-    nstim1,
-    stim_period_S2,
-    nstim2,
 
-    NUM_CONSTANTS
-};
+    NUM_CONSTANTS};
 
 
 void
 ToRORd_dynClinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-ToRORd_dynClcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
+ToRORd_dynClcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);

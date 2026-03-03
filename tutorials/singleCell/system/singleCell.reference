@@ -1,0 +1,6 @@
+# file                                   time       expected      tolerance
+BuenoOrovio_endocardialCells_S1_1000.txt 0.0200000  -84.0000000   1e-6
+BuenoOrovio_endocardialCells_S1_1000.txt 0.0215000   47.2447329   5e-3
+BuenoOrovio_endocardialCells_S1_1000.txt 0.0220000   45.1105145   5e-3
+BuenoOrovio_endocardialCells_S1_1000.txt 0.5000000  -83.6517881   5e-3
+BuenoOrovio_endocardialCells_S1_1000.txt 1.0000000  -83.8798211   5e-3

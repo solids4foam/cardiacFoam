@@ -1,0 +1,61 @@
+{
+  "tutorial": "NiedererEtAl2012",
+  "case_root": "/Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012",
+  "setup_root": "/Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012/setupNiedererEtAl2012",
+  "output_dir": "/Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012/postProcessing",
+  "dry_run": true,
+  "results": [
+    {
+      "case_id": "explicit_TNNP_epicardialCells_DT0.05_DX0.5",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "dt_ms": 0.05,
+        "dx_mm": 0.5,
+        "solver": "explicit"
+      },
+      "error": null
+    },
+    {
+      "case_id": "implicit_TNNP_epicardialCells_DT0.05_DX0.5",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "dt_ms": 0.05,
+        "dx_mm": 0.5,
+        "solver": "implicit"
+      },
+      "error": null
+    },
+    {
+      "case_id": "explicit_TNNP_epicardialCells_DT0.05_DX0.2",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "dt_ms": 0.05,
+        "dx_mm": 0.2,
+        "solver": "explicit"
+      },
+      "error": null
+    },
+    {
+      "case_id": "implicit_TNNP_epicardialCells_DT0.05_DX0.2",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "dt_ms": 0.05,
+        "dx_mm": 0.2,
+        "solver": "implicit"
+      },
+      "error": null
+    }
+  ]
+}

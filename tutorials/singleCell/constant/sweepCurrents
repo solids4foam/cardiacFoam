@@ -29,3 +29,9 @@ points    300;
 
 tissue    myocyte;
 outputExtension txt;
+
+// Print variables taken from each model dependency map header
+printCurrentVariables true;
+
+// Optional utility mode: print only available current names and exit
+// listCurrentsOnly true;

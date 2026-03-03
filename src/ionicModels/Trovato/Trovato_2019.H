@@ -253,6 +253,152 @@ static const char* TrovatoALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm",
 };
 
+static const char* TrovatoCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_CaMKo",
+    "AC_KmCaM",
+    "AC_KmCaMK",
+    "AC_aCaMK",
+    "AC_bCaMK",
+    "AC_IP3_IP3",
+    "AC_k0",
+    "AC_k0a",
+    "AC_k1",
+    "AC_k1a",
+    "AC_k2",
+    "AC_k2a",
+    "AC_tauip3",
+    "AC_GpCa",
+    "AC_KmCap",
+    "AC_L",
+    "AC_greekpi",
+    "AC_rad",
+    "AC_Ageo",
+    "AC_vcell",
+    "AC_Acap",
+    "AC_vcsr",
+    "AC_vjsr",
+    "AC_vmyo",
+    "AC_vnsr",
+    "AC_vsl",
+    "AC_vss",
+    "AC_gaptau",
+    "AC_sstau",
+    "AC_cao",
+    "AC_ko",
+    "AC_nao",
+    "AC_F",
+    "AC_R",
+    "AC_T",
+    "AC_zca",
+    "AC_zk",
+    "AC_zna",
+    "AC_Gncx",
+    "AC_KmCaAct",
+    "AC_kasymm",
+    "AC_kcaoff",
+    "AC_kcaon",
+    "AC_kna1",
+    "AC_kna2",
+    "AC_kna3",
+    "AC_qca",
+    "AC_qna",
+    "AC_wca",
+    "AC_wna",
+    "AC_wnaca",
+    "AC_h10_i",
+    "AC_h10_ss",
+    "AC_k2_i",
+    "AC_k2_ss",
+    "AC_k5_i",
+    "AC_k5_ss",
+    "AC_h11_i",
+    "AC_h11_ss",
+    "AC_h12_i",
+    "AC_h12_ss",
+    "AC_k1_i",
+    "AC_k1_ss",
+    "AC_H",
+    "AC_Khp",
+    "AC_Kki",
+    "AC_Kko",
+    "AC_Kmgatp",
+    "AC_Knai0",
+    "AC_Knao0",
+    "AC_Knap",
+    "AC_Kxkur",
+    "AC_MgADP",
+    "AC_MgATP",
+    "AC_Pnak",
+    "AC_delta",
+    "AC_eP",
+    "AC_k1m",
+    "AC_k1p",
+    "AC_k2m",
+    "AC_k2p",
+    "AC_k3m",
+    "AC_k3p",
+    "AC_k4m",
+    "AC_k4p",
+    "AC_a2",
+    "AC_a4",
+    "AC_b1",
+    "AC_dkmplbbar",
+    "AC_dqupcamkbar",
+    "AC_kmup",
+    "AC_nsrbar",
+    "AC_PKNa",
+    "AC_GCaT",
+    "AC_GK1",
+    "AC_GKr",
+    "AC_GKs",
+    "AC_Ahf",
+    "AC_GNa",
+    "AC_hssV1",
+    "AC_hssV2",
+    "AC_mssV1",
+    "AC_mssV2",
+    "AC_mtD1",
+    "AC_mtD2",
+    "AC_mtV1",
+    "AC_mtV2",
+    "AC_mtV3",
+    "AC_mtV4",
+    "AC_Ahs",
+    "AC_GfK",
+    "AC_GfNa",
+    "AC_Gsus",
+    "AC_Gto",
+    "AC_GNaL",
+    "AC_thL",
+    "AC_thLp",
+    "AC_Aff",
+    "AC_Kmn",
+    "AC_PCa",
+    "AC_k2n",
+    "AC_tjca",
+    "AC_Afs",
+    "AC_PCaK",
+    "AC_PCaNa",
+    "AC_PCap",
+    "AC_PCaKp",
+    "AC_PCaNap",
+    "AC_PCab",
+    "AC_PNab",
+    "AC_BSLmax",
+    "AC_BSRmax",
+    "AC_KmBSL",
+    "AC_KmBSR",
+    "AC_cm",
+    "AC_cmdnmax",
+    "AC_cmdnmaxsl",
+    "AC_csqnmax",
+    "AC_csqnmaxsl",
+    "AC_kmcmdn",
+    "AC_kmcsqn",
+    "AC_kmtrpn",
+    "AC_trpnmax",
+    "AC_trpnmaxsl",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 TrovatoDependencyMap()
@@ -260,25 +406,91 @@ TrovatoDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
+        {"INa", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+        {"I_Na", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+        {"AV_INa_INa", Foam::wordList({"AV_INa_INa","INa_m","INa_hf","INa_hs","INa_j","AV_mss","AV_hss","AV_jss","AV_tm","AV_thf","AV_ths","AV_tj"})},
+
+        {"INaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+        {"I_NaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+        {"AV_INaL_INaL", Foam::wordList({"AV_INaL_INaL","INaL_mL","INaL_hL","INaL_hLp","AV_mLss","AV_hLss","AV_hLssp","AV_tmL"})},
+
+        {"Ito", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+        {"I_to", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+        {"AV_Ito_Ito", Foam::wordList({"AV_Ito_Ito","Ito_a","Ito_i1","Ito_i2","AV_ass","AV_iss","AV_taua","AV_tauif","AV_tauis"})},
+
+        {"Isus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+        {"I_sus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+        {"AV_Isus_Isus", Foam::wordList({"AV_Isus_Isus","AV_asus"})},
+
+        {"If", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+        {"I_f", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+        {"AV_If_If", Foam::wordList({"AV_If_If","AV_IfNa","AV_IfK","If_y","AV_yss","AV_tauy"})},
+
+        {"ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+        {"I_CaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+        {"AV_ICaL_ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_ff","ICaL_fs","ICaL_fcaf","ICaL_fcas","AV_dss","AV_fss","AV_td","AV_tff","AV_tfs","AV_tfcaf","AV_tfcas"})},
+
+        {"ICaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+        {"I_CaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+        {"AV_ICaT_ICaT", Foam::wordList({"AV_ICaT_ICaT","ICaT_b","ICaT_g","AV_bss","AV_gss","AV_taub","AV_taug"})},
+
+        {"ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+        {"I_CaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+        {"AV_ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","AV_PhiCaNa"})},
+
+        {"ICaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+        {"I_CaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+        {"AV_ICaK", Foam::wordList({"AV_ICaK","ICaL_d","AV_PhiCaK"})},
+
+        {"IKr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+        {"I_Kr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+        {"AV_IKr_IKr", Foam::wordList({"AV_IKr_IKr","IKr_xrf","IKr_xrs","AV_xr","AV_xrss","AV_txrf","AV_txrs"})},
+
+        {"IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+        {"I_Ks", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+        {"AV_IKs_IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1ss","AV_xs2ss","AV_txs1","AV_txs2"})},
+
+        {"IK1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+        {"I_K1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+        {"AV_IK1_IK1", Foam::wordList({"AV_IK1_IK1","IK1_xk1","AV_xk1ss","AV_txk1"})},
+
+        {"INaCa", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_JncxNa_i","AV_JncxCa_i","AV_JncxNa_ss","AV_JncxCa_ss"})},
+        {"I_NaCa", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_JncxNa_i","AV_JncxCa_i","AV_JncxNa_ss","AV_JncxCa_ss"})},
+        {"AV_INaCa_i_INaCa_i", Foam::wordList({"AV_INaCa_i_INaCa_i","AV_JncxNa_i","AV_JncxCa_i"})},
+        {"AV_INaCa_ss", Foam::wordList({"AV_INaCa_ss","AV_JncxNa_ss","AV_JncxCa_ss"})},
+
+        {"INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"I_NaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"AV_INaK_INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+
+        {"INab", Foam::wordList({"AV_INab_INab"})},
+        {"I_Nab", Foam::wordList({"AV_INab_INab"})},
+        {"AV_INab_INab", Foam::wordList({"AV_INab_INab"})},
+
+        {"ICab", Foam::wordList({"AV_ICab_ICab"})},
+        {"I_Cab", Foam::wordList({"AV_ICab_ICab"})},
+        {"AV_ICab_ICab", Foam::wordList({"AV_ICab_ICab"})},
+
+        {"IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"I_pCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"AV_IpCa_IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+
+        {"Iion", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"I_ion", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"Iion_cm", Foam::wordList({"AV_INa_INa","AV_INaL_INaL","AV_Ito_Ito","AV_Isus_Isus","AV_ICaL_ICaL","AV_ICaT_ICaT","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_If_If","AV_IK1_IK1","AV_INaCa_i_INaCa_i","AV_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})}
         }
     );
 
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 void
 TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
@@ -289,7 +501,7 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_KmCaMK] = 0.15;
     CONSTANTS[AC_aCaMK] = 0.05;
     CONSTANTS[AC_bCaMK] = 0.00068;
-
+    
     /* IP3 */
     CONSTANTS[AC_IP3_IP3] = 0.0001;
     CONSTANTS[AC_k0] = 96000.0;
@@ -299,11 +511,11 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_k2] = 1800.0;
     CONSTANTS[AC_k2a] = 0.21;
     CONSTANTS[AC_tauip3] = 3.7;
-
+    
     /* IpCa */
     CONSTANTS[AC_GpCa] = 0.0005;
     CONSTANTS[AC_KmCap] = 0.0005;
-
+    
     /* cell_geometry */
     CONSTANTS[AC_L] = 0.0164;
     CONSTANTS[AC_greekpi] = 3.14159265000000021e+00;
@@ -317,16 +529,16 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_vnsr] = 0.04 * CONSTANTS[AC_vcell];
     CONSTANTS[AC_vsl] = 0.15 * CONSTANTS[AC_vcell];
     CONSTANTS[AC_vss] = 0.02 * CONSTANTS[AC_vcell];
-
+    
     /* diff */
     CONSTANTS[AC_gaptau] = 12.0;
     CONSTANTS[AC_sstau] = 0.2;
-
+    
     /* extracellular */
     CONSTANTS[AC_cao] = 1.8;
     CONSTANTS[AC_ko] = 5.4;
     CONSTANTS[AC_nao] = 140.0;
-
+    
     /* physical_constants */
     CONSTANTS[AC_F] = 96485.0;
     CONSTANTS[AC_R] = 8314.0;
@@ -334,7 +546,7 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_zca] = 2.0;
     CONSTANTS[AC_zk] = 1.0;
     CONSTANTS[AC_zna] = 1.0;
-
+    
     /* INaCa_i */
     CONSTANTS[AC_Gncx] = 9.57089999999999959e-04;
     CONSTANTS[AC_KmCaAct] = 0.00015;
@@ -361,7 +573,7 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_h12_ss] = 1.0 / CONSTANTS[AC_h10_ss];
     CONSTANTS[AC_k1_i] = CONSTANTS[AC_h12_i] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
     CONSTANTS[AC_k1_ss] = CONSTANTS[AC_h12_ss] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
-
+    
     /* INaK */
     CONSTANTS[AC_H] = 1e-07;
     CONSTANTS[AC_Khp] = 1.698e-07;
@@ -388,28 +600,28 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_a2] = CONSTANTS[AC_k2p];
     CONSTANTS[AC_a4] = CONSTANTS[AC_k4p] * CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp] / (1.0 + CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp]);
     CONSTANTS[AC_b1] = CONSTANTS[AC_k1m] * CONSTANTS[AC_MgADP];
-
+    
     /* SERCA */
     CONSTANTS[AC_dkmplbbar] = 0.00017;
     CONSTANTS[AC_dqupcamkbar] = 0.75;
     CONSTANTS[AC_kmup] = 0.00028;
     CONSTANTS[AC_nsrbar] = 15.0;
-
+    
     /* reversal_potentials */
     CONSTANTS[AC_PKNa] = 0.01833;
-
+    
     /* ICaT */
     CONSTANTS[AC_GCaT] = 0.0754;
-
+    
     /* IK1 */
     CONSTANTS[AC_GK1] = 0.0455;
-
+    
     /* IKr */
     CONSTANTS[AC_GKr] = 0.0342;
-
+    
     /* IKs */
     CONSTANTS[AC_GKs] = 0.0029;
-
+    
     /* INa */
     CONSTANTS[AC_Ahf] = 0.99;
     CONSTANTS[AC_GNa] = 39.4572;
@@ -424,22 +636,22 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_mtV3] = 77.42;
     CONSTANTS[AC_mtV4] = 5.955;
     CONSTANTS[AC_Ahs] = 1.0 - CONSTANTS[AC_Ahf];
-
+    
     /* If */
     CONSTANTS[AC_GfK] = 0.0232;
     CONSTANTS[AC_GfNa] = 0.0116;
-
+    
     /* Isus */
     CONSTANTS[AC_Gsus] = 0.0301;
-
+    
     /* Ito */
     CONSTANTS[AC_Gto] = 0.192;
-
+    
     /* INaL */
     CONSTANTS[AC_GNaL] = 0.0189;
     CONSTANTS[AC_thL] = 200.0;
     CONSTANTS[AC_thLp] = 3.0 * CONSTANTS[AC_thL];
-
+    
     /* ICaL */
     CONSTANTS[AC_Aff] = 0.6;
     CONSTANTS[AC_Kmn] = 0.002;
@@ -452,13 +664,13 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_PCap] = 1.1 * CONSTANTS[AC_PCa];
     CONSTANTS[AC_PCaKp] = 0.0003574 * CONSTANTS[AC_PCap];
     CONSTANTS[AC_PCaNap] = 0.00125 * CONSTANTS[AC_PCap];
-
+    
     /* ICab */
     CONSTANTS[AC_PCab] = 2.5e-08;
-
+    
     /* INab */
     CONSTANTS[AC_PNab] = 9.375e-10;
-
+    
     /* intracellular_ions */
     CONSTANTS[AC_BSLmax] = 0.4777;
     CONSTANTS[AC_BSRmax] = 0.019975;
@@ -474,7 +686,7 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
     CONSTANTS[AC_kmtrpn] = 0.0005;
     CONSTANTS[AC_trpnmax] = 0.0315;
     CONSTANTS[AC_trpnmaxsl] = 0.0035;
-
+    
 
 
     /* --- Initial values --- */
@@ -529,21 +741,21 @@ TrovatoinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFl
 
 
 void
-TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* CaMK */
     ALGEBRAIC[AV_CaMKb] = CONSTANTS[AC_CaMKo] * (1.0 - STATES[CaMKt]) / (1.0 + CONSTANTS[AC_KmCaM] / STATES[Cass]);
     ALGEBRAIC[AV_CaMKa] = ALGEBRAIC[AV_CaMKb] + STATES[CaMKt];
     RATES[CaMKt] = CONSTANTS[AC_aCaMK] * ALGEBRAIC[AV_CaMKb] * (ALGEBRAIC[AV_CaMKb] + STATES[CaMKt]) - CONSTANTS[AC_bCaMK] * STATES[CaMKt];
-
+    
     /* IP3 */
     ALGEBRAIC[AV_POip3] = CONSTANTS[AC_tauip3] * CONSTANTS[AC_IP3_IP3] * STATES[Cass] * (1.0 - STATES[IP3_u]) / ((1.0 + CONSTANTS[AC_IP3_IP3] * CONSTANTS[AC_k0] / CONSTANTS[AC_k0a]) * (1.0 + STATES[Cass] * CONSTANTS[AC_k1] / CONSTANTS[AC_k1a]));
     RATES[IP3_u] = STATES[Cass] * CONSTANTS[AC_k2] * (1.0 - STATES[IP3_u]) - CONSTANTS[AC_k2a] * STATES[IP3_u];
     ALGEBRAIC[AV_Jip3] = 10.92 * ALGEBRAIC[AV_POip3] * (STATES[Cajsr] - STATES[Cass]);
-
+    
     /* IpCa */
     ALGEBRAIC[AV_IpCa_IpCa] = CONSTANTS[AC_GpCa] * STATES[Casl] / (CONSTANTS[AC_KmCap] + STATES[Casl]);
-
+    
     /* diff */
     ALGEBRAIC[AV_Jdiff] = (STATES[Cass] - STATES[Casl]) / CONSTANTS[AC_sstau];
     ALGEBRAIC[AV_JdiffK] = (STATES[Kss] - STATES[Ksl]) / CONSTANTS[AC_sstau];
@@ -551,13 +763,13 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_Jgap] = (STATES[Casl] - STATES[Cai]) / CONSTANTS[AC_gaptau];
     ALGEBRAIC[AV_JgapK] = (STATES[Ksl] - STATES[Ki]) / CONSTANTS[AC_gaptau];
     ALGEBRAIC[AV_JgapNa] = (STATES[Nasl] - STATES[Nai]) / CONSTANTS[AC_gaptau];
+    
 
-
-
+    
     /* trans_flux */
     ALGEBRAIC[AV_Jtr1] = (STATES[Cansr] - STATES[Cajsr]) / 120.0;
     ALGEBRAIC[AV_Jtr2] = (STATES[Cansr] - STATES[Cacsr]) / 120.0;
-
+    
     /* INaCa_i */
     ALGEBRAIC[AV_allo_i] = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / STATES[Casl], 2.0));
     ALGEBRAIC[AV_allo_ss] = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / STATES[Cass], 2.0));
@@ -621,7 +833,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_JncxNa_ss] = 3.0 * (ALGEBRAIC[AV_E4_ss] * ALGEBRAIC[AV_k7_ss] - ALGEBRAIC[AV_E1_ss] * ALGEBRAIC[AV_k8_ss]) + ALGEBRAIC[AV_E3_ss] * ALGEBRAIC[AV_k4pp_ss] - ALGEBRAIC[AV_E2_ss] * ALGEBRAIC[AV_k3pp_ss];
     ALGEBRAIC[AV_INaCa_i_INaCa_i] = 0.8 * CONSTANTS[AC_Gncx] * ALGEBRAIC[AV_allo_i] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JncxNa_i] + CONSTANTS[AC_zca] * ALGEBRAIC[AV_JncxCa_i]);
     ALGEBRAIC[AV_INaCa_ss] = 0.2 * CONSTANTS[AC_Gncx] * ALGEBRAIC[AV_allo_ss] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JncxNa_ss] + CONSTANTS[AC_zca] * ALGEBRAIC[AV_JncxCa_ss]);
-
+    
     /* INaK */
     ALGEBRAIC[AV_Knai] = CONSTANTS[AC_Knai0] * exp(CONSTANTS[AC_delta] * STATES[membrane_v] * CONSTANTS[AC_F] / (3.0 * CONSTANTS[AC_R] * CONSTANTS[AC_T]));
     ALGEBRAIC[AV_Knao] = CONSTANTS[AC_Knao0] * exp((1.0 - CONSTANTS[AC_delta]) * STATES[membrane_v] * CONSTANTS[AC_F] / (3.0 * CONSTANTS[AC_R] * CONSTANTS[AC_T]));
@@ -644,19 +856,19 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_JnakK] = 2.0 * (ALGEBRAIC[AV_E4] * CONSTANTS[AC_b1] - ALGEBRAIC[AV_E3] * ALGEBRAIC[AV_a1]);
     ALGEBRAIC[AV_JnakNa] = 3.0 * (ALGEBRAIC[AV_E1] * ALGEBRAIC[AV_a3] - ALGEBRAIC[AV_E2] * ALGEBRAIC[AV_b3]);
     ALGEBRAIC[AV_INaK_INaK] = CONSTANTS[AC_Pnak] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JnakNa] + CONSTANTS[AC_zk] * ALGEBRAIC[AV_JnakK]);
-
+    
     /* SERCA */
     ALGEBRAIC[AV_dkmplb] = CONSTANTS[AC_dkmplbbar] * ALGEBRAIC[AV_CaMKa] / (ALGEBRAIC[AV_CaMKa] + CONSTANTS[AC_KmCaMK]);
     ALGEBRAIC[AV_dqupcamk] = CONSTANTS[AC_dqupcamkbar] * ALGEBRAIC[AV_CaMKa] / (ALGEBRAIC[AV_CaMKa] + CONSTANTS[AC_KmCaMK]);
     ALGEBRAIC[AV_Jup1] = 0.0002 * (ALGEBRAIC[AV_dqupcamk] + 1.0) / (1.0 + (CONSTANTS[AC_kmup] - ALGEBRAIC[AV_dkmplb]) / STATES[Casl]) - 0.00105 * STATES[Cansr] / CONSTANTS[AC_nsrbar];
     ALGEBRAIC[AV_Jup2] = 0.0026 * (ALGEBRAIC[AV_dqupcamk] + 1.0) / (1.0 + (CONSTANTS[AC_kmup] - ALGEBRAIC[AV_dkmplb]) / STATES[Cai]) - 0.0042 * STATES[Cansr] / CONSTANTS[AC_nsrbar];
-
+    
     /* reversal_potentials */
     ALGEBRAIC[AV_ECa] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (2.0 * CONSTANTS[AC_F]) * log(CONSTANTS[AC_cao] / STATES[Casl]);
     ALGEBRAIC[AV_EK] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_ko] / STATES[Ksl]);
     ALGEBRAIC[AV_ENa] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_nao] / STATES[Nasl]);
     ALGEBRAIC[AV_EKs] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log((CONSTANTS[AC_ko] + CONSTANTS[AC_PKNa] * CONSTANTS[AC_nao]) / (STATES[Ksl] + CONSTANTS[AC_PKNa] * STATES[Nasl]));
-
+    
     /* ICaT */
     ALGEBRAIC[AV_bss] = 1.0 / (1.0 + exp(-(STATES[membrane_v] + 30.0) / 7.0));
     ALGEBRAIC[AV_gss] = 1.0 / (1.0 + exp((STATES[membrane_v] + 61.0) / 5.0));
@@ -665,14 +877,14 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_ICaT_ICaT] = CONSTANTS[AC_GCaT] * STATES[ICaT_b] * STATES[ICaT_g] * (STATES[membrane_v] - ALGEBRAIC[AV_ECa]);
     RATES[ICaT_b] = (ALGEBRAIC[AV_bss] - STATES[ICaT_b]) / ALGEBRAIC[AV_taub];
     RATES[ICaT_g] = (ALGEBRAIC[AV_gss] - STATES[ICaT_g]) / ALGEBRAIC[AV_taug];
-
+    
     /* IK1 */
     ALGEBRAIC[AV_rk1] = 1.0 / (1.0 + exp((STATES[membrane_v] + 116.0 - 5.5 * CONSTANTS[AC_ko]) / 11.0));
     ALGEBRAIC[AV_txk1] = 122.2 / (exp(-(STATES[membrane_v] + 127.2) / 20.36) + exp((STATES[membrane_v] + 236.8) / 69.33));
     ALGEBRAIC[AV_xk1ss] = 1.0 / (1.0 + exp(-(STATES[membrane_v] + 2.5538 * CONSTANTS[AC_ko] + 144.59) / (1.5692 * CONSTANTS[AC_ko] + 3.8115)));
     ALGEBRAIC[AV_IK1_IK1] = CONSTANTS[AC_GK1] * 2.3238 * sqrt(CONSTANTS[AC_ko] / 5.4) * ALGEBRAIC[AV_rk1] * STATES[IK1_xk1] * (STATES[membrane_v] - ALGEBRAIC[AV_EK]);
     RATES[IK1_xk1] = (ALGEBRAIC[AV_xk1ss] - STATES[IK1_xk1]) / ALGEBRAIC[AV_txk1];
-
+    
     /* IKr */
     ALGEBRAIC[AV_Axrf] = 1.0 / (1.0 + exp((STATES[membrane_v] + 54.81) / 38.21));
     ALGEBRAIC[AV_rkr] = 1.0 / (1.0 + exp((STATES[membrane_v] + 55.0) / (0.32 * 75.0))) * 1.0 / (1.0 + exp((STATES[membrane_v] - 10.0) / (0.32 * 30.0)));
@@ -684,7 +896,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[IKr_xrs] = (ALGEBRAIC[AV_xrss] - STATES[IKr_xrs]) / ALGEBRAIC[AV_txrs];
     ALGEBRAIC[AV_xr] = ALGEBRAIC[AV_Axrf] * STATES[IKr_xrf] + ALGEBRAIC[AV_Axrs] * STATES[IKr_xrs];
     ALGEBRAIC[AV_IKr_IKr] = CONSTANTS[AC_GKr] * sqrt(CONSTANTS[AC_ko] / 5.4) * ALGEBRAIC[AV_xr] * ALGEBRAIC[AV_rkr] * (STATES[membrane_v] - ALGEBRAIC[AV_EK]);
-
+    
     /* IKs */
     ALGEBRAIC[AV_KsCa] = 1.0 + 0.6 / (1.0 + pow(3.8e-05 / STATES[Casl], 1.4));
     ALGEBRAIC[AV_txs1] = 817.3 + 1.0 / (0.0002326 * exp((STATES[membrane_v] + 48.28) / 17.8) + 0.001292 * exp(-(STATES[membrane_v] + 210.0) / 230.0));
@@ -694,7 +906,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_xs2ss] = ALGEBRAIC[AV_xs1ss];
     RATES[IKs_xs1] = (ALGEBRAIC[AV_xs1ss] - STATES[IKs_xs1]) / ALGEBRAIC[AV_txs1];
     RATES[IKs_xs2] = (ALGEBRAIC[AV_xs2ss] - STATES[IKs_xs2]) / ALGEBRAIC[AV_txs2];
-
+    
     /* INa */
     ALGEBRAIC[AV_fINap] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_hssp] = 1.0 / (1.0 + exp((STATES[membrane_v] + 84.7) / 6.22));
@@ -716,7 +928,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_INa_INa] = CONSTANTS[AC_GNa] * (STATES[membrane_v] - ALGEBRAIC[AV_ENa]) * pow(STATES[INa_m], 3.0) * ((1.0 - ALGEBRAIC[AV_fINap]) * ALGEBRAIC[AV_h] * STATES[INa_j] + ALGEBRAIC[AV_fINap] * ALGEBRAIC[AV_hp] * STATES[INa_jp]);
     RATES[INa_j] = (ALGEBRAIC[AV_jss] - STATES[INa_j]) / ALGEBRAIC[AV_tj];
     RATES[INa_jp] = (ALGEBRAIC[AV_jss] - STATES[INa_jp]) / ALGEBRAIC[AV_tjp];
-
+    
     /* If */
     ALGEBRAIC[AV_tauy] = 2000.0 / (exp((STATES[membrane_v] + 57.0) / 60.0) + exp(-(STATES[membrane_v] + 132.0) / 10.0));
     ALGEBRAIC[AV_yss] = 1.0 / (1.0 + exp((STATES[membrane_v] + 87.0) / 9.5));
@@ -724,11 +936,11 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     ALGEBRAIC[AV_IfNa] = CONSTANTS[AC_GfNa] * STATES[If_y] * STATES[If_y] * (STATES[membrane_v] - ALGEBRAIC[AV_ENa]);
     RATES[If_y] = (ALGEBRAIC[AV_yss] - STATES[If_y]) / ALGEBRAIC[AV_tauy];
     ALGEBRAIC[AV_If_If] = ALGEBRAIC[AV_IfNa] + ALGEBRAIC[AV_IfK];
-
+    
     /* Isus */
     ALGEBRAIC[AV_asus] = 1.0 / (1.0 + exp(-(STATES[membrane_v] - 12.0) / 16.0));
     ALGEBRAIC[AV_Isus_Isus] = CONSTANTS[AC_Gsus] * ALGEBRAIC[AV_asus] * (STATES[membrane_v] - ALGEBRAIC[AV_EK]);
-
+    
     /* Ito */
     ALGEBRAIC[AV_ass] = 1.0 / (1.0 + exp((20.0 - STATES[membrane_v]) / 13.0));
     ALGEBRAIC[AV_iss] = 1.0 / (1.0 + exp((27.0 + STATES[membrane_v]) / 13.0));
@@ -739,7 +951,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[Ito_a] = (ALGEBRAIC[AV_ass] - STATES[Ito_a]) / ALGEBRAIC[AV_taua];
     RATES[Ito_i1] = (ALGEBRAIC[AV_iss] - STATES[Ito_i1]) / ALGEBRAIC[AV_tauis];
     RATES[Ito_i2] = (ALGEBRAIC[AV_iss] - STATES[Ito_i2]) / ALGEBRAIC[AV_tauif];
-
+    
     /* INaL */
     ALGEBRAIC[AV_fINaLp] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_hLss] = 1.0 / (1.0 + exp((STATES[membrane_v] + 87.61) / 7.488));
@@ -750,7 +962,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[INaL_hL] = (ALGEBRAIC[AV_hLss] - STATES[INaL_hL]) / CONSTANTS[AC_thL];
     RATES[INaL_mL] = (ALGEBRAIC[AV_mLss] - STATES[INaL_mL]) / ALGEBRAIC[AV_tmL];
     RATES[INaL_hLp] = (ALGEBRAIC[AV_hLssp] - STATES[INaL_hLp]) / CONSTANTS[AC_thLp];
-
+    
     /* ICaL */
     ALGEBRAIC[AV_Afcaf] = 0.3 + 0.6 / (1.0 + exp((STATES[membrane_v] - 10.0) / 10.0));
     ALGEBRAIC[AV_dss] = 1.0 / (1.0 + exp(-(STATES[membrane_v] + 3.94 + 3.3) / 4.23));
@@ -780,7 +992,7 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[ICaL_ffp] = (ALGEBRAIC[AV_fss] - STATES[ICaL_ffp]) / ALGEBRAIC[AV_tffp];
     RATES[ICaL_jca] = (ALGEBRAIC[AV_fcass] - STATES[ICaL_jca]) / CONSTANTS[AC_tjca];
     RATES[ICaL_nca] = ALGEBRAIC[AV_anca] * CONSTANTS[AC_k2n] - STATES[ICaL_nca] * ALGEBRAIC[AV_km2n];
-
+    
     /* intracellular_ions */
     RATES[Cansr] = ALGEBRAIC[AV_Jup1] + ALGEBRAIC[AV_Jup2] - (ALGEBRAIC[AV_Jtr1] * CONSTANTS[AC_vjsr] / CONSTANTS[AC_vnsr] + ALGEBRAIC[AV_Jtr2] * CONSTANTS[AC_vcsr] / CONSTANTS[AC_vnsr]);
     RATES[Ki] = ALGEBRAIC[AV_JgapK] * CONSTANTS[AC_vsl] / CONSTANTS[AC_vmyo];
@@ -793,19 +1005,19 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[Cacsr] = ALGEBRAIC[AV_Bcacsr] * (ALGEBRAIC[AV_Jtr2] - STATES[ryr_Jrel2]);
     RATES[Cai] = ALGEBRAIC[AV_Bcai] * (ALGEBRAIC[AV_Jgap] * CONSTANTS[AC_vsl] / CONSTANTS[AC_vmyo] + STATES[ryr_Jrel2] * CONSTANTS[AC_vcsr] / CONSTANTS[AC_vmyo] - ALGEBRAIC[AV_Jup2] * CONSTANTS[AC_vnsr] / CONSTANTS[AC_vmyo]);
     RATES[Cajsr] = ALGEBRAIC[AV_Bcajsr] * (ALGEBRAIC[AV_Jtr1] - (STATES[ryr_Jrel1] + ALGEBRAIC[AV_Jip3]));
-
+    
     /* membrane */
     ALGEBRAIC[AV_vffrt] = STATES[membrane_v] * CONSTANTS[AC_F] * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]);
     ALGEBRAIC[AV_vfrt] = STATES[membrane_v] * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]);
 
-
+    
     /* ryr */
     ALGEBRAIC[AV_REL2] = ALGEBRAIC[AV_Jgap] * CONSTANTS[AC_vsl] / CONSTANTS[AC_vmyo] + -ALGEBRAIC[AV_Jup2] * CONSTANTS[AC_vnsr] / CONSTANTS[AC_vmyo] + STATES[ryr_Jrel2] * CONSTANTS[AC_vcsr] / CONSTANTS[AC_vmyo];
     ALGEBRAIC[AV_ireltau] = 2.0 * (1.0 + 1.0 * 1.0 / (1.0 + pow(0.28 / ALGEBRAIC[AV_CaMKa], 8.0))) / (1.0 + 0.0123 / STATES[Cajsr]);
     ALGEBRAIC[AV_ireltau2] = 6.0 * (1.0 + 1.0 * 1.0 / (1.0 + pow(0.28 / ALGEBRAIC[AV_CaMKa], 8.0))) / (1.0 + 0.0123 / STATES[Cacsr]);
     ALGEBRAIC[AV_irelss2] = ((ALGEBRAIC[AV_REL2] > 0.0) ? 91.0 * (1.0 + 1.0 * 1.0 / (1.0 + pow(0.28 / ALGEBRAIC[AV_CaMKa], 8.0))) * ALGEBRAIC[AV_REL2] / (1.0 + pow(1.0 / STATES[Cacsr], 8.0)) : 0.0);
     RATES[ryr_Jrel2] = (ALGEBRAIC[AV_irelss2] - STATES[ryr_Jrel2]) / ALGEBRAIC[AV_ireltau2];
-
+    
     /* *remaining* */
     ALGEBRAIC[AV_PhiCaK] = 1.0 * ALGEBRAIC[AV_vffrt] * (0.75 * STATES[Kss] * exp(1.0 * ALGEBRAIC[AV_vfrt]) - 0.75 * CONSTANTS[AC_ko]) / (exp(1.0 * ALGEBRAIC[AV_vfrt]) - 1.0);
     ALGEBRAIC[AV_PhiCaL] = 4.0 * ALGEBRAIC[AV_vffrt] * (STATES[Cass] * exp(2.0 * ALGEBRAIC[AV_vfrt]) - 0.341 * CONSTANTS[AC_cao]) / (exp(2.0 * ALGEBRAIC[AV_vfrt]) - 1.0);
@@ -826,12 +1038,12 @@ TrovatocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* ST
     RATES[ryr_Jrel1] = (ALGEBRAIC[AV_irelss] - STATES[ryr_Jrel1]) / ALGEBRAIC[AV_ireltau];
 
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_Ito_Ito] + ALGEBRAIC[AV_Isus_Isus] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaT_ICaT] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_If_If] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_INaCa_i_INaCa_i] + ALGEBRAIC[AV_INaCa_ss] + ALGEBRAIC[AV_INaK_INaK] + ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
+    
+    
 
+    
 
-
-
-
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {

@@ -71,6 +71,18 @@ jobs:
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
+      - name: Tutorial smoke regression
+        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2312' && matrix.mode == 'lightweight'
+        shell: bash -l {0}
+        run: |
+          export HOME=/root
+          source ${{ matrix.container-image.source }}
+
+          unset SOLIDS4FOAM_INST_DIR
+          export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+
+          ./tutorials/Alltest-regression smoke
+
       - name: PETSc sanity check
         shell: bash -l {0}
         run: |

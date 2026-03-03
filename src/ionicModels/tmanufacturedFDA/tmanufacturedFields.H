@@ -159,7 +159,7 @@ inline void computeAndPrintErrors
     const scalar dx,
     const scalar dt,
     const int nsteps,
-    const bool solveExplicit //,
+    const bool useExplicitAlgorithm //,
     //const std::string& filename = ""
 )
 {
@@ -200,7 +200,8 @@ inline void computeAndPrintErrors
     Info << "\nSimulation summary:\n";
     Info << "-------------------\n";
     Info << "Number of cells (N)   = " << N << nl;
-    Info << "Solver type           = " << (solveExplicit ? "Explicit" : "Implicit") << nl;
+    Info << "Solver type           = "
+         << (useExplicitAlgorithm ? "Explicit" : "Implicit") << nl;
     Info << "Grid spacing (dx)     = " << dx << nl;
     Info << "Time step (dt)        = " << dt << nl;
     Info << "Number of steps       = " << nsteps << nl;
@@ -214,9 +215,6 @@ inline void computeAndPrintErrors
          << "u2     " << L1_u2 << "   " << L2_u2 << "   " << Linf_u2 << nl
          << "-------------------------------------------------\n" << endl;
 
-
-
-
     // std::string outFilename = filename;
     // if (outFilename.empty())
     if (Pstream::master())
@@ -226,12 +224,12 @@ inline void computeAndPrintErrors
         // Pstream::parRun()
 
         // std::stringstream filenameSS;
-        // filenameSS << N << "_cells_" << (solveExplicit ? "explicit" : "implicit") << ".dat";
+        // filenameSS << N << "_cells_" << (useExplicitAlgorithm ? "explicit" : "implicit") << ".dat";
         // outFilename = filenameSS.str();
         fileName outFilename
         (
             Foam::name(N) + "_cells_"
-          + word(solveExplicit ? "explicit" : "implicit") + ".dat"
+          + word(useExplicitAlgorithm ? "explicit" : "implicit") + ".dat"
         );
 
         //        std::ofstream fout(outFilename, std::ios::out | std::ios::app);
@@ -248,7 +246,8 @@ inline void computeAndPrintErrors
             fout << "\nSimulation summary:\n";
             fout << "-------------------\n";
             fout << "Number of cells (N)   = " << N << "\n";
-            fout << "Solver type           = " << (solveExplicit ? "Explicit" : "Implicit") << "\n";
+            fout << "Solver type           = "
+                 << (useExplicitAlgorithm ? "Explicit" : "Implicit") << "\n";
             fout << "Grid spacing (dx)     = " << dx << "\n";
             fout << "Time step (dt)        = " << dt << "\n";
             fout << "Number of steps       = " << nsteps << "\n";
@@ -267,4 +266,3 @@ inline void computeAndPrintErrors
 } // namespace Foam
 
 #endif
-

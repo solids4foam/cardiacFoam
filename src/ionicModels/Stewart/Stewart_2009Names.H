@@ -1,4 +1,5 @@
 #pragma once
+#include "stimulusIO.H"
 
 enum STATES_INDEX {
     membrane_V,
@@ -159,19 +160,12 @@ enum CONSTANTS_INDEX {
     AC_P_NaK,
     AC_g_sus,
     AC_g_to,
-    stim_start,
-    stim_duration,
-    stim_amplitude,
-    stim_period_S1,
-    nstim1,
-    stim_period_S2,
-    nstim2,
-    NUM_CONSTANTS
-};
+
+    NUM_CONSTANTS};
 
 
 void
 StewartinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-StewartcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
+StewartcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);

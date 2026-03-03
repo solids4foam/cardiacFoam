@@ -229,6 +229,124 @@ static const char* GaurALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm",
 };
 
+static const char* GaurCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_F",
+    "AC_L",
+    "AC_R",
+    "AC_T",
+    "AC_cao",
+    "AC_cli",
+    "AC_clo",
+    "AC_ko",
+    "AC_nao",
+    "AC_pi",
+    "AC_rad",
+    "AC_vmyo1frac",
+    "AC_Ageo",
+    "AC_vcell",
+    "AC_Acap",
+    "AC_vjsr",
+    "AC_vmyo",
+    "AC_vnsr",
+    "AC_vss",
+    "AC_vcsr",
+    "AC_vmyo1",
+    "AC_vnsr1",
+    "AC_vnsr2",
+    "AC_vmyo2",
+    "AC_CaMKo",
+    "AC_ECl",
+    "AC_KmCaM",
+    "AC_KmCaMK",
+    "AC_PKNa",
+    "AC_aCaMK",
+    "AC_bCaMK",
+    "AC_GNa",
+    "AC_GNaL",
+    "AC_tau_hl",
+    "AC_PCa",
+    "AC_vhalf_d",
+    "AC_vhalff",
+    "AC_zca",
+    "AC_PCaK",
+    "AC_PCaNa",
+    "AC_GKr",
+    "AC_GKs",
+    "AC_GK1",
+    "AC_Gto",
+    "AC_SOICR",
+    "AC_grelbarjsrol",
+    "AC_tau_gap",
+    "AC_tauoff",
+    "AC_tauon",
+    "AC_Gncx",
+    "AC_KmCaAct",
+    "AC_kasymm",
+    "AC_kcaoff",
+    "AC_kcaon",
+    "AC_kna1",
+    "AC_kna2",
+    "AC_kna3",
+    "AC_qca",
+    "AC_qna",
+    "AC_wca",
+    "AC_wna",
+    "AC_wnaca",
+    "AC_zna",
+    "AC_h10",
+    "AC_k2",
+    "AC_k5",
+    "AC_h11",
+    "AC_h12",
+    "AC_k1",
+    "AC_h101",
+    "AC_k21",
+    "AC_k51",
+    "AC_h1111",
+    "AC_h121",
+    "AC_k11",
+    "AC_H",
+    "AC_Khp",
+    "AC_Kki",
+    "AC_Kko",
+    "AC_Kmgatp",
+    "AC_Knai0",
+    "AC_Knao0",
+    "AC_Knap",
+    "AC_Kxkur",
+    "AC_MgADP",
+    "AC_MgATP",
+    "AC_Pnak",
+    "AC_delta",
+    "AC_eP",
+    "AC_k1m",
+    "AC_k1p",
+    "AC_k2m",
+    "AC_k2p",
+    "AC_k3m",
+    "AC_k3p2",
+    "AC_k4m",
+    "AC_k4p2",
+    "AC_zk",
+    "AC_a2",
+    "AC_a4",
+    "AC_b1",
+    "AC_GKb",
+    "AC_PNab",
+    "AC_PCab",
+    "AC_GpCa",
+    "AC_BSLmax",
+    "AC_BSRmax",
+    "AC_KmBSL",
+    "AC_KmBSR",
+    "AC_cmdnmax",
+    "AC_csqnmax",
+    "AC_kmcmdn",
+    "AC_kmcsqn",
+    "AC_kmtrpn",
+    "AC_trpnmax",
+};
+
 
 static inline const Foam::HashTable<Foam::wordList>&
 GaurDependencyMap()
@@ -236,25 +354,88 @@ GaurDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
+        // Fast sodium current
+        {"INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+        {"I_Na", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+        {"AV_INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+
+        // Late sodium current
+        {"INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+        {"I_NaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+        {"AV_INaL_INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+
+        // L-type Ca current and permeation components
+        {"ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+        {"I_CaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+        {"AV_ICaL_ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+
+        {"ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+        {"I_CaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+        {"AV_ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+
+        {"ICaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+        {"I_CaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+        {"AV_ICaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+
+        // Potassium currents
+        {"IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+        {"I_Kr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+        {"AV_IKr_IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+
+        {"IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+        {"I_Ks", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+        {"AV_IKs_IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+
+        {"IK1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+        {"I_K1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+        {"AV_IK1_IK1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+
+        {"ITo", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"Ito", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"I_to", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"AV_ITo_ITo", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+
+        // Exchanger/pump/background currents
+        {"INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+        {"I_NaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+        {"AV_INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+
+        {"INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"I_NaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"AV_INaK_INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+
+        {"IKb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+        {"I_Kb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+        {"AV_IKb_IKb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+
+        {"INab", Foam::wordList({"AV_INab_INab"})},
+        {"I_Nab", Foam::wordList({"AV_INab_INab"})},
+        {"AV_INab_INab", Foam::wordList({"AV_INab_INab"})},
+
+        {"ICab", Foam::wordList({"AV_ICab_ICab"})},
+        {"I_Cab", Foam::wordList({"AV_ICab_ICab"})},
+        {"AV_ICab_ICab", Foam::wordList({"AV_ICab_ICab"})},
+
+        {"IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"I_pCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"AV_IpCa_IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+
+        // Total ionic current
+        {"Iion", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"Iion_cm", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
         }
     );
 
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 void
 GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
@@ -285,7 +466,7 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_vnsr1] = CONSTANTS[AC_vnsr] / 2.0;
     CONSTANTS[AC_vnsr2] = CONSTANTS[AC_vnsr] / 2.0;
     CONSTANTS[AC_vmyo2] = CONSTANTS[AC_vmyo] - CONSTANTS[AC_vmyo1];
-
+    
     /* CaMK */
     CONSTANTS[AC_CaMKo] = 0.05;
     CONSTANTS[AC_ECl] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_cli] / CONSTANTS[AC_clo]);
@@ -294,14 +475,14 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_PKNa] = 0.01833;
     CONSTANTS[AC_aCaMK] = 0.05;
     CONSTANTS[AC_bCaMK] = 0.00068;
-
+    
     /* I_Na */
     CONSTANTS[AC_GNa] = 14.838;
-
+    
     /* INaL */
     CONSTANTS[AC_GNaL] = 0.0075;
     CONSTANTS[AC_tau_hl] = 600.0;
-
+    
     /* ICaL */
     CONSTANTS[AC_PCa] = 0.0002;
     CONSTANTS[AC_vhalf_d] = 3.4;
@@ -309,26 +490,26 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_zca] = 2.0;
     CONSTANTS[AC_PCaK] = 0.0003574 * CONSTANTS[AC_PCa];
     CONSTANTS[AC_PCaNa] = 0.00125 * CONSTANTS[AC_PCa];
-
+    
     /* IKr */
     CONSTANTS[AC_GKr] = 0.5 * 0.015;
-
+    
     /* IKs */
     CONSTANTS[AC_GKs] = 0.021;
-
+    
     /* IK1 */
     CONSTANTS[AC_GK1] = 0.75 * 0.2;
-
+    
     /* ITo */
     CONSTANTS[AC_Gto] = 0.4 * 0.5;
-
+    
     /* CICR */
     CONSTANTS[AC_SOICR] = 10.0;
     CONSTANTS[AC_grelbarjsrol] = 2.0;
     CONSTANTS[AC_tau_gap] = 3.0;
     CONSTANTS[AC_tauoff] = 5.0;
     CONSTANTS[AC_tauon] = 0.5;
-
+    
     /* INaCa_i */
     CONSTANTS[AC_Gncx] = 1.0 * 0.0008;
     CONSTANTS[AC_KmCaAct] = 0.00015;
@@ -350,7 +531,7 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_h11] = CONSTANTS[AC_nao] * CONSTANTS[AC_nao] / (CONSTANTS[AC_h10] * CONSTANTS[AC_kna1] * CONSTANTS[AC_kna2]);
     CONSTANTS[AC_h12] = 1.0 / CONSTANTS[AC_h10];
     CONSTANTS[AC_k1] = CONSTANTS[AC_h12] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
-
+    
     /* INaCa_ss */
     CONSTANTS[AC_h101] = CONSTANTS[AC_kasymm] + 1.0 + CONSTANTS[AC_nao] / CONSTANTS[AC_kna1] * (1.0 + CONSTANTS[AC_nao] / CONSTANTS[AC_kna2]);
     CONSTANTS[AC_k21] = CONSTANTS[AC_kcaoff];
@@ -358,7 +539,7 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_h1111] = CONSTANTS[AC_nao] * CONSTANTS[AC_nao] / (CONSTANTS[AC_h101] * CONSTANTS[AC_kna1] * CONSTANTS[AC_kna2]);
     CONSTANTS[AC_h121] = 1.0 / CONSTANTS[AC_h101];
     CONSTANTS[AC_k11] = CONSTANTS[AC_h121] * CONSTANTS[AC_cao] * CONSTANTS[AC_kcaon];
-
+    
     /* INaK */
     CONSTANTS[AC_H] = 1e-07;
     CONSTANTS[AC_Khp] = 1.698e-07;
@@ -386,19 +567,19 @@ GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag,
     CONSTANTS[AC_a2] = CONSTANTS[AC_k2p];
     CONSTANTS[AC_a4] = CONSTANTS[AC_k4p2] * CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp] / (1.0 + CONSTANTS[AC_MgATP] / CONSTANTS[AC_Kmgatp]);
     CONSTANTS[AC_b1] = CONSTANTS[AC_k1m] * CONSTANTS[AC_MgADP];
-
+    
     /* IKb */
     CONSTANTS[AC_GKb] = 0.003;
-
+    
     /* INab */
     CONSTANTS[AC_PNab] = 3.75e-10;
-
+    
     /* ICab */
     CONSTANTS[AC_PCab] = 1.0 * 2.5e-08;
-
+    
     /* IpCa */
     CONSTANTS[AC_GpCa] = 0.0575;
-
+    
     /* SR_uptake */
     CONSTANTS[AC_BSLmax] = 1.124;
     CONSTANTS[AC_BSRmax] = 0.047;
@@ -446,15 +627,15 @@ STATES[cell_v] = -87.3;
 
 
 void
-GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* diffusion */
     ALGEBRAIC[AV_Jdiff] = (STATES[cass] - STATES[cai]) / 0.2;
     ALGEBRAIC[AV_JdiffK] = (STATES[kss] - STATES[ki]) / 2.0;
     ALGEBRAIC[AV_JdiffNa] = (STATES[nass] - STATES[nai]) / 2.0;
+    
 
-
-
+    
     /* CaMK */
     ALGEBRAIC[AV_EK] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_ko] / STATES[ki]);
     ALGEBRAIC[AV_ENa] = CONSTANTS[AC_R] * CONSTANTS[AC_T] / CONSTANTS[AC_F] * log(CONSTANTS[AC_nao] / STATES[nai]);
@@ -466,7 +647,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_diff_CaMKt] = CONSTANTS[AC_aCaMK] * ALGEBRAIC[AV_CaMKb] * (ALGEBRAIC[AV_CaMKb] + STATES[CaMK_CaMKt]) - CONSTANTS[AC_bCaMK] * STATES[CaMK_CaMKt];
     ALGEBRAIC[AV_CaMK_f] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     RATES[CaMK_CaMKt] = ALGEBRAIC[AV_diff_CaMKt];
-
+    
     /* I_Na */
     ALGEBRAIC[AV_aa_h] = ((STATES[cell_v] >= -40.0) ? 0.0 : 0.057 * exp(-(STATES[cell_v] + 80.0) / 6.8));
     ALGEBRAIC[AV_aa_j] = ((STATES[cell_v] >= -40.0) ? 0.0 : (-25428.0 * exp(0.2444 * STATES[cell_v]) - 6.948e-06 * exp(-0.04391 * STATES[cell_v])) * (STATES[cell_v] + 37.78) / (1.0 + exp(0.311 * (STATES[cell_v] + 79.23))));
@@ -484,7 +665,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     RATES[I_Na_h] = (ALGEBRAIC[AV_h_inf] - STATES[I_Na_h]) / ALGEBRAIC[AV_tau_h];
     RATES[I_Na_j] = (ALGEBRAIC[AV_j_inf] - STATES[I_Na_j]) / ALGEBRAIC[AV_tau_j];
     RATES[I_Na_m] = (ALGEBRAIC[AV_m_inf] - STATES[I_Na_m]) / ALGEBRAIC[AV_tau_m];
-
+    
     /* INaL */
     ALGEBRAIC[AV_aml] = 0.32 * ((STATES[cell_v] == -47.13) ? 10.0 : -(STATES[cell_v] + 47.13) / (exp(-0.1 * (STATES[cell_v] + 47.13)) - 1.0));
     ALGEBRAIC[AV_bml] = 0.08 * exp(-STATES[cell_v] / 11.0);
@@ -494,7 +675,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_tau_ml] = 1.0 / (ALGEBRAIC[AV_aml] + ALGEBRAIC[AV_bml]);
     RATES[INaL_hl] = (ALGEBRAIC[AV_hl_inf] - STATES[INaL_hl]) / CONSTANTS[AC_tau_hl];
     RATES[INaL_ml] = (ALGEBRAIC[AV_ml_inf] - STATES[INaL_ml]) / ALGEBRAIC[AV_tau_ml];
-
+    
     /* ICaL */
     ALGEBRAIC[AV_PhiCaK] = CONSTANTS[AC_F] * (0.75 * STATES[kss] * exp(ALGEBRAIC[AV_vfrt]) - 0.75 * CONSTANTS[AC_ko]) * ((STATES[cell_v] == 0.0) ? 1.0 : ALGEBRAIC[AV_vfrt] / (exp(ALGEBRAIC[AV_vfrt]) - 1.0));
     ALGEBRAIC[AV_PhiCaL] = 2.0 * CONSTANTS[AC_F] * (STATES[cass] * exp(2.0 * (STATES[cell_v] * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]))) - 0.341 * CONSTANTS[AC_cao]) * ((STATES[cell_v] == 0.0) ? 1.0 : 2.0 * ALGEBRAIC[AV_vfrt] / (exp(2.0 * ALGEBRAIC[AV_vfrt]) - 1.0));
@@ -516,14 +697,14 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     RATES[ICaL_fca] = (ALGEBRAIC[AV_fca_inf] - STATES[ICaL_fca]) / ALGEBRAIC[AV_tau_fca];
     RATES[ICaL_ff] = (ALGEBRAIC[AV_ff_inf] - STATES[ICaL_ff]) / ALGEBRAIC[AV_tau_ff];
     RATES[ICaL_fs] = (ALGEBRAIC[AV_fs_inf] - STATES[ICaL_fs]) / ALGEBRAIC[AV_tau_fs];
-
+    
     /* IKr */
     ALGEBRAIC[AV_rkr] = 1.0 / (1.0 + exp((STATES[cell_v] + 22.0) / 15.0));
     ALGEBRAIC[AV_tau_xr] = 12.98 + 1.0 / (0.3652 * exp((STATES[cell_v] - 31.66) / 3.869) + 4.123e-05 * exp(-(STATES[cell_v] - 47.78) / 20.38));
     ALGEBRAIC[AV_xr_inf] = 1.0 / (1.0 + exp(-(STATES[cell_v] + 56.8) / 17.8));
     ALGEBRAIC[AV_IKr_IKr] = CONSTANTS[AC_GKr] * sqrt(CONSTANTS[AC_ko] / 5.4) * STATES[IKr_xr] * ALGEBRAIC[AV_rkr] * (STATES[cell_v] - ALGEBRAIC[AV_EK]);
     RATES[IKr_xr] = (ALGEBRAIC[AV_xr_inf] - STATES[IKr_xr]) / ALGEBRAIC[AV_tau_xr];
-
+    
     /* IKs */
     ALGEBRAIC[AV_KsCa] = 1.0 + 0.6 / (1.0 + pow(3.8e-05 / STATES[cai], 1.4));
     ALGEBRAIC[AV_tau_xs1] = 300.0 + 1.0 / (1e-06 * exp((STATES[cell_v] + 50.0) / 20.0) + 0.04 * exp(-(STATES[cell_v] + 50.0) / 20.0));
@@ -533,17 +714,17 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_xs2_inf] = ALGEBRAIC[AV_xs1_inf];
     RATES[IKs_xs1] = (ALGEBRAIC[AV_xs1_inf] - STATES[IKs_xs1]) / ALGEBRAIC[AV_tau_xs1];
     RATES[IKs_xs2] = (ALGEBRAIC[AV_xs2_inf] - STATES[IKs_xs2]) / ALGEBRAIC[AV_tau_xs2];
-
+    
     /* IK1 */
     ALGEBRAIC[AV_rk1] = 1.0 / (1.0 + exp((STATES[cell_v] + 79.3 - 2.6 * CONSTANTS[AC_ko]) / 19.6));
     ALGEBRAIC[AV_IK1_IK1] = CONSTANTS[AC_GK1] * sqrt(CONSTANTS[AC_ko] / 5.4) * ALGEBRAIC[AV_rk1] * (STATES[cell_v] - ALGEBRAIC[AV_EK]);
-
+    
     /* ITo */
     ALGEBRAIC[AV_alpha_aa] = 0.025 / (1.0 + exp((STATES[cell_v] + 58.0) / 5.0));
     ALGEBRAIC[AV_beta_aa] = 1.0 / (5.0 * (1.0 + exp((STATES[cell_v] + 19.0) / -9.0)));
     ALGEBRAIC[AV_rito2] = 1.0 / (1.0 + exp(-(STATES[cell_v] + 10.0) / 5.0));
     RATES[ITo_aa] = ALGEBRAIC[AV_alpha_aa] * (1.0 - STATES[ITo_aa]) - ALGEBRAIC[AV_beta_aa] * STATES[ITo_aa];
-
+    
     /* CICR */
     ALGEBRAIC[AV_diff_A] = ((STATES[CICR_tjsrol] < 5.0) ? -STATES[CICR_A] / 0.1 : 1.0);
     ALGEBRAIC[AV_trel1factor] = 1.0 * 20.0 * (1.0 + 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa], 8.0))) / (1.0 + pow(0.5 / STATES[cajsr], 8.0));
@@ -557,7 +738,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_Jrelol] = ALGEBRAIC[AV_greljsrol] * (STATES[cajsr] - STATES[cass]);
     RATES[CICR_tjsrol] = ALGEBRAIC[AV_diff_tjsrol];
     ALGEBRAIC[AV_Jrel] = STATES[CICR_Jrel1] + ALGEBRAIC[AV_Jrelol];
-
+    
     /* INaCa_i */
     ALGEBRAIC[AV_allo] = 1.0 / (1.0 + CONSTANTS[AC_KmCaAct] / STATES[cai] * CONSTANTS[AC_KmCaAct] / STATES[cai]);
     ALGEBRAIC[AV_h4] = 1.0 + STATES[nai] / CONSTANTS[AC_kna1] * (1.0 + STATES[nai] / CONSTANTS[AC_kna2]);
@@ -591,7 +772,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_JncxCa] = ALGEBRAIC[AV_E2] * CONSTANTS[AC_k2] - ALGEBRAIC[AV_E1] * CONSTANTS[AC_k1];
     ALGEBRAIC[AV_JncxNa] = 3.0 * (ALGEBRAIC[AV_E4] * ALGEBRAIC[AV_k7] - ALGEBRAIC[AV_E1] * ALGEBRAIC[AV_k8]) + ALGEBRAIC[AV_E3] * ALGEBRAIC[AV_k4pp] - ALGEBRAIC[AV_E2] * ALGEBRAIC[AV_k3pp];
     ALGEBRAIC[AV_INaCa_i_INaCa_i] = 0.8 * CONSTANTS[AC_Gncx] * ALGEBRAIC[AV_allo] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JncxNa] + CONSTANTS[AC_zca] * ALGEBRAIC[AV_JncxCa]);
-
+    
     /* INaCa_ss */
     ALGEBRAIC[AV_allo1] = 1.0 / (1.0 + CONSTANTS[AC_KmCaAct] / STATES[cass] * CONSTANTS[AC_KmCaAct] / STATES[cass]);
     ALGEBRAIC[AV_h111] = 1.0 + STATES[nass] / CONSTANTS[AC_kna3] * (1.0 + ALGEBRAIC[AV_hna]);
@@ -624,7 +805,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_JncxNa1] = 3.0 * (ALGEBRAIC[AV_E41] * ALGEBRAIC[AV_k71] - ALGEBRAIC[AV_E11] * ALGEBRAIC[AV_k81]) + ALGEBRAIC[AV_E31] * ALGEBRAIC[AV_k4pp1] - ALGEBRAIC[AV_E21] * ALGEBRAIC[AV_k3pp1];
     ALGEBRAIC[AV_INaCa_ss_INaCa_ss] = 0.2 * CONSTANTS[AC_Gncx] * ALGEBRAIC[AV_allo1] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JncxNa1] + CONSTANTS[AC_zca] * ALGEBRAIC[AV_JncxCa1]);
     ALGEBRAIC[AV_INaCa] = ALGEBRAIC[AV_INaCa_i_INaCa_i] + ALGEBRAIC[AV_INaCa_ss_INaCa_ss];
-
+    
     /* INaK */
     ALGEBRAIC[AV_Knai] = CONSTANTS[AC_Knai0] * exp(CONSTANTS[AC_delta] * STATES[cell_v] * CONSTANTS[AC_F] / (3.0 * CONSTANTS[AC_R] * CONSTANTS[AC_T]));
     ALGEBRAIC[AV_Knao] = CONSTANTS[AC_Knao0] * exp((1.0 - CONSTANTS[AC_delta]) * STATES[cell_v] * CONSTANTS[AC_F] / (3.0 * CONSTANTS[AC_R] * CONSTANTS[AC_T]));
@@ -645,20 +826,20 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_JnakK] = 2.0 * (ALGEBRAIC[AV_E42] * CONSTANTS[AC_b1] - ALGEBRAIC[AV_E32] * ALGEBRAIC[AV_a1]);
     ALGEBRAIC[AV_JnakNa] = 3.0 * (ALGEBRAIC[AV_E12] * ALGEBRAIC[AV_a3] - ALGEBRAIC[AV_E22] * ALGEBRAIC[AV_b3]);
     ALGEBRAIC[AV_INaK_INaK] = CONSTANTS[AC_Pnak] * (CONSTANTS[AC_zna] * ALGEBRAIC[AV_JnakNa] + CONSTANTS[AC_zk] * ALGEBRAIC[AV_JnakK]);
-
+    
     /* IKb */
     ALGEBRAIC[AV_xkb] = 1.0 / (1.0 + exp(-(STATES[cell_v] - 14.48) / 18.34));
     ALGEBRAIC[AV_IKb_IKb] = CONSTANTS[AC_GKb] * ALGEBRAIC[AV_xkb] * (STATES[cell_v] - ALGEBRAIC[AV_EK]);
-
+    
     /* INab */
     ALGEBRAIC[AV_INab_INab] = CONSTANTS[AC_PNab] * CONSTANTS[AC_F] * (STATES[nai] * exp(ALGEBRAIC[AV_vfrt]) - CONSTANTS[AC_nao]) * ((STATES[cell_v] == 0.0) ? 1.0 : ALGEBRAIC[AV_vfrt] / (exp(ALGEBRAIC[AV_vfrt]) - 1.0));
-
+    
     /* ICab */
     ALGEBRAIC[AV_ICab_ICab] = CONSTANTS[AC_PCab] * 2.0 * CONSTANTS[AC_F] * (STATES[cai] * exp(2.0 * ALGEBRAIC[AV_vfrt]) - 0.341 * CONSTANTS[AC_cao]) * ((STATES[cell_v] == 0.0) ? 1.0 : 2.0 * ALGEBRAIC[AV_vfrt] / (exp(2.0 * ALGEBRAIC[AV_vfrt]) - 1.0));
-
+    
     /* IpCa */
     ALGEBRAIC[AV_IpCa_IpCa] = CONSTANTS[AC_GpCa] * STATES[cai] / (0.0005 + STATES[cai]);
-
+    
     /* SR_uptake */
     ALGEBRAIC[AV_Jleak] = 0.005 * STATES[cansr] / 15.0;
     ALGEBRAIC[AV_Jtr] = (STATES[cansr] - STATES[cajsr]) / 100.0;
@@ -670,7 +851,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_fJupp] = 1.0 / (1.0 + CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa]);
     ALGEBRAIC[AV_Jup] = (1.0 - ALGEBRAIC[AV_fJupp]) * ALGEBRAIC[AV_Jupnp] + ALGEBRAIC[AV_fJupp] * ALGEBRAIC[AV_Jupp] - ALGEBRAIC[AV_Jleak];
     ALGEBRAIC[AV_Jup2] = (1.0 - ALGEBRAIC[AV_fJupp]) * ALGEBRAIC[AV_Jupnp2] + ALGEBRAIC[AV_fJupp] * ALGEBRAIC[AV_Jupp2] - ALGEBRAIC[AV_Jleak];
-
+    
     /* ionic_concentrations */
     ALGEBRAIC[AV_Bcacsr] = 1.0 / (1.0 + CONSTANTS[AC_csqnmax] * CONSTANTS[AC_kmcsqn] / ((CONSTANTS[AC_kmcsqn] + STATES[cacsr]) * (CONSTANTS[AC_kmcsqn] + STATES[cacsr])));
     ALGEBRAIC[AV_Bcai] = 1.0 / (1.0 + CONSTANTS[AC_cmdnmax] * CONSTANTS[AC_kmcmdn] / ((CONSTANTS[AC_kmcmdn] + STATES[cai]) * (CONSTANTS[AC_kmcmdn] + STATES[cai])) + CONSTANTS[AC_trpnmax] * CONSTANTS[AC_kmtrpn] / ((CONSTANTS[AC_kmtrpn] + STATES[cai]) * (CONSTANTS[AC_kmtrpn] + STATES[cai])));
@@ -698,7 +879,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     RATES[cai2] = ALGEBRAIC[AV_diff_cai2];
     RATES[cajsr] = ALGEBRAIC[AV_diff_cajsr];
     RATES[cass] = ALGEBRAIC[AV_diff_cass];
-
+    
     /* *remaining* */
     ALGEBRAIC[AV_kito2] = 1.0 - 1.0 / (1.0 + ALGEBRAIC[AV_Jrel] / 0.4 * ALGEBRAIC[AV_Jrel] / 0.4);
     ALGEBRAIC[AV_Rel1] = (-ALGEBRAIC[AV_ICaL_ICaL] + 2.0 * ALGEBRAIC[AV_INaCa_ss_INaCa_ss]) * (CONSTANTS[AC_Acap] / (2.0 * CONSTANTS[AC_vss] * CONSTANTS[AC_F])) + ALGEBRAIC[AV_Jrel] * (CONSTANTS[AC_vjsr] / CONSTANTS[AC_vss]) - ALGEBRAIC[AV_Jdiff];
@@ -708,10 +889,10 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
     ALGEBRAIC[AV_Jrel2_inf] = ((ALGEBRAIC[AV_Rel2] > 0.0) ? 1.0 * (250.0 * ALGEBRAIC[AV_Rel2] * (1.0 + 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaMK] / ALGEBRAIC[AV_CaMKa], 8.0)))) / (1.0 + pow(0.75 / STATES[cacsr], 8.0)) : 0.0);
     RATES[CICR_Jrel1] = (ALGEBRAIC[AV_Jrel1_inf] - STATES[CICR_Jrel1]) / ALGEBRAIC[AV_tau_Jrel1];
     RATES[CICR_Jrel2] = (ALGEBRAIC[AV_Jrel2_inf] - STATES[CICR_Jrel2]) / ALGEBRAIC[AV_tau_Jrel2];
-
+    
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_ITo_ITo] + ALGEBRAIC[AV_INaCa_i_INaCa_i] + ALGEBRAIC[AV_INaCa_ss_INaCa_ss] + ALGEBRAIC[AV_INaK_INaK] + ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
-
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {

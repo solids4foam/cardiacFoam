@@ -39,6 +39,10 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 
+extern const char* tmanufacturedFDASTATES_NAMES[NUM_STATES];
+extern const char* tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC];
+extern const char* tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS];
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -78,6 +82,57 @@ class tmanufacturedFDA
         //- No copy assignment
         void operator=(const tmanufacturedFDA&) = delete;
 
+protected:
+        virtual const PtrList<scalarField>* ioStatesPtr() const override
+        {
+            return &STATES_;
+        }
+
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+        {
+            return &ALGEBRAIC_;
+        }
+
+        virtual const PtrList<scalarField>* ioRatesPtr() const override
+        {
+            return &RATES_;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual label ioNumConstants() const override
+        {
+            return NUM_CONSTANTS;
+        }
+
+        virtual const char* const* ioConstantNames() const override
+        {
+            return tmanufacturedFDACONSTANTS_NAMES;
+        }
+
+        virtual const char* const* ioStateNames() const override
+        {
+            return tmanufacturedFDASTATES_NAMES;
+        }
+
+        virtual label ioNumStates() const override
+        {
+            return NUM_STATES;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const override
+        {
+            return tmanufacturedFDAALGEBRAIC_NAMES;
+        }
+
+        virtual label ioNumAlgebraic() const override
+        {
+            return NUM_ALGEBRAIC;
+        }
+
 
 public:
 
@@ -86,7 +141,7 @@ public:
 
 
     // Override the only available tissue in this model
-    virtual List<word> supportedDimensions() const;
+    virtual List<word> supportedDimensions() const override;
 
 
     // Constructors
@@ -109,7 +164,7 @@ public:
     // Member Functions
 
 
-        virtual bool hasManufacturedSolution() const
+        virtual bool hasManufacturedSolution() const override
         {
             return true;
         }
@@ -121,7 +176,7 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        );
+        ) override;
 
         virtual void solveODE
         (
@@ -130,7 +185,7 @@ public:
             const scalarField& Vm,
             scalarField& Im,
             Field<Field<scalar>>& states
-        );
+        ) override;
 
         void initializeFields
         (
@@ -139,11 +194,11 @@ public:
             volScalarField& u2,
             volScalarField& u3,
             const volVectorField& C
-        );
+        ) override;
 
 
         //- Number of ODE's to solve
-        virtual label nEqns() const
+        virtual label nEqns() const override
         {
             return NUM_STATES;
         }
@@ -155,30 +210,12 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const;
+        ) const override;
 
         void updateStatesOld() const;
         void resetStatesToStatesOld() const;
         // to provide variable names for export
-        virtual Foam::wordList exportedFieldNames() const;
-        virtual wordList debugPrintedNames() const;
-
-
-        // Override to export the variables
-        virtual void exportStates
-        (
-            const Field<Field<scalar>>&,
-            PtrList<volScalarField>&
-        );
-
-        // Override to print variables in solver
-        void debugPrintFields
-        (
-            label cellI,
-            scalar t1,
-            scalar t2,
-            scalar step
-        ) const;
+        virtual Foam::wordList exportedFieldNames() const override;
 };
 
 

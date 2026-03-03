@@ -1,7 +1,7 @@
-# singleCellElectroActivationFoam tutorial
+# cardiacFoam single-cell tutorial
 
 This tutorial demonstrates how to run **single-cell electrophysiology
-simulations** using `singleCellElectroActivationFoam`.
+simulations** using `cardiacFoam`.
 
 The case is designed to test and analyse a **single integration point**
 of a chosen ionic model, allowing inspection of the transmembrane voltage
@@ -11,7 +11,7 @@ and internal state variables as functions of time.
 
 ## Overview
 
-Unlike tissue-level solvers (e.g. `electroActivationFoam`), this case does
+Unlike tissue-level runs, this case does
 **not** solve a spatial voltage PDE. Instead:
 
 - The transmembrane voltage `Vm` is integrated directly as part of the
@@ -33,10 +33,9 @@ This setup is useful for:
 ```
 singleCell/
 ├── constant
-│   ├── cardiacProperties
-│   ├── electroActivationProperties
-│   ├── stimulusProtocol
-│   └── timeIntegrationProperties
+│   ├── electroProperties
+│   ├── physicsProperties
+│   ├── polyMesh
 │   └── sweepCurrents
 
 ├── system
@@ -56,7 +55,8 @@ singleCell/
 
 ### Ionic model
 
-The ionic model is selected in `constant/cardiacProperties`, for example:
+The ionic model is selected in `constant/electroProperties` under
+`singleCellElectroCoeffs`, for example:
 
 ```cpp
 ionicModel  BuenoOrovio;
@@ -68,7 +68,7 @@ Any model registered with the `ionicModels` library can be used - write `banana`
 
 ### Time integration
 
-The file `constant/timeIntegrationProperties` controls:
+The file `constant/electroProperties` also controls:
 
 - The ODE solver (e.g. `RKF45`, `Euler`),
 - Initial ODE step size,
@@ -82,7 +82,7 @@ within the ionic model ODE system.
 
 ### Stimulus protocol
 
-The external stimulus is defined in `constant/stimulusProtocol`, allowing
+The external stimulus is also defined in `constant/electroProperties`, allowing
 specification of:
 
 - Stimulus start time,
@@ -127,7 +127,7 @@ From the case directory:
 
 This will:
 
-1. Run `singleCellElectroActivationFoam`,
+1. Run `cardiacFoam`,
 2. Automatically invoke `plotVoltage` after the simulation completes.
 
 To clean generated files:
@@ -179,5 +179,5 @@ It is **not** intended for tissue-level or patient-specific simulations.
 
 - Results depend strongly on the chosen ionic model and stimulus protocol.
 - Time-step sensitivity should be checked when changing ODE solver settings.
-- For spatial propagation and activation timing, use `electroActivationFoam`
-  instead.
+- For spatial propagation and activation timing, use a tissue case setup with
+  `cardiacFoam`.
