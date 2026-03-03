@@ -1,4 +1,5 @@
 #pragma once
+#include "stimulusIO.H"
 
 enum STATES_INDEX {
     membrane_V,
@@ -44,7 +45,7 @@ enum STATES_INDEX {
     buffCa_TnCL,
     buffNa_NaB_jn,
     buffNa_NaB_sl,
-
+    
     NUM_STATES
 };
 
@@ -308,19 +309,12 @@ enum CONSTANTS_INDEX {
     AC_Q10SLCaP,
     AC_ipca_IpCa_jn_b,
     AC_ipca_IpCa_sl_b,
-    stim_start,
-    stim_duration,
-    stim_amplitude,
-    stim_period_S1,
-    nstim1,
-    stim_period_S2,
-    nstim2,
-    NUM_CONSTANTS
-};
+
+    NUM_CONSTANTS};
 
 
 void
 GrandiinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-GrandicomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
+GrandicomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);

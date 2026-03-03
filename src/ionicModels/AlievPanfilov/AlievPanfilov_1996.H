@@ -3,7 +3,7 @@
 #include "stimulusIO.H"
 
 const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
-    "u",
+    "u", 
     "recovery_r"
 };
 const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
@@ -12,6 +12,16 @@ const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm"
 };
 
+const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_Vp",
+    "AC_Vr",
+    "AC_Vth",
+    "AC_epsilon",
+    "AC_k",
+    "AC_mu1",
+    "AC_mu2",
+    "AC_a",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 AlievPanfilovDependencyMap()
@@ -19,25 +29,23 @@ AlievPanfilovDependencyMap()
     static const Foam::HashTable<Foam::wordList> dep
     (
         {
-
+        {"Iion", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"I_ion", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"Iion_cm", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"u", Foam::wordList({"u", "RATES_u"})},
+        {"recovery_r", Foam::wordList({"recovery_r", "AV_eps", "RATES_recovery_r"})}
         }
     );
 
     return dep;
 }
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
 
@@ -53,11 +61,11 @@ AlievPanfilovinitConsts(double* CONSTANTS, double* RATES, double *STATES, int ti
     CONSTANTS[AC_k] = 8.0;
     CONSTANTS[AC_mu1] = 0.2;
     CONSTANTS[AC_mu2] = 0.3;
-
+    
     /* membrane_potential */
     CONSTANTS[AC_a] = (CONSTANTS[AC_Vth] - CONSTANTS[AC_Vr]) / (CONSTANTS[AC_Vp] - CONSTANTS[AC_Vr]);
 
-
+    
     /* --- Initial values --- */
     STATES[u] = 0.05;
     STATES[recovery_r] = 0.0;
@@ -65,13 +73,13 @@ AlievPanfilovinitConsts(double* CONSTANTS, double* RATES, double *STATES, int ti
 
 
 void
-AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
     /* recovery_variable */
     ALGEBRAIC[AV_eps] = CONSTANTS[AC_epsilon] + CONSTANTS[AC_mu1] * STATES[recovery_r] / (CONSTANTS[AC_mu2] + STATES[u]);
-    RATES[recovery_r] = ALGEBRAIC[AV_eps] * ( - STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
-
+    RATES[recovery_r] = ALGEBRAIC[AV_eps] * (-STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
+    
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];
 
@@ -82,8 +90,8 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     //ALGEBRAIC[AV_e] = ((STATES[u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
     //RATES[active_tension_Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[u] - STATES[active_tension_Ta]);
 
-
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {
@@ -91,7 +99,6 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     }
 
 }
-
 
 
 

@@ -4,20 +4,13 @@
 
 namespace Foam
 {
-
-    void stimulusIO::loadStimulusProtocol
+StimulusProtocol stimulusIO::loadStimulusProtocol
 (
-    const dictionary& dict,
-    scalarField& C,
-    label stim_start,
-    label stim_period_S1,
-    label stim_duration,
-    label stim_amplitude,
-    label nstim1,
-    label stim_period_S2,
-    label nstim2
+    const dictionary& dict
 )
 {
+    StimulusProtocol stim;
+
     // Required keys
     const char* required[] =
     {
@@ -37,25 +30,74 @@ namespace Foam
         }
     }
 
-    C[stim_start]     = readScalar(dict.lookup("stim_start"));
-    C[stim_period_S1] = readScalar(dict.lookup("stim_period_S1"));
-    C[stim_duration]  = readScalar(dict.lookup("stim_duration"));
-    C[stim_amplitude] = readScalar(dict.lookup("stim_amplitude"));
+    stim.stimStart = readScalar(dict.lookup("stim_start"));
+    stim.stimPeriodS1 = readScalar(dict.lookup("stim_period_S1"));
+    stim.stimDuration = readScalar(dict.lookup("stim_duration"));
+    stim.stimAmplitude = readScalar(dict.lookup("stim_amplitude"));
 
     // Defaults for optional keys
-    C[nstim1] = 1;          // default: one S1 pulse train period count
-    C[nstim2] = 0;          // default: no S2 unless requested
-    C[stim_period_S2] = 0;  // default: disabled
+    stim.nStim1 = 1;
+    stim.nStim2 = 0;
+    stim.stimPeriodS2 = 0.0;
 
-if (dict.found("nstim1"))
-    C[nstim1] = readScalar(dict.lookup("nstim1"));
+    if (dict.found("nstim1"))
+    {
+        stim.nStim1 = readLabel(dict.lookup("nstim1"));
+    }
 
-if (dict.found("stim_period_S2"))
-    C[stim_period_S2] = readScalar(dict.lookup("stim_period_S2"));
+    if (dict.found("stim_period_S2"))
+    {
+        stim.stimPeriodS2 = readScalar(dict.lookup("stim_period_S2"));
+    }
 
-if (dict.found("nstim2"))
-    C[nstim2] = readScalar(dict.lookup("nstim2"));
+    if (dict.found("nstim2"))
+    {
+        stim.nStim2 = readLabel(dict.lookup("nstim2"));
+    }
 
+    return stim;
+}
+
+void stimulusIO::loadStimulusProtocol
+(
+    const dictionary& dict,
+    scalarField& C,
+    label stim_start,
+    label stim_period_S1,
+    label stim_duration,
+    label stim_amplitude,
+    label nstim1,
+    label stim_period_S2,
+    label nstim2
+)
+{
+    const StimulusProtocol stim = loadStimulusProtocol(dict);
+    C[stim_start] = stim.stimStart;
+    C[stim_period_S1] = stim.stimPeriodS1;
+    C[stim_duration] = stim.stimDuration;
+    C[stim_amplitude] = stim.stimAmplitude;
+    C[nstim1] = stim.nStim1;
+    C[stim_period_S2] = stim.stimPeriodS2;
+    C[nstim2] = stim.nStim2;
+}
+
+scalar stimulusIO::computeStimulus
+(
+    scalar VOI,
+    const StimulusProtocol& stim
+)
+{
+    return computeStimulus
+    (
+        VOI,
+        stim.stimStart,
+        stim.stimPeriodS1,
+        stim.stimDuration,
+        stim.stimAmplitude,
+        stim.nStim1,
+        stim.stimPeriodS2,
+        stim.nStim2
+    );
 }
 
 scalar stimulusIO::computeStimulus
@@ -108,35 +150,6 @@ scalar stimulusIO::computeStimulus
     return Istim;
 }
 
-
-
-
-
-
-
-    bool stimulusIO::shouldWriteStep
-    (
-        scalar tBegin,
-        scalar tEnd,
-        const dictionary& dict,
-        bool utilitiesMode
-    )
-    {
-        // For utilities (like sweepCurrents): always write
-        if (utilitiesMode)
-            return true;
-
-        // User controls when to start writing
-        scalar writeAfterTime = 0.0;
-        if (dict.found("writeAfterTime"))
-        {
-            writeAfterTime = readScalar(dict.lookup("writeAfterTime"));
-        }
-        // Start writing once we pass that time
-        return (tEnd >= writeAfterTime);
-    }
-
-
     word stimulusIO::protocolSuffix(const dictionary& dict)
     {
         scalar s1 = readScalar(dict.lookup("stim_period_S1"));
@@ -153,6 +166,4 @@ scalar stimulusIO::computeStimulus
         return out;
     }
 } // namespace Foam
-
-
 

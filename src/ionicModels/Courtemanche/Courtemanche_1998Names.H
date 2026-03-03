@@ -1,19 +1,60 @@
 #pragma once
+#include "stimulusIO.H"
 #include "dictionary.H"
 
 
 
-enum CONSTANT_INDEX{    AC_CMDN_max,    AC_CSQN_max,    AC_Ca_up_max,    AC_Cao,    AC_Cm,
-    AC_ECaL,    AC_F,    AC_FRT,    AC_INaCa_max,    AC_INaK_max,    AC_I_diff,    AC_I_up_max,
-    AC_IpCa_max,    AC_KQ10,    AC_K_rel,    AC_K_up,    AC_KmCa,    AC_KmKo,    AC_KmNa,
-    AC_KmNai,    AC_Km_CMDN,    AC_Km_CSQN,    AC_Km_TRPN,    AC_Ko,    AC_Nao,    AC_R,
-    AC_RTF,    AC_T,    AC_TRPN_max,    AC_V_cell,    AC_V_i,    AC_V_rel,    AC_V_up,
-    AC_c1,    AC_c2,   AC_cajsr_u_tau,    AC_g,    AC_gCaL,    AC_gK1,    AC_gKr,    AC_gKs,
-    AC_gKur_base,   AC_gNa,    AC_gbCa,    AC_gbNa,    AC_gto,    AC_ical_fCa_tau,    AC_ksat,    AC_sigma,    AC_tau_tr,
-
-    stim_start, stim_duration, stim_amplitude,
-    stim_period_S1, nstim1,
-    stim_period_S2, nstim2,
+enum CONSTANT_INDEX {
+    AC_CMDN_max,
+    AC_CSQN_max,
+    AC_Ca_up_max,
+    AC_Cao,
+    AC_Cm,
+    AC_ECaL,
+    AC_F,
+    AC_FRT,
+    AC_INaCa_max,
+    AC_INaK_max,
+    AC_I_diff,
+    AC_I_up_max,
+    AC_IpCa_max,
+    AC_KQ10,
+    AC_K_rel,
+    AC_K_up,
+    AC_KmCa,
+    AC_KmKo,
+    AC_KmNa,
+    AC_KmNai,
+    AC_Km_CMDN,
+    AC_Km_CSQN,
+    AC_Km_TRPN,
+    AC_Ko,
+    AC_Nao,
+    AC_R,
+    AC_RTF,
+    AC_T,
+    AC_TRPN_max,
+    AC_V_cell,
+    AC_V_i,
+    AC_V_rel,
+    AC_V_up,
+    AC_c1,
+    AC_c2,
+    AC_cajsr_u_tau,
+    AC_g,
+    AC_gCaL,
+    AC_gK1,
+    AC_gKr,
+    AC_gKs,
+    AC_gKur_base,
+    AC_gNa,
+    AC_gbCa,
+    AC_gbNa,
+    AC_gto,
+    AC_ical_fCa_tau,
+    AC_ksat,
+    AC_sigma,
+    AC_tau_tr,
 
     NUM_CONSTANTS};
 
@@ -104,13 +145,13 @@ enum ALGEBRAIC_INDEX
     // --- Totals / stimulus ---
     Iion_cm,
     Istim,
-
+    
     NUM_ALGEBRAIC
 };
 
 void
 CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
+CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 
 

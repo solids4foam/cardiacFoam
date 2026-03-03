@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     electroActivationFoam;
+application     cardiacFoam;
 
 startFrom       startTime;
 
@@ -23,7 +23,7 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime    0.05;
+endTime    	0.06;
 
 deltaT          1e-05;
 
@@ -46,6 +46,14 @@ timePrecision   6;
 runTimeModifiable false;
 
 
+
 // ************************************************************************* //
 
 
+functions
+{
+    smokeCheck
+    {
+        #include "smokeCheck"
+    }
+}

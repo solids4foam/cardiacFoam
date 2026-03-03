@@ -1,0 +1,16 @@
+type            probes;
+libs            ("libsampling.so");
+enabled         true;
+
+// Restrict function execution to this time window
+timeStart       0.055;
+timeEnd         0.06;
+
+writeControl    writeTime;
+
+fields          (Vm ionicCurrent activationTime);
+
+probeLocations
+(
+    (0.02 0.003 0.007)
+);

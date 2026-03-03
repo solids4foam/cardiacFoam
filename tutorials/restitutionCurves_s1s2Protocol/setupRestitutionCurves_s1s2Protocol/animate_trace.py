@@ -49,7 +49,7 @@ def create_voltage_animation(
     Parameters
     ----------
     data_file:
-        Path to the ``.txt`` output produced by singleCellElectroActivationFoam.
+        Path to the ``.txt`` output produced by cardiacFoam.
     output_path:
         Destination video file.  Extension determines format:
         ``.mp4`` (requires ffmpeg) or ``.gif`` (requires Pillow).

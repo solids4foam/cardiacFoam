@@ -57,8 +57,6 @@ Foam::tmanufacturedFDA::tmanufacturedFDA
     RATES_(num)
 {
     ionicModel::setTissueFromDict();
-    //see if integrationPtI need to add flog in function as well.
-    Info<< nl << "Calling FDA test Constants" << endl;
     forAll(STATES_, integrationPtI)
     {
         STATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
@@ -79,9 +77,6 @@ Foam::tmanufacturedFDA::tmanufacturedFDA
         );
         STATES_OLD_[integrationPtI] = STATES_[integrationPtI];
     }
-
-    Info<< nl
-        << "CONSTANTS = " << CONSTANTS_ << endl;
 }
 
 
@@ -266,53 +261,5 @@ void Foam::tmanufacturedFDA::resetStatesToStatesOld() const
         names.append("u3");
         return names;
     }
-
-
-    Foam::wordList Foam::tmanufacturedFDA::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            tmanufacturedFDASTATES_NAMES, NUM_STATES,
-            tmanufacturedFDAALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::tmanufacturedFDA::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
-{
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        tmanufacturedFDASTATES_NAMES,NUM_STATES,
-        tmanufacturedFDAALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
-}
-
-void Foam::tmanufacturedFDA::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
-{
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        tmanufacturedFDASTATES_NAMES, NUM_STATES,
-        tmanufacturedFDAALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
-}
-
-
-
 
 // ************************************************************************* //

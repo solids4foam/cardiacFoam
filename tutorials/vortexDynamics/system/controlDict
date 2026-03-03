@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     electroActivationFoam;
+application     cardiacFoam;
 
 startFrom       startTime;
 
@@ -47,5 +47,4 @@ runTimeModifiable false;
 
 
 // ************************************************************************* //
-
 

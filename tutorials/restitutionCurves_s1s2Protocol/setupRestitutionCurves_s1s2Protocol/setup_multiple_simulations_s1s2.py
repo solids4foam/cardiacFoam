@@ -5,8 +5,7 @@ import shutil
 
 
 # ================= FILE NAMES =================
-PROPERTIES_FILE_NAME = "cardiacProperties"
-STIMULUS_FILE_NAME = "stimulusProtocol"
+ELECTRO_PROPERTIES_FILE_NAME = "electroProperties"
 
 
 # ================= UPDATE FILES =================
@@ -32,7 +31,7 @@ def update_electro_properties(electro_file: Path, tissue: str, ionic_model: str)
 
 
 def update_s1s2_protocol(
-    protocol_file: Path,
+    electro_file: Path,
     s1_interval: int,
     s2_interval: int,
     stim_amplitude: float,
@@ -40,11 +39,11 @@ def update_s1s2_protocol(
     n_s2: int = 2,
 ) -> None:
     """
-    Update the S1–S2 protocol entries in the stimulusProtocol file.
+    Update the S1–S2 protocol entries in the electroProperties file.
     """
-    lines = protocol_file.read_text().splitlines(keepends=True)
+    lines = electro_file.read_text().splitlines(keepends=True)
 
-    with protocol_file.open("w") as f:
+    with electro_file.open("w") as f:
         for line in lines:
             stripped = line.strip()
 
@@ -109,22 +108,21 @@ def run_s1s2_simulation(
 
     print(f"\n🚀 Base (OpenFOAM case) directory: {base_dir}")
 
-    tissue_file = base_dir / "constant" / PROPERTIES_FILE_NAME
-    stimulus_file = base_dir / "constant" / STIMULUS_FILE_NAME
+    electro_file = base_dir / "constant" / ELECTRO_PROPERTIES_FILE_NAME
 
    
     total = len(s2_intervals)
-    for i, s2_intervals in enumerate(s2_intervals, start=1):
+    for i, s2_interval in enumerate(s2_intervals, start=1):
         print("\n==========================================")
         print(f"▶ Simulation {i}/{total}")
         print(f"   Tissue type : {tissue_type}")
         print(f"   Ionic model : {ionic_model}")
-        print(f"   S1–S2       : {s1_interval} ms – {s2_intervals} ms")
+        print(f"   S1–S2       : {s1_interval} ms – {s2_interval} ms")
         print("==========================================\n")
 
 
-        update_electro_properties(tissue_file, tissue_type, ionic_model)
-        update_s1s2_protocol(stimulus_file, s1_interval, s2_intervals, stim_amplitude)
+        update_electro_properties(electro_file, tissue_type, ionic_model)
+        update_s1s2_protocol(electro_file, s1_interval, s2_interval, stim_amplitude)
 
         subprocess.run(
             ["bash", "-l", str(run_cases_script), str(base_dir)],

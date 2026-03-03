@@ -58,7 +58,6 @@ Foam::BuenoOrovio::BuenoOrovio
 
 {
     ionicModel::setTissueFromDict();
-    Info<< nl << "Initialize Bueno Orovio constants:" << nl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -77,18 +76,9 @@ Foam::BuenoOrovio::BuenoOrovio
 
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -144,6 +134,8 @@ void Foam::BuenoOrovio::calculateCurrent
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
         // Jion is the total ionic current density used by the PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
@@ -167,8 +159,7 @@ void Foam::BuenoOrovio::solveODE
 {
     const scalar tStart = stepStartTime * 1000.0;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000.0;
-    const bool doDebugPrint = !debugPrintedNames().empty();
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -187,7 +178,7 @@ void Foam::BuenoOrovio::solveODE
 
         // Clamp ODE step
         step = min(step, deltaT * 1000.0);
-        if (doDebugPrint && integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Advance the ODE system
@@ -203,9 +194,11 @@ void Foam::BuenoOrovio::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
-        if (doDebugPrint && integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -239,7 +232,9 @@ void Foam::BuenoOrovio::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
+    ,
+            stimulusProtocol()
+        );
 }
 
 void Foam::BuenoOrovio::updateStatesOld(const Field<Field<scalar>>&) const
@@ -255,117 +250,20 @@ void Foam::BuenoOrovio::resetStatesToStatesOld(Field<Field<scalar>>&) const
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::BuenoOrovio::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            BuenoOrovioSTATES_NAMES, NUM_STATES,
-            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::BuenoOrovio::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            BuenoOrovioSTATES_NAMES, NUM_STATES,
-            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::BuenoOrovio::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::BuenoOrovio::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        BuenoOrovioSTATES_NAMES,NUM_STATES,
-        BuenoOrovioALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return BuenoOrovioSTATES_NAMES;
 }
 
-void Foam::BuenoOrovio::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::BuenoOrovio::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        BuenoOrovioSTATES_NAMES, NUM_STATES,
-        BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return BuenoOrovioCONSTANTS_NAMES;
 }
 
-
-void Foam::BuenoOrovio::writeHeader(OFstream& os) const
+const char* const* Foam::BuenoOrovio::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            BuenoOrovioSTATES_NAMES, NUM_STATES,
-            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return BuenoOrovioALGEBRAIC_NAMES;
 }
-
-
-
-static Foam::scalar BO_vm(const Foam::scalarField& S)
-{
-    return S[0] * 85.7 - 84.0;
-}
-
-void Foam::BuenoOrovio::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            BuenoOrovioSTATES_NAMES, NUM_STATES,
-            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            BO_vm
-        );
-    }
-}
-
-
-
 
 void Foam::BuenoOrovio::sweepCurrent
 (
@@ -396,6 +294,7 @@ void Foam::BuenoOrovio::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -417,18 +316,25 @@ void Foam::BuenoOrovio::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             BuenoOrovioSTATES_NAMES, NUM_STATES,
-            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            BuenoOrovioALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
 
+}
+
+Foam::wordList Foam::BuenoOrovio::availableSweepCurrents() const
+{
+    return BuenoOrovioDependencyMap().toc();
 }
 
 
@@ -453,7 +359,7 @@ Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) co
         case CouplingSignal::Act:
             return STATES_[i][0];
         case CouplingSignal::Vm:
-            return BO_vm(STATES_[i]);
+            return transformedVm(STATES_[i]);
         default:
             break;
     }
@@ -465,8 +371,6 @@ Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) co
 
     return 0.0;
 }
-
-
 
 
 

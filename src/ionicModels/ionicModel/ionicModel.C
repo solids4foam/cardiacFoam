@@ -49,14 +49,10 @@ Foam::ionicModel::ionicModel
     tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    if (dict_.found("IonicModelVariables_export"))
-        dict_.lookup("IonicModelVariables_export") >> variableExport_;
-    else if (dict_.found("exportedVariables"))
+    if (dict_.found("exportedVariables"))
         dict_.lookup("exportedVariables") >> variableExport_;
 
-    if (dict_.found("IonicModelVariables_debugPrint"))
-        dict_.lookup("IonicModelVariables_debugPrint") >> debugVarNames_;
-    else if (dict_.found("debugPrintVariables"))
+    if (dict_.found("debugPrintVariables"))
         dict_.lookup("debugPrintVariables") >> debugVarNames_;
 }
 
@@ -82,8 +78,6 @@ Foam::ionicModel::New
 )
 {
     const word modelType(dict.lookup("ionicModel"));
-    Info<< "Selecting ionic model: " << modelType << endl;
-
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (!ctorPtr)
@@ -118,6 +112,39 @@ bool Foam::ionicModel::utilitiesMode() const
 return dict_.found("utilities") && readBool(dict_.lookup("utilities"));
 }
 
+bool Foam::ionicModel::startupLogEnabled() const
+{
+    return dict_.lookupOrDefault<Switch>("startupLog", true);
+}
+
+Foam::label Foam::ionicModel::sampleIntegrationPoint
+(
+    const label nPoints
+) const
+{
+    if (nPoints <= 0)
+    {
+        return 0;
+    }
+
+    const label requested = dict_.lookupOrDefault<label>("initSampleCell", 0);
+
+    return max(label(0), min(requested, nPoints - 1));
+}
+
+void Foam::ionicModel::logExportedFieldSelection() const
+{
+    if (!startupLogEnabled())
+    {
+        return;
+    }
+
+    const wordList exportNames = exportedFieldNames();
+    if (!exportNames.empty())
+    {
+        Info<< "Exporting fields: " << exportNames << nl;
+    }
+}
 
 bool Foam::ionicModel::hasSignal(const CouplingSignal) const
 {
@@ -136,7 +163,7 @@ Foam::scalar Foam::ionicModel::signal
         << static_cast<int>(s)
         << " from ionicModel, but this ionic model does not provide it."
         << nl
-        << "You must hasSignal() and signal() in the derived ionic model."
+        << "You must override hasSignal() and signal() in the derived ionic model."
         << abort(FatalError);
 
     return 0.0;

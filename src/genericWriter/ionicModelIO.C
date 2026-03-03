@@ -1,6 +1,217 @@
 #include "ionicModelIO.H"
+#include "ionicVariableCompatibility.H"
 
 namespace Foam {
+
+    namespace
+    {
+        void emitHeader
+        (
+            OFstream& os,
+            const wordList& names
+        )
+        {
+            os << "time";
+            forAll(names, k)
+            {
+                os << " " << names[k];
+            }
+            os << nl;
+        }
+
+        void emitRow
+        (
+            const scalar t,
+            OFstream& os,
+            const scalarField& S,
+            const scalarField& A,
+            const scalarField& R,
+            const ionicModelIO::SelectionPlan& plan,
+            Foam::ionicModelIO::VmTransform transformVm
+        )
+        {
+            os << t;
+
+            forAll(plan.source, k)
+            {
+                const label src = plan.source[k];
+                const label idx = plan.index[k];
+
+                if (src == ionicModelIO::COL_VM)
+                {
+                    os << " " << (transformVm ? transformVm(S) : S[0]);
+                }
+                else if (src == ionicModelIO::COL_STATE)
+                {
+                    os << " " << S[idx];
+                }
+                else if (src == ionicModelIO::COL_ALGEBRAIC)
+                {
+                    os << " " << A[idx];
+                }
+                else if (src == ionicModelIO::COL_RATE)
+                {
+                    os << " " << R[idx];
+                }
+                else
+                {
+                    FatalErrorInFunction
+                        << "Unexpected selection source id " << src
+                        << " in write plan." << exit(FatalError);
+                }
+            }
+
+            os << nl;
+        }
+
+        const ionicModelIO::SelectionPlan& selectedPlan
+        (
+            const wordList& exportedNames,
+            const char* const stateNames[],
+            const label nStates,
+            const char* const algNames[],
+            const label nAlg,
+            ionicModelIO::SelectedMapCache& cache
+        )
+        {
+            const bool cacheHit =
+                   cache.valid
+                && cache.stateNamesPtr == static_cast<const void*>(stateNames)
+                && cache.algNamesPtr == static_cast<const void*>(algNames)
+                && cache.nStates == nStates
+                && cache.nAlg == nAlg
+                && ionicVariableCompatibility::sameWordList
+                   (
+                       cache.exportedNames,
+                       exportedNames
+                   );
+
+            if (!cacheHit)
+            {
+                cache.stateNamesPtr = static_cast<const void*>(stateNames);
+                cache.algNamesPtr = static_cast<const void*>(algNames);
+                cache.nStates = nStates;
+                cache.nAlg = nAlg;
+                cache.exportedNames = exportedNames;
+
+                List<label> stateIndex;
+                List<label> algIndex;
+                List<label> rateIndex;
+                Foam::ionicModelIO::mapVariableNames
+                (
+                    exportedNames,
+                    stateNames,
+                    nStates,
+                    algNames,
+                    nAlg,
+                    stateIndex,
+                    algIndex,
+                    rateIndex
+                );
+
+                cache.plan.names = exportedNames;
+                cache.plan.source.setSize(exportedNames.size());
+                cache.plan.index.setSize(exportedNames.size());
+
+                forAll(exportedNames, k)
+                {
+                    if
+                    (
+                        exportedNames[k] == "Vm"
+                     || ionicVariableCompatibility::isVmLikeName(exportedNames[k])
+                    )
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_VM;
+                        cache.plan.index[k] = 0;
+                    }
+                    else if (stateIndex[k] >= 0)
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_STATE;
+                        cache.plan.index[k] = stateIndex[k];
+                    }
+                    else if (rateIndex[k] >= 0)
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_RATE;
+                        cache.plan.index[k] = rateIndex[k];
+                    }
+                    else
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_ALGEBRAIC;
+                        cache.plan.index[k] = algIndex[k];
+                    }
+                }
+                cache.valid = true;
+            }
+
+            return cache.plan;
+        }
+
+        const ionicModelIO::SelectionPlan& fullPlan
+        (
+            const char* const stateNames[],
+            const label nStates,
+            const char* const algNames[],
+            const label nAlg,
+            ionicModelIO::FullPlanCache& cache
+        )
+        {
+            const bool cacheHit =
+                   cache.valid
+                && cache.stateNamesPtr == static_cast<const void*>(stateNames)
+                && cache.algNamesPtr == static_cast<const void*>(algNames)
+                && cache.nStates == nStates
+                && cache.nAlg == nAlg;
+
+            if (!cacheHit)
+            {
+                cache.stateNamesPtr = static_cast<const void*>(stateNames);
+                cache.algNamesPtr = static_cast<const void*>(algNames);
+                cache.nStates = nStates;
+                cache.nAlg = nAlg;
+
+                ionicModelIO::SelectionPlan& plan = cache.plan;
+                const label nCols = 1 + (nStates - 1) + nAlg + nStates;
+                plan.names.setSize(nCols);
+                plan.source.setSize(nCols);
+                plan.index.setSize(nCols);
+
+                label k = 0;
+
+                plan.names[k] = "Vm";
+                plan.source[k] = ionicModelIO::COL_VM;
+                plan.index[k] = 0;
+                ++k;
+
+                for (label s = 1; s < nStates; ++s)
+                {
+                    plan.names[k] = stateNames[s];
+                    plan.source[k] = ionicModelIO::COL_STATE;
+                    plan.index[k] = s;
+                    ++k;
+                }
+
+                for (label a = 0; a < nAlg; ++a)
+                {
+                    plan.names[k] = algNames[a];
+                    plan.source[k] = ionicModelIO::COL_ALGEBRAIC;
+                    plan.index[k] = a;
+                    ++k;
+                }
+
+                for (label s = 0; s < nStates; ++s)
+                {
+                    plan.names[k] = word("RATES_") + word(stateNames[s]);
+                    plan.source[k] = ionicModelIO::COL_RATE;
+                    plan.index[k] = s;
+                    ++k;
+                }
+
+                cache.valid = true;
+            }
+
+            return cache.plan;
+        }
+    }
 
     void Foam::ionicModelIO::writeHeader
     (
@@ -8,27 +219,11 @@ namespace Foam {
         const char* const stateNames[],
         int nStates,
         const char* const algNames[],
-        int nAlg
+        int nAlg,
+        FullPlanCache& fullPlanCache
     )
     {
-        os << "time Vm";
-        // States
-        for (int i = 1; i < nStates; ++i)
-        {
-            os << " " << stateNames[i];
-        }
-        // Algebraic
-        for (int i = 0; i < nAlg; ++i)
-        {
-            os << " " << algNames[i];
-        }
-        // Rates
-        for (int i = 0; i < nStates; ++i)
-        {
-            os << " RATES_" << stateNames[i];
-        }
-
-        os << endl;
+        emitHeader(os, fullPlan(stateNames, nStates, algNames, nAlg, fullPlanCache).names);
     }
 
     void Foam::ionicModelIO::writeSelectedHeader
@@ -37,14 +232,7 @@ namespace Foam {
         const wordList& exportedNames
     )
     {
-        os << "time";
-
-        forAll(exportedNames, k)
-        {
-            os << " " << exportedNames[k];
-        }
-
-        os << nl;
+        emitHeader(os, exportedNames);
     }
 
 
@@ -59,31 +247,28 @@ namespace Foam {
     )
     {
         const scalarField& S = STATES[0];
+        const scalarField& A = ALGEBRAIC[0];
+        const scalarField& R = RATES[0];
 
-        // time + transformed Vm
-        os << t << " " << transformVm(S);
+        // Keep full-row emission tight; selected/export paths share one plan engine.
+        os << t << " " << (transformVm ? transformVm(S) : S[0]);
 
-        // states
-        for (int i = 1; i < S.size(); ++i)
+        for (label i = 1; i < S.size(); ++i)
         {
             os << " " << S[i];
         }
 
-        // algebraic
-        const scalarField& A = ALGEBRAIC[0];
         forAll(A, i)
         {
             os << " " << A[i];
         }
 
-        // rates
-        const scalarField& R = RATES[0];
         forAll(R, i)
         {
             os << " " << R[i];
         }
 
-        os << endl;
+        os << nl;
     }
 
     void Foam::ionicModelIO::writeSelected
@@ -94,84 +279,111 @@ namespace Foam {
         const PtrList<scalarField>& ALGEBRAIC,
         const wordList& exportedNames,
         const char* const stateNames[],
-        int nStates,
+        label nStates,
         const char* const algNames[],
-        int nAlg
+        label nAlg,
+        SelectedMapCache& selectedPlanCache,
+        const PtrList<scalarField>& RATES,
+        VmTransform transformVm
     )
     {
-        // 1. mapping (same as exportStateFields)
-        List<label> stateIndex, algIndex;
-
-        mapVariableNames
-        (
-            exportedNames,
-            stateNames, nStates,
-            algNames,  nAlg,
-            stateIndex,
-            algIndex
-        );
+        // 1. mapping (cached between timesteps)
+        const SelectionPlan& plan =
+            selectedPlan
+            (
+                exportedNames,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                selectedPlanCache
+            );
 
         // 2. single cell only
         const scalarField& S = STATES[0];
         const scalarField& A = ALGEBRAIC[0];
+        const scalarField& R = RATES[0];
 
-        // 3. write
-        os << t;
+        emitRow(t, os, S, A, R, plan, transformVm);
+    }
 
-        forAll(stateIndex, k)
+    bool Foam::ionicModelIO::shouldWriteStep
+    (
+        scalar tBegin,
+        scalar tEnd,
+        const dictionary& dict,
+        bool utilitiesMode
+    )
+    {
+        // For utilities (like sweepCurrents): always write
+        if (utilitiesMode)
         {
-            if (stateIndex[k] >= 0)
-            {
-                os << " " << S[stateIndex[k]];
-            }
-            else
-            {
-                os << " " << A[algIndex[k]];
-            }
+            return true;
         }
 
-        os << nl;
+        // User controls when to start writing
+        scalar writeAfterTime = 0.0;
+        if (dict.found("writeAfterTime"))
+        {
+            writeAfterTime = readScalar(dict.lookup("writeAfterTime"));
+        }
+
+        // Start writing once we pass that time
+        return (tEnd >= writeAfterTime);
     }
 
 
-    Foam::wordList Foam::ionicModelIO::exportedFieldNames
+    const Foam::wordList& Foam::ionicModelIO::exportedFieldNamesRef
     (
         const wordList& userList,
         const char* const stateNames[],
         label nStates,
         const char* const algNames[],
-        label nAlg
+        label nAlg,
+        ExportedNamesCache& cache
     )
     {
         if (!userList.size())
         {
-            return Foam::wordList();
+            static const wordList empty;
+            return empty;
+        }
+
+        const bool cacheHit =
+               cache.valid
+            && cache.stateNamesPtr == static_cast<const void*>(stateNames)
+            && cache.algNamesPtr == static_cast<const void*>(algNames)
+            && cache.nStates == nStates
+            && cache.nAlg == nAlg
+            && ionicVariableCompatibility::sameWordList(cache.requested, userList);
+        if (cacheHit)
+        {
+            return cache.filtered;
         }
 
         wordList filtered;
         forAll(userList, k)
         {
             const word& name = userList[k];
-            bool found = false;
-            for (label i = 0; i < nStates; ++i)
-            {
-                if (name == stateNames[i])
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                for (label i = 0; i < nAlg; ++i)
-                {
-                    if (name == algNames[i])
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-            }
+            bool isVm = false;
+            label stateIdx = -1;
+            label algIdx = -1;
+            label rateIdx = -1;
+            const bool found =
+                ionicVariableCompatibility::resolveVariable
+                (
+                    name,
+                    stateNames,
+                    nStates,
+                    algNames,
+                    nAlg,
+                    isVm,
+                    stateIdx,
+                    algIdx,
+                    rateIdx
+                )
+             && (isVm || stateIdx >= 0 || algIdx >= 0 || rateIdx >= 0);
+
             if (found)
             {
                 filtered.append(name);
@@ -184,48 +396,80 @@ namespace Foam {
             }
         }
 
-        return filtered;
-    }
+        cache.valid = true;
+        cache.stateNamesPtr = static_cast<const void*>(stateNames);
+        cache.algNamesPtr = static_cast<const void*>(algNames);
+        cache.nStates = nStates;
+        cache.nAlg = nAlg;
+        cache.requested = userList;
+        cache.filtered = filtered;
 
+        return cache.filtered;
+    }
 
     void Foam::ionicModelIO::exportStateFields
     (
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const PtrList<scalarField>& RATES,
         const wordList& exportedNames,
         const char* const stateNames[],
         int nStates,
         const char* const algNames[],
         int nAlg,
+        SelectedMapCache& selectedPlanCache,
         PtrList<volScalarField>& outFields
     )
     {
-        // 1. mapping
-        List<label> stateIndex, algIndex;
-        mapVariableNames
-        (
-            exportedNames,
-            stateNames, nStates,
-            algNames,  nAlg,
-            stateIndex,
-            algIndex
-        );
+        const SelectionPlan& plan =
+            selectedPlan
+            (
+                exportedNames,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                selectedPlanCache
+            );
+
+        if (outFields.size() != plan.source.size())
+        {
+            FatalErrorInFunction
+                << "Mismatch between selected export variables ("
+                << plan.source.size() << ") and allocated output fields ("
+                << outFields.size() << ")."
+                << exit(FatalError);
+        }
 
         // 2. Populate volScalarFields
         forAll(STATES, cellI)
         {
             const scalarField& S = STATES[cellI];
             const scalarField& A = ALGEBRAIC[cellI];
+            const scalarField& R = RATES[cellI];
 
             forAll(outFields, k)
             {
-                if (stateIndex[k] >= 0)
+                const label src = plan.source[k];
+                const label idx = plan.index[k];
+
+                if (src == ionicModelIO::COL_VM || src == ionicModelIO::COL_STATE)
                 {
-                    outFields[k][cellI] = S[stateIndex[k]];
+                    outFields[k][cellI] = S[idx];
+                }
+                else if (src == ionicModelIO::COL_RATE)
+                {
+                    outFields[k][cellI] = R[idx];
+                }
+                else if (src == ionicModelIO::COL_ALGEBRAIC)
+                {
+                    outFields[k][cellI] = A[idx];
                 }
                 else
                 {
-                    outFields[k][cellI] = A[algIndex[k]];
+                    FatalErrorInFunction
+                        << "Unexpected selection source id " << src
+                        << " in export plan." << exit(FatalError);
                 }
             }
         }
@@ -241,11 +485,13 @@ namespace Foam {
     (
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const PtrList<scalarField>& RATES,
         const wordList& printedNames,
         const char* const stateNames[],
         int nStates,
         const char* const algNames[],
         int nAlg,
+        SelectedMapCache& selectedPlanCache,
         label cellI,
         scalar t1,
         scalar t2,
@@ -253,43 +499,45 @@ namespace Foam {
     )
     {
         if (printedNames.empty())
-        {
             return;
-        }
 
-        // Map names → indices
-        List<label> stateIndex, algIndex;
-        mapVariableNames
-        (
-            printedNames,
-            stateNames, nStates,
-            algNames,  nAlg,
-            stateIndex,
-            algIndex
-        );
+        const SelectionPlan& plan =
+            selectedPlan
+            (
+                printedNames,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                selectedPlanCache
+            );
 
         const scalarField& S = STATES[cellI];
         const scalarField& A = ALGEBRAIC[cellI];
-
+        const scalarField& R = RATES[cellI];
         // Header line
         Info<< "DEBUG cell=" << cellI
             << " t=" << t1 << "→" << t2;
 
         if (step >= 0)
-        {
             Info<< " step=" << step;
-        }
 
         // Print each selected variable
         forAll(printedNames, k)
         {
-            if (stateIndex[k] >= 0)
+            if (plan.source[k] == ionicModelIO::COL_VM || plan.source[k] == ionicModelIO::COL_STATE)
+                {Info<< " " << printedNames[k] << "=" << S[plan.index[k]];}
+            else if (plan.source[k] == ionicModelIO::COL_RATE)
             {
-                Info<< " " << printedNames[k] << "=" << S[stateIndex[k]];
+                Info<< " " << printedNames[k] << "=" << R[plan.index[k]];
             }
+            else if (plan.source[k] == ionicModelIO::COL_ALGEBRAIC)
+                {Info<< " " << printedNames[k] << "=" << A[plan.index[k]];}
             else
             {
-                Info<< " " << printedNames[k] << "=" << A[algIndex[k]];
+                FatalErrorInFunction
+                    << "Unexpected selection source id " << plan.source[k]
+                    << " in debug plan." << exit(FatalError);
             }
         }
         Info<< nl;
@@ -303,42 +551,21 @@ namespace Foam {
         const char* const algNames[],
         int nAlg,
         List<label>& stateIndex,
-        List<label>& algIndex
+        List<label>& algIndex,
+        List<label>& rateIndex
     )
     {
-        stateIndex.setSize(names.size(), -1);
-        algIndex.setSize(names.size(), -1);
-
-        forAll(names, k)
-        {
-            const word& name = names[k];
-
-            // Match STATE variable
-            for (label s = 0; s < nStates; ++s)
-            {
-                if (name == stateNames[s])
-                {
-                    stateIndex[k] = s;
-                    goto mapped;
-                }
-            }
-
-            // Match ALGEBRAIC variable
-            for (label a = 0; a < nAlg; ++a)
-            {
-                if (name == algNames[a])
-                {
-                    algIndex[k] = a;
-                    goto mapped;
-                }
-            }
-
-            FatalErrorInFunction
-                << "Unknown debug variable: " << name
-                << exit(FatalError);
-
-        mapped:;
-        }
+        ionicVariableCompatibility::mapVariableNames
+        (
+            names,
+            stateNames,
+            nStates,
+            algNames,
+            nAlg,
+            stateIndex,
+            algIndex,
+            rateIndex
+        );
     }
 
 
@@ -357,28 +584,40 @@ namespace Foam {
         const char* const stateNames[],
         label nStates,
         const char* const algNames[],
-        label nAlg
+        label nAlg,
+        const scalarField& RATES,
+        SelectedMapCache& selectedPlanCache
     )
     {
-        List<label> stateIndex, algIndex;
-
-        mapVariableNames(
-            deps,
-            stateNames, nStates,
-            algNames, nAlg,
-            stateIndex, algIndex
-        );
-
+        const SelectionPlan& plan =
+            selectedPlan
+            (
+                deps,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                selectedPlanCache
+            );
+    
         os << V;
-
-        forAll(deps, i)
+    
+        forAll(plan.source, i)
         {
-            if (stateIndex[i] >= 0)
-                os << "," << STATES[stateIndex[i]];
-            else if (algIndex[i] >= 0)
-                os << "," << ALG[algIndex[i]];
+            if (plan.source[i] == ionicModelIO::COL_VM || plan.source[i] == ionicModelIO::COL_STATE)
+                os << "," << STATES[plan.index[i]];
+            else if (plan.source[i] == ionicModelIO::COL_ALGEBRAIC)
+                os << "," << ALG[plan.index[i]];
+            else if (plan.source[i] == ionicModelIO::COL_RATE)
+            {
+                os << "," << RATES[plan.index[i]];
+            }
             else
-                os << ",0";
+            {
+                FatalErrorInFunction
+                    << "Unexpected selection source id " << plan.source[i]
+                    << " in sweep plan." << exit(FatalError);
+            }
         }
         os << nl;
     }
@@ -405,4 +644,4 @@ namespace Foam {
 
 
 
-
+    

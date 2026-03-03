@@ -1,6 +1,6 @@
-# electroActivationFoam tutorial: Niederer et al. (2011) slab benchmark
+# cardiacFoam tutorial: Niederer et al. (2011) slab benchmark
 
-This tutorial demonstrates the use of **electroActivationFoam** to reproduce the
+This tutorial demonstrates the use of **cardiacFoam** to reproduce the
 cardiac tissue electrophysiology benchmark proposed by **Niederer et al. (2011)**,
 which is widely used to verify cardiac electrophysiology simulators.
 
@@ -33,13 +33,14 @@ Key characteristics of the benchmark:
 ## Case structure
 
 ```
-NiedererEtAl2011/
+NiedererEtAl2012/
 ├── 0
 │   └── Vm
 ├── constant
-│   ├── cardiacProperties
-│   ├── timeIntegrationProperties
-│   └── stimulusProtocol
+│   ├── electroProperties
+│   ├── physicsProperties
+│   ├── activeTensionProperties
+│   └── polyMesh
 ├── system
 │   ├── blockMeshDict
 │   ├── controlDict
@@ -57,51 +58,25 @@ NiedererEtAl2011/
 
 ## Solver options
 
-This case can be run using either:
-
-- **`electroActivationFoam`**  
-  A full **monodomain reaction–diffusion solver**, reproducing the Niederer et al.
-  benchmark as originally defined. This option is **more accurate** but
-  computationally more expensive.
-
-- **`eikonalElectroActivationFoam`**  
-  A simplified **eikonal-based solver** that computes activation times directly
-  by solving an anisotropic eikonal–diffusion equation. This option is
-  **significantly cheaper**, but neglects detailed transmembrane dynamics and is
-  intended for rapid estimation of activation times rather than full
-  electrophysiological modelling.
-
-The eikonal solver uses the same geometry, material parameters, and stimulus
-location, but replaces the monodomain PDE with a steady nonlinear eikonal
-formulation.
+This case runs with **`cardiacFoam`**.
 
 ---
 
 ## Running the tutorial
 
-By default, the tutorial runs the **monodomain solver** in serial:
+By default, the tutorial runs in serial:
 
 ```bash
 ./Allrun
 ```
 
-To run the **eikonal solver** instead:
-
-```bash
-./Allrun eikonal
-```
-
-To run either solver in parallel:
+To run in parallel:
 
 ```bash
 ./Allrun parallel
 ```
 
 or, for the eikonal solver in parallel:
-
-```bash
-./Allrun eikonal parallel
-```
 
 ---
 
