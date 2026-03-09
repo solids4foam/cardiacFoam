@@ -171,6 +171,29 @@ class monoDomainElectro
         void operator=(const monoDomainElectro&);
 
 
+protected:
+
+    // Protected constructor for subclasses (passes concrete type name up)
+    monoDomainElectro
+    (
+        const word& type,
+        Time& runTime,
+        const word& region = dynamicFvMesh::defaultRegion
+    );
+
+    //- Const access to transmembrane voltage (needed by ECG subclasses)
+    const volScalarField& Vm() const
+    {
+        return Vm_;
+    }
+
+    //- Const access to the conductivity tensor (needed by ECG subclasses)
+    const volTensorField& conductivity() const
+    {
+        return conductivity_;
+    }
+
+
 public:
 
     //- Runtime type information
