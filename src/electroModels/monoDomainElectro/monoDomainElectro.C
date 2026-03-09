@@ -332,7 +332,18 @@ monoDomainElectro::monoDomainElectro
     const word& region
 )
 :
-    electroModel(typeName, runTime, region),
+    monoDomainElectro(typeName, runTime, region)
+{}
+
+
+monoDomainElectro::monoDomainElectro
+(
+    const word& type,
+    Time& runTime,
+    const word& region
+)
+:
+    electroModel(type, runTime, region),
     Vm_
     (
         IOobject
