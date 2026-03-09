@@ -137,6 +137,71 @@ void greensFunctionECGElectro::writeHeader()
 }
 
 
+void greensFunctionECGElectro::loadTorsoSurface(const dictionary& ecgDict)
+{
+    const fileName stlPath(ecgDict.get<fileName>("torsoSurface"));
+    const fileName fullPath(runTime().path()/stlPath);
+
+    Info<< "greensFunctionECGElectro: loading torso surface from '"
+        << fullPath << "'" << nl << endl;
+
+    torsoSurfacePtr_.reset(new triSurface(fullPath));
+    torsoFaceCentres_ = torsoSurfacePtr_().faceCentres();
+
+    Info<< "Torso surface: " << torsoFaceCentres_.size()
+        << " faces loaded." << nl << endl;
+
+    torsoVtkDir_ = runTime().path()/"postProcessing"/"ECG";
+    mkDir(torsoVtkDir_);
+}
+
+
+void greensFunctionECGElectro::writeTorsoVtk(const scalarList& phiTorso) const
+{
+    const triSurface& surf = torsoSurfacePtr_();
+    const pointField& pts  = surf.points();
+    const label nPoints    = pts.size();
+    const label nTris      = surf.size();
+
+    const fileName vtkFile
+    (
+        torsoVtkDir_/"phiT_" + runTime().timeName() + ".vtk"
+    );
+
+    OFstream os(vtkFile);
+    os.setf(std::ios::scientific);
+    os.precision(8);
+
+    os << "# vtk DataFile Version 3.0\n";
+    os << "Torso ECG phiT t=" << runTime().timeName() << "\n";
+    os << "ASCII\n";
+    os << "DATASET POLYDATA\n";
+
+    os << "POINTS " << nPoints << " float\n";
+    forAll(pts, pI)
+    {
+        os << pts[pI].x() << " " << pts[pI].y() << " " << pts[pI].z() << "\n";
+    }
+
+    os << "POLYGONS " << nTris << " " << 4*nTris << "\n";
+    forAll(surf, tI)
+    {
+        const triFace& tri = surf[tI];
+        os << "3 " << tri[0] << " " << tri[1] << " " << tri[2] << "\n";
+    }
+
+    os << "CELL_DATA " << nTris << "\n";
+    os << "SCALARS phiT float 1\n";
+    os << "LOOKUP_TABLE default\n";
+    forAll(phiTorso, fI)
+    {
+        os << phiTorso[fI] << "\n";
+    }
+
+    Info<< "ECG surface written to " << vtkFile << nl;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 greensFunctionECGElectro::greensFunctionECGElectro
