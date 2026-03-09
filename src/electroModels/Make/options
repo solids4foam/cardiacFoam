@@ -32,6 +32,7 @@ EXE_INC = \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/surfMesh/lnInclude \
     -I$(LIB_SRC)/dynamicMesh/lnInclude \
     -I$(LIB_SRC)/dynamicMesh/dynamicMesh/lnInclude \
     -I$(LIB_SRC)/dynamicMesh/dynamicFvMesh/lnInclude \
@@ -46,6 +47,7 @@ LIB_LIBS = \
     -lgenericWriter \
     -lfiniteVolume \
     -lmeshTools \
+    -lsurfMesh \
     -ldynamicFvMesh \
     -ldynamicMesh \
     -lODE
