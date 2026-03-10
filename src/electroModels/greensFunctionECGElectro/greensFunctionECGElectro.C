@@ -323,7 +323,7 @@ bool greensFunctionECGElectro::evolve()
 
     // 4) Green's function + Gima-Rudy pseudo-ECG integrals (single pass):
     //    phi_greens(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
-    //    phi_pseudo(P) = -sum_c [ (Gi_c . grad(Vm)_c) . r_vec * V_c / |C_c - P|^3 ]
+    //    phi_pseudo(P) = -sum_c [ (D_c . grad(Vm)_c) . r_vec * V_c / |C_c - P|^3 ]
     //    where r_vec = C_c - P.
     //    (D & gradVm) is the dipole source density following Gima & Rudy (2002),
     //    where D = conductivity() is the monodomain diffusion tensor;
