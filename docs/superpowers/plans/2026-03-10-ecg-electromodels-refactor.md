@@ -4,7 +4,7 @@
 
 **Goal:** Introduce `ecgElectroBase` between `monoDomainElectro` and the ECG subclasses, split `greensFunctionECGElectro` into `pseudoECGElectro` and `BEMECGElectro`, eliminate 4 copies of the conductivity tensor init pattern, and add a `postProcess` flag that reads Vm from disk instead of solving the monodomain PDE.
 
-**Architecture:** `ecgElectroBase` extends `monoDomainElectro` using the existing protected `(const word& type, Time& runTime, const word& region)` constructor chain. Shared ECG state (`sigmaI_`, `Gi_`, `sigmaT_`) lives in the base; subclasses implement only `computeECG()`. `monoDomainElectro` gains two protected members: `initialiseConductivityTensor()` (static utility, replaces 4 duplicate patterns) and `readVm()` (called by the base in postProcess mode).
+**Architecture:** `ecgElectroBase` extends `monoDomainElectro` using the existing protected `(const word& type, Time& runTime, const word& region)` constructor chain. Shared ECG state (`Gi_`, `sigmaT_`, `postProcess_`) lives in the base; subclasses implement only `computeECG()`. `monoDomainElectro` gains two protected members: `initialiseConductivityTensor()` (static utility, replaces 4 duplicate patterns — used for both `conductivity_` and `Gi_`) and `readVm()` (called by the base in postProcess mode). The `Gi` tensor stays as a full `volTensorField` initialized from the dict (no scalar simplification — deferred).
 
 **Tech Stack:** OpenFOAM C++ (wmake build system), existing electroModel runtime-selection pattern (`defineTypeNameAndDebug`, `addToRunTimeSelectionTable`), `volTensorField`, `dimensionedScalar`, `IOobject::READ_IF_PRESENT`.
 
@@ -16,17 +16,17 @@
 |---|---|---|
 | Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.H` | Declare `initialiseConductivityTensor()` (protected static) and `readVm()` (protected) |
 | Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` | Implement both; refactor `initialiseConductivity()` to delegate to the utility |
-| **Create** | `src/electroModels/ecgElectroBase/ecgElectroBase.H` | Abstract base: `sigmaI_`, `Gi_`, `sigmaT_`, `postProcess_`; pure virtual `computeECG()`; `evolve()` mode switch |
-| **Create** | `src/electroModels/ecgElectroBase/ecgElectroBase.C` | Constructor, `evolve()`, `read()` |
+| **Create** | `src/electroModels/ecgElectroBase/ecgElectroBase.H` | Abstract base: `Gi_` (volTensorField), `sigmaT_`, `postProcess_`; pure virtual `computeECG()`; `evolve()` mode switch |
+| **Create** | `src/electroModels/ecgElectroBase/ecgElectroBase.C` | Constructor (init `Gi_` via `initialiseConductivityTensor`), `evolve()`, `read()` |
 | **Create** | `src/electroModels/pseudoECGElectro/pseudoECGElectro.H` | Gima-Rudy dipole subclass |
 | **Create** | `src/electroModels/pseudoECGElectro/pseudoECGElectro.C` | `computeECG()`: dipole integral, electrode output |
 | **Create** | `src/electroModels/BEMECGElectro/BEMECGElectro.H` | Green's function subclass (replaces `greensFunctionECGElectro`) |
-| **Create** | `src/electroModels/BEMECGElectro/BEMECGElectro.C` | `computeECG()`: Is_ computation, Green's function integral, torso VTK |
+| **Create** | `src/electroModels/BEMECGElectro/BEMECGElectro.C` | `computeECG()`: Is_ computation, Green's function integral only, torso VTK — no pseudo-ECG output |
 | Modify | `src/electroModels/pdeECGElectro/pdeECGElectro.H` | Extend `ecgElectroBase`; remove `Gi_`, `sigmaT_`; add `sigmaE_`, `Ge_` |
 | Modify | `src/electroModels/pdeECGElectro/pdeECGElectro.C` | Remove duplicate init; use `Gi()` from base; add `computeECG()` |
 | Delete | `src/electroModels/greensFunctionECGElectro/` | Replaced by `BEMECGElectro` + `pseudoECGElectro` |
 | Modify | `src/electroModels/Make/files` | Add new classes; remove `greensFunctionECGElectro` |
-| Modify | `tutorials/ECG/constant/electroProperties` | `greensFunctionECGElectro` → `BEMECGElectro`; `Gi` tensor → `sigmaI` scalar |
+| Modify | `tutorials/ECG/constant/electroProperties` | `greensFunctionECGElectro` → `BEMECGElectro`; coeff dict renamed only — `Gi` tensor unchanged |
 
 ---
 
@@ -234,10 +234,9 @@
   {
       // Private data
 
-          //- Intracellular conductivity scalar: Gi_ = sigmaI_ * conductivity()
-          const dimensionedScalar sigmaI_;
-
-          //- Intracellular conductivity tensor (time-invariant, set once in ctor)
+          //- Intracellular conductivity tensor (time-invariant, set once in ctor).
+          //  Initialized via initialiseConductivityTensor("Gi", ecgDict, mesh()).
+          //  Gi tensor simplification to scalar (sigmaI * conductivity) is deferred.
           volTensorField Gi_;
 
           //- Isotropic torso / infinite-medium conductivity (constant)
@@ -276,9 +275,9 @@
 
           // Access
 
-              const volTensorField& Gi() const { return Gi_; }
+              const volTensorField& Gi()     const { return Gi_; }
               const dimensionedScalar& sigmaT() const { return sigmaT_; }
-              bool postProcess() const { return postProcess_; }
+              bool postProcess()             const { return postProcess_; }
 
           // Evolution
 
@@ -323,22 +322,14 @@
   )
   :
       monoDomainElectro(type, runTime, region),
-      sigmaI_
-      (
-          "sigmaI",
-          electroProperties().subDict(type + "Coeffs").subDict("ECG")
-      ),
       Gi_
       (
-          IOobject
+          initialiseConductivityTensor
           (
               "Gi",
-              runTime.timeName(),
-              mesh(),
-              IOobject::NO_READ,
-              IOobject::NO_WRITE
-          ),
-          sigmaI_ * conductivity()
+              electroProperties().subDict(type + "Coeffs").subDict("ECG"),
+              mesh()
+          )
       ),
       sigmaT_
       (
@@ -352,7 +343,7 @@
       )
   {
       Info<< "ECGElectroBase:" << nl
-          << "  sigmaI  = " << sigmaI_.value() << " S/m" << nl
+          << "  Gi      read from ECG subdict or disk" << nl
           << "  sigmaT  = " << sigmaT_.value() << " S/m" << nl
           << "  postProcess = " << postProcess_ << nl;
   }
@@ -589,9 +580,8 @@
           pointField          torsoFaceCentres_;
           fileName            torsoVtkDir_;
 
-          //- Output streams
-          autoPtr<OFstream> outputPtr_;       // ECG.dat
-          autoPtr<OFstream> outputPseudoPtr_; // pseudoECG.dat (companion output)
+          //- Output stream
+          autoPtr<OFstream> outputPtr_;   // ECG.dat only — pseudo-ECG belongs to pseudoECGElectro
 
 
       // Private member functions
@@ -599,12 +589,7 @@
           void readElectrodes(const dictionary& ecgDict);
           void loadTorsoSurface(const dictionary& ecgDict);
           void writeHeader();
-          void writePseudoHeader();
-          void writeTorsoVtk
-          (
-              const scalarList& phiGreens,
-              const scalarList& phiPseudo
-          ) const;
+          void writeTorsoVtk(const scalarList& phiGreens) const;
           virtual void computeECG();
 
 
@@ -636,15 +621,19 @@
   1. Base class: `ecgElectroBase` instead of `monoDomainElectro`
   2. **Remove** `Gi_` member and `initialiseGi()` — use `Gi()` from base
   3. **Remove** `sigmaT_` member — use `sigmaT()` from base
-  4. `computeECG()` replaces the ECG portion of `evolve()` — the monodomain call is gone
+  4. **Remove** `outputPseudoPtr_` and `writePseudoHeader()` — pseudo-ECG output is `pseudoECGElectro`'s responsibility
+  5. `computeECG()` replaces the ECG portion of `evolve()` — the monodomain call is gone
 
-  Constructor: copy from `greensFunctionECGElectro`, remove all `Gi_`/`sigmaT_` init.
+  Constructor: copy from `greensFunctionECGElectro`, remove `Gi_`/`sigmaT_` init and the pseudo-ECG output stream setup.
 
-  `computeECG()`: copy the ECG block from `greensFunctionECGElectro::evolve()` (lines 302–409 of original), replacing `Gi_` with `Gi()` and `sigmaT_` with `sigmaT()`.
+  `computeECG()`: copy the ECG block from `greensFunctionECGElectro::evolve()` (lines 302–409 of original):
+  - Keep the Green's function integral (`localSumsGreens`) and `ECG.dat` output
+  - **Drop** the pseudo-ECG integral (`localSumsPseudo`) and `pseudoECG.dat` output entirely
+  - Replace `Gi_` with `Gi()` and `sigmaT_` with `sigmaT()`
 
-  All other methods (`readElectrodes`, `loadTorsoSurface`, `writeHeader`, `writePseudoHeader`, `writeTorsoVtk`) copy verbatim from `greensFunctionECGElectro.C`.
+  `writeTorsoVtk` takes only `phiGreens` (no `phiPseudo`).
 
-  The single-pass loop combining Green's function + pseudo-ECG integrals is preserved in `computeECG()` for efficiency.
+  Methods `readElectrodes`, `loadTorsoSurface`, `writeHeader` copy verbatim from `greensFunctionECGElectro.C`.
 
 - [ ] **Step 3: Add to `Make/files`**
 
@@ -678,51 +667,36 @@
 
 - [ ] **Step 1: Update `electroProperties`**
 
-  Change:
-  ```
-  electroModel  greensFunctionECGElectro;
+  Two changes only — everything else stays verbatim:
+  1. `electroModel` value: `greensFunctionECGElectro` → `BEMECGElectro`
+  2. Coeff dict name: `greensFunctionECGElectroCoeffs` → `BEMECGElectroCoeffs`
 
-  greensFunctionECGElectroCoeffs
-  {
-      ...
-      ECG
-      {
-          Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
-          sigmaT  [-1 -3 3 0 0 2 0] 0.24725;
-          ...
-      }
-  }
-  ```
+  The `ECG {}` subdict content is **unchanged** — `Gi` stays as the full anisotropic tensor:
 
-  To:
   ```
   electroModel  BEMECGElectro;
 
   BEMECGElectroCoeffs
   {
-      // All monodomain settings remain flat here (chi, Cm, ionicModel, etc.)
-      // — copy verbatim from greensFunctionECGElectroCoeffs above
       chi   [0 -1 0 0 0 0 0] 140000;
       Cm    [-1 -4 4 0 0 2 0] 0.01;
       ionicModel    BuenoOrovio;
       tissue        epicardialCells;
       solutionAlgorithm    explicit;
-      // ... (all other monodomain keys unchanged)
+      // ... all other monodomain keys unchanged ...
 
       ECG
       {
-          sigmaI  [-1 -3 3 0 0 2 0] 0.17;     // was: Gi tensor (6 components)
-          sigmaT  [-1 -3 3 0 0 2 0] 0.24725;  // unchanged
+          Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);  // unchanged
+          sigmaT  [-1 -3 3 0 0 2 0] 0.24725;                      // unchanged
           electrodes
           {
               V1 (-26.1184 -283.543 -70.0558);
-              // ... all other electrodes unchanged
+              // ... all electrodes unchanged ...
           }
       }
   }
   ```
-
-  Note: `sigmaI` is the isotropic intracellular conductivity scalar that was the diagonal of the original `Gi` tensor. Use `0.17` for the longitudinal component (the existing `Gi` was anisotropic with `(0.17 0 0  0.019 0  0.019)` — confirm with the user whether `sigmaI = 0.17` (fibre direction) or a harmonic mean should be used here).
 
 - [ ] **Step 2: Run ECG tutorial**
 
@@ -899,10 +873,8 @@
 
 ---
 
-## Open Questions (Confirm Before Implementing)
+## Deferred / Known Limitations
 
-1. **`sigmaI` value in tutorial**: The original `Gi` was anisotropic `(0.17 0 0  0.019 0  0.019)`. The new `sigmaI` is a scalar. Confirm whether `sigmaI = 0.17` (fibre-direction value) is appropriate, or if a different representative value should be used.
+1. **`Gi` tensor → scalar simplification**: `Gi_` stays as a full anisotropic `volTensorField` initialized from the dict. The physical relationship `Gi = sigmaI * conductivity()` is noted in the design spec but not implemented here — a separate task once the anisotropy handling is better understood.
 
-2. **`postProcess` time-looping**: In postProcess mode, `readVm()` re-reads from `mesh().time().timeName()`. The solver binary must advance `runTime` through existing time directories. This integration with the solver binary or a dedicated utility is **deferred** — the flag is implemented but not the solver-level looping.
-
-3. **`pseudoECGElectro` companion output**: Currently `greensFunctionECGElectro` outputs both `ECG.dat` (Green's) and `pseudoECG.dat` (dipole) in a single pass. After splitting, decide whether `BEMECGElectro` keeps its companion `pseudoECG.dat` output or drops it entirely (since `pseudoECGElectro` now handles it).
+2. **`postProcess` time-looping**: `readVm()` re-reads Vm from `mesh().time().timeName()`. The solver binary must advance `runTime` through existing time directories for this to be useful. Integration with the solver binary or a dedicated utility is **deferred** — the flag is wired up but standalone postProcess invocation is not tested in this plan.
