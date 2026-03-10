@@ -318,25 +318,34 @@ bool greensFunctionECGElectro::evolve()
     for (label i = 0; i < nE; i++) allPoints[i]      = electrodePositions_[i];
     for (label i = 0; i < nF; i++) allPoints[nE + i] = torsoFaceCentres_[i];
 
-    // 4) Green's function integral:
-    //    phi(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
+    // 4) Green's function + pseudo-ECG integrals (single pass):
+    //    phi_greens(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
+    //    phi_pseudo(P) = sum_c [ (grad(Vm)_c . r_vec) * V_c / |C_c - P|^3 ]
     const scalarField& IsI  = Is_.primitiveField();
     const scalarField& Vols = mesh().V();
     const vectorField& Ctrs = mesh().C().primitiveField();
     const scalar invCoeff =
         1.0/(4.0*constant::mathematical::pi*sigmaT_.value());
 
-    List<scalar> localSums(nAll, scalar(0));
+    tmp<volVectorField> tgradVm = fvc::grad(Vm());
+    const vectorField& gradVm   = tgradVm().primitiveField();
+
+    List<scalar> localSumsGreens(nAll, scalar(0));
+    List<scalar> localSumsPseudo(nAll, scalar(0));
 
     forAll(Ctrs, cI)
     {
-        const scalar IsV = IsI[cI]*Vols[cI];
+        const scalar IsV     = IsI[cI]*Vols[cI];
+        const vector gradVmV = gradVm[cI]*Vols[cI];
+
         for (label pI = 0; pI < nAll; pI++)
         {
-            const scalar r = mag(Ctrs[cI] - allPoints[pI]);
+            const vector r_vec = Ctrs[cI] - allPoints[pI];
+            const scalar r     = mag(r_vec);
             if (r > VSMALL)
             {
-                localSums[pI] += IsV/r;
+                localSumsGreens[pI] += IsV / r;
+                localSumsPseudo[pI] += (gradVmV & r_vec) / (r*r*r);
             }
         }
     }
@@ -344,31 +353,49 @@ bool greensFunctionECGElectro::evolve()
     // 5) Reduce across processors and apply coefficient
     for (label pI = 0; pI < nAll; pI++)
     {
-        reduce(localSums[pI], sumOp<scalar>());
-        localSums[pI] *= invCoeff;
+        reduce(localSumsGreens[pI], sumOp<scalar>());
+        reduce(localSumsPseudo[pI], sumOp<scalar>());
+        localSumsGreens[pI] *= invCoeff;
+        // localSumsPseudo: no sigmaT factor per design
     }
 
-    // 6) Electrode output → ECG.dat  (every timestep)
+    // 6) Electrode output → ECG.dat + pseudoECG.dat  (every timestep)
     if (nE > 0)
     {
-        OFstream& os = outputPtr_.ref();
-        os << runTime().value();
-        for (label eI = 0; eI < nE; eI++)
+        // Green's function → ECG.dat
         {
-            os << "  " << localSums[eI];
+            OFstream& os = outputPtr_.ref();
+            os << runTime().value();
+            for (label eI = 0; eI < nE; eI++)
+            {
+                os << "  " << localSumsGreens[eI];
+            }
+            os << nl;
         }
-        os << nl;
+
+        // Pseudo-ECG → pseudoECG.dat
+        {
+            OFstream& os = outputPseudoPtr_.ref();
+            os << runTime().value();
+            for (label eI = 0; eI < nE; eI++)
+            {
+                os << "  " << localSumsPseudo[eI];
+            }
+            os << nl;
+        }
     }
 
     // 7) Torso surface output → VTK  (at outputTime only)
     if (nF > 0 && runTime().outputTime())
     {
-        scalarList phiTorso(nF);
+        scalarList phiGreens(nF);
+        scalarList phiPseudo(nF);
         for (label fI = 0; fI < nF; fI++)
         {
-            phiTorso[fI] = localSums[nE + fI];
+            phiGreens[fI] = localSumsGreens[nE + fI];
+            phiPseudo[fI] = localSumsPseudo[nE + fI];
         }
-        writeTorsoVtk(phiTorso);
+        writeTorsoVtk(phiGreens, phiPseudo);
     }
 
     return true;
