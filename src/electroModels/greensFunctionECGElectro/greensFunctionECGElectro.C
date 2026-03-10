@@ -137,6 +137,21 @@ void greensFunctionECGElectro::writeHeader()
 }
 
 
+void greensFunctionECGElectro::writePseudoHeader()
+{
+    OFstream& os = outputPseudoPtr_.ref();
+    os.setf(std::ios::scientific);
+    os.precision(8);
+
+    os << "# time";
+    forAll(electrodeNames_, i)
+    {
+        os << "  " << electrodeNames_[i];
+    }
+    os << nl;
+}
+
+
 void greensFunctionECGElectro::loadTorsoSurface(const dictionary& ecgDict)
 {
     const fileName stlPath(ecgDict.get<fileName>("torsoSurface"));
@@ -156,7 +171,11 @@ void greensFunctionECGElectro::loadTorsoSurface(const dictionary& ecgDict)
 }
 
 
-void greensFunctionECGElectro::writeTorsoVtk(const scalarList& phiTorso) const
+void greensFunctionECGElectro::writeTorsoVtk
+(
+    const scalarList& phiGreens,
+    const scalarList& phiPseudo
+) const
 {
     const triSurface& surf = torsoSurfacePtr_();
     const pointField& pts  = surf.points();
@@ -191,11 +210,19 @@ void greensFunctionECGElectro::writeTorsoVtk(const scalarList& phiTorso) const
     }
 
     os << "CELL_DATA " << nTris << "\n";
-    os << "SCALARS phiT float 1\n";
+
+    os << "SCALARS phiGreens float 1\n";
     os << "LOOKUP_TABLE default\n";
-    forAll(phiTorso, fI)
+    forAll(phiGreens, fI)
     {
-        os << phiTorso[fI] << "\n";
+        os << phiGreens[fI] << "\n";
+    }
+
+    os << "SCALARS phiPseudo float 1\n";
+    os << "LOOKUP_TABLE default\n";
+    forAll(phiPseudo, fI)
+    {
+        os << phiPseudo[fI] << "\n";
     }
 
     Info<< "ECG surface written to " << vtkFile << nl;
@@ -235,6 +262,7 @@ greensFunctionECGElectro::greensFunctionECGElectro
     electrodeNames_(),
     electrodePositions_(),
     outputPtr_(),
+    outputPseudoPtr_(),
     torsoSurfacePtr_(),
     torsoFaceCentres_(),
     torsoVtkDir_()
@@ -258,6 +286,8 @@ greensFunctionECGElectro::greensFunctionECGElectro
         mkDir(outDir);
         outputPtr_.reset(new OFstream(outDir/"ECG.dat"));
         writeHeader();
+        outputPseudoPtr_.reset(new OFstream(outDir/"pseudoECG.dat"));
+        writePseudoHeader();
     }
 
     if (hasSurface)
@@ -278,7 +308,17 @@ bool greensFunctionECGElectro::evolve()
     Is_ = -fvc::div(Gi_ & fvc::grad(Vm()));
     Is_.correctBoundaryConditions();
 
-    // 3) Electrode potentials via Green's function volume integral:
+    // 3) Build combined evaluation point list:
+    //    [ electrode positions (nE) | torso face centres (nF) ]
+    const label nE = electrodePositions_.size();
+    const label nF = torsoFaceCentres_.size();
+    const label nAll = nE + nF;
+
+    List<vector> allPoints(nAll);
+    for (label i = 0; i < nE; i++) allPoints[i]      = electrodePositions_[i];
+    for (label i = 0; i < nF; i++) allPoints[nE + i] = torsoFaceCentres_[i];
+
+    // 4) Green's function integral:
     //    phi(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
     const scalarField& IsI  = Is_.primitiveField();
     const scalarField& Vols = mesh().V();
@@ -286,35 +326,50 @@ bool greensFunctionECGElectro::evolve()
     const scalar invCoeff =
         1.0/(4.0*constant::mathematical::pi*sigmaT_.value());
 
-    scalarList phiElectrodes(electrodePositions_.size(), scalar(0));
+    List<scalar> localSums(nAll, scalar(0));
 
-    forAll(electrodePositions_, eI)
+    forAll(Ctrs, cI)
     {
-        const vector& P = electrodePositions_[eI];
-        scalar localSum = 0.0;
-
-        forAll(Ctrs, cI)
+        const scalar IsV = IsI[cI]*Vols[cI];
+        for (label pI = 0; pI < nAll; pI++)
         {
-            const scalar r = mag(Ctrs[cI] - P);
+            const scalar r = mag(Ctrs[cI] - allPoints[pI]);
             if (r > VSMALL)
             {
-                localSum += IsI[cI]*Vols[cI]/r;
+                localSums[pI] += IsV/r;
             }
         }
-
-        // Sum across all processors (parallel-safe)
-        reduce(localSum, sumOp<scalar>());
-        phiElectrodes[eI] = invCoeff*localSum;
     }
 
-    // 4) Write one row to ECG.dat every time step
-    OFstream& os = outputPtr_.ref();
-    os << runTime().value();
-    forAll(phiElectrodes, eI)
+    // 5) Reduce across processors and apply coefficient
+    for (label pI = 0; pI < nAll; pI++)
     {
-        os << "  " << phiElectrodes[eI];
+        reduce(localSums[pI], sumOp<scalar>());
+        localSums[pI] *= invCoeff;
     }
-    os << nl;
+
+    // 6) Electrode output → ECG.dat  (every timestep)
+    if (nE > 0)
+    {
+        OFstream& os = outputPtr_.ref();
+        os << runTime().value();
+        for (label eI = 0; eI < nE; eI++)
+        {
+            os << "  " << localSums[eI];
+        }
+        os << nl;
+    }
+
+    // 7) Torso surface output → VTK  (at outputTime only)
+    if (nF > 0 && runTime().outputTime())
+    {
+        scalarList phiTorso(nF);
+        for (label fI = 0; fI < nF; fI++)
+        {
+            phiTorso[fI] = localSums[nE + fI];
+        }
+        writeTorsoVtk(phiTorso);
+    }
 
     return true;
 }

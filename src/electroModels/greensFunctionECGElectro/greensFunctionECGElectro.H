@@ -122,6 +122,9 @@ class greensFunctionECGElectro
         //- Output stream for ECG.dat (null if electrodes not configured)
         autoPtr<OFstream> outputPtr_;
 
+        //- Output stream for pseudoECG.dat (null if electrodes not configured)
+        autoPtr<OFstream> outputPseudoPtr_;
+
         //- Torso surface for body-surface potential map (null if not configured)
         autoPtr<triSurface> torsoSurfacePtr_;
 
@@ -143,11 +146,18 @@ class greensFunctionECGElectro
         //- Write column header to ECG.dat
         void writeHeader();
 
+        //- Write column header to pseudoECG.dat
+        void writePseudoHeader();
+
         //- Load torso surface STL if "torsoSurface" key is present in ecgDict
         void loadTorsoSurface(const dictionary& ecgDict);
 
-        //- Write torso surface potential as VTK ASCII POLYDATA
-        void writeTorsoVtk(const scalarList& phiTorso) const;
+        //- Write torso surface potentials as VTK ASCII POLYDATA
+        void writeTorsoVtk
+        (
+            const scalarList& phiGreens,
+            const scalarList& phiPseudo
+        ) const;
 
         //- Disallow default bitwise copy construct
         greensFunctionECGElectro(const greensFunctionECGElectro&);
