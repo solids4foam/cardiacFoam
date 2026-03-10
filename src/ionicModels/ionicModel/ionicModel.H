@@ -309,16 +309,6 @@ public:
         ) const override = 0;
 
 
-        //- Solve and ODE system for the start time, the time-step and the
-        //  voltage. Then place the result in the integration point result list
-        virtual void calculateCurrent
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im
-        ) = 0;
-
         //Initialization for a volumetric field
         // - currently for manufatured solutions
         virtual void initializeFields

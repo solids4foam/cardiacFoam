@@ -97,56 +97,6 @@ Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissueTypes() const
 }
 
 
-//  Explicit split: calculateCurrent (Iion only, no state update)
-void Foam::BuenoOrovio::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im
-)
-{
-    const scalar tStart = stepStartTime * 1000.0;
-
-    if (Im.size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Im.size() != Vm.size()" << abort(FatalError);
-    }
-
-    // We do NOT modify the gating states here – just compute Iion
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        // Vm in the CellML code is in mV
-        STATESI[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
-
-        ::BuenoOroviocomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        ,
-            stimulusProtocol()
-        );
-        // Jion is the total ionic current density used by the PDE
-        Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
-
-        //copy internal STATES to memory external state buffer.
-        //---------Currently with no use. -------------//
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
-    }
-}
-
-
 void Foam::BuenoOrovio::solveODE
 (
     const scalar stepStartTime,
