@@ -174,8 +174,7 @@ public:
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
+            scalarField& Im
         ) override;
 
         virtual void solveODE
@@ -183,8 +182,7 @@ public:
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
+            scalarField& Im
         ) override;
 
         void initializeFields

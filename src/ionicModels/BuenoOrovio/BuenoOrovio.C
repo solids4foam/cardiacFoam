@@ -103,8 +103,7 @@ void Foam::BuenoOrovio::calculateCurrent
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000.0;
@@ -153,8 +152,7 @@ void Foam::BuenoOrovio::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000.0;
@@ -342,36 +340,18 @@ Foam::wordList Foam::BuenoOrovio::availableSweepCurrents() const
 //-------COupling signals--------//
 bool Foam::BuenoOrovio::hasSignal(const CouplingSignal s) const
 {
-    switch (s)
-    {
-        case CouplingSignal::Act:
-        case CouplingSignal::Vm:
-            return true;
-        default:
-            return false;
-    }
+    return (s == CouplingSignal::Act) || ionicModel::hasSignal(s);
 }
 
 Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) const
 {
-    switch (s)
+    if (s == CouplingSignal::Act)
     {
-        case CouplingSignal::Act:
-            return STATES_[i][0];
-        case CouplingSignal::Vm:
-            return transformedVm(STATES_[i]);
-        default:
-            break;
+        return STATES_[i][0];
     }
-    FatalErrorInFunction
-        << "Requested coupling signal "
-        << static_cast<int>(s)
-        << " from BuenoOrovio, but this signal is not available."
-        << abort(FatalError);
 
-    return 0.0;
+    return ionicModel::signal(i, s);
 }
-
 
 
 

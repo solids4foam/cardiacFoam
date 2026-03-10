@@ -137,8 +137,7 @@ void Foam::tmanufacturedFDA::calculateCurrent
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const label monitorCell = 0;
@@ -175,8 +174,7 @@ void Foam::tmanufacturedFDA::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     //STATES_ = STATES_OLD_;

@@ -116,8 +116,7 @@ void Foam::TNNP::calculateCurrent
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;
@@ -163,8 +162,7 @@ void Foam::TNNP::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;
