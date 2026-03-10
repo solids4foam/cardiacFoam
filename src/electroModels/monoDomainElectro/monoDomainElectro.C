@@ -161,20 +161,16 @@ bool monoDomainElectro::evolveExplicit() {
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
 
-  // 2) Update the ionic current using OLD Vm
-  ionicModelPtr_->calculateCurrent(t0, dt, Vm_.oldTime(), Iion_);
-  Iion_.correctBoundaryConditions();
-
-  // 3) Solve the Vm equation
+  // 2) Solve the Vm equation using Iion_ from previous timestep
   solve(chi_ * Cm_ * fvm::ddt(Vm_) == fvc::laplacian(conductivity_, Vm_) -
                                           chi_ * Cm_ * Iion_ +
                                           externalStimulusCurrent_);
 
-  // 4) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
-  // PHILIP -> we can merge 2 and 4, i.e. update current once per time step
+  // 3) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
   ionicModelPtr_->solveODE(t0, dt,
                            Vm_, // Vm_new
                            Iion_);
+  Iion_.correctBoundaryConditions();
 
   // 5) Update post-processing fields
 
@@ -207,22 +203,18 @@ bool monoDomainElectro::evolveImplicit() {
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
 
-  // 2) Update the ionic current using OLD Vm
-  ionicModelPtr_->calculateCurrent(t0, dt, Vm_.oldTime(), Iion_);
-  Iion_.correctBoundaryConditions();
-
-  // 3) Solve the Vm equation implicitly - no ODE update inside
+  // 2) Solve the Vm equation implicitly using Iion_ from previous timestep
   while (pimple().loop()) {
     solve(chi_ * Cm_ * fvm::ddt(Vm_) == fvm::laplacian(conductivity_, Vm_) -
                                             chi_ * Cm_ * Iion_ +
                                             externalStimulusCurrent_);
   }
 
-  // 4) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
-  // PHILIP -> we can merge 2 and 4, i.e. update current once per time step
+  // 3) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
   ionicModelPtr_->solveODE(t0, dt,
                            Vm_, // Vm_new
                            Iion_);
+  Iion_.correctBoundaryConditions();
 
   // 5) Update post-processing fields
 

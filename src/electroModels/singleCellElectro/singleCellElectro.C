@@ -22,14 +22,11 @@ License
 #include "stimulusIO.H"
 #include "OSspecific.H"
 
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
-namespace electroModels
-{
+namespace electroModels {
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -38,95 +35,72 @@ addToRunTimeSelectionTable(electroModel, singleCellElectro, dictionary);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-singleCellElectro::singleCellElectro
-(
-    Time& runTime,
-    const word& region
-)
-:
-    electroModel(typeName, runTime, region),
-    cardiacProperties_(electroProperties()),
-    ionicModelPtr_
-    (
-        ionicModel::New
-        (
-            electroProperties(),
-            1, // one integration point
-            runTime.deltaTValue(),
-            true // solve Vm equation within ODE system
-        )
-    ),
-    outputPtr_()
-{
-    // Create the output file
-    const fileName outputDir(runTime.path()/"postProcessing");
-    mkDir(outputDir);
+singleCellElectro::singleCellElectro(Time &runTime, const word &region)
+    : electroModel(typeName, runTime, region),
+      cardiacProperties_(electroProperties()),
+      ionicModelPtr_(ionicModel::New(electroProperties(),
+                                     1, // one integration point
+                                     runTime.deltaTValue(),
+                                     true // solve Vm equation within ODE system
+                                     )),
+      outputPtr_(),
+      Vm_(IOobject("Vm", runTime.timeName(), mesh(), IOobject::READ_IF_PRESENT,
+                   IOobject::AUTO_WRITE),
+          mesh(), dimensionedScalar("Vm", dimVoltage, -80.0), "zeroGradient") {
+  // Create the output file
+  const fileName outputDir(runTime.path() / "postProcessing");
+  mkDir(outputDir);
 
-    const fileName outFile =
-        outputDir/ionicModelPtr_->type() + "_"
-      + ionicModelPtr_->tissueName() + "_"
-      + stimulusIO::protocolSuffix(electroProperties()) +".txt";
+  const fileName outFile =
+      outputDir / ionicModelPtr_->type() + "_" + ionicModelPtr_->tissueName() +
+      "_" + stimulusIO::protocolSuffix(electroProperties()) + ".txt";
 
-    outputPtr_.reset(new OFstream(outFile));
-    OFstream& output = outputPtr_.ref();
+  outputPtr_.reset(new OFstream(outFile));
+  OFstream &output = outputPtr_.ref();
 
-    output.setf(std::ios::fixed);
-    output.precision(7);
+  output.setf(std::ios::fixed);
+  output.precision(7);
 
-    // Extract the names of the fields to be exported
-    const wordList exportNames = ionicModelPtr_->exportedFieldNames();
-    if (!exportNames.empty())
-    {
-        Info<< "Exporting fields: " << exportNames << nl;
-    }
+  // Extract the names of the fields to be exported
+  const wordList exportNames = ionicModelPtr_->exportedFieldNames();
+  if (!exportNames.empty()) {
+    Info << "Exporting fields: " << exportNames << nl;
+  }
 
-     ionicModelPtr_->writeHeader(output);
+  ionicModelPtr_->writeHeader(output);
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool singleCellElectro::evolve()
-{
-    // Create dummy Vm, Iion and state fields
-    Field<Field<scalar>> dummyStates(1);
-    dummyStates[0].setSize(ionicModelPtr_->nEqns());
-    const scalarField dummyVmField(1, 0);
-    scalarField dummyIonicCurrentField(1, 0.0);
+bool singleCellElectro::evolve() {
+  // Create dummy Iion field (Vm is integrated directly within the ODE solver)
+  scalarField dummyIonicCurrentField(1, 0.0);
 
-    // Old time
-    const scalar t0 = runTime().value() - runTime().deltaTValue();
+  // Old time
+  const scalar t0 = runTime().value() - runTime().deltaTValue();
 
-    // Time step
-    const scalar dt = runTime().deltaTValue();
+  // Time step
+  const scalar dt = runTime().deltaTValue();
 
-    // Current time
-    const scalar t1 = runTime().value();
+  // Current time
+  const scalar t1 = runTime().value();
 
-    // Solve the ionic model from t0 to t1
-    ionicModelPtr_->solveODE
-    (
-        t0,
-        dt,
-        dummyVmField,
-        dummyIonicCurrentField,
-        dummyStates
-    );
+  // Solve the ionic model from t0 to t1
+  // Vm_ is integrated directly within the ODE solver
+  ionicModelPtr_->solveODE(t0, dt, Vm_.internalField(), dummyIonicCurrentField);
 
-    if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false))
-    {
-        ionicModelPtr_->write(runTime().value(), outputPtr_.ref());
-    }
+  if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false)) {
+    ionicModelPtr_->write(runTime().value(), outputPtr_.ref());
+  }
 
-    return true;
+  return true;
 }
 
+void singleCellElectro::end() {
+  runTime().printExecutionTime(Info);
 
-void singleCellElectro::end()
-{
-    runTime().printExecutionTime(Info);
-
-    Info<< "Results written to: " << outputPtr_->name() << nl
-        << "Format: [Time STATES ALGEBRAIC RATES]" << endl;
+  Info << "Results written to: " << outputPtr_->name() << nl
+       << "Format: [Time STATES ALGEBRAIC RATES]" << endl;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

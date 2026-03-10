@@ -156,13 +156,6 @@ protected:
 
         // Member Functions
 
-            virtual void calculateCurrent
-            (
-                const scalar stepStartTime,
-                const scalar deltaT,
-                const scalarField& Vm,
-                scalarField& Im
-            ) override;
 
 
             virtual void solveODE
