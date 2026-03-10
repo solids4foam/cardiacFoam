@@ -366,8 +366,8 @@ bool greensFunctionECGElectro::evolve()
         // localSumsPseudo: no sigmaT factor per design
     }
 
-    // 6) Electrode output → ECG.dat + pseudoECG.dat  (every timestep)
-    if (nE > 0)
+    // 6) Electrode output → ECG.dat + pseudoECG.dat  (at outputTime, same as field writes)
+    if (nE > 0 && runTime().outputTime())
     {
         // Green's function → ECG.dat
         {
