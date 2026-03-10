@@ -174,8 +174,7 @@ protected:
                 const scalar stepStartTime,
                 const scalar deltaT,
                 const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
+                scalarField& Im
             ) override;
 
 
@@ -184,8 +183,7 @@ protected:
                 const scalar stepStartTime,
                 const scalar deltaT,
                 const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
+                scalarField& Im
             ) override;
 
 

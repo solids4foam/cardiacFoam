@@ -102,8 +102,7 @@ void Foam::ToRORd_dynCl::calculateCurrent
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000.0;
@@ -151,8 +150,7 @@ void Foam::ToRORd_dynCl::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;
