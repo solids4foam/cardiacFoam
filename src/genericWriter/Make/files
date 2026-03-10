@@ -1,3 +1,5 @@
+activeTensionIO.C
+ecgModelIO.C
 ionicModelIO.C
 ionicVariableCompatibility.C
 stimulusIO.C

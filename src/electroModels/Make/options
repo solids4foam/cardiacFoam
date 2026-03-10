@@ -28,6 +28,8 @@ EXE_INC = \
     $(VERSION_SPECIFIC_INC) \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
+    -I../ecgModels/lnInclude \
+    -I../activeTensionModels/lnInclude \
     -I../couplingModels \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
@@ -42,9 +44,12 @@ EXE_INC = \
 
 LIB_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
+    -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
     -lionicModels \
     -lgenericWriter \
+    -lecgModels \
+    -lactiveTensionModels \
     -lfiniteVolume \
     -lmeshTools \
     -lsurfMesh \

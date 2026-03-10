@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import math
 import re
+import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
 from functools import partial
@@ -361,8 +362,6 @@ def _run_case(
     line_end: Sequence[float] = DEFAULT_LINE_END,
     line_n_points: int = DEFAULT_LINE_N_POINTS,
 ) -> None:
-    del setup_root
-
     run_script = resolve_run_script_path(
         tutorials_root=tutorials_root,
         run_script_relpath=run_script_relpath,
@@ -378,7 +377,6 @@ def _run_case(
             "--case-dir",
             str(case_root),
             "--parallel",
-            "--touch-case-foam",
         ],
         check=True,
     )
@@ -396,6 +394,34 @@ def _run_case(
         line_n_points=line_n_points,
     )
 
+    _cache_case_postprocessing(
+        case_root=case_root,
+        setup_root=setup_root,
+        case_id=case.case_id,
+        cache_dir_name=defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
+    )
+
+
+def _cache_case_postprocessing(
+    *,
+    case_root: Path,
+    setup_root: Path,
+    case_id: str,
+    cache_dir_name: str,
+) -> None:
+    source = case_root / "postProcessing"
+    if not source.exists():
+        raise FileNotFoundError(f"Missing postProcessing folder to cache: {source}")
+
+    cache_root = setup_root / cache_dir_name
+    cache_root.mkdir(parents=True, exist_ok=True)
+    destination = cache_root / case_id
+
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source, destination)
+    print(f"Cached postProcessing for {case_id}: {destination}")
+
 
 def _postprocess(
     setup_root: Path,
@@ -403,9 +429,12 @@ def _postprocess(
     *,
     line_postprocess_relpath: Path = defaults.LINE_POSTPROCESS_RELPATH,
     points_postprocess_relpath: Path = defaults.POINTS_POSTPROCESS_RELPATH,
+    cache_postprocess_relpath: Path = defaults.CACHE_POSTPROCESS_RELPATH,
     excel_reference_relpath: Path = defaults.EXCEL_REFERENCE_RELPATH,
+    cache_postprocess_function_name: str = defaults.CACHE_POSTPROCESS_FUNCTION,
     line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
     points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
+    case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
     strict_artifacts: bool = False,
 ) -> None:
     run_postprocess_tasks(
@@ -414,6 +443,14 @@ def _postprocess(
         tutorial_name=defaults.TUTORIAL_NAME,
         strict_artifacts=strict_artifacts,
         tasks=[
+            PostprocessTask(
+                module_relpath=cache_postprocess_relpath,
+                function_name=cache_postprocess_function_name,
+                kwargs={
+                    "cache_root": f"$SETUP_ROOT/{case_postprocess_cache_dirname}",
+                    "cache_output_subdir": "cachedPostProcessing",
+                },
+            ),
             PostprocessTask(
                 module_relpath=line_postprocess_relpath,
                 function_name=line_postprocess_function_name,
@@ -437,7 +474,7 @@ def make_spec(
     ionic_model_tissue_map: Mapping[str, Sequence[str]] = defaults.IONIC_MODEL_TISSUE_MAP,
     dt_values: Sequence[float] = defaults.DT_VALUES,
     dx_values: Sequence[float] = defaults.DX_VALUES,
-    solvers: Sequence[str] = ("implicit",),
+    solvers: Sequence[str] = defaults.SOLVERS,
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
     end_time_by_dx: Mapping[float, float] = defaults.END_TIME_BY_DX,
@@ -454,9 +491,12 @@ def make_spec(
     line_n_points: int = DEFAULT_LINE_N_POINTS,
     line_postprocess_relpath: str | Path = defaults.LINE_POSTPROCESS_RELPATH,
     points_postprocess_relpath: str | Path = defaults.POINTS_POSTPROCESS_RELPATH,
+    cache_postprocess_relpath: str | Path = defaults.CACHE_POSTPROCESS_RELPATH,
     excel_reference_relpath: str | Path = defaults.EXCEL_REFERENCE_RELPATH,
+    cache_postprocess_function_name: str = defaults.CACHE_POSTPROCESS_FUNCTION,
     line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
     points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
+    case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     ionic_models_list = [str(item) for item in ionic_models]
@@ -494,6 +534,7 @@ def make_spec(
     run_script_path = Path(run_script_relpath)
     line_postprocess_path = Path(line_postprocess_relpath)
     points_postprocess_path = Path(points_postprocess_relpath)
+    cache_postprocess_path = Path(cache_postprocess_relpath)
     excel_reference_path = Path(excel_reference_relpath)
     output_relpath = Path(output_dir_name)
 
@@ -544,9 +585,12 @@ def make_spec(
             _postprocess,
             line_postprocess_relpath=line_postprocess_path,
             points_postprocess_relpath=points_postprocess_path,
+            cache_postprocess_relpath=cache_postprocess_path,
             excel_reference_relpath=excel_reference_path,
+            cache_postprocess_function_name=cache_postprocess_function_name,
             line_postprocess_function_name=line_postprocess_function_name,
             points_postprocess_function_name=points_postprocess_function_name,
+            case_postprocess_cache_dirname=case_postprocess_cache_dirname,
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={
@@ -575,9 +619,12 @@ def make_spec(
             "line_n_points": line_n_points,
             "line_postprocess_relpath": str(line_postprocess_path),
             "points_postprocess_relpath": str(points_postprocess_path),
+            "cache_postprocess_relpath": str(cache_postprocess_path),
             "excel_reference_relpath": str(excel_reference_path),
+            "cache_postprocess_function_name": cache_postprocess_function_name,
             "line_postprocess_function_name": line_postprocess_function_name,
             "points_postprocess_function_name": points_postprocess_function_name,
+            "case_postprocess_cache_dirname": case_postprocess_cache_dirname,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

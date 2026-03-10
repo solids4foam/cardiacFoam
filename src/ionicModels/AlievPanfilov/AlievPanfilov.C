@@ -339,34 +339,16 @@ Foam::wordList Foam::AlievPanfilov::availableSweepCurrents() const
 
 bool Foam::AlievPanfilov::hasSignal(const CouplingSignal s) const
 {
-    switch (s)
-    {
-        case CouplingSignal::Act:
-        case CouplingSignal::Vm:
-            return true;
-        default:
-            return false;
-    }
+    return (s == CouplingSignal::Act) || ionicModel::hasSignal(s);
 }
 
 Foam::scalar Foam::AlievPanfilov::signal(const label i, const CouplingSignal s) const
 {
-    switch (s)
+    if (s == CouplingSignal::Act)
     {
-        case CouplingSignal::Act:
-            return STATES_[i][0];
-        case CouplingSignal::Vm:
-            return transformedVm(STATES_[i]);
-        default:
-            break;
+        return STATES_[i][0];
     }
-    FatalErrorInFunction
-        << "Requested coupling signal "
-        << static_cast<int>(s)
-        << " from AlievPanfilov, but this signal is not available."
-        << abort(FatalError);
 
-    return 0.0;
+    return ionicModel::signal(i, s);
 }
-
 

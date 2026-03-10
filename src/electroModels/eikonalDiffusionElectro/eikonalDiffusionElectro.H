@@ -82,122 +82,112 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
-namespace electroModels
-{
+namespace electroModels {
 
 /*---------------------------------------------------------------------------*\
                         Class eikonalDiffusionElectro Declaration
 \*---------------------------------------------------------------------------*/
 
-class eikonalDiffusionElectro
-:
-    public electroModel
-{
-    // Private data
+class eikonalDiffusionElectro : public electroModel {
+  // Private data
 
-        //- Activation time
-        volScalarField psi_;
+  //- Activation time
+  volScalarField psi_;
 
-        // Gradient of activation time
-        volVectorField gradPsi_;
+  //- Transmembrane voltage (not solved here, but needed by the interface)
+  volScalarField Vm_;
 
-        //- Indices of the cells to stimulate
-        labelList stimulusCellIDs_;
+  // Gradient of activation time
+  volVectorField gradPsi_;
 
-        //- Surface-to-volume ratio
-        const dimensionedScalar chi_;
+  //- Indices of the cells to stimulate
+  labelList stimulusCellIDs_;
 
-        //- Membrane capacitance
-        const dimensionedScalar Cm_;
+  //- Surface-to-volume ratio
+  const dimensionedScalar chi_;
 
-        //- C-nductiivty tensor field
-        volTensorField conductivity_;
+  //- Membrane capacitance
+  const dimensionedScalar Cm_;
 
-        //- M tensor
-        const volTensorField M_;
+  //- C-nductiivty tensor field
+  volTensorField conductivity_;
 
-        //- M & gradPsi term
-        volVectorField w_;
+  //- M tensor
+  const volTensorField M_;
 
-        //- Nonlinear term
-        volScalarField G_;
+  //- M & gradPsi term
+  volVectorField w_;
 
-        //- Reference "velocity"
-        const dimensionedScalar c0_;
+  //- Nonlinear term
+  volScalarField G_;
 
-        //- Term related to the linearisation of c0*G
-        volVectorField a_;
+  //- Reference "velocity"
+  const dimensionedScalar c0_;
 
-        //- Term related to the linearisation of c0*G
-        volVectorField u_;
+  //- Term related to the linearisation of c0*G
+  volVectorField a_;
 
-        //- phiU term
-        surfaceScalarField phiU_;
+  //- Term related to the linearisation of c0*G
+  volVectorField u_;
 
-        //- divPhiU term
-        volScalarField divPhiU_;
+  //- phiU term
+  surfaceScalarField phiU_;
 
-        //- Solution algorithm flag
-        //  If enabled, then an eikonal-advection-diffusion equation is solved,
-        //  otherwise an eikonal-diffusion equation is solved. The eikonal-
-        //  advection-diffusion approach should provide fasater convergence.
-        const Switch eikonalAdvectionDiffusionApproach_;
+  //- divPhiU term
+  volScalarField divPhiU_;
 
-    // Private Member Functions
+  //- Solution algorithm flag
+  //  If enabled, then an eikonal-advection-diffusion equation is solved,
+  //  otherwise an eikonal-diffusion equation is solved. The eikonal-
+  //  advection-diffusion approach should provide fasater convergence.
+  const Switch eikonalAdvectionDiffusionApproach_;
 
-        //- Initialise the conductivity
-        tmp<volTensorField> initialiseConductivity() const;
+  // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        eikonalDiffusionElectro(const eikonalDiffusionElectro&);
+  //- Initialise the conductivity
+  tmp<volTensorField> initialiseConductivity() const;
 
-        //- Disallow default bitwise assignment
-        void operator=(const eikonalDiffusionElectro&);
+  //- Disallow default bitwise copy construct
+  eikonalDiffusionElectro(const eikonalDiffusionElectro &);
 
+  //- Disallow default bitwise assignment
+  void operator=(const eikonalDiffusionElectro &);
 
 public:
+  //- Runtime type information
+  TypeName("eikonalDiffusionElectro");
 
-    //- Runtime type information
-    TypeName("eikonalDiffusionElectro");
+  // Constructors
 
-    // Constructors
+  //- Construct from components
+  eikonalDiffusionElectro(Time &runTime,
+                          const word &region = dynamicFvMesh::defaultRegion);
 
-        //- Construct from components
-        eikonalDiffusionElectro
-        (
-            Time& runTime,
-            const word& region = dynamicFvMesh::defaultRegion
-        );
+  // Destructor
 
+  virtual ~eikonalDiffusionElectro() {}
 
-    // Destructor
+  // Member Functions
 
-        virtual ~eikonalDiffusionElectro()
-        {}
+  // Access
 
+  // Edit
 
-    // Member Functions
+  //- Update the size of the time-step
+  virtual void setDeltaT(Time &runTime) {
+    InfoInFunction << "Setting deltaT and endTime to 1.0" << endl;
+    runTime.setDeltaT(1.0);
+    runTime.setEndTime(runTime.deltaT());
+  }
 
-        // Access
+  //- Evolve the electro model
+  virtual bool evolve();
 
-        // Edit
-
-            //- Update the size of the time-step
-            virtual void setDeltaT(Time& runTime)
-            {
-                InfoInFunction
-                    << "Setting deltaT and endTime to 1.0" << endl;
-                runTime.setDeltaT(1.0);
-                runTime.setEndTime(runTime.deltaT());
-            }
-
-            //- Evolve the electro model
-            virtual bool evolve();
+  //- Return transmembrane voltage (needed by composite models)
+  virtual const volScalarField &Vm() const { return Vm_; }
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

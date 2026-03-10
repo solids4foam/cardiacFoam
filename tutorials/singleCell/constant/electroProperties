@@ -21,8 +21,10 @@ singleCellElectroCoeffs
 
     // Cell model selection
 
-    ionicModel    BuenoOrovio;
-    tissue    endocardialCells;
+    ionicModel    TNNP;
+    tissue    epicardialCells	;
+//ionicModel    Gaur;
+  //  tissue    myocyte	;
 
 
 
@@ -40,8 +42,8 @@ singleCellElectroCoeffs
     singleCellStimulus
     {
         stim_start      20;
-        stim_duration   1.5;
-        stim_amplitude  0.4;
+        stim_duration   1;
+        stim_amplitude  50;
         stim_period_S1  1000;
         nstim1          3;
         stim_period_S2  0;

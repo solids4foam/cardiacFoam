@@ -20,6 +20,30 @@ public:
     // Accepts Vm aliases (case/separator-insensitive).
     static bool isVmLikeName(const word& name);
 
+    // Find membrane-voltage state index from model state names.
+    // Returns -1 if not found.
+    static label findVmStateIndex
+    (
+        const char* const stateNames[],
+        label nStates
+    );
+
+    // Find intracellular-calcium state index from model state names.
+    // Returns -1 if not found.
+    static label findCaiStateIndex
+    (
+        const char* const stateNames[],
+        label nStates
+    );
+
+    // Find activation-like state index from model state names.
+    // Returns -1 if not found.
+    static label findActStateIndex
+    (
+        const char* const stateNames[],
+        label nStates
+    );
+
     // Accepts both RATES_<state> and rates_<state>.
     static bool isRateNameRelaxed
     (
@@ -58,4 +82,3 @@ public:
 }
 
 #endif
-
