@@ -325,12 +325,13 @@ bool greensFunctionECGElectro::evolve()
     //    phi_greens(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
     //    phi_pseudo(P) = -sum_c [ (Gi_c . grad(Vm)_c) . r_vec * V_c / |C_c - P|^3 ]
     //    where r_vec = C_c - P.
-    //    (Gi & gradVm) is the dipole source density following Gima & Rudy (2002);
+    //    (D & gradVm) is the dipole source density following Gima & Rudy (2002),
+    //    where D = conductivity() is the monodomain diffusion tensor;
     //    sign relative to their convention absorbed into post-processing scaling.
     const scalarField&  IsI  = Is_.primitiveField();
     const scalarField&  Vols = mesh().V();
     const vectorField&  Ctrs = mesh().C().primitiveField();
-    const tensorField&  GiI  = Gi_.primitiveField();
+    const tensorField&  DI   = conductivity().primitiveField();
     const scalar invCoeff =
         1.0/(4.0*constant::mathematical::pi*sigmaT_.value());
 
@@ -342,7 +343,7 @@ bool greensFunctionECGElectro::evolve()
     forAll(Ctrs, cI)
     {
         const scalar IsV    = IsI[cI]*Vols[cI];
-        const vector dipole = (GiI[cI] & gradVm[cI]) * Vols[cI];
+        const vector dipole = (DI[cI] & gradVm[cI]) * Vols[cI];
 
         for (label pI = 0; pI < nAll; pI++)
         {
