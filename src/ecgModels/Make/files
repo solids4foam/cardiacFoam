@@ -1,0 +1,8 @@
+ecgModel/ecgModel.C
+
+pseudoECGElectro/pseudoECGElectro.C
+
+
+
+
+LIB = $(FOAM_USER_LIBBIN)/libecgModels
