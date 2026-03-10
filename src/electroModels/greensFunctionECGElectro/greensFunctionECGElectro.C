@@ -304,11 +304,14 @@ bool greensFunctionECGElectro::evolve()
     // 1) Advance monodomain — updates Vm
     monoDomainElectro::evolve();
 
-    // 2) Current source density: Is = -div( Gi . grad(Vm) )
-    Is_ = -fvc::div(Gi_ & fvc::grad(Vm()));
+    // 2) Compute grad(Vm) once — reused for both Is_ and pseudo-ECG below
+    tmp<volVectorField> tgradVm = fvc::grad(Vm());
+
+    // 3a) Current source density: Is = -div( Gi . grad(Vm) )
+    Is_ = -fvc::div(Gi_ & tgradVm());
     Is_.correctBoundaryConditions();
 
-    // 3) Build combined evaluation point list:
+    // 3b) Build combined evaluation point list:
     //    [ electrode positions (nE) | torso face centres (nF) ]
     const label nE = electrodePositions_.size();
     const label nF = torsoFaceCentres_.size();
@@ -323,16 +326,13 @@ bool greensFunctionECGElectro::evolve()
     //    phi_pseudo(P) = sum_c [ (grad(Vm)_c . r_vec) * V_c / |C_c - P|^3 ]
     //    where r_vec = C_c - P  (sign convention follows design doc;
     //    sign relative to Gima-Rudy absorbed into post-processing scaling)
-    // Note: fvc::grad(Vm()) is also called inside Is_ above — both are needed
-    //       as Is_ uses Gi_ weighting; consolidation is a future optimisation.
     const scalarField& IsI  = Is_.primitiveField();
     const scalarField& Vols = mesh().V();
     const vectorField& Ctrs = mesh().C().primitiveField();
     const scalar invCoeff =
         1.0/(4.0*constant::mathematical::pi*sigmaT_.value());
 
-    tmp<volVectorField> tgradVm = fvc::grad(Vm());
-    const vectorField& gradVm   = tgradVm().primitiveField();
+    const vectorField& gradVm = tgradVm().primitiveField();
 
     List<scalar> localSumsGreens(nAll, scalar(0));
     List<scalar> localSumsPseudo(nAll, scalar(0));
