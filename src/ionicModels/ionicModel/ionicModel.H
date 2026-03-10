@@ -293,9 +293,8 @@ public:
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        )= 0;
+            scalarField& Im
+        ) = 0;
 
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
@@ -317,9 +316,8 @@ public:
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        )= 0;
+            scalarField& Im
+        ) = 0;
 
         //Initialization for a volumetric field
         // - currently for manufatured solutions
@@ -618,7 +616,6 @@ public:
         // 3D vol fields(defined for states, algebraic and rates.)
         virtual void exportStates
         (
-            const Field<Field<scalar>>&,
             PtrList<volScalarField>& outFields
         )
         {
