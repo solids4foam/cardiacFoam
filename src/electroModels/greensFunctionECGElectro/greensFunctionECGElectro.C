@@ -192,7 +192,7 @@ void greensFunctionECGElectro::writeTorsoVtk
     os.precision(8);
 
     os << "# vtk DataFile Version 3.0\n";
-    os << "Torso ECG phiT t=" << runTime().timeName() << "\n";
+    os << "Torso ECG potentials (phiGreens, phiPseudo) t=" << runTime().timeName() << "\n";
     os << "ASCII\n";
     os << "DATASET POLYDATA\n";
 
@@ -321,6 +321,10 @@ bool greensFunctionECGElectro::evolve()
     // 4) Green's function + pseudo-ECG integrals (single pass):
     //    phi_greens(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
     //    phi_pseudo(P) = sum_c [ (grad(Vm)_c . r_vec) * V_c / |C_c - P|^3 ]
+    //    where r_vec = C_c - P  (sign convention follows design doc;
+    //    sign relative to Gima-Rudy absorbed into post-processing scaling)
+    // Note: fvc::grad(Vm()) is also called inside Is_ above — both are needed
+    //       as Is_ uses Gi_ weighting; consolidation is a future optimisation.
     const scalarField& IsI  = Is_.primitiveField();
     const scalarField& Vols = mesh().V();
     const vectorField& Ctrs = mesh().C().primitiveField();
