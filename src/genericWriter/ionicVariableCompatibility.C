@@ -95,6 +95,103 @@ bool ionicVariableCompatibility::isVmLikeName(const word& name)
     return canonicalName(name.c_str()) == "vm";
 }
 
+label ionicVariableCompatibility::findVmStateIndex
+(
+    const char* const stateNames[],
+    const label nStates
+)
+{
+    if (!stateNames || nStates <= 0)
+    {
+        return -1;
+    }
+
+    for (label i = 0; i < nStates; ++i)
+    {
+        const std::string name = canonicalName(stateNames[i]);
+        if
+        (
+               name == "vm"
+            || name == "membranev"
+            || name == "voltage"
+            || name == "membranepotential"
+            || name == "cellv"
+        )
+        {
+            return i;
+        }
+    }
+
+    // Fallback for models that expose only a single-symbol voltage state.
+    if (canonicalName(stateNames[0]) == "v")
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+label ionicVariableCompatibility::findCaiStateIndex
+(
+    const char* const stateNames[],
+    const label nStates
+)
+{
+    if (!stateNames || nStates <= 0)
+    {
+        return -1;
+    }
+
+    for (label i = 0; i < nStates; ++i)
+    {
+        const std::string name = canonicalName(stateNames[i]);
+
+        if
+        (
+               name == "cai"
+            || name == "calciumcai"
+            || name == "intracellularcai"
+            || name == "intracellularcalcium"
+            || name.find("cai") != std::string::npos
+        )
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+label ionicVariableCompatibility::findActStateIndex
+(
+    const char* const stateNames[],
+    const label nStates
+)
+{
+    if (!stateNames || nStates <= 0)
+    {
+        return -1;
+    }
+
+    for (label i = 0; i < nStates; ++i)
+    {
+        const std::string name = canonicalName(stateNames[i]);
+
+        if
+        (
+               name == "act"
+            || name == "activation"
+            || name == "active"
+            || name == "lambda"
+        )
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 
 bool ionicVariableCompatibility::isRateNameRelaxed
 (
@@ -257,4 +354,3 @@ void ionicVariableCompatibility::mapVariableNames
 }
 
 } // namespace Foam
-

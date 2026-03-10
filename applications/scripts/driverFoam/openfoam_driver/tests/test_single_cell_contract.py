@@ -8,7 +8,22 @@ from pathlib import Path
 class TestSingleCellContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.module_path = Path(__file__).resolve().parents[2] / "singleCell" / "setupSingleCell" / "singleCellinteractivePlots.py"
+        current = Path(__file__).resolve()
+        repo_root = None
+        for parent in current.parents:
+            if (parent / "tutorials").exists() and (parent / "applications").exists():
+                repo_root = parent
+                break
+        if repo_root is None:
+            raise RuntimeError("Could not locate repository root from test path")
+
+        cls.module_path = (
+            repo_root
+            / "tutorials"
+            / "singleCell"
+            / "setupSingleCell"
+            / "singleCellinteractivePlots.py"
+        )
         cls.tree = ast.parse(cls.module_path.read_text())
 
     def test_load_simulation_data_no_output_folder_dependency(self) -> None:

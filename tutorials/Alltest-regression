@@ -52,27 +52,17 @@ runTutorial()
 
         export CF_SKIP_PLOTS=1
 
-        if [ -x "./runRegressionTest.sh" ]
+        if [ ! -x "./runRegressionTest.sh" ]
         then
-            if [ "${runMode}" = "parallel" ]
-            then
-                ./runRegressionTest.sh parallel > "${runLog}" 2>&1
-            else
-                ./runRegressionTest.sh > "${runLog}" 2>&1
-            fi
-        else
-            if [ ! -x "./Allrun" ]
-            then
-                echo "ERROR: missing executable Allrun in ${tutorialName}"
-                exit 1
-            fi
+            echo "ERROR: missing executable runRegressionTest.sh in ${tutorialName}"
+            exit 1
+        fi
 
-            if [ "${runMode}" = "parallel" ]
-            then
-                ./Allrun parallel > "${runLog}" 2>&1
-            else
-                ./Allrun > "${runLog}" 2>&1
-            fi
+        if [ "${runMode}" = "parallel" ]
+        then
+            ./runRegressionTest.sh parallel > "${runLog}" 2>&1
+        else
+            ./runRegressionTest.sh > "${runLog}" 2>&1
         fi
     )
 

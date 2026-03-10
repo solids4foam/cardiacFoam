@@ -52,73 +52,69 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
-namespace electroModels
-{
+namespace electroModels {
 
 /*---------------------------------------------------------------------------* \
                         Class singleCellElectro Declaration
 \*---------------------------------------------------------------------------*/
 
-class singleCellElectro
-:
-    public electroModel
-{
-    // Private data
+class singleCellElectro : public electroModel {
+  // Private data
 
-        //- Cardiac properties dictionary
-        const dictionary& cardiacProperties_;
+  //- Cardiac properties dictionary
+  const dictionary &cardiacProperties_;
 
-        //- Run-time selectable ionic model
-        autoPtr<ionicModel> ionicModelPtr_;
+  //- Run-time selectable ionic model
+  autoPtr<ionicModel> ionicModelPtr_;
 
-        //- Output file pointer
-        autoPtr<OFstream> outputPtr_;
+  //- Output file pointer
+  autoPtr<OFstream> outputPtr_;
 
+  //- Transmembrane voltage field
+  volScalarField Vm_;
 
-    // Private Member Functions
+  // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        singleCellElectro(const singleCellElectro&);
+  //- Disallow default bitwise copy construct
+  singleCellElectro(const singleCellElectro &);
 
-        //- Disallow default bitwise assignment
-        void operator=(const singleCellElectro&);
-
+  //- Disallow default bitwise assignment
+  void operator=(const singleCellElectro &);
 
 public:
+  //- Runtime type information
+  TypeName("singleCellElectro");
 
-    //- Runtime type information
-    TypeName("singleCellElectro");
+  // Constructors
 
-    // Constructors
+  //- Construct from components
+  singleCellElectro(Time &runTime,
+                    const word &region = dynamicFvMesh::defaultRegion);
 
-        //- Construct from components
-        singleCellElectro
-        (
-            Time& runTime,
-            const word& region = dynamicFvMesh::defaultRegion
-        );
+  // Destructor
 
+  virtual ~singleCellElectro() {}
 
-    // Destructor
+  // Member Functions
 
-        virtual ~singleCellElectro()
-        {}
+  // Edit
 
+  //- Evolve the electro model
+  virtual bool evolve();
 
-    // Member Functions
+  //- This function is called at the end of the simulation
+  virtual void end();
 
-        // Edit
+  //- Return transmembrane voltage (needed by composite models)
+  virtual const volScalarField &Vm() const { return Vm_; }
 
-            //- Evolve the electro model
-            virtual bool evolve();
-
-            //- This function is called at the end of the simulation
-            virtual void end();
+  //- Return optional coupling signal provider (e.g. ionic model)
+  virtual const CouplingSignalProvider *provider() const {
+    return ionicModelPtr_.operator->();
+  }
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

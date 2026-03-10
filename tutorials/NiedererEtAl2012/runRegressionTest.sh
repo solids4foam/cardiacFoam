@@ -16,35 +16,8 @@ checkSmokeCheckResults()
     fi
 
     if [ ! -d "${postDir}" ]; then
-        latestDir=""
-        latestVal=""
-
-        if [ -d "${postRoot}" ]; then
-            for dir in "${postRoot}"/*; do
-                if [ ! -d "${dir}" ]; then
-                    continue
-                fi
-
-                base="$(basename "${dir}")"
-                if [[ ! "${base}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-                    continue
-                fi
-
-                if [ -z "${latestDir}" ] || awk -v a="${base}" -v b="${latestVal}" 'BEGIN { exit !(a > b) }'; then
-                    latestDir="${dir}"
-                    latestVal="${base}"
-                fi
-            done
-        fi
-
-        if [ -n "${latestDir}" ]; then
-            postDir="${latestDir}"
-            echo "Using smokeCheck output directory: ${postDir}"
-        else
-            echo "Post-processing directory not found: ${postDir}"
-            echo "No numeric smokeCheck output folders found under: ${postRoot}"
-            return 1
-        fi
+        echo "Post-processing directory not found: ${postDir}"
+        return 1
     fi
 
     nFail=0

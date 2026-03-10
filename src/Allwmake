@@ -15,5 +15,6 @@ fi
 echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
+wmake $targetType libso activeTensionModels
+wmake $targetType libso ecgModels
 wmake $targetType libso electroModels
-

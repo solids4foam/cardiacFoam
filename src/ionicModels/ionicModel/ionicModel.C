@@ -19,6 +19,7 @@ License
 
 #include "ionicModel.H"
 #include "ionicSelector.H"
+#include "ionicVariableCompatibility.H"
 
 
 
@@ -146,24 +147,183 @@ void Foam::ionicModel::logExportedFieldSelection() const
     }
 }
 
-bool Foam::ionicModel::hasSignal(const CouplingSignal) const
+bool Foam::ionicModel::hasSignal(const CouplingSignal s) const
 {
-    // Base class provides no coupling signals by default
-    return false;
+    const label vmIdx =
+        ionicVariableCompatibility::findVmStateIndex
+        (
+            ioStateNames(),
+            ioNumStates()
+        );
+    const label caiIdx =
+        ionicVariableCompatibility::findCaiStateIndex
+        (
+            ioStateNames(),
+            ioNumStates()
+        );
+
+    switch (s)
+    {
+        case CouplingSignal::Vm:
+        {
+            if (ioVmTransform())
+            {
+                return true;
+            }
+
+            return vmIdx >= 0;
+        }
+        case CouplingSignal::Cai:
+        {
+            return caiIdx >= 0;
+        }
+        case CouplingSignal::Act:
+        {
+            if (hasManufacturedSolution())
+            {
+                return false;
+            }
+
+            const label actIdx =
+                ionicVariableCompatibility::findActStateIndex
+                (
+                    ioStateNames(),
+                    ioNumStates()
+                );
+
+            if (actIdx >= 0)
+            {
+                return true;
+            }
+
+            if (caiIdx >= 0)
+            {
+                return true;
+            }
+
+            return (ioVmTransform() || vmIdx >= 0);
+        }
+        default:
+            return false;
+    }
 }
 
 Foam::scalar Foam::ionicModel::signal
 (
-    const label,
+    const label i,
     const CouplingSignal s
 ) const
 {
+    const auto* statesPtr = ioStatesPtr();
+    if (!statesPtr || statesPtr->empty())
+    {
+        FatalErrorInFunction
+            << "Requested coupling signal "
+            << static_cast<int>(s)
+            << " from ionicModel, but state storage is not available."
+            << abort(FatalError);
+    }
+
+    if (i < 0 || i >= statesPtr->size())
+    {
+        FatalErrorInFunction
+            << "Requested coupling signal index i=" << i
+            << " but valid integration-point range is [0, "
+            << (statesPtr->size() - 1) << "]."
+            << abort(FatalError);
+    }
+
+    const scalarField& state = (*statesPtr)[i];
+
+    if (s == CouplingSignal::Vm)
+    {
+        const ionicModelIO::VmTransform transformVm = ioVmTransform();
+        if (transformVm)
+        {
+            return transformVm(state);
+        }
+
+        const label vmIdx =
+            ionicVariableCompatibility::findVmStateIndex
+            (
+                ioStateNames(),
+                ioNumStates()
+            );
+        if (vmIdx >= 0 && vmIdx < state.size())
+        {
+            return state[vmIdx];
+        }
+    }
+    else if (s == CouplingSignal::Cai)
+    {
+        const label caiIdx =
+            ionicVariableCompatibility::findCaiStateIndex
+            (
+                ioStateNames(),
+                ioNumStates()
+            );
+        if (caiIdx >= 0 && caiIdx < state.size())
+        {
+            return state[caiIdx];
+        }
+    }
+    else if (s == CouplingSignal::Act)
+    {
+        if (hasManufacturedSolution())
+        {
+            FatalErrorInFunction
+                << "Requested coupling signal "
+                << static_cast<int>(s)
+                << " from manufactured ionic model "
+                << typeName
+                << ", but Act is intentionally disabled."
+                << abort(FatalError);
+        }
+
+        const label actIdx =
+            ionicVariableCompatibility::findActStateIndex
+            (
+                ioStateNames(),
+                ioNumStates()
+            );
+        if (actIdx >= 0 && actIdx < state.size())
+        {
+            return state[actIdx];
+        }
+
+        const label caiIdx =
+            ionicVariableCompatibility::findCaiStateIndex
+            (
+                ioStateNames(),
+                ioNumStates()
+            );
+        if (caiIdx >= 0 && caiIdx < state.size())
+        {
+            return state[caiIdx];
+        }
+
+        const ionicModelIO::VmTransform transformVm = ioVmTransform();
+        if (transformVm)
+        {
+            return transformVm(state);
+        }
+
+        const label vmIdx =
+            ionicVariableCompatibility::findVmStateIndex
+            (
+                ioStateNames(),
+                ioNumStates()
+            );
+        if (vmIdx >= 0 && vmIdx < state.size())
+        {
+            return state[vmIdx];
+        }
+    }
+
     FatalErrorInFunction
         << "Requested coupling signal "
         << static_cast<int>(s)
         << " from ionicModel, but this ionic model does not provide it."
-        << nl
-        << "You must override hasSignal() and signal() in the derived ionic model."
         << abort(FatalError);
 
     return 0.0;
