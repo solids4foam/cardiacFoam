@@ -9,11 +9,11 @@
 
 `greensFunctionECGElectro` and `pdeECGElectro` both extend `monoDomainElectro` directly with no shared base, resulting in:
 
-1. **4 copies** of the same conductivity tensor initialisation pattern (`initialiseConductivity`, `initialiseGi` ×2, `initialiseGe`)
+1. **4 copies** of the same conductivity tensor initialisation pattern
 2. **Duplicate members** (`Gi_`, `sigmaT_`) declared independently in each subclass
-3. **No postProcess mode** — ECG always requires a live monodomain solve; cannot run on existing Vm output
-4. **`greensFunctionECGElectro` mixes two distinct ECG approaches** (Green's function BEM and Gima-Rudy dipole) in one class
-5. **Dict structure is flat** — monodomain and ECG settings interleaved, no separation
+3. **No postProcess mode** — ECG always requires a live monodomain solve
+4. **`greensFunctionECGElectro` mixes two distinct ECG approaches** in one class
+5. **No runtime-selectability of ECG type** — changing the ECG approach requires changing `electroModel`
 
 ---
 
@@ -21,14 +21,18 @@
 
 ```
 electroModel  (abstract, unchanged)
-├── monoDomainElectro  (pure Vm solver, unchanged except two additions)
-└── ecgElectroBase  (NEW abstract — ECG mode switch + shared state)
-    ├── pseudoECGElectro    (Gima-Rudy dipole)
-    ├── BEMECGElectro       (Green's function / current source)
-    └── pdeECGElectro       (heart Poisson + torso Laplace)
+├── monoDomainElectro  (pure Vm solver — unchanged except two additions)
+├── ecgElectro         (NEW concrete — owns autoPtr<ecgModel>, mode switch)
+└── pdeECGElectro      (extends monoDomainElectro — stays separate, manages torso mesh)
+
+ecgModel  (NEW abstract, runtime-selectable — same pattern as ionicModel)
+├── BEMECGElectro      (Green's function / current source)
+└── pseudoECGElectro   (Gima-Rudy dipole)
 ```
 
-`greensFunctionECGElectro` is **removed** — replaced by `pseudoECGElectro` and `BEMECGElectro`.
+`greensFunctionECGElectro` is **removed** — replaced by `ecgElectro` + `BEMECGElectro`/`pseudoECGElectro`.
+
+`pdeECGElectro` stays as a direct `monoDomainElectro` subclass because it manages a separate torso mesh and solves additional PDEs — too coupled for the `ecgModel` pattern.
 
 ---
 
@@ -37,10 +41,11 @@ electroModel  (abstract, unchanged)
 | Class | Owns | Does |
 |---|---|---|
 | `monoDomainElectro` | `conductivity_`, `Vm_`, ionic model | Solves monodomain PDE; adds `readVm()` and `initialiseConductivityTensor()` |
-| `ecgElectroBase` | `sigmaI_`, `Gi_`, `sigmaT_`, `postProcess_` | Mode-switches `evolve()`; initialises shared ECG state |
-| `pseudoECGElectro` | `gradVm_` | Implements `computeECG()` via Gima-Rudy dipole |
-| `BEMECGElectro` | `Is_`, electrodes, torso surface | Implements `computeECG()` via Green's function integral |
-| `pdeECGElectro` | `sigmaE_`, `Ge_`, `phiE_`, torso mesh/field | Implements `computeECG()` via Poisson + Laplace |
+| `ecgElectro` | `postProcess_`, `autoPtr<ecgModel>` | Mode-switches `evolve()`; delegates ECG computation to `ecgModel` |
+| `ecgModel` (abstract) | `Gi_`, `sigmaT_` | Defines runtime-selectable ECG compute interface |
+| `BEMECGElectro` | `Is_`, electrodes, torso surface | Implements `compute()` via Green's function integral |
+| `pseudoECGElectro` | electrodes | Implements `compute()` via Gima-Rudy dipole |
+| `pdeECGElectro` | `Gi_`, `Ge_`, `sigmaT_`, `phiE_`, torso mesh | Solves heart Poisson + torso Laplace; not an `ecgModel` |
 
 ---
 
@@ -48,7 +53,7 @@ electroModel  (abstract, unchanged)
 
 ### `initialiseConductivityTensor` (protected static)
 
-Replaces 4 duplicate copies of the disk-or-dict tensor initialisation pattern:
+Replaces duplicate tensor initialisation pattern in both monodomain and ECG subclasses:
 
 ```cpp
 static tmp<volTensorField> initialiseConductivityTensor(
@@ -60,71 +65,79 @@ static tmp<volTensorField> initialiseConductivityTensor(
 // 2. Fallback: read dimensionedSymmTensor from sourceDict, convert via & tensor(I)
 ```
 
-Used by `monoDomainElectro` for `conductivity_` only. `Gi_` and `Ge_` no longer use this pattern.
+Used by `monoDomainElectro` (for `conductivity_`) and by `ecgModel` subclasses (for `Gi_`). Since it is `static`, `ecgModel` subclasses call it as `monoDomainElectro::initialiseConductivityTensor(...)` after including the header via `lnInclude/`.
 
 ### `readVm()` (protected)
 
 ```cpp
-void readVm();  // calls Vm_.read() — allows ecgElectroBase to update Vm from disk
+void readVm();  // calls Vm_.read() — used by ecgElectro in postProcess mode
 ```
 
 ---
 
-## `ecgElectroBase` Interface
+## `ecgModel` Interface
 
-### Members
-
-```cpp
-protected:
-    dimensionedScalar sigmaI_;   // intracellular conductivity scalar (time-invariant)
-    volTensorField    Gi_;       // = sigmaI_ * conductivity(), initialised in ctor
-    dimensionedScalar sigmaT_;   // isotropic torso / infinite-medium conductivity (constant)
-    Switch            postProcess_;
-```
-
-`Gi_` and `sigmaT_` are **time-invariant**: initialised once in the constructor, never re-read.
-
-### Virtual interface
+New abstract class, follows the same runtime-selection pattern as `ionicModel`.
 
 ```cpp
-protected:
-    virtual void computeECG() = 0;   // each subclass implements its ECG physics
-```
-
-### `evolve()` — not overridable by subclasses
-
-```cpp
-void ecgElectroBase::evolve()
+class ecgModel
 {
-    if (!postProcess_)
-        monoDomainElectro::evolve();   // runs Vm PDE + ionic model
-    else
-        readVm();                       // reads Vm from current time directory on disk
+protected:
+    const volScalarField& Vm_;   // reference to monodomain Vm (owned by ecgElectro)
+    const fvMesh&         mesh_;
 
-    computeECG();
-}
+    volTensorField        Gi_;   // intracellular conductivity (time-invariant)
+    dimensionedScalar     sigmaT_; // torso / infinite-medium conductivity
+
+public:
+    declareRunTimeSelectionTable(...);
+
+    static autoPtr<ecgModel> New(
+        const volScalarField& Vm,
+        const dictionary& dict      // the ecgModel's own Coeffs subdict
+    );
+
+    virtual void compute() = 0;    // called every timestep after Vm is ready
+    virtual bool read()   = 0;
+};
 ```
 
-### `read()`
+`Gi_` is initialised via `monoDomainElectro::initialiseConductivityTensor("Gi", dict, mesh)`. `Gi_` and `sigmaT_` are **time-invariant** — set once in the constructor.
 
-Re-reads `ECGCoeffs` subdict. `sigmaI_` and `sigmaT_` are constants so no field update is needed.
+---
+
+## `ecgElectro` Interface
+
+Concrete `electroModel`, replaces `ecgElectroBase` as the user-facing electroModel name.
+
+```cpp
+class ecgElectro : public monoDomainElectro
+{
+    const Switch postProcess_;
+    autoPtr<ecgModel> ecgModelPtr_;
+
+public:
+    TypeName("ecgElectro");
+
+    virtual bool evolve()
+    {
+        bool ok = true;
+        if (!postProcess_)
+            ok = monoDomainElectro::evolve();
+        else
+            readVm();
+
+        ecgModelPtr_->compute();
+        return ok;
+    }
+};
+```
 
 ---
 
 ## Subclass Physics
 
-### `pseudoECGElectro`
-
-Gima-Rudy dipole approximation:
-
-```
-φ_pseudo(x) = (1/sigmaT_) * ∫ (Gi_ & ∇Vm) · (x − x') / |x − x'|³ dV
-```
-
-- Members: `gradVm_` (cached, reused each timestep)
-- Output: `postProcessing/pseudoECG.dat` (gated on `outputTime()`)
-
-### `BEMECGElectro`
+### `BEMECGElectro` (ecgModel subclass)
 
 Green's function / boundary element method:
 
@@ -135,70 +148,61 @@ Is = −div(Gi_ & ∇Vm)
 
 - Members: `Is_`, point electrodes, optional torso triSurface
 - Output: `postProcessing/ECG.dat` + optional `postProcessing/ECG/phiT_<time>.vtk`
-- Parallel-safe via `Foam::reduce(..., sumOp<scalar>())`
 
-### `pdeECGElectro`
+### `pseudoECGElectro` (ecgModel subclass)
 
-Heart Poisson + torso Laplace:
-
-```
-div((Gi_ + Ge_) ∇phiE) = −div(Gi_ ∇Vm)   [heart region]
-div(sigmaT_ ∇phiT)     = 0                 [torso region]
-```
-
-- Members: `sigmaE_` (scalar), `Ge_ = sigmaE_ * conductivity()`, `phiE_`, torso mesh + `phiTPtr_`
-- `GiPlusGe` computed inline as `(sigmaI_ + sigmaE_) * conductivity()`
-- Output: `phiT.write()` at `outputTime()`
-
----
-
-## Physical Relationships
+Gima-Rudy dipole approximation:
 
 ```
-Gi_ = sigmaI_ * conductivity()   // same anisotropy as monodomain, scaled
-Ge_ = sigmaE_ * conductivity()   // same anisotropy as monodomain, scaled
+φ_pseudo(x) = (1/sigmaT_) * ∫ (Gi_ & ∇Vm) · (x − x') / |x − x'|³ dV
 ```
 
-`conductivity_` (from `monoDomainElectro`) encodes the full anisotropy tensor. `sigmaI_` and `sigmaE_` are scalar constants read from `ECGCoeffs`.
+- Members: point electrodes
+- Output: `postProcessing/pseudoECG.dat`
+
+### `pdeECGElectro` (monoDomainElectro subclass — unchanged pattern)
+
+Heart Poisson + torso Laplace — stays as a direct `electroModel` subclass because it needs full PDE infrastructure on a separate torso mesh. Retains its own `Gi_`, `Ge_`, `sigmaT_` for now (Gi/Ge tensor → scalar simplification deferred).
 
 ---
 
 ## Dict Structure
 
 ```
-electroModel  BEMECGElectro;   // or pseudoECGElectro / pdeECGElectro
+electroModel  ecgElectro;
 
-BEMECGElectroCoeffs
+ecgElectroCoeffs
 {
     postProcess   false;   // true = skip monodomain solve, read Vm from disk
 
-    monoDomainElectroCoeffs          // ignored when postProcess true
-    {
-        chi               [0 -1 0 0 0 0 0]    140000;
-        Cm                [-1 -4 4 0 0 2 0]   0.01;
-        conductivity      [-1 -3 3 0 0 2 0]   (0.17 0 0  0.019 0  0.019);
-        ionicModel        BuenoOrovio;
-        solutionAlgorithm explicit;
-    }
+    // Monodomain settings (flat — same keys as monoDomainElectroCoeffs):
+    chi               [0 -1 0 0 0 0 0]    140000;
+    Cm                [-1 -4 4 0 0 2 0]   0.01;
+    conductivity      [-1 -3 3 0 0 2 0]   (0.17 0 0  0.019 0  0.019);
+    ionicModel        BuenoOrovio;
+    solutionAlgorithm explicit;
+    // ... other monodomain keys unchanged ...
 
-    ECGCoeffs
-    {
-        sigmaI  [-1 -3 3 0 0 2 0]  0.17;
-        sigmaT  [-1 -3 3 0 0 2 0]  0.24725;
-        // pdeECGElectro also: sigmaE
+    // ECG type (runtime-selectable, same pattern as ionicModel):
+    ecgModel      BEMECGElectro;   // or pseudoECGElectro
 
-        // BEMECGElectro / pseudoECGElectro:
+    BEMECGElectroCoeffs
+    {
+        Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
+        sigmaT  [-1 -3 3 0 0 2 0] 0.24725;
         electrodes
         {
             V1  (-26.1184  -283.543  -70.0558);
+            // ...
         }
-        // BEMECGElectro optional:
-        // torsoSurface  "constant/triSurface/torso.stl";
+        // optional: torsoSurface "constant/triSurface/torso.stl";
+    }
 
-        // pdeECGElectro:
-        // torsoRegion   torso;
-        // heartPatch    epicardium;
-        // torsoPatch    endocardium;
+    pseudoECGElectroCoeffs
+    {
+        Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
+        sigmaT  [-1 -3 3 0 0 2 0] 0.24725;
+        electrodes { ... }
     }
 }
 ```
@@ -210,26 +214,31 @@ BEMECGElectroCoeffs
 | Action | File |
 |---|---|
 | Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.H` — add `readVm()`, `initialiseConductivityTensor()` |
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` — extract utility, add `readVm()` |
-| New | `src/electroModels/ecgElectroBase/ecgElectroBase.H` |
-| New | `src/electroModels/ecgElectroBase/ecgElectroBase.C` |
-| New | `src/electroModels/pseudoECGElectro/pseudoECGElectro.H` |
-| New | `src/electroModels/pseudoECGElectro/pseudoECGElectro.C` |
-| Rename/refactor | `src/electroModels/greensFunctionECGElectro/` → `BEMECGElectro/` |
-| Modify | `src/electroModels/pdeECGElectro/pdeECGElectro.H/.C` — remove duplicate members, extend `ecgElectroBase` |
+| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` — implement both |
+| **New** | `src/electroModels/ecgModel/ecgModel.H` — abstract ecgModel base + run-time selector |
+| **New** | `src/electroModels/ecgModel/ecgModel.C` |
+| **New** | `src/electroModels/ecgElectro/ecgElectro.H` — concrete electroModel wrapper |
+| **New** | `src/electroModels/ecgElectro/ecgElectro.C` |
+| **New** | `src/electroModels/ecgModels/BEMECGElectro/BEMECGElectro.H` |
+| **New** | `src/electroModels/ecgModels/BEMECGElectro/BEMECGElectro.C` |
+| **New** | `src/electroModels/ecgModels/pseudoECGElectro/pseudoECGElectro.H` |
+| **New** | `src/electroModels/ecgModels/pseudoECGElectro/pseudoECGElectro.C` |
+| Modify | `src/electroModels/pdeECGElectro/pdeECGElectro.H/.C` — unchanged hierarchy, cleanup only |
+| Delete | `src/electroModels/greensFunctionECGElectro/` |
 | Modify | `src/electroModels/Make/files` — add new classes, remove `greensFunctionECGElectro` |
-| Modify | `tutorials/ECG/constant/electroProperties` — update dict structure |
+| Modify | `tutorials/ECG/constant/electroProperties` — `electroModel ecgElectro`, add `ecgModel BEMECGElectro` |
 
 ---
 
 ## Future: Coupled ECG
 
-`coupledECGElectro` will extend `ecgElectroBase` and implement `computeECG()` with bidirectional coupling (extracellular potential feeds back into the monodomain). The base class `evolve()` mode switch accommodates this naturally since `computeECG()` can modify fields used by the next monodomain solve.
+A future `coupledECGElectro` ecgModel subclass will implement bidirectional coupling. The `ecgElectro::evolve()` mode switch already supports this since `ecgModel::compute()` can write fields read by the next monodomain iteration.
 
 ---
 
-## Non-Goals
+## Non-Goals (this refactor)
 
-- Anisotropic torso conductivity (future)
-- 12-lead ECG derivation from electrode signals (future)
-- Multiple monodomain solver types (forward-compatible via `monoDomainElectroCoeffs` subdict naming)
+- `Gi`/`Ge` tensor → scalar simplification (deferred)
+- Anisotropic torso conductivity
+- 12-lead ECG derivation
+- `postProcess` time-looping solver integration (flag is wired, looping deferred)
