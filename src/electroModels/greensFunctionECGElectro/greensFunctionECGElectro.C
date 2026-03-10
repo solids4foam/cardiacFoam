@@ -321,14 +321,16 @@ bool greensFunctionECGElectro::evolve()
     for (label i = 0; i < nE; i++) allPoints[i]      = electrodePositions_[i];
     for (label i = 0; i < nF; i++) allPoints[nE + i] = torsoFaceCentres_[i];
 
-    // 4) Green's function + pseudo-ECG integrals (single pass):
+    // 4) Green's function + Gima-Rudy pseudo-ECG integrals (single pass):
     //    phi_greens(P) = 1/(4*pi*sigmaT) * sum_c [ Is_c * V_c / |C_c - P| ]
-    //    phi_pseudo(P) = sum_c [ (grad(Vm)_c . r_vec) * V_c / |C_c - P|^3 ]
-    //    where r_vec = C_c - P  (sign convention follows design doc;
-    //    sign relative to Gima-Rudy absorbed into post-processing scaling)
-    const scalarField& IsI  = Is_.primitiveField();
-    const scalarField& Vols = mesh().V();
-    const vectorField& Ctrs = mesh().C().primitiveField();
+    //    phi_pseudo(P) = -sum_c [ (Gi_c . grad(Vm)_c) . r_vec * V_c / |C_c - P|^3 ]
+    //    where r_vec = C_c - P.
+    //    (Gi & gradVm) is the dipole source density following Gima & Rudy (2002);
+    //    sign relative to their convention absorbed into post-processing scaling.
+    const scalarField&  IsI  = Is_.primitiveField();
+    const scalarField&  Vols = mesh().V();
+    const vectorField&  Ctrs = mesh().C().primitiveField();
+    const tensorField&  GiI  = Gi_.primitiveField();
     const scalar invCoeff =
         1.0/(4.0*constant::mathematical::pi*sigmaT_.value());
 
@@ -339,8 +341,8 @@ bool greensFunctionECGElectro::evolve()
 
     forAll(Ctrs, cI)
     {
-        const scalar IsV     = IsI[cI]*Vols[cI];
-        const vector gradVmV = gradVm[cI]*Vols[cI];
+        const scalar IsV    = IsI[cI]*Vols[cI];
+        const vector dipole = (GiI[cI] & gradVm[cI]) * Vols[cI];
 
         for (label pI = 0; pI < nAll; pI++)
         {
@@ -349,7 +351,7 @@ bool greensFunctionECGElectro::evolve()
             if (r > VSMALL)
             {
                 localSumsGreens[pI] += IsV / r;
-                localSumsPseudo[pI] += (gradVmV & r_vec) / (r*r*r);
+                localSumsPseudo[pI] += (dipole & r_vec) / (r*r*r);
             }
         }
     }

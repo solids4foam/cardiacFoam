@@ -73,7 +73,7 @@ Description
 
     Output (when 'torsoSurface' configured, at outputTime only):
         postProcessing/ECG/phiT_<time>.vtk — two CELL_DATA scalar fields:
-            phiGreens (Green's function) and phiPseudo (pseudo-ECG)
+            phiGreens (Green's function) and phiPseudo (Gima-Rudy dipole)
 
 Author
     Simão Nieto de Castro, UCD.
