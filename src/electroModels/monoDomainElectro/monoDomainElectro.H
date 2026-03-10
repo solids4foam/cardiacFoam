@@ -47,185 +47,157 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
-namespace electroModels
-{
+namespace electroModels {
 
 // Stimulus helper struct for storing info related to external stimulii
-struct stimulus
-{
-    //- Cell indices to be stimulated
-    labelList cellIDs_;
+struct stimulus {
+  //- Cell indices to be stimulated
+  labelList cellIDs_;
 
-    //- Start time for stimulation
-    scalar startTime_;
+  //- Start time for stimulation
+  scalar startTime_;
 
-    //- Duration of stimulation
-    scalar duration_;
+  //- Duration of stimulation
+  scalar duration_;
 
-    //- Intensity
-    scalar intensity_;
+  //- Intensity
+  scalar intensity_;
 
-    stimulus()
-    :
-        cellIDs_(0),
-        startTime_(0),
-        duration_(0),
-        intensity_(0)
-    {}
+  stimulus() : cellIDs_(0), startTime_(0), duration_(0), intensity_(0) {}
 };
-
 
 /*---------------------------------------------------------------------------* \
                         Class monoDomainElectro Declaration
 \*---------------------------------------------------------------------------*/
 
-class monoDomainElectro
-:
-    public electroModel
-{
-    // Private data
+class monoDomainElectro : public electroModel {
+  // Private data
 
-        //- Transmembrane voltage
-        volScalarField Vm_;
+  //- Transmembrane voltage
+  volScalarField Vm_;
 
-        //- Ionic currnet
-        volScalarField Iion_;
+  //- Ionic currnet
+  volScalarField Iion_;
 
-        //- External stimulus current
-        volScalarField externalStimulusCurrent_;
+  //- External stimulus current
+  volScalarField externalStimulusCurrent_;
 
-        //- List of external stimulii
-        List<stimulus> externalStimulus_;
+  //- List of external stimulii
+  List<stimulus> externalStimulus_;
 
-        //- Cardiac properties dictionary
-        const dictionary& cardiacProperties_;
+  //- Cardiac properties dictionary
+  const dictionary &cardiacProperties_;
 
-        //- Surface-to-volume ratio
-        const dimensionedScalar chi_;
+  //- Surface-to-volume ratio
+  const dimensionedScalar chi_;
 
-        //- Membrane capacitance
-        const dimensionedScalar Cm_;
+  //- Membrane capacitance
+  const dimensionedScalar Cm_;
 
-        //- C-nductiivty tensor field
-        volTensorField conductivity_;
+  //- C-nductiivty tensor field
+  volTensorField conductivity_;
 
-        //- Field to record the activation time, which is the time at which
-        //  each cell reaches or exceeds a transmembrane voltage of 0.0
-        volScalarField activationTime_;
+  //- Field to record the activation time, which is the time at which
+  //  each cell reaches or exceeds a transmembrane voltage of 0.0
+  volScalarField activationTime_;
 
-        //- Field for tracking if the activation time has been calculated yet in
-        //  a cell
-        boolList calculateActivationTime_;
+  //- Field for tracking if the activation time has been calculated yet in
+  //  a cell
+  boolList calculateActivationTime_;
 
-        //- Ionic model output fields
-        PtrList<volScalarField> outFields_;
+  //- Ionic model output fields
+  PtrList<volScalarField> outFields_;
 
-        //- Run-time selectable ionic model
-        autoPtr<ionicModel> ionicModelPtr_;
+  //- Run-time selectable ionic model
+  autoPtr<ionicModel> ionicModelPtr_;
 
-        // External state storage for the ionic model
-        Field<Field<scalar>> states_;
+  //- Flag for tracking if the time step size has been set
+  bool setDeltaT_;
 
-        //- Flag for tracking if the time step size has been set
-        bool setDeltaT_;
+  //- Frequency to write time step information to the standard output
+  //  A value of N means write every N time steps
+  label infoFrequency_;
 
-        //- Frequency to write time step information to the standard output
-        //  A value of N means write every N time steps
-        label infoFrequency_;
+  // Private Member Functions
 
+  //- Initialise the conductivity
+  tmp<volTensorField> initialiseConductivity() const;
 
-    // Private Member Functions
+  //- Update the external stimulus current field
+  void updateExternalStimulusCurrent(volScalarField &externalStimulusCurrent,
+                                     const List<stimulus> &externalStimulus,
+                                     const scalar t0) const;
 
-        //- Initialise the conductivity
-        tmp<volTensorField> initialiseConductivity() const;
+  //- Update the activation time
+  void updateActivationTime(volScalarField &activationTime,
+                            boolList &calculateActivationTime,
+                            const volScalarField &Vm) const;
 
-        //- Update the external stimulus current field
-        void updateExternalStimulusCurrent
-        (
-            volScalarField& externalStimulusCurrent,
-            const List<stimulus>& externalStimulus,
-            const scalar t0
-        ) const;
+  //- Evolve the electro model using an explicit algorithm
+  virtual bool evolveExplicit();
 
-        //- Update the activation time
-        void updateActivationTime
-        (
-            volScalarField& activationTime,
-            boolList& calculateActivationTime,
-            const volScalarField& Vm
-        ) const;
+  //- Evolve the electro model using an implicit algorithm
+  virtual bool evolveImplicit();
 
-        //- Evolve the electro model using an explicit algorithm
-        virtual bool evolveExplicit();
+  //- Disallow default bitwise copy construct
+  monoDomainElectro(const monoDomainElectro &);
 
-        //- Evolve the electro model using an implicit algorithm
-        virtual bool evolveImplicit();
-
-        //- Disallow default bitwise copy construct
-        monoDomainElectro(const monoDomainElectro&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const monoDomainElectro&);
-
+  //- Disallow default bitwise assignment
+  void operator=(const monoDomainElectro &);
 
 protected:
+  // Protected constructor for subclasses (passes concrete type name up)
+  monoDomainElectro(const word &type, Time &runTime,
+                    const word &region = dynamicFvMesh::defaultRegion);
 
-    // Protected constructor for subclasses (passes concrete type name up)
-    monoDomainElectro
-    (
-        const word& type,
-        Time& runTime,
-        const word& region = dynamicFvMesh::defaultRegion
-    );
+  //- Const access to the conductivity tensor
+  const volTensorField &conductivity() const { return conductivity_; }
 
-    //- Const access to transmembrane voltage (needed by ECG subclasses)
-    const volScalarField& Vm() const
-    {
-        return Vm_;
-    }
-
-    //- Const access to the conductivity tensor (needed by ECG subclasses)
-    const volTensorField& conductivity() const
-    {
-        return conductivity_;
-    }
-
+  //- Re-read Vm from the current time directory.
+  //  Used by ecgElectro in postProcess mode to skip the monodomain solve.
+  void readVm();
 
 public:
+  //- Initialise a conductivity tensor field: attempt READ_IF_PRESENT from
+  //  disk; fall back to a uniform tensor read from dict (symmTensor entry).
+  //  Used by monoDomainElectro (conductivity_) and ecgModel subclasses (Gi_).
+  static tmp<volTensorField>
+  initialiseConductivityTensor(const word &fieldName, const dictionary &dict,
+                               const fvMesh &mesh);
 
-    //- Runtime type information
-    TypeName("monoDomainElectro");
+  //- Runtime type information
+  TypeName("monoDomainElectro");
 
-    // Constructors
+  // Constructors
 
-        //- Construct from components
-        monoDomainElectro
-        (
-            Time& runTime,
-            const word& region = dynamicFvMesh::defaultRegion
-        );
+  //- Construct from components
+  monoDomainElectro(Time &runTime,
+                    const word &region = dynamicFvMesh::defaultRegion);
 
+  // Destructor
 
-    // Destructor
+  virtual ~monoDomainElectro() {}
 
-        virtual ~monoDomainElectro()
-        {}
+  // Member Functions
 
+  // Edit
 
-    // Member Functions
+  //- Update the size of the time-step
+  virtual void setDeltaT(Time &runTime);
 
-        // Edit
+  //- Evolve the electro model
+  virtual bool evolve();
 
-            //- Update the size of the time-step
-            virtual void setDeltaT(Time& runTime);
+  //- Return transmembrane voltage (needed by composite models)
+  virtual const volScalarField &Vm() const { return Vm_; }
 
-            //- Evolve the electro model
-            virtual bool evolve();
+  //- Return optional coupling signal provider (e.g. ionic model)
+  virtual const CouplingSignalProvider *provider() const {
+    return ionicModelPtr_.operator->();
+  }
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
