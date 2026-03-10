@@ -67,8 +67,13 @@ Description
             }
         }
 
-    Output: postProcessing/ECG.dat — one row per time step:
-        # time  LA  RA  LL ...
+    Output (when 'electrodes' configured):
+        postProcessing/ECG.dat     — Green's function potentials, one row per time step
+        postProcessing/pseudoECG.dat — pseudo-ECG (dipole) potentials, same format
+
+    Output (when 'torsoSurface' configured, at outputTime only):
+        postProcessing/ECG/phiT_<time>.vtk — two CELL_DATA scalar fields:
+            phiGreens (Green's function) and phiPseudo (pseudo-ECG)
 
 Author
     Simão Nieto de Castro, UCD.
