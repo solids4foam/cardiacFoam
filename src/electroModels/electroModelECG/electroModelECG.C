@@ -69,8 +69,7 @@ bool Foam::electroModels::electroModelECG::evolve() {
 }
 
 bool Foam::electroModels::electroModelECG::read() {
-  bool status = physicsModel::read();
-  status = electroModelPtr_->read() && status;
+  bool status = electroModelPtr_->read();
 
   if (ecgModelPtr_.valid()) {
     const dictionary &props = electroModelPtr_->electroProperties();

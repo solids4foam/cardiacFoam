@@ -39,7 +39,10 @@ Foam::electroModels::electroMechanicalModel::electroMechanicalModel(
   const dictionary &props = electroModelPtr_->electroProperties();
 
   if (props.found("activeTensionModel")) {
-    const dictionary &atDict = props.subDict("activeTensionModel");
+    // Merge parent dict so ODE solver keys (solver, initialODEStep, maxSteps,
+    // etc.) are available in the subdict without duplicating them in the case.
+    dictionary atDict(props.subDict("activeTensionModel"));
+    atDict.merge(props);
     activeTensionModelPtr_ =
         activeTensionModel::New(atDict, electroModelPtr_->mesh().nCells());
 
@@ -48,24 +51,21 @@ Foam::electroModels::electroMechanicalModel::electroMechanicalModel(
     if (provider) {
       activeTensionModelPtr_->setCouplingSignalProvider(*provider);
     }
-  } else {
-    FatalErrorInFunction << "activeTensionModel sub-dictionary not found in "
-                         << "electroProperties." << abort(FatalError);
+
+    // Active tension field
+    TaPtr_.reset(new volScalarField(
+        IOobject("Ta", runTime.timeName(), electroModelPtr_->mesh(),
+                 IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE),
+        electroModelPtr_->mesh(), dimensionedScalar("Ta", dimPressure, 0.0),
+        "zeroGradient"));
+
+    // Lambda field (stretch) - typically read from solid simulation
+    lambdaPtr_.reset(new volScalarField(
+        IOobject("lambda", runTime.timeName(), electroModelPtr_->mesh(),
+                 IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE),
+        electroModelPtr_->mesh(), dimensionedScalar("lambda", dimless, 1.0),
+        "zeroGradient"));
   }
-
-  // Active tension field
-  TaPtr_.reset(new volScalarField(
-      IOobject("Ta", runTime.timeName(), electroModelPtr_->mesh(),
-               IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE),
-      electroModelPtr_->mesh(), dimensionedScalar("Ta", dimPressure, 0.0),
-      "zeroGradient"));
-
-  // Lambda field (stretch) - typically read from solid simulation
-  lambdaPtr_.reset(new volScalarField(
-      IOobject("lambda", runTime.timeName(), electroModelPtr_->mesh(),
-               IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE),
-      electroModelPtr_->mesh(), dimensionedScalar("lambda", dimless, 1.0),
-      "zeroGradient"));
 }
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -84,7 +84,7 @@ bool Foam::electroModels::electroMechanicalModel::evolve() {
   if (activeTensionModelPtr_.valid()) {
     activeTensionModelPtr_->calculateTension(
         runTime().value(), runTime().deltaTValue(), lambdaPtr_->internalField(),
-        TaPtr_->internalField());
+        TaPtr_->primitiveFieldRef());
     TaPtr_->correctBoundaryConditions();
   }
 
@@ -92,8 +92,7 @@ bool Foam::electroModels::electroMechanicalModel::evolve() {
 }
 
 bool Foam::electroModels::electroMechanicalModel::read() {
-  bool status = physicsModel::read();
-  status = electroModelPtr_->read() && status;
+  bool status = electroModelPtr_->read();
 
   if (activeTensionModelPtr_.valid()) {
     // Re-read active tension if needed
