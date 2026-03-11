@@ -23,9 +23,9 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime    0.055;
+endTime    	0.04;
 
-deltaT    1e-06;
+deltaT    	5e-05;
 
 maxCo 		0.1;
 
@@ -54,11 +54,6 @@ runTimeModifiable false;
 
 functions
 {
-    smokeCheck
-    {
-        #include "smokeCheck"
-    }
-
     Niedererpoints
     {
         #include "Niedererpoints"

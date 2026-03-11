@@ -23,13 +23,13 @@ monoDomainElectroCoeffs
     chi   [0 -1 0 0 0 0 0] 140000;
     Cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    ionicModel    TNNP;
+    ionicModel    BuenoOrovio;
     tissue    epicardialCells;
 
-    ExportedVariables (Vm Iion);
+    ExportedVariables (Vm Jsi);
     debugPrintVariables (Vm Iion);
 
-    solutionAlgorithm    implicit;
+    solutionAlgorithm    explicit;
     solver RKF45;
     initialODEStep 1e-6;
     maxSteps 1000000000;
@@ -43,10 +43,6 @@ monoDomainElectroCoeffs
         stimulusStartTime 0.0;
     }
 
-
-
-    eikonalAdvectionDiffusionApproach yes;
-    c0 [0 0 -0.5 0 0 0 0] 40;
 }
 
 // ************************************************************************* //

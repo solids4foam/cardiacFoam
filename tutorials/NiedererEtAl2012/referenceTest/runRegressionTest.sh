@@ -19,32 +19,26 @@ restoreReferenceConfigs()
     done
 }
 
-checkSmokeCheckResults()
+checkNiedererResults()
 {
     caseDir="$(pwd)"
     refFile="${caseDir}/referenceTest/NiedererEtAl2012.reference"
-    postRoot="${caseDir}/postProcessing/smokeCheck"
-    postDir="${postRoot}/0"
+    outDir="${caseDir}/postProcessing"
 
     if [ ! -f "${refFile}" ]; then
         echo "Reference file not found: ${refFile}"
         return 1
     fi
 
-    if [ ! -d "${postDir}" ]; then
-        echo "Post-processing directory not found: ${postDir}"
-        return 1
-    fi
-
     nFail=0
     nCheck=0
 
-    while read -r field time expected tolerance; do
-        if [ -z "${field}" ] || [[ "${field}" == \#* ]]; then
+    while read -r fileName time column expected tolerance; do
+        if [ -z "${fileName}" ] || [[ "${fileName}" == \#* ]]; then
             continue
         fi
 
-        dataFile="${postDir}/${field}"
+        dataFile="${outDir}/${fileName}"
         if [ ! -f "${dataFile}" ]; then
             echo "FAIL: missing output file ${dataFile}"
             nFail=$((nFail + 1))
@@ -53,14 +47,14 @@ checkSmokeCheckResults()
         fi
 
         actual="$(
-            awk -v target="${time}" '
+            awk -v target="${time}" -v col="${column}" '
                 BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-                $1 !~ /^#/ && NF >= 2 {
+                $1 !~ /^#/ && NF >= col {
                     d = $1 - target;
                     if (d < 0) d = -d;
                     if (d < bestDiff) {
                         bestDiff = d;
-                        actual = $2;
+                        actual = $col;
                         found = 1;
                     }
                 }
@@ -77,7 +71,7 @@ checkSmokeCheckResults()
         nCheck=$((nCheck + 1))
 
         if [ -z "${actual}" ]; then
-            echo "FAIL: ${field} at t=${time} not found in ${dataFile}"
+            echo "FAIL: ${fileName} col=${column} at t=${time} not found in ${dataFile}"
             nFail=$((nFail + 1))
             continue
         fi
@@ -89,14 +83,14 @@ checkSmokeCheckResults()
                 exit !(d <= t);
             }
         '; then
-            echo "PASS: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+            echo "PASS: ${fileName} col=${column} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
         else
-            echo "FAIL: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+            echo "FAIL: ${fileName} col=${column} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
             nFail=$((nFail + 1))
         fi
     done < "${refFile}"
 
-    echo "smokeCheck comparison: ${nCheck} checks, ${nFail} failures"
+    echo "NiedererEtAl2012 comparison: ${nCheck} checks, ${nFail} failures"
 
     if [ "${nFail}" -ne 0 ]; then
         return 1
@@ -126,6 +120,5 @@ else
     runApplication cardiacFoam
 fi
 
-# Regression protocol for this case: smokeCheck only.
-runApplication -o postProcess -func smokeCheck
-checkSmokeCheckResults || exit 1
+runApplication -o postProcess -func Niedererpoints -latestTime
+checkNiedererResults || exit 1
