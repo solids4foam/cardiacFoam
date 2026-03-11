@@ -50,11 +50,32 @@ Foam::ionicModel::ionicModel
     tissue_(-1),
     solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    if (dict_.found("exportedVariables"))
-        dict_.lookup("exportedVariables") >> variableExport_;
+    // Required schema:
+    // outputVariables
+    // {
+    //   ionic
+    //   {
+    //     export (...);
+    //     debug  (...);
+    //   }
+    // }
+    if (dict_.found("outputVariables"))
+    {
+        const dictionary& outDict = dict_.subDict("outputVariables");
+        if (outDict.found("ionic"))
+        {
+            const dictionary& ionicOut = outDict.subDict("ionic");
+            if (ionicOut.found("export"))
+            {
+                ionicOut.lookup("export") >> variableExport_;
+            }
 
-    if (dict_.found("debugPrintVariables"))
-        dict_.lookup("debugPrintVariables") >> debugVarNames_;
+            if (ionicOut.found("debug"))
+            {
+                ionicOut.lookup("debug") >> debugVarNames_;
+            }
+        }
+    }
 }
 
 void::Foam::ionicModel::setTissueFromDict()
@@ -177,32 +198,6 @@ bool Foam::ionicModel::hasSignal(const CouplingSignal s) const
         {
             return caiIdx >= 0;
         }
-        case CouplingSignal::Act:
-        {
-            if (hasManufacturedSolution())
-            {
-                return false;
-            }
-
-            const label actIdx =
-                ionicVariableCompatibility::findActStateIndex
-                (
-                    ioStateNames(),
-                    ioNumStates()
-                );
-
-            if (actIdx >= 0)
-            {
-                return true;
-            }
-
-            if (caiIdx >= 0)
-            {
-                return true;
-            }
-
-            return (ioVmTransform() || vmIdx >= 0);
-        }
         default:
             return false;
     }
@@ -265,58 +260,6 @@ Foam::scalar Foam::ionicModel::signal
         if (caiIdx >= 0 && caiIdx < state.size())
         {
             return state[caiIdx];
-        }
-    }
-    else if (s == CouplingSignal::Act)
-    {
-        if (hasManufacturedSolution())
-        {
-            FatalErrorInFunction
-                << "Requested coupling signal "
-                << static_cast<int>(s)
-                << " from manufactured ionic model "
-                << typeName
-                << ", but Act is intentionally disabled."
-                << abort(FatalError);
-        }
-
-        const label actIdx =
-            ionicVariableCompatibility::findActStateIndex
-            (
-                ioStateNames(),
-                ioNumStates()
-            );
-        if (actIdx >= 0 && actIdx < state.size())
-        {
-            return state[actIdx];
-        }
-
-        const label caiIdx =
-            ionicVariableCompatibility::findCaiStateIndex
-            (
-                ioStateNames(),
-                ioNumStates()
-            );
-        if (caiIdx >= 0 && caiIdx < state.size())
-        {
-            return state[caiIdx];
-        }
-
-        const ionicModelIO::VmTransform transformVm = ioVmTransform();
-        if (transformVm)
-        {
-            return transformVm(state);
-        }
-
-        const label vmIdx =
-            ionicVariableCompatibility::findVmStateIndex
-            (
-                ioStateNames(),
-                ioNumStates()
-            );
-        if (vmIdx >= 0 && vmIdx < state.size())
-        {
-            return state[vmIdx];
         }
     }
 

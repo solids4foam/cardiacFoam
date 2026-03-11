@@ -32,7 +32,7 @@ Description
 
         pseudoECGElectroCoeffs
         {
-            Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
+            Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019); // fallback
             sigmaT  [-1 -3 3 0 0 2 0] 0.24725;   // stored but unused
 
             electrodes
@@ -73,9 +73,6 @@ class pseudoECGElectro : public ecgModel {
   //- Output stream for pseudoECG.dat
   autoPtr<OFstream> outputPtr_;
 
-  //- Electrode names
-  wordList electrodeNames_;
-
   // Private Member Functions
 
   //- Disallow copy construct
@@ -89,7 +86,8 @@ public:
   TypeName("pseudoECGElectro");
 
   // Constructor
-  pseudoECGElectro(const volScalarField &Vm, const dictionary &dict);
+  pseudoECGElectro(const volScalarField &Vm, const dictionary &dict,
+                   const volTensorField *conductivityPtr);
 
   // Destructor
   virtual ~pseudoECGElectro() = default;

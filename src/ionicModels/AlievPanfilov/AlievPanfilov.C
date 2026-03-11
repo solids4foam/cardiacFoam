@@ -283,16 +283,10 @@ Foam::wordList Foam::AlievPanfilov::availableSweepCurrents() const
 
 bool Foam::AlievPanfilov::hasSignal(const CouplingSignal s) const
 {
-    return (s == CouplingSignal::Act) || ionicModel::hasSignal(s);
+    return ionicModel::hasSignal(s);
 }
 
 Foam::scalar Foam::AlievPanfilov::signal(const label i, const CouplingSignal s) const
 {
-    if (s == CouplingSignal::Act)
-    {
-        return STATES_[i][0];
-    }
-
     return ionicModel::signal(i, s);
 }
-

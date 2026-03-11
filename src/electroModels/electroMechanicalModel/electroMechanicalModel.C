@@ -19,6 +19,9 @@ License
 
 #include "electroMechanicalModel.H"
 #include "addToRunTimeSelectionTable.H"
+#include "ionicModelIO.H"
+#include "OSspecific.H"
+#include "stimulusIO.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -31,18 +34,39 @@ addToRunTimeSelectionTable(physicsModel, electroMechanicalModel, physicsModel);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
+Foam::autoPtr<Foam::physicsModel>
+Foam::electroModels::electroMechanicalModel::New(Time &runTime,
+                                                 const word &region) {
+  return autoPtr<physicsModel>(
+      new electroMechanicalModel(typeName, runTime, region));
+}
+
+Foam::electroModels::electroMechanicalModel::electroMechanicalModel(
+    Time &runTime, const word &region)
+    : electroMechanicalModel(typeName, runTime, region) {}
+
 Foam::electroModels::electroMechanicalModel::electroMechanicalModel(
     const word &type, Time &runTime, const word &region)
     : physicsModel(type, runTime),
       electroModelPtr_(electroModel::New(runTime, region)),
-      activeTensionModelPtr_(), TaPtr_(), lambdaPtr_() {
+      activeTensionModelPtr_(), TaPtr_(), lambdaPtr_(),
+      activeTensionOutFields_(), activeTensionOutputPtr_() {
   const dictionary &props = electroModelPtr_->electroProperties();
 
   if (props.found("activeTensionModel")) {
+    const dictionary &atSubDict = props.subDict("activeTensionModel");
+    const word atModelType(atSubDict.lookup("activeTensionModel"));
+
     // Merge parent dict so ODE solver keys (solver, initialODEStep, maxSteps,
     // etc.) are available in the subdict without duplicating them in the case.
-    dictionary atDict(props.subDict("activeTensionModel"));
+    dictionary atDict(atSubDict);
     atDict.merge(props);
+
+    // Keep the model selector as a primitive entry.
+    // merge(props) injects the parent "activeTensionModel" sub-dictionary,
+    // which would otherwise replace this key with a dictionary entry.
+    atDict.add("activeTensionModel", atModelType, true);
+
     activeTensionModelPtr_ =
         activeTensionModel::New(atDict, electroModelPtr_->mesh().nCells());
 
@@ -65,6 +89,37 @@ Foam::electroModels::electroMechanicalModel::electroMechanicalModel(
                  IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE),
         electroModelPtr_->mesh(), dimensionedScalar("lambda", dimless, 1.0),
         "zeroGradient"));
+
+    // Optional exported active-tension fields for volumetric output
+    const wordList atNames = activeTensionModelPtr_->exportedFieldNames();
+    activeTensionOutFields_.setSize(atNames.size());
+    forAll(atNames, i) {
+      activeTensionOutFields_.set(
+          i, new volScalarField(IOobject(atNames[i], runTime.timeName(),
+                                         electroModelPtr_->mesh(),
+                                         IOobject::NO_READ, IOobject::AUTO_WRITE),
+                                electroModelPtr_->mesh(), dimless,
+                                "zeroGradient"));
+    }
+
+    // Single-cell trace output for active-tension model variables
+    if (electroModelPtr_->mesh().nCells() == 1) {
+      const fileName outputDir(runTime.path() / "postProcessing");
+      mkDir(outputDir);
+
+      const word ionicModelType(props.lookup("ionicModel"));
+      const word tissueName(props.lookup("tissue"));
+      const word stimSuffix(stimulusIO::protocolSuffix(props));
+      const fileName outFile =
+          outputDir / (ionicModelType + "_" + tissueName + "_" + stimSuffix +
+                       "_activeTension_" + atModelType + ".txt");
+      activeTensionOutputPtr_.reset(new OFstream(outFile));
+
+      OFstream &output = activeTensionOutputPtr_.ref();
+      output.setf(std::ios::fixed);
+      output.precision(7);
+      activeTensionModelPtr_->writeHeader(output);
+    }
   }
 }
 
@@ -86,6 +141,15 @@ bool Foam::electroModels::electroMechanicalModel::evolve() {
         runTime().value(), runTime().deltaTValue(), lambdaPtr_->internalField(),
         TaPtr_->primitiveFieldRef());
     TaPtr_->correctBoundaryConditions();
+
+    if (activeTensionOutputPtr_.valid()) {
+      const scalar t1 = runTime().value();
+      const scalar t0 = t1 - runTime().deltaTValue();
+      if (ionicModelIO::shouldWriteStep(t0, t1, electroModelPtr_->electroProperties(),
+                                        false)) {
+        activeTensionModelPtr_->write(t1, activeTensionOutputPtr_.ref());
+      }
+    }
   }
 
   return status;
@@ -104,6 +168,9 @@ bool Foam::electroModels::electroMechanicalModel::read() {
 void Foam::electroModels::electroMechanicalModel::writeFields(
     const Time &runTime) {
   electroModelPtr_->writeFields(runTime);
+  if (activeTensionOutFields_.size()) {
+    activeTensionModelPtr_->exportStates(activeTensionOutFields_);
+  }
   if (TaPtr_.valid())
     TaPtr_->write();
 }

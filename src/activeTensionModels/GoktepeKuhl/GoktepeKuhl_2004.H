@@ -48,9 +48,8 @@ GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
     
     //Tension Calculation
     ALGEBRAIC[AV_e] =
-        CONSTANTS[AC_e0]
-        + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0])
-        * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_Vm] - CONSTANTS[AC_Vshift])));
+        CONSTANTS[AC_e0] + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0]) 
+            * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_Vm] - CONSTANTS[AC_Vshift])));
 
     RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * ALGEBRAIC[AV_u] - STATES[Ta]);
     

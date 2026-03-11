@@ -36,14 +36,6 @@ public:
         label nStates
     );
 
-    // Find activation-like state index from model state names.
-    // Returns -1 if not found.
-    static label findActStateIndex
-    (
-        const char* const stateNames[],
-        label nStates
-    );
-
     // Accepts both RATES_<state> and rates_<state>.
     static bool isRateNameRelaxed
     (

@@ -45,7 +45,7 @@ void activeTensionModel::validateProvider() const
 {
     const Requirements req = requirements();
 
-    const bool needsAny = req.needVm || req.needAct || req.needCai;
+    const bool needsAny = req.needVm || req.needCai;
 
     if (needsAny && !providerPtr_)
     {
@@ -71,7 +71,6 @@ void activeTensionModel::validateProvider() const
     };
 
     if (req.needVm)  require(CouplingSignal::Vm,  "Vm");
-    if (req.needAct) require(CouplingSignal::Act, "Act");
     if (req.needCai) require(CouplingSignal::Cai, "Cai");
 }
 

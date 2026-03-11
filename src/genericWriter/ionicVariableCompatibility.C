@@ -162,37 +162,6 @@ label ionicVariableCompatibility::findCaiStateIndex
     return -1;
 }
 
-label ionicVariableCompatibility::findActStateIndex
-(
-    const char* const stateNames[],
-    const label nStates
-)
-{
-    if (!stateNames || nStates <= 0)
-    {
-        return -1;
-    }
-
-    for (label i = 0; i < nStates; ++i)
-    {
-        const std::string name = canonicalName(stateNames[i]);
-
-        if
-        (
-               name == "act"
-            || name == "activation"
-            || name == "active"
-            || name == "lambda"
-        )
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-
 bool ionicVariableCompatibility::isRateNameRelaxed
 (
     const word& name,

@@ -32,13 +32,17 @@ Description
     Common members available to all subclasses:
       Vm_               — const ref to monodomain Vm field
       mesh_             — const ref to the heart fvMesh
-      Gi_               — intracellular conductivity tensor (time-invariant)
+      Gi()              — conductivity tensor used by the ECG model
+                           (prefers monodomain conductivity field when provided,
+                           else falls back to local Gi initialisation)
       sigmaT_           — torso conductivity
       electrodeNames_   — electrode labels  (empty if not configured)
       electrodePositions_ — electrode positions (empty if not configured)
 
-    Gi_ is initialised by trying READ_IF_PRESENT from disk, then falling back
-    to a uniform tensor built from the 'Gi' symmTensor entry in the dict.
+    If monodomain conductivity is provided by the owning electroModel, it is
+    reused directly. Otherwise Gi is initialised by trying READ_IF_PRESENT from
+    disk, then falling back to a uniform tensor built from the 'Gi' symmTensor
+    entry in the dict.
 
 Author
     Simão Nieto de Castro, UCD.
@@ -86,8 +90,13 @@ protected:
     //- Heart mesh
     const fvMesh& mesh_;
 
-    //- Intracellular conductivity tensor [S/m]  (time-invariant)
-    volTensorField Gi_;
+    //- Owned fallback conductivity tensor when monodomain conductivity is not
+    //  provided by the electroModel
+    autoPtr<volTensorField> GiOwnedPtr_;
+
+    //- Conductivity tensor used by the ECG model (either monodomain
+    //  conductivity or owned fallback Gi)
+    const volTensorField* GiPtr_;
 
     //- Torso / infinite-medium conductivity [S/m]
     dimensionedScalar sigmaT_;
@@ -113,15 +122,22 @@ public:
         dictionary,
         (
             const volScalarField& Vm,
-            const dictionary& dict
+            const dictionary& dict,
+            const volTensorField* conductivityPtr
         ),
-        (Vm, dict)
+        (Vm, dict, conductivityPtr)
     );
 
     // Constructors
 
-        //- Construct from Vm field and model coefficients dictionary
-        ecgModel(const volScalarField& Vm, const dictionary& dict);
+        //- Construct from Vm field and model coefficients dictionary.
+        //  If conductivityPtr is non-null, it is reused as Gi.
+        ecgModel
+        (
+            const volScalarField& Vm,
+            const dictionary& dict,
+            const volTensorField* conductivityPtr
+        );
 
     // Selectors
 
@@ -129,7 +145,8 @@ public:
         static autoPtr<ecgModel> New
         (
             const volScalarField& Vm,
-            const dictionary& dict
+            const dictionary& dict,
+            const volTensorField* conductivityPtr = nullptr
         );
 
     // Destructor
@@ -137,7 +154,7 @@ public:
 
     // Access
 
-        const volTensorField& Gi()        const { return Gi_; }
+        const volTensorField& Gi() const { return *GiPtr_; }
         const dimensionedScalar& sigmaT() const { return sigmaT_; }
 
     // Member Functions

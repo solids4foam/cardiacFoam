@@ -21,8 +21,8 @@ singleCellElectroCoeffs
 
     // Cell model selection
 
-    ionicModel    BuenoOrovio;
-    tissue    endocardialCells;
+    ionicModel    AlievPanfilov;
+    tissue    myocyte;
 
 
     // Time integration settings

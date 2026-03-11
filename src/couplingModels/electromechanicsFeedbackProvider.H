@@ -10,7 +10,6 @@ namespace Foam
 enum class CouplingSignal // this can be expanded for the necessary eletromechanic feedback. For mechanobiology, see later. 
 {
     Vm,        // membrane potential mV
-    Act,       // activation signal [0..1]
     Cai,       // intracellular Ca  mM
 };
 
@@ -27,4 +26,3 @@ public:
 } // End namespace Foam
 
 #endif
-

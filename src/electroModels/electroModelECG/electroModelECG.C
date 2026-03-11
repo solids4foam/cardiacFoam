@@ -31,6 +31,15 @@ addToRunTimeSelectionTable(physicsModel, electroModelECG, physicsModel);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
+Foam::autoPtr<Foam::physicsModel> Foam::electroModels::electroModelECG::New(
+    Time &runTime, const word &region) {
+  return autoPtr<physicsModel>(new electroModelECG(typeName, runTime, region));
+}
+
+Foam::electroModels::electroModelECG::electroModelECG(Time &runTime,
+                                                      const word &region)
+    : electroModelECG(typeName, runTime, region) {}
+
 Foam::electroModels::electroModelECG::electroModelECG(const word &type,
                                                       Time &runTime,
                                                       const word &region)
@@ -40,7 +49,8 @@ Foam::electroModels::electroModelECG::electroModelECG(const word &type,
 
   if (props.found("ECG")) {
     const dictionary &ecgDict = props.subDict("ECG");
-    ecgModelPtr_ = ecgModel::New(electroModelPtr_->Vm(), ecgDict);
+    ecgModelPtr_ = ecgModel::New(
+        electroModelPtr_->Vm(), ecgDict, electroModelPtr_->conductivityPtr());
   } else {
     FatalErrorInFunction
         << "ECG sub-dictionary not found in electroProperties for "

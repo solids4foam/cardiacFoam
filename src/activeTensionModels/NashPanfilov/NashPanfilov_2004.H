@@ -33,8 +33,6 @@ NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
     CONSTANTS[AC_e0] = 1.0;
     CONSTANTS[AC_kTa] = 47.9;
 
-    CONSTANTS[AC_a] = (CONSTANTS[AC_Vth] - CONSTANTS[AC_Vr]) / (CONSTANTS[AC_Vp] - CONSTANTS[AC_Vr]);
-
     STATES[Ta] = 0.0;
 }
 
@@ -42,6 +40,6 @@ NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 void
 NashPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
-    ALGEBRAIC[AV_e] = ((ALGEBRAIC[AV_u] < 0.05) ? 10.0 * CONSTANTS[AC_e0] : 1.0 * CONSTANTS[AC_e0]);
+    ALGEBRAIC[AV_e] = ((ALGEBRAIC[AV_u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
     RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * ALGEBRAIC[AV_u] - STATES[Ta]);
 }

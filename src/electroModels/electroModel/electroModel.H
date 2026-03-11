@@ -149,6 +149,9 @@ public:
   //- Return optional coupling signal provider (e.g. ionic model)
   virtual const CouplingSignalProvider *provider() const { return nullptr; }
 
+  //- Return optional conductivity tensor field (e.g. monodomain conductivity)
+  virtual const volTensorField *conductivityPtr() const { return nullptr; }
+
   //- Read electroProperties dictionary
   virtual bool read();
 

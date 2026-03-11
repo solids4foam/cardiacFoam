@@ -290,19 +290,13 @@ Foam::wordList Foam::BuenoOrovio::availableSweepCurrents() const
 //-------COupling signals--------//
 bool Foam::BuenoOrovio::hasSignal(const CouplingSignal s) const
 {
-    return (s == CouplingSignal::Act) || ionicModel::hasSignal(s);
+    return ionicModel::hasSignal(s);
 }
 
 Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) const
 {
-    if (s == CouplingSignal::Act)
-    {
-        return STATES_[i][0];
-    }
-
     return ionicModel::signal(i, s);
 }
-
 
 
 

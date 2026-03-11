@@ -197,6 +197,9 @@ public:
   virtual const CouplingSignalProvider *provider() const {
     return ionicModelPtr_.operator->();
   }
+
+  //- Return conductivity tensor field for downstream coupled models (e.g. ECG)
+  virtual const volTensorField *conductivityPtr() const { return &conductivity_; }
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

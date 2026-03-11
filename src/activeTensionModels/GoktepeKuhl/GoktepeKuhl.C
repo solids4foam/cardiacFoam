@@ -60,34 +60,22 @@ Foam::GoktepeKuhl::GoktepeKuhl
     STATES_(num),
     ALGEBRAIC_(num),
     RATES_(num),
-    CONSTANTS_(NUM_CONSTANTS, 0.0),
-    driveSignal_(CouplingSignal::Act),
-    driveSignalName_("Act")
+    CONSTANTS_(NUM_CONSTANTS, 0.0)
 {
     const word requestedSignal =
-        dict_.lookupOrDefault<word>("couplingSignal", "Act");
+        dict_.lookupOrDefault<word>("couplingSignal", "Vm");
 
-    if (requestedSignal == "Act" || requestedSignal == "act")
-    {
-        driveSignal_     = CouplingSignal::Act;
-        driveSignalName_ = "Act";
-    }
-    else if (requestedSignal == "Vm" || requestedSignal == "vm")
-    {
-        driveSignal_     = CouplingSignal::Vm;
-        driveSignalName_ = "Vm";
-    }
-    else
+    if (!(requestedSignal == "Vm" || requestedSignal == "vm"))
     {
         FatalErrorInFunction
             << "Unknown GoktepeKuhl 'couplingSignal' value: "
             << requestedSignal << nl
-            << "Valid options are: Act, Vm."
+            << "Valid option is: Vm."
             << abort(FatalError);
     }
 
     Info<< nl << "Initialize GoktepeKuhl constants:" << nl;
-    Info<< "GoktepeKuhl couplingSignal: " << driveSignalName_ << nl;
+    Info<< "GoktepeKuhl couplingSignal: Vm" << nl;
 
     forAll(STATES_, integrationPtI)
     {
@@ -126,8 +114,13 @@ void Foam::GoktepeKuhl::solveAtPoint
 
     scalar& Ta_i = STATESI[::Ta];
 
+    // Map Vm (mV) to Aliev-Panfilov activation variable u in [0,1].
+    scalar uSignal = (driveVal - CONSTANTS_[AC_Vr]) / 100.0;
+
+    uSignal = max(scalar(0.0), min(uSignal, scalar(1.0)));
+
     ALGEBRAICI[::AV_Vm] = driveVal;
-    ALGEBRAICI[::AV_u]  = driveVal;
+    ALGEBRAICI[::AV_u]  = uSignal;
 
     const scalar tStart = currentT_ * 1000/12.9;
     const scalar tEnd   = (currentT_ + currentDt_) * 1000/12.9;
@@ -161,8 +154,12 @@ void Foam::GoktepeKuhl::derivatives
 ) const
 {
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
+    scalar uSignal = (currentDriveSignal_ - CONSTANTS_[AC_Vr]) / 100.0;
+
+    uSignal = max(scalar(0.0), min(uSignal, scalar(1.0)));
+
     ALGEBRAIC_TMP[::AV_Vm] = currentDriveSignal_;
-    ALGEBRAIC_TMP[::AV_u]  = currentDriveSignal_;
+    ALGEBRAIC_TMP[::AV_u]  = uSignal;
 
     GoktepeKuhlcomputeVariables
     (
