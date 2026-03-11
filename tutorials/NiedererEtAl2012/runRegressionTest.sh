@@ -3,6 +3,17 @@
 # Source OpenFOAM run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
+restoreReferenceConfigs()
+{
+    for refFile in constant/*.reference
+    do
+        [ -f "${refFile}" ] || continue
+        target="${refFile%.reference}"
+        echo "Restoring ${target} from ${refFile}"
+        cp "${refFile}" "${target}"
+    done
+}
+
 checkSmokeCheckResults()
 {
     caseDir="$(pwd)"
@@ -97,6 +108,8 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+restoreReferenceConfigs
 
 runApplication blockMesh
 
