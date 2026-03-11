@@ -22,7 +22,7 @@ restoreReferenceConfigs()
 checkSmokeCheckResults()
 {
     caseDir="$(pwd)"
-    refFile="${caseDir}/referenceTest/smokeCheck.reference"
+    refFile="${caseDir}/referenceTest/NiedererEtAl2012.reference"
     postRoot="${caseDir}/postProcessing/smokeCheck"
     postDir="${postRoot}/0"
 
