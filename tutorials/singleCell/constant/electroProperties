@@ -21,11 +21,8 @@ singleCellElectroCoeffs
 
     // Cell model selection
 
-    ionicModel    TNNP;
-    tissue    epicardialCells	;
-//ionicModel    Gaur;
-  //  tissue    myocyte	;
-
+    ionicModel    BuenoOrovio;
+    tissue    endocardialCells;
 
 
     // Time integration settings
@@ -43,7 +40,7 @@ singleCellElectroCoeffs
     {
         stim_start      20;
         stim_duration   1;
-        stim_amplitude  50;
+        stim_amplitude  0.4;
         stim_period_S1  1000;
         nstim1          3;
         stim_period_S2  0;
@@ -55,7 +52,7 @@ singleCellElectroCoeffs
     // optional I/O control
 
     writeAfterTime  0;
-    exportedVariables (Vm);
+    exportedVariables (Vm s);
     debugPrintVariables (Vm);
 	
 }
