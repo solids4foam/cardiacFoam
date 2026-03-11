@@ -5,10 +5,9 @@
 
 restoreReferenceConfigs()
 {
-    for refFile in constant/*.reference
-    do
-        [ -f "${refFile}" ] || continue
-        target="${refFile%.reference}"
+    [ -d referenceTest ] || return 0
+    find referenceTest -type f | while IFS= read -r refFile; do
+        target="${refFile#referenceTest/}"
         echo "Restoring ${target} from ${refFile}"
         cp "${refFile}" "${target}"
     done
