@@ -169,22 +169,13 @@ public:
             return true;
         }
 
-        virtual void calculateCurrent
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        ) override;
 
         virtual void solveODE
         (
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
+            scalarField& Im
         ) override;
 
         void initializeFields

@@ -292,4 +292,33 @@ void activeTensionModel::debugPrintFields
     );
 }
 
+void activeTensionModel::calculateTension
+(
+    const scalar t,
+    const scalar dt,
+    const scalarField& lambda,
+    scalarField& Ta
+)
+{
+    if (Ta.size() != nIntegrationPoints_)
+    {
+        FatalErrorInFunction
+            << "Ta.size() (" << Ta.size()
+            << ") != nIntegrationPoints (" << nIntegrationPoints_ << ")"
+            << abort(FatalError);
+    }
+
+    currentT_  = t;
+    currentDt_ = dt;
+
+    const CouplingSignalProvider& p = provider();
+    const CouplingSignal sig = driveSignal();
+
+    forAll(Ta, i)
+    {
+        currentDriveSignal_ = p.signal(i, sig);
+        solveAtPoint(i, currentDriveSignal_, lambda[i], Ta[i]);
+    }
+}
+
 } // End namespace Foam
