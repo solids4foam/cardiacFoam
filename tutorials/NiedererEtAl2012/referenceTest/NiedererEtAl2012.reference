@@ -1,7 +1,10 @@
-# field          time    expected        tolerance
-Vm               0.055   -0.0665434      1e-4
-Vm               0.06     0.0159434      1e-4
-ionicCurrent     0.055    1.55185        1e-4
-ionicCurrent     0.06     1.44671        1e-4
-activationTime   0.055    0              1e-6
-activationTime   0.06     0.0559663      1e-4
+# file                                time    col  expected      tolerance
+# col = awk column index ($2 = probe 0, $3 = probe 1, ...)
+# Probe 0 (0 0 0.007)        — near stimulus
+# Probe 2 (0.019999 0 0.007) — far in x, near z
+# Probe 4 (0 0.003 0.007)    — lateral
+# Probe 8 (0.01 0.0015 0.0035) — centre of domain
+Niedererpoints/0/activationTime      0.04    2    0.00120503    1e-5
+Niedererpoints/0/activationTime      0.04    4    0.03271       1e-4
+Niedererpoints/0/activationTime      0.04    6    0.0105757     1e-4
+Niedererpoints/0/activationTime      0.04    10   0.0218433     1e-4
