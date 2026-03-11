@@ -3,6 +3,17 @@
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
+restoreReferenceConfigs()
+{
+    for refFile in constant/*.reference
+    do
+        [ -f "${refFile}" ] || continue
+        target="${refFile%.reference}"
+        echo "Restoring ${target} from ${refFile}"
+        cp "${refFile}" "${target}"
+    done
+}
+
 checkSingleCellResults()
 {
     caseDir="$(pwd)"
@@ -87,6 +98,8 @@ checkSingleCellResults()
 
     return 0
 }
+
+restoreReferenceConfigs
 
 runApplication cardiacFoam
 
