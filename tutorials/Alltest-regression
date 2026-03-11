@@ -161,12 +161,14 @@ do
 
     case "${tutorialName}" in
         manufacturedFDA | singleCell | restitutionCurves_s1s2Protocol | vortexDynamics | NiedererEtAl2012)
-            appendUniqueCase "${tutorialName}"
             runTutorial "${tutorialName}" "${runMode}"
             if [ "$?" -ne 0 ]
             then
                 nFails=$((nFails + 1))
                 failedCases+=("${caseName}")
+                echo "NOTE: ${tutorialName} left uncleaned for inspection"
+            else
+                appendUniqueCase "${tutorialName}"
             fi
             ;;
         *)
