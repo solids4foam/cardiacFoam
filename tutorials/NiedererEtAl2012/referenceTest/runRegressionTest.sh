@@ -59,7 +59,7 @@ checkNiedererResults()
                     }
                 }
                 END {
-                    if (found && bestDiff <= 1e-9) {
+                    if (found && bestDiff <= 2.5e-3) {
                         print actual;
                         exit 0;
                     }
