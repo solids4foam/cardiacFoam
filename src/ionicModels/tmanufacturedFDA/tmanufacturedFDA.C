@@ -132,51 +132,12 @@ void Foam::tmanufacturedFDA::initializeFields
     Info<< "Boundary conditions corrected." << endl;
 }
 
-void Foam::tmanufacturedFDA::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
-)
-{
-    const label monitorCell = 0;
-    STATES_ = STATES_OLD_;
-    const scalar tStart = stepStartTime;
-
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& S = STATES_[integrationPtI];
-        scalarField& A = ALGEBRAIC_[integrationPtI];
-        scalarField& R = RATES_[integrationPtI];
-
-        S[V] = Vm[integrationPtI];
-
-        ::tmanufacturedFDAcomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            R.data(),
-            S.data(),
-            A.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        );
-
-        Im[integrationPtI] = A[Iion];
-        if (integrationPtI == monitorCell)
-        {debugPrintFields(integrationPtI, tStart, 0, 0);}
-    }
-}
-
 void Foam::tmanufacturedFDA::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     //STATES_ = STATES_OLD_;

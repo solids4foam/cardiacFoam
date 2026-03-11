@@ -46,7 +46,6 @@ Defined in `ionicModel/ionicModel.H` and implemented in `ionicModel/ionicModel.C
 Derived models implement:
 
 - `solveODE(...)`
-- `calculateCurrent(...)`
 - `derivatives(...)`
 - `nEqns() const`
 

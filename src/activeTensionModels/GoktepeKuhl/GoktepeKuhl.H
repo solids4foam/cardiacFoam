@@ -38,7 +38,6 @@ private:
     PtrList<scalarField> RATES_;
 
     mutable scalarField CONSTANTS_;
-    scalar currentDriveSignal_;
     CouplingSignal driveSignal_;
     word driveSignalName_;
 
@@ -73,6 +72,20 @@ protected:
         return NUM_ALGEBRAIC;
     }
 
+    //- Returns the configured drive signal (Act or Vm, from dict)
+    virtual CouplingSignal driveSignal() const override
+    {
+        return driveSignal_;
+    }
+
+    virtual void solveAtPoint
+    (
+        label i,
+        scalar driveVal,
+        scalar lambda,
+        scalar& Ta
+    ) override;
+
 public:
 
     TypeName("GoktepeKuhl");
@@ -90,14 +103,6 @@ public:
             r.needAct = true;
         return r;
     }
-
-    virtual void calculateTension
-    (
-        const scalar t,
-        const scalar dt,
-        const scalarField& couplingInput,
-        scalarField& Ta
-    ) override;
 
     virtual label nEqns() const override
     {

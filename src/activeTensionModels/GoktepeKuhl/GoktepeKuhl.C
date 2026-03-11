@@ -61,7 +61,6 @@ Foam::GoktepeKuhl::GoktepeKuhl
     ALGEBRAIC_(num),
     RATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
-    currentDriveSignal_(0.0),
     driveSignal_(CouplingSignal::Act),
     driveSignalName_("Act")
 {
@@ -113,56 +112,43 @@ Foam::GoktepeKuhl::GoktepeKuhl
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::GoktepeKuhl::calculateTension
+void Foam::GoktepeKuhl::solveAtPoint
 (
-    const scalar t,
-    const scalar dt,
-    const scalarField&,
-    scalarField& Ta
+    const label i,
+    const scalar driveVal,
+    const scalar /*lambda*/,
+    scalar& Ta
 )
 {
-    if (Ta.size() != nIntegrationPoints_)
+    scalarField& STATESI    = STATES_[i];
+    scalarField& ALGEBRAICI = ALGEBRAIC_[i];
+    scalarField& RATESI     = RATES_[i];
+
+    scalar& Ta_i = STATESI[::Ta];
+
+    ALGEBRAICI[::AV_Vm] = driveVal;
+    ALGEBRAICI[::AV_u]  = driveVal;
+
+    const scalar tStart = currentT_ * 1000/12.9;
+    const scalar tEnd   = (currentT_ + currentDt_) * 1000/12.9;
+    scalar step         = currentDt_ * 1000/12.9;
+
+    odeSolver_->solve(tStart, tEnd, STATESI, step);
+
+    GoktepeKuhlcomputeVariables
+    (
+        tEnd,
+        CONSTANTS_.data(),
+        RATESI.data(),
+        STATESI.data(),
+        ALGEBRAICI.data()
+    );
+
+    Ta = Ta_i;
+
+    if (!debugPrintedNames().empty() && i == 0)
     {
-        FatalErrorInFunction
-            << "Ta.size() != nIntegrationPoints" << abort(FatalError);
-    }
-
-    const scalar tStart = t * 1000/12.9;
-    const scalar tEnd   = (t + dt) * 1000/12.9;
-    scalar step         = dt * 1000/12.9;
-
-    const CouplingSignalProvider& p = provider();
-    const label monitorCell = 0;
-
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        scalar& Ta_i          = STATESI[::Ta];
-        const scalar driveVal = p.signal(integrationPtI, driveSignal_);
-        currentDriveSignal_   = driveVal;
-        ALGEBRAICI[::AV_Vm]   = driveVal;
-        ALGEBRAICI[::AV_u]    = driveVal;
-
-        odeSolver_->solve(tStart, tEnd, STATESI, step);
-
-        GoktepeKuhlcomputeVariables
-        (
-            tEnd,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data()
-        );
-
-        Ta[integrationPtI] = Ta_i;
-
-        if (!debugPrintedNames().empty() && integrationPtI == monitorCell)
-        {
-            debugPrintFields(integrationPtI, tStart, tEnd, step);
-        }
+        debugPrintFields(i, tStart, tEnd, step);
     }
 }
 

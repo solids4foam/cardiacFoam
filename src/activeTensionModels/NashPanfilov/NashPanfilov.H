@@ -38,7 +38,6 @@ private:
     PtrList<scalarField> RATES_;
 
     mutable scalarField CONSTANTS_;
-    scalar currentAct_;
 
 protected:
 
@@ -71,6 +70,19 @@ protected:
         return NUM_ALGEBRAIC;
     }
 
+    virtual CouplingSignal driveSignal() const override
+    {
+        return CouplingSignal::Act;
+    }
+
+    virtual void solveAtPoint
+    (
+        label i,
+        scalar driveVal,
+        scalar lambda,
+        scalar& Ta
+    ) override;
+
 public:
 
     TypeName("NashPanfilov");
@@ -85,14 +97,6 @@ public:
         r.needAct = true;
         return r;
     }
-
-    virtual void calculateTension
-    (
-        const scalar t,
-        const scalar dt,
-        const scalarField& Act,
-        scalarField& Ta
-    ) override;
 
     virtual label nEqns() const override
     {

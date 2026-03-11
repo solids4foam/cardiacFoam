@@ -113,9 +113,6 @@ class monoDomainElectro : public electroModel {
   //- Run-time selectable ionic model
   autoPtr<ionicModel> ionicModelPtr_;
 
-  // External state storage for the ionic model
-  Field<Field<scalar>> states_;
-
   //- Flag for tracking if the time step size has been set
   bool setDeltaT_;
 

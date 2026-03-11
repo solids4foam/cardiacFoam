@@ -169,14 +169,6 @@ protected:
 
         // Member Functions
 
-            virtual void calculateCurrent
-            (
-                const scalar stepStartTime,
-                const scalar deltaT,
-                const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
-            ) override;
 
 
             virtual void solveODE
@@ -184,8 +176,7 @@ protected:
                 const scalar stepStartTime,
                 const scalar deltaT,
                 const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
+                scalarField& Im
             ) override;
 
 

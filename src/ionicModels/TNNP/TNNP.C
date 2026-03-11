@@ -111,60 +111,13 @@ const char* const* Foam::TNNP::ioAlgebraicNames() const
 
 
 
-void Foam::TNNP::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
-)
-{
-    const scalar tStart = stepStartTime * 1000;
-    if (Im.size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Im.size() != Vm.size()" << abort(FatalError);
-    }
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        // Update voltage for this integration point
-        STATESI[0] = Vm[integrationPtI] * 1000;
-
-        ::TNNPcomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        ,
-            stimulusProtocol()
-        );
-        // Jion  is the total ionic current density used by the PDE
-        Im[integrationPtI] = ALGEBRAICI[Iion_cm];
-
-        //copy internal STATES to memory external state buffer.
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
-    }
-}
-
-
 //  Solve ODE with mixed singleCell implementation and 1D-3D condition
 void Foam::TNNP::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;

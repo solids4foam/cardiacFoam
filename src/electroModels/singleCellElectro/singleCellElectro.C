@@ -73,9 +73,7 @@ singleCellElectro::singleCellElectro(Time &runTime, const word &region)
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool singleCellElectro::evolve() {
-  // Create dummy Iion and state fields
-  Field<Field<scalar>> dummyStates(1);
-  dummyStates[0].setSize(ionicModelPtr_->nEqns());
+  // Create dummy Iion field (Vm is integrated directly within the ODE solver)
   scalarField dummyIonicCurrentField(1, 0.0);
 
   // Old time
@@ -89,8 +87,7 @@ bool singleCellElectro::evolve() {
 
   // Solve the ionic model from t0 to t1
   // Vm_ is integrated directly within the ODE solver
-  ionicModelPtr_->solveODE(t0, dt, Vm_.internalField(), dummyIonicCurrentField,
-                           dummyStates);
+  ionicModelPtr_->solveODE(t0, dt, Vm_.internalField(), dummyIonicCurrentField);
 
   if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false)) {
     ionicModelPtr_->write(runTime().value(), outputPtr_.ref());

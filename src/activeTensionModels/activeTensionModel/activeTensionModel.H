@@ -39,6 +39,17 @@ protected:
     // Optional pointer to coupling signal provider (typically ionicModel or adapter)
     const CouplingSignalProvider* providerPtr_;
 
+    //- Drive signal value for the current integration point.
+    //  Set by the base calculateTension() loop before each solveAtPoint() call
+    //  so that derivatives() can read it during ODE sub-steps.
+    scalar currentDriveSignal_;
+
+    //- Time at start of current timestep (set by base before loop)
+    scalar currentT_;
+
+    //- Timestep size (set by base before loop)
+    scalar currentDt_;
+
     wordList debugVarNames_;
     wordList exportVarNames_;
 
@@ -113,7 +124,10 @@ public:
     :
         dict_(dict),
         nIntegrationPoints_(nIntegrationPoints),
-        providerPtr_(nullptr)
+        providerPtr_(nullptr),
+        currentDriveSignal_(0.0),
+        currentT_(0.0),
+        currentDt_(0.0)
     {
         if (dict_.found("ActiveTensionModel_debugPrint"))
             dict_.lookup("ActiveTensionModel_debugPrint") >> debugVarNames_;
@@ -216,14 +230,35 @@ public:
     // Implemented in base using io* hooks; derived classes may override.
     virtual void fieldValues(const label integrationPtI, scalarField& values) const;
 
-    // Main API: update active tension for all points
+    //- Return the CouplingSignal this model reads as its drive input.
+    //  NashPanfilov always returns Act; GoktepeKuhl returns the dict-configured value.
+    virtual CouplingSignal driveSignal() const = 0;
+
+    //- Advance ODE and write active tension for a single integration point.
+    //  Called by the base calculateTension() loop.
+    //  Derived classes must NOT call provider() directly — driveVal is already resolved.
+    //
+    //  i        : integration-point (cell) index
+    //  driveVal : coupling signal value at this cell (Act / Cai / Vm)
+    //  lambda   : stretch at this cell (ignored by models that don't use it)
+    //  Ta       : output — active tension at this cell
+    virtual void solveAtPoint
+    (
+        label i,
+        scalar driveVal,
+        scalar lambda,
+        scalar& Ta
+    ) = 0;
+
+    //- Base implementation: queries provider, loops over cells, calls solveAtPoint().
+    //  Derived classes must NOT override this.
     virtual void calculateTension
     (
         const scalar t,
         const scalar dt,
         const scalarField& lambda,
         scalarField& Ta
-    ) = 0;
+    );
 
     virtual void derivatives
     (

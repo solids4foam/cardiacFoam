@@ -59,8 +59,7 @@ Foam::NashPanfilov::NashPanfilov
     STATES_(num),
     ALGEBRAIC_(num),
     RATES_(num),
-    CONSTANTS_(NUM_CONSTANTS, 0.0),
-    currentAct_(0.0)
+    CONSTANTS_(NUM_CONSTANTS, 0.0)
 {
     Info<< nl << "Initialize NashPanfilov constants:" << nl;
     forAll(STATES_, integrationPtI)
@@ -86,55 +85,42 @@ Foam::NashPanfilov::NashPanfilov
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::NashPanfilov::calculateTension
+void Foam::NashPanfilov::solveAtPoint
 (
-    const scalar t,
-    const scalar dt,
-    const scalarField& Act,
-    scalarField& Ta
+    const label i,
+    const scalar driveVal,
+    const scalar /*lambda*/,
+    scalar& Ta
 )
 {
-    if (Ta.size() != nIntegrationPoints_)
+    scalarField& STATESI    = STATES_[i];
+    scalarField& ALGEBRAICI = ALGEBRAIC_[i];
+    scalarField& RATESI     = RATES_[i];
+
+    scalar& Ta_i = STATESI[::Ta];
+
+    ALGEBRAICI[::AV_u] = driveVal;
+
+    const scalar tStart = currentT_;
+    const scalar tEnd   = currentT_ + currentDt_;
+    scalar step         = currentDt_;
+
+    odeSolver_->solve(tStart, tEnd, STATESI, step);
+
+    NashPanfilovcomputeVariables
+    (
+        tEnd,
+        CONSTANTS_.data(),
+        RATESI.data(),
+        STATESI.data(),
+        ALGEBRAICI.data()
+    );
+
+    Ta = Ta_i;
+
+    if (!debugPrintedNames().empty() && i == 0)
     {
-        FatalErrorInFunction
-            << "Ta.size() != nIntegrationPoints" << abort(FatalError);
-    }
-
-    const scalar tStart = t;
-    const scalar tEnd   = t + dt;
-    scalar step         = dt;
-
-    const CouplingSignalProvider& p = provider();
-    const label monitorCell = 0;
-
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        scalar& Ta_i = STATESI[::Ta];
-        scalar act   = p.signal(integrationPtI, CouplingSignal::Act);
-        currentAct_  = act;
-        ALGEBRAICI[::AV_u] = act;
-
-        odeSolver_->solve(tStart, tEnd, STATESI, step);
-
-        NashPanfilovcomputeVariables
-        (
-            tEnd,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data()
-        );
-
-        Ta[integrationPtI] = Ta_i;
-
-        if (!debugPrintedNames().empty() && integrationPtI == monitorCell)
-        {
-            debugPrintFields(integrationPtI, tStart, tEnd, step);
-        }
+        debugPrintFields(i, tStart, tEnd, step);
     }
 }
 
@@ -147,7 +133,7 @@ void Foam::NashPanfilov::derivatives
 ) const
 {
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
-    ALGEBRAIC_TMP[::AV_u] = currentAct_;
+    ALGEBRAIC_TMP[::AV_u] = currentDriveSignal_;
 
     NashPanfilovcomputeVariables
     (
