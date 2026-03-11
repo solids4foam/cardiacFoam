@@ -1,44 +1,49 @@
 #!/bin/bash
 
-# Source OpenFOAM run functions
+# Run from tutorial root regardless of where this script is called from
+cd "${0%/*}/.." || exit 1
+
+# Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
 restoreReferenceConfigs()
 {
-    [ -d referenceTest ] || return 0
-    find referenceTest -type f | while IFS= read -r refFile; do
-        target="${refFile#referenceTest/}"
-        echo "Restoring ${target} from ${refFile}"
-        cp "${refFile}" "${target}"
+    for dir in referenceTest/constant referenceTest/system
+    do
+        [ -d "${dir}" ] || continue
+        find "${dir}" -type f | while IFS= read -r refFile; do
+            target="${refFile#referenceTest/}"
+            echo "Restoring ${target} from ${refFile}"
+            cp "${refFile}" "${target}"
+        done
     done
 }
 
-checkSmokeCheckResults()
+checkSingleCellResults()
 {
     caseDir="$(pwd)"
-    refFile="${caseDir}/system/smokeCheck.reference"
-    postRoot="${caseDir}/postProcessing/smokeCheck"
-    postDir="${postRoot}/0"
+    refFile="${caseDir}/referenceTest/singleCell.reference"
+    outDir="${caseDir}/postProcessing"
 
     if [ ! -f "${refFile}" ]; then
         echo "Reference file not found: ${refFile}"
         return 1
     fi
 
-    if [ ! -d "${postDir}" ]; then
-        echo "Post-processing directory not found: ${postDir}"
+    if [ ! -d "${outDir}" ]; then
+        echo "Post-processing directory not found: ${outDir}"
         return 1
     fi
 
     nFail=0
     nCheck=0
 
-    while read -r field time expected tolerance; do
-        if [ -z "${field}" ] || [[ "${field}" == \#* ]]; then
+    while read -r fileName time expected tolerance; do
+        if [ -z "${fileName}" ] || [[ "${fileName}" == \#* ]]; then
             continue
         fi
 
-        dataFile="${postDir}/${field}"
+        dataFile="${outDir}/${fileName}"
         if [ ! -f "${dataFile}" ]; then
             echo "FAIL: missing output file ${dataFile}"
             nFail=$((nFail + 1))
@@ -49,7 +54,7 @@ checkSmokeCheckResults()
         actual="$(
             awk -v target="${time}" '
                 BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-                $1 !~ /^#/ && NF >= 2 {
+                NR > 1 && NF >= 2 {
                     d = $1 - target;
                     if (d < 0) d = -d;
                     if (d < bestDiff) {
@@ -71,7 +76,7 @@ checkSmokeCheckResults()
         nCheck=$((nCheck + 1))
 
         if [ -z "${actual}" ]; then
-            echo "FAIL: ${field} at t=${time} not found in ${dataFile}"
+            echo "FAIL: ${fileName} at t=${time} not found in ${dataFile}"
             nFail=$((nFail + 1))
             continue
         fi
@@ -83,14 +88,14 @@ checkSmokeCheckResults()
                 exit !(d <= t);
             }
         '; then
-            echo "PASS: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+            echo "PASS: ${fileName} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
         else
-            echo "FAIL: ${field} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
+            echo "FAIL: ${fileName} t=${time} actual=${actual} expected=${expected} tol=${tolerance}"
             nFail=$((nFail + 1))
         fi
     done < "${refFile}"
 
-    echo "smokeCheck comparison: ${nCheck} checks, ${nFail} failures"
+    echo "singleCell comparison: ${nCheck} checks, ${nFail} failures"
 
     if [ "${nFail}" -ne 0 ]; then
         return 1
@@ -99,27 +104,9 @@ checkSmokeCheckResults()
     return 0
 }
 
-parallelRun=false
-for arg in "$@"; do
-    case "$arg" in
-        parallel)
-            parallelRun=true
-            ;;
-    esac
-done
-
 restoreReferenceConfigs
 
-runApplication blockMesh
+runApplication cardiacFoam
 
-if $parallelRun; then
-    runApplication decomposePar
-    runParallel cardiacFoam
-    runApplication reconstructPar
-else
-    runApplication cardiacFoam
-fi
-
-# Regression protocol for this case: smokeCheck only.
-runApplication -o postProcess -func smokeCheck
-checkSmokeCheckResults || exit 1
+# Compare single-cell trace against regression checkpoints
+checkSingleCellResults || exit 1
