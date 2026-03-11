@@ -72,7 +72,7 @@ protected:
 
     virtual CouplingSignal driveSignal() const override
     {
-        return CouplingSignal::Act;
+        return CouplingSignal::Vm;
     }
 
     virtual void solveAtPoint
@@ -94,7 +94,7 @@ public:
     virtual Requirements requirements() const override
     {
         Requirements r;
-        r.needAct = true;
+        r.needVm = true;
         return r;
     }
 

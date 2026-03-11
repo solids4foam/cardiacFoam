@@ -65,15 +65,9 @@ Optional overrides:
   (e.g. `membrane_V`, `V`, `Vm`).
 - `Cai`: available when a state matching intracellular calcium naming exists
   (e.g. `Ca_i`, `Cai`, `calcium_Cai`).
-- `Act`: for non-manufactured models, the base class now resolves it from
-  existing states in this order:
-  `Act`-like state name -> `Cai` -> `Vm`.
-  Models with explicit activation semantics (e.g. AlievPanfilov/BuenoOrovio)
-  can still override `Act` directly.
 
 This means most detailed ionic models expose `Vm`/`Cai` without per-model
-signal boilerplate, and all non-manufactured ionic models expose an `Act`
-signal from an existing variable.
+signal boilerplate.
 
 ## Tissue vs dimension selection
 
@@ -108,6 +102,7 @@ Current `Make/files` entries:
 - `Grandi`
 - `ORd`
 - `Stewart`
+- `TestAlievPanfilovNash`
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`

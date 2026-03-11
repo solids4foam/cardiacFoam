@@ -24,7 +24,6 @@ models without hard-coding model internals.
 ### Signals currently defined
 
 - `Vm` : membrane voltage
-- `Act`: activation signal
 - `Cai`: intracellular calcium
 
 ### Interface
@@ -39,14 +38,10 @@ Current base behavior:
 
 - `Vm`: auto-discovered from model metadata or transform hook.
 - `Cai`: auto-discovered from model metadata.
-- `Act` (non-manufactured models): resolved from existing states using
-  priority `Act`-like state -> `Cai` -> `Vm`.
-
-Reduced models can still provide explicit `Act` overrides.
 
 For active-tension models, coupling input should be chosen per model.
 Example: `GoktepeKuhl` is configured with exactly one driving signal
-(`couplingSignal Act` or `couplingSignal Vm`), not both simultaneously.
+(`couplingSignal Vm`).
 
 ## Status
 

@@ -41,7 +41,6 @@ Name compatibility and resolution layer:
 
 - relaxed matching for Vm aliases,
 - centralized `Vm`/`Cai` state-index discovery used by coupling signals,
-- centralized activation-like state discovery (`Act`) used by coupling signals,
 - relaxed matching for `RATES_<state>` names,
 - mapping user-requested names to state/algebraic/rate indices.
 

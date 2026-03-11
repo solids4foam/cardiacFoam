@@ -23,6 +23,7 @@ License
 #include "physicsModel.H"
 #include "electroModel.H"
 #include "activeTensionModel.H"
+#include "OFstream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -47,6 +48,12 @@ class electroMechanicalModel : public physicsModel {
   //  For now we use a local one or access it if available.
   autoPtr<volScalarField> lambdaPtr_;
 
+  //- Exported active-tension fields (states/algebraic/rates)
+  PtrList<volScalarField> activeTensionOutFields_;
+
+  //- Single-cell active-tension trace output (if mesh has one cell)
+  autoPtr<OFstream> activeTensionOutputPtr_;
+
   //- Disallow default bitwise copy construct
   electroMechanicalModel(const electroMechanicalModel &);
 
@@ -57,7 +64,17 @@ public:
   //- Runtime type information
   TypeName("electroMechanicalModel");
 
+  //- Runtime selection constructor entrypoint
+  static autoPtr<physicsModel> New(
+      Time &runTime,
+      const word &region = dynamicFvMesh::defaultRegion);
+
   // Constructors
+
+  //- Construct from components
+  electroMechanicalModel(
+      Time &runTime,
+      const word &region = dynamicFvMesh::defaultRegion);
 
   //- Construct from components
   electroMechanicalModel(const word &type, Time &runTime,

@@ -129,15 +129,33 @@ public:
         currentT_(0.0),
         currentDt_(0.0)
     {
-        if (dict_.found("ActiveTensionModel_debugPrint"))
-            dict_.lookup("ActiveTensionModel_debugPrint") >> debugVarNames_;
-        else if (dict_.found("debugPrintVariables"))
-            dict_.lookup("debugPrintVariables") >> debugVarNames_;
+        // Required schema:
+        // outputVariables
+        // {
+        //   activeTension
+        //   {
+        //     export (...);
+        //     debug  (...);
+        //   }
+        // }
+        if (dict_.found("outputVariables"))
+        {
+            const dictionary& outDict = dict_.subDict("outputVariables");
+            if (outDict.found("activeTension"))
+            {
+                const dictionary& atOut = outDict.subDict("activeTension");
 
-        if (dict_.found("ActiveTensionModel_export"))
-            dict_.lookup("ActiveTensionModel_export") >> exportVarNames_;
-        else if (dict_.found("exportedVariables"))
-            dict_.lookup("exportedVariables") >> exportVarNames_;
+                if (atOut.found("export"))
+                {
+                    atOut.lookup("export") >> exportVarNames_;
+                }
+
+                if (atOut.found("debug"))
+                {
+                    atOut.lookup("debug") >> debugVarNames_;
+                }
+            }
+        }
     }
 
     virtual ~activeTensionModel() = default;
@@ -153,7 +171,6 @@ public:
     struct Requirements
     {
         bool needVm  = false;
-        bool needAct = false;
         bool needCai = false;
     };
 
@@ -231,7 +248,7 @@ public:
     virtual void fieldValues(const label integrationPtI, scalarField& values) const;
 
     //- Return the CouplingSignal this model reads as its drive input.
-    //  NashPanfilov always returns Act; GoktepeKuhl returns the dict-configured value.
+    //  Active-tension feedback accepts Vm or Cai.
     virtual CouplingSignal driveSignal() const = 0;
 
     //- Advance ODE and write active tension for a single integration point.
@@ -239,7 +256,7 @@ public:
     //  Derived classes must NOT call provider() directly — driveVal is already resolved.
     //
     //  i        : integration-point (cell) index
-    //  driveVal : coupling signal value at this cell (Act / Cai / Vm)
+    //  driveVal : coupling signal value at this cell (Vm / Cai)
     //  lambda   : stretch at this cell (ignored by models that don't use it)
     //  Ta       : output — active tension at this cell
     virtual void solveAtPoint

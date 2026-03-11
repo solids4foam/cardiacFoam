@@ -127,12 +127,14 @@ void ecgModel::readElectrodes(const dictionary& dict)
 ecgModel::ecgModel
 (
     const volScalarField& Vm,
-    const dictionary& dict
+    const dictionary& dict,
+    const volTensorField* conductivityPtr
 )
 :
     Vm_(Vm),
     mesh_(Vm.mesh()),
-    Gi_(initialiseGi(dict, Vm.mesh())),
+    GiOwnedPtr_(),
+    GiPtr_(nullptr),
     sigmaT_
     (
         "sigmaT",
@@ -142,6 +144,18 @@ ecgModel::ecgModel
     electrodeNames_(),
     electrodePositions_()
 {
+    if (conductivityPtr)
+    {
+        GiPtr_ = conductivityPtr;
+        Info<< "ECG conductivity source: monodomain conductivity field"
+            << nl << endl;
+    }
+    else
+    {
+        GiOwnedPtr_.reset(new volTensorField(initialiseGi(dict, Vm.mesh())));
+        GiPtr_ = GiOwnedPtr_.operator->();
+    }
+
     readElectrodes(dict);
 }
 
@@ -151,7 +165,8 @@ ecgModel::ecgModel
 autoPtr<ecgModel> ecgModel::New
 (
     const volScalarField& Vm,
-    const dictionary& dict
+    const dictionary& dict,
+    const volTensorField* conductivityPtr
 )
 {
     const word modelType(dict.lookup("ecgModel"));
@@ -171,7 +186,7 @@ autoPtr<ecgModel> ecgModel::New
 
     return autoPtr<ecgModel>
     (
-        ctorPtr(Vm, dict.subDict(modelType + "Coeffs"))
+        ctorPtr(Vm, dict.subDict(modelType + "Coeffs"), conductivityPtr)
     );
 }
 

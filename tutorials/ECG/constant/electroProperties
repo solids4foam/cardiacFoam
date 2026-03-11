@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroModel ecgElectro;
+electroModel monoDomainElectro;
 
-ecgElectroCoeffs
+monoDomainElectroCoeffs
 {
     postProcess   false;
 
@@ -44,25 +44,27 @@ ecgElectroCoeffs
         stimulusStartTime 0.0;
     }
 
-    // ECG type selection (same pattern as ionicModel):
-    ecgModel  BEMECGElectro;
-
-    BEMECGElectroCoeffs
+    ECG
     {
-        // Intracellular conductivity tensor [S/m] (symmTensor: xx xy xz yy yz zz)
-        Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
+        ecgModel pseudoECGElectro;
 
-        // Torso conductivity [S/m]
-        sigmaT  [-1 -3 3 0 0 2 0] 0.24725;
-
-        electrodes
+        pseudoECGElectroCoeffs
         {
-            V1 (-26.1184    -283.543    -70.0558);
-            V2 ( 73.582     -278.089    -70.1427);
-            V3 ( 85.1153    -276.414    -93.8405);
-            V4 ( 99.7976    -269.695   -106.596);
-            V5 (122.885     -253.215   -119.155);
-            V6 (148.613     -227.84    -119.317);
+            // Intracellular conductivity tensor [S/m]
+            Gi      [-1 -3 3 0 0 2 0] (0.17 0 0  0.019 0  0.019);
+
+            // Torso conductivity [S/m] (stored by the model, currently unused)
+            sigmaT  [-1 -3 3 0 0 2 0] 0.24725;
+
+            electrodes
+            {
+                V1 (-26.1184    -283.543    -70.0558);
+                V2 ( 73.582     -278.089    -70.1427);
+                V3 ( 85.1153    -276.414    -93.8405);
+                V4 ( 99.7976    -269.695   -106.596);
+                V5 (122.885     -253.215   -119.155);
+                V6 (148.613     -227.84    -119.317);
+            }
         }
     }
 }

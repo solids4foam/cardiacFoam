@@ -50,7 +50,16 @@ public:
   //- Runtime type information
   TypeName("electroModel+ECG");
 
+  //- Runtime selection constructor entrypoint
+  static autoPtr<physicsModel> New(
+      Time &runTime,
+      const word &region = dynamicFvMesh::defaultRegion);
+
   // Constructors
+
+  //- Construct from components
+  electroModelECG(Time &runTime,
+                  const word &region = dynamicFvMesh::defaultRegion);
 
   //- Construct from components
   electroModelECG(const word &type, Time &runTime,

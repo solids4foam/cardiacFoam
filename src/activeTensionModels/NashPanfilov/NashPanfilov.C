@@ -22,6 +22,7 @@ License
 #include "NashPanfilov.H"
 #include "NashPanfilov_2004.H"
 #include "addToRunTimeSelectionTable.H"
+#include "word.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -61,7 +62,20 @@ Foam::NashPanfilov::NashPanfilov
     RATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0)
 {
+    const word requestedSignal =
+        dict_.lookupOrDefault<word>("couplingSignal", "Vm");
+
+    if (!(requestedSignal == "Vm" || requestedSignal == "vm"))
+    {
+        FatalErrorInFunction
+            << "Unknown NashPanfilov 'couplingSignal' value: "
+            << requestedSignal << nl
+            << "Valid option is: Vm."
+            << abort(FatalError);
+    }
+
     Info<< nl << "Initialize NashPanfilov constants:" << nl;
+    Info<< "NashPanfilov couplingSignal: Vm" << nl;
     forAll(STATES_, integrationPtI)
     {
         STATES_.set(integrationPtI,    new scalarField(NUM_STATES,    0.0));
@@ -99,11 +113,20 @@ void Foam::NashPanfilov::solveAtPoint
 
     scalar& Ta_i = STATESI[::Ta];
 
-    ALGEBRAICI[::AV_u] = driveVal;
+    // Map Vm (mV) to normalized activation variable u in [0,1].
+    scalar uSignal =
+        (driveVal - CONSTANTS_[AC_Vr])
+      / (CONSTANTS_[AC_Vp] - CONSTANTS_[AC_Vr]);
 
-    const scalar tStart = currentT_;
-    const scalar tEnd   = currentT_ + currentDt_;
-    scalar step         = currentDt_;
+    uSignal = max(scalar(0.0), min(uSignal, scalar(1.0)));
+
+    ALGEBRAICI[::AV_u] = uSignal;
+
+    // Nash-Panfilov ODE was derived in the same normalized time used by
+    // Aliev-Panfilov (t* = t_ms / 12.9), so convert OpenFOAM seconds first.
+    const scalar tStart = currentT_ * 1000.0 / 12.9;
+    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0 / 12.9;
+    scalar step         = currentDt_ * 1000.0 / 12.9;
 
     odeSolver_->solve(tStart, tEnd, STATESI, step);
 
@@ -133,7 +156,12 @@ void Foam::NashPanfilov::derivatives
 ) const
 {
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
-    ALGEBRAIC_TMP[::AV_u] = currentDriveSignal_;
+    scalar uSignal =
+        (currentDriveSignal_ - CONSTANTS_[AC_Vr])
+      / (CONSTANTS_[AC_Vp] - CONSTANTS_[AC_Vr]);
+
+    uSignal = max(scalar(0.0), min(uSignal, scalar(1.0)));
+    ALGEBRAIC_TMP[::AV_u] = uSignal;
 
     NashPanfilovcomputeVariables
     (

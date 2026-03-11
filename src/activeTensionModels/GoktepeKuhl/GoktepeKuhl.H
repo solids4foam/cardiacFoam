@@ -38,8 +38,6 @@ private:
     PtrList<scalarField> RATES_;
 
     mutable scalarField CONSTANTS_;
-    CouplingSignal driveSignal_;
-    word driveSignalName_;
 
 protected:
 
@@ -72,10 +70,10 @@ protected:
         return NUM_ALGEBRAIC;
     }
 
-    //- Returns the configured drive signal (Act or Vm, from dict)
+    //- Returns the configured drive signal (Vm only).
     virtual CouplingSignal driveSignal() const override
     {
-        return driveSignal_;
+        return CouplingSignal::Vm;
     }
 
     virtual void solveAtPoint
@@ -97,10 +95,7 @@ public:
     virtual Requirements requirements() const override
     {
         Requirements r;
-        if (driveSignal_ == CouplingSignal::Vm)
-            r.needVm = true;
-        else if (driveSignal_ == CouplingSignal::Act)
-            r.needAct = true;
+        r.needVm = true;
         return r;
     }
 

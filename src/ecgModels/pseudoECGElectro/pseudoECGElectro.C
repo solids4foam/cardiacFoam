@@ -37,8 +37,9 @@ addToRunTimeSelectionTable(ecgModel, pseudoECGElectro, dictionary);
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
 pseudoECGElectro::pseudoECGElectro(const volScalarField &Vm,
-                                   const dictionary &dict)
-    : ecgModel(Vm, dict), outputPtr_() {
+                                   const dictionary &dict,
+                                   const volTensorField *conductivityPtr)
+    : ecgModel(Vm, dict, conductivityPtr), outputPtr_() {
   const fileName outDir(mesh_.time().path() / "postProcessing");
   outputPtr_ =
       ecgModelIO::openTimeSeries(outDir, "pseudoECG.dat", electrodeNames_);
