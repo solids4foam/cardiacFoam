@@ -23,9 +23,9 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime    0.04;
+endTime    	0.04;
 
-deltaT    5e-05;
+deltaT    	5e-05;
 
 maxCo 		0.1;
 

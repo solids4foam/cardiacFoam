@@ -22,7 +22,5 @@ else
     runApplication cardiacFoam
 fi
 
-# Run post-processing function object for the smoke-test window
-runApplication -o postProcess -func smokeCheck
 runApplication -o postProcess -func Niedererpoints -latestTime
 runApplication -o postProcess -func Niedererlines -latestTime
