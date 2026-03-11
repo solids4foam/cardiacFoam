@@ -52,17 +52,17 @@ runTutorial()
 
         export CF_SKIP_PLOTS=1
 
-        if [ ! -x "./runRegressionTest.sh" ]
+        if [ ! -x "./referenceTest/runRegressionTest.sh" ]
         then
-            echo "ERROR: missing executable runRegressionTest.sh in ${tutorialName}"
+            echo "ERROR: missing executable referenceTest/runRegressionTest.sh in ${tutorialName}"
             exit 1
         fi
 
         if [ "${runMode}" = "parallel" ]
         then
-            ./runRegressionTest.sh parallel > "${runLog}" 2>&1
+            ./referenceTest/runRegressionTest.sh parallel > "${runLog}" 2>&1
         else
-            ./runRegressionTest.sh > "${runLog}" 2>&1
+            ./referenceTest/runRegressionTest.sh > "${runLog}" 2>&1
         fi
     )
 
