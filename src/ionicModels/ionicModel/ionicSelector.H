@@ -1,30 +1,22 @@
 #ifndef ionicSelector_H
 #define ionicSelector_H
 
-#include "dictionary.H"
 #include "List.H"
+#include "dictionary.H"
 #include "word.H"
 
 namespace Foam {
 
-class ionicSelector
-{
+class ionicSelector {
 public:
-    // Main interface
-    static label selectTissueOrDimension
-    (
-        const dictionary& dict,
-        const bool hasManufacturedSolution,
-        const List<word>& supportedTissues,
-        const List<word>& supportedDimensions
-    );
+  // Main interface
+  static label selectTissue(const dictionary &dict,
+                            const List<word> &supportedTissues);
 
-private:
-    static label tissueFlag(const word& t);
-    static label dimensionFlag(const word& d);
+  static label tissueFlag(const word &t);
+  static label dimensionFlag(const word &d);
 };
 
 } // End namespace Foam
 
 #endif
-

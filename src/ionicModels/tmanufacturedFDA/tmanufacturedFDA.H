@@ -39,176 +39,117 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 
-extern const char* tmanufacturedFDASTATES_NAMES[NUM_STATES];
-extern const char* tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC];
-extern const char* tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS];
+extern const char *tmanufacturedFDASTATES_NAMES[NUM_STATES];
+extern const char *tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC];
+extern const char *tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS];
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
 /*---------------------------------------------------------------------------*\
                          Class manufacturedFDA Declaration
 \*---------------------------------------------------------------------------*/
 
-class tmanufacturedFDA
-:
-    public ionicModel
-{
-    // Private Data
+class tmanufacturedFDA : public ionicModel {
+  // Private Data
 
-        //- States
-        mutable PtrList<scalarField> STATES_;
+  //- States
+  mutable PtrList<scalarField> STATES_;
 
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
+  //- States - old time
+  mutable PtrList<scalarField> STATES_OLD_;
 
-        //- Constants
-        mutable scalarField CONSTANTS_;
+  //- Constants
+  mutable scalarField CONSTANTS_;
 
-        //- Algebraic
-        mutable PtrList<scalarField> ALGEBRAIC_;
+  //- Algebraic
+  mutable PtrList<scalarField> ALGEBRAIC_;
 
-        //- Rates
-        mutable PtrList<scalarField> RATES_;
+  //- Rates
+  mutable PtrList<scalarField> RATES_;
 
+  // Private Member Functions
 
-    // Private Member Functions
+  //- No copy construct
+  tmanufacturedFDA(const tmanufacturedFDA &) = delete;
 
-        //- No copy construct
-        tmanufacturedFDA(const tmanufacturedFDA&) = delete;
-
-        //- No copy assignment
-        void operator=(const tmanufacturedFDA&) = delete;
+  //- No copy assignment
+  void operator=(const tmanufacturedFDA &) = delete;
 
 protected:
-        virtual const PtrList<scalarField>* ioStatesPtr() const override
-        {
-            return &STATES_;
-        }
+  virtual const PtrList<scalarField> *ioStatesPtr() const override {
+    return &STATES_;
+  }
 
-        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
-        {
-            return &ALGEBRAIC_;
-        }
+  virtual const PtrList<scalarField> *ioAlgebraicPtr() const override {
+    return &ALGEBRAIC_;
+  }
 
-        virtual const PtrList<scalarField>* ioRatesPtr() const override
-        {
-            return &RATES_;
-        }
+  virtual const PtrList<scalarField> *ioRatesPtr() const override {
+    return &RATES_;
+  }
 
-        virtual const scalarField* ioConstantsPtr() const override
-        {
-            return &CONSTANTS_;
-        }
+  virtual const scalarField *ioConstantsPtr() const override {
+    return &CONSTANTS_;
+  }
 
-        virtual label ioNumConstants() const override
-        {
-            return NUM_CONSTANTS;
-        }
+  virtual label ioNumConstants() const override { return NUM_CONSTANTS; }
 
-        virtual const char* const* ioConstantNames() const override
-        {
-            return tmanufacturedFDACONSTANTS_NAMES;
-        }
+  virtual const char *const *ioConstantNames() const override {
+    return tmanufacturedFDACONSTANTS_NAMES;
+  }
 
-        virtual const char* const* ioStateNames() const override
-        {
-            return tmanufacturedFDASTATES_NAMES;
-        }
+  virtual const char *const *ioStateNames() const override {
+    return tmanufacturedFDASTATES_NAMES;
+  }
 
-        virtual label ioNumStates() const override
-        {
-            return NUM_STATES;
-        }
+  virtual label ioNumStates() const override { return NUM_STATES; }
 
-        virtual const char* const* ioAlgebraicNames() const override
-        {
-            return tmanufacturedFDAALGEBRAIC_NAMES;
-        }
+  virtual const char *const *ioAlgebraicNames() const override {
+    return tmanufacturedFDAALGEBRAIC_NAMES;
+  }
 
-        virtual label ioNumAlgebraic() const override
-        {
-            return NUM_ALGEBRAIC;
-        }
-
+  virtual label ioNumAlgebraic() const override { return NUM_ALGEBRAIC; }
 
 public:
+  //- Runtime type information
+  TypeName("tmanufacturedFDA");
 
-    //- Runtime type information
-    TypeName("tmanufacturedFDA");
+  // Override the only available tissue in this model
+  virtual List<word> supportedDimensions() const override;
 
+  // Constructors
 
-    // Override the only available tissue in this model
-    virtual List<word> supportedDimensions() const override;
+  //- Construct given a dictionary, the number of integration points and a
+  //  initial time step for the ODE solver
+  tmanufacturedFDA(const dictionary &dict, const label nIntegrationPoints,
+                   const scalar initialDeltaT,
+                   const Switch solveVmWithinODESolver = false);
 
+  //- Destructor
+  virtual ~tmanufacturedFDA();
 
-    // Constructors
+  // Member Functions
 
-        //- Construct given a dictionary, the number of integration points and a
-        //  initial time step for the ODE solver
-        tmanufacturedFDA
-        (
-            const dictionary& dict,
-            const label nIntegrationPoints,
-            const scalar initialDeltaT,
-            const Switch solveVmWithinODESolver = false
-        );
+  virtual bool hasManufacturedSolution() const override { return true; }
 
+  virtual void solveODE(const scalar stepStartTime, const scalar deltaT,
+                        const scalarField &Vm, scalarField &Im) override;
 
-    //- Destructor
-    virtual ~tmanufacturedFDA();
+  //- Number of ODE's to solve
+  virtual label nEqns() const override { return NUM_STATES; }
 
+  //- Derivatives of each ODE with respect to the primary unknown in that
+  //  equation
+  virtual void derivatives(const scalar t, const scalarField &y,
+                           scalarField &dydt) const override;
 
-    // Member Functions
-
-
-        virtual bool hasManufacturedSolution() const override
-        {
-            return true;
-        }
-
-
-        virtual void solveODE
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im
-        ) override;
-
-        void initializeFields
-        (
-            volScalarField& Vm,
-            volScalarField& u1,
-            volScalarField& u2,
-            volScalarField& u3,
-            const volVectorField& C
-        ) override;
-
-
-        //- Number of ODE's to solve
-        virtual label nEqns() const override
-        {
-            return NUM_STATES;
-        }
-
-        //- Derivatives of each ODE with respect to the primary unknown in that
-        //  equation
-        virtual void derivatives
-        (
-            const scalar t,
-            const scalarField& y,
-            scalarField& dydt
-        ) const override;
-
-        void updateStatesOld() const;
-        void resetStatesToStatesOld() const;
-        // to provide variable names for export
-        virtual Foam::wordList exportedFieldNames() const override;
+  void updateStatesOld() const;
+  void resetStatesToStatesOld() const;
+  // to provide variable names for export
+  virtual Foam::wordList exportedFieldNames() const override;
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
