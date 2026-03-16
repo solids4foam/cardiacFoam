@@ -40,6 +40,7 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
+#include "fvMesh.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 
@@ -61,9 +62,6 @@ class ionicModel
     public CouplingSignalProvider
 {
     // Private Data
-
-    // Private Data
-
         //- ODE solver
         autoPtr<ODESolver> odeSolver_;
 
@@ -96,6 +94,7 @@ class ionicModel
 
     protected:
         virtual void setTissueFromDict();
+        void setTissue(label t) { tissue_ = t; }
         void setStimulusProtocolFromDict(const dictionary& dict)
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
@@ -296,6 +295,12 @@ public:
             scalarField& Im
         ) = 0;
 
+        // Lifecycle hooks for model-specific initialization and post-processing.
+        // Derived models can override these to handle tasks like analytical
+        // field initialization (MMS) or error computation.
+        virtual void preProcess(volScalarField& Vm, PtrList<volScalarField>& outFields) {}
+        virtual void postProcess(const volScalarField& Vm, const PtrList<volScalarField>& outFields) {}
+
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
 
@@ -308,18 +313,6 @@ public:
             scalarField& dydt
         ) const override = 0;
 
-
-        //Initialization for a volumetric field
-        // - currently for manufatured solutions
-        virtual void initializeFields
-        (
-            volScalarField& Vm,
-            volScalarField& u1,
-            volScalarField& u2,
-            volScalarField& u3,
-            const volVectorField& C
-        )
-        {}
 
         //- Jacobian for solving the coupled system of ODEs
         virtual void jacobian

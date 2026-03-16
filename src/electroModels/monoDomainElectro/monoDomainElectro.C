@@ -260,8 +260,9 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                       mesh(), dimensionedScalar("zero", dimTime, 0.0),
                       "zeroGradient"),
       calculateActivationTime_(mesh().nCells(), true), outFields_(),
-      ionicModelPtr_(ionicModel::New(electroProperties(), mesh().nCells(),
-                                     runTime.deltaTValue())),
+      ionicModelPtr_(
+          ionicModel::New(electroProperties().subDict("cardiacProperties"),
+                          mesh().nCells(), runTime.deltaTValue())),
       setDeltaT_(true),
       infoFrequency_(
           electroProperties().lookupOrDefault<label>("infoFrequency", 1)) {
@@ -347,6 +348,8 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
        << "Membrane capacitance Cm = " << Cm_ << nl << endl;
 
   // Set output fields
+  // 🔑 Call model-specific pre-processing (replacing legacy initializeFields)
+  ionicModelPtr_->preProcess(Vm_, outFields_);
   const wordList names = ionicModelPtr_->exportedFieldNames();
   outFields_.setSize(names.size());
   forAll(names, i) {
@@ -390,10 +393,11 @@ void monoDomainElectro::setDeltaT(Time &runTime) {
 }
 
 bool monoDomainElectro::evolve() {
+  bool converged = true;
   if (solutionAlg() == solutionAlgorithm::IMPLICIT) {
-    return evolveImplicit();
+    converged = evolveImplicit();
   } else if (solutionAlg() == solutionAlgorithm::EXPLICIT) {
-    return evolveExplicit();
+    converged = evolveExplicit();
   } else {
     FatalErrorInFunction
         << "Unrecognised solution algorithm. Available options are "
@@ -405,8 +409,10 @@ bool monoDomainElectro::evolve() {
         << endl;
   }
 
-  // Keep compiler happy
-  return true;
+  // 🔑 Call model-specific post-processing
+  ionicModelPtr_->postProcess(Vm_, outFields_);
+
+  return converged;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
