@@ -88,6 +88,21 @@ protected:
         return nullptr;
     }
 
+    virtual const scalarField* ioConstantsPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual label ioNumConstants() const
+    {
+        return 0;
+    }
+
+    virtual const char* const* ioConstantNames() const
+    {
+        return nullptr;
+    }
+
     virtual const char* const* ioStateNames() const
     {
         return nullptr;
@@ -211,6 +226,172 @@ public:
     label nIntegrationPoints() const
     {
         return nIntegrationPoints_;
+    }
+
+    wordList constantVariableNames() const
+    {
+        const label nConstants = ioNumConstants();
+        if (nConstants <= 0)
+        {
+            return wordList();
+        }
+
+        const char* const* names = ioConstantNames();
+        if (!names)
+        {
+            return wordList();
+        }
+
+        wordList result(nConstants);
+        for (label i = 0; i < nConstants; ++i)
+        {
+            result[i] = word(names[i]);
+        }
+        return result;
+    }
+
+    scalarField constantVariableValues() const
+    {
+        const auto* constantsPtr = ioConstantsPtr();
+        if (!constantsPtr)
+        {
+            return scalarField();
+        }
+
+        return *constantsPtr;
+    }
+
+    wordList stateVariableNames() const
+    {
+        if (!hasIOMetadata())
+        {
+            return wordList();
+        }
+
+        const label nStates = ioNumStates();
+        if (nStates <= 0)
+        {
+            return wordList();
+        }
+
+        const char* const* names = ioStateNames();
+        if (!names)
+        {
+            return wordList();
+        }
+
+        wordList result(nStates);
+        for (label i = 0; i < nStates; ++i)
+        {
+            result[i] = word(names[i]);
+        }
+        return result;
+    }
+
+    scalarField stateVariableValues(const label integrationPtI = 0) const
+    {
+        const auto* statesPtr = ioStatesPtr();
+        if (!statesPtr || statesPtr->empty())
+        {
+            return scalarField();
+        }
+
+        if (integrationPtI < 0 || integrationPtI >= statesPtr->size())
+        {
+            FatalErrorInFunction
+                << "Requested integration point " << integrationPtI
+                << " but valid range is [0, " << (statesPtr->size() - 1)
+                << "]." << exit(FatalError);
+        }
+
+        return (*statesPtr)[integrationPtI];
+    }
+
+    wordList algebraicVariableNames() const
+    {
+        const label nAlg = ioNumAlgebraic();
+        if (nAlg <= 0)
+        {
+            return wordList();
+        }
+
+        const char* const* names = ioAlgebraicNames();
+        if (!names)
+        {
+            return wordList();
+        }
+
+        wordList result(nAlg);
+        for (label i = 0; i < nAlg; ++i)
+        {
+            result[i] = word(names[i]);
+        }
+        return result;
+    }
+
+    scalarField algebraicVariableValues(const label integrationPtI = 0) const
+    {
+        const auto* algebraicPtr = ioAlgebraicPtr();
+        if (!algebraicPtr || algebraicPtr->empty())
+        {
+            return scalarField();
+        }
+
+        if
+        (
+            integrationPtI < 0
+         || integrationPtI >= algebraicPtr->size()
+        )
+        {
+            FatalErrorInFunction
+                << "Requested integration point " << integrationPtI
+                << " but valid range is [0, "
+                << (algebraicPtr->size() - 1) << "]."
+                << exit(FatalError);
+        }
+
+        return (*algebraicPtr)[integrationPtI];
+    }
+
+    wordList rateVariableNames() const
+    {
+        const label nStates = ioNumStates();
+        if (nStates <= 0)
+        {
+            return wordList();
+        }
+
+        const char* const* names = ioStateNames();
+        if (!names)
+        {
+            return wordList();
+        }
+
+        wordList result(nStates);
+        for (label i = 0; i < nStates; ++i)
+        {
+            result[i] = word("RATES_") + word(names[i]);
+        }
+        return result;
+    }
+
+    scalarField rateVariableValues(const label integrationPtI = 0) const
+    {
+        const auto* ratesPtr = ioRatesPtr();
+        if (!ratesPtr || ratesPtr->empty())
+        {
+            return scalarField();
+        }
+
+        if (integrationPtI < 0 || integrationPtI >= ratesPtr->size())
+        {
+            FatalErrorInFunction
+                << "Requested integration point " << integrationPtI
+                << " but valid range is [0, " << (ratesPtr->size() - 1)
+                << "]." << exit(FatalError);
+        }
+
+        return (*ratesPtr)[integrationPtI];
     }
 
     // Return names of variables to export (filtered against available names)
