@@ -38,15 +38,21 @@ addToRunTimeSelectionTable(electroModel, singleCellElectro, dictionary);
 singleCellElectro::singleCellElectro(Time &runTime, const word &region)
     : electroModel(typeName, runTime, region),
       cardiacProperties_(electroProperties()),
-      ionicModelPtr_(ionicModel::New(electroProperties(),
+      ionicModelPtr_(ionicModel::New(ionicProperties(),
                                      1, // one integration point
                                      runTime.deltaTValue(),
                                      true // solve Vm equation within ODE system
                                      )),
+      prePostProcessor_(electroModelsPrePostProcessor::New(
+          ionicModelPtr_->type(), ionicProperties())),
+      preProcessFieldNames_(
+          prePostProcessor_->preProcessFieldNames(*ionicModelPtr_)),
+      preProcessFields_(),
       outputPtr_(),
       Vm_(IOobject("Vm", runTime.timeName(), mesh(), IOobject::READ_IF_PRESENT,
                    IOobject::AUTO_WRITE),
-          mesh(), dimensionedScalar("Vm", dimVoltage, -80.0), "zeroGradient") {
+          mesh(), dimensionedScalar("Vm", dimVoltage, -80.0), "zeroGradient"),
+      outFields_() {
   // Create the output file
   const fileName outputDir(runTime.path() / "postProcessing");
   mkDir(outputDir);
@@ -63,10 +69,29 @@ singleCellElectro::singleCellElectro(Time &runTime, const word &region)
 
   // Extract the names of the fields to be exported
   const wordList exportNames = ionicModelPtr_->exportedFieldNames();
+  const wordList requiredPostProcessNames =
+      prePostProcessor_->requiredPostProcessFieldNames(*ionicModelPtr_);
   if (!exportNames.empty()) {
     Info << "Exporting fields: " << exportNames << nl;
   }
 
+  outFields_.setSize(exportNames.size());
+  forAll(exportNames, i) {
+    outFields_.set(
+        i, new volScalarField(IOobject(exportNames[i], runTime.timeName(),
+                                       mesh(), IOobject::NO_READ,
+                                       IOobject::AUTO_WRITE),
+                              mesh(), dimless, "zeroGradient"));
+  }
+
+  electroModelsPrePostProcessor::validatePostProcessFields(
+      ionicModelPtr_->type(), exportNames, requiredPostProcessNames);
+
+  electroModelsPrePostProcessor::allocateFields(preProcessFieldNames_, mesh(),
+                                                "preProcess_",
+                                                preProcessFields_);
+
+  prePostProcessor_->preProcess(*ionicModelPtr_, Vm_, preProcessFields_);
   ionicModelPtr_->writeHeader(output);
 }
 
@@ -88,6 +113,17 @@ bool singleCellElectro::evolve() {
   // Solve the ionic model from t0 to t1
   // Vm_ is integrated directly within the ODE solver
   ionicModelPtr_->solveODE(t0, dt, Vm_.internalField(), dummyIonicCurrentField);
+
+  const bool shouldPostProcess =
+      prePostProcessor_->shouldPostProcess(*ionicModelPtr_, Vm_);
+
+  if ((runTime().outputTime() || shouldPostProcess) && !outFields_.empty()) {
+    ionicModelPtr_->exportStates(outFields_);
+  }
+
+  if (shouldPostProcess) {
+    prePostProcessor_->postProcess(*ionicModelPtr_, Vm_, outFields_);
+  }
 
   if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false)) {
     ionicModelPtr_->write(runTime().value(), outputPtr_.ref());

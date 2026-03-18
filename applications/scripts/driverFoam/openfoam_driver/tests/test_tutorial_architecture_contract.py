@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -116,6 +117,33 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             signature.parameters["solvers"].default,
             niederer_defaults.SOLVERS,
         )
+
+    def test_manufactured_defaults_to_1d_implicit_cases(self) -> None:
+        spec = self._load_spec("manufacturedFDA")
+        cases = spec.build_cases()
+
+        self.assertTrue(cases)
+        self.assertTrue(all(case.params["dimension"] == "1D" for case in cases))
+        self.assertTrue(all(case.params["solver"] == "implicit" for case in cases))
+        self.assertFalse(spec.run_case.keywords["run_in_parallel"])
+
+    def test_manufactured_stage_output_falls_back_to_processor0_postprocessing(self) -> None:
+        case = CaseConfig(
+            case_id="manufactured",
+            params={"dimension": "1D", "solver": "implicit", "cells": 20, "dt": 0.1},
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            case_root = Path(temp_dir)
+            source_dir = case_root / "processor0" / "postProcessing"
+            source_dir.mkdir(parents=True, exist_ok=True)
+            source_file = source_dir / "1D_20_cells_implicit.dat"
+            source_file.write_text("parallel-output")
+
+            staged = manufactured_fda._stage_case_output(case_root, case)
+
+            self.assertEqual(staged, case_root / "1D_20_cells_implicit.dat")
+            self.assertEqual(staged.read_text(), "parallel-output")
 
 
 if __name__ == "__main__":

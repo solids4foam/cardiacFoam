@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from collections.abc import Sequence
 from functools import partial
@@ -22,6 +23,13 @@ from ...core.runtime.models import CaseConfig, TutorialSpec
 def _format_dt(dt_value: float) -> str:
     token = f"{dt_value:.12g}".replace(".", "p")
     return token.replace("-", "m")
+
+
+def _case_output_filename(case: CaseConfig) -> str:
+    dimension = str(case.params["dimension"])
+    cells = int(case.params["cells"])
+    solver = str(case.params["solver"])
+    return f"{dimension}_{cells}_cells_{solver}.dat"
 
 
 def _build_cases(
@@ -122,28 +130,60 @@ def _run_case(
     *,
     tutorials_root: Path | None = None,
     run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
+    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
 ) -> None:
+    del setup_root
     dimension = str(case.params["dimension"])
     run_script = resolve_run_script_path(
         tutorials_root=tutorials_root,
         run_script_relpath=run_script_relpath,
     )
+    command = [
+        "bash",
+        "-l",
+        str(run_script),
+        "--case-dir",
+        str(case_root),
+        "--dimension",
+        dimension,
+    ]
+    if run_in_parallel:
+        command.append("--parallel")
+
     subprocess.run(
-        [
-            "bash",
-            "-l",
-            str(run_script),
-            "--case-dir",
-            str(case_root),
-            "--dimension",
-            dimension,
-            "--parallel",
-        ],
+        command,
         check=True,
+    )
+    _stage_case_output(case_root, case)
+
+
+def _stage_case_output(case_root: Path, case: CaseConfig) -> Path:
+    filename = _case_output_filename(case)
+    destination = case_root / filename
+    candidates = (
+        case_root / "postProcessing" / filename,
+        case_root / "processor0" / "postProcessing" / filename,
+        case_root / filename,
+    )
+
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
+        if candidate == destination:
+            return destination
+        shutil.copy2(candidate, destination)
+        print(f"Archived manufactured output: {candidate} -> {destination}")
+        return destination
+
+    checked = ", ".join(str(path) for path in candidates)
+    raise FileNotFoundError(
+        f"Manufactured output '{filename}' not found after run. Checked: {checked}"
     )
 
 
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
+    for stale_output in output_dir.glob("*.dat"):
+        stale_output.unlink()
     collect_outputs_by_pattern(case_root, output_dir, pattern="*.dat")
 
 
@@ -187,6 +227,7 @@ def make_spec(
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
+    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
@@ -238,6 +279,7 @@ def make_spec(
             _run_case,
             tutorials_root=tutorials_root,
             run_script_relpath=run_script_path,
+            run_in_parallel=run_in_parallel,
         ),
         collect_outputs=_collect_outputs,
         postprocess=partial(
@@ -256,6 +298,7 @@ def make_spec(
             "electro_properties_scope": electro_properties_scope,
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_path),
+            "run_in_parallel": run_in_parallel,
             "postprocess_script_relpath": str(postprocess_script_path),
             "postprocess_function_name": postprocess_function_name,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,

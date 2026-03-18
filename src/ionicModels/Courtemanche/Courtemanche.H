@@ -58,9 +58,6 @@ class Courtemanche
         //- States
         mutable PtrList<scalarField> STATES_;
 
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
-
         //- Constants
         mutable scalarField CONSTANTS_;
 
@@ -181,10 +178,6 @@ protected:
                 const scalarField& y,
                 scalarField& dydt
             ) const override;
-
-
-            virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-            virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
 
             virtual void sweepCurrent
             (

@@ -25,8 +25,6 @@ License
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "ionicSelector.H"
-
-#include "tmanufacturedFields.H"
 #include "volFields.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -43,15 +41,12 @@ Foam::tmanufacturedFDA::tmanufacturedFDA(const dictionary &dict,
                                          const scalar initialDeltaT,
                                          const Switch solveVmWithinODESolver)
     : ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
-      STATES_(num), STATES_OLD_(num), CONSTANTS_(NUM_CONSTANTS, 0.0),
-      ALGEBRAIC_(num), RATES_(num) {
-  // Dimension read from dict: "dimension 2D;" — avoids mesh dependency in base
-  const word dimWord(dict.lookup("dimension"));
-  setTissue(ionicSelector::dimensionFlag(dimWord));
+      STATES_(num), CONSTANTS_(NUM_CONSTANTS, 0.0), ALGEBRAIC_(num),
+      RATES_(num) {
+  setTissue(ionicSelector::selectDimension(dict, supportedDimensions()));
 
   forAll(STATES_, integrationPtI) {
     STATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
-    STATES_OLD_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
     ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
     RATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
 
@@ -59,7 +54,6 @@ Foam::tmanufacturedFDA::tmanufacturedFDA(const dictionary &dict,
     // states
     tmanufacturedFDAinitConsts(CONSTANTS_.data(), RATES_[integrationPtI].data(),
                                STATES_[integrationPtI].data(), tissue());
-    STATES_OLD_[integrationPtI] = STATES_[integrationPtI];
   }
 }
 
@@ -75,58 +69,9 @@ Foam::List<Foam::word> Foam::tmanufacturedFDA::supportedDimensions() const
   return {"1D", "2D", "3D"};
 }
 
-void Foam::tmanufacturedFDA::preProcess(volScalarField &Vm,
-                                        PtrList<volScalarField> &outFields) {
-  if (outFields.size() < 3) {
-    FatalErrorInFunction
-        << "tmanufacturedFDA requires at least 3 outFields (u1, u2, u3)"
-        << exit(FatalError);
-  }
-
-  volScalarField &u1m = outFields[0];
-  volScalarField &u2m = outFields[1];
-  volScalarField &u3m = outFields[2];
-
-  const volVectorField &C = Vm.mesh().C();
-  scalarField X = C.component(vector::X);
-  scalarField Y = C.component(vector::Y);
-  scalarField Z = C.component(vector::Z);
-  const scalar t = 0.0;
-
-  computeManufacturedV(Vm, X, Y, Z, t, tissue());
-  computeManufacturedU(u1m, u2m, u3m, X, Y, Z, t, tissue());
-
-  forAll(STATES_, i) {
-    scalarField &S = STATES_[i];
-    S[V] = Vm[i];
-    S[u1] = u1m[i];
-    S[u2] = u2m[i];
-    S[u3] = u3m[i];
-
-    STATES_OLD_[i] = S;
-  }
-
-  Vm.correctBoundaryConditions();
-  u1m.correctBoundaryConditions();
-  u2m.correctBoundaryConditions();
-  u3m.correctBoundaryConditions();
-
-  Info << "Boundary conditions corrected." << endl;
-}
-
-void Foam::tmanufacturedFDA::postProcess(
-    const volScalarField &Vm, const PtrList<volScalarField> &outFields) {
-  // MS logic for error computation could go here if needed.
-  // Currently, error reporting is handled via external call or handled
-  // by the msHandler in v1. In v2, we should move it here.
-  // However, I don't see computeAndPrintErrors called in this file yet.
-  // I'll check tmanufacturedFields.H for it.
-}
-
 void Foam::tmanufacturedFDA::solveODE(const scalar stepStartTime,
                                       const scalar deltaT,
                                       const scalarField &Vm, scalarField &Im) {
-  // STATES_ = STATES_OLD_;
   const scalar tStart = stepStartTime;
   const scalar tEnd = tStart + deltaT;
   const label monitorCell = 0;
@@ -154,7 +99,8 @@ void Foam::tmanufacturedFDA::solveODE(const scalar stepStartTime,
       debugPrintFields(integrationPtI, tStart, tEnd, h);
     }
 
-    Im[integrationPtI] = A[Iion];
+    // The generic monodomain solver expects ionic current normalized by Cm.
+    Im[integrationPtI] = A[Iion] / CONSTANTS_[Cm];
   }
 }
 void Foam::tmanufacturedFDA::derivatives(const scalar t, const scalarField &y,
@@ -164,14 +110,6 @@ void Foam::tmanufacturedFDA::derivatives(const scalar t, const scalarField &y,
   ::tmanufacturedFDAcomputeVariables(
       t, CONSTANTS_.data(), dydt.data(), const_cast<scalarField &>(y).data(),
       ALG.data(), tissue(), solveVmWithinODESolver());
-}
-
-void Foam::tmanufacturedFDA::updateStatesOld() const {
-  saveStateSnapshot(STATES_, STATES_OLD_);
-}
-
-void Foam::tmanufacturedFDA::resetStatesToStatesOld() const {
-  restoreStateSnapshot(STATES_, STATES_OLD_);
 }
 
 // ------------------------------------------------------------------------- //

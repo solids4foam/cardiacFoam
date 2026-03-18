@@ -51,7 +51,6 @@ Foam::BuenoOrovio::BuenoOrovio
 :
     ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
-    STATES_OLD_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
@@ -61,7 +60,6 @@ Foam::BuenoOrovio::BuenoOrovio
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
-        STATES_OLD_.set(i,  new scalarField(NUM_STATES,     0.0));
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
@@ -185,16 +183,6 @@ void Foam::BuenoOrovio::derivatives
         );
 }
 
-void Foam::BuenoOrovio::updateStatesOld(const Field<Field<scalar>>&) const
-{
-    saveStateSnapshot(STATES_, STATES_OLD_);
-}
-
-void Foam::BuenoOrovio::resetStatesToStatesOld(Field<Field<scalar>>&) const
-{
-    restoreStateSnapshot(STATES_, STATES_OLD_);
-}
-
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
@@ -297,7 +285,6 @@ Foam::scalar Foam::BuenoOrovio::signal(const label i, const CouplingSignal s) co
 {
     return ionicModel::signal(i, s);
 }
-
 
 
 

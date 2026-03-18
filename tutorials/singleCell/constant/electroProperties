@@ -52,7 +52,14 @@ singleCellElectroCoeffs
     // optional I/O control
 
     writeAfterTime  0;
-    exportedVariables (Vm s);
-    debugPrintVariables (Vm);
-	
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm s);
+            debug (Vm);
+        }
+    }
+		
 }

@@ -44,6 +44,7 @@ SourceFiles
 
 #include "electroModel.H"
 #include "ionicModel.H"
+#include "electroModelsPrePostProcessor.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -112,6 +113,13 @@ class monoDomainElectro : public electroModel {
 
   //- Run-time selectable ionic model
   autoPtr<ionicModel> ionicModelPtr_;
+
+  //- Optional ionic-model pre/post processor selected from the ionic model type
+  autoPtr<electroModelsPrePostProcessor> prePostProcessor_;
+
+  //- Processor-declared fields used for pre-processing data exchange
+  wordList preProcessFieldNames_;
+  PtrList<volScalarField> preProcessFields_;
 
   //- Flag for tracking if the time step size has been set
   bool setDeltaT_;

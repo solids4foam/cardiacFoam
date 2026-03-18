@@ -49,6 +49,7 @@ SourceFiles
 
 #include "electroModel.H"
 #include "ionicModel.H"
+#include "electroModelsPrePostProcessor.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -69,11 +70,21 @@ class singleCellElectro : public electroModel {
   //- Run-time selectable ionic model
   autoPtr<ionicModel> ionicModelPtr_;
 
+  //- Optional ionic-model pre/post processor selected from the ionic model type
+  autoPtr<electroModelsPrePostProcessor> prePostProcessor_;
+
+  //- Processor-declared fields used for pre-processing data exchange
+  wordList preProcessFieldNames_;
+  PtrList<volScalarField> preProcessFields_;
+
   //- Output file pointer
   autoPtr<OFstream> outputPtr_;
 
   //- Transmembrane voltage field
   volScalarField Vm_;
+
+  //- Ionic model output fields used by lifecycle hooks
+  PtrList<volScalarField> outFields_;
 
   // Private Member Functions
 

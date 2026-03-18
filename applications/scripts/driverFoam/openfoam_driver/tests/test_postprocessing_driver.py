@@ -8,6 +8,14 @@ from pathlib import Path
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 
 
+def _repo_root_from_test() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "tutorials").exists() and (parent / "applications").exists():
+            return parent
+    raise RuntimeError("Could not locate repository root from test path")
+
+
 class TestPostprocessingDriver(unittest.TestCase):
     def test_writes_schema_version_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -117,6 +125,119 @@ class TestPostprocessingDriver(unittest.TestCase):
             kwargs_payload = json.loads((output_dir / "kwargs.json").read_text())
             self.assertEqual(kwargs_payload["output_token"], str(output_dir / "inside.txt"))
             self.assertEqual(kwargs_payload["setup_token"], str(setup_root / "here.txt"))
+
+    def test_manufactured_postprocess_writes_csv_without_optional_plotting_deps(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = repo_root / "tutorials" / "manufacturedFDA" / "setupManufacturedFDA"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            (output_dir / "1D_10_cells_implicit.dat").write_text(
+                "\n".join(
+                    [
+                        "Vm 0 0 1.0e-02",
+                        "u1 0 0 2.0e-02",
+                        "u2 0 0 4.0e-02",
+                    ]
+                )
+            )
+            (output_dir / "1D_20_cells_implicit.dat").write_text(
+                "\n".join(
+                    [
+                        "Vm 0 0 2.5e-03",
+                        "u1 0 0 5.0e-03",
+                        "u2 0 0 1.0e-02",
+                    ]
+                )
+            )
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="manufacturedFDA",
+                tasks=[PostprocessTask(module_relpath=Path("post_processing_manufactured.py"))],
+            )
+
+            csv_path = output_dir / "manufactured_convergence_rates.csv"
+            manifest_path = output_dir / "plots.json"
+
+            self.assertTrue(csv_path.exists())
+            self.assertTrue(manifest_path.exists())
+            self.assertIn("rate_Vm", csv_path.read_text())
+
+            manifest = json.loads(manifest_path.read_text())
+            artifact_paths = {artifact["path"] for artifact in manifest["artifacts"]}
+            self.assertIn("manufactured_convergence_rates.csv", artifact_paths)
+
+    def test_manufactured_postprocess_ignores_stale_outputs_not_in_manifest(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = repo_root / "tutorials" / "manufacturedFDA" / "setupManufacturedFDA"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            (output_dir / "run_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "status": "ok",
+                                "params": {
+                                    "dimension": "1D",
+                                    "cells": 10,
+                                    "solver": "implicit",
+                                },
+                            },
+                            {
+                                "status": "ok",
+                                "params": {
+                                    "dimension": "1D",
+                                    "cells": 20,
+                                    "solver": "implicit",
+                                },
+                            },
+                        ]
+                    }
+                )
+            )
+
+            (output_dir / "1D_10_cells_implicit.dat").write_text(
+                "\n".join(
+                    [
+                        "Vm 0 0 1.0e-02",
+                        "u1 0 0 2.0e-02",
+                        "u2 0 0 4.0e-02",
+                    ]
+                )
+            )
+            (output_dir / "1D_20_cells_implicit.dat").write_text(
+                "\n".join(
+                    [
+                        "Vm 0 0 2.5e-03",
+                        "u1 0 0 5.0e-03",
+                        "u2 0 0 1.0e-02",
+                    ]
+                )
+            )
+            (output_dir / "1D_500_cells_implicit.dat").write_text(
+                "\n".join(
+                    [
+                        "Vm 0 0 1.0e-08",
+                        "u1 0 0 1.0e-08",
+                        "u2 0 0 1.0e-08",
+                    ]
+                )
+            )
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="manufacturedFDA",
+                tasks=[PostprocessTask(module_relpath=Path("post_processing_manufactured.py"))],
+            )
+
+            csv_lines = (output_dir / "manufactured_convergence_rates.csv").read_text().strip().splitlines()
+            self.assertEqual(len(csv_lines), 2)
+            self.assertIn("10,20", csv_lines[1])
 
 
 if __name__ == "__main__":

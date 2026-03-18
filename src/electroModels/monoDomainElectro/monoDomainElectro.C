@@ -30,6 +30,14 @@ namespace Foam {
 
 namespace electroModels {
 
+namespace {
+
+bool hasCustomPrePostProcessor(const electroModelsPrePostProcessor &processor) {
+  return processor.type() != "electroModelsPrePostProcessor";
+}
+
+} // End anonymous namespace
+
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(monoDomainElectro, 0);
@@ -161,25 +169,20 @@ bool monoDomainElectro::evolveExplicit() {
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
 
-  // 2) Solve the Vm equation using Iion_ from previous timestep
+  // 2) Advance ionic model in time using the current Vm state
+  ionicModelPtr_->solveODE(t0, dt,
+                           Vm_,
+                           Iion_);
+  Iion_.correctBoundaryConditions();
+
+  // 3) Solve the Vm equation using the updated ionic current
   solve(chi_ * Cm_ * fvm::ddt(Vm_) == fvc::laplacian(conductivity_, Vm_) -
                                           chi_ * Cm_ * Iion_ +
                                           externalStimulusCurrent_);
 
-  // 3) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
-  ionicModelPtr_->solveODE(t0, dt,
-                           Vm_, // Vm_new
-                           Iion_);
-  Iion_.correctBoundaryConditions();
-
   // 5) Update post-processing fields
 
   updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
-
-  if (runTime().outputTime()) {
-    // Extract states for visualisation
-    ionicModelPtr_->exportStates(outFields_);
-  }
 
   // Re-enable OpenFOAM linear solver output
   SolverPerformance<scalar>::debug = debugOrg;
@@ -203,27 +206,22 @@ bool monoDomainElectro::evolveImplicit() {
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
 
-  // 2) Solve the Vm equation implicitly using Iion_ from previous timestep
+  // 2) Advance ionic model in time using the current Vm state
+  ionicModelPtr_->solveODE(t0, dt,
+                           Vm_,
+                           Iion_);
+  Iion_.correctBoundaryConditions();
+
+  // 3) Solve the Vm equation implicitly using the updated ionic current
   while (pimple().loop()) {
     solve(chi_ * Cm_ * fvm::ddt(Vm_) == fvm::laplacian(conductivity_, Vm_) -
                                             chi_ * Cm_ * Iion_ +
                                             externalStimulusCurrent_);
   }
 
-  // 3) Advance ionic model in time (ODE solve) with NEW Vm, once per timestep
-  ionicModelPtr_->solveODE(t0, dt,
-                           Vm_, // Vm_new
-                           Iion_);
-  Iion_.correctBoundaryConditions();
-
   // 5) Update post-processing fields
 
   updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
-
-  if (runTime().outputTime()) {
-    // Extract states for visualisation
-    ionicModelPtr_->exportStates(outFields_);
-  }
 
   return true;
 }
@@ -249,7 +247,6 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
           mesh(), dimensionedScalar("zero", dimCurrent / dimVolume, 0.0),
           "zeroGradient"),
       externalStimulus_(),
-      // cardiacProperties_(electroProperties().subDict("cardiacProperties")),
       cardiacProperties_(electroProperties()),
       chi_("chi", dimArea / dimVolume, cardiacProperties_),
       Cm_("Cm", dimCurrent * dimTime / (dimVoltage * dimArea),
@@ -260,9 +257,13 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                       mesh(), dimensionedScalar("zero", dimTime, 0.0),
                       "zeroGradient"),
       calculateActivationTime_(mesh().nCells(), true), outFields_(),
-      ionicModelPtr_(
-          ionicModel::New(electroProperties().subDict("cardiacProperties"),
-                          mesh().nCells(), runTime.deltaTValue())),
+      ionicModelPtr_(ionicModel::New(ionicProperties(),
+                                     mesh().nCells(),
+                                     runTime.deltaTValue())),
+      prePostProcessor_(electroModelsPrePostProcessor::New(
+          ionicModelPtr_->type(), ionicProperties())),
+      preProcessFieldNames_(prePostProcessor_->preProcessFieldNames(*ionicModelPtr_)),
+      preProcessFields_(),
       setDeltaT_(true),
       infoFrequency_(
           electroProperties().lookupOrDefault<label>("infoFrequency", 1)) {
@@ -347,10 +348,10 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
   Info << "Surface-to-volume ratio chi = " << chi_ << nl
        << "Membrane capacitance Cm = " << Cm_ << nl << endl;
 
-  // Set output fields
-  // 🔑 Call model-specific pre-processing (replacing legacy initializeFields)
-  ionicModelPtr_->preProcess(Vm_, outFields_);
+  // Allocate model-declared output fields before lifecycle hooks run.
   const wordList names = ionicModelPtr_->exportedFieldNames();
+  const wordList requiredPostProcessNames =
+      prePostProcessor_->requiredPostProcessFieldNames(*ionicModelPtr_);
   outFields_.setSize(names.size());
   forAll(names, i) {
     outFields_.set(
@@ -358,6 +359,26 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                                        IOobject::NO_READ, IOobject::AUTO_WRITE),
                               mesh(), dimless, "zeroGradient"));
   }
+
+  electroModelsPrePostProcessor::validatePostProcessFields(
+      ionicModelPtr_->type(), names, requiredPostProcessNames);
+
+  electroModelsPrePostProcessor::allocateFields(preProcessFieldNames_, mesh(),
+                                                "preProcess_",
+                                                preProcessFields_);
+
+  if (hasCustomPrePostProcessor(prePostProcessor_())) {
+    Info << "Using pre/post processor " << prePostProcessor_->type()
+         << " for ionic model " << ionicModelPtr_->type() << "." << endl;
+  }
+
+  if (hasCustomPrePostProcessor(prePostProcessor_()) &&
+      !preProcessFieldNames_.empty()) {
+    Info << "Running preProcess with fields " << preProcessFieldNames_ << "."
+         << endl;
+  }
+
+  prePostProcessor_->preProcess(*ionicModelPtr_, Vm_, preProcessFields_);
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -409,8 +430,20 @@ bool monoDomainElectro::evolve() {
         << endl;
   }
 
-  // 🔑 Call model-specific post-processing
-  ionicModelPtr_->postProcess(Vm_, outFields_);
+  const bool shouldPostProcess =
+      prePostProcessor_->shouldPostProcess(*ionicModelPtr_, Vm_);
+
+  if ((runTime().outputTime() || shouldPostProcess) && !outFields_.empty()) {
+    ionicModelPtr_->exportStates(outFields_);
+  }
+
+  if (shouldPostProcess) {
+    if (hasCustomPrePostProcessor(prePostProcessor_())) {
+      Info << "Running postProcess via " << prePostProcessor_->type() << "."
+           << endl;
+    }
+    prePostProcessor_->postProcess(*ionicModelPtr_, Vm_, outFields_);
+  }
 
   return converged;
 }

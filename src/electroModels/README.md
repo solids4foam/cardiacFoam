@@ -11,6 +11,8 @@ src/electroModels/
 ├── monoDomainElectro/          # Full monodomain PDE-ODE model
 ├── singleCellElectro/          # Single-cell ODE-only driver
 ├── eikonalDiffusionElectro/    # Reduced-order activation-time model
+├── electroModelECG/            # Electro + ECG wrapper model
+├── electroMechanicalModel/     # Electro-mechanics wrapper model
 ├── Make/
 └── README.md
 ```
@@ -41,6 +43,10 @@ Tissue-scale PDE-ODE model:
 
 - Solves transmembrane voltage `Vm` on the mesh.
 - Uses runtime-selected ionic model per cell (`ionicModel::New(...)`).
+- Creates an optional ionic-model pre/post processor keyed by ionic-model type
+  for mesh-dependent setup/verification.
+- The shared pre/post processor abstractions live in
+  `src/modelPrePostProcessors/`.
 - Maintains external state storage (`Field<Field<scalar>> states_`).
 - Supports both explicit and implicit stepping paths.
 - Tracks `activationTime` when `Vm` crosses threshold.
@@ -69,11 +75,31 @@ Reduced-order activation model:
 - Uses anisotropic conductivity tensor and optional stabilized form (`eikonalAdvectionDiffusionApproach`).
 - Applies stimulus through geometric box selection in the mesh.
 
+### 5) `electroModelECG`
+
+Wrapper workflow for cases that solve electrophysiology and compute ECG outputs
+in the same run:
+
+- Owns an inner electro model plus a runtime-selected `ecgModel`.
+- Reads the `ECG` sub-dictionary from `constant/electroProperties`.
+- Delegates time stepping to the electro model and ECG post-processing to the
+  ECG stack in `src/ecgModels/`.
+
+### 6) `electroMechanicalModel`
+
+Wrapper workflow for coupled electro-mechanics runs:
+
+- Owns an electro model plus a runtime-selected active-tension model.
+- Passes coupling signals from the ionic model stack into the active-tension
+  stack.
+- Uses the same runtime-selection pattern as the other electro models.
+
 ## Runtime chain with `cardiacFoam`
 
 1. `cardiacFoam` creates `physicsModel`.
 2. Electro `physicsModel` creates `electroModel` from `electroProperties`.
-3. `monoDomainElectro` and `singleCellElectro` create `ionicModel` from the same dictionary scope.
+3. `monoDomainElectro` and `singleCellElectro` create `ionicModel` from the
+   selected electro-model coeff dictionary in `electroProperties`.
 
 ## Build target
 
@@ -83,6 +109,8 @@ Reduced-order activation model:
 - `eikonalDiffusionElectro/eikonalDiffusionElectro.C`
 - `monoDomainElectro/monoDomainElectro.C`
 - `singleCellElectro/singleCellElectro.C`
+- `electroModelECG/electroModelECG.C`
+- `electroMechanicalModel/electroMechanicalModel.C`
 
 into:
 

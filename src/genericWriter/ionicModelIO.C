@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "ionicModelIO.H"
 #include "ionicVariableCompatibility.H"
 
@@ -478,6 +497,79 @@ namespace Foam {
         forAll(outFields, k)
         {
             outFields[k].correctBoundaryConditions();
+        }
+    }
+
+    void Foam::ionicModelIO::importStateFields
+    (
+        PtrList<scalarField>& STATES,
+        const volScalarField& Vm,
+        const PtrList<volScalarField>& inFields,
+        const wordList& fieldNames,
+        const char* const stateNames[],
+        int nStates,
+        const char* const algNames[],
+        int nAlg,
+        SelectedMapCache& selectedPlanCache
+    )
+    {
+        const SelectionPlan& plan =
+            selectedPlan
+            (
+                fieldNames,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                selectedPlanCache
+            );
+
+        if (inFields.size() != plan.source.size())
+        {
+            FatalErrorInFunction
+                << "Mismatch between selected import variables ("
+                << plan.source.size() << ") and provided input fields ("
+                << inFields.size() << ")."
+                << exit(FatalError);
+        }
+
+        if (STATES.size() != Vm.size())
+        {
+            FatalErrorInFunction
+                << "Vm field size " << Vm.size()
+                << " does not match ionic state count " << STATES.size() << "."
+                << exit(FatalError);
+        }
+
+        const scalarField& VmValues = Vm.primitiveField();
+
+        forAll(STATES, cellI)
+        {
+            scalarField& S = STATES[cellI];
+
+            forAll(inFields, k)
+            {
+                const label src = plan.source[k];
+                const label idx = plan.index[k];
+
+                if (src == ionicModelIO::COL_VM)
+                {
+                    S[idx] = VmValues[cellI];
+                }
+                else if (src == ionicModelIO::COL_STATE)
+                {
+                    S[idx] = inFields[k][cellI];
+                }
+                else
+                {
+                    FatalErrorInFunction
+                        << "Cannot import field '" << fieldNames[k]
+                        << "' into ionic states because it resolves to source "
+                        << src
+                        << ". Only Vm/state variables are supported for import."
+                        << exit(FatalError);
+                }
+            }
         }
     }
 

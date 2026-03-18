@@ -57,6 +57,6 @@ tmanufacturedFDAcomputeVariables(double VOI, double* CONSTANTS, double* RATES, d
     RATES[u1] = pow(STATES[u1] + STATES[u3] - STATES[V], 2.0) * pow(STATES[u2], 2.0) + 0.5 * (STATES[u1] + STATES[u3] - STATES[V]) * pow(STATES[u2], 2.0) * (STATES[V] - STATES[u3]);
     RATES[u2] = - (STATES[u1] + STATES[u3] - STATES[V]) *  pow(STATES[u2], 3);
     RATES[u3] = 0;
-    ALGEBRAIC[Iion] =  - (CONSTANTS[Cm]/2.0) * (STATES[u1] + STATES[u3] - STATES[V])  * pow(STATES[u2], 2) * (STATES[V] - STATES[u3]) + (CONSTANTS[Beta] * (STATES[V] - STATES[u3])) / CONSTANTS[Chi];
+    ALGEBRAIC[Iion] =  - (STATES[u1] + STATES[u3] - STATES[V])  * pow(STATES[u2], 2) * (STATES[V] - STATES[u3]) + (CONSTANTS[Beta] * (STATES[V] - STATES[u3])) / CONSTANTS[Chi];
 
 }

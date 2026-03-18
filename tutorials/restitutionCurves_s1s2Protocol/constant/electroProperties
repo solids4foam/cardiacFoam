@@ -41,7 +41,14 @@ singleCellElectroCoeffs
     }
 
     writeAfterTime    18.0;
-    exportedVariables (Vm);
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm);
+        }
+    }
 }
 
 // ************************************************************************* //

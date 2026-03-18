@@ -9,7 +9,13 @@ if [[ -z "$CASE_DIR" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_RUNNER="$SCRIPT_DIR/../../../openfoam_driver/scripts/run_case.sh"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+COMMON_RUNNER="$REPO_ROOT/applications/scripts/driverFoam/openfoam_driver/scripts/run_case.sh"
+
+if [[ ! -x "$COMMON_RUNNER" ]]; then
+    echo "Common runner not found: $COMMON_RUNNER" >&2
+    exit 1
+fi
 
 exec "$COMMON_RUNNER" \
     --case-dir "$CASE_DIR" \
