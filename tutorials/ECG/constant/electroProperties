@@ -28,8 +28,14 @@ monoDomainElectroCoeffs
     ionicModel    BuenoOrovio;
     tissue    epicardialCells;
 
-    //ExportedVariables (Vm Iion);
-    //debugPrintVariables (Vm);
+    //outputVariables
+    //{
+    //    ionic
+    //    {
+    //        export (Vm Iion);
+    //        debug (Vm);
+    //    }
+    //}
 
     solutionAlgorithm    explicit;
     solver RKF45;

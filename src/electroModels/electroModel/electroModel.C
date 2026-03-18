@@ -213,6 +213,12 @@ void Foam::electroModel::writeFields(const Time& runTime)
 }
 
 
+const Foam::dictionary& Foam::electroModel::ionicProperties() const
+{
+    return electroProperties_;
+}
+
+
 bool Foam::electroModel::read()
 {
     if (regIOobject::read())

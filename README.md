@@ -56,7 +56,6 @@ Compiled in `libionicModels`:
 - `Grandi`
 - `ORd`
 - `Stewart`
-- `TestAlievPanfilovNash`
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`

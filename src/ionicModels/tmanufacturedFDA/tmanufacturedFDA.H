@@ -57,9 +57,6 @@ class tmanufacturedFDA : public ionicModel {
   //- States
   mutable PtrList<scalarField> STATES_;
 
-  //- States - old time
-  mutable PtrList<scalarField> STATES_OLD_;
-
   //- Constants
   mutable scalarField CONSTANTS_;
 
@@ -116,8 +113,16 @@ public:
   //- Runtime type information
   TypeName("tmanufacturedFDA");
 
-  // Override the only available tissue in this model
+  // Override the only available dimension family in this model
   virtual List<word> supportedDimensions() const override;
+
+  virtual word tissueName() const override
+  {
+    return (tissue() == 1) ? "1D" :
+           (tissue() == 2) ? "2D" :
+           (tissue() == 3) ? "3D" :
+                             "unknown";
+  }
 
   // Constructors
 
@@ -132,8 +137,6 @@ public:
 
   // Member Functions
 
-  virtual bool hasManufacturedSolution() const override { return true; }
-
   virtual void solveODE(const scalar stepStartTime, const scalar deltaT,
                         const scalarField &Vm, scalarField &Im) override;
 
@@ -145,8 +148,6 @@ public:
   virtual void derivatives(const scalar t, const scalarField &y,
                            scalarField &dydt) const override;
 
-  void updateStatesOld() const;
-  void resetStatesToStatesOld() const;
   // to provide variable names for export
   virtual Foam::wordList exportedFieldNames() const override;
 };

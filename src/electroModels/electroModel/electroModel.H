@@ -103,6 +103,10 @@ public:
   //- Return electro properties dictionary
   const dictionary &electroProperties() const { return electroProperties_; }
 
+  //- Return the electro-model coeff dictionary used to construct the ionic
+  //  model. Ionic keys are expected at this scope.
+  const dictionary &ionicProperties() const;
+
   // Declare run-time constructor selection table
 
   declareRunTimeSelectionTable(autoPtr, electroModel, dictionary,

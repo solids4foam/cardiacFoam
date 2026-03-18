@@ -104,6 +104,8 @@ class ionicModel
         mutable ionicModelIO::FullPlanCache fullWritePlanCache_;
         mutable ionicModelIO::SelectedMapCache writeSelectedPlanCache_;
         mutable ionicModelIO::SelectedMapCache exportSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache exportTransferSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache importTransferSelectedPlanCache_;
         mutable ionicModelIO::SelectedMapCache debugSelectedPlanCache_;
         mutable ionicModelIO::ExportedNamesCache exportedNamesCache_;
         mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
@@ -170,51 +172,6 @@ class ionicModel
         {
             return ioStateNames() && ioNumStates() > 0;
         }
-
-        /*NOTE: currently protected, each means they are only visible by the derived class.
-        THe higher order solver will use them so probably will be set as public.*/
-
-        // Copies STATES_ → states external buffer
-        // inline void copyInternalToExternal
-        // (
-        //     const PtrList<scalarField>& internal,
-        //     Field<Field<scalar>>& external,
-        //     const label nStates
-        // ) const
-        // {
-            // This is VERY expensive: disable for now. If we really need this
-            // functionality, we should find a way tha avoids such copies
-            // forAll(internal, i)
-            // {
-            //     if (external[i].size() >= nStates)
-            //     {
-            //         external[i] = internal[i];
-            //     }
-            // }
-        // }
-
-        // Copies current STATES_ → STATES_OLD_
-        inline void saveStateSnapshot
-        (
-            const PtrList<scalarField>& internal,
-            PtrList<scalarField>& old
-        ) const
-        {
-            forAll(internal, i)
-                old[i] = internal[i];
-        }
-
-        // Restores snapshot STATES_OLD_ → STATES_
-        inline void restoreStateSnapshot
-        (
-            PtrList<scalarField>& internal,
-            const PtrList<scalarField>& old
-        ) const
-        {
-            forAll(internal, i)
-                internal[i] = old[i];
-        }
-
 
 public:
 
@@ -294,12 +251,6 @@ public:
             const scalarField& Vm,
             scalarField& Im
         ) = 0;
-
-        // Lifecycle hooks for model-specific initialization and post-processing.
-        // Derived models can override these to handle tasks like analytical
-        // field initialization (MMS) or error computation.
-        virtual void preProcess(volScalarField& Vm, PtrList<volScalarField>& outFields) {}
-        virtual void postProcess(const volScalarField& Vm, const PtrList<volScalarField>& outFields) {}
 
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
@@ -474,8 +425,7 @@ public:
             return (*algebraicPtr)[integrationPtI];
         }
 
-        //Tissue and dimensions flag getter for ionicModel and manufactured solution
-            //tissue
+        // Tissue/variant metadata used by model-side setup code.
         virtual List<word> supportedTissueTypes() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
@@ -490,11 +440,6 @@ public:
             (t == 3) ? "endocardialCells" :
             (t == 4) ? "myocyte" :
                         "unknown";
-        }
-            //dimension in manufactured
-        virtual bool hasManufacturedSolution() const
-        {
-        return false;   // Default: no manufactured solution
         }
 
         virtual List<word> supportedDimensions() const
@@ -640,6 +585,19 @@ public:
             );
         }
 
+        virtual void exportFields
+        (
+            const wordList& fieldNames,
+            PtrList<volScalarField>& outFields
+        ) const;
+
+        virtual void importFields
+        (
+            const volScalarField& Vm,
+            const wordList& fieldNames,
+            const PtrList<volScalarField>& inFields
+        );
+
         // Printing function
         virtual void debugPrintFields
         (
@@ -761,9 +719,7 @@ public:
             return wordList();
         }
         bool utilitiesMode() const;
-        bool startupLogEnabled() const;
         label sampleIntegrationPoint(const label nPoints) const;
-        void logExportedFieldSelection() const;
 
 
     };  

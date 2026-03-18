@@ -92,10 +92,6 @@ bool Foam::ionicModel::utilitiesMode() const {
   return dict_.found("utilities") && readBool(dict_.lookup("utilities"));
 }
 
-bool Foam::ionicModel::startupLogEnabled() const {
-  return dict_.lookupOrDefault<Switch>("startupLog", true);
-}
-
 Foam::label
 Foam::ionicModel::sampleIntegrationPoint(const label nPoints) const {
   if (nPoints <= 0) {
@@ -105,17 +101,6 @@ Foam::ionicModel::sampleIntegrationPoint(const label nPoints) const {
   const label requested = dict_.lookupOrDefault<label>("initSampleCell", 0);
 
   return max(label(0), min(requested, nPoints - 1));
-}
-
-void Foam::ionicModel::logExportedFieldSelection() const {
-  if (!startupLogEnabled()) {
-    return;
-  }
-
-  const wordList exportNames = exportedFieldNames();
-  if (!exportNames.empty()) {
-    Info << "Exporting fields: " << exportNames << nl;
-  }
 }
 
 bool Foam::ionicModel::hasSignal(const CouplingSignal s) const {
@@ -184,4 +169,50 @@ Foam::scalar Foam::ionicModel::signal(const label i,
       << abort(FatalError);
 
   return 0.0;
+}
+
+void Foam::ionicModel::exportFields(const wordList &fieldNames,
+                                    PtrList<volScalarField> &outFields) const {
+  if (!hasIOMetadata()) {
+    FatalErrorInFunction
+        << "I/O metadata not available for ionic model " << typeName
+        << ". Override exportFields() or provide io* hooks." << exit(FatalError);
+  }
+
+  const auto *statesPtr = ioStatesPtr();
+  const auto *algebraicPtr = ioAlgebraicPtr();
+  const auto *ratesPtr = ioRatesPtr();
+
+  if (!statesPtr || !algebraicPtr || !ratesPtr) {
+    FatalErrorInFunction
+        << "I/O storage pointers are not available for ionic model " << typeName
+        << ". Override exportFields() or provide io* hooks "
+        << "(including ioRatesPtr)." << exit(FatalError);
+  }
+
+  ionicModelIO::exportStateFields(*statesPtr, *algebraicPtr, *ratesPtr,
+                                  fieldNames, ioStateNames(), ioNumStates(),
+                                  ioAlgebraicNames(), ioNumAlgebraic(),
+                                  exportTransferSelectedPlanCache_, outFields);
+}
+
+void Foam::ionicModel::importFields(const volScalarField &Vm,
+                                    const wordList &fieldNames,
+                                    const PtrList<volScalarField> &inFields) {
+  PtrList<scalarField> *statesPtr =
+      const_cast<PtrList<scalarField> *>(ioStatesPtr());
+
+  if (!statesPtr || statesPtr->empty()) {
+    return;
+  }
+
+  const label nStates = ioNumStates();
+  if (nStates <= 0 || !ioStateNames()) {
+    return;
+  }
+
+  ionicModelIO::importStateFields(*statesPtr, Vm, inFields, fieldNames,
+                                  ioStateNames(), nStates, ioAlgebraicNames(),
+                                  ioNumAlgebraic(),
+                                  importTransferSelectedPlanCache_);
 }

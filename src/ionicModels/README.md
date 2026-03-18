@@ -53,7 +53,6 @@ Optional overrides:
 
 - `supportedTissueTypes()`
 - `supportedDimensions()`
-- `hasManufacturedSolution()`
 - `sweepCurrent(...)`
 - coupling-signal methods (`hasSignal`, `signal`)
 
@@ -74,7 +73,7 @@ signal boilerplate.
 `ionicModel/ionicSelector` centralizes dictionary interpretation:
 
 - Normal models use `tissue` entry.
-- Manufactured models (`hasManufacturedSolution()==true`) use `dimension` entry.
+- Manufactured/verification models can use `dimension` entry via model-side selection.
 
 This keeps selection logic consistent across all ionic models.
 
@@ -87,6 +86,7 @@ Common behaviors:
 
 - Filter exported/debug variable lists.
 - Write full or selected headers.
+- Import solver-owned volumetric fields back into ionic state storage when needed.
 - Export selected variables into `volScalarField` lists.
 - Support relaxed variable name compatibility for Vm/rates through `ionicVariableCompatibility`.
 

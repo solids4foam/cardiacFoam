@@ -26,8 +26,14 @@ monoDomainElectroCoeffs
     ionicModel BuenoOrovio;
     tissue epicardialCells;
 
-    exportedVariables (u v w s Jfi Jion);
-    debugPrintVariables (u v w s Jfi Jion);
+    outputVariables
+    {
+        ionic
+        {
+            export (u v w s Jfi Jion);
+            debug (u v w s Jfi Jion);
+        }
+    }
 
     solutionAlgorithm implicit;
     CFL 0.1;
