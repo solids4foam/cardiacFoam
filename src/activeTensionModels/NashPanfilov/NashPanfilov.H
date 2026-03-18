@@ -66,6 +66,18 @@ protected:
         return &RATES_;
     }
 
+    virtual const scalarField* ioConstantsPtr() const override
+    {
+        return &CONSTANTS_;
+    }
+
+    virtual label ioNumConstants() const override
+    {
+        return NUM_CONSTANTS;
+    }
+
+    virtual const char* const* ioConstantNames() const override;
+
     virtual const char* const* ioStateNames() const override;
 
     virtual label ioNumStates() const override

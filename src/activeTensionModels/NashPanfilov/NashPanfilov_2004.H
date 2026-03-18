@@ -4,6 +4,15 @@ static const char* NashPanfilovSTATES_NAMES[NUM_STATES] = {
     "Ta"
 };
 
+static const char* NashPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_Vp",
+    "AC_Vr",
+    "AC_Vth",
+    "AC_e0",
+    "AC_kTa",
+    "AC_a"
+};
+
 static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_u",
     "AV_e",

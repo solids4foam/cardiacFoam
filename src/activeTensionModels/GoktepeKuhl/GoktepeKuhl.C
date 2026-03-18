@@ -40,6 +40,11 @@ const char* const* Foam::GoktepeKuhl::ioStateNames() const
     return GoktepeKuhlSTATES_NAMES;
 }
 
+const char* const* Foam::GoktepeKuhl::ioConstantNames() const
+{
+    return GoktepeKuhlCONSTANTS_NAMES;
+}
+
 const char* const* Foam::GoktepeKuhl::ioAlgebraicNames() const
 {
     return GoktepeKuhlALGEBRAIC_NAMES;
@@ -122,9 +127,9 @@ void Foam::GoktepeKuhl::solveAtPoint
     ALGEBRAICI[::AV_Vm] = driveVal;
     ALGEBRAICI[::AV_u]  = uSignal;
 
-    const scalar tStart = currentT_ * 1000/12.9;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000/12.9;
-    scalar step         = currentDt_ * 1000/12.9;
+    const scalar tStart = currentT_ * 1000/100;
+    const scalar tEnd   = (currentT_ + currentDt_) * 1000/100;
+    scalar step         = currentDt_ * 1000/100;
 
     odeSolver_->solve(tStart, tEnd, STATESI, step);
 

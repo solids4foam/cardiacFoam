@@ -40,6 +40,11 @@ const char* const* Foam::NashPanfilov::ioStateNames() const
     return NashPanfilovSTATES_NAMES;
 }
 
+const char* const* Foam::NashPanfilov::ioConstantNames() const
+{
+    return NashPanfilovCONSTANTS_NAMES;
+}
+
 const char* const* Foam::NashPanfilov::ioAlgebraicNames() const
 {
     return NashPanfilovALGEBRAIC_NAMES;

@@ -4,6 +4,15 @@ static const char* GoktepeKuhlSTATES_NAMES[NUM_STATES] = {
     "Ta"
 };
 
+static const char* GoktepeKuhlCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_Vr",
+    "AC_eInfty",
+    "AC_e0",
+    "AC_eXi",
+    "AC_Vshift",
+    "AC_kTa"
+};
+
 static const char* GoktepeKuhlALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_e",
     "AV_Vm",
@@ -48,8 +57,8 @@ GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
     
     //Tension Calculation
     ALGEBRAIC[AV_e] =
-        CONSTANTS[AC_e0] + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0]) 
-            * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_Vm] - CONSTANTS[AC_Vshift])));
+        CONSTANTS[AC_e0] + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0])
+            * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_u] - CONSTANTS[AC_Vshift])));
 
     RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * ALGEBRAIC[AV_u] - STATES[Ta]);
     
