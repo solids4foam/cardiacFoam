@@ -154,7 +154,7 @@ Units are **ms** for time and **mm** for space.
 
 ## Setup Folder Dependencies
 
-The driver run script is centralized at `applications/scripts/driverFoam/openfoam_driver/scripts/run_case.sh`.  
+The driver run script is centralized at `applications/scripts/driverFoam/openfoam_driver/scripts/run_case.sh`.
 Remaining setup-folder dependencies are postprocess/export assets:
 
 ### `singleCell/setupSingleCell`
