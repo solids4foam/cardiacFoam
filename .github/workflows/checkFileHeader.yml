@@ -11,22 +11,51 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v38
-
-      - name: Run the cardiacFoamChangeCopyright.sh script on added files
+      - name: Check headers on tracked C/H files
+        shell: bash
         run: |
-          # Run the script on each added file
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          set -euo pipefail
 
-            extension="${file##*.}"
-            chmod +x ./applications/scripts/cardiacFoamChangeCopyright.sh
+          script=./applications/scripts/cardiacFoamChangeCopyright.sh
+          chmod +x "$script"
 
-            if [ "$extension" == "H" ] || [ "$extension" == "C" ]; then
-              echo "Checking: $file"
-              ./applications/scripts/cardiacFoamChangeCopyright.sh "$file"
+          mapfile -t files_to_check < <(git ls-files '*.C' '*.H')
+
+          if [ "${#files_to_check[@]}" -eq 0 ]; then
+            echo "No tracked C/H files to check."
+            exit 0
+          fi
+
+          missing_header=0
+
+          for file in "${files_to_check[@]}"; do
+            echo "Checking: $file"
+
+            if ! grep -qE 'This file is part of (cardiacFoam|solids4foam)\.' "$file"; then
+              echo "❌ Missing recognized project header: $file"
+              missing_header=1
+              continue
             fi
+
+            # Run the normalizer script as a consistency check. It exits 1 when
+            # it would rewrite the file, so do not fail immediately here.
+            "$script" "$file" || true
           done
+
+          if [ "$missing_header" -ne 0 ]; then
+            echo "One or more tracked files are missing the required project header."
+            exit 1
+          fi
+
+          if ! git diff --exit-code -- "${files_to_check[@]}"; then
+            echo "❌ Header formatting drift detected."
+            echo "Run the fixer locally:"
+            echo "  ./applications/scripts/cardiacFoamChangeCopyright.sh <file>"
+            exit 1
+          fi
+
+          echo "✅ Headers look correct."

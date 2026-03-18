@@ -11,6 +11,8 @@ jobs:
   build-and-test:
     name: Build on ${{ matrix.container-image.name }} (${{ matrix.mode }})
     runs-on: ubuntu-22.04
+    env:
+      HOME: /root
 
     strategy:
       fail-fast: false
@@ -52,10 +54,6 @@ jobs:
       - name: Build cardiacFoam
         shell: bash -l {0}
         run: |
-          # Ensure the correct HOME is used so solids4foam libs are visible
-          echo "Fixing HOME"
-          export HOME=/root
-
           echo "Sourcing OpenFOAM environment"
           source ${{ matrix.container-image.source }}
 
@@ -75,7 +73,6 @@ jobs:
         if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2312' && matrix.mode == 'lightweight'
         shell: bash -l {0}
         run: |
-          export HOME=/root
           source ${{ matrix.container-image.source }}
 
           unset SOLIDS4FOAM_INST_DIR
