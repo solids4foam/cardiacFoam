@@ -51,6 +51,7 @@ applications/utilities/checkMeshGeometry/
 ```
 
 `Make/files`:
+
 ```
 checkMeshGeometry.C
 EXE = $(FOAM_USER_APPBIN)/checkMeshGeometry

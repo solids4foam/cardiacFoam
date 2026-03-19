@@ -13,6 +13,7 @@
 ### Task 1: Create Make/files
 
 **Files:**
+
 - Create: `applications/utilities/checkMeshGeometry/Make/files`
 
 **Step 1: Create the file**
@@ -28,6 +29,7 @@ EXE = $(FOAM_USER_APPBIN)/checkMeshGeometry
 ```bash
 cat applications/utilities/checkMeshGeometry/Make/files
 ```
+
 Expected: shows the two lines above.
 
 ---
@@ -35,6 +37,7 @@ Expected: shows the two lines above.
 ### Task 2: Create Make/options
 
 **Files:**
+
 - Create: `applications/utilities/checkMeshGeometry/Make/options`
 
 **Step 1: Create the file**
@@ -62,6 +65,7 @@ cat applications/utilities/checkMeshGeometry/Make/options
 ### Task 3: Implement checkMeshGeometry.C
 
 **Files:**
+
 - Create: `applications/utilities/checkMeshGeometry/checkMeshGeometry.C`
 
 **Step 1: Write the implementation**
@@ -244,6 +248,7 @@ checkMeshGeometry
 ```
 
 Expected output (no scaling):
+
 ```
 ========== checkMeshGeometry ==========
 
@@ -275,6 +280,7 @@ checkMeshGeometry
 ```
 
 Expected output (warns + scales):
+
 ```
 ========== checkMeshGeometry ==========
 
@@ -317,6 +323,7 @@ Restore the correct points for the tutorial case.
 `applications/Allwmake` already uses `wmake all utilities` which picks up all subdirectories automatically — no change needed.
 
 Verify:
+
 ```bash
 cd applications
 ./Allwmake 2>&1 | grep checkMeshGeometry

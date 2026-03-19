@@ -45,6 +45,7 @@ The restore happens at the shell level before `runApplication`. The solver sees 
 ## Updating references
 
 When reference values need to be recaptured (e.g., after a model change):
+
 1. Update `constant/electroProperties` to the new canonical config
 2. Run the solver and capture new output values
 3. Update `system/singleCell.reference` or `system/smokeCheck.reference` with new values
