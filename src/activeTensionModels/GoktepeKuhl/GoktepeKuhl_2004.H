@@ -44,7 +44,7 @@ GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES)
     CONSTANTS[AC_Vshift] = 0.0;
 
     CONSTANTS[AC_kTa] = 47.9;      // Kpa mV−1
-      
+
     /* initial conditions */
     STATES[Ta] = 0.0;
 }
@@ -54,14 +54,14 @@ void
 GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
     /* membrane_potential */
-    
+
     //Tension Calculation
     ALGEBRAIC[AV_e] =
         CONSTANTS[AC_e0] + (CONSTANTS[AC_eInfty] - CONSTANTS[AC_e0])
             * exp(-exp(-CONSTANTS[AC_eXi] * (ALGEBRAIC[AV_u] - CONSTANTS[AC_Vshift])));
 
     RATES[Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * ALGEBRAIC[AV_u] - STATES[Ta]);
-    
-    
- 
+
+
+
 }

@@ -691,9 +691,9 @@ namespace Foam {
                 nAlg,
                 selectedPlanCache
             );
-    
+
         os << V;
-    
+
         forAll(plan.source, i)
         {
             if (plan.source[i] == ionicModelIO::COL_VM || plan.source[i] == ionicModelIO::COL_STATE)
@@ -736,4 +736,4 @@ namespace Foam {
 
 
 
-    
+

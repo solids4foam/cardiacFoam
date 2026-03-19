@@ -23,7 +23,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
-#include "stimulusIO.H" 
+#include "stimulusIO.H"
 #include "volFields.H"
 #include "HashTable.H"
 
@@ -74,7 +74,7 @@ Foam::Courtemanche::Courtemanche
         {
             setStimulusProtocolFromDict(dict);
         }
-        
+
     }
 }
 

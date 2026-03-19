@@ -36,7 +36,7 @@ autoPtr<OFstream> ecgModelIO::openTimeSeries
 {
     mkDir(outDir);
     autoPtr<OFstream> osPtr(new OFstream(outDir/filename));
-    
+
     OFstream& os = osPtr.ref();
     os.setf(std::ios::scientific);
     os.precision(8);

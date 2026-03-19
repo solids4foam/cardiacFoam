@@ -5,7 +5,7 @@ enum STATES_INDEX {
     NUM_STATES
 };
 
-enum ALGEBRAIC_INDEX { 
+enum ALGEBRAIC_INDEX {
     AV_e,
     AV_Vm,
     AV_u,

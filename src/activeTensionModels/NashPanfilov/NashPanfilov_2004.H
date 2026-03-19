@@ -16,7 +16,7 @@ static const char* NashPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
 static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_u",
     "AV_e",
-    
+
 };
 
 
