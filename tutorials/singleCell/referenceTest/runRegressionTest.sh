@@ -6,14 +6,35 @@ cd "${0%/*}/.." || exit 1
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-restoreReferenceConfigs()
+prepareRegressionCase()
 {
-    for dir in referenceTest/constant referenceTest/system
+    tutorialRoot="$1"
+    caseDir="$2"
+
+    rm -rf "${caseDir}"
+    mkdir -p "${caseDir}"
+
+    for item in constant system
     do
-        [ -d "${dir}" ] || continue
-        find "${dir}" -type f | while IFS= read -r refFile; do
-            target="${refFile#referenceTest/}"
-            echo "Restoring ${target} from ${refFile}"
+        if [ -d "${tutorialRoot}/${item}" ]; then
+            cp -r "${tutorialRoot}/${item}" "${caseDir}/"
+        fi
+    done
+
+    for item in Allrun Allclean README.md plotSweep plotVoltage
+    do
+        if [ -e "${tutorialRoot}/${item}" ]; then
+            cp -r "${tutorialRoot}/${item}" "${caseDir}/"
+        fi
+    done
+
+    for dir in constant system
+    do
+        [ -d "${tutorialRoot}/referenceTest/${dir}" ] || continue
+        find "${tutorialRoot}/referenceTest/${dir}" -type f | while IFS= read -r refFile; do
+            target="${caseDir}/${refFile#${tutorialRoot}/referenceTest/}"
+            mkdir -p "$(dirname "${target}")"
+            echo "Restoring ${target#${caseDir}/} from ${refFile}"
             cp "${refFile}" "${target}"
         done
     done
@@ -21,8 +42,9 @@ restoreReferenceConfigs()
 
 checkSingleCellResults()
 {
-    caseDir="$(pwd)"
-    refFile="${caseDir}/referenceTest/singleCell.reference"
+    caseDir="$1"
+    tutorialRoot="$2"
+    refFile="${tutorialRoot}/referenceTest/singleCell.reference"
     outDir="${caseDir}/postProcessing"
 
     if [ ! -f "${refFile}" ]; then
@@ -104,9 +126,17 @@ checkSingleCellResults()
     return 0
 }
 
-restoreReferenceConfigs
+tutorialRoot="$(pwd)"
+regressionCaseDir="${tutorialRoot}/regressionTests/case"
 
-runApplication cardiacFoam
+prepareRegressionCase "${tutorialRoot}" "${regressionCaseDir}"
+
+(
+    cd "${regressionCaseDir}" || exit 1
+    runApplication cardiacFoam
+) || exit 1
 
 # Compare single-cell trace against regression checkpoints
-checkSingleCellResults || exit 1
+checkSingleCellResults "${regressionCaseDir}" "${tutorialRoot}" || exit 1
+
+rm -rf "${regressionCaseDir}"
