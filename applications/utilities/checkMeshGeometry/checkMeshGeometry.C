@@ -28,7 +28,6 @@ Usage
 
 Author
     cardiacFoam developers.
-
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
