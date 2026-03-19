@@ -70,7 +70,7 @@ jobs:
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
       - name: Tutorial smoke regression
-        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2312' && matrix.mode == 'lightweight'
+        if: matrix.mode == 'lightweight'
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
