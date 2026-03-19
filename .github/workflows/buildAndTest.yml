@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       HOME: /root
+      OMPI_ALLOW_RUN_AS_ROOT: "1"
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: "1"
 
     strategy:
       fail-fast: false
