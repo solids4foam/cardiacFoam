@@ -37,7 +37,7 @@ enum STATES_INDEX{
     v, // Fast sodium activation variable
     w, // Slow sodium activation variable
     s, // Slow inactivation variable
-    NUM_STATES 
+    NUM_STATES
 };
 enum ALGEBRAIC_INDEX{
     Jfi, // Fast sodium current
@@ -45,7 +45,7 @@ enum ALGEBRAIC_INDEX{
     Jsi, // Slow inactivation current
     Jion, // total current
     Istim, // Stimulus current
-    
+
     tauSo,      // 5  τ_so
     tauO,       // 6  τ_o
     tauVMinus,  // 7  τ_v⁻
@@ -53,7 +53,7 @@ enum ALGEBRAIC_INDEX{
     tauS,       // 9  τ_s
     vInfty,     // 10 v∞
     wInfty,     // 11 w∞
-    NUM_ALGEBRAIC 
+    NUM_ALGEBRAIC
 };
 
 void

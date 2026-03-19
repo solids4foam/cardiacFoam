@@ -208,7 +208,7 @@ TNNPDependencyMap()
                   "tau_r","tau_s"
               }) },
 
-            
+
             // Rapid delayed rectifier potassium current
             { "IKr",
               Foam::wordList
@@ -233,11 +233,11 @@ TNNPDependencyMap()
             { "IK1",Foam::wordList({"i_K1","xK1_inf"}) },
             { "I_K1",Foam::wordList({"i_K1","xK1_inf"}) },
 
-            // Sodium–potassium pump  
+            // Sodium–potassium pump
             { "INaK",Foam::wordList({"i_NaK"}) },
             { "I_NaK",Foam::wordList({"i_NaK"}) },
 
-            
+
             // Sodium–calcium exchanger
             { "INaCa",Foam::wordList({"i_NaCa"}) },
             { "I_NaCa",Foam::wordList({"i_NaCa"}) },
@@ -295,7 +295,7 @@ STATES[V] = -86.2;
 CONSTANTS[R] = 8.314;
 CONSTANTS[T] = 310;
 CONSTANTS[F] = 96.485;
-CONSTANTS[Cm] = 185; 
+CONSTANTS[Cm] = 185;
 CONSTANTS[V_c] = 16404;
 
 
@@ -367,7 +367,7 @@ void
 TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
-//INa 
+//INa
 ALGEBRAIC[m_inf] = 1.00000/pow(1.00000+exp((- 56.8600 - STATES[V])/9.03000), 2.00000);
 ALGEBRAIC[alpha_m] = 1.00000/(1.00000+exp((- 60.0000 - STATES[V])/5.00000));
 ALGEBRAIC[beta_m] = 0.100000/(1.00000+exp((STATES[V]+35.0000)/5.00000))+0.100000/(1.00000+exp((STATES[V] - 50.0000)/200.000));
@@ -404,8 +404,8 @@ RATES[fCa] = (ALGEBRAIC[fCa_inf]>STATES[fCa]&&STATES[V]>- 60.0000 ? 0.00000 : AL
 
 //Ito
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000)) 
+ALGEBRAIC[s_inf] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
 ALGEBRAIC[tau_s] = (tissueFlag == 1)
      ? 85.0000*exp(- pow(STATES[V]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[V] - 20.0000)/5.00000))+3.00000
@@ -501,8 +501,8 @@ ALGEBRAIC[f_inf] = 1.00000/(1.00000+exp((STATES[V]+20.0000)/7.00000));
 ALGEBRAIC[tau_f] =  1125.00*exp(- pow(STATES[V]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[V])/10.0000));
 
 //Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1) 
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000)) 
+ALGEBRAIC[s_inf] = (tissueFlag == 1)
+    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
     : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
 
 ALGEBRAIC[tau_s] = (tissueFlag == 1)

@@ -45,7 +45,7 @@ enum STATES_INDEX {
     buffCa_TnCL,
     buffNa_NaB_jn,
     buffNa_NaB_sl,
-    
+
     NUM_STATES
 };
 

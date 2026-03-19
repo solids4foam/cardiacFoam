@@ -145,7 +145,7 @@ enum ALGEBRAIC_INDEX
     // --- Totals / stimulus ---
     Iion_cm,
     Istim,
-    
+
     NUM_ALGEBRAIC
 };
 

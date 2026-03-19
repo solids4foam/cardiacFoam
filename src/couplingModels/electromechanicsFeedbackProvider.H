@@ -26,7 +26,7 @@ License
 namespace Foam
 {
 
-enum class CouplingSignal // this can be expanded for the necessary eletromechanic feedback. For mechanobiology, see later. 
+enum class CouplingSignal // this can be expanded for the necessary eletromechanic feedback. For mechanobiology, see later.
 {
     Vm,        // membrane potential mV
     Cai,       // intracellular Ca  mM

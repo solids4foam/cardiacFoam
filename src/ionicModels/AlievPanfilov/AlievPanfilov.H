@@ -192,7 +192,7 @@ protected:
                 scalarField& dydt
             ) const override;
 
-        
+
             virtual void sweepCurrent
             (
                 const word& currentName,
