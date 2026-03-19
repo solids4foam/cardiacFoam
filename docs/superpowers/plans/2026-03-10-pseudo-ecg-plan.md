@@ -17,6 +17,7 @@
 ### Task 1: Update the header file
 
 **Files:**
+
 - Modify: `src/electroModels/greensFunctionECGElectro/greensFunctionECGElectro.H`
 
 - [ ] **Step 1: Read the current header**
@@ -26,11 +27,14 @@
 - [ ] **Step 2: Add `outputPseudoPtr_` after `outputPtr_`**
 
   In the private data section, after:
+
   ```cpp
   //- Output stream for ECG.dat (null if electrodes not configured)
   autoPtr<OFstream> outputPtr_;
   ```
+
   add:
+
   ```cpp
   //- Output stream for pseudoECG.dat (null if electrodes not configured)
   autoPtr<OFstream> outputPseudoPtr_;
@@ -39,11 +43,14 @@
 - [ ] **Step 3: Update `writeTorsoVtk` declaration**
 
   Change:
+
   ```cpp
   //- Write torso surface potential as VTK ASCII POLYDATA
   void writeTorsoVtk(const scalarList& phiTorso) const;
   ```
+
   to:
+
   ```cpp
   //- Write torso surface potentials as VTK ASCII POLYDATA
   void writeTorsoVtk
@@ -66,6 +73,7 @@
   cd /Users/simaocastro/cardiacFoamv2/src/electroModels
   wmake 2>&1 | head -30
   ```
+
   Expected: compile error referencing `writeTorsoVtk` mismatch (`.C` still has old signature) — confirms the header change is picked up. If the build unexpectedly passes, verify that `greensFunctionECGElectro.C` still has the old `writeTorsoVtk(phiTorso)` signature and was not already modified.
 
 ---
@@ -73,15 +81,19 @@
 ### Task 2: Update the constructor in the `.C` file
 
 **Files:**
+
 - Modify: `src/electroModels/greensFunctionECGElectro/greensFunctionECGElectro.C`
 
 - [ ] **Step 1: Add `outputPseudoPtr_()` to the initialiser list**
 
   In the constructor initialiser list, after:
+
   ```cpp
   outputPtr_(),
   ```
+
   add:
+
   ```cpp
   outputPseudoPtr_(),
   ```
@@ -89,11 +101,14 @@
 - [ ] **Step 2: Open `pseudoECG.dat` and write its header**
 
   Inside the constructor body, in the `if (hasElectrodes)` block, after:
+
   ```cpp
   outputPtr_.reset(new OFstream(outDir/"ECG.dat"));
   writeHeader();
   ```
+
   add:
+
   ```cpp
   outputPseudoPtr_.reset(new OFstream(outDir/"pseudoECG.dat"));
   writePseudoHeader();
@@ -102,6 +117,7 @@
 - [ ] **Step 3: Implement `writePseudoHeader()` in the `.C` file**
 
   Add immediately after the `writeHeader()` implementation (around line 137):
+
   ```cpp
   void greensFunctionECGElectro::writePseudoHeader()
   {
@@ -123,15 +139,19 @@
 ### Task 3: Update `writeTorsoVtk()` to write two scalar fields
 
 **Files:**
+
 - Modify: `src/electroModels/greensFunctionECGElectro/greensFunctionECGElectro.C`
 
 - [ ] **Step 1: Update the function signature**
 
   Change:
+
   ```cpp
   void greensFunctionECGElectro::writeTorsoVtk(const scalarList& phiTorso) const
   ```
+
   to:
+
   ```cpp
   void greensFunctionECGElectro::writeTorsoVtk
   (
@@ -143,6 +163,7 @@
 - [ ] **Step 2: Replace the single CELL_DATA block with two scalar sections**
 
   Replace the existing `CELL_DATA` block:
+
   ```cpp
   os << "CELL_DATA " << nTris << "\n";
   os << "SCALARS phiT float 1\n";
@@ -152,7 +173,9 @@
       os << phiTorso[fI] << "\n";
   }
   ```
+
   with:
+
   ```cpp
   os << "CELL_DATA " << nTris << "\n";
 
@@ -177,6 +200,7 @@
   cd /Users/simaocastro/cardiacFoamv2/src/electroModels
   wmake 2>&1 | tail -20
   ```
+
   Expected: compile error in `evolve()` — old call `writeTorsoVtk(phiTorso)` now has wrong arity. This confirms the signature change propagated correctly. The `.C` file will be fixed in Chunk 2. If the build unexpectedly passes, check whether `evolve()` still contains `writeTorsoVtk(phiTorso)` — if not, someone already patched it.
 
 - [ ] **Step 4: Commit header + constructor + writeTorsoVtk changes (Tasks 1, 2, and 3)**
@@ -194,15 +218,19 @@
 ### Task 4: Rewrite `evolve()` with the combined loop
 
 **Files:**
+
 - Modify: `src/electroModels/greensFunctionECGElectro/greensFunctionECGElectro.C`
 
 - [ ] **Step 1: Compute `gradVm` before the cell loop**
 
   In `evolve()`, after:
+
   ```cpp
   const vectorField& Ctrs = mesh().C().primitiveField();
   ```
+
   add:
+
   ```cpp
   tmp<volVectorField> tgradVm = fvc::grad(Vm());
   const vectorField& gradVm   = tgradVm().primitiveField();
@@ -211,10 +239,13 @@
 - [ ] **Step 2: Replace the single accumulator with two**
 
   Replace:
+
   ```cpp
   List<scalar> localSums(nAll, scalar(0));
   ```
+
   with:
+
   ```cpp
   List<scalar> localSumsGreens(nAll, scalar(0));
   List<scalar> localSumsPseudo(nAll, scalar(0));
@@ -223,6 +254,7 @@
 - [ ] **Step 3: Replace the inner loop body**
 
   Replace:
+
   ```cpp
   forAll(Ctrs, cI)
   {
@@ -237,7 +269,9 @@
       }
   }
   ```
+
   with:
+
   ```cpp
   forAll(Ctrs, cI)
   {
@@ -260,6 +294,7 @@
 - [ ] **Step 4: Update the reduce + coefficient loop**
 
   Replace:
+
   ```cpp
   for (label pI = 0; pI < nAll; pI++)
   {
@@ -267,7 +302,9 @@
       localSums[pI] *= invCoeff;
   }
   ```
+
   with:
+
   ```cpp
   for (label pI = 0; pI < nAll; pI++)
   {
@@ -276,11 +313,13 @@
       localSumsGreens[pI] *= invCoeff;
   }
   ```
+
   Note: `localSumsPseudo` is NOT multiplied by `invCoeff` — pseudo-ECG has no `sigmaT` factor.
 
 - [ ] **Step 5: Update the electrode output block**
 
   Replace:
+
   ```cpp
   if (nE > 0)
   {
@@ -293,7 +332,9 @@
       os << nl;
   }
   ```
+
   with:
+
   ```cpp
   if (nE > 0)
   {
@@ -324,6 +365,7 @@
 - [ ] **Step 6: Update the torso surface output block**
 
   Replace:
+
   ```cpp
   if (nF > 0 && runTime().outputTime())
   {
@@ -335,7 +377,9 @@
       writeTorsoVtk(phiTorso);
   }
   ```
+
   with:
+
   ```cpp
   if (nF > 0 && runTime().outputTime())
   {
@@ -362,6 +406,7 @@
   cd /Users/simaocastro/cardiacFoamv2/src/electroModels
   wmake 2>&1 | tail -20
   ```
+
   Expected: clean build, `libelectroModels.so` updated, no warnings about `localSums`.
 
 - [ ] **Step 2: Run the ECG tutorial smoke check**
@@ -370,6 +415,7 @@
   cd /Users/simaocastro/cardiacFoamv2/tutorials/ECG
   ./Allrun 2>&1 | tail -30
   ```
+
   Expected: solver runs to completion without errors.
 
 - [ ] **Step 3: Verify `pseudoECG.dat` is created**
@@ -377,6 +423,7 @@
   ```bash
   head -5 /Users/simaocastro/cardiacFoamv2/tutorials/ECG/postProcessing/pseudoECG.dat
   ```
+
   Expected: header line starting with `# time` followed by electrode names, then numeric rows.
 
 - [ ] **Step 4: Verify `ECG.dat` still has the same format**
@@ -384,14 +431,17 @@
   ```bash
   head -5 /Users/simaocastro/cardiacFoamv2/tutorials/ECG/postProcessing/ECG.dat
   ```
+
   Expected: same format as before — header + numeric rows. Confirm it was not broken.
 
 - [ ] **Step 5: Verify VTK contains both scalar fields (if torso surface configured)**
 
   If the ECG tutorial has a `torsoSurface` entry:
+
   ```bash
   grep -c "SCALARS" /Users/simaocastro/cardiacFoamv2/tutorials/ECG/postProcessing/ECG/phiT_*.vtk | head -3
   ```
+
   Expected: each VTK file reports `2` (one `phiGreens`, one `phiPseudo`).
 
 - [ ] **Step 6: Commit**
