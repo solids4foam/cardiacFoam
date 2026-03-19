@@ -27,7 +27,6 @@ SourceFiles
 Authors
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicModel_H
