@@ -305,7 +305,7 @@ def plot_trace(time, vm, beats, savepath=None):
             color="navy",
             lw=1,
             alpha=0.6
-            
+
             )
         if np.isfinite(b.get("t_repol90", np.nan)):
             plt.axvline(
@@ -392,8 +392,8 @@ def postprocess_one_ionic_model(
     tissues: list[str],
     show_plot: bool = False
 ):
-    
-    
+
+
     output_dir = base_dir / output_folder
     if not output_dir.exists():
         print(f"❌ Output folder not found: {output_dir}")
@@ -402,7 +402,7 @@ def postprocess_one_ionic_model(
 
     plt.figure()
     data_rows = []
-    early_files = set()  
+    early_files = set()
 
     for tissue in tissues:
         pattern = f"{ionic_model}_{tissue}_*.txt"
@@ -419,7 +419,7 @@ def postprocess_one_ionic_model(
 
         for f in files:
             time, vm = load_trace(f)
-            
+
             beats = detect_beats(time, vm)
             # Attach filename to beats once
             for b in beats:
@@ -430,8 +430,8 @@ def postprocess_one_ionic_model(
                 early_files.add(b["file"])
 
             if show_plot:
-                plot_trace(time, vm, beats) 
-            
+                plot_trace(time, vm, beats)
+
             apd, di = compute_apd_di(beats)
             if apd is None or di is None:
                 continue
@@ -449,7 +449,7 @@ def postprocess_one_ionic_model(
                 "DI_ms": di,
                 "APD90_ms": apd,
                             })
-        
+
         plt.plot(di_ms, apd_ms, marker="o", label=tissue)
 
     plt.xlabel("DI (ms)")
@@ -461,7 +461,7 @@ def postprocess_one_ionic_model(
     fig_path = output_dir / f"{ionic_model}_restitution.png"
     plt.savefig(fig_path, dpi=300)
     if show_plot:
-        plt.show() 
+        plt.show()
     plt.close()
     csv_path = output_dir / f"{ionic_model}_restitution.csv"
 
@@ -493,9 +493,9 @@ def restitution_curves(
     output_folder: str,
     ionic_model: str,
     tissue_types: list[str],
-    show_plots: bool = False, 
+    show_plots: bool = False,
 ):
-        
+
         postprocess_one_ionic_model(
             base_dir=base_dir,
             output_folder=output_folder,

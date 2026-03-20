@@ -27,7 +27,6 @@ SourceFiles
 Authors
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicModel_H
@@ -229,7 +228,7 @@ public:
     /// --- CouplingSignalProvider interface ---
     bool hasSignal(CouplingSignal s) const override;
     scalar signal(label i, CouplingSignal s) const override;
-    
+
 
 //-----------------------Solver Functions ---------------------//
         //- ODE solver
@@ -722,7 +721,7 @@ public:
         label sampleIntegrationPoint(const label nPoints) const;
 
 
-    };  
+    };
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam

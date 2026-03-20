@@ -39,6 +39,7 @@
 ### Task 1: Add `initialiseConductivityTensor` and `readVm` to `monoDomainElectro`
 
 **Files:**
+
 - Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.H`
 - Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.C`
 
@@ -167,6 +168,7 @@
 ### Task 2: Create `ecgModel`
 
 **Files:**
+
 - Create: `src/electroModels/ecgModel/ecgModel.H`
 - Create: `src/electroModels/ecgModel/ecgModel.C`
 - Modify: `src/electroModels/Make/files`
@@ -353,6 +355,7 @@
 ### Task 3: Create `ecgElectro`
 
 **Files:**
+
 - Create: `src/electroModels/ecgElectro/ecgElectro.H`
 - Create: `src/electroModels/ecgElectro/ecgElectro.C`
 - Modify: `src/electroModels/Make/files`
@@ -486,6 +489,7 @@
 ### Task 4: Create `BEMECGElectro`
 
 **Files:**
+
 - Create: `src/electroModels/ecgModels/BEMECGElectro/BEMECGElectro.H`
 - Create: `src/electroModels/ecgModels/BEMECGElectro/BEMECGElectro.C`
 - Modify: `src/electroModels/Make/files`
@@ -579,6 +583,7 @@
 ### Task 5: Create `pseudoECGElectro`
 
 **Files:**
+
 - Create: `src/electroModels/ecgModels/pseudoECGElectro/pseudoECGElectro.H`
 - Create: `src/electroModels/ecgModels/pseudoECGElectro/pseudoECGElectro.C`
 - Modify: `src/electroModels/Make/files`
@@ -691,6 +696,7 @@
 ### Task 6: Update tutorial and verify end-to-end
 
 **Files:**
+
 - Modify: `tutorials/ECG/constant/electroProperties`
 
 - [ ] **Step 1: Update `electroProperties`**
@@ -773,6 +779,7 @@
 - [ ] **Step 1: Remove from `Make/files`**
 
   Delete the line:
+
   ```
   greensFunctionECGElectro/greensFunctionECGElectro.C
   ```

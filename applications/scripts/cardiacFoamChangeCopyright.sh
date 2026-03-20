@@ -47,24 +47,56 @@ fi
 orig_file=$(< "$1")
 
 perl -0777 -p -i -e '
-s!(([#% ]*) *)(  =========.*?\n)\n.*?\n[#%]*\n.*?\n[#%]*\n.*?\n[#%]*\n!$1License
-$1    This file is part of cardiacFoam.
-$2
-$1    cardiacFoam is free software: you can redistribute it and/or modify it
-$1    under the terms of the GNU General Public License as published by the
-$1    Free Software Foundation, either version 3 of the License, or (at your
-$1    option) any later version.
-$2
-$1    cardiacFoam is distributed in the hope that it will be useful, but
-$1    WITHOUT ANY WARRANTY; without even the implied warranty of
-$1    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-$1    General Public License for more details.
-$2
-$1    You should have received a copy of the GNU General Public License
-$1    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
-$2
-!s;
 s/[ \t]+$//mg;
+
+my $license = <<'\''LICENSE'\'';
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+LICENSE
+
+my $banner_start = "/*---------------------------------------------------------------------------*\\\n";
+my $banner_end = "\\*---------------------------------------------------------------------------*/\n";
+my $full_header = $banner_start . $license . "\n" . $banner_end . "\n";
+
+if (
+    s{\A(/\*[-]+\*\\\n)(.*?)(\n\\\*[-]+\*/\n?)}{
+        my ($start, $body, $end) = ($1, $2, $3);
+
+        $body =~ s/\A\n+//;
+        $body =~ s/\n+\z//;
+
+        if ($body =~ /(?:\A|\n)License\n/s) {
+            $body =~ s{(?:\A|\n)License\n.*?(?=(?:\n[A-Z][A-Za-z0-9]*\n)|\z)}{
+                my $prefix = substr($&, 0, 1) eq "\n" ? "\n" : "";
+                $prefix . $license
+            }se;
+        } elsif (length $body) {
+            $body = $license . "\n\n" . $body;
+        } else {
+            $body = $license;
+        }
+
+        $body =~ s/\n{3,}/\n\n/g;
+        $start . $body . $end
+    }se
+) {
+    # Existing header updated in place.
+} else {
+    $_ = $full_header . $_;
+}
 ' $1
 
 # Read modified file

@@ -1,8 +1,10 @@
 #!/bin/bash
 
-rm -rf log.* 
+rm -rf log.*
 
 
 for d in [0-9]*; do
   [ -d "$d" ] && [ "$d" != "0" ] && rm -rf "$d"
 done
+
+rm -rf postProcessing regressionTests

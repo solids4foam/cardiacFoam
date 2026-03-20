@@ -28,7 +28,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef AlievPanfilov_H
@@ -192,7 +191,7 @@ protected:
                 scalarField& dydt
             ) const override;
 
-        
+
             virtual void sweepCurrent
             (
                 const word& currentName,

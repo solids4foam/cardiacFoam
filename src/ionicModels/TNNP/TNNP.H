@@ -28,7 +28,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef TNNP_H

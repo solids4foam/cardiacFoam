@@ -110,7 +110,7 @@ def run_s1s2_simulation(
 
     electro_file = base_dir / "constant" / ELECTRO_PROPERTIES_FILE_NAME
 
-   
+
     total = len(s2_intervals)
     for i, s2_interval in enumerate(s2_intervals, start=1):
         print("\n==========================================")
