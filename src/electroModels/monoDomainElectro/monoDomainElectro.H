@@ -44,6 +44,7 @@ SourceFiles
 
 #include "electroModel.H"
 #include "ionicModel.H"
+#include "ecgModel.H"
 #include "electroModelsPrePostProcessor.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -117,6 +118,9 @@ class monoDomainElectro : public electroModel {
   //- Optional ionic-model pre/post processor selected from the ionic model type
   autoPtr<electroModelsPrePostProcessor> prePostProcessor_;
 
+  //- Optional ECG model selected from the nested ECG configuration
+  autoPtr<ecgModel> ecgModelPtr_;
+
   //- Processor-declared fields used for pre-processing data exchange
   wordList preProcessFieldNames_;
   PtrList<volScalarField> preProcessFields_;
@@ -164,13 +168,11 @@ protected:
   const volTensorField &conductivity() const { return conductivity_; }
 
   //- Re-read Vm from the current time directory.
-  //  Used by ecgElectro in postProcess mode to skip the monodomain solve.
   void readVm();
 
 public:
   //- Initialise a conductivity tensor field: attempt READ_IF_PRESENT from
   //  disk; fall back to a uniform tensor read from dict (symmTensor entry).
-  //  Used by monoDomainElectro (conductivity_) and ecgModel subclasses (Gi_).
   static tmp<volTensorField>
   initialiseConductivityTensor(const word &fieldName, const dictionary &dict,
                                const fvMesh &mesh);
@@ -198,6 +200,9 @@ public:
   //- Evolve the electro model
   virtual bool evolve();
 
+  //- Read electroProperties dictionary
+  virtual bool read();
+
   //- Return transmembrane voltage (needed by composite models)
   virtual const volScalarField &Vm() const { return Vm_; }
 
@@ -206,8 +211,8 @@ public:
     return ionicModelPtr_.operator->();
   }
 
-  //- Return conductivity tensor field for downstream coupled models (e.g. ECG)
-  virtual const volTensorField *conductivityPtr() const { return &conductivity_; }
+  //- Finalize electro and optional ECG reporting
+  virtual void end();
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -13,12 +13,11 @@ from pathlib import Path
 from ...core.defaults import niederer_2012 as defaults
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
+    apply_electro_property_overrides,
+    apply_physics_property_overrides,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
-    set_ionic_model,
-    set_solution_algorithm,
-    set_tissue,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
 
@@ -165,30 +164,35 @@ def _apply_case(
     control_dict_relpath: Path = defaults.CONTROL_DICT_RELPATH,
     block_mesh_dict_relpath: Path = defaults.BLOCK_MESH_DICT_RELPATH,
     electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: Path = Path("constant/physicsProperties"),
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
     end_time_by_dx: Mapping[float, float] = defaults.END_TIME_BY_DX,
 ) -> None:
     control_dict = case_root / control_dict_relpath
     block_mesh_dict = case_root / block_mesh_dict_relpath
     electro_properties = case_root / electro_properties_relpath
+    physics_properties = case_root / physics_properties_relpath
 
     dx_mm = float(case.params["dx_mm"])
     dt_ms = float(case.params["dt_ms"])
     tissue = str(case.params["tissue"])
     ionic_model = str(case.params["ionicModel"])
     solver = str(case.params["solver"])
+    case_overrides = {
+        f"{electro_properties_scope}.tissue": tissue,
+        f"{electro_properties_scope}.ionicModel": ionic_model,
+        f"{electro_properties_scope}.solutionAlgorithm": solver,
+    }
 
     _replace_blockmesh_resolution(block_mesh_dict, dx_mm, slab_size_mm=slab_size_mm)
     # Input dt is provided in milliseconds in the JSON/spec settings.
     set_delta_t(control_dict, dt_ms * 1.0e-3)
     _update_end_time(control_dict, dx_mm, end_time_by_dx=end_time_by_dx)
-    set_tissue(electro_properties, tissue, scope=electro_properties_scope)
-    set_ionic_model(electro_properties, ionic_model, scope=electro_properties_scope)
-    set_solution_algorithm(
-        electro_properties,
-        solver,
-        scope=electro_properties_scope,
-    )
+    apply_electro_property_overrides(electro_properties, case_overrides)
+    apply_electro_property_overrides(electro_properties, electro_property_overrides)
+    apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
 def _float_to_case_tag(value: float) -> str:
@@ -481,6 +485,9 @@ def make_spec(
     control_dict_relpath: str | Path = defaults.CONTROL_DICT_RELPATH,
     block_mesh_dict_relpath: str | Path = defaults.BLOCK_MESH_DICT_RELPATH,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: str | Path = "constant/physicsProperties",
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     points_function_object_name: str = DEFAULT_POINTS_FUNCTION_OBJECT,
     line_function_object_name: str = DEFAULT_LINE_FUNCTION_OBJECT,
@@ -531,6 +538,7 @@ def make_spec(
     control_dict_path = Path(control_dict_relpath)
     block_mesh_dict_path = Path(block_mesh_dict_relpath)
     electro_properties_path = Path(electro_properties_relpath)
+    physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     line_postprocess_path = Path(line_postprocess_relpath)
     points_postprocess_path = Path(points_postprocess_relpath)
@@ -564,6 +572,9 @@ def make_spec(
             control_dict_relpath=control_dict_path,
             block_mesh_dict_relpath=block_mesh_dict_path,
             electro_properties_relpath=electro_properties_path,
+            physics_properties_relpath=physics_properties_path,
+            electro_property_overrides=electro_property_overrides,
+            physics_property_overrides=physics_property_overrides,
             slab_size_mm=slab_size_mm_list,
             end_time_by_dx=end_time_by_dx_map,
         ),
@@ -607,6 +618,7 @@ def make_spec(
             "control_dict_relpath": str(control_dict_path),
             "block_mesh_dict_relpath": str(block_mesh_dict_path),
             "electro_properties_relpath": str(electro_properties_path),
+            "physics_properties_relpath": str(physics_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "run_script_relpath": str(run_script_path),
             "output_relpath": str(output_relpath),
@@ -625,6 +637,8 @@ def make_spec(
             "line_postprocess_function_name": line_postprocess_function_name,
             "points_postprocess_function_name": points_postprocess_function_name,
             "case_postprocess_cache_dirname": case_postprocess_cache_dirname,
+            "has_electro_property_overrides": bool(electro_property_overrides),
+            "has_physics_property_overrides": bool(physics_property_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

@@ -9,12 +9,11 @@ from pathlib import Path
 from ...core.defaults import single_cell as defaults
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
+    apply_electro_property_overrides,
+    apply_physics_property_overrides,
     collect_outputs_by_pattern,
     resolve_run_script_path,
     resolve_spec_paths,
-    set_ionic_model,
-    set_stimulus_amplitude,
-    set_tissue,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
 
@@ -46,6 +45,9 @@ def _apply_case(
     stimulus_map: Mapping[str, float],
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: Path = Path("constant/physicsProperties"),
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     tissue = case.params["tissue"]
     ionic_model = case.params["ionicModel"]
@@ -54,14 +56,16 @@ def _apply_case(
         raise KeyError(f"Missing stimulus amplitude for ionic model '{ionic_model}'")
 
     electro_properties_file = case_root / electro_properties_relpath
+    physics_properties_file = case_root / physics_properties_relpath
+    case_overrides = {
+        f"{electro_properties_scope}.tissue": tissue,
+        f"{electro_properties_scope}.ionicModel": ionic_model,
+        f"{electro_properties_scope}.singleCellStimulus.stim_amplitude": stimulus_map[ionic_model],
+    }
 
-    set_tissue(electro_properties_file, tissue, scope=electro_properties_scope)
-    set_ionic_model(electro_properties_file, ionic_model, scope=electro_properties_scope)
-    set_stimulus_amplitude(
-        electro_properties_file,
-        stimulus_map[ionic_model],
-        scope=electro_properties_scope,
-    )
+    apply_electro_property_overrides(electro_properties_file, case_overrides)
+    apply_electro_property_overrides(electro_properties_file, electro_property_overrides)
+    apply_physics_property_overrides(physics_properties_file, physics_property_overrides)
 
 
 def _run_case(
@@ -119,6 +123,9 @@ def make_spec(
     stimulus_map: Mapping[str, float] = defaults.STIMULUS_MAP,
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: str | Path = "constant/physicsProperties",
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     output_glob: str = defaults.OUTPUT_GLOB,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
@@ -137,6 +144,7 @@ def make_spec(
             raise KeyError(f"Missing stimulus amplitude for ionic model '{ionic_model}'")
 
     electro_properties_path = Path(electro_properties_relpath)
+    physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
 
@@ -164,6 +172,9 @@ def make_spec(
             stimulus_map=stimulus_map,
             electro_properties_scope=electro_properties_scope,
             electro_properties_relpath=electro_properties_path,
+            physics_properties_relpath=physics_properties_path,
+            electro_property_overrides=electro_property_overrides,
+            physics_property_overrides=physics_property_overrides,
         ),
         run_case=partial(
             _run_case,
@@ -182,11 +193,14 @@ def make_spec(
             "notes": "Single-cell sweep on ionic model and tissue types.",
             "ionic_models": ionic_models_list,
             "electro_properties_relpath": str(electro_properties_path),
+            "physics_properties_relpath": str(physics_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "run_script_relpath": str(run_script_path),
             "output_glob": output_glob,
             "postprocess_script_relpath": str(postprocess_script_path),
             "postprocess_function_name": postprocess_function_name,
+            "has_electro_property_overrides": bool(electro_property_overrides),
+            "has_physics_property_overrides": bool(physics_property_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

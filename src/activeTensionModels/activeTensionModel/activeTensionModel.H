@@ -50,7 +50,7 @@ protected:
 
     //- Drive signal value for the current integration point.
     //  Set by the base calculateTension() loop before each solveAtPoint() call
-    //  so that derivatives() can read it during ODE sub-steps.
+    //  so th at derivatives() can read it during ODE sub-steps.
     scalar currentDriveSignal_;
 
     //- Time at start of current timestep (set by base before loop)

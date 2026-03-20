@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import partial
 from itertools import product
 from pathlib import Path
@@ -10,12 +10,11 @@ from pathlib import Path
 from ...core.defaults import manufactured_fda as defaults
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
-    collect_outputs_by_pattern,
+    apply_electro_property_overrides,
+    apply_physics_property_overrides,
     resolve_run_script_path,
     resolve_spec_paths,
-    set_cardiac_dimension,
     set_delta_t,
-    set_solution_algorithm,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
 
@@ -30,6 +29,10 @@ def _case_output_filename(case: CaseConfig) -> str:
     cells = int(case.params["cells"])
     solver = str(case.params["solver"])
     return f"{dimension}_{cells}_cells_{solver}.dat"
+
+
+def _archive_output_dir(case_root: Path) -> Path:
+    return case_root / "postProcessing"
 
 
 def _build_cases(
@@ -98,6 +101,13 @@ def _apply_case(
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     control_dict_relpath: Path = defaults.CONTROL_DICT_RELPATH,
     electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: Path = Path("constant/physicsProperties"),
+    electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
+    physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
+    ecg_enabled: bool = defaults.ECG_ENABLED,
+    ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
+    ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
+    ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
 ) -> None:
     dimension = str(case.params["dimension"])
@@ -107,20 +117,42 @@ def _apply_case(
 
     control_dict = case_root / control_dict_relpath
     electro_properties = case_root / electro_properties_relpath
+    physics_properties = case_root / physics_properties_relpath
     block_mesh_dict = case_root / Path(block_mesh_dict_template.format(dimension=dimension))
+    case_overrides = {
+        f"{electro_properties_scope}.dimension": f'"{dimension}"',
+        f"{electro_properties_scope}.solutionAlgorithm": solver,
+    }
+
+    if ecg_enabled:
+        ecg_scope = f"{electro_properties_scope}.ECG"
+        ecg_coeffs_scope = f"{ecg_scope}.pseudoECGElectroCoeffs"
+        try:
+            electrodes = ecg_electrodes_by_dimension[dimension]
+        except KeyError as exc:
+            raise ValueError(f"Missing ECG electrode set for dimension '{dimension}'") from exc
+
+        case_overrides.update(
+            {
+                f"{ecg_scope}.ecgModel": "pseudoECGElectro",
+                f"{ecg_coeffs_scope}.manufactured.enabled": True,
+                f"{ecg_coeffs_scope}.manufactured.dimension": f'"{dimension}"',
+                f"{ecg_coeffs_scope}.manufactured.referenceQuadratureOrder": int(
+                    ecg_reference_quadrature_order
+                ),
+                f"{ecg_coeffs_scope}.manufactured.checkQuadratureOrders": "("
+                + " ".join(str(int(value)) for value in ecg_check_quadrature_orders)
+                + ")",
+            }
+        )
+        for electrode_name, electrode_position in electrodes.items():
+            case_overrides[f"{ecg_coeffs_scope}.electrodes.{electrode_name}"] = electrode_position
 
     _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
     set_delta_t(control_dict, dt_value)
-    set_cardiac_dimension(
-        electro_properties,
-        dimension,
-        scope=electro_properties_scope,
-    )
-    set_solution_algorithm(
-        electro_properties,
-        solver,
-        scope=electro_properties_scope,
-    )
+    apply_electro_property_overrides(electro_properties, case_overrides)
+    apply_electro_property_overrides(electro_properties, electro_property_overrides)
+    apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
 def _run_case(
@@ -154,16 +186,36 @@ def _run_case(
         command,
         check=True,
     )
+    _archive_case_logs(case_root, case)
     _stage_case_output(case_root, case)
+    _stage_case_ecg_outputs(case_root, case)
+
+
+def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
+    log_files = sorted(path for path in case_root.glob("log.*") if path.is_file())
+    if not log_files:
+        return None
+
+    destination_root = case_root / "logs" / case.case_id
+    if destination_root.exists():
+        shutil.rmtree(destination_root)
+    destination_root.mkdir(parents=True, exist_ok=True)
+
+    for source in log_files:
+        shutil.copy2(source, destination_root / source.name)
+
+    print(f"Archived {len(log_files)} log file(s) for {case.case_id}: {destination_root}")
+    return destination_root
 
 
 def _stage_case_output(case_root: Path, case: CaseConfig) -> Path:
     filename = _case_output_filename(case)
-    destination = case_root / filename
+    destination_dir = _archive_output_dir(case_root)
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    destination = destination_dir / filename
     candidates = (
         case_root / "postProcessing" / filename,
         case_root / "processor0" / "postProcessing" / filename,
-        case_root / filename,
     )
 
     for candidate in candidates:
@@ -181,10 +233,74 @@ def _stage_case_output(case_root: Path, case: CaseConfig) -> Path:
     )
 
 
+def _stage_case_ecg_outputs(case_root: Path, case: CaseConfig) -> list[Path]:
+    staged_outputs: list[Path] = []
+    destination_dir = _archive_output_dir(case_root)
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    for source_name in (
+        "pseudoECG.dat",
+        "manufacturedPseudoECG.dat",
+        "manufacturedPseudoECGSummary.dat",
+    ):
+        destination = destination_dir / f"ECG_{case.case_id}_{source_name}"
+        candidates = (
+            case_root / "postProcessing" / source_name,
+            case_root / "processor0" / "postProcessing" / source_name,
+        )
+
+        for candidate in candidates:
+            if not candidate.exists():
+                continue
+            if candidate == destination:
+                staged_outputs.append(destination)
+                break
+            if candidate.parent == destination_dir:
+                shutil.move(str(candidate), str(destination))
+                print(f"Archived ECG output: {candidate} -> {destination} (moved)")
+            else:
+                shutil.copy2(candidate, destination)
+                print(f"Archived ECG output: {candidate} -> {destination}")
+            staged_outputs.append(destination)
+            break
+
+    return staged_outputs
+
+
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
-    for stale_output in output_dir.glob("*.dat"):
-        stale_output.unlink()
-    collect_outputs_by_pattern(case_root, output_dir, pattern="*.dat")
+    archived_dir = _archive_output_dir(case_root)
+    archived_outputs = []
+    if archived_dir.exists():
+        for source in sorted(archived_dir.glob("*.dat")):
+            name = source.name
+            if name.startswith("ECG_") or (
+                name.endswith(".dat") and "_cells_" in name and name[1:2] == "D"
+            ):
+                archived_outputs.append(source)
+    same_output_dir = archived_dir.exists() and archived_dir.resolve() == output_dir.resolve()
+    if archived_outputs:
+        if same_output_dir:
+            print(f"Archived outputs already available in {output_dir}; preserving in place")
+        else:
+            for stale_output in output_dir.glob("*.dat"):
+                stale_output.unlink()
+            for source in archived_outputs:
+                destination = output_dir / source.name
+                shutil.copy2(source, destination)
+                print(f"Copied output: {source.name} -> {destination}")
+    else:
+        print(
+            "No archived .dat files found in case root; preserving existing "
+            f"outputs in {output_dir}"
+        )
+
+    source_logs = case_root / "logs"
+    destination_logs = output_dir / "logs"
+    if destination_logs.exists():
+        shutil.rmtree(destination_logs)
+    if source_logs.exists():
+        shutil.copytree(source_logs, destination_logs)
+        print(f"Copied archived logs -> {destination_logs}")
 
 
 def _postprocess(
@@ -223,6 +339,13 @@ def make_spec(
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     control_dict_relpath: str | Path = defaults.CONTROL_DICT_RELPATH,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    physics_properties_relpath: str | Path = "constant/physicsProperties",
+    electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
+    physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
+    ecg_enabled: bool = defaults.ECG_ENABLED,
+    ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
+    ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
+    ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
@@ -239,6 +362,7 @@ def make_spec(
     solver_types_list = [str(item) for item in solver_types]
     control_dict_path = Path(control_dict_relpath)
     electro_properties_path = Path(electro_properties_relpath)
+    physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
 
@@ -273,6 +397,13 @@ def make_spec(
             electro_properties_scope=electro_properties_scope,
             control_dict_relpath=control_dict_path,
             electro_properties_relpath=electro_properties_path,
+            physics_properties_relpath=physics_properties_path,
+            electro_property_overrides=electro_property_overrides,
+            physics_property_overrides=physics_property_overrides,
+            ecg_enabled=ecg_enabled,
+            ecg_reference_quadrature_order=ecg_reference_quadrature_order,
+            ecg_check_quadrature_orders=ecg_check_quadrature_orders,
+            ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
             block_mesh_dict_template=block_mesh_dict_template,
         ),
         run_case=partial(
@@ -295,12 +426,18 @@ def make_spec(
             "piecewise_sweep": piecewise_sweep,
             "control_dict_relpath": str(control_dict_path),
             "electro_properties_relpath": str(electro_properties_path),
+            "physics_properties_relpath": str(physics_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_path),
             "run_in_parallel": run_in_parallel,
             "postprocess_script_relpath": str(postprocess_script_path),
             "postprocess_function_name": postprocess_function_name,
+            "has_electro_property_overrides": bool(electro_property_overrides),
+            "has_physics_property_overrides": bool(physics_property_overrides),
+            "ecg_enabled": ecg_enabled,
+            "ecg_reference_quadrature_order": ecg_reference_quadrature_order,
+            "ecg_check_quadrature_orders": [int(value) for value in ecg_check_quadrature_orders],
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )
