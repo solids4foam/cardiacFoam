@@ -13,6 +13,7 @@
 ## Chunk 1: singleCell
 
 **Files:**
+
 - Create: `tutorials/singleCell/constant/electroProperties.reference`
 - Modify: `tutorials/singleCell/runRegressionTest.sh`
 
@@ -31,6 +32,7 @@ cp tutorials/singleCell/constant/electroProperties \
 diff tutorials/singleCell/constant/electroProperties \
      tutorials/singleCell/constant/electroProperties.reference
 ```
+
 Expected: no output (identical files).
 
 - [ ] **Step 3: Commit**
@@ -133,6 +135,7 @@ git commit -m "test(singleCell): restore reference configs before regression run
 ## Chunk 2: NiedererEtAl2012
 
 **Files:**
+
 - Create: `tutorials/NiedererEtAl2012/constant/electroProperties.reference`
 - Modify: `tutorials/NiedererEtAl2012/runRegressionTest.sh`
 
@@ -151,6 +154,7 @@ cp tutorials/NiedererEtAl2012/constant/electroProperties \
 diff tutorials/NiedererEtAl2012/constant/electroProperties \
      tutorials/NiedererEtAl2012/constant/electroProperties.reference
 ```
+
 Expected: no output (identical files).
 
 - [ ] **Step 3: Commit**

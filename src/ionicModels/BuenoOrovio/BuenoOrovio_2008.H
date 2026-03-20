@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "heaviside.H"
 #include "BuenoOrovio_2008Names.H"
 #include "stimulusIO.H"
@@ -104,40 +123,40 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
         CONSTANTS[thetaW] = 0.13;
         CONSTANTS[thetaVMinus] = (tissueFlag == 1) ? 0.006 : (tissueFlag == 2) ? 0.1 : 0.2;
         CONSTANTS[thetaO] = (tissueFlag == 2) ? 0.005 : 0.006;
-    
+
         CONSTANTS[tauV1Minus] = (tissueFlag == 1) ? 60 : (tissueFlag == 2) ? 80 : 75;
         CONSTANTS[tauV2Minus] = (tissueFlag == 1) ? 1150 : (tissueFlag == 2) ? 1.4506 : 10;
         CONSTANTS[tauVPlus] = 1.4506;
-    
+
         CONSTANTS[tauW1Minus] = (tissueFlag == 1) ? 60 : (tissueFlag == 2) ? 70 : 6;
         CONSTANTS[tauW2Minus] = (tissueFlag == 1) ? 15 : (tissueFlag == 2) ? 8 : 140;
-    
+
         CONSTANTS[kWMinus] = (tissueFlag == 1) ? 65 : 200;
         CONSTANTS[uWMinus] = (tissueFlag == 1) ? 0.03 : 0.016;
-    
+
         CONSTANTS[tauWPlus] = (tissueFlag == 1) ? 200 : 280;
-    
+
         CONSTANTS[tauFi] = (tissueFlag == 1) ? 0.11 : (tissueFlag == 2) ? 0.078 : 0.1;
-    
+
         CONSTANTS[tauO1] = (tissueFlag == 1) ? 400 : (tissueFlag == 2) ? 410 : 470;
         CONSTANTS[tauO2] = (tissueFlag == 2) ? 7 : 6;
-    
+
         CONSTANTS[tauSo1] = (tissueFlag == 1) ? 30.0181 : (tissueFlag == 2) ? 91 : 40;
         CONSTANTS[tauSo2] = (tissueFlag == 1) ? 0.9957 : (tissueFlag == 2) ? 0.8 : 1.2;
         CONSTANTS[kSo] = (tissueFlag == 1) ? 2.0458 : (tissueFlag == 2) ? 2.1 : 2;
         CONSTANTS[uSo] = (tissueFlag == 2) ? 0.6 : 0.65;
-    
+
         CONSTANTS[tauS1] = 2.7342;
         CONSTANTS[tauS2] = (tissueFlag == 1) ? 16 : (tissueFlag == 2) ? 4 : 2;
         CONSTANTS[kS] = 2.0994;
         CONSTANTS[uS] = 0.9087;
-    
+
         CONSTANTS[tauSi] = (tissueFlag == 1) ? 1.8875 : (tissueFlag == 2) ? 3.3849 : 2.9013;
         CONSTANTS[tauWInfty] = (tissueFlag == 1) ? 0.07 : (tissueFlag == 2) ? 0.01 : 0.0273;
         CONSTANTS[wInftyStar] = (tissueFlag == 1) ? 0.94 : (tissueFlag == 2) ? 0.5 : 0.78;
 
         // Initial values for the gating variables
-        STATES[u] = 0; 
+        STATES[u] = 0;
         STATES[v] = 1.0;
         STATES[w] = 1.0;
         STATES[s] = 0.0;
@@ -148,16 +167,16 @@ void
 BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     using Foam::heaviside;
-        //Time Constants currents 
-        ALGEBRAIC[tauSo] = CONSTANTS[tauSo1] 
-                    + (CONSTANTS[tauSo2] - CONSTANTS[tauSo1]) 
+        //Time Constants currents
+        ALGEBRAIC[tauSo] = CONSTANTS[tauSo1]
+                    + (CONSTANTS[tauSo2] - CONSTANTS[tauSo1])
                     * (1.0 + tanh(CONSTANTS[kSo] * (STATES[u] - CONSTANTS[uSo]))) / 2.0;
 
         ALGEBRAIC[tauO] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaO])) * CONSTANTS[tauO1]
                     + heaviside(STATES[u] - CONSTANTS[thetaO]) * CONSTANTS[tauO2];
 
         // Calculate the three currents
-        ALGEBRAIC[Jfi] = -STATES[v] * heaviside(STATES[u] - CONSTANTS[thetaV]) 
+        ALGEBRAIC[Jfi] = -STATES[v] * heaviside(STATES[u] - CONSTANTS[thetaV])
                     * (STATES[u] - CONSTANTS[thetaV]) * (CONSTANTS[uU] - STATES[u]) / CONSTANTS[tauFi];
 
         ALGEBRAIC[Jso] = (STATES[u] - CONSTANTS[uO]) * (1.0 - heaviside(STATES[u] - CONSTANTS[thetaW])) / ALGEBRAIC[tauO]
@@ -165,7 +184,7 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         ALGEBRAIC[Jsi] = -heaviside(STATES[u] - CONSTANTS[thetaW])
                     * STATES[w] * STATES[s] / CONSTANTS[tauSi];
-        
+
         ALGEBRAIC[Jion] = ALGEBRAIC[Jfi] + ALGEBRAIC[Jso] + ALGEBRAIC[Jsi];
 
         // Time constants for gating variables
@@ -181,7 +200,7 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         ALGEBRAIC[vInfty] = heaviside(CONSTANTS[thetaVMinus]- STATES[u]);
 
-        ALGEBRAIC[wInfty] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaO])) 
+        ALGEBRAIC[wInfty] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaO]))
                     * (1.0 - STATES[u] / CONSTANTS[tauWInfty])
                     + heaviside(STATES[u] - CONSTANTS[thetaO]) * CONSTANTS[wInftyStar];
 
@@ -204,11 +223,11 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
                 RATES[u] = -ALGEBRAIC[Jion] - ALGEBRAIC[Istim];
             }
 }
-   
+
 
 
         //std::cout << "CURRENTS " << __LINE__ << std::endl;
-   
+
 
 
 

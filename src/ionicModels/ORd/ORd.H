@@ -27,7 +27,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef ORd_H

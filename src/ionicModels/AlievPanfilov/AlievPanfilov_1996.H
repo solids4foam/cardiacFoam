@@ -1,9 +1,28 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 
 #include "AlievPanfilov_1996Names.H"
 #include "stimulusIO.H"
 
 const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
-    "u", 
+    "u",
     "recovery_r"
 };
 const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
@@ -61,11 +80,11 @@ AlievPanfilovinitConsts(double* CONSTANTS, double* RATES, double *STATES, int ti
     CONSTANTS[AC_k] = 8.0;
     CONSTANTS[AC_mu1] = 0.2;
     CONSTANTS[AC_mu2] = 0.3;
-    
+
     /* membrane_potential */
     CONSTANTS[AC_a] = (CONSTANTS[AC_Vth] - CONSTANTS[AC_Vr]) / (CONSTANTS[AC_Vp] - CONSTANTS[AC_Vr]);
 
-    
+
     /* --- Initial values --- */
     STATES[u] = 0.05;
     STATES[recovery_r] = 0.0;
@@ -79,7 +98,7 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     /* recovery_variable */
     ALGEBRAIC[AV_eps] = CONSTANTS[AC_epsilon] + CONSTANTS[AC_mu1] * STATES[recovery_r] / (CONSTANTS[AC_mu2] + STATES[u]);
     RATES[recovery_r] = ALGEBRAIC[AV_eps] * (-STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
-    
+
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];
 
@@ -90,7 +109,7 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     //ALGEBRAIC[AV_e] = ((STATES[u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
     //RATES[active_tension_Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[u] - STATES[active_tension_Ta]);
 
-    
+
     ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)

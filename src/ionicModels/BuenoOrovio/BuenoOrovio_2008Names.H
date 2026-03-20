@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #pragma once
 #include "stimulusIO.H"
 
@@ -37,7 +56,7 @@ enum STATES_INDEX{
     v, // Fast sodium activation variable
     w, // Slow sodium activation variable
     s, // Slow inactivation variable
-    NUM_STATES 
+    NUM_STATES
 };
 enum ALGEBRAIC_INDEX{
     Jfi, // Fast sodium current
@@ -45,7 +64,7 @@ enum ALGEBRAIC_INDEX{
     Jsi, // Slow inactivation current
     Jion, // total current
     Istim, // Stimulus current
-    
+
     tauSo,      // 5  τ_so
     tauO,       // 6  τ_o
     tauVMinus,  // 7  τ_v⁻
@@ -53,7 +72,7 @@ enum ALGEBRAIC_INDEX{
     tauS,       // 9  τ_s
     vInfty,     // 10 v∞
     wInfty,     // 11 w∞
-    NUM_ALGEBRAIC 
+    NUM_ALGEBRAIC
 };
 
 void

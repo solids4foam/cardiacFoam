@@ -34,7 +34,7 @@ class ionicModelIO
 public:
 
 
-    // Existing generic writer 
+    // Existing generic writer
     typedef scalar (*VmTransform)(const scalarField&);
 
     enum ColumnSource
@@ -83,7 +83,7 @@ public:
         wordList requested;
         wordList filtered;
     };
-    
+
     static void writeHeader
     (
         OFstream& os,
@@ -223,9 +223,9 @@ public:
     const wordList& deps
     );
 
-    
 
-    
+
+
 
 };
 
