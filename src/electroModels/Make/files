@@ -1,9 +1,10 @@
 electroModel/electroModel.C
 
+ecgModel/ecgModel.C
+pseudoECGElectro/pseudoECGElectro.C
 eikonalDiffusionElectro/eikonalDiffusionElectro.C
 monoDomainElectro/monoDomainElectro.C
 singleCellElectro/singleCellElectro.C
-electroModelECG/electroModelECG.C
 electroMechanicalModel/electroMechanicalModel.C
 
 

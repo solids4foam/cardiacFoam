@@ -10,16 +10,10 @@ from pathlib import Path
 from ...core.defaults import restitution_curves as defaults
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
+    apply_electro_property_overrides,
+    apply_physics_property_overrides,
     resolve_run_script_path,
     resolve_spec_paths,
-    set_ionic_model,
-    set_n_stim1,
-    set_n_stim2,
-    set_s1_period,
-    set_s2_period,
-    set_stimulus_amplitude,
-    set_tissue,
-    set_write_after_time,
     set_end_time,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
@@ -64,6 +58,9 @@ def _apply_case(
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     control_dict_relpath: Path = defaults.CONTROL_DICT_RELPATH,
+    physics_properties_relpath: Path = Path("constant/physicsProperties"),
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     ionic_model = case.params["ionicModel"]
     tissue = case.params["tissue"]
@@ -74,30 +71,24 @@ def _apply_case(
 
     electro_properties_file = case_root / electro_properties_relpath
     control_dict_file = case_root / control_dict_relpath
-
-    # electroProperties (ionic/tissue)
-    set_tissue(electro_properties_file, tissue, scope=electro_properties_scope)
-    set_ionic_model(electro_properties_file, ionic_model, scope=electro_properties_scope)
-
-    # electroProperties (stimulus protocol)
-    set_stimulus_amplitude(
-        electro_properties_file,
-        stimulus_map[ionic_model],
-        scope=electro_properties_scope,
-    )
-    set_s1_period(electro_properties_file, s1_interval_ms, scope=electro_properties_scope)
-    set_n_stim1(electro_properties_file, n_s1, scope=electro_properties_scope)
-    set_s2_period(electro_properties_file, s2_interval_ms, scope=electro_properties_scope)
-    set_n_stim2(electro_properties_file, n_s2, scope=electro_properties_scope)
-    set_write_after_time(
-        electro_properties_file,
-        write_after_time_s,
-        scope=electro_properties_scope,
-    )
+    physics_properties_file = case_root / physics_properties_relpath
+    case_overrides = {
+        f"{electro_properties_scope}.tissue": tissue,
+        f"{electro_properties_scope}.ionicModel": ionic_model,
+        f"{electro_properties_scope}.singleCellStimulus.stim_amplitude": stimulus_map[ionic_model],
+        f"{electro_properties_scope}.singleCellStimulus.stim_period_S1": s1_interval_ms,
+        f"{electro_properties_scope}.singleCellStimulus.nstim1": n_s1,
+        f"{electro_properties_scope}.singleCellStimulus.stim_period_S2": s2_interval_ms,
+        f"{electro_properties_scope}.singleCellStimulus.nstim2": n_s2,
+        f"{electro_properties_scope}.writeAfterTime": write_after_time_s,
+    }
 
     # controlDict: endTime = (S1*n_S1 + S2*n_S2) / 1000 + buffer
     end_time = (s1_interval_ms * n_s1 + s2_interval_ms * n_s2) / 1000.0 + end_time_buffer_s
     set_end_time(control_dict_file, end_time)
+    apply_electro_property_overrides(electro_properties_file, case_overrides)
+    apply_electro_property_overrides(electro_properties_file, electro_property_overrides)
+    apply_physics_property_overrides(physics_properties_file, physics_property_overrides)
 
 
 def _run_case(
@@ -213,6 +204,9 @@ def make_spec(
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     control_dict_relpath: str | Path = defaults.CONTROL_DICT_RELPATH,
+    physics_properties_relpath: str | Path = "constant/physicsProperties",
+    electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
+    physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     output_glob: str = defaults.OUTPUT_GLOB,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
@@ -235,6 +229,7 @@ def make_spec(
 
     electro_properties_path = Path(electro_properties_relpath)
     control_dict_path = Path(control_dict_relpath)
+    physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
 
@@ -271,6 +266,9 @@ def make_spec(
             electro_properties_scope=electro_properties_scope,
             electro_properties_relpath=electro_properties_path,
             control_dict_relpath=control_dict_path,
+            physics_properties_relpath=physics_properties_path,
+            electro_property_overrides=electro_property_overrides,
+            physics_property_overrides=physics_property_overrides,
         ),
         run_case=partial(
             _run_case,
@@ -299,11 +297,14 @@ def make_spec(
             "electro_properties_relpath": str(electro_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "control_dict_relpath": str(control_dict_path),
+            "physics_properties_relpath": str(physics_properties_path),
             "run_script_relpath": str(run_script_path),
             "output_glob": output_glob,
             "postprocess_script_relpath": str(postprocess_script_path),
             "postprocess_function_name": postprocess_function_name,
             "show_plots": show_plots,
+            "has_electro_property_overrides": bool(electro_property_overrides),
+            "has_physics_property_overrides": bool(physics_property_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

@@ -29,7 +29,6 @@ EXE_INC = \
     -I../ionicModels/lnInclude \
     -I../modelPrePostProcessors/lnInclude \
     -I../genericWriter/lnInclude \
-    -I../ecgModels/lnInclude \
     -I../activeTensionModels/lnInclude \
     -I../couplingModels \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
@@ -50,7 +49,6 @@ LIB_LIBS = \
     -lmodelPrePostProcessors \
     -lionicModels \
     -lgenericWriter \
-    -lecgModels \
     -lactiveTensionModels \
     -lfiniteVolume \
     -lmeshTools \

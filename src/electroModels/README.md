@@ -11,7 +11,8 @@ src/electroModels/
 ├── monoDomainElectro/          # Full monodomain PDE-ODE model
 ├── singleCellElectro/          # Single-cell ODE-only driver
 ├── eikonalDiffusionElectro/    # Reduced-order activation-time model
-├── electroModelECG/            # Electro + ECG wrapper model
+├── ecgModel/                   # ECG subsystem base class
+├── pseudoECGElectro/           # Pseudo-ECG implementation
 ├── electroMechanicalModel/     # Electro-mechanics wrapper model
 ├── Make/
 └── README.md
@@ -75,15 +76,14 @@ Reduced-order activation model:
 - Uses anisotropic conductivity tensor and optional stabilized form (`eikonalAdvectionDiffusionApproach`).
 - Applies stimulus through geometric box selection in the mesh.
 
-### 5) `electroModelECG`
+### 5) Optional ECG subsystem
 
-Wrapper workflow for cases that solve electrophysiology and compute ECG outputs
-in the same run:
+`monoDomainElectro` can optionally own a runtime-selected `ecgModel`:
 
-- Owns an inner electro model plus a runtime-selected `ecgModel`.
-- Reads the `ECG` sub-dictionary from `constant/electroProperties`.
-- Delegates time stepping to the electro model and ECG post-processing to the
-  ECG stack in `src/ecgModels/`.
+- Reads the nested `ECG` sub-dictionary from `constant/electroProperties`.
+- Reuses the monodomain `Vm` and conductivity field directly.
+- Computes ECG outputs in the same run without requiring a separate
+  top-level physics model.
 
 ### 6) `electroMechanicalModel`
 
@@ -106,10 +106,11 @@ Wrapper workflow for coupled electro-mechanics runs:
 `Make/files` builds:
 
 - `electroModel/electroModel.C`
+- `ecgModel/ecgModel.C`
+- `pseudoECGElectro/pseudoECGElectro.C`
 - `eikonalDiffusionElectro/eikonalDiffusionElectro.C`
 - `monoDomainElectro/monoDomainElectro.C`
 - `singleCellElectro/singleCellElectro.C`
-- `electroModelECG/electroModelECG.C`
 - `electroMechanicalModel/electroMechanicalModel.C`
 
 into:

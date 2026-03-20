@@ -20,6 +20,9 @@
       "TNNP": 60.0,
       "Gaur": 60.0
     },
+    "electro_property_overrides": {
+      "$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug": "(Vm)"
+    },
     "output_glob": "*.txt"
   },
   "niederer2012": {
@@ -45,5 +48,16 @@
       "BuenoOrovio": ["mCells", "endocardialCells", "epicardialCells"]
     },
     "s2_intervals_ms": [1500, 1200, 1000, 800, 600, 400]
+  },
+  "genericCase": {
+    "case_dir_name": "singleCell+electroMec",
+    "physics_property_overrides": {
+      "type": "electroMechanicalModel"
+    },
+    "electro_property_overrides": {
+      "$ELECTRO_MODEL_COEFFS.ionicModel": "AlievPanfilov",
+      "$ELECTRO_MODEL_COEFFS.tissue": "myocyte",
+      "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": "GoktepeKuhl"
+    }
   }
 }

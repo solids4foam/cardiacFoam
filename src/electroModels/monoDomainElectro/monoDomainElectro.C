@@ -262,6 +262,7 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                                      runTime.deltaTValue())),
       prePostProcessor_(electroModelsPrePostProcessor::New(
           ionicModelPtr_->type(), ionicProperties())),
+      ecgModelPtr_(),
       preProcessFieldNames_(prePostProcessor_->preProcessFieldNames(*ionicModelPtr_)),
       preProcessFields_(),
       setDeltaT_(true),
@@ -379,6 +380,11 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
   }
 
   prePostProcessor_->preProcess(*ionicModelPtr_, Vm_, preProcessFields_);
+
+  if (cardiacProperties_.found("ECG")) {
+    ecgModelPtr_ = ecgModel::New(Vm_, cardiacProperties_.subDict("ECG"),
+                                 conductivity());
+  }
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -445,7 +451,34 @@ bool monoDomainElectro::evolve() {
     prePostProcessor_->postProcess(*ionicModelPtr_, Vm_, outFields_);
   }
 
+  if (ecgModelPtr_.valid()) {
+    ecgModelPtr_->compute();
+  }
+
   return converged;
+}
+
+bool monoDomainElectro::read() {
+  const bool status = electroModel::read();
+
+  if (cardiacProperties_.found("ECG")) {
+    if (ecgModelPtr_.valid()) {
+      ecgModelPtr_->read(cardiacProperties_.subDict("ECG"));
+    } else {
+      ecgModelPtr_ = ecgModel::New(Vm_, cardiacProperties_.subDict("ECG"),
+                                   conductivity());
+    }
+  }
+
+  return status;
+}
+
+void monoDomainElectro::end() {
+  if (ecgModelPtr_.valid()) {
+    ecgModelPtr_->end();
+  }
+
+  electroModel::end();
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

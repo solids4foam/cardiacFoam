@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
 from .core.runtime.registry import list_tutorials, load_tutorial_spec
+from .introspection import describe_tutorial
 from .specs.common import default_setup_dir_name
 
 
@@ -13,13 +14,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=["sim", "post", "all"],
+        choices=["sim", "post", "all", "describe"],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
         "--tutorial",
         required=True,
-        help=f"Tutorial spec to run ({', '.join(list_tutorials())})",
+        help=(
+            "Tutorial spec or case folder to run "
+            f"({', '.join(list_tutorials())}, genericCase)"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -35,8 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         help=(
             "Path to JSON file with make_spec overrides. Supports either a top-level "
-            "tutorial map (keys: singleCell, niederer2012, manufacturedFDA, restitutionCurves) "
-            "or a direct parameter object for the selected tutorial."
+            "tutorial map (keys: singleCell, niederer2012, manufacturedFDA, "
+            "restitutionCurves, genericCase/randomCase) or a direct parameter "
+            "object for the selected tutorial."
         ),
     )
     parser.add_argument(
@@ -60,7 +65,11 @@ def _load_spec_overrides(config_path: str, tutorial: str) -> dict:
                 raise ValueError(f"Config section '{key}' must be a JSON object")
             return _normalize_spec_overrides(value)
 
-    known_tutorial_keys = {name.casefold() for name in list_tutorials()}
+    known_tutorial_keys = {
+        *(name.casefold() for name in list_tutorials()),
+        "genericcase",
+        "randomcase",
+    }
     if any(key.casefold() in known_tutorial_keys for key in payload):
         raise KeyError(
             f"No config section found for tutorial '{tutorial}'. "
@@ -100,6 +109,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.action == "post" and args.dry_run:
         parser.error("--dry-run is not valid with action=post")
+    if args.action == "describe" and args.dry_run:
+        parser.error("--dry-run is not valid with action=describe")
+    if args.action == "describe" and args.continue_on_error:
+        parser.error("--continue-on-error is not valid with action=describe")
 
     overrides = _load_spec_overrides(args.config, args.tutorial) if args.config else None
     if args.tutorials_root:
@@ -107,11 +120,25 @@ def main(argv: list[str] | None = None) -> int:
             overrides = {}
         overrides["tutorials_root"] = args.tutorials_root
 
+    if args.action == "describe":
+        print(
+            json.dumps(
+                describe_tutorial(
+                    args.tutorial,
+                    overrides=overrides,
+                    config_path=args.config,
+                ),
+                indent=2,
+            )
+        )
+        return 0
+
     spec = load_tutorial_spec(args.tutorial, overrides=overrides)
     engine = DriverEngine(
         spec=spec,
         dry_run=args.dry_run,
         continue_on_error=args.continue_on_error,
+        requested_action=args.action,
     )
 
     if args.action == "sim":

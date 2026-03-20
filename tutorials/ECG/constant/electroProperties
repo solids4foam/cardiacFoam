@@ -57,7 +57,14 @@ monoDomainElectroCoeffs
 
         pseudoECGElectroCoeffs
         {
-            sigmaT [-1 -3 3 0 0 2 0] 0.24725; // unused by pseudoECG for now
+            manufactured
+            {
+                enabled no;
+                dimension "3D";
+                referenceQuadratureOrder 96;
+                checkQuadratureOrders (6 12 24 48);
+            }
+
             electrodes
             {
                 V1 (-0.0261184   -0.283543   -0.0700558);

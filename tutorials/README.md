@@ -6,7 +6,7 @@ This folder contains reference and regression cases for `cardiacFoam`.
 
 - `singleCell` : single-point ODE workflow (`singleCellElectro`)
 - `NiedererEtAl2012` : slab verification workflow (`monoDomainElectro`)
-- `ECG` : monodomain + ECG output workflow (`electroModel+ECG`)
+- `ECG` : monodomain + ECG output workflow (`electroModel` with nested `ECG`)
 - `manufacturedFDA` : manufactured-solution verification (`tmanufacturedFDA`)
 - `restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps (single-cell)
 - `vortexDynamics` : 2D wave dynamics (monodomain)
