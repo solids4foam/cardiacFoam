@@ -1,8 +1,11 @@
 electroModel/electroModel.C
 
+ecgModel/ecgModel.C
+pseudoECGElectro/pseudoECGElectro.C
 eikonalDiffusionElectro/eikonalDiffusionElectro.C
 monoDomainElectro/monoDomainElectro.C
 singleCellElectro/singleCellElectro.C
+electroMechanicalModel/electroMechanicalModel.C
 
 
 LIB = $(FOAM_MODULE_LIBBIN)/libelectroModels

@@ -97,3 +97,4 @@ SunOS*Gcc*/
 # Generated mesh / field data (VTK)
 *.vtk
 *.vtu
+.worktrees/

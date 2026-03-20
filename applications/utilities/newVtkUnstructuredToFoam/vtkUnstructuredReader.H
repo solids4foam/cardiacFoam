@@ -35,7 +35,6 @@ Description
 
 SourceFiles
     vtkUnstructuredReader.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef vtkUnstructuredReader_H

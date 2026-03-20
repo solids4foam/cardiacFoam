@@ -11,6 +11,10 @@ jobs:
   build-and-test:
     name: Build on ${{ matrix.container-image.name }} (${{ matrix.mode }})
     runs-on: ubuntu-22.04
+    env:
+      HOME: /root
+      OMPI_ALLOW_RUN_AS_ROOT: "1"
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: "1"
 
     strategy:
       fail-fast: false
@@ -52,10 +56,6 @@ jobs:
       - name: Build cardiacFoam
         shell: bash -l {0}
         run: |
-          # Ensure the correct HOME is used so solids4foam libs are visible
-          echo "Fixing HOME"
-          export HOME=/root
-
           echo "Sourcing OpenFOAM environment"
           source ${{ matrix.container-image.source }}
 
@@ -70,6 +70,17 @@ jobs:
           fi
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
+
+      - name: Tutorial smoke regression
+        if: matrix.mode == 'lightweight'
+        shell: bash -l {0}
+        run: |
+          source ${{ matrix.container-image.source }}
+
+          unset SOLIDS4FOAM_INST_DIR
+          export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+
+          ./tutorials/Alltest-regression smoke
 
       - name: PETSc sanity check
         shell: bash -l {0}

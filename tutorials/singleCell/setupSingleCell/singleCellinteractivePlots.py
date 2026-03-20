@@ -2,7 +2,7 @@
 singleCell_Electrophysiology: singleCellinteractivePlots.py
 
 This script plots simulation outputs from multiple model-cell combinations using Plotly.
-The input is read from a folder in the case directory defined by the variable OUTPUT_FOLDER.
+The input is read from a folder provided to the post-processing entrypoint.
 
 Each input entry in `file_dfs_vars` is a tuple:
     (file_name, dataframe, selected_variables)
@@ -37,11 +37,26 @@ Output:
 """
 
 import os
+import sys
 import numpy as np
 import pandas as pd
+from pathlib import Path
+from typing import Any
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 import plotly.graph_objs as go
+
+TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
+if str(TUTORIALS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TUTORIALS_ROOT))
+
+from openfoam_driver.postprocessing.plotting_common import (
+    build_visibility_mask,
+    ordered_unique,
+    parse_model_and_cell,
+)
+from openfoam_driver.postprocessing.style import apply_plotly_layout
+from openfoam_driver.postprocessing.style import write_plotly_html
 
 
 STATE_COUNTS = {
@@ -74,28 +89,43 @@ def list_txt_files(folder):
         print(f"The directory '{folder}' does not exist.")
         return []
 
-    return [f for f in os.listdir(folder) if f.endswith('.txt')]
+    return sorted(f for f in os.listdir(folder) if f.endswith('.txt'))
 
 
 
 
-def select_files(files):
+def select_files(
+    files,
+    *,
+    interactive: bool = True,
+    preset_files: list[str] | None = None,
+):
+    if not interactive:
+        if preset_files is None:
+            return list(files)
+        return [name for name in files if name in set(preset_files)]
+
     return checkboxlist_dialog(
         title="Select Simulation Output Files",
         text="Choose one or more files to load:",
         values=[(f, f) for f in files]
     ).run() or []
 
-def detect_model_and_states(filename):
+def detect_model_and_states(filename, *, interactive: bool = True):
     model_name = filename.split('_')[0].strip()
     n_states = STATE_COUNTS.get(model_name)
     if n_states is None:
+        if not interactive:
+            raise ValueError(
+                f"Model '{model_name}' is missing from STATE_COUNTS; "
+                "add it to STATE_COUNTS for non-interactive post-processing."
+            )
         n_states = int(prompt("Model not recognized. Enter number of states: "))
     return model_name, n_states
 
-def load_simulation_data(filename):
-    if not os.path.isabs(filename):
-        filename = os.path.join(OUTPUT_FOLDER, filename)
+def load_simulation_data(filename, *, base_folder: str | None = None):
+    if not os.path.isabs(filename) and base_folder is not None:
+        filename = os.path.join(base_folder, filename)
 
     if not os.path.exists(filename):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -118,7 +148,24 @@ def categorize_columns(header, n_states):
     return states, rates, algebraic
 
 
-def select_variables(states, algebraic, rates, file_name):
+def select_variables(
+    states,
+    algebraic,
+    rates,
+    file_name,
+    *,
+    interactive: bool = True,
+    selected_categories: list[str] | None = None,
+):
+    categories = selected_categories or ["States", "Algebraic", "Rates"]
+    category_set = {name for name in categories}
+    if not interactive:
+        return {
+            "States": list(states) if "States" in category_set else [],
+            "Algebraic": list(algebraic) if "Algebraic" in category_set else [],
+            "Rates": list(rates) if "Rates" in category_set else [],
+        }
+
     print(f"Selecting variables for file: {file_name}\n")
     selected_states = checkboxlist_dialog(
         title=f"States ({file_name})",
@@ -144,8 +191,10 @@ def select_variables(states, algebraic, rates, file_name):
         "Rates": selected_rates
     }
 
-def rename_legends(variable_list):
+def rename_legends(variable_list, *, interactive: bool = True):
     """Ask user to rename variables; Enter keeps default."""
+    if not interactive:
+        return list(variable_list)
     print("Rename variables with same physical meaning. Enter to skip")
     legend_names = []
     for var in variable_list:
@@ -153,40 +202,36 @@ def rename_legends(variable_list):
         legend_names.append(new_name.strip() if new_name.strip() else var)
     return legend_names
 
-def collect_variables_for_legend(file_dfs_vars):
+def collect_variables_for_legend(file_dfs_vars, *, interactive: bool = True):
     all_vars = {"States": [], "Algebraic": [], "Rates": []}
     for _, _, selected_variables in file_dfs_vars:
         for category, var_list in selected_variables.items():
             all_vars[category].extend(var_list)
     # Remove duplicates
     for cat in all_vars:
-        all_vars[cat] = list(dict.fromkeys(all_vars[cat]))
+        all_vars[cat] = ordered_unique(all_vars[cat])
     # Ask for legend renaming
     legend_map = {}
     for category, var_list in all_vars.items():
         if var_list:
-            legend_map[category] = rename_legends(var_list)
+            legend_map[category] = rename_legends(var_list, interactive=interactive)
         else:
             legend_map[category] = []
     return all_vars, legend_map
 
 def add_traces(fig, file_dfs_vars, all_vars, legend_map):
-    category_traces = {}
-    file_model_map = {}
-    file_cell_map = {}
+    categories = ("States", "Algebraic", "Rates")
+    category_trace_indices = {category: [] for category in categories}
+    model_trace_indices: dict[str, list[int]] = {}
+    cell_trace_indices: dict[str, list[int]] = {}
 
     for file_name, df, selected_variables in file_dfs_vars:
         time = df['time']
-        file_base = os.path.splitext(file_name)[0]
-        parts = file_base.split('_')
-        raw_model = parts[0] if len(parts) > 0 else "UnknownModel"
-        raw_cell = parts[1] if len(parts) > 1 else "UnknownCell"
-
-        model = MODEL_MAP.get(raw_model, raw_model)
-        cell_type = CELL_TYPE_MAP.get(raw_cell, raw_cell)
-
-        file_model_map[file_name] = model
-        file_cell_map[file_name] = cell_type
+        model, cell_type = parse_model_and_cell(
+            file_name,
+            model_map=MODEL_MAP,
+            cell_map=CELL_TYPE_MAP,
+        )
 
         for category, var_list in selected_variables.items():
             if not var_list:
@@ -200,131 +245,164 @@ def add_traces(fig, file_dfs_vars, all_vars, legend_map):
                     visible=True
                 )
                 fig.add_trace(trace)
-                category_traces.setdefault((category, file_name), []).append(trace)
+                trace_index = len(fig.data) - 1
+                category_trace_indices.setdefault(category, []).append(trace_index)
+                model_trace_indices.setdefault(model, []).append(trace_index)
+                cell_trace_indices.setdefault(cell_type, []).append(trace_index)
 
-    return category_traces, file_model_map, file_cell_map
+    return category_trace_indices, model_trace_indices, cell_trace_indices
 
-def build_buttons(category_traces, file_dfs_vars, file_model_map, file_cell_map):
-    all_traces = [t for traces in category_traces.values() for t in traces]
+
+def build_buttons(fig, category_trace_indices, model_trace_indices, cell_trace_indices):
     categories = ["States", "Algebraic", "Rates"]
+    total_traces = len(fig.data)
+    all_vis = build_visibility_mask(range(total_traces), total_traces)
 
-    # Category buttons
-    category_vis = []
-    for cat in categories:
-        if any((cat, f) in category_traces for f, _, _ in file_dfs_vars):
-            vis = [any(t in category_traces.get((cat, f), []) for f, _, _ in file_dfs_vars)
-                   for t in all_traces]
-        else:
-            vis = [False]*len(all_traces)
-        category_vis.append(vis)
-
-    # Model buttons (group all files of the same model)
-    unique_models = list(dict.fromkeys(file_model_map.values()))
-    model_vis = []
-    for model in unique_models:
-        vis = [any(t in category_traces.get((cat, f), [])
-                   for cat in categories
-                   for f in file_model_map if file_model_map[f] == model)
-               for t in all_traces]
-        model_vis.append(vis)
-
-    # Cell buttons
-    unique_cells = list(dict.fromkeys(file_cell_map.values()))
-    cell_vis = []
-    for cell in unique_cells:
-        vis = [any(t in category_traces.get((cat, f), [])
-                   for cat in categories
-                   for f in file_cell_map if file_cell_map[f] == cell)
-               for t in all_traces]
-        cell_vis.append(vis)
-
-    # Show All
-    all_vis = [True]*len(all_traces)
-
-    # Combine buttons
     buttons = [dict(label="Show All", method="update", args=[{"visible": all_vis}])]
-    buttons += [dict(label=f"Category: {cat}", method="update", args=[{"visible": category_vis[i]}])
-                for i, cat in enumerate(categories)]
-    buttons += [dict(label=f"Model: {model}", method="update", args=[{"visible": model_vis[i]}])
-                for i, model in enumerate(unique_models)]
-    buttons += [dict(label=f"Cell: {cell}", method="update", args=[{"visible": cell_vis[i]}])
-                for i, cell in enumerate(unique_cells)]
-
+    buttons += [
+        dict(
+            label=f"Category: {category}",
+            method="update",
+            args=[{"visible": build_visibility_mask(category_trace_indices.get(category, []), total_traces)}],
+        )
+        for category in categories
+    ]
+    buttons += [
+        dict(
+            label=f"Model: {model}",
+            method="update",
+            args=[{"visible": build_visibility_mask(model_trace_indices[model], total_traces)}],
+        )
+        for model in ordered_unique(model_trace_indices.keys())
+    ]
+    buttons += [
+        dict(
+            label=f"Cell: {cell}",
+            method="update",
+            args=[{"visible": build_visibility_mask(cell_trace_indices[cell], total_traces)}],
+        )
+        for cell in ordered_unique(cell_trace_indices.keys())
+    ]
     return buttons
 
-# -------------------------------
-# Main plotting function
-# -------------------------------
-def plot_multiple_files(file_dfs_vars):
+
+def plot_multiple_files(
+    file_dfs_vars,
+    output_html: str | Path | None = None,
+    show: bool = True,
+    *,
+    interactive: bool = True,
+):
     fig = go.Figure()
+    all_vars, legend_map = collect_variables_for_legend(
+        file_dfs_vars,
+        interactive=interactive,
+    )
+    category_traces, model_traces, cell_traces = add_traces(fig, file_dfs_vars, all_vars, legend_map)
+    buttons = build_buttons(fig, category_traces, model_traces, cell_traces)
 
-    # Prepare legend names
-    all_vars, legend_map = collect_variables_for_legend(file_dfs_vars)
-
-    # Add traces
-    category_traces, file_model_map, file_cell_map = add_traces(fig, file_dfs_vars, all_vars, legend_map)
-
-    # Build buttons
-    buttons = build_buttons(category_traces, file_dfs_vars, file_model_map, file_cell_map)
-
-    # Update layout
-    fig.update_layout(
+    apply_plotly_layout(
+        fig,
         title="Simulation Variables",
         xaxis_title="Time [ms]",
         yaxis_title="Voltage [mV], Currents [pA/pF], Concentrations [mM], Rates [/ms]",
         updatemenus=[dict(type="buttons", x=1.05, y=0.8, buttons=buttons)],
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
-    fig.show()
+    if output_html is not None:
+        write_plotly_html(fig, output_html)
+    if show:
+        fig.show()
+    return fig
 
 
-
-def plot_multiple_files(file_dfs_vars):
-    fig = go.Figure()
-
-    all_vars, legend_map = collect_variables_for_legend(file_dfs_vars)
-    category_traces, file_cell_map, file_model_map = add_traces(fig, file_dfs_vars, all_vars, legend_map)
-    buttons = build_buttons(category_traces, file_dfs_vars, file_cell_map, file_model_map)
-
-    fig.update_layout(
-        title="Simulation Variables",
-        xaxis_title="Time [ms]",
-        yaxis_title="Voltage [mV], Currents [pA/pF], Concentrations [mM], Rates [/ms]",
-        updatemenus=[dict(type="buttons", x=1.05, y=0.8, buttons=buttons)],
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-    )
-
-    fig.show()
-
-
-def post_processing_single_cell(output_folder):
+def post_processing_single_cell(
+    output_folder,
+    *,
+    output_html: str | Path | None = None,
+    show: bool = True,
+    interactive: bool = True,
+    selected_files: list[str] | None = None,
+    selected_categories: list[str] | None = None,
+    rename_legend_labels: bool | None = None,
+):
     """Post-process simulation results from the given output folder."""
+    rename_legend_labels_resolved = (
+        interactive if rename_legend_labels is None else rename_legend_labels
+    )
     files = list_txt_files(output_folder)
     if not files:
         print("No .txt files found. Exiting.")
         return
 
-    selected_files = select_files(files)
-    if not selected_files:
+    selected_files_resolved = select_files(
+        files,
+        interactive=interactive,
+        preset_files=selected_files,
+    )
+    if not selected_files_resolved:
         print("No files selected. Exiting.")
         return
 
     file_dfs_vars = []
-    for file in selected_files:
-        model_name, n_states = detect_model_and_states(file)
+    for file in selected_files_resolved:
+        model_name, n_states = detect_model_and_states(file, interactive=interactive)
         print(f"Detected model: {model_name}, Number of states: {n_states}")
 
         # Construct full file path
-        file_path = os.path.join(output_folder, file)
+        df, header = load_simulation_data(file, base_folder=output_folder)
+        states, rates, algebraic = categorize_columns(header, n_states)
 
-        df, header = load_simulation_data(file_path)
-        states, rates, algebraic = categorize_columns(header, n_states, model_name)
-
-        selected_variables = select_variables(states, algebraic, rates, file)
+        selected_variables = select_variables(
+            states,
+            algebraic,
+            rates,
+            file,
+            interactive=interactive,
+            selected_categories=selected_categories,
+        )
         file_dfs_vars.append((file, df, selected_variables))
 
-    plot_multiple_files(file_dfs_vars)
+    plot_multiple_files(
+        file_dfs_vars,
+        output_html=output_html,
+        show=show,
+        interactive=rename_legend_labels_resolved,
+    )
+    artifacts: list[dict[str, Any]] = []
+    if output_html is not None:
+        artifacts.append(
+            {
+                "path": str(output_html),
+                "label": "singleCell interactive variables",
+                "kind": "plot",
+                "format": "html",
+            }
+        )
+    return artifacts
+
+
+def run_postprocessing(
+    *,
+    output_dir: str,
+    setup_root: str | None = None,
+    files: list[str] | None = None,
+    categories: list[str] | None = None,
+    rename_legends: bool = False,
+    **_: object,
+) -> None:
+    del setup_root
+    output_html = Path(output_dir) / "singleCell_interactive_variables.html"
+    return post_processing_single_cell(
+        output_dir,
+        output_html=output_html,
+        show=False,
+        interactive=False,
+        selected_files=files,
+        selected_categories=categories,
+        rename_legend_labels=rename_legends,
+    )
 
 
 if __name__ == "__main__":

@@ -1,11 +1,199 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "stimulusIO.H"
 #include "IOstreams.H"
+#include "dimensionedScalar.H"
 #include <cmath>
 
 namespace Foam
 {
+namespace
+{
+const dictionary* singleCellStimulusDict(const dictionary& dict)
+{
+    if (!dict.found("singleCellStimulus"))
+    {
+        return nullptr;
+    }
 
-    void stimulusIO::loadStimulusProtocol
+    return &dict.subDict("singleCellStimulus");
+}
+
+bool hasAnySingleCellStimulusKey(const dictionary& dict)
+{
+    return
+        dict.found("stim_start")
+     || dict.found("stim_period_S1")
+     || dict.found("stim_duration")
+     || dict.found("stim_amplitude")
+     || dict.found("nstim1")
+     || dict.found("stim_period_S2")
+     || dict.found("nstim2");
+}
+
+const dictionary* monodomainStimulusDict(const dictionary& dict)
+{
+    if (!dict.found("monodomainStimulus"))
+    {
+        return nullptr;
+    }
+
+    return &dict.subDict("monodomainStimulus");
+}
+
+void readMonodomainStimulusBoxes
+(
+    const dictionary& stimDict,
+    List<boundBox>& boxes
+)
+{
+    const bool hasMinList = stimDict.found("stimulusLocationMinList");
+    const bool hasMaxList = stimDict.found("stimulusLocationMaxList");
+
+    if (hasMinList != hasMaxList)
+    {
+        FatalErrorInFunction
+            << "Both stimulusLocationMinList and stimulusLocationMaxList "
+            << "must be provided together."
+            << abort(FatalError);
+    }
+
+    if (hasMinList)
+    {
+        const List<point> mins(stimDict.lookup("stimulusLocationMinList"));
+        const List<point> maxs(stimDict.lookup("stimulusLocationMaxList"));
+
+        if (mins.size() != maxs.size())
+        {
+            FatalErrorInFunction
+                << "stimulusLocationMinList and stimulusLocationMaxList must "
+                << "have the same size."
+                << abort(FatalError);
+        }
+
+        boxes.setSize(mins.size());
+        forAll(mins, i)
+        {
+            boxes[i] = boundBox(mins[i], maxs[i]);
+        }
+    }
+    else
+    {
+        boxes.setSize(1);
+        boxes[0] = boundBox
+        (
+            point(stimDict.lookup("stimulusLocationMin")),
+            point(stimDict.lookup("stimulusLocationMax"))
+        );
+    }
+}
+
+void checkSize
+(
+    const List<scalar>& values,
+    const label expected,
+    const word& name
+)
+{
+    if (values.size() != expected)
+    {
+        FatalErrorInFunction
+            << name << " must have the same size as the stimulus box list."
+            << abort(FatalError);
+    }
+}
+
+void checkNonNegative
+(
+    const List<scalar>& values,
+    const word& name
+)
+{
+    forAll(values, i)
+    {
+        if (values[i] < 0.0)
+        {
+            FatalErrorInFunction
+                << name << " must be non-negative. Found value "
+                << values[i] << " at index " << i << "."
+                << abort(FatalError);
+        }
+    }
+}
+}
+
+StimulusProtocol stimulusIO::loadStimulusProtocol
+(
+    const dictionary& dict
+)
+{
+    StimulusProtocol stim;
+
+    const dictionary* stimDictPtr = singleCellStimulusDict(dict);
+    if (!stimDictPtr)
+    {
+        // Default no-stimulus protocol if no explicit singleCellStimulus
+        // dictionary is provided.
+        return stim;
+    }
+    const dictionary& stimDict = *stimDictPtr;
+    const bool hasAnyStimulusKey = hasAnySingleCellStimulusKey(stimDict);
+
+    // Incomplete definitions are usually a typo and should fail fast.
+    if
+    (
+        hasAnyStimulusKey
+     && (
+            !stimDict.found("stim_start")
+         || !stimDict.found("stim_period_S1")
+         || !stimDict.found("stim_duration")
+         || !stimDict.found("stim_amplitude")
+        )
+    )
+    {
+        FatalErrorInFunction
+            << "Incomplete single-cell stimulus protocol. Required keys are: "
+            << "(stim_start, stim_period_S1, stim_duration, stim_amplitude)."
+            << nl
+            << "Define them inside sub-dictionary 'singleCellStimulus'."
+            << exit(FatalError);
+    }
+
+    stim.stimStart = stimDict.lookupOrDefault<scalar>("stim_start", 0.0);
+    stim.stimPeriodS1 = stimDict.lookupOrDefault<scalar>("stim_period_S1", 0.0);
+    stim.stimDuration = stimDict.lookupOrDefault<scalar>("stim_duration", 0.0);
+    stim.stimAmplitude = stimDict.lookupOrDefault<scalar>("stim_amplitude", 0.0);
+
+    stim.nStim1 = stimDict.lookupOrDefault<label>
+    (
+        "nstim1",
+        stim.stimPeriodS1 > SMALL ? 1 : 0
+    );
+
+    stim.stimPeriodS2 = stimDict.lookupOrDefault<scalar>("stim_period_S2", 0.0);
+    stim.nStim2 = stimDict.lookupOrDefault<label>("nstim2", 0);
+
+    return stim;
+}
+
+void stimulusIO::loadStimulusProtocol
 (
     const dictionary& dict,
     scalarField& C,
@@ -18,44 +206,33 @@ namespace Foam
     label nstim2
 )
 {
-    // Required keys
-    const char* required[] =
-    {
-        "stim_start",
-        "stim_period_S1",
-        "stim_duration",
-        "stim_amplitude"
-    };
+    const StimulusProtocol stim = loadStimulusProtocol(dict);
+    C[stim_start] = stim.stimStart;
+    C[stim_period_S1] = stim.stimPeriodS1;
+    C[stim_duration] = stim.stimDuration;
+    C[stim_amplitude] = stim.stimAmplitude;
+    C[nstim1] = stim.nStim1;
+    C[stim_period_S2] = stim.stimPeriodS2;
+    C[nstim2] = stim.nStim2;
+}
 
-    for (const char* k : required)
-    {
-        if (!dict.found(k))
-        {
-            FatalErrorInFunction
-                << "Missing required stimulus key: " << k
-                << exit(FatalError);
-        }
-    }
-
-    C[stim_start]     = readScalar(dict.lookup("stim_start"));
-    C[stim_period_S1] = readScalar(dict.lookup("stim_period_S1"));
-    C[stim_duration]  = readScalar(dict.lookup("stim_duration"));
-    C[stim_amplitude] = readScalar(dict.lookup("stim_amplitude"));
-
-    // Defaults for optional keys
-    C[nstim1] = 1;          // default: one S1 pulse train period count
-    C[nstim2] = 0;          // default: no S2 unless requested
-    C[stim_period_S2] = 0;  // default: disabled
-
-if (dict.found("nstim1"))
-    C[nstim1] = readScalar(dict.lookup("nstim1"));
-
-if (dict.found("stim_period_S2"))
-    C[stim_period_S2] = readScalar(dict.lookup("stim_period_S2"));
-
-if (dict.found("nstim2"))
-    C[nstim2] = readScalar(dict.lookup("nstim2"));
-
+scalar stimulusIO::computeStimulus
+(
+    scalar VOI,
+    const StimulusProtocol& stim
+)
+{
+    return computeStimulus
+    (
+        VOI,
+        stim.stimStart,
+        stim.stimPeriodS1,
+        stim.stimDuration,
+        stim.stimAmplitude,
+        stim.nStim1,
+        stim.stimPeriodS2,
+        stim.nStim2
+    );
 }
 
 scalar stimulusIO::computeStimulus
@@ -108,51 +285,140 @@ scalar stimulusIO::computeStimulus
     return Istim;
 }
 
+bool stimulusIO::hasActiveStimulus(const StimulusProtocol& stim)
+{
+    const bool hasS1 =
+        stim.stimPeriodS1 > SMALL
+     && stim.nStim1 > 0
+     && stim.stimDuration > SMALL
+     && mag(stim.stimAmplitude) > SMALL;
 
+    const bool hasS2 =
+        stim.stimPeriodS2 > SMALL
+     && stim.nStim2 > 0
+     && stim.stimDuration > SMALL
+     && mag(stim.stimAmplitude) > SMALL;
 
+    return hasS1 || hasS2;
+}
 
+MonodomainStimulusProtocol stimulusIO::loadMonodomainStimulusProtocol
+(
+    const dictionary& dict
+)
+{
+    MonodomainStimulusProtocol stim;
 
+    const dictionary* stimDictPtr = monodomainStimulusDict(dict);
+    if (!stimDictPtr)
+    {
+        return stim;
+    }
 
+    const dictionary& stimDict = *stimDictPtr;
+    readMonodomainStimulusBoxes(stimDict, stim.boxes);
 
-    bool stimulusIO::shouldWriteStep
+    stim.startTimes.setSize(stim.boxes.size());
+    if (stimDict.found("stimulusStartTimeList"))
+    {
+        stimDict.lookup("stimulusStartTimeList") >> stim.startTimes;
+        checkSize
+        (
+            stim.startTimes,
+            stim.boxes.size(),
+            "stimulusStartTimeList"
+        );
+    }
+    else
+    {
+        const scalar startTime =
+            stimDict.lookupOrDefault<scalar>("stimulusStartTime", 0.0);
+        forAll(stim.startTimes, i)
+        {
+            stim.startTimes[i] = startTime;
+        }
+    }
+
+    stim.durations = List<scalar>(stim.boxes.size(), 0.0);
+    if (stimDict.found("stimulusDurationList"))
+    {
+        stimDict.lookup("stimulusDurationList") >> stim.durations;
+        checkSize
+        (
+            stim.durations,
+            stim.boxes.size(),
+            "stimulusDurationList"
+        );
+    }
+    else
+    {
+        const dimensionedScalar stimulusDuration
+        (
+            "stimulusDuration", dimTime, stimDict
+        );
+        forAll(stim.durations, i)
+        {
+            stim.durations[i] = stimulusDuration.value();
+        }
+    }
+    checkNonNegative(stim.durations, "stimulusDuration");
+
+    stim.intensities = List<scalar>(stim.boxes.size(), 0.0);
+    if (stimDict.found("stimulusIntensityList"))
+    {
+        stimDict.lookup("stimulusIntensityList") >> stim.intensities;
+        checkSize
+        (
+            stim.intensities,
+            stim.boxes.size(),
+            "stimulusIntensityList"
+        );
+    }
+    else
+    {
+        const dimensionedScalar stimulusIntensity
+        (
+            "stimulusIntensity", dimCurrent/dimVolume, stimDict
+        );
+        forAll(stim.intensities, i)
+        {
+            stim.intensities[i] = stimulusIntensity.value();
+        }
+    }
+
+    return stim;
+}
+
+word stimulusIO::protocolSuffix(const dictionary& dict)
+{
+    const dictionary* stimDictPtr = singleCellStimulusDict(dict);
+    if (!stimDictPtr)
+    {
+        return "noStim";
+    }
+    const dictionary& stimDict = *stimDictPtr;
+    const scalar s1 = stimDict.lookupOrDefault<scalar>("stim_period_S1", 0.0);
+    const label n1 = stimDict.lookupOrDefault<label>
     (
-        scalar tBegin,
-        scalar tEnd,
-        const dictionary& dict,
-        bool utilitiesMode
-    )
-    {
-        // For utilities (like sweepCurrents): always write
-        if (utilitiesMode)
-            return true;
+        "nstim1",
+        s1 > SMALL ? 1 : 0
+    );
+    const label n2 = stimDict.lookupOrDefault<label>("nstim2", 0);
 
-        // User controls when to start writing
-        scalar writeAfterTime = 0.0;
-        if (dict.found("writeAfterTime"))
-        {
-            writeAfterTime = readScalar(dict.lookup("writeAfterTime"));
-        }
-        // Start writing once we pass that time
-        return (tEnd >= writeAfterTime);
+    if (s1 <= SMALL || n1 <= 0)
+    {
+        return "noStim";
     }
 
+    word out = "S1_" + Foam::name(s1);
 
-    word stimulusIO::protocolSuffix(const dictionary& dict)
+    if (n2 > 0)
     {
-        scalar s1 = readScalar(dict.lookup("stim_period_S1"));
-        scalar n2 = dict.found("nstim2") ? readScalar(dict.lookup("nstim2")) : 0;
-
-        word out = "S1_" + Foam::name(s1);
-
-        if (n2 > 0)
-        {
-            scalar s2 = readScalar(dict.lookup("stim_period_S2"));
-            out += "_S2_" + Foam::name(s2);
-        }
-
-        return out;
+        const scalar s2 =
+            stimDict.lookupOrDefault<scalar>("stim_period_S2", 0.0);
+        out += "_S2_" + Foam::name(s2);
     }
+
+    return out;
+}
 } // namespace Foam
-
-
-

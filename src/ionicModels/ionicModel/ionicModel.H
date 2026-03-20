@@ -27,7 +27,6 @@ SourceFiles
 Authors
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicModel_H
@@ -40,8 +39,11 @@ Authors
 #include "Switch.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "electromechanicsFeedbackProvider.H"
+#include "fvMesh.H"
+#include "ionicModelIO.H"
+#include "stimulusIO.H"
 
+#include "electromechanicsFeedbackProvider.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -59,9 +61,6 @@ class ionicModel
     public CouplingSignalProvider
 {
     // Private Data
-
-    // Private Data
-
         //- ODE solver
         autoPtr<ODESolver> odeSolver_;
 
@@ -80,6 +79,9 @@ class ionicModel
         //  enable this flag
         mutable Switch solveVmWithinODESolver_;
 
+        //- External stimulus protocol (separate from model constants)
+        StimulusProtocol stimulus_;
+
 
     // Private Member Functions
 
@@ -89,55 +91,86 @@ class ionicModel
         //- No copy assignment
         void operator=(const ionicModel&) = delete;
 
-protected:
+    protected:
         virtual void setTissueFromDict();
+        void setTissue(label t) { tissue_ = t; }
+        void setStimulusProtocolFromDict(const dictionary& dict)
+        {
+            stimulus_ = stimulusIO::loadStimulusProtocol(dict);
+        }
         wordList variableExport_;
         wordList debugVarNames_;
+        mutable ionicModelIO::FullPlanCache fullWritePlanCache_;
+        mutable ionicModelIO::SelectedMapCache writeSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache exportSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache exportTransferSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache importTransferSelectedPlanCache_;
+        mutable ionicModelIO::SelectedMapCache debugSelectedPlanCache_;
+        mutable ionicModelIO::ExportedNamesCache exportedNamesCache_;
+        mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
 
-        /*NOTE: currently protected, each means they are only visible by the derived class.
-        THe higher order solver will use them so probably will be set as public.*/
-
-        // Copies STATES_ → states external buffer
-        // inline void copyInternalToExternal
-        // (
-        //     const PtrList<scalarField>& internal,
-        //     Field<Field<scalar>>& external,
-        //     const label nStates
-        // ) const
-        // {
-            // This is VERY expensive: disable for now. If we really need this
-            // functionality, we should find a way tha avoids such copies
-            // forAll(internal, i)
-            // {
-            //     if (external[i].size() >= nStates)
-            //     {
-            //         external[i] = internal[i];
-            //     }
-            // }
-        // }
-
-        // Copies current STATES_ → STATES_OLD_
-        inline void saveStateSnapshot
-        (
-            const PtrList<scalarField>& internal,
-            PtrList<scalarField>& old
-        ) const
+        // Optional metadata hooks for generic I/O in the base class.
+        // Derived models can override these and then rely on base
+        // write/export/debug implementations.
+        virtual const PtrList<scalarField>* ioStatesPtr() const
         {
-            forAll(internal, i)
-                old[i] = internal[i];
+            return nullptr;
         }
 
-        // Restores snapshot STATES_OLD_ → STATES_
-        inline void restoreStateSnapshot
-        (
-            PtrList<scalarField>& internal,
-            const PtrList<scalarField>& old
-        ) const
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const
         {
-            forAll(internal, i)
-                internal[i] = old[i];
+            return nullptr;
         }
 
+        virtual const PtrList<scalarField>* ioRatesPtr() const
+        {
+            return nullptr;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const
+        {
+            return nullptr;
+        }
+
+        virtual label ioNumConstants() const
+        {
+            return 0;
+        }
+
+        virtual const char* const* ioConstantNames() const
+        {
+            return nullptr;
+        }
+
+        virtual const char* const* ioStateNames() const
+        {
+            return nullptr;
+        }
+
+        virtual label ioNumStates() const
+        {
+            return 0;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const
+        {
+            return nullptr;
+        }
+
+        virtual label ioNumAlgebraic() const
+        {
+            return 0;
+        }
+
+        virtual ionicModelIO::VmTransform ioVmTransform() const
+        {
+            return nullptr;
+        }
+
+        bool hasIOMetadata() const
+        {
+            return ioStateNames() && ioNumStates() > 0;
+        }
 
 public:
 
@@ -190,12 +223,11 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
-
 //-----------------------Member Functions ---------------------//
 
-        /// --- CouplingSignalProvider interface ---
-        bool hasSignal(CouplingSignal s) const;
-        scalar signal(label i, CouplingSignal s) const;
+    /// --- CouplingSignalProvider interface ---
+    bool hasSignal(CouplingSignal s) const override;
+    scalar signal(label i, CouplingSignal s) const override;
 
 
 //-----------------------Solver Functions ---------------------//
@@ -216,12 +248,11 @@ public:
             const scalar stepStartTime,
             const scalar deltaT,
             const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        )= 0;
+            scalarField& Im
+        ) = 0;
 
         //- Number of ODE's to solve
-        virtual label nEqns() const = 0;
+        virtual label nEqns() const override = 0;
 
         //- Derivatives of each ODE with respect to the primary unknown in that
         //  equation - right side of the equation
@@ -230,31 +261,8 @@ public:
             const scalar t,
             const scalarField& y,
             scalarField& dydt
-        ) const = 0;
+        ) const override = 0;
 
-
-        //- Solve and ODE system for the start time, the time-step and the
-        //  voltage. Then place the result in the integration point result list
-        virtual void calculateCurrent
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        )= 0;
-
-        //Initialization for a volumetric field
-        // - currently for manufatured solutions
-        virtual void initializeFields
-        (
-            volScalarField& Vm,
-            volScalarField& u1,
-            volScalarField& u2,
-            volScalarField& u3,
-            const volVectorField& C
-        )
-        {}
 
         //- Jacobian for solving the coupled system of ODEs
         virtual void jacobian
@@ -263,7 +271,7 @@ public:
             const scalarField& y,
             scalarField& dfdt,
             scalarSquareMatrix& dfdy
-        ) const
+        ) const override
         {
             notImplemented
             (
@@ -286,8 +294,137 @@ public:
             return solveVmWithinODESolver_;
         }
 
-        //Tissue and dimensions flag getter for ionicModel and manufactured solution
-            //tissue
+        const StimulusProtocol& stimulusProtocol() const
+        {
+            return stimulus_;
+        }
+
+        //- Return available state variable names for this model
+        wordList stateVariableNames() const
+        {
+            if (!hasIOMetadata())
+            {
+                return wordList();
+            }
+
+            const label nStates = ioNumStates();
+            if (nStates <= 0)
+            {
+                return wordList();
+            }
+
+            const char* const* names = ioStateNames();
+            if (!names)
+            {
+                return wordList();
+            }
+
+            wordList result(nStates);
+            for (label i = 0; i < nStates; ++i)
+            {
+                result[i] = word(names[i]);
+            }
+            return result;
+        }
+
+        //- Return constants values for this model
+        scalarField constantVariableValues() const
+        {
+            const auto* constantsPtr = ioConstantsPtr();
+            if (!constantsPtr)
+            {
+                return scalarField();
+            }
+            return *constantsPtr;
+        }
+
+        //- Return available constant variable names for this model
+        wordList constantVariableNames() const
+        {
+            const label nConstants = ioNumConstants();
+            if (nConstants <= 0)
+            {
+                return wordList();
+            }
+
+            const char* const* names = ioConstantNames();
+            if (!names)
+            {
+                return wordList();
+            }
+
+            wordList result(nConstants);
+            for (label i = 0; i < nConstants; ++i)
+            {
+                result[i] = word(names[i]);
+            }
+            return result;
+        }
+
+        //- Return state values at an integration point
+        scalarField stateVariableValues(const label integrationPtI = 0) const
+        {
+            const auto* statesPtr = ioStatesPtr();
+            if (!statesPtr || statesPtr->empty())
+            {
+                return scalarField();
+            }
+
+            if (integrationPtI < 0 || integrationPtI >= statesPtr->size())
+            {
+                FatalErrorInFunction
+                    << "Requested integration point " << integrationPtI
+                    << " but valid range is [0, " << (statesPtr->size() - 1)
+                    << "]." << exit(FatalError);
+            }
+
+            return (*statesPtr)[integrationPtI];
+        }
+
+        //- Return available algebraic variable names for this model
+        wordList algebraicVariableNames() const
+        {
+            const label nAlg = ioNumAlgebraic();
+            if (nAlg <= 0)
+            {
+                return wordList();
+            }
+
+            const char* const* names = ioAlgebraicNames();
+            if (!names)
+            {
+                return wordList();
+            }
+
+            wordList result(nAlg);
+            for (label i = 0; i < nAlg; ++i)
+            {
+                result[i] = word(names[i]);
+            }
+            return result;
+        }
+
+        //- Return algebraic values at an integration point
+        scalarField algebraicVariableValues(const label integrationPtI = 0) const
+        {
+            const auto* algebraicPtr = ioAlgebraicPtr();
+            if (!algebraicPtr || algebraicPtr->empty())
+            {
+                return scalarField();
+            }
+
+            if (integrationPtI < 0 || integrationPtI >= algebraicPtr->size())
+            {
+                FatalErrorInFunction
+                    << "Requested integration point " << integrationPtI
+                    << " but valid range is [0, " << (algebraicPtr->size() - 1)
+                    << "]." << exit(FatalError);
+            }
+
+            return (*algebraicPtr)[integrationPtI];
+        }
+
+        // Tissue/variant metadata used by model-side setup code.
         virtual List<word> supportedTissueTypes() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
@@ -303,11 +440,6 @@ public:
             (t == 4) ? "myocyte" :
                         "unknown";
         }
-            //dimension in manufactured
-        virtual bool hasManufacturedSolution() const
-        {
-        return false;   // Default: no manufactured solution
-        }
 
         virtual List<word> supportedDimensions() const
         {
@@ -319,41 +451,252 @@ public:
         // Write and export from internal variables functions
         // singleCell
         virtual void writeHeader(OFstream& os) const
-        {}
+        {
+            if (!hasIOMetadata())
+            {
+                FatalErrorInFunction
+                    << "I/O metadata not available for ionic model "
+                    << typeName
+                    << ". Override writeHeader()/write() or provide io* hooks."
+                    << exit(FatalError);
+            }
+
+            const wordList names = exportedFieldNames();
+
+            if (!names.empty())
+            {
+                ionicModelIO::writeSelectedHeader(os, names);
+            }
+            else
+            {
+                ionicModelIO::writeHeader
+                (
+                    os,
+                    ioStateNames(),
+                    ioNumStates(),
+                    ioAlgebraicNames(),
+                    ioNumAlgebraic(),
+                    fullWritePlanCache_
+                );
+            }
+        }
 
         virtual void write(const scalar t, OFstream& os) const
-        {}
+        {
+            if (!hasIOMetadata())
+            {
+                FatalErrorInFunction
+                    << "I/O metadata not available for ionic model "
+                    << typeName
+                    << ". Override writeHeader()/write() or provide io* hooks."
+                    << exit(FatalError);
+            }
+
+            const auto* statesPtr = ioStatesPtr();
+            const auto* algebraicPtr = ioAlgebraicPtr();
+            const auto* ratesPtr = ioRatesPtr();
+
+            if (!statesPtr || !algebraicPtr || !ratesPtr)
+            {
+                FatalErrorInFunction
+                    << "I/O storage pointers are not available for ionic model "
+                    << typeName
+                    << ". Override write()/exportStates() or provide io* hooks "
+                    << "(including ioRatesPtr)."
+                    << exit(FatalError);
+            }
+
+            const wordList names = exportedFieldNames();
+
+            if (!names.empty())
+            {
+                ionicModelIO::writeSelected
+                (
+                    t,
+                    os,
+                    *statesPtr,
+                    *algebraicPtr,
+                    names,
+                    ioStateNames(),
+                    ioNumStates(),
+                    ioAlgebraicNames(),
+                    ioNumAlgebraic(),
+                    writeSelectedPlanCache_,
+                    *ratesPtr,
+                    ioVmTransform()
+                );
+            }
+            else
+            {
+                ionicModelIO::write
+                (
+                    t,
+                    os,
+                    *statesPtr,
+                    *algebraicPtr,
+                    *ratesPtr,
+                    ioVmTransform()
+                );
+            }
+        }
 
         // 3D vol fields(defined for states, algebraic and rates.)
         virtual void exportStates
         (
-            const Field<Field<scalar>>&,
-            PtrList<volScalarField>&
+            PtrList<volScalarField>& outFields
         )
-        {}
+        {
+            if (!hasIOMetadata())
+            {
+                FatalErrorInFunction
+                    << "I/O metadata not available for ionic model "
+                    << typeName
+                    << ". Override exportStates() or provide io* hooks."
+                    << exit(FatalError);
+            }
+
+            const auto* statesPtr = ioStatesPtr();
+            const auto* algebraicPtr = ioAlgebraicPtr();
+            const auto* ratesPtr = ioRatesPtr();
+
+            if (!statesPtr || !algebraicPtr || !ratesPtr)
+            {
+                FatalErrorInFunction
+                    << "I/O storage pointers are not available for ionic model "
+                    << typeName
+                    << ". Override exportStates() or provide io* hooks "
+                    << "(including ioRatesPtr)."
+                    << exit(FatalError);
+            }
+
+            ionicModelIO::exportStateFields
+            (
+                *statesPtr,
+                *algebraicPtr,
+                *ratesPtr,
+                exportedFieldNames(),
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                exportSelectedPlanCache_,
+                outFields
+            );
+        }
+
+        virtual void exportFields
+        (
+            const wordList& fieldNames,
+            PtrList<volScalarField>& outFields
+        ) const;
+
+        virtual void importFields
+        (
+            const volScalarField& Vm,
+            const wordList& fieldNames,
+            const PtrList<volScalarField>& inFields
+        );
 
         // Printing function
         virtual void debugPrintFields
         (
-            label,
-            scalar,
-            scalar,
-            scalar
+            label cellI,
+            scalar t1,
+            scalar t2,
+            scalar step
         ) const
-        {}
+        {
+            if (!hasIOMetadata())
+            {
+                FatalErrorInFunction
+                    << "I/O metadata not available for ionic model "
+                    << typeName
+                    << ". Override debugPrintFields() or provide io* hooks."
+                    << exit(FatalError);
+            }
+
+            const auto* statesPtr = ioStatesPtr();
+            const auto* algebraicPtr = ioAlgebraicPtr();
+            const auto* ratesPtr = ioRatesPtr();
+
+            if (!statesPtr || !algebraicPtr || !ratesPtr)
+            {
+                FatalErrorInFunction
+                    << "I/O storage pointers are not available for ionic model "
+                    << typeName
+                    << ". Override debugPrintFields() or provide io* hooks "
+                    << "(including ioRatesPtr)."
+                    << exit(FatalError);
+            }
+
+            const wordList names = debugPrintedNames();
+
+            ionicModelIO::debugPrintFields
+            (
+                *statesPtr,
+                *algebraicPtr,
+                *ratesPtr,
+                names,
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                debugSelectedPlanCache_,
+                cellI,
+                t1,
+                t2,
+                step
+            );
+        }
 
         // Return names of variables to export
         virtual wordList exportedFieldNames() const
         {
-            return variableExport_.size()
-                ? variableExport_
-                : wordList();
+            if (!variableExport_.size())
+            {
+                return wordList();
+            }
+
+            if (!hasIOMetadata())
+            {
+                return variableExport_;
+            }
+
+            const wordList& filtered = ionicModelIO::exportedFieldNamesRef
+            (
+                variableExport_,
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                exportedNamesCache_
+            );
+
+            return filtered;
         }
         virtual wordList debugPrintedNames() const
         {
-            return debugVarNames_.size()
-                ? debugVarNames_
-                : wordList();
+            if (!debugVarNames_.size())
+            {
+                return wordList();
+            }
+
+            if (!hasIOMetadata())
+            {
+                return debugVarNames_;
+            }
+
+            const wordList& filtered = ionicModelIO::exportedFieldNamesRef
+            (
+                debugVarNames_,
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                debugNamesCache_
+            );
+
+            return filtered;
         }
 
         virtual void sweepCurrent
@@ -369,7 +712,13 @@ public:
                 << "sweepCurrent not implemented for ionic model "
                 << typeName << exit(FatalError);
         }
+
+        virtual wordList availableSweepCurrents() const
+        {
+            return wordList();
+        }
         bool utilitiesMode() const;
+        label sampleIntegrationPoint(const label nPoints) const;
 
 
     };

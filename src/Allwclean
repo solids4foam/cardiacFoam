@@ -3,4 +3,6 @@ cd ${0%/*} || exit 1    # run from this directory
 
 wclean genericWriter
 wclean ionicModels
+wclean modelPrePostProcessors
+wclean activeTensionModels
 wclean electroModels

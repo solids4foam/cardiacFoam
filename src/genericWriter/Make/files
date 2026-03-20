@@ -1,4 +1,7 @@
+activeTensionIO.C
+ecgModelIO.C
 ionicModelIO.C
+ionicVariableCompatibility.C
 stimulusIO.C
 
 LIB = $(FOAM_USER_LIBBIN)/libgenericWriter

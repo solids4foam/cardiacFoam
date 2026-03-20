@@ -28,7 +28,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedFDA_H
@@ -39,148 +38,118 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 
+extern const char *tmanufacturedFDASTATES_NAMES[NUM_STATES];
+extern const char *tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC];
+extern const char *tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS];
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
 /*---------------------------------------------------------------------------*\
                          Class manufacturedFDA Declaration
 \*---------------------------------------------------------------------------*/
 
-class tmanufacturedFDA
-:
-    public ionicModel
-{
-    // Private Data
+class tmanufacturedFDA : public ionicModel {
+  // Private Data
 
-        //- States
-        mutable PtrList<scalarField> STATES_;
+  //- States
+  mutable PtrList<scalarField> STATES_;
 
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
+  //- Constants
+  mutable scalarField CONSTANTS_;
 
-        //- Constants
-        mutable scalarField CONSTANTS_;
+  //- Algebraic
+  mutable PtrList<scalarField> ALGEBRAIC_;
 
-        //- Algebraic
-        mutable PtrList<scalarField> ALGEBRAIC_;
+  //- Rates
+  mutable PtrList<scalarField> RATES_;
 
-        //- Rates
-        mutable PtrList<scalarField> RATES_;
+  // Private Member Functions
 
+  //- No copy construct
+  tmanufacturedFDA(const tmanufacturedFDA &) = delete;
 
-    // Private Member Functions
+  //- No copy assignment
+  void operator=(const tmanufacturedFDA &) = delete;
 
-        //- No copy construct
-        tmanufacturedFDA(const tmanufacturedFDA&) = delete;
+protected:
+  virtual const PtrList<scalarField> *ioStatesPtr() const override {
+    return &STATES_;
+  }
 
-        //- No copy assignment
-        void operator=(const tmanufacturedFDA&) = delete;
+  virtual const PtrList<scalarField> *ioAlgebraicPtr() const override {
+    return &ALGEBRAIC_;
+  }
 
+  virtual const PtrList<scalarField> *ioRatesPtr() const override {
+    return &RATES_;
+  }
+
+  virtual const scalarField *ioConstantsPtr() const override {
+    return &CONSTANTS_;
+  }
+
+  virtual label ioNumConstants() const override { return NUM_CONSTANTS; }
+
+  virtual const char *const *ioConstantNames() const override {
+    return tmanufacturedFDACONSTANTS_NAMES;
+  }
+
+  virtual const char *const *ioStateNames() const override {
+    return tmanufacturedFDASTATES_NAMES;
+  }
+
+  virtual label ioNumStates() const override { return NUM_STATES; }
+
+  virtual const char *const *ioAlgebraicNames() const override {
+    return tmanufacturedFDAALGEBRAIC_NAMES;
+  }
+
+  virtual label ioNumAlgebraic() const override { return NUM_ALGEBRAIC; }
 
 public:
+  //- Runtime type information
+  TypeName("tmanufacturedFDA");
 
-    //- Runtime type information
-    TypeName("tmanufacturedFDA");
+  // Override the only available dimension family in this model
+  virtual List<word> supportedDimensions() const override;
 
+  virtual word tissueName() const override
+  {
+    return (tissue() == 1) ? "1D" :
+           (tissue() == 2) ? "2D" :
+           (tissue() == 3) ? "3D" :
+                             "unknown";
+  }
 
-    // Override the only available tissue in this model
-    virtual List<word> supportedDimensions() const;
+  // Constructors
 
+  //- Construct given a dictionary, the number of integration points and a
+  //  initial time step for the ODE solver
+  tmanufacturedFDA(const dictionary &dict, const label nIntegrationPoints,
+                   const scalar initialDeltaT,
+                   const Switch solveVmWithinODESolver = false);
 
-    // Constructors
+  //- Destructor
+  virtual ~tmanufacturedFDA();
 
-        //- Construct given a dictionary, the number of integration points and a
-        //  initial time step for the ODE solver
-        tmanufacturedFDA
-        (
-            const dictionary& dict,
-            const label nIntegrationPoints,
-            const scalar initialDeltaT,
-            const Switch solveVmWithinODESolver = false
-        );
+  // Member Functions
 
+  virtual void solveODE(const scalar stepStartTime, const scalar deltaT,
+                        const scalarField &Vm, scalarField &Im) override;
 
-    //- Destructor
-    virtual ~tmanufacturedFDA();
+  //- Number of ODE's to solve
+  virtual label nEqns() const override { return NUM_STATES; }
 
+  //- Derivatives of each ODE with respect to the primary unknown in that
+  //  equation
+  virtual void derivatives(const scalar t, const scalarField &y,
+                           scalarField &dydt) const override;
 
-    // Member Functions
-
-
-        virtual bool hasManufacturedSolution() const
-        {
-            return true;
-        }
-
-        virtual void calculateCurrent
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        );
-
-        virtual void solveODE
-        (
-            const scalar stepStartTime,
-            const scalar deltaT,
-            const scalarField& Vm,
-            scalarField& Im,
-            Field<Field<scalar>>& states
-        );
-
-        void initializeFields
-        (
-            volScalarField& Vm,
-            volScalarField& u1,
-            volScalarField& u2,
-            volScalarField& u3,
-            const volVectorField& C
-        );
-
-
-        //- Number of ODE's to solve
-        virtual label nEqns() const
-        {
-            return NUM_STATES;
-        }
-
-        //- Derivatives of each ODE with respect to the primary unknown in that
-        //  equation
-        virtual void derivatives
-        (
-            const scalar t,
-            const scalarField& y,
-            scalarField& dydt
-        ) const;
-
-        void updateStatesOld() const;
-        void resetStatesToStatesOld() const;
-        // to provide variable names for export
-        virtual Foam::wordList exportedFieldNames() const;
-        virtual wordList debugPrintedNames() const;
-
-
-        // Override to export the variables
-        virtual void exportStates
-        (
-            const Field<Field<scalar>>&,
-            PtrList<volScalarField>&
-        );
-
-        // Override to print variables in solver
-        void debugPrintFields
-        (
-            label cellI,
-            scalar t1,
-            scalar t2,
-            scalar step
-        ) const;
+  // to provide variable names for export
+  virtual Foam::wordList exportedFieldNames() const override;
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

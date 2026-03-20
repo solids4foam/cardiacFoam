@@ -51,18 +51,15 @@ Foam::AlievPanfilov::AlievPanfilov
 :
     ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
-    STATES_OLD_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
 
 {
     ionicModel::setTissueFromDict();
-    Info<< nl << "Initialize Aliev Panfilov constants:" << nl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
-        STATES_OLD_.set(i,  new scalarField(NUM_STATES,     0.0));
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
@@ -77,18 +74,9 @@ Foam::AlievPanfilov::AlievPanfilov
 
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -107,65 +95,17 @@ Foam::List<Foam::word> Foam::AlievPanfilov::supportedTissueTypes() const
 }
 
 
-//  Explicit split: calculateCurrent (Iion only, no state update)
-void Foam::AlievPanfilov::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
-)
-{
-    const scalar tStart = stepStartTime * 1000.0 / 12.9;
-    if (Im.size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Im.size() != Vm.size()" << abort(FatalError);
-    }
-
-    // We do NOT modify the gating states here – just compute Iion
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-
-        STATESI[0] = (Vm[integrationPtI] * 1000.0 + 80)/100;
-        ::AlievPanfilovcomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        );
-        // Iion_cm  is the total ionic current density used by the PDE
-        Im[integrationPtI] = ALGEBRAICI[Iion_cm] * 100;
-
-        //copy internal STATES to memory external state buffer.
-        //---------Currently with no use. -------------//
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
-    }
-}
-
-
 void Foam::AlievPanfilov::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000.0 / 12.9;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000.0/12.9;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -184,7 +124,7 @@ void Foam::AlievPanfilov::solveODE
 
         // Clamp ODE step
         step = min(step, deltaT * 1000.0/12.9);
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Advance the ODE system
@@ -200,19 +140,15 @@ void Foam::AlievPanfilov::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] * 100;
-
-        //copy internal STATES to memory external state buffer.
-        //---------Currently with no use. -------------//
-
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -236,131 +172,28 @@ void Foam::AlievPanfilov::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
-}
-
-void Foam::AlievPanfilov::updateStatesOld(const Field<Field<scalar>>&) const
-{
-    saveStateSnapshot(STATES_, STATES_OLD_);
-}
-
-void Foam::AlievPanfilov::resetStatesToStatesOld(Field<Field<scalar>>&) const
-{
-    restoreStateSnapshot(STATES_, STATES_OLD_);
+    ,
+            stimulusProtocol()
+        );
 }
 
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::AlievPanfilov::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            AlievPanfilovSTATES_NAMES, NUM_STATES,
-            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::AlievPanfilov::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            AlievPanfilovSTATES_NAMES, NUM_STATES,
-            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::AlievPanfilov::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::AlievPanfilov::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        AlievPanfilovSTATES_NAMES,NUM_STATES,
-        AlievPanfilovALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return AlievPanfilovSTATES_NAMES;
 }
 
-void Foam::AlievPanfilov::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::AlievPanfilov::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        AlievPanfilovSTATES_NAMES, NUM_STATES,
-        AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return AlievPanfilovCONSTANTS_NAMES;
 }
 
-
-void Foam::AlievPanfilov::writeHeader(OFstream& os) const
+const char* const* Foam::AlievPanfilov::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            AlievPanfilovSTATES_NAMES, NUM_STATES,
-            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return AlievPanfilovALGEBRAIC_NAMES;
 }
-
-
-
-static Foam::scalar AlievPanfilov_vm(const Foam::scalarField& S)
-{
-    return S[0] * 100 - 80;
-}
-
-void Foam::AlievPanfilov::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            AlievPanfilovSTATES_NAMES, NUM_STATES,
-            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            AlievPanfilov_vm
-        );
-    }
-}
-
 
 void Foam::AlievPanfilov::sweepCurrent
 (
@@ -391,6 +224,7 @@ void Foam::AlievPanfilov::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -412,17 +246,24 @@ void Foam::AlievPanfilov::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             AlievPanfilovSTATES_NAMES, NUM_STATES,
-            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            AlievPanfilovALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
+}
+
+Foam::wordList Foam::AlievPanfilov::availableSweepCurrents() const
+{
+    return AlievPanfilovDependencyMap().toc();
 }
 
 
@@ -430,39 +271,10 @@ void Foam::AlievPanfilov::sweepCurrent
 
 bool Foam::AlievPanfilov::hasSignal(const CouplingSignal s) const
 {
-    switch (s)
-    {
-        case CouplingSignal::Act:
-        case CouplingSignal::Vm:
-            return true;
-        default:
-            return false;
-    }
+    return ionicModel::hasSignal(s);
 }
 
 Foam::scalar Foam::AlievPanfilov::signal(const label i, const CouplingSignal s) const
 {
-    switch (s)
-    {
-        case CouplingSignal::Act:
-            return STATES_[i][0];
-        case CouplingSignal::Vm:
-            return AlievPanfilov_vm(STATES_[i]);
-        default:
-            break;
-    }
-    FatalErrorInFunction
-        << "Requested coupling signal "
-        << static_cast<int>(s)
-        << " from AlievPanfilov, but this signal is not available."
-        << abort(FatalError);
-
-    return 0.0;
+    return ionicModel::signal(i, s);
 }
-
-
-
-
-
-
-

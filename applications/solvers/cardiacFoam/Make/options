@@ -29,6 +29,12 @@ EXE_INC = \
 
 EXE_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
+    -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
     -lelectroModels \
+    -lmodelPrePostProcessors \
+    -lionicModels \
+    -lgenericWriter \
+    -lecgModels \
+    -lactiveTensionModels \
     $(GFORTRAN_LIBS)

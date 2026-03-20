@@ -1,19 +1,19 @@
 /*---------------------------------------------------------------------------*\
 License
-    This file is part of solids4foam.
+    This file is part of cardiacFoam.
 
-    solids4foam is free software: you can redistribute it and/or modify it
+    cardiacFoam is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
     option) any later version.
 
-    solids4foam is distributed in the hope that it will be useful, but
+    cardiacFoam is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with solids4foam.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
     electroModel
@@ -26,7 +26,6 @@ Author
 
 SourceFiles
     electroModel.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroModel_H
@@ -39,7 +38,7 @@ SourceFiles
 #include "pimpleControl.H"
 #include "dimVoltage.H"
 #include "Enum.H"
-
+#include "electromechanicsFeedbackProvider.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -57,91 +56,82 @@ class electroModel
 {
 public:
 
-        //- Solution algorithms
-        enum solutionAlgorithm
-        {
-            IMPLICIT,
-            EXPLICIT
-        };
+    //- Solution algorithms
+    enum solutionAlgorithm
+    {
+        IMPLICIT,
+        EXPLICIT
+    };
 
-        //- Solution algorithm names
-        static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+    //- Solution algorithm names
+    static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+
 
 private:
 
-    // Private data
+    //- Mesh
+    autoPtr<dynamicFvMesh> meshPtr_;
 
-        //- Mesh
-        autoPtr<dynamicFvMesh> meshPtr_;
+    //- Electro properties dictionary
+    dictionary electroProperties_;
 
-        //- Electro properties dictionary
-        dictionary electroProperties_;
+    //- PIMPLE control for monitoring convergence of the outer loop
+    mutable autoPtr<pimpleControl> pimplePtr_;
 
-        //- Pimple control for monitoring the convergence of the outer loop
-        mutable autoPtr<pimpleControl> pimplePtr_;
+    //- Solution algorithm, e.g. implicit or explicit
+    const solutionAlgorithm solutionAlgorithm_;
 
-        //- Solution algorithm, e.g. implicit, explicit
-        //  This enum is used by some of the electro models but not all
-        const solutionAlgorithm solutionAlgorithm_;
+    //- Make the PIMPLE control
+    void makePimpleControl() const;
 
+    //- Disallow default bitwise copy construct
+    electroModel(const electroModel&);
 
-    // Private Member Functions
-
-        //- Make the pimple control
-        void makePimpleControl() const;
-
-        //- Disallow default bitwise copy construct
-        electroModel(const electroModel&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const electroModel&);
+    //- Disallow default bitwise assignment
+    void operator=(const electroModel&);
 
 
 protected:
 
-    // Protected member functions
+    //- Return non-const access to the PIMPLE control
+    pimpleControl& pimple();
 
-        //- Return electro properties dictionary
-        dictionary& electroProperties()
-        {
-            return electroProperties_;
-        }
+    //- Return const access to the solution algorithm enum
+    const solutionAlgorithm& solutionAlg() const
+    {
+        return solutionAlgorithm_;
+    }
 
-        //- Return electro properties dictionary
-        const dictionary& electroProperties() const
-        {
-            return electroProperties_;
-        }
-
-        //- Return non-const acess to the pimple control
-        pimpleControl& pimple();
-
-        //- Const access to the solution algorithm enum
-        const solutionAlgorithm& solutionAlg() const
-        {
-            return solutionAlgorithm_;
-        }
 
 public:
 
     //- Runtime type information
     TypeName("electroModel");
 
+    //- Return electro properties dictionary
+    dictionary& electroProperties()
+    {
+        return electroProperties_;
+    }
 
-    // Declare run-time constructor selection table
+    //- Return electro properties dictionary
+    const dictionary& electroProperties() const
+    {
+        return electroProperties_;
+    }
 
-        declareRunTimeSelectionTable
-        (
-            autoPtr,
-            electroModel,
-            dictionary,
-            (
-                Time& runTime,
-                const word& region
-            ),
-            (runTime, region)
-        );
+    //- Return the electro-model coefficients dictionary used to construct the
+    //  ionic model
+    const dictionary& ionicProperties() const;
 
+    declareRunTimeSelectionTable
+    (
+        autoPtr,
+        electroModel,
+        dictionary,
+        (Time& runTime, const word& region),
+        (runTime, region)
+    );
 
     // Constructors
 
@@ -153,64 +143,62 @@ public:
             const word& region = dynamicFvMesh::defaultRegion
         );
 
-
     // Selectors
 
         //- Select constructed from mesh
         static autoPtr<electroModel> New
         (
-            Time& runTime, const word& region = "region0"
+            Time& runTime,
+            const word& region = "region0"
         );
 
-
-    // Destructor
-
-        virtual ~electroModel();
-
+    //- Destructor
+    virtual ~electroModel();
 
     // Member Functions
 
-        // Access
+        //- Return reference to the mesh
+        dynamicFvMesh& mesh()
+        {
+            return meshPtr_();
+        }
 
-            //- Return reference to the mesh
-            dynamicFvMesh& mesh()
-            {
-                return meshPtr_();
-            }
+        //- Return const reference to the mesh
+        const dynamicFvMesh& mesh() const
+        {
+            return meshPtr_();
+        }
 
-            //- Return const reference to the mesh
-            const dynamicFvMesh& mesh() const
-            {
-                return meshPtr_();
-            }
+        //- Return time
+        const Time& runTime() const
+        {
+            return meshPtr_().time();
+        }
 
-            //- Return time
-            const Time& runTime() const
-            {
-                return meshPtr_().time();
-            }
+        //- Update the size of the time-step
+        virtual void setDeltaT(Time& runTime)
+        {
+            physicsModel::setDeltaT(runTime);
+        }
 
-        // Edit
+        //- Return transmembrane voltage (needed by composite models)
+        virtual const volScalarField& Vm() const = 0;
 
-            //- Update the size of the time-step
-            virtual void setDeltaT(Time& runTime)
-            {
-                physicsModel::setDeltaT(runTime);
-            }
+        //- Return optional coupling signal provider (e.g. ionic model)
+        virtual const CouplingSignalProvider* provider() const
+        {
+            return nullptr;
+        }
 
-            //- Evolve the electro model
-            virtual bool evolve() = 0;
+        //- Read electroProperties dictionary
+        virtual bool read();
 
-            //- Read electroProperties dictionary
-            virtual bool read();
+        //- Write fields
+        virtual void writeFields(const Time& runTime);
 
-            //- Write fields
-            virtual void writeFields(const Time& runTime);
-
-            //- This function is called at the end of the simulation
-            virtual void end();
+        //- This function is called at the end of the simulation
+        virtual void end();
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

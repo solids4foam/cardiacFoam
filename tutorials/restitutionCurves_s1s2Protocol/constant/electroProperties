@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroModel singleCellElectro;
+
+singleCellElectroCoeffs
+{
+    ionicModel    BuenoOrovio;
+    tissue    epicardialCells;
+
+    solutionAlgorithm explicit;
+    solver Euler;
+    initialODEStep 1e-5;
+    maxSteps 1000000000;
+    absTol 1e-6;
+    relTol 1e-4;
+
+    singleCellStimulus
+    {
+        stim_start 20;
+        stim_duration 1;
+        stim_amplitude 0.4;
+        stim_period_S1 2000;
+        nstim1 10;
+        stim_period_S2 250;
+        nstim2 2;
+    }
+
+    writeAfterTime    18.0;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm);
+        }
+    }
+}
+
+// ************************************************************************* //

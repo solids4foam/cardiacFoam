@@ -27,7 +27,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef genericModel_H
@@ -55,9 +54,6 @@ class genericModel
 
         //- States
         mutable PtrList<scalarField> STATES_;
-
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
 
         //- Constants
         mutable scalarField CONSTANTS_;
@@ -154,10 +150,6 @@ class genericModel
                 scalarField& dydt
             ) const override;
 
-
-            virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-            virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
-
                     // Override to provide variable names for export
             virtual Foam::wordList exportedFieldNames() const override;
             virtual wordList debugPrintedNames() const override;
@@ -199,5 +191,4 @@ class genericModel
 #endif
 
 // ************************************************************************* //
-
 

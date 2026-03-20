@@ -5,3 +5,5 @@
 
 cleanCase
 rm -rf case.foam monitorFile postProcessing
+rm -rf regressionTests
+rm -f log.*

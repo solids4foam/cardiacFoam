@@ -1,30 +1,30 @@
 /*---------------------------------------------------------------------------*\
 License
-    This file is part of solids4foam.
+    This file is part of cardiacFoam.
 
-    solids4foam is free software: you can redistribute it and/or modify it
+    cardiacFoam is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
     option) any later version.
 
-    solids4foam is distributed in the hope that it will be useful, but
+    cardiacFoam is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with solids4foam.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
 #include "electroModel.H"
 #include "addToRunTimeSelectionTable.H"
 
-
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
     defineTypeNameAndDebug(electroModel, 0);
     defineRunTimeSelectionTable(electroModel, dictionary);
     addToRunTimeSelectionTable(physicsModel, electroModel, physicsModel);
@@ -79,9 +79,6 @@ Foam::electroModel::electroModel
     physicsModel(type, runTime),
     IOdictionary
     (
-        // If region == "region0" then read from the main case
-        // Otherwise, read from the region/sub-mesh directory e.g.
-        // constant/electro
         bool(region == dynamicFvMesh::defaultRegion)
       ? IOobject
         (
@@ -95,7 +92,7 @@ Foam::electroModel::electroModel
         (
             "electroProperties",
             runTime.caseConstant(),
-            region, // using 'local' property of IOobject
+            region,
             runTime,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
@@ -118,9 +115,7 @@ Foam::electroModel::electroModel
     pimplePtr_(),
     solutionAlgorithm_
     (
-        electroProperties_.found("solutionAlgorithm")
-      ? solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
-      : solutionAlgorithm::EXPLICIT
+        solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
     )
 {}
 
@@ -133,15 +128,12 @@ Foam::electroModel::~electroModel()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-
 Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
 (
     Time& runTime,
     const word& region
 )
 {
-    // NB: dictionary must be unregistered to avoid adding to the database
-
     IOdictionary props
     (
         IOobject
@@ -153,7 +145,7 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
             runTime,
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
-            false  // Do not register
+            false
         )
     );
 
@@ -174,7 +166,6 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
             *dictionaryConstructorTablePtr_
         ) << exit(FatalIOError);
     }
-
 #else
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
@@ -215,23 +206,28 @@ void Foam::electroModel::writeFields(const Time& runTime)
 }
 
 
+const Foam::dictionary& Foam::electroModel::ionicProperties() const
+{
+    return electroProperties_;
+}
+
+
 bool Foam::electroModel::read()
 {
     if (regIOobject::read())
     {
         electroProperties_ = subDict(type() + "Coeffs");
-
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
+
 
 void Foam::electroModel::end()
 {
-    this->IOobject::rename(this->IOobject::name()+".withDefaultValues");
+    this->IOobject::rename(this->IOobject::name() + ".withDefaultValues");
     this->regIOobject::write();
 }
+
 // ************************************************************************* //

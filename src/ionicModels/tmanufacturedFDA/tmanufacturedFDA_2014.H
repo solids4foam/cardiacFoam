@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "tmanufacturedFDA_2014Names.H"
 
 const char* tmanufacturedFDASTATES_NAMES[NUM_STATES] = {
@@ -11,6 +30,11 @@ const char* tmanufacturedFDAALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion"
 };
 
+const char* tmanufacturedFDACONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "Cm",
+    "Beta",
+    "Chi",
+};
 
 // Dim 1
 // Dim 2
@@ -52,6 +76,6 @@ tmanufacturedFDAcomputeVariables(double VOI, double* CONSTANTS, double* RATES, d
     RATES[u1] = pow(STATES[u1] + STATES[u3] - STATES[V], 2.0) * pow(STATES[u2], 2.0) + 0.5 * (STATES[u1] + STATES[u3] - STATES[V]) * pow(STATES[u2], 2.0) * (STATES[V] - STATES[u3]);
     RATES[u2] = - (STATES[u1] + STATES[u3] - STATES[V]) *  pow(STATES[u2], 3);
     RATES[u3] = 0;
-    ALGEBRAIC[Iion] =  - (CONSTANTS[Cm]/2.0) * (STATES[u1] + STATES[u3] - STATES[V])  * pow(STATES[u2], 2) * (STATES[V] - STATES[u3]) + (CONSTANTS[Beta] * (STATES[V] - STATES[u3])) / CONSTANTS[Chi];
+    ALGEBRAIC[Iion] =  - (STATES[u1] + STATES[u3] - STATES[V])  * pow(STATES[u2], 2) * (STATES[V] - STATES[u3]) + (CONSTANTS[Beta] * (STATES[V] - STATES[u3])) / CONSTANTS[Chi];
 
 }

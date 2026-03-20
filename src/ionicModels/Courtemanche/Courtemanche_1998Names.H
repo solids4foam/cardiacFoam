@@ -1,19 +1,79 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #pragma once
+#include "stimulusIO.H"
 #include "dictionary.H"
 
 
 
-enum CONSTANT_INDEX{    AC_CMDN_max,    AC_CSQN_max,    AC_Ca_up_max,    AC_Cao,    AC_Cm,
-    AC_ECaL,    AC_F,    AC_FRT,    AC_INaCa_max,    AC_INaK_max,    AC_I_diff,    AC_I_up_max,
-    AC_IpCa_max,    AC_KQ10,    AC_K_rel,    AC_K_up,    AC_KmCa,    AC_KmKo,    AC_KmNa,
-    AC_KmNai,    AC_Km_CMDN,    AC_Km_CSQN,    AC_Km_TRPN,    AC_Ko,    AC_Nao,    AC_R,
-    AC_RTF,    AC_T,    AC_TRPN_max,    AC_V_cell,    AC_V_i,    AC_V_rel,    AC_V_up,
-    AC_c1,    AC_c2,   AC_cajsr_u_tau,    AC_g,    AC_gCaL,    AC_gK1,    AC_gKr,    AC_gKs,
-    AC_gKur_base,   AC_gNa,    AC_gbCa,    AC_gbNa,    AC_gto,    AC_ical_fCa_tau,    AC_ksat,    AC_sigma,    AC_tau_tr,
-
-    stim_start, stim_duration, stim_amplitude,
-    stim_period_S1, nstim1,
-    stim_period_S2, nstim2,
+enum CONSTANT_INDEX {
+    AC_CMDN_max,
+    AC_CSQN_max,
+    AC_Ca_up_max,
+    AC_Cao,
+    AC_Cm,
+    AC_ECaL,
+    AC_F,
+    AC_FRT,
+    AC_INaCa_max,
+    AC_INaK_max,
+    AC_I_diff,
+    AC_I_up_max,
+    AC_IpCa_max,
+    AC_KQ10,
+    AC_K_rel,
+    AC_K_up,
+    AC_KmCa,
+    AC_KmKo,
+    AC_KmNa,
+    AC_KmNai,
+    AC_Km_CMDN,
+    AC_Km_CSQN,
+    AC_Km_TRPN,
+    AC_Ko,
+    AC_Nao,
+    AC_R,
+    AC_RTF,
+    AC_T,
+    AC_TRPN_max,
+    AC_V_cell,
+    AC_V_i,
+    AC_V_rel,
+    AC_V_up,
+    AC_c1,
+    AC_c2,
+    AC_cajsr_u_tau,
+    AC_g,
+    AC_gCaL,
+    AC_gK1,
+    AC_gKr,
+    AC_gKs,
+    AC_gKur_base,
+    AC_gNa,
+    AC_gbCa,
+    AC_gbNa,
+    AC_gto,
+    AC_ical_fCa_tau,
+    AC_ksat,
+    AC_sigma,
+    AC_tau_tr,
 
     NUM_CONSTANTS};
 
@@ -111,6 +171,6 @@ enum ALGEBRAIC_INDEX
 void
 CourtemancheinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
+CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 
 

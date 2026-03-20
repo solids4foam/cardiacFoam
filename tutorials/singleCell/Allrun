@@ -3,6 +3,10 @@
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-runApplication singleCellElectroActivationFoam
+runApplication cardiacFoam
 
-./plotVoltage
+if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
+    echo "Skipping plotVoltage (CF_SKIP_PLOTS=1)."
+else
+    ./plotVoltage
+fi
