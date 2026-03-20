@@ -42,124 +42,162 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam {
+namespace Foam
+{
 
 /*---------------------------------------------------------------------------*\
                        Class electroModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class electroModel : public physicsModel, public IOdictionary {
+class electroModel
+:
+    public physicsModel,
+    public IOdictionary
+{
 public:
-  //- Solution algorithms
-  enum solutionAlgorithm { IMPLICIT, EXPLICIT };
 
-  //- Solution algorithm names
-  static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+    //- Solution algorithms
+    enum solutionAlgorithm
+    {
+        IMPLICIT,
+        EXPLICIT
+    };
+
+    //- Solution algorithm names
+    static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+
 
 private:
-  // Private data
 
-  //- Mesh
-  autoPtr<dynamicFvMesh> meshPtr_;
+    //- Mesh
+    autoPtr<dynamicFvMesh> meshPtr_;
 
-  //- Electro properties dictionary
-  dictionary electroProperties_;
+    //- Electro properties dictionary
+    dictionary electroProperties_;
 
-  //- Pimple control for monitoring the convergence of the outer loop
-  mutable autoPtr<pimpleControl> pimplePtr_;
+    //- PIMPLE control for monitoring convergence of the outer loop
+    mutable autoPtr<pimpleControl> pimplePtr_;
 
-  //- Solution algorithm, e.g. implicit, explicit
-  //  This enum is used by some of the electro models but not all
-  const solutionAlgorithm solutionAlgorithm_;
+    //- Solution algorithm, e.g. implicit or explicit
+    const solutionAlgorithm solutionAlgorithm_;
 
-  // Private Member Functions
+    //- Make the PIMPLE control
+    void makePimpleControl() const;
 
-  //- Make the pimple control
-  void makePimpleControl() const;
+    //- Disallow default bitwise copy construct
+    electroModel(const electroModel&);
 
-  //- Disallow default bitwise copy construct
-  electroModel(const electroModel &);
+    //- Disallow default bitwise assignment
+    void operator=(const electroModel&);
 
-  //- Disallow default bitwise assignment
-  void operator=(const electroModel &);
 
 protected:
-  // Protected member functions
 
-  //- Return non-const acess to the pimple control
-  pimpleControl &pimple();
+    //- Return non-const access to the PIMPLE control
+    pimpleControl& pimple();
 
-  //- Const access to the solution algorithm enum
-  const solutionAlgorithm &solutionAlg() const { return solutionAlgorithm_; }
+    //- Return const access to the solution algorithm enum
+    const solutionAlgorithm& solutionAlg() const
+    {
+        return solutionAlgorithm_;
+    }
+
 
 public:
-  //- Runtime type information
-  TypeName("electroModel");
 
-  //- Return electro properties dictionary
-  dictionary &electroProperties() { return electroProperties_; }
+    //- Runtime type information
+    TypeName("electroModel");
 
-  //- Return electro properties dictionary
-  const dictionary &electroProperties() const { return electroProperties_; }
+    //- Return electro properties dictionary
+    dictionary& electroProperties()
+    {
+        return electroProperties_;
+    }
 
-  //- Return the electro-model coeff dictionary used to construct the ionic
-  //  model. Ionic keys are expected at this scope.
-  const dictionary &ionicProperties() const;
+    //- Return electro properties dictionary
+    const dictionary& electroProperties() const
+    {
+        return electroProperties_;
+    }
 
-  // Declare run-time constructor selection table
+    //- Return the electro-model coefficients dictionary used to construct the
+    //  ionic model
+    const dictionary& ionicProperties() const;
 
-  declareRunTimeSelectionTable(autoPtr, electroModel, dictionary,
-                               (Time & runTime, const word &region),
-                               (runTime, region));
+    declareRunTimeSelectionTable
+    (
+        autoPtr,
+        electroModel,
+        dictionary,
+        (Time& runTime, const word& region),
+        (runTime, region)
+    );
 
-  // Constructors
+    // Constructors
 
-  //- Construct from components
-  electroModel(const word &type, Time &runTime,
-               const word &region = dynamicFvMesh::defaultRegion);
+        //- Construct from components
+        electroModel
+        (
+            const word& type,
+            Time& runTime,
+            const word& region = dynamicFvMesh::defaultRegion
+        );
 
-  // Selectors
+    // Selectors
 
-  //- Select constructed from mesh
-  static autoPtr<electroModel> New(Time &runTime,
-                                   const word &region = "region0");
+        //- Select constructed from mesh
+        static autoPtr<electroModel> New
+        (
+            Time& runTime,
+            const word& region = "region0"
+        );
 
-  // Destructor
+    //- Destructor
+    virtual ~electroModel();
 
-  virtual ~electroModel();
+    // Member Functions
 
-  // Member Functions
+        //- Return reference to the mesh
+        dynamicFvMesh& mesh()
+        {
+            return meshPtr_();
+        }
 
-  // Access
+        //- Return const reference to the mesh
+        const dynamicFvMesh& mesh() const
+        {
+            return meshPtr_();
+        }
 
-  //- Return reference to the mesh
-  dynamicFvMesh &mesh() { return meshPtr_(); }
+        //- Return time
+        const Time& runTime() const
+        {
+            return meshPtr_().time();
+        }
 
-  //- Return const reference to the mesh
-  const dynamicFvMesh &mesh() const { return meshPtr_(); }
+        //- Update the size of the time-step
+        virtual void setDeltaT(Time& runTime)
+        {
+            physicsModel::setDeltaT(runTime);
+        }
 
-  //- Return time
-  const Time &runTime() const { return meshPtr_().time(); }
+        //- Return transmembrane voltage (needed by composite models)
+        virtual const volScalarField& Vm() const = 0;
 
-  // Edit
+        //- Return optional coupling signal provider (e.g. ionic model)
+        virtual const CouplingSignalProvider* provider() const
+        {
+            return nullptr;
+        }
 
-  //- Update the size of the time-step
-  virtual void setDeltaT(Time &runTime) { physicsModel::setDeltaT(runTime); }
+        //- Read electroProperties dictionary
+        virtual bool read();
 
-  //- Return transmembrane voltage (needed by composite models)
-  virtual const volScalarField &Vm() const = 0;
+        //- Write fields
+        virtual void writeFields(const Time& runTime);
 
-  //- Return optional coupling signal provider (e.g. ionic model)
-  virtual const CouplingSignalProvider *provider() const { return nullptr; }
-
-  //- Read electroProperties dictionary
-  virtual bool read();
-
-  //- Write fields
-  virtual void writeFields(const Time &runTime);
-
-  //- This function is called at the end of the simulation
-  virtual void end();
+        //- This function is called at the end of the simulation
+        virtual void end();
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

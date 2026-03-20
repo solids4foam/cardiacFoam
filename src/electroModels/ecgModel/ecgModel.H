@@ -22,21 +22,11 @@ Description
     Abstract base class for ECG computation models.
 
     Follows the same runtime-selection pattern as ionicModel /
-    activeTensionModel.  Concrete subclasses implement compute() to evaluate
+    activeTensionModel. Concrete subclasses implement compute() to evaluate
     body-surface potentials from the transmembrane voltage field Vm.
 
-    ecgModel is an ECG subsystem used by electroModels. It receives Vm as a
-    const reference from the owning electroModel implementation.
-
-    Common members available to all subclasses:
-      Vm_               — const ref to monodomain Vm field
-      mesh_             — const ref to the heart fvMesh
-      conductivity()    — monodomain conductivity tensor used by the ECG model
-      electrodeNames_   — electrode labels  (empty if not configured)
-      electrodePositions_ — electrode positions (empty if not configured)
-
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro, UCD.
     Philip Cardiff, UCD.
 
 SourceFiles
@@ -72,13 +62,13 @@ protected:
     //- Monodomain conductivity tensor provided by the parent electroModel
     const volTensorField& conductivity_;
 
-    //- Electrode labels (empty when electrodes not configured)
+    //- Electrode labels (empty when electrodes are not configured)
     wordList electrodeNames_;
 
-    //- Electrode positions (empty when electrodes not configured)
+    //- Electrode positions (empty when electrodes are not configured)
     List<vector> electrodePositions_;
 
-    //- Read electrode positions from the 'electrodes' subdict (if present)
+    //- Read electrode positions from the electrodes sub-dictionary
     void readElectrodes(const dictionary& dict);
 
 
@@ -101,8 +91,7 @@ public:
 
     // Constructors
 
-        //- Construct from Vm field, coefficients dictionary, and monodomain
-        //  conductivity tensor.
+        //- Construct from Vm field, coefficients dictionary, and conductivity
         ecgModel
         (
             const volScalarField& Vm,
@@ -112,7 +101,7 @@ public:
 
     // Selectors
 
-        //- Return a new ecgModel selected from dict entry 'ecgModel'
+        //- Return a new ecgModel selected from dict entry ecgModel
         static autoPtr<ecgModel> New
         (
             const volScalarField& Vm,
@@ -120,23 +109,24 @@ public:
             const volTensorField& conductivity
         );
 
-    // Destructor
+    //- Destructor
     virtual ~ecgModel() = default;
-
-    // Access
-
-        const volTensorField& conductivity() const { return conductivity_; }
 
     // Member Functions
 
-        //- Compute ECG output for the current timestep
+        //- Return the conductivity tensor used by the ECG model
+        const volTensorField& conductivity() const
+        {
+            return conductivity_;
+        }
+
+        //- Compute ECG output for the current time-step
         virtual void compute() = 0;
 
-        //- Refresh model coefficients from the ECG sub-dictionary.
-        //  Subclasses may extend this, but should preserve output layout.
+        //- Refresh model coefficients from the ECG sub-dictionary
         virtual bool read(const dictionary& dict);
 
-        //- Finalize any model-specific reporting at the end of the run
+        //- Finalise any model-specific reporting at the end of the run
         virtual void end() {}
 };
 

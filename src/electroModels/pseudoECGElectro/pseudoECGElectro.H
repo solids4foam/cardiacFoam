@@ -21,27 +21,8 @@ Class
 Description
     ECG model using the Gima-Rudy dipole approximation (pseudo-ECG).
 
-    The potential at each electrode position P is:
-
-        phi_pseudo(P,t) = -sum_c [ (conductivity . grad(Vm))_c . r_vec * V_c / |r|^3 ]
-
-    where r_vec = C_c - P and the sum is made parallel-safe via Foam::reduce.
-
-    Dictionary (inside pseudoECGElectroCoeffs):
-
-        pseudoECGElectroCoeffs
-        {
-            electrodes
-            {
-                V1  (-26.1184 -283.543 -70.0558);
-                // ...
-            }
-        }
-
-    Output: postProcessing/pseudoECG.dat  (at outputTime, one row per step)
-
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro, UCD.
     Philip Cardiff, UCD.
 
 SourceFiles
@@ -57,113 +38,119 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam {
+namespace Foam
+{
 
 /*---------------------------------------------------------------------------*\
                      Class pseudoECGElectro Declaration
 \*---------------------------------------------------------------------------*/
 
-class pseudoECGElectro : public ecgModel {
-  // Private data
+class pseudoECGElectro
+:
+    public ecgModel
+{
+    //- Output stream for pseudoECG.dat
+    autoPtr<OFstream> outputPtr_;
 
-  //- Output stream for pseudoECG.dat
-  autoPtr<OFstream> outputPtr_;
+    //- Optional manufactured-solution diagnostics stream
+    autoPtr<OFstream> manufacturedOutputPtr_;
 
-  //- Optional manufactured-solution diagnostics stream
-  autoPtr<OFstream> manufacturedOutputPtr_;
+    //- Enable manufactured-reference comparisons after each ECG step
+    Switch manufacturedEnabled_;
 
-  //- Enable manufactured-reference comparisons after each ECG step
-  Switch manufacturedEnabled_;
+    //- Active manufactured dimension used by the reference integral
+    label manufacturedDimension_;
 
-  //- Active manufactured dimension used by the meshless reference integral
-  label manufacturedDimension_;
+    //- High-order reference quadrature order
+    label manufacturedReferenceQuadratureOrder_;
 
-  //- High-order reference quadrature order
-  label manufacturedReferenceQuadratureOrder_;
+    //- Lower-order quadrature orders used for consistency checks
+    List<label> manufacturedCheckQuadratureOrders_;
 
-  //- Lower-order quadrature orders used for consistency checks
-  List<label> manufacturedCheckQuadratureOrders_;
+    //- Cached spatial manufactured reference for the higher-order quadrature
+    List<scalar> manufacturedReferenceSpatialValues_;
 
-  //- Cached spatial manufactured reference for the higher-order quadrature
-  List<scalar> manufacturedReferenceSpatialValues_;
+    //- Cached spatial manufactured references for lower-order quadratures
+    List<List<scalar>> manufacturedCheckSpatialValues_;
 
-  //- Cached spatial manufactured references for the lower-order quadratures
-  List<List<scalar>> manufacturedCheckSpatialValues_;
+    //- Conductivity tensor used to build the current manufactured cache
+    tensor manufacturedCachedConductivity_;
 
-  //- Conductivity tensor used to build the current manufactured cache
-  tensor manufacturedCachedConductivity_;
+    //- True when the cached manufactured spatial references are up to date
+    bool manufacturedSpatialCacheValid_;
 
-  //- True when the cached manufactured spatial references are up to date
-  bool manufacturedSpatialCacheValid_;
+    //- Number of manufactured samples processed so far
+    label manufacturedSampleCount_;
 
-  //- Number of manufactured samples processed so far
-  label manufacturedSampleCount_;
+    //- Running norms for |numeric - reference quadrature|
+    List<scalar> referenceErrorL1Sum_;
+    List<scalar> referenceErrorL2Sum_;
+    List<scalar> referenceErrorLinf_;
 
-  //- Running norms for |numeric - reference quadrature|
-  List<scalar> referenceErrorL1Sum_;
-  List<scalar> referenceErrorL2Sum_;
-  List<scalar> referenceErrorLinf_;
+    //- Running norms for |numeric - check quadrature| for each qCheck
+    List<List<scalar>> checkErrorL1Sum_;
+    List<List<scalar>> checkErrorL2Sum_;
+    List<List<scalar>> checkErrorLinf_;
 
-  //- Running norms for |numeric - check quadrature| for each qCheck
-  List<List<scalar>> checkErrorL1Sum_;
-  List<List<scalar>> checkErrorL2Sum_;
-  List<List<scalar>> checkErrorLinf_;
+    //- Running norms for |reference - check quadrature| for each qCheck
+    List<List<scalar>> referenceDeltaL1Sum_;
+    List<List<scalar>> referenceDeltaL2Sum_;
+    List<List<scalar>> referenceDeltaLinf_;
 
-  //- Running norms for |reference quadrature - check quadrature| for each qCheck
-  List<List<scalar>> referenceDeltaL1Sum_;
-  List<List<scalar>> referenceDeltaL2Sum_;
-  List<List<scalar>> referenceDeltaLinf_;
+    //- Avoid rewriting the manufactured summary file
+    bool manufacturedSummaryWritten_;
 
-  //- Avoid rewriting the manufactured summary file
-  bool manufacturedSummaryWritten_;
+    void readManufacturedConfig(const dictionary& dict);
+    void initialiseManufacturedOutput();
+    void resizeManufacturedCheckStorage();
+    void invalidateManufacturedReferenceCache();
+    void rebuildManufacturedReferenceCache(const tensor& referenceConductivity);
+    void computePseudoECGValues(List<scalar>& values) const;
 
-  // Private Member Functions
+    void updateManufacturedStatistics
+    (
+        const List<scalar>& numericValues,
+        const List<List<scalar>>& checkReferenceValues,
+        const List<scalar>& referenceValues
+    );
 
-  void readManufacturedConfig(const dictionary &dict);
+    void writeManufacturedSummary();
 
-  void initialiseManufacturedOutput();
+    //- Disallow copy construct
+    pseudoECGElectro(const pseudoECGElectro&);
 
-  void resizeManufacturedCheckStorage();
+    //- Disallow assignment
+    void operator=(const pseudoECGElectro&);
 
-  void invalidateManufacturedReferenceCache();
-
-  void rebuildManufacturedReferenceCache(const tensor &referenceConductivity);
-
-  void computePseudoECGValues(List<scalar> &values) const;
-
-  void updateManufacturedStatistics(const List<scalar> &numericValues,
-                                    const List<List<scalar>> &checkReferenceValues,
-                                    const List<scalar> &referenceValues);
-
-  void writeManufacturedSummary();
-
-  //- Disallow copy construct
-  pseudoECGElectro(const pseudoECGElectro &);
-
-  //- Disallow assignment
-  void operator=(const pseudoECGElectro &);
 
 public:
-  //- Runtime type information
-  TypeName("pseudoECGElectro");
 
-  // Constructor
-  pseudoECGElectro(const volScalarField &Vm, const dictionary &dict,
-                   const volTensorField &conductivity);
+    //- Runtime type information
+    TypeName("pseudoECGElectro");
 
-  // Destructor
-  virtual ~pseudoECGElectro() = default;
+    // Constructors
 
-  // Member Functions
+        //- Construct from components
+        pseudoECGElectro
+        (
+            const volScalarField& Vm,
+            const dictionary& dict,
+            const volTensorField& conductivity
+        );
 
-  //- Compute Gima-Rudy pseudo-ECG for the current timestep
-  virtual void compute();
+    //- Destructor
+    virtual ~pseudoECGElectro() = default;
 
-  //- Refresh coefficients while preserving the existing output layout
-  virtual bool read(const dictionary &dict);
+    // Member Functions
 
-  //- Flush manufactured diagnostics at the end of the run
-  virtual void end();
+        //- Compute Gima-Rudy pseudo-ECG for the current time-step
+        virtual void compute();
+
+        //- Refresh coefficients while preserving the existing output layout
+        virtual bool read(const dictionary& dict);
+
+        //- Flush manufactured diagnostics at the end of the run
+        virtual void end();
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

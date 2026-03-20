@@ -74,7 +74,7 @@ wordList readSweepHeaderColumns(const fileName& sweepFile)
             << exit(FatalError);
     }
 
-    forAll(header, i)
+    for (string::size_type i = 0; i < header.size(); ++i)
     {
         if (header[i] == ',')
         {
