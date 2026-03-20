@@ -27,7 +27,8 @@ License
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam {
+namespace Foam
+{
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -38,10 +39,13 @@ addToRunTimeSelectionTable(ecgModel, pseudoECGElectro, dictionary);
 
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
-pseudoECGElectro::pseudoECGElectro(const volScalarField &Vm,
-                                   const dictionary &dict,
-                                   const volTensorField &conductivity)
-    : ecgModel(Vm, dict, conductivity), outputPtr_(), manufacturedOutputPtr_(),
+pseudoECGElectro::pseudoECGElectro
+(
+    const volScalarField& Vm,
+    const dictionary& dict,
+    const volTensorField& conductivity
+)
+: ecgModel(Vm, dict, conductivity), outputPtr_(), manufacturedOutputPtr_(),
       manufacturedEnabled_(false),
       manufacturedDimension_(max(label(1), min(mesh_.nGeometricD(), label(3)))),
       manufacturedReferenceQuadratureOrder_(96),
@@ -59,17 +63,20 @@ pseudoECGElectro::pseudoECGElectro(const volScalarField &Vm,
       referenceDeltaL1Sum_(),
       referenceDeltaL2Sum_(),
       referenceDeltaLinf_(),
-      manufacturedSummaryWritten_(false) {
+      manufacturedSummaryWritten_(false)
+{
   const fileName outDir(mesh_.time().path() / "postProcessing");
   outputPtr_ =
       ecgModelIO::openTimeSeries(outDir, "pseudoECG.dat", electrodeNames_);
   readManufacturedConfig(dict);
-  if (manufacturedEnabled_) {
+  if (manufacturedEnabled_)
+  {
     initialiseManufacturedOutput();
   }
 }
 
-void pseudoECGElectro::resizeManufacturedCheckStorage() {
+void pseudoECGElectro::resizeManufacturedCheckStorage()
+{
   const label nChecks = manufacturedCheckQuadratureOrders_.size();
   const label nElectrodes = electrodePositions_.size();
 
@@ -94,7 +101,8 @@ void pseudoECGElectro::resizeManufacturedCheckStorage() {
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
+void pseudoECGElectro::readManufacturedConfig(const dictionary& dict)
+{
   manufacturedEnabled_ = false;
   manufacturedDimension_ = max(label(1), min(mesh_.nGeometricD(), label(3)));
   manufacturedReferenceQuadratureOrder_ = 96;
@@ -104,7 +112,8 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
   manufacturedCheckQuadratureOrders_[2] = 24;
   manufacturedCheckQuadratureOrders_[3] = 48;
 
-  if (!dict.found("manufactured")) {
+  if (!dict.found("manufactured"))
+  {
     resizeManufacturedCheckStorage();
     return;
   }
@@ -113,20 +122,29 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
   manufacturedEnabled_ =
       manufacturedDict.lookupOrDefault<Switch>("enabled", true);
 
-  if (!manufacturedEnabled_) {
+  if (!manufacturedEnabled_)
+  {
     resizeManufacturedCheckStorage();
     return;
   }
 
-  if (manufacturedDict.found("dimension")) {
+  if (manufacturedDict.found("dimension"))
+  {
     const word dimensionName(manufacturedDict.lookup("dimension"));
-    if (dimensionName == "1D") {
+    if (dimensionName == "1D")
+    {
       manufacturedDimension_ = 1;
-    } else if (dimensionName == "2D") {
+    }
+    else if (dimensionName == "2D")
+    {
       manufacturedDimension_ = 2;
-    } else if (dimensionName == "3D") {
+    }
+    else if (dimensionName == "3D")
+    {
       manufacturedDimension_ = 3;
-    } else {
+    }
+    else
+    {
       FatalErrorInFunction
           << "Unsupported manufactured pseudo-ECG dimension '"
           << dimensionName << "'. Expected one of 1D, 2D, or 3D."
@@ -136,24 +154,30 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
 
   manufacturedReferenceQuadratureOrder_ =
       manufacturedDict.lookupOrDefault<label>("referenceQuadratureOrder", 96);
-  if (manufacturedDict.found("checkQuadratureOrders")) {
+  if (manufacturedDict.found("checkQuadratureOrders"))
+  {
     manufacturedDict.lookup("checkQuadratureOrders")
         >> manufacturedCheckQuadratureOrders_;
-  } else {
+  }
+  else
+  {
     manufacturedCheckQuadratureOrders_.setSize(1);
     manufacturedCheckQuadratureOrders_[0] =
         manufacturedDict.lookupOrDefault<label>("checkQuadratureOrder", 6);
   }
 
-  if (manufacturedCheckQuadratureOrders_.size() == 0) {
+  if (manufacturedCheckQuadratureOrders_.size() == 0)
+  {
     FatalErrorInFunction
         << "Manufactured pseudo-ECG requires at least one entry in "
            "checkQuadratureOrders."
         << exit(FatalError);
   }
 
-  for (label i = 0; i < manufacturedCheckQuadratureOrders_.size(); ++i) {
-    for (label j = i + 1; j < manufacturedCheckQuadratureOrders_.size(); ++j) {
+  for (label i = 0; i < manufacturedCheckQuadratureOrders_.size(); ++i)
+  {
+    for (label j = i + 1; j < manufacturedCheckQuadratureOrders_.size(); ++j)
+    {
       if (manufacturedCheckQuadratureOrders_[j] <
           manufacturedCheckQuadratureOrders_[i]) {
         const label tmp = manufacturedCheckQuadratureOrders_[i];
@@ -164,7 +188,8 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
     }
   }
   label uniqueCount = 0;
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
     const label current = manufacturedCheckQuadratureOrders_[checkI];
     if (checkI == 0 ||
         current != manufacturedCheckQuadratureOrders_[uniqueCount - 1]) {
@@ -181,7 +206,8 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
         << exit(FatalError);
   }
 
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
     if (!pseudoECGManufacturedSupportsQuadratureOrder(
             manufacturedCheckQuadratureOrders_[checkI])) {
       FatalErrorInFunction
@@ -196,8 +222,10 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
 
   Info << "Enabled manufactured pseudo-ECG references: qRef="
        << manufacturedReferenceQuadratureOrder_ << ", qChecks=(";
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
-    if (checkI > 0) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
+    if (checkI > 0)
+    {
       Info << " ";
     }
     Info << manufacturedCheckQuadratureOrders_[checkI];
@@ -205,14 +233,17 @@ void pseudoECGElectro::readManufacturedConfig(const dictionary &dict) {
   Info << "), dimension=" << manufacturedDimension_ << "." << endl;
 }
 
-void pseudoECGElectro::initialiseManufacturedOutput() {
+void pseudoECGElectro::initialiseManufacturedOutput()
+{
   const fileName outDir(mesh_.time().path() / "postProcessing");
   wordList columns;
 
-  forAll(electrodeNames_, electrodeI) {
+  forAll(electrodeNames_, electrodeI)
+  {
     const word &name = electrodeNames_[electrodeI];
     columns.append("numeric_" + name);
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       columns.append(
           "refQ" + Foam::name(manufacturedCheckQuadratureOrders_[checkI]) + "_" +
           name);
@@ -220,7 +251,8 @@ void pseudoECGElectro::initialiseManufacturedOutput() {
     columns.append("refQ" +
                    Foam::name(manufacturedReferenceQuadratureOrder_) + "_" +
                    name);
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       columns.append(
           "errQ" + Foam::name(manufacturedCheckQuadratureOrders_[checkI]) + "_" +
           name);
@@ -228,7 +260,8 @@ void pseudoECGElectro::initialiseManufacturedOutput() {
     columns.append("errQ" +
                    Foam::name(manufacturedReferenceQuadratureOrder_) + "_" +
                    name);
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       columns.append(
           "deltaQuadratureQ" +
           Foam::name(manufacturedCheckQuadratureOrders_[checkI]) + "_Q" +
@@ -240,21 +273,26 @@ void pseudoECGElectro::initialiseManufacturedOutput() {
       ecgModelIO::openTimeSeries(outDir, "manufacturedPseudoECG.dat", columns);
 }
 
-void pseudoECGElectro::invalidateManufacturedReferenceCache() {
+void pseudoECGElectro::invalidateManufacturedReferenceCache()
+{
   manufacturedReferenceSpatialValues_.clear();
   manufacturedCheckSpatialValues_.clear();
   manufacturedSpatialCacheValid_ = false;
   manufacturedCachedConductivity_ = tensor::zero;
 }
 
-void pseudoECGElectro::rebuildManufacturedReferenceCache(
-    const tensor &referenceConductivity) {
+void pseudoECGElectro::rebuildManufacturedReferenceCache
+(
+    const tensor& referenceConductivity
+)
+{
   List<scalar> referenceNodes, referenceWeights;
   pseudoECGManufacturedQuadratureRule(manufacturedReferenceQuadratureOrder_,
                                       referenceNodes, referenceWeights);
   List<List<scalar>> checkNodes(manufacturedCheckQuadratureOrders_.size());
   List<List<scalar>> checkWeights(manufacturedCheckQuadratureOrders_.size());
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
     pseudoECGManufacturedQuadratureRule(
         manufacturedCheckQuadratureOrders_[checkI], checkNodes[checkI],
         checkWeights[checkI]);
@@ -262,12 +300,15 @@ void pseudoECGElectro::rebuildManufacturedReferenceCache(
 
   manufacturedReferenceSpatialValues_.setSize(electrodePositions_.size());
   manufacturedCheckSpatialValues_.setSize(manufacturedCheckQuadratureOrders_.size());
-  forAll(manufacturedCheckSpatialValues_, checkI) {
+  forAll(manufacturedCheckSpatialValues_, checkI)
+  {
     manufacturedCheckSpatialValues_[checkI].setSize(electrodePositions_.size());
   }
 
-  forAll(electrodePositions_, electrodeI) {
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(electrodePositions_, electrodeI)
+  {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       manufacturedCheckSpatialValues_[checkI][electrodeI] =
           computeManufacturedPseudoECGSpatialReference(
               electrodePositions_[electrodeI], referenceConductivity,
@@ -283,7 +324,8 @@ void pseudoECGElectro::rebuildManufacturedReferenceCache(
   manufacturedSpatialCacheValid_ = true;
 }
 
-void pseudoECGElectro::computePseudoECGValues(List<scalar> &values) const {
+void pseudoECGElectro::computePseudoECGValues(List<scalar>& values) const
+{
   // Gima-Rudy dipole:
   //   phi_pseudo(P) = -sum_c [ (conductivity . grad(Vm))_c . r_vec * V_c / |r|^3 ]
   //   r_vec = C_c - P
@@ -298,32 +340,40 @@ void pseudoECGElectro::computePseudoECGValues(List<scalar> &values) const {
   const label nE = electrodePositions_.size();
 
   values.setSize(nE);
-  forAll(values, valueI) {
+  forAll(values, valueI)
+  {
     values[valueI] = scalar(0);
   }
 
-  forAll(Ctrs, cI) {
+  forAll(Ctrs, cI)
+  {
     const vector dipole = (conductivityField[cI] & gradVm[cI]) * Vols[cI];
 
-    for (label pI = 0; pI < nE; pI++) {
+    for (label pI = 0; pI < nE; pI++)
+    {
       const vector r_vec = Ctrs[cI] - electrodePositions_[pI];
       const scalar r = mag(r_vec);
-      if (r > VSMALL) {
+      if (r > VSMALL)
+      {
         values[pI] += (dipole & r_vec) / (r * r * r);
       }
     }
   }
 
   // Parallel reduction (no sign flip: consistent with original accumulation)
-  for (label pI = 0; pI < nE; pI++) {
+  for (label pI = 0; pI < nE; pI++)
+  {
     reduce(values[pI], sumOp<scalar>());
   }
 }
 
-void pseudoECGElectro::updateManufacturedStatistics(
-    const List<scalar> &numericValues,
-    const List<List<scalar>> &checkReferenceValues,
-    const List<scalar> &referenceValues) {
+void pseudoECGElectro::updateManufacturedStatistics
+(
+    const List<scalar>& numericValues,
+    const List<List<scalar>>& checkReferenceValues,
+    const List<scalar>& referenceValues
+)
+{
   ++manufacturedSampleCount_;
 
   forAll(numericValues, electrodeI) {
@@ -334,7 +384,8 @@ void pseudoECGElectro::updateManufacturedStatistics(
     referenceErrorL2Sum_[electrodeI] += referenceError * referenceError;
     referenceErrorLinf_[electrodeI] =
         max(referenceErrorLinf_[electrodeI], referenceError);
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       const scalar checkError = Foam::mag(
           numericValues[electrodeI] - checkReferenceValues[checkI][electrodeI]);
       const scalar referenceDelta =
@@ -354,14 +405,17 @@ void pseudoECGElectro::updateManufacturedStatistics(
   }
 }
 
-void pseudoECGElectro::writeManufacturedSummary() {
-  if (!manufacturedEnabled_ || manufacturedSummaryWritten_) {
+void pseudoECGElectro::writeManufacturedSummary()
+{
+  if (!manufacturedEnabled_ || manufacturedSummaryWritten_)
+  {
     return;
   }
 
   manufacturedSummaryWritten_ = true;
 
-  if (!Pstream::master()) {
+  if (!Pstream::master())
+  {
     return;
   }
 
@@ -373,13 +427,15 @@ void pseudoECGElectro::writeManufacturedSummary() {
   os << "samples " << manufacturedSampleCount_ << "\n";
   os << "dimension " << manufacturedDimension_ << "D\n";
   os << "qChecks";
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
     os << " " << manufacturedCheckQuadratureOrders_[checkI];
   }
   os << "\n";
   os << "qReference " << manufacturedReferenceQuadratureOrder_ << "\n";
   os << "Electrode  L1_err_ref  L2_err_ref  Linf_err_ref";
-  forAll(manufacturedCheckQuadratureOrders_, checkI) {
+  forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
     const label qCheck = manufacturedCheckQuadratureOrders_[checkI];
     os << "  L1_err_q" << qCheck << "  L2_err_q" << qCheck << "  Linf_err_q"
        << qCheck << "  L1_delta_q" << qCheck << "_ref  L2_delta_q" << qCheck
@@ -389,12 +445,14 @@ void pseudoECGElectro::writeManufacturedSummary() {
 
   const scalar sampleCount = max(scalar(1), scalar(manufacturedSampleCount_));
 
-  forAll(electrodeNames_, electrodeI) {
+  forAll(electrodeNames_, electrodeI)
+  {
     os << electrodeNames_[electrodeI] << " "
        << referenceErrorL1Sum_[electrodeI] / sampleCount << " "
        << Foam::sqrt(referenceErrorL2Sum_[electrodeI] / sampleCount) << " "
        << referenceErrorLinf_[electrodeI];
-    forAll(manufacturedCheckQuadratureOrders_, checkI) {
+    forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
       os << " " << checkErrorL1Sum_[checkI][electrodeI] / sampleCount << " "
          << Foam::sqrt(checkErrorL2Sum_[checkI][electrodeI] / sampleCount)
          << " " << checkErrorLinf_[checkI][electrodeI] << " "
@@ -406,11 +464,13 @@ void pseudoECGElectro::writeManufacturedSummary() {
   }
 }
 
-void pseudoECGElectro::compute() {
+void pseudoECGElectro::compute()
+{
   List<scalar> numericValues;
   computePseudoECGValues(numericValues);
 
-  if (manufacturedEnabled_) {
+  if (manufacturedEnabled_)
+  {
     const scalar timeValue = mesh_.time().value();
     const tensor referenceConductivity = conductivity().primitiveField()[0];
     if (!manufacturedSpatialCacheValid_ ||
@@ -432,23 +492,27 @@ void pseudoECGElectro::compute() {
         electrodePositions_.size() *
         (2 + 3 * manufacturedCheckQuadratureOrders_.size()));
 
-    forAll(electrodePositions_, electrodeI) {
+    forAll(electrodePositions_, electrodeI)
+  {
       referenceValues[electrodeI] =
           timeFactor * manufacturedReferenceSpatialValues_[electrodeI];
       manufacturedRow.append(numericValues[electrodeI]);
-      forAll(manufacturedCheckQuadratureOrders_, checkI) {
+      forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
         checkReferenceValues[checkI][electrodeI] =
             timeFactor * manufacturedCheckSpatialValues_[checkI][electrodeI];
         manufacturedRow.append(checkReferenceValues[checkI][electrodeI]);
       }
       manufacturedRow.append(referenceValues[electrodeI]);
-      forAll(manufacturedCheckQuadratureOrders_, checkI) {
+      forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
         manufacturedRow.append(Foam::mag(
             numericValues[electrodeI] - checkReferenceValues[checkI][electrodeI]));
       }
       manufacturedRow.append(
           Foam::mag(numericValues[electrodeI] - referenceValues[electrodeI]));
-      forAll(manufacturedCheckQuadratureOrders_, checkI) {
+      forAll(manufacturedCheckQuadratureOrders_, checkI)
+  {
         manufacturedRow.append(
             Foam::mag(referenceValues[electrodeI] -
                       checkReferenceValues[checkI][electrodeI]));
@@ -470,12 +534,14 @@ void pseudoECGElectro::compute() {
     }
   }
 
-  if (mesh_.time().outputTime()) {
+  if (mesh_.time().outputTime())
+  {
     ecgModelIO::writeRow(outputPtr_.ref(), mesh_.time().value(), numericValues);
   }
 }
 
-bool pseudoECGElectro::read(const dictionary &dict) {
+bool pseudoECGElectro::read(const dictionary& dict)
+{
   const wordList previousElectrodeNames(electrodeNames_);
   const List<vector> previousElectrodePositions(electrodePositions_);
   const bool wasManufacturedEnabled = manufacturedEnabled_;
@@ -531,7 +597,8 @@ bool pseudoECGElectro::read(const dictionary &dict) {
         << exit(FatalError);
   }
 
-  if (!manufacturedEnabled_) {
+  if (!manufacturedEnabled_)
+  {
     invalidateManufacturedReferenceCache();
   } else if (electrodePositionsChanged || manufacturedConfigurationChanged) {
     invalidateManufacturedReferenceCache();
@@ -545,7 +612,10 @@ bool pseudoECGElectro::read(const dictionary &dict) {
   return true;
 }
 
-void pseudoECGElectro::end() { writeManufacturedSummary(); }
+void pseudoECGElectro::end()
+{
+  writeManufacturedSummary();
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

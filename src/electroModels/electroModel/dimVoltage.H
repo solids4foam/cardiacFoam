@@ -32,7 +32,7 @@ Author
 namespace Foam
 {
 
-    const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
+const dimensionSet dimVoltage(dimMass*dimArea/(pow3(dimTime)*dimCurrent));
 
 } // End namespace Foam
 
@@ -41,4 +41,3 @@ namespace Foam
 #endif
 
 // ************************************************************************* //
-

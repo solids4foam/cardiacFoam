@@ -20,11 +20,11 @@ License
 #include "electroModel.H"
 #include "addToRunTimeSelectionTable.H"
 
-
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
     defineTypeNameAndDebug(electroModel, 0);
     defineRunTimeSelectionTable(electroModel, dictionary);
     addToRunTimeSelectionTable(physicsModel, electroModel, physicsModel);
@@ -79,9 +79,6 @@ Foam::electroModel::electroModel
     physicsModel(type, runTime),
     IOdictionary
     (
-        // If region == "region0" then read from the main case
-        // Otherwise, read from the region/sub-mesh directory e.g.
-        // constant/electro
         bool(region == dynamicFvMesh::defaultRegion)
       ? IOobject
         (
@@ -95,7 +92,7 @@ Foam::electroModel::electroModel
         (
             "electroProperties",
             runTime.caseConstant(),
-            region, // using 'local' property of IOobject
+            region,
             runTime,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
@@ -131,15 +128,12 @@ Foam::electroModel::~electroModel()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-
 Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
 (
     Time& runTime,
     const word& region
 )
 {
-    // NB: dictionary must be unregistered to avoid adding to the database
-
     IOdictionary props
     (
         IOobject
@@ -151,7 +145,7 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
             runTime,
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
-            false  // Do not register
+            false
         )
     );
 
@@ -172,7 +166,6 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
             *dictionaryConstructorTablePtr_
         ) << exit(FatalIOError);
     }
-
 #else
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
@@ -224,18 +217,17 @@ bool Foam::electroModel::read()
     if (regIOobject::read())
     {
         electroProperties_ = subDict(type() + "Coeffs");
-
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
+
 
 void Foam::electroModel::end()
 {
-    this->IOobject::rename(this->IOobject::name()+".withDefaultValues");
+    this->IOobject::rename(this->IOobject::name() + ".withDefaultValues");
     this->regIOobject::write();
 }
+
 // ************************************************************************* //

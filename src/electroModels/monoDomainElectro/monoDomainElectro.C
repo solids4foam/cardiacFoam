@@ -26,13 +26,20 @@ License
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam {
+namespace Foam
+{
 
-namespace electroModels {
+namespace electroModels
+{
 
-namespace {
+namespace
+{
 
-bool hasCustomPrePostProcessor(const electroModelsPrePostProcessor &processor) {
+bool hasCustomPrePostProcessor
+(
+    const electroModelsPrePostProcessor& processor
+)
+{
   return processor.type() != "electroModelsPrePostProcessor";
 }
 
@@ -45,8 +52,13 @@ addToRunTimeSelectionTable(electroModel, monoDomainElectro, dictionary);
 
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
 
-tmp<volTensorField> monoDomainElectro::initialiseConductivityTensor(
-    const word &fieldName, const dictionary &dict, const fvMesh &mesh) {
+tmp<volTensorField> monoDomainElectro::initialiseConductivityTensor
+(
+    const word& fieldName,
+    const dictionary& dict,
+    const fvMesh& mesh
+)
+{
   tmp<volTensorField> tresult(new volTensorField(
       IOobject(fieldName, mesh.time().timeName(), mesh,
                IOobject::READ_IF_PRESENT, IOobject::NO_WRITE),
@@ -70,7 +82,9 @@ tmp<volTensorField> monoDomainElectro::initialiseConductivityTensor(
     if (result.size() > 0) {
       Info << fieldName << " tensor (cell 0): " << result[0] << nl;
     }
-  } else {
+  }
+    else
+    {
     Info << fieldName << " field read from " << mesh.time().timeName() << nl
          << endl;
   }
@@ -78,16 +92,24 @@ tmp<volTensorField> monoDomainElectro::initialiseConductivityTensor(
   return tresult;
 }
 
-tmp<volTensorField> monoDomainElectro::initialiseConductivity() const {
+tmp<volTensorField> monoDomainElectro::initialiseConductivity() const
+{
   return initialiseConductivityTensor("conductivity", cardiacProperties_,
                                       mesh());
 }
 
-void monoDomainElectro::readVm() { Vm_.read(); }
+void monoDomainElectro::readVm()
+{
+    Vm_.read();
+}
 
-void monoDomainElectro::updateExternalStimulusCurrent(
-    volScalarField &externalStimulusCurrent,
-    const List<stimulus> &externalStimulus, const scalar t0) const {
+void monoDomainElectro::updateExternalStimulusCurrent
+(
+    volScalarField& externalStimulusCurrent,
+    const List<stimulus>& externalStimulus,
+    const scalar t0
+) const
+{
   scalarField &externalStimulusCurrentI = externalStimulusCurrent;
   externalStimulusCurrentI = 0.0;
 
@@ -109,9 +131,13 @@ void monoDomainElectro::updateExternalStimulusCurrent(
   externalStimulusCurrent.correctBoundaryConditions();
 }
 
-void monoDomainElectro::updateActivationTime(volScalarField &activationTime,
-                                             boolList &calculateActivationTime,
-                                             const volScalarField &Vm) const {
+void monoDomainElectro::updateActivationTime
+(
+    volScalarField& activationTime,
+    boolList& calculateActivationTime,
+    const volScalarField& Vm
+) const
+{
   // Update activationTime field
   const scalarField &VmI = Vm;
   const scalarField &VmOldI = Vm.oldTime();
@@ -135,7 +161,8 @@ void monoDomainElectro::updateActivationTime(volScalarField &activationTime,
   activationTime.correctBoundaryConditions();
 }
 
-bool monoDomainElectro::evolveExplicit() {
+bool monoDomainElectro::evolveExplicit()
+{
   if (time().timeIndex() == 1) {
     Info << "Solving the mono-domain equation for Vm using an explicit "
          << "approach" << nl << setw(20) << "Simulation Time" << setw(20)
@@ -190,7 +217,8 @@ bool monoDomainElectro::evolveExplicit() {
   return true;
 }
 
-bool monoDomainElectro::evolveImplicit() {
+bool monoDomainElectro::evolveImplicit()
+{
   if (time().timeIndex() == 1) {
     Info << "Solving the mono-domain equation for Vm using an implicit "
          << "approach" << endl;
@@ -228,8 +256,10 @@ bool monoDomainElectro::evolveImplicit() {
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-monoDomainElectro::monoDomainElectro(Time &runTime, const word &region)
-    : monoDomainElectro(typeName, runTime, region) {}
+monoDomainElectro::monoDomainElectro(Time& runTime, const word& region)
+:
+    monoDomainElectro(typeName, runTime, region)
+{}
 
 monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                                      const word &region)
@@ -268,13 +298,16 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
       setDeltaT_(true),
       infoFrequency_(
           electroProperties().lookupOrDefault<label>("infoFrequency", 1)) {
-  const Switch allowIonicStimulusInMonodomain =
+
+    const Switch allowIonicStimulusInMonodomain =
       electroProperties().lookupOrDefault<Switch>(
           "allowIonicStimulusInMonodomain", false);
 
   const StimulusProtocol &ionicStim = ionicModelPtr_->stimulusProtocol();
-  if (stimulusIO::hasActiveStimulus(ionicStim)) {
-    if (!allowIonicStimulusInMonodomain) {
+  if (stimulusIO::hasActiveStimulus(ionicStim))
+{
+    if (!allowIonicStimulusInMonodomain)
+{
       FatalErrorInFunction
           << "Detected active ionic-model stimulus protocol while using "
           << "monoDomainElectro." << nl
@@ -294,14 +327,18 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
   const MonodomainStimulusProtocol monodomainStimulus =
       stimulusIO::loadMonodomainStimulusProtocol(electroProperties());
 
-  if (monodomainStimulus.boxes.size() > 0) {
+  if (monodomainStimulus.boxes.size() > 0)
+{
     List<labelHashSet> stimCellSets(monodomainStimulus.boxes.size());
     labelHashSet stimCellSet;
     const vectorField &CI = mesh().C();
-    forAll(CI, cellI) {
+    forAll(CI, cellI)
+    {
       const point &c = CI[cellI];
-      forAll(monodomainStimulus.boxes, bI) {
-        if (monodomainStimulus.boxes[bI].contains(c)) {
+      forAll(monodomainStimulus.boxes, bI)
+      {
+        if (monodomainStimulus.boxes[bI].contains(c))
+        {
           stimCellSets[bI].insert(cellI);
           stimCellSet.insert(cellI);
         }
@@ -312,20 +349,23 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
     externalStimulus_.setSize(monodomainStimulus.boxes.size());
 
     // Initialise each stimulii
-    forAll(monodomainStimulus.boxes, bI) {
+    forAll(monodomainStimulus.boxes, bI)
+      {
       externalStimulus_[bI].cellIDs_ = stimCellSets[bI].toc();
       externalStimulus_[bI].startTime_ = monodomainStimulus.startTimes[bI];
       externalStimulus_[bI].duration_ = monodomainStimulus.durations[bI];
       externalStimulus_[bI].intensity_ = monodomainStimulus.intensities[bI];
 
-      if (externalStimulus_[bI].cellIDs_.size() == 0) {
+      if (externalStimulus_[bI].cellIDs_.size() == 0)
+      {
         WarningInFunction << "Stimulus box index " << bI
                           << " does not contain any mesh cells." << nl;
       }
     }
 
     // Only print stimulus info if this is a 3D mesh
-    if (mesh().nGeometricD() == 3) {
+    if (mesh().nGeometricD() == 3)
+    {
       Info << "---------------------------------------------" << nl
            << "Stimulus source dictionary: monodomainStimulus" << nl
            << "3D mesh detected — stimulus parameters:" << nl
@@ -336,10 +376,13 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
            << "Stimulus intensity list: " << monodomainStimulus.intensities
            << nl << "---------------------------------------------" << endl;
     }
-  } else {
+  }
+    else
+    {
     externalStimulus_.setSize(0);
 
-    if (mesh().nGeometricD() == 3) {
+    if (mesh().nGeometricD() == 3)
+    {
       Info << "No monodomainStimulus sub-dictionary provided. "
            << "Defaulting to zero external stimulus current." << endl;
     }
@@ -354,7 +397,8 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
   const wordList requiredPostProcessNames =
       prePostProcessor_->requiredPostProcessFieldNames(*ionicModelPtr_);
   outFields_.setSize(names.size());
-  forAll(names, i) {
+  forAll(names, i)
+  {
     outFields_.set(
         i, new volScalarField(IOobject(names[i], runTime.timeName(), mesh(),
                                        IOobject::NO_READ, IOobject::AUTO_WRITE),
@@ -368,20 +412,23 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
                                                 "preProcess_",
                                                 preProcessFields_);
 
-  if (hasCustomPrePostProcessor(prePostProcessor_())) {
+  if (hasCustomPrePostProcessor(prePostProcessor_()))
+  {
     Info << "Using pre/post processor " << prePostProcessor_->type()
          << " for ionic model " << ionicModelPtr_->type() << "." << endl;
   }
 
   if (hasCustomPrePostProcessor(prePostProcessor_()) &&
-      !preProcessFieldNames_.empty()) {
+      !preProcessFieldNames_.empty())
+  {
     Info << "Running preProcess with fields " << preProcessFieldNames_ << "."
          << endl;
   }
 
   prePostProcessor_->preProcess(*ionicModelPtr_, Vm_, preProcessFields_);
 
-  if (cardiacProperties_.found("ECG")) {
+  if (cardiacProperties_.found("ECG"))
+  {
     ecgModelPtr_ = ecgModel::New(Vm_, cardiacProperties_.subDict("ECG"),
                                  conductivity());
   }
@@ -389,9 +436,11 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void monoDomainElectro::setDeltaT(Time &runTime) {
+void monoDomainElectro::setDeltaT(Time& runTime)
+{
   // Update the time step
-  if (solutionAlg() == solutionAlgorithm::EXPLICIT && setDeltaT_) {
+  if (solutionAlg() == solutionAlgorithm::EXPLICIT && setDeltaT_)
+  {
     setDeltaT_ = false;
 
     // Unit face normals
@@ -419,13 +468,19 @@ void monoDomainElectro::setDeltaT(Time &runTime) {
   }
 }
 
-bool monoDomainElectro::evolve() {
+bool monoDomainElectro::evolve()
+{
   bool converged = true;
-  if (solutionAlg() == solutionAlgorithm::IMPLICIT) {
+  if (solutionAlg() == solutionAlgorithm::IMPLICIT)
+  {
     converged = evolveImplicit();
-  } else if (solutionAlg() == solutionAlgorithm::EXPLICIT) {
+  }
+  else if (solutionAlg() == solutionAlgorithm::EXPLICIT)
+  {
     converged = evolveExplicit();
-  } else {
+  }
+    else
+    {
     FatalErrorInFunction
         << "Unrecognised solution algorithm. Available options are "
         << electroModel::solutionAlgorithmNames_
@@ -439,32 +494,41 @@ bool monoDomainElectro::evolve() {
   const bool shouldPostProcess =
       prePostProcessor_->shouldPostProcess(*ionicModelPtr_, Vm_);
 
-  if ((runTime().outputTime() || shouldPostProcess) && !outFields_.empty()) {
+  if ((runTime().outputTime() || shouldPostProcess) && !outFields_.empty())
+  {
     ionicModelPtr_->exportStates(outFields_);
   }
 
-  if (shouldPostProcess) {
-    if (hasCustomPrePostProcessor(prePostProcessor_())) {
+  if (shouldPostProcess)
+  {
+    if (hasCustomPrePostProcessor(prePostProcessor_()))
+  {
       Info << "Running postProcess via " << prePostProcessor_->type() << "."
            << endl;
     }
     prePostProcessor_->postProcess(*ionicModelPtr_, Vm_, outFields_);
   }
 
-  if (ecgModelPtr_.valid()) {
+  if (ecgModelPtr_.valid())
+  {
     ecgModelPtr_->compute();
   }
 
   return converged;
 }
 
-bool monoDomainElectro::read() {
+bool monoDomainElectro::read()
+{
   const bool status = electroModel::read();
 
-  if (cardiacProperties_.found("ECG")) {
-    if (ecgModelPtr_.valid()) {
+  if (cardiacProperties_.found("ECG"))
+  {
+    if (ecgModelPtr_.valid())
+  {
       ecgModelPtr_->read(cardiacProperties_.subDict("ECG"));
-    } else {
+    }
+    else
+    {
       ecgModelPtr_ = ecgModel::New(Vm_, cardiacProperties_.subDict("ECG"),
                                    conductivity());
     }
@@ -473,8 +537,10 @@ bool monoDomainElectro::read() {
   return status;
 }
 
-void monoDomainElectro::end() {
-  if (ecgModelPtr_.valid()) {
+void monoDomainElectro::end()
+{
+  if (ecgModelPtr_.valid())
+  {
     ecgModelPtr_->end();
   }
 

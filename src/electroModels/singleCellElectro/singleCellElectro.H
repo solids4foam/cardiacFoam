@@ -36,7 +36,7 @@ Description
     using ionicModelIO.
 
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro, UCD.
     Philip Cardiff, UCD.
 
 SourceFiles
@@ -52,78 +52,85 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam {
+namespace Foam
+{
+namespace electroModels
+{
 
-namespace electroModels {
-
-/*---------------------------------------------------------------------------* \
+/*---------------------------------------------------------------------------*\
                         Class singleCellElectro Declaration
 \*---------------------------------------------------------------------------*/
 
-class singleCellElectro : public electroModel {
-  // Private data
+class singleCellElectro
+:
+    public electroModel
+{
+    //- Cardiac properties dictionary
+    const dictionary& cardiacProperties_;
 
-  //- Cardiac properties dictionary
-  const dictionary &cardiacProperties_;
+    //- Run-time selectable ionic model
+    autoPtr<ionicModel> ionicModelPtr_;
 
-  //- Run-time selectable ionic model
-  autoPtr<ionicModel> ionicModelPtr_;
+    //- Optional ionic-model pre/post processor selected from the ionic model
+    //  type
+    autoPtr<electroModelsPrePostProcessor> prePostProcessor_;
 
-  //- Optional ionic-model pre/post processor selected from the ionic model type
-  autoPtr<electroModelsPrePostProcessor> prePostProcessor_;
+    //- Processor-declared fields used for pre-processing data exchange
+    wordList preProcessFieldNames_;
+    PtrList<volScalarField> preProcessFields_;
 
-  //- Processor-declared fields used for pre-processing data exchange
-  wordList preProcessFieldNames_;
-  PtrList<volScalarField> preProcessFields_;
+    //- Output file pointer
+    autoPtr<OFstream> outputPtr_;
 
-  //- Output file pointer
-  autoPtr<OFstream> outputPtr_;
+    //- Transmembrane voltage field
+    volScalarField Vm_;
 
-  //- Transmembrane voltage field
-  volScalarField Vm_;
+    //- Ionic model output fields used by lifecycle hooks
+    PtrList<volScalarField> outFields_;
 
-  //- Ionic model output fields used by lifecycle hooks
-  PtrList<volScalarField> outFields_;
+    //- Disallow default bitwise copy construct
+    singleCellElectro(const singleCellElectro&);
 
-  // Private Member Functions
+    //- Disallow default bitwise assignment
+    void operator=(const singleCellElectro&);
 
-  //- Disallow default bitwise copy construct
-  singleCellElectro(const singleCellElectro &);
-
-  //- Disallow default bitwise assignment
-  void operator=(const singleCellElectro &);
 
 public:
-  //- Runtime type information
-  TypeName("singleCellElectro");
 
-  // Constructors
+    //- Runtime type information
+    TypeName("singleCellElectro");
 
-  //- Construct from components
-  singleCellElectro(Time &runTime,
-                    const word &region = dynamicFvMesh::defaultRegion);
+    // Constructors
 
-  // Destructor
+        //- Construct from components
+        singleCellElectro
+        (
+            Time& runTime,
+            const word& region = dynamicFvMesh::defaultRegion
+        );
 
-  virtual ~singleCellElectro() {}
+    //- Destructor
+    virtual ~singleCellElectro() {}
 
-  // Member Functions
+    // Member Functions
 
-  // Edit
+        //- Evolve the electro model
+        virtual bool evolve();
 
-  //- Evolve the electro model
-  virtual bool evolve();
+        //- This function is called at the end of the simulation
+        virtual void end();
 
-  //- This function is called at the end of the simulation
-  virtual void end();
+        //- Return transmembrane voltage (needed by composite models)
+        virtual const volScalarField& Vm() const
+        {
+            return Vm_;
+        }
 
-  //- Return transmembrane voltage (needed by composite models)
-  virtual const volScalarField &Vm() const { return Vm_; }
-
-  //- Return optional coupling signal provider (e.g. ionic model)
-  virtual const CouplingSignalProvider *provider() const {
-    return ionicModelPtr_.operator->();
-  }
+        //- Return optional coupling signal provider (e.g. ionic model)
+        virtual const CouplingSignalProvider* provider() const
+        {
+            return ionicModelPtr_.operator->();
+        }
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -51,7 +51,7 @@ void ecgModel::readElectrodes(const dictionary& dict)
 
     forAll(names, i)
     {
-        electrodeNames_[i]     = names[i];
+        electrodeNames_[i] = names[i];
         electrodePositions_[i] = eDict.get<vector>(names[i]);
     }
 
