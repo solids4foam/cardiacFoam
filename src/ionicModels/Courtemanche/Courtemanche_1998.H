@@ -460,9 +460,9 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
 {
     double AV_B1;
     double AV_B2;
-    double AV_Ca_CMDN;
-    double AV_Ca_CSQN;
-    double AV_Ca_TRPN;
+[[maybe_unused]] double AV_Ca_CMDN;
+[[maybe_unused]] double AV_Ca_CSQN;
+[[maybe_unused]] double AV_Ca_TRPN;
     double AV_ECa;
     double AV_EK;
     double AV_ENa;
