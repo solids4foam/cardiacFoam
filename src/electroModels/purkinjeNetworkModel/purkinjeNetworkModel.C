@@ -37,7 +37,7 @@ void purkinjeNetworkModel::readGraph(const dictionary& dict)
 {
     // Each entry in 'edges' is a list of 4 scalars:
     // ( nodeA  nodeB  length  conductance )
-    const List<scalarList> edgeEntries(dict.lookup("edges"));
+    const List<scalarList> edgeEntries(dict.get<List<scalarList>>("edges"));
     nEdges_ = edgeEntries.size();
 
     edgeNodeA_.setSize(nEdges_);
@@ -67,7 +67,7 @@ void purkinjeNetworkModel::readGraph(const dictionary& dict)
     nNodes_ = maxNode + 1;
 
     Info<< "Purkinje network: " << nNodes_ << " nodes, "
-        << nEdges_ << " edges." << nl;
+        << nEdges_ << " edges." << endl;
 }
 
 void purkinjeNetworkModel::readPVJs(const dictionary& dict)
@@ -84,7 +84,19 @@ void purkinjeNetworkModel::readPVJs(const dictionary& dict)
             << exit(FatalError);
     }
 
-    Info<< "Purkinje PVJs: " << pvjNodes_.size() << " junctions." << nl;
+    const label nCells = mesh_.nCells();
+    forAll(pvjCellIDs_, k)
+    {
+        if (pvjCellIDs_[k] < 0 || pvjCellIDs_[k] >= nCells)
+        {
+            FatalErrorInFunction
+                << "pvjCellIDs[" << k << "] = " << pvjCellIDs_[k]
+                << " is out of range [0, " << nCells - 1 << "]."
+                << exit(FatalError);
+        }
+    }
+
+    Info<< "Purkinje PVJs: " << pvjNodes_.size() << " junctions." << endl;
 }
 
 void purkinjeNetworkModel::readRootStimulus(const dictionary& dict)
@@ -96,7 +108,7 @@ void purkinjeNetworkModel::readRootStimulus(const dictionary& dict)
 
     Info<< "Purkinje root stimulus: start=" << rootStartTime_
         << " duration=" << rootDuration_
-        << " intensity=" << rootIntensity_ << nl;
+        << " intensity=" << rootIntensity_ << endl;
 }
 
 
@@ -140,7 +152,13 @@ purkinjeNetworkModel::purkinjeNetworkModel
     const dictionary& coeffsDict =
         dict.subDict("purkinjeNetworkModelCoeffs");
 
-    ionicModelPtr_ = ionicModel::New(coeffsDict, nNodes_, initialDeltaT);
+    ionicModelPtr_ = ionicModel::New
+    (
+        coeffsDict,
+        nNodes_,
+        initialDeltaT,
+        false   // solveVmWithinODESolver: always false for 1D PN (Vm governed by diffusion PDE)
+    );
 
     Info<< "purkinjeNetworkModel constructed with ionic model "
         << ionicModelPtr_->type() << nl << endl;
