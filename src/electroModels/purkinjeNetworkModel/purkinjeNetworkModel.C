@@ -165,16 +165,74 @@ purkinjeNetworkModel::purkinjeNetworkModel
 }
 
 
-// * * * * * * * * * * * * evolve (stub for Task 3) * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 void purkinjeNetworkModel::evolve
 (
-    scalar          /*t0*/,
-    scalar          /*dt*/,
-    volScalarField& /*externalStimulusCurrent*/
+    scalar          t0,
+    scalar          dt,
+    volScalarField& externalStimulusCurrent
 )
 {
-    // Implemented in Task 3
+    // --- Step 1: Apply root stimulus at node 0 ---
+    // Added as a point-source current term in the cable equation RHS.
+    scalarField rootCurrent(nNodes_, 0.0);
+    if (t0 >= rootStartTime_ && t0 <= (rootStartTime_ + rootDuration_))
+    {
+        rootCurrent[0] = rootIntensity_;
+    }
+
+    // --- Step 2: Advance ionic model for all Purkinje nodes ---
+    // ionicModel::solveODE takes (stepStartTime, deltaT, Vm [scalarField], Im [scalarField]).
+    // Vm1D_ has size nNodes_; solveODE updates Iion1D_ in-place.
+    // Iion1D_ stores Iion/(chi*Cm) [V/s] — same scaling as Iion_ in monoDomainElectro.
+    ionicModelPtr_->solveODE(t0, dt, Vm1D_, Iion1D_);
+
+    // --- Step 3: Compute 1D graph Laplacian and advance Vm1D_ explicitly ---
+    // Discrete Laplacian contribution at node A from edge (A,B):
+    //   flux_AB = sigma_AB * (Vm1D_[B] - Vm1D_[A]) / L_AB^2   [A/m^3]
+    // Symmetric: same magnitude, opposite sign added to node B.
+    //
+    // Explicit Euler update (mirrors the 3D monodomain convention):
+    //   chi*Cm * dVm/dt = laplacian + rootCurrent - chi*Cm*Iion1D_
+    //   => Vm_new[i] = Vm_old[i] + dt/(chi*Cm) * (laplacian[i] + rootCurrent[i])
+    //                             - dt * Iion1D_[i]
+
+    scalarField laplacian(nNodes_, 0.0);
+    for (label eI = 0; eI < nEdges_; eI++)
+    {
+        const label  A     = edgeNodeA_[eI];
+        const label  B     = edgeNodeB_[eI];
+        const scalar L     = edgeLength_[eI];
+        const scalar sigma = edgeConductance_[eI];
+        const scalar flux  = sigma * (Vm1D_[B] - Vm1D_[A]) / (L * L);
+        laplacian[A] += flux;
+        laplacian[B] -= flux;
+    }
+
+    const scalar dtOverChiCm = dt / (chi_ * Cm_);
+    for (label nI = 0; nI < nNodes_; nI++)
+    {
+        Vm1D_[nI] += dtOverChiCm * (laplacian[nI] + rootCurrent[nI])
+                   - dt * Iion1D_[nI];
+    }
+
+    // --- Step 4: Scatter coupling current to 3D externalStimulusCurrent ---
+    // Vergara-Quarteroni: I_coupling = (Vm1D_[pvj] - Vm3D[pvj]) / R_pvj_
+    // Added to externalStimulusCurrent (already set by updateExternalStimulusCurrent
+    // before this call). primitiveFieldRef() gives direct access to internal data.
+    scalarField& extI = externalStimulusCurrent.primitiveFieldRef();
+
+    forAll(pvjNodes_, k)
+    {
+        const label pn  = pvjNodes_[k];
+        const label cId = pvjCellIDs_[k];
+        const scalar Icoupling =
+            (Vm1D_[pn] - Vm_[cId]) / R_pvj_;
+        extI[cId] += Icoupling;
+    }
+
+    externalStimulusCurrent.correctBoundaryConditions();
 }
 
 
