@@ -75,7 +75,9 @@ class purkinjeNetworkModel
 
     // ---- 1D state (size = nNodes_) ----
     scalarField Vm1D_;            // transmembrane voltage [V]
-    scalarField Iion1D_;          // ionic current [V/s]
+    // Ionic source term [V/s]: stores Iion/(chi*Cm) — same scaling convention
+    // as Iion_ in monoDomainElectro (ionicModel::solveODE output is already scaled).
+    scalarField Iion1D_;
 
     // ---- Ionic model (nNodes_ integration points) ----
     autoPtr<ionicModel> ionicModelPtr_;
