@@ -106,10 +106,9 @@ public:
         //  into externalStimulusCurrent at PVJ cell indices.
         virtual void evolve
         (
-            scalar                t0,
-            scalar                dt,
-            const volScalarField& Vm,
-            volScalarField&       externalStimulusCurrent
+            scalar          t0,
+            scalar          dt,
+            volScalarField& externalStimulusCurrent
         ) = 0;
 
         //- Finalize any model-specific reporting at the end of the run

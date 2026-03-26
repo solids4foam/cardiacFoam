@@ -62,13 +62,7 @@ public:
 
     // Member Functions
 
-        void evolve
-        (
-            scalar                t0,
-            scalar                dt,
-            const volScalarField& Vm,
-            volScalarField&       externalStimulusCurrent
-        ) override {}
+        void evolve(scalar, scalar, volScalarField&) override {}
 };
 
 
