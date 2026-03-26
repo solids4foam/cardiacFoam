@@ -1,6 +1,8 @@
 electroModel/electroModel.C
 
 ecgModel/ecgModel.C
+purkinjeModel/purkinjeModel.C
+purkinjeNetworkModel/purkinjeNetworkModel.C
 pseudoECGElectro/pseudoECGElectro.C
 eikonalDiffusionElectro/eikonalDiffusionElectro.C
 monoDomainElectro/monoDomainElectro.C
