@@ -51,4 +51,35 @@ monoDomainElectroCoeffs
 
 }
 
+purkinjeNetwork
+{
+    purkinjeModel    purkinjeNetworkModel;
+
+    R_pvj            500.0;   // [Ohm.m^2] global PVJ coupling resistance
+
+    // Minimal 2-node, 1-edge tree: root=0, terminal=1
+    edges
+    (
+        ( 0  1  0.001  0.003 )
+    );
+
+    pvjNodes   ( 1 );
+    pvjCellIDs ( 0 );    // cell 0 is always valid
+
+    rootStimulus
+    {
+        startTime    0.0;
+        duration     0.002;
+        intensity    80000.0;
+    }
+
+    purkinjeNetworkModelCoeffs
+    {
+        ionicModel    Stewart;
+
+        chi            1400.0;    // [1/m]  typical Purkinje value
+        Cm             1.0e-2;    // [F/m^2]
+    }
+}
+
 // ************************************************************************* //
