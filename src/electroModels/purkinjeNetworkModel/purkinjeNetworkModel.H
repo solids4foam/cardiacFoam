@@ -35,6 +35,8 @@ SourceFiles
 
 #include "purkinjeModel.H"
 #include "ionicModel.H"
+#include "ecgModelIO.H"
+#include "OFstream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -59,7 +61,8 @@ class purkinjeNetworkModel
 
     // ---- PVJ mapping (parallel lists) ----
     labelList   pvjNodes_;        // Purkinje node indices that are PVJs
-    labelList   pvjCellIDs_;      // matching 3D mesh cell indices
+    pointField  pvjLocations_;    // 3D coordinates of each PVJ junction [m]
+    labelList   pvjCellIDs_;      // local cell ID of PVJ centroid (-1 if not on this proc)
 
     // ---- Root stimulus ----
     scalar      rootStartTime_;
@@ -72,6 +75,9 @@ class purkinjeNetworkModel
 
     // ---- Coupling ----
     scalar      R_pvj_;           // global PVJ resistance [Ohm.m^2]
+    scalar          pvjRadius_;       // sphere radius for current distribution [m]
+    List<labelList> pvjCellSets_;    // 3D cells within pvjRadius_ of each PVJ centroid
+    scalarField     pvjSphereVol_;   // total cell volume of each PVJ sphere [m^3]
 
     // ---- 1D state (size = nNodes_) ----
     scalarField Vm1D_;            // transmembrane voltage [V]
@@ -82,10 +88,16 @@ class purkinjeNetworkModel
     // ---- Ionic model (nNodes_ integration points) ----
     autoPtr<ionicModel> ionicModelPtr_;
 
+    // ---- Output (mirrors ecgModelIO pattern) ----
+    autoPtr<OFstream> outputPtr_;   // postProcessing/purkinjeNetwork.dat
+    wordList          exportVars_;  // tokens written to purkinjeNetwork.dat
+    wordList          debugVars_;   // tokens printed to terminal every 10 steps
+
     // ---- Private helpers ----
     void readGraph(const dictionary& dict);
     void readPVJs(const dictionary& dict);
     void readRootStimulus(const dictionary& dict);
+    void openOutputFile();
 
     // No copy
     purkinjeNetworkModel(const purkinjeNetworkModel&) = delete;
@@ -115,6 +127,8 @@ public:
             scalar          dt,
             volScalarField& externalStimulusCurrent
         ) override;
+
+        virtual void write() override;
 };
 
 
