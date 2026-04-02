@@ -1,0 +1,30 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/electro";
+    object      timeIntegrationProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// PDE-ODE solution algorithm
+solveExplicit    yes;
+
+// Max courant number
+// Use a small CFL to keep deltaT around 5e-05 for the TNNP ionic model
+CFL           0.02;
+
+// ODE solver
+solver    RKF45;
+
+// ODE solver parameters
+initialODEStep 1e-5;
+maxSteps 1000000000;
+
+// ************************************************************************* //

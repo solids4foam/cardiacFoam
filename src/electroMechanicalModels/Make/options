@@ -1,0 +1,39 @@
+SOLIDS4FOAM_ROOT := $(SOLIDS4FOAM_INST_DIR)
+
+sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
+sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
+
+ifndef S4F_NO_USE_EIGEN
+    VERSION_SPECIFIC_INC += -I$(SOLIDS4FOAM_ROOT)/ThirdParty/eigen3
+endif
+
+EXE_INC = \
+    $(VERSION_SPECIFIC_INC) \
+    -I../electroModels/lnInclude \
+    -I../ionicModels/lnInclude \
+    -I../genericWriter/lnInclude \
+    -I../couplingModels \
+    -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
+    -I$(SOLIDS4FOAM_ROOT)/src/blockCoupledSolids4FoamTools/lnInclude \
+    -I$(SOLIDS4FOAM_ROOT)/src/RBFMeshMotionSolver/lnInclude \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/dynamicFvMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/topoChangerFvMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
+    -I$(LIB_SRC)/fvMotionSolver/lnInclude \
+    -I$(LIB_SRC)/ODE/lnInclude
+
+LIB_LIBS = \
+    -L$(FOAM_MODULE_LIBBIN) \
+    -lsolids4FoamModels \
+    -lelectroModels \
+    -lionicModels \
+    -lgenericWriter \
+    -lfiniteVolume \
+    -lmeshTools \
+    -ldynamicFvMesh \
+    -ldynamicMesh \
+    -lODE
