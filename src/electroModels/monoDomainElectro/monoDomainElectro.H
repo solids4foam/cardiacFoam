@@ -36,6 +36,7 @@ SourceFiles
 #include "electroModel.H"
 #include "ionicModel.H"
 #include "ecgModel.H"
+#include "purkinjeModel.H"
 #include "electroModelsPrePostProcessor.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -123,8 +124,17 @@ class monoDomainElectro
     wordList preProcessFieldNames_;
     PtrList<volScalarField> preProcessFields_;
 
+<<<<<<< HEAD
     //- Flag for tracking if the time-step size has been set
     bool setDeltaT_;
+=======
+  //- Optional 1D Purkinje Network model
+  autoPtr<purkinjeModel> purkinjeModelPtr_;
+
+  //- Processor-declared fields used for pre-processing data exchange
+  wordList preProcessFieldNames_;
+  PtrList<volScalarField> preProcessFields_;
+>>>>>>> eb1d0e9 (feat: wire purkinjeModelPtr_ into monoDomainElectro)
 
     //- Frequency for writing time-step information to standard output
     label infoFrequency_;

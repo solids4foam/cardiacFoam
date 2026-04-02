@@ -196,6 +196,12 @@ bool monoDomainElectro::evolveExplicit()
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
 
+  // 1b) Advance 1D Purkinje network and inject coupling current
+  if (purkinjeModelPtr_)
+  {
+      purkinjeModelPtr_->evolve(t0, dt, externalStimulusCurrent_);
+  }
+
   // 2) Advance ionic model in time using the current Vm state
   ionicModelPtr_->solveODE(t0, dt,
                            Vm_,
@@ -233,6 +239,12 @@ bool monoDomainElectro::evolveImplicit()
   // 1) Set the external stimulus
   updateExternalStimulusCurrent(externalStimulusCurrent_, externalStimulus_,
                                 t0);
+
+  // 1b) Advance 1D Purkinje network and inject coupling current
+  if (purkinjeModelPtr_)
+  {
+      purkinjeModelPtr_->evolve(t0, dt, externalStimulusCurrent_);
+  }
 
   // 2) Advance ionic model in time using the current Vm state
   ionicModelPtr_->solveODE(t0, dt,
@@ -431,6 +443,16 @@ monoDomainElectro::monoDomainElectro(const word &type, Time &runTime,
   {
     ecgModelPtr_ = ecgModel::New(Vm_, cardiacProperties_.subDict("ECG"),
                                  conductivity());
+  }
+
+  if (cardiacProperties_.found("purkinjeNetwork"))
+  {
+      purkinjeModelPtr_ = purkinjeModel::New
+      (
+          Vm_,
+          cardiacProperties_.subDict("purkinjeNetwork"),
+          runTime.deltaTValue()
+      );
   }
 }
 
