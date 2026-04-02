@@ -1,0 +1,4 @@
+electroMechanicalModel/electroMechanicalModel.C
+sequentialElectroMechanical/sequentialElectroMechanical.C
+
+LIB = $(FOAM_MODULE_LIBBIN)/libelectroMechanicalModels
