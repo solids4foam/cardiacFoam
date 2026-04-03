@@ -8,6 +8,7 @@ ifeq ($(USE_LIGHTWEIGHT_PHYSICSMODEL),1)
     VERSION_SPECIFIC_LIBS += -lphysicsModel
 else
     VERSION_SPECIFIC_LIBS += -lsolids4FoamModels
+    VERSION_SPECIFIC_LIBS += -lelectroMechanicalModels
 endif
 
 ifdef S4F_USE_GFORTRAN

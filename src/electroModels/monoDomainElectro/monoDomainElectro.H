@@ -201,6 +201,16 @@ public:
 
             //- Evolve the electro model
             virtual bool evolve();
+
+        // Coupling
+
+            //- Return a coupling field by name.
+            //  Supported names: "Vm", "Cai", "Act"
+            //  (depending on the ionic model's CouplingSignalProvider)
+            virtual tmp<volScalarField> couplingField
+            (
+                const word& fieldName
+            ) const;
 };
 
 

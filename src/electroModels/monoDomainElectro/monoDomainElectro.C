@@ -643,6 +643,78 @@ bool monoDomainElectro::evolve()
 }
 
 
+Foam::tmp<Foam::volScalarField> monoDomainElectro::couplingField
+(
+    const word& fieldName
+) const
+{
+    // Map word to CouplingSignal
+    CouplingSignal signal;
+    if (fieldName == "Vm")
+    {
+        signal = CouplingSignal::Vm;
+    }
+    else if (fieldName == "Cai")
+    {
+        signal = CouplingSignal::Cai;
+    }
+    else if (fieldName == "Act")
+    {
+        signal = CouplingSignal::Act;
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "Unknown coupling field name: " << fieldName << nl
+            << "Valid names are: Vm, Cai, Act"
+            << abort(FatalError);
+
+        return tmp<volScalarField>(nullptr);
+    }
+
+    // Check that the ionic model supports this signal
+    if (!ionicModelPtr_->hasSignal(signal))
+    {
+        FatalErrorInFunction
+            << "Coupling field \"" << fieldName
+            << "\" requested but the ionic model "
+            << ionicModelPtr_->type()
+            << " does not provide this signal."
+            << abort(FatalError);
+
+        return tmp<volScalarField>(nullptr);
+    }
+
+    // Build the field from the ionic model's per-cell signal interface
+    tmp<volScalarField> tresult
+    (
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime().timeName(),
+                mesh(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh(),
+            dimensionedScalar(fieldName, dimless, 0.0),
+            "zeroGradient"
+        )
+    );
+
+    scalarField& resultI = tresult.ref().primitiveFieldRef();
+
+    forAll(resultI, cellI)
+    {
+        resultI[cellI] = ionicModelPtr_->signal(cellI, signal);
+    }
+
+    return tresult;
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace electroModels
