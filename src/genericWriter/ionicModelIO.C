@@ -20,7 +20,8 @@ License
 #include "ionicModelIO.H"
 #include "ionicVariableCompatibility.H"
 
-namespace Foam {
+namespace Foam
+{
 
     namespace
     {
@@ -242,7 +243,11 @@ namespace Foam {
         FullPlanCache& fullPlanCache
     )
     {
-        emitHeader(os, fullPlan(stateNames, nStates, algNames, nAlg, fullPlanCache).names);
+        emitHeader
+        (
+            os,
+            fullPlan(stateNames, nStates, algNames, nAlg, fullPlanCache).names
+        );
     }
 
     void Foam::ionicModelIO::writeSelectedHeader
@@ -617,14 +622,22 @@ namespace Foam {
         // Print each selected variable
         forAll(printedNames, k)
         {
-            if (plan.source[k] == ionicModelIO::COL_VM || plan.source[k] == ionicModelIO::COL_STATE)
-                {Info<< " " << printedNames[k] << "=" << S[plan.index[k]];}
+            if
+            (
+                plan.source[k] == ionicModelIO::COL_VM
+             || plan.source[k] == ionicModelIO::COL_STATE
+            )
+            {
+                Info<< " " << printedNames[k] << "=" << S[plan.index[k]];
+            }
             else if (plan.source[k] == ionicModelIO::COL_RATE)
             {
                 Info<< " " << printedNames[k] << "=" << R[plan.index[k]];
             }
             else if (plan.source[k] == ionicModelIO::COL_ALGEBRAIC)
-                {Info<< " " << printedNames[k] << "=" << A[plan.index[k]];}
+            {
+                Info<< " " << printedNames[k] << "=" << A[plan.index[k]];
+            }
             else
             {
                 FatalErrorInFunction
@@ -696,8 +709,14 @@ namespace Foam {
 
         forAll(plan.source, i)
         {
-            if (plan.source[i] == ionicModelIO::COL_VM || plan.source[i] == ionicModelIO::COL_STATE)
+            if
+            (
+                plan.source[i] == ionicModelIO::COL_VM
+             || plan.source[i] == ionicModelIO::COL_STATE
+            )
+            {
                 os << "," << STATES[plan.index[i]];
+            }
             else if (plan.source[i] == ionicModelIO::COL_ALGEBRAIC)
                 os << "," << ALG[plan.index[i]];
             else if (plan.source[i] == ionicModelIO::COL_RATE)

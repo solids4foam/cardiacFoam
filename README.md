@@ -34,15 +34,15 @@ At runtime, solver/model selection is fully dictionary-driven:
 1. `applications/solvers/cardiacFoam/cardiacFoam.C` creates `physicsModel::New(runTime)`.
 2. `physicsModel` type is selected from `constant/physicsProperties` (`type`).
 3. For electro runs, `src/electroModels/electroModel::New(...)` selects `electroModel` from `constant/electroProperties` (`electroModel`).
-4. Electro models (`monoDomainElectro`, `singleCellElectro`, `eikonalDiffusionElectro`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
+4. Electro models (`MonoDomainSolver`, `SingleCellSolver`, `EikonalSolver`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
 
 This gives one stable executable (`cardiacFoam`) with pluggable electro and ionic sub-models.
 
 ## Current electro model stack
 
-- `monoDomainElectro`: tissue PDE-ODE model, explicit/implicit stepping, activation-time tracking.
-- `singleCellElectro`: single integration-point ODE workflow (no spatial PDE solve).
-- `eikonalDiffusionElectro`: reduced-order activation-time model.
+- `MonoDomainSolver`: tissue PDE-ODE model, explicit/implicit stepping, activation-time tracking.
+- `SingleCellSolver`: single integration-point ODE workflow (no spatial PDE solve).
+- `EikonalSolver`: reduced-order activation-time model.
 
 ## Current ionic model stack
 

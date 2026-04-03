@@ -1,7 +1,7 @@
 # ionicModels library architecture
 
 This directory provides runtime-selectable ionic cell models (`libionicModels`) used by
-`monoDomainElectro` and `singleCellElectro`.
+`MonoDomainSolver` and `SingleCellSolver`.
 
 Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 

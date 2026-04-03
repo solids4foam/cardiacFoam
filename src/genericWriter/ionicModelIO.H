@@ -27,7 +27,8 @@ License
 #include "dictionary.H"
 #include "Time.H"
 
-namespace Foam {
+namespace Foam
+{
 
 class ionicModelIO
 {

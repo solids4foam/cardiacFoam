@@ -43,7 +43,14 @@ enum CONSTANTS_INDEX {
 
 
 void
-GoktepeKuhlinitConsts(double* CONSTANTS,double* RATES,double* STATES);
+GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES);
 
 void
-GoktepeKuhlcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC);
+GoktepeKuhlcomputeVariables
+(
+    double VOI,
+    double* CONSTANTS,
+    double* RATES,
+    double* STATES,
+    double* ALGEBRAIC
+);

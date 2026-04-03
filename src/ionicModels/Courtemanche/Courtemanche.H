@@ -38,6 +38,7 @@ Author
 #include "volFields.H"
 #include "Courtemanche_1998Names.H"
 #include "dictionary.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -121,7 +122,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("Courtemanche");
+        OverrideTypeName("Courtemanche");
 
 
         //override the only available tissue in this model

@@ -89,7 +89,6 @@ Foam::Courtemanche::~Courtemanche()
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 Foam::List<Foam::word> Foam::Courtemanche::supportedTissueTypes() const
-
 {
     return {"myocyte"};
 }

@@ -37,6 +37,7 @@ Author
 #include "BuenoOrovio_2008Names.H"
 #include "OFstream.H"
 #include "volFields.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 namespace Foam
@@ -129,7 +130,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("BuenoOrovio");
+        OverrideTypeName("BuenoOrovio");
 
 
         //override the only available tissue in this model
@@ -188,7 +189,8 @@ protected:
 
             // CouplingSignalProvider
             virtual bool hasSignal(const CouplingSignal s) const override;
-            virtual scalar signal(const label i, const CouplingSignal s) const override;
+            virtual scalar signal
+            (const label i, const CouplingSignal s) const override;
 
             virtual void sweepCurrent
             (

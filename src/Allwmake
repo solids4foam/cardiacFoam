@@ -1,3 +1,4 @@
+
 #!/bin/bash
 cd ${0%/*} || exit 1    # run from this directory
 
@@ -13,8 +14,13 @@ if [ -z "${_SOLIDS4FOAM_RESOLVED:-}" ]; then
 fi
 
 echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
+
+# Force Clang to ignore the override warning globally ---
+export WM_CXXFLAGS="$WM_CXXFLAGS -Wno-inconsistent-missing-override"
+
+
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
-wmake $targetType libso modelPrePostProcessors
+wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
