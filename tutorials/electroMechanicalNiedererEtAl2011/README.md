@@ -51,7 +51,7 @@ values. The mesh is generated once via `blockMesh` and copied to both regions.
 
 Set in `constant/electroMechanicalProperties`:
 
-```
+```text
 kTa             1e7;       # Pa per (Cai unit); TNNP Cai is in mM
 CaiThreshold    0.0002;    # mM; TNNP resting Cai is ~0.0002 mM
 ```
