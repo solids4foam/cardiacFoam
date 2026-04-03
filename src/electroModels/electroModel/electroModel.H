@@ -209,6 +209,17 @@ public:
 
             //- This function is called at the end of the simulation
             virtual void end();
+
+        // Coupling
+
+            //- Return a coupling field by name.
+            //  Supported field names depend on the derived class and its
+            //  ionic model, e.g. "Vm", "Cai", "Act".
+            //  Default implementation triggers a FatalError.
+            virtual tmp<volScalarField> couplingField
+            (
+                const word& fieldName
+            ) const;
 };
 
 
