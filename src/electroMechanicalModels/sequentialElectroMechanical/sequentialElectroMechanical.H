@@ -52,6 +52,24 @@ class sequentialElectroMechanical
 :
     public electroMechanicalModel
 {
+    // Private data
+
+        //- Active tension field registered on the solid mesh.
+        //  Populated each time step from the electro model's Cai field
+        //  and picked up by electroMechanicalLaw via objectRegistry lookup.
+        volScalarField Ta_;
+
+        //- Scaling factor: Ta = kTa * max(Cai - CaiThreshold, 0)
+        //  Units: [Pa / Cai-unit]. The ionic model returns Cai in its
+        //  native units (e.g. mM for TNNP). This factor converts to stress.
+        //  This simple linear model is a placeholder; it will be replaced by
+        //  a dedicated runtime-selectable active tension model in the future.
+        const dimensionedScalar kTa_;
+
+        //- Threshold Cai below which no active tension is generated
+        const dimensionedScalar CaiThreshold_;
+
+
     // Private Member Functions
 
         //- Disallow default bitwise copy construct

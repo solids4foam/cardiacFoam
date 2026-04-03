@@ -13,10 +13,13 @@ geometry) with:
 - **Electro region**: monodomain reaction-diffusion PDE with the TNNP ionic
   model
 - **Solid region**: nonlinear total Lagrangian solid solver with the
-  `electroMechanicalLaw` (Guccione passive + active tension)
+  `electroMechanicalLaw` (neo-Hookean passive + active tension)
 
-Currently, the two regions are solved sequentially with no field exchange (Stage
-1 shell coupling). Active tension coupling will be added in a future stage.
+The two regions are coupled sequentially: after each electro solve, the
+intracellular calcium concentration (Cai) is extracted from the ionic model
+and converted to an active tension field (Ta) using a simple linear model.
+This Ta field is passed to the solid region where the `electroMechanicalLaw`
+adds it as a fibre-aligned active stress component.
 
 ## Running
 
@@ -43,3 +46,15 @@ system/
 
 The electro region creates its fields internally (Vm, etc.) with default
 values. The mesh is generated once via `blockMesh` and copied to both regions.
+
+## Coupling parameters
+
+Set in `constant/electroMechanicalProperties`:
+
+```
+kTa             1e7;       # Pa per (Cai unit); TNNP Cai is in mM
+CaiThreshold    0.0002;    # mM; TNNP resting Cai is ~0.0002 mM
+```
+
+Active tension: `Ta = kTa * max(Cai - CaiThreshold, 0)`.
+This simple linear model is a placeholder for a dedicated active tension model.

@@ -234,4 +234,23 @@ void Foam::electroModel::end()
     this->IOobject::rename(this->IOobject::name()+".withDefaultValues");
     this->regIOobject::write();
 }
+
+
+Foam::tmp<Foam::volScalarField> Foam::electroModel::couplingField
+(
+    const word& fieldName
+) const
+{
+    FatalErrorInFunction
+        << "Coupling field \"" << fieldName
+        << "\" requested from electroModel type " << type() << nl
+        << "This electroModel does not support coupling fields." << nl
+        << "Override couplingField() in the derived class to enable coupling."
+        << abort(FatalError);
+
+    // Keep compiler happy
+    return tmp<volScalarField>(nullptr);
+}
+
+
 // ************************************************************************* //
