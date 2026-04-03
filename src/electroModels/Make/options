@@ -26,11 +26,28 @@ endif
 
 EXE_INC = \
     $(VERSION_SPECIFIC_INC) \
+    -Idomains \
+    -Idomains/ConductionSystemDomain \
+    -Idomains/ECGDomain \
+    -IecgModels/PseudoECGDomain \
+    -IconductionSystemModels \
+    -IconductionSystemModels/purkinjeNetworkModel \
+    -Isolvers/ConductionSystemSolver \
+    -Isolvers/PseudoECGSolver \
+    -Icore \
+    -Icore/electroModel \
     -I../ionicModels/lnInclude \
-    -I../modelPrePostProcessors/lnInclude \
+    -I../verificationModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
-    -I../couplingModels \
+    -I../couplingModels/common \
+    -Icouplers \
+    -Isolvers/MonoDomainSolver \
+    -Isolvers/BiDomainSolver \
+    -Isolvers/SingleCellSolver \
+    -Isolvers/EikonalSolver \
+    -Iwrappers/electroMechanicalModel \
+    -I../../modules/physicsModel/src/solids4FoamModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
@@ -43,10 +60,9 @@ EXE_INC = \
     -I$(LIB_SRC)/ODE/lnInclude \
 
 LIB_LIBS = \
-    -L$(FOAM_MODULE_LIBBIN) \
     -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
-    -lmodelPrePostProcessors \
+    -lverificationModels \
     -lionicModels \
     -lgenericWriter \
     -lactiveTensionModels \

@@ -14,34 +14,42 @@ License
 
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
-
 \*---------------------------------------------------------------------------*/
 
-#ifndef CouplingSignalProvider_H
-#define CouplingSignalProvider_H
+#ifndef Explicit1DSolver_H
+#define Explicit1DSolver_H
 
-#include "scalar.H"
-#include "label.H"
+#include "graphConductionSystemSolver.H"
+#include "overrideTypeName.H"
+#include "scalarField.H"
 
 namespace Foam
 {
 
-enum class CouplingSignal // this can be expanded for the necessary eletromechanic feedback. For mechanobiology, see later.
+class Explicit1DSolver
+:
+    public GraphConductionSystemSolver
 {
-    Vm,        // membrane potential mV
-    Cai,       // intracellular Ca  mM
-};
+    mutable scalarField laplacianBuffer_;
+    mutable scalarField appliedCurrentBuffer_;
 
-class CouplingSignalProvider
-{
 public:
-    virtual ~CouplingSignalProvider() = default;
 
-    // Does this provider support the requested signal?
-    virtual bool hasSignal(const CouplingSignal s) const = 0;
-    virtual scalar signal(const label i, const CouplingSignal s) const = 0;
+    OverrideTypeName("Explicit1DSolver");
+
+    explicit Explicit1DSolver(const dictionary&)
+    {}
+
+    virtual void advance
+    (
+        GraphConductionSystemDomain& domain,
+        scalar t0,
+        scalar dt
+    ) override;
 };
 
 } // End namespace Foam
 
 #endif
+
+// ************************************************************************* //

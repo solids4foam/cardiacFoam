@@ -7,13 +7,20 @@ The library is built as `libelectroModels`.
 
 ```text
 src/electroModels/
-├── electroModel/               # Base class and runtime selection
-├── monoDomainElectro/          # Full monodomain PDE-ODE model
-├── singleCellElectro/          # Single-cell ODE-only driver
-├── eikonalDiffusionElectro/    # Reduced-order activation-time model
-├── ecgModel/                   # ECG subsystem base class
-├── pseudoECGElectro/           # Pseudo-ECG implementation
-├── electroMechanicalModel/     # Electro-mechanics wrapper model
+├── core/
+│   └── electroModel/           # Core orchestration and base interfaces
+├── domains/
+│   ├── conductionSystemDomain/ # Pre-primary auxiliary domain wrapper
+│   ├── ecgDomain/              # Post-primary ECG contracts + solver interface
+│   └── reactionDiffusionMyocardiumDomain/ # Shared monodomain/bidomain tissue domain
+├── ecgModels/                  # Concrete ECG domain model implementations
+├── conductionSystemModels/     # Purkinje / graph-backed conduction models
+├── solvers/
+│   ├── monoDomainSolver/      # Full monodomain PDE-ODE model
+│   ├── singleCellSolver/      # Single-cell ODE-only driver
+│   └── eikonalSolver/         # Reduced-order activation-time model
+├── wrappers/
+│   └── electroMechanicalModel/ # Electro-mechanics wrapper model
 ├── Make/
 └── README.md
 ```
@@ -35,10 +42,10 @@ Responsibilities:
 Selection key in `electroProperties`:
 
 ```cpp
-electroModel monoDomainElectro;
+electroModel MonoDomainSolver;
 ```
 
-### 2) `monoDomainElectro`
+### 2) `MonoDomainSolver`
 
 Tissue-scale PDE-ODE model:
 
@@ -48,7 +55,6 @@ Tissue-scale PDE-ODE model:
   for mesh-dependent setup/verification.
 - The shared pre/post processor abstractions live in
   `src/modelPrePostProcessors/`.
-- Maintains external state storage (`Field<Field<scalar>> states_`).
 - Supports both explicit and implicit stepping paths.
 - Tracks `activationTime` when `Vm` crosses threshold.
 - Exports selected ionic variables to volumetric fields.
@@ -59,7 +65,7 @@ Stimulus architecture:
 - Ionic-model S1/S2 stimulus can exist for single-cell workflows.
 - Guard logic prevents accidental double stimulation in monodomain runs unless explicitly allowed (`allowIonicStimulusInMonodomain`).
 
-### 3) `singleCellElectro`
+### 3) `SingleCellSolver`
 
 Single integration-point workflow:
 
@@ -68,7 +74,7 @@ Single integration-point workflow:
 - Writes traces to `postProcessing/<ionicModel>_<tissue>_<stimulus>.txt`.
 - Uses shared `ionicModelIO` helpers for headers and row writes.
 
-### 4) `eikonalDiffusionElectro`
+### 4) `EikonalSolver`
 
 Reduced-order activation model:
 
@@ -76,16 +82,54 @@ Reduced-order activation model:
 - Uses anisotropic conductivity tensor and optional stabilized form (`eikonalAdvectionDiffusionApproach`).
 - Applies stimulus through geometric box selection in the mesh.
 
-### 5) Optional ECG subsystem
+### 5) Optional staged domains
 
-`monoDomainElectro` can optionally own a runtime-selected `ecgModel`:
+`electrophysicsSystem` can optionally own staged auxiliary domains:
 
-- Reads the nested `ECG` sub-dictionary from `constant/electroProperties`.
-- Reuses the monodomain `Vm` and conductivity field directly.
-- Computes ECG outputs in the same run without requiring a separate
-  top-level physics model.
+- A pre-primary conduction-system domain, such as Purkinje, advanced before
+  the myocardium and coupled through a domain-coupling model.
+- A post-primary ECG domain, advanced after the myocardium from the updated
+  electrophysiology state with one-way data flow.
 
-### 6) `electroMechanicalModel`
+Current ECG implementations live under `ecgModels/`. The
+`PseudoECGDomain` model remains a one-way ECG evaluation, but it is now
+scheduled through the same domain system as the Purkinje side.
+
+Canonical dictionary schema for staged domains (inside
+`MonoDomainSolverCoeffs` / `BiDomainSolverCoeffs`):
+
+```cpp
+conductionNetworkDomains
+{
+    purkinjeNetwork
+    {
+        ConductionSystemDomain purkinjeNetworkModel;
+        // ... purkinjeNetworkModel settings ...
+    }
+}
+
+domainCouplings
+{
+    purkinjeToMyocardium
+    {
+        ElectroDomainCoupler pvjResistanceCouplingModel;
+        // ... coupling settings ...
+    }
+}
+
+ecgDomains
+{
+    ECG
+    {
+        ECGDomain PseudoECGDomain;
+        // ... ECG model settings ...
+    }
+}
+```
+
+Only the schema above is supported.
+
+### 6) `ElectroMechanicalModel`
 
 Wrapper workflow for coupled electro-mechanics runs:
 
@@ -98,21 +142,22 @@ Wrapper workflow for coupled electro-mechanics runs:
 
 1. `cardiacFoam` creates `physicsModel`.
 2. Electro `physicsModel` creates `electroModel` from `electroProperties`.
-3. `monoDomainElectro` and `singleCellElectro` create `ionicModel` from the
+3. `MonoDomainSolver` and `SingleCellSolver` create `ionicModel` from the
    selected electro-model coeff dictionary in `electroProperties`.
 
 ## Build target
 
 `Make/files` builds:
+all compiled sources under:
 
-- `electroModel/electroModel.C`
-- `ecgModel/ecgModel.C`
-- `pseudoECGElectro/pseudoECGElectro.C`
-- `eikonalDiffusionElectro/eikonalDiffusionElectro.C`
-- `monoDomainElectro/monoDomainElectro.C`
-- `singleCellElectro/singleCellElectro.C`
-- `electroMechanicalModel/electroMechanicalModel.C`
+- `core/electroModel/`
+- `domains/`
+- `conductionSystemModels/`
+- `solvers/`
+- `wrappers/`
 
 into:
 
-- `$(FOAM_MODULE_LIBBIN)/libelectroModels`
+- `$(FOAM_USER_LIBBIN)/libelectroModels`
+
+Electro-domain coupling models are compiled from `src/couplingModels/electroDomain/`.

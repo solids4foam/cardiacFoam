@@ -1,49 +1,42 @@
 # couplingModels architecture
 
-This directory currently contains the coupling signal interface shared between ionic
-models and downstream electromechanics code.
+This directory now groups shared coupling contracts used across electro-only and
+electro-mechanics workflows.
 
 ## Current contents
 
 ```text
 src/couplingModels/
-├── electromechanicsFeedbackProvider.H
+├── common/                     # Cross-library coupling interfaces
+│   └── electromechanicalSignalProvider.H
+├── electroDomain/              # Electro-domain coupling contracts + models
+│   ├── electroDomainCouplingEndpoints.H
+│   ├── ElectroDomainCoupler.{H,C}
+│   └── pvj*.{H,C}
 ├── lnInclude/
 └── README.md
 ```
 
-## `CouplingSignalProvider` interface
+## `CouplingSignalProvider` interface (`common/`)
 
-Defined in `electromechanicsFeedbackProvider.H`.
+Purpose:
 
-### Purpose
+- Provide a minimal API for querying cell-level coupling signals from
+  electrophysiology models.
 
-Provide a minimal, stable API for querying cell-level signals from electrophysiology
-models without hard-coding model internals.
-
-### Signals currently defined
-
-- `Vm` : membrane voltage
-- `Cai`: intracellular calcium
-
-### Interface
+Main methods:
 
 ```cpp
 virtual bool hasSignal(CouplingSignal s) const = 0;
 virtual scalar signal(label i, CouplingSignal s) const = 0;
 ```
 
-`Foam::ionicModel` inherits from this interface.
-Current base behavior:
+`Foam::ionicModel` inherits from this interface; active-tension models consume
+it via `electroMechanicalModel`.
 
-- `Vm`: auto-discovered from model metadata or transform hook.
-- `Cai`: auto-discovered from model metadata.
+## Electro-domain coupling contracts (`electroDomain/`)
 
-For active-tension models, coupling input should be chosen per model.
-Example: `GoktepeKuhl` is configured with exactly one driving signal
-(`couplingSignal Vm`).
-
-## Status
-
-This layer is intentionally small and is expected to grow as electro-mechanics
-coupling paths are expanded.
+`electroDomainCouplingEndpoints.H` and `ElectroDomainCoupler.H` define
+the coupling interface between staged electrophysiology domains (e.g. Purkinje
+to myocardium). Runtime models such as `pvjResistanceCouplingModel` implement
+that interface.
