@@ -1,0 +1,25 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Allrun script for electro-mechanical coupling tutorial
+#
+# Based on NiedererEtAl2012 with added solid region
+#-------------------------------------------------------------------------------
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# -------------------------
+# Mesh generation
+# -------------------------
+
+runApplication blockMesh
+
+# Copy mesh to both regions
+cp -r constant/polyMesh constant/electro/polyMesh
+cp -r constant/polyMesh constant/solid/polyMesh
+
+# -------------------------
+# Run solver
+# -------------------------
+
+runApplication cardiacFoam

@@ -17,3 +17,7 @@ wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
 wmake $targetType libso electroModels
 
+if [ "$USE_LIGHTWEIGHT_PHYSICSMODEL" != "1" ]; then
+    wmake $targetType libso electroMechanicalModels
+fi
+
