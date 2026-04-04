@@ -1,7 +1,0 @@
-phases:
-    - name: Initialization
-      modules: [cardiacFoam]
-    - name: Time loop
-      modules: [ionicModels, electroModels, cardiacFoam]
-    - name: Write
-      modules: [cardiacFoam]
