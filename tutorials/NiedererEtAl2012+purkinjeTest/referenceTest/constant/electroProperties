@@ -1,0 +1,110 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroModel monoDomainElectro;
+
+monoDomainElectroCoeffs
+{
+    conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
+    chi   [0 -1 0 0 0 0 0] 140000;
+    Cm    [-1 -4 4 0 0 2 0] 0.01;
+
+    ionicModel    BuenoOrovio;
+    tissue    epicardialCells;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm Jsi);
+            debug (Vm Iion);
+        }
+    }
+
+    solutionAlgorithm    explicit;
+    solver RKF45;
+    initialODEStep 1e-6;
+    maxSteps 1000000000;
+
+    monodomainStimulus
+    {
+        stimulusLocationMin (0 0 5.5e-3);
+        stimulusLocationMax (1.5e-3 1.5e-3 7e-3);
+        stimulusDuration [0 0 1 0 0 0 0] 2e-3;
+        stimulusIntensity [0 -3 0 0 0 1 0] 50000;
+        stimulusStartTime 0.0;
+    }
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomainModel purkinjeNetworkModel;
+
+            R_pvj            500.0;   // [Ohm.m^2] global PVJ coupling resistance
+
+            // 8-node bifurcating tree, 4 PVJ terminals spread across the slab.
+            // Mesh: 100x15x35 cells, scale 0.001 (mm), cellID = i + j*100 + k*1500
+            //
+            //  root(0) ─── bifurc(1) ─── left-main(2) ─── left-ant(4)   @ ( 4.9, 1.5, 1.9) mm  cellID=14224
+            //                         │                └── left-post(5)  @ ( 4.9, 1.5, 4.9) mm  cellID=36724
+            //                         └── right-main(3) ── right-ant(6)  @ (14.9, 1.5, 1.9) mm  cellID=14274
+            //                                          └── right-post(7) @ (14.9, 1.5, 4.9) mm  cellID=36774
+            //
+            // Edge format: ( nodeA  nodeB  length[m]  conductance[S/m] )
+            edges
+            (
+                ( 0  1  0.003  0.003 )   // root → first bifurcation
+                ( 1  2  0.005  0.003 )   // → left main branch
+                ( 1  3  0.005  0.003 )   // → right main branch
+                ( 2  4  0.004  0.003 )   // left anterior terminal
+                ( 2  5  0.004  0.003 )   // left posterior terminal
+                ( 3  6  0.004  0.003 )   // right anterior terminal
+                ( 3  7  0.004  0.003 )   // right posterior terminal
+            );
+
+            pvjNodes   ( 4      5      6      7     );
+            pvjCellIDs ( 14224  36724  14274  36774 );
+
+            rootStimulus
+            {
+                startTime    0.0;
+                duration     0.002;
+                intensity    80000.0;
+            }
+
+            purkinjeNetworkModelCoeffs
+            {
+                ionicModel    Stewart;
+
+                chi            1400.0;    // [1/m]  typical Purkinje value
+                Cm             1.0e-2;    // [F/m^2]
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCouplingModel pvjResistanceCouplingModel;
+            R_pvj      500.0;
+        }
+    }
+}
+
+// ************************************************************************* //

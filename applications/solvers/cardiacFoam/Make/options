@@ -1,0 +1,40 @@
+SOLIDS4FOAM_ROOT := $(SOLIDS4FOAM_INST_DIR)
+
+sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
+sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
+
+ifeq ($(USE_LIGHTWEIGHT_PHYSICSMODEL),1)
+    VERSION_SPECIFIC_INC += -DUSE_LIGHTWEIGHT_PHYSICSMODEL
+    VERSION_SPECIFIC_LIBS += -lphysicsModel
+else
+    VERSION_SPECIFIC_LIBS += -lsolids4FoamModels
+endif
+
+ifdef S4F_USE_GFORTRAN
+    GFORTRAN_LIBS = \
+        -lgfortran \
+        $(FOAM_USER_LIBBIN)/abaqusUmatLinearElastic.o \
+        -labaqusUmatLinearElastic
+endif
+
+EXE_INC = \
+    -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
+    $(VERSION_SPECIFIC_INC) \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/dynamicFvMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicFvMesh/lnInclude
+
+EXE_LIBS = \
+    -L$(FOAM_MODULE_LIBBIN) \
+    -L$(FOAM_USER_LIBBIN) \
+    $(VERSION_SPECIFIC_LIBS) \
+    -lelectroModels \
+    -lmodelPrePostProcessors \
+    -lionicModels \
+    -lgenericWriter \
+    -lecgModels \
+    -lactiveTensionModels \
+    $(GFORTRAN_LIBS)

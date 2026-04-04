@@ -1,0 +1,259 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8dbc61e11c-20241220 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : cardiacFoam -parallel
+Date   : Apr 03 2026
+Time   : 18:27:20
+Host   : macbook
+PID    : 82207
+I/O    : uncollated
+Case   : /Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012+purkinjeTest
+nProcs : 6
+Hosts  :
+(
+    (macbook 6)
+)
+Pstream initialized with:
+    floatTransfer      : false
+    maxCommsSize       : 0
+    nProcsSimpleSum    : 0
+    nonBlockingExchange: 0 (tuning: 0)
+    exchange algorithm : 0
+    commsType          : nonBlocking
+    polling iterations : 0
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Selecting physicsModel electroModel
+
+Selecting electroModel monoDomainElectro
+
+conductivity not found on disk, using value from "/Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012+purkinjeTest/processor0/../constant/electroProperties/monoDomainElectroCoeffs"
+
+Selecting electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme
+Selecting conductionSystemDomainModel purkinjeNetworkModel
+Selecting conductionSystemSolver conductionSystemExplicitSolver
+Conduction graph: 8 nodes, 7 edges.
+Purkinje PVJs: 4 junctions, pvjRadius=0.6 mm
+  pvj0 (node 4, location (0.00245 0.00115 0.00025), localCentreCell=372): 91 local cells, V_sphere_global=7.28e-10 m^3
+  pvj1 (node 5, location (0.01245 0.00035 0.00065), localCentreCell=-1): 0 local cells, V_sphere_global=8.08e-10 m^3
+  pvj2 (node 6, location (0.00745 0.00115 0.00025), localCentreCell=-1): 0 local cells, V_sphere_global=7.28e-10 m^3
+  pvj3 (node 7, location (0.01745 0.00035 0.00065), localCentreCell=-1): 0 local cells, V_sphere_global=8.08e-10 m^3
+Purkinje root stimulus: start=0 duration=0.002 intensity=1000
+purkinjeNetworkModel constructed with ionic model BuenoOrovio
+purkinjeNetworkModel: writing to "/Users/simaocastro/cardiacFoamv2/tutorials/NiedererEtAl2012+purkinjeTest/processor0/../postProcessing/purkinjeNetwork.dat"
+Selecting electroDomainCouplingModel pvjResistanceCouplingModel
+PVJ coupling model: R_pvj=500, pvjRadius=0.0006, couplingMode=networkToMyocardium
+Setting deltaT = 4.19734e-05, maxCo = 0.1
+Time = 4.19734e-05
+
+Selecting ODE solver RKF45
+DEBUG cell=0 t=0→0.0419734 step=5e-05 Vm=0.173396
+Selecting ODE solver RKF45
+DEBUG cell=0 t=0→0.0419734 step=0.32805 Vm=0.173396
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.05 s  ClockTime = 0 s
+
+Time = 8.39469e-05
+
+DEBUG cell=0 t=0.0419734→0.0839469 step=0.0419734 Vm=0.172209
+DEBUG cell=0 t=0.0419734→0.0839469 step=0.377761 Vm=0.172209
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.06 s  ClockTime = 0 s
+
+Time = 0.00012592
+
+DEBUG cell=0 t=0.0839469→0.12592 step=0.0419734 Vm=0.171031
+DEBUG cell=0 t=0.0839469→0.12592 step=0.377761 Vm=0.171031
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.06 s  ClockTime = 0 s
+
+Time = 0.000167894
+
+DEBUG cell=0 t=0.12592→0.167894 step=0.0419734 Vm=0.169865
+DEBUG cell=0 t=0.12592→0.167894 step=0.377761 Vm=0.169865
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.06 s  ClockTime = 0 s
+
+Time = 0.000209867
+
+DEBUG cell=0 t=0.167894→0.209867 step=0.0419734 Vm=0.168711
+DEBUG cell=0 t=0.167894→0.209867 step=0.377761 Vm=0.168711
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.07 s  ClockTime = 0 s
+
+Time = 0.000251841
+
+DEBUG cell=0 t=0.209867→0.251841 step=0.0419734 Vm=0.16757
+DEBUG cell=0 t=0.209867→0.251841 step=0.377761 Vm=0.16757
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.07 s  ClockTime = 0 s
+
+Time = 0.000293814
+
+DEBUG cell=0 t=0.251841→0.293814 step=0.0419734 Vm=0.166441
+DEBUG cell=0 t=0.251841→0.293814 step=0.377761 Vm=0.166441
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.08 s  ClockTime = 0 s
+
+Time = 0.000335787
+
+DEBUG cell=0 t=0.293814→0.335787 step=0.0419734 Vm=0.165324
+DEBUG cell=0 t=0.293814→0.335787 step=0.377761 Vm=0.165324
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.09 s  ClockTime = 1 s
+
+Time = 0.000377761
+
+DEBUG cell=0 t=0.335787→0.377761 step=0.0419734 Vm=0.164219
+DEBUG cell=0 t=0.335787→0.377761 step=0.377761 Vm=0.164219
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.09 s  ClockTime = 1 s
+
+Time = 0.000419734
+
+[PK] timeIndex=10  t=0.000377761  Vm1D[mV]: n0=-212.034 n1=326.163 n2=-120.25 n3=-120.25 n4=81.0616 n5=81.0616 n6=81.0616 n7=81.0616
+DEBUG cell=0 t=0.377761→0.419734 step=0.0419734 Vm=0.163125
+DEBUG cell=0 t=0.377761→0.419734 step=0.377761 Vm=0.163125
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.1 s  ClockTime = 1 s
+
+Time = 0.000461708
+
+DEBUG cell=0 t=0.419734→0.461708 step=0.0419734 Vm=0.162043
+DEBUG cell=0 t=0.419734→0.461708 step=0.377761 Vm=0.162043
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.1 s  ClockTime = 1 s
+
+Time = 0.000503681
+
+DEBUG cell=0 t=0.461708→0.503681 step=0.0419734 Vm=0.160971
+DEBUG cell=0 t=0.461708→0.503681 step=0.377761 Vm=0.160971
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.11 s  ClockTime = 1 s
+
+Time = 0.000545655
+
+DEBUG cell=0 t=0.503681→0.545655 step=0.0419734 Vm=0.159909
+DEBUG cell=0 t=0.503681→0.545655 step=0.377761 Vm=0.159909
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.11 s  ClockTime = 1 s
+
+Time = 0.000587628
+
+DEBUG cell=0 t=0.545655→0.587628 step=0.0419734 Vm=0.158858
+DEBUG cell=0 t=0.545655→0.587628 step=0.377761 Vm=0.158858
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.11 s  ClockTime = 1 s
+
+Time = 0.000629602
+
+DEBUG cell=0 t=0.587628→0.629602 step=0.0419734 Vm=0.157817
+DEBUG cell=0 t=0.587628→0.629602 step=0.377761 Vm=0.157817
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.12 s  ClockTime = 1 s
+
+Time = 0.000671575
+
+DEBUG cell=0 t=0.629602→0.671575 step=0.0419734 Vm=0.156786
+DEBUG cell=0 t=0.629602→0.671575 step=0.377761 Vm=0.156786
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.12 s  ClockTime = 1 s
+
+Time = 0.000713548
+
+DEBUG cell=0 t=0.671575→0.713548 step=0.0419734 Vm=0.155764
+DEBUG cell=0 t=0.671575→0.713548 step=0.377761 Vm=0.155764
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.13 s  ClockTime = 1 s
+
+Time = 0.000755522
+
+DEBUG cell=0 t=0.713548→0.755522 step=0.0419734 Vm=0.154752
+DEBUG cell=0 t=0.713548→0.755522 step=0.377761 Vm=0.154752
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.13 s  ClockTime = 1 s
+
+Time = 0.000797495
+
+DEBUG cell=0 t=0.755522→0.797495 step=0.0419734 Vm=0.153748
+DEBUG cell=0 t=0.755522→0.797495 step=0.377761 Vm=0.153748
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.14 s  ClockTime = 1 s
+
+Time = 0.000839469
+
+[PK] timeIndex=20  t=0.000797495  Vm1D[mV]: n0=-2.97817e+13 n1=1.08872e+13 n2=-2.93265e+13 n3=-2.93265e+13 n4=1.53414e+07 n5=1.53414e+07 n6=1.53414e+07 n7=1.53414e+07
+DEBUG cell=0 t=0.797495→0.839469 step=0.0419734 Vm=0.152753
+DEBUG cell=0 t=0.797495→0.839469 step=0.377761 Vm=0.152753
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.14 s  ClockTime = 1 s
+
+Time = 0.000881442
+
+DEBUG cell=0 t=0.839469→0.881442 step=0.0419734 Vm=0.151767
+DEBUG cell=0 t=0.839469→0.881442 step=0.377761 Vm=0.151767
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.15 s  ClockTime = 1 s
+
+Time = 0.000923416
+
+DEBUG cell=0 t=0.881442→0.923416 step=0.0419734 Vm=0.150789
+DEBUG cell=0 t=0.881442→0.923416 step=0.377761 Vm=0.150789
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.15 s  ClockTime = 1 s
+
+Time = 0.000965389
+
+DEBUG cell=0 t=0.923416→0.965389 step=0.0419734 Vm=0.14982
+DEBUG cell=0 t=0.923416→0.965389 step=0.377761 Vm=0.14982
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.16 s  ClockTime = 1 s
+
+Time = 0.00100736
+
+DEBUG cell=0 t=0.965389→1.00736 step=0.0419734 Vm=0.148858
+DEBUG cell=0 t=0.965389→1.00736 step=0.377761 Vm=0.148858
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.16 s  ClockTime = 1 s
+
+Time = 0.00104934
+
+DEBUG cell=0 t=1.00736→1.04934 step=0.0419734 Vm=0.147904
+DEBUG cell=0 t=1.00736→1.04934 step=0.377761 Vm=0.147904
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.17 s  ClockTime = 1 s
+
+Time = 0.00109131
+
+DEBUG cell=0 t=1.04934→1.09131 step=0.0419734 Vm=0.146957
+DEBUG cell=0 t=1.04934→1.09131 step=0.377761 Vm=0.146957
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.17 s  ClockTime = 1 s
+
+Time = 0.00113328
+
+DEBUG cell=0 t=1.09131→1.13328 step=0.0419734 Vm=0.146017
+DEBUG cell=0 t=1.09131→1.13328 step=0.377761 Vm=0.146017
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.17 s  ClockTime = 1 s
+
+Time = 0.00117526
+
+DEBUG cell=0 t=1.13328→1.17526 step=0.0419734 Vm=0.145085
+DEBUG cell=0 t=1.13328→1.17526 step=0.377761 Vm=0.145085
+diagonal:  Solving for Vm, Initial residual = 0, Final residual = 0, No Iterations 0
+ExecutionTime = 0.19 s  ClockTime = 1 s
+
+Time = 0.00121723
+
