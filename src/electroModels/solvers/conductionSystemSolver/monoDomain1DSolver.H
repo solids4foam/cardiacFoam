@@ -57,7 +57,7 @@ class MonoDomain1DSolver
 
 public:
 
-    OverrideTypeName("monodomain1DSolver");
+    OverrideTypeName("monodomain1D");
 
     explicit MonoDomain1DSolver(const dictionary&)
     {}

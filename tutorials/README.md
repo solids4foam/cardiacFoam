@@ -4,8 +4,8 @@ This folder contains reference and regression cases for `cardiacFoam`.
 
 ## Current tutorial cases
 
-- `singleCell` : single-point ODE workflow (`SingleCellSolver`)
-- `NiedererEtAl2012` : slab verification workflow (`MonoDomainSolver`)
+- `singleCell` : single-point ODE workflow (`singleCell`)
+- `NiedererEtAl2012` : slab verification workflow (`monodomain`)
 - `ECG` : monodomain + ECG output workflow (`electroModel` with nested `ECG`)
 - `manufacturedFDA` : manufactured-solution verification (`tmanufacturedFDA`)
 - `restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps (single-cell)

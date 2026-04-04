@@ -14,9 +14,9 @@ FoamFile
     object      electroProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-electroModel SingleCellSolver;
+electroModel singleCell;
 
-SingleCellSolverCoeffs
+singleCellCoeffs
 {
 
     // Cell model selection

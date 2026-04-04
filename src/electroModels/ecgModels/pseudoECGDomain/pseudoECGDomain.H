@@ -74,7 +74,7 @@ class PseudoECGDomain
 public:
 
     //- Runtime type information
-    OverrideTypeName("pseudoECGDomain");
+    OverrideTypeName("pseudoECG");
 
     // Constructors
 

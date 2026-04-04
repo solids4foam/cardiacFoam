@@ -35,7 +35,7 @@ class Explicit1DSolver
 
 public:
 
-    OverrideTypeName("explicit1DSolver");
+    OverrideTypeName("explicit1D");
 
     explicit Explicit1DSolver(const dictionary&)
     {}

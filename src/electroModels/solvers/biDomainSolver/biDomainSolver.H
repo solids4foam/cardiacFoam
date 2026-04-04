@@ -70,7 +70,7 @@ protected:
     );
 
 public:
-    OverrideTypeName("bidomainSolver");
+    OverrideTypeName("bidomain");
 
     BiDomainSolver
     (

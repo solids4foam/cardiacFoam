@@ -69,7 +69,7 @@ protected:
 
 public:
 
-    OverrideTypeName("monodomainSolver");
+    OverrideTypeName("monodomain");
 
     MonoDomainSolver
     (

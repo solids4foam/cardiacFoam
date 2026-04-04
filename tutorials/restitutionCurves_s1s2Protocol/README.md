@@ -2,7 +2,7 @@
 
 This tutorial runs single-cell S1-S2 pacing sweeps to generate restitution curves.
 
-- Electro model: `SingleCellSolver`
+- Electro model: `singleCell`
 - Typical ionic model: configurable (default driver uses `BuenoOrovio`)
 - Purpose: APD/restitution analysis across S2 intervals
 
@@ -36,9 +36,9 @@ tutorials/restitutionCurves_s1s2Protocol/
 `constant/electroProperties`:
 
 ```cpp
-electroModel SingleCellSolver;
+electroModel singleCell;
 
-SingleCellSolverCoeffs
+singleCellCoeffs
 {
     ionicModel ...;
     tissue ...;

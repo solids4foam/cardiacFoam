@@ -31,7 +31,7 @@ autoPtr<ECGSolver> ECGSolver::New(const dictionary& dict)
 {
     const word solverType
     (
-        dict.lookupOrDefault<word>("ECGSolver", "PseudoECGSolver")
+        dict.lookupOrDefault<word>("solver", "pseudoECG")
     );
 
     Info<< "Selecting ECGSolver " << solverType << nl;

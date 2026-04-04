@@ -1,0 +1,52 @@
+#!/bin/bash
+cd ${0%/*} || exit 1    # run from this directory
+
+# Stop at first error
+set -e
+
+# Check if OpenFOAM has been sourced
+if [[ -z "${WM_PROJECT}" ]]
+then
+    echo "Please source the OpenFOAM bashrc first!"
+    exit 1
+else
+    allowed_ver=(
+        "v2512" "v2506" "v2412" "v2406" "v2312"
+    )
+    if ! [[ " ${allowed_ver[*]} " == *" $WM_PROJECT_VERSION "* ]]; then
+        echo "Unsupported OpenFOAM version sourced!"
+        exit 1
+    fi
+fi
+
+# Check and define SOLIDS4FOAM_INST_DIR
+source "./etc/resolveSolids4Foam.sh"
+
+# Parse arguments for library compilation
+if [ -f "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments ]
+then
+    . "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments
+fi
+
+# Compile libraries
+(cd src && ./Allwmake "$@" 2>&1 | tee log.Allwmake)
+
+# Compile solvers
+(cd applications && ./Allwmake "$@" 2>&1 | tee log.Allwmake)
+
+# Check if the build succeeded
+echo; echo "Checking if the installation was a success:"
+N_ERRORS_1=$(find . -name log.Allwmake -exec grep -h "Error " {} + 2>/dev/null | wc -l)
+N_ERRORS_2=$(find . -name log.Allwmake -exec grep -h "Stop." {} + 2>/dev/null | wc -l)
+if [[ $N_ERRORS_1 -gt 0 ]] || [[ $N_ERRORS_2 -gt 0 ]]
+then
+    echo "** BUILD ERROR **"
+    echo "There were build errors in the following logs:"
+    find . -name 'log.*' -exec grep -l "Error " {} + 2>/dev/null
+    find . -name 'log.*' -exec grep -l "Stop." {} + 2>/dev/null
+    echo; echo "Please examine these logs for additional details"; echo
+    exit 1
+else
+    echo "There were no build errors: enjoy cardiacFoam!"; echo
+fi
+echo

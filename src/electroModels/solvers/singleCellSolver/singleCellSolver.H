@@ -104,7 +104,7 @@ class SingleCellSolver
 public:
 
     //- Runtime type information
-    OverrideTypeName("singleCellSolver");
+    OverrideTypeName("singleCell");
 
     // Constructors
 

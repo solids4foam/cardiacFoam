@@ -116,7 +116,7 @@ class EikonalSolver
 public:
 
     //- Runtime type information
-    OverrideTypeName("eikonalSolver");
+    OverrideTypeName("eikonalDiffusion");
 
     // Constructors
 
