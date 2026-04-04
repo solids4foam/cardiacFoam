@@ -1,0 +1,264 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
+#include <math.h>
+#include "Courtemanche_1998.H"
+#include "Courtemanche.H"
+#include "addToRunTimeSelectionTable.H"
+#include "ionicModel.H"
+#include "ionicModelIO.H"
+#include "stimulusIO.H"
+#include "volFields.H"
+#include "HashTable.H"
+
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+namespace Foam
+{
+    defineTypeNameAndDebug(Courtemanche, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel, Courtemanche, dictionary
+    );
+}
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::Courtemanche::Courtemanche
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    STATES_(num),
+    CONSTANTS_(NUM_CONSTANTS, 0.0),
+    ALGEBRAIC_(num),
+    RATES_(num)
+{
+    // 🔑 First, set tissue using base logic + overrides
+    ionicModel::setTissueFromDict();
+    forAll(STATES_, i)
+    {
+        STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
+        ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
+        RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
+
+        // Initialise constants, states and rates from generated code
+        CourtemancheinitConsts
+        (
+            CONSTANTS_.data(),
+            RATES_[i].data(),
+            STATES_[i].data(),
+            tissue(),dict
+        );
+        if (!utilitiesMode())
+        {
+            setStimulusProtocolFromDict(dict);
+        }
+
+    }
+}
+
+
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+Foam::Courtemanche::~Courtemanche()
+{}
+
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+Foam::List<Foam::word> Foam::Courtemanche::supportedTissueTypes() const
+{
+    return {"myocyte"};
+}
+// ------------------------------------------------------------------------- //
+//  Solve ODE with mixed singleCell implementation and 1D-3D condition
+// ------------------------------------------------------------------------- //
+void Foam::Courtemanche::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    const scalar tStart = stepStartTime * 1000;
+    const scalar tEnd   = (stepStartTime + deltaT) * 1000;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
+
+    forAll(STATES_, integrationPtI)
+    {
+        scalarField& STATESI    = STATES_[integrationPtI];
+        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
+        scalarField& RATESI     = RATES_[integrationPtI];
+
+        scalar& step = ionicModel::step()[integrationPtI];
+
+        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
+        if (!solveVmWithinODESolver())
+        {
+            STATESI[0] = Vm[integrationPtI]*1000.0;
+        }
+
+        // Clamp time step (ms)
+        step = min(step, deltaT * 1000.0);
+        // Advance ODE system for all states
+        odeSolver().solve(tStart, tEnd, STATESI, step);
+
+        // Update algebraics and rates at tEnd (includes Iion and I_stim)
+        ::CourtemanchecomputeVariables
+        (
+            tEnd,
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGEBRAICI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+        if (integrationPtI == sampleCell)
+        {debugPrintFields(integrationPtI, tStart, tEnd, step);}
+
+        // Total ionic current density used by PDE
+        Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+
+        //----can easily be expanded for all variables------//
+        //copyInternalToExternal(STATES_, states, NUM_STATES);
+    }
+}
+
+void Foam::Courtemanche::derivatives
+(
+    const scalar t,
+    const scalarField& y,
+    scalarField& dydt
+) const
+{
+    // Must match NUM_ALGEBRAIC from the generated Courtemanche code
+    scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
+
+    ::CourtemanchecomputeVariables
+    (
+        t,
+        CONSTANTS_.data(),
+        dydt.data(),                              // RATES (output)
+        const_cast<scalarField&>(y).data(),       // STATES (input)
+        ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
+        tissue(),
+        solveVmWithinODESolver()
+    ,
+            stimulusProtocol()
+        );
+}
+
+// ------------------------------------------------------------------------- //
+//  Writing logic in singleCell and 3D simulations
+
+const char* const* Foam::Courtemanche::ioStateNames() const
+{
+    return CourtemancheSTATES_NAMES;
+}
+
+const char* const* Foam::Courtemanche::ioConstantNames() const
+{
+    return CourtemancheCONSTANTS_NAMES;
+}
+
+const char* const* Foam::Courtemanche::ioAlgebraicNames() const
+{
+    return CourtemancheALGEBRAIC_NAMES;
+}
+
+void Foam::Courtemanche::sweepCurrent
+(
+    const word& currentName,
+    scalar Vmin,
+    scalar Vmax,
+    label nPts,
+    const fileName& outputFile
+) const
+{
+    // Retrieve dependency variables
+    const auto& depMap = CourtemancheDependencyMap();
+
+    if (!depMap.found(currentName))
+    {
+        FatalErrorInFunction
+            << "Unknown current: " << currentName << nl
+            << "Available currents: " << depMap.toc() << nl
+            << exit(FatalError);
+    }
+
+    const wordList& deps = depMap[currentName];
+    OFstream os(outputFile);
+    // Write sweep header: V,<deps...>
+    ionicModelIO::writeSweepHeader(os, deps);
+
+    // Working arrays from integration point 0
+    scalarField STATESI = STATES_[0];
+    scalarField RATESI(NUM_STATES, 0.0);
+    scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
+
+    // Voltage sweep
+    for (label i = 0; i < nPts; ++i)
+    {
+        scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
+
+        // Reset all states to baseline
+        STATESI = STATES_[0];
+
+        // Overwrite membrane voltage (dimensionless in BO2008)
+        STATESI[0] = V;
+
+        ::CourtemanchecomputeVariables
+        (
+            0.0,                       // VOI
+            CONSTANTS_.data(),
+            RATESI.data(),
+            STATESI.data(),
+            ALGI.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        ionicModelIO::writeOneSweepRow
+        (
+            os, V, deps,STATESI,ALGI,
+            CourtemancheSTATES_NAMES, NUM_STATES,
+            CourtemancheALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
+        );
+    }
+}
+
+Foam::wordList Foam::Courtemanche::availableSweepCurrents() const
+{
+    return CourtemancheDependencyMap().toc();
+}

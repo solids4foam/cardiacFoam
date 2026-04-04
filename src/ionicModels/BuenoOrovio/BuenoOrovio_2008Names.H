@@ -1,0 +1,98 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
+#pragma once
+#include "stimulusIO.H"
+
+enum CONSTANTS_INDEX {
+    uO,
+    uU,
+    thetaV,
+    thetaW,
+    thetaVMinus,
+    thetaO,
+    tauV1Minus,
+    tauV2Minus,
+    tauVPlus,
+    tauW1Minus,
+    tauW2Minus,
+    kWMinus,
+    uWMinus,
+    tauWPlus,
+    tauFi,
+    tauO1,
+    tauO2,
+    tauSo1,
+    tauSo2,
+    kSo,
+    uSo,
+    tauS1,
+    tauS2,
+    kS,
+    uS,
+    tauSi,
+    tauWInfty,
+    wInftyStar,
+
+    NUM_CONSTANTS};
+enum STATES_INDEX{
+    u, // Membrane voltage
+    v, // Fast sodium activation variable
+    w, // Slow sodium activation variable
+    s, // Slow inactivation variable
+    NUM_STATES
+};
+enum ALGEBRAIC_INDEX{
+    Jfi, // Fast sodium current
+    Jso, // Slow sodium current
+    Jsi, // Slow inactivation current
+    Jion, // total current
+    Istim, // Stimulus current
+
+    tauSo,      // 5  τ_so
+    tauO,       // 6  τ_o
+    tauVMinus,  // 7  τ_v⁻
+    tauWMinus,  // 8  τ_w⁻
+    tauS,       // 9  τ_s
+    vInfty,     // 10 v∞
+    wInfty,     // 11 w∞
+    NUM_ALGEBRAIC
+};
+
+void
+BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
+void
+BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
