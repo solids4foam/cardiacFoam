@@ -45,8 +45,7 @@ tutorials/fluidSolidInteraction-preCICE/tutorials
 # derived files
 lex.yy.c
 
-# Corefiles
-core
+
 
 # dependency files - anywhere
 *.dep
