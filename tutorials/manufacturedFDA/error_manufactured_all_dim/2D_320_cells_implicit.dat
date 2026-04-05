@@ -1,0 +1,19 @@
+Manufactured-solution error summary (t = 0.200002):
+Field     L1-error       L2-error       Linf-error
+Vm     2.22501e-06   2.74543e-06   5.68627e-06
+u1     5.47244e-07   6.91068e-07   1.7877e-06
+u2     2.07354e-07   2.62427e-07   6.28541e-07
+-------------------------------------------------
+
+
+Simulation summary:
+-------------------
+Number of cells (N)   = 320
+Mesh dimension        = 2
+Solver type           = Implicit
+Grid spacing (dx)     = 0.00787451
+Time step (dt)        = 8.76201e-06
+Number of steps       = 22826
+Final simulation time = 0.200002
+-------------------
+
