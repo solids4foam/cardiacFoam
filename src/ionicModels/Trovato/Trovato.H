@@ -36,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "Trovato_2019Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -119,7 +120,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("Trovato");
+        OverrideTypeName("Trovato");
 
 
         //override the only available tissue in this model

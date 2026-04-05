@@ -36,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "Stewart_2009Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -119,7 +120,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("Stewart");
+        OverrideTypeName("Stewart");
 
 
         //override the only available tissue in this model

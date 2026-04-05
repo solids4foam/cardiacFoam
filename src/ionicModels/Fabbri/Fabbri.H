@@ -36,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "Fabbri_2017Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -119,7 +120,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("Fabbri");
+        OverrideTypeName("Fabbri");
 
 
         //override the only available tissue in this model

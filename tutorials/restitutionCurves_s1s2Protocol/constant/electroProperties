@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroModel singleCellElectro;
+electroModel singleCellSolver;
 
-singleCellElectroCoeffs
+singleCellSolverCoeffs
 {
     ionicModel    BuenoOrovio;
     tissue    epicardialCells;

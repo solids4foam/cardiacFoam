@@ -279,9 +279,18 @@ void activeTensionIO::write
     const scalarField& R = RATES[0];
 
     os << t;
-    forAll(S, i) { os << " " << S[i]; }
-    forAll(A, i) { os << " " << A[i]; }
-    forAll(R, i) { os << " " << R[i]; }
+    forAll(S, i)
+    {
+        os << " " << S[i];
+    }
+    forAll(A, i)
+    {
+        os << " " << A[i];
+    }
+    forAll(R, i)
+    {
+        os << " " << R[i];
+    }
     os << nl;
 }
 

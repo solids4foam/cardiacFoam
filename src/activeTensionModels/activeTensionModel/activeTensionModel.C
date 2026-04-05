@@ -60,13 +60,13 @@ void activeTensionModel::validateProvider() const
     {
         FatalErrorInFunction
             << "Active tension model requires coupling signals, "
-            << "but CouplingSignalProvider was not set."
+            << "but ElectromechanicalSignalProvider was not set."
             << abort(FatalError);
     }
 
     if (!providerPtr_) return;
 
-    const CouplingSignalProvider& p = *providerPtr_;
+    const ElectromechanicalSignalProvider& p = *providerPtr_;
 
     auto require = [&](const CouplingSignal s, const char* name)
     {
@@ -79,8 +79,8 @@ void activeTensionModel::validateProvider() const
         }
     };
 
-    if (req.needVm)  require(CouplingSignal::Vm,  "Vm");
-    if (req.needCai) require(CouplingSignal::Cai, "Cai");
+    if (req.needVm)  require(CouplingSignal::VM,  "Vm");
+    if (req.needCai) require(CouplingSignal::CAI, "Cai");
 }
 
 
@@ -319,7 +319,7 @@ void activeTensionModel::calculateTension
     currentT_  = t;
     currentDt_ = dt;
 
-    const CouplingSignalProvider& p = provider();
+    const ElectromechanicalSignalProvider& p = provider();
     const CouplingSignal sig = driveSignal();
 
     forAll(Ta, i)

@@ -15,16 +15,16 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroModel monoDomainElectro;
+myocardiumSolver  monodomainSolver;
 
-monoDomainElectroCoeffs
+monodomainSolverCoeffs
 {
     conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
     chi   [0 -1 0 0 0 0 0] 140000;
     Cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    ionicModel    Stewart;
-    tissue        myocyte;
+    ionicModel    BuenoOrovio;
+    tissue        endocardialCells;
 
     outputVariables
     {
@@ -49,66 +49,78 @@ monoDomainElectroCoeffs
         stimulusStartTime 0.0;
     }
 
-}
-
-purkinjeNetwork
-{
-    purkinjeModel    purkinjeNetworkModel;
-
-    R_pvj            500.0;   // [Ohm.m^2] Vergara-Quarteroni coupling resistance (physical, dimensional)
-    pvjRadius        6e-4;   // [m] sphere radius for current distribution (0.6 mm ~ 3 cells)
-
-    // Edge format: ( nodeA  nodeB  length[m]  conductance[S/m] )
-    edges
-    (
-        ( 0  1  0.003  3.0 )   // root → first bifurcation
-        ( 1  2  0.005  3.0 )   // → left main branch
-        ( 1  3  0.005  3.0 )   // → right main branch
-        ( 2  4  0.004  3.0 )   // left anterior terminal
-        ( 2  5  0.004  3.0 )   // left posterior terminal
-        ( 3  6  0.004  3.0 )   // right anterior terminal
-        ( 3  7  0.004  3.0 )   // right posterior terminal
-    );
-
-    pvjNodes      ( 4      5      6      7     );
-    // 3D coordinates [m] of each PVJ junction (parallel-safe: replaces pvjCellIDs).
-    // Derived from serial cell IDs 14224/36724/14274/36774 in the 200x30x70 blockMesh:
-    //   cellID = i + 200*j + 6000*k, cell centre = ((i+0.5)*0.1mm, (j+0.5)*0.1mm, (k+0.5)*0.1mm)
-    pvjLocations
-    (
-        (0.00245  0.00115  0.00025)   // was cell 14224 (i=24,j=11,k=2)
-        (0.01245  0.00035  0.00065)   // was cell 36724 (i=124,j=3,k=6)
-        (0.00745  0.00115  0.00025)   // was cell 14274 (i=74,j=11,k=2)
-        (0.01745  0.00035  0.00065)   // was cell 36774 (i=174,j=3,k=6)
-    );
-
-    rootStimulus
+    conductionNetworkDomains
     {
-        startTime    0.0;
-        duration     0.002;
-        // chi=1400, Cm=0.01: to drive from -0.084V to threshold (~-0.040V) in 2ms
-        // Istim = chi*Cm*ΔV/Δt = 1400*0.01*0.044/0.002 = 308 A/m^3 → use 3× suprathreshold
-        intensity    1000.0;
+        purkinjeNetwork
+        {
+            conductionSystemDomainModel purkinjeNetworkModel;
+
+            R_pvj            500.0;   // [Ohm.m^2] Vergara-Quarteroni coupling resistance (physical, dimensional)
+            pvjRadius        6e-4;   // [m] sphere radius for current distribution (0.6 mm ~ 3 cells)
+
+            // Edge format: ( nodeA  nodeB  length[m]  conductance[S/m] )
+            edges
+            (
+                ( 0  1  0.003  3.0 )   // root → first bifurcation
+                ( 1  2  0.005  3.0 )   // → left main branch
+                ( 1  3  0.005  3.0 )   // → right main branch
+                ( 2  4  0.004  3.0 )   // left anterior terminal
+                ( 2  5  0.004  3.0 )   // left posterior terminal
+                ( 3  6  0.004  3.0 )   // right anterior terminal
+                ( 3  7  0.004  3.0 )   // right posterior terminal
+            );
+
+            pvjNodes      ( 4      5      6      7     );
+            // 3D coordinates [m] of each PVJ junction (parallel-safe: replaces pvjCellIDs).
+            // Derived from serial cell IDs 14224/36724/14274/36774 in the 200x30x70 blockMesh:
+            //   cellID = i + 200*j + 6000*k, cell centre = ((i+0.5)*0.1mm, (j+0.5)*0.1mm, (k+0.5)*0.1mm)
+            pvjLocations
+            (
+                (0.00245  0.00115  0.00025)   // was cell 14224 (i=24,j=11,k=2)
+                (0.01245  0.00035  0.00065)   // was cell 36724 (i=124,j=3,k=6)
+                (0.00745  0.00115  0.00025)   // was cell 14274 (i=74,j=11,k=2)
+                (0.01745  0.00035  0.00065)   // was cell 36774 (i=174,j=3,k=6)
+            );
+
+            rootStimulus
+            {
+                startTime    0.0;
+                duration     0.002;
+                // chi=1400, Cm=0.01: to drive from -0.084V to threshold (~-0.040V) in 2ms
+                // Istim = chi*Cm*ΔV/Δt = 1400*0.01*0.044/0.002 = 308 A/m^3 → use 3× suprathreshold
+                intensity    1000.0;
+            }
+
+            purkinjeNetworkModelCoeffs
+            {
+                ionicModel    BuenoOrovio;
+    		tissue        endocardialCells;
+                Vm1D_rest     0;   // Stewart rest: STATES[membrane_V] = -69.14 mV = -0.06914 V
+
+                // ODE solver settings — same entries required by all ionicModels
+                solver           RKF45;
+                initialODEStep   1e-6;
+                maxSteps         1000000000;
+
+                chi            1400.0;    // [1/m]  typical Purkinje value
+                Cm             1.0e-2;    // [F/m^2]
+
+                outputVariables
+                {
+                    export  (Vm Icoupling);   // columns in purkinjeNetwork.dat
+                    debug   (Vm);             // printed to terminal every 10 timesteps
+                }
+            }
+        }
     }
 
-    purkinjeNetworkModelCoeffs
+    domainCouplings
     {
-        ionicModel    Stewart;
-        tissue        myocyte;
-        Vm1D_rest     -0.06914;   // Stewart rest: STATES[membrane_V] = -69.14 mV = -0.06914 V
-
-        // ODE solver settings — same entries required by all ionicModels
-        solver           RKF45;
-        initialODEStep   1e-6;
-        maxSteps         1000000000;
-
-        chi            1400.0;    // [1/m]  typical Purkinje value
-        Cm             1.0e-2;    // [F/m^2]
-
-        outputVariables
+        purkinjeToMyocardium
         {
-            export  (Vm Icoupling);   // columns in purkinjeNetwork.dat
-            debug   (Vm);             // printed to terminal every 10 timesteps
+            electroDomainCouplingModel pvjResistanceCoupler;
+            R_pvj      500.0;
+            pvjRadius  6e-4;
         }
     }
 }

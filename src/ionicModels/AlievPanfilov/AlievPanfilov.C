@@ -274,7 +274,11 @@ bool Foam::AlievPanfilov::hasSignal(const CouplingSignal s) const
     return ionicModel::hasSignal(s);
 }
 
-Foam::scalar Foam::AlievPanfilov::signal(const label i, const CouplingSignal s) const
+Foam::scalar Foam::AlievPanfilov::signal
+(
+    const label i,
+    const CouplingSignal s
+) const
 {
     return ionicModel::signal(i, s);
 }

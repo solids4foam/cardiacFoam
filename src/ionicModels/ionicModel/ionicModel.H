@@ -43,7 +43,7 @@ Authors
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 
-#include "electromechanicsFeedbackProvider.H"
+#include "electromechanicalSignalProvider.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -58,7 +58,7 @@ namespace Foam
 class ionicModel
 :
     public ODESystem,
-    public CouplingSignalProvider
+    public ElectromechanicalSignalProvider
 {
     // Private Data
         //- ODE solver
@@ -223,25 +223,29 @@ public:
     //- Destructor
     virtual ~ionicModel();
 
-//-----------------------Member Functions ---------------------//
+    // Member Functions
 
-    /// --- CouplingSignalProvider interface ---
+    /// --- ElectromechanicalSignalProvider interface ---
     bool hasSignal(CouplingSignal s) const override;
     scalar signal(label i, CouplingSignal s) const override;
 
 
-//-----------------------Solver Functions ---------------------//
+    // Solver Functions
         //- ODE solver
         ODESolver& odeSolver()
         {
             if (!odeSolver_)
-                {odeSolver_.reset(ODESolver::New(*this, dict_));}
+            {
+                odeSolver_.reset(ODESolver::New(*this, dict_));
+            }
             return odeSolver_();
         }
 
         //- Step size for ODE solver
         scalarList& step()
-            {return step_;}
+        {
+            return step_;
+        }
 
         virtual void solveODE
         (
@@ -280,7 +284,7 @@ public:
         };
 
 
-//-----------------------Read and get for derived class ---------------------//
+    // Read and Get
 
         //- Getter for tissue flag
         label tissue() const
@@ -405,7 +409,8 @@ public:
         }
 
         //- Return algebraic values at an integration point
-        scalarField algebraicVariableValues(const label integrationPtI = 0) const
+        scalarField algebraicVariableValues
+        (const label integrationPtI = 0) const
         {
             const auto* algebraicPtr = ioAlgebraicPtr();
             if (!algebraicPtr || algebraicPtr->empty())
@@ -430,6 +435,18 @@ public:
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
         }
 
+        //- Optional verification family tag for manufactured/reference tests.
+        virtual word verificationFamily() const
+        {
+            return word();
+        }
+
+        //- Optional geometric dimension used by manufactured/reference tests.
+        virtual label geometricDimension() const
+        {
+            return -1;
+        }
+
         virtual word tissueName() const
         {
         const label t = tissue_;
@@ -447,7 +464,7 @@ public:
         }
 
 
-//-------------------------------Print Export and write ---------------------//
+    // Print, Export and Write
         // Write and export from internal variables functions
         // singleCell
         virtual void writeHeader(OFstream& os) const
@@ -722,7 +739,7 @@ public:
 
 
     };
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 

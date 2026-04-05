@@ -17,14 +17,14 @@ is required.
 ## Class Structure
 
 Follows the `ecgModel` companion pattern exactly: a separate class hierarchy owned by
-`monoDomainElectro`, not a new `electroModel` subclass.
+`MonoDomainSolver`, not a new `electroModel` subclass.
 
 ```
 purkinjeModel                (abstract base, RTST, analogous to ecgModel)
   └── purkinjeNetworkModel   (concrete, registered via addToRunTimeSelectionTable)
 ```
 
-`monoDomainElectro` gains one new member:
+`MonoDomainSolver` gains one new member:
 
 ```cpp
 autoPtr<purkinjeModel> purkinjeModelPtr_;   // null if purkinjeNetwork subdict absent
@@ -58,7 +58,7 @@ public:
 ```
 
 `evolve()` **adds** the PVJ coupling current into `externalStimulusCurrent` in-place.
-No new field and no change to the `solve()` line in `monoDomainElectro` are required.
+No new field and no change to the `solve()` line in `MonoDomainSolver` are required.
 
 ---
 
@@ -66,7 +66,7 @@ No new field and no change to the `solve()` line in `monoDomainElectro` are requ
 
 ```cpp
 // constant/electroProperties
-electroModel  monoDomainElectro;
+electroModel  MonoDomainSolver;
 
 // ... existing monodomain entries ...
 
@@ -156,7 +156,7 @@ dVm1D[i]/dt = (1/χCm) * Σ_j [ σ_ij*(Vm1D[j]-Vm1D[i]) / L_ij² ] - Iion[i]
 
 ## Call Sequence
 
-### `monoDomainElectro::evolveExplicit()` (modified)
+### `MonoDomainSolver::evolveExplicit()` (modified)
 
 ```cpp
 // 1) External stimulus (unchanged)
@@ -206,8 +206,8 @@ src/electroModels/purkinjeNetworkModel/purkinjeNetworkModel.C
 
 ### Modified
 ```
-src/electroModels/monoDomainElectro/monoDomainElectro.H   add autoPtr<purkinjeModel>
-src/electroModels/monoDomainElectro/monoDomainElectro.C   construct + call in evolve
+src/electroModels/MonoDomainSolver/MonoDomainSolver.H   add autoPtr<purkinjeModel>
+src/electroModels/MonoDomainSolver/MonoDomainSolver.C   construct + call in evolve
 src/electroModels/Make/files                               add 4 new .C entries
 ```
 

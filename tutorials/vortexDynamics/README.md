@@ -3,7 +3,7 @@
 This tutorial is a tissue-scale 2D propagation/reentry-style setup using the
 monodomain workflow.
 
-- Electro model: `monoDomainElectro`
+- Electro model: `MonoDomainSolver`
 - Ionic model: configured in `constant/electroProperties`
 - Purpose: wave dynamics demonstration in a planar domain
 
@@ -29,7 +29,7 @@ tutorials/vortexDynamics/
 
 ## Key dictionary scope
 
-`constant/electroProperties` uses `monoDomainElectroCoeffs` with:
+`constant/electroProperties` uses `MonoDomainSolverCoeffs` with:
 
 - conductivity, `chi`, `Cm`
 - `ionicModel` and `tissue`

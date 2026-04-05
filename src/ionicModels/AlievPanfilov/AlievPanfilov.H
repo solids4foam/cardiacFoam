@@ -37,6 +37,7 @@ Author
 #include "AlievPanfilov_1996Names.H"
 #include "OFstream.H"
 #include "volFields.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 namespace Foam
@@ -129,7 +130,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("AlievPanfilov");
+        OverrideTypeName("AlievPanfilov");
 
 
         //override the only available tissue in this model
@@ -160,7 +161,8 @@ protected:
 
         // CouplingSignalProvider
         virtual bool hasSignal(const CouplingSignal s) const override;
-        virtual scalar signal(const label i, const CouplingSignal s) const override;
+        virtual scalar signal
+        (const label i, const CouplingSignal s) const override;
 
 
         // Member Functions

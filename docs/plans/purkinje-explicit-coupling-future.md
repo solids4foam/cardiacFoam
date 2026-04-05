@@ -18,8 +18,8 @@ In operator splitting:
 In explicit coupling with shared current:
 1. Advance 1D PN ODE from `t` to `t+dt` using `Vm_3D` at PVJs.
 2. Compute `I_coupling` at each PVJ immediately.
-3. Write `I_coupling` into `couplingCurrent_` (a `volScalarField` owned by `monoDomainElectro`).
-4. `monoDomainElectro` assembles and solves the 3D PDE with `couplingCurrent_` on the RHS
+3. Write `I_coupling` into `couplingCurrent_` (a `volScalarField` owned by `MonoDomainSolver`).
+4. `MonoDomainSolver` assembles and solves the 3D PDE with `couplingCurrent_` on the RHS
    in the **same** `solve()` call — not a subsequent step.
 
 The distinction is subtle but matters: the coupling current is part of the assembled matrix
@@ -34,7 +34,7 @@ purkinjeModel::evolve(t, dt, Vm_3D, couplingCurrent_)
   ├── compute I_coupling at each PVJ node
   └── scatter I_coupling into couplingCurrent_ at PVJ cell indices
 
-monoDomainElectro::evolveExplicit()
+MonoDomainSolver::evolveExplicit()
   └── solve( chi*Cm*ddt(Vm) == laplacian(...) - chi*Cm*Iion + externalStimulus + couplingCurrent_ )
 ```
 
@@ -43,7 +43,7 @@ monoDomainElectro::evolveExplicit()
 | Aspect | Operator splitting | Explicit shared current |
 |---|---|---|
 | `purkinjeModel::evolve` signature | `evolve(t, dt, Vm)` — returns nothing or scalar residual | `evolve(t, dt, Vm, couplingCurrent&)` — writes into field |
-| `couplingCurrent_` ownership | Not needed | Owned by `monoDomainElectro`; non-const ref passed to `purkinjeModel` |
+| `couplingCurrent_` ownership | Not needed | Owned by `MonoDomainSolver`; non-const ref passed to `purkinjeModel` |
 | PDE assembly | Separate injection step | `couplingCurrent_` added directly in `solve()` call |
 
 ## Trade-offs vs Operator Splitting
@@ -55,7 +55,7 @@ monoDomainElectro::evolveExplicit()
 - No additional data copies; `couplingCurrent_` is reused across timesteps like `externalStimulusCurrent_`.
 
 **Disadvantages:**
-- Slightly more intrusive: `monoDomainElectro` must own and zero `couplingCurrent_` each step.
+- Slightly more intrusive: `MonoDomainSolver` must own and zero `couplingCurrent_` each step.
 - The coupling remains explicit (first-order in time) unless an outer Picard iteration is added.
 - Subcycling complicates timestep control.
 

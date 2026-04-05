@@ -4,7 +4,7 @@
 
 **Goal:** Introduce `ecgElectro` (concrete electroModel) + `ecgModel` (runtime-selectable, like `ionicModel`) to replace `greensFunctionECGElectro`. ECG type is selected inside the electroModel coeff dict (`ecgModel BEMECGElectro;`) and has its own subdict, exactly like `ionicModel`.
 
-**Architecture:** `ecgElectro` extends `monoDomainElectro` and owns an `autoPtr<ecgModel>`. `ecgModel` is an abstract runtime-selectable class; `BEMECGElectro` and `pseudoECGElectro` are its concrete subclasses. `monoDomainElectro` gains `initialiseConductivityTensor()` (static utility, used by both monodomain and ecgModel subclasses) and `readVm()` (for postProcess mode).
+**Architecture:** `ecgElectro` extends `MonoDomainSolver` and owns an `autoPtr<ecgModel>`. `ecgModel` is an abstract runtime-selectable class; `BEMECGElectro` and `pseudoECGElectro` are its concrete subclasses. `MonoDomainSolver` gains `initialiseConductivityTensor()` (static utility, used by both monodomain and ecgModel subclasses) and `readVm()` (for postProcess mode).
 
 **Tech Stack:** OpenFOAM C++ (wmake), existing runtime-selection pattern (`declareRunTimeSelectionTable`, `addToRunTimeSelectionTable`), `volTensorField`, `autoPtr`.
 
@@ -14,8 +14,8 @@
 
 | Action | File | Responsibility |
 |---|---|---|
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.H` | Add `initialiseConductivityTensor()` (protected static) and `readVm()` (protected) |
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` | Implement both; refactor `initialiseConductivity()` to delegate |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.H` | Add `initialiseConductivityTensor()` (protected static) and `readVm()` (protected) |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.C` | Implement both; refactor `initialiseConductivity()` to delegate |
 | **Create** | `src/electroModels/ecgModel/ecgModel.H` | Abstract base + runtime-selector declaration |
 | **Create** | `src/electroModels/ecgModel/ecgModel.C` | `New()` factory, `defineRunTimeSelectionTable` |
 | **Create** | `src/electroModels/ecgElectro/ecgElectro.H` | Concrete electroModel: `postProcess_`, `ecgModelPtr_` |
@@ -28,20 +28,20 @@
 | Delete | `src/electroModels/greensFunctionECGElectro/` | Replaced |
 | Modify | `tutorials/ECG/constant/electroProperties` | Switch to `ecgElectro` + `ecgModel BEMECGElectro` |
 
-`pdeECGElectro` is **not changed** in this plan — it stays as a direct `monoDomainElectro` subclass.
+`pdeECGElectro` is **not changed** in this plan — it stays as a direct `MonoDomainSolver` subclass.
 
 ---
 
-## Chunk 1: `monoDomainElectro` Infrastructure
+## Chunk 1: `MonoDomainSolver` Infrastructure
 
 **Goal:** Extract the conductivity tensor init pattern into a reusable static utility; add `readVm()` for postProcess mode. Existing behaviour unchanged — `NiedererEtAl2012` must still pass.
 
-### Task 1: Add `initialiseConductivityTensor` and `readVm` to `monoDomainElectro`
+### Task 1: Add `initialiseConductivityTensor` and `readVm` to `MonoDomainSolver`
 
 **Files:**
 
-- Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.H`
-- Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.C`
+- Modify: `src/electroModels/MonoDomainSolver/MonoDomainSolver.H`
+- Modify: `src/electroModels/MonoDomainSolver/MonoDomainSolver.C`
 
 - [ ] **Step 1: Add declarations to `.H`**
 
@@ -49,7 +49,7 @@
 
   ```cpp
   //- Initialise a conductivity tensor: try disk (READ_IF_PRESENT), fall back to dict.
-  //  Used by both monoDomainElectro (for conductivity_) and ecgModel subclasses (for Gi_).
+  //  Used by both MonoDomainSolver (for conductivity_) and ecgModel subclasses (for Gi_).
   static tmp<volTensorField> initialiseConductivityTensor
   (
       const word& fieldName,
@@ -68,7 +68,7 @@
 
   ```cpp
   Foam::tmp<Foam::volTensorField>
-  Foam::monoDomainElectro::initialiseConductivityTensor
+  Foam::MonoDomainSolver::initialiseConductivityTensor
   (
       const word& fieldName,
       const dictionary& dict,
@@ -119,7 +119,7 @@
   Replace its body with:
 
   ```cpp
-  tmp<volTensorField> monoDomainElectro::initialiseConductivity() const
+  tmp<volTensorField> MonoDomainSolver::initialiseConductivity() const
   {
       return initialiseConductivityTensor("conductivity", cardiacProperties_, mesh());
   }
@@ -128,7 +128,7 @@
 - [ ] **Step 4: Implement `readVm()`**
 
   ```cpp
-  void Foam::monoDomainElectro::readVm()
+  void Foam::MonoDomainSolver::readVm()
   {
       Vm_.read();
   }
@@ -155,8 +155,8 @@
 - [ ] **Step 6: Commit**
 
   ```bash
-  git add src/electroModels/monoDomainElectro/
-  git commit -m "refactor(monoDomainElectro): extract initialiseConductivityTensor + add readVm()"
+  git add src/electroModels/MonoDomainSolver/
+  git commit -m "refactor(MonoDomainSolver): extract initialiseConductivityTensor + add readVm()"
   ```
 
 ---
@@ -181,7 +181,7 @@
   #ifndef ecgModel_H
   #define ecgModel_H
 
-  #include "monoDomainElectro.H"   // for initialiseConductivityTensor
+  #include "MonoDomainSolver.H"   // for initialiseConductivityTensor
   #include "volFields.H"
   #include "dimensionedScalar.H"
   #include "autoPtr.H"
@@ -194,7 +194,7 @@
   {
   protected:
 
-      const volScalarField& Vm_;    // Vm owned by ecgElectro (monoDomainElectro)
+      const volScalarField& Vm_;    // Vm owned by ecgElectro (MonoDomainSolver)
       const fvMesh&         mesh_;
 
       volTensorField        Gi_;    // intracellular conductivity (time-invariant)
@@ -273,7 +273,7 @@
       mesh_(Vm.mesh()),
       Gi_
       (
-          monoDomainElectro::initialiseConductivityTensor("Gi", dict, Vm.mesh())
+          MonoDomainSolver::initialiseConductivityTensor("Gi", dict, Vm.mesh())
       ),
       sigmaT_("sigmaT", dict)
   {
@@ -366,7 +366,7 @@
   #ifndef ecgElectro_H
   #define ecgElectro_H
 
-  #include "monoDomainElectro.H"
+  #include "MonoDomainSolver.H"
   #include "ecgModel.H"
 
   namespace Foam
@@ -374,7 +374,7 @@
 
   class ecgElectro
   :
-      public monoDomainElectro
+      public MonoDomainSolver
   {
       const Switch      postProcess_;
       autoPtr<ecgModel> ecgModelPtr_;
@@ -418,7 +418,7 @@
       const word& region
   )
   :
-      monoDomainElectro(typeName, runTime, region),
+      MonoDomainSolver(typeName, runTime, region),
       postProcess_
       (
           electroProperties().subDict(typeName + "Coeffs")
@@ -428,7 +428,7 @@
       (
           ecgModel::New
           (
-              Vm(),   // protected accessor from monoDomainElectro
+              Vm(),   // protected accessor from MonoDomainSolver
               electroProperties().subDict(typeName + "Coeffs")
           )
       )
@@ -441,7 +441,7 @@
       bool ok = true;
 
       if (!postProcess_)
-          ok = monoDomainElectro::evolve();
+          ok = MonoDomainSolver::evolve();
       else
           readVm();
 
@@ -452,11 +452,11 @@
 
   bool Foam::ecgElectro::read()
   {
-      return monoDomainElectro::read();
+      return MonoDomainSolver::read();
   }
   ```
 
-  Note: `Vm()` — verify the exact name of the protected accessor that exposes `Vm_` in `monoDomainElectro`. If it doesn't exist as a non-const reference, add one or store a reference to the field before constructing the ecgModel.
+  Note: `Vm()` — verify the exact name of the protected accessor that exposes `Vm_` in `MonoDomainSolver`. If it doesn't exist as a non-const reference, add one or store a reference to the field before constructing the ecgModel.
 
 - [ ] **Step 3: Add to `Make/files`**
 
@@ -823,4 +823,4 @@
 
 2. **`postProcess` time-looping**: `readVm()` is wired up in `ecgElectro::evolve()`, but the solver binary's time-directory looping for standalone postProcess invocation is not implemented in this plan.
 
-3. **`pdeECGElectro` not migrated**: stays as a direct `monoDomainElectro` subclass with its own `Gi_`/`Ge_`/`sigmaT_`. Migration to use `ecgModel` is deferred due to the separate torso mesh complexity.
+3. **`pdeECGElectro` not migrated**: stays as a direct `MonoDomainSolver` subclass with its own `Gi_`/`Ge_`/`sigmaT_`. Migration to use `ecgModel` is deferred due to the separate torso mesh complexity.
