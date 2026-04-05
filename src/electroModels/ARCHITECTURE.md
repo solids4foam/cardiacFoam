@@ -115,9 +115,8 @@ Concrete implementations of `graphConductionSystemSolver`.
 
 | Class | Type name | Method |
 |---|---|---|
-| `explicit1DSolver` | `explicit1D` | Explicit Euler ODE on cable segments |
-| `monodomain1DSolver` | `monodomain1D` | Monodomain diffusion on 1D cable |
-| `eikonalSolver1D` | `eikonal1D` | Eikonal fast-marching on graph topology |
+| `Monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
+| `EikonalSolver1D` | `eikonalSolver` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
 
 ---
 
@@ -137,22 +136,27 @@ Transfers state between domains at each timestep. Runs between domain advances i
 ## Runtime selection configuration (`electroProperties`)
 
 ```cpp
-electroModel        electroActivationFoam;
+myocardiumSolver  monodomainSolver;
 
-myocardiumSolverCoeffs
+monodomainSolverCoeffs
 {
-    myocardiumSolver    monodomain;   // or: bidomain, eikonal
-    ionicModel          BuenoOrovio;
-}
+    ionicModel  BuenoOrovio;
+    // ...
 
-ecgSolverCoeffs
-{
-    ecgSolver           pseudoECG;
-}
-
-conductionSystemSolverCoeffs
-{
-    conductionSystemSolver  explicit1D;
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            ConductionSystemDomain  purkinjeNetworkModel;
+            // ...
+            purkinjeNetworkModelCoeffs
+            {
+                ConductionSystemSolver  Monodomain1DSolver;  // default; or: eikonalSolver
+                ionicModel  BuenoOrovio;
+                // ...
+            }
+        }
+    }
 }
 ```
 

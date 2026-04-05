@@ -49,20 +49,14 @@ public:
         (mesh, electroProperties)
     );
 
-    //- Select from the "myocardiumSolver" key in electroProperties.
-    //  For bidomain, call the overload that accepts a phiE reference.
+    //- Construct from explicit solver type name and its Coeffs subdictionary.
+    //  The solverType is resolved by the caller (electroModel::New / builder);
+    //  no dict key lookup is performed here.
     static autoPtr<myocardiumSolver> New
     (
         const fvMesh& mesh,
-        const dictionary& electroProperties
-    );
-
-    //- Bidomain overload: accepts the pre-built phiE field.
-    static autoPtr<myocardiumSolver> NewBidomain
-    (
-        const fvMesh& mesh,
-        const dictionary& electroProperties,
-        volScalarField& phiE
+        const word& solverType,
+        const dictionary& coeffs
     );
 
     virtual ~myocardiumSolver() = default;

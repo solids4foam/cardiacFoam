@@ -31,7 +31,11 @@ namespace electroModels
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(EikonalSolver, 0);
+// OverrideTypeName("eikonalSolver") in the header declares typeName_() == "eikonalSolver".
+// defineTypeNameWithName registers the static member accordingly; the plain
+// defineTypeNameAndDebug(EikonalSolver, 0) would use #EikonalSolver and overwrite it.
+defineTypeNameWithName(EikonalSolver, "eikonalSolver");
+defineDebugSwitch(EikonalSolver, 0);
 addToRunTimeSelectionTable(electroModel, EikonalSolver, dictionary);
 
 
