@@ -144,8 +144,7 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     const word& region
 )
 {
-    // NB: dictionary must be unregistered to avoid adding to the database
-
+    // Pre-read electroProperties without registering to the database.
     IOdictionary props
     (
         IOobject
@@ -157,40 +156,36 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
             runTime,
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
-            false  // Do not register
+            false  // do not register
         )
     );
 
+    // Single entry point: 'myocardiumSolver' is the canonical selector key.
+    // Direct electroModel subclasses (e.g. singleCellSolver) register themselves
+    // in this table and are selected by the same key.
     const word modelType(props.lookup("myocardiumSolver"));
 
     Info<< nl << "Selecting myocardiumSolver " << modelType << endl;
 
-    // electroModel is now a single concrete entry point (not subclassed
-    // per-solver). The myocardiumSolver selection happens inside
-    // configureMyocardiumDomain() via the reactionDiffusionSolver factory.
-    // singleCellSolver is the only remaining electroModel subclass.
-
-#if (OPENFOAM >= 2112)
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (ctorPtr)
     {
-        // Legacy path: singleCellSolver or any surviving subclass
+        // Direct electroModel subclass (e.g. singleCellSolver, eikonalSolver,
+        // electroActivationFoam).
         return autoPtr<electroModel>(ctorPtr(runTime, region));
     }
-#else
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(modelType);
 
-    if (cstrIter != dictionaryConstructorTablePtr_->end())
-    {
-        return autoPtr<electroModel>(cstrIter()(runTime, region));
-    }
-#endif
+    // Type not found in either table -- give a clear error listing all valid
+    // type names so the user knows exactly what to fix in their electroProperties.
+    FatalErrorInLookup
+    (
+        "myocardiumSolver",
+        modelType,
+        *dictionaryConstructorTablePtr_
+    ) << exit(FatalError);
 
-    // Default path: plain electroModel constructed in-place, will call
-    // configureMyocardiumDomain() via its own constructor.
-    return autoPtr<electroModel>(new electroModel(typeName, runTime, region));
+    return autoPtr<electroModel>();
 }
 
 

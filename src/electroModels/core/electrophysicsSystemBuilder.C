@@ -157,6 +157,12 @@ void configureMyocardiumDomain
     scalar                  initialDeltaT
 )
 {
+    // Derive the solver type from the Coeffs subdict name
+    // ("monodomainSolverCoeffs" → "monodomainSolver").
+    const word& cn = electroProperties.dictName();
+    const word solverType =
+        cn.endsWith("Coeffs") ? word(cn.substr(0, cn.size() - 6)) : cn;
+
     system.setMyocardium
     (
         new MyocardiumDomain
@@ -168,7 +174,7 @@ void configureMyocardiumDomain
             postProcessFields,
             ionicModel,
             verificationModelPtr,
-            myocardiumSolver::New(mesh, electroProperties)
+            myocardiumSolver::New(mesh, solverType, electroProperties)
         )
     );
 

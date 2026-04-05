@@ -14,7 +14,7 @@ FoamFile
     object      electroProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-electroModel singleCellSolver;
+myocardiumSolver singleCellSolver;
 
 singleCellSolverCoeffs
 {

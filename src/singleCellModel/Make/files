@@ -1,3 +1,0 @@
-singleCellSolver/singleCellSolver.C
-
-LIB = $(FOAM_USER_LIBBIN)/libsingleCellModel

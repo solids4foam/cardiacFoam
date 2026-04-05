@@ -4,6 +4,7 @@ core/electrophysicsSystem.C
 core/schemes/electrophysicsAdvanceScheme.C
 core/schemes/staggered/staggeredElectrophysicsAdvanceScheme.C
 core/electrophysicsSystemBuilder.C
+core/electroActivationFoam/electroActivationFoam.C
 
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
@@ -19,12 +20,12 @@ electroDomains/myocardiumDomain/myocardiumSolver.C
 myocardiumModels/monodomainSolver/monodomainSolver.C
 myocardiumModels/bidomainSolver/bidomainSolver.C
 myocardiumModels/eikonalSolver/eikonalSolver.C
+myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 
 /* Conduction system models */
-conductionSystemModels/explicit1DSolver/explicit1DSolver.C
 conductionSystemModels/monodomain1DSolver/monodomain1DSolver.C
 conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C
 

@@ -24,5 +24,4 @@ wmake $targetType libso ionicModels
 wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
-wmake $targetType libso singleCellModel
 
