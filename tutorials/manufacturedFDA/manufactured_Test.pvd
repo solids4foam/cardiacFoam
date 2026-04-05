@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <Collection>
+    <DataSet timestep="0" group="source10648" part="0" file="manufactured_Test/manufactured_Test_source10648T0000.vtm"/>
+    <DataSet timestep="0" group="source10932" part="0" file="manufactured_Test/manufactured_Test_source10932T0000.vtpc"/>
+    <DataSet timestep="0" group="source11172" part="0" file="manufactured_Test/manufactured_Test_source11172T0000.vtpc"/>
+    <DataSet timestep="0" group="source12120" part="0" file="manufactured_Test/manufactured_Test_source12120T0000.vtpc"/>
+    <DataSet timestep="0" group="source12360" part="0" file="manufactured_Test/manufactured_Test_source12360T0000.vtpc"/>
+    <DataSet timestep="0" group="source12600" part="0" file="manufactured_Test/manufactured_Test_source12600T0000.vtpc"/>
+  </Collection>
+</VTKFile>

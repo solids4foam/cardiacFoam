@@ -1,0 +1,312 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8dbc61e11c-20241220 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : cardiacFoam -parallel
+Date   : Mar 19 2026
+Time   : 20:06:47
+Host   : macbook
+PID    : 84909
+I/O    : uncollated
+Case   : /Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA
+nProcs : 6
+Hosts  :
+(
+    (macbook 6)
+)
+Pstream initialized with:
+    floatTransfer      : false
+    maxCommsSize       : 0
+    nProcsSimpleSum    : 0
+    nonBlockingExchange: 0 (tuning: 0)
+    exchange algorithm : 0
+    commsType          : nonBlocking
+    polling iterations : 0
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Selecting physicsModel electroModel
+
+Selecting electroModel monoDomainElectro
+
+conductivity not found on disk, using value from "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA/processor0/../constant/electroProperties/monoDomainElectroCoeffs"
+
+conductivity tensor (cell 0): (0.111453 0 0 0 0.121585 0 0 0 0.0303964)
+--> FOAM Warning : 
+    From Foam::electroModels::monoDomainElectro::monoDomainElectro(const word &, Time &, const word &)
+    in file monoDomainElectro/monoDomainElectro.C at line 322
+    Stimulus box index 0 does not contain any mesh cells.
+Surface-to-volume ratio chi = chi [0 -1 0 0 0 0 0] 3
+Membrane capacitance Cm = Cm [-1 -4 4 0 0 2 0] 2
+
+Using pre/post processor tmanufacturedFDA for ionic model tmanufacturedFDA.
+Running preProcess with fields 3(u1 u2 u3).
+Selecting ecgModel pseudoECGElectro
+ECG conductivity source: monodomain conductivity field
+
+ECG electrodes (5):
+  E1  @  (-0.5 0.5 0)
+  E2  @  (1.5 0.5 0)
+  E3  @  (1.2 0.23 0)
+  E4  @  (1.35 0.78 0)
+  E5  @  (0.18 1.35 0)
+
+Enabled manufactured pseudo-ECG references: qRef=96, qChecks=(6 12 24 48), dimension=2.
+Time = 0.00892857
+
+Solving the mono-domain equation for Vm using an implicit approach
+DEBUG cell=0 t=0→0.00892857 step=0.00892857 V=0.939347 u1=1.93947 u2=0.999938 u3=0 Iion=0
+Selecting ODE solver RKF45
+DEBUG cell=0 t=0→0.00892857 step=0.0803571 V=0.939347 u1=1.95262 u2=0.99107 u3=0 Iion=-2.78228
+
+PIMPLE: no residual control data found. Calculations will employ 2 corrector loops
+
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00230998, Final residual = 1.70218e-16, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 1.88094e-16, Final residual = 1.88094e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0178571
+
+DEBUG cell=0 t=0.00892857→0.0178571 step=0.00892857 V=0.943714 u1=1.95262 u2=0.99107 u3=0 Iion=-2.78228
+DEBUG cell=0 t=0.00892857→0.0178571 step=0.0803571 V=0.943714 u1=1.96575 u2=0.98236 u3=0 Iion=-2.78676
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00229367, Final residual = 1.06759e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 6.90258e-17, Final residual = 6.90258e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0267857
+
+DEBUG cell=0 t=0.0178571→0.0267857 step=0.00892857 V=0.948069 u1=1.96575 u2=0.98236 u3=0 Iion=-2.78676
+DEBUG cell=0 t=0.0178571→0.0267857 step=0.0803571 V=0.948069 u1=1.97886 u2=0.973804 u3=0 Iion=-2.79127
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00227574, Final residual = 1.05935e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 7.21669e-17, Final residual = 7.21669e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0357143
+
+DEBUG cell=0 t=0.0267857→0.0357143 step=0.00892857 V=0.952409 u1=1.97886 u2=0.973804 u3=0 Iion=-2.79127
+DEBUG cell=0 t=0.0267857→0.0357143 step=0.0803571 V=0.952409 u1=1.99194 u2=0.965397 u3=0 Iion=-2.7958
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00225749, Final residual = 1.05096e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 7.46215e-17, Final residual = 7.46215e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0446428
+
+DEBUG cell=0 t=0.0357143→0.0446428 step=0.00892857 V=0.956733 u1=1.99194 u2=0.965397 u3=0 Iion=-2.7958
+DEBUG cell=0 t=0.0357143→0.0446428 step=0.0803571 V=0.956733 u1=2.00501 u2=0.957136 u3=0 Iion=-2.80036
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00223934, Final residual = 1.04263e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 7.16386e-17, Final residual = 7.16386e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0535714
+
+DEBUG cell=0 t=0.0446428→0.0535714 step=0.00892857 V=0.961041 u1=2.00501 u2=0.957136 u3=0 Iion=-2.80036
+DEBUG cell=0 t=0.0446428→0.0535714 step=0.0803571 V=0.961041 u1=2.01805 u2=0.949016 u3=0 Iion=-2.80494
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00222144, Final residual = 1.0344e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 7.1438e-17, Final residual = 7.1438e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0625
+
+DEBUG cell=0 t=0.0535714→0.0625 step=0.00892857 V=0.965332 u1=2.01805 u2=0.949016 u3=0 Iion=-2.80494
+DEBUG cell=0 t=0.0535714→0.0625 step=0.0803571 V=0.965332 u1=2.03107 u2=0.941034 u3=0 Iion=-2.80953
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00220381, Final residual = 1.0263e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 6.5833e-17, Final residual = 6.5833e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0714286
+
+DEBUG cell=0 t=0.0625→0.0714286 step=0.00892857 V=0.969607 u1=2.03107 u2=0.941034 u3=0 Iion=-2.80953
+DEBUG cell=0 t=0.0625→0.0714286 step=0.0803571 V=0.969607 u1=2.04408 u2=0.933188 u3=0 Iion=-2.81415
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00218647, Final residual = 1.01833e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 6.86547e-17, Final residual = 6.86547e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0803571
+
+DEBUG cell=0 t=0.0714286→0.0803571 step=0.00892857 V=0.973866 u1=2.04408 u2=0.933188 u3=0 Iion=-2.81415
+DEBUG cell=0 t=0.0714286→0.0803571 step=0.0803571 V=0.973866 u1=2.05706 u2=0.925472 u3=0 Iion=-2.81878
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00216941, Final residual = 1.01049e-17, No Iterations 7
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 7.16659e-17, Final residual = 7.16659e-17, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0892857
+
+DEBUG cell=0 t=0.0803571→0.0892857 step=0.00892857 V=0.97811 u1=2.05706 u2=0.925472 u3=0 Iion=-2.81878
+DEBUG cell=0 t=0.0803571→0.0892857 step=0.0803571 V=0.97811 u1=2.07002 u2=0.917884 u3=0 Iion=-2.82343
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00215263, Final residual = 9.98274e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 1.02525e-15, Final residual = 1.05771e-17, No Iterations 1
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.0982143
+
+DEBUG cell=0 t=0.0892857→0.0982143 step=0.00892857 V=0.982338 u1=2.07002 u2=0.917884 u3=0 Iion=-2.82343
+DEBUG cell=0 t=0.0892857→0.0982143 step=0.0803571 V=0.982338 u1=2.08296 u2=0.910422 u3=0 Iion=-2.82809
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00213612, Final residual = 9.90623e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.7085e-16, Final residual = 9.7085e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.107143
+
+DEBUG cell=0 t=0.0982143→0.107143 step=0.00892857 V=0.98655 u1=2.08296 u2=0.910422 u3=0 Iion=-2.82809
+DEBUG cell=0 t=0.0982143→0.107143 step=0.0803571 V=0.98655 u1=2.09588 u2=0.903081 u3=0 Iion=-2.83277
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00211988, Final residual = 9.83095e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 1.00601e-15, Final residual = 1.0372e-17, No Iterations 1
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.116071
+
+DEBUG cell=0 t=0.107143→0.116071 step=0.00892857 V=0.990748 u1=2.09588 u2=0.903081 u3=0 Iion=-2.83277
+DEBUG cell=0 t=0.107143→0.116071 step=0.0803571 V=0.990748 u1=2.10879 u2=0.895858 u3=0 Iion=-2.83747
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.0021039, Final residual = 9.75688e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.76524e-16, Final residual = 9.76524e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.125
+
+DEBUG cell=0 t=0.116071→0.125 step=0.00892857 V=0.994931 u1=2.10879 u2=0.895858 u3=0 Iion=-2.83747
+DEBUG cell=0 t=0.116071→0.125 step=0.0803571 V=0.994931 u1=2.12167 u2=0.888752 u3=0 Iion=-2.84218
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00208817, Final residual = 9.68398e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.80851e-16, Final residual = 9.80851e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.133929
+
+DEBUG cell=0 t=0.125→0.133929 step=0.00892857 V=0.999099 u1=2.12167 u2=0.888752 u3=0 Iion=-2.84218
+DEBUG cell=0 t=0.125→0.133929 step=0.0803571 V=0.999099 u1=2.13454 u2=0.881759 u3=0 Iion=-2.8469
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00207268, Final residual = 9.61223e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.57359e-16, Final residual = 9.57359e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.142857
+
+DEBUG cell=0 t=0.133929→0.142857 step=0.00892857 V=1.00325 u1=2.13454 u2=0.881759 u3=0 Iion=-2.8469
+DEBUG cell=0 t=0.133929→0.142857 step=0.0803571 V=1.00325 u1=2.14738 u2=0.874876 u3=0 Iion=-2.85164
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00205744, Final residual = 9.54161e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.77936e-16, Final residual = 9.77936e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.151786
+
+DEBUG cell=0 t=0.142857→0.151786 step=0.00892857 V=1.00739 u1=2.14738 u2=0.874876 u3=0 Iion=-2.85164
+DEBUG cell=0 t=0.142857→0.151786 step=0.0803571 V=1.00739 u1=2.16021 u2=0.868102 u3=0 Iion=-2.85639
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00204244, Final residual = 9.47208e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.71988e-16, Final residual = 9.71988e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.160714
+
+DEBUG cell=0 t=0.151786→0.160714 step=0.00892857 V=1.01152 u1=2.16021 u2=0.868102 u3=0 Iion=-2.85639
+DEBUG cell=0 t=0.151786→0.160714 step=0.0803571 V=1.01152 u1=2.17302 u2=0.861432 u3=0 Iion=-2.86116
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00202766, Final residual = 9.40363e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.30155e-16, Final residual = 9.30155e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.169643
+
+DEBUG cell=0 t=0.160714→0.169643 step=0.00892857 V=1.01563 u1=2.17302 u2=0.861432 u3=0 Iion=-2.86116
+DEBUG cell=0 t=0.160714→0.169643 step=0.0803571 V=1.01563 u1=2.18581 u2=0.854866 u3=0 Iion=-2.86593
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00201311, Final residual = 9.33622e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.4715e-16, Final residual = 9.4715e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.178571
+
+DEBUG cell=0 t=0.169643→0.178571 step=0.00892857 V=1.01973 u1=2.18581 u2=0.854866 u3=0 Iion=-2.86593
+DEBUG cell=0 t=0.169643→0.178571 step=0.0803571 V=1.01973 u1=2.19858 u2=0.8484 u3=0 Iion=-2.87072
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00199878, Final residual = 9.26983e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.21457e-16, Final residual = 9.21457e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.1875
+
+DEBUG cell=0 t=0.178571→0.1875 step=0.00892857 V=1.02381 u1=2.19858 u2=0.8484 u3=0 Iion=-2.87072
+DEBUG cell=0 t=0.178571→0.1875 step=0.0803571 V=1.02381 u1=2.21134 u2=0.842032 u3=0 Iion=-2.87552
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00198466, Final residual = 9.20444e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.32312e-16, Final residual = 9.32312e-16, No Iterations 0
+ExecutionTime = 0.01 s  ClockTime = 0 s
+
+Time = 0.196429
+
+DEBUG cell=0 t=0.1875→0.196429 step=0.00892857 V=1.02788 u1=2.21134 u2=0.842032 u3=0 Iion=-2.87552
+DEBUG cell=0 t=0.1875→0.196429 step=0.0803571 V=1.02788 u1=2.22407 u2=0.835761 u3=0 Iion=-2.88033
+PIMPLE: iteration 1
+DICPCG:  Solving for Vm, Initial residual = 0.00197075, Final residual = 9.14003e-16, No Iterations 6
+PIMPLE: iteration 2
+DICPCG:  Solving for Vm, Initial residual = 9.21002e-16, Final residual = 9.21002e-16, No Iterations 0
+Running postProcess via tmanufacturedFDA.
+
+Simulation summary:
+-------------------
+Number of cells (N)   = 10
+Solver type           = Implicit
+Grid spacing (dx)     = 0.1
+Time step (dt)        = 0.00892857
+Number of steps       = 22
+Final simulation time = 0.196429
+-------------------
+
+Manufactured-solution error summary (t = 0.196429):
+-------------------------------------------------
+Field     L1-error       L2-error       Linf-error
+Vm     0.00180371   0.00228868   0.00446872
+u1     1.69403e-05   2.13324e-05   4.70338e-05
+u2     6.46953e-06   9.16837e-06   2.82591e-05
+-------------------------------------------------
+
+ExecutionTime = 0.02 s  ClockTime = 0 s
+
+
+End
+
+Finalising parallel run
