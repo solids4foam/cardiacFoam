@@ -45,7 +45,14 @@ enum CONSTANTS_INDEX {
 
 
 void
-NashPanfilovinitConsts(double* CONSTANTS,double* RATES,double* STATES);
+NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES);
 
 void
-NashPanfilovcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC);
+NashPanfilovcomputeVariables
+(
+    double VOI,
+    double* CONSTANTS,
+    double* RATES,
+    double* STATES,
+    double* ALGEBRAIC
+);

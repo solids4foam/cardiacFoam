@@ -36,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "ToRORd_dynCl_2023Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -119,7 +120,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("ToRORd_dynCl");
+        OverrideTypeName("ToRORd_dynCl");
 
 
         //override the only available tissue in this model

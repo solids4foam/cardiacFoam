@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroModel monoDomainElectro;
+myocardiumSolver  monodomainSolver;
 
-monoDomainElectroCoeffs
+monodomainSolverCoeffs
 {
 
 
@@ -51,28 +51,31 @@ monoDomainElectroCoeffs
         stimulusStartTime 0.0;
     }
 
-    ECG
+    ecgDomains
     {
-        ecgModel pseudoECGElectro;
-
-        pseudoECGElectroCoeffs
+        ECG
         {
-            manufactured
-            {
-                enabled no;
-                dimension "3D";
-                referenceQuadratureOrder 96;
-                checkQuadratureOrders (6 12 24 48);
-            }
+            ECGDomain pseudoECGDomain;
 
-            electrodes
+            pseudoECGDomainCoeffs
             {
-                V1 (-0.0261184   -0.283543   -0.0700558);
-                V2 ( 0.073582    -0.278089   -0.0701427);
-                V3 ( 0.0851153   -0.276414   -0.0938405);
-                V4 ( 0.0997976   -0.269695   -0.106596);
-                V5 ( 0.122885    -0.253215   -0.119155);
-                V6 ( 0.148613    -0.22784    -0.119317);
+                manufactured
+                {
+                    enabled no;
+                    dimension "3D";
+                    referenceQuadratureOrder 96;
+                    checkQuadratureOrders (6 12 24 48);
+                }
+
+                electrodes
+                {
+                    V1 (-0.0261184   -0.283543   -0.0700558);
+                    V2 ( 0.073582    -0.278089   -0.0701427);
+                    V3 ( 0.0851153   -0.276414   -0.0938405);
+                    V4 ( 0.0997976   -0.269695   -0.106596);
+                    V5 ( 0.122885    -0.253215   -0.119155);
+                    V6 ( 0.148613    -0.22784    -0.119317);
+                }
             }
         }
     }

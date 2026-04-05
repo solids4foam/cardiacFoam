@@ -23,7 +23,8 @@ License
 #include "labelList.H"
 #include "wordList.H"
 
-namespace Foam {
+namespace Foam
+{
 
 class ionicVariableCompatibility
 {

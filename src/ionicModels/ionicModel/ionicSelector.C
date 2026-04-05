@@ -21,60 +21,82 @@ License
 #include "error.H"
 #include "ionicSelector.H"
 
-namespace Foam {
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-label ionicSelector::selectTissue(const dictionary &dict,
-                                  const List<word> &supportedTissues) {
-  if (!dict.found("tissue")) {
-    FatalErrorInFunction << "Normal model requires 'tissue' entry"
-                         << exit(FatalError);
-  }
+namespace Foam
+{
 
-  word t;
-  dict.lookup("tissue") >> t;
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-  if (!supportedTissues.contains(t)) {
-    FatalErrorInFunction << "Unsupported tissue '" << t
-                         << "' allowed: " << supportedTissues
-                         << exit(FatalError);
-  }
+label ionicSelector::selectTissue(const dictionary& dict,
+                                  const List<word>& supportedTissues)
+{
+    if (!dict.found("tissue"))
+    {
+        FatalErrorInFunction
+            << "Normal model requires 'tissue' entry"
+            << exit(FatalError);
+    }
 
-  return tissueFlag(t);
-}
+    word t;
+    dict.lookup("tissue") >> t;
 
-// Map tissues
-label ionicSelector::tissueFlag(const word &t) {
-  return (t == "epicardialCells")    ? 1
-         : (t == "mCells")           ? 2
-         : (t == "endocardialCells") ? 3
-         : (t == "myocyte")          ? 4
-                                     : -1;
-}
+    if (!supportedTissues.contains(t))
+    {
+        FatalErrorInFunction
+            << "Unsupported tissue '" << t
+            << "' allowed: " << supportedTissues
+            << exit(FatalError);
+    }
 
-
-label ionicSelector::selectDimension(const dictionary &dict,
-                                     const List<word> &supportedDimensions) {
-  if (!dict.found("dimension")) {
-    FatalErrorInFunction << "Model requires 'dimension' entry"
-                         << exit(FatalError);
-  }
-
-  word d;
-  dict.lookup("dimension") >> d;
-
-  if (!supportedDimensions.contains(d)) {
-    FatalErrorInFunction << "Unsupported dimension '" << d
-                         << "' allowed: " << supportedDimensions
-                         << exit(FatalError);
-  }
-
-  return dimensionFlag(d);
+    return tissueFlag(t);
 }
 
 
-// Map dimensions
-label ionicSelector::dimensionFlag(const word &d) {
-  return (d == "1D") ? 1 : (d == "2D") ? 2 : (d == "3D") ? 3 : -1;
+//- Map tissue name to flag integer
+label ionicSelector::tissueFlag(const word& t)
+{
+    return (t == "epicardialCells")    ? 1
+         : (t == "mCells")            ? 2
+         : (t == "endocardialCells")  ? 3
+         : (t == "myocyte")           ? 4
+                                      : -1;
 }
 
-} // namespace Foam
+
+label ionicSelector::selectDimension(const dictionary& dict,
+                                     const List<word>& supportedDimensions)
+{
+    if (!dict.found("dimension"))
+    {
+        FatalErrorInFunction
+            << "Model requires 'dimension' entry"
+            << exit(FatalError);
+    }
+
+    word d;
+    dict.lookup("dimension") >> d;
+
+    if (!supportedDimensions.contains(d))
+    {
+        FatalErrorInFunction
+            << "Unsupported dimension '" << d
+            << "' allowed: " << supportedDimensions
+            << exit(FatalError);
+    }
+
+    return dimensionFlag(d);
+}
+
+
+//- Map dimension name to flag integer
+label ionicSelector::dimensionFlag(const word& d)
+{
+    return (d == "1D") ? 1 : (d == "2D") ? 2 : (d == "3D") ? 3 : -1;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// ************************************************************************* //

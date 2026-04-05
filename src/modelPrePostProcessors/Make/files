@@ -1,4 +1,0 @@
-electroModelsPrePostProcessor/electroModelsPrePostProcessor.C
-tmanufacturedFDAPrePostProcessor/tmanufacturedFDAPrePostProcessor.C
-
-LIB = $(FOAM_USER_LIBBIN)/libmodelPrePostProcessors

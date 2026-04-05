@@ -37,6 +37,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "TNNP_2004Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -120,7 +121,7 @@ protected:
         public:
 
         //- Runtime type information
-        TypeName("TNNP");
+        OverrideTypeName("TNNP");
 
 
         //override the only available tissue in this model

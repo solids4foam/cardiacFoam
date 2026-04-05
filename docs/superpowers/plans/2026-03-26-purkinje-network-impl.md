@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a graph-based 1D Purkinje Network (PN) solver that couples into `monoDomainElectro` via operator splitting, injecting PVJ coupling currents into the existing `externalStimulusCurrent_` field.
+**Goal:** Add a graph-based 1D Purkinje Network (PN) solver that couples into `MonoDomainSolver` via operator splitting, injecting PVJ coupling currents into the existing `externalStimulusCurrent_` field.
 
-**Architecture:** A `purkinjeModel` companion class (like `ecgModel`) is owned by `monoDomainElectro`. The concrete `purkinjeNetworkModel` reads a graph edge list from the dict, advances a 1D explicit-Euler monodomain on the graph each timestep, and writes coupling currents at PVJ cell indices into `externalStimulusCurrent` before the 3D PDE solve.
+**Architecture:** A `purkinjeModel` companion class (like `ecgModel`) is owned by `MonoDomainSolver`. The concrete `purkinjeNetworkModel` reads a graph edge list from the dict, advances a 1D explicit-Euler monodomain on the graph each timestep, and writes coupling currents at PVJ cell indices into `externalStimulusCurrent` before the 3D PDE solve.
 
 **Tech Stack:** OpenFOAM C++, wmake, existing `ionicModel` RTST (Stewart_2009 for Purkinje cells), `volScalarField`/`scalarField`.
 
@@ -18,8 +18,8 @@
 | Create | `src/electroModels/purkinjeModel/purkinjeModel.C` | RTST definitions, `New` selector |
 | Create | `src/electroModels/purkinjeNetworkModel/purkinjeNetworkModel.H` | Concrete class: graph, ionic model, state |
 | Create | `src/electroModels/purkinjeNetworkModel/purkinjeNetworkModel.C` | Constructor + `evolve()` |
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.H` | Add `autoPtr<purkinjeModel>` |
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` | Construct + call in evolveExplicit/Implicit |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.H` | Add `autoPtr<purkinjeModel>` |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.C` | Construct + call in evolveExplicit/Implicit |
 | Modify | `src/electroModels/Make/files` | Add 2 new `.C` source entries |
 
 No changes to `Make/options` — `ionicModels` and `volFields` are already linked.
@@ -164,9 +164,9 @@ electroModel/electroModel.C
 
 ecgModel/ecgModel.C
 pseudoECGElectro/pseudoECGElectro.C
-eikonalDiffusionElectro/eikonalDiffusionElectro.C
-monoDomainElectro/monoDomainElectro.C
-singleCellElectro/singleCellElectro.C
+EikonalSolver/EikonalSolver.C
+MonoDomainSolver/MonoDomainSolver.C
+SingleCellSolver/SingleCellSolver.C
 electroMechanicalModel/electroMechanicalModel.C
 
 
@@ -601,13 +601,13 @@ git commit -m "feat: purkinjeNetworkModel::evolve — 1D graph Laplacian + coupl
 
 ---
 
-## Task 4: Wire `purkinjeModelPtr_` into `monoDomainElectro`
+## Task 4: Wire `purkinjeModelPtr_` into `MonoDomainSolver`
 
 **Files:**
-- Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.H`
-- Modify: `src/electroModels/monoDomainElectro/monoDomainElectro.C`
+- Modify: `src/electroModels/MonoDomainSolver/MonoDomainSolver.H`
+- Modify: `src/electroModels/MonoDomainSolver/MonoDomainSolver.C`
 
-- [ ] **Step 4.1: Add `#include` and data member to `monoDomainElectro.H`**
+- [ ] **Step 4.1: Add `#include` and data member to `MonoDomainSolver.H`**
 
 After the existing `#include "ecgModel.H"` line (around line 47):
 ```cpp
@@ -620,7 +620,7 @@ After the existing `autoPtr<ecgModel> ecgModelPtr_;` data member (around line 12
 autoPtr<purkinjeModel> purkinjeModelPtr_;
 ```
 
-- [ ] **Step 4.2: Construct `purkinjeModelPtr_` in `monoDomainElectro.C`**
+- [ ] **Step 4.2: Construct `purkinjeModelPtr_` in `MonoDomainSolver.C`**
 
 In the constructor body, after the block that constructs `ecgModelPtr_`
 (which ends around line 387):
@@ -686,9 +686,9 @@ Expected: no undefined symbol errors.
 
 ```bash
 cd /Users/simaocastro/cardiacFoamv2
-git add src/electroModels/monoDomainElectro/monoDomainElectro.H \
-        src/electroModels/monoDomainElectro/monoDomainElectro.C
-git commit -m "feat: wire purkinjeModelPtr_ into monoDomainElectro"
+git add src/electroModels/MonoDomainSolver/MonoDomainSolver.H \
+        src/electroModels/MonoDomainSolver/MonoDomainSolver.C
+git commit -m "feat: wire purkinjeModelPtr_ into MonoDomainSolver"
 ```
 
 ---
@@ -812,4 +812,4 @@ git commit -m "test: add minimal purkinjeNetwork to NiedererEtAl2012 tutorial"
 - **`Vm3D[cId]` access:** `volScalarField` supports `operator[]` on `label` returning the cell value — this is valid OpenFOAM.
 - **`externalStimulusCurrent.primitiveFieldRef()`:** Returns non-const `scalarField&` to internal data — correct for in-place modification before `correctBoundaryConditions()`.
 - **Laplacian sign:** The loop adds `+flux` to A and `-flux` to B. For `flux = sigma*(Vm_B - Vm_A)/L^2`, this means node A gains positive current when `Vm_B > Vm_A` — consistent with diffusion from high to low potential.
-- **Stewart resting potential:** `Vm1D_` initialised at `-0.084` V to match the `Vm_` initial condition in `monoDomainElectro`.
+- **Stewart resting potential:** `Vm1D_` initialised at `-0.084` V to match the `Vm_` initial condition in `MonoDomainSolver`.

@@ -7,7 +7,7 @@
 
 ## Problem
 
-`greensFunctionECGElectro` and `pdeECGElectro` both extend `monoDomainElectro` directly with no shared base, resulting in:
+`greensFunctionECGElectro` and `pdeECGElectro` both extend `MonoDomainSolver` directly with no shared base, resulting in:
 
 1. **4 copies** of the same conductivity tensor initialisation pattern
 2. **Duplicate members** (`Gi_`, `sigmaT_`) declared independently in each subclass
@@ -21,9 +21,9 @@
 
 ```
 electroModel  (abstract, unchanged)
-├── monoDomainElectro  (pure Vm solver — unchanged except two additions)
+├── MonoDomainSolver  (pure Vm solver — unchanged except two additions)
 ├── ecgElectro         (NEW concrete — owns autoPtr<ecgModel>, mode switch)
-└── pdeECGElectro      (extends monoDomainElectro — stays separate, manages torso mesh)
+└── pdeECGElectro      (extends MonoDomainSolver — stays separate, manages torso mesh)
 
 ecgModel  (NEW abstract, runtime-selectable — same pattern as ionicModel)
 ├── BEMECGElectro      (Green's function / current source)
@@ -32,7 +32,7 @@ ecgModel  (NEW abstract, runtime-selectable — same pattern as ionicModel)
 
 `greensFunctionECGElectro` is **removed** — replaced by `ecgElectro` + `BEMECGElectro`/`pseudoECGElectro`.
 
-`pdeECGElectro` stays as a direct `monoDomainElectro` subclass because it manages a separate torso mesh and solves additional PDEs — too coupled for the `ecgModel` pattern.
+`pdeECGElectro` stays as a direct `MonoDomainSolver` subclass because it manages a separate torso mesh and solves additional PDEs — too coupled for the `ecgModel` pattern.
 
 ---
 
@@ -40,7 +40,7 @@ ecgModel  (NEW abstract, runtime-selectable — same pattern as ionicModel)
 
 | Class | Owns | Does |
 |---|---|---|
-| `monoDomainElectro` | `conductivity_`, `Vm_`, ionic model | Solves monodomain PDE; adds `readVm()` and `initialiseConductivityTensor()` |
+| `MonoDomainSolver` | `conductivity_`, `Vm_`, ionic model | Solves monodomain PDE; adds `readVm()` and `initialiseConductivityTensor()` |
 | `ecgElectro` | `postProcess_`, `autoPtr<ecgModel>` | Mode-switches `evolve()`; delegates ECG computation to `ecgModel` |
 | `ecgModel` (abstract) | `Gi_`, `sigmaT_` | Defines runtime-selectable ECG compute interface |
 | `BEMECGElectro` | `Is_`, electrodes, torso surface | Implements `compute()` via Green's function integral |
@@ -49,7 +49,7 @@ ecgModel  (NEW abstract, runtime-selectable — same pattern as ionicModel)
 
 ---
 
-## `monoDomainElectro` Additions
+## `MonoDomainSolver` Additions
 
 ### `initialiseConductivityTensor` (protected static)
 
@@ -65,7 +65,7 @@ static tmp<volTensorField> initialiseConductivityTensor(
 // 2. Fallback: read dimensionedSymmTensor from sourceDict, convert via & tensor(I)
 ```
 
-Used by `monoDomainElectro` (for `conductivity_`) and by `ecgModel` subclasses (for `Gi_`). Since it is `static`, `ecgModel` subclasses call it as `monoDomainElectro::initialiseConductivityTensor(...)` after including the header via `lnInclude/`.
+Used by `MonoDomainSolver` (for `conductivity_`) and by `ecgModel` subclasses (for `Gi_`). Since it is `static`, `ecgModel` subclasses call it as `MonoDomainSolver::initialiseConductivityTensor(...)` after including the header via `lnInclude/`.
 
 ### `readVm()` (protected)
 
@@ -102,7 +102,7 @@ public:
 };
 ```
 
-`Gi_` is initialised via `monoDomainElectro::initialiseConductivityTensor("Gi", dict, mesh)`. `Gi_` and `sigmaT_` are **time-invariant** — set once in the constructor.
+`Gi_` is initialised via `MonoDomainSolver::initialiseConductivityTensor("Gi", dict, mesh)`. `Gi_` and `sigmaT_` are **time-invariant** — set once in the constructor.
 
 ---
 
@@ -111,7 +111,7 @@ public:
 Concrete `electroModel`, replaces `ecgElectroBase` as the user-facing electroModel name.
 
 ```cpp
-class ecgElectro : public monoDomainElectro
+class ecgElectro : public MonoDomainSolver
 {
     const Switch postProcess_;
     autoPtr<ecgModel> ecgModelPtr_;
@@ -123,7 +123,7 @@ public:
     {
         bool ok = true;
         if (!postProcess_)
-            ok = monoDomainElectro::evolve();
+            ok = MonoDomainSolver::evolve();
         else
             readVm();
 
@@ -160,7 +160,7 @@ Gima-Rudy dipole approximation:
 - Members: point electrodes
 - Output: `postProcessing/pseudoECG.dat`
 
-### `pdeECGElectro` (monoDomainElectro subclass — unchanged pattern)
+### `pdeECGElectro` (MonoDomainSolver subclass — unchanged pattern)
 
 Heart Poisson + torso Laplace — stays as a direct `electroModel` subclass because it needs full PDE infrastructure on a separate torso mesh. Retains its own `Gi_`, `Ge_`, `sigmaT_` for now (Gi/Ge tensor → scalar simplification deferred).
 
@@ -175,7 +175,7 @@ ecgElectroCoeffs
 {
     postProcess   false;   // true = skip monodomain solve, read Vm from disk
 
-    // Monodomain settings (flat — same keys as monoDomainElectroCoeffs):
+    // Monodomain settings (flat — same keys as MonoDomainSolverCoeffs):
     chi               [0 -1 0 0 0 0 0]    140000;
     Cm                [-1 -4 4 0 0 2 0]   0.01;
     conductivity      [-1 -3 3 0 0 2 0]   (0.17 0 0  0.019 0  0.019);
@@ -213,8 +213,8 @@ ecgElectroCoeffs
 
 | Action | File |
 |---|---|
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.H` — add `readVm()`, `initialiseConductivityTensor()` |
-| Modify | `src/electroModels/monoDomainElectro/monoDomainElectro.C` — implement both |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.H` — add `readVm()`, `initialiseConductivityTensor()` |
+| Modify | `src/electroModels/MonoDomainSolver/MonoDomainSolver.C` — implement both |
 | **New** | `src/electroModels/ecgModel/ecgModel.H` — abstract ecgModel base + run-time selector |
 | **New** | `src/electroModels/ecgModel/ecgModel.C` |
 | **New** | `src/electroModels/ecgElectro/ecgElectro.H` — concrete electroModel wrapper |

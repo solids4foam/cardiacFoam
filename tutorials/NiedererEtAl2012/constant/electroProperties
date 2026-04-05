@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroModel monoDomainElectro;
+myocardiumSolver  monodomainSolver;
 
-monoDomainElectroCoeffs
+monodomainSolverCoeffs
 {
     conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
     chi   [0 -1 0 0 0 0 0] 140000;

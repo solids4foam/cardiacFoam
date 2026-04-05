@@ -33,7 +33,7 @@ License
 #include "volFields.H"
 
 #include "activeTensionIO.H"
-#include "electromechanicsFeedbackProvider.H"
+#include "electromechanicalSignalProvider.H"
 
 namespace Foam
 {
@@ -46,7 +46,7 @@ protected:
     const label nIntegrationPoints_;
 
     // Optional pointer to coupling signal provider (typically ionicModel or adapter)
-    const CouplingSignalProvider* providerPtr_;
+    const ElectromechanicalSignalProvider* providerPtr_;
 
     //- Drive signal value for the current integration point.
     //  Set by the base calculateTension() loop before each solveAtPoint() call
@@ -202,7 +202,10 @@ public:
     virtual Requirements requirements() const = 0;
 
     // Attach provider (call once from solver/harness)
-    virtual void setCouplingSignalProvider(const CouplingSignalProvider& p)
+    virtual void setElectromechanicalSignalProvider
+    (
+        const ElectromechanicalSignalProvider& p
+    )
     {
         providerPtr_ = &p;
     }
@@ -211,13 +214,13 @@ public:
     virtual void validateProvider() const;
 
     // Convenience accessors for derived classes (fail-fast + clear errors)
-    inline const CouplingSignalProvider& provider() const
+    inline const ElectromechanicalSignalProvider& provider() const
     {
         if (!providerPtr_)
         {
             FatalErrorInFunction
-                << "CouplingSignalProvider not set. "
-                << "Call setCouplingSignalProvider(...) before correct()."
+                << "ElectromechanicalSignalProvider not set. "
+                << "Call setElectromechanicalSignalProvider(...) before correct()."
                 << abort(FatalError);
         }
         return *providerPtr_;

@@ -241,7 +241,7 @@ done'
 grep electroModel constant/electroProperties
 ```
 
-Expected output: `electroModel monoDomainElectro;` (restored from `.reference`).
+Expected output: `electroModel MonoDomainSolver;` (restored from `.reference`).
 
 - [ ] **Step 6: Commit**
 

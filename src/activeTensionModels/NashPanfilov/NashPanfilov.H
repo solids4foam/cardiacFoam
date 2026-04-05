@@ -94,7 +94,7 @@ protected:
 
     virtual CouplingSignal driveSignal() const override
     {
-        return CouplingSignal::Vm;
+        return CouplingSignal::VM;
     }
 
     virtual void solveAtPoint
