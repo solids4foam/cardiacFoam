@@ -138,5 +138,77 @@ class TestDeepElectroOverrides(unittest.TestCase):
             self.assertIn("V1    (1 2 3);", updated)
 
 
+class TestConductionSystemSchemaContract(unittest.TestCase):
+    """Verifies that the conduction_system group uses the keys the C++ code actually reads."""
+
+    def setUp(self):
+        self.entries = {
+            e.driver_path: e
+            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["conduction_system"]
+        }
+
+    def test_conduction_domain_selector_key_is_ConductionSystemDomain(self):
+        # C++ conductionSystemDomain.C: dict.lookupOrDefault<word>("ConductionSystemDomain", ...)
+        matching = [
+            p for p in self.entries
+            if p.endswith(".ConductionSystemDomain")
+        ]
+        self.assertTrue(
+            len(matching) >= 1,
+            "Expected at least one entry whose path ends with '.ConductionSystemDomain'"
+        )
+
+    def test_coupler_selector_key_is_ElectroDomainCoupler(self):
+        # C++ electroDomainCoupler.C: dict.lookupOrDefault<word>("ElectroDomainCoupler", ...)
+        matching = [
+            p for p in self.entries
+            if p.endswith(".ElectroDomainCoupler")
+        ]
+        self.assertTrue(
+            len(matching) >= 1,
+            "Expected at least one entry whose path ends with '.ElectroDomainCoupler'"
+        )
+
+    def test_advance_scheme_key_is_electrophysicsAdvanceScheme(self):
+        # C++ electrophysicsAdvanceScheme.C: dict.lookupOrDefault<word>("electrophysicsAdvanceScheme", ...)
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
+            self.entries,
+        )
+
+    def test_advance_scheme_enum_includes_pimple_staggered(self):
+        entry = self.entries["$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme"]
+        self.assertIn(
+            "pimpleStaggeredElectrophysicsAdvanceScheme",
+            entry.enum_values,
+        )
+
+    def test_pvjNodes_and_pvjLocations_documented(self):
+        pvj_nodes_keys = [p for p in self.entries if p.endswith(".pvjNodes")]
+        pvj_locs_keys  = [p for p in self.entries if p.endswith(".pvjLocations")]
+        self.assertTrue(len(pvj_nodes_keys) >= 1, "pvjNodes not documented")
+        self.assertTrue(len(pvj_locs_keys)  >= 1, "pvjLocations not documented")
+
+    def test_root_stimulus_sub_entries_documented(self):
+        for sub in ("startTime", "duration", "intensity"):
+            matching = [p for p in self.entries if p.endswith(f".rootStimulus.{sub}")]
+            self.assertTrue(
+                len(matching) >= 1,
+                f"rootStimulus.{sub} not documented"
+            )
+
+    def test_purkinjeNetworkModelCoeffs_chi_and_Cm_documented(self):
+        chi_keys = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.chi")]
+        Cm_keys  = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.Cm")]
+        self.assertTrue(len(chi_keys) >= 1, "purkinjeNetworkModelCoeffs.chi not documented")
+        self.assertTrue(len(Cm_keys)  >= 1, "purkinjeNetworkModelCoeffs.Cm not documented")
+
+    def test_coupling_helper_keys_documented(self):
+        primary_domain_keys = [p for p in self.entries if p.endswith(".primaryDomain")]
+        network_domain_keys = [p for p in self.entries if p.endswith(".conductionNetworkDomain")]
+        self.assertTrue(len(primary_domain_keys) >= 1, "primaryDomain not documented")
+        self.assertTrue(len(network_domain_keys) >= 1, "conductionNetworkDomain not documented")
+
+
 if __name__ == "__main__":
     unittest.main()
