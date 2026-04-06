@@ -31,17 +31,17 @@ autoPtr<ECGSolver> ECGSolver::New(const dictionary& dict)
 {
     const word solverType
     (
-        dict.lookupOrDefault<word>("ECGSolver", "PseudoECGSolver")
+        dict.lookupOrDefault<word>("ecgSolver", "pseudoECG")
     );
 
-    Info<< "Selecting ECGSolver " << solverType << nl;
+    Info<< "Selecting ecgSolver " << solverType << nl;
 
     auto* ctorPtr = dictionaryConstructorTable(solverType);
 
     if (!ctorPtr)
     {
         FatalErrorInFunction
-            << "Unknown ECGSolver type " << solverType << nl
+            << "Unknown ecgSolver type " << solverType << nl
             << "Valid types:" << nl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);

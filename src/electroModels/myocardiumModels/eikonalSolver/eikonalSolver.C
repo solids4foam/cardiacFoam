@@ -134,7 +134,7 @@ EikonalSolver::EikonalSolver(Time& runTime, const word& region)
     gradPsi_(fvc::grad(psi_)),
     stimulusCellIDs_(0),
     chi_("chi", dimArea/dimVolume, electroProperties()),
-    Cm_("Cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties()),
+    Cm_("cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties()),
     conductivity_(initialiseConductivity()),
     M_("M", conductivity_/(chi_*Cm_)),
     w_("w", M_ & gradPsi_),

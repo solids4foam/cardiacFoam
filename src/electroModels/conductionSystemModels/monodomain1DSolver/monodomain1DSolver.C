@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "monodomain1DSolver.H"
-#include "graphConductionSystemDomain.H"
+#include "conductionSystemDomain.H"
 #include "ionicModel.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -28,7 +28,7 @@ namespace Foam
 defineTypeNameAndDebug(Monodomain1DSolver, 0);
 addToRunTimeSelectionTable
 (
-    GraphConductionSystemSolver,
+    conductionSystemSolver,
     Monodomain1DSolver,
     dictionary
 );
@@ -36,7 +36,7 @@ addToRunTimeSelectionTable
 
 void Monodomain1DSolver::advance
 (
-    GraphConductionSystemDomain& domain,
+    ConductionSystemDomain& domain,
     scalar t0,
     scalar dt
 )

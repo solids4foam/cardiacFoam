@@ -153,7 +153,7 @@ PVJResistanceCoupler::PVJResistanceCoupler
         networkTerminalDomain_.terminalLocations(),
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)
     ),
-    R_pvj_(dict.get<scalar>("R_pvj")),
+    R_pvj_(dict.get<scalar>("rPvj")),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
     couplingMode_
     (

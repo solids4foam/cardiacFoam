@@ -22,8 +22,6 @@ License
 #include "autoPtr.H"
 #include "PtrList.H"
 #include "electroDomainInterface.H"
-#include "conductionSystemDomain.H"
-#include "ecgDomain.H"
 #include "electroDomainCoupler.H"
 #include "myocardiumDomain.H"
 #include "schemes/electrophysicsAdvanceScheme.H"
@@ -101,19 +99,6 @@ public:
         upstreamDomains_.clear();
     }
 
-    void setConductionSystemDomain
-    (
-        ConductionSystemDomain* conductionSystemDomain
-    )
-    {
-        setUpstreamDomain(conductionSystemDomain);
-    }
-
-    void clearConductionSystemDomain()
-    {
-        clearUpstreamDomain();
-    }
-
     void setUpstreamCouplingModel(ElectroDomainCoupler* couplingModel)
     {
         clearUpstreamCouplingModel();
@@ -160,16 +145,6 @@ public:
         downstreamDomains_.clear();
     }
 
-    void setECGDomain(ECGDomain* ecgDomain)
-    {
-        setDownstreamDomain(ecgDomain);
-    }
-
-    void clearECGDomain()
-    {
-        clearDownstreamDomain();
-    }
-
     void setDownstreamCouplingModel
     (
         ElectroDomainCoupler* couplingModel
@@ -204,11 +179,6 @@ public:
         return !upstreamDomains_.empty();
     }
 
-    bool hasConductionSystemDomain() const
-    {
-        return hasUpstreamDomain();
-    }
-
     bool hasUpstreamCouplingModel() const
     {
         return !upstreamCouplingModels_.empty();
@@ -217,11 +187,6 @@ public:
     bool hasDownstreamDomain() const
     {
         return !downstreamDomains_.empty();
-    }
-
-    bool hasECGDomain() const
-    {
-        return hasDownstreamDomain();
     }
 
     bool hasDownstreamCouplingModel() const
@@ -294,33 +259,13 @@ public:
 
     void writeUpstreamDomain();
 
-    void writeConductionSystemDomain()
-    {
-        writeUpstreamDomain();
-    }
-
     void writeUpstreamCouplingModel();
-
-    void endConductionSystemDomain()
-    {
-        endUpstreamDomain();
-    }
 
     void endUpstreamDomain();
 
     void writeDownstreamDomain();
 
-    void writeECGDomain()
-    {
-        writeDownstreamDomain();
-    }
-
     void endUpstreamCouplingModel();
-
-    void endECGDomain()
-    {
-        endDownstreamDomain();
-    }
 
     void endDownstreamDomain();
 

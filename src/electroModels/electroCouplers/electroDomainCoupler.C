@@ -35,7 +35,7 @@ autoPtr<ElectroDomainCoupler> ElectroDomainCoupler::New
 {
     const word modelType
     (
-        dict.lookupOrDefault<word>("ElectroDomainCoupler", word::null)
+        dict.lookupOrDefault<word>("electroDomainCoupler", word::null)
     );
 
     if (modelType.empty())
@@ -43,18 +43,18 @@ autoPtr<ElectroDomainCoupler> ElectroDomainCoupler::New
         FatalErrorInFunction
             << "No electro-domain coupling model specified in dictionary '"
             << dict.dictName() << "'." << nl
-            << "Expected key ElectroDomainCoupler."
+            << "Expected key electroDomainCoupler."
             << exit(FatalError);
     }
 
-    Info<< "Selecting ElectroDomainCoupler " << modelType << nl;
+    Info<< "Selecting electroDomainCoupler " << modelType << nl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (!ctorPtr)
     {
         FatalErrorInFunction
-            << "Unknown ElectroDomainCoupler type " << modelType << nl
+            << "Unknown electroDomainCoupler type " << modelType << nl
             << "Valid types:" << nl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);

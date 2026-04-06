@@ -18,14 +18,12 @@ License
 
 #include "electrophysicsSystemBuilder.H"
 #include "myocardiumDomain.H"
+#include "conductionSystemDomain.H"
 #include "electroDomainCoupler.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 #include "ionicModel.H"
 #include "ecgDomain.H"
-#include "myocardiumDomain.H"
-#include "myocardiumSolver.H"
-#include "monodomainSolver.H"
 
 #include "DynamicList.H"
 #include "HashTable.H"
@@ -153,19 +151,12 @@ void configureMyocardiumDomain
     const wordList&          postProcessFieldNames,
     PtrList<volScalarField>& postProcessFields,
     ionicModel&              ionicModel,
-    electroVerificationModel* verificationModelPtr,
-    scalar                  initialDeltaT
+    electroVerificationModel* verificationModelPtr
 )
 {
-    // Derive the solver type from the Coeffs subdict name
-    // ("monodomainSolverCoeffs" → "monodomainSolver").
-    const word& cn = electroProperties.dictName();
-    const word solverType =
-        cn.endsWith("Coeffs") ? word(cn.substr(0, cn.size() - 6)) : cn;
-
     system.setMyocardium
     (
-        new MyocardiumDomain
+        MyocardiumDomain::New
         (
             mesh,
             electroProperties,
@@ -173,15 +164,8 @@ void configureMyocardiumDomain
             postProcessFieldNames,
             postProcessFields,
             ionicModel,
-            verificationModelPtr,
-            myocardiumSolver::New(mesh, solverType, electroProperties)
-        )
-    );
-
-    configureAdvanceScheme(system, electroProperties);
-    configureConductionSystemDomain
-    (
-        system, mesh, electroProperties, initialDeltaT
+            verificationModelPtr
+        ).ptr()
     );
 }
 
@@ -207,8 +191,6 @@ void configureConductionSystemDomain
     scalar                initialDeltaT
 )
 {
-    const ConductionSystemDomainContext context(mesh.time(), &mesh);
-
     system.clearUpstreamDomain();
     system.clearUpstreamCouplingModel();
 
@@ -243,13 +225,10 @@ void configureConductionSystemDomain
                 << exit(FatalError);
         }
 
-        autoPtr<ConductionSystemDomain> networkDomain =
-            ConductionSystemDomain::New
-            (
-                context,
-                *networkDicts[i],
-                initialDeltaT
-            );
+        autoPtr<ConductionSystemDomain> networkDomain
+        (
+            new ConductionSystemDomain(mesh, *networkDicts[i], initialDeltaT)
+        );
 
         ConductionSystemDomain* networkPtr = networkDomain.ptr();
         networkDomainsByName.insert(networkName, networkPtr);

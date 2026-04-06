@@ -121,7 +121,20 @@ Foam::electroActivationFoam::electroActivationFoam
         wordList(),         // postProcessFieldNames (filled by verification)
         postProcessFields_,
         ionicModelPtr_(),
-        verificationModelPtr_.get(),
+        verificationModelPtr_.get()
+    );
+
+    electrophysicsSystemBuilder::configureAdvanceScheme
+    (
+        domainSystem_,
+        electroProperties()
+    );
+
+    electrophysicsSystemBuilder::configureConductionSystemDomain
+    (
+        domainSystem_,
+        mesh(),
+        electroProperties(),
         runTime.deltaTValue()
     );
 

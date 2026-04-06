@@ -280,7 +280,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.Cm",
+            driver_path="$ELECTRO_MODEL_COEFFS.cm",
             description="Membrane capacitance.",
             source_refs=(
                 "src/electroModels/solvers/monoDomainSolver/monoDomainDiffusionSolver.C",
@@ -415,21 +415,20 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
     ),
     "ecg": (
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ECGDomain",
-            description="ECG domain model selector within the ecgDomains sub-dictionary.",
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
+            description="ECG solver model selector within the ecgDomains sub-dictionary.",
             source_refs=(
-                "src/electroModels/ecgModels/pseudoECGDomain/pseudoECGDomain.H",
-                "src/electroModels/core/ecgDomain/ecgDomain.H",
+                "src/electroModels/electroDomains/ecgDomain/ecgSolver.C",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("pseudoECGDomain",),
+            enum_values=("pseudoECG",),
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.pseudoECGDomainCoeffs.electrodes.<electrode>",
-            description="Per-electrode position vector in the pseudoECGDomain coefficients block.",
-            source_refs=("src/electroModels/ecgModels/pseudoECGDomain/pseudoECGDomain.C",),
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>",
+            description="Per-electrode position vector [m] in the ECG domain block.",
+            source_refs=("src/electroModels/electroDomains/ecgDomain/ecgDomain.C",),
             notes="The driver can update existing electrode entries but does not insert new electrode names.",
             value_kind="vector3",
             ui_control="vector3",
@@ -470,7 +469,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
     ),
     "conduction_system": (
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.ConductionSystemDomain",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.conductionSystemDomain",
             description=(
                 "Conduction system domain model selector (sub-dictionary within "
                 "conductionNetworkDomains). Used exclusively in Purkinje/1D pipelines."
@@ -484,7 +483,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.ConductionSystemSolver",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
             description=(
                 "1D graph solver used within the conduction network domain. "
                 "Default is Monodomain1DSolver."
@@ -576,7 +575,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.Cm",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.cm",
             description="Membrane capacitance [F/m²] for the 1D Purkinje monodomain equation.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
@@ -586,7 +585,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.Vm1D_rest",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.vm1DRest",
             description=(
                 "Resting transmembrane potential [V] used to initialise the 1D Purkinje field. "
                 "Default: -0.084 V."
@@ -627,7 +626,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.ElectroDomainCoupler",
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
             description=(
                 "PVJ coupling model selector within the domainCouplings sub-dictionary. "
                 "Used to couple a Purkinje network domain to the 3D myocardium."
@@ -641,7 +640,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.R_pvj",
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
             description="PVJ coupling resistance [Ω·m²]. Required.",
             source_refs=(
                 "src/electroModels/electroCouplers/pvjResistanceCoupler.C",
@@ -654,7 +653,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
             description=(
                 "Sphere radius [m] for current distribution at PVJ junctions. "
-                "Must match the value in the corresponding conductionNetworkDomain entry. "
                 "Default: 0.5e-3."
             ),
             source_refs=(

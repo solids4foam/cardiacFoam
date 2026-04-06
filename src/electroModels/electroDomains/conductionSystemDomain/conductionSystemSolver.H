@@ -16,58 +16,61 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Monodomain1DSolver
+    Foam::conductionSystemSolver
 
 Description
-    Implicit monodomain cable-equation solver for the conduction system
-    graph.  Uses the same operator-splitting scheme as the 3-D
-    MyocardiumDomain:
+    Abstract base class for conduction-system graph solvers.
 
-        1.  Solve the ionic-model ODE  (reaction step)
-        2.  Solve the implicit cable equation  (diffusion step)
-
-    The cable equation on the graph is discretised in exactly the same way
-    that fvm::laplacian + fvm::ddt would produce on a 1-D finite-volume
-    mesh.  Because the graph is small (typically < 1000 nodes), the
-    resulting dense linear system is solved with LU decomposition.
-
-Author
-    Simao Nieto de Castro, UCD.
+    Concrete implementations (Monodomain1DSolver, EikonalSolver1D) are
+    registered in the runtime selection table under the dictionary key
+    "conductionSystemSolver".
 
 SourceFiles
-    Monodomain1DSolver.C
+    conductionSystemSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef MonoDomain1DSolver_H
-#define MonoDomain1DSolver_H
+#ifndef conductionSystemSolver_H
+#define conductionSystemSolver_H
 
-#include "conductionSystemSolver.H"
-#include "overrideTypeName.H"
-#include "scalarField.H"
-#include "scalarMatrices.H"
+#include "autoPtr.H"
+#include "runTimeSelectionTables.H"
+#include "scalar.H"
 
 namespace Foam
 {
 
-class Monodomain1DSolver
-:
-    public conductionSystemSolver
-{
-    mutable scalarField appliedCurrentBuffer_;
+class dictionary;
+class ConductionSystemDomain;
 
+class conductionSystemSolver
+{
 public:
 
-    OverrideTypeName("monodomain1DSolver");
+    TypeName("conductionSystemSolver");
 
-    explicit Monodomain1DSolver(const dictionary&)
-    {}
+    declareRunTimeSelectionTable
+    (
+        autoPtr,
+        conductionSystemSolver,
+        dictionary,
+        (
+            const dictionary& dict
+        ),
+        (dict)
+    );
+
+    conductionSystemSolver() = default;
+
+    static autoPtr<conductionSystemSolver> New(const dictionary& dict);
+
+    virtual ~conductionSystemSolver() = default;
 
     virtual void advance
     (
         ConductionSystemDomain& domain,
         scalar t0,
         scalar dt
-    ) override;
+    ) = 0;
 };
 
 } // End namespace Foam

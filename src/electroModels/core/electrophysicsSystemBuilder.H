@@ -40,8 +40,7 @@ void configureMyocardiumDomain
     const wordList&          postProcessFieldNames,
     PtrList<volScalarField>& postProcessFields,
     ionicModel&              ionicModel,
-    electroVerificationModel* verificationModelPtr,
-    scalar                  initialDeltaT
+    electroVerificationModel* verificationModelPtr
 );
 
 void configureAdvanceScheme
