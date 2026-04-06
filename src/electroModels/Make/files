@@ -3,6 +3,7 @@ core/electroModel.C
 core/electrophysicsSystem.C
 core/schemes/electrophysicsAdvanceScheme.C
 core/schemes/staggered/staggeredElectrophysicsAdvanceScheme.C
+core/schemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
 core/electrophysicsSystemBuilder.C
 core/electroActivationFoam/electroActivationFoam.C
 
