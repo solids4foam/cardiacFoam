@@ -81,6 +81,20 @@ protected:
 
 public:
 
+    //- Factory: derives the solver type from the Coeffs subdict name and
+    //  delegates to the injecting constructor below.
+    //  ("monodomainSolverCoeffs" → selects "monodomainSolver", etc.)
+    static autoPtr<MyocardiumDomain> New
+    (
+        const fvMesh& mesh,
+        const dictionary& electroProperties,
+        PtrList<volScalarField>& outFields,
+        const wordList& postProcessFieldNames,
+        PtrList<volScalarField>& postProcessFields,
+        ionicModel& ionicModel,
+        electroVerificationModel* verificationModelPtr
+    );
+
     MyocardiumDomain
     (
         const fvMesh& mesh,

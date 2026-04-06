@@ -28,7 +28,7 @@ Description
     from the solver coefficients sub-dictionary.
 
     This solver is the 1D counterpart of EikonalSolver (3D myocardium)
-    and is registered in the GraphConductionSystemSolver runtime table
+    and is registered in the conductionSystemSolver runtime table
     under the key "eikonalSolver".
 
 Usage
@@ -48,7 +48,8 @@ SourceFiles
 #ifndef EikonalSolver1D_H
 #define EikonalSolver1D_H
 
-#include "graphConductionSystemSolver.H"
+#include "dimensionedScalar.H"
+#include "conductionSystemSolver.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
 
@@ -57,9 +58,9 @@ namespace Foam
 
 class EikonalSolver1D
 :
-    public GraphConductionSystemSolver
+    public conductionSystemSolver
 {
-    scalar c0_;        //- conduction velocity [m/s]
+    dimensionedScalar c0_;        //- conduction velocity [m/s]
 
 public:
 
@@ -69,7 +70,7 @@ public:
 
     virtual void advance
     (
-        GraphConductionSystemDomain& domain,
+        ConductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) override;

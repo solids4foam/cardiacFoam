@@ -16,52 +16,47 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 \*---------------------------------------------------------------------------*/
 
-#ifndef GraphConductionSystemSolver_H
-#define GraphConductionSystemSolver_H
-
-#include "autoPtr.H"
-#include "runTimeSelectionTables.H"
-#include "scalar.H"
+#include "conductionSystemSolver.H"
+#include "addToRunTimeSelectionTable.H"
+#include "dictionary.H"
 
 namespace Foam
 {
 
-class dictionary;
-class GraphConductionSystemDomain;
+defineTypeNameAndDebug(conductionSystemSolver, 0);
+defineRunTimeSelectionTable(conductionSystemSolver, dictionary);
 
-class GraphConductionSystemSolver
+
+autoPtr<conductionSystemSolver> conductionSystemSolver::New
+(
+    const dictionary& dict
+)
 {
-public:
-
-    TypeName("GraphConductionSystemSolver");
-
-    declareRunTimeSelectionTable
+    const word solverType
     (
-        autoPtr,
-        GraphConductionSystemSolver,
-        dictionary,
+        dict.lookupOrDefault<word>
         (
-            const dictionary& dict
-        ),
-        (dict)
+            "conductionSystemSolver",
+            "Monodomain1DSolver"
+        )
     );
 
-    GraphConductionSystemSolver() = default;
+    Info<< "Selecting conductionSystemSolver " << solverType << nl;
 
-    static autoPtr<GraphConductionSystemSolver> New(const dictionary& dict);
+    auto* ctorPtr = dictionaryConstructorTable(solverType);
 
-    virtual ~GraphConductionSystemSolver() = default;
+    if (!ctorPtr)
+    {
+        FatalErrorInFunction
+            << "Unknown conductionSystemSolver type " << solverType << nl
+            << "Valid types:" << nl
+            << dictionaryConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
+    }
 
-    virtual void advance
-    (
-        GraphConductionSystemDomain& domain,
-        scalar t0,
-        scalar dt
-    ) = 0;
-};
+    return autoPtr<conductionSystemSolver>(ctorPtr(dict));
+}
 
 } // End namespace Foam
-
-#endif
 
 // ************************************************************************* //

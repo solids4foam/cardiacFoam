@@ -54,12 +54,12 @@ void ECGDomain::readElectrodes(const dictionary& dict)
     electrodeNames_.clear();
     electrodePositions_.clear();
 
-    if (!dict.found("electrodes"))
+    if (!dict.found("electrodePositions"))
     {
         return;
     }
 
-    const dictionary& eDict = dict.subDict("electrodes");
+    const dictionary& eDict = dict.subDict("electrodePositions");
     const wordList names(eDict.toc());
 
     electrodeNames_.setSize(names.size());

@@ -30,6 +30,38 @@ namespace
 } // End anonymous namespace
 
 
+autoPtr<MyocardiumDomain> MyocardiumDomain::New
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties,
+    PtrList<volScalarField>& outFields,
+    const wordList& postProcessFieldNames,
+    PtrList<volScalarField>& postProcessFields,
+    ionicModel& ionicModel,
+    electroVerificationModel* verificationModelPtr
+)
+{
+    const word& cn = electroProperties.dictName();
+    const word solverType =
+        cn.endsWith("Coeffs") ? word(cn.substr(0, cn.size() - 6)) : cn;
+
+    return autoPtr<MyocardiumDomain>
+    (
+        new MyocardiumDomain
+        (
+            mesh,
+            electroProperties,
+            outFields,
+            postProcessFieldNames,
+            postProcessFields,
+            ionicModel,
+            verificationModelPtr,
+            myocardiumSolver::New(mesh, solverType, electroProperties)
+        )
+    );
+}
+
+
 MyocardiumDomain::MyocardiumDomain
 (
     const fvMesh& mesh,
@@ -110,7 +142,7 @@ MyocardiumDomain::MyocardiumDomain
     verificationModelPtr_(verificationModelPtr),
     electroProperties_(electroProperties),
     chi_("chi", dimArea/dimVolume, electroProperties_),
-    Cm_("Cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties_),
+    Cm_("cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties_),
     monodomainStimulus_(stimulusIO::loadMonodomainStimulusProtocol
     (
         electroProperties_

@@ -33,7 +33,7 @@ class PseudoECGSolver
 {
 public:
 
-    OverrideTypeName("pseudoECGSolver");
+    OverrideTypeName("pseudoECG");
 
     explicit PseudoECGSolver(const dictionary&)
     {}

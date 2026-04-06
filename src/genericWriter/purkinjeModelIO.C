@@ -14,48 +14,61 @@ License
 
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
 \*---------------------------------------------------------------------------*/
 
-#include "graphConductionSystemSolver.H"
-#include "addToRunTimeSelectionTable.H"
-#include "dictionary.H"
+#include "purkinjeModelIO.H"
+#include "OSspecific.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-defineTypeNameAndDebug(GraphConductionSystemSolver, 0);
-defineRunTimeSelectionTable(GraphConductionSystemSolver, dictionary);
+// * * * * * * * * * * * * * * * Static Functions  * * * * * * * * * * * * * //
 
-
-autoPtr<GraphConductionSystemSolver> GraphConductionSystemSolver::New
+autoPtr<OFstream> purkinjeModelIO::openTimeSeries
 (
-    const dictionary& dict
+    const fileName& outDir,
+    const word& filename,
+    const wordList& columnNames
 )
 {
-    const word solverType
-    (
-        dict.lookupOrDefault<word>
-        (
-            "ConductionSystemSolver",
-            "Monodomain1DSolver"
-        )
-    );
+    mkDir(outDir);
+    autoPtr<OFstream> osPtr(new OFstream(outDir/filename));
 
-    Info<< "Selecting ConductionSystemSolver " << solverType << nl;
+    OFstream& os = osPtr.ref();
+    os.setf(std::ios::scientific);
+    os.precision(8);
 
-    auto* ctorPtr = dictionaryConstructorTable(solverType);
-
-    if (!ctorPtr)
+    os << "# time";
+    forAll(columnNames, i)
     {
-        FatalErrorInFunction
-            << "Unknown ConductionSystemSolver type " << solverType << nl
-            << "Valid types:" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        os << "  " << columnNames[i];
     }
+    os << nl;
 
-    return autoPtr<GraphConductionSystemSolver>(ctorPtr(dict));
+    return osPtr;
 }
+
+
+void purkinjeModelIO::writeRow
+(
+    OFstream& os,
+    scalar time,
+    const List<scalar>& values
+)
+{
+    os << time;
+    forAll(values, i)
+    {
+        os << "  " << values[i];
+    }
+    os << nl;
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
