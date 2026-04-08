@@ -8,18 +8,24 @@ The library is built as `libelectroModels`.
 ```text
 src/electroModels/
 ├── core/
+│   ├── README.md               # Core subsystem overview
 │   └── electroModel/           # Core orchestration and base interfaces
 ├── electroDomains/
 │   ├── conductionSystemDomain/ # Pre-primary auxiliary domain wrapper
 │   ├── ecgDomain/              # Post-primary ECG contracts + solver interface
-│   └── myocardiumDomain/       # Shared monodomain/bidomain tissue domain
+│   ├── myocardiumDomain/       # Shared monodomain/bidomain tissue domain
+│   └── README.md               # Domain overview
 ├── ecgModels/                  # Concrete ECG domain model implementations
+│   └── README.md
 ├── conductionSystemModels/     # Purkinje / graph-backed conduction models
+│   └── README.md
 ├── myocardiumModels/
 │   ├── monodomainSolver/      # Full monodomain PDE-ODE model
 │   ├── singleCellSolver/      # Single-cell ODE-only driver
-│   └── eikonalSolver/         # Reduced-order activation-time model
+│   ├── eikonalSolver/         # Reduced-order activation-time model
+│   └── README.md
 ├── electroCouplers/            # Domain coupling models
+│   └── README.md
 ├── Make/
 └── README.md
 ```
@@ -111,7 +117,7 @@ domainCouplings
 {
     purkinjeToMyocardium
     {
-        ElectroDomainCoupler pvjResistanceCouplingModel;
+        ElectroDomainCoupler pvjResistanceCoupler;
         // ... coupling settings ...
     }
 }
@@ -127,6 +133,10 @@ ecgDomains
 ```
 
 Only the schema above is supported.
+
+For subsystem-level details, use the local README files under `core/`,
+`electroDomains/`, `myocardiumModels/`, `conductionSystemModels/`,
+`ecgModels/`, and `electroCouplers/`.
 
 ### 6) `ElectroMechanicalModel`
 
@@ -160,4 +170,4 @@ into:
 
 - `$(FOAM_USER_LIBBIN)/libelectroModels`
 
-Electro-domain coupling models are compiled from `src/couplingModels/electroDomain/`.
+Electro-domain coupling models are compiled from `src/electroModels/electroCouplers/`.
