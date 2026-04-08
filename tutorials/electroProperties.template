@@ -79,6 +79,18 @@ monodomainSolverCoeffs
     // absTol          1e-6;         // (optional) absolute tolerance for adaptive solvers
     // relTol          1e-4;         // (optional) relative tolerance
 
+    // ── Time-advance scheme (multi-domain coupling) ──────────────────────────
+    // Selects the scheme for advancing coupled domains (myocardium, Purkinje, ECG)
+    // Valid types:
+    //   staggeredElectrophysicsAdvanceScheme
+    //       — Weakly coupled explicit staggered scheme (fast, stable for unidirectional)
+    //       — Works with explicit/implicit solutionAlgorithm
+    //   pimpleStaggeredElectrophysicsAdvanceScheme
+    //       — Strongly coupled segregated scheme with PIMPLE iteration (stable bidirectional)
+    //       — Requires solutionAlgorithm = implicit and coupling domains present
+    electrophysicsAdvanceScheme  staggeredElectrophysicsAdvanceScheme;
+    // electrophysicsAdvanceScheme  pimpleStaggeredElectrophysicsAdvanceScheme;
+
 
     // ── Output variables ────────────────────────────────────────────────────
     outputVariables

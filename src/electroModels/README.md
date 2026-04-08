@@ -9,18 +9,17 @@ The library is built as `libelectroModels`.
 src/electroModels/
 ├── core/
 │   └── electroModel/           # Core orchestration and base interfaces
-├── domains/
+├── electroDomains/
 │   ├── conductionSystemDomain/ # Pre-primary auxiliary domain wrapper
 │   ├── ecgDomain/              # Post-primary ECG contracts + solver interface
-│   └── reactionDiffusionMyocardiumDomain/ # Shared monodomain/bidomain tissue domain
+│   └── myocardiumDomain/       # Shared monodomain/bidomain tissue domain
 ├── ecgModels/                  # Concrete ECG domain model implementations
 ├── conductionSystemModels/     # Purkinje / graph-backed conduction models
-├── solvers/
-│   ├── monoDomainSolver/      # Full monodomain PDE-ODE model
+├── myocardiumModels/
+│   ├── monodomainSolver/      # Full monodomain PDE-ODE model
 │   ├── singleCellSolver/      # Single-cell ODE-only driver
 │   └── eikonalSolver/         # Reduced-order activation-time model
-├── wrappers/
-│   └── electroMechanicalModel/ # Electro-mechanics wrapper model
+├── electroCouplers/            # Domain coupling models
 ├── Make/
 └── README.md
 ```
@@ -151,10 +150,11 @@ Wrapper workflow for coupled electro-mechanics runs:
 all compiled sources under:
 
 - `core/electroModel/`
-- `domains/`
+- `electroDomains/`
 - `conductionSystemModels/`
-- `solvers/`
-- `wrappers/`
+- `myocardiumModels/`
+- `ecgModels/`
+- `electroCouplers/`
 
 into:
 
