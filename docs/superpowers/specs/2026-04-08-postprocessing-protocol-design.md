@@ -264,7 +264,7 @@ Each script:
 |----------|------------|--------|
 | NiedererEtAl2012 | `case_id`, `DX_mm`, `DT_ms`, `solver`, `point_{n}_activation_ms` (one col per probe point) | `*points_DT*_DX*.csv` files in `output_dir` |
 | singleCell | `case_id`, `ionic_model`, `tissue`, `APD_ms`, `peak_voltage_mV`, `resting_voltage_mV` | `.txt` time-series files in `output_dir`; APD extracted by 90% repolarization threshold crossing on voltage column |
-| manufacturedFDA | `case_id`, `dimension`, `solver`, `n_cells`, `L2_error`, `convergence_rate` | L2 error values computed per mesh level by existing `post_processing_manufactured.py`; convergence_rate derived as log-ratio across consecutive refinement levels |
+| manufacturedFDA | `case_id`, `dimension`, `solver`, `n_cells`, `L2_error`, `convergence_rate` | L2 errors read from `.dat` files in `output_dir`; convergence_rate computed inside the postprocessing script as log-ratio across consecutive refinement levels |
 | restitutionCurves | `case_id`, `ionic_model`, `BCL_ms`, `DI_ms`, `APD_ms` | `.txt` trace files; APD/DI detected by threshold crossings as in existing `postProcessing_restCurves.py` |
 
 ### File naming conventions
