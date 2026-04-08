@@ -166,6 +166,7 @@ def _postprocess(
     ionic_models: Sequence[str],
     ionic_model_tissue_map: Mapping[str, Sequence[str]],
     show_plots: bool = False,
+    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
     strict_artifacts: bool = False,
 ) -> None:
     run_postprocess_tasks(
@@ -182,7 +183,10 @@ def _postprocess(
                     "tissue_map": {m: list(t) for m, t in ionic_model_tissue_map.items()},
                     "show_plots": show_plots,
                 },
-            )
+            ),
+            PostprocessTask(
+                module_relpath=table_summary_relpath,
+            ),
         ],
     )
 
@@ -211,6 +215,7 @@ def make_spec(
     output_glob: str = defaults.OUTPUT_GLOB,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
+    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     show_plots: bool = False,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
@@ -232,6 +237,7 @@ def make_spec(
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
+    table_summary_path = Path(table_summary_relpath)
 
     # write_after_time: start writing 2 s before the end of the S1 phase
     write_after_time_s = (s1_interval_ms * n_s1) / 1000.0 - 2.0
@@ -284,6 +290,7 @@ def make_spec(
             ionic_models=ionic_models_list,
             ionic_model_tissue_map=ionic_model_tissue_map,
             show_plots=show_plots,
+            table_summary_relpath=table_summary_path,
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={

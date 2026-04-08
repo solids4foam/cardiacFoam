@@ -439,6 +439,7 @@ def _postprocess(
     line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
     points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
     case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
+    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
     strict_artifacts: bool = False,
 ) -> None:
     run_postprocess_tasks(
@@ -463,6 +464,9 @@ def _postprocess(
             PostprocessTask(
                 module_relpath=points_postprocess_relpath,
                 function_name=points_postprocess_function_name,
+            ),
+            PostprocessTask(
+                module_relpath=table_summary_relpath,
             ),
         ],
     )
@@ -504,6 +508,7 @@ def make_spec(
     line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
     points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
     case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
+    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     ionic_models_list = [str(item) for item in ionic_models]
@@ -544,6 +549,7 @@ def make_spec(
     points_postprocess_path = Path(points_postprocess_relpath)
     cache_postprocess_path = Path(cache_postprocess_relpath)
     excel_reference_path = Path(excel_reference_relpath)
+    table_summary_path = Path(table_summary_relpath)
     output_relpath = Path(output_dir_name)
 
     case_root, setup_root, output_dir = resolve_spec_paths(
@@ -602,6 +608,7 @@ def make_spec(
             line_postprocess_function_name=line_postprocess_function_name,
             points_postprocess_function_name=points_postprocess_function_name,
             case_postprocess_cache_dirname=case_postprocess_cache_dirname,
+            table_summary_relpath=table_summary_path,
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={

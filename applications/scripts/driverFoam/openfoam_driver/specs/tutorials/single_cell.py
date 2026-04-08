@@ -96,6 +96,7 @@ def _postprocess(
     *,
     postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
+    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
     strict_artifacts: bool = False,
 ) -> None:
     run_postprocess_tasks(
@@ -107,7 +108,10 @@ def _postprocess(
             PostprocessTask(
                 module_relpath=postprocess_script_relpath,
                 function_name=postprocess_function_name,
-            )
+            ),
+            PostprocessTask(
+                module_relpath=table_summary_relpath,
+            ),
         ],
     )
 
@@ -130,6 +134,7 @@ def make_spec(
     output_glob: str = defaults.OUTPUT_GLOB,
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
+    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     ionic_models_list = [str(item) for item in ionic_models]
@@ -147,6 +152,7 @@ def make_spec(
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
+    table_summary_path = Path(table_summary_relpath)
 
     default_output_dir_name = defaults.OUTPUT_DIR_NAME
     case_root, setup_root, output_dir = resolve_spec_paths(
@@ -186,6 +192,7 @@ def make_spec(
             _postprocess,
             postprocess_script_relpath=postprocess_script_path,
             postprocess_function_name=postprocess_function_name,
+            table_summary_relpath=table_summary_path,
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={
