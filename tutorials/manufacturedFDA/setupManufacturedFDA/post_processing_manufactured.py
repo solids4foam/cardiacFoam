@@ -2742,7 +2742,7 @@ All ECG plots in this folder are derived only from OpenFOAM outputs built from t
     return destination
 
 
-def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
+def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> list[dict]:
     del setup_root
     output_path = Path(output_dir)
     _cleanup_unsupported_ecg_archives(output_path)
