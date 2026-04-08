@@ -15,6 +15,7 @@ from .core.runtime.registry import (
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
 from .gui_schema import describe_gui_schema
 from .launch import describe_launch_matrix
+from .tutorial_contracts import describe_tutorial_contract
 
 COMMON_OVERRIDE_KEYS = (
     "case_dir_name",
@@ -157,6 +158,12 @@ def describe_tutorial(
         "make_spec": _describe_factory(resolution["factory"]),
         "factory_overrides": _serialize(resolution["factory_overrides"]),
         "spec": _describe_spec(spec),
+        "tutorial_contract": _serialize(
+            describe_tutorial_contract(
+                spec,
+                resolution=resolution["resolution"],
+            )
+        ),
         "dict_entries": _dict_entry_catalog(),
         "gui_schema": describe_gui_schema(),
         "launch": describe_launch_matrix(

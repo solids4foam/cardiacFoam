@@ -52,17 +52,13 @@ BidomainSolver::BidomainSolver
     Gi_(initialiseConductivityTensor
     (
         mesh,
-        electroProperties.found("conductivityIntracellular")
-      ? word("conductivityIntracellular")
-      : word("Gi"),
+        word("conductivityIntracellular"),
         electroProperties
     )),
     Ge_(initialiseConductivityTensor
     (
         mesh,
-        electroProperties.found("conductivityExtracellular")
-      ? word("conductivityExtracellular")
-      : word("Ge"),
+        word("conductivityExtracellular"),
         electroProperties
     )),
     GiPlusGe_

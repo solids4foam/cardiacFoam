@@ -104,6 +104,7 @@ def _apply_case(
     physics_properties_relpath: Path = Path("constant/physicsProperties"),
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
+    verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
     ecg_enabled: bool = defaults.ECG_ENABLED,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
@@ -122,11 +123,11 @@ def _apply_case(
     case_overrides = {
         f"{electro_properties_scope}.dimension": f'"{dimension}"',
         f"{electro_properties_scope}.solutionAlgorithm": solver,
+        f"{electro_properties_scope}.verificationModel.type": verification_model_type,
     }
 
     if ecg_enabled:
-        ecg_scope = f"{electro_properties_scope}.ECG"
-        ecg_coeffs_scope = f"{ecg_scope}.pseudoECGElectroCoeffs"
+        ecg_scope = f"{electro_properties_scope}.ecgDomains.ECG"
         try:
             electrodes = ecg_electrodes_by_dimension[dimension]
         except KeyError as exc:
@@ -134,19 +135,21 @@ def _apply_case(
 
         case_overrides.update(
             {
-                f"{ecg_scope}.ecgModel": "pseudoECGElectro",
-                f"{ecg_coeffs_scope}.manufactured.enabled": True,
-                f"{ecg_coeffs_scope}.manufactured.dimension": f'"{dimension}"',
-                f"{ecg_coeffs_scope}.manufactured.referenceQuadratureOrder": int(
+                f"{ecg_scope}.ecgSolver": "pseudoECG",
+                f"{ecg_scope}.manufactured.enabled": True,
+                f"{ecg_scope}.manufactured.dimension": f'"{dimension}"',
+                f"{ecg_scope}.manufactured.referenceQuadratureOrder": int(
                     ecg_reference_quadrature_order
                 ),
-                f"{ecg_coeffs_scope}.manufactured.checkQuadratureOrders": "("
+                f"{ecg_scope}.manufactured.checkQuadratureOrders": "("
                 + " ".join(str(int(value)) for value in ecg_check_quadrature_orders)
                 + ")",
             }
         )
         for electrode_name, electrode_position in electrodes.items():
-            case_overrides[f"{ecg_coeffs_scope}.electrodes.{electrode_name}"] = electrode_position
+            case_overrides[
+                f"{ecg_scope}.electrodePositions.{electrode_name}"
+            ] = electrode_position
 
     _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
     set_delta_t(control_dict, dt_value)

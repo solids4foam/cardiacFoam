@@ -27,7 +27,7 @@ PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
         source_refs=(
             "modules/physicsModel/src/solids4FoamModels/physicsModel/physicsModel.C",
             "applications/utilities/listCellModelsVariables/listCellModelsVariables.C",
-            "src/electroModels/core/electroModel/electroModel.H",
+            "src/electroModels/core/electroModel.H",
         ),
         value_kind="enum",
         ui_control="select",
@@ -40,14 +40,14 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
     "top_level": (
         DictEntry(
             driver_path="myocardiumSolver",
-            description="Myocardium diffusion solver. Selects the numerical kernel for 3D reaction-diffusion. Reads from 'myocardiumSolverCoeffs' sub-dict.",
+            description="Top-level myocardium solver selector. Determines the active '<solver>Coeffs' sub-dictionary in electroProperties.",
             source_refs=(
-                "src/electroModels/electroDomains/myocardiumDomain/reactionDiffusionSolver.C",
-                "src/electroModels/core/electroModel/electrophysicsSystemBuilder.C",
+                "src/electroModels/core/electroModel.C",
+                "src/electroModels/core/electroActivationFoam/electroActivationFoam.C",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("monodomainSolver", "bidomainSolver", "eikonalSolver"),
+            enum_values=("monodomainSolver", "bidomainSolver", "singleCellSolver", "eikonalSolver"),
         ),
     ),
     "common_model_coeffs": (
@@ -55,8 +55,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.solutionAlgorithm",
             description="Electro solver time-discretisation mode.",
             source_refs=(
-                "src/electroModels/core/electroModel/electroModel.C",
-                "src/verificationModels/manufacturedFDA/monodomainVerification/manufacturedFDAMonodomainVerifier.C",
+                "src/electroModels/core/electroModel.C",
+                "src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.C",
             ),
             value_kind="enum",
             ui_control="select",
@@ -67,7 +67,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description="Ionic cell model selector.",
             source_refs=(
                 "src/ionicModels/ionicModel/ionicModel.C",
-                "src/electroModels/wrappers/electroMechanicalModel/electroMechanicalModel.C",
             ),
             value_kind="enum",
             ui_control="select",
@@ -91,7 +90,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description="Tissue selector for ionic-model specialisation.",
             source_refs=(
                 "src/ionicModels/ionicModel/ionicSelector.C",
-                "src/electroModels/wrappers/electroMechanicalModel/electroMechanicalModel.C",
             ),
             value_kind="enum",
             ui_control="select",
@@ -275,7 +273,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductivity",
             description="Monodomain conductivity tensor.",
             source_refs=(
-                "src/electroModels/myocardiumModels/monodomainSolver/monoDomainDiffusionSolver.C",
+                "src/electroModels/myocardiumModels/monodomainSolver/monodomainSolver.C",
                 "src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",
             ),
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
@@ -286,7 +284,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.chi",
             description="Surface-to-volume ratio.",
             source_refs=(
-                "src/electroModels/myocardiumModels/monodomainSolver/monoDomainDiffusionSolver.C",
+                "src/electroModels/myocardiumModels/monodomainSolver/monodomainSolver.C",
                 "src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",
             ),
             value_kind="scalar",
@@ -296,7 +294,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.cm",
             description="Membrane capacitance.",
             source_refs=(
-                "src/electroModels/myocardiumModels/monodomainSolver/monoDomainDiffusionSolver.C",
+                "src/electroModels/myocardiumModels/monodomainSolver/monodomainSolver.C",
                 "src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",
             ),
             value_kind="scalar",
@@ -391,9 +389,24 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.solverHookFields.preProcess",
             description="Manufactured-FDA pre-process field list.",
-            source_refs=("src/verificationModels/manufacturedFDA/monodomainVerification/manufacturedFDAMonodomainVerifier.C",),
+            source_refs=("src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.C",),
             value_kind="word_list",
             ui_control="token_list",
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.verificationModel.type",
+            description="Optional myocardium-side verification hook selector.",
+            source_refs=(
+                "src/verificationModels/electroVerification/electroVerificationModel.C",
+                "src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H",
+                "src/verificationModels/bidomainVerification/manufacturedFDABidomainVerifier.H",
+            ),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=(
+                "manufacturedFDAMonodomainVerifier",
+                "manufacturedFDABidomainVerifier",
+            ),
         ),
     ),
     "eikonal_diffusion": (
@@ -421,7 +434,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.c0",
             description="Wave-speed parameter for the eikonal formulation.",
-            source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalDiffusionElectro.C",),
+            source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",),
             value_kind="scalar",
             ui_control="number",
         ),
@@ -429,13 +442,46 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
     "ecg": (
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
-            description="ECG solver model selector within the ecgDomains sub-dictionary.",
+            description="ECG solver selector within the ecgDomains sub-dictionary.",
             source_refs=(
                 "src/electroModels/electroDomains/ecgDomain/ecgSolver.C",
             ),
             value_kind="enum",
             ui_control="select",
             enum_values=("pseudoECG",),
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.enabled",
+            description="Enable manufactured pseudo-ECG verification for the selected ECG domain.",
+            source_refs=("src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C",),
+            value_kind="boolean",
+            ui_control="checkbox",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
+            description="Dimensional selector used by the manufactured pseudo-ECG reference.",
+            source_refs=("src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C",),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=("1D", "2D", "3D"),
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.referenceQuadratureOrder",
+            description="Quadrature order used for the manufactured pseudo-ECG reference integral.",
+            source_refs=("src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C",),
+            value_kind="integer",
+            ui_control="number",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.checkQuadratureOrders",
+            description="Additional quadrature orders used to compare manufactured pseudo-ECG reference convergence.",
+            source_refs=("src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C",),
+            value_kind="label_list",
+            ui_control="textarea",
             dynamic_path=True,
         ),
         DictEntry(
@@ -452,7 +498,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductivityIntracellular",
             description="Intracellular conductivity tensor for the bidomain formulation.",
-            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/biDomainSolver.C",),
+            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
             value_kind="dimensioned_tensor_literal",
             ui_control="textarea",
@@ -460,7 +506,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductivityExtracellular",
             description="Extracellular conductivity tensor for the bidomain formulation.",
-            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/biDomainSolver.C",),
+            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
             value_kind="dimensioned_tensor_literal",
             ui_control="textarea",
@@ -468,14 +514,14 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceCell",
             description="Cell index used to pin the extracellular potential reference.",
-            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/biDomainSolver.C",),
+            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="integer",
             ui_control="number",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceValue",
             description="Value of the extracellular potential at the reference cell.",
-            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/biDomainSolver.C",),
+            source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="scalar",
             ui_control="number",
         ),
@@ -499,14 +545,15 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
             description=(
                 "1D graph solver used within the conduction network domain. "
-                "Default is Monodomain1DSolver."
+                "Default is monodomain1DSolver."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/graphConductionSystemSolver.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemSolver.C",
+                "src/electroModels/conductionSystemModels/monodomain1DSolver/monodomain1DSolver.H",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("Monodomain1DSolver",),
+            enum_values=("monodomain1DSolver",),
             dynamic_path=True,
         ),
         DictEntry(
@@ -516,7 +563,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Must match pvjLocations in length."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="label_list",
             ui_control="textarea",
@@ -528,7 +575,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "List of 3D coordinates [m] for each PVJ terminal, one per pvjNodes entry."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="point_list",
             ui_control="textarea",
@@ -541,7 +588,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "that receive the coupling current. Default: 0.5e-3."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -551,7 +598,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.startTime",
             description="Start time [s] of the root-node stimulus applied to Purkinje node 0.",
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -561,7 +608,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.duration",
             description="Duration [s] of the root-node stimulus pulse.",
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -571,7 +618,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.intensity",
             description="Amplitude [A/m³] of the root-node stimulus current applied to Purkinje node 0.",
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -581,7 +628,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.chi",
             description="Surface-to-volume ratio [1/m] for the 1D Purkinje monodomain equation.",
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -591,7 +638,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.cm",
             description="Membrane capacitance [F/m²] for the 1D Purkinje monodomain equation.",
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -604,7 +651,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Default: -0.084 V."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -618,7 +665,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Default: (Vm Icoupling)."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="word_list",
             ui_control="token_list",
@@ -632,7 +679,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Default: empty."
             ),
             source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/purkinjeNetworkModel/purkinjeNetworkModel.C",
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="word_list",
             ui_control="token_list",
@@ -743,7 +790,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel",
             description="Active-tension model selector.",
             source_refs=(
-                "src/electroModels/wrappers/electroMechanicalModel/electroMechanicalModel.C",
                 "src/activeTensionModels/activeTensionModel/activeTensionModel.C",
             ),
             value_kind="enum",

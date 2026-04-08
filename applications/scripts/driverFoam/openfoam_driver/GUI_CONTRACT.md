@@ -232,7 +232,7 @@ than a fixed dictionary key.
 
 Current example:
 
-- `$ELECTRO_MODEL_COEFFS.ECG.<ecgModel>Coeffs.electrodes.<name>`
+- `$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<name>`
 
 The GUI should not assume that `<name>` can be created arbitrarily. The current
 driver mutator updates existing entries only; it does not create new keys.

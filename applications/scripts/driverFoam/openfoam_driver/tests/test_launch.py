@@ -39,9 +39,9 @@ class TestLaunchDescription(unittest.TestCase):
             (case_root / "constant" / "electroProperties").write_text(
                 "\n".join(
                     [
-                        "electroModel singleCellElectro;",
+                        "myocardiumSolver singleCellSolver;",
                         "",
-                        "singleCellElectroCoeffs",
+                        "singleCellSolverCoeffs",
                         "{",
                         "    ionicModel BuenoOrovio;",
                         "}",

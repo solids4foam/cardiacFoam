@@ -19,7 +19,7 @@ class TestDictEntryCatalog(unittest.TestCase):
 
         documented = set(all_documented_driver_paths())
         expected = {
-            "electroModel",
+            "myocardiumSolver",
             "$ELECTRO_MODEL_COEFFS.solutionAlgorithm",
             "$ELECTRO_MODEL_COEFFS.ionicModel",
             "$ELECTRO_MODEL_COEFFS.tissue",
@@ -32,7 +32,7 @@ class TestDictEntryCatalog(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
             "$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusIntensity",
             "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach",
-            "$ELECTRO_MODEL_COEFFS.ECG.ecgModel",
+            "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
             "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel",
             "$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",
         }
@@ -80,7 +80,9 @@ class TestDictEntryCatalog(unittest.TestCase):
 
         ecg_entries = {entry.driver_path: entry for entry in ELECTRO_PROPERTY_ENTRY_GROUPS["ecg"]}
         self.assertTrue(
-            ecg_entries["$ELECTRO_MODEL_COEFFS.ECG.<ecgModel>Coeffs.electrodes.<name>"].dynamic_path
+            ecg_entries[
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>"
+            ].dynamic_path
         )
 
 
@@ -88,24 +90,24 @@ class TestDeepElectroOverrides(unittest.TestCase):
     def test_apply_electro_property_overrides_updates_dimensioned_and_dynamic_entries(self) -> None:
         text = "\n".join(
             [
-                "electroModel monoDomainElectro;",
+                "myocardiumSolver monodomainSolver;",
                 "",
-                "monoDomainElectroCoeffs",
+                "monodomainSolverCoeffs",
                 "{",
                 "    conductivity [-1 -3 3 0 0 2 0] (0.133 0 0 0.017 0 0.017);",
                 "    monodomainStimulus",
                 "    {",
                 "        stimulusIntensity [0 -3 0 0 0 1 0] 50000;",
                 "    }",
-                "    ECG",
+                "    ecgDomains",
                 "    {",
-                "        ecgModel pseudoECGElectro;",
-                "        pseudoECGElectroCoeffs",
+                "        ECG",
                 "        {",
-                "            electrodes",
-                "            {",
-                "                V1 (-0.02 -0.28 -0.07);",
-                "            }",
+                "            ecgSolver pseudoECG;",
+                "            electrodePositions",
+                "                {",
+                    "                    V1 (-0.02 -0.28 -0.07);",
+                "                }",
                 "        }",
                 "    }",
                 "}",
@@ -122,7 +124,7 @@ class TestDeepElectroOverrides(unittest.TestCase):
                 {
                     "$ELECTRO_MODEL_COEFFS.conductivity": "[-1 -3 3 0 0 2 0] (0.2 0 0 0.03 0 0.03)",
                     "$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusIntensity": "[0 -3 0 0 0 1 0] 75000",
-                    "$ELECTRO_MODEL_COEFFS.ECG.pseudoECGElectroCoeffs.electrodes.V1": "(1 2 3)",
+                    "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1": "(1 2 3)",
                 },
             )
 
@@ -147,26 +149,26 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
             for e in ELECTRO_PROPERTY_ENTRY_GROUPS["conduction_system"]
         }
 
-    def test_conduction_domain_selector_key_is_ConductionSystemDomain(self):
-        # C++ conductionSystemDomain.C: dict.lookupOrDefault<word>("ConductionSystemDomain", ...)
+    def test_conduction_domain_selector_key_is_conductionSystemDomain(self):
+        # C++ uses lowercase key names in dictionary lookups.
         matching = [
             p for p in self.entries
-            if p.endswith(".ConductionSystemDomain")
+            if p.endswith(".conductionSystemDomain")
         ]
         self.assertTrue(
             len(matching) >= 1,
-            "Expected at least one entry whose path ends with '.ConductionSystemDomain'"
+            "Expected at least one entry whose path ends with '.conductionSystemDomain'"
         )
 
-    def test_coupler_selector_key_is_ElectroDomainCoupler(self):
-        # C++ electroDomainCoupler.C: dict.lookupOrDefault<word>("ElectroDomainCoupler", ...)
+    def test_coupler_selector_key_is_electroDomainCoupler(self):
+        # C++ uses lowercase key names in dictionary lookups.
         matching = [
             p for p in self.entries
-            if p.endswith(".ElectroDomainCoupler")
+            if p.endswith(".electroDomainCoupler")
         ]
         self.assertTrue(
             len(matching) >= 1,
-            "Expected at least one entry whose path ends with '.ElectroDomainCoupler'"
+            "Expected at least one entry whose path ends with '.electroDomainCoupler'"
         )
 
     def test_advance_scheme_key_is_electrophysicsAdvanceScheme(self):
@@ -197,11 +199,11 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
                 f"rootStimulus.{sub} not documented"
             )
 
-    def test_purkinjeNetworkModelCoeffs_chi_and_Cm_documented(self):
+    def test_purkinjeNetworkModelCoeffs_chi_and_cm_documented(self):
         chi_keys = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.chi")]
-        Cm_keys  = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.Cm")]
+        cm_keys  = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.cm")]
         self.assertTrue(len(chi_keys) >= 1, "purkinjeNetworkModelCoeffs.chi not documented")
-        self.assertTrue(len(Cm_keys)  >= 1, "purkinjeNetworkModelCoeffs.Cm not documented")
+        self.assertTrue(len(cm_keys)  >= 1, "purkinjeNetworkModelCoeffs.cm not documented")
 
     def test_coupling_helper_keys_documented(self):
         primary_domain_keys = [p for p in self.entries if p.endswith(".primaryDomain")]

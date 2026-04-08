@@ -132,6 +132,86 @@ class TestTutorialArchitectureContract(unittest.TestCase):
         self.assertTrue(spec.metadata["ecg_enabled"])
         self.assertEqual(sorted({int(case.params["cells"]) for case in cases}), [10, 20, 40, 80])
 
+    def test_manufactured_apply_case_wires_verification_and_ecg_blocks(self) -> None:
+        case = CaseConfig(
+            case_id="manufactured",
+            params={"dimension": "2D", "solver": "implicit", "cells": 20, "dt": 0.1},
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            case_root = Path(temp_dir)
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "system").mkdir(parents=True, exist_ok=True)
+
+            (case_root / "constant" / "electroProperties").write_text(
+                "\n".join(
+                    [
+                        "myocardiumSolver monodomainSolver;",
+                        "",
+                        "monodomainSolverCoeffs",
+                        "{",
+                        '    dimension "1D";',
+                        "    solutionAlgorithm explicit;",
+                        "    verificationModel",
+                        "    {",
+                        "        type manufacturedFDAMonodomainVerifier;",
+                        "    }",
+                        "    solverHookFields",
+                        "    {",
+                        "        preProcess (u1 u2 u3);",
+                        "    }",
+                        "    ecgDomains",
+                        "    {",
+                        "        ECG",
+                        "        {",
+                        "            ecgSolver pseudoECG;",
+                        "            manufactured",
+                        "            {",
+                        "                enabled no;",
+                        '                dimension "1D";',
+                        "                referenceQuadratureOrder 12;",
+                        "                checkQuadratureOrders (6);",
+                        "            }",
+                        "            electrodePositions",
+                        "            {",
+                        "                E1 (0 0 0);",
+                        "                E2 (0 0 0);",
+                        "                E3 (0 0 0);",
+                        "                E4 (0 0 0);",
+                        "                E5 (0 0 0);",
+                        "            }",
+                        "        }",
+                        "    }",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
+            (case_root / "system" / "controlDict").write_text(
+                "\n".join(
+                    [
+                        "deltaT 1.0;",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "system" / "blockMeshDict.2D").write_text(
+                "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)\n"
+            )
+
+            manufactured_fda._apply_case(case_root, case)
+
+            electro_text = (case_root / "constant" / "electroProperties").read_text()
+            self.assertIn('dimension    "2D";', electro_text)
+            self.assertIn("solutionAlgorithm    implicit;", electro_text)
+            self.assertIn("type    manufacturedFDAMonodomainVerifier;", electro_text)
+            self.assertIn("enabled    yes;", electro_text)
+            self.assertIn('dimension    "2D";', electro_text)
+            self.assertIn("referenceQuadratureOrder    96;", electro_text)
+            self.assertIn("checkQuadratureOrders    (6 12 24 48);", electro_text)
+            self.assertIn("E1    (-0.5 0.5 0);", electro_text)
+
     def test_manufactured_stage_output_falls_back_to_processor0_postprocessing(self) -> None:
         case = CaseConfig(
             case_id="manufactured",
@@ -250,16 +330,23 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             self.assertFalse(raw.exists(), "raw root postProcessing ECG file should be renamed away")
 
     def test_registry_can_load_non_registered_case_folder_via_generic_spec(self) -> None:
-        spec = load_tutorial_spec(
-            "ECG",
-            overrides={"tutorials_root": self.tutorials_root},
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tutorials_root = Path(temp_dir)
+            case_root = tutorials_root / "ECG"
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text("myocardiumSolver singleCellSolver;\n")
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
 
-        self.assertEqual(spec.name, "ECG")
-        self.assertEqual(len(spec.build_cases()), 1)
-        self.assertIn("Generic case runner", spec.metadata["notes"])
-        self.assertIsNone(spec.collect_outputs)
-        self.assertIsNone(spec.postprocess)
+            spec = load_tutorial_spec(
+                "ECG",
+                overrides={"tutorials_root": tutorials_root},
+            )
+
+            self.assertEqual(spec.name, "ECG")
+            self.assertEqual(len(spec.build_cases()), 1)
+            self.assertIn("Generic case runner", spec.metadata["notes"])
+            self.assertIsNone(spec.collect_outputs)
+            self.assertIsNone(spec.postprocess)
 
     def test_generic_case_overrides_update_electro_and_physics_properties(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -270,9 +357,9 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             (case_root / "constant" / "electroProperties").write_text(
                 "\n".join(
                     [
-                        "electroModel singleCellElectro;",
+                        "myocardiumSolver singleCellSolver;",
                         "",
-                        "singleCellElectroCoeffs",
+                        "singleCellSolverCoeffs",
                         "{",
                         "    ionicModel BuenoOrovio;",
                         "}",
@@ -311,9 +398,9 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             (case_root / "constant" / "electroProperties").write_text(
                 "\n".join(
                     [
-                        "electroModel monoDomainElectro;",
+                        "myocardiumSolver monodomainSolver;",
                         "",
-                        "monoDomainElectroCoeffs",
+                        "monodomainSolverCoeffs",
                         "{",
                         "    ionicModel BuenoOrovio;",
                         "    tissue epicardialCells;",
@@ -343,7 +430,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                             "case_id": "endo",
                             "electro_property_overrides": {
                                 "$ELECTRO_MODEL_COEFFS.tissue": "endocardialCells",
-                                "$ELECTRO_MODEL_COEFFS.ECG.pseudoECGElectroCoeffs.electrodes.V1": "(1 2 3)",
+                                "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1": "(1 2 3)",
                             },
                         },
                     ],
@@ -354,7 +441,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             self.assertEqual([case.case_id for case in cases], ["epi", "endo"])
             self.assertEqual(
                 cases[1].params["electro_property_overrides"][
-                    "$ELECTRO_MODEL_COEFFS.ECG.pseudoECGElectroCoeffs.electrodes.V1"
+                    "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1"
                 ],
                 "(1 2 3)",
             )
@@ -368,9 +455,9 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             (case_root / "constant" / "electroProperties").write_text(
                 "\n".join(
                     [
-                        "electroModel singleCellElectro;",
+                        "myocardiumSolver singleCellSolver;",
                         "",
-                        "singleCellElectroCoeffs",
+                        "singleCellSolverCoeffs",
                         "{",
                         "    ionicModel BuenoOrovio;",
                         "    tissue myocyte;",
@@ -392,7 +479,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 ionic_model_tissue_map={"TNNP": ["epicardialCells"]},
                 stimulus_map={"TNNP": 60.0},
                 electro_property_overrides={
-                    "singleCellElectroCoeffs.ionicModel": "Gaur",
+                    "singleCellSolverCoeffs.ionicModel": "Gaur",
                 },
                 physics_property_overrides={
                     "type": "electroMechanicalModel",

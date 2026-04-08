@@ -131,7 +131,7 @@ Dictionary overrides accept either:
 
 For `electro_property_overrides`, the special scope token
 `$ELECTRO_MODEL_COEFFS` resolves to the currently selected
-`<electroModel>Coeffs` sub-dictionary in `electroProperties`.
+`<solver>Coeffs` sub-dictionary in `electroProperties`.
 
 The driver override layer is generic: it does not hardcode a whitelist of
 allowed keys. Any existing entry in `physicsProperties` or `electroProperties`
@@ -145,8 +145,8 @@ That catalog was assembled from the current `src/` readers and groups the
 known override paths for:
 
 - `physicsProperties.type`
-- `electroProperties.electroModel`
-- common `<electroModel>Coeffs` keys such as `ionicModel`, `tissue`,
+- `electroProperties.myocardiumSolver`
+- common `<solver>Coeffs` keys such as `ionicModel`, `tissue`,
   `solutionAlgorithm`, `writeAfterTime`, and `outputVariables`
 - `singleCellStimulus`
 - `monodomainStimulus`
@@ -166,7 +166,7 @@ Examples:
 - `physics_property_overrides: { "type": "electroMechanicalModel" }`
 - `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.ionicModel": "TNNP" }`
 - `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": "GoktepeKuhl" }`
-- `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.ECG.pseudoECGElectroCoeffs.electrodes.V1": "(1 2 3)" }`
+- `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1": "(1 2 3)" }`
 
 Notes:
 
