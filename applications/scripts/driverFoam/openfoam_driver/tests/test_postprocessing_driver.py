@@ -335,5 +335,44 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertIn("peak_voltage_mV", csv_text)
 
 
+    def test_restitution_table_summary_consolidates_model_csvs(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "restitutionCurves_s1s2Protocol"
+            / "setupRestitutionCurves_s1s2Protocol"
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            # Write fake per-model restitution CSVs
+            (output_dir / "TNNP_restitution.csv").write_text(
+                "tissue,DI_ms,APD90_ms\nepicardiaCells,300.0,280.0\nmCells,250.0,240.0\n"
+            )
+            (output_dir / "BuenoOrovio_restitution.csv").write_text(
+                "tissue,DI_ms,APD90_ms\nepicardiaCells,310.0,290.0\n"
+            )
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="restitutionCurves_s1s2Protocol",
+                tasks=[
+                    PostprocessTask(
+                        module_relpath=Path("postProcessing/table_summary.py")
+                    )
+                ],
+            )
+
+            self.assertTrue((output_dir / "restitutionCurves_summary.csv").exists())
+            self.assertTrue((output_dir / "restitutionCurves_summary.html").exists())
+            csv_text = (output_dir / "restitutionCurves_summary.csv").read_text()
+            self.assertIn("# tutorial: restitutionCurves_s1s2Protocol", csv_text)
+            self.assertIn("ionic_model", csv_text)
+            self.assertIn("TNNP", csv_text)
+            self.assertIn("BuenoOrovio", csv_text)
+
+
 if __name__ == "__main__":
     unittest.main()
