@@ -50,7 +50,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertTrue(manifest_path.exists())
             manifest = json.loads(manifest_path.read_text())
 
-            self.assertEqual(manifest["schema_version"], "1.0")
+            self.assertEqual(manifest["schema_version"], "1.1")
             self.assertEqual(manifest["artifact_count"], 1)
             artifact = manifest["artifacts"][0]
             self.assertEqual(artifact["path"], "plot_a.html")
