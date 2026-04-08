@@ -300,6 +300,40 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertIn("case_id", csv_text)
             self.assertIn("implicit_TNNP_epicardialCells", csv_text)
 
+    def test_singlecell_table_summary_produces_csv_and_html(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = repo_root / "tutorials" / "singleCell" / "setupSingleCell"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            # Fake single-cell .txt output: time Vm (space-separated)
+            # Resting ~-85 mV, peak ~40 mV, repolarises back to ~-85 mV
+            import numpy as np
+            t = np.linspace(0, 0.5, 500)
+            vm = np.full_like(t, -85.0)
+            vm[50:150] = np.linspace(-85, 40, 100)   # upstroke
+            vm[150:350] = np.linspace(40, -85, 200)  # repolarisation
+            txt_lines = ["time Vm"] + [f"{ti:.4f} {vi:.4f}" for ti, vi in zip(t, vm)]
+            (output_dir / "TNNP_epicardialCells_run.txt").write_text("\n".join(txt_lines))
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="singleCell",
+                tasks=[
+                    PostprocessTask(
+                        module_relpath=Path("postProcessing/table_summary.py")
+                    )
+                ],
+            )
+
+            self.assertTrue((output_dir / "singleCell_summary.csv").exists())
+            self.assertTrue((output_dir / "singleCell_summary.html").exists())
+            csv_text = (output_dir / "singleCell_summary.csv").read_text()
+            self.assertIn("# tutorial: singleCell", csv_text)
+            self.assertIn("APD_ms", csv_text)
+            self.assertIn("peak_voltage_mV", csv_text)
+
 
 if __name__ == "__main__":
     unittest.main()
