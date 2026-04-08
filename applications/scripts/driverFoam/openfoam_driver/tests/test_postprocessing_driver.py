@@ -240,5 +240,35 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertIn("10,20", csv_lines[1])
 
 
+    def test_restitution_run_postprocessing_returns_list(self) -> None:
+        """run_postprocessing must return list[dict], not None."""
+        repo_root = _repo_root_from_test()
+        module_path = (
+            repo_root
+            / "tutorials"
+            / "restitutionCurves_s1s2Protocol"
+            / "setupRestitutionCurves_s1s2Protocol"
+            / "postProcessing_restCurves.py"
+        )
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("restcurves", module_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        fn = mod.run_postprocessing
+        hints = fn.__annotations__
+        return_hint = hints.get("return", None)
+        # With `from __future__ import annotations` the hint is a string;
+        # without it, it may be the actual type.  Accept both.
+        is_list = return_hint is list or (
+            isinstance(return_hint, str) and return_hint.startswith("list")
+        )
+        self.assertTrue(
+            is_list,
+            f"run_postprocessing must annotate return as list[dict], got: {return_hint!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

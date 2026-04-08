@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -511,7 +513,7 @@ def run_postprocessing(
     output_dir: str,
     setup_root: str | None = None,
     **kwargs,
-) -> None:
+) -> list:
     """PostprocessTask-compatible entry point for the openfoam_driver framework.
 
     Called by the driver engine after all S1–S2 simulations complete.
@@ -525,6 +527,8 @@ def run_postprocessing(
     show_plots: bool = kwargs.get("show_plots", False)
 
     output_dir_path = Path(output_dir)
+    artifacts: list[dict] = []
+
     for model in ionic_models:
         tissues = list(tissue_map.get(model, []))
         postprocess_one_ionic_model(
@@ -534,6 +538,24 @@ def run_postprocessing(
             tissues=tissues,
             show_plot=show_plots,
         )
+        fig_path = output_dir_path / f"{model}_restitution.png"
+        csv_path = output_dir_path / f"{model}_restitution.csv"
+        if fig_path.exists():
+            artifacts.append({
+                "path": fig_path.name,
+                "label": f"{model} restitution curve",
+                "kind": "plot",
+                "format": "png",
+            })
+        if csv_path.exists():
+            artifacts.append({
+                "path": csv_path.name,
+                "label": f"{model} restitution data",
+                "kind": "data",
+                "format": "csv",
+            })
+
+    return artifacts
 
 
 if __name__ == "__main__":
