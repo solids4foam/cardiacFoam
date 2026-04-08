@@ -254,12 +254,23 @@ A fully implicit (monolithic) block-coupled system would require:
 - Allows independent domain solvers
 - Achieves implicit stability with modest overhead
 
+For the domain-side exchange objects and the PVJ resistance model itself, see
+[../electroCouplers/README.md](../electroCouplers/README.md).
+
 ### Why Separate Advance and Prepare?
 
 The **two-phase coupling** (prepare ↔ advance) allows:
 - Couplers to query stale fields from previous sub-step
 - Explicit evaluation of coupling terms
 - Flexibility to implement semi-implicit extensions (diagonal matrix modification)
+
+In particular, the Purkinje-myocardium PVJ workflow uses:
+
+- `prepareSecondaryCoupling()` before the conduction-system advance
+- `preparePrimaryCoupling()` before the myocardium advance
+
+This lets the coupler sample updated upstream state without forcing the domains
+to know each other's internals.
 
 ### Why Optional Domains?
 
@@ -309,4 +320,3 @@ Dictionary-driven construction avoids code branching and allows runtime flexibil
 | Couplers | Inter-domain data exchange | Runtime selectable |
 
 The architecture cleanly separates **what to solve** (domains) from **how to solve** (scheme), enabling researchers to quickly experiment with different coupling approaches without modifying core orchestration logic.
-

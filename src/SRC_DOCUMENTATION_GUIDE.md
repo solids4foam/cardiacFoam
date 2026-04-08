@@ -17,7 +17,7 @@ The `src/` directory contains all **source code libraries** that implement cardi
 | **[ARCHITECTURE.md](./electroModels/ARCHITECTURE.md)** | All domains & solvers | Directory structure, domain types, solver hierarchy |
 | **[README.md](./electroModels/README.md)** | High-level overview | Components, runtime selection, build process |
 | **[ELECTROMODEL_ORCHESTRATION.md](./electroModels/core/ELECTROMODEL_ORCHESTRATION.md)** | Core coordination | electroModel facade, electrophysicsSystem, advance schemes |
-| **[COUPLING_PURKINJE_MYOCARDIUM.md](./electroModels/COUPLING_PURKINJE_MYOCARDIUM.md)** | Specialized coupling | 1D-3D Purkinje-myocardium interaction, resistive coupling, stability |
+| **[electroCouplers/README.md](./electroModels/electroCouplers/README.md)** | Domain coupling | PVJ coupling endpoints, mapper, resistance coupler, exchange modes |
 | **[electroDomains/README.md](./electroModels/electroDomains/README.md)** | Domain interfaces | MyocardiumDomain, ECGDomain, ConductionSystemDomain contracts |
 
 **Key Files to Know:**
@@ -139,7 +139,7 @@ Ionic (Vm, Cai) → Active Tension Model (σ_active) → Solid Mechanics (u)
 ### "...understand the overall flow"
 1. Read **[ARCHITECTURE.md](./ARCHITECTURE.md)** (src-level overview)
 2. Read **[electroModels/ELECTROMODEL_ORCHESTRATION.md](./electroModels/core/ELECTROMODEL_ORCHESTRATION.md)**
-3. Check **[electroModels/COUPLING_PURKINJE_MYOCARDIUM.md](./electroModels/COUPLING_PURKINJE_MYOCARDIUM.md)** for domain coupling
+3. Check **[electroModels/electroCouplers/README.md](./electroModels/electroCouplers/README.md)** for domain coupling
 
 ### "...run a monodomain simulation"
 1. Read **[electroModels/README.md](./electroModels/README.md)** (configuration overview)
@@ -165,10 +165,11 @@ Ionic (Vm, Cai) → Active Tension Model (σ_active) → Solid Mechanics (u)
 5. Test with `singleCellSolver` and compare vs. literature
 
 ### "...debug bidirectional Purkinje-myocardium coupling"
-1. Read **[electroModels/COUPLING_PURKINJE_MYOCARDIUM.md](./electroModels/COUPLING_PURKINJE_MYOCARDIUM.md)** Section 5 (Problem) and 6 (Solutions)
-2. Try `electrophysicsAdvanceScheme pimpleStaggeredElectrophysicsAdvanceScheme;`
-3. Set `solutionAlgorithm implicit;` to enable PIMPLE iteration
-4. Monitor convergence via implicit iterations reported in log
+1. Read **[electroModels/electroCouplers/README.md](./electroModels/electroCouplers/README.md)** for the PVJ exchange model
+2. Read **[electroModels/core/ELECTROMODEL_ORCHESTRATION.md](./electroModels/core/ELECTROMODEL_ORCHESTRATION.md)** for staggered vs PIMPLE scheme behavior
+3. Try `electrophysicsAdvanceScheme pimpleStaggeredElectrophysicsAdvanceScheme;`
+4. Set `solutionAlgorithm implicit;` to enable PIMPLE iteration
+5. Monitor convergence via implicit iterations reported in log
 
 ### "...optimize for large meshes"
 1. Use GPU ionic model: `ionicModel BuenoOrovioGPU;` or `ORdGPU;`
@@ -187,8 +188,8 @@ src/
 ├── electroModels/
 │   ├── ARCHITECTURE.md                      # Domain/solver hierarchy
 │   ├── README.md                            # Config overview
-│   ├── COUPLING_PURKINJE_MYOCARDIUM.md     # Purkinje-tissue coupling
 │   ├── core/
+│   │   ├── README.md                       # Core subsystem overview
 │   │   ├── ELECTROMODEL_ORCHESTRATION.md   # ← Core orchestration logic
 │   │   ├── electroModel/                    # Entry point
 │   │   └── schemes/
@@ -200,17 +201,13 @@ src/
 │   │   ├── conductionSystemDomain/          # 1D Purkinje (upstream)
 │   │   └── ecgDomain/                       # ECG (downstream)
 │   ├── myocardiumModels/
-│   │   ├── monodomainSolver/                # 3D monodomain (single Vm)
-│   │   ├── bidomainSolver/                  # 3D bidomain (Vm + φe)
-│   │   ├── singleCellSolver/                # 0D ODE-only
-│   │   └── eikonalSolver/                   # 3D eikonal (activation time)
+│   │   └── README.md                        # Tissue solver overview
 │   ├── conductionSystemModels/
-│   │   ├── monodomain1DSolver/              # 1D cable equation
-│   │   └── eikonalSolver1D/                 # 1D activation time
+│   │   └── README.md                        # Graph solver overview
 │   ├── ecgModels/
-│   │   └── pseudoECGSolver/                 # Dipole-distance ECG
+│   │   └── README.md                        # ECG solver overview
 │   └── electroCouplers/
-│       └── pvjResistanceCoupler/            # Purkinje-Myocardium interface
+│       └── README.md                        # Purkinje-myocardium coupling
 │
 ├── ionicModels/
 │   ├── IONIC_MODEL_ARCHITECTURE.md          # ← Full ionic model guide
@@ -325,8 +322,7 @@ Together they enable **multi-scale, multi-physics cardiac simulation** from ion 
 ## References
 
 - **Electromodel architecture:** See **[ELECTROMODEL_ORCHESTRATION.md](./electroModels/core/ELECTROMODEL_ORCHESTRATION.md)**
-- **Purkinje coupling:** See **[COUPLING_PURKINJE_MYOCARDIUM.md](./electroModels/COUPLING_PURKINJE_MYOCARDIUM.md)**
+- **Purkinje coupling:** See **[electroCouplers/README.md](./electroModels/electroCouplers/README.md)**
 - **Ionic models:** See **[IONIC_MODEL_ARCHITECTURE.md](./ionicModels/IONIC_MODEL_ARCHITECTURE.md)**
 - **Verification:** See **[VERIFICATION_MODELS_ARCHITECTURE.md](./verificationModels/VERIFICATION_MODELS_ARCHITECTURE.md)**
 - **Mechanics:** See **[ACTIVE_TENSION_MODELS_ARCHITECTURE.md](./activeTensionModels/ACTIVE_TENSION_MODELS_ARCHITECTURE.md)**
-
