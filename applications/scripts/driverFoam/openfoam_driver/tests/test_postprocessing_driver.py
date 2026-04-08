@@ -270,5 +270,36 @@ class TestPostprocessingDriver(unittest.TestCase):
         )
 
 
+    def test_niederer_table_summary_produces_csv_and_html(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = (
+            repo_root / "tutorials" / "NiedererEtAl2012" / "setupNiedererEtAl2012"
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            # Write a fake points CSV matching the expected pattern
+            csv_content = "activationTime,Points:0,Points:1,Points:2\n0.042,0.0,0.0,0.007\n0.055,0.02,0.003,0.007\n"
+            (output_dir / "implicit_TNNP_epicardialCells_points_DT001_DX01.csv").write_text(csv_content)
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="NiedererEtAl2012",
+                tasks=[
+                    PostprocessTask(
+                        module_relpath=Path("postProcessing/table_summary.py")
+                    )
+                ],
+            )
+
+            self.assertTrue((output_dir / "NiedererEtAl2012_summary.csv").exists())
+            self.assertTrue((output_dir / "NiedererEtAl2012_summary.html").exists())
+            csv_text = (output_dir / "NiedererEtAl2012_summary.csv").read_text()
+            self.assertIn("# tutorial: NiedererEtAl2012", csv_text)
+            self.assertIn("case_id", csv_text)
+            self.assertIn("implicit_TNNP_epicardialCells", csv_text)
+
+
 if __name__ == "__main__":
     unittest.main()
