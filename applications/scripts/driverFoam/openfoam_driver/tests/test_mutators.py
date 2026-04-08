@@ -17,14 +17,14 @@ class TestScopedMutators(unittest.TestCase):
     def test_updates_only_within_scope(self) -> None:
         text = "\n".join(
             [
-                "electroModel monoDomainElectro;",
+                "myocardiumSolver monodomainSolver;",
                 "",
-                "monoDomainElectroCoeffs",
+                "monodomainSolverCoeffs",
                 "{",
                 "    ionicModel TNNP;",
                 "}",
                 "",
-                "singleCellElectroCoeffs",
+                "singleCellSolverCoeffs",
                 "{",
                 "    ionicModel BuenoOrovio;",
                 "}",
@@ -40,7 +40,7 @@ class TestScopedMutators(unittest.TestCase):
                 path,
                 "ionicModel",
                 "Gaur",
-                scope="singleCellElectroCoeffs",
+                scope="singleCellSolverCoeffs",
             )
 
             updated = path.read_text()
@@ -79,7 +79,7 @@ class TestScopedMutators(unittest.TestCase):
     def test_single_cell_stimulus_updates_use_nested_scope(self) -> None:
         text = "\n".join(
             [
-                "singleCellElectroCoeffs",
+                "singleCellSolverCoeffs",
                 "{",
                 "    singleCellStimulus",
                 "    {",
@@ -101,11 +101,11 @@ class TestScopedMutators(unittest.TestCase):
             apply_electro_property_overrides(
                 path,
                 {
-                    "singleCellElectroCoeffs.singleCellStimulus.stim_amplitude": 0.8,
-                    "singleCellElectroCoeffs.singleCellStimulus.stim_period_S1": 1200,
-                    "singleCellElectroCoeffs.singleCellStimulus.stim_period_S2": 300,
-                    "singleCellElectroCoeffs.singleCellStimulus.nstim1": 12,
-                    "singleCellElectroCoeffs.singleCellStimulus.nstim2": 3,
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_amplitude": 0.8,
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_period_S1": 1200,
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_period_S2": 300,
+                    "singleCellSolverCoeffs.singleCellStimulus.nstim1": 12,
+                    "singleCellSolverCoeffs.singleCellStimulus.nstim2": 3,
                 },
             )
 
@@ -119,9 +119,9 @@ class TestScopedMutators(unittest.TestCase):
     def test_detect_electro_coeffs_scope(self) -> None:
         text = "\n".join(
             [
-                "electroModel monoDomainElectro;",
+                "myocardiumSolver monodomainSolver;",
                 "",
-                "monoDomainElectroCoeffs",
+                "monodomainSolverCoeffs",
                 "{",
                 "    ionicModel TNNP;",
                 "}",
@@ -132,14 +132,14 @@ class TestScopedMutators(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "electroProperties"
             path.write_text(text)
-            self.assertEqual(detect_electro_coeffs_scope(path), "monoDomainElectroCoeffs")
+            self.assertEqual(detect_electro_coeffs_scope(path), "monodomainSolverCoeffs")
 
     def test_normalize_entry_overrides_supports_electro_scope_token(self) -> None:
         text = "\n".join(
             [
-                "electroModel singleCellElectro;",
+                "myocardiumSolver singleCellSolver;",
                 "",
-                "singleCellElectroCoeffs",
+                "singleCellSolverCoeffs",
                 "{",
                 "    ionicModel BuenoOrovio;",
                 "}",
@@ -158,15 +158,15 @@ class TestScopedMutators(unittest.TestCase):
 
             self.assertEqual(
                 normalized,
-                [{"key": "ionicModel", "value": "Gaur", "scope": ("singleCellElectroCoeffs",)}],
+                [{"key": "ionicModel", "value": "Gaur", "scope": ("singleCellSolverCoeffs",)}],
             )
 
     def test_apply_electro_property_overrides_handles_nested_paths(self) -> None:
         text = "\n".join(
             [
-                "electroModel singleCellElectro;",
+                "myocardiumSolver singleCellSolver;",
                 "",
-                "singleCellElectroCoeffs",
+                "singleCellSolverCoeffs",
                 "{",
                 "    ionicModel BuenoOrovio;",
                 "    singleCellStimulus",

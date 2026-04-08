@@ -52,6 +52,23 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(solution_algorithm["value_kind"], "enum")
         self.assertIn("implicit", solution_algorithm["enum_values"])
         self.assertGreater(payload["spec"]["cases"]["count"], 0)
+        self.assertIn("tutorial_contract", payload)
+        self.assertEqual(payload["tutorial_contract"]["name"], "singleCell")
+        self.assertIn(
+            "constant/electroProperties",
+            payload["tutorial_contract"]["core_required_files"],
+        )
+        self.assertIn(
+            "system/fvSchemes",
+            payload["tutorial_contract"]["solver_required_files"],
+        )
+        self.assertIn(
+            "system/fvSolution",
+            payload["tutorial_contract"]["solver_required_files"],
+        )
+        self.assertIn("Allrun", payload["tutorial_contract"]["conditional_files"])
+        self.assertIn("README.md", payload["tutorial_contract"]["conditional_files"])
+        self.assertIn("ionicModel", payload["tutorial_contract"]["case_parameters"])
         self.assertIn("launch", payload)
         self.assertEqual(payload["launch"]["sim"]["action"], "sim")
         self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))
@@ -64,9 +81,9 @@ class TestIntrospection(unittest.TestCase):
             (case_root / "constant" / "electroProperties").write_text(
                 "\n".join(
                     [
-                        "electroModel singleCellElectro;",
+                        "myocardiumSolver singleCellSolver;",
                         "",
-                        "singleCellElectroCoeffs",
+                        "singleCellSolverCoeffs",
                         "{",
                         "    ionicModel BuenoOrovio;",
                         "}",
@@ -89,6 +106,13 @@ class TestIntrospection(unittest.TestCase):
                 "openfoam_driver.specs.tutorials.generic_case.make_spec",
             )
             self.assertEqual(payload["spec"]["cases"]["count"], 1)
+            self.assertEqual(payload["tutorial_contract"]["name"], "randomCase")
+            self.assertEqual(
+                payload["tutorial_contract"]["core_required_files"],
+                ["constant/electroProperties", "constant/physicsProperties"],
+            )
+            self.assertEqual(payload["tutorial_contract"]["solver_required_files"], [])
+            self.assertEqual(payload["tutorial_contract"]["reference_cases"], [])
 
     def test_cli_describe_prints_json_payload(self) -> None:
         stream = io.StringIO()
@@ -108,6 +132,26 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(payload["resolved_name"], "singleCell")
         self.assertIn("common_override_keys", payload)
         self.assertIn("launch", payload)
+
+    def test_heartsimtemplate_exposes_machine_readable_authoring_contract(self) -> None:
+        payload = describe_tutorial(
+            "HeartSimTemplate",
+            overrides={"tutorials_root": self.tutorials_root},
+        )
+
+        contract = payload["tutorial_contract"]
+        self.assertEqual(contract["name"], "HeartSimTemplate")
+        self.assertEqual(contract["resolution"], "case_folder")
+        self.assertEqual(contract["authoring_contract_path"], "workflow_contract.json")
+        self.assertIsNotNone(contract["authoring_contract"])
+        self.assertEqual(
+            contract["authoring_contract"]["tutorial_family"],
+            "HeartSimTemplate",
+        )
+        self.assertEqual(
+            contract["authoring_contract"]["workflow_templates"][0]["workflow_id"],
+            "monodomain_purkinje_pseudo_ecg",
+        )
 
 
 if __name__ == "__main__":

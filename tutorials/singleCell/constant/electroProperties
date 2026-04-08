@@ -15,7 +15,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 myocardiumSolver singleCellSolver;
-electroModelsCoeffs
 singleCellSolverCoeffs
 {
 

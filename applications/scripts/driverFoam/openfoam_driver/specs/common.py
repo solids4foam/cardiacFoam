@@ -32,20 +32,20 @@ def default_setup_dir_name(case_dir_name: str) -> str:
     return f"setup{normalized_case_dir[:1].upper()}{normalized_case_dir[1:]}"
 
 
-def detect_electro_model_name(electro_properties_path: Path) -> str:
+def detect_myocardium_solver_name(electro_properties_path: Path) -> str:
     for line in electro_properties_path.read_text().splitlines():
         stripped = line.split("//", 1)[0].strip()
-        if not stripped.startswith("electroModel"):
+        if not stripped.startswith("myocardiumSolver"):
             continue
         tokens = stripped.rstrip(";").split()
         if len(tokens) < 2:
             break
         return tokens[1]
-    raise KeyError(f"Could not determine electroModel from {electro_properties_path}")
+    raise KeyError(f"Could not determine myocardiumSolver from {electro_properties_path}")
 
 
 def detect_electro_coeffs_scope(electro_properties_path: Path) -> str:
-    return f"{detect_electro_model_name(electro_properties_path)}Coeffs"
+    return f"{detect_myocardium_solver_name(electro_properties_path)}Coeffs"
 
 
 def _resolve_scope_tokens(

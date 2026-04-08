@@ -12,7 +12,7 @@ stack.
 - shared analytical oracle:
   `verificationModels`
 - optional manufactured pseudo-ECG verification:
-  `manufacturedFDAPseudoECGVerifier` from `libverificationModels`
+  `pseudoECGManufacturedVerifier` from `libverificationModels`
 
 ## Purpose
 

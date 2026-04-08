@@ -96,8 +96,8 @@ intended to drive UI field generation and validation hints.
 The catalog currently includes:
 
 - `physicsProperties.type`
-- `electroProperties.electroModel`
-- common `<electroModel>Coeffs` entries
+- `electroProperties.myocardiumSolver`
+- common `<solver>Coeffs` entries
 - single-cell stimulus entries
 - monodomain stimulus entries
 - eikonal-diffusion entries

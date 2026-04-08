@@ -1,0 +1,227 @@
+{
+  "contract_version": 1,
+  "tutorial_family": "HeartSimTemplate",
+  "purpose": "Authoring contract for full cardiac electrophysiology cases built from reusable workflow templates.",
+  "status": {
+    "template_kind": "symbolic_authoring_template",
+    "runnable_without_substitution": false,
+    "future_work": [
+      "Replace symbolic ionic-model placeholders with concrete model selections before attempting to run.",
+      "Define a formal protocol for Purkinje-specific ionic export variable discovery, analogous to the myocardium export-variable query flow."
+    ]
+  },
+  "base_case": {
+    "core_required_files": [
+      "constant/electroProperties",
+      "constant/physicsProperties"
+    ],
+    "solver_required_files": [
+      "system/controlDict",
+      "system/fvSchemes",
+      "system/fvSolution"
+    ],
+    "conditional_files": [
+      "system/decomposeParDict",
+      "system/blockMeshDict",
+      "Allrun",
+      "Allclean",
+      "README.md"
+    ],
+    "system_baseline_files": [
+      "system/fvSchemes",
+      "system/fvSolution"
+    ]
+  },
+  "agent_protocols": {
+    "ionic_variable_exports": {
+      "strategy": "dynamic_query",
+      "required": true,
+      "description": "Do not hardcode ionic export variables. Query the available variables for the selected ionic model before writing outputVariables.ionic.export.",
+      "tool": "listCellModelsVariables",
+      "output_target": "monodomainSolverCoeffs.outputVariables.ionic.export",
+      "fallback_exports": [
+        "Vm"
+      ],
+      "notes": [
+        "Use the selected ionicModel from electroProperties as the lookup input.",
+        "Keep debug output conservative, typically (Vm Iion), unless the user explicitly requests more."
+      ]
+    },
+    "purkinje_ionic_variable_exports": {
+      "strategy": "future_work",
+      "required": false,
+      "description": "Purkinje ionic export placeholders are currently symbolic and must be replaced by a future code-backed export-variable discovery path before automatic case authoring can make them runnable.",
+      "output_target": "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.export"
+    }
+  },
+  "workflow_templates": [
+    {
+      "workflow_id": "monodomain_purkinje_pseudo_ecg",
+      "title": "3D Monodomain + 1D Purkinje + Pseudo-ECG",
+      "myocardiumSolver": "monodomainSolver",
+      "electro_scope": "monodomainSolverCoeffs",
+      "required_blocks": [
+        "monodomainSolverCoeffs",
+        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.conductionNetworkDomains",
+        "monodomainSolverCoeffs.domainCouplings",
+        "monodomainSolverCoeffs.ecgDomains"
+      ],
+      "required_keys": [
+        "monodomainSolverCoeffs.ionicModel",
+        "monodomainSolverCoeffs.tissue",
+        "monodomainSolverCoeffs.solutionAlgorithm",
+        "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
+        "monodomainSolverCoeffs.ecgDomains.<name>.ecgSolver",
+        "monodomainSolverCoeffs.ecgDomains.<name>.electrodePositions.<electrode>"
+      ],
+      "capabilities": {
+        "ecg": true,
+        "purkinje": true,
+        "verification": false
+      },
+      "placeholders": {
+        "myocardiumIonicModel": "<myocardiumIonicModel>",
+        "purkinjeIonicModel": "<purkinjeIonicModel>",
+        "myocardiumIonicExports": "{{<myocardiumIonicModel>_EXPORTS}}",
+        "purkinjeIonicExports": "<purkinjeIonicModel>_SPECIFIC"
+      },
+      "notes": [
+        "This is the current major-heart symbolic template in HeartSimTemplate/constant/electroProperties.",
+        "It is not runnable until the ionic-model placeholders are replaced."
+      ]
+    },
+    {
+      "workflow_id": "monodomain_purkinje",
+      "title": "3D Monodomain + 1D Purkinje",
+      "myocardiumSolver": "monodomainSolver",
+      "electro_scope": "monodomainSolverCoeffs",
+      "required_blocks": [
+        "monodomainSolverCoeffs",
+        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.conductionNetworkDomains",
+        "monodomainSolverCoeffs.domainCouplings"
+      ],
+      "required_keys": [
+        "monodomainSolverCoeffs.ionicModel",
+        "monodomainSolverCoeffs.tissue",
+        "monodomainSolverCoeffs.solutionAlgorithm",
+        "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler"
+      ],
+      "capabilities": {
+        "ecg": false,
+        "purkinje": true,
+        "verification": false
+      },
+      "placeholders": {
+        "ionicModel": "{{ IONIC_MODEL_NAME }}",
+        "ionicExports": "{{ IONIC_SPECIFIC_EXPORTS }}"
+      }
+    },
+    {
+      "workflow_id": "monodomain_pseudo_ecg",
+      "title": "3D Monodomain + Pseudo-ECG",
+      "myocardiumSolver": "monodomainSolver",
+      "electro_scope": "monodomainSolverCoeffs",
+      "required_blocks": [
+        "monodomainSolverCoeffs",
+        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.ecgDomains"
+      ],
+      "required_keys": [
+        "monodomainSolverCoeffs.ionicModel",
+        "monodomainSolverCoeffs.tissue",
+        "monodomainSolverCoeffs.solutionAlgorithm",
+        "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
+        "monodomainSolverCoeffs.ecgDomains.<name>.ecgSolver",
+        "monodomainSolverCoeffs.ecgDomains.<name>.electrodePositions.<electrode>"
+      ],
+      "capabilities": {
+        "ecg": true,
+        "purkinje": false,
+        "verification": false
+      },
+      "placeholders": {
+        "ionicModel": "{{ IONIC_MODEL_NAME }}",
+        "ionicExports": "{{ IONIC_SPECIFIC_EXPORTS }}"
+      }
+    },
+    {
+      "workflow_id": "eikonal_purkinje",
+      "title": "3D Eikonal + 1D Eikonal",
+      "myocardiumSolver": "eikonalSolver",
+      "electro_scope": "eikonalSolverCoeffs",
+      "required_blocks": [
+        "eikonalSolverCoeffs",
+        "eikonalSolverCoeffs.conductionNetworkDomains"
+      ],
+      "required_keys": [
+        "eikonalSolverCoeffs.c0",
+        "eikonalSolverCoeffs.eikonalAdvectionDiffusionApproach",
+        "eikonalSolverCoeffs.stimulusLocationMin",
+        "eikonalSolverCoeffs.stimulusLocationMax",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.c0"
+      ],
+      "capabilities": {
+        "ecg": false,
+        "purkinje": true,
+        "verification": false
+      },
+      "notes": [
+        "This workflow is activation-time only and does not require ionic export variables.",
+        "Use psi-focused outputVariables in the Purkinje block."
+      ]
+    }
+  ],
+  "compatibility_rules": [
+    {
+      "if": {
+        "myocardiumSolver": "monodomainSolver"
+      },
+      "allows": [
+        "monodomainStimulus",
+        "ecgDomains",
+        "conductionNetworkDomains",
+        "domainCouplings",
+        "verificationModel"
+      ]
+    },
+    {
+      "if": {
+        "myocardiumSolver": "singleCellSolver"
+      },
+      "allows": [
+        "singleCellStimulus",
+        "writeAfterTime"
+      ],
+      "forbids": [
+        "ecgDomains",
+        "conductionNetworkDomains",
+        "domainCouplings"
+      ]
+    },
+    {
+      "if": {
+        "myocardiumSolver": "eikonalSolver"
+      },
+      "allows": [
+        "conductionNetworkDomains"
+      ],
+      "forbids": [
+        "verificationModel"
+      ]
+    }
+  ],
+  "provenance": {
+    "human_source": "templates.md",
+    "schema_source": "applications/scripts/driverFoam/openfoam_driver/dict_entries.py"
+  }
+}

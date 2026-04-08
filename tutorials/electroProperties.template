@@ -102,6 +102,13 @@ monodomainSolverCoeffs
         }
     }
 
+    // ── Optional verification hook ─────────────────────────────────────────
+    // Valid type: manufacturedFDAMonodomainVerifier
+    // verificationModel
+    // {
+    //     type  manufacturedFDAMonodomainVerifier;
+    // }
+
 
     // ── Stimulus (monodomain volume stimulus) ───────────────────────────────
     monodomainStimulus
@@ -155,13 +162,13 @@ monodomainSolverCoeffs
             {
                 // ── Graph solver selection ───────────────────────────────────
                 // Key: 'conductionSystemSolver <type>;'
-                // Default (if omitted): Monodomain1DSolver
+                // Default (if omitted): monodomain1DSolver
                 //
                 // Valid types (registered in GraphConductionSystemSolver RTST):
-                //   Monodomain1DSolver — implicit cable equation + ionic ODE [DEFAULT]
+                //   monodomain1DSolver — implicit cable equation + ionic ODE [DEFAULT]
                 //   eikonalSolver      — activation-time only, needs c0 [m/s]
                 //
-                conductionSystemSolver  Monodomain1DSolver;   // or: eikonalSolver
+                conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver
 
                 // --- Eikonal solver: only c0 is required ---
                 // conduction velocity [m/s] (must be dimensioned)
@@ -215,10 +222,10 @@ monodomainSolverCoeffs
 bidomainSolverCoeffs
 {
     // Intracellular conductivity tensor  [S/m]
-    sigmaI  [-1 -3 3 0 0 2 0]  (0.1334 0 0 0.01761 0 0.01761);
+    conductivityIntracellular  [-1 -3 3 0 0 2 0]  (0.1334 0 0 0.01761 0 0.01761);
 
     // Extracellular conductivity tensor  [S/m]
-    sigmaE  [-1 -3 3 0 0 2 0]  (0.2668 0 0 0.03521 0 0.03521);
+    conductivityExtracellular  [-1 -3 3 0 0 2 0]  (0.2668 0 0 0.03521 0 0.03521);
 
     chi     [0 -1 0 0 0 0 0]  140000;
     cm      [-1 -4 4 0 0 2 0]  0.01;
@@ -235,6 +242,12 @@ bidomainSolverCoeffs
     {
         ionic { export (Vm); debug (Vm); }
     }
+
+    // Optional manufactured/reference verifier
+    // verificationModel
+    // {
+    //     type  manufacturedFDABidomainVerifier;
+    // }
 
     monodomainStimulus
     {
