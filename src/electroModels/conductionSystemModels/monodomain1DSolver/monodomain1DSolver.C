@@ -33,7 +33,6 @@ addToRunTimeSelectionTable
     dictionary
 );
 
-
 void Monodomain1DSolver::advance
 (
     ConductionSystemDomain& domain,
@@ -45,80 +44,91 @@ void Monodomain1DSolver::advance
     scalarField& Iion = domain.ionicCurrent();
     const label N = Vm.size();
 
-    // ---- Step 1: Reaction — solve ionic model ODE ----
-    domain.ionicModelRef().solveODE(t0, dt, Vm, Iion);
+    // ---- Step 1: Reaction (First Half-Step) ----
+    // Integrate ODEs for dt/2
+    domain.ionicModelRef().solveODE(t0, dt / 2.0, Vm, Iion);
 
-    // ---- Step 2: Applied current (root stimulus + PVJ coupling) ----
+    // ---- Step 2: Applied current ----
     appliedCurrentBuffer_.setSize(N);
     domain.assembleAppliedCurrent(t0, appliedCurrentBuffer_);
 
-    // ---- Step 3: Diffusion — implicit cable equation ----
-    //
-    //  Point-wise cable equation (backward Euler):
-    //
-    //    (Vm_new - Vm_old) / dt
-    //        = 1/(chi*Cm) * sum_edges[ sigma/L^2 * (Vm_new_j - Vm_new_i) ]
-    //          - Iion
-    //          + Iapp / (chi*Cm)
-    //
-    //  Rearranged as  A * Vm_new = b :
-    //
-    //    A[i][i] = 1 + dt/(chi*Cm) * sum_edges_at_i( sigma_e / L_e^2 )
-    //    A[i][j] =   - dt/(chi*Cm) * sigma_e / L_e^2
-    //    b[i]    = Vm_old[i] - dt*Iion[i] + dt/(chi*Cm)*Iapp[i]
-    //
-    //  This is the same implicit discretisation that
-    //  fvm::ddt + fvm::laplacian produces on the 3-D myocardium mesh.
-
-    scalarSquareMatrix A(N, Zero);
-    scalarField rhs(N, Zero);
-
+    // ---- Step 3: Diffusion (Full-Step PDE) using O(N) Hines Algorithm ----
     const scalar dtOverChiCm = dt / (domain.chi() * domain.Cm());
+    
+    // Arrays for the tree solver
+    scalarField diag(N, 1.0);       // Main diagonal
+    scalarField rhs(N, Zero);       // Right-hand side
+    scalarField parentCoeff(N, Zero); // Off-diagonal coefficient linking to parent
 
-    // Diagonal: identity from backward-Euler ddt
-    for (label i = 0; i < N; i++)
-    {
-        A(i, i) = 1.0;
-    }
-
-    // Implicit Laplacian contributions from graph edges
     const labelList& edgeA = domain.edgeStartNodes();
     const labelList& edgeB = domain.edgeEndNodes();
     const scalarField& edgeLength = domain.edgeLengths();
     const scalarField& edgeConductance = domain.edgeConductances();
+    
+    // Access the topology we built in conductionGraph
+    const labelList& parent = domain.graph().parentList;
+    const labelList& reverseOrder = domain.graph().reverseOrder;
+    const labelList& forwardOrder = domain.graph().orderList;
 
+    // 3a. Assemble matrix coefficients
     forAll(edgeA, edgeI)
     {
-        const label iN = edgeA[edgeI];
-        const label jN = edgeB[edgeI];
-        const scalar coeff =
-            dtOverChiCm
-          * edgeConductance[edgeI]
-          / sqr(edgeLength[edgeI]);
+        label nodeA = edgeA[edgeI];
+        label nodeB = edgeB[edgeI];
+        
+        scalar coeff = dtOverChiCm * edgeConductance[edgeI] / sqr(edgeLength[edgeI]);
 
-        A(iN, iN) += coeff;
-        A(jN, jN) += coeff;
-        A(iN, jN) -= coeff;
-        A(jN, iN) -= coeff;
+        diag[nodeA] += coeff;
+        diag[nodeB] += coeff;
+
+        // Determine which node is the child to store the off-diagonal parent link
+        if (parent[nodeA] == nodeB)
+        {
+            parentCoeff[nodeA] = -coeff;
+        }
+        else if (parent[nodeB] == nodeA)
+        {
+            parentCoeff[nodeB] = -coeff;
+        }
     }
 
-    // Right-hand side
-    forAll(Vm, i)
+    // 3b. Assemble RHS (Notice Iion is REMOVED here because ODE handles it)
+    for (label i = 0; i < N; i++)
     {
-        rhs[i] = Vm[i]
-               - dt * Iion[i]
-               + dtOverChiCm * appliedCurrentBuffer_[i];
+        rhs[i] = Vm[i] + dtOverChiCm * appliedCurrentBuffer_[i];
     }
 
-    // ---- Step 4: Solve  A * x = b  (LU decomposition) ----
-    LUsolve(A, rhs);
+    // 3c. Forward Sweep (Bottom-up: Leaves to Root)
+    // Iterate through reverseOrder, skipping the last element (which is the root)
+    for (label i = 0; i < N - 1; i++)
+    {
+        label c = reverseOrder[i]; // Child
+        label p = parent[c];       // Parent
 
-    // ---- Step 5: Update Vm (rhs now contains the solution) ----
-    Vm = rhs;
+        scalar factor = parentCoeff[c] / diag[c];
+        diag[p] -= factor * parentCoeff[c]; // Because symmetric, child-to-parent is same as parent-to-child
+        rhs[p]  -= factor * rhs[c];
+    }
+
+    // 3d. Backward Sweep (Top-down: Root to Leaves)
+    // Solve the root node first
+    label root = forwardOrder[0];
+    Vm[root] = rhs[root] / diag[root];
+
+    // Propagate the exact solution down to the leaves
+    for (label i = 1; i < N; i++)
+    {
+        label c = forwardOrder[i];
+        label p = parent[c];
+
+        Vm[c] = (rhs[c] - parentCoeff[c] * Vm[p]) / diag[c];
+    }
+
+    // ---- Step 4: Reaction (Second Half-Step) ----
+    // Integrate ODEs for the remaining dt/2 using the newly diffused Vm
+    domain.ionicModelRef().solveODE(t0 + (dt / 2.0), dt / 2.0, Vm, Iion);
 
     domain.reportAdvanceDiagnostics(t0, dt);
 }
 
-} // End namespace Foam
-
-// ************************************************************************* //
+} // End namespace Foam 

@@ -34,6 +34,9 @@ Author
 #include "scalarField.H"
 #include "labelList.H"
 #include "dictionary.H"
+#include "DynamicList.H"
+#include "boolList.H"
+#include <queue>
 
 namespace Foam
 {
@@ -46,6 +49,12 @@ struct conductionGraph
     labelList   edgeNodeB;
     scalarField edgeLengths;
     scalarField edgeConductances;
+
+    // Tree topology rooted at node 0 (built during readFromDict).
+    // Required by Monodomain1DSolver (Hines algorithm).
+    labelList   parentList;    // parent[i] = parent node (-1 for root)
+    labelList   orderList;     // BFS order root→leaves (back-substitution pass)
+    labelList   reverseOrder;  // BFS order leaves→root (forward-elimination pass)
 
     conductionGraph()
     :
@@ -89,6 +98,80 @@ struct conductionGraph
 
         Info<< "Conduction graph: " << nNodes << " nodes, "
             << nEdges << " edges." << endl;
+
+        buildTreeTopology();
+    }
+
+private:
+
+    // BFS from node 0 to establish parent–child relationships and the
+    // two traversal orderings needed by the Hines two-pass algorithm.
+    // Aborts with a fatal error if the graph is disconnected or not a tree.
+    void buildTreeTopology()
+    {
+        if (nNodes == 0) return;
+
+        // Validate: a tree on N nodes has exactly N-1 edges.
+        if (nEdges != nNodes - 1)
+        {
+            FatalErrorInFunction
+                << "Conduction graph has " << nNodes << " nodes but "
+                << nEdges << " edges. A tree requires exactly N-1 = "
+                << (nNodes - 1) << " edges. "
+                << "Hines algorithm requires an acyclic (tree) topology."
+                << exit(FatalError);
+        }
+
+        // Build undirected adjacency list.
+        List<DynamicList<label>> adj(nNodes);
+        forAll(edgeNodeA, eI)
+        {
+            adj[edgeNodeA[eI]].append(edgeNodeB[eI]);
+            adj[edgeNodeB[eI]].append(edgeNodeA[eI]);
+        }
+
+        parentList.setSize(nNodes, -1);
+        orderList.setSize(nNodes);
+        boolList visited(nNodes, false);
+
+        std::queue<label> q;
+        q.push(0);
+        visited[0] = true;
+        label orderIdx = 0;
+
+        while (!q.empty())
+        {
+            label node = q.front(); q.pop();
+            orderList[orderIdx++] = node;
+
+            forAll(adj[node], nbrI)
+            {
+                label nbr = adj[node][nbrI];
+                if (!visited[nbr])
+                {
+                    visited[nbr] = true;
+                    parentList[nbr] = node;
+                    q.push(nbr);
+                }
+            }
+        }
+
+        if (orderIdx != nNodes)
+        {
+            FatalErrorInFunction
+                << "Conduction graph is not connected: BFS from node 0 "
+                << "reached " << orderIdx << " of " << nNodes << " nodes."
+                << exit(FatalError);
+        }
+
+        // reverseOrder: reverse of BFS (leaves→root for forward elimination).
+        reverseOrder.setSize(nNodes);
+        forAll(orderList, i)
+        {
+            reverseOrder[i] = orderList[nNodes - 1 - i];
+        }
+
+        Info<< "Conduction graph: tree topology built (root=0)." << endl;
     }
 };
 
