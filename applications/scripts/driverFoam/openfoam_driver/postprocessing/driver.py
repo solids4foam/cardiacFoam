@@ -114,7 +114,7 @@ def _write_plots_manifest(
     artifacts: list[dict[str, Any]],
 ) -> Path:
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "tutorial": tutorial_name,
         "output_dir": str(output_dir),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
