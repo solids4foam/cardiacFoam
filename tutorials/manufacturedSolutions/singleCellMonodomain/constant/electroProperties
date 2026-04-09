@@ -1,0 +1,62 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+myocardiumSolver singleCellSolver;
+singleCellSolverCoeffs
+{
+    ionicModel monodomainFDAManufactured;
+
+    verificationModel
+    {
+        type manufacturedFDAMonodomainVerifier;
+    }
+
+    solverHookFields
+    {
+        preProcess (u1 u2 u3);
+    }
+
+    dimension "1D";
+
+    solutionAlgorithm explicit;
+    solver          RKF45;
+    initialODEStep  1e-5;
+    maxSteps        1000000000;
+    absTol          1e-6;
+    relTol          1e-4;
+
+    singleCellStimulus
+    {
+        stim_start      0;
+        stim_duration   0;
+        stim_amplitude  0;
+        stim_period_S1  1000;
+        nstim1          0;
+        stim_period_S2  0;
+        nstim2          0;
+    }
+
+    writeAfterTime  0;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (V u1 u2 u3 Iion);
+            debug (V u1 u2 u3 Iion);
+        }
+    }
+}

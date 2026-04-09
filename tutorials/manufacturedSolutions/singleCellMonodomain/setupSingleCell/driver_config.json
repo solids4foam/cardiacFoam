@@ -1,0 +1,12 @@
+{
+  "case_dir_name": "manufacturedSolutions/singleCellMonodomain",
+  "setup_dir_name": "setupSingleCell",
+  "postprocess_strict_artifacts": false,
+  "ionic_models": ["monodomainFDAManufactured"],
+  "ionic_model_tissue_map": {
+    "monodomainFDAManufactured": ["myocyte"]
+  },
+  "stimulus_map": {
+    "monodomainFDAManufactured": 0.0
+  }
+}

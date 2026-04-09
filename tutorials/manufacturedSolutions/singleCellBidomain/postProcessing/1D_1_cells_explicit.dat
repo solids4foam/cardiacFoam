@@ -1,0 +1,18 @@
+Single-cell bidomain manufactured-solution error summary (t = 1):
+Field     L1-error       L2-error       Linf-error
+Vm     2.53633e-17   2.53633e-17   2.53633e-17
+u1     1.86295e-12   1.86295e-12   1.86295e-12
+u2     1.4766e-14   1.4766e-14   1.4766e-14
+-------------------------------------------------
+
+
+Simulation summary:
+-------------------
+Number of cells (N)   = 1
+Solver type           = Explicit
+Grid spacing (dx)     = 1
+Time step (dt)        = 5e-05
+Number of steps       = 20000
+Final simulation time = 1
+-------------------
+
