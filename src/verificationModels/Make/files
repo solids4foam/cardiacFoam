@@ -3,6 +3,7 @@ ecgVerification/ecgVerificationModel.C
 ecgVerification/pseudoECGManufacturedVerifier.C
 monodomainVerification/manufacturedFDAMonodomainVerifier.C
 bidomainVerification/manufacturedFDABidomainVerifier.C
+bidomainVerification/singleCellManufacturedFDABidomainVerifier.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libverificationModels

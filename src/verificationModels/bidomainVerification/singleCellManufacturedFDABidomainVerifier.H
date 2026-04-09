@@ -16,8 +16,8 @@ License
     with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 \*---------------------------------------------------------------------------*/
 
-#ifndef manufacturedFDABidomainVerifier_H
-#define manufacturedFDABidomainVerifier_H
+#ifndef singleCellManufacturedFDABidomainVerifier_H
+#define singleCellManufacturedFDABidomainVerifier_H
 
 #include "electroVerificationModel.H"
 #include "overrideTypeName.H"
@@ -25,19 +25,10 @@ License
 namespace Foam
 {
 
-class manufacturedFDABidomainVerifier : public electroVerificationModel
+class singleCellManufacturedFDABidomainVerifier : public electroVerificationModel
 {
-    volScalarField* phiEPtr_;
-    Switch enabled_;
-    Switch reportPDEResiduals_;
     bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
-    scalar k_;
-    scalar phiEReferenceValue_;
-    point phiEReferencePoint_;
-    fileName outputFileName_;
-
-    const dictionary& verificationDict() const;
 
     wordList readConfiguredNames
     (
@@ -48,11 +39,9 @@ class manufacturedFDABidomainVerifier : public electroVerificationModel
 
 public:
 
-    OverrideTypeName("manufacturedFDABidomainVerifier");
+    OverrideTypeName("singleCellManufacturedFDABidomainVerifier");
 
-    explicit manufacturedFDABidomainVerifier(const dictionary& dict);
-
-    virtual void bindBidomainField(volScalarField& phiE) override;
+    explicit singleCellManufacturedFDABidomainVerifier(const dictionary& dict);
 
     virtual wordList preProcessFieldNames(const ionicModel& model) const override;
 

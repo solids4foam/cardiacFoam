@@ -36,7 +36,7 @@ monodomainSolverCoeffs
 
     verificationModel
     {
-        type manufacturedFDAMonodomainVerifier;
+        type    manufacturedFDAMonodomainVerifier;
     }
 
     solverHookFields
@@ -44,7 +44,7 @@ monodomainSolverCoeffs
         preProcess (u1 u2 u3);
     }
 
-    dimension    "1D";
+    dimension    "3D";
 
     solutionAlgorithm    implicit;
     CFL 0.1;
@@ -65,7 +65,7 @@ monodomainSolverCoeffs
     {
         ECG
         {
-            ecgSolver pseudoECG;
+            ecgSolver    pseudoECG;
 
             manufactured
             {

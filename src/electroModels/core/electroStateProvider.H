@@ -76,6 +76,23 @@ public:
     //- The mesh on which this state provider is defined.
     virtual const fvMesh& mesh() const = 0;
 
+    //- Base mesh from which this provider's mesh may have been derived.
+    virtual const fvMesh& baseMesh() const
+    {
+        return mesh();
+    }
+
+    //- Optional mapping from a subset mesh back to the base mesh.
+    virtual const labelUList* subsetFaceMapPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const labelUList* subsetCellMapPtr() const
+    {
+        return nullptr;
+    }
+
     //- Optional state channels exposed by the provider.
     virtual const volScalarField* VmPtr() const
     {
@@ -90,6 +107,19 @@ public:
     virtual const volTensorField* conductivityPtr() const
     {
         return nullptr;
+    }
+
+    //- Optional split conductivity channels for models that distinguish
+    //  between intracellular and extracellular media.
+    //  By default these fall back to the legacy conductivityPtr() channel.
+    virtual const volTensorField* intracellularConductivityPtr() const
+    {
+        return conductivityPtr();
+    }
+
+    virtual const volTensorField* extracellularConductivityPtr() const
+    {
+        return conductivityPtr();
     }
 };
 

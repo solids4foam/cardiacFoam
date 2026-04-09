@@ -69,6 +69,41 @@ public:
     ) = 0;
 };
 
+
+//- Downstream bath/body-potential interface used by heart-to-bath couplers.
+class bathCouplingEndpoint
+{
+public:
+
+    virtual ~bathCouplingEndpoint() = default;
+
+    //- Bath/source term prepared by the heart-to-bath coupler.
+    virtual volScalarField& interfaceSourceField() = 0;
+
+    //- Solved extracellular potential in the bath/body domain.
+    virtual volScalarField& bathPotentialField() = 0;
+
+    //- Interface patch index on the bath domain, or -1 if not configured.
+    virtual label interfacePatchIndex() const
+    {
+        return -1;
+    }
+
+    //- Base mesh from which the bath domain was derived.
+    virtual const fvMesh& baseMesh() const = 0;
+
+    //- Optional mapping from bath-submesh faces/cells back to the base mesh.
+    virtual const labelUList* subsetFaceMapPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const labelUList* subsetCellMapPtr() const
+    {
+        return nullptr;
+    }
+};
+
 } // End namespace Foam
 
 #endif

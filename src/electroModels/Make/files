@@ -10,6 +10,7 @@ core/electroActivationFoam/electroActivationFoam.C
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
 electroDomains/conductionSystemDomain/conductionSystemSolver.C
+electroDomains/bathDomain/bathDomain.C
 electroDomains/ecgDomain/ecgDomain.C
 electroDomains/ecgDomain/ecgSolver.C
 electroDomains/myocardiumDomain/myocardiumDomain.C
@@ -22,6 +23,7 @@ myocardiumModels/eikonalSolver/eikonalSolver.C
 myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */
+ecgModels/bathECGSolver.C
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 
 /* Conduction system models */
@@ -30,6 +32,7 @@ conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C
 
 /* Couplers */
 electroCouplers/electroDomainCoupler.C
+electroCouplers/heartBathInterfaceCoupler.C
 electroCouplers/pvjMapper.C
 electroCouplers/pvjResistanceCoupler.C
 

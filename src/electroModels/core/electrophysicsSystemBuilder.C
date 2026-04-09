@@ -24,6 +24,7 @@ License
 #include "error.H"
 #include "ionicModel.H"
 #include "ecgDomain.H"
+#include "bathDomain.H"
 
 #include "DynamicList.H"
 #include "HashTable.H"
@@ -137,6 +138,40 @@ void collectConductionCouplingDicts
             << "'purkinjeNetwork'. Use 'domainCouplings { <name> { ... } }'."
             << exit(FatalError);
     }
+}
+
+
+void collectBathDomainDicts
+(
+    const dictionary& electroProperties,
+    DynamicList<word>& names,
+    DynamicList<const dictionary*>& dicts
+)
+{
+    appendSubDictionaries
+    (
+        electroProperties,
+        "bathDomains",
+        names,
+        dicts
+    );
+}
+
+
+void collectBathCouplingDicts
+(
+    const dictionary& electroProperties,
+    DynamicList<word>& names,
+    DynamicList<const dictionary*>& dicts
+)
+{
+    appendSubDictionaries
+    (
+        electroProperties,
+        "bathCouplings",
+        names,
+        dicts
+    );
 }
 
 } // End anonymous namespace
@@ -321,6 +356,48 @@ void configureECGDomain
     system.endDownstreamCouplingModel();
     system.clearDownstreamCouplingModel();
 
+    DynamicList<word> bathDomainNames;
+    DynamicList<const dictionary*> bathDomainDicts;
+    collectBathDomainDicts
+    (
+        electroProperties,
+        bathDomainNames,
+        bathDomainDicts
+    );
+
+    HashTable<BathDomain*> bathDomainsByName
+    (
+        bathDomainNames.size()
+    );
+
+    forAll(bathDomainNames, i)
+    {
+        const word& bathDomainName = bathDomainNames[i];
+
+        if (bathDomainsByName.found(bathDomainName))
+        {
+            FatalErrorInFunction
+                << "Duplicate bath domain name '" << bathDomainName
+                << "' while configuring downstream domains."
+                << exit(FatalError);
+        }
+
+        autoPtr<BathDomain> bathDomain
+        (
+            new BathDomain
+            (
+                stateProvider,
+                stateProvider.baseMesh(),
+                *bathDomainDicts[i],
+                bathDomainName
+            )
+        );
+
+        BathDomain* bathPtr = bathDomain.ptr();
+        bathDomainsByName.insert(bathDomainName, bathPtr);
+        system.appendDownstreamDomain(bathPtr);
+    }
+
     DynamicList<word> ecgDomainNames;
     DynamicList<const dictionary*> ecgDomainDicts;
 
@@ -355,6 +432,76 @@ void configureECGDomain
                 *ecgDomainDicts[i],
                 ecgDomainNames[i]
             )
+        );
+    }
+
+    DynamicList<word> bathCouplingNames;
+    DynamicList<const dictionary*> bathCouplingDicts;
+    collectBathCouplingDicts
+    (
+        electroProperties,
+        bathCouplingNames,
+        bathCouplingDicts
+    );
+
+    forAll(bathCouplingNames, i)
+    {
+        const dictionary& couplingDict = *bathCouplingDicts[i];
+
+        const word primaryName =
+            couplingDict.lookupOrDefault<word>("primaryDomain", "myocardium");
+
+        if (primaryName != "myocardium")
+        {
+            FatalErrorInFunction
+                << "Only primaryDomain=myocardium is currently supported, got '"
+                << primaryName << "' in bath coupling entry '"
+                << bathCouplingNames[i] << "'."
+                << exit(FatalError);
+        }
+
+        word linkedBath =
+            couplingDict.lookupOrDefault<word>
+            (
+                "bathDomain",
+                word::null
+            );
+
+        if (linkedBath.empty())
+        {
+            if (bathDomainNames.size() == 1)
+            {
+                linkedBath = bathDomainNames[0];
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "Bath coupling entry '" << bathCouplingNames[i]
+                    << "' must specify bathDomain when multiple bath domains "
+                    << "are configured."
+                    << exit(FatalError);
+            }
+        }
+
+        if (!bathDomainsByName.found(linkedBath))
+        {
+            FatalErrorInFunction
+                << "Bath coupling entry '" << bathCouplingNames[i]
+                << "' references bathDomain='" << linkedBath
+                << "', but no matching bath domain is configured."
+                << exit(FatalError);
+        }
+
+        BathDomain& bathDomain = *bathDomainsByName[linkedBath];
+
+        system.appendDownstreamCouplingModel
+        (
+            ElectroDomainCoupler::New
+            (
+                system.myocardium(),
+                bathDomain,
+                couplingDict
+            ).ptr()
         );
     }
 }

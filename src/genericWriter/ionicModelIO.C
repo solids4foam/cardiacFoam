@@ -547,10 +547,20 @@ namespace Foam
         }
 
         const scalarField& VmValues = Vm.primitiveField();
+        const label vmStateIndex =
+            ionicVariableCompatibility::findVmStateIndex(stateNames, nStates);
 
         forAll(STATES, cellI)
         {
             scalarField& S = STATES[cellI];
+
+            // Keep the ionic-model voltage state synchronized with the
+            // externally provided Vm field even when the caller only imports
+            // auxiliary manufactured states such as u1/u2/u3.
+            if (vmStateIndex >= 0)
+            {
+                S[vmStateIndex] = VmValues[cellI];
+            }
 
             forAll(inFields, k)
             {
@@ -749,7 +759,6 @@ namespace Foam
 
 
 } // End namespace Foam
-
 
 
 

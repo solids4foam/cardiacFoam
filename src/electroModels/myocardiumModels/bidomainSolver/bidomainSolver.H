@@ -36,11 +36,12 @@ class BidomainSolver
     public myocardiumSolver
 {
     volScalarField phiE_;
+    volScalarField phiI_;
     volTensorField Gi_;
     volTensorField Ge_;
     volTensorField GiPlusGe_;
-    label phiEReferenceCell_;
     scalar phiEReferenceValue_;
+    point phiEReferencePoint_;
 
     tmp<volTensorField> initialiseConductivityTensor
     (
@@ -48,6 +49,8 @@ class BidomainSolver
         const word& fieldName,
         const dictionary& dict
     ) const;
+
+    label referenceCell() const;
 
 public:
 
@@ -64,9 +67,24 @@ public:
         return &phiE_;
     }
 
+    virtual const volScalarField* phiIPtr() const override
+    {
+        return &phiI_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &Gi_;
+    }
+
+    virtual const volTensorField* intracellularConductivityPtr() const override
+    {
+        return &Gi_;
+    }
+
+    virtual const volTensorField* extracellularConductivityPtr() const override
+    {
+        return &Ge_;
     }
 
     virtual const volTensorField& explicitConductivityField() const override

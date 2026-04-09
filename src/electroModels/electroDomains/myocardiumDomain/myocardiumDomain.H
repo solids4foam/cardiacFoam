@@ -26,6 +26,7 @@ License
 #include "ionicModel.H"
 #include "electroVerificationModel.H"
 #include "dimVoltage.H"
+#include "fvMeshSubset.H"
 #include "stimulusIO.H"
 #include "myocardiumSolver.H"
 
@@ -40,6 +41,8 @@ class MyocardiumDomain
 {
 protected:
 
+    autoPtr<fvMeshSubset> meshSubsetPtr_;
+    const fvMesh& supportMesh_;
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
     volScalarField sourceField_;
@@ -95,16 +98,23 @@ public:
         electroVerificationModel* verificationModelPtr
     );
 
-    MyocardiumDomain
+    static label configuredCellCount
     (
         const fvMesh& mesh,
+        const dictionary& electroProperties
+    );
+
+    MyocardiumDomain
+    (
+        const fvMesh& supportMesh,
         const dictionary& electroProperties,
         PtrList<volScalarField>& outFields,
         const wordList& postProcessFieldNames,
         PtrList<volScalarField>& postProcessFields,
         ionicModel& ionicModel,
         electroVerificationModel* verificationModelPtr,
-        autoPtr<myocardiumSolver> diffusionSolverPtr
+        autoPtr<myocardiumSolver> diffusionSolverPtr,
+        autoPtr<fvMeshSubset> meshSubsetPtr
     );
 
     virtual ~MyocardiumDomain() = default;
@@ -112,6 +122,31 @@ public:
     virtual const fvMesh& mesh() const override
     {
         return Vm_.mesh();
+    }
+
+    virtual const fvMesh& baseMesh() const override
+    {
+        return supportMesh_;
+    }
+
+    virtual const labelUList* subsetFaceMapPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? &meshSubsetPtr_->faceMap()
+          : nullptr
+        );
+    }
+
+    virtual const labelUList* subsetCellMapPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? &meshSubsetPtr_->cellMap()
+          : nullptr
+        );
     }
 
     virtual const Time& time() const override
@@ -137,6 +172,16 @@ public:
     virtual const volTensorField* conductivityPtr() const override
     {
         return diffusionSolverPtr_->conductivityPtr();
+    }
+
+    virtual const volTensorField* intracellularConductivityPtr() const override
+    {
+        return diffusionSolverPtr_->intracellularConductivityPtr();
+    }
+
+    virtual const volTensorField* extracellularConductivityPtr() const override
+    {
+        return diffusionSolverPtr_->extracellularConductivityPtr();
     }
 
     virtual volScalarField& sourceField() override
@@ -179,6 +224,8 @@ public:
         scalar dt,
         pimpleControl* pimplePtr
     );
+
+    virtual void write() override;
 
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const;
 

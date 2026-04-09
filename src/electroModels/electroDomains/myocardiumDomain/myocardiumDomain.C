@@ -25,6 +25,81 @@ namespace Foam
 namespace
 {
 
+autoPtr<fvMeshSubset> createMyocardiumMeshSubset
+(
+    const fvMesh& supportMesh,
+    const dictionary& electroProperties
+)
+{
+    if (!electroProperties.found("cellZone"))
+    {
+        return autoPtr<fvMeshSubset>(nullptr);
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = supportMesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << supportMesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
+    subsetPtr->setCellSubset(supportMesh.cellZones()[zoneId]);
+    return subsetPtr;
+}
+
+
+const fvMesh& resolveMyocardiumMesh
+(
+    const fvMesh& supportMesh,
+    const autoPtr<fvMeshSubset>& subsetPtr
+)
+{
+    return
+    (
+        subsetPtr.valid() && subsetPtr->hasSubMesh()
+      ? subsetPtr->subMesh()
+      : supportMesh
+    );
+}
+
+
+void writeMappedCellField
+(
+    const volScalarField& subField,
+    const fvMesh& supportMesh,
+    const labelUList& cellMap
+)
+{
+    volScalarField fullField
+    (
+        IOobject
+        (
+            subField.name(),
+            supportMesh.time().timeName(),
+            supportMesh,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        supportMesh,
+        dimensionedScalar("zero", subField.dimensions(), 0.0),
+        "zeroGradient"
+    );
+
+    scalarField& fullValues = fullField.primitiveFieldRef();
+    const scalarField& subValues = subField.primitiveField();
+
+    forAll(cellMap, subCelli)
+    {
+        fullValues[cellMap[subCelli]] = subValues[subCelli];
+    }
+
+    fullField.write();
+}
 
 
 } // End anonymous namespace
@@ -32,7 +107,7 @@ namespace
 
 autoPtr<MyocardiumDomain> MyocardiumDomain::New
 (
-    const fvMesh& mesh,
+    const fvMesh& supportMesh,
     const dictionary& electroProperties,
     PtrList<volScalarField>& outFields,
     const wordList& postProcessFieldNames,
@@ -45,48 +120,90 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
     const word solverType =
         cn.endsWith("Coeffs") ? word(cn.substr(0, cn.size() - 6)) : cn;
 
+    autoPtr<fvMeshSubset> meshSubsetPtr
+    (
+        createMyocardiumMeshSubset(supportMesh, electroProperties)
+    );
+    const fvMesh& myocardiumMesh =
+        resolveMyocardiumMesh(supportMesh, meshSubsetPtr);
+
     return autoPtr<MyocardiumDomain>
     (
         new MyocardiumDomain
         (
-            mesh,
+            supportMesh,
             electroProperties,
             outFields,
             postProcessFieldNames,
             postProcessFields,
             ionicModel,
             verificationModelPtr,
-            myocardiumSolver::New(mesh, solverType, electroProperties)
+            myocardiumSolver::New
+            (
+                myocardiumMesh,
+                solverType,
+                electroProperties
+            ),
+            meshSubsetPtr
         )
     );
 }
 
 
-MyocardiumDomain::MyocardiumDomain
+label MyocardiumDomain::configuredCellCount
 (
     const fvMesh& mesh,
+    const dictionary& electroProperties
+)
+{
+    if (!electroProperties.found("cellZone"))
+    {
+        return mesh.nCells();
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << mesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    return mesh.cellZones()[zoneId].size();
+}
+
+
+MyocardiumDomain::MyocardiumDomain
+(
+    const fvMesh& supportMesh,
     const dictionary& electroProperties,
     PtrList<volScalarField>& outFields,
     const wordList& postProcessFieldNames,
     PtrList<volScalarField>& postProcessFields,
     ionicModel& ionicModel,
     electroVerificationModel* verificationModelPtr,
-    autoPtr<myocardiumSolver> diffusionSolverPtr
+    autoPtr<myocardiumSolver> diffusionSolverPtr,
+    autoPtr<fvMeshSubset> meshSubsetPtr
 )
 :
     electroDomainInterface(),
+    meshSubsetPtr_(meshSubsetPtr),
+    supportMesh_(supportMesh),
     diffusionSolverPtr_(diffusionSolverPtr),
     Vm_
     (
         IOobject
         (
             "Vm",
-            mesh.time().timeName(),
-            mesh,
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        mesh,
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
         "zeroGradient"
     ),
@@ -95,12 +212,12 @@ MyocardiumDomain::MyocardiumDomain
         IOobject
         (
             "externalStimulusCurrent",
-            mesh.time().timeName(),
-            mesh,
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        mesh,
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
         "zeroGradient"
     ),
@@ -109,12 +226,12 @@ MyocardiumDomain::MyocardiumDomain
         IOobject
         (
             "ionicCurrent",
-            mesh.time().timeName(),
-            mesh,
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh,
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
         "zeroGradient"
     ),
@@ -123,16 +240,20 @@ MyocardiumDomain::MyocardiumDomain
         IOobject
         (
             "activationTime",
-            mesh.time().timeName(),
-            mesh,
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        mesh,
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimTime, 0.0),
         "zeroGradient"
     ),
-    calculateActivationTime_(mesh.nCells(), true),
+    calculateActivationTime_
+    (
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).nCells(),
+        true
+    ),
     outFields_(outFields),
     preProcessFieldNames_(),
     preProcessFields_(),
@@ -155,6 +276,14 @@ MyocardiumDomain::MyocardiumDomain
         ) == "explicit"
     )
 {
+    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    {
+        Info<< "Constructed MyocardiumDomain on submesh '"
+            << mesh().name() << "' from cellZone '"
+            << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
+            << "'." << nl << endl;
+    }
+
     if (diffusionSolverPtr_->phiEPtr())
     {
         bindBidomainField(*const_cast<volScalarField*>(diffusionSolverPtr_->phiEPtr()));
@@ -430,6 +559,77 @@ void MyocardiumDomain::exportPostProcessFields()
     if (!postProcessFields_.empty())
     {
         ionicModel_.exportFields(postProcessFieldNames_, postProcessFields_);
+    }
+}
+
+
+void MyocardiumDomain::write()
+{
+    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    {
+        const labelUList& cellMap = meshSubsetPtr_->cellMap();
+
+        writeMappedCellField(Vm_, supportMesh_, cellMap);
+        writeMappedCellField(sourceField_, supportMesh_, cellMap);
+        writeMappedCellField(Iion_, supportMesh_, cellMap);
+        writeMappedCellField(activationTime_, supportMesh_, cellMap);
+
+        if (const volScalarField* phiEPtr = diffusionSolverPtr_->phiEPtr())
+        {
+            writeMappedCellField(*phiEPtr, supportMesh_, cellMap);
+        }
+
+        if (const volScalarField* phiIPtr = diffusionSolverPtr_->phiIPtr())
+        {
+            writeMappedCellField(*phiIPtr, supportMesh_, cellMap);
+        }
+
+        forAll(outFields_, i)
+        {
+            writeMappedCellField(outFields_[i], supportMesh_, cellMap);
+        }
+
+        forAll(preProcessFields_, i)
+        {
+            writeMappedCellField(preProcessFields_[i], supportMesh_, cellMap);
+        }
+
+        forAll(postProcessFields_, i)
+        {
+            writeMappedCellField(postProcessFields_[i], supportMesh_, cellMap);
+        }
+
+        return;
+    }
+
+    Vm_.write();
+    sourceField_.write();
+    Iion_.write();
+    activationTime_.write();
+
+    if (const volScalarField* phiEPtr = diffusionSolverPtr_->phiEPtr())
+    {
+        phiEPtr->write();
+    }
+
+    if (const volScalarField* phiIPtr = diffusionSolverPtr_->phiIPtr())
+    {
+        phiIPtr->write();
+    }
+
+    forAll(outFields_, i)
+    {
+        outFields_[i].write();
+    }
+
+    forAll(preProcessFields_, i)
+    {
+        preProcessFields_[i].write();
+    }
+
+    forAll(postProcessFields_, i)
+    {
+        postProcessFields_[i].write();
     }
 }
 

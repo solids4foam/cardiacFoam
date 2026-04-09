@@ -200,6 +200,20 @@ public:
       return nullptr;
   }
 
+  virtual const volTensorField *intracellularConductivityPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().intracellularConductivityPtr();
+      return nullptr;
+  }
+
+  virtual const volTensorField *extracellularConductivityPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().extracellularConductivityPtr();
+      return nullptr;
+  }
+
   //- Evolve physics over a time-step
   virtual bool evolve();
 
