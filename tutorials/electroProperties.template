@@ -67,6 +67,7 @@ monodomainSolverCoeffs
     // ── Ionic model ─────────────────────────────────────────────────────────
     // Valid types (registered in ionicModel RTST):
     //   AlievPanfilov | BuenoOrovio | TenTusscher | ORd | Mitchell | ...
+    //   monodomainFDAManufactured | bidomainFDAManufactured
     ionicModel    BuenoOrovio;
     tissue        epicardialCells;   // epicardialCells | endocardialCells | mCells | myocyte
 
@@ -110,8 +111,8 @@ monodomainSolverCoeffs
     // }
 
 
-    // ── Stimulus (monodomain volume stimulus) ───────────────────────────────
-    monodomainStimulus
+    // ── Stimulus (external volume stimulus) ──────────────────────────────────
+    externalStimulus
     {
         stimulusLocationMin  (0 0 5.5e-3);           // corner of stimulus box [m]
         stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
@@ -249,7 +250,7 @@ bidomainSolverCoeffs
     //     type  manufacturedFDABidomainVerifier;
     // }
 
-    monodomainStimulus
+    externalStimulus
     {
         stimulusLocationMin  (0 0 5.5e-3);
         stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);

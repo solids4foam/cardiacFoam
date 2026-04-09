@@ -128,7 +128,7 @@ class TestPostprocessingDriver(unittest.TestCase):
 
     def test_manufactured_postprocess_writes_csv_without_optional_plotting_deps(self) -> None:
         repo_root = _repo_root_from_test()
-        setup_root = repo_root / "tutorials" / "manufacturedFDA" / "setupManufacturedFDA"
+        setup_root = repo_root / "tutorials" / "manufacturedSolutions" / "monodomain" / "setupManufacturedFDA"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
@@ -171,7 +171,7 @@ class TestPostprocessingDriver(unittest.TestCase):
 
     def test_manufactured_postprocess_ignores_stale_outputs_not_in_manifest(self) -> None:
         repo_root = _repo_root_from_test()
-        setup_root = repo_root / "tutorials" / "manufacturedFDA" / "setupManufacturedFDA"
+        setup_root = repo_root / "tutorials" / "manufacturedSolutions" / "monodomain" / "setupManufacturedFDA"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)

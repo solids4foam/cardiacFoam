@@ -48,7 +48,7 @@ We compute: `S_mfg = ∂Vm/∂t − σ∇²Vm` analytically, then inject it as t
 
 Replace ionic currents with **manufactured stimulus patterns** while keeping PDE structure intact.
 
-**Example: tmanufacturedFDA**
+**Example: monodomainFDAManufactured**
 
 ```
 Iion_manufactured(x,y,z,t) = A × sin(ωx × x) × sin(ωy × y) × sin(ωt × t)
@@ -197,7 +197,7 @@ This catches bugs before they spread to users.
 monodomainSolverCoeffs
 {
     // Replace actual ionic model with test model
-    ionicModel  tmanufacturedFDA;    // Manufactured stimulus, no ionic dynamics
+    ionicModel  monodomainFDAManufactured;    // Manufactured stimulus, no ionic dynamics
     tissue      myocyte;              // Tissue type (usually ignored for MMS)
 
     // Conductivity (choose something reasonable)
@@ -213,7 +213,7 @@ monodomainSolverCoeffs
 
 ```cpp
 // In singleCellSolver:
-ionicModel  tmanufacturedFDA;
+ionicModel  monodomainFDAManufactured;
 
 singleCellStimulus
 {
@@ -288,7 +288,7 @@ public:
 ### Running a Verification Test
 
 ```bash
-cd tutorials/manufacturedFDA/
+cd tutorials/manufacturedSolutions/monodomainPseudoECG/
 python prepare_simulation_data.py --refine 4  # Create 4 mesh levels
 ./Allwmake  # Compile with verification models enabled
 
@@ -362,4 +362,3 @@ Verification models are the **correctness guardrails** of cardiacFoam:
 | **Isolate physics** | Test parts independently | Monodomain (no coupling), ECG (passive) |
 
 They ensure that numerical results are **trustworthy** before clinical deployment or publication.
-

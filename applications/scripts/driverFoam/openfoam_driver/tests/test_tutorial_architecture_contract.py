@@ -10,6 +10,7 @@ from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.registry import list_tutorials, load_tutorial_spec
 from openfoam_driver.specs.tutorials import (
     manufactured_fda,
+    manufactured_fda_bidomain,
     niederer_2012,
     restitution_curves,
     single_cell,
@@ -33,6 +34,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             "singleCell": single_cell,
             "niederer2012": niederer_2012,
             "manufacturedFDA": manufactured_fda,
+            "manufacturedFDABidomain": manufactured_fda_bidomain,
             "restitutionCurves": restitution_curves,
         }
 
@@ -45,7 +47,13 @@ class TestTutorialArchitectureContract(unittest.TestCase):
     def test_registry_contains_expected_tutorials(self) -> None:
         self.assertEqual(
             set(list_tutorials()),
-            {"singleCell", "niederer2012", "manufacturedFDA", "restitutionCurves"},
+            {
+                "singleCell",
+                "niederer2012",
+                "manufacturedFDA",
+                "manufacturedFDABidomain",
+                "restitutionCurves",
+            },
         )
 
     def test_all_tutorial_specs_load(self) -> None:
@@ -60,7 +68,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 self.assertIn("notes", spec.metadata)
                 self.assertIn("run_script_relpath", spec.metadata)
                 self.assertIn("postprocess_strict_artifacts", spec.metadata)
-                self.assertEqual(spec.case_root.parent, self.tutorials_root)
+                self.assertIn(self.tutorials_root, spec.case_root.parents)
                 self.assertEqual(spec.setup_root.parent, spec.case_root)
                 self.assertEqual(spec.output_dir.parent, spec.case_root)
 

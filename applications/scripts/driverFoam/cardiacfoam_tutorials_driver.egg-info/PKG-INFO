@@ -161,7 +161,7 @@ Remaining setup-folder dependencies are postprocess/export assets:
 
 - `singleCellinteractivePlots.py`
 
-### `manufacturedFDA/setupManufacturedFDA`
+### `manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA`
 
 - `post_processing_manufactured.py`
 

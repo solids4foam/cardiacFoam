@@ -59,7 +59,8 @@ Compiled in `libionicModels`:
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`
-- `tmanufacturedFDA` (manufactured-solution verification model)
+- `monodomainFDAManufactured` (manufactured monodomain verification model)
+- `bidomainFDAManufactured` (manufactured bidomain verification model)
 
 ## Tutorial and automation architecture
 
@@ -72,6 +73,7 @@ Current tutorial specs in the Python driver:
 - `singleCell`
 - `niederer2012`
 - `manufacturedFDA`
+- `manufacturedFDABidomain`
 - `restitutionCurves`
 
 The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.

@@ -48,14 +48,14 @@ bool hasAnySingleCellStimulusKey(const dictionary& dict)
      || dict.found("nstim2");
 }
 
-const dictionary* monodomainStimulusDict(const dictionary& dict)
+const dictionary* externalStimulusDict(const dictionary& dict)
 {
-    if (!dict.found("monodomainStimulus"))
+    if (!dict.found("externalStimulus"))
     {
         return nullptr;
     }
 
-    return &dict.subDict("monodomainStimulus");
+    return &dict.subDict("externalStimulus");
 }
 
 void readMonodomainStimulusBoxes
@@ -302,14 +302,14 @@ bool stimulusIO::hasActiveStimulus(const StimulusProtocol& stim)
     return hasS1 || hasS2;
 }
 
-MonodomainStimulusProtocol stimulusIO::loadMonodomainStimulusProtocol
+ExternalStimulusProtocol stimulusIO::loadExternalStimulusProtocol
 (
     const dictionary& dict
 )
 {
-    MonodomainStimulusProtocol stim;
+    ExternalStimulusProtocol stim;
 
-    const dictionary* stimDictPtr = monodomainStimulusDict(dict);
+    const dictionary* stimDictPtr = externalStimulusDict(dict);
     if (!stimDictPtr)
     {
         return stim;

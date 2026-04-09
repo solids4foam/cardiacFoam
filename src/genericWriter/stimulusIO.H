@@ -52,7 +52,7 @@ public:
     {}
 };
 
-class MonodomainStimulusProtocol
+class ExternalStimulusProtocol
 {
 public:
     List<boundBox> boxes;
@@ -60,7 +60,7 @@ public:
     List<scalar> durations;
     List<scalar> intensities;
 
-    MonodomainStimulusProtocol()
+    ExternalStimulusProtocol()
     :
         boxes(0),
         startTimes(0),
@@ -115,9 +115,9 @@ public:
     // Return true when any S1/S2 pacing branch can generate a non-zero pulse.
     static bool hasActiveStimulus(const StimulusProtocol& stim);
 
-    // Parse monodomain spatial stimulus entries from "monodomainStimulus".
+    // Parse external spatial stimulus entries from "externalStimulus".
     // If the sub-dictionary is absent, returns an empty protocol.
-    static MonodomainStimulusProtocol loadMonodomainStimulusProtocol
+    static ExternalStimulusProtocol loadExternalStimulusProtocol
     (
         const dictionary& dict
     );

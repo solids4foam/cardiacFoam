@@ -1,9 +1,0 @@
-{
-  "case_dir_name": "manufacturedFDA",
-  "setup_dir_name": "setupManufacturedFDA",
-  "postprocess_strict_artifacts": false,
-  "ecg_enabled": true,
-  "dimensions": ["1D", "2D", "3D"],
-  "number_cells": [10, 20, 40, 80],
-  "dt_values": [0.00892857, 0.00224215, 0.000560538, 0.000140174]
-}

@@ -19,6 +19,18 @@ allCaseSet=(
     "NiedererEtAl2012"
 )
 
+resolveTutorialDir()
+{
+    case "$1" in
+        manufacturedFDA)
+            echo "manufacturedSolutions/monodomainPseudoECG"
+            ;;
+        *)
+            echo "$1"
+            ;;
+    esac
+}
+
 # Keep the default CI run fast
 smokeCaseSet=(
     "singleCell"
@@ -36,14 +48,16 @@ runTutorial()
     echo "Running ${tutorialName} (${runMode})"
     echo "----------------------------------------------------------------------"
 
-    if [ ! -d "${tutorialName}" ]
+    tutorialDir="$(resolveTutorialDir "${tutorialName}")"
+
+    if [ ! -d "${tutorialDir}" ]
     then
-        echo "ERROR: tutorial directory not found: ${tutorialName}"
+        echo "ERROR: tutorial directory not found: ${tutorialDir}"
         return 1
     fi
 
     (
-        cd "${tutorialName}" || exit 1
+        cd "${tutorialDir}" || exit 1
 
         if [ -x "./Allclean" ]
         then
@@ -69,7 +83,7 @@ runTutorial()
     runStatus=$?
     if [ "${runStatus}" -ne 0 ]
     then
-        echo "FAILED: ${tutorialName} (see ${tutorialName}/${runLog})"
+        echo "FAILED: ${tutorialName} (see ${tutorialDir}/${runLog})"
         return 1
     fi
 
@@ -94,10 +108,11 @@ cleanTutorials()
 {
     for tutorialName in "${cleanupCaseSet[@]:-}"
     do
-        if [ -x "${tutorialName}/Allclean" ]
+        tutorialDir="$(resolveTutorialDir "${tutorialName}")"
+        if [ -x "${tutorialDir}/Allclean" ]
         then
             (
-                cd "${tutorialName}" || exit 1
+                cd "${tutorialDir}" || exit 1
                 ./Allclean > /dev/null 2>&1 || true
             )
             echo "CLEANED: ${tutorialName}"

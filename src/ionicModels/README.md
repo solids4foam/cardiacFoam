@@ -10,7 +10,8 @@ Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 ```text
 src/ionicModels/
 ├── ionicModel/            # Base class, selector utilities, runtime selection
-├── tmanufacturedFDA/      # Manufactured-solution verification model
+├── monodomainFDAManufactured/  # Manufactured-solution verification model
+├── bidomainFDAManufactured/    # Manufactured-solution verification model
 ├── AlievPanfilov/
 ├── BuenoOrovio/
 ├── Courtemanche/
@@ -102,11 +103,11 @@ Current `Make/files` entries:
 - `Grandi`
 - `ORd`
 - `Stewart`
-- `TestAlievPanfilovNash`
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`
-- `tmanufacturedFDA`
+- `monodomainFDAManufactured`
+- `bidomainFDAManufactured`
 
 ## Build target
 

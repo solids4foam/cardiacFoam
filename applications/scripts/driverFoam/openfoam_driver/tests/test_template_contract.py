@@ -219,7 +219,7 @@ class TestTutorialElectroPropertiesAudit(unittest.TestCase):
         expected = {
             "tutorials/NiedererEtAl2012/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/NiedererEtAl2012/referenceTest/constant/electroProperties": "monodomainSolverCoeffs",
-            "tutorials/manufacturedFDA/constant/electroProperties": "monodomainSolverCoeffs",
+            "tutorials/manufacturedSolutions/monodomainPseudoECG/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/restitutionCurves_s1s2Protocol/constant/electroProperties": "singleCellSolverCoeffs",
             "tutorials/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
             "tutorials/singleCell/referenceTest/constant/electroProperties": "singleCellSolverCoeffs",

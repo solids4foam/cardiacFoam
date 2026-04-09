@@ -264,7 +264,7 @@ MyocardiumDomain::MyocardiumDomain
     electroProperties_(electroProperties),
     chi_("chi", dimArea/dimVolume, electroProperties_),
     Cm_("cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties_),
-    monodomainStimulus_(stimulusIO::loadMonodomainStimulusProtocol
+    externalStimulus_(stimulusIO::loadExternalStimulusProtocol
     (
         electroProperties_
     )),
@@ -300,7 +300,7 @@ MyocardiumDomain::MyocardiumDomain
 void MyocardiumDomain::updateExternalStimulusCurrent
 (
     volScalarField& externalStimulusCurrent,
-    const MonodomainStimulusProtocol& externalStimulus,
+    const ExternalStimulusProtocol& externalStimulus,
     scalar t0
 ) const
 {
@@ -489,7 +489,7 @@ void MyocardiumDomain::advance
     pimpleControl* pimplePtr
 )
 {
-    updateExternalStimulusCurrent(sourceField_, monodomainStimulus_, t0);
+    updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
 
     ionicModel_.solveODE(t0, dt, Vm_, Iion_);
     Iion_.correctBoundaryConditions();

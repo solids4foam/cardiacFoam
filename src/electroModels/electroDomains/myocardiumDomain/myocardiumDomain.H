@@ -59,13 +59,13 @@ protected:
     const dictionary& electroProperties_;
     const dimensionedScalar chi_;
     const dimensionedScalar Cm_;
-    MonodomainStimulusProtocol monodomainStimulus_;
+    ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
 
     void updateExternalStimulusCurrent
     (
         volScalarField& externalStimulusCurrent,
-        const MonodomainStimulusProtocol& externalStimulus,
+        const ExternalStimulusProtocol& externalStimulus,
         scalar t0
     ) const;
 
