@@ -17,5 +17,5 @@ Current split:
 - Legacy compatibility wrappers in `electroModels` were removed; consumers
   should include `monodomainVerification/manufacturedFDAReference.H` directly.
 
-The runtime-selected `tmanufacturedFDAPrePostProcessor` in
+The runtime-selected manufactured pre/post-processor adapter in
 `modelPrePostProcessors/` is now only an adapter for the monodomain verifier.

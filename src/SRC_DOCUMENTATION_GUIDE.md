@@ -149,7 +149,7 @@ Ionic (Vm, Cai) → Active Tension Model (σ_active) → Solid Mechanics (u)
 
 ### "...validate the solver"
 1. Read **[verificationModels/VERIFICATION_MODELS_ARCHITECTURE.md](./verificationModels/VERIFICATION_MODELS_ARCHITECTURE.md)**
-2. Run `cd tutorials/manufacturedFDA/` and follow instructions
+2. Run `cd tutorials/manufacturedSolutions/monodomainPseudoECG/` and follow instructions
 3. Measure convergence order (should match theory)
 
 ### "...add electro-mechanical coupling"

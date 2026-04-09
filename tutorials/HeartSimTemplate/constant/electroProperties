@@ -40,7 +40,7 @@ monodomainSolverCoeffs
         ionic { export (Vm {{<myocardiumIonicModel>_EXPORTS }}); debug (Vm Iion); } 
     }
 
-    monodomainStimulus
+    externalStimulus
     {
         stimulusLocationMin  (0 0 5.5e-3);
         stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);

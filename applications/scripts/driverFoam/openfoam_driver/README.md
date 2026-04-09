@@ -39,6 +39,7 @@ This keeps all tutorial workflows on one engine while allowing per-tutorial swee
 - `singleCell`
 - `niederer2012`
 - `manufacturedFDA`
+- `manufacturedFDABidomain`
 - `restitutionCurves`
 
 Aliases are handled in `core/runtime/registry.py`.
@@ -62,6 +63,7 @@ Run examples:
 # installed entrypoints
 foamctl all --tutorial niederer2012
 foamctl sim --tutorial manufacturedFDA --dry-run
+foamctl sim --tutorial manufacturedFDABidomain --dry-run
 driverFoam sim --tutorial singleCell   # compatibility alias
 
 # module invocation
@@ -230,7 +232,7 @@ Each `results` item currently reports:
 Expected per tutorial setup assets:
 
 - `singleCell/setupSingleCell/singleCellinteractivePlots.py`
-- `manufacturedFDA/setupManufacturedFDA/post_processing_manufactured.py`
+- `manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/post_processing_manufactured.py`
 - `NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/{cache_postProcessing.py,line_postProcessing.py,points_postProcessing.py}`
 - `restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing_restCurves.py`
 

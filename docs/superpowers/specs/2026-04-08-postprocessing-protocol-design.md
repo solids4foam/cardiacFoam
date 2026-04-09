@@ -248,7 +248,7 @@ Location: `setup<Tutorial>/postProcessing/table_summary.py`
 ```
 tutorials/NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/table_summary.py
 tutorials/singleCell/setupSingleCell/postProcessing/table_summary.py
-tutorials/manufacturedFDA/setupManufacturedFDA/postProcessing/table_summary.py
+tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/postProcessing/table_summary.py
 tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing/table_summary.py
 ```
 

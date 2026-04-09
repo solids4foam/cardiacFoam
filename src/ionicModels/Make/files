@@ -1,8 +1,8 @@
 ionicModel/ionicModel.C
 ionicModel/ionicSelector.C
 
-tmanufacturedFDA/tmanufacturedFDA.C
-tmanufacturedFDABidomain/tmanufacturedFDABidomain.C
+monodomainFDAManufactured/monodomainFDAManufactured.C
+bidomainFDAManufactured/bidomainFDAManufactured.C
 
 TNNP/TNNP.C
 Gaur/Gaur.C

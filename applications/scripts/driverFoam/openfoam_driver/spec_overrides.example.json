@@ -1,6 +1,16 @@
 {
   "manufacturedFDA": {
-    "case_dir_name": "manufacturedFDA",
+    "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
+    "postprocess_strict_artifacts": false,
+    "dimensions": ["1D"],
+    "solver_types": ["implicit"],
+    "number_cells": [10, 20, 40, 80],
+    "dt_values": [0.00892857, 0.00224215, 0.000560538, 0.000140174],
+    "piecewise_sweep": true
+  },
+  "manufacturedFDABidomain": {
+    "case_dir_name": "manufacturedSolutions/bidomain",
+    "setup_dir_name": "setupManufacturedFDA",
     "postprocess_strict_artifacts": false,
     "dimensions": ["1D"],
     "solver_types": ["implicit"],
