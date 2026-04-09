@@ -19,8 +19,10 @@ License
 #include "bidomainSolver.H"
 
 #include "IOmanip.H"
+#include "PstreamReduceOps.H"
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
+#include "polyMesh.H"
 
 namespace Foam
 {
@@ -49,6 +51,20 @@ BidomainSolver::BidomainSolver
         dimensionedScalar("phiE", dimVoltage, 0.0),
         "zeroGradient"
     ),
+    phiI_
+    (
+        IOobject
+        (
+            "phiI",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("phiI", dimVoltage, 0.0),
+        "zeroGradient"
+    ),
     Gi_(initialiseConductivityTensor
     (
         mesh,
@@ -73,15 +89,38 @@ BidomainSolver::BidomainSolver
         ),
         Gi_ + Ge_
     ),
-    phiEReferenceCell_
-    (
-        electroProperties.lookupOrDefault<label>("phiEReferenceCell", 0)
-    ),
     phiEReferenceValue_
     (
         electroProperties.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)
-    )
-{}
+    ),
+    phiEReferencePoint_(electroProperties.get<point>("phiERefPoint"))
+{
+}
+
+
+label BidomainSolver::referenceCell() const
+{
+    const label refCell = phiE_.mesh().findCell(phiEReferencePoint_);
+
+    if (Pstream::parRun())
+    {
+        const label localOwnsReference = refCell >= 0 ? 1 : 0;
+        label ownerCount = localOwnsReference;
+
+        reduce(ownerCount, sumOp<label>());
+
+        if (ownerCount != 1)
+        {
+            FatalErrorInFunction
+                << "phiERefPoint " << phiEReferencePoint_
+                << " must be owned by exactly one processor in parallel, but "
+                << ownerCount << " processors reported a containing cell."
+                << exit(FatalError);
+        }
+    }
+
+    return refCell;
+}
 
 tmp<volTensorField> BidomainSolver::initialiseConductivityTensor
 (
@@ -143,13 +182,17 @@ void BidomainSolver::solveDiffusionExplicit
 )
 {
     (void)dt;
+    const label refCell = referenceCell();
 
     fvScalarMatrix phiEqn
     (
         fvm::laplacian(GiPlusGe_, phiE_)
      == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
     );
-    phiEqn.setReference(phiEReferenceCell_, phiEReferenceValue_, true);
+    if (refCell >= 0)
+    {
+        phiEqn.setReference(refCell, phiEReferenceValue_, true);
+    }
     solve(phiEqn);
 
     solve
@@ -159,6 +202,8 @@ void BidomainSolver::solveDiffusionExplicit
        - domain.chi()*domain.Cm()*domain.Iion()
        + domain.sourceField()
     );
+
+    phiI_ = domain.Vm() + phiE_;
 }
 
 
@@ -170,6 +215,7 @@ void BidomainSolver::solveDiffusionImplicit
 )
 {
     (void)dt;
+    const label refCell = referenceCell();
 
     while (pimple.loop())
     {
@@ -178,7 +224,10 @@ void BidomainSolver::solveDiffusionImplicit
             fvm::laplacian(GiPlusGe_, phiE_)
          == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
         );
-        phiEqn.setReference(phiEReferenceCell_, phiEReferenceValue_, true);
+        if (refCell >= 0)
+        {
+            phiEqn.setReference(refCell, phiEReferenceValue_, true);
+        }
         solve(phiEqn);
 
         solve
@@ -190,6 +239,8 @@ void BidomainSolver::solveDiffusionImplicit
             + domain.sourceField()
         );
     }
+
+    phiI_ = domain.Vm() + phiE_;
 }
 
 } // End namespace Foam

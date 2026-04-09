@@ -66,7 +66,22 @@ public:
         return nullptr;
     }
 
+    virtual const volScalarField* phiIPtr() const
+    {
+        return nullptr;
+    }
+
     virtual const volTensorField* conductivityPtr() const = 0;
+
+    virtual const volTensorField* intracellularConductivityPtr() const
+    {
+        return conductivityPtr();
+    }
+
+    virtual const volTensorField* extracellularConductivityPtr() const
+    {
+        return conductivityPtr();
+    }
 
     virtual const volTensorField& explicitConductivityField() const = 0;
 

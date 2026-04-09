@@ -98,7 +98,7 @@ Foam::electroActivationFoam::electroActivationFoam
         ionicModel::New
         (
             electroProperties(),
-            mesh().nCells(),
+            MyocardiumDomain::configuredCellCount(mesh(), electroProperties()),
             runTime.deltaTValue()
         )
     ),

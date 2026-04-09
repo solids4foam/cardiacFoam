@@ -203,6 +203,11 @@ Foam::pimpleControl& Foam::electroModel::pimple()
 void Foam::electroModel::writeFields(const Time& runTime)
 {
     physicsModel::writeFields(runTime);
+
+    if (domainSystem_.hasMyocardium())
+    {
+        domainSystem_.myocardium().write();
+    }
 }
 
 
@@ -211,7 +216,7 @@ void Foam::electroModel::configureECGSystem()
     electrophysicsSystemBuilder::configureECGDomain
     (
         domainSystem_,
-        *this,
+        domainSystem_.myocardium(),
         electroProperties_
     );
 }

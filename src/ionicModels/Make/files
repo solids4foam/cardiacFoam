@@ -2,6 +2,7 @@ ionicModel/ionicModel.C
 ionicModel/ionicSelector.C
 
 tmanufacturedFDA/tmanufacturedFDA.C
+tmanufacturedFDABidomain/tmanufacturedFDABidomain.C
 
 TNNP/TNNP.C
 Gaur/Gaur.C
@@ -14,8 +15,6 @@ ORd/ORd.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
 AlievPanfilov/AlievPanfilov.C
-
-
 
 
 /*PerisYague/PerisYague.C*/
