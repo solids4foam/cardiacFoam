@@ -65,6 +65,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("implicit", "explicit"),
+            required=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ionicModel",
@@ -89,6 +90,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "monodomainFDAManufactured",
                 "bidomainFDAManufactured",
             ),
+            required=True,
+            constraints=("Not applicable when myocardiumSolver=eikonalSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.tissue",
@@ -99,6 +102,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+            required=True,
+            constraints=("Not applicable when myocardiumSolver=eikonalSolver or ionicModel is a manufactured model.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
@@ -112,6 +117,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("staggeredElectrophysicsAdvanceScheme", "pimpleStaggeredElectrophysicsAdvanceScheme"),
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.dimension",
@@ -120,6 +126,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("1D", "2D", "3D"),
+            required=False,
+            constraints=("Only applicable for manufactured ionic models (monodomainFDAManufactured, bidomainFDAManufactured).",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.writeAfterTime",
@@ -127,6 +135,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/ionicModelIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.utilities",
@@ -134,6 +143,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
             value_kind="boolean",
             ui_control="checkbox",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.initSampleCell",
@@ -141,6 +151,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
             value_kind="integer",
             ui_control="number",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.outputVariables.ionic.export",
@@ -148,6 +159,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
             value_kind="word_list",
             ui_control="token_list",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug",
@@ -155,6 +167,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
             value_kind="word_list",
             ui_control="token_list",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.outputVariables.activeTension.export",
@@ -162,6 +175,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/activeTensionModels/activeTensionModel/activeTensionModel.H",),
             value_kind="word_list",
             ui_control="token_list",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.outputVariables.activeTension.debug",
@@ -169,6 +183,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/activeTensionModels/activeTensionModel/activeTensionModel.H",),
             value_kind="word_list",
             ui_control="token_list",
+            required=False,
         ),
     ),
     "ode_solver_passthrough": (
@@ -188,6 +203,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("RKF45",),
+            required=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.initialODEStep",
@@ -196,6 +212,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Pass-through key; commonly used in repository tutorials.",
             value_kind="scalar",
             ui_control="number",
+            required=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.maxSteps",
@@ -204,6 +221,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Pass-through key; commonly used in repository tutorials.",
             value_kind="integer",
             ui_control="number",
+            required=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.absTol",
@@ -212,6 +230,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Pass-through key; commonly used in repository tutorials.",
             value_kind="scalar",
             ui_control="number",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.relTol",
@@ -220,6 +239,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Pass-through key; commonly used in repository tutorials.",
             value_kind="scalar",
             ui_control="number",
+            required=False,
         ),
     ),
     "single_cell_stimulus": (
@@ -229,6 +249,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
@@ -236,6 +258,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_duration",
@@ -243,6 +267,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude",
@@ -250,6 +276,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim1",
@@ -257,6 +285,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="integer",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S2",
@@ -264,6 +294,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim2",
@@ -271,6 +303,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="integer",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=singleCellSolver.",),
         ),
     ),
     "monodomain": (
@@ -284,6 +318,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
             value_kind="dimensioned_tensor_literal",
             ui_control="textarea",
+            required=True,
+            constraints=("Required for monodomainSolver and eikonalSolver; not used by singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.chi",
@@ -294,6 +330,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.cm",
@@ -304,6 +342,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.infoFrequency",
@@ -311,6 +351,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/monodomainSolver/monoDomainSolver.C",),
             value_kind="integer",
             ui_control="number",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.allowIonicStimulusInMonodomain",
@@ -318,6 +359,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/monodomainSolver/monoDomainSolver.C",),
             value_kind="boolean",
             ui_control="checkbox",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMin",
@@ -325,6 +367,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="vector3",
             ui_control="vector3",
+            required=False,
+            constraints=("Mutually exclusive with stimulusLocationMinList.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMax",
@@ -332,6 +376,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="vector3",
             ui_control="vector3",
+            required=False,
+            constraints=("Mutually exclusive with stimulusLocationMaxList.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMinList",
@@ -339,6 +385,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="vector3_list",
             ui_control="textarea",
+            required=False,
+            constraints=("Mutually exclusive with stimulusLocationMin.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMaxList",
@@ -346,6 +394,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="vector3_list",
             ui_control="textarea",
+            required=False,
+            constraints=("Mutually exclusive with stimulusLocationMax.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTime",
@@ -353,6 +403,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar",
             ui_control="number",
+            required=False,
+            constraints=("Mutually exclusive with stimulusStartTimeList.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTimeList",
@@ -360,6 +412,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar_list",
             ui_control="textarea",
+            required=False,
+            constraints=("Mutually exclusive with stimulusStartTime.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDuration",
@@ -368,6 +422,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="DimensionedScalar-style values are best passed as a full literal string.",
             value_kind="dimensioned_scalar_literal",
             ui_control="text",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDurationList",
@@ -375,6 +430,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar_list",
             ui_control="textarea",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
@@ -383,6 +439,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="DimensionedScalar-style values are best passed as a full literal string.",
             value_kind="dimensioned_scalar_literal",
             ui_control="text",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensityList",
@@ -390,6 +447,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/genericWriter/stimulusIO.C",),
             value_kind="scalar_list",
             ui_control="textarea",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.solverHookFields.preProcess",
@@ -397,6 +455,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.C",),
             value_kind="word_list",
             ui_control="token_list",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.verificationModel.type",
@@ -412,6 +471,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "manufacturedFDAMonodomainVerifier",
                 "manufacturedFDABidomainVerifier",
             ),
+            required=False,
         ),
     ),
     "eikonal_diffusion": (
@@ -421,6 +481,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",),
             value_kind="boolean",
             ui_control="checkbox",
+            required=True,
+            constraints=("Required when myocardiumSolver=eikonalSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.stimulusLocationMin",
@@ -428,6 +490,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",),
             value_kind="vector3",
             ui_control="vector3",
+            required=True,
+            constraints=("Required when myocardiumSolver=eikonalSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.stimulusLocationMax",
@@ -435,6 +499,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",),
             value_kind="vector3",
             ui_control="vector3",
+            required=True,
+            constraints=("Required when myocardiumSolver=eikonalSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.c0",
@@ -442,6 +508,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C",),
             value_kind="scalar",
             ui_control="number",
+            required=True,
+            constraints=("Required when myocardiumSolver=eikonalSolver.",),
         ),
     ),
     "ecg": (
@@ -455,6 +523,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("pseudoECG",),
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.enabled",
@@ -463,6 +533,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="boolean",
             ui_control="checkbox",
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
@@ -472,6 +544,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("1D", "2D", "3D"),
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.referenceQuadratureOrder",
@@ -480,6 +554,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="integer",
             ui_control="number",
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.checkQuadratureOrders",
@@ -488,6 +564,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="label_list",
             ui_control="textarea",
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>",
@@ -497,6 +575,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             ui_control="vector3",
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
         ),
     ),
     "bidomain": (
@@ -507,6 +587,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
             value_kind="dimensioned_tensor_literal",
             ui_control="textarea",
+            required=True,
+            constraints=("Required for bidomainSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductivityExtracellular",
@@ -515,6 +597,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             notes="Tensor entries are best overridden with a full OpenFOAM literal string.",
             value_kind="dimensioned_tensor_literal",
             ui_control="textarea",
+            required=True,
+            constraints=("Required for bidomainSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceCell",
@@ -522,6 +606,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="integer",
             ui_control="number",
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceValue",
@@ -529,6 +614,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="scalar",
             ui_control="number",
+            required=False,
         ),
     ),
     "conduction_system": (
@@ -545,6 +631,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("purkinjeNetworkModel",),
             dynamic_path=True,
+            required=False,
+            constraints=("Only applicable when conductionNetworkDomains block is present.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.graphFile",
@@ -559,6 +647,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word",
             ui_control="text",
             dynamic_path=True,
+            required=True,
+            constraints=("Required within a conductionNetworkDomains entry.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootNode",
@@ -572,6 +662,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="label",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
@@ -588,6 +679,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("monodomain1DSolver", "eikonalSolver"),
             dynamic_path=True,
+            required=False,
+            constraints=("monodomain1DSolver valid only with monodomainSolver myocardium; eikonalSolver valid only with eikonalSolver myocardium.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.ionicModel",
@@ -603,6 +696,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("AlievPanfilov", "BuenoOrovio", "TenTusscher", "ORd", "Mitchell"),
             dynamic_path=True,
+            required=False,
+            constraints=("Required when conductionSystemSolver=monodomain1DSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.tissue",
@@ -618,6 +713,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("epicardialCells", "endocardialCells", "mCells", "myocyte"),
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjNodes",
@@ -631,6 +727,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="label_list",
             ui_control="textarea",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjLocations",
@@ -643,6 +740,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="point_list",
             ui_control="textarea",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjRadius",
@@ -656,6 +754,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.startTime",
@@ -666,6 +765,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.duration",
@@ -676,6 +776,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.intensity",
@@ -686,6 +787,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.chi",
@@ -696,6 +798,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.cm",
@@ -706,6 +809,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.vm1DRest",
@@ -719,6 +823,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.export",
@@ -733,6 +838,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word_list",
             ui_control="token_list",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.debug",
@@ -747,6 +853,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word_list",
             ui_control="token_list",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
@@ -761,6 +868,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
             dynamic_path=True,
+            required=False,
+            constraints=("reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
@@ -774,6 +883,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
@@ -787,6 +897,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
@@ -805,6 +916,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("unidirectional", "bidirectional"),
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
@@ -818,6 +930,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word",
             ui_control="text",
             dynamic_path=True,
+            required=True,
+            constraints=("Must match a key in conductionNetworkDomains.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
@@ -837,6 +951,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "staggeredElectrophysicsAdvanceScheme",
                 "pimpleStaggeredElectrophysicsAdvanceScheme",
             ),
+            required=False,
         ),
     ),
     "active_tension": (
@@ -849,6 +964,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("GoktepeKuhl", "NashPanfilov"),
+            required=False,
+            constraints=("Only applicable when electro-mechanical coupling is configured.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",
@@ -860,6 +977,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("Vm",),
+            required=False,
+            constraints=("Only applicable when activeTensionModel is configured.",),
         ),
     ),
     "domain_couplings": (
@@ -877,6 +996,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
             dynamic_path=True,
+            required=False,
+            constraints=("reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
@@ -890,6 +1011,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word",
             ui_control="text",
             dynamic_path=True,
+            required=True,
+            constraints=("Must match a key in conductionNetworkDomains.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
@@ -904,6 +1027,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
@@ -917,6 +1041,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             dynamic_path=True,
+            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
@@ -931,6 +1056,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="select",
             enum_values=("unidirectional", "bidirectional"),
             dynamic_path=True,
+            required=False,
         ),
     ),
 }
