@@ -12,10 +12,21 @@ and the static Python catalog.
 from __future__ import annotations
 
 import argparse
-import pathlib
 import re
 import sys
 from pathlib import Path
+
+# Setup sys.path for importing catalog at module level
+_catalog_dir = str(Path(__file__).parent.parent)
+if _catalog_dir not in sys.path:
+    sys.path.insert(0, _catalog_dir)
+from ionic_model_catalog import IONIC_MODEL_CATALOG
+
+
+def _fmt_tuple(items: list[str]) -> str:
+    """Format a list of items as a tuple string, with trailing comma if single element."""
+    inner = ", ".join(f'"{s}"' for s in items)
+    return inner + ("," if len(items) == 1 else "")
 
 
 def parse_report_text(text: str) -> dict[str, list[str]]:
@@ -38,9 +49,8 @@ def parse_report_text(text: str) -> dict[str, list[str]]:
 
     # Parse constants section
     constants_section = re.search(
-        r"Ionic constants\s*\(\d+\).*?\n((?:\s+constants\s*\[\d+\].*\n)*)",
-        text,
-        re.DOTALL
+        r"Ionic constants\s*\(\d+\)[^\n]*\n((?:[ \t]+constants[ \t]*\[\d+\][^\n]*\n)*)",
+        text
     )
     if constants_section:
         const_lines = constants_section.group(1)
@@ -51,9 +61,8 @@ def parse_report_text(text: str) -> dict[str, list[str]]:
 
     # Parse states section
     states_section = re.search(
-        r"Ionic states\s*\(\d+\).*?\n((?:\s+states\s*\[\d+\].*\n)*)",
-        text,
-        re.DOTALL
+        r"Ionic states\s*\(\d+\)[^\n]*\n((?:[ \t]+states[ \t]*\[\d+\][^\n]*\n)*)",
+        text
     )
     if states_section:
         state_lines = states_section.group(1)
@@ -64,9 +73,8 @@ def parse_report_text(text: str) -> dict[str, list[str]]:
 
     # Parse algebraic section
     algebraic_section = re.search(
-        r"Ionic algebraic\s*\(\d+\).*?\n((?:\s+algebraic\s*\[\d+\].*\n)*)",
-        text,
-        re.DOTALL
+        r"Ionic algebraic\s*\(\d+\)[^\n]*\n((?:[ \t]+algebraic[ \t]*\[\d+\][^\n]*\n)*)",
+        text
     )
     if algebraic_section:
         alg_lines = algebraic_section.group(1)
@@ -94,12 +102,6 @@ def compare_with_catalog(model_name: str, parsed: dict[str, list[str]]) -> list[
 
     Returns list of difference strings (empty = no diff).
     """
-    # Import the catalog module directly via sys.path manipulation
-    catalog_dir = pathlib.Path(__file__).parent.parent
-    if str(catalog_dir) not in sys.path:
-        sys.path.insert(0, str(catalog_dir))
-
-    from ionic_model_catalog import IONIC_MODEL_CATALOG
     catalog = IONIC_MODEL_CATALOG
 
     if model_name not in catalog:
@@ -153,9 +155,9 @@ def compare_with_catalog(model_name: str, parsed: dict[str, list[str]]) -> list[
 
 def print_update_snippet(model_name: str, parsed: dict[str, list[str]]) -> None:
     """Print a Python snippet showing what the catalog entry should look like."""
-    states_str = ", ".join(f'"{s}"' for s in parsed["states"])
-    algebraic_str = ", ".join(f'"{a}"' for a in parsed["algebraic"])
-    constants_str = ", ".join(f'"{c}"' for c in parsed["constants"])
+    states_str = _fmt_tuple(parsed["states"])
+    algebraic_str = _fmt_tuple(parsed["algebraic"])
+    constants_str = _fmt_tuple(parsed["constants"])
 
     print(f'    "{model_name}": IonicModelEntry(')
     print(f'        states=({states_str}),')
@@ -193,7 +195,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not args.report.exists():
+    if not args.report.is_file():
         print(f"ERROR: report file not found: {args.report}", file=sys.stderr)
         return 1
 
