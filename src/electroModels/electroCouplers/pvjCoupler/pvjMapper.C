@@ -297,6 +297,40 @@ void PVJMapper::depositActivationTimes
     activationTimeField.correctBoundaryConditions();
 }
 
+
+void PVJMapper::gatherActivationTimes
+(
+    const volScalarField& activationTimeField,
+    scalarField& terminalActivationTime
+) const
+{
+    terminalActivationTime.setSize(terminalCellSets_.size());
+    terminalActivationTime = GREAT;
+
+    const scalarField& activationValues = activationTimeField.primitiveField();
+
+    forAll(terminalCellSets_, i)
+    {
+        forAll(terminalCellSets_[i], localI)
+        {
+            const label cellI = terminalCellSets_[i][localI];
+            const scalar t = activationValues[cellI];
+
+            if (t >= 0.0 && t < terminalActivationTime[i])
+            {
+                terminalActivationTime[i] = t;
+            }
+        }
+
+        reduce(terminalActivationTime[i], minOp<scalar>());
+
+        if (terminalActivationTime[i] >= GREAT/2.0)
+        {
+            terminalActivationTime[i] = -1.0;
+        }
+    }
+}
+
 } // End namespace Foam
 
 // ************************************************************************* //
