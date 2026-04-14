@@ -1,4 +1,0 @@
-Restoring constant/electroProperties from /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/singleCell/constant/electroProperties
-Restoring system/controlDict from /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/singleCell/system/controlDict
-Running cardiacFoam on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/singleCell/regressionTests/case
-/Volumes/OpenFOAM-v2412/bin/tools/RunFunctions: line 235: 41846 Segmentation fault: 11  $appRun $appArgs "$@" > $logFile 2>&1

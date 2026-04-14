@@ -15,6 +15,8 @@ class DictEntry:
     enum_values: tuple[str, ...] = ()
     examples: tuple[str, ...] = ()
     dynamic_path: bool = False
+    required: bool = False
+    constraints: tuple[str, ...] = ()
 
 
 PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
@@ -32,6 +34,7 @@ PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
         value_kind="enum",
         ui_control="select",
         enum_values=("electroModel", "electroMechanicalModel"),
+        required=True,
     ),
 )
 
@@ -48,6 +51,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("monodomainSolver", "bidomainSolver", "singleCellSolver", "eikonalSolver"),
+            required=True,
         ),
     ),
     "common_model_coeffs": (
