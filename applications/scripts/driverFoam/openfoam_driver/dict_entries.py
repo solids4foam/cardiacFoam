@@ -686,15 +686,31 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.ionicModel",
             description=(
                 "Ionic model used for 1D Purkinje monodomain. "
-                "Same choices as for 3D myocardium (e.g., BuenoOrovio, TenTusscher, etc.)."
+                "Uses the same runtime selection table as the 3D myocardium solver. "
+                "Stewart (human Purkinje) is the canonical choice for conduction system simulations."
             ),
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-                "src/ionicModels/ionicModel.H",
+                "src/ionicModels/ionicModel/ionicModel.C",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("AlievPanfilov", "BuenoOrovio", "TenTusscher", "ORd", "Mitchell"),
+            enum_values=(
+                "AlievPanfilov",
+                "BuenoOrovio",
+                "Courtemanche",
+                "Fabbri",
+                "Gaur",
+                "Grandi",
+                "ORd",
+                "Stewart",
+                "TNNP",
+                "ToRORd_dynCl",
+                "Trovato",
+                "monodomainFDAManufactured",
+                "bidomainFDAManufactured",
+            ),
+            notes="Stewart is the canonical human Purkinje model. monodomainFDAManufactured/bidomainFDAManufactured are for verification only.",
             dynamic_path=True,
             required=False,
             constraints=("Required when conductionSystemSolver=monodomain1DSolver.",),
