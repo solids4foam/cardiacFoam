@@ -433,6 +433,31 @@ void ConductionSystemDomain::terminalActivationTime(scalarField& values) const
 }
 
 
+void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values)
+{
+    if (values.size() != terminalNodes_.size())
+    {
+        FatalErrorInFunction
+            << "Expected " << terminalNodes_.size()
+            << " terminal activation values but received "
+            << values.size()
+            << exit(FatalError);
+    }
+
+    forAll(terminalNodes_, i)
+    {
+        if (values[i] >= 0.0)
+        {
+            const label nodeI = terminalNodes_[i];
+            if (activationTime_[nodeI] < 0.0 || values[i] < activationTime_[nodeI])
+            {
+                activationTime_[nodeI] = values[i];
+            }
+        }
+    }
+}
+
+
 void ConductionSystemDomain::setTerminalCoupling
 (
     const scalarField& terminalCurrent,

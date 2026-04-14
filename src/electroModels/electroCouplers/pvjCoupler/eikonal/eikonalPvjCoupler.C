@@ -34,12 +34,7 @@ addToRunTimeSelectionTable
 
 void EikonalPvjCoupler::ensureSupportedMode() const
 {
-    if (couplingMode_ == bidirectional)
-    {
-        FatalErrorInFunction
-            << "bidirectional eikonal PVJ coupling is in development."
-            << exit(FatalError);
-    }
+    // Mode checks removed to allow bidirectional eikonal coupling
 }
 
 
@@ -64,7 +59,18 @@ void EikonalPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
     (void)t0;
     (void)dt;
 
-    ensureSupportedMode();
+    if (couplingMode_ == bidirectional)
+    {
+        scalarField observedTissueTimes;
+        mapper_.gatherActivationTimes
+        (
+            primaryDomain_.activationTime(),
+            observedTissueTimes
+        );
+
+        networkTerminalDomain_.setTerminalActivationTime(observedTissueTimes);
+    }
+
     clearTerminalCouplingBuffers();
 
     networkTerminalDomain_.setTerminalCoupling

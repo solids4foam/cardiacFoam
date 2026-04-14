@@ -48,6 +48,12 @@ public:
         scalarField& values
     ) const;
 
+    void gatherActivationTimes
+    (
+        const volScalarField& activationTimeField,
+        scalarField& terminalActivationTime
+    ) const;
+
     void depositCoupling
     (
         const scalarField& couplingCurrent,

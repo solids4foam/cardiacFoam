@@ -130,6 +130,8 @@ public:
 
     virtual void terminalActivationTime(scalarField& values) const override;
 
+    virtual void setTerminalActivationTime(const scalarField& values) override;
+
     virtual void setTerminalCoupling
     (
         const scalarField& terminalCurrent,
