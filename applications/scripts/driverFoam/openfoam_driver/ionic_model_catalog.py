@@ -130,11 +130,12 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_Vp", "AC_Vr", "AC_Vth", "AC_epsilon", "AC_k", "AC_mu1", "AC_mu2", "AC_a"),
         recommended_exports=("u", "recovery_r"),
         compatible_tissues=("myocyte",),
-        compatible_solvers=("singleCellSolver",),
+        compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
         species=("generic",),
         cardiac_region=("ventricle",),
         model_type="phenomenological",
         description="Simplified 2-variable phenomenological model; not species-specific (Aliev & Panfilov 1996).",
+        notes="Phenomenological; works in any PDE-based or ODE-only solver, same as BuenoOrovio.",
     ),
     "BuenoOrovio": IonicModelEntry(
         states=("u", "v", "w", "s"),
