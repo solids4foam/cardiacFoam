@@ -115,6 +115,29 @@ def _dict_entry_catalog() -> dict[str, Any]:
     }
 
 
+def _ionic_model_catalog() -> dict[str, Any]:
+    from .ionic_model_catalog import (
+        ACTIVE_TENSION_MODEL_CATALOG,
+        IONIC_MODEL_CATALOG,
+        SOLVER_COMPATIBILITY_RULES,
+    )
+
+    return {
+        "schema_version": "1.0",
+        "ionic_models": {
+            name: _serialize(asdict(entry))
+            for name, entry in IONIC_MODEL_CATALOG.items()
+        },
+        "active_tension_models": {
+            name: _serialize(asdict(entry))
+            for name, entry in ACTIVE_TENSION_MODEL_CATALOG.items()
+        },
+        "solver_compatibility": [
+            dict(rule) for rule in SOLVER_COMPATIBILITY_RULES
+        ],
+    }
+
+
 def list_runs(runs_root: str | Path) -> list[dict[str, Any]]:
     import json
     root = Path(runs_root)
@@ -165,6 +188,7 @@ def describe_tutorial(
             )
         ),
         "dict_entries": _dict_entry_catalog(),
+        "ionic_model_catalog": _ionic_model_catalog(),
         "gui_schema": describe_gui_schema(),
         "launch": describe_launch_matrix(
             tutorial,
