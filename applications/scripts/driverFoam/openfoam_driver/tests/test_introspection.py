@@ -76,6 +76,13 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("launch", payload)
         self.assertEqual(payload["launch"]["sim"]["action"], "sim")
         self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))
+        self.assertIn("ionic_model_catalog", payload)
+        catalog = payload["ionic_model_catalog"]
+        self.assertEqual(catalog["schema_version"], "1.0")
+        self.assertIn("TNNP", catalog["ionic_models"])
+        self.assertIsInstance(catalog["ionic_models"]["TNNP"]["states"], list)
+        self.assertIsInstance(catalog["solver_compatibility"], list)
+        self.assertGreater(len(catalog["solver_compatibility"]), 0)
 
     def test_describe_tutorial_reports_generic_case_folder_resolution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

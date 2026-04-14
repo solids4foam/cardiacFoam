@@ -14,6 +14,11 @@ from .core.runtime.registry import (
 )
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
 from .gui_schema import describe_gui_schema
+from .ionic_model_catalog import (
+    ACTIVE_TENSION_MODEL_CATALOG,
+    IONIC_MODEL_CATALOG,
+    SOLVER_COMPATIBILITY_RULES,
+)
 from .launch import describe_launch_matrix
 from .tutorial_contracts import describe_tutorial_contract
 
@@ -116,12 +121,6 @@ def _dict_entry_catalog() -> dict[str, Any]:
 
 
 def _ionic_model_catalog() -> dict[str, Any]:
-    from .ionic_model_catalog import (
-        ACTIVE_TENSION_MODEL_CATALOG,
-        IONIC_MODEL_CATALOG,
-        SOLVER_COMPATIBILITY_RULES,
-    )
-
     return {
         "schema_version": "1.0",
         "ionic_models": {
