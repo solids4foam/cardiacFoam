@@ -38,7 +38,7 @@ class IonicModelEntry:
     """Which myocardium solvers can host this model."""
 
     species: tuple[str, ...]
-    """Species the model is designed for (e.g. ('human',), ('guinea_pig',), ('generic',))."""
+    """Species the model is designed for (e.g. ('human',), ('pig',), ('generic',))."""
 
     cardiac_region: tuple[str, ...]
     """Cardiac region the model is designed for (e.g. ('ventricle',), ('atrium',), ('sinoatrial_node',), ('purkinje',), ('manufactured',))."""
@@ -179,10 +179,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("cell_v", "cai"),
         compatible_tissues=("myocyte",),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        species=("guinea_pig",),
+        species=("pig",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Guinea pig ventricular ionic model based on the Gaur-Rudy-Luo formulation (1996).",
+        description="Pig ventricular ionic model based on the Gaur-Rudy-Luo formulation (1996).",
     ),
     "Grandi": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "xrf", "xrs", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrsp", "xs1", "xs2", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr"),
