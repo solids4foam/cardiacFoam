@@ -133,7 +133,7 @@ def _ionic_model_catalog() -> dict[str, Any]:
             for name, entry in ACTIVE_TENSION_MODEL_CATALOG.items()
         },
         "solver_compatibility": [
-            dict(rule) for rule in SOLVER_COMPATIBILITY_RULES
+            _serialize(rule) for rule in SOLVER_COMPATIBILITY_RULES
         ],
     }
 
