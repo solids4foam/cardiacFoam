@@ -17,7 +17,6 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "genericModel.H"
 #include "genericModel_YYYY.H"
 #include "addToRunTimeSelectionTable.H"
@@ -26,6 +25,8 @@ License
 #include "stimulusIO.H"
 #include "volFields.H"
 #include "HashTable.H"
+
+#include <math.h>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -57,7 +58,6 @@ Foam::genericModel::genericModel
 
     // 🔑 First, set tissue using base logic + overrides
     ionicModel::setTissueFromDict();
-    Info<< nl << "Calling genericModel initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -70,22 +70,15 @@ Foam::genericModel::genericModel
             CONSTANTS_.data(),
             RATES_[i].data(),
             STATES_[i].data(),
-            tissue(),dict
+            tissue(),
+            dict
         );
+
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 
 }
 
@@ -105,50 +98,6 @@ Foam::List<Foam::word> Foam::genericModel::supportedTissueTypes() const
 }
 
 
-void Foam::genericModel::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
-)
-{
-    const scalar tStart = stepStartTime * 1000.0;
-    if (Im.size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Im.size() != Vm.size()" << abort(FatalError);
-    }
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        // Update voltage for this integration point
-        STATESI[cell_v] = Vm[integrationPtI] * 1000;
-
-        ::genericModelcomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        );
-        // Jion  is the total ionic current density used by the PDE
-        Im[integrationPtI] = ALGEBRAICI[Iion_cm];
-
-        //copy internal STATES to memory external state buffer.
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
-    }
-}
-
-
 // ------------------------------------------------------------------------- //
 //  Solve ODE with mixed singleCell implementation and 1D-3D condition
 // ------------------------------------------------------------------------- //
@@ -157,13 +106,12 @@ void Foam::genericModel::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -176,7 +124,7 @@ void Foam::genericModel::solveODE
         // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
-            STATESI[cell_v] = Vm[integrationPtI]*1000.0;
+            STATESI[0] = Vm[integrationPtI]*1000.0;
         }
 
         // Clamp time step (ms)
@@ -193,16 +141,14 @@ void Foam::genericModel::solveODE
             STATESI.data(),
             ALGEBRAICI.data(),
             tissue(),
-            solveVmWithinODESolver()
+            solveVmWithinODESolver(),
+            stimulusProtocol()
         );
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
-
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -224,120 +170,29 @@ void Foam::genericModel::derivatives
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
-        solveVmWithinODESolver()
+        solveVmWithinODESolver(),
+        stimulusProtocol()
     );
 }
 
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::genericModel::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::genericModel::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::genericModel::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::genericModel::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        genericModelSTATES_NAMES,NUM_STATES,
-        genericModelALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return genericModelSTATES_NAMES;
 }
 
-void Foam::genericModel::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::genericModel::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        genericModelSTATES_NAMES, NUM_STATES,
-        genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return genericModelCONSTANTS_NAMES;
 }
 
-
-
-void Foam::genericModel::writeHeader(OFstream& os) const
+const char* const* Foam::genericModel::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return genericModelALGEBRAIC_NAMES;
 }
 
-static Foam::scalar genericModel_vm(const Foam::scalarField& S)
-{
-    return S[0];
-}
-
-void Foam::genericModel::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            genericModel_vm
-        );
-    }
-}
 void Foam::genericModel::sweepCurrent
 (
     const word& currentName,
@@ -367,6 +222,7 @@ void Foam::genericModel::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -376,7 +232,7 @@ void Foam::genericModel::sweepCurrent
         // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
+        // Overwrite membrane voltage
         STATESI[0] = V;
 
         ::genericModelcomputeVariables
@@ -387,16 +243,22 @@ void Foam::genericModel::sweepCurrent
             STATESI.data(),
             ALGI.data(),
             tissue(),
-            solveVmWithinODESolver()
+            solveVmWithinODESolver(),
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
-            os, V, deps,STATESI,ALGI,
+            os, V, deps, STATESI, ALGI,
             genericModelSTATES_NAMES, NUM_STATES,
-            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            genericModelALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
+}
+
+Foam::wordList Foam::genericModel::availableSweepCurrents() const
+{
+    return genericModelDependencyMap().toc();
 }
