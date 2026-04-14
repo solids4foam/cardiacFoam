@@ -71,7 +71,7 @@ def parse_report_text(text: str) -> dict[str, list[str]]:
     if algebraic_section:
         alg_lines = algebraic_section.group(1)
         for line in alg_lines.split("\n"):
-            match = re.search(r"algebraic\s*\[\d+\]\s+(\w+)\s*-->", line)
+            match = re.search(r"algebraic\s*\[\d+\]\s+(\w+)", line)
             if match:
                 result["algebraic"].append(match.group(1))
 
@@ -95,8 +95,6 @@ def compare_with_catalog(model_name: str, parsed: dict[str, list[str]]) -> list[
     Returns list of difference strings (empty = no diff).
     """
     # Import the catalog module directly via sys.path manipulation
-    import sys
-
     catalog_dir = pathlib.Path(__file__).parent.parent
     if str(catalog_dir) not in sys.path:
         sys.path.insert(0, str(catalog_dir))
@@ -248,7 +246,7 @@ Ionic states (3) --> initial value
   states [2] h --> 0.9
 
 Ionic algebraic (1)
-  algebraic [0] Iion --> 0.0
+  algebraic [0] Iion
 """
     result = parse_report_text(sample)
     assert result["ionic_model"] == "TestModel", f"Expected TestModel, got {result['ionic_model']}"
@@ -259,5 +257,4 @@ Ionic algebraic (1)
 
 
 if __name__ == "__main__":
-    _self_test()
     sys.exit(main())
