@@ -17,15 +17,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "AlievPanfilov.H"
 #include "AlievPanfilov_1996.H"
+#include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
-#include "HashTable.H"
+
+#include <math.h>
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //

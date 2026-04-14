@@ -69,6 +69,10 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("Allrun", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("README.md", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("ionicModel", payload["tutorial_contract"]["case_parameters"])
+        self.assertIn(
+            "regressionTests/singleCell",
+            payload["tutorial_contract"]["reference_cases"],
+        )
         self.assertIn("launch", payload)
         self.assertEqual(payload["launch"]["sim"]["action"], "sim")
         self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))

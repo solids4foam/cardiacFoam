@@ -17,12 +17,12 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <cmath>
-
 #include "NashPanfilov.H"
 #include "NashPanfilov_2004.H"
 #include "addToRunTimeSelectionTable.H"
 #include "word.H"
+
+#include <cmath>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 

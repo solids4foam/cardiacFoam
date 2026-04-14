@@ -44,6 +44,10 @@ SourceFiles
 #include "wordList.H"
 #include "scalarList.H"
 #include "fileName.H"
+#include "pointField.H"
+#include "labelList.H"
+#include "scalarField.H"
+#include "scalarList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -82,6 +86,43 @@ public:
             OFstream& os,
             scalar time,
             const List<scalar>& values
+        );
+
+        //- Write one VTK legacy PolyData file for the Purkinje graph at a
+        //  given simulation time.  Each call produces an independent
+        //  purkinjeNetwork_<timeStepIndex>.vtk file in outDir that ParaView
+        //  automatically groups into a time series using zero-padded indices.
+        //
+        //  nodeLocations : 3-D position of every graph node (size = nNodes).
+        //                  If empty the function is a no-op.
+        //  edgeNodeA/B   : parallel lists giving the two endpoint node indices
+        //                  of every edge (size = nEdges each).
+        //  Vm1D          : membrane potential at every node (BuenoOrovio scale).
+        //  Iion1D        : ionic current at every node.
+        //  pvjNodes      : node indices of the PVJ terminals.
+        //  terminalSource: volumetric source at each PVJ (size = pvjNodes.size()).
+        //- (Re)write a .vtk.series JSON sidecar so that ParaView (≥5.6)
+        //  displays correct physical time values for legacy VTK files.
+        //  Pass all accumulated (time, filename) pairs each call.
+        static void writeVTKSeries
+        (
+            const fileName&   seriesPath,
+            const scalarList& times,
+            const wordList&   filenames
+        );
+
+        static void writeVTK
+        (
+            const fileName&     outDir,
+            const word&         timeName,
+            const label         timeStep,
+            const pointField&   nodeLocations,
+            const labelList&    edgeNodeA,
+            const labelList&    edgeNodeB,
+            const scalarField&  Vm1D,
+            const scalarField&  Iion1D,
+            const labelList&    pvjNodes,
+            const scalarField&  terminalSource
         );
 };
 

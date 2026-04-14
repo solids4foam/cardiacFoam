@@ -64,13 +64,19 @@ public:
 
     virtual void solveDiffusionExplicit
     (
-        MyocardiumDomain& domain,
+        electroVolumeFieldDomain& domain,
         scalar dt
     ) override;
 
     virtual void solveDiffusionImplicit
     (
-        MyocardiumDomain& domain,
+        electroVolumeFieldDomain& domain,
+        scalar dt
+    ) override;
+
+    virtual void solveDiffusionImplicit
+    (
+        electroVolumeFieldDomain& domain,
         scalar dt,
         pimpleControl& pimple
     ) override;

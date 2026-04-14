@@ -97,7 +97,7 @@ tmp<volTensorField> MonodomainSolver::initialiseConductivity
 
 void MonodomainSolver::solveDiffusionExplicit
 (
-    MyocardiumDomain& domain,
+    electroVolumeFieldDomain& domain,
     scalar dt
 )
 {
@@ -115,22 +115,32 @@ void MonodomainSolver::solveDiffusionExplicit
 
 void MonodomainSolver::solveDiffusionImplicit
 (
-    MyocardiumDomain& domain,
-    scalar dt,
-    pimpleControl& pimple
+    electroVolumeFieldDomain& domain,
+    scalar dt
 )
 {
     (void)dt;
 
+    solve
+    (
+        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+      == fvm::laplacian(conductivity_, domain.Vm())
+       - domain.chi()*domain.Cm()*domain.Iion()
+        + domain.sourceField()
+    );
+}
+
+
+void MonodomainSolver::solveDiffusionImplicit
+(
+    electroVolumeFieldDomain& domain,
+    scalar dt,
+    pimpleControl& pimple
+)
+{
     while (pimple.loop())
     {
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvm::laplacian(conductivity_, domain.Vm())
-           - domain.chi()*domain.Cm()*domain.Iion()
-            + domain.sourceField()
-        );
+        solveDiffusionImplicit(domain, dt);
     }
 }
 

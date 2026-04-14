@@ -9,17 +9,40 @@ signals or derived potentials without feeding current back into the tissue.
 
 ```text
 src/electroModels/ecgModels/
-├── pseudoECGSolver/   # Pseudo-ECG evaluation from myocardium state
+├── pseudoECGSolver/
+│   ├── pseudoECGSolver.H
+│   └── pseudoECGSolver.C
+├── bidomainBathECGSolver/
+│   ├── bidomainBathECGSolver.H
+│   └── bidomainBathECGSolver.C
 └── README.md
 ```
 
 ## Available models
 
-- `PseudoECGSolver`
+**Concrete solver implementations:**
+
+- **`PseudoECGSolver`** (ECG post-processor)
   - Registered as `pseudoECG`.
-  - Implements the current ECG evaluation kernel used by `ECGDomain`.
-  - Reads upstream myocardium state through `ECGDomain`, which in turn depends
-    on the `electroStateProvider` interface exposed by the primary domain.
+  - Computes pseudo-ECG signals using the Gima-Rudy dipole model.
+  - Reads upstream myocardium state through `ECGDomain`.
+  - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
+
+- **`BidomainBathECGSolver`** (bath extracellular potential solver)
+  - Registered as `bidomainBathECG`.
+  - Solves steady-state Laplacian: `∇·(σ_bath·∇φE) = -I_interface`
+  - Reads myocardium transmembrane current through `BathDomain`.
+  - Abstract interface: `electroDomains/bathDomain/bathECGSolver.H/C`
+
+## Architectural pattern
+
+- **Abstract solver interfaces** live in domain folders (`electroDomains/`):
+  - `ecgDomain/ecgSolver.H/C`
+  - `bathDomain/bathECGSolver.H/C`
+  
+- **Concrete solver implementations** live here in `ecgModels/`:
+  - `pseudoECGSolver/`
+  - `bidomainBathECGSolver/`
 
 ## Execution role
 
@@ -30,5 +53,8 @@ src/electroModels/ecgModels/
 - it does not inject source terms back into the myocardium
 
 See [../electroDomains/README.md](../electroDomains/README.md) for the
-domain-level contract and [../core/ELECTROMODEL_ORCHESTRATION.md](../core/ELECTROMODEL_ORCHESTRATION.md)
+domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep sequence.
+
+Bath-related solver code is still present in this folder, but bath is not part
+of the active `core` orchestration path at the moment.

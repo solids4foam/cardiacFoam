@@ -1,7 +1,7 @@
 # ionicModels library architecture
 
 This directory provides runtime-selectable ionic cell models (`libionicModels`) used by
-`MonoDomainSolver` and `SingleCellSolver`.
+myocardium workflows, Purkinje/conduction workflows, and `singleCellSolver`.
 
 Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 
@@ -40,7 +40,7 @@ Defined in `ionicModel/ionicModel.H` and implemented in `ionicModel/ionicModel.C
 - Supports single-cell mode (`solveVmWithinODESolver_`).
 - Stores stimulation protocol (`StimulusProtocol`) loaded from dictionary.
 - Implements optional generic export/write/debug APIs through `ionicModelIO`.
-- Implements `CouplingSignalProvider` interface for electromechanics signal exchange.
+- Implements `ElectromechanicalSignalProvider` interface for electromechanics signal exchange.
 
 ### Key virtual interface
 

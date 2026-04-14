@@ -50,6 +50,7 @@ SourceFiles
 
 #include "dimensionedScalar.H"
 #include "conductionSystemSolver.H"
+#include "fvMesh.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
 
@@ -64,9 +65,9 @@ class EikonalSolver1D
 
 public:
 
-    OverrideTypeName("eikonalSolver");
+    OverrideTypeName("eikonalSolver1D");
 
-    explicit EikonalSolver1D(const dictionary& solverCoeffs);
+    EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs);
 
     virtual void advance
     (

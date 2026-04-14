@@ -20,20 +20,20 @@ License
 #ifndef activeTensionModel_H
 #define activeTensionModel_H
 
-#include "dictionary.H"
-#include "autoPtr.H"
-#include "runTimeSelectionTables.H"
-#include "PtrList.H"
-#include "scalarField.H"
-#include "label.H"
-#include "Switch.H"
-#include "error.H"
-#include "wordList.H"
-#include "OFstream.H"
-#include "volFields.H"
-
 #include "activeTensionIO.H"
 #include "electromechanicalSignalProvider.H"
+
+#include "OFstream.H"
+#include "PtrList.H"
+#include "Switch.H"
+#include "autoPtr.H"
+#include "dictionary.H"
+#include "error.H"
+#include "label.H"
+#include "runTimeSelectionTables.H"
+#include "scalarField.H"
+#include "volFields.H"
+#include "wordList.H"
 
 namespace Foam
 {

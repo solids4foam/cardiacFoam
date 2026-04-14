@@ -17,15 +17,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "BuenoOrovio.H"
 #include "BuenoOrovio_2008.H"
+#include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
-#include "HashTable.H"
+
+#include <math.h>
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -290,7 +291,6 @@ Foam::scalar Foam::BuenoOrovio::signal
 {
     return ionicModel::signal(i, s);
 }
-
 
 
 

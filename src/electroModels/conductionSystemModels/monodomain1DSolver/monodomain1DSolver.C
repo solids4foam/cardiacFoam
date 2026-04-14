@@ -53,12 +53,25 @@ void Monodomain1DSolver::advance
     domain.assembleAppliedCurrent(t0, appliedCurrentBuffer_);
 
     // ---- Step 3: Diffusion (Full-Step PDE) using O(N) Hines Algorithm ----
-    const scalar dtOverChiCm = dt / (domain.chi() * domain.Cm());
+    //
+    // Finite-volume cable equation on a graph:
+    //
+    //   dV_i/dt =
+    //       (1/(chi*Cm*controlLength_i))
+    //         * sum_e sigma_e/L_e * (V_j - V_i)
+    //     - Iion_i + Iapp_i/(chi*Cm)
+    //
+    // where controlLength_i is the 1-D control volume measure assembled from
+    // half of each incident edge length. For uniform spacing this reduces to
+    // the usual sigma*(V_{i-1}-2V_i+V_{i+1})/dx^2 term.
+    const scalar chiCm = domain.chi() * domain.Cm();
     
     // Arrays for the tree solver
     scalarField diag(N, 1.0);       // Main diagonal
     scalarField rhs(N, Zero);       // Right-hand side
-    scalarField parentCoeff(N, Zero); // Off-diagonal coefficient linking to parent
+    scalarField parentCoeff(N, Zero); // Matrix row child -> column parent
+    scalarField childCoeff(N, Zero);  // Matrix row parent -> column child
+    scalarField controlLength(N, Zero);
 
     const labelList& edgeA = domain.edgeStartNodes();
     const labelList& edgeB = domain.edgeEndNodes();
@@ -70,32 +83,75 @@ void Monodomain1DSolver::advance
     const labelList& reverseOrder = domain.graph().reverseOrder;
     const labelList& forwardOrder = domain.graph().orderList;
 
-    // 3a. Assemble matrix coefficients
     forAll(edgeA, edgeI)
     {
         label nodeA = edgeA[edgeI];
         label nodeB = edgeB[edgeI];
-        
-        scalar coeff = dtOverChiCm * edgeConductance[edgeI] / sqr(edgeLength[edgeI]);
 
-        diag[nodeA] += coeff;
-        diag[nodeB] += coeff;
+        controlLength[nodeA] += 0.5*edgeLength[edgeI];
+        controlLength[nodeB] += 0.5*edgeLength[edgeI];
+    }
+
+    forAll(controlLength, nodeI)
+    {
+        if (controlLength[nodeI] <= SMALL)
+        {
+            FatalErrorInFunction
+                << "Node " << nodeI
+                << " has zero 1D control length. The cable discretisation "
+                << "requires every node to be connected to at least one edge."
+                << exit(FatalError);
+        }
+    }
+
+    // 3a. Assemble finite-volume matrix coefficients
+    forAll(edgeA, edgeI)
+    {
+        label nodeA = edgeA[edgeI];
+        label nodeB = edgeB[edgeI];
+
+        const scalar edgeCoeff =
+            edgeConductance[edgeI]/edgeLength[edgeI];
+
+        const scalar coeffA =
+            dt*edgeCoeff/(chiCm*controlLength[nodeA]);
+
+        const scalar coeffB =
+            dt*edgeCoeff/(chiCm*controlLength[nodeB]);
+
+        diag[nodeA] += coeffA;
+        diag[nodeB] += coeffB;
 
         // Determine which node is the child to store the off-diagonal parent link
         if (parent[nodeA] == nodeB)
         {
-            parentCoeff[nodeA] = -coeff;
+            parentCoeff[nodeA] = -coeffA;
+            childCoeff[nodeA] = -coeffB;
         }
         else if (parent[nodeB] == nodeA)
         {
-            parentCoeff[nodeB] = -coeff;
+            parentCoeff[nodeB] = -coeffB;
+            childCoeff[nodeB] = -coeffA;
+        }
+        else
+        {
+            FatalErrorInFunction
+                << "Edge " << edgeI << " connecting nodes " << nodeA
+                << " and " << nodeB
+                << " is inconsistent with the rooted tree topology."
+                << exit(FatalError);
         }
     }
 
-    // 3b. Assemble RHS (Notice Iion is REMOVED here because ODE handles it)
+    // 3b. Assemble RHS. The ionic model computes Iion during the reaction
+    // sub-step, but Vm is not advanced inside the ODE solver for monodomain
+    // runs, so Iion must still enter the membrane balance here.
     for (label i = 0; i < N; i++)
     {
-        rhs[i] = Vm[i] + dtOverChiCm * appliedCurrentBuffer_[i];
+        rhs[i] =
+            Vm[i]
+          - dt*Iion[i]
+          + dt*appliedCurrentBuffer_[i]/chiCm;
     }
 
     // 3c. Forward Sweep (Bottom-up: Leaves to Root)
@@ -105,8 +161,8 @@ void Monodomain1DSolver::advance
         label c = reverseOrder[i]; // Child
         label p = parent[c];       // Parent
 
-        scalar factor = parentCoeff[c] / diag[c];
-        diag[p] -= factor * parentCoeff[c]; // Because symmetric, child-to-parent is same as parent-to-child
+        scalar factor = childCoeff[c] / diag[c];
+        diag[p] -= factor * parentCoeff[c];
         rhs[p]  -= factor * rhs[c];
     }
 

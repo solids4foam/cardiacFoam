@@ -30,7 +30,7 @@ not intended as a generic survey of cardiac ionic models.
 
 ```text
 src/ionicModels/
-├── ionicModel/                    # Base class, factory, selector helpers
+├── ionicModel/                    # Base class, factory, selectors, batched/GPU support headers
 ├── monodomainFDAManufactured/     # Manufactured monodomain ionic wrapper
 ├── bidomainFDAManufactured/       # Manufactured bidomain ionic wrapper
 ├── AlievPanfilov/
@@ -75,6 +75,27 @@ Derived classes register with:
 ```cpp
 addToRunTimeSelectionTable(ionicModel, MyModel, dictionary);
 ```
+
+## `ionicModel/` support layers
+
+The `ionicModel/` folder now contains more than the classic base class and
+factory code. It also includes:
+
+- `ionicSelector`
+  shared tissue/dimension selection logic
+- `ionicModelGPU`
+  GPU-oriented ionic-model layer
+- `batchedIonicCore`
+  compact SoA storage helpers for batched execution
+- `batchedIonicModel`
+  reusable batched execution base
+- `configuredBatchedIonicModel`
+  shared configuration/metadata layer for batched models
+- `batchedKernelExecution`
+  batched execution helpers
+
+These headers are support infrastructure. They do not mean that this repository
+currently ships separate compiled GPU runtime types in `Make/files`.
 
 ## Effective Derived-Class Contract
 

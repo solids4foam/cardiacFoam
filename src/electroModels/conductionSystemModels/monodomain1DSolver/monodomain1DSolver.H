@@ -19,17 +19,16 @@ Class
     Foam::Monodomain1DSolver
 
 Description
-    Implicit monodomain cable-equation solver for the conduction system
-    graph.  Uses the same operator-splitting scheme as the 3-D
-    MyocardiumDomain:
+    Implicit monodomain cable-equation solver for a tree conduction-system
+    graph. Uses the same reaction/diffusion splitting as the 3-D myocardium:
 
         1.  Solve the ionic-model ODE  (reaction step)
         2.  Solve the implicit cable equation  (diffusion step)
 
-    The cable equation on the graph is discretised in exactly the same way
-    that fvm::laplacian + fvm::ddt would produce on a 1-D finite-volume
-    mesh.  Because the graph is small (typically < 1000 nodes), the
-    resulting dense linear system is solved with LU decomposition.
+    The cable equation is discretised as a 1-D finite-volume graph problem.
+    Each graph node owns a control length assembled from half of each incident
+    edge length. Edge diffusion uses sigma/L flux coefficients and is solved
+    with a tree Hines elimination pass.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -42,6 +41,7 @@ SourceFiles
 #define MonoDomain1DSolver_H
 
 #include "conductionSystemSolver.H"
+#include "fvMesh.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
 #include "scalarMatrices.H"
@@ -59,7 +59,7 @@ public:
 
     OverrideTypeName("monodomain1DSolver");
 
-    explicit Monodomain1DSolver(const dictionary&)
+    Monodomain1DSolver(const fvMesh&, const dictionary&)
     {}
 
     virtual void advance

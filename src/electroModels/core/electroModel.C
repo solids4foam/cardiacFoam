@@ -19,6 +19,7 @@ License
 
 #include "electroModel.H"
 #include "addToRunTimeSelectionTable.H"
+#include "dimVoltage.H"
 #include "electrophysicsSystemBuilder.H"
 
 
@@ -161,8 +162,10 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     );
 
     // Single entry point: 'myocardiumSolver' is the canonical selector key.
-    // Direct electroModel subclasses (e.g. singleCellSolver) register themselves
-    // in this table and are selected by the same key.
+    // Direct electroModel subclasses (e.g. singleCellSolver) register directly
+    // in this table.  Myocardium spatial solvers (monodomainSolver,
+    // bidomainSolver, eikonalSolver) are all handled by electrophysiologyModel,
+    // which registers itself under those three names.
     const word modelType(props.lookup("myocardiumSolver"));
 
     Info<< nl << "Selecting myocardiumSolver " << modelType << endl;
@@ -172,7 +175,7 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     if (ctorPtr)
     {
         // Direct electroModel subclass (e.g. singleCellSolver, eikonalSolver,
-        // electroActivationFoam).
+        // electrophysiologyModel).
         return autoPtr<electroModel>(ctorPtr(runTime, region));
     }
 
@@ -211,9 +214,9 @@ void Foam::electroModel::writeFields(const Time& runTime)
 }
 
 
-void Foam::electroModel::configureECGSystem()
+void Foam::electroModel::configureECGDomains()
 {
-    electrophysicsSystemBuilder::configureECGDomain
+    electrophysicsSystemBuilder::configureECGDomains
     (
         domainSystem_,
         domainSystem_.myocardium(),
@@ -262,7 +265,7 @@ bool Foam::electroModel::read()
             electroProperties_
         );
 
-        electrophysicsSystemBuilder::configureConductionSystemDomain
+        electrophysicsSystemBuilder::configureConductionDomains
         (
             domainSystem_,
             mesh(),
@@ -270,7 +273,7 @@ bool Foam::electroModel::read()
             runTime().deltaTValue()
         );
 
-        configureECGSystem();
+        configureECGDomains();
 
         return true;
     }
@@ -317,20 +320,94 @@ bool Foam::electroModel::evolve()
         }
     }
 
-    domainSystem_.writeUpstreamCouplingModel();
-    domainSystem_.writeUpstreamDomain();
-    domainSystem_.writeDownstreamDomain();
+    domainSystem_.writeConductionCouplings();
+    domainSystem_.writeConductionDomains();
+    domainSystem_.writeECGDomains();
 
     return converged;
 }
 
 
+Foam::tmp<Foam::volScalarField>
+Foam::electroModel::couplingField(const word& fieldName) const
+{
+    // Map field name to CouplingSignal enum
+    CouplingSignal sig;
+    if (fieldName == "Vm")
+    {
+        sig = CouplingSignal::VM;
+    }
+    else if (fieldName == "Cai")
+    {
+        sig = CouplingSignal::CAI;
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "Unknown coupling field \"" << fieldName << nl
+            << "Valid options are: Vm, Cai."
+            << abort(FatalError);
+        // suppress compiler warning — unreachable
+        sig = CouplingSignal::VM;
+    }
+
+    const ElectromechanicalSignalProvider* p = provider();
+
+    if (!p)
+    {
+        FatalErrorInFunction
+            << "No ElectromechanicalSignalProvider available for electroModel "
+            << type() << nl
+            << "The electro solver does not expose a coupling signal."
+            << abort(FatalError);
+    }
+
+    if (!p->hasSignal(sig))
+    {
+        FatalErrorInFunction
+            << "Coupling signal \"" << fieldName
+            << "\" is not available from the ionic model." << nl
+            << "Check that the ionic model has the corresponding state variable."
+            << abort(FatalError);
+    }
+
+    const fvMesh& msh = refCast<const fvMesh>(mesh());
+
+    tmp<volScalarField> tResult
+    (
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                msh.time().timeName(),
+                msh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            msh,
+            dimensionedScalar(fieldName, dimless, scalar(0))
+        )
+    );
+
+    scalarField& resultI = tResult.ref().primitiveFieldRef();
+    forAll(resultI, cellI)
+    {
+        resultI[cellI] = p->signal(cellI, sig);
+    }
+
+    tResult.ref().correctBoundaryConditions();
+
+    return tResult;
+}
+
+
 void Foam::electroModel::end()
 {
-    domainSystem_.endDownstreamCouplingModel();
-    domainSystem_.endDownstreamDomain();
-    domainSystem_.endUpstreamCouplingModel();
-    domainSystem_.endUpstreamDomain();
+    domainSystem_.endECGCouplings();
+    domainSystem_.endECGDomains();
+    domainSystem_.endConductionCouplings();
+    domainSystem_.endConductionDomains();
 
     this->IOobject::rename(this->IOobject::name()+".withDefaultValues");
     this->regIOobject::write();

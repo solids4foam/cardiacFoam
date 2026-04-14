@@ -177,7 +177,7 @@ tmp<volTensorField> BidomainSolver::initialiseConductivityTensor
 
 void BidomainSolver::solveDiffusionExplicit
 (
-    MyocardiumDomain& domain,
+    electroVolumeFieldDomain& domain,
     scalar dt
 )
 {
@@ -209,38 +209,48 @@ void BidomainSolver::solveDiffusionExplicit
 
 void BidomainSolver::solveDiffusionImplicit
 (
-    MyocardiumDomain& domain,
-    scalar dt,
-    pimpleControl& pimple
+    electroVolumeFieldDomain& domain,
+    scalar dt
 )
 {
     (void)dt;
     const label refCell = referenceCell();
 
-    while (pimple.loop())
+    fvScalarMatrix phiEqn
+    (
+        fvm::laplacian(GiPlusGe_, phiE_)
+     == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
+    );
+    if (refCell >= 0)
     {
-        fvScalarMatrix phiEqn
-        (
-            fvm::laplacian(GiPlusGe_, phiE_)
-         == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
-        );
-        if (refCell >= 0)
-        {
-            phiEqn.setReference(refCell, phiEReferenceValue_, true);
-        }
-        solve(phiEqn);
-
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvm::laplacian(Gi_, domain.Vm())
-           + fvc::div(Gi_ & fvc::grad(phiE_))
-           - domain.chi()*domain.Cm()*domain.Iion()
-            + domain.sourceField()
-        );
+        phiEqn.setReference(refCell, phiEReferenceValue_, true);
     }
+    solve(phiEqn);
+
+    solve
+    (
+        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+      == fvm::laplacian(Gi_, domain.Vm())
+       + fvc::div(Gi_ & fvc::grad(phiE_))
+       - domain.chi()*domain.Cm()*domain.Iion()
+        + domain.sourceField()
+    );
 
     phiI_ = domain.Vm() + phiE_;
+}
+
+
+void BidomainSolver::solveDiffusionImplicit
+(
+    electroVolumeFieldDomain& domain,
+    scalar dt,
+    pimpleControl& pimple
+)
+{
+    while (pimple.loop())
+    {
+        solveDiffusionImplicit(domain, dt);
+    }
 }
 
 } // End namespace Foam

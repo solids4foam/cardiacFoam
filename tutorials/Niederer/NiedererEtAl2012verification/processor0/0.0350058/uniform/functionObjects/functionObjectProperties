@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    arch        "LSB;label=32;scalar=64";
+    class       dictionary;
+    location    "0.0350058/uniform/functionObjects";
+    object      functionObjectProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+cdf7e925f5746741c316f5fbcf39ad0dfca90775
+{
+    Niedererpoints
+    {
+        scalar
+        {
+            average(activationTime) 0.01114780950672568;
+            min(activationTime) 0;
+            max(activationTime) 0.03399419349931625;
+        }
+        label
+        {
+            size(activationTime) 9;
+        }
+    }
+    Niedererlines
+    {
+        scalar
+        {
+            average(activationTime) 0.01122018424418116;
+            min(activationTime) 0;
+            max(activationTime) 0.03494500671146319;
+        }
+        label
+        {
+            size(activationTime) 101;
+        }
+    }
+}
+
+
+// ************************************************************************* //

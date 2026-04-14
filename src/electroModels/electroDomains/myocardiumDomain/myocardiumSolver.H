@@ -25,11 +25,10 @@ License
 #include "runTimeSelectionTables.H"
 #include "dictionary.H"
 #include "fvMesh.H"
+#include "electroVolumeFieldDomain.H"
 
 namespace Foam
 {
-
-class MyocardiumDomain;
 
 class myocardiumSolver
 {
@@ -87,13 +86,19 @@ public:
 
     virtual void solveDiffusionExplicit
     (
-        MyocardiumDomain& domain,
+        electroVolumeFieldDomain& domain,
         scalar dt
     ) = 0;
 
     virtual void solveDiffusionImplicit
     (
-        MyocardiumDomain& domain,
+        electroVolumeFieldDomain& domain,
+        scalar dt
+    ) = 0;
+
+    virtual void solveDiffusionImplicit
+    (
+        electroVolumeFieldDomain& domain,
         scalar dt,
         pimpleControl& pimple
     ) = 0;

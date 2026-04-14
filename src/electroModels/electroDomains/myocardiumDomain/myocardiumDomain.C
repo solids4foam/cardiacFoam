@@ -189,7 +189,6 @@ MyocardiumDomain::MyocardiumDomain
     autoPtr<fvMeshSubset> meshSubsetPtr
 )
 :
-    electroDomainInterface(),
     meshSubsetPtr_(meshSubsetPtr),
     supportMesh_(supportMesh),
     diffusionSolverPtr_(diffusionSolverPtr),
@@ -276,6 +275,9 @@ MyocardiumDomain::MyocardiumDomain
         ) == "explicit"
     )
 {
+    Info<< "MyocardiumDomain initial Vm[min,max]=["
+        << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
+
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {
         Info<< "Constructed MyocardiumDomain on submesh '"
@@ -482,6 +484,17 @@ void MyocardiumDomain::advance(scalar t0, scalar dt)
 }
 
 
+void MyocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
+{
+    (void)dt;
+    // Reset the source field and apply the 3D external box stimulus.
+    // Called by the advance scheme BEFORE any domain coupling deposits
+    // current into sourceField_.  Keeping this here ensures that coupling
+    // current added by preparePrimaryCoupling survives into the FVM solve.
+    updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
+}
+
+
 void MyocardiumDomain::advance
 (
     scalar t0,
@@ -489,7 +502,9 @@ void MyocardiumDomain::advance
     pimpleControl* pimplePtr
 )
 {
-    updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
+    // sourceField_ was already set by prepareTimeStep (external stimulus)
+    // and then augmented by the PVJ coupler (preparePrimaryCoupling).
+    // Do NOT reset it here.
 
     ionicModel_.solveODE(t0, dt, Vm_, Iion_);
     Iion_.correctBoundaryConditions();

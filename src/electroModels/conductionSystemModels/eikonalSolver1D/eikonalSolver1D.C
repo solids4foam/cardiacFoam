@@ -18,7 +18,7 @@ addToRunTimeSelectionTable
 );
 
 
-EikonalSolver1D::EikonalSolver1D(const dictionary& solverCoeffs)
+EikonalSolver1D::EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
     c0_("c0", solverCoeffs)
 {

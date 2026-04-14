@@ -109,7 +109,7 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             / "electroCouplers"
             / "electroDomainCoupler.C"
         )
-        conduction_domain = _read(
+        conduction_domain_selector = _read(
             self.repo_root
             / "src"
             / "electroModels"
@@ -172,7 +172,8 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn('"ecgSolver"', ecg_solver)
         self.assertIn('"electrodePositions"', ecg_domain)
         self.assertIn('"electroDomainCoupler"', electro_coupler)
-        self.assertIn('subDict("purkinjeNetworkModelCoeffs").get<scalar>("cm")', conduction_domain)
+        self.assertIn('lookupOrDefault<word>', conduction_domain_selector)
+        self.assertIn('subDict("purkinjeNetworkModelCoeffs").get<scalar>("cm")', conduction_domain_selector)
 
         self.assertIn('OverrideTypeName("monodomainSolver")', monodomain_runtime)
         self.assertIn('OverrideTypeName("bidomainSolver")', bidomain_runtime)
@@ -218,11 +219,13 @@ class TestTutorialElectroPropertiesAudit(unittest.TestCase):
     def test_detect_electro_coeffs_scope_tracks_template_truth_cases(self) -> None:
         expected = {
             "tutorials/NiedererEtAl2012/constant/electroProperties": "monodomainSolverCoeffs",
-            "tutorials/NiedererEtAl2012/referenceTest/constant/electroProperties": "monodomainSolverCoeffs",
+            "tutorials/NiedererEtAl2012Purkinje/constant/electroProperties": "monodomainSolverCoeffs",
+            "tutorials/NiedererEtAl2012EikonalPurkinje/constant/electroProperties": "eikonalSolverCoeffs",
+            "tutorials/regressionTests/NiedererEtAl2012/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/manufacturedSolutions/monodomainPseudoECG/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/restitutionCurves_s1s2Protocol/constant/electroProperties": "singleCellSolverCoeffs",
             "tutorials/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
-            "tutorials/singleCell/referenceTest/constant/electroProperties": "singleCellSolverCoeffs",
+            "tutorials/regressionTests/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
         }
 
         for relpath, scope in expected.items():

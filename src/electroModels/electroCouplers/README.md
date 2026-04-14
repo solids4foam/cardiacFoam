@@ -2,8 +2,8 @@
 
 This directory contains inter-domain coupling infrastructure for the staged
 electrophysiology system. It defines the endpoint contracts used by domains,
-the base class for couplers, and the current Purkinje-ventricular-junction
-(PVJ) resistance coupling implementation.
+the base class for couplers, and the Purkinje-ventricular-junction (PVJ)
+coupling family.
 
 ## Current contents
 
@@ -11,8 +11,14 @@ the base class for couplers, and the current Purkinje-ventricular-junction
 src/electroModels/electroCouplers/
 ├── electroDomainCouplingEndpoints.H   # Domain-side coupling interfaces
 ├── electroDomainCoupler.{H,C}         # Base class for staged couplers
-├── pvjMapper.{H,C}                    # PVJ geometry and source projection
-├── pvjResistanceCoupler.{H,C}         # Purkinje-myocardium resistive coupling
+├── heartBathInterfaceCoupler.{H,C}    # Bath-interface coupling code still present
+├── pvjCoupler/
+│   ├── pvjCoupler.{H,C}               # PVJ family base class
+│   ├── pvjMapper.{H,C}                # PVJ geometry and source projection
+│   ├── eikonal/
+│   │   └── eikonalPvjCoupler.{H,C}
+│   └── reactionDiffusion/
+│       └── reactionDiffusionPvjCoupler.{H,C}
 └── README.md
 ```
 
@@ -48,7 +54,13 @@ and provides three hook points:
 This split supports staged domain updates without hard-wiring a single coupling
 order into each domain.
 
-## PVJ mapping and current path
+## Other shipped coupling code
+
+`heartBathInterfaceCoupler` is still compiled in this tree. It is bath-related
+coupling code, but bath is not currently part of the active `core`
+orchestration path.
+
+## PVJ coupling family
 
 `PVJMapper` owns the geometry work needed for 1D-to-3D exchange:
 
@@ -56,8 +68,16 @@ order into each domain.
 - gather tissue `Vm` at PVJ locations
 - convert terminal currents into volumetric source terms
 - distribute those source terms into the myocardium `sourceField`
+- deposit terminal activation times into the myocardium activation field
 
-`PVJResistanceCoupler` then applies the current resistive model at each PVJ:
+`PVJCoupler` owns the family-level scaffolding:
+
+- `networkCouplingEndpoint` discovery
+- `couplingMode` parsing
+- `PVJMapper`
+- shared terminal coupling buffers
+
+`ReactionDiffusionPvjCoupler` then applies the current resistive model at each PVJ:
 
 ```text
 network terminal Vm  ----\
@@ -74,9 +94,9 @@ The coupler reuses internal buffers for:
 
 ## Coupling modes
 
-`PVJResistanceCoupler` supports:
+`ReactionDiffusionPvjCoupler` supports:
 
-- `networkToMyocardium`
+- `unidirectional`
   - one-way driving from the Purkinje network into the myocardium
   - the myocardium receives injected current
   - the network-side coupling buffers are zeroed before the network advance
@@ -84,6 +104,14 @@ The coupler reuses internal buffers for:
   - two-way exchange between network and myocardium
   - allows retrograde influence from tissue state through the resistive PVJ
     term
+
+`EikonalPvjCoupler` supports:
+
+- `unidirectional`
+  - one-way transfer of Purkinje terminal activation times into the myocardium
+    eikonal domain
+- `bidirectional`
+  - reserved, but currently stops with an "in development" message
 
 ## Runtime sequence
 
@@ -97,5 +125,5 @@ In the default staggered workflow:
 This is efficient and works well for one-way coupling. Bidirectional coupling
 is stiffer and generally benefits from the iterative
 `pimpleStaggeredElectrophysicsAdvanceScheme`; see
-[../core/ELECTROMODEL_ORCHESTRATION.md](../core/ELECTROMODEL_ORCHESTRATION.md)
+[../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep-level tradeoffs.

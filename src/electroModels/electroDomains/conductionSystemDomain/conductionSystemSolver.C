@@ -19,6 +19,7 @@ License
 #include "conductionSystemSolver.H"
 #include "addToRunTimeSelectionTable.H"
 #include "dictionary.H"
+#include "error.H"
 
 namespace Foam
 {
@@ -29,6 +30,7 @@ defineRunTimeSelectionTable(conductionSystemSolver, dictionary);
 
 autoPtr<conductionSystemSolver> conductionSystemSolver::New
 (
+    const fvMesh& mesh,
     const dictionary& dict
 )
 {
@@ -37,7 +39,7 @@ autoPtr<conductionSystemSolver> conductionSystemSolver::New
         dict.lookupOrDefault<word>
         (
             "conductionSystemSolver",
-            "Monodomain1DSolver"
+            "monodomain1DSolver"
         )
     );
 
@@ -47,14 +49,16 @@ autoPtr<conductionSystemSolver> conductionSystemSolver::New
 
     if (!ctorPtr)
     {
-        FatalErrorInFunction
-            << "Unknown conductionSystemSolver type " << solverType << nl
-            << "Valid types:" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "conductionSystemSolver",
+            solverType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<conductionSystemSolver>(ctorPtr(dict));
+    return autoPtr<conductionSystemSolver>(ctorPtr(mesh, dict));
 }
 
 } // End namespace Foam

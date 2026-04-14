@@ -1,0 +1,13 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Allclean script for electro-mechanical coupling tutorial
+#-------------------------------------------------------------------------------
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/CleanFunctions
+
+cleanCase
+rm -rf constant/polyMesh
+rm -rf constant/electro/polyMesh
+rm -rf constant/solid/polyMesh
+rm -f constant/electro/electroProperties.withDefaultValues

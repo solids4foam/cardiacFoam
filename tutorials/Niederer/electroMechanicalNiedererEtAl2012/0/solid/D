@@ -1,0 +1,29 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0/solid";
+    object      D;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 0 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    walls
+    {
+        type            fixedDisplacement;
+        value           uniform (0 0 0);
+    }
+}
+
+// ************************************************************************* //
