@@ -423,6 +423,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="dimensioned_scalar_literal",
             ui_control="text",
             required=False,
+            constraints=("Mutually exclusive with stimulusDurationList.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDurationList",
@@ -431,6 +432,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar_list",
             ui_control="textarea",
             required=False,
+            constraints=("Mutually exclusive with stimulusDuration.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
@@ -440,6 +442,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="dimensioned_scalar_literal",
             ui_control="text",
             required=False,
+            constraints=("Mutually exclusive with stimulusIntensityList.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensityList",
@@ -448,6 +451,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar_list",
             ui_control="textarea",
             required=False,
+            constraints=("Mutually exclusive with stimulusIntensity.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.solverHookFields.preProcess",
