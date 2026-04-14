@@ -1,0 +1,33 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/electro";
+    object      stimulusProtocol;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// External stimulus current location
+stimulusLocationMin    (0 0 5.5e-3);
+stimulusLocationMax    (1.5e-3 1.5e-3 7e-3);
+
+// External stimulus current characteristics
+stimulusDuration    [0 0 1 0 0 0 0] 2e-3;
+stimulusIntensity   [0 -3 0 0 0 1 0] 50000;
+
+// Read to run only
+stim_start      0;
+stim_duration   0;
+stim_amplitude  0;
+stim_period_S1  0;
+nstim1  0;
+stim_period_S2  0;
+nstim2  0;
+
+// ************************************************************************* //

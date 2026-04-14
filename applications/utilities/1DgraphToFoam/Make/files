@@ -1,0 +1,4 @@
+../newVtkUnstructuredToFoam/vtkUnstructuredReader.C
+1DgraphToFoam.C
+
+EXE = $(FOAM_USER_APPBIN)/1DgraphToFoam

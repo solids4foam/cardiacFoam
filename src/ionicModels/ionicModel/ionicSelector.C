@@ -17,9 +17,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include "ionicSelector.H"
+
 #include "IOstreams.H"
 #include "error.H"
-#include "ionicSelector.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

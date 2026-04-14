@@ -28,7 +28,7 @@ Main responsibilities:
 
 - Runtime selection via `activeTensionModel::New(...)`.
 - Store the active-tension dictionary and integration-point count.
-- Query an optional `CouplingSignalProvider` for upstream signals such as `Vm`
+- Query an optional `ElectromechanicalSignalProvider` for upstream signals such as `Vm`
   and `Cai`.
 - Run the base `calculateTension(...)` loop and delegate per-point work to
   `solveAtPoint(...)`.
@@ -41,4 +41,4 @@ Main responsibilities:
 
 Both models select their driving electrophysiology signal from dictionary input
 (`couplingSignal`, default `Vm`) and integrate with the same
-`CouplingSignalProvider` interface used by `ionicModel`.
+`ElectromechanicalSignalProvider` interface used by `ionicModel`.

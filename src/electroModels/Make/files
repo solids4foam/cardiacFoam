@@ -1,19 +1,20 @@
 /* Core */
 core/electroModel.C
-core/electrophysicsSystem.C
-core/schemes/electrophysicsAdvanceScheme.C
-core/schemes/staggered/staggeredElectrophysicsAdvanceScheme.C
-core/schemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
-core/electrophysicsSystemBuilder.C
-core/electroActivationFoam/electroActivationFoam.C
+core/system/electrophysicsSystem.C
+core/advanceSchemes/electrophysicsAdvanceScheme.C
+core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C
+core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
+core/system/electrophysicsSystemBuilder.C
+core/electrophysiologyModel/electrophysiologyModel.C
 
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
 electroDomains/conductionSystemDomain/conductionSystemSolver.C
-electroDomains/bathDomain/bathDomain.C
 electroDomains/ecgDomain/ecgDomain.C
 electroDomains/ecgDomain/ecgSolver.C
+electroDomains/myocardiumDomain/myocardiumDomainInterface.C
 electroDomains/myocardiumDomain/myocardiumDomain.C
+electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C
 electroDomains/myocardiumDomain/myocardiumSolver.C
 
 /* Myocardium models */
@@ -23,7 +24,6 @@ myocardiumModels/eikonalSolver/eikonalSolver.C
 myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */
-ecgModels/bathECGSolver.C
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 
 /* Conduction system models */
@@ -32,9 +32,10 @@ conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C
 
 /* Couplers */
 electroCouplers/electroDomainCoupler.C
-electroCouplers/heartBathInterfaceCoupler.C
-electroCouplers/pvjMapper.C
-electroCouplers/pvjResistanceCoupler.C
+electroCouplers/pvjCoupler/pvjMapper.C
+electroCouplers/pvjCoupler/pvjCoupler.C
+electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C
+electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libelectroModels

@@ -22,7 +22,7 @@ Description
     Single-cell electrophysiology solver based on OpenFOAM.
 
     This solver advances a single cardiac cell model in time using a
-    run-time selectable ionic model. In contrast to electroActivationFoam,
+    run-time selectable ionic model. In contrast to electrophysiologyModel,
     no spatial voltage PDE is solved; instead, the transmembrane voltage
     Vm is integrated directly as part of the ionic model ODE system.
 

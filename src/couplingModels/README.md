@@ -1,42 +1,42 @@
-# couplingModels architecture
+# couplingModels
 
-This directory now groups shared coupling contracts used across electro-only and
-electro-mechanics workflows.
+This folder contains shared coupling-side interfaces used across libraries.
+It does not contain the staged Purkinje, ECG, or bath electro-domain couplers.
 
 ## Current contents
 
 ```text
 src/couplingModels/
-├── common/                     # Cross-library coupling interfaces
+├── common/
 │   └── electromechanicalSignalProvider.H
-├── electroDomain/              # Electro-domain coupling contracts + models
-│   ├── electroDomainCouplingEndpoints.H
-│   ├── ElectroDomainCoupler.{H,C}
-│   └── pvj*.{H,C}
 ├── lnInclude/
 └── README.md
 ```
 
-## `CouplingSignalProvider` interface (`common/`)
+## Purpose
 
-Purpose:
+The main role of this folder is to define the
+`ElectromechanicalSignalProvider` contract used by:
 
-- Provide a minimal API for querying cell-level coupling signals from
-  electrophysiology models.
+- `ionicModel`
+- `activeTensionModel`
 
-Main methods:
+That interface lets one component query scalar signals such as:
 
-```cpp
-virtual bool hasSignal(CouplingSignal s) const = 0;
-virtual scalar signal(label i, CouplingSignal s) const = 0;
-```
+- `Vm`
+- `Cai`
 
-`Foam::ionicModel` inherits from this interface; active-tension models consume
-it via `electroMechanicalModel`.
+without depending on a concrete ionic-model implementation.
 
-## Electro-domain coupling contracts (`electroDomain/`)
+## What this folder does not own
 
-`electroDomainCouplingEndpoints.H` and `ElectroDomainCoupler.H` define
-the coupling interface between staged electrophysiology domains (e.g. Purkinje
-to myocardium). Runtime models such as `pvjResistanceCouplingModel` implement
-that interface.
+This folder does not own:
+
+- Purkinje-to-myocardium electro couplers
+- ECG or bath couplers
+- staged domain-coupling runtime selection
+
+Those pieces live in:
+
+- [`../electroModels/electroCouplers/README.md`](../electroModels/electroCouplers/README.md)
+

@@ -43,7 +43,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description="Top-level myocardium solver selector. Determines the active '<solver>Coeffs' sub-dictionary in electroProperties.",
             source_refs=(
                 "src/electroModels/core/electroModel.C",
-                "src/electroModels/core/electroActivationFoam/electroActivationFoam.C",
+                "src/electroModels/core/electrophysiologyModel/electrophysiologyModel.C",
             ),
             value_kind="enum",
             ui_control="select",
@@ -543,6 +543,33 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
         ),
         DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.graphFile",
+            description=(
+                "REQUIRED: Name of the graph file in constant/ directory "
+                "(e.g., 'purkinjeGraph'). File must contain 'edges', 'points', "
+                "'pvjNodes', 'pvjLocations' dictionaries/lists."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
+            ),
+            value_kind="word",
+            ui_control="text",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootNode",
+            description=(
+                "Optional: index of the Purkinje root node (default: 0). "
+                "Must be a valid node in the graph (0 <= rootNode < nNodes)."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
+            ),
+            value_kind="label",
+            ui_control="number",
+            dynamic_path=True,
+        ),
+        DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
             description=(
                 "1D graph solver used within the conduction network domain. "
@@ -551,10 +578,41 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemSolver.C",
                 "src/electroModels/conductionSystemModels/monodomain1DSolver/monodomain1DSolver.H",
+                "src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.H",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("monodomain1DSolver",),
+            enum_values=("monodomain1DSolver", "eikonalSolver"),
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.ionicModel",
+            description=(
+                "Ionic model used for 1D Purkinje monodomain. "
+                "Same choices as for 3D myocardium (e.g., BuenoOrovio, TenTusscher, etc.)."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
+                "src/ionicModels/ionicModel.H",
+            ),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=("AlievPanfilov", "BuenoOrovio", "TenTusscher", "ORd", "Mitchell"),
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.tissue",
+            description=(
+                "Tissue type for 1D Purkinje ionic model. "
+                "Examples: epicardialCells, endocardialCells, mCells, myocyte."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
+                "src/ionicModels/ionicModel.H",
+            ),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=("epicardialCells", "endocardialCells", "mCells", "myocyte"),
             dynamic_path=True,
         ),
         DictEntry(
@@ -697,14 +755,17 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("pvjResistanceCoupler",),
+            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
             dynamic_path=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
-            description="PVJ coupling resistance [Ω·m²]. Required.",
+            description=(
+                "PVJ coupling resistance [Ω·m²]. Required for "
+                "reactionDiffusionPvjCoupler; unused by eikonalPvjCoupler."
+            ),
             source_refs=(
-                "src/electroModels/electroCouplers/pvjResistanceCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -717,7 +778,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Default: 0.5e-3."
             ),
             source_refs=(
-                "src/electroModels/electroCouplers/pvjResistanceCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.C",
             ),
             value_kind="scalar",
             ui_control="number",
@@ -727,37 +788,25 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
             description=(
                 "PVJ coupling direction. "
-                "networkToMyocardium: 1-way, Purkinje drives tissue only. "
-                "bidirectional: physiological retrograde conduction allowed. "
-                "Use bidirectional only with pimpleStaggeredElectrophysicsAdvanceScheme."
+                "unidirectional: 1-way, Purkinje drives tissue only. "
+                "bidirectional: physiological retrograde conduction allowed for "
+                "reactionDiffusionPvjCoupler. eikonalPvjCoupler currently accepts only "
+                "unidirectional; bidirectional reports 'in development'."
             ),
             source_refs=(
-                "src/electroModels/electroCouplers/pvjResistanceCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C",
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("networkToMyocardium", "bidirectional"),
-            dynamic_path=True,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.primaryDomain",
-            description=(
-                "Name of the primary domain this coupling writes into. "
-                "Only 'myocardium' is currently supported. Default: myocardium."
-            ),
-            source_refs=(
-                "src/electroModels/core/electrophysicsSystemBuilder.C",
-            ),
-            value_kind="word",
-            ui_control="text",
+            enum_values=("unidirectional", "bidirectional"),
             dynamic_path=True,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
             description=(
                 "Name of the conductionNetworkDomains entry this coupling is linked to. "
-                "Required when more than one conduction network domain is configured; "
-                "auto-resolved when only one network domain exists."
+                "Required for every conduction-system coupling entry."
             ),
             source_refs=(
                 "src/electroModels/core/electrophysicsSystemBuilder.C",
@@ -807,6 +856,77 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             ui_control="select",
             enum_values=("Vm",),
+        ),
+    ),
+    "domain_couplings": (
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
+            description=(
+                "Coupling model selector for domain-to-domain interactions "
+                "(e.g., Purkinje-to-myocardium). Used only when multiple domains are present."
+            ),
+            source_refs=(
+                "src/electroModels/electroCouplers/electroDomainCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusionPvjCoupler/reactionDiffusionPvjCoupler.C",
+            ),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
+            description=(
+                "REQUIRED: Name of the conductionNetworkDomains entry this coupling targets. "
+                "Must match a key in conductionNetworkDomains."
+            ),
+            source_refs=(
+                "src/electroModels/electrophysicsSystemBuilder.C",
+            ),
+            value_kind="word",
+            ui_control="text",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
+            description=(
+                "Junction resistance [Ω·m²] per unit surface area. "
+                "Used by reactionDiffusionPvjCoupler for monodomain coupling. "
+                "Example: 500.0 Ω·m²."
+            ),
+            source_refs=(
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusionPvjCoupler/reactionDiffusionPvjCoupler.C",
+            ),
+            value_kind="scalar",
+            ui_control="number",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
+            description=(
+                "Sphere radius [m] around each PVJ used to identify 3D cells for coupling. "
+                "Default: 0.5e-3 m."
+            ),
+            source_refs=(
+                "src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.C",
+            ),
+            value_kind="scalar",
+            ui_control="number",
+            dynamic_path=True,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
+            description=(
+                "Coupling direction: 'unidirectional' (Purkinje→myocardium only) "
+                "or 'bidirectional' (both ways). Default: unidirectional."
+            ),
+            source_refs=(
+                "src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.H",
+            ),
+            value_kind="enum",
+            ui_control="select",
+            enum_values=("unidirectional", "bidirectional"),
+            dynamic_path=True,
         ),
     ),
 }

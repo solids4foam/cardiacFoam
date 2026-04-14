@@ -1,9 +1,9 @@
 # myocardiumModels
 
-This directory contains runtime-selectable numerical kernels used by
-`MyocardiumDomain`. The domain owns the tissue fields and lifecycle; the
-classes here provide the diffusion or reduced-order solve applied to those
-fields.
+This directory contains myocardium-side numerical kernels and related electro
+models. The domain-side ownership lives in `electroDomains/myocardiumDomain/`,
+while the classes here provide the diffusion, reduced-order, or single-cell
+solve implementations used by those workflows.
 
 ## Current contents
 
@@ -36,6 +36,9 @@ src/electroModels/myocardiumModels/
   - Computes activation times with a reduced-order anisotropic eikonal
     formulation rather than a full ionic-PDE solve.
   - Useful for fast propagation studies where only activation timing is needed.
+  - In the current architecture, the eikonal myocardium path is surfaced
+    through `EikonalMyocardiumDomain`, not by forcing the classic
+    reaction-diffusion `MyocardiumDomain` to own it directly.
 
 ## ODE-only workflow
 
@@ -46,16 +49,19 @@ src/electroModels/myocardiumModels/
   - Used for ionic-model testing, calibration, and waveform generation rather
     than tissue-scale propagation.
 
-## Relationship to `MyocardiumDomain`
+## Relationship to myocardium-domain code
 
-`MyocardiumDomain` owns:
+`MyocardiumDomain` owns the reaction-diffusion tissue path, while
+`EikonalMyocardiumDomain` owns the reduced-order activation-time path.
+
+Together, the myocardium-domain layer owns:
 
 - the tissue fields (`Vm`, `Iion`, `sourceField`, `activationTime`)
 - the ionic model
 - stimulus handling
 - export/post-processing hooks
 
-The solver classes in this directory own only the numerical kernel associated
-with the chosen tissue formulation. See
+The solver classes in this directory own the numerical kernel associated with
+the chosen tissue formulation or workflow. See
 [../electroDomains/README.md](../electroDomains/README.md) for the domain-level
 state and lifecycle.

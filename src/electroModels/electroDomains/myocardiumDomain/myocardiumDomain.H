@@ -19,13 +19,12 @@ License
 #ifndef MyocardiumDomain_H
 #define MyocardiumDomain_H
 
-#include "electroDomainInterface.H"
-#include "electroStateProvider.H"
+#include "myocardiumDomainInterface.H"
 #include "electromechanicalSignalProvider.H"
-#include "electroDomainCouplingEndpoints.H"
 #include "ionicModel.H"
 #include "electroVerificationModel.H"
 #include "dimVoltage.H"
+#include "electroVolumeFieldDomain.H"
 #include "fvMeshSubset.H"
 #include "stimulusIO.H"
 #include "myocardiumSolver.H"
@@ -35,9 +34,8 @@ namespace Foam
 
 class MyocardiumDomain
 :
-    public electroDomainInterface,
-    public tissueCouplingEndpoint,
-    public electroStateProvider
+    public myocardiumDomainInterface,
+    public electroVolumeFieldDomain
 {
 protected:
 
@@ -83,6 +81,8 @@ protected:
     void initialiseProcessing();
 
 public:
+
+    using myocardiumDomainInterface::advance;
 
     //- Factory: derives the solver type from the Coeffs subdict name and
     //  delegates to the injecting constructor below.
@@ -189,32 +189,42 @@ public:
         return sourceField_;
     }
 
-    virtual const ElectromechanicalSignalProvider* provider() const
+    virtual const volScalarField& activationTime() const override
+    {
+        return activationTime_;
+    }
+
+    virtual volScalarField& activationTimeField() override
+    {
+        return activationTime_;
+    }
+
+    virtual const ElectromechanicalSignalProvider* provider() const override
     {
         return &ionicModel_;
     }
 
-    volScalarField& VmRef()
+    virtual volScalarField& VmRef() override
     {
         return Vm_;
     }
 
-    const volScalarField& Iion() const
+    virtual const volScalarField& Iion() const override
     {
         return Iion_;
     }
 
-    const dimensionedScalar& chi() const
+    virtual const dimensionedScalar& chi() const override
     {
         return chi_;
     }
 
-    const dimensionedScalar& Cm() const
+    virtual const dimensionedScalar& Cm() const override
     {
         return Cm_;
     }
 
-    virtual void prepareTimeStep(scalar t0, scalar dt) override {}
+    virtual void prepareTimeStep(scalar t0, scalar dt) override;
 
     virtual void advance(scalar t0, scalar dt) override;
 
@@ -223,19 +233,19 @@ public:
         scalar t0,
         scalar dt,
         pimpleControl* pimplePtr
-    );
+    ) override;
 
     virtual void write() override;
 
-    virtual scalar suggestExplicitDeltaT(scalar maxCo) const;
+    virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
 
-    virtual bool shouldPostProcess() const;
+    virtual bool shouldPostProcess() const override;
 
-    virtual void exportStates();
+    virtual void exportStates() override;
 
     virtual void exportPostProcessFields();
 
-    virtual void postProcess();
+    virtual void postProcess() override;
 };
 
 } // End namespace Foam

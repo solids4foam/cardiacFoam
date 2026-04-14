@@ -19,6 +19,7 @@ License
 
 #include "singleCellSolver.H"
 #include "addToRunTimeSelectionTable.H"
+#include "dimVoltage.H"
 #include "stimulusIO.H"
 #include "OSspecific.H"
 

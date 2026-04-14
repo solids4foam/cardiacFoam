@@ -206,9 +206,7 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
         self.assertTrue(len(cm_keys)  >= 1, "purkinjeNetworkModelCoeffs.cm not documented")
 
     def test_coupling_helper_keys_documented(self):
-        primary_domain_keys = [p for p in self.entries if p.endswith(".primaryDomain")]
         network_domain_keys = [p for p in self.entries if p.endswith(".conductionNetworkDomain")]
-        self.assertTrue(len(primary_domain_keys) >= 1, "primaryDomain not documented")
         self.assertTrue(len(network_domain_keys) >= 1, "conductionNetworkDomain not documented")
 
 

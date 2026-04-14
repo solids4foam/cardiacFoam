@@ -1,173 +1,107 @@
-# electroModels library architecture
+# electroModels
 
-This directory provides runtime-selectable electrophysiology models used by `cardiacFoam`.
-The library is built as `libelectroModels`.
+This folder builds `libelectroModels`, the spatial electrophysiology library.
+It contains the top-level orchestration layer, domain state owners, numerical
+solver kernels, and staged inter-domain couplers.
 
-## Directory structure
+## Current structure
 
 ```text
 src/electroModels/
-├── core/
-│   ├── README.md               # Core subsystem overview
-│   └── electroModel/           # Core orchestration and base interfaces
-├── electroDomains/
-│   ├── conductionSystemDomain/ # Pre-primary auxiliary domain wrapper
-│   ├── ecgDomain/              # Post-primary ECG contracts + solver interface
-│   ├── myocardiumDomain/       # Shared monodomain/bidomain tissue domain
-│   └── README.md               # Domain overview
-├── ecgModels/                  # Concrete ECG domain model implementations
-│   └── README.md
-├── conductionSystemModels/     # Purkinje / graph-backed conduction models
-│   └── README.md
-├── myocardiumModels/
-│   ├── monodomainSolver/      # Full monodomain PDE-ODE model
-│   ├── singleCellSolver/      # Single-cell ODE-only driver
-│   ├── eikonalSolver/         # Reduced-order activation-time model
-│   └── README.md
-├── electroCouplers/            # Domain coupling models
-│   └── README.md
+├── core/                     # Top-level orchestration and advance schemes
+├── electroDomains/           # Domain state owners
+├── myocardiumModels/         # Myocardium-side solver kernels
+├── conductionSystemModels/   # Purkinje/conduction solver kernels
+├── ecgModels/                # ECG and bath-side solver kernels
+├── electroCouplers/          # Staged electro-domain couplers
 ├── Make/
 └── README.md
 ```
 
-## Core design
+## Top-level runtime selection
 
-### 1) `Foam::electroModel` (base class)
-
-Defined in `electroModel/electroModel.H`.
-
-Responsibilities:
-
-- Derives from `physicsModel` and `IOdictionary`.
-- Reads `constant/electroProperties`.
-- Exposes common mesh/time access and the `evolve()` interface.
-- Owns runtime selection table (`electroModel::New(...)`).
-- Parses `solutionAlgorithm` enum (`implicit` / `explicit`).
-
-Selection key in `electroProperties`:
+The current top-level electro workflow is selected from:
 
 ```cpp
-electroModel MonoDomainSolver;
+myocardiumSolver  monodomainSolver;
 ```
 
-### 2) `MonoDomainSolver`
-
-Tissue-scale PDE-ODE model:
-
-- Solves transmembrane voltage `Vm` on the mesh.
-- Uses runtime-selected ionic model per cell (`ionicModel::New(...)`).
-- Creates an optional ionic-model pre/post processor keyed by ionic-model type
-  for mesh-dependent setup/verification.
-- The shared pre/post processor abstractions live in
-  `src/modelPrePostProcessors/`.
-- Supports both explicit and implicit stepping paths.
-- Tracks `activationTime` when `Vm` crosses threshold.
-- Exports selected ionic variables to volumetric fields.
-
-Stimulus architecture:
-
-- PDE stimulus is loaded from `monodomainStimulus` dictionary entries.
-- Ionic-model S1/S2 stimulus can exist for single-cell workflows.
-- Guard logic prevents accidental double stimulation in monodomain runs unless explicitly allowed (`allowIonicStimulusInMonodomain`).
-
-### 3) `SingleCellSolver`
-
-Single integration-point workflow:
-
-- Instantiates ionic model with one integration point.
-- Enables `solveVmWithinODESolver=true` so voltage is advanced inside ODEs.
-- Writes traces to `postProcessing/<ionicModel>_<tissue>_<stimulus>.txt`.
-- Uses shared `ionicModelIO` helpers for headers and row writes.
-
-### 4) `EikonalSolver`
-
-Reduced-order activation model:
-
-- Solves steady eikonal-diffusion formulation for activation time `psi`.
-- Uses anisotropic conductivity tensor and optional stabilized form (`eikonalAdvectionDiffusionApproach`).
-- Applies stimulus through geometric box selection in the mesh.
-
-### 5) Optional staged domains
-
-`electrophysicsSystem` can optionally own staged auxiliary domains:
-
-- A pre-primary conduction-system domain, such as Purkinje, advanced before
-  the myocardium and coupled through a domain-coupling model.
-- A post-primary ECG domain, advanced after the myocardium from the updated
-  electrophysiology state with one-way data flow.
-
-Current ECG implementations live under `ecgModels/`. The
-`PseudoECGDomain` model remains a one-way ECG evaluation, but it is now
-scheduled through the same domain system as the Purkinje side.
-
-Canonical dictionary schema for staged domains (inside
-`MonoDomainSolverCoeffs` / `BiDomainSolverCoeffs`):
+or:
 
 ```cpp
-conductionNetworkDomains
-{
-    purkinjeNetwork
-    {
-        ConductionSystemDomain purkinjeNetworkModel;
-        // ... purkinjeNetworkModel settings ...
-    }
-}
-
-domainCouplings
-{
-    purkinjeToMyocardium
-    {
-        ElectroDomainCoupler pvjResistanceCoupler;
-        // ... coupling settings ...
-    }
-}
-
-ecgDomains
-{
-    ECG
-    {
-        ECGDomain PseudoECGDomain;
-        // ... ECG model settings ...
-    }
-}
+myocardiumSolver  bidomainSolver;
 ```
 
-Only the schema above is supported.
+or:
 
-For subsystem-level details, use the local README files under `core/`,
-`electroDomains/`, `myocardiumModels/`, `conductionSystemModels/`,
-`ecgModels/`, and `electroCouplers/`.
+```cpp
+myocardiumSolver  eikonalSolver;
+```
 
-### 6) `ElectroMechanicalModel`
+`electroModel::New(...)` reads that key and dispatches to the assembled
+orchestration wrapper `electrophysiologyModel`.
 
-Wrapper workflow for coupled electro-mechanics runs:
+`singleCellSolver` is also compiled in this library, but it is not part of the
+multi-domain `electrophysiologyModel` path.
 
-- Owns an electro model plus a runtime-selected active-tension model.
-- Passes coupling signals from the ionic model stack into the active-tension
-  stack.
-- Uses the same runtime-selection pattern as the other electro models.
+## Folder roles
 
-## Runtime chain with `cardiacFoam`
+### `core/`
 
-1. `cardiacFoam` creates `physicsModel`.
-2. Electro `physicsModel` creates `electroModel` from `electroProperties`.
-3. `MonoDomainSolver` and `SingleCellSolver` create `ionicModel` from the
-   selected electro-model coeff dictionary in `electroProperties`.
+Owns orchestration only:
 
-## Build target
+- top-level `electroModel`
+- assembled `electrophysicsSystem`
+- dictionary-driven builder
+- timestep advance schemes
 
-`Make/files` builds:
-all compiled sources under:
+### `electroDomains/`
 
-- `core/electroModel/`
-- `electroDomains/`
-- `conductionSystemModels/`
-- `myocardiumModels/`
-- `ecgModels/`
-- `electroCouplers/`
+Owns the long-lived state of each physical domain:
 
-into:
+- myocardium
+- conduction system / Purkinje
+- ECG
+- bath code is still present in the tree, but not part of the active core
+  orchestration path at the moment
 
-- `$(FOAM_USER_LIBBIN)/libelectroModels`
+### `myocardiumModels/`
 
-Electro-domain coupling models are compiled from `src/electroModels/electroCouplers/`.
+Contains myocardium-side solver kernels and related electro models:
+
+- `monodomainSolver`
+- `bidomainSolver`
+- `eikonalSolver`
+- `singleCellSolver`
+
+### `conductionSystemModels/`
+
+Contains Purkinje/conduction solver kernels used by
+`ConductionSystemDomain`:
+
+- `monodomain1DSolver`
+- `eikonalSolver`
+
+### `ecgModels/`
+
+Contains downstream ECG and bath-related kernels:
+
+- `pseudoECGSolver`
+- `bathECGSolver`
+- `bidomainBathECGSolver`
+
+### `electroCouplers/`
+
+Contains staged electro-domain coupling contracts and implementations:
+
+- `ElectroDomainCoupler`
+- endpoint interfaces
+- PVJ coupling family
+- `heartBathInterfaceCoupler` code remains present in the tree
+
+## Read next
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+- [`core/README.md`](./core/README.md)
+- [`core/ARCHITECTURE.md`](./core/ARCHITECTURE.md)
+

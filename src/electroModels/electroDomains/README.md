@@ -12,6 +12,7 @@ src/electroModels/electroDomains/
 ├── myocardiumDomain/         # Primary 3D tissue domain
 ├── conductionSystemDomain/   # Upstream 1D/graph conduction domain
 ├── ecgDomain/                # Downstream ECG evaluation domain
+├── bathDomain/               # Bath-side domain code still present in tree
 └── README.md
 ```
 
@@ -51,6 +52,11 @@ Defined under `ecgDomain/`.
   `ECGSolver`.
 - Consumes read-only myocardium state through `electroStateProvider`; it does
   not couple current back into the tissue.
+
+### `bathDomain`
+
+Bath-side domain code is still present in this folder and still compiled, but
+it is not currently assembled by the active `core` orchestration path.
 
 ## Relationship to sibling directories
 

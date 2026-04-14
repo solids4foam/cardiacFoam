@@ -80,9 +80,10 @@ monodomainSolverCoeffs
     // --- 3. PVJ Resistance Coupler ---
     domainCouplings
     {
-        purkinjeToMyocardium
+        couplingA
         {
-            electroDomainCoupler  pvjResistanceCoupler;
+            electroDomainCoupler  reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
             rPvj                  500.0;
             pvjRadius             6e-4;
             couplingMode          bidirectional;

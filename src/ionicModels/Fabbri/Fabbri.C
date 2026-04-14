@@ -17,15 +17,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "Fabbri.H"
 #include "Fabbri_2017.H"
+#include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
-#include "HashTable.H"
+
+#include <math.h>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 

@@ -19,9 +19,9 @@ Class
     Foam::conductionSystemSolver
 
 Description
-    Abstract base class for conduction-system graph solvers.
+    Abstract base class for conduction-system solvers.
 
-    Concrete implementations (Monodomain1DSolver, EikonalSolver1D) are
+    Concrete implementations are
     registered in the runtime selection table under the dictionary key
     "conductionSystemSolver".
 
@@ -33,6 +33,7 @@ SourceFiles
 #define conductionSystemSolver_H
 
 #include "autoPtr.H"
+#include "fvMesh.H"
 #include "runTimeSelectionTables.H"
 #include "scalar.H"
 
@@ -54,14 +55,19 @@ public:
         conductionSystemSolver,
         dictionary,
         (
+            const fvMesh& mesh,
             const dictionary& dict
         ),
-        (dict)
+        (mesh, dict)
     );
 
     conductionSystemSolver() = default;
 
-    static autoPtr<conductionSystemSolver> New(const dictionary& dict);
+    static autoPtr<conductionSystemSolver> New
+    (
+        const fvMesh& mesh,
+        const dictionary& dict
+    );
 
     virtual ~conductionSystemSolver() = default;
 

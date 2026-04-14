@@ -17,7 +17,6 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "monodomainFDAManufactured.H"
 #include "monodomainFDAManufactured_2014.H"
 #include "monodomainFDAManufactured_2014Names.H"
@@ -26,6 +25,8 @@ License
 #include "ionicModelIO.H"
 #include "ionicSelector.H"
 #include "volFields.H"
+
+#include <math.h>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 

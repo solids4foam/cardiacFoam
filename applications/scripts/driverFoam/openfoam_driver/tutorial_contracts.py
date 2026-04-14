@@ -86,16 +86,16 @@ def describe_tutorial_contract(
 ) -> dict[str, Any]:
     case_root = spec.case_root
     tutorials_root = case_root.parent
-    tutorial_root = tutorials_root / spec.name
+    regression_root = tutorials_root / "regressionTests" / spec.name
 
     block_mesh_variants = _glob_relpaths(case_root / "system", "blockMeshDict*")
-    authoring_contract_path = tutorial_root / "workflow_contract.json"
+    authoring_contract_path = case_root / "workflow_contract.json"
     authoring_contract = _read_json_if_exists(authoring_contract_path)
-    reference_cases = sorted(
-        path.name
-        for path in tutorial_root.iterdir()
-        if path.is_dir() and path.name.lower().endswith("referencetest")
-    ) if tutorial_root.exists() else []
+    reference_cases = []
+    if regression_root.exists():
+        reference_cases.append(
+            str(regression_root.relative_to(tutorials_root))
+        )
 
     return {
         "name": spec.name,

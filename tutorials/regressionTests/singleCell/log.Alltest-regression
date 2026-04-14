@@ -1,0 +1,7 @@
+Running cardiacFoam on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/singleCell/case
+PASS: BuenoOrovio_endocardialCells_S1_1000.txt t=0.0200000 actual=-84.0005041 expected=-84.0005041 tol=5e-3
+PASS: BuenoOrovio_endocardialCells_S1_1000.txt t=0.0215000 actual=42.3123891 expected=42.3123891 tol=5e-3
+PASS: BuenoOrovio_endocardialCells_S1_1000.txt t=0.0220000 actual=44.8863342 expected=44.8863342 tol=5e-3
+PASS: BuenoOrovio_endocardialCells_S1_1000.txt t=0.0300000 actual=32.7821149 expected=32.7821149 tol=5e-3
+PASS: BuenoOrovio_endocardialCells_S1_1000.txt t=0.5000000 actual=-83.6520453 expected=-83.6520453 tol=5e-3
+singleCell comparison: 5 checks, 0 failures

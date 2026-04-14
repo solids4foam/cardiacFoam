@@ -1,69 +1,50 @@
-# genericWriter architecture
+# genericWriter
 
-This directory contains shared helper classes used by ionic and electro models for:
+This folder builds `libgenericWriter`, the shared output and stimulus helper
+library.
 
-- writing time-series outputs,
-- mapping/exporting selected variables,
-- reading and evaluating stimulus protocol dictionaries.
-
-It is built as `libgenericWriter`.
-
-## Directory structure
+## Current contents
 
 ```text
 src/genericWriter/
-├── ionicModelIO.H/.C
-├── ionicVariableCompatibility.H/.C
-├── stimulusIO.H/.C
+├── ionicModelIO.{H,C}
+├── ionicVariableCompatibility.{H,C}
+├── stimulusIO.{H,C}
+├── activeTensionIO.{H,C}
+├── ecgModelIO.{H,C}
+├── purkinjeModelIO.{H,C}
 ├── Make/
 └── README.md
 ```
 
-## Components
+## Purpose
 
-### `ionicModelIO`
+This library centralizes small reusable pieces that would otherwise be repeated
+inside ionic, electro, ECG, Purkinje, or active-tension code.
 
-Central utility for ionic model outputs:
+## Main components
 
-- header generation (`writeHeader`, `writeSelectedHeader`),
-- data row writes (`write`, `writeSelected`),
-- timestep write gating (`shouldWriteStep`),
-- selected-name filtering and caching,
-- state/algebraic/rate export to `volScalarField`,
-- debug-print helpers,
-- sweep output helpers (`writeSweepHeader`, `writeOneSweepRow`).
+- `ionicModelIO`
+  General ionic-model export, trace writing, field-export planning, and
+  selected-variable handling
+- `ionicVariableCompatibility`
+  Shared variable-name compatibility and lookup rules used by ionic exports and
+  signal discovery
+- `stimulusIO`
+  Shared stimulus dictionary parsing and evaluation helpers
+- `activeTensionIO`
+  Active-tension output helpers
+- `ecgModelIO`
+  ECG output helpers
+- `purkinjeModelIO`
+  Purkinje/conduction time-series output helpers
 
-It also provides small cache structs to avoid repeating expensive variable resolution.
+## What this folder does not own
 
-### `ionicVariableCompatibility`
+This folder does not own the physics models themselves. It only provides helper
+logic used by:
 
-Name compatibility and resolution layer:
+- `ionicModels`
+- `electroModels`
+- `activeTensionModels`
 
-- relaxed matching for Vm aliases,
-- centralized `Vm`/`Cai` state-index discovery used by coupling signals,
-- relaxed matching for `RATES_<state>` names,
-- mapping user-requested names to state/algebraic/rate indices.
-
-Used by `ionicModelIO` when filtering exported/debug variable lists.
-
-### `stimulusIO`
-
-Dictionary parser and stimulus evaluator:
-
-- `StimulusProtocol` (single-cell S1/S2 timing protocol),
-- `MonodomainStimulusProtocol` (spatial box-based monodomain stimulus list),
-- protocol load functions from OpenFOAM dictionaries,
-- pulse evaluation (`computeStimulus`),
-- helper checks (`hasActiveStimulus`, `protocolSuffix`).
-
-## Build target
-
-`Make/files` builds:
-
-- `ionicModelIO.C`
-- `ionicVariableCompatibility.C`
-- `stimulusIO.C`
-
-into:
-
-- `$(FOAM_USER_LIBBIN)/libgenericWriter`

@@ -42,6 +42,11 @@ public:
 
     //- Transmembrane voltage at the domain.
     virtual const volScalarField& Vm() const = 0;
+
+    //- Activation-time field at the tissue domain.
+    virtual const volScalarField& activationTime() const = 0;
+
+    virtual volScalarField& activationTimeField() = 0;
 };
 
 
@@ -57,6 +62,8 @@ public:
     virtual const pointField& terminalLocations() const = 0;
 
     virtual void terminalVm(scalarField& values) const = 0;
+
+    virtual void terminalActivationTime(scalarField& values) const = 0;
 
     //- Receive terminal exchange terms prepared by the coupling model.
     //  Positive terminalCurrent removes charge from the network and injects

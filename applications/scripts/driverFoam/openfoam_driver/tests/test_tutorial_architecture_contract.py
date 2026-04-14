@@ -7,7 +7,11 @@ from pathlib import Path
 
 from openfoam_driver.core.defaults import niederer_2012 as niederer_defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.core.runtime.registry import list_tutorials, load_tutorial_spec
+from openfoam_driver.core.runtime.registry import (
+    list_case_directories,
+    list_tutorials,
+    load_tutorial_spec,
+)
 from openfoam_driver.specs.tutorials import (
     manufactured_fda,
     manufactured_fda_bidomain,
@@ -71,6 +75,16 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 self.assertIn(self.tutorials_root, spec.case_root.parents)
                 self.assertEqual(spec.setup_root.parent, spec.case_root)
                 self.assertEqual(spec.output_dir.parent, spec.case_root)
+
+    def test_case_directory_listing_excludes_grouping_folders(self) -> None:
+        discovered = set(list_case_directories(self.tutorials_root))
+
+        self.assertIn("HeartSimTemplate", discovered)
+        self.assertIn("singleCell", discovered)
+        self.assertIn("NiedererEtAl2012Purkinje", discovered)
+        self.assertIn("NiedererEtAl2012EikonalPurkinje", discovered)
+        self.assertNotIn("manufacturedSolutions", discovered)
+        self.assertNotIn("regressionTests", discovered)
 
     def test_case_sweeps_are_non_empty_and_unique(self) -> None:
         for tutorial in list_tutorials():

@@ -33,14 +33,12 @@ SourceFiles
 
 #include "physicsModel.H"
 #include "runTimeSelectionTables.H"
-#include "volFields.H"
-#include "surfaceFields.H"
-#include "pimpleControl.H"
-#include "dimVoltage.H"
-#include "Enum.H"
 #include "electromechanicalSignalProvider.H"
 #include "electroStateProvider.H"
 #include "electrophysicsSystem.H"
+#include "Enum.H"
+#include "pimpleControl.H"
+#include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -103,7 +101,7 @@ protected:
   electrophysicsSystem domainSystem_;
 
   //- Configure ECG domains from electroProperties
-  void configureECGSystem();
+  void configureECGDomains();
 
   //- Return non-const acess to the pimple control
   pimpleControl &pimple();
@@ -176,6 +174,11 @@ public:
   {
       return domainSystem_.myocardium().provider();
   }
+
+  //- Return a named coupling signal as a volScalarField on the electro mesh.
+  //  Supported field names: "Vm", "Cai".
+  //  Values are in the ionic model's native units (mV for Vm, mM for Cai).
+  virtual tmp<volScalarField> couplingField(const word& fieldName) const;
 
   //- Default electrophysiology state channels; derived models override the
   //  fields they actually expose.

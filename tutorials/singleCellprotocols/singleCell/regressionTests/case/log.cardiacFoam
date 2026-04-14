@@ -1,0 +1,34 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8dbc61e11c-20241220 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : cardiacFoam
+Date   : Apr 10 2026
+Time   : 17:33:11
+Host   : macbook
+PID    : 41846
+I/O    : uncollated
+Case   : /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/singleCell/regressionTests/case
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Selecting physicsModel electroModel
+[stack trace]
+=============
+#1  Foam::sigSegv::sigHandler(int) in /Volumes/OpenFOAM-v2412/platforms/darwin64ClangDPInt32Opt/lib/libOpenFOAM.dylib
+#2  _sigtramp in /usr/lib/system/libsystem_platform.dylib
+#3  Foam::physicsModel::New(Foam::Time&, Foam::word const&) in ~/OpenFOAM/simaocastro-v2412/platforms/darwin64ClangDPInt32Opt/lib/libphysicsModel.dylib
+#4  Foam::physicsModel::New(Foam::Time&, Foam::word const&) in ~/OpenFOAM/simaocastro-v2412/platforms/darwin64ClangDPInt32Opt/lib/libphysicsModel.dylib
+#5  main in ~/OpenFOAM/simaocastro-v2412/platforms/darwin64ClangDPInt32Opt/bin/cardiacFoam
+#6  start in /usr/lib/dyld
+=============

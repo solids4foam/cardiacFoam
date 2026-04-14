@@ -17,15 +17,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "TNNP.H"
 #include "TNNP_2004.H"
+#include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
-#include "HashTable.H"
+
+#include <math.h>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -274,5 +275,4 @@ Foam::wordList Foam::TNNP::availableSweepCurrents() const
 {
     return TNNPDependencyMap().toc();
 }
-
 

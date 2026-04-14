@@ -40,6 +40,7 @@ SourceFiles
 #define EikonalSolver_H
 
 #include "electroModel.H"
+#include "surfaceFields.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

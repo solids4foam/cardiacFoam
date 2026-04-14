@@ -1,21 +1,48 @@
 # verificationModels
 
-Shared analytical manufactured-oracle definitions live here.
+This folder builds `libverificationModels`, the verification library for
+electrophysiology and ECG workflows.
 
-Current split:
+## Current contents
 
-- `monodomainVerification/manufacturedFDAMonodomainVerifier.C` owns the
-  manufactured monodomain initialization and error-summary logic.
-- `monodomainVerification/manufacturedFDAReference.H` provides the exact manufactured
-  `Vm`, `u1`, `u2`, `u3`, and manufactured pseudo-ECG reference formulas.
-- `bidomainVerification/manufacturedFDABidomainReference.H` extends the shared
-  manufactured formulas with exact `phiE` and `phiI` fields for bidomain tests.
-- `bidomainVerification/manufacturedFDABidomainVerifier.C` provides the
-  bidomain manufactured error summary for `Vm`, `phiE`, `phiI`, `u1`, and `u2`.
-- `ecgVerification/pseudoECGManufacturedVerifier.C` owns the manufactured
-  pseudo-ECG verification lifecycle.
-- Legacy compatibility wrappers in `electroModels` were removed; consumers
-  should include `monodomainVerification/manufacturedFDAReference.H` directly.
+```text
+src/verificationModels/
+├── electroVerification/      # Base electro verifier family
+├── monodomainVerification/   # Monodomain manufactured/reference verifiers
+├── bidomainVerification/     # Bidomain manufactured/reference verifiers
+├── ecgVerification/          # ECG verification family
+├── Make/
+└── README.md
+```
 
-The runtime-selected manufactured pre/post-processor adapter in
-`modelPrePostProcessors/` is now only an adapter for the monodomain verifier.
+## Purpose
+
+The code in this folder provides runtime-selected verification models and
+reference helpers used to validate:
+
+- monodomain workflows
+- bidomain workflows
+- ECG workflows
+- selected single-cell manufactured cases
+
+## Main abstractions
+
+- `electroVerificationModel`
+  Base runtime-selection layer for myocardium-side verification hooks
+- `ecgVerificationModel`
+  Base runtime-selection layer for ECG-side verification hooks
+
+## Concrete families
+
+- `monodomainVerification/`
+  Manufactured monodomain references and verifiers
+- `bidomainVerification/`
+  Manufactured bidomain references and verifiers
+- `ecgVerification/`
+  ECG verification helpers such as pseudo-ECG manufactured verification
+
+## What this folder does not own
+
+This folder does not own the myocardium or ECG solvers themselves. It provides
+verification-side models that are called from those workflows.
+

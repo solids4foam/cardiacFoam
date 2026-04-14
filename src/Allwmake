@@ -19,9 +19,11 @@ echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
 export WM_CXXFLAGS="$WM_CXXFLAGS -Wno-inconsistent-missing-override"
 
 
+wmake lnInclude couplingModels
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
 wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
+wmake $targetType libso electroMechanicalModels
 

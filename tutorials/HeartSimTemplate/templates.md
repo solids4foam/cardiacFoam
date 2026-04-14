@@ -213,9 +213,10 @@ monodomainSolverCoeffs
 
     domainCouplings
     {
-        purkinjeToMyocardium
+        couplingA
         {
-            electroDomainCoupler  pvjResistanceCoupler;
+            electroDomainCoupler  reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
             rPvj                  500.0;
             pvjRadius             6e-4;
             couplingMode          bidirectional;
@@ -296,7 +297,7 @@ eikonalSolverCoeffs
             pvjNodes     ( 2  3 );
             pvjLocations ( (0.00245  0.00115  0.00025) (0.00745  0.00115  0.00025) );
             
-            rootStimulus { startTime 0.0; }
+            rootStimulus { startTime 0.0; duration 0.002; intensity 1000.0; }
 
             purkinjeNetworkModelCoeffs
             {
@@ -306,6 +307,17 @@ eikonalSolverCoeffs
                 // Eikonal only uses psi (activation time), no ionic variables needed
                 outputVariables { export (psi); debug (psi); }
             }
+        }
+    }
+
+    domainCouplings
+    {
+        couplingA
+        {
+            electroDomainCoupler  eikonalPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            pvjRadius             6e-4;
+            couplingMode          unidirectional;
         }
     }
 }

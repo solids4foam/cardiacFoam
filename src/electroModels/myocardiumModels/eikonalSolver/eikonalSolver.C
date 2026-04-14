@@ -21,6 +21,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvc.H"
 #include "fvm.H"
+#include "dimVoltage.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

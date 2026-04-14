@@ -112,7 +112,8 @@
         "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
         "monodomainSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
         "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
-        "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler"
+        "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
+        "monodomainSolverCoeffs.domainCouplings.<name>.conductionNetworkDomain"
       ],
       "capabilities": {
         "ecg": false,
@@ -159,7 +160,8 @@
       "electro_scope": "eikonalSolverCoeffs",
       "required_blocks": [
         "eikonalSolverCoeffs",
-        "eikonalSolverCoeffs.conductionNetworkDomains"
+        "eikonalSolverCoeffs.conductionNetworkDomains",
+        "eikonalSolverCoeffs.domainCouplings"
       ],
       "required_keys": [
         "eikonalSolverCoeffs.c0",
@@ -168,7 +170,10 @@
         "eikonalSolverCoeffs.stimulusLocationMax",
         "eikonalSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
         "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
-        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.c0"
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.c0",
+        "eikonalSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
+        "eikonalSolverCoeffs.domainCouplings.<name>.conductionNetworkDomain",
+        "eikonalSolverCoeffs.domainCouplings.<name>.couplingMode"
       ],
       "capabilities": {
         "ecg": false,
@@ -213,7 +218,8 @@
         "myocardiumSolver": "eikonalSolver"
       },
       "allows": [
-        "conductionNetworkDomains"
+        "conductionNetworkDomains",
+        "domainCouplings"
       ],
       "forbids": [
         "verificationModel"

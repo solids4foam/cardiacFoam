@@ -292,6 +292,29 @@ public:
             return tissue_;
         }
 
+        //- Return the resting membrane potential in SI units (V), derived
+        //  directly from the model's own initial conditions as set by
+        //  initConsts.  This is the 1D analogue of the 3D domain reading Vm
+        //  from the '0/Vm' field file: no external specification is required.
+        //
+        //  For dimensionless models (BuenoOrovio, AlievPanfilov) the
+        //  ioVmTransform() function is applied to convert STATES[0] → mV
+        //  before converting to V.  For all standard CellML models that store
+        //  Vm directly in mV, the transform is nullptr and STATES[0] is used
+        //  as-is.  Falls back to -0.084 V if the model provides no state data.
+        virtual scalar vmRest() const
+        {
+            const auto* statesPtr = ioStatesPtr();
+            if (!statesPtr || statesPtr->empty() || (*statesPtr)[0].empty())
+            {
+                return -0.084;
+            }
+            const scalarField& s0 = (*statesPtr)[0];
+            const ionicModelIO::VmTransform transform = ioVmTransform();
+            const scalar vmMv = transform ? transform(s0) : s0[0];
+            return vmMv * 1e-3;   // mV → V
+        }
+
         //- Getter for 1 cell inside the CellML ODE
         const Switch& solveVmWithinODESolver() const
         {
