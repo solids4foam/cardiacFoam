@@ -37,6 +37,15 @@ class IonicModelEntry:
     compatible_solvers: tuple[str, ...]
     """Which myocardium solvers can host this model."""
 
+    species: tuple[str, ...]
+    """Species the model is designed for (e.g. ('human',), ('guinea_pig',), ('generic',))."""
+
+    cardiac_region: tuple[str, ...]
+    """Cardiac region the model is designed for (e.g. ('ventricle',), ('atrium',), ('sinoatrial_node',), ('purkinje',), ('manufactured',))."""
+
+    model_type: str
+    """Model classification: 'phenomenological', 'ionic', or 'manufactured'."""
+
     description: str
     """Human-readable description."""
 
@@ -122,7 +131,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("u", "recovery_r"),
         compatible_tissues=("myocyte",),
         compatible_solvers=("singleCellSolver",),
-        description="Aliev-Panfilov reduced ionic model (1996) for myocytes.",
+        species=("generic",),
+        cardiac_region=("ventricle",),
+        model_type="phenomenological",
+        description="Simplified 2-variable phenomenological model; not species-specific (Aliev & Panfilov 1996).",
     ),
     "BuenoOrovio": IonicModelEntry(
         states=("u", "v", "w", "s"),
@@ -131,7 +143,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("u", "v", "w", "s"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Bueno-Orovio reduced ionic model (2008) for human ventricular tissue.",
+        species=("generic",),
+        cardiac_region=("ventricle",),
+        model_type="phenomenological",
+        description="Minimal phenomenological model designed to replicate human/mammalian ventricular action potentials (Bueno-Orovio et al. 2008).",
     ),
     "Courtemanche": IonicModelEntry(
         states=("membrane_V", "sodium_Nai", "potassium_Ki", "calcium_Cai", "calcium_CaUp", "calcium_CaRel", "ina_m", "ina_h", "ina_j", "ito_oa", "ito_oi", "ikur_ua", "ikur_ui", "ikr_xr", "iks_xs", "ical_d", "ical_f", "ical_fCa", "cajsr_u", "cajsr_v", "cajsr_w"),
@@ -140,7 +155,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("membrane_V", "calcium_Cai"),
         compatible_tissues=("myocyte",),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Courtemanche human atrial ionic model (1998).",
+        species=("human",),
+        cardiac_region=("atrium",),
+        model_type="ionic",
+        description="Gold-standard ionic model for human atrial simulations (Courtemanche et al. 1998).",
     ),
     "Fabbri": IonicModelEntry(
         states=("membrane_V", "Na_i", "If_y_gate_y", "INa_m_gate_m", "INa_h_gate_h", "ICaL_dL_gate_dL", "ICaL_fL_gate_fL", "ICaL_fCa_gate_fCa", "ICaT_dT_gate_dT", "ICaT_fT_gate_fT", "SR_R", "SR_O", "SR_I", "SR_RI", "Buffer_fTMM", "Buffer_fCMi", "Buffer_fCMs", "Buffer_fTC", "Buffer_fTMC", "Buffer_fCQ", "Ca_i", "Ca_nsr", "Ca_jsr", "Ca_sub", "IKur_rKur_gate_r_Kur", "IKur_sKur_gate_s_Kur", "Ito_q_gate_q", "Ito_r_gate_r", "IKr_pa_gate_paS", "IKr_pa_gate_paF", "IKr_pi_gate_piy", "IKs_n_gate_n", "IKACh_a_gate_a"),
@@ -149,7 +167,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("membrane_V", "Ca_i"),
         compatible_tissues=("myocyte",),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Fabbri human sinoatrial node ionic model (2017).",
+        species=("human",),
+        cardiac_region=("sinoatrial_node",),
+        model_type="ionic",
+        description="Ionic model specifically for human sinoatrial node (pacemaker) cells (Fabbri et al. 2017).",
     ),
     "Gaur": IonicModelEntry(
         states=("cell_v", "nai", "nass", "ki", "kss", "cai", "cai2", "cass", "cansr", "cajsr", "cacsr", "I_Na_m", "I_Na_h", "I_Na_j", "INaL_ml", "INaL_hl", "ICaL_d", "ICaL_fca", "IKr_xr", "IKs_xs1", "IKs_xs2", "ITo_aa", "CICR_Jrel2", "CICR_Jrel1", "CaMK_CaMKt", "CICR_tjsrol", "CICR_A", "ICaL_fs", "ICaL_ff"),
@@ -158,7 +179,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("cell_v", "cai"),
         compatible_tissues=("myocyte",),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Gaur ventricular ionic model (2021).",
+        species=("guinea_pig",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="Guinea pig ventricular ionic model based on the Gaur-Rudy-Luo formulation (1996).",
     ),
     "Grandi": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "xrf", "xrs", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrsp", "xs1", "xs2", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr"),
@@ -167,7 +191,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("V", "Cass"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Grandi human ventricular ionic model (2011).",
+        species=("human",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="Human ventricular ionic model with detailed calcium signalling and electrolytes (Grandi et al. 2010).",
     ),
     "ORd": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt"),
@@ -176,7 +203,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("V", "Cass"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="ORd human ventricular ionic model (2011).",
+        species=("human",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="O'Hara-Rudy; industry-standard human ventricular ionic model (O'Hara et al. 2011).",
     ),
     "Stewart": IonicModelEntry(
         states=("V", "m", "h1", "h2", "j", "d", "f", "f_ca", "r", "s", "xK", "Nai", "Ki", "Cai", "CaRel", "CaUp"),
@@ -185,7 +215,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("V", "Cai"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Stewart guinea pig ventricular ionic model (2009).",
+        species=("human",),
+        cardiac_region=("purkinje",),
+        model_type="ionic",
+        description="Human Purkinje fibre ionic model for specialised cardiac conduction (Stewart et al. 2009).",
     ),
     "TNNP": IonicModelEntry(
         states=("membrane_V", "sodium_Nai", "potassium_Ki", "calcium_Cai", "calcium_CaUp", "calcium_CaRel", "ina_m", "ina_h", "ina_j", "ito_oa", "ito_oi", "ikur_ua", "ikur_ui", "ikr_xr", "iks_xs", "ical_d", "ical_f", "ical_fCa", "cajsr_u", "cajsr_v", "cajsr_w"),
@@ -194,7 +227,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("membrane_V", "calcium_Cai"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="TNNP human ventricular ionic model (2004).",
+        species=("human",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="Ten Tusscher-Noble-Noble-Panfilov; widely used human ventricular ionic model for 3-D simulations (ten Tusscher & Panfilov 2006).",
     ),
     "ToRORd_dynCl": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt", "Cli", "Clss"),
@@ -203,7 +239,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("V", "Cass"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="ToRORd-dynCl human ventricular ionic model (2023) with dynamic chloride.",
+        species=("human",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="Evolution of ORd with dynamic chloride handling (Tomek et al. 2019).",
     ),
     "Trovato": IonicModelEntry(
         states=("Vm", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt"),
@@ -212,7 +251,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("Vm", "Cass"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-        description="Trovato human ventricular ionic model (2019).",
+        species=("human",),
+        cardiac_region=("ventricle",),
+        model_type="ionic",
+        description="Recent update to ORd focusing on early after-depolarisations (EADs) (Trovato et al. 2020).",
     ),
     "monodomainFDAManufactured": IonicModelEntry(
         states=("phi",),
@@ -221,7 +263,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("phi",),
         compatible_tissues=("manufactured",),
         compatible_solvers=("monodomainSolver", "singleCellSolver"),
-        description="FDA manufactured solution for monodomain verification.",
+        species=("generic",),
+        cardiac_region=("manufactured",),
+        model_type="manufactured",
+        description="Manufactured (verification) monodomain ionic model; not physiological.",
     ),
     "bidomainFDAManufactured": IonicModelEntry(
         states=("phi",),
@@ -230,7 +275,10 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("phi",),
         compatible_tissues=("manufactured",),
         compatible_solvers=("bidomainSolver", "singleCellSolver"),
-        description="FDA manufactured solution for bidomain verification.",
+        species=("generic",),
+        cardiac_region=("manufactured",),
+        model_type="manufactured",
+        description="Manufactured (verification) bidomain ionic model; not physiological.",
     ),
 }
 
@@ -317,3 +365,21 @@ def get_active_tension_entry(name: str) -> ActiveTensionModelEntry:
             f"Available models: {', '.join(ACTIVE_TENSION_MODEL_CATALOG.keys())}"
         )
     return ACTIVE_TENSION_MODEL_CATALOG[name]
+
+
+def list_models_by_region(cardiac_region: str) -> list[str]:
+    """Return ionic model names whose cardiac_region tuple contains the given region."""
+    return [
+        name
+        for name, entry in IONIC_MODEL_CATALOG.items()
+        if cardiac_region in entry.cardiac_region
+    ]
+
+
+def list_models_by_species(species: str) -> list[str]:
+    """Return ionic model names whose species tuple contains the given species."""
+    return [
+        name
+        for name, entry in IONIC_MODEL_CATALOG.items()
+        if species in entry.species
+    ]
