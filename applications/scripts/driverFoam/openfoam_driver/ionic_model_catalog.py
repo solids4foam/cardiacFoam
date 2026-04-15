@@ -49,6 +49,18 @@ class IonicModelEntry:
     description: str
     """Human-readable description."""
 
+    aliases: tuple[str, ...] = ()
+    """Alternative names for this model."""
+
+    recommended_ode_step: float = 1e-5
+    """Suggested ODE timestep for stable integration."""
+
+    recommended_stimulus_duration: float | None = 0.002
+    """Suggested stimulus pulse duration in milliseconds."""
+
+    recommended_stimulus_intensity: float | None = 80000.0
+    """Suggested stimulus current intensity in pA."""
+
     notes: str = ""
     """Additional notes or warnings."""
 
@@ -77,6 +89,9 @@ class ActiveTensionModelEntry:
 
     notes: str = ""
     """Additional notes or warnings."""
+
+    aliases: tuple[str, ...] = ()
+    """Alternative names for this model."""
 
 
 SOLVER_COMPATIBILITY_RULES: Final[tuple[dict, ...]] = (
@@ -134,7 +149,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("generic",),
         cardiac_region=("ventricle",),
         model_type="phenomenological",
-        description="Simplified 2-variable phenomenological model; not species-specific (Aliev & Panfilov 1996).",
+        description="Two-variable phenomenological model; not species-specific (Aliev & Panfilov 1996). Computationally very cheap — suited for large-scale qualitative propagation studies and parameter sweeps. Does not reproduce ion concentrations or realistic AP morphology. Dimensionless units: stimulus intensity ~0.5, duration ~1.0 time unit.",
+        aliases=("AP model", "Aliev-Panfilov", "AP96"),
+        recommended_ode_step=1e-3,
+        recommended_stimulus_duration=1.0,
+        recommended_stimulus_intensity=0.5,
         notes="Phenomenological; works in any PDE-based or ODE-only solver, same as BuenoOrovio.",
     ),
     "BuenoOrovio": IonicModelEntry(
@@ -147,7 +166,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("generic",),
         cardiac_region=("ventricle",),
         model_type="phenomenological",
-        description="Minimal phenomenological model designed to replicate human/mammalian ventricular action potentials (Bueno-Orovio et al. 2008).",
+        description="Four-variable phenomenological model reproducing better AP morphology than AlievPanfilov; not species-specific (Bueno-Orovio et al. 2008). Computationally cheap. No ion dynamics. Compatible with epicardial, M-cell, and endocardial tissue variants. Dimensionless units.",
+        aliases=("BO model", "Bueno-Orovio", "minimal ventricular model", "BO08"),
+        recommended_ode_step=1e-3,
+        recommended_stimulus_duration=1.0,
+        recommended_stimulus_intensity=0.5,
     ),
     "Courtemanche": IonicModelEntry(
         states=("membrane_V", "sodium_Nai", "potassium_Ki", "calcium_Cai", "calcium_CaUp", "calcium_CaRel", "ina_m", "ina_h", "ina_j", "ito_oa", "ito_oi", "ikur_ua", "ikur_ui", "ikr_xr", "iks_xs", "ical_d", "ical_f", "ical_fCa", "cajsr_u", "cajsr_v", "cajsr_w"),
@@ -159,7 +182,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("atrium",),
         model_type="ionic",
-        description="Gold-standard ionic model for human atrial simulations (Courtemanche et al. 1998).",
+        description="Human atrial ionic model (Courtemanche et al. 1998). 21 states. Suited for atrial fibrillation and atrial remodelling studies. Computationally moderate.",
+        aliases=("CRN", "Courtemanche-Ramirez-Nattel", "human atrial model", "CRN98"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "Fabbri": IonicModelEntry(
         states=("membrane_V", "Na_i", "If_y_gate_y", "INa_m_gate_m", "INa_h_gate_h", "ICaL_dL_gate_dL", "ICaL_fL_gate_fL", "ICaL_fCa_gate_fCa", "ICaT_dT_gate_dT", "ICaT_fT_gate_fT", "SR_R", "SR_O", "SR_I", "SR_RI", "Buffer_fTMM", "Buffer_fCMi", "Buffer_fCMs", "Buffer_fTC", "Buffer_fTMC", "Buffer_fCQ", "Ca_i", "Ca_nsr", "Ca_jsr", "Ca_sub", "IKur_rKur_gate_r_Kur", "IKur_sKur_gate_s_Kur", "Ito_q_gate_q", "Ito_r_gate_r", "IKr_pa_gate_paS", "IKr_pa_gate_paF", "IKr_pi_gate_piy", "IKs_n_gate_n", "IKACh_a_gate_a"),
@@ -171,7 +198,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("sinoatrial_node",),
         model_type="ionic",
-        description="Ionic model specifically for human sinoatrial node (pacemaker) cells (Fabbri et al. 2017).",
+        description="Human sinoatrial node model with spontaneous pacing (Fabbri et al. 2017). Use for SAN automaticity and pacemaker current studies. Not a working myocyte model.",
+        aliases=("Fabbri-Fantini", "sinoatrial node model", "SAN model", "pacemaker model"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "Gaur": IonicModelEntry(
         states=("cell_v", "nai", "nass", "ki", "kss", "cai", "cai2", "cass", "cansr", "cajsr", "cacsr", "I_Na_m", "I_Na_h", "I_Na_j", "INaL_ml", "INaL_hl", "ICaL_d", "ICaL_fca", "IKr_xr", "IKs_xs1", "IKs_xs2", "ITo_aa", "CICR_Jrel2", "CICR_Jrel1", "CaMK_CaMKt", "CICR_tjsrol", "CICR_A", "ICaL_fs", "ICaL_ff"),
@@ -183,7 +214,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("pig",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Pig ventricular ionic model based on the Gaur-Rudy-Luo formulation (1996).",
+        description="Pig ventricular ionic model (Gaur & Rudy 2011). Use when pig (guinea pig) animal experiments are the reference. Computationally moderate.",
+        aliases=("Gaur-Rudy", "guinea pig ventricular model"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "Grandi": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "xrf", "xrs", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrsp", "xs1", "xs2", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr"),
@@ -195,7 +230,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Human ventricular ionic model with detailed calcium signalling and electrolytes (Grandi et al. 2010).",
+        description="Human ventricular ionic model with detailed calcium signalling and electrolytes (Grandi et al. 2010). 29 states. Suited for Ca²⁺ handling and atrial fibrillation drug studies. Computationally demanding.",
+        aliases=("Grandi-Pasqualini-Bers", "GPB model"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "ORd": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt"),
@@ -207,7 +246,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="O'Hara-Rudy; industry-standard human ventricular ionic model (O'Hara et al. 2011).",
+        description="O'Hara-Rudy; industry-standard 41-state human ventricular ionic model (O'Hara et al. 2011). Preferred for drug-induced arrhythmia and late INa studies. Computationally demanding.",
+        aliases=("O'Hara-Rudy", "OR model", "O'Hara 2011", "ORd2011"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "Stewart": IonicModelEntry(
         states=("V", "m", "h1", "h2", "j", "d", "f", "f_ca", "r", "s", "xK", "Nai", "Ki", "Cai", "CaRel", "CaUp"),
@@ -219,7 +262,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("purkinje",),
         model_type="ionic",
-        description="Human Purkinje fibre ionic model for specialised cardiac conduction (Stewart et al. 2009).",
+        description="Human Purkinje fibre ionic model for specialised cardiac conduction (Stewart et al. 2009). Use with monodomain1DSolver for Purkinje network simulations. Not a ventricular myocyte model.",
+        aliases=("Stewart-Aslanidi-Noble", "human Purkinje model"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "TNNP": IonicModelEntry(
         states=("membrane_V", "sodium_Nai", "potassium_Ki", "calcium_Cai", "calcium_CaUp", "calcium_CaRel", "ina_m", "ina_h", "ina_j", "ito_oa", "ito_oi", "ikur_ua", "ikur_ui", "ikr_xr", "iks_xs", "ical_d", "ical_f", "ical_fCa", "cajsr_u", "cajsr_v", "cajsr_w"),
@@ -231,7 +278,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Ten Tusscher-Noble-Noble-Panfilov; widely used human ventricular ionic model for 3-D simulations (ten Tusscher & Panfilov 2006).",
+        description="Ten Tusscher-Noble-Noble-Panfilov; widely used 21-state human ventricular ionic model (ten Tusscher & Panfilov 2006). Well-validated for 3-D reentry and drug screening. Tissue variants: epicardial, M-cell, endocardial. Computationally moderate.",
+        aliases=("ten Tusscher", "TT04", "TT06", "ten Tusscher-Panfilov", "TT2006"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=50000.0,
     ),
     "ToRORd_dynCl": IonicModelEntry(
         states=("V", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt", "Cli", "Clss"),
@@ -243,7 +294,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Evolution of ORd with dynamic chloride handling (Tomek et al. 2019).",
+        description="Evolution of ORd with dynamic chloride handling; 44 states (Tomek et al. 2019). Suited for studies involving chloride currents or arrhythmia. Computationally demanding.",
+        aliases=("ToR-ORd", "Tomek", "ToRORd", "Tomek-Rodriguez-ORd", "dynamic chloride"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "Trovato": IonicModelEntry(
         states=("Vm", "m", "hf", "hs", "j", "hsp", "jp", "fLCa", "mL", "hL", "hLp", "a", "iF", "iS", "ap", "iFp", "iSp", "d", "ff", "fs", "fcaf", "fcas", "jca", "nca", "ffp", "fcafp", "fcasp", "xrf", "xrs", "xs1", "xs2", "xk1", "y", "oa", "oi", "r", "u", "Nai", "Cass", "Cajsr", "Cansr", "CaMKt"),
@@ -255,7 +310,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("human",),
         cardiac_region=("ventricle",),
         model_type="ionic",
-        description="Recent update to ORd focusing on early after-depolarisations (EADs) (Trovato et al. 2020).",
+        description="ORd update focusing on early after-depolarisations (EADs); 41 states (Trovato et al. 2020). Same computational cost as ORd. Use for EAD and triggered activity studies.",
+        aliases=("Trovato 2020", "updated ORd", "EAD model"),
+        recommended_ode_step=1e-5,
+        recommended_stimulus_duration=0.002,
+        recommended_stimulus_intensity=80000.0,
     ),
     "monodomainFDAManufactured": IonicModelEntry(
         states=("phi",),
@@ -267,7 +326,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("generic",),
         cardiac_region=("manufactured",),
         model_type="manufactured",
-        description="Manufactured (verification) monodomain ionic model; not physiological.",
+        description="Manufactured solution for monodomain solver convergence testing and verification (FDA benchmark). Not for physiological studies.",
+        aliases=("FDA manufactured", "monodomain manufactured solution"),
+        recommended_ode_step=1e-4,
+        recommended_stimulus_duration=None,
+        recommended_stimulus_intensity=None,
     ),
     "bidomainFDAManufactured": IonicModelEntry(
         states=("phi",),
@@ -279,7 +342,11 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         species=("generic",),
         cardiac_region=("manufactured",),
         model_type="manufactured",
-        description="Manufactured (verification) bidomain ionic model; not physiological.",
+        description="Manufactured solution for bidomain solver convergence testing and verification (FDA benchmark). Not for physiological studies.",
+        aliases=("FDA manufactured", "bidomain manufactured solution"),
+        recommended_ode_step=1e-4,
+        recommended_stimulus_duration=None,
+        recommended_stimulus_intensity=None,
     ),
 }
 
@@ -291,6 +358,7 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         rates=("Ta",),
         recommended_exports=("Ta",),
         description="Goktepe-Kuhl active tension model (2004).",
+        aliases=("Goktepe-Kuhl", "active stress model"),
     ),
     "NashPanfilov": ActiveTensionModelEntry(
         states=("Ta",),
@@ -299,6 +367,7 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         rates=("Ta",),
         recommended_exports=("Ta",),
         description="Nash-Panfilov active tension model (2004).",
+        aliases=("Nash-Panfilov", "phenomenological active stress"),
     ),
 }
 
