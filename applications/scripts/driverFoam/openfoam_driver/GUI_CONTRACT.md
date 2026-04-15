@@ -134,7 +134,7 @@ Top-level keys:
 - `compatible_tissues` — valid `tissue` values for this model (e.g. `"epicardialCells"`, `"myocyte"`)
 - `compatible_solvers` — valid `myocardiumSolver` values (e.g. `"monodomainSolver"`, `"singleCellSolver"`)
 - `species` — species this model was derived from (e.g. `"human"`, `"pig"`)
-- `cardiac_region` — cardiac region (e.g. `"ventricle"`, `"atria"`, `"purkinje"`)
+- `cardiac_region` — cardiac region (e.g. `"ventricle"`, `"atrium"`, `"purkinje"`)
 - `model_type` — `"phenomenological"`, `"ionic"`, or `"manufactured"`
 - `description` — human-readable summary
 - `notes` — additional implementation notes (may be empty)

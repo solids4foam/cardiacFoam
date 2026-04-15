@@ -109,9 +109,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
             description="Time-advance scheme for multi-domain coupling (myocardium, Purkinje, ECG).",
             source_refs=(
-                "src/electroModels/core/schemes/electrophysicsAdvanceScheme.H",
-                "src/electroModels/core/schemes/staggered/staggeredElectrophysicsAdvanceScheme.C",
-                "src/electroModels/core/schemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C",
+                "src/electroModels/core/advanceSchemes/electrophysicsAdvanceScheme.H",
+                "src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C",
+                "src/electroModels/core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C",
             ),
             notes="staggeredElectrophysicsAdvanceScheme: weakly coupled, fast, stable for unidirectional. pimpleStaggeredElectrophysicsAdvanceScheme: strongly coupled with PIMPLE iteration, stable for bidirectional coupling (requires solutionAlgorithm=implicit).",
             value_kind="enum",
@@ -727,7 +727,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-                "src/ionicModels/ionicModel.H",
+                "src/ionicModels/ionicModel/ionicModel.H",
             ),
             value_kind="enum",
             ui_control="select",
@@ -945,7 +945,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Required for every conduction-system coupling entry."
             ),
             source_refs=(
-                "src/electroModels/core/electrophysicsSystemBuilder.C",
+                "src/electroModels/core/system/electrophysicsSystemBuilder.C",
             ),
             value_kind="word",
             ui_control="text",
@@ -961,9 +961,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "pimpleStaggeredElectrophysicsAdvanceScheme: PIMPLE-iterated, required for bidirectional coupling."
             ),
             source_refs=(
-                "src/electroModels/core/schemes/electrophysicsAdvanceScheme.C",
-                "src/electroModels/core/schemes/staggered/staggeredElectrophysicsAdvanceScheme.H",
-                "src/electroModels/core/schemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.H",
+                "src/electroModels/core/advanceSchemes/electrophysicsAdvanceScheme.C",
+                "src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H",
+                "src/electroModels/core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.H",
             ),
             value_kind="enum",
             ui_control="select",
@@ -1010,7 +1010,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             source_refs=(
                 "src/electroModels/electroCouplers/electroDomainCoupler.C",
-                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusionPvjCoupler/reactionDiffusionPvjCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
             ),
             value_kind="enum",
             ui_control="select",
@@ -1026,7 +1026,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Must match a key in conductionNetworkDomains."
             ),
             source_refs=(
-                "src/electroModels/electrophysicsSystemBuilder.C",
+                "src/electroModels/core/system/electrophysicsSystemBuilder.C",
             ),
             value_kind="word",
             ui_control="text",
@@ -1042,7 +1042,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Example: 500.0 Ω·m²."
             ),
             source_refs=(
-                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusionPvjCoupler/reactionDiffusionPvjCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
             ),
             value_kind="scalar",
             ui_control="number",
