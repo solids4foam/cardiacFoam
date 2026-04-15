@@ -76,11 +76,34 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("launch", payload)
         self.assertEqual(payload["launch"]["sim"]["action"], "sim")
         self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))
+
+    def test_describe_tutorial_ionic_model_catalog_present_and_complete(self) -> None:
+        payload = describe_tutorial(
+            "singleCell",
+            overrides={"tutorials_root": self.tutorials_root},
+        )
+
         self.assertIn("ionic_model_catalog", payload)
         catalog = payload["ionic_model_catalog"]
         self.assertEqual(catalog["schema_version"], "1.0")
+
+        # ionic_models
+        self.assertIn("ionic_models", catalog)
         self.assertIn("TNNP", catalog["ionic_models"])
-        self.assertIsInstance(catalog["ionic_models"]["TNNP"]["states"], list)
+        tnnp = catalog["ionic_models"]["TNNP"]
+        for key in ("states", "algebraic", "recommended_exports", "compatible_tissues",
+                    "compatible_solvers", "species", "cardiac_region", "model_type"):
+            self.assertIn(key, tnnp, msg=f"Missing key {key!r} on TNNP")
+        # tuples must be serialised to lists
+        self.assertIsInstance(tnnp["states"], list)
+        self.assertGreater(len(tnnp["states"]), 0)
+
+        # active_tension_models
+        self.assertIn("active_tension_models", catalog)
+        self.assertGreater(len(catalog["active_tension_models"]), 0)
+
+        # solver_compatibility
+        self.assertIn("solver_compatibility", catalog)
         self.assertIsInstance(catalog["solver_compatibility"], list)
         self.assertGreater(len(catalog["solver_compatibility"]), 0)
 
