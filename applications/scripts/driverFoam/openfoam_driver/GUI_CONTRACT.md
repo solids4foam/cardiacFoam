@@ -41,6 +41,8 @@ The `describe` payload currently contains:
 - `ionic_model_catalog`
 - `gui_schema`
 - `launch`
+- `config_schema`
+- `manifest_schema`
 
 ## `make_spec` schema
 
@@ -314,6 +316,167 @@ Current example:
 The GUI should not assume that `<name>` can be created arbitrarily. The current
 driver mutator updates existing entries only; it does not create new keys.
 
+## `config_schema`
+
+`config_schema` documents the JSON format accepted by `--config`. It contains:
+
+- `description` — prose explanation of the format
+- `top_level_shapes` — the two valid shapes (`flat` and `wrapped`)
+- `section_fields` — each key accepted inside a tutorial section
+- `worked_example` — a ready-to-use minimal config for this tutorial
+
+### Config file shape
+
+**Flat** — one tutorial, parameters at the top level:
+
+```json
+{
+  "ionic_models": ["TNNP"],
+  "electro_property_overrides": {
+    "$ELECTRO_MODEL_COEFFS.chi": "140000"
+  }
+}
+```
+
+**Wrapped** — multi-tutorial file, each tutorial in its own named section
+(key matching is case-insensitive):
+
+```json
+{
+  "singleCell": {
+    "ionic_models": ["TNNP"],
+    "electro_property_overrides": {
+      "$ELECTRO_MODEL_COEFFS.chi": "140000"
+    }
+  }
+}
+```
+
+### `section_fields`
+
+| Key | Type | Description |
+|-----|------|-------------|
+| *(spec parameters)* | varies | Parameters accepted by `make_spec()` for this tutorial. Listed in `config_schema.section_fields.spec_parameters.available_keys`. |
+| `electro_property_overrides` | mapping or list | Overrides for `constant/electroProperties`. |
+| `physics_property_overrides` | mapping or list | Overrides for `constant/physicsProperties`. |
+| `case_dir_name` | string | Override the case directory name. |
+| `setup_dir_name` | string | Override the setup directory (default: `<case_dir_name>_setup`). |
+| `output_dir_name` | string | Override where the manifest and outputs are written. |
+| `run_script_relpath` | string | Path to an alternative run script. |
+
+### `electro_property_overrides` format
+
+**Shorthand (recommended)** — a mapping from `driver_path` to value string.
+Use exactly the `driver_path` values from `dict_entries.electroProperties`.
+The `$ELECTRO_MODEL_COEFFS` token resolves automatically to the correct solver
+coeffs dict (e.g. `monodomainSolverCoeffs`):
+
+```json
+{
+  "$ELECTRO_MODEL_COEFFS.chi": "140000",
+  "$ELECTRO_MODEL_COEFFS.cm": "0.01",
+  "$ELECTRO_MODEL_COEFFS.initialODEStep": "1e-5",
+  "$ELECTRO_MODEL_COEFFS.ionicModel": "TNNP"
+}
+```
+
+**Explicit** — a list of `{key, scope, value}` objects, for cases where you need
+to target a sub-dictionary by its literal name:
+
+```json
+[
+  {"key": "chi",       "scope": ["monodomainSolverCoeffs"], "value": "140000"},
+  {"key": "ionicModel","scope": ["monodomainSolverCoeffs"], "value": "TNNP"}
+]
+```
+
+---
+
+## `manifest_schema`
+
+`manifest_schema` documents `run_manifest.json` — the run-state source of truth.
+
+### File location
+
+```
+<output_dir>/run_manifest.json
+```
+
+The exact path is also available as `launch.<action>.manifest_path`.
+
+### Polling contract
+
+Poll every **15–30 seconds**. Stop when `status` is in the terminal state list.
+The file is written atomically; reading it at any time is safe.
+
+### Companion file: `action_events.jsonl`
+
+Written to the same directory. Append-only JSONL; one event per line.
+Events: `sim_started`, `case_started`, `case_finished`, `sim_finished`,
+`postprocess_started`, `postprocess_finished`, `all_started`, `all_finished`.
+Each line has `event`, `timestamp_utc`, and `run_id` fields plus event-specific payload.
+
+### Top-level fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema_version` | string | Currently `"2.0"` |
+| `run_id` | string | Unique run identifier |
+| `requested_action` | string | `"sim"`, `"post"`, or `"all"` |
+| `tutorial` | string | Tutorial name |
+| `case_root` | string | Absolute path |
+| `setup_root` | string | Absolute path |
+| `output_dir` | string | Absolute path |
+| `dry_run` | boolean | |
+| `continue_on_error` | boolean | |
+| `status` | string | See status values below |
+| `postprocess_status` | string | See postprocess status values below |
+| `current_case_id` | string\|null | Case currently executing; null between cases |
+| `started_at_utc` | string\|null | ISO 8601 |
+| `updated_at_utc` | string | ISO 8601 — timestamp of last write |
+| `finished_at_utc` | string\|null | ISO 8601; null until terminal state |
+| `total_cases` | integer | |
+| `planned_cases` | integer | Non-zero only in dry-run mode |
+| `completed_cases` | integer | Cases with status `"ok"` |
+| `failed_cases` | integer | Cases with status `"failed"` |
+| `error` | string\|null | Top-level error message if run failed early |
+| `plots_manifest_path` | string\|null | Path to `plots.json` if postprocess produced plots |
+| `human_report_path` | string | Path to `run_report.md` |
+| `results` | array | Per-case results — see below |
+
+### `status` values
+
+| Value | Terminal? | Meaning |
+|-------|-----------|---------|
+| `running` | no | Simulation in progress |
+| `completed` | **yes** | All cases finished successfully |
+| `completed_with_failures` | **yes** | All cases ran; at least one failed |
+| `failed` | **yes** | A case failed and `continue_on_error=false` |
+| `postprocessing` | no | Simulations done; postprocessing running |
+| `postprocess_failed` | **yes** | Postprocessing raised an exception |
+| `planned` | **yes** | Dry-run complete; no simulation was run |
+
+### `postprocess_status` values
+
+`not_started` → `running` → `completed` or `failed`.
+`skipped` is set in dry-run mode.
+
+### Per-case result fields (`results` array)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `case_id` | string | Unique case identifier |
+| `status` | string | `"ok"`, `"failed"`, or `"planned"` |
+| `duration_s` | float | Wall-clock seconds |
+| `params` | object | Parameter values for this case |
+| `error` | string\|null | Exception message if `status="failed"` |
+| `index` | integer | 1-based position in the case list |
+| `total_cases` | integer | |
+| `started_at_utc` | string\|null | ISO 8601 |
+| `finished_at_utc` | string\|null | ISO 8601 |
+
+---
+
 ## Current limitations
 
 - The driver override layer updates existing dict entries only.
@@ -341,6 +504,13 @@ driver mutator updates existing entries only; it does not create new keys.
       Purkinje solver.
 5. Use `gui_schema.routes` and `gui_schema.view_models` as the initial app structure.
 6. Preview `spec.cases`.
-7. Launch through `launch.<action>.command` or an equivalent backend wrapper.
-8. Poll `launch.<action>.manifest_path` for run-state updates.
-9. Persist overrides as JSON compatible with `--config`.
+7. Build the `--config` JSON using `config_schema` as the template.
+   - Start from `config_schema.worked_example.json`.
+   - Set spec parameters from `config_schema.section_fields.spec_parameters.available_keys`.
+   - Set dict entries via `electro_property_overrides` using driver_path keys from `dict_entries`.
+8. Launch through `launch.<action>.command` or an equivalent backend wrapper.
+9. Poll `launch.<action>.manifest_path` every 15–30 s.
+   - Stop when `manifest_schema.terminal_states` contains the current `status`.
+   - Read `results[].status` to identify which cases succeeded or failed.
+   - `action_events.jsonl` (same directory) provides a fine-grained event stream.
+10. Persist overrides as JSON compatible with `--config`.
