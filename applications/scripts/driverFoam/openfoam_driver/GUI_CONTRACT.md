@@ -38,6 +38,7 @@ The `describe` payload currently contains:
 - `factory_overrides`
 - `spec`
 - `dict_entries`
+- `ionic_model_catalog`
 - `gui_schema`
 - `launch`
 
@@ -101,6 +102,73 @@ Each dict entry reports:
 - `enum_values`
 - `examples`
 - `dynamic_path`
+- `required`
+  Boolean. `true` if the parameter must be supplied for a valid simulation; `false` if it has a safe default or is optional.
+- `constraints`
+  List of strings. Each string describes a constraint on this parameter's value or relationship with another parameter. Empty list if unconstrained.
+
+## `ionic_model_catalog`
+
+`ionic_model_catalog` is a static machine-readable catalog of cardiac ionic models,
+active tension models, and solver compatibility rules. Agents use this key to plan
+simulation configuration without requiring an OpenFOAM environment at planning time.
+
+Top-level keys:
+
+- `schema_version`
+  String. Currently `"1.0"`. Increment when the catalog schema changes in a
+  breaking way.
+- `ionic_models`
+  Map from model name to `IonicModelEntry`.
+- `active_tension_models`
+  Map from model name to `ActiveTensionModelEntry`.
+- `solver_compatibility`
+  List of solver compatibility rules.
+
+### `IonicModelEntry` fields
+
+- `states` — list of state variable names (from `stateVariableNames()`)
+- `algebraic` — list of algebraic variable names (from `algebraicVariableNames()`)
+- `constants` — list of constant parameter names (from `constantVariableNames()`)
+- `recommended_exports` — minimum useful set of variable names for `outputVariables.ionic.export`
+- `compatible_tissues` — valid `tissue` values for this model (e.g. `"epicardialCells"`, `"myocyte"`)
+- `compatible_solvers` — valid `myocardiumSolver` values (e.g. `"monodomainSolver"`, `"singleCellSolver"`)
+- `species` — species this model was derived from (e.g. `"human"`, `"pig"`)
+- `cardiac_region` — cardiac region (e.g. `"ventricle"`, `"atria"`, `"purkinje"`)
+- `model_type` — `"phenomenological"`, `"ionic"`, or `"manufactured"`
+- `description` — human-readable summary
+- `notes` — additional implementation notes (may be empty)
+
+### `ActiveTensionModelEntry` fields
+
+- `states`, `algebraic`, `constants` — same semantics as ionic models
+- `rates` — list of rate variable names (from `rateVariableNames()`)
+- `recommended_exports` — minimum useful set of variable names for active tension output
+- `description`, `notes` — same as ionic models
+
+### `solver_compatibility` rules
+
+Each rule is a dict with:
+
+- `myocardium_solver` — solver name or `"*"` (wildcard)
+- `purkinje_solver` — solver name or `"*"` (wildcard)
+- `required_coupler` — required coupler name, or `null` if the combination is invalid
+- `valid` — boolean
+- `reason` — string explanation (present on invalid rules only)
+
+Valid combinations:
+
+| Myocardium solver | Purkinje solver | Coupler |
+|---|---|---|
+| `monodomainSolver` | `monodomain1DSolver` | `reactionDiffusionPvjCoupler` |
+| `eikonalSolver` | `eikonalSolver` | `eikonalPvjCoupler` |
+
+All other cross-physics combinations are invalid. `bidomainSolver` and
+`singleCellSolver` do not support Purkinje network coupling.
+
+**Note:** `solutionAlgorithm` (PDE↔ODE coupling loop) and
+`electrophysicsAdvanceScheme` (myocardium↔Purkinje multi-domain coupling) are
+**independent** parameters — there is no constraint between them.
 
 ## `gui_schema`
 
@@ -253,8 +321,17 @@ driver mutator updates existing entries only; it does not create new keys.
 1. Call `describe`.
 2. Build tutorial-level controls from `make_spec.parameters`.
 3. Build dict editors from `dict_entries`.
-4. Use `gui_schema.routes` and `gui_schema.view_models` as the initial app structure.
-5. Preview `spec.cases`.
-6. Launch through `launch.<action>.command` or an equivalent backend wrapper.
-7. Poll `launch.<action>.manifest_path` for run-state updates.
-8. Persist overrides as JSON compatible with `--config`.
+   - Use `required: true` entries to mark mandatory fields.
+   - Display `constraints` strings as inline validation hints.
+4. Read `ionic_model_catalog` to plan ionic model configuration:
+   a. Pick an `ionicModel` → look up `ionic_models[name].recommended_exports`.
+   b. Set `outputVariables.ionic.export` to the `recommended_exports` value.
+   c. Verify the chosen `tissue` is in `compatible_tissues`.
+   d. Verify the chosen solver is in `compatible_solvers`.
+   e. Check `solver_compatibility` before combining a myocardium solver with a
+      Purkinje solver.
+5. Use `gui_schema.routes` and `gui_schema.view_models` as the initial app structure.
+6. Preview `spec.cases`.
+7. Launch through `launch.<action>.command` or an equivalent backend wrapper.
+8. Poll `launch.<action>.manifest_path` for run-state updates.
+9. Persist overrides as JSON compatible with `--config`.
