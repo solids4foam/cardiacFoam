@@ -106,6 +106,10 @@ Each dict entry reports:
   Boolean. `true` if the parameter must be supplied for a valid simulation; `false` if it has a safe default or is optional.
 - `constraints`
   List of strings. Each string describes a constraint on this parameter's value or relationship with another parameter. Empty list if unconstrained.
+- `unit`
+  SI unit string for the parameter (e.g. `"S/m"`, `"1/m"`, `"F/m²"`, `"s"`, `"A/m³"`). Empty string for enum, boolean, or dimensionless parameters.
+- `typical_value`
+  A canonical value from a working tutorial as a string. Empty string for enum or boolean parameters. For `dimensioned_scalar_literal` or `dimensioned_tensor_literal` entries, this is the numeric magnitude only (the full OpenFOAM literal must still include the dimension set when writing the file).
 
 ## `ionic_model_catalog`
 
@@ -136,8 +140,12 @@ Top-level keys:
 - `species` — species this model was derived from (e.g. `"human"`, `"pig"`)
 - `cardiac_region` — cardiac region (e.g. `"ventricle"`, `"atrium"`, `"purkinje"`)
 - `model_type` — `"phenomenological"`, `"ionic"`, or `"manufactured"`
-- `description` — human-readable summary
+- `description` — human-readable summary including biological context, typical use case, computational cost signal, and key limitations
 - `notes` — additional implementation notes (may be empty)
+- `aliases` — list of alternative names and abbreviations users may use when referring to this model (e.g. `"ten Tusscher"`, `"TT06"`, `"TT2006"` for `TNNP`); useful for semantic matching and in-context model selection
+- `recommended_ode_step` — typical `initialODEStep` in seconds for this model; dimensionless models use a larger step (e.g. `1e-3`), ionic models typically `1e-5`
+- `recommended_stimulus_duration` — typical stimulus duration in seconds; `null` for dimensionless or manufactured models where the unit is not seconds
+- `recommended_stimulus_intensity` — typical stimulus current density in A/m³; `null` for dimensionless or manufactured models
 
 ### `ActiveTensionModelEntry` fields
 
@@ -145,6 +153,7 @@ Top-level keys:
 - `rates` — list of rate variable names (from `rateVariableNames()`)
 - `recommended_exports` — minimum useful set of variable names for active tension output
 - `description`, `notes` — same as ionic models
+- `aliases` — alternative names and abbreviations for this active tension model
 
 ### `solver_compatibility` rules
 
