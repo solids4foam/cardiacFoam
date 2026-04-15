@@ -17,6 +17,8 @@ class DictEntry:
     dynamic_path: bool = False
     required: bool = False
     constraints: tuple[str, ...] = ()
+    unit: str = ""
+    typical_value: str = ""
 
 
 PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
@@ -213,6 +215,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             ui_control="number",
             required=True,
+            unit="s",
+            typical_value="1e-5",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.maxSteps",
@@ -222,6 +226,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="integer",
             ui_control="number",
             required=True,
+            typical_value="1000",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.absTol",
@@ -251,6 +256,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            unit="s",
+            typical_value="0.0",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
@@ -260,6 +267,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            unit="s",
+            typical_value="1.0",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_duration",
@@ -269,6 +278,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            unit="s",
+            typical_value="1.0",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude",
@@ -278,6 +289,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            typical_value="0.4",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim1",
@@ -320,6 +332,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="textarea",
             required=True,
             constraints=("Required for monodomainSolver and eikonalSolver; not used by singleCellSolver.",),
+            unit="S/m",
+            typical_value="0.17",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.chi",
@@ -332,6 +346,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
+            unit="1/m",
+            typical_value="140000",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.cm",
@@ -344,6 +360,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             required=True,
             constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
+            unit="F/m²",
+            typical_value="0.01",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.infoFrequency",
@@ -424,6 +442,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="text",
             required=False,
             constraints=("Mutually exclusive with stimulusDurationList.",),
+            unit="s",
+            typical_value="0.002",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDurationList",
@@ -443,6 +463,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="text",
             required=False,
             constraints=("Mutually exclusive with stimulusIntensityList.",),
+            unit="A/m³",
+            typical_value="50000",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensityList",
@@ -593,6 +615,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="textarea",
             required=True,
             constraints=("Required for bidomainSolver.",),
+            unit="S/m",
+            typical_value="0.17",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductivityExtracellular",
@@ -603,6 +627,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="textarea",
             required=True,
             constraints=("Required for bidomainSolver.",),
+            unit="S/m",
+            typical_value="0.62",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceCell",
@@ -819,6 +845,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             dynamic_path=True,
             required=False,
+            unit="1/m",
+            typical_value="140000",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.cm",
@@ -830,6 +858,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="number",
             dynamic_path=True,
             required=False,
+            unit="F/m²",
+            typical_value="0.01",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.vm1DRest",
