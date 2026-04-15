@@ -170,6 +170,10 @@ def print_update_snippet(model_name: str, parsed: dict[str, list[str]]) -> None:
     print(f'        cardiac_region=(...),')
     print(f'        model_type="ionic",')
     print(f'        description="...",')
+    print(f'        aliases=(),')
+    print(f'        recommended_ode_step=1e-5,')
+    print(f'        recommended_stimulus_duration=0.002,')
+    print(f'        recommended_stimulus_intensity=80000.0,')
     print(f'    ),')
 
 
