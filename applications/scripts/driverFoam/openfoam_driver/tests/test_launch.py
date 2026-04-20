@@ -26,9 +26,11 @@ class TestLaunchDescription(unittest.TestCase):
         )
 
         self.assertEqual(payload["action"], "sim")
+        self.assertEqual(payload["entry_kind"], "registered_tutorial")
         self.assertEqual(payload["resolved_name"], "singleCell")
         self.assertTrue(payload["manifest_path"].endswith("run_manifest.json"))
         self.assertIn("--continue-on-error", payload["command"])
+        self.assertIn("--entry", payload["command"])
         self.assertIn("singleCell", payload["command_display"])
 
     def test_describe_launch_matrix_handles_case_folder_resolution(self) -> None:
@@ -57,6 +59,7 @@ class TestLaunchDescription(unittest.TestCase):
             )
 
             self.assertEqual(payload["sim"]["resolution"], "case_folder")
+            self.assertEqual(payload["sim"]["entry_kind"], "case_folder")
             self.assertEqual(payload["all"]["resolved_name"], "randomCase")
             self.assertTrue(payload["post"]["manifest_path"].endswith("run_manifest.json"))
 

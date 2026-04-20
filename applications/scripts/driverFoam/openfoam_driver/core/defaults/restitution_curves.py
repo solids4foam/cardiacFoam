@@ -11,6 +11,8 @@ from .shared import (
 
 
 TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
+CASE_DIR_NAME = "singleCellprotocols/restitutionCurves_s1s2Protocol"
+SETUP_DIR_NAME = "setupRestitutionCurves_s1s2Protocol"
 
 IONIC_MODELS = ("BuenoOrovio",)
 
@@ -52,6 +54,8 @@ TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
 # Re-export shared paths used by the spec
 __all__ = [
     "TUTORIAL_NAME",
+    "CASE_DIR_NAME",
+    "SETUP_DIR_NAME",
     "IONIC_MODELS",
     "IONIC_MODEL_TISSUE_MAP",
     "STIMULUS_MAP",

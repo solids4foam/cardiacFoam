@@ -30,7 +30,7 @@ class TestDictEntryCatalog(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.outputVariables.ionic.export",
             "$ELECTRO_MODEL_COEFFS.outputVariables.activeTension.export",
             "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
-            "$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusIntensity",
+            "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
             "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach",
             "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
             "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel",
@@ -70,11 +70,11 @@ class TestDictEntryCatalog(unittest.TestCase):
             entry.driver_path: entry for entry in ELECTRO_PROPERTY_ENTRY_GROUPS["monodomain"]
         }
         self.assertEqual(
-            monodomain_entries["$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusLocationMin"].value_kind,
+            monodomain_entries["$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMin"].value_kind,
             "vector3",
         )
         self.assertEqual(
-            monodomain_entries["$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusIntensity"].value_kind,
+            monodomain_entries["$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity"].value_kind,
             "dimensioned_scalar_literal",
         )
 
@@ -95,7 +95,7 @@ class TestDeepElectroOverrides(unittest.TestCase):
                 "monodomainSolverCoeffs",
                 "{",
                 "    conductivity [-1 -3 3 0 0 2 0] (0.133 0 0 0.017 0 0.017);",
-                "    monodomainStimulus",
+                "    externalStimulus",
                 "    {",
                 "        stimulusIntensity [0 -3 0 0 0 1 0] 50000;",
                 "    }",
@@ -123,7 +123,7 @@ class TestDeepElectroOverrides(unittest.TestCase):
                 path,
                 {
                     "$ELECTRO_MODEL_COEFFS.conductivity": "[-1 -3 3 0 0 2 0] (0.2 0 0 0.03 0 0.03)",
-                    "$ELECTRO_MODEL_COEFFS.monodomainStimulus.stimulusIntensity": "[0 -3 0 0 0 1 0] 75000",
+                    "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity": "[0 -3 0 0 0 1 0] 75000",
                     "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1": "(1 2 3)",
                 },
             )
@@ -160,54 +160,84 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
             "Expected at least one entry whose path ends with '.conductionSystemDomain'"
         )
 
-    def test_coupler_selector_key_is_electroDomainCoupler(self):
-        # C++ uses lowercase key names in dictionary lookups.
-        matching = [
-            p for p in self.entries
-            if p.endswith(".electroDomainCoupler")
-        ]
-        self.assertTrue(
-            len(matching) >= 1,
-            "Expected at least one entry whose path ends with '.electroDomainCoupler'"
-        )
-
-    def test_advance_scheme_key_is_electrophysicsAdvanceScheme(self):
-        # C++ electrophysicsAdvanceScheme.C: dict.lookupOrDefault<word>("electrophysicsAdvanceScheme", ...)
+    def test_graph_file_schema_is_documented_on_the_coeffs_subdict(self):
         self.assertIn(
-            "$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
+            self.entries,
+        )
+        self.assertNotIn(
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjNodes",
+            self.entries,
+        )
+        self.assertNotIn(
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjLocations",
             self.entries,
         )
 
-    def test_advance_scheme_enum_includes_pimple_staggered(self):
-        entry = self.entries["$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme"]
-        self.assertIn(
-            "pimpleStaggeredElectrophysicsAdvanceScheme",
-            entry.enum_values,
-        )
-
-    def test_pvjNodes_and_pvjLocations_documented(self):
-        pvj_nodes_keys = [p for p in self.entries if p.endswith(".pvjNodes")]
-        pvj_locs_keys  = [p for p in self.entries if p.endswith(".pvjLocations")]
-        self.assertTrue(len(pvj_nodes_keys) >= 1, "pvjNodes not documented")
-        self.assertTrue(len(pvj_locs_keys)  >= 1, "pvjLocations not documented")
-
     def test_root_stimulus_sub_entries_documented(self):
-        for sub in ("startTime", "duration", "intensity"):
-            matching = [p for p in self.entries if p.endswith(f".rootStimulus.{sub}")]
+        for sub in ("startTime", "duration", "intensity", "node"):
+            matching = [
+                p
+                for p in self.entries
+                if p.endswith(f".purkinjeGraphModelCoeffs.rootStimulus.{sub}")
+            ]
             self.assertTrue(
                 len(matching) >= 1,
                 f"rootStimulus.{sub} not documented"
             )
 
-    def test_purkinjeNetworkModelCoeffs_chi_and_cm_documented(self):
-        chi_keys = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.chi")]
-        cm_keys  = [p for p in self.entries if p.endswith(".purkinjeNetworkModelCoeffs.cm")]
-        self.assertTrue(len(chi_keys) >= 1, "purkinjeNetworkModelCoeffs.chi not documented")
-        self.assertTrue(len(cm_keys)  >= 1, "purkinjeNetworkModelCoeffs.cm not documented")
+    def test_purkinjeGraphModelCoeffs_chi_and_cm_documented(self):
+        chi_keys = [p for p in self.entries if p.endswith(".purkinjeGraphModelCoeffs.chi")]
+        cm_keys  = [p for p in self.entries if p.endswith(".purkinjeGraphModelCoeffs.cm")]
+        self.assertTrue(len(chi_keys) >= 1, "purkinjeGraphModelCoeffs.chi not documented")
+        self.assertTrue(len(cm_keys)  >= 1, "purkinjeGraphModelCoeffs.cm not documented")
+
+class TestDomainCouplingSchemaContract(unittest.TestCase):
+    """Verifies that the domain_couplings group owns the domainCouplings schema."""
+
+    def setUp(self):
+        self.entries = {
+            e.driver_path: e
+            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["domain_couplings"]
+        }
+
+    def test_coupler_selector_key_is_electroDomainCoupler(self):
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
+            self.entries,
+        )
 
     def test_coupling_helper_keys_documented(self):
-        network_domain_keys = [p for p in self.entries if p.endswith(".conductionNetworkDomain")]
-        self.assertTrue(len(network_domain_keys) >= 1, "conductionNetworkDomain not documented")
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
+            self.entries,
+        )
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
+            self.entries,
+        )
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
+            self.entries,
+        )
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
+            self.entries,
+        )
+
+    def test_common_model_coeffs_owns_electrophysics_advance_scheme(self):
+        common_entries = {
+            e.driver_path: e
+            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["common_model_coeffs"]
+        }
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
+            common_entries,
+        )
+        self.assertIn(
+            "pimpleStaggeredElectrophysicsAdvanceScheme",
+            common_entries["$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme"].enum_values,
+        )
 
 
 if __name__ == "__main__":

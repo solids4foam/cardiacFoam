@@ -4,6 +4,7 @@ ionicModel/ionicSelector.C
 monodomainFDAManufactured/monodomainFDAManufactured.C
 bidomainFDAManufactured/bidomainFDAManufactured.C
 
+
 TNNP/TNNP.C
 Gaur/Gaur.C
 Grandi/Grandi.C
@@ -15,9 +16,8 @@ ORd/ORd.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
 AlievPanfilov/AlievPanfilov.C
+PerisYague/PerisYague.C
 
-
-/*PerisYague/PerisYague.C*/
 
 
 LIB = $(FOAM_USER_LIBBIN)/libionicModels

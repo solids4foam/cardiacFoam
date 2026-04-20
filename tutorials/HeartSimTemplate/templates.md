@@ -175,7 +175,7 @@ monodomainSolverCoeffs
         ionic { export (Vm {{ IONIC_SPECIFIC_EXPORTS }}); debug (Vm Iion); } 
     }
 
-    monodomainStimulus
+    externalStimulus
     {
         stimulusLocationMin  (0 0 5.5e-3);
         stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
@@ -188,24 +188,24 @@ monodomainSolverCoeffs
     {
         purkinjeNetwork
         {
-            conductionSystemDomain  purkinjeNetworkModel;
-            edges ( ( 0  1  0.003  3.0 ) ( 1  2  0.005  3.0 ) ( 1  3  0.005  3.0 ) );
-            pvjNodes     ( 2  3 );
-            pvjLocations ( (0.00245  0.00115  0.00025) (0.00745  0.00115  0.00025) );
+            conductionSystemDomain  purkinjeGraphModel;
 
-            rootStimulus { startTime 0.0; duration 0.002; intensity 1000.0; }
-
-            purkinjeNetworkModelCoeffs
+            purkinjeGraphModelCoeffs
             {
                 conductionSystemSolver  monodomain1DSolver;
+                graphFile               purkinjeGraph;
                 ionicModel      {{ IONIC_MODEL_NAME }};
                 tissue          endocardialCells;
+
+                chi             14000;
+                cm              0.01;
                 vm1DRest        -0.084;
+
+                rootStimulus { node {{ PURKINJE_ROOT_NODE }}; startTime 0.0; duration 0.002; intensity 5000000.0; }
+
                 solver          RKF45;
                 initialODEStep  1e-6;
                 maxSteps        1000000000;
-                chi             1400.0;
-                cm              1.0e-2;
                 outputVariables { export (Vm Icoupling); debug (Vm); }
             }
         }
@@ -249,7 +249,7 @@ monodomainSolverCoeffs
         ionic { export (Vm {{ IONIC_SPECIFIC_EXPORTS }}); debug (Vm Iion); } 
     }
 
-    monodomainStimulus
+    externalStimulus
     {
         stimulusLocationMin  (0 0 5.5e-3);
         stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
@@ -292,16 +292,12 @@ eikonalSolverCoeffs
     {
         purkinjeNetwork
         {
-            conductionSystemDomain  purkinjeNetworkModel;
-            edges ( ( 0  1  0.003  3.0 ) ( 1  2  0.005  3.0 ) ( 1  3  0.005  3.0 ) );
-            pvjNodes     ( 2  3 );
-            pvjLocations ( (0.00245  0.00115  0.00025) (0.00745  0.00115  0.00025) );
-            
-            rootStimulus { startTime 0.0; duration 0.002; intensity 1000.0; }
+            conductionSystemDomain  purkinjeGraphModel;
 
-            purkinjeNetworkModelCoeffs
+            purkinjeGraphModelCoeffs
             {
                 conductionSystemSolver  eikonalSolver;
+                graphFile               purkinjeGraph;
                 c0  [0 1 -1 0 0 0 0]    2.0;
                 
                 // Eikonal only uses psi (activation time), no ionic variables needed

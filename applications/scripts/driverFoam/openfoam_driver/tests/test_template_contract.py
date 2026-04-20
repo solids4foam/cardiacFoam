@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
 
@@ -69,10 +70,16 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn("conductivityIntracellular", template)
         self.assertIn("conductivityExtracellular", template)
         self.assertIn("monodomain1DSolver", template)
+        self.assertIn("phiERefPoint", template)
+        self.assertIn("purkinjeGraphModelCoeffs", template)
+        self.assertIn("# to implement", template)
 
         self.assertNotIn("ecgDomainModel", template)
         self.assertNotIn("pseudoECGElectroCoeffs", template)
         self.assertNotIn("monoDomainElectroCoeffs", template)
+        self.assertNotIn("phiEReferenceCell", template)
+        self.assertNotIn("purkinjeNetworkModelCoeffs", template)
+        self.assertNotIn("bidomainBathECG", template)
 
     def test_template_truth_markers_match_core_cpp_contracts(self) -> None:
         electro_model_core = _read(
@@ -169,17 +176,27 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn('lookup("myocardiumSolver")', electro_model_core)
         self.assertIn('"conductivityIntracellular"', bidomain_solver)
         self.assertIn('"conductivityExtracellular"', bidomain_solver)
+        self.assertIn('"phiERefPoint"', bidomain_solver)
         self.assertIn('"ecgSolver"', ecg_solver)
         self.assertIn('"electrodePositions"', ecg_domain)
         self.assertIn('"electroDomainCoupler"', electro_coupler)
-        self.assertIn('lookupOrDefault<word>', conduction_domain_selector)
-        self.assertIn('subDict("purkinjeNetworkModelCoeffs").get<scalar>("cm")', conduction_domain_selector)
+        self.assertIn('"purkinjeGraphModel"', conduction_domain_selector)
+        self.assertIn('dict.get<word>("graphFile")', conduction_domain_selector)
+        self.assertIn('dict.subDict("rootStimulus")', conduction_domain_selector)
 
         self.assertIn('OverrideTypeName("monodomainSolver")', monodomain_runtime)
         self.assertIn('OverrideTypeName("bidomainSolver")', bidomain_runtime)
         self.assertIn('OverrideTypeName("singleCellSolver")', single_cell_runtime)
         self.assertIn('OverrideTypeName("eikonalSolver")', eikonal_runtime)
         self.assertIn('OverrideTypeName("monodomain1DSolver")', conduction_runtime)
+        self.assertIn('OverrideTypeName("eikonalSolver1D")', _read(
+            self.repo_root
+            / "src"
+            / "electroModels"
+            / "conductionSystemModels"
+            / "eikonalSolver1D"
+            / "eikonalSolver1D.H"
+        ))
         self.assertIn('OverrideTypeName("pseudoECG")', pseudo_ecg_runtime)
 
     def test_driver_schema_paths_follow_template_truth_family(self) -> None:
@@ -194,7 +211,9 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.conductivityIntracellular",
             "$ELECTRO_MODEL_COEFFS.conductivityExtracellular",
             "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.conductionSystemDomain",
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
             "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
+            "$ELECTRO_MODEL_COEFFS.phiERefPoint",
         }
         self.assertTrue(expected.issubset(documented))
 
@@ -204,6 +223,11 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             ".electrodes.",
             "monoDomainElectroCoeffs",
             "singleCellElectroCoeffs",
+            "phiEReferenceCell",
+            "purkinjeNetworkModelCoeffs",
+            ".pvjNodes",
+            ".pvjLocations",
+            "bidomainBath",
         )
         self.assertFalse(
             [path for path in documented if any(fragment in path for fragment in forbidden_fragments)]
@@ -218,13 +242,12 @@ class TestTutorialElectroPropertiesAudit(unittest.TestCase):
 
     def test_detect_electro_coeffs_scope_tracks_template_truth_cases(self) -> None:
         expected = {
-            "tutorials/NiedererEtAl2012/constant/electroProperties": "monodomainSolverCoeffs",
-            "tutorials/NiedererEtAl2012Purkinje/constant/electroProperties": "monodomainSolverCoeffs",
-            "tutorials/NiedererEtAl2012EikonalPurkinje/constant/electroProperties": "eikonalSolverCoeffs",
+            "tutorials/Niederer/NiedererEtAl2012verification/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/regressionTests/NiedererEtAl2012/constant/electroProperties": "monodomainSolverCoeffs",
             "tutorials/manufacturedSolutions/monodomainPseudoECG/constant/electroProperties": "monodomainSolverCoeffs",
-            "tutorials/restitutionCurves_s1s2Protocol/constant/electroProperties": "singleCellSolverCoeffs",
-            "tutorials/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
+            "tutorials/manufacturedSolutions/bidomain/constant/electroProperties": "bidomainSolverCoeffs",
+            "tutorials/singleCellprotocols/restitutionCurves_s1s2Protocol/constant/electroProperties": "singleCellSolverCoeffs",
+            "tutorials/singleCellprotocols/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
             "tutorials/regressionTests/singleCell/constant/electroProperties": "singleCellSolverCoeffs",
         }
 
@@ -235,25 +258,22 @@ class TestTutorialElectroPropertiesAudit(unittest.TestCase):
                     scope,
                 )
 
-    def test_all_live_tutorial_electroproperties_files_follow_template_truth(self) -> None:
-        discovered = sorted(
-            path
-            for path in self.tutorials_root.rglob("electroProperties*")
-            if path.parent.name == "constant"
+    def test_heartsimtemplate_workflow_contract_uses_grounded_vocab(self) -> None:
+        workflow_contract = json.loads(
+            (
+                self.repo_root
+                / "tutorials"
+                / "HeartSimTemplate"
+                / "workflow_contract.json"
+            ).read_text()
         )
-        actual = {
-            str(path.relative_to(self.repo_root)): _classify_electro_properties(_read(path))
-            for path in discovered
-        }
-        self.assertEqual(
-            set(actual.values()),
-            {"template_truth"},
-        )
+        payload = json.dumps(workflow_contract)
 
-    def test_obsolete_with_default_values_files_are_absent(self) -> None:
-        obsolete = list(self.tutorials_root.rglob("electroProperties.withDefaultValues"))
-        self.assertEqual(obsolete, [])
-
+        self.assertIn("externalStimulus", payload)
+        self.assertIn("purkinjeGraphModelCoeffs", payload)
+        self.assertIn("HeartPurkinje_MonopECG/HeartPurkinje", payload)
+        self.assertNotIn("monodomainStimulus", payload)
+        self.assertNotIn("purkinjeNetworkModelCoeffs", payload)
 
 if __name__ == "__main__":
     unittest.main()

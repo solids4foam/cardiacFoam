@@ -10,6 +10,8 @@ from .shared import (
 
 
 TUTORIAL_NAME = "singleCell"
+CASE_DIR_NAME = "singleCellprotocols/singleCell"
+SETUP_DIR_NAME = "setupSingleCell"
 IONIC_MODELS = ("TNNP", "Gaur", "Courtemanche", "BuenoOrovio")
 IONIC_MODEL_TISSUE_MAP = {
     "TNNP": ("epicardialCells", "mCells", "endocardialCells"),

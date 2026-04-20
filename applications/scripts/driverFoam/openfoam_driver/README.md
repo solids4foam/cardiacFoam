@@ -1,7 +1,7 @@
 # OpenFOAM tutorial driver architecture
 
 This package provides a shared Python automation engine for tutorial sweeps,
-OpenFOAM execution, and post-processing.
+workflow-case execution, and post-processing.
 
 ## Package structure
 
@@ -47,7 +47,8 @@ Aliases are handled in `core/runtime/registry.py`.
 In addition to these curated specs, the driver can also run:
 
 - `genericCase` / `randomCase` with `case_dir_name` supplied in config
-- any existing case folder directly, for example `foamctl sim --tutorial ECG`
+- any existing case folder directly, for example `foamctl sim --entry ECG`
+- workflow entries such as `HeartSimTemplate` and `HeartPurkinje`
 
 ## Install and run
 
@@ -61,17 +62,17 @@ Run examples:
 
 ```bash
 # installed entrypoints
-foamctl all --tutorial niederer2012
-foamctl sim --tutorial manufacturedFDA --dry-run
-foamctl sim --tutorial manufacturedFDABidomain --dry-run
-driverFoam sim --tutorial singleCell   # compatibility alias
+foamctl all --entry niederer2012
+foamctl sim --entry manufacturedFDA --dry-run
+foamctl sim --entry manufacturedFDABidomain --dry-run
+driverFoam sim --tutorial singleCell   # legacy compatibility alias
 
 # module invocation
-python3 -m openfoam_driver all --tutorial singleCell
-python3 -m openfoam_driver describe --tutorial singleCell
+python3 -m openfoam_driver all --entry singleCell
+python3 -m openfoam_driver describe --entry singleCell
 
 # repo-local wrapper
-applications/scripts/driverFoam/bin/driverFoam sim --tutorial ECG --dry-run
+applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
 ```
 
 ## CLI actions
@@ -79,7 +80,7 @@ applications/scripts/driverFoam/bin/driverFoam sim --tutorial ECG --dry-run
 - `sim` : apply and run all planned cases
 - `post`: run only post-processing hook
 - `all` : `sim` then `post`
-- `describe` : print machine-readable tutorial/spec metadata as JSON
+- `describe` : print machine-readable entry/spec metadata as JSON
 
 Useful flags:
 
@@ -89,7 +90,7 @@ Useful flags:
 - `--tutorials-root <path>`
 
 The `describe` action is the GUI-prep entrypoint. It resolves the requested
-tutorial or case folder and prints:
+entry and prints:
 
 - the `make_spec(...)` parameter schema and defaults
 - resolved case/setup/output paths
@@ -108,8 +109,8 @@ GUI-focused contract document:
 
 `--config` accepts either:
 
-- top-level map keyed by tutorial name, or
-- direct object with `make_spec(...)` keyword args for the selected tutorial.
+- top-level map keyed by entry name, or
+- direct object with `make_spec(...)` keyword args for the selected entry.
 
 Canonical example config:
 
@@ -151,7 +152,7 @@ known override paths for:
 - common `<solver>Coeffs` keys such as `ionicModel`, `tissue`,
   `solutionAlgorithm`, `writeAfterTime`, and `outputVariables`
 - `singleCellStimulus`
-- `monodomainStimulus`
+- `externalStimulus`
 - eikonal-diffusion keys
 - ECG keys
 - active-tension keys
@@ -199,7 +200,11 @@ integration. The current schema includes:
 - `schema_version`
 - `run_id`
 - `requested_action`
-- `tutorial`
+- `entry`
+- `entry_kind`
+- `entry_path`
+- `source_type`
+- `workflow_family`
 - `status`
 - `postprocess_status`
 - `current_case_id`

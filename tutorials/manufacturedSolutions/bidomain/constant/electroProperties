@@ -49,11 +49,6 @@ bidomainSolverCoeffs
         k 0.7071067811865476;
     }
 
-    solverHookFields
-    {
-        preProcess (u1 u2 u3);
-    }
-
     dimension    "3D";
 
     solutionAlgorithm    implicit;

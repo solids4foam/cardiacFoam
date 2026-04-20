@@ -310,6 +310,7 @@ def _postprocess(
     setup_root: Path,
     output_dir: Path,
     *,
+    tutorial_name: str = defaults.TUTORIAL_NAME,
     postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     strict_artifacts: bool = False,
@@ -317,7 +318,7 @@ def _postprocess(
     run_postprocess_tasks(
         setup_root=setup_root,
         output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
+        tutorial_name=tutorial_name,
         strict_artifacts=strict_artifacts,
         tasks=[
             PostprocessTask(
@@ -331,6 +332,7 @@ def _postprocess(
 def make_spec(
     *,
     tutorials_root: Path | None = None,
+    tutorial_name: str = defaults.TUTORIAL_NAME,
     case_dir_name: str = defaults.CASE_DIR_NAME,
     setup_dir_name: str | None = defaults.SETUP_DIR_NAME,
     output_dir_name: str | None = None,
@@ -384,7 +386,7 @@ def make_spec(
     )
 
     return TutorialSpec(
-        name=case_dir_name,
+        name=tutorial_name,
         case_root=case_root,
         setup_root=setup_root,
         output_dir=output_dir,
@@ -420,6 +422,7 @@ def make_spec(
         collect_outputs=_collect_outputs,
         postprocess=partial(
             _postprocess,
+            tutorial_name=tutorial_name,
             postprocess_script_relpath=postprocess_script_path,
             postprocess_function_name=postprocess_function_name,
             strict_artifacts=postprocess_strict_artifacts,

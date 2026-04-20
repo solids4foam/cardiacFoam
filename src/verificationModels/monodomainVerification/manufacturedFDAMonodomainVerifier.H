@@ -30,13 +30,6 @@ class manufacturedFDAMonodomainVerifier : public electroVerificationModel
     bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
 
-    wordList readConfiguredNames
-    (
-        const word& subDictName,
-        const word& entryName,
-        const wordList& defaults
-    ) const;
-
 public:
 
     OverrideTypeName("manufacturedFDAMonodomainVerifier");

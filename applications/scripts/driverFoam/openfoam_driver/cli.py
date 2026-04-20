@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
-from .core.runtime.registry import list_tutorials, load_tutorial_spec
-from .introspection import describe_tutorial
+from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
+from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
 
 
@@ -17,13 +17,25 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["sim", "post", "all", "describe"],
         help="Pipeline stage to execute",
     )
-    parser.add_argument(
-        "--tutorial",
-        required=True,
+    selector_group = parser.add_mutually_exclusive_group(required=True)
+    selector_group.add_argument(
+        "--entry",
         help=(
-            "Tutorial spec or case folder to run "
+            "Entry name or relative workflow/case path to run "
             f"({', '.join(list_tutorials())}, genericCase)"
         ),
+    )
+    selector_group.add_argument(
+        "--tutorial",
+        help=(
+            "Legacy alias for --entry. Accepts the same values and remains "
+            "supported for compatibility."
+        ),
+    )
+    parser.add_argument(
+        "--entry-kind",
+        choices=list(ENTRY_KIND_VALUES),
+        help="Optional entry classification override for --entry resolution.",
     )
     parser.add_argument(
         "--dry-run",
@@ -54,12 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _load_spec_overrides(config_path: str, tutorial: str) -> dict:
+def _load_spec_overrides(config_path: str, entry: str) -> dict:
     payload = json.loads(Path(config_path).read_text())
     if not isinstance(payload, dict):
         raise ValueError("Config file must contain a JSON object")
 
-    normalized_requested = tutorial.strip().casefold()
+    normalized_requested = entry.strip().casefold()
     for key, value in payload.items():
         if key.casefold() == normalized_requested:
             if not isinstance(value, dict):
@@ -73,7 +85,7 @@ def _load_spec_overrides(config_path: str, tutorial: str) -> dict:
     }
     if any(key.casefold() in known_tutorial_keys for key in payload):
         raise KeyError(
-            f"No config section found for tutorial '{tutorial}'. "
+            f"No config section found for entry '{entry}'. "
             f"Available config sections: {', '.join(payload.keys())}"
         )
 
@@ -115,7 +127,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "describe" and args.continue_on_error:
         parser.error("--continue-on-error is not valid with action=describe")
 
-    overrides = _load_spec_overrides(args.config, args.tutorial) if args.config else None
+    selected_entry = args.entry or args.tutorial
+    if selected_entry is None:
+        parser.error("One of --entry or --tutorial is required")
+
+    overrides = _load_spec_overrides(args.config, selected_entry) if args.config else None
     if args.tutorials_root:
         if overrides is None:
             overrides = {}
@@ -124,8 +140,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "describe":
         print(
             json.dumps(
-                describe_tutorial(
-                    args.tutorial,
+                describe_entry(
+                    selected_entry,
+                    entry_kind=args.entry_kind,
                     overrides=overrides,
                     config_path=args.config,
                 ),
@@ -134,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    spec = load_tutorial_spec(args.tutorial, overrides=overrides)
+    spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
     engine = DriverEngine(
         spec=spec,
         dry_run=args.dry_run,

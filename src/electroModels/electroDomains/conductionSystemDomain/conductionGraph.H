@@ -21,7 +21,7 @@ Class
 Description
     Value type holding 1D graph topology for a conduction network:
     nodes, edges, lengths, and conductances. Loaded from a dictionary
-    containing an 'edges' list of (nodeA nodeB length conductance) tuples.
+    containing a 'conductionEdges' list of (nodeA nodeB length conductance) tuples.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -62,11 +62,11 @@ struct conductionGraph
         nEdges(0)
     {}
 
-    void readFromDict(const dictionary& dict)
+    void readFromDict(const dictionary& dict, const bool reportSetup = false)
     {
         const List<scalarList> edgeEntries
         (
-            dict.get<List<scalarList>>("edges")
+            dict.get<List<scalarList>>("conductionEdges")
         );
         nEdges = edgeEntries.size();
 
@@ -82,7 +82,7 @@ struct conductionGraph
             if (e.size() != 4)
             {
                 FatalErrorInFunction
-                    << "Each entry in 'edges' must have 4 values: "
+                    << "Each entry in 'conductionEdges' must have 4 values: "
                     << "(nodeA nodeB length conductance). Entry " << eI
                     << " has " << e.size() << " values."
                     << exit(FatalError);
@@ -96,10 +96,13 @@ struct conductionGraph
 
         nNodes = maxNode + 1;
 
-        Info<< "Conduction graph: " << nNodes << " nodes, "
-            << nEdges << " edges." << endl;
+        if (reportSetup)
+        {
+            Info<< "Conduction graph: " << nNodes << " nodes, "
+                << nEdges << " edges." << endl;
+        }
 
-        buildTreeTopology();
+        buildTreeTopology(reportSetup);
     }
 
 private:
@@ -107,7 +110,7 @@ private:
     // BFS from node 0 to establish parent–child relationships and the
     // two traversal orderings needed by the Hines two-pass algorithm.
     // Aborts with a fatal error if the graph is disconnected or not a tree.
-    void buildTreeTopology()
+    void buildTreeTopology(const bool reportSetup)
     {
         if (nNodes == 0) return;
 
@@ -171,7 +174,10 @@ private:
             reverseOrder[i] = orderList[nNodes - 1 - i];
         }
 
-        Info<< "Conduction graph: tree topology built (root=0)." << endl;
+        if (reportSetup)
+        {
+            Info<< "Conduction graph: tree topology built (root=0)." << endl;
+        }
     }
 };
 

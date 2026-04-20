@@ -7,15 +7,17 @@ from typing import Any
 
 from .core.runtime.models import CaseConfig, TutorialSpec
 from .core.runtime.registry import (
+    list_entries,
     list_available_tutorials,
     list_case_directories,
     list_tutorials,
+    resolve_entry,
     resolve_tutorial,
 )
+from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
 from .gui_schema import describe_gui_schema
 from .ionic_model_catalog import (
-    ACTIVE_TENSION_MODEL_CATALOG,
     IONIC_MODEL_CATALOG,
     SOLVER_COMPATIBILITY_RULES,
 )
@@ -127,13 +129,19 @@ def _ionic_model_catalog() -> dict[str, Any]:
             name: _serialize(asdict(entry))
             for name, entry in IONIC_MODEL_CATALOG.items()
         },
+        "solver_compatibility": [
+            _serialize(rule) for rule in SOLVER_COMPATIBILITY_RULES
+        ],
+    }
+
+
+def _active_tension_catalog() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
         "active_tension_models": {
             name: _serialize(asdict(entry))
             for name, entry in ACTIVE_TENSION_MODEL_CATALOG.items()
         },
-        "solver_compatibility": [
-            _serialize(rule) for rule in SOLVER_COMPATIBILITY_RULES
-        ],
     }
 
 
@@ -182,14 +190,14 @@ def _describe_config_schema(
         "description": (
             "Describes the --config JSON file format accepted by openfoam_driver. "
             "The config is a JSON object. It may be flat (applies to one tutorial) "
-            "or wrapped in a tutorial-named key (multi-tutorial files where different "
-            "sections apply to different tutorials)."
+            "or wrapped in an entry-named key (multi-entry files where different "
+            "sections apply to different entries)."
         ),
         "top_level_shapes": {
             "flat": {
                 "description": (
                     "A single JSON object whose keys are spec parameters and/or "
-                    "common override keys. Applies to the tutorial named on --tutorial."
+                    "common override keys. Applies to the entry named on --entry."
                 ),
                 "example_snippet": {
                     "ionic_models": ["TNNP"],
@@ -200,8 +208,8 @@ def _describe_config_schema(
             },
             "wrapped": {
                 "description": (
-                    "A JSON object keyed by tutorial name. Each value is a flat "
-                    "section. Use this when one file covers multiple tutorials. "
+                    "A JSON object keyed by entry name. Each value is a flat "
+                    "section. Use this when one file covers multiple entries. "
                     "Key matching is case-insensitive."
                 ),
                 "example_snippet": {
@@ -217,7 +225,7 @@ def _describe_config_schema(
         "section_fields": {
             "spec_parameters": {
                 "description": (
-                    "Parameters accepted by make_spec() for this tutorial. "
+                    "Parameters accepted by make_spec() for this entry. "
                     "These are the high-level knobs (e.g. ionic_models, n_beats, "
                     "solvers). Place them at the top level of the config section."
                 ),
@@ -310,7 +318,7 @@ def _manifest_schema() -> dict[str, Any]:
             "It is written to output_dir/run_manifest.json and updated after every "
             "case completes. Poll this file to track run progress."
         ),
-        "schema_version": "2.0",
+        "schema_version": "2.1",
         "file_location": "output_dir/run_manifest.json  (see launch.<action>.manifest_path)",
         "companion_file": (
             "output_dir/action_events.jsonl — append-only JSONL log with one "
@@ -322,10 +330,14 @@ def _manifest_schema() -> dict[str, Any]:
             "Reading the file is safe at any time — it is written atomically."
         ),
         "top_level_fields": {
-            "schema_version": "string — manifest format version (currently '2.0')",
+            "schema_version": "string — manifest format version (currently '2.1')",
             "run_id": "string — unique ID for this run (timestamp + random suffix)",
             "requested_action": "string — 'sim', 'post', or 'all'",
-            "tutorial": "string — tutorial name",
+            "entry": "string — selected entry name",
+            "entry_kind": "string | null — entry classification such as registered_tutorial or workflow_case",
+            "entry_path": "string | null — relative path of the resolved entry under tutorials/",
+            "source_type": "string | null — spec_factory, workflow_contract, workflow_reference_case, filesystem_case, or generic_alias",
+            "workflow_family": "string | null — workflow family name when the entry belongs to one",
             "case_root": "string — absolute path to the case directory",
             "setup_root": "string — absolute path to the setup directory",
             "output_dir": "string — absolute path to the output directory",
@@ -401,24 +413,105 @@ def list_runs(runs_root: str | Path) -> list[dict[str, Any]]:
     return manifests
 
 
-def describe_tutorial(
-    tutorial: str,
+def _workflow_catalog(
+    tutorials_root: Path,
+    entry_catalog: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    families: dict[str, dict[str, Any]] = {}
+    for entry in entry_catalog:
+        workflow_family = entry.get("workflow_family")
+        if not workflow_family:
+            continue
+        family_name = str(workflow_family)
+        family = families.setdefault(
+            family_name,
+            {
+                "workflow_family": family_name,
+                "template_entry": None,
+                "reference_cases": [],
+                "workflow_templates": [],
+            },
+        )
+
+        entry_kind = str(entry["entry_kind"])
+        if entry_kind == "workflow_template":
+            authoring_contract = (
+                Path(tutorials_root) / str(entry["entry_path"]) / "workflow_contract.json"
+            )
+            payload = None
+            if authoring_contract.exists():
+                import json
+
+                payload = json.loads(authoring_contract.read_text())
+            family["template_entry"] = {
+                "entry_name": entry["entry_name"],
+                "entry_path": entry["entry_path"],
+                "entry_kind": entry_kind,
+                "is_runnable": entry["is_runnable"],
+            }
+            family["workflow_templates"] = list((payload or {}).get("workflow_templates", []))
+        elif entry_kind == "workflow_case":
+            family["reference_cases"].append(
+                {
+                    "entry_name": entry["entry_name"],
+                    "entry_path": entry["entry_path"],
+                    "entry_kind": entry_kind,
+                    "is_runnable": entry["is_runnable"],
+                }
+            )
+
+    return sorted(families.values(), key=lambda item: item["workflow_family"].casefold())
+
+
+def _matching_workflow(
+    workflow_catalog: list[dict[str, Any]],
+    workflow_family: str | None,
+) -> dict[str, Any] | None:
+    if not workflow_family:
+        return None
+    for family in workflow_catalog:
+        if family["workflow_family"] == workflow_family:
+            return family
+    return None
+
+
+def describe_entry(
+    entry: str,
     *,
+    entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     python_executable: str | None = None,
 ) -> dict[str, Any]:
-    resolution = resolve_tutorial(tutorial, overrides=overrides)
+    resolution = resolve_entry(entry, entry_kind=entry_kind, overrides=overrides)
     spec = resolution["factory"](**resolution["factory_overrides"])
     tutorials_root = Path(
         resolution["factory_overrides"].get("tutorials_root", spec.case_root.parent)
     )
+    entry_catalog = list_entries(tutorials_root)
+    workflow_catalog = _workflow_catalog(tutorials_root, entry_catalog)
 
     make_spec_info = _describe_factory(resolution["factory"])
     return {
-        "requested_tutorial": tutorial,
+        "requested_entry": entry,
+        "requested_tutorial": entry,
         "resolution": resolution["resolution"],
         "resolved_name": resolution["resolved_name"],
+        "entry": {
+            "entry_name": resolution["entry_name"],
+            "entry_kind": resolution["entry_kind"],
+            "entry_path": resolution["entry_path"],
+            "is_runnable": resolution["is_runnable"],
+            "source_type": resolution["source_type"],
+            "workflow_family": resolution["workflow_family"],
+        },
+        "entry_kind": resolution["entry_kind"],
+        "entry_catalog": _serialize(entry_catalog),
+        "workflow": _serialize(
+            _matching_workflow(workflow_catalog, resolution["workflow_family"])
+        ),
+        "workflow_catalog": _serialize(workflow_catalog),
+        "is_runnable": resolution["is_runnable"],
         "registered_tutorials": list_tutorials(),
         "special_tutorial_aliases": list(SPECIAL_TUTORIAL_ALIASES),
         "available_tutorials": list_available_tutorials(tutorials_root),
@@ -435,9 +528,11 @@ def describe_tutorial(
         ),
         "dict_entries": _dict_entry_catalog(),
         "ionic_model_catalog": _ionic_model_catalog(),
+        "active_tension_catalog": _active_tension_catalog(),
         "gui_schema": describe_gui_schema(),
         "launch": describe_launch_matrix(
-            tutorial,
+            entry,
+            entry_kind=resolution["entry_kind"],
             overrides=resolution["factory_overrides"],
             config_path=config_path,
             tutorials_root=tutorials_root,
@@ -449,3 +544,18 @@ def describe_tutorial(
         ),
         "manifest_schema": _manifest_schema(),
     }
+
+
+def describe_tutorial(
+    tutorial: str,
+    *,
+    overrides: dict[str, Any] | None = None,
+    config_path: str | Path | None = None,
+    python_executable: str | None = None,
+) -> dict[str, Any]:
+    return describe_entry(
+        tutorial,
+        overrides=overrides,
+        config_path=config_path,
+        python_executable=python_executable,
+    )

@@ -124,43 +124,44 @@ monodomainSolverCoeffs
 
     // ── Conduction-system (Purkinje) domains  [OPTIONAL] ───────────────────
     // Remove this entire block if no Purkinje network is present.
-    // When present, 'graphFile' is REQUIRED and must reference a dictionary
-    // in constant/ directory containing 'edges', 'points', 'pvjNodes', 'pvjLocations'.
+    // When present, the canonical runtime structure is:
+    //   conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs { ... }
+    // The separate graph file in constant/ carries 'edges', 'points',
+    // 'pvjNodes', 'pvjLocations', and optional 'rootNode'.
     conductionNetworkDomains
     {
         purkinjeNetwork        // arbitrary name; repeated for multiple networks
         {
             // Factory key — selects the conduction domain implementation.
-            // Valid type: purkinjeNetworkModel
-            conductionSystemDomain  purkinjeNetworkModel;
-
-            // REQUIRED: Reference to graph file in constant/ directory.
-            // File must contain: edges, points, pvjNodes, pvjLocations
-            graphFile  purkinjeGraph;
-
-            // Optional: root node index (default: 0). Only needed if root is not node 0.
-            // rootNode  0;
-
-            // Root node stimulus
-            rootStimulus
-            {
-                startTime  0.0;
-                duration   0.002;    // [s]
-                intensity  1000.0;   // [A/m³] suprathreshold
-            }
+            // Canonical runtime type: purkinjeGraphModel
+            // Legacy compatibility alias may appear in older files:
+            // conductionSystemDomain
+            conductionSystemDomain  purkinjeGraphModel;
 
             // Coefficients for the graph-level conduction solver
-            purkinjeNetworkModelCoeffs
+            purkinjeGraphModelCoeffs
             {
+                // REQUIRED: reference to graph file in constant/
+                graphFile  purkinjeGraph;
+
+                // Root node stimulus
+                rootStimulus
+                {
+                    startTime  0.0;
+                    duration   0.002;    // [s]
+                    intensity  1000.0;   // [A/m^3] suprathreshold
+                    // node  0;          // optional override of graph-file rootNode
+                }
+
                 // ── Graph solver selection ───────────────────────────────────
                 // Key: 'conductionSystemSolver <type>;'
                 // Default (if omitted): monodomain1DSolver
                 //
                 // Valid types (registered in conductionSystemSolver RTST):
                 //   monodomain1DSolver — implicit cable equation + ionic ODE [DEFAULT]
-                //   eikonalSolver      — activation-time only, needs c0 [m/s]
+                //   eikonalSolver1D    — activation-time only, needs c0 [m/s]
                 //
-                conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver
+                conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver1D
 
                 // --- Eikonal solver: only c0 is required ---
                 // conduction velocity [m/s] (must be dimensioned)
@@ -240,6 +241,8 @@ bidomainSolverCoeffs
     solver             RKF45;
     initialODEStep     1e-6;
     maxSteps           1000000000;
+    phiERefPoint       (0 0 0);    // required point used to locate the reference cell
+    phiEReferenceValue 0.0;
 
     outputVariables
     {
@@ -348,7 +351,7 @@ eikonalSolverCoeffs
     //   conductionNetworkDomains { ... }
     //   domainCouplings { ... }
     // Use:
-    //   purkinjeNetworkModelCoeffs.conductionSystemSolver  eikonalSolver;
+    //   purkinjeGraphModelCoeffs.conductionSystemSolver  eikonalSolver1D;
     //   conductionNetworkDomain  purkinjeNetwork;
     //   electroDomainCoupler     eikonalPvjCoupler;
 }
@@ -359,26 +362,30 @@ eikonalSolverCoeffs
 // ─────────────────────────────────────────────────────────────────────────────
 
 /*
-ecgDomains
+Place ecgDomains inside the active <solver>Coeffs block, for example:
+
+monodomainSolverCoeffs
 {
-    bodySurfaceECG
+    ecgDomains
     {
-        // ECG stays as a top-level optional block, not inside <type>Coeffs.
-        // It is assembled after the myocardium domain and can be combined
-        // with monodomain, bidomain, or eikonal myocardium runs as supported.
-
-        // ECG solver selection (registered in ecgSolver RTST)
-        // Valid type: pseudoECG
-        ecgSolver  pseudoECG;
-
-        // Electrode positions [m]
-        electrodePositions
+        bodySurfaceECG
         {
-            lead_I   ( 0.1  0.0  0.0 );
-            lead_II  ( 0.0  0.1  0.0 );
+            // ECG solver selection (registered in ecgSolver RTST)
+            // Valid type: pseudoECG
+            ecgSolver  pseudoECG;
+
+            // Electrode positions [m]
+            electrodePositions
+            {
+                lead_I   ( 0.1  0.0  0.0 );
+                lead_II  ( 0.0  0.1  0.0 );
+            }
         }
     }
 }
+
+// Bath-coupled ECG support
+// # to implement
 */
 
 // ─────────────────────────────────────────────────────────────────────────────

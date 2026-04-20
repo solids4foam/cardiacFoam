@@ -21,6 +21,7 @@ License
 
 #include "electroDomainCoupler.H"
 #include "pvjMapper.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -43,6 +44,7 @@ protected:
     PVJMapper mapper_;
     scalar pvjRadius_;
     CouplingMode couplingMode_;
+    Switch reportSetup_;
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
 

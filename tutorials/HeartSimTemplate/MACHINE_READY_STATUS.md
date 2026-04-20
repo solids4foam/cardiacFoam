@@ -19,6 +19,12 @@
   - solver required files
   - conditional files
 - The current template is explicitly marked as symbolic authoring input, not a directly runnable case.
+- The workflow contract is now grounded against the runnable reference case:
+  - `tutorials/HeartPurkinje_MonopECG/HeartPurkinje`
+- The canonical workflow vocabulary now uses:
+  - `externalStimulus`
+  - `purkinjeGraphModel`
+  - `purkinjeGraphModelCoeffs`
 
 ## Missing For Full Machine-Ready Use
 
@@ -28,7 +34,7 @@
 - Replace symbolic ionic export placeholders with real export-variable lists.
 - Define a code-backed protocol for Purkinje ionic export discovery, analogous to the myocardium export-variable flow.
 - Decide whether `HeartSimTemplate` should remain a generic template folder or become a curated registered tutorial in `driverFOAM`.
-- Ground the template against a real full-heart production case/dictionary so the workflow contract is based on a final reference case, not only symbolic templates.
+- Decide whether the grounded HeartPurkinje reference should remain a workflow case entry or later become a curated registered tutorial/workflow.
 
 ## Current Interpretation For Agents
 

@@ -24,11 +24,6 @@ singleCellSolverCoeffs
         type singleCellManufacturedFDABidomainVerifier;
     }
 
-    solverHookFields
-    {
-        preProcess (u1 u2 u3);
-    }
-
     manufacturedBidomain
     {
         k 0.7071067811865476;

@@ -39,13 +39,6 @@ class manufacturedFDABidomainVerifier : public electroVerificationModel
 
     const dictionary& verificationDict() const;
 
-    wordList readConfiguredNames
-    (
-        const word& subDictName,
-        const word& entryName,
-        const wordList& defaults
-    ) const;
-
 public:
 
     OverrideTypeName("manufacturedFDABidomainVerifier");

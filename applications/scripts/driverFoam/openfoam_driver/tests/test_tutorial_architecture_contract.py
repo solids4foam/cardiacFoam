@@ -8,9 +8,11 @@ from pathlib import Path
 from openfoam_driver.core.defaults import niederer_2012 as niederer_defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.registry import (
+    list_entries,
     list_case_directories,
     list_tutorials,
     load_tutorial_spec,
+    resolve_entry,
 )
 from openfoam_driver.specs.tutorials import (
     manufactured_fda,
@@ -80,11 +82,32 @@ class TestTutorialArchitectureContract(unittest.TestCase):
         discovered = set(list_case_directories(self.tutorials_root))
 
         self.assertIn("HeartSimTemplate", discovered)
-        self.assertIn("singleCell", discovered)
-        self.assertIn("NiedererEtAl2012Purkinje", discovered)
-        self.assertIn("NiedererEtAl2012EikonalPurkinje", discovered)
+        self.assertIn("ECG", discovered)
         self.assertNotIn("manufacturedSolutions", discovered)
         self.assertNotIn("regressionTests", discovered)
+
+    def test_entry_catalog_classifies_workflow_template_and_reference_case(self) -> None:
+        entries = list_entries(self.tutorials_root)
+        indexed = {entry["entry_path"]: entry for entry in entries}
+
+        self.assertEqual(indexed["HeartSimTemplate"]["entry_kind"], "workflow_template")
+        self.assertFalse(indexed["HeartSimTemplate"]["is_runnable"])
+        self.assertEqual(
+            indexed["HeartPurkinje_MonopECG/HeartPurkinje"]["entry_kind"],
+            "workflow_case",
+        )
+        self.assertTrue(indexed["HeartPurkinje_MonopECG/HeartPurkinje"]["is_runnable"])
+
+    def test_resolve_entry_supports_explicit_workflow_case_kind(self) -> None:
+        resolution = resolve_entry(
+            "HeartPurkinje",
+            entry_kind="workflow_case",
+            overrides={"tutorials_root": self.tutorials_root},
+        )
+
+        self.assertEqual(resolution["entry_kind"], "workflow_case")
+        self.assertEqual(resolution["entry_path"], "HeartPurkinje_MonopECG/HeartPurkinje")
+        self.assertEqual(resolution["resolution"], "case_folder")
 
     def test_case_sweeps_are_non_empty_and_unique(self) -> None:
         for tutorial in list_tutorials():
@@ -177,10 +200,6 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                         "    verificationModel",
                         "    {",
                         "        type manufacturedFDAMonodomainVerifier;",
-                        "    }",
-                        "    solverHookFields",
-                        "    {",
-                        "        preProcess (u1 u2 u3);",
                         "    }",
                         "    ecgDomains",
                         "    {",

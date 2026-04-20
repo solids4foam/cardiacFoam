@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from openfoam_driver.core.runtime.engine import DriverEngine
+from openfoam_driver.core.runtime.registry import load_entry_spec
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 
 
@@ -56,8 +57,10 @@ class TestDriverEngineManifest(unittest.TestCase):
             self.assertEqual(applied_cases, ["caseA", "caseB"])
             self.assertEqual(ran_cases, ["caseA", "caseB"])
             self.assertEqual(len(results), 2)
-            self.assertEqual(manifest["schema_version"], "2.0")
+            self.assertEqual(manifest["schema_version"], "2.1")
             self.assertEqual(manifest["requested_action"], "all")
+            self.assertEqual(manifest["entry"], "dummy")
+            self.assertIsNone(manifest["entry_kind"])
             self.assertEqual(manifest["status"], "completed")
             self.assertEqual(manifest["postprocess_status"], "not_started")
             self.assertEqual(manifest["completed_cases"], 2)
@@ -71,6 +74,7 @@ class TestDriverEngineManifest(unittest.TestCase):
             self.assertTrue(report_path.exists())
             report_text = report_path.read_text()
             self.assertIn("# driverFoam Run Report", report_text)
+            self.assertIn("- Entry: `dummy`", report_text)
             self.assertIn("### caseA", report_text)
             self.assertIn("### caseB", report_text)
 
@@ -103,6 +107,7 @@ class TestDriverEngineManifest(unittest.TestCase):
 
             manifest = _load_json(output_dir / "run_manifest.json")
             self.assertEqual(manifest["requested_action"], "post")
+            self.assertEqual(manifest["entry"], "dummy")
             self.assertEqual(manifest["status"], "completed")
             self.assertEqual(manifest["postprocess_status"], "completed")
             self.assertEqual(manifest["total_cases"], 0)
@@ -153,6 +158,44 @@ class TestDriverEngineManifest(unittest.TestCase):
             self.assertEqual(collected, ["ok"])
             self.assertEqual(seen_in_postprocess, ["3D_80_cells_implicit.dat"])
             self.assertTrue((output_dir / "3D_80_cells_implicit.dat").exists())
+
+    def test_loaded_entry_spec_writes_entry_metadata_into_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tutorials_root = Path(temp_dir)
+            case_root = tutorials_root / "HeartPurkinje_MonopECG" / "HeartPurkinje"
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "system").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "\n".join(
+                    [
+                        "myocardiumSolver monodomainSolver;",
+                        "",
+                        "monodomainSolverCoeffs",
+                        "{",
+                        "    ionicModel BuenoOrovio;",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
+            (case_root / "system" / "controlDict").write_text("application cardiacFoam;\n")
+            (case_root / "system" / "fvSchemes").write_text("ddtSchemes {}\n")
+            (case_root / "system" / "fvSolution").write_text("solvers {}\n")
+
+            spec = load_entry_spec(
+                "HeartPurkinje",
+                entry_kind="workflow_case",
+                overrides={"tutorials_root": tutorials_root},
+            )
+            engine = DriverEngine(spec=spec, requested_action="sim", dry_run=True)
+            engine.run_simulations()
+
+            manifest = _load_json(spec.setup_root / "run_manifest.json")
+            self.assertEqual(manifest["entry"], "HeartPurkinje")
+            self.assertEqual(manifest["entry_kind"], "workflow_case")
+            self.assertEqual(manifest["entry_path"], "HeartPurkinje_MonopECG/HeartPurkinje")
+            self.assertEqual(manifest["source_type"], "workflow_reference_case")
 
 
 if __name__ == "__main__":

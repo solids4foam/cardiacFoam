@@ -1,7 +1,22 @@
 SOLIDS4FOAM_ROOT := $(SOLIDS4FOAM_INST_DIR)
+CARDIACFOAM_LIGHTWEIGHT_ROOT := $(abspath ../../modules/physicsModel)
 
 sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
 sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
+
+ifeq ($(strip $(SOLIDS4FOAM_ROOT)),)
+    $(error SOLIDS4FOAM_INST_DIR is not set. Use './Allwmake' or source 'etc/resolveSolids4Foam.sh' before building src/electroMechanicalModels.)
+endif
+
+ifeq ($(strip $(USE_LIGHTWEIGHT_PHYSICSMODEL)),1)
+    ifneq ($(abspath $(SOLIDS4FOAM_ROOT)),$(CARDIACFOAM_LIGHTWEIGHT_ROOT))
+        $(error USE_LIGHTWEIGHT_PHYSICSMODEL=1 but SOLIDS4FOAM_INST_DIR resolves to '$(abspath $(SOLIDS4FOAM_ROOT))' instead of '$(CARDIACFOAM_LIGHTWEIGHT_ROOT)'. Rebuild through './Allwmake' to keep the physicsModel backend consistent.)
+    endif
+else
+    ifeq ($(abspath $(SOLIDS4FOAM_ROOT)),$(CARDIACFOAM_LIGHTWEIGHT_ROOT))
+        $(error SOLIDS4FOAM_INST_DIR points to the bundled lightweight physicsModel root but USE_LIGHTWEIGHT_PHYSICSMODEL is not 1. Rebuild through './Allwmake' to keep the physicsModel backend consistent.)
+    endif
+endif
 
 ifndef S4F_NO_USE_EIGEN
     VERSION_SPECIFIC_INC += -I$(SOLIDS4FOAM_ROOT)/ThirdParty/eigen3

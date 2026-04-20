@@ -19,6 +19,7 @@ License
 #include "eikonalMyocardiumDomain.H"
 #include "error.H"
 #include "DynamicList.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -158,9 +159,12 @@ tmp<volTensorField> EikonalMyocardiumDomain::initialiseConductivity() const
 
     if (!result.headerOk())
     {
-        Info<< "\nconductivity not found on disk, using conductivity from "
-            << electroProperties_.name()
-            << nl << endl;
+        if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+        {
+            Info<< "\nconductivity not found on disk, using conductivity from "
+                << electroProperties_.name()
+                << nl << endl;
+        }
 
         result =
             dimensionedTensor
@@ -275,7 +279,11 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
 
     stimulusCellIDs_ = stimCellSet.toc();
 
-    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    if
+    (
+        electroProperties.lookupOrDefault<Switch>("reportSetup", false)
+     && meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+    )
     {
         Info<< "Constructed EikonalMyocardiumDomain on submesh '"
             << mesh().name() << "' from cellZone '"

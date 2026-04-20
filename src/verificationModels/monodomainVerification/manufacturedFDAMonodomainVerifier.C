@@ -231,35 +231,12 @@ manufacturedFDAMonodomainVerifier::manufacturedFDAMonodomainVerifier
     errorsReported_(false)
 {}
 
-
-wordList manufacturedFDAMonodomainVerifier::readConfiguredNames
-(
-    const word& subDictName,
-    const word& entryName,
-    const wordList& defaults
-) const
-{
-    if (!dict().found(subDictName))
-    {
-        return defaults;
-    }
-
-    const dictionary& hookDict = dict().subDict(subDictName);
-    return hookDict.lookupOrDefault<wordList>(entryName, defaults);
-}
-
-
 wordList manufacturedFDAMonodomainVerifier::preProcessFieldNames
 (
     const ionicModel&
 ) const
 {
-    return readConfiguredNames
-    (
-        "solverHookFields",
-        "preProcess",
-        wordList({"u1", "u2", "u3"})
-    );
+    return wordList({"u1", "u2", "u3"});
 }
 
 

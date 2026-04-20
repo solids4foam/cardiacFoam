@@ -273,17 +273,21 @@ MyocardiumDomain::MyocardiumDomain
         (
             "solutionAlgorithm", "implicit"
         ) == "explicit"
-    )
+    ),
+    reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
 {
-    Info<< "MyocardiumDomain initial Vm[min,max]=["
-        << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
-
-    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    if (reportSetup_)
     {
-        Info<< "Constructed MyocardiumDomain on submesh '"
-            << mesh().name() << "' from cellZone '"
-            << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
-            << "'." << nl << endl;
+        Info<< "MyocardiumDomain initial Vm[min,max]=["
+            << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
+
+        if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+        {
+            Info<< "Constructed MyocardiumDomain on submesh '"
+                << mesh().name() << "' from cellZone '"
+                << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
+                << "'." << nl << endl;
+        }
     }
 
     if (diffusionSolverPtr_->phiEPtr())
@@ -371,18 +375,10 @@ void MyocardiumDomain::updateActivationTime
 
 void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
 {
-    const Switch allowIonicStimulusInMonodomain =
-        electroProperties_.lookupOrDefault<Switch>
-        (
-            "allowIonicStimulusInMonodomain",
-            false
-        );
-
     const StimulusProtocol& ionicStim = ionicModel_.stimulusProtocol();
     if
     (
         stimulusIO::hasActiveStimulus(ionicStim)
-     && !allowIonicStimulusInMonodomain
     )
     {
         FatalErrorInFunction
@@ -390,8 +386,8 @@ void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
             << "a reaction-diffusion myocardium domain." << nl
             << "This can unintentionally combine ionic and PDE external "
             << "stimulation." << nl
-            << "Either disable ionic protocol keys (stim_*, nstim*) or set "
-            << "allowIonicStimulusInMonodomain true to override."
+            << "Disable the ionic protocol keys (stim_*, nstim*) and use "
+            << "externalStimulus for PDE-scale stimulation instead."
             << exit(FatalError);
     }
 }
@@ -464,10 +460,13 @@ void MyocardiumDomain::initialiseProcessing()
             postProcessFields_
         );
 
-        Info << "Using verification model "
-             << verificationModelPtr_->type() << "." << endl;
+        if (reportSetup_)
+        {
+            Info << "Using verification model "
+                 << verificationModelPtr_->type() << "." << endl;
+        }
 
-        if (!preProcessFieldNames_.empty())
+        if (reportSetup_ && !preProcessFieldNames_.empty())
         {
             Info << "Running preProcess with fields " << preProcessFieldNames_
                  << "." << endl;
