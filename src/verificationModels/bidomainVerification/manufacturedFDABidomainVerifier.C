@@ -232,26 +232,6 @@ const dictionary& manufacturedFDABidomainVerifier::verificationDict() const
     return dict();
 }
 
-
-wordList manufacturedFDABidomainVerifier::readConfiguredNames
-(
-    const word& subDictName,
-    const word& entryName,
-    const wordList& defaults
-) const
-{
-    const dictionary& cfg = verificationDict();
-
-    if (!cfg.found(subDictName))
-    {
-        return defaults;
-    }
-
-    const dictionary& hookDict = cfg.subDict(subDictName);
-    return hookDict.lookupOrDefault<wordList>(entryName, defaults);
-}
-
-
 void manufacturedFDABidomainVerifier::bindBidomainField(volScalarField& phiE)
 {
     phiEPtr_ = &phiE;
@@ -263,12 +243,7 @@ wordList manufacturedFDABidomainVerifier::preProcessFieldNames
     const ionicModel&
 ) const
 {
-    return readConfiguredNames
-    (
-        "solverHookFields",
-        "preProcess",
-        wordList({"u1", "u2", "u3"})
-    );
+    return wordList({"u1", "u2", "u3"});
 }
 
 
@@ -277,12 +252,7 @@ wordList manufacturedFDABidomainVerifier::requiredPostProcessFieldNames
     const ionicModel&
 ) const
 {
-    return readConfiguredNames
-    (
-        "solverHookFields",
-        "postProcess",
-        wordList({"u1", "u2"})
-    );
+    return wordList({"u1", "u2"});
 }
 
 

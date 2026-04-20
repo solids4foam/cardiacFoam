@@ -1,13 +1,24 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "tutorial_family": "HeartSimTemplate",
-  "purpose": "Authoring contract for full cardiac electrophysiology cases built from reusable workflow templates.",
+  "purpose": "Authoring contract for full cardiac electrophysiology cases built from reusable workflow templates and grounded against a runnable HeartPurkinje reference case.",
   "status": {
     "template_kind": "symbolic_authoring_template",
     "runnable_without_substitution": false,
     "future_work": [
       "Replace symbolic ionic-model placeholders with concrete model selections before attempting to run.",
       "Define a formal protocol for Purkinje-specific ionic export variable discovery, analogous to the myocardium export-variable query flow."
+    ]
+  },
+  "reference_workflow_case": {
+    "entry_path": "HeartPurkinje_MonopECG/HeartPurkinje",
+    "entry_kind": "workflow_case",
+    "notes": [
+      "This case is the runnable vocabulary reference for the monodomain + Purkinje + pseudo-ECG workflow family.",
+      "Reference-only keys present in that case but not promoted into the canonical contract are listed under legacy_reference_keys."
+    ],
+    "legacy_reference_keys": [
+      "purkinjeConductivity"
     ]
   },
   "base_case": {
@@ -51,7 +62,7 @@
       "strategy": "future_work",
       "required": false,
       "description": "Purkinje ionic export placeholders are currently symbolic and must be replaced by a future code-backed export-variable discovery path before automatic case authoring can make them runnable.",
-      "output_target": "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.export"
+      "output_target": "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.outputVariables.export"
     }
   },
   "workflow_templates": [
@@ -62,7 +73,7 @@
       "electro_scope": "monodomainSolverCoeffs",
       "required_blocks": [
         "monodomainSolverCoeffs",
-        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.externalStimulus",
         "monodomainSolverCoeffs.conductionNetworkDomains",
         "monodomainSolverCoeffs.domainCouplings",
         "monodomainSolverCoeffs.ecgDomains"
@@ -73,7 +84,9 @@
         "monodomainSolverCoeffs.solutionAlgorithm",
         "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
         "monodomainSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
-        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.node",
         "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
         "monodomainSolverCoeffs.ecgDomains.<name>.ecgSolver",
         "monodomainSolverCoeffs.ecgDomains.<name>.electrodePositions.<electrode>"
@@ -86,12 +99,13 @@
       "placeholders": {
         "myocardiumIonicModel": "<myocardiumIonicModel>",
         "purkinjeIonicModel": "<purkinjeIonicModel>",
+        "purkinjeRootNode": "<purkinjeRootNode>",
         "myocardiumIonicExports": "{{<myocardiumIonicModel>_EXPORTS}}",
         "purkinjeIonicExports": "<purkinjeIonicModel>_SPECIFIC"
       },
       "notes": [
-        "This is the current major-heart symbolic template in HeartSimTemplate/constant/electroProperties.",
-        "It is not runnable until the ionic-model placeholders are replaced."
+        "This template is symbolic and is intentionally not directly runnable.",
+        "The canonical vocabulary for this workflow is grounded against tutorials/HeartPurkinje_MonopECG/HeartPurkinje."
       ]
     },
     {
@@ -101,7 +115,7 @@
       "electro_scope": "monodomainSolverCoeffs",
       "required_blocks": [
         "monodomainSolverCoeffs",
-        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.externalStimulus",
         "monodomainSolverCoeffs.conductionNetworkDomains",
         "monodomainSolverCoeffs.domainCouplings"
       ],
@@ -111,7 +125,8 @@
         "monodomainSolverCoeffs.solutionAlgorithm",
         "monodomainSolverCoeffs.electrophysicsAdvanceScheme",
         "monodomainSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
-        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver",
+        "monodomainSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
         "monodomainSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
         "monodomainSolverCoeffs.domainCouplings.<name>.conductionNetworkDomain"
       ],
@@ -132,7 +147,7 @@
       "electro_scope": "monodomainSolverCoeffs",
       "required_blocks": [
         "monodomainSolverCoeffs",
-        "monodomainSolverCoeffs.monodomainStimulus",
+        "monodomainSolverCoeffs.externalStimulus",
         "monodomainSolverCoeffs.ecgDomains"
       ],
       "required_keys": [
@@ -169,8 +184,9 @@
         "eikonalSolverCoeffs.stimulusLocationMin",
         "eikonalSolverCoeffs.stimulusLocationMax",
         "eikonalSolverCoeffs.conductionNetworkDomains.<name>.conductionSystemDomain",
-        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
-        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.c0",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
+        "eikonalSolverCoeffs.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.c0",
         "eikonalSolverCoeffs.domainCouplings.<name>.electroDomainCoupler",
         "eikonalSolverCoeffs.domainCouplings.<name>.conductionNetworkDomain",
         "eikonalSolverCoeffs.domainCouplings.<name>.couplingMode"
@@ -192,7 +208,7 @@
         "myocardiumSolver": "monodomainSolver"
       },
       "allows": [
-        "monodomainStimulus",
+        "externalStimulus",
         "ecgDomains",
         "conductionNetworkDomains",
         "domainCouplings",
@@ -208,6 +224,7 @@
         "writeAfterTime"
       ],
       "forbids": [
+        "externalStimulus",
         "ecgDomains",
         "conductionNetworkDomains",
         "domainCouplings"
@@ -228,6 +245,7 @@
   ],
   "provenance": {
     "human_source": "templates.md",
-    "schema_source": "applications/scripts/driverFoam/openfoam_driver/dict_entries.py"
+    "schema_source": "applications/scripts/driverFoam/openfoam_driver/dict_entries.py",
+    "reference_workflow_case": "tutorials/HeartPurkinje_MonopECG/HeartPurkinje"
   }
 }

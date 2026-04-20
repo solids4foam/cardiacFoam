@@ -93,7 +93,7 @@ void ConductionSystemDomain::readGraphFile(const dictionary& dict)
         )
     );
 
-    graph_.readFromDict(graphDict);
+    graph_.readFromDict(graphDict, reportSetup_);
 
     rootNode_ = graphDict.lookupOrDefault<label>("rootNode", 0);
     terminalNodes_ = labelList(graphDict.lookup("pvjNodes"));
@@ -140,15 +140,18 @@ void ConductionSystemDomain::readGraphFile(const dictionary& dict)
         }
     }
 
-    Info<< "Purkinje graph file '" << graphFile << "': rootNode="
-        << rootNode_ << ", terminals=" << terminalNodes_.size() << nl;
-    forAll(terminalNodes_, i)
+    if (reportSetup_)
     {
-        Info<< "  terminal" << i
-            << " node=" << terminalNodes_[i]
-            << " location=" << terminalLocations_[i] << nl;
+        Info<< "Purkinje graph file '" << graphFile << "': rootNode="
+            << rootNode_ << ", terminals=" << terminalNodes_.size() << nl;
+        forAll(terminalNodes_, i)
+        {
+            Info<< "  terminal" << i
+                << " node=" << terminalNodes_[i]
+                << " location=" << terminalLocations_[i] << nl;
+        }
+        Info<< endl;
     }
-    Info<< endl;
 }
 
 
@@ -294,8 +297,11 @@ void ConductionSystemDomain::openOutputFile()
         colNames
     );
 
-    Info<< "ConductionSystemDomain: writing to "
-        << outDir/"purkinjeNetwork.dat" << nl << endl;
+    if (reportSetup_)
+    {
+        Info<< "ConductionSystemDomain: writing to "
+            << outDir/"purkinjeNetwork.dat" << nl << endl;
+    }
 }
 
 
@@ -335,6 +341,7 @@ ConductionSystemDomain::ConductionSystemDomain
     outputPtr_(),
     exportVars_(),
     debugVars_(),
+    reportSetup_(coeffsDict_.lookupOrDefault<Switch>("reportSetup", false)),
     pvdTimes_(),
     pvdFiles_()
 {
@@ -344,9 +351,12 @@ ConductionSystemDomain::ConductionSystemDomain
     initialiseOutputControls();
     openOutputFile();
 
-    Info<< "ConductionSystemDomain constructed as graph Purkinje model with "
-        << graph_.nNodes << " nodes and " << graph_.nEdges << " edges."
-        << nl << endl;
+    if (reportSetup_)
+    {
+        Info<< "ConductionSystemDomain constructed as graph Purkinje model with "
+            << graph_.nNodes << " nodes and " << graph_.nEdges << " edges."
+            << nl << endl;
+    }
 }
 
 

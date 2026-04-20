@@ -29,7 +29,8 @@ def default_setup_dir_name(case_dir_name: str) -> str:
     normalized_case_dir = case_dir_name.strip()
     if not normalized_case_dir:
         raise ValueError("case_dir_name cannot be empty")
-    return f"setup{normalized_case_dir[:1].upper()}{normalized_case_dir[1:]}"
+    case_leaf = Path(normalized_case_dir).name
+    return f"setup{case_leaf[:1].upper()}{case_leaf[1:]}"
 
 
 def detect_myocardium_solver_name(electro_properties_path: Path) -> str:

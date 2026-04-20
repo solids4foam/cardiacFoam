@@ -32,11 +32,16 @@ class TestIntrospection(unittest.TestCase):
         )
 
         self.assertEqual(payload["resolution"], "registered")
+        self.assertEqual(payload["entry_kind"], "registered_tutorial")
         self.assertEqual(payload["resolved_name"], "singleCell")
+        self.assertEqual(payload["entry"]["entry_name"], "singleCell")
         self.assertIn("singleCell", payload["registered_tutorials"])
         self.assertIn("ionic_models", payload["make_spec"]["parameters"])
         self.assertIn("gui_schema", payload)
-        self.assertEqual(payload["gui_schema"]["routes"][0]["path"], "/tutorials")
+        self.assertEqual(payload["gui_schema"]["routes"][0]["path"], "/entries")
+        self.assertIn("entry_catalog", payload)
+        self.assertIsInstance(payload["entry_catalog"], list)
+        self.assertIn("workflow_catalog", payload)
         self.assertIn(
             "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
             {
@@ -54,6 +59,13 @@ class TestIntrospection(unittest.TestCase):
         self.assertGreater(payload["spec"]["cases"]["count"], 0)
         self.assertIn("tutorial_contract", payload)
         self.assertEqual(payload["tutorial_contract"]["name"], "singleCell")
+        self.assertTrue(
+            payload["spec"]["case_root"].endswith(
+                "tutorials/singleCellprotocols/singleCell"
+            )
+        )
+        self.assertTrue(Path(payload["spec"]["case_root"]).exists())
+        self.assertTrue(Path(payload["spec"]["setup_root"]).exists())
         self.assertIn(
             "constant/electroProperties",
             payload["tutorial_contract"]["core_required_files"],
@@ -98,14 +110,16 @@ class TestIntrospection(unittest.TestCase):
         self.assertIsInstance(tnnp["states"], list)
         self.assertGreater(len(tnnp["states"]), 0)
 
-        # active_tension_models
-        self.assertIn("active_tension_models", catalog)
-        self.assertGreater(len(catalog["active_tension_models"]), 0)
-
         # solver_compatibility
         self.assertIn("solver_compatibility", catalog)
         self.assertIsInstance(catalog["solver_compatibility"], list)
         self.assertGreater(len(catalog["solver_compatibility"]), 0)
+
+        self.assertIn("active_tension_catalog", payload)
+        at_catalog = payload["active_tension_catalog"]
+        self.assertEqual(at_catalog["schema_version"], "1.0")
+        self.assertIn("active_tension_models", at_catalog)
+        self.assertGreater(len(at_catalog["active_tension_models"]), 0)
 
     def test_describe_tutorial_reports_generic_case_folder_resolution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -133,6 +147,7 @@ class TestIntrospection(unittest.TestCase):
             )
 
             self.assertEqual(payload["resolution"], "case_folder")
+            self.assertEqual(payload["entry_kind"], "case_folder")
             self.assertEqual(payload["resolved_name"], "randomCase")
             self.assertIn("randomCase", payload["available_tutorials"])
             self.assertEqual(
@@ -154,7 +169,7 @@ class TestIntrospection(unittest.TestCase):
             exit_code = main(
                 [
                     "describe",
-                    "--tutorial",
+                    "--entry",
                     "singleCell",
                     "--tutorials-root",
                     str(self.tutorials_root),
@@ -166,6 +181,25 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(payload["resolved_name"], "singleCell")
         self.assertIn("common_override_keys", payload)
         self.assertIn("launch", payload)
+        self.assertEqual(payload["entry_kind"], "registered_tutorial")
+
+    def test_cli_legacy_tutorial_alias_still_works(self) -> None:
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            exit_code = main(
+                [
+                    "describe",
+                    "--tutorial",
+                    "singleCell",
+                    "--tutorials-root",
+                    str(self.tutorials_root),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["resolved_name"], "singleCell")
+        self.assertEqual(payload["entry_kind"], "registered_tutorial")
 
     def test_heartsimtemplate_exposes_machine_readable_authoring_contract(self) -> None:
         payload = describe_tutorial(
@@ -176,6 +210,8 @@ class TestIntrospection(unittest.TestCase):
         contract = payload["tutorial_contract"]
         self.assertEqual(contract["name"], "HeartSimTemplate")
         self.assertEqual(contract["resolution"], "case_folder")
+        self.assertEqual(payload["entry_kind"], "workflow_template")
+        self.assertFalse(payload["is_runnable"])
         self.assertEqual(contract["authoring_contract_path"], "workflow_contract.json")
         self.assertIsNotNone(contract["authoring_contract"])
         self.assertEqual(
@@ -185,6 +221,38 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(
             contract["authoring_contract"]["workflow_templates"][0]["workflow_id"],
             "monodomain_purkinje_pseudo_ecg",
+        )
+        self.assertEqual(
+            contract["authoring_contract"]["workflow_templates"][0]["required_blocks"][1],
+            "monodomainSolverCoeffs.externalStimulus",
+        )
+        self.assertNotIn(
+            "purkinjeNetworkModelCoeffs",
+            json.dumps(contract["authoring_contract"]),
+        )
+
+    def test_heartpurkinje_entry_is_exposed_as_runnable_workflow_case(self) -> None:
+        payload = describe_tutorial(
+            "HeartPurkinje",
+            overrides={"tutorials_root": self.tutorials_root},
+        )
+
+        self.assertEqual(payload["entry_kind"], "workflow_case")
+        self.assertTrue(payload["is_runnable"])
+        self.assertEqual(payload["entry"]["entry_path"], "HeartPurkinje_MonopECG/HeartPurkinje")
+        self.assertTrue(payload["spec"]["setup_root"].endswith("setupHeartPurkinje"))
+        self.assertEqual(payload["workflow"]["workflow_family"], "HeartSimTemplate")
+        self.assertEqual(
+            payload["workflow"]["template_entry"]["entry_name"],
+            "HeartSimTemplate",
+        )
+        self.assertIn(
+            "HeartPurkinje_MonopECG/HeartPurkinje",
+            {
+                item["entry_path"]
+                for item in payload["entry_catalog"]
+                if item["entry_kind"] == "workflow_case"
+            },
         )
 
 

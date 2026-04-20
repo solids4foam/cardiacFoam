@@ -21,6 +21,7 @@ License
 #include "IOmanip.H"
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -75,10 +76,13 @@ tmp<volTensorField> MonodomainSolver::initialiseConductivity
 
     if (!result.headerOk())
     {
-        Info << nl
-             << "conductivity not found on disk, using value from "
-             << electroProperties.name()
-             << nl << endl;
+        if (electroProperties.lookupOrDefault<Switch>("reportSetup", false))
+        {
+            Info << nl
+                 << "conductivity not found on disk, using value from "
+                 << electroProperties.name()
+                 << nl << endl;
+        }
 
         result = dimensionedTensor
         (

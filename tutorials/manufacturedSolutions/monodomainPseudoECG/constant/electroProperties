@@ -39,11 +39,6 @@ monodomainSolverCoeffs
         type    manufacturedFDAMonodomainVerifier;
     }
 
-    solverHookFields
-    {
-        preProcess (u1 u2 u3);
-    }
-
     dimension    "3D";
 
     solutionAlgorithm    implicit;

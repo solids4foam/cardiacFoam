@@ -20,6 +20,27 @@ EXTRA_ALGEBRAIC = [
     "Iion_cm",
 ]
 
+LICENSE_HEADER = """/*---------------------------------------------------------------------------*\\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
+"""
+
 
 # ============================================================
 # Utilities
@@ -91,6 +112,9 @@ static inline const Foam::HashTable<Foam::wordList>&
 
 def load_state_map(fname="state_map.txt"):
     mapping = {}
+    if not os.path.exists(fname):
+        return None
+        
     with open(fname) as f:
         for line in f:
             if line.strip():
@@ -179,11 +203,10 @@ def extract_body_only(func_text):
 # ============================================================
 
 def extract_constants_from_update_constants(src):
-    block = extract_function(src, "updateConstants")
     pattern = re.compile(r"\bCONSTANTS\[([A-Za-z_][A-Za-z0-9_]*)\]")
     names = OrderedDict()
 
-    for m in pattern.finditer(block):
+    for m in pattern.finditer(src):
         names[m.group(1)] = None
 
     for c in EXTRA_CONSTANTS:
@@ -269,20 +292,34 @@ void
     )
 
 
-def emit_openfoam_algebraic_tail():
-    return """
+def emit_openfoam_algebraic_tail(discovered=None):
+    """
+    Generates the tail of the computeVariables function.
+    If 'Iion' was discovered, it automatically maps it to Iion_cm.
+    """
+    iion_map = ""
+    if discovered and discovered.get('Iion'):
+        iion_name = discovered['Iion']
+        iion_map = f"\n    // Automatically discovered ionic current mapping\n    ALGEBRAIC[Iion_cm] = ALGEBRAIC[{iion_name}];\n"
+    elif discovered and discovered.get('Vm'):
+        # If we have Vm but not an explicit Iion, 
+        # we can't safely automate the sum, but we can provide a hint.
+        iion_map = f"\n    // TODO: Define ALGEBRAIC[Iion_cm] based on {discovered['Vm']} derivative\n"
 
+    return f"""
+{iion_map}
     ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
-    {
+    {{
         RATES[0] = -ALGEBRAIC[Iion_cm] - ALGEBRAIC[Istim];
-    }
+    }}
 """
 
 
 def generate_header(fname, states, algebraic, constants, model_name):
     with open(fname, "w") as f:
+        f.write(LICENSE_HEADER)
         f.write("#pragma once\n\n")
         emit_enum(f, "STATES_INDEX", states)
         emit_enum(f, "ALGEBRAIC_INDEX", algebraic)
@@ -292,7 +329,7 @@ def generate_header(fname, states, algebraic, constants, model_name):
 
 # Final C assembly
 # ============================================================
-def build_final_c(init_block, computeVariables_block, init_values_block):
+def build_final_c(init_block, computeVariables_block, init_values_block, discovered=None):
 
     # Ensure correct headers
     init_block = normalize_void_signature(init_block)
@@ -304,9 +341,16 @@ def build_final_c(init_block, computeVariables_block, init_values_block):
     # Reconstruct init function explicitly
     init_header = init_block.split("{", 1)[0].rstrip() + "\n{"
 
+    tissue_inject = ""
+    if discovered and discovered.get("Tissue"):
+        # Map OpenFOAM tissueFlag to the discovered CellML variable
+        t_name = discovered["Tissue"]
+        tissue_inject = f"\n    // Automated tissueFlag mapping\n    CONSTANTS[{t_name}] = (double)tissueFlag;\n"
+
     final_init = (
         init_header
         + "\n"
+        + tissue_inject
         + init_body
         + "\n\n    /* --- Initial values --- */\n\n"
         + init_vals
@@ -322,14 +366,14 @@ def build_final_c(init_block, computeVariables_block, init_values_block):
         compute_header
         + "\n"
         + compute_body
-        + emit_openfoam_algebraic_tail()
+        + emit_openfoam_algebraic_tail(discovered)
         + "\n}\n"
     )
 
     return final_init + "\n\n" + final_compute
 
 
-def run_mapping(input_c, output_c, verbose: bool = False):
+def run_mapping(input_c, output_c, mapping=None, discovered=None, verbose: bool = False):
     global DEBUG
     DEBUG = verbose
     model_name, year = parse_model_from_output(output_c)
@@ -339,7 +383,14 @@ def run_mapping(input_c, output_c, verbose: bool = False):
     with open(input_c) as f:
         src = f.read()
 
-    mapping = load_state_map()
+    # Use manual mapping from file if no auto_mapping provided
+    if mapping is None:
+        mapping = load_state_map()
+
+    if mapping is None:
+        raise ValueError(
+            "State mapping required. Provide state_map.txt or ensure Myokit is installed."
+        )
 
     rewritten = rewrite_states_rates(src, mapping)
     rewritten = rewrite_init_consts_signature(rewritten, model_name)
@@ -350,7 +401,7 @@ def run_mapping(input_c, output_c, verbose: bool = False):
     for name in EXTRA_ALGEBRAIC:
         if name not in algebraic:
             algebraic.append(name)
-    constants = extract_constants_from_update_constants(src)
+    constants = extract_constants_from_update_constants(rewritten)
 
     init_block = extract_function(rewritten, f"{model_name}initConsts")
     computeVariables_block = extract_function(
@@ -360,9 +411,10 @@ def run_mapping(input_c, output_c, verbose: bool = False):
 
     debug(computeVariables_block, verbose)
 
-    final_c = build_final_c(init_block, computeVariables_block, init_vals)
+    final_c = build_final_c(init_block, computeVariables_block, init_vals, discovered)
 
     with open(output_c, "w") as f:
+        f.write(LICENSE_HEADER)
         f.write(f'#include "{output_h}"\n')
         f.write('#include "stimulusIO.H"\n\n')
         emit_names_array(f, f"{model_name}STATES_NAMES", "STATES", states)

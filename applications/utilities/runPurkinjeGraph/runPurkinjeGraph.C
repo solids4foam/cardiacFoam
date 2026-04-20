@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     const scalar deltaT =
         args.getOrDefault<scalar>("deltaT", runTime.deltaTValue());
 
-    const label nSteps = args.getOrDefault<label>("nSteps", 10);
+    const label nSteps = args.getOrDefault<label>("nSteps", 10000);
 
     if (nSteps < 0)
     {

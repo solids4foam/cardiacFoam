@@ -113,6 +113,16 @@ Foam::autoPtr<Foam::physicsModel> Foam::physicsModel::New
 
     if (!ctorPtr)
     {
+        if (!physicsModelConstructorTablePtr_)
+        {
+            FatalIOErrorInFunction(props)
+                << "No physicsModel implementations are registered in the "
+                << "runtime table while selecting type '" << modelType << "'. "
+                << "This usually means the providing library was loaded but "
+                << "its registration did not populate the table."
+                << exit(FatalIOError);
+        }
+
         FatalIOErrorInLookup
         (
             props,

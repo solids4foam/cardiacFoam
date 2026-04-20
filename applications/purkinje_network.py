@@ -76,6 +76,34 @@ def parse_args() -> argparse.Namespace:
         description="Generate a tagged 3D Purkinje network mesh."
     )
     parser.add_argument(
+        "--input-vtu",
+        type=Path,
+        default=None,
+        help=(
+            "Optional input line-network .vtu. When set (typically together "
+            "with --graph-only), the script writes a *_graph.vtk from this "
+            "geometry instead of the built-in example."
+        ),
+    )
+    parser.add_argument(
+        "--root-index",
+        type=int,
+        default=None,
+        help=(
+            "Optional root node index for --input-vtu. If omitted, uses "
+            "POINT_DATA nodeRole==1, else point_source==2, else 0."
+        ),
+    )
+    parser.add_argument(
+        "--input-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Scale factor applied to --input-vtu coordinates before writing the graph. "
+            "Example: 0.001 converts mm -> m."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("."),
@@ -102,7 +130,7 @@ def parse_args() -> argparse.Namespace:
         "--graph-step",
         type=float,
         default=MESH_SIZE,
-        help="Maximum segment length in the line graph VTK.",
+        help="Maximum segment length in the line graph VTK (<=0 disables resampling).",
     )
     parser.add_argument(
         "--diffusivity",
@@ -206,6 +234,7 @@ def write_graph_vtk(
     basename: str,
     nodes: list[list[float]],
     edges: list[list[int]],
+    root_index: int,
     terminal_node_ids: tuple[int, ...],
     radius: float,
     graph_step: float,
@@ -215,36 +244,41 @@ def write_graph_vtk(
 
     graph_points = [tuple(point) for point in nodes]
     node_roles = [0 for _ in graph_points]
-    node_roles[0] = 1
+    node_roles[root_index] = 1
     for node_i in terminal_node_ids:
         node_roles[node_i] = 2
 
     graph_edges: list[tuple[int, int]] = []
     edge_original_ids: list[int] = []
 
-    for edge_i, (start_i, end_i) in enumerate(edges):
-        start = nodes[start_i]
-        end = nodes[end_i]
-        length = math.dist(start, end)
-        n_segments = max(1, math.ceil(length / graph_step))
-
-        previous_i = start_i
-        for segment_i in range(1, n_segments):
-            alpha = segment_i / n_segments
-            point = tuple(
-                (1.0 - alpha) * start[component_i]
-                + alpha * end[component_i]
-                for component_i in range(3)
-            )
-            point_i = len(graph_points)
-            graph_points.append(point)
-            node_roles.append(0)
-            graph_edges.append((previous_i, point_i))
+    if graph_step <= 0.0:
+        for edge_i, (start_i, end_i) in enumerate(edges):
+            graph_edges.append((start_i, end_i))
             edge_original_ids.append(edge_i)
-            previous_i = point_i
+    else:
+        for edge_i, (start_i, end_i) in enumerate(edges):
+            start = nodes[start_i]
+            end = nodes[end_i]
+            length = math.dist(start, end)
+            n_segments = max(1, math.ceil(length / graph_step))
 
-        graph_edges.append((previous_i, end_i))
-        edge_original_ids.append(edge_i)
+            previous_i = start_i
+            for segment_i in range(1, n_segments):
+                alpha = segment_i / n_segments
+                point = tuple(
+                    (1.0 - alpha) * start[component_i]
+                    + alpha * end[component_i]
+                    for component_i in range(3)
+                )
+                point_i = len(graph_points)
+                graph_points.append(point)
+                node_roles.append(0)
+                graph_edges.append((previous_i, point_i))
+                edge_original_ids.append(edge_i)
+                previous_i = point_i
+
+            graph_edges.append((previous_i, end_i))
+            edge_original_ids.append(edge_i)
 
     print(f"Writing line graph VTK: {graph_path}")
     with graph_path.open("w", encoding="utf-8") as vtk:
@@ -321,6 +355,7 @@ def write_outputs(
         basename,
         NODES,
         EDGES,
+        0,
         TERMINAL_NODE_IDS,
         radius,
         graph_step,
@@ -328,16 +363,127 @@ def write_outputs(
     )
 
 
+def _read_line_network_vtu(vtu_path: Path):
+    try:
+        import meshio  # type: ignore
+    except Exception as exc:
+        raise RuntimeError(
+            "meshio is required for --input-vtu. Use the project venv python."
+        ) from exc
+
+    mesh = meshio.read(vtu_path)
+    if mesh.points is None or len(mesh.points) == 0:
+        raise RuntimeError(f"No points found in {vtu_path}")
+
+    nodes = mesh.points.tolist()
+
+    edges: list[list[int]] = []
+    for cell_block in mesh.cells:
+        if cell_block.type == "line":
+            for a, b in cell_block.data:
+                edges.append([int(a), int(b)])
+        elif cell_block.type == "polyline":
+            for poly in cell_block.data:
+                poly = list(map(int, poly))
+                if len(poly) < 2:
+                    continue
+                for i in range(1, len(poly)):
+                    edges.append([poly[i - 1], poly[i]])
+
+    if not edges:
+        raise RuntimeError(f"No line/polyline cells found in {vtu_path}")
+
+    return nodes, edges, (mesh.point_data or {})
+
+
+def _scale_nodes(nodes: list[list[float]], scale: float) -> list[list[float]]:
+    if scale == 1.0:
+        return nodes
+    return [[scale * p[0], scale * p[1], scale * p[2]] for p in nodes]
+
+
+def _degree(n_points: int, edges: list[list[int]]) -> list[int]:
+    deg = [0] * n_points
+    for a, b in edges:
+        deg[a] += 1
+        deg[b] += 1
+    return deg
+
+
+def _infer_root_and_terminals(
+    *,
+    nodes: list[list[float]],
+    edges: list[list[int]],
+    point_data: dict,
+    root_index: int | None,
+):
+    n_points = len(nodes)
+    if root_index is None:
+        root = None
+        roles = point_data.get("nodeRole")
+        if roles is not None:
+            roots = [i for i, r in enumerate(roles) if int(r) == 1]
+            if len(roots) == 1:
+                root = roots[0]
+
+        if root is None:
+            src = point_data.get("point_source")
+            if src is not None:
+                glue = [i for i, s in enumerate(src) if int(s) == 2]
+                if len(glue) == 1:
+                    root = glue[0]
+
+        if root is None:
+            root = 0
+    else:
+        if root_index < 0 or root_index >= n_points:
+            raise RuntimeError(f"--root-index {root_index} outside [0, {n_points})")
+        root = int(root_index)
+
+    roles = point_data.get("nodeRole")
+    if roles is not None:
+        terminals = tuple(i for i, r in enumerate(roles) if int(r) == 2)
+    else:
+        deg = _degree(n_points, edges)
+        terminals = tuple(i for i, d in enumerate(deg) if d == 1 and i != root)
+
+    return root, terminals
+
+
 def main() -> None:
     args = parse_args()
 
     if args.graph_only:
         args.output_dir.mkdir(parents=True, exist_ok=True)
+        if args.input_vtu is not None:
+            nodes, edges, point_data = _read_line_network_vtu(args.input_vtu)
+            nodes = _scale_nodes(nodes, args.input_scale)
+            root_index, terminal_node_ids = _infer_root_and_terminals(
+                nodes=nodes,
+                edges=edges,
+                point_data=point_data,
+                root_index=args.root_index,
+            )
+            write_graph_vtk(
+                args.output_dir,
+                args.basename,
+                nodes,
+                edges,
+                root_index,
+                terminal_node_ids,
+                args.radius,
+                args.graph_step,
+                args.diffusivity,
+            )
+            print("Done. Use 1DgraphToFoam on the *_graph.vtk file.")
+            return
+
         write_graph_vtk(
             args.output_dir,
             args.basename,
             NODES,
             EDGES,
+            0,
             TERMINAL_NODE_IDS,
             args.radius,
             args.graph_step,

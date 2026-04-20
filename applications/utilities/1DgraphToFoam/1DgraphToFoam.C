@@ -301,14 +301,15 @@ scalar edgeConductanceFromFields
 }
 
 
-void writeConductionSolverContract
+pointField writeConductionSolverContract
 (
     Ostream& os,
     const pointField& points,
     const labelListList& lines,
     const objectRegistry& pointData,
     const objectRegistry& cellData,
-    const labelList& lineMap
+    const labelList& lineMap,
+    const scalar graphStep
 )
 {
     if (lineMap.size() != lines.size())
@@ -359,6 +360,10 @@ void writeConductionSolverContract
         pvjLocations[i] = points[pvjNodes[i]];
     }
 
+    // Expanded point list: original points + interpolated intermediate nodes.
+    DynamicList<point> expandedPoints(points);
+    label nextNodeId = points.size();
+
     DynamicList<scalarList> conductionEdges;
     forAll(lines, lineI)
     {
@@ -372,14 +377,51 @@ void writeConductionSolverContract
                 << exit(FatalError);
         }
 
+        const scalar cond =
+            edgeConductanceFromFields(lineI, cellData, lineMap);
+
         for (label i = 1; i < line.size(); ++i)
         {
-            scalarList edge(4, 0.0);
-            edge[0] = line[i - 1];
-            edge[1] = line[i];
-            edge[2] = mag(points[line[i]] - points[line[i - 1]]);
-            edge[3] = edgeConductanceFromFields(lineI, cellData, lineMap);
-            conductionEdges.append(edge);
+            const point& pA = points[line[i - 1]];
+            const point& pB = points[line[i]];
+            const scalar len = mag(pB - pA);
+
+            if (graphStep > 0 && len > graphStep)
+            {
+                const label nSeg =
+                    max(1, label(std::ceil(len / graphStep)));
+                const scalar subLen = len / nSeg;
+
+                label prevNode = line[i - 1];
+                for (label s = 1; s < nSeg; ++s)
+                {
+                    const scalar alpha = scalar(s) / scalar(nSeg);
+                    expandedPoints.append((1 - alpha)*pA + alpha*pB);
+                    const label curNode = nextNodeId++;
+                    scalarList edge(4, 0.0);
+                    edge[0] = prevNode;
+                    edge[1] = curNode;
+                    edge[2] = subLen;
+                    edge[3] = cond;
+                    conductionEdges.append(edge);
+                    prevNode = curNode;
+                }
+                scalarList edge(4, 0.0);
+                edge[0] = prevNode;
+                edge[1] = line[i];
+                edge[2] = subLen;
+                edge[3] = cond;
+                conductionEdges.append(edge);
+            }
+            else
+            {
+                scalarList edge(4, 0.0);
+                edge[0] = line[i - 1];
+                edge[1] = line[i];
+                edge[2] = len;
+                edge[3] = cond;
+                conductionEdges.append(edge);
+            }
         }
     }
 
@@ -393,11 +435,19 @@ void writeConductionSolverContract
         << List<scalarList>(conductionEdges.shrink())
         << token::END_STATEMENT << nl << nl;
 
+    const label nSubdivided = nextNodeId - points.size();
     Info<< "1DgraphToFoam solver contract:" << nl
         << "  rootNode: " << rootNode << nl
         << "  pvjNodes: " << pvjNodes.size() << nl
-        << "  conductionEdges: " << conductionEdges.size() << nl
-        << endl;
+        << "  conductionEdges: " << conductionEdges.size() << nl;
+    if (nSubdivided > 0)
+    {
+        Info<< "  subdivided edges (graphStep=" << graphStep << " m): "
+            << nSubdivided << " intermediate nodes inserted" << nl;
+    }
+    Info<< endl;
+
+    return pointField(expandedPoints.shrink());
 }
 
 } // End anonymous namespace
@@ -419,12 +469,21 @@ int main(int argc, char *argv[])
         "word",
         "Name of the graph object written under constant/ (default: purkinjeGraph)"
     );
+    argList::addOption
+    (
+        "graphStep",
+        "scalar",
+        "Maximum edge length after subdivision (m). "
+        "Edges longer than this are split into equal sub-segments. "
+        "Default 3e-4 m (0.3 mm). Set to 0 to disable."
+    );
 
     #include "setRootCase.H"
     #include "createTime.H"
 
     const fileName vtkFile(args.get<fileName>(1));
     const word graphName(args.getOrDefault<word>("name", "purkinjeGraph"));
+    const scalar graphStep(args.getOrDefault<scalar>("graphStep", 3e-4));
 
     IFstream vtkStream(vtkFile);
     vtkUnstructuredReader reader(runTime, vtkStream);
@@ -464,17 +523,21 @@ int main(int argc, char *argv[])
         << indent << "object      " << graphName << token::END_STATEMENT << nl
         << decrIndent << token::END_BLOCK << nl << nl;
 
-    writeConductionSolverContract
+    const pointField expandedPoints
     (
-        os,
-        points,
-        lines,
-        reader.pointData(),
-        reader.cellData(),
-        reader.lineMap()
+        writeConductionSolverContract
+        (
+            os,
+            points,
+            lines,
+            reader.pointData(),
+            reader.cellData(),
+            reader.lineMap(),
+            graphStep
+        )
     );
 
-    os  << "points" << nl << points << token::END_STATEMENT << nl << nl
+    os  << "points" << nl << expandedPoints << token::END_STATEMENT << nl << nl
         << "edges" << nl << lines << token::END_STATEMENT << nl << nl
         << "edgeVtkCellMap" << nl << reader.lineMap()
         << token::END_STATEMENT << nl << nl

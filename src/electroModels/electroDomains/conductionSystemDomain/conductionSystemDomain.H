@@ -31,6 +31,7 @@ SourceFiles
 #include "pointField.H"
 #include "purkinjeModelIO.H"
 #include "scalarField.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -73,6 +74,7 @@ class ConductionSystemDomain
     autoPtr<OFstream> outputPtr_;
     wordList exportVars_;
     wordList debugVars_;
+    Switch reportSetup_;
 
     // PVD time-series index: parallel lists of physical time and VTK filename
     scalarList pvdTimes_;

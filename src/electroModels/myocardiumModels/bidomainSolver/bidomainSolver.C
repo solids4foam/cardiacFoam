@@ -23,6 +23,7 @@ License
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -155,10 +156,13 @@ tmp<volTensorField> BidomainSolver::initialiseConductivityTensor
 
     if (!result.headerOk())
     {
-        Info << nl
-             << fieldName << " not found on disk, using value from "
-             << dict.name()
-             << nl << endl;
+        if (dict.lookupOrDefault<Switch>("reportSetup", false))
+        {
+            Info << nl
+                 << fieldName << " not found on disk, using value from "
+                 << dict.name()
+                 << nl << endl;
+        }
 
         result = dimensionedTensor
         (

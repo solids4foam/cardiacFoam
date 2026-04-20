@@ -15,10 +15,10 @@ implementation.
 
 The driver is now prepared to support a local GUI through:
 
-- generic case discovery and execution
+- entry discovery and execution
 - generic dictionary override support
 - source-backed editable dict-entry metadata
-- machine-readable tutorial introspection
+- machine-readable entry introspection
 - machine-readable launch planning
 - machine-readable run-state manifests
 
@@ -26,14 +26,15 @@ The frontend itself has not been implemented yet.
 
 ## What Was Added Or Changed
 
-### 1. Generic case execution
+### 1. Entry execution
 
 Previously the driver mainly supported a fixed set of curated tutorial specs.
 It now also supports:
 
 - registered tutorials
 - `genericCase` and `randomCase` aliases
-- any existing case folder directly under `tutorials/`
+- workflow templates and workflow reference cases
+- any existing case folder discoverable under `tutorials/`
 
 Main files:
 
@@ -41,7 +42,7 @@ Main files:
 - `specs/tutorials/generic_case.py`
 
 This means the driver no longer depends only on a hardcoded tutorial registry.
-It can resolve a direct case folder and run it through a generic spec.
+It can resolve a direct case folder or workflow entry and run it through a generic spec when appropriate.
 
 ### 2. Generic dict override model
 
@@ -99,7 +100,7 @@ The catalog currently includes:
 - `electroProperties.myocardiumSolver`
 - common `<solver>Coeffs` entries
 - single-cell stimulus entries
-- monodomain stimulus entries
+- monodomain external-stimulus entries
 - eikonal-diffusion entries
 - ECG entries
 - active-tension entries
@@ -130,12 +131,13 @@ Main file:
 It is exposed through:
 
 ```bash
-python3 -m openfoam_driver describe --tutorial <name> [--config overrides.json]
+python3 -m openfoam_driver describe --entry <name-or-path> [--entry-kind <kind>] [--config overrides.json]
 ```
 
 The `describe` payload currently includes:
 
-- tutorial resolution details
+- entry resolution details
+- entry catalog and workflow catalog data
 - registered tutorials
 - discovered case directories
 - `make_spec(...)` parameter schema and defaults
@@ -145,7 +147,7 @@ The `describe` payload currently includes:
 - GUI route and view-model suggestions
 - launch metadata for `sim`, `post`, and `all`
 
-This is the main API a frontend should use to build its initial screens.
+This is the main API a frontend should use to build its initial screens, including the first-step choice between a tutorial/example and a real workflow case.
 
 ### 6. Launch planning layer
 
@@ -188,7 +190,11 @@ The manifest now includes:
 - `schema_version`
 - `run_id`
 - `requested_action`
-- `tutorial`
+- `entry`
+- `entry_kind`
+- `entry_path`
+- `source_type`
+- `workflow_family`
 - `status`
 - `postprocess_status`
 - `current_case_id`
@@ -604,7 +610,7 @@ Data source:
 
 For a first implementation:
 
-1. On tutorial selection, call `describe`.
+1. On entry selection, call `describe`.
 2. Build forms from `make_spec.parameters` and `dict_entries`.
 3. Persist current UI state as JSON compatible with `--config`.
 4. Use `describe` again after config changes to refresh:

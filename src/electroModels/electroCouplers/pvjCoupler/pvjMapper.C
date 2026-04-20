@@ -29,7 +29,8 @@ PVJMapper::PVJMapper
 (
     const fvMesh& mesh,
     const pointField& terminalLocations,
-    scalar radius
+    scalar radius,
+    bool reportSetup
 )
 :
     mesh_(mesh),
@@ -162,7 +163,7 @@ PVJMapper::PVJMapper
             }
         }
 
-        if (Pstream::master())
+        if (reportSetup && Pstream::master())
         {
             Info<< "PVJ mapping " << i
                 << ": location=" << terminalLocations_[i]
@@ -176,7 +177,7 @@ PVJMapper::PVJMapper
         }
     }
 
-    if (Pstream::master())
+    if (reportSetup && Pstream::master())
     {
         Info<< endl;
     }

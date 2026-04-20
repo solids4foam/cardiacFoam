@@ -372,14 +372,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.allowIonicStimulusInMonodomain",
-            description="Explicit opt-in for combining ionic-model and PDE stimulus definitions.",
-            source_refs=("src/electroModels/myocardiumModels/monodomainSolver/monoDomainSolver.C",),
-            value_kind="boolean",
-            ui_control="checkbox",
-            required=False,
-        ),
-        DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMin",
             description="Single-box minimum corner for PDE stimulus application.",
             source_refs=("src/genericWriter/stimulusIO.C",),
@@ -474,14 +466,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="textarea",
             required=False,
             constraints=("Mutually exclusive with stimulusIntensity.",),
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.solverHookFields.preProcess",
-            description="Manufactured-FDA pre-process field list.",
-            source_refs=("src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.C",),
-            value_kind="word_list",
-            ui_control="token_list",
-            required=False,
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.verificationModel.type",
@@ -631,12 +615,13 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="0.62",
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceCell",
-            description="Cell index used to pin the extracellular potential reference.",
+            driver_path="$ELECTRO_MODEL_COEFFS.phiERefPoint",
+            description="Point [m] used to locate the cell that pins the extracellular potential reference.",
             source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
-            value_kind="integer",
-            ui_control="number",
-            required=False,
+            value_kind="vector3",
+            ui_control="vector3",
+            required=True,
+            constraints=("Required for bidomainSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceValue",
@@ -659,16 +644,16 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("purkinjeNetworkModel",),
+            enum_values=("purkinjeGraphModel", "conductionSystemDomain"),
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when conductionNetworkDomains block is present.",),
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.graphFile",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
             description=(
                 "REQUIRED: Name of the graph file in constant/ directory "
-                "(e.g., 'purkinjeGraph'). File must contain 'edges', 'points', "
+                "(e.g., 'purkinjeGraph'). The graph file must contain 'edges', 'points', "
                 "'pvjNodes', 'pvjLocations' dictionaries/lists."
             ),
             source_refs=(
@@ -678,24 +663,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ui_control="text",
             dynamic_path=True,
             required=True,
-            constraints=("Required within a conductionNetworkDomains entry.",),
+            constraints=("Required when a Purkinje graph is configured.",),
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootNode",
-            description=(
-                "Optional: index of the Purkinje root node (default: 0). "
-                "Must be a valid node in the graph (0 <= rootNode < nNodes)."
-            ),
-            source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-            ),
-            value_kind="label",
-            ui_control="number",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.conductionSystemSolver",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver",
             description=(
                 "1D graph solver used within the conduction network domain. "
                 "Default is monodomain1DSolver."
@@ -707,13 +678,13 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="enum",
             ui_control="select",
-            enum_values=("monodomain1DSolver", "eikonalSolver"),
+            enum_values=("monodomain1DSolver", "eikonalSolver1D"),
             dynamic_path=True,
             required=False,
-            constraints=("monodomain1DSolver valid only with monodomainSolver myocardium; eikonalSolver valid only with eikonalSolver myocardium.",),
+            constraints=("monodomain1DSolver valid only with monodomainSolver myocardium; eikonalSolver1D valid only with eikonalSolver myocardium.",),
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.ionicModel",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.ionicModel",
             description=(
                 "Ionic model used for 1D Purkinje monodomain. "
                 "Uses the same runtime selection table as the 3D myocardium solver. "
@@ -746,7 +717,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required when conductionSystemSolver=monodomain1DSolver.",),
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.tissue",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.tissue",
             description=(
                 "Tissue type for 1D Purkinje ionic model. "
                 "Examples: epicardialCells, endocardialCells, mCells, myocyte."
@@ -762,48 +733,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjNodes",
-            description=(
-                "Label list of Purkinje graph node indices that are PVJ terminals. "
-                "Must match pvjLocations in length."
-            ),
-            source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-            ),
-            value_kind="label_list",
-            ui_control="textarea",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjLocations",
-            description=(
-                "List of 3D coordinates [m] for each PVJ terminal, one per pvjNodes entry."
-            ),
-            source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-            ),
-            value_kind="point_list",
-            ui_control="textarea",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.pvjRadius",
-            description=(
-                "Sphere radius [m] around each PVJ centroid used to identify the 3D cells "
-                "that receive the coupling current. Default: 0.5e-3."
-            ),
-            source_refs=(
-                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
-            ),
-            value_kind="scalar",
-            ui_control="number",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.startTime",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.startTime",
             description="Start time [s] of the root-node stimulus applied to Purkinje node 0.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -814,7 +744,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.duration",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.duration",
             description="Duration [s] of the root-node stimulus pulse.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -825,7 +755,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.rootStimulus.intensity",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.intensity",
             description="Amplitude [A/m³] of the root-node stimulus current applied to Purkinje node 0.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -836,7 +766,18 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.chi",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.node",
+            description="Optional graph-node index that overrides the graph-file rootNode for the applied root stimulus.",
+            source_refs=(
+                "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
+            ),
+            value_kind="label",
+            ui_control="number",
+            dynamic_path=True,
+            required=False,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.chi",
             description="Surface-to-volume ratio [1/m] for the 1D Purkinje monodomain equation.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -849,7 +790,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="140000",
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.cm",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.cm",
             description="Membrane capacitance [F/m²] for the 1D Purkinje monodomain equation.",
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -862,7 +803,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="0.01",
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.vm1DRest",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.vm1DRest",
             description=(
                 "Resting transmembrane potential [V] used to initialise the 1D Purkinje field. "
                 "Default: -0.084 V."
@@ -876,7 +817,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.export",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.outputVariables.export",
             description=(
                 "Word list of variables written to postProcessing/purkinjeNetwork.dat. "
                 "Valid tokens: Vm, Iion, Icoupling, IcouplingSource, IcouplingCurrent. "
@@ -891,7 +832,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeNetworkModelCoeffs.outputVariables.debug",
+            driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.outputVariables.debug",
             description=(
                 "Word list of variables printed to terminal every 10 time steps. "
                 "Valid tokens: Vm, Iion, Icoupling, IcouplingSource, IcouplingCurrent. "
@@ -903,104 +844,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word_list",
             ui_control="token_list",
             dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler",
-            description=(
-                "PVJ coupling model selector within the domainCouplings sub-dictionary. "
-                "Used to couple a Purkinje network domain to the 3D myocardium."
-            ),
-            source_refs=(
-                "src/electroModels/electroCouplers/electroDomainCoupler.C",
-            ),
-            value_kind="enum",
-            ui_control="select",
-            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
-            dynamic_path=True,
-            required=False,
-            constraints=("reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).",),
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",
-            description=(
-                "PVJ coupling resistance [Ω·m²]. Required for "
-                "reactionDiffusionPvjCoupler; unused by eikonalPvjCoupler."
-            ),
-            source_refs=(
-                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
-            ),
-            value_kind="scalar",
-            ui_control="number",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius",
-            description=(
-                "Sphere radius [m] for current distribution at PVJ junctions. "
-                "Default: 0.5e-3."
-            ),
-            source_refs=(
-                "src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.C",
-            ),
-            value_kind="scalar",
-            ui_control="number",
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
-            description=(
-                "PVJ coupling direction. "
-                "unidirectional: 1-way, Purkinje drives tissue only. "
-                "bidirectional: physiological retrograde conduction allowed for "
-                "reactionDiffusionPvjCoupler. eikonalPvjCoupler currently accepts only "
-                "unidirectional; bidirectional reports 'in development'."
-            ),
-            source_refs=(
-                "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
-                "src/electroModels/electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C",
-            ),
-            value_kind="enum",
-            ui_control="select",
-            enum_values=("unidirectional", "bidirectional"),
-            dynamic_path=True,
-            required=False,
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
-            description=(
-                "Name of the conductionNetworkDomains entry this coupling is linked to. "
-                "Required for every conduction-system coupling entry."
-            ),
-            source_refs=(
-                "src/electroModels/core/system/electrophysicsSystemBuilder.C",
-            ),
-            value_kind="word",
-            ui_control="text",
-            dynamic_path=True,
-            required=True,
-            constraints=("Must match a key in conductionNetworkDomains.",),
-        ),
-        DictEntry(
-            driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
-            description=(
-                "Electrophysics time-advance scheme selector. "
-                "staggeredElectrophysicsAdvanceScheme: explicit staggered, safe for unidirectional coupling. "
-                "pimpleStaggeredElectrophysicsAdvanceScheme: PIMPLE-iterated, required for bidirectional coupling."
-            ),
-            source_refs=(
-                "src/electroModels/core/advanceSchemes/electrophysicsAdvanceScheme.C",
-                "src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H",
-                "src/electroModels/core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.H",
-            ),
-            value_kind="enum",
-            ui_control="select",
-            enum_values=(
-                "staggeredElectrophysicsAdvanceScheme",
-                "pimpleStaggeredElectrophysicsAdvanceScheme",
-            ),
             required=False,
         ),
     ),

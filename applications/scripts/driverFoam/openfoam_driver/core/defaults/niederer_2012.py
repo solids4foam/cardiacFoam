@@ -13,6 +13,7 @@ from .shared import (
 
 TUTORIAL_NAME = "niederer2012"
 CASE_DIR_NAME = "Niederer/NiedererEtAl2012verification"
+SETUP_DIR_NAME = "setupNiedererEtAl2012"
 DX_VALUES = (0.5, 0.2, 0.1)  # in mm
 DT_VALUES = (0.01, 0.005, 0.001)  # in ms
 IONIC_MODELS = ("TNNP",)
@@ -63,6 +64,7 @@ EXCEL_REFERENCE_RELPATH = Path(
 __all__ = [
     "TUTORIAL_NAME",
     "CASE_DIR_NAME",
+    "SETUP_DIR_NAME",
     "DX_VALUES",
     "DT_VALUES",
     "IONIC_MODELS",

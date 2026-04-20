@@ -18,10 +18,10 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalSolver.H"
-#include "addToRunTimeSelectionTable.H"
 #include "fvc.H"
 #include "fvm.H"
 #include "dimVoltage.H"
+#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -37,7 +37,10 @@ namespace electroModels
 // defineTypeNameAndDebug(EikonalSolver, 0) would use #EikonalSolver and overwrite it.
 defineTypeNameWithName(EikonalSolver, "eikonalSolver");
 defineDebugSwitch(EikonalSolver, 0);
-addToRunTimeSelectionTable(electroModel, EikonalSolver, dictionary);
+// Do not register this legacy top-level implementation in the electroModel
+// table.  The canonical eikonal workflow is selected through
+// electrophysiologyModel and assembled as EikonalMyocardiumDomain; registering
+// both under "eikonalSolver" creates a duplicate runtime-selection entry.
 
 
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
@@ -69,8 +72,11 @@ tmp<volTensorField> EikonalSolver::initialiseConductivity() const
 
     if (!result.headerOk())
     {
-        Info<< "\nconductivity not found on disk, using conductivity from "
-            << electroProperties().name() << nl << endl;
+        if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
+        {
+            Info<< "\nconductivity not found on disk, using conductivity from "
+                << electroProperties().name() << nl << endl;
+        }
 
         result =
             dimensionedTensor
@@ -84,12 +90,16 @@ tmp<volTensorField> EikonalSolver::initialiseConductivity() const
               & tensor(I)
             );
 
-        if (result.size() > 0)
+        if
+        (
+            electroProperties().lookupOrDefault<Switch>("reportSetup", false)
+         && result.size() > 0
+        )
         {
             Info<< "Conductivity tensor (cell 0): " << result[0] << nl;
         }
     }
-    else
+    else if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
     {
         Info<< "conductivity field read from " << runTime().timeName() << nl
             << endl;
@@ -173,12 +183,15 @@ EikonalSolver::EikonalSolver(Time& runTime, const word& region)
 
     stimulusCellIDs_ = stimCellSet.toc();
 
-    Info<< "Surface-to-volume ratio chi = " << chi_ << nl
-        << "Membrane capacitance Cm = " << Cm_ << nl
-        << "M tensor field:" << nl
-        << "    max(M) = " << gMax(M_) << nl
-        << "    min(M) = " << gMin(M_) << nl
-        << "    average(M) = " << gAverage(M_) << endl;
+    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
+    {
+        Info<< "Surface-to-volume ratio chi = " << chi_ << nl
+            << "Membrane capacitance Cm = " << Cm_ << nl
+            << "M tensor field:" << nl
+            << "    max(M) = " << gMax(M_) << nl
+            << "    min(M) = " << gMin(M_) << nl
+            << "    average(M) = " << gAverage(M_) << endl;
+    }
 }
 
 
@@ -186,7 +199,10 @@ EikonalSolver::EikonalSolver(Time& runTime, const word& region)
 
 bool EikonalSolver::evolve()
 {
-    Info<< "Evolving electro model: " << this->type() << endl;
+    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
+    {
+        Info<< "Evolving electro model: " << this->type() << endl;
+    }
 
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);

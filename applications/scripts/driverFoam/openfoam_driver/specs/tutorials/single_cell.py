@@ -119,8 +119,8 @@ def _postprocess(
 def make_spec(
     *,
     tutorials_root: Path | None = None,
-    case_dir_name: str = defaults.TUTORIAL_NAME,
-    setup_dir_name: str | None = None,
+    case_dir_name: str = defaults.CASE_DIR_NAME,
+    setup_dir_name: str | None = defaults.SETUP_DIR_NAME,
     output_dir_name: str | None = None,
     ionic_models: Sequence[str] = defaults.IONIC_MODELS,
     ionic_model_tissue_map: Mapping[str, Sequence[str]] = defaults.IONIC_MODEL_TISSUE_MAP,
@@ -164,7 +164,7 @@ def make_spec(
     )
 
     return TutorialSpec(
-        name=case_dir_name,
+        name=defaults.TUTORIAL_NAME,
         case_root=case_root,
         setup_root=setup_root,
         output_dir=output_dir,

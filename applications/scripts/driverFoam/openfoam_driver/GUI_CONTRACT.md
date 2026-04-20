@@ -8,13 +8,13 @@ and `openfoam_driver`.
 Use:
 
 ```bash
-python3 -m openfoam_driver describe --tutorial <name> [--config overrides.json]
+python3 -m openfoam_driver describe --entry <name-or-path> [--entry-kind <kind>] [--config overrides.json]
 ```
 
 The command prints a single JSON object. The GUI should treat that JSON as the
 source of truth for:
 
-- tutorial resolution
+- entry resolution
 - `make_spec(...)` parameters and defaults
 - resolved case/setup/output paths
 - planned cases for the current configuration
@@ -24,11 +24,18 @@ source of truth for:
 
 The `describe` payload currently contains:
 
+- `requested_entry`
 - `requested_tutorial`
+- `entry`
+- `entry_kind`
 - `resolution`
   Values:
   `registered`, `case_folder`, `generic_alias`
 - `resolved_name`
+- `entry_catalog`
+- `workflow`
+- `workflow_catalog`
+- `is_runnable`
 - `registered_tutorials`
 - `special_tutorial_aliases`
 - `available_tutorials`
@@ -39,6 +46,7 @@ The `describe` payload currently contains:
 - `spec`
 - `dict_entries`
 - `ionic_model_catalog`
+- `active_tension_catalog`
 - `gui_schema`
 - `launch`
 - `config_schema`
@@ -53,7 +61,7 @@ The `describe` payload currently contains:
 - optional `annotation`
 - optional `default`
 
-The GUI can use this to auto-build tutorial-level forms.
+The GUI can use this to auto-build entry-level forms.
 
 ## `spec` payload
 
@@ -115,9 +123,9 @@ Each dict entry reports:
 
 ## `ionic_model_catalog`
 
-`ionic_model_catalog` is a static machine-readable catalog of cardiac ionic models,
-active tension models, and solver compatibility rules. Agents use this key to plan
-simulation configuration without requiring an OpenFOAM environment at planning time.
+`ionic_model_catalog` is a static machine-readable catalog of cardiac ionic models
+and solver compatibility rules. Agents use this key to plan ionic-model
+configuration without requiring an OpenFOAM environment at planning time.
 
 Top-level keys:
 
@@ -126,8 +134,6 @@ Top-level keys:
   breaking way.
 - `ionic_models`
   Map from model name to `IonicModelEntry`.
-- `active_tension_models`
-  Map from model name to `ActiveTensionModelEntry`.
 - `solver_compatibility`
   List of solver compatibility rules.
 
@@ -148,14 +154,6 @@ Top-level keys:
 - `recommended_ode_step` — typical `initialODEStep` in seconds for this model; dimensionless models use a larger step (e.g. `1e-3`), ionic models typically `1e-5`
 - `recommended_stimulus_duration` — typical stimulus duration in seconds; `null` for dimensionless or manufactured models where the unit is not seconds
 - `recommended_stimulus_intensity` — typical stimulus current density in A/m³; `null` for dimensionless or manufactured models
-
-### `ActiveTensionModelEntry` fields
-
-- `states`, `algebraic`, `constants` — same semantics as ionic models
-- `rates` — list of rate variable names (from `rateVariableNames()`)
-- `recommended_exports` — minimum useful set of variable names for active tension output
-- `description`, `notes` — same as ionic models
-- `aliases` — alternative names and abbreviations for this active tension model
 
 ### `solver_compatibility` rules
 
@@ -180,6 +178,28 @@ All other cross-physics combinations are invalid. `bidomainSolver` and
 **Note:** `solutionAlgorithm` (PDE↔ODE coupling loop) and
 `electrophysicsAdvanceScheme` (myocardium↔Purkinje multi-domain coupling) are
 **independent** parameters — there is no constraint between them.
+
+## `active_tension_catalog`
+
+`active_tension_catalog` is a static machine-readable catalog of active tension
+models. Agents use this key to plan electromechanical coupling and active
+tension output without conflating those models with ionic-model selection.
+
+Top-level keys:
+
+- `schema_version`
+  String. Currently `"1.0"`. Increment when the catalog schema changes in a
+  breaking way.
+- `active_tension_models`
+  Map from model name to `ActiveTensionModelEntry`.
+
+### `ActiveTensionModelEntry` fields
+
+- `states`, `algebraic`, `constants` — same semantics as ionic models
+- `rates` — list of rate variable names (from `rateVariableNames()`)
+- `recommended_exports` — minimum useful set of variable names for active tension output
+- `description`, `notes` — same as ionic models
+- `aliases` — alternative names and abbreviations for this active tension model
 
 ## `gui_schema`
 
@@ -207,10 +227,10 @@ structure for the first GUI pass.
 
 Current recommended routes:
 
-- `/tutorials`
-- `/tutorials/:tutorialId`
-- `/tutorials/:tutorialId/config`
-- `/tutorials/:tutorialId/cases`
+- `/entries`
+- `/entries/:entryId`
+- `/entries/:entryId/config`
+- `/entries/:entryId/cases`
 - `/runs`
 - `/runs/:runId`
 
@@ -225,8 +245,9 @@ Each view-model spec reports:
 
 Current view-models cover:
 
-- tutorial catalog
-- tutorial overview
+- entry catalog
+- workflow family metadata
+- entry overview
 - spec parameter form fields
 - dict-entry editor fields
 - planned cases
@@ -245,6 +266,8 @@ Current view-models cover:
 Each launch item reports:
 
 - `action`
+- `entry`
+- `entry_kind`
 - `tutorial`
 - `resolved_name`
 - `resolution`
@@ -420,10 +443,14 @@ Each line has `event`, `timestamp_utc`, and `run_id` fields plus event-specific 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `schema_version` | string | Currently `"2.0"` |
+| `schema_version` | string | Currently `"2.1"` |
 | `run_id` | string | Unique run identifier |
 | `requested_action` | string | `"sim"`, `"post"`, or `"all"` |
-| `tutorial` | string | Tutorial name |
+| `entry` | string | Selected entry name |
+| `entry_kind` | string\|null | Entry classification |
+| `entry_path` | string\|null | Resolved relative path under `tutorials/` |
+| `source_type` | string\|null | Resolution source such as `spec_factory` or `workflow_reference_case` |
+| `workflow_family` | string\|null | Workflow family name when applicable |
 | `case_root` | string | Absolute path |
 | `setup_root` | string | Absolute path |
 | `output_dir` | string | Absolute path |
@@ -491,7 +518,7 @@ Each line has `event`, `timestamp_utc`, and `run_id` fields plus event-specific 
 ## Recommended GUI strategy
 
 1. Call `describe`.
-2. Build tutorial-level controls from `make_spec.parameters`.
+2. Build entry-level controls from `make_spec.parameters`.
 3. Build dict editors from `dict_entries`.
    - Use `required: true` entries to mark mandatory fields.
    - Display `constraints` strings as inline validation hints.
@@ -502,15 +529,19 @@ Each line has `event`, `timestamp_utc`, and `run_id` fields plus event-specific 
    d. Verify the chosen solver is in `compatible_solvers`.
    e. Check `solver_compatibility` before combining a myocardium solver with a
       Purkinje solver.
-5. Use `gui_schema.routes` and `gui_schema.view_models` as the initial app structure.
-6. Preview `spec.cases`.
-7. Build the `--config` JSON using `config_schema` as the template.
+5. Read `active_tension_catalog` to plan active tension configuration:
+   a. Pick an `activeTensionModel` only when electromechanical coupling is intended.
+   b. Set `outputVariables.activeTension.export` from
+      `active_tension_models[name].recommended_exports`.
+6. Use `gui_schema.routes` and `gui_schema.view_models` as the initial app structure.
+7. Preview `spec.cases`.
+8. Build the `--config` JSON using `config_schema` as the template.
    - Start from `config_schema.worked_example.json`.
    - Set spec parameters from `config_schema.section_fields.spec_parameters.available_keys`.
    - Set dict entries via `electro_property_overrides` using driver_path keys from `dict_entries`.
-8. Launch through `launch.<action>.command` or an equivalent backend wrapper.
-9. Poll `launch.<action>.manifest_path` every 15–30 s.
+9. Launch through `launch.<action>.command` or an equivalent backend wrapper.
+10. Poll `launch.<action>.manifest_path` every 15–30 s.
    - Stop when `manifest_schema.terminal_states` contains the current `status`.
    - Read `results[].status` to identify which cases succeeded or failed.
    - `action_events.jsonl` (same directory) provides a fine-grained event stream.
-10. Persist overrides as JSON compatible with `--config`.
+11. Persist overrides as JSON compatible with `--config`.

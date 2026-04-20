@@ -168,19 +168,29 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     // which registers itself under those three names.
     const word modelType(props.lookup("myocardiumSolver"));
 
-    Info<< nl << "Selecting myocardiumSolver " << modelType << endl;
+    Info<< nl << "Selecting electroModel entry for myocardiumSolver "
+        << modelType << endl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (ctorPtr)
     {
-        // Direct electroModel subclass (e.g. singleCellSolver, eikonalSolver,
-        // electrophysiologyModel).
+        // Direct electroModel subclass or orchestration wrapper
+        // (e.g. singleCellSolver, electrophysiologyModel).
         return autoPtr<electroModel>(ctorPtr(runTime, region));
     }
 
     // Type not found in either table -- give a clear error listing all valid
     // type names so the user knows exactly what to fix in their electroProperties.
+    if (!dictionaryConstructorTablePtr_)
+    {
+        FatalErrorInFunction
+            << "No electroModel implementations are registered in the "
+            << "runtime table while selecting myocardiumSolver '"
+            << modelType << "'."
+            << exit(FatalError);
+    }
+
     FatalErrorInLookup
     (
         "myocardiumSolver",

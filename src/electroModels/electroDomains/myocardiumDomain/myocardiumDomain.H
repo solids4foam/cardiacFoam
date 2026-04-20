@@ -26,8 +26,9 @@ License
 #include "dimVoltage.H"
 #include "electroVolumeFieldDomain.H"
 #include "fvMeshSubset.H"
-#include "stimulusIO.H"
 #include "myocardiumSolver.H"
+#include "stimulusIO.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -59,6 +60,7 @@ protected:
     const dimensionedScalar Cm_;
     ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
+    Switch reportSetup_;
 
     void updateExternalStimulusCurrent
     (

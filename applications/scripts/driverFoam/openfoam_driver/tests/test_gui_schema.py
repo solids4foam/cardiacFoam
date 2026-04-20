@@ -12,10 +12,10 @@ class TestGuiSchema(unittest.TestCase):
         self.assertEqual(
             route_paths,
             {
-                "/tutorials",
-                "/tutorials/:tutorialId",
-                "/tutorials/:tutorialId/config",
-                "/tutorials/:tutorialId/cases",
+                "/entries",
+                "/entries/:entryId",
+                "/entries/:entryId/config",
+                "/entries/:entryId/cases",
                 "/runs",
                 "/runs/:runId",
             },
@@ -26,8 +26,9 @@ class TestGuiSchema(unittest.TestCase):
         view_model_ids = {view_model["id"] for view_model in payload["view_models"]}
         self.assertTrue(
             {
-                "TutorialCatalogViewModel",
-                "TutorialOverviewViewModel",
+                "EntryCatalogViewModel",
+                "WorkflowFamilyViewModel",
+                "EntryOverviewViewModel",
                 "SpecParameterViewModel",
                 "DictEntryViewModel",
                 "PlannedCaseViewModel",

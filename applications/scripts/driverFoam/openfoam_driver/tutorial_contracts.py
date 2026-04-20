@@ -79,13 +79,20 @@ def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text())
 
 
+def _find_tutorials_root(case_root: Path) -> Path:
+    for candidate in (case_root.parent, *case_root.parents):
+        if (candidate / "regressionTests").exists():
+            return candidate
+    return case_root.parent
+
+
 def describe_tutorial_contract(
     spec: TutorialSpec,
     *,
     resolution: str,
 ) -> dict[str, Any]:
     case_root = spec.case_root
-    tutorials_root = case_root.parent
+    tutorials_root = _find_tutorials_root(case_root)
     regression_root = tutorials_root / "regressionTests" / spec.name
 
     block_mesh_variants = _glob_relpaths(case_root / "system", "blockMeshDict*")

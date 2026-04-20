@@ -46,7 +46,7 @@ MonoDomainSolverCoeffs
     tissue epicardialCells;
     solutionAlgorithm implicit;   // or explicit via sweeps
 
-    monodomainStimulus
+    externalStimulus
     {
         ...
     }

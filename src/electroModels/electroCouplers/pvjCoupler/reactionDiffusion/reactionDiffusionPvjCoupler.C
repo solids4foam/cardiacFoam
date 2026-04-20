@@ -107,11 +107,14 @@ ReactionDiffusionPvjCoupler::ReactionDiffusionPvjCoupler
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
-    Info << "Reaction-diffusion PVJ coupling model: R_pvj=" << R_pvj_
-         << ", pvjRadius=" << pvjRadius_
-         << ", couplingMode=" << couplingModeName(couplingMode_)
-         << ", debugCoupling=" << debugCoupling_
-         << endl;
+    if (reportSetup_)
+    {
+        Info << "Reaction-diffusion PVJ coupling model: R_pvj=" << R_pvj_
+             << ", pvjRadius=" << pvjRadius_
+             << ", couplingMode=" << couplingModeName(couplingMode_)
+             << ", debugCoupling=" << debugCoupling_
+             << endl;
+    }
 }
 
 

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .core.runtime.registry import resolve_tutorial
+from .core.runtime.registry import resolve_entry
 
 
 VALID_DRIVER_ACTIONS = ("sim", "post", "all")
@@ -13,8 +13,9 @@ VALID_DRIVER_ACTIONS = ("sim", "post", "all")
 
 def describe_launch(
     action: str,
-    tutorial: str,
+    entry: str,
     *,
+    entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     tutorials_root: str | Path | None = None,
@@ -31,11 +32,13 @@ def describe_launch(
     if tutorials_root is not None:
         effective_overrides["tutorials_root"] = str(tutorials_root)
 
-    resolution = resolve_tutorial(tutorial, overrides=effective_overrides)
+    resolution = resolve_entry(entry, entry_kind=entry_kind, overrides=effective_overrides)
     spec = resolution["factory"](**resolution["factory_overrides"])
     interpreter = python_executable or sys.executable
 
-    command = [interpreter, "-m", "openfoam_driver", action, "--tutorial", tutorial]
+    command = [interpreter, "-m", "openfoam_driver", action, "--entry", entry]
+    if entry_kind is not None:
+        command.extend(["--entry-kind", entry_kind])
     if dry_run:
         command.append("--dry-run")
     if continue_on_error:
@@ -52,7 +55,9 @@ def describe_launch(
 
     return {
         "action": action,
-        "tutorial": tutorial,
+        "entry": entry,
+        "tutorial": entry,
+        "entry_kind": resolution["entry_kind"],
         "resolved_name": resolution["resolved_name"],
         "resolution": resolution["resolution"],
         "command": command,
@@ -69,8 +74,9 @@ def describe_launch(
 
 
 def describe_launch_matrix(
-    tutorial: str,
+    entry: str,
     *,
+    entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     tutorials_root: str | Path | None = None,
@@ -79,7 +85,8 @@ def describe_launch_matrix(
     return {
         action: describe_launch(
             action,
-            tutorial,
+            entry,
+            entry_kind=entry_kind,
             overrides=overrides,
             config_path=config_path,
             tutorials_root=tutorials_root,

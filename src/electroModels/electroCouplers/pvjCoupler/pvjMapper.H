@@ -39,7 +39,8 @@ public:
     (
         const fvMesh& mesh,
         const pointField& terminalLocations,
-        scalar radius
+        scalar radius,
+        bool reportSetup = false
     );
 
     void gatherVm3DPvjs

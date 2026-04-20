@@ -2,6 +2,7 @@
 #include "conductionSystemDomain.H"
 #include "addToRunTimeSelectionTable.H"
 #include "DynamicList.H"
+#include "Switch.H"
 #include <queue>
 #include <utility>
 #include <vector>
@@ -22,8 +23,11 @@ EikonalSolver1D::EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
     c0_("c0", solverCoeffs)
 {
-    Info<< "EikonalSolver1D: conduction velocity c0 = " << c0_.value()
-        << " m/s" << endl;
+    if (solverCoeffs.lookupOrDefault<Switch>("reportSetup", false))
+    {
+        Info<< "EikonalSolver1D: conduction velocity c0 = " << c0_.value()
+            << " m/s" << endl;
+    }
 }
 
 

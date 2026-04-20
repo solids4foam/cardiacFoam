@@ -693,8 +693,8 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             {
                 // VTK 5.0 and later (OFFSETS and CONNECTIVITY)
 
+                // VTK explicitly outputs only nCells offsets.
                 const label nOffsets(nCells);
-                --nCells;
 
                 DebugInfo
                     << "Reading offsets/connectivity for "
@@ -707,6 +707,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                     nOffsets, cellOffsets,
                     nNumbers, cellVerts
                 );
+
+                // Add the missing final offset (total connectivity size)
+                cellOffsets.resize(nOffsets + 1);
+                cellOffsets[nOffsets] = nNumbers;
             }
         }
         else if (tag == "CELL_TYPES")
@@ -748,8 +752,8 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             {
                 // VTK 5.0 and later (OFFSETS and CONNECTIVITY)
 
+                // VTK explicitly outputs only nLines offsets.
                 const label nOffsets(nLines);
-                --nLines;
 
                 DebugInfo
                     << "Reading offsets/connectivity for "
@@ -762,6 +766,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                     nOffsets, elemOffsets,
                     nNumbers, elemVerts
                 );
+
+                // Add the missing final offset (total connectivity size)
+                elemOffsets.resize(nOffsets + 1);
+                elemOffsets[nOffsets] = nNumbers;
             }
 
             // Append into lines
@@ -805,8 +813,8 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             {
                 // VTK 5.0 and later (OFFSETS and CONNECTIVITY)
 
+                // VTK explicitly outputs only nFaces offsets.
                 const label nOffsets(nFaces);
-                --nFaces;
 
                 DebugInfo
                     << "Reading offsets/connectivity for "
@@ -819,6 +827,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                     nOffsets, elemOffsets,
                     nNumbers, elemVerts
                 );
+
+                // Add the missing final offset (total connectivity size)
+                elemOffsets.resize(nOffsets + 1);
+                elemOffsets[nOffsets] = nNumbers;
             }
 
             // Append into faces
@@ -1075,8 +1087,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             {
                 // VTK 5.0 and later (OFFSETS and CONNECTIVITY)
 
-                const label nOffsets(nStrips);
-                --nStrips;
+                const label nOffsets(nStrips + 1);
 
                 DebugInfo
                     << "Reading offsets/connectivity for "
