@@ -1,0 +1,19 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       uniformDimensionedVectorField;
+    location    "constant/solid";
+    object      g;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -2 0 0 0 0];
+value           (0 0 0);
+
+// ************************************************************************* //

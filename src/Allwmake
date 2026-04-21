@@ -25,5 +25,8 @@ wmake $targetType libso ionicModels
 wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
-wmake $targetType libso electroMechanicalModels
+
+if [ "$USE_LIGHTWEIGHT_PHYSICSMODEL" != "1" ]; then
+    wmake $targetType libso electroMechanicalModels
+fi
 
