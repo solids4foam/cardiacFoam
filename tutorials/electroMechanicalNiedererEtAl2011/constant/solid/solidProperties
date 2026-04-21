@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/solid";
+    object      solidProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
+
+nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
+{
+    // Maximum number of momentum correctors
+    nCorrectors             10000;
+
+    // Solution tolerance for displacement
+    solutionTolerance       1e-6;
+
+    // Alternative solution tolerance for displacement
+    alternativeTolerance    1e-7;
+
+    // Write frequency for the residuals
+    infoFrequency           100;
+
+    // Enable predictor to pre-compute sigma (including active tension)
+    // before the momentum loop
+    predictor               true;
+}
+
+// ************************************************************************* //

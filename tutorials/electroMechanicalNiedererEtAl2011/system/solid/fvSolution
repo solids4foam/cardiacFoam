@@ -1,0 +1,38 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/solid";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "D|DD|sigmaHyd"
+    {
+        solver          PCG;
+        preconditioner  FDIC;
+        tolerance       1e-11;
+        relTol          0.001;
+    }
+}
+
+relaxationFactors
+{
+    equations
+    {
+    }
+
+    fields
+    {
+    }
+}
+
+// ************************************************************************* //
