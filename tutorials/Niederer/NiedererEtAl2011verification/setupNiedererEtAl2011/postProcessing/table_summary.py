@@ -1,7 +1,7 @@
-"""table_summary.py — Activation time summary table for NiedererEtAl2012.
+"""table_summary.py — Activation time summary table for NiedererEtAl2011.
 
 Reads *points_DT*_DX*.csv files from output_dir, extracts activation times
-per probe point, and writes NiedererEtAl2012_summary.csv + .html via TableWriter.
+per probe point, and writes NiedererEtAl2011_summary.csv + .html via TableWriter.
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _parse_filename(filename: str) -> tuple[str, float, float, str]:
 def build_summary_rows(output_dir: Path) -> list[dict]:
     files = sorted(output_dir.glob("*points_DT*_DX*.csv"))
     if not files:
-        print(f"[NiedererEtAl2012/table_summary] No points CSV files in {output_dir}")
+        print(f"[NiedererEtAl2011/table_summary] No points CSV files in {output_dir}")
         return []
 
     rows = []
@@ -62,13 +62,13 @@ def run_postprocessing(
     if not rows:
         return []
     meta = TableMetadata(
-        tutorial="NiedererEtAl2012",
+        tutorial="NiedererEtAl2011",
         units={"activationTime": "ms", "DX": "mm", "DT": "ms"},
     )
     return TableWriter.write(
         rows,
         output_path,
-        "NiedererEtAl2012_summary",
+        "NiedererEtAl2011_summary",
         "Niederer activation time summary",
         meta,
     )

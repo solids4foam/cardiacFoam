@@ -1,4 +1,4 @@
-# NiedererEtAl2012 tutorial architecture
+# NiedererEtAl2011 tutorial architecture
 
 This tutorial implements the Niederer slab verification workflow for tissue-scale
 monodomain simulations.
@@ -10,7 +10,7 @@ monodomain simulations.
 ## Folder structure
 
 ```text
-tutorials/NiedererEtAl2012/
+tutorials/NiedererEtAl2011/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -21,7 +21,7 @@ tutorials/NiedererEtAl2012/
 │   ├── fvSchemes
 │   ├── fvSolution
 │   └── smokeCheck.reference
-├── setupNiedererEtAl2012/
+├── setupNiedererEtAl2011/
 │   └── postProcessing/
 │       ├── cache_postProcessing.py
 │       ├── line_postProcessing.py
@@ -83,7 +83,7 @@ Driver sweeps are controlled by
 ## Regression behavior
 
 `runRegressionTest.sh` is a local wrapper around
-`tutorials/regressionTests/NiedererEtAl2012/runRegressionTest.sh`. The shared
+`tutorials/regressionTests/NiedererEtAl2011/runRegressionTest.sh`. The shared
 regression folder stores the override dictionaries and
-`NiedererEtAl2012.reference`, while the runnable case stays focused on the base
+`NiedererEtAl2011.reference`, while the runnable case stays focused on the base
 tutorial setup.

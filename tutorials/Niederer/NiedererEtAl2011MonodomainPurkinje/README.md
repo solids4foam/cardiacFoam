@@ -1,4 +1,4 @@
-# NiedererEtAl2012Purkinje tutorial architecture
+# NiedererEtAl2011Purkinje tutorial architecture
 
 This tutorial keeps the Niederer slab setup and adds a small 1D Purkinje
 network coupled into the 3D monodomain tissue.
@@ -12,7 +12,7 @@ network coupled into the 3D monodomain tissue.
 ## Folder structure
 
 ```text
-tutorials/NiedererEtAl2012Purkinje/
+tutorials/NiedererEtAl2011Purkinje/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -24,7 +24,7 @@ tutorials/NiedererEtAl2012Purkinje/
 │   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setupNiedererEtAl2012Purkinje/
+├── setupNiedererEtAl2011Purkinje/
 │   └── README.md
 ├── Allrun
 ├── Allclean

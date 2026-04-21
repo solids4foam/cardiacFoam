@@ -2,7 +2,7 @@
 #-------------------------------------------------------------------------------
 # Allrun script for electro-mechanical coupling tutorial
 #
-# Based on NiedererEtAl2012 with added solid region
+# Based on NiedererEtAl2011 with added solid region
 #-------------------------------------------------------------------------------
 
 # Source OpenFOAM run functions
