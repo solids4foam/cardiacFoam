@@ -27,6 +27,7 @@ License
 #include "scalarField.H"
 #include "dictionary.H"
 #include "NashPanfilov_2004Names.H"
+#include "overrideTypeName.H"
 
 namespace Foam
 {
@@ -107,7 +108,7 @@ protected:
 
 public:
 
-    TypeName("NashPanfilov");
+    OverrideTypeName("NashPanfilov");
 
     NashPanfilov(const dictionary& dict, const label num);
 
