@@ -1,0 +1,36 @@
+{
+  "vertices": 79449,
+  "faces": 26483,
+  "fields": {
+    "tags": {
+      "min": 1.0,
+      "max": 24.0,
+      "file": "/scalars/tags.bin"
+    },
+    "electrode_endo_rv": {
+      "min": 0.0,
+      "max": 1.0,
+      "file": "/scalars/electrode_endo_rv.bin"
+    },
+    "uvc_intraventricular": {
+      "min": 0.0,
+      "max": 1.0,
+      "file": "/scalars/uvc_intraventricular.bin"
+    },
+    "uvc_longitudinal": {
+      "min": 0.0,
+      "max": 1.0,
+      "file": "/scalars/uvc_longitudinal.bin"
+    },
+    "uvc_rotational": {
+      "min": 0.0,
+      "max": 1.0,
+      "file": "/scalars/uvc_rotational.bin"
+    },
+    "uvc_transmural": {
+      "min": 0.0,
+      "max": 1.0,
+      "file": "/scalars/uvc_transmural.bin"
+    }
+  }
+}

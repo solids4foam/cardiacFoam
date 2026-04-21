@@ -30,7 +30,6 @@ Author
 
 SourceFiles
     electroMechanicalModel.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroMechanicalModel_H

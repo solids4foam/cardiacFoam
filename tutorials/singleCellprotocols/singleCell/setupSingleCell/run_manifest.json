@@ -1,0 +1,89 @@
+{
+  "tutorial": "singleCell",
+  "case_root": "/Users/simaocastro/cardiacFoamEP/tutorials/singleCell",
+  "setup_root": "/Users/simaocastro/cardiacFoamEP/tutorials/singleCell/setupSingleCell",
+  "output_dir": "/Users/simaocastro/cardiacFoamEP/tutorials/singleCell/postProcessing",
+  "dry_run": true,
+  "results": [
+    {
+      "case_id": "TNNP_epicardialCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells"
+      },
+      "error": null
+    },
+    {
+      "case_id": "TNNP_mCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "mCells"
+      },
+      "error": null
+    },
+    {
+      "case_id": "TNNP_endocardialCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TNNP",
+        "tissue": "endocardialCells"
+      },
+      "error": null
+    },
+    {
+      "case_id": "Gaur_myocyte",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Gaur",
+        "tissue": "myocyte"
+      },
+      "error": null
+    },
+    {
+      "case_id": "Courtemanche_myocyte",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Courtemanche",
+        "tissue": "myocyte"
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_epicardialCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells"
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_mCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "mCells"
+      },
+      "error": null
+    },
+    {
+      "case_id": "BuenoOrovio_endocardialCells",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "BuenoOrovio",
+        "tissue": "endocardialCells"
+      },
+      "error": null
+    }
+  ]
+}

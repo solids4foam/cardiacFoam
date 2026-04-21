@@ -1,197 +1,111 @@
 # cardiacFoam
 
-**cardiacFoam** is an open-source OpenFOAM toolbox for cardiac electro-mechanical
-simulation, developed as part of the **XenoSim** project.
+`cardiacFoam` is an OpenFOAM toolbox for cardiac electrophysiology and electro-mechanics.
+It keeps the `solids4foam` runtime-selection style, and can run in two modes:
 
-It is designed as a cardiac-focused extension of
-[solids4foam](https://github.com/solids4foam/solids4foam), building on its
-finite-volume solid mechanics and fluid–structure interaction (FSI)
-capabilities, while extending them with cardiac electrophysiology and
-electromechanical coupling models.
+- Full mode: with a full `solids4foam` installation (electro + solid + FSI workflows).
+- Electro-only mode: with the lightweight fallback `modules/physicsModel` shipped in this repository.
 
-The code is under active development and should be considered **work in
-progress**.
+## Repository architecture
 
----
-
-## Scope and objectives
-
-The long-term aim of **cardiacFoam** is to provide a unified finite-volume
-framework for coupled cardiac electrophysiology, solid mechanics, and
-fluid–structure interaction within OpenFOAM.
-
-Specifically, the toolbox targets:
-
-- Cardiac electrophysiology modelling (reaction–diffusion and reduced models)
-- Electromechanical coupling for active myocardium
-- Integration with FSI formulations available in solids4foam
-- Research-grade, extensible solvers suitable for whole-heart simulations
-
----
-
-## Design philosophy
-
-**cardiacFoam** follows the same modular, run-time selectable design philosophy
-as solids4foam.
-
-- Electrophysiology models are implemented as run-time selectable
-  **`electroModels`**
-- This mirrors the **`solidModels`** and **`fluidModels`** architecture in
-  solids4foam
-- New electrophysiology formulations (e.g. monodomain, eikonal, etc.) can be
-  added in a consistent and extensible way
-
-This approach enables flexible model selection at run-time and promotes
-code reuse and extensibility across different cardiac modelling workflows.
-
----
-
-## What does it currently contain?
-
-The toolbox currently includes:
-
-- **Electrophysiology solvers**
-  - Monodomain reaction–diffusion model
-  - Eikonal–diffusion model
-  - Minimal Bueno-Orovio ionic model
-
-- **Tutorial cases**
-  - Niederer et al. (2011) benchmark slab test case
-  - Additional example cases demonstrating electro-only workflows
-
-- **Ongoing development**
-  - Electromechanical coupling formulations
-  - Cardiac-specific constitutive and activation models
-  - Closer integration with solids4foam FSI capabilities
-
----
-
-## Dependencies and usage modes
-
-- **OpenFOAM:**
-  Compatible with **OpenFOAM-v2312 through OpenFOAM-v2512**
-
-- **PETSc (optional):**
-  Used for nonlinear and coupled solution strategies in solids4foam.
-
-### solids4foam: optional dependency
-
-**cardiacFoam can be used in two modes:**
-
-#### 1. With full solids4foam (required for electromechanics / FSI)
-
-If a full solids4foam installation is available, cardiacFoam will use it to
-access:
-
-- Solid mechanics models
-- Fluid–structure interaction (FSI)
-- Advanced constitutive laws and coupling infrastructure
-
-This is required for:
-
-- Electromechanical simulations
-- Fully coupled heart mechanics + flow problems
-
-You can specify the installation via:
-
-```bash
-export SOLIDS4FOAM_INST_DIR=/path/to/solids4foam
+```text
+cardiacFoam/
+├── applications/
+│   ├── solvers/cardiacFoam/                 # Main executable
+│   ├── utilities/                           # sweepCurrents, setFibreField, ...
+│   └── scripts/
+│       ├── driverFoam/openfoam_driver/      # Python tutorial automation engine
+│       └── cellML2foam/                     # CellML -> ionic model generation pipeline
+├── src/
+│   ├── electroModels/                       # Runtime-selectable electro solvers
+│   ├── ionicModels/                         # Runtime-selectable ionic ODE models
+│   ├── genericWriter/                       # Shared I/O and stimulus parsing helpers
+│   └── couplingModels/                      # Electro-mechanics coupling signal interfaces
+├── modules/
+│   └── physicsModel/                        # Lightweight fallback physicsModel
+├── tutorials/                               # Reference cases and regression cases
+└── etc/resolveSolids4Foam.sh                # Backend selection helper
 ```
 
-If not explicitly set, cardiacFoam will attempt to detect a solids4foam
-installation (e.g. via submodules).
+## Runtime execution flow
 
----
+At runtime, solver/model selection is fully dictionary-driven:
 
-#### 2. Without solids4foam (lightweight electrophysiology-only mode)
+1. `applications/solvers/cardiacFoam/cardiacFoam.C` creates `physicsModel::New(runTime)`.
+2. `physicsModel` type is selected from `constant/physicsProperties` (`type`).
+3. For electro runs, `src/electroModels/electroModel::New(...)` selects `electroModel` from `constant/electroProperties` (`electroModel`).
+4. Electro models (`MonoDomainSolver`, `SingleCellSolver`, `EikonalSolver`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
 
-If solids4foam is not available, cardiacFoam automatically falls back to a
-lightweight internal **`physicsModel`** implementation.
+This gives one stable executable (`cardiacFoam`) with pluggable electro and ionic sub-models.
 
-This mode supports:
+## Current electro model stack
 
-- Standalone electrophysiology simulations
-- Monodomain and eikonal models
-- Ionic models and activation dynamics
+- `MonoDomainSolver`: tissue PDE-ODE model, explicit/implicit stepping, activation-time tracking.
+- `SingleCellSolver`: single integration-point ODE workflow (no spatial PDE solve).
+- `EikonalSolver`: reduced-order activation-time model.
 
-but **does not include**:
+## Current ionic model stack
 
-- Solid mechanics
-- Electromechanical coupling
-- FSI capabilities
+Compiled in `libionicModels`:
 
----
+- `AlievPanfilov`
+- `BuenoOrovio`
+- `Courtemanche`
+- `Fabbri`
+- `Gaur`
+- `Grandi`
+- `ORd`
+- `Stewart`
+- `TNNP`
+- `ToRORd_dynCl`
+- `Trovato`
+- `monodomainFDAManufactured` (manufactured monodomain verification model)
+- `bidomainFDAManufactured` (manufactured bidomain verification model)
 
-### Automatic dependency resolution
+## Tutorial and automation architecture
 
-Dependency handling is managed by:
+Manual tutorial entry points are in `tutorials/*/Allrun`. For parameter sweeps and post-processing automation, use:
+
+- `applications/scripts/driverFoam/openfoam_driver`
+
+Current tutorial specs in the Python driver:
+
+- `singleCell`
+- `niederer2012`
+- `manufacturedFDA`
+- `manufacturedFDABidomain`
+- `restitutionCurves`
+
+The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.
+
+## Build and run
 
 ```bash
-etc/resolveSolids4Foam.sh
+./Allwmake
 ```
 
-This script:
-
-- Detects whether a valid `SOLIDS4FOAM_INST_DIR` is available
-- Falls back to the internal `modules/physicsModel` if not
-- Sets up the required include paths and libraries accordingly
-
-This allows the same codebase to seamlessly support both:
-
-- full multi-physics workflows (with solids4foam), and
-- lightweight electro-only simulations (without it)
-
----
-
-## Installation
-
-1. Source a supported OpenFOAM version (v2312–v2512)
-
-2. Clone the repository:
-
-    ```bash
-    git clone https://github.com/<organisation>/cardiacFoam.git
-    cd cardiacFoam
-    ```
-
-3. (Optional) Initialise submodules (recommended for full functionality):
-
-    ```bash
-    git submodule update --init --recursive
-    ```
-
-4. Compile the toolbox:
-
-    ```bash
-    ./Allwmake
-    ```
-
-    During compilation, the appropriate solids4foam or lightweight backend will be
-    automatically selected.
-
----
-
-## Running a tutorial
-
-To run the Niederer benchmark slab case:
+Run examples:
 
 ```bash
-cd tutorials/NiedererEtAl2011
+cd tutorials/singleCell
 ./Allrun
+
+cd ../NiedererEtAl2012
+./Allrun parallel
 ```
 
----
+Run automation from repository root:
 
-## Status
+```bash
+foamctl all --tutorial singleCell
+foamctl all --tutorial niederer2012
+```
 
-**cardiacFoam is research software under active development.**
-APIs, solvers, and case setups may change as the project evolves.
+## Regression checks
 
-Contributions, feedback, and collaboration are very welcome.
+- Tutorial regression entrypoint: `tutorials/Alltest-regression`
+- Driver architecture contract tests: `applications/scripts/driverFoam/openfoam_driver/tests/test_tutorial_architecture_contract.py`
 
----
+## Notes
 
-## Contact
-
-For questions or collaboration inquiries, please email
-[philip.cardiff@ucd.ie](mailto:philip.cardiff@ucd.ie).
+This is active research software. APIs and dictionaries evolve as models and workflows are expanded.

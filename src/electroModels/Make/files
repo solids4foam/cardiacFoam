@@ -1,8 +1,41 @@
-electroModel/electroModel.C
+/* Core */
+core/electroModel.C
+core/system/electrophysicsSystem.C
+core/advanceSchemes/electrophysicsAdvanceScheme.C
+core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C
+core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
+core/system/electrophysicsSystemBuilder.C
+core/electrophysiologyModel/electrophysiologyModel.C
 
-eikonalDiffusionElectro/eikonalDiffusionElectro.C
-monoDomainElectro/monoDomainElectro.C
-singleCellElectro/singleCellElectro.C
+/* Domains */
+electroDomains/conductionSystemDomain/conductionSystemDomain.C
+electroDomains/conductionSystemDomain/conductionSystemSolver.C
+electroDomains/ecgDomain/ecgDomain.C
+electroDomains/ecgDomain/ecgSolver.C
+electroDomains/myocardiumDomain/myocardiumDomainInterface.C
+electroDomains/myocardiumDomain/myocardiumDomain.C
+electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C
+electroDomains/myocardiumDomain/myocardiumSolver.C
+
+/* Myocardium models */
+myocardiumModels/monodomainSolver/monodomainSolver.C
+myocardiumModels/bidomainSolver/bidomainSolver.C
+myocardiumModels/eikonalSolver/eikonalSolver.C
+myocardiumModels/singleCellSolver/singleCellSolver.C
+
+/* ECG models */
+ecgModels/pseudoECGSolver/pseudoECGSolver.C
+
+/* Conduction system models */
+conductionSystemModels/monodomain1DSolver/monodomain1DSolver.C
+conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C
+
+/* Couplers */
+electroCouplers/electroDomainCoupler.C
+electroCouplers/pvjCoupler/pvjMapper.C
+electroCouplers/pvjCoupler/pvjCoupler.C
+electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C
+electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C
 
 
-LIB = $(FOAM_MODULE_LIBBIN)/libelectroModels
+LIB = $(FOAM_USER_LIBBIN)/libelectroModels

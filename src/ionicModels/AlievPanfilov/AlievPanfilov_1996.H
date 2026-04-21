@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 
 #include "AlievPanfilov_1996Names.H"
 #include "stimulusIO.H"
@@ -12,6 +31,16 @@ const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm"
 };
 
+const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_Vp",
+    "AC_Vr",
+    "AC_Vth",
+    "AC_epsilon",
+    "AC_k",
+    "AC_mu1",
+    "AC_mu2",
+    "AC_a",
+};
 
 static inline const Foam::HashTable<Foam::wordList>&
 AlievPanfilovDependencyMap()
@@ -19,25 +48,23 @@ AlievPanfilovDependencyMap()
     static const Foam::HashTable<Foam::wordList> dep
     (
         {
-
+        {"Iion", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"I_ion", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"Iion_cm", Foam::wordList({"Iion_cm", "u", "recovery_r", "AV_eps"})},
+        {"u", Foam::wordList({"u", "RATES_u"})},
+        {"recovery_r", Foam::wordList({"recovery_r", "AV_eps", "RATES_recovery_r"})}
         }
     );
 
     return dep;
 }
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
 
@@ -65,12 +92,12 @@ AlievPanfilovinitConsts(double* CONSTANTS, double* RATES, double *STATES, int ti
 
 
 void
-AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
     /* recovery_variable */
     ALGEBRAIC[AV_eps] = CONSTANTS[AC_epsilon] + CONSTANTS[AC_mu1] * STATES[recovery_r] / (CONSTANTS[AC_mu2] + STATES[u]);
-    RATES[recovery_r] = ALGEBRAIC[AV_eps] * ( - STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
+    RATES[recovery_r] = ALGEBRAIC[AV_eps] * (-STATES[recovery_r] - CONSTANTS[AC_k] * STATES[u] * (STATES[u] - (CONSTANTS[AC_a] + 1.0)));
 
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];
@@ -83,7 +110,7 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     //RATES[active_tension_Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[u] - STATES[active_tension_Ta]);
 
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {
@@ -91,7 +118,6 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
     }
 
 }
-
 
 
 

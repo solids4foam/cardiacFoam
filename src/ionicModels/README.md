@@ -1,190 +1,124 @@
-# ionicModels library
+# ionicModels library architecture
 
-The `ionicModels` library provides a run-time selectable family of cardiac
- electrophysiology (cell / ionic) models for use with **electroActivationFoam**.
- It wraps CellML-generated ODE systems in a common C++ interface
- (`Foam::ionicModel`) and connects them to monodomain/bidomain
- reaction–diffusion solvers.
+This directory provides runtime-selectable ionic cell models (`libionicModels`) used by
+myocardium workflows, Purkinje/conduction workflows, and `singleCellSolver`.
 
-The goals of the library are:
-
-- To keep each ionic model modular and close to its source publication,
-- To expose a consistent API for:
-  - Evaluating ionic current densities,
-  - Advancing state variables in time,
-  - Exporting states, algebraic variables, and rates,
-  - Performing manufactured-solution verification where available.
-
----
+Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 
 ## Directory structure
 
-```bash
-ionicModels/
-├── BuenoOrovio/        # Bueno-Orovio et al. 2008 model
-├── Courtemanche/       # Courtemanche et al. 1998 model
-├── Gaur/               # Gaur et al. 2021 model
-├── TNNP/               # Ten Tusscher–Noble–Noble–Panfilov 2004 model
-├── tmanufacturedFDA/   # Manufactured-solution / FDA verification model
-├── ionicModel/         # Base class, selectors, utility functions
-├── Make/               # Build system files
+```text
+src/ionicModels/
+├── ionicModel/            # Base class, selector utilities, runtime selection
+├── monodomainFDAManufactured/  # Manufactured-solution verification model
+├── bidomainFDAManufactured/    # Manufactured-solution verification model
+├── AlievPanfilov/
+├── BuenoOrovio/
+├── Courtemanche/
+├── Fabbri/
+├── Gaur/
+├── Grandi/
+├── ORd/
+├── Stewart/
+├── TNNP/
+├── ToRORd_dynCl/
+├── Trovato/
+├── Make/
 └── README.md
 ```
 
----
+## Core class: `Foam::ionicModel`
 
-## Core architecture
+Defined in `ionicModel/ionicModel.H` and implemented in `ionicModel/ionicModel.C`.
 
-### `Foam::ionicModel` (base class)
+### Main responsibilities
 
-Located in `ionicModel/ionicModel.H`, this abstract base class defines the API
-that all ionic models must implement. It:
+- Inherits `ODESystem` (OpenFOAM ODE API).
+- Implements runtime selection via `ionicModel::New(...)`.
+- Stores per-integration-point ODE step sizes (`step_`).
+- Stores tissue/dimension selector flag (`tissue_`).
+- Supports single-cell mode (`solveVmWithinODESolver_`).
+- Stores stimulation protocol (`StimulusProtocol`) loaded from dictionary.
+- Implements optional generic export/write/debug APIs through `ionicModelIO`.
+- Implements `ElectromechanicalSignalProvider` interface for electromechanics signal exchange.
 
-- Derives from `Foam::ODESystem`,
-- Owns an OpenFOAM `ODESolver`,
-- Stores:
-  - The model dictionary (`dict_`),
-  - A per-integration-point time step array (`step_`),
-  - A tissue-type flag (`tissue_`),
-  - An optional flag enabling the solution of `Vm` inside the ODE model
-    (for single-cell simulations).
+### Key virtual interface
 
-The class provides:
+Derived models implement:
 
-- **Pure virtual functions** that derived models must implement:
-  - `solveODE(...)`
-  - `calculateCurrent(...)`
-  - `derivatives(...)`
-  - `nEqns() const`
-- **Run-time selection:**
-  - `TypeName("ionicModel")`
-  - `declareRunTimeSelectionTable(...)`
-  - `autoPtr<ionicModel> ionicModel::New(...)`
-- **Utility functions** for copying and snapshotting internal model states:
-  - `copyInternalToExternal(...)`
-  - `saveStateSnapshot(...)`
-  - `restoreStateSnapshot(...)`
-- **Optional features:**
-  - `supportedTissueTypes()`
-  - `supportedDimensions()`
-  - `hasManufacturedSolution()`
-  - `writeHeader(...)`, `write(...)`
-  - `writeSweepHeder(...)`, , `writeOneSweepRow(...)`
-  - `exportStates(...)`
-  - `debugPrintFields(...)`
-  - `exportedFieldNames()`, `debugPrintedNames()`
+- `solveODE(...)`
+- `derivatives(...)`
+- `nEqns() const`
 
-All concrete ionic models inherit from this class and override the appropriate
-behaviour.
+Optional overrides:
 
----
+- `supportedTissueTypes()`
+- `supportedDimensions()`
+- `sweepCurrent(...)`
+- coupling-signal methods (`hasSignal`, `signal`)
 
-## Available ionic models
+### Coupling signals in the base class
 
-### BuenoOrovio (2008)
+`ionicModel` now provides default coupling signal exposure from model metadata:
 
-```bash
-BuenoOrovio/
-├── BuenoOrovio_2008.H        # Generated ODE system
-├── BuenoOrovio_2008Names.H   # Enums and variable names
-├── BuenoOrovio.H, BuenoOrovio.C
-└── heaviside.H
-```
+- `Vm`: available when a model provides `ioVmTransform()` or has a voltage state
+  (e.g. `membrane_V`, `V`, `Vm`).
+- `Cai`: available when a state matching intracellular calcium naming exists
+  (e.g. `Ca_i`, `Cai`, `calcium_Cai`).
 
-### Courtemanche (1998)
+This means most detailed ionic models expose `Vm`/`Cai` without per-model
+signal boilerplate.
 
-```bash
-Courtemanche/
-├── Courtemanche_1998.H
-├── Courtemanche_1998Names.H
-├── Courtemanche.H
-└── Courtemanche.C
-```
+## Tissue vs dimension selection
 
-### Gaur (2021)
+`ionicModel/ionicSelector` centralizes dictionary interpretation:
 
-```bash
-Gaur/
-├── Gaur_2021.H
-├── Gaur_2021Names.H
-├── Gaur.H
-└── Gaur.C
-```
+- Normal models use `tissue` entry.
+- Manufactured/verification models can use `dimension` entry via model-side selection.
 
-### TNNP (2004)
+This keeps selection logic consistent across all ionic models.
 
-```bash
-TNNP/
-├── TNNP_2004.H
-├── TNNP_2004Names.H
-├── TNNP.C
-└── TNNP.H
-```
+## I/O and export architecture
 
-### Manufactured FDA model
+The base class can write/export without model-specific code when metadata hooks are provided
+(`ioStateNames`, `ioAlgebraicNames`, `ioStatesPtr`, etc.).
 
-```bash
-tmanufacturedFDA/
-├── tmanufacturedFDA_2014.H
-├── tmanufacturedFDA_2014Names.H
-├── tmanufacturedFDA.H
-├── tmanufacturedFDA.C
-└── tmanufacturedFields.H
-```
+Common behaviors:
 
----
+- Filter exported/debug variable lists.
+- Write full or selected headers.
+- Import solver-owned volumetric fields back into ionic state storage when needed.
+- Export selected variables into `volScalarField` lists.
+- Support relaxed variable name compatibility for Vm/rates through `ionicVariableCompatibility`.
 
-## I/O utilities: `ionicModelIO`
+## Compiled ionic models
 
-Located in `../genericWriter/`.
+Current `Make/files` entries:
 
-This module centralises:
+- `AlievPanfilov`
+- `BuenoOrovio`
+- `Courtemanche`
+- `Fabbri`
+- `Gaur`
+- `Grandi`
+- `ORd`
+- `Stewart`
+- `TNNP`
+- `ToRORd_dynCl`
+- `Trovato`
+- `monodomainFDAManufactured`
+- `bidomainFDAManufactured`
 
-- header writing for single-cell CSV/TSV outputs,
-- writing state/algebraic/rate traces,
-- exporting internal model data as `volScalarField` objects,
-- generating lists of variable names for exporting and debugging.
+## Build target
 
----
+`Make/files` builds into:
 
-## Usage inside a PDE solver
-
-1. Allocate:
-   - `volScalarField Vm;`
-   - `scalarField Iion;`
-   - `Field<Field<scalar>> states;`
-
-2. On each timestep:
-   - `model.calculateCurrent(t0, dt, Vm, Iion, states);`
-   - or `model.solveODE(t0, dt, Vm, Iion, states);`
-
-3. Optionally export state fields.
-
----
+- `$(FOAM_USER_LIBBIN)/libionicModels`
 
 ## Adding a new ionic model
 
-Steps:
-
-1. Generate ODE code (usually from CellML).
-2. Create new directory with wrapper `.H/.C`.
-3. Implement overrides of `solveODE`, `calculateCurrent`, `derivatives`, `nEqns`.
-4. Register in run‑time selection table.
-
----
-
-## Manufactured solution support
-
-The `tmanufacturedFDA` model demonstrates how to:
-
-- override `hasManufacturedSolution()`,
-- initialise analytic fields,
-- export error fields for convergence testing.
-
----
-
-## Building
-
-```bash
-wmake libso .
-```
+1. Add model folder with generated equations and wrapper `.H/.C`.
+2. Derive from `Foam::ionicModel` and implement required methods.
+3. Register runtime type in the model `.C` file.
+4. Add the `.C` file to `src/ionicModels/Make/files`.
+5. Provide metadata hooks if generic export/write behavior is desired.

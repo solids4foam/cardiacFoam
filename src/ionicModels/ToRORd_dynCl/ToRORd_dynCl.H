@@ -27,7 +27,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef ToRORd_dynCl_H
@@ -37,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "ToRORd_dynCl_2023Names.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,9 +56,6 @@ class ToRORd_dynCl
         //- States
         mutable PtrList<scalarField> STATES_;
 
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
-
         //- Constants
         mutable scalarField CONSTANTS_;
 
@@ -77,16 +74,58 @@ class ToRORd_dynCl
         //- No copy assignment
         void operator=(const ToRORd_dynCl&) = delete;
 
+protected:
+        virtual const PtrList<scalarField>* ioStatesPtr() const override
+        {
+            return &STATES_;
+        }
+
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+        {
+            return &ALGEBRAIC_;
+        }
+
+        virtual const PtrList<scalarField>* ioRatesPtr() const override
+        {
+            return &RATES_;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual label ioNumConstants() const override
+        {
+            return NUM_CONSTANTS;
+        }
+
+        virtual const char* const* ioConstantNames() const override;
+
+        virtual const char* const* ioStateNames() const override;
+
+        virtual label ioNumStates() const override
+        {
+            return NUM_STATES;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const override;
+
+        virtual label ioNumAlgebraic() const override
+        {
+            return NUM_ALGEBRAIC;
+        }
+
 
         public:
 
         //- Runtime type information
-        TypeName("ToRORd_dynCl");
+        OverrideTypeName("ToRORd_dynCl");
 
 
         //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const;
-        virtual List<word> supportedDimensions() const
+        virtual List<word> supportedTissueTypes() const override;
+        virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
         }
@@ -112,21 +151,6 @@ class ToRORd_dynCl
 
         // Member Functions
 
-            virtual void writeHeader(OFstream& output) const;
-            //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const;
-
-
-
-
-            virtual void calculateCurrent
-            (
-                const scalar stepStartTime,
-                const scalar deltaT,
-                const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
-            );
 
 
             virtual void solveODE
@@ -134,13 +158,12 @@ class ToRORd_dynCl
                 const scalar stepStartTime,
                 const scalar deltaT,
                 const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
-            );
+                scalarField& Im
+            ) override;
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const
+            virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
@@ -152,32 +175,7 @@ class ToRORd_dynCl
                 const scalar t,
                 const scalarField& y,
                 scalarField& dydt
-            ) const;
-
-
-            virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-            virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
-
-                    // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const;
-            virtual wordList debugPrintedNames() const;
-
-
-            // Override to export the variables
-            virtual void exportStates
-            (
-                const Field<Field<scalar>>&,
-                PtrList<volScalarField>&
-            );
-
-            // Override to print variables in solver
-            void debugPrintFields
-            (
-                label cellI,
-                scalar t1,
-                scalar t2,
-                scalar step
-            ) const;
+            ) const override;
 
             virtual void sweepCurrent
             (
@@ -186,7 +184,9 @@ class ToRORd_dynCl
                 scalar Vmax,
                 label nPts,
                 const fileName& outputFile
-            ) const;
+            ) const override;
+
+            virtual wordList availableSweepCurrents() const override;
 
 
 };
@@ -199,5 +199,3 @@ class ToRORd_dynCl
 #endif
 
 // ************************************************************************* //
-
-

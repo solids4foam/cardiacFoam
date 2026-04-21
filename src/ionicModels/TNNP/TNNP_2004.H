@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "dictionary.H"
 #include "scalar.H"
 #include "TNNP_2004Names.H"
@@ -96,22 +115,59 @@ static const char* TNNP_ALGEBRAIC_NAMES[70] = {
     "Iion_cm"                   // 69
 };
 
+static const char* TNNP_CONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "R",
+    "T",
+    "F",
+    "Cm",
+    "V_c",
+    "P_kna",
+    "K_o",
+    "Na_o",
+    "Ca_o",
+    "g_K1",
+    "g_Kr",
+    "g_Ks",
+    "g_Na",
+    "g_bNa",
+    "g_CaL",
+    "g_bCa",
+    "g_to",
+    "P_NaK",
+    "K_mk",
+    "K_mNa",
+    "K_NaCa",
+    "K_sat",
+    "alpha_NCX",
+    "gamma_NCX",
+    "Km_Ca",
+    "Km_Nai",
+    "g_pCa",
+    "K_pCa",
+    "g_pK",
+    "tau_g",
+    "a_rel",
+    "b_rel",
+    "c_rel",
+    "K_up",
+    "V_leak",
+    "Vmax_up",
+    "Buf_c",
+    "K_buf_c",
+    "Buf_sr",
+    "K_buf_sr",
+    "V_sr",
+    "tau_fCa",
+};
 
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
 
@@ -129,6 +185,13 @@ TNNPDependencyMap()
                   "m_inf","h_inf","j_inf",
                   "tau_m","tau_h","tau_j"
               }) },
+            { "I_Na",
+              Foam::wordList
+              ({
+                  "i_Na",
+                  "m_inf","h_inf","j_inf",
+                  "tau_m","tau_h","tau_j"
+              }) },
 
 
             // L-type calcium current
@@ -140,9 +203,23 @@ TNNPDependencyMap()
                   "tau_d","tau_f"
                   // tau_fCa is CONSTANT
               }) },
+            { "I_CaL",
+              Foam::wordList
+              ({
+                  "i_CaL",
+                  "d_inf","f_inf","fCa_inf",
+                  "tau_d","tau_f"
+              }) },
 
             // Transient outward potassium current
             { "Ito",
+              Foam::wordList
+              ({
+                  "i_to",
+                  "r_inf","s_inf",
+                  "tau_r","tau_s"
+              }) },
+            { "I_to",
               Foam::wordList
               ({
                   "i_to",
@@ -159,28 +236,43 @@ TNNPDependencyMap()
                   "xr1_inf","xr2_inf",
                   "tau_xr1","tau_xr2"
                 }) },
+            { "I_Kr",
+              Foam::wordList
+              ({
+                  "i_Kr",
+                  "xr1_inf","xr2_inf",
+                  "tau_xr1","tau_xr2"
+                }) },
 
             // Slow delayed rectifier potassium current
             { "IKs",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
+            { "I_Ks",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
 
             // Inward rectifier potassium current
             { "IK1",Foam::wordList({"i_K1","xK1_inf"}) },
+            { "I_K1",Foam::wordList({"i_K1","xK1_inf"}) },
 
             // Sodium–potassium pump
             { "INaK",Foam::wordList({"i_NaK"}) },
+            { "I_NaK",Foam::wordList({"i_NaK"}) },
 
 
             // Sodium–calcium exchanger
             { "INaCa",Foam::wordList({"i_NaCa"}) },
+            { "I_NaCa",Foam::wordList({"i_NaCa"}) },
 
 
             // Background currents
             { "IbNa",Foam::wordList({ "i_b_Na" }) },
             { "IbCa",Foam::wordList({ "i_b_Ca" }) },
+            { "I_bNa",Foam::wordList({ "i_b_Na" }) },
+            { "I_bCa",Foam::wordList({ "i_b_Ca" }) },
 
             // Plateau / pump currents
             { "IpCa",Foam::wordList({ "i_p_Ca" }) },
             { "IpK", Foam::wordList({ "i_p_K" }) },
+            { "I_pCa",Foam::wordList({ "i_p_Ca" }) },
+            { "I_pK", Foam::wordList({ "i_p_K" }) },
 
             // SR release gate (Ca-driven, not Vm sweep)
             { "RyR_g",Foam::wordList({"g_inf"}) },
@@ -193,7 +285,19 @@ TNNPDependencyMap()
               ({
                   "i_K1","i_to","i_Kr","i_Ks","i_CaL","i_Na","i_b_Na",
                   "i_NaK","i_NaCa","i_b_Ca", "i_p_K","i_p_Ca","Iion_cm"
-              }) }
+                }) },
+            { "Iion_cm",
+              Foam::wordList
+              ({
+                  "i_K1","i_to","i_Kr","i_Ks","i_CaL","i_Na","i_b_Na",
+                  "i_NaK","i_NaCa","i_b_Ca", "i_p_K","i_p_Ca","Iion_cm"
+                }) },
+            { "I_ion",
+              Foam::wordList
+              ({
+                  "i_K1","i_to","i_Kr","i_Ks","i_CaL","i_Na","i_b_Na",
+                  "i_NaK","i_NaCa","i_b_Ca", "i_p_K","i_p_Ca","Iion_cm"
+                }) }
         }
     );
 
@@ -279,7 +383,7 @@ CONSTANTS[tau_fCa] = 2.00000;
 }
 
 void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver)
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 //INa
@@ -384,7 +488,7 @@ ALGEBRAIC[Iion_cm] = ALGEBRAIC[i_K1]+ALGEBRAIC[i_to]+ALGEBRAIC[i_Kr]+
                 ALGEBRAIC[i_Na]+ALGEBRAIC[i_b_Na]+ALGEBRAIC[i_NaCa]+
                 ALGEBRAIC[i_b_Ca]+ALGEBRAIC[i_p_K]+ALGEBRAIC[i_p_Ca];
 
-ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
 RATES[V] = 0.0;
 if (solveVmWithinODESolver)
@@ -409,7 +513,7 @@ RATES[Ca_SR] =  ALGEBRAIC[ddt_Ca_sr_total]*ALGEBRAIC[f_JCa_sr_free];
 
 
 void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 ALGEBRAIC[f_inf] = 1.00000/(1.00000+exp((STATES[V]+20.0000)/7.00000));
@@ -495,5 +599,5 @@ ALGEBRAIC[Iion_cm] = ALGEBRAIC[i_K1]+ALGEBRAIC[i_to]+ALGEBRAIC[i_Kr]+
                 ALGEBRAIC[i_Na]+ALGEBRAIC[i_b_Na]+ALGEBRAIC[i_NaCa]+
                 ALGEBRAIC[i_b_Ca]+ALGEBRAIC[i_p_K]+ALGEBRAIC[i_p_Ca];
 
-ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 }

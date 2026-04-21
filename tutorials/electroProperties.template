@@ -1,0 +1,439 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// cardiacFoamv2 — electroProperties template
+// ============================================
+// Single canonical selector key: 'myocardiumSolver'
+// Valid types (registered in myocardiumSolver RTST):
+//   monodomainSolver    — 3D reaction-diffusion, single potential (Vm)
+//   bidomainSolver      — 3D reaction-diffusion, dual potential (Vm + phiE)
+//   eikonalSolver 	 - 3D eikonal-diffusion, no potential
+//   singleCellSolver    — 0D ODE-only (no mesh, no diffusion)
+//
+// Settings live in the matching '<type>Coeffs' subdictionary.
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 1 — SOLVER SELECTION  (choose exactly one; comment out the others)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Valid types registered in the 'myocardiumSolver' runtime table:
+//   monodomainSolver  — 3D PDE, single potential (Vm), reaction-diffusion
+//   bidomainSolver    — 3D PDE, dual potential (Vm + phiE)
+//   singleCellSolver  — 0D ODE-only benchmark (no mesh, no diffusion)
+//   eikonalSolver     — steady-state activation-time solver (no ionic model)
+//                       assembled through the same top-level electrophysiology model
+//
+// Setting key: 'myocardiumSolver <type>;'
+// Coefficients must live in the matching '<type>Coeffs { ... }' subdict.
+
+myocardiumSolver  monodomainSolver;   // 3-D monodomain
+// myocardiumSolver  bidomainSolver;  // 3-D bidomain
+// myocardiumSolver  singleCellSolver;// 0-D single-cell ODE benchmark
+// myocardiumSolver  eikonalSolver;   // steady activation-time (no ionic)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 2A — MONODOMAIN COEFFICIENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+monodomainSolverCoeffs
+{
+    // --- Tissue conductivity tensor (SI: S/m = kg^-1 m^-3 s^3 A^2) ---
+    // Isotropic: (sigma 0 0 0 sigma 0 sigma)  Anisotropic: full 6-component Voigt tensor
+    conductivity [-1 -3 3 0 0 2 0] (0.1334 0 0 0.01761 0 0.01761);
+
+    // --- Membrane surface-to-volume ratio  [1/m] ---
+    chi   [0 -1 0 0 0 0 0]  140000;
+
+    // --- Membrane capacitance  [F/m^2] ---
+    cm    [-1 -4 4 0 0 2 0]  0.01;
+
+
+    // ── Ionic model ─────────────────────────────────────────────────────────
+    // Valid types (registered in ionicModel RTST):
+    //   AlievPanfilov | BuenoOrovio | TenTusscher | ORd | Mitchell | ...
+    //   monodomainFDAManufactured | bidomainFDAManufactured
+    ionicModel    BuenoOrovio;
+    tissue        epicardialCells;   // epicardialCells | endocardialCells | mCells | myocyte
+
+
+    // ── ODE time-integration ────────────────────────────────────────────────
+    solutionAlgorithm  explicit;     // explicit | implicit
+    solver             RKF45;        // RKF45 | euler | RK4
+    initialODEStep     1e-6;         // [s] first adaptive step size
+    maxSteps           1000000000;   // hard limit on ODE steps per macro-step
+    // absTol          1e-6;         // (optional) absolute tolerance for adaptive solvers
+    // relTol          1e-4;         // (optional) relative tolerance
+
+    // ── Time-advance scheme (multi-domain coupling) ──────────────────────────
+    // Selects the scheme for advancing coupled domains (myocardium, Purkinje, ECG)
+    // Valid types:
+    //   staggeredElectrophysicsAdvanceScheme
+    //       — Weakly coupled explicit staggered scheme (fast, stable for unidirectional)
+    //       — Works with explicit/implicit solutionAlgorithm
+    //   pimpleStaggeredElectrophysicsAdvanceScheme
+    //       — Strongly coupled segregated scheme with PIMPLE iteration (stable bidirectional)
+    //       — Requires solutionAlgorithm = implicit and coupling domains present
+    electrophysicsAdvanceScheme  staggeredElectrophysicsAdvanceScheme;
+    // electrophysicsAdvanceScheme  pimpleStaggeredElectrophysicsAdvanceScheme;
+
+
+    // ── Output variables ────────────────────────────────────────────────────
+    outputVariables
+    {
+        ionic
+        {
+            export  (Vm Jsi);    // fields written to disk at outputTime
+            debug   (Vm Iion);   // fields printed to terminal
+        }
+    }
+
+    // ── Optional verification hook ─────────────────────────────────────────
+    // Valid type: manufacturedFDAMonodomainVerifier
+    // verificationModel
+    // {
+    //     type  manufacturedFDAMonodomainVerifier;
+    // }
+
+
+    // ── Stimulus (external volume stimulus) ──────────────────────────────────
+    externalStimulus
+    {
+        stimulusLocationMin  (0 0 5.5e-3);           // corner of stimulus box [m]
+        stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
+        stimulusDuration     [0 0 1 0 0 0 0]  2e-3;  // [s]
+        stimulusIntensity    [0 -3 0 0 0 1 0] 50000; // [A/m^3]
+        stimulusStartTime    0.0;                     // [s]
+    }
+
+
+    // ── Conduction-system (Purkinje) domains  [OPTIONAL] ───────────────────
+    // Remove this entire block if no Purkinje network is present.
+    // When present, the canonical runtime structure is:
+    //   conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs { ... }
+    // The separate graph file in constant/ carries 'edges', 'points',
+    // 'pvjNodes', 'pvjLocations', and optional 'rootNode'.
+    conductionNetworkDomains
+    {
+        purkinjeNetwork        // arbitrary name; repeated for multiple networks
+        {
+            // Factory key — selects the conduction domain implementation.
+            // Canonical runtime type: purkinjeGraphModel
+            // Legacy compatibility alias may appear in older files:
+            // conductionSystemDomain
+            conductionSystemDomain  purkinjeGraphModel;
+
+            // Coefficients for the graph-level conduction solver
+            purkinjeGraphModelCoeffs
+            {
+                // REQUIRED: reference to graph file in constant/
+                graphFile  purkinjeGraph;
+
+                // Root node stimulus
+                rootStimulus
+                {
+                    startTime  0.0;
+                    duration   0.002;    // [s]
+                    intensity  1000.0;   // [A/m^3] suprathreshold
+                    // node  0;          // optional override of graph-file rootNode
+                }
+
+                // ── Graph solver selection ───────────────────────────────────
+                // Key: 'conductionSystemSolver <type>;'
+                // Default (if omitted): monodomain1DSolver
+                //
+                // Valid types (registered in conductionSystemSolver RTST):
+                //   monodomain1DSolver — implicit cable equation + ionic ODE [DEFAULT]
+                //   eikonalSolver1D    — activation-time only, needs c0 [m/s]
+                //
+                conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver1D
+
+                // --- Eikonal solver: only c0 is required ---
+                // conduction velocity [m/s] (must be dimensioned)
+                // c0  [0 1 -1 0 0 0 0]  0.8; 
+
+                ionicModel      BuenoOrovio;
+                tissue          endocardialCells;
+                vm1DRest       -0.084;  // resting potential [V]
+
+                solver          RKF45;
+                initialODEStep  1e-6;
+                maxSteps        1000000000;
+
+                chi     1400.0;   // [1/m]
+                cm      1.0e-2;   // [F/m²]
+
+                outputVariables
+                {
+                    export  (Vm Icoupling);
+                    debug   (Vm);
+                }
+            }
+        }
+    }
+
+
+    // ── Domain couplings (e.g. Purkinje→myocardium)  [OPTIONAL] ────────────
+    // Remove this block if no cross-domain coupling is needed.
+    domainCouplings
+    {
+        couplingName   // arbitrary label
+        {
+            // Factory key — selects the coupling model.
+            // Valid types:
+            //   reactionDiffusionPvjCoupler  — voltage/current coupling for monodomain 1D
+            //   eikonalPvjCoupler            — activation-time coupling for eikonal models
+            electroDomainCoupler  reactionDiffusionPvjCoupler;
+
+            // Explicit reference to the conductionNetworkDomains entry that
+            // this coupling targets. Required even if only one network exists.
+            conductionNetworkDomain  purkinjeNetwork;
+
+            // Reaction-diffusion coupling only:
+            rPvj      500.0;   // [Ω·m²]
+            pvjRadius  6e-4;    // [m]
+
+            // reactionDiffusionPvjCoupler: unidirectional | bidirectional
+            // eikonalPvjCoupler:           unidirectional only
+            //                       (bidirectional is currently in development)
+            couplingMode unidirectional;
+        }
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 2B — BIDOMAIN COEFFICIENTS
+// (activate by setting: myocardiumSolver bidomainSolver;)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+bidomainSolverCoeffs
+{
+    // Intracellular conductivity tensor  [S/m]
+    conductivityIntracellular  [-1 -3 3 0 0 2 0]  (0.1334 0 0 0.01761 0 0.01761);
+
+    // Extracellular conductivity tensor  [S/m]
+    conductivityExtracellular  [-1 -3 3 0 0 2 0]  (0.2668 0 0 0.03521 0 0.03521);
+
+    chi     [0 -1 0 0 0 0 0]  140000;
+    cm      [-1 -4 4 0 0 2 0]  0.01;
+
+    ionicModel    BuenoOrovio;
+    tissue        epicardialCells;
+
+    solutionAlgorithm  implicit;
+    solver             RKF45;
+    initialODEStep     1e-6;
+    maxSteps           1000000000;
+    phiERefPoint       (0 0 0);    // required point used to locate the reference cell
+    phiEReferenceValue 0.0;
+
+    outputVariables
+    {
+        ionic { export (Vm); debug (Vm); }
+    }
+
+    // Optional manufactured/reference verifier
+    // verificationModel
+    // {
+    //     type  manufacturedFDABidomainVerifier;
+    // }
+
+    externalStimulus
+    {
+        stimulusLocationMin  (0 0 5.5e-3);
+        stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
+        stimulusDuration     [0 0 1 0 0 0 0]  2e-3;
+        stimulusIntensity    [0 -3 0 0 0 1 0] 50000;
+        stimulusStartTime    0.0;
+    }
+}
+*/
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 2C — SINGLE-CELL COEFFICIENTS
+// (activate by setting: myocardiumSolver singleCellSolver;)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+singleCellSolverCoeffs
+{
+    ionicModel    AlievPanfilov;   // any registered ionicModel
+    tissue        myocyte;
+
+    solutionAlgorithm  explicit;
+    solver             RKF45;
+    initialODEStep     1e-5;
+    maxSteps           1000000000;
+    absTol             1e-6;
+    relTol             1e-4;
+
+    // S1-S2 stimulus protocol
+    singleCellStimulus
+    {
+        stim_start      20;      // [ms] or [s] — match your ionic model's units
+        stim_duration   1;
+        stim_amplitude  0.4;
+        stim_period_S1  1000;
+        nstim1          3;
+        stim_period_S2  0;       // 0 = no S2
+        nstim2          0;
+    }
+
+    // optional: write state vector after this simulation time
+    writeAfterTime  0;
+
+    outputVariables
+    {
+        ionic
+        {
+            export  (Vm s);
+            debug   (Vm);
+        }
+    }
+}
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 2D — 3D EIKONAL SOLVER COEFFICIENTS
+// (activate by setting: myocardiumSolver eikonalSolver;)
+//
+// Solves a steady nonlinear anisotropic eikonal-diffusion equation to compute
+// activation times psi(x) [s]. No ionic model needed — only physical tissue
+// parameters and a reference velocity c0. The stimulus box pins psi = 0 at
+// the initial activation site.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+eikonalSolverCoeffs
+{
+    // Tissue conductivity tensor [S/m]  (falls back to 0/conductivity if present)
+    conductivity  [-1 -3 3 0 0 2 0]  (0.1334 0 0 0.01761 0 0.01761);
+
+    // Surface-to-volume ratio  [1/m]
+    chi           [0 -1 0 0 0 0 0]   140000;
+
+    // Membrane capacitance  [F/m²]
+    cm            [-1 -4 4 0 0 2 0]  0.01;
+
+    // Reference conduction velocity  [m/s]
+    // c0 enters the eikonal equation as the wave-speed normalisation.
+    c0            [0 1 -1 0 0 0 0]   0.8;
+
+    // Linearisation scheme:
+    //   true  → advection-diffusion approach (more stable, recommended)
+    //   false → pure diffusion (simpler, may need tighter PIMPLE relaxation)
+    eikonalAdvectionDiffusionApproach  true;
+
+    // Stimulus box — cells inside are pinned to psi = 0 (activation origin)
+    stimulusLocationMin  (0 0 5.5e-3);
+    stimulusLocationMax  (1.5e-3 1.5e-3 7e-3);
+
+    // Optional Purkinje coupling follows the same structure used above for
+    // monodomainSolverCoeffs:
+    //   conductionNetworkDomains { ... }
+    //   domainCouplings { ... }
+    // Use:
+    //   purkinjeGraphModelCoeffs.conductionSystemSolver  eikonalSolver1D;
+    //   conductionNetworkDomain  purkinjeNetwork;
+    //   electroDomainCoupler     eikonalPvjCoupler;
+}
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 3 — ECG / PSEUDO-ECG MONITORING  [OPTIONAL]
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+Place ecgDomains inside the active <solver>Coeffs block, for example:
+
+monodomainSolverCoeffs
+{
+    ecgDomains
+    {
+        bodySurfaceECG
+        {
+            // ECG solver selection (registered in ecgSolver RTST)
+            // Valid type: pseudoECG
+            ecgSolver  pseudoECG;
+
+            // Electrode positions [m]
+            electrodePositions
+            {
+                lead_I   ( 0.1  0.0  0.0 );
+                lead_II  ( 0.0  0.1  0.0 );
+            }
+        }
+    }
+}
+
+// Bath-coupled ECG support
+// # to implement
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPENDIX A — PURKINJE GRAPH FILE FORMAT (constant/purkinjeGraph)
+// ─────────────────────────────────────────────────────────────────────────────
+/*
+When using conductionNetworkDomains, the 'graphFile' key references a separate
+dictionary in constant/ directory. Example constant/purkinjeGraph:
+
+    FoamFile
+    {
+        version     2.0;
+        format      ascii;
+        class       dictionary;
+        location    "constant";
+        object      purkinjeGraph;
+    }
+
+    // Edge list: ( nodeA  nodeB  length[m]  conductance[S/m] )
+    // A tree on N nodes requires exactly N-1 edges.
+    edges
+    (
+        ( 0  1  0.003  3.0 )
+        ( 1  2  0.005  3.0 )
+        ( 1  3  0.005  3.0 )
+    );
+
+    // 3-D position of every node [m] (size = nNodes, must include all nodes 0..N-1)
+    points
+    (
+        (0.0        0.0        0.0)
+        (0.003      0.0        0.0)
+        (0.008      0.0        0.0)
+        (0.008      0.001      0.0)
+    );
+
+    // Node indices where Purkinje terminates and couples to myocardium
+    pvjNodes  ( 2  3 );
+
+    // 3-D position of each PVJ [m] (size = pvjNodes.size())
+    pvjLocations
+    (
+        (0.008  0.0    0.0)
+        (0.008  0.001  0.0)
+    );
+
+    // Optional: root stimulus node (default: 0)
+    // rootNode  0;
+*/
+
+// ************************************************************************* //

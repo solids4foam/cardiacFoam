@@ -1,7 +1,17 @@
 /*--------------------------------*- C++ -*----------------------------------*\
+<<<<<<<< HEAD:tutorials/Niederer/NiedererEtAl2012MonodomainPurkinje/system/decomposeParDict
+| solids4foam: solid mechanics and fluid-solid interaction simulations        |
+| Version:     v2.0                                                           |
+| Web:         https://solids4foam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
+========
 | cardiacFoam: the OpenFOAM heart project                                     |
 | Version:     v0.1                                                           |
 | Web:         https://cardiacFoam.github.io                                  |
+>>>>>>>> origin/main:tutorials/electroMechanicalNiedererEtAl2011/constant/electro/electroProperties
 \*---------------------------------------------------------------------------*/
 FoamFile
 {

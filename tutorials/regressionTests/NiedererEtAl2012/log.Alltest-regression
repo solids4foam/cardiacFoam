@@ -1,0 +1,12 @@
+Running blockMesh on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/NiedererEtAl2012/case
+Running decomposePar on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/NiedererEtAl2012/case
+Running cardiacFoam (6 processes) on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/NiedererEtAl2012/case 
+Running reconstructPar on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/NiedererEtAl2012/case
+Running postProcess on /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/regressionTests/NiedererEtAl2012/case
+PASS: Niedererpoints/0/activationTime col=2 t=0.04 actual=0.0012048 expected=0.00120503 tol=1e-5
+PASS: Niedererpoints/0/activationTime col=4 t=0.04 actual=0.0327112 expected=0.03271 tol=1e-4
+PASS: Niedererpoints/0/activationTime col=6 t=0.04 actual=0.0105765 expected=0.0105757 tol=1e-4
+PASS: Niedererpoints/0/activationTime col=10 t=0.04 actual=0.0218436 expected=0.0218433 tol=1e-4
+PASS: Niedererpoints/0/activationTime col=5 t=0.04 actual=0 expected=0 tol=1e-6
+PASS: Niedererpoints/0/activationTime col=9 t=0.04 actual=0 expected=0 tol=1e-6
+NiedererEtAl2012 comparison: 6 checks, 0 failures

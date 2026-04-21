@@ -1,4 +1,24 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #pragma once
+#include "stimulusIO.H"
 
 enum STATES_INDEX {
     membrane_V,
@@ -387,19 +407,12 @@ enum CONSTANTS_INDEX {
     AC_a_rel,
     AC_btp,
     AC_a_relp,
-    stim_start,
-    stim_duration,
-    stim_amplitude,
-    stim_period_S1,
-    nstim1,
-    stim_period_S2,
-    nstim2,
-    NUM_CONSTANTS
-};
+
+    NUM_CONSTANTS};
 
 
 void
 ORdinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-ORdcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver);
+ORdcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
