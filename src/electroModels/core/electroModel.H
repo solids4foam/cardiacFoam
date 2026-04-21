@@ -96,7 +96,7 @@ private:
 
 protected:
   // Protected member functions
-  
+
   //- Multi-domain electrophysiology system
   electrophysicsSystem domainSystem_;
 

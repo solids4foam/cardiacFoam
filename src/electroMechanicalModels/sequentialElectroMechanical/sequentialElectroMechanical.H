@@ -28,7 +28,6 @@ Author
 
 SourceFiles
     sequentialElectroMechanical.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef sequentialElectroMechanical_H

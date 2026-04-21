@@ -32,7 +32,6 @@ Usage
         OverrideTypeName("MyDerivedClass");
 
     The corresponding .C file still uses the normal defineTypeNameAndDebug().
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef overrideTypeName_H
