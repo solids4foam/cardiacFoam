@@ -15,15 +15,17 @@ Each tutorial (`NiedererEtAl2012`, `singleCell`, `manufacturedFDA`, `restitution
 ## Goals
 
 1. A typed protocol/contract that every tutorial postprocessing script must conform to
-2. Consistent `plots.json` manifest (v1.1) readable by the existing app
-3. Structured tabular summaries (tutorial-specific columns, standard metadata envelope) exported as `.csv` + `.html`
-4. Merge `driverFOAMagentPreparation` improvements into the main package
-5. Minimal migration burden — existing plotting logic is not rewritten
+1. Consistent `plots.json` manifest (v1.1) readable by the existing app
+1. Structured tabular summaries (tutorial-specific columns, standard metadata envelope) exported as `.csv` + `.html`
+1. Merge `driverFOAMagentPreparation` improvements into the main package
+1. Minimal migration burden — existing plotting logic is not rewritten
 
 ## Non-Goals
 
 - Static PNG/PDF export (handled by the downstream app via kaleido)
+
 - Mandatory use of `plot_builder` for custom visualizations (3D subplots, complex updatemenus)
+
 - A heart-simulation-level table schema (future work, user-defined)
 
 ---
@@ -43,13 +45,19 @@ Every tutorial postprocessing script exposes exactly one public function:
 ```python
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **kwargs) -> list[dict]:
     ...
+
 ```
 
 **Rules:**
+
 - All parameters are keyword-only (`*` in signature)
+
 - `output_dir` — always injected by the driver; directory where simulation outputs live and where artifacts are written
+
 - `setup_root` — optional; path to `setup<Tutorial>/` folder, used when scripts reference static assets (e.g. Niederer reference Excel file)
+
 - `**kwargs` — absorbs future driver-injected context without breaking existing scripts
+
 - Return value is always a `list[dict]` — empty list `[]` when nothing to report, never `None`
 
 ### Artifact dict schema
@@ -63,12 +71,17 @@ Each item in the returned list must conform to:
     "kind":   Literal["plot", "table", "data", "report"],
     "format": Literal["html", "png", "csv", "json", "md", "dir"],
 }
+
 ```
 
 `kind` semantics:
+
 - `"plot"` — interactive or static visualization
+
 - `"table"` — structured tabular data (key metrics, summaries)
+
 - `"data"` — raw simulation output (CSV samples, VTK files)
+
 - `"report"` — human-readable narrative (markdown, PDF)
 
 ### Protocol stub
@@ -87,6 +100,7 @@ class PostprocessingProtocol(Protocol):
         setup_root: str | None = None,
         **kwargs: object,
     ) -> list[dict]: ...
+
 ```
 
 Scripts are not required to subclass it. IDEs and `mypy` will flag signature mismatches when type-checking is enabled.
@@ -118,26 +132,33 @@ class TableWriter:
         metadata: TableMetadata,
     ) -> list[dict]:               # returns artifact dicts (csv + html)
         ...
+
 ```
 
 **CSV output** — envelope injected as comment lines before the header:
 
 ```
+
 # tutorial: NiedererEtAl2012
+
 # generated_at: 2026-04-08T12:00:00Z
 # units: {"activationTime": "ms", "DX": "mm", "DT": "ms"}
+
 case_id,DX,DT,point_0_ms,point_1_ms,...
 implicit_TNNP_epi_DT001_DX01,0.1,0.01,42.3,55.1,...
+
 ```
 
 **HTML output** — styled table with metadata displayed in a header block above the data rows.
 
 Returns two artifact dicts:
+
 ```python
 [
     {"path": "NiedererEtAl2012_summary.csv", "label": label, "kind": "table", "format": "csv"},
     {"path": "NiedererEtAl2012_summary.html", "label": label, "kind": "table", "format": "html"},
 ]
+
 ```
 
 ### `plot_builder.py` (from `driverFOAMagentPreparation`, merged in)
@@ -157,10 +178,10 @@ Declarative Plotly helpers — `PlotSpec`, `TraceSpec`, `GroupShadedColors`, `bu
 `PostprocessTask` dataclass and `run_postprocess_tasks()` are unchanged from the draft. The driver:
 
 1. Loads each task module dynamically from `module_relpath`
-2. Resolves `$OUTPUT_DIR` and `$SETUP_ROOT` placeholders in `kwargs`
-3. Calls `run_postprocessing(**resolved_kwargs)`
-4. Normalizes returned artifact dicts (adds `absolute_path`, `exists`, `task_index`, `module`, `function`)
-5. Writes `plots.json` to `output_dir`
+1. Resolves `$OUTPUT_DIR` and `$SETUP_ROOT` placeholders in `kwargs`
+1. Calls `run_postprocessing(**resolved_kwargs)`
+1. Normalizes returned artifact dicts (adds `absolute_path`, `exists`, `task_index`, `module`, `function`)
+1. Writes `plots.json` to `output_dir`
 
 ### `plots.json` schema — v1.1
 
@@ -198,6 +219,7 @@ Only change from v1.0: `schema_version` bumped to `"1.1"`, `kind: "table"` is no
         }
     ]
 }
+
 ```
 
 ### `PostprocessTask` — unchanged
@@ -208,6 +230,7 @@ class PostprocessTask:
     module_relpath: str
     function_name: str = "run_postprocessing"
     kwargs: dict = field(default_factory=dict)
+
 ```
 
 ### Tutorial spec wiring pattern
@@ -222,6 +245,7 @@ tasks = [
     PostprocessTask("postProcessing/points_postProcessing.py"),
     PostprocessTask("postProcessing/table_summary.py"),   # new per tutorial
 ]
+
 ```
 
 ---
@@ -246,17 +270,20 @@ All existing plotting logic, Plotly figures, and color schemes are untouched.
 Location: `setup<Tutorial>/postProcessing/table_summary.py`
 
 ```
+
 tutorials/NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/table_summary.py
 tutorials/singleCell/setupSingleCell/postProcessing/table_summary.py
 tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/postProcessing/table_summary.py
 tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing/table_summary.py
+
 ```
 
 Each script:
+
 1. Reads its tutorial's CSV outputs from `output_dir`
-2. Extracts key metrics (tutorial-specific columns)
-3. Calls `TableWriter.write()` with a `TableMetadata` envelope
-4. Returns the artifact list from `TableWriter`
+1. Extracts key metrics (tutorial-specific columns)
+1. Calls `TableWriter.write()` with a `TableMetadata` envelope
+1. Returns the artifact list from `TableWriter`
 
 **Tutorial-specific columns:**
 

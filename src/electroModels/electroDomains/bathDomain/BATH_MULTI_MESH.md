@@ -17,12 +17,15 @@ logic so the feature can be reinstated or ported cleanly.
 ## Classes
 
 ### `BathDomain`
+
 `electroDomains/bathDomain/bathDomain.H` / `.C`
 
 Implements three interfaces simultaneously:
 
 - `electroDomainInterface` — plugs into the advance loop
+
 - `bathCouplingEndpoint` — exposes fields to `heartBathInterfaceCoupler`
+
 - `electroStateProvider` — lets the ECG solver read heart state
 
 **Multi-mesh members**
@@ -58,6 +61,7 @@ Implements three interfaces simultaneously:
 ---
 
 ### `BathECGSolver`
+
 `ecgModels/bathECGSolver.H` / `.C`
 
 Run-time selectable base class for solvers that act on a `BathDomain`.  No
@@ -70,6 +74,7 @@ Concrete implementation: `bidomainBathECGSolver` in
 ---
 
 ### `bathCouplingEndpoint` (interface)
+
 `electroCouplers/electroDomainCouplingEndpoints.H`
 
 Abstract interface still present in the header (included by
@@ -89,6 +94,7 @@ virtual or have inline defaults.
 ---
 
 ### `heartBathInterfaceCoupler`
+
 `electroCouplers/heartBathInterfaceCoupler.H` / `.C`
 
 Bridges `tissueCouplingEndpoint` (heart side) and `bathCouplingEndpoint` (bath
@@ -104,12 +110,12 @@ The coupler selects one of three transfer paths at runtime:
    the heart face that each bath interface face came from, then looks up the
    adjacent heart cell value.
 
-2. **Region-mesh patch path** — `subsetFaceMapPtr()` is null,
+1. **Region-mesh patch path** — `subsetFaceMapPtr()` is null,
    `interfacePatchIndex() >= 0`, and `baseMesh()` matches the heart mesh.
    Uses `treeDataFace` (nearest-face search) to match bath patch face centres
    to heart patch face centres and copies values.
 
-3. **Same-mesh fallback** — bath mesh and heart mesh are identical;
+1. **Same-mesh fallback** — bath mesh and heart mesh are identical;
    `phiE` primitive field is copied directly.
 
 ---
@@ -121,13 +127,19 @@ The following lines were removed from `electroModels/Make/files` and
 is added back.
 
 **Make/files**
+
 ```
+
 electroDomains/bathDomain/bathDomain.C
 ecgModels/bathECGSolver.C
 electroCouplers/heartBathInterfaceCoupler.C
+
 ```
 
 **Make/options** (`EXE_INC`)
+
 ```
+
 -IelectroDomains/bathDomain
+
 ```

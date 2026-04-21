@@ -1,18 +1,21 @@
+# Cardiac Electrophysiology OpenFOAM Agent Templates
+
 Here is the full Markdown document designed for your agent. You can save this directly as Cardiac_Sim_Templates.md.
 
 Markdown
-# Cardiac Electrophysiology OpenFOAM Agent Templates
 
 This document contains the machine-readable lookup tables and OpenFOAM dictionary templates for cardiac electrophysiology simulations.
- 
-1. Agent knowlege on the ionicModel variables.  
 
-# Dynamic Ionic Variable Extraction Protocol
+1. Agent knowlege on the ionicModel variables.
+
+## Dynamic Ionic Variable Extraction Protocol
 
 *Agent Instructions: Do not hardcode export variables. When generating an `electroProperties` file for a specific `ionicModel`, you must dynamically query the simulation environment to find the valid variables.*
 
 ## Step 1: Run the Utility Tool
+
 Before writing the `electroProperties` file, execute the built-in OpenFOAM utility via the shell:
+
 ```bash
 it reads <model> from the dictionary with ionicModel <key>
 listCellModelsVariables

@@ -11,6 +11,7 @@ src/couplingModels/
 │   └── electromechanicalSignalProvider.H
 ├── lnInclude/
 └── README.md
+
 ```
 
 ## Purpose
@@ -19,11 +20,13 @@ The main role of this folder is to define the
 `ElectromechanicalSignalProvider` contract used by:
 
 - `ionicModel`
+
 - `activeTensionModel`
 
 That interface lets one component query scalar signals such as:
 
 - `Vm`
+
 - `Cai`
 
 without depending on a concrete ionic-model implementation.
@@ -33,10 +36,11 @@ without depending on a concrete ionic-model implementation.
 This folder does not own:
 
 - Purkinje-to-myocardium electro couplers
+
 - ECG or bath couplers
+
 - staged domain-coupling runtime selection
 
 Those pieces live in:
 
 - [`../electroModels/electroCouplers/README.md`](../electroModels/electroCouplers/README.md)
-

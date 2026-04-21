@@ -9,6 +9,7 @@ Compiled as `libelectroModels`. Provides the full co-simulation infrastructure f
 ## Directory structure
 
 ```
+
 electroModels/
 ├── core/                       Framework kernel — stable abstractions
 │   ├── system/                 Domain container + dictionary-driven builder
@@ -23,6 +24,7 @@ electroModels/
 ├── ecgModels/                  Run-time-selectable ECG field solvers
 ├── conductionSystemModels/     Run-time-selectable conduction system solvers
 └── electroCouplers/            Inter-domain coupling logic and endpoint contracts
+
 ```
 
 ---
@@ -56,26 +58,41 @@ Each domain owns its mesh, fields, a run-time-selectable solver, and implements 
 The primary 3D cardiac region. This folder now owns the myocardium-domain family selection.
 
 **`myocardiumDomainInterface`**
+
 - Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
+
 - Factory: `myocardiumDomainInterface::New(...)`
+
 - Role: selects the concrete myocardium domain from the active `myocardiumSolver` contract without leaking solver branching into `core`
 
 **`MyocardiumDomain`**
+
 - Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
+
 - Owns: `autoPtr<myocardiumSolver>`, `ionicModel&`
+
 - Fields: `Vm_` (transmembrane voltage), `sourceField_` (external current injection)
+
 - On construction: detects whether the solver provides `phiE` (bidomain case) and binds it; no special-casing needed in the builder
+
 - Domain-specific capabilities (not part of the lifecycle interface): `suggestExplicitDeltaT()`, `shouldPostProcess()`, `exportStates()`, `postProcess()`, `provider()`
 
 **`EikonalMyocardiumDomain`**
+
 - Inherits: `myocardiumDomainInterface`
+
 - Owns: activation-time state (`psi`) and the 3D eikonal transport fields
+
 - Does not require an ionic model
+
 - Exposes activation time through the same tissue coupling endpoint used by the PVJ couplers
 
 **`myocardiumSolver`** — abstract diffusion solver base
+
 - `solveDiffusionExplicit(dt)` / `solveDiffusionImplicit(dt)` — spatial PDE kernel
+
 - `phiEPtr()` — returns extracellular field pointer (or null for monodomain)
+
 - `conductivityPtr()` — returns conductivity tensor if available
 
 ### `ecgDomain/`
@@ -83,12 +100,17 @@ The primary 3D cardiac region. This folder now owns the myocardium-domain family
 The body-surface region. Solves a purely passive Laplace/Poisson equation driven by the myocardial `Vm` gradient as a source term. Has no ionic model.
 
 **`ECGDomain`**
+
 - Inherits: `electroDomainInterface`
+
 - Holds: `const electroStateProvider& stateProvider_` — reference to the upstream myocardium
+
 - Owns: `autoPtr<ecgSolver>`
 
 **`bathDomain`**
+
 - Bath-side domain code is still present and compiled in this tree
+
 - It is not currently assembled by the active `core` orchestration path
 
 **`ecgSolver`** — abstract ECG solver base. Registered implementations selected by the `ecgSolver` key in `electroProperties`.
@@ -98,8 +120,11 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 The Purkinje/His-bundle network. Advances activation on a graph or 1D cable, then provides activation timing to the PVJ coupler for injection into the myocardium.
 
 **`ConductionSystemDomain`** — concrete graph-topology conduction domain
+
 - Inherits: `electroDomainInterface`, `networkCouplingEndpoint`
+
 - Owns: `autoPtr<conductionSystemSolver>`, `conductionGraph`, ionic model state, PVJ metadata
+
 - `conductionSystemSolver` — abstract 1D solver; registered implementations selected under `purkinjeNetworkModelCoeffs`
 
 ---
@@ -116,14 +141,20 @@ Concrete reaction-diffusion implementations of `myocardiumSolver`. Each register
 | `singleCellSolver` | `singleCellSolver` | ODE only: `Cm dVm/dt = −Iion + Istim` | No spatial PDE; used for ionic model validation and waveform generation |
 
 **Monodomain PDE:**
+
 ```
+
 Cm * ∂Vm/∂t + Iion = ∇·(σ∇Vm)/χ + Istim
+
 ```
 
 **Bidomain PDE system:**
+
 ```
+
 Cm * ∂Vm/∂t + Iion = ∇·(σᵢ∇Vm)/χ − ∇·(σₑ∇φₑ)/χ + Istim
 0 = ∇·(σᵢ∇Vm) + ∇·(σₑ∇φₑ)   [Laplace equation for φₑ]
+
 ```
 
 ---
@@ -150,9 +181,12 @@ Concrete implementations of `conductionSystemSolver`.
 | `EikonalSolver1D` | `eikonalSolver` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
 
 **Cable equation (per edge):**
+
 ```
+
 Cm * dVm/dt + Iion = G * d²Vm/dx²  +  Istim
 where G = conductance/length
+
 ```
 
 `Monodomain1DSolver` uses the **Hines tree-elimination algorithm** for O(n) implicit solution: forward elimination leaf → root, then back-substitution root → leaf. Requires tree topology (enforced at graph load).
@@ -176,10 +210,13 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `heartBathInterfaceCoupler.H/C` | Bath-interface coupling code still present in the tree. |
 
 **PVJ coupling equation** (`reactionDiffusionPvjCoupler`):
+
 ```
+
 I_pvj = (Vm_1D − Vm_3D) / R_pvj          [A/m²]
 tissue source += I_pvj  (volumetric, scattered over cells within pvjRadius)
 network source -= I_pvj  (bidirectional mode only)
+
 ```
 
 `PVJMapper` spatial algorithm: for each PVJ location, find all 3D cells within `pvjRadius`, gather tissue `Vm` as a volume-weighted average, then scatter coupling current back to those cells.
@@ -211,6 +248,7 @@ monodomainSolverCoeffs
         }
     }
 }
+
 ```
 
 ---
@@ -218,6 +256,7 @@ monodomainSolverCoeffs
 ## Timestep data flow
 
 ```
+
 ┌───────────────────────────────────────────────────────────────┐
 │                    electrophysicsSystem                        │
 │                                                               │
@@ -237,6 +276,7 @@ monodomainSolverCoeffs
 │                                                               │
 │  5. write() / end() on all domains and couplers               │
 └───────────────────────────────────────────────────────────────┘
+
 ```
 
 ---
@@ -255,6 +295,7 @@ monodomainSolverCoeffs
 ## Inheritance summary
 
 ```
+
 electroDomainInterface
     ├── myocardiumDomainInterface + electroStateProvider + tissueCouplingEndpoint
     │     ├── MyocardiumDomain
@@ -273,4 +314,5 @@ electroStateProvider
 ElectromechanicalSignalProvider  (from couplingModels/)
     ← implemented by: ionicModel
     ← exposed by:     electroModel::provider() → myocardium → ionicModel
+
 ```

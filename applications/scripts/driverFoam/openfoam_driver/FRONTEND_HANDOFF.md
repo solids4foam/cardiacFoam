@@ -16,10 +16,15 @@ implementation.
 The driver is now prepared to support a local GUI through:
 
 - entry discovery and execution
+
 - generic dictionary override support
+
 - source-backed editable dict-entry metadata
+
 - machine-readable entry introspection
+
 - machine-readable launch planning
+
 - machine-readable run-state manifests
 
 The frontend itself has not been implemented yet.
@@ -32,13 +37,17 @@ Previously the driver mainly supported a fixed set of curated tutorial specs.
 It now also supports:
 
 - registered tutorials
+
 - `genericCase` and `randomCase` aliases
+
 - workflow templates and workflow reference cases
+
 - any existing case folder discoverable under `tutorials/`
 
 Main files:
 
 - `core/runtime/registry.py`
+
 - `specs/tutorials/generic_case.py`
 
 This means the driver no longer depends only on a hardcoded tutorial registry.
@@ -56,13 +65,17 @@ Main file:
 Key points:
 
 - supports dotted-path overrides
+
 - supports `$ELECTRO_MODEL_COEFFS` as a dynamic scope token
+
 - works for both curated specs and generic cases
+
 - supports nested paths such as active tension and ECG blocks
 
 Important limitation:
 
 - overrides update existing entries only
+
 - they do not create new dictionary keys automatically
 
 ### 3. Curated specs migrated to the generic override path
@@ -73,8 +86,11 @@ as generic cases.
 Main files:
 
 - `specs/tutorials/single_cell.py`
+
 - `specs/tutorials/niederer_2012.py`
+
 - `specs/tutorials/manufactured_fda.py`
+
 - `specs/tutorials/restitution_curves.py`
 
 This matters because the frontend can now treat curated and generic runs
@@ -85,6 +101,7 @@ through the same dict-editing model.
 A catalog of repository-known editable entries was added for:
 
 - `physicsProperties`
+
 - `electroProperties`
 
 Main file:
@@ -97,25 +114,41 @@ intended to drive UI field generation and validation hints.
 The catalog currently includes:
 
 - `physicsProperties.type`
+
 - `electroProperties.myocardiumSolver`
+
 - common `<solver>Coeffs` entries
+
 - single-cell stimulus entries
+
 - monodomain external-stimulus entries
+
 - eikonal-diffusion entries
+
 - ECG entries
+
 - active-tension entries
+
 - common ODE-solver pass-through entries
 
 Each entry now exposes frontend-relevant metadata:
 
 - `driver_path`
+
 - `description`
+
 - `source_refs`
+
 - `notes`
+
 - `value_kind`
+
 - `ui_control`
+
 - `enum_values`
+
 - `examples`
+
 - `dynamic_path`
 
 This is the current backend source of truth for dict-editing UI hints.
@@ -132,19 +165,29 @@ It is exposed through:
 
 ```bash
 python3 -m openfoam_driver describe --entry <name-or-path> [--entry-kind <kind>] [--config overrides.json]
+
 ```
 
 The `describe` payload currently includes:
 
 - entry resolution details
+
 - entry catalog and workflow catalog data
+
 - registered tutorials
+
 - discovered case directories
+
 - `make_spec(...)` parameter schema and defaults
+
 - resolved case/setup/output paths
+
 - planned cases
+
 - grouped dict-entry metadata
+
 - GUI route and view-model suggestions
+
 - launch metadata for `sim`, `post`, and `all`
 
 This is the main API a frontend should use to build its initial screens, including the first-step choice between a tutorial/example and a real workflow case.
@@ -161,16 +204,23 @@ It provides a machine-readable description of how the driver would be launched
 for each action:
 
 - `sim`
+
 - `post`
+
 - `all`
 
 Each launch item provides:
 
 - exact command
+
 - command display string
+
 - expected `run_manifest.json` path
+
 - expected `plots.json` path when relevant
+
 - resolved case/setup/output paths
+
 - whether post-processing is available
 
 This allows a local app to launch the backend without re-implementing registry
@@ -188,37 +238,65 @@ Main file:
 The manifest now includes:
 
 - `schema_version`
+
 - `run_id`
+
 - `requested_action`
+
 - `entry`
+
 - `entry_kind`
+
 - `entry_path`
+
 - `source_type`
+
 - `workflow_family`
+
 - `status`
+
 - `postprocess_status`
+
 - `current_case_id`
+
 - `started_at_utc`
+
 - `updated_at_utc`
+
 - `finished_at_utc`
+
 - `total_cases`
+
 - `planned_cases`
+
 - `completed_cases`
+
 - `failed_cases`
+
 - `error`
+
 - `plots_manifest_path`
+
 - `results`
 
 Each per-case result currently includes:
 
 - `case_id`
+
 - `status`
+
 - `duration_s`
+
 - `params`
+
 - `error`
+
 - `index`
+
 - `total_cases`
+
 - `started_at_utc`
+
 - `finished_at_utc`
 
 This is now the main run-state contract a frontend should poll.
@@ -249,10 +327,15 @@ first screen structure and the initial data/view-model boundaries.
 It currently suggests routes for:
 
 - tutorial catalog
+
 - tutorial overview
+
 - tutorial configuration
+
 - planned cases
+
 - runs index
+
 - run detail
 
 ## Current Code Architecture
@@ -266,23 +349,32 @@ contract generation.
 Files:
 
 - `core/runtime/models.py`
+
 - `core/runtime/registry.py`
+
 - `core/runtime/engine.py`
 
 Responsibilities:
 
 - `models.py`
+
   Defines `TutorialSpec` and `CaseConfig`, which are the core execution
   contracts.
+
 - `registry.py`
+
   Resolves tutorial names, aliases, and direct case-folder matches.
+
 - `engine.py`
+
   Executes simulations and post-processing and writes run manifests.
 
 Assessment:
 
 - This is the correct abstraction boundary for execution.
+
 - `TutorialSpec` remains the main unit of orchestration.
+
 - The frontend should not need to interact with this layer directly.
 
 ### B. Spec layer
@@ -290,19 +382,25 @@ Assessment:
 Files:
 
 - `specs/tutorials/*.py`
+
 - `specs/common.py`
 
 Responsibilities:
 
 - each tutorial builds a `TutorialSpec`
+
 - `common.py` now contains the shared dict override logic and path helpers
+
 - curated specs and generic specs both use the same mutator model
 
 Assessment:
 
 - This layer is much cleaner than before because dict edits are no longer
+
   hardcoded in tutorial-specific helper APIs.
+
 - The generic spec is especially important for future GUI flexibility because
+
   it allows running arbitrary case folders.
 
 ### C. Introspection and GUI-contract layer
@@ -310,24 +408,35 @@ Assessment:
 Files:
 
 - `dict_entries.py`
+
 - `introspection.py`
+
 - `launch.py`
+
 - `gui_schema.py`
+
 - `GUI_CONTRACT.md`
 
 Responsibilities:
 
 - expose editable dict metadata
+
 - expose tutorial parameter schema
+
 - expose launch plans
+
 - expose route/view-model planning
 
 Assessment:
 
 - This is the key GUI-preparation layer.
+
 - It converts internal Python objects into JSON-friendly, machine-readable
+
   payloads.
+
 - It gives the frontend a stable read model without forcing it to understand
+
   spec internals.
 
 ### D. CLI layer
@@ -335,19 +444,25 @@ Assessment:
 Files:
 
 - `cli.py`
+
 - `__main__.py`
 
 Responsibilities:
 
 - parse CLI actions
+
 - load config overrides
+
 - call `describe`
+
 - call the engine for `sim`, `post`, and `all`
 
 Assessment:
 
 - This is still thin enough, which is good.
+
 - For a local app, this can either remain the launch target or be wrapped by a
+
   thin desktop-backend service.
 
 ## Why This Is Good GUI Preparation
@@ -360,12 +475,19 @@ The preparation is useful for the GUI because it now answers these questions in
 a stable way:
 
 - What tutorials or case folders are runnable?
+
 - What inputs are configurable at the tutorial level?
+
 - What dict entries are editable?
+
 - What kind of values do those entries expect?
+
 - What cases will the current configuration expand into?
+
 - What command will actually run?
+
 - Where should the frontend watch for run progress?
+
 - What artifacts should be visible after completion?
 
 That is enough to start a first useful GUI without inventing a second backend
@@ -410,17 +532,21 @@ These are the main areas that could still be improved.
 Current status:
 
 - run state is file-backed through `run_manifest.json`
+
 - logs are still stdout/stderr based
 
 Impact:
 
 - a frontend can show progress and final state
+
 - it cannot yet consume structured incremental logs without wrapping process IO
 
 Suggested improvement:
 
 - add a line-oriented log file or event file per run
+
 - optionally add structured events such as `case_started`, `case_finished`,
+
   `postprocess_started`, `postprocess_failed`
 
 ### 2. Validation could be stricter
@@ -428,18 +554,23 @@ Suggested improvement:
 Current status:
 
 - the dict override path model is generic
+
 - the dict-entry catalog contains typing hints
+
 - there is still limited hard validation before execution
 
 Impact:
 
 - the frontend can guide the user, but the backend may still only fail once a
+
   run is attempted
 
 Suggested improvement:
 
 - add preflight validation against known dict paths
+
 - validate required config combinations earlier
+
 - report field-level errors in a machine-readable format
 
 ### 3. Run discovery is still implicit
@@ -447,16 +578,19 @@ Suggested improvement:
 Current status:
 
 - the frontend can poll a manifest path once it already launched a run
+
 - there is no dedicated backend API for enumerating prior runs
 
 Impact:
 
 - a local app can monitor active runs it launched
+
 - showing a robust historical run list would need additional directory scanning
 
 Suggested improvement:
 
 - add a `list_runs(...)` helper that discovers manifests under known output
+
   directories
 
 ### 4. Dict catalog is intentionally incomplete for some pass-through solver keys
@@ -464,12 +598,15 @@ Suggested improvement:
 Current status:
 
 - common ODE-solver pass-through keys are included
+
 - the backend intentionally documents that additional keys may exist
 
 Impact:
 
 - frontend coverage is strong for common paths
+
 - it is not a mathematically complete schema for every possible OpenFOAM
+
   pass-through key
 
 Suggested improvement:
@@ -481,17 +618,21 @@ Suggested improvement:
 Current status:
 
 - `launch.py` gives the exact CLI command
+
 - there is not yet a dedicated long-lived local service API
 
 Impact:
 
 - this is fine for a first local app
+
 - a more mature desktop app might want a backend process API rather than only
+
   shelling out to `python -m openfoam_driver`
 
 Suggested improvement:
 
 - if needed later, add a thin backend service layer instead of changing the
+
   execution engine itself
 
 ## Recommended Next Step For The Frontend
@@ -508,102 +649,131 @@ The first frontend should be a thin client over the current backend contract.
 Show:
 
 - registered tutorials
+
 - discovered case folders
+
 - generic-case entrypoint
 
 Data source:
 
 - `describe_tutorial(...).registered_tutorials`
+
 - `available_tutorials`
+
 - `case_directories`
 
-2. Tutorial overview
+1. Tutorial overview
 
 Show:
 
 - requested tutorial
+
 - resolution mode
+
 - resolved name
+
 - `case_root`
+
 - `setup_root`
+
 - `output_dir`
+
 - metadata summary
 
 Data source:
 
 - `describe_tutorial(...)`
 
-3. Configuration screen
+1. Configuration screen
 
 Show:
 
 - `make_spec.parameters`
+
 - common override keys
+
 - grouped dict-entry editors
 
 Data source:
 
 - `make_spec.parameters`
+
 - `common_override_keys`
+
 - `dict_entries`
 
 Notes:
 
 - render fields from `value_kind` and `ui_control`
+
 - keep a raw JSON override view as an expert fallback
 
-4. Planned cases screen
+1. Planned cases screen
 
 Show:
 
 - case count
+
 - expanded case list
+
 - per-case parameter payload
 
 Data source:
 
 - `spec.cases`
 
-5. Run launch controls
+1. Run launch controls
 
 Show:
 
 - `sim`
+
 - `post`
+
 - `all`
+
 - dry-run toggle where valid
+
 - continue-on-error toggle where valid
+
 - exact launch command
 
 Data source:
 
 - `launch`
 
-6. Run monitor
+1. Run monitor
 
 Show:
 
 - current status
+
 - current case id
+
 - counts for planned/completed/failed cases
+
 - per-case result list
+
 - error state
 
 Data source:
 
 - `run_manifest.json`
 
-7. Results/artifacts view
+1. Results/artifacts view
 
 Show:
 
 - `output_dir`
+
 - `plots_manifest_path`
+
 - success/failure summary
 
 Data source:
 
 - `run_manifest.json`
+
 - `plots.json` when present
 
 ## Recommended Frontend Data Flow
@@ -611,16 +781,16 @@ Data source:
 For a first implementation:
 
 1. On entry selection, call `describe`.
-2. Build forms from `make_spec.parameters` and `dict_entries`.
-3. Persist current UI state as JSON compatible with `--config`.
-4. Use `describe` again after config changes to refresh:
+1. Build forms from `make_spec.parameters` and `dict_entries`.
+1. Persist current UI state as JSON compatible with `--config`.
+1. Use `describe` again after config changes to refresh:
    - resolved paths
    - planned cases
    - launch metadata
-5. Launch the driver using the returned launch command or an equivalent local
+1. Launch the driver using the returned launch command or an equivalent local
    backend wrapper.
-6. Poll the returned manifest path.
-7. Show artifacts once the run reaches a terminal state.
+1. Poll the returned manifest path.
+1. Show artifacts once the run reaches a terminal state.
 
 This is enough for a useful local app without inventing a second orchestration
 layer.
@@ -630,20 +800,30 @@ layer.
 The frontend should avoid re-implementing backend logic for:
 
 - tutorial resolution
+
 - case discovery
+
 - path derivation
+
 - launch command construction
+
 - dict path semantics
+
 - run progress inference
 
 Instead, it should treat the current backend as the source of truth and focus
 on:
 
 - visibility
+
 - form generation
+
 - input persistence
+
 - process launch
+
 - manifest polling
+
 - result presentation
 
 ## Suggested First Frontend Milestone
@@ -651,11 +831,17 @@ on:
 The first milestone should be intentionally modest:
 
 - select a tutorial or case folder
+
 - edit top-level parameters
+
 - edit dict overrides
+
 - preview cases
+
 - launch `sim`
+
 - poll `run_manifest.json`
+
 - show results and errors
 
 That would already provide real value and would validate whether the current
@@ -666,15 +852,20 @@ backend contract is sufficient before more advanced UI work.
 The backend preparation work is covered by driver tests, including:
 
 - introspection tests
+
 - dict-entry catalog tests
+
 - GUI-schema tests
+
 - launch description tests
+
 - run manifest tests
 
 At the time of writing, the driver-side test suite passes with:
 
 ```bash
 PYTHONPATH=applications/scripts/driverFoam python3 -m unittest discover applications/scripts/driverFoam/openfoam_driver/tests
+
 ```
 
 ## Final Assessment

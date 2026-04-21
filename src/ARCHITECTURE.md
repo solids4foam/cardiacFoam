@@ -13,12 +13,14 @@ src/
 ├── activeTensionModels/  Runtime-selectable active-tension ODE models
 ├── couplingModels/       Shared electromechanical signal interfaces
 └── electroModels/        Spatial electrophysiology domains, solvers, couplers
+
 ```
 
 Build order from `src/Allwmake`:
 
 ```text
 genericWriter → ionicModels → verificationModels → activeTensionModels → electroModels
+
 ```
 
 ## Libraries
@@ -28,17 +30,25 @@ genericWriter → ionicModels → verificationModels → activeTensionModels →
 Shared helpers for:
 
 - ionic-model exports and trace writing
+
 - ECG and Purkinje time-series output
+
 - active-tension output support
+
 - single-cell and monodomain stimulus parsing/evaluation
 
 Main files:
 
 - `ionicModelIO`
+
 - `ionicVariableCompatibility`
+
 - `stimulusIO`
+
 - `activeTensionIO`
+
 - `ecgModelIO`
+
 - `purkinjeModelIO`
 
 ### `ionicModels` — `libionicModels`
@@ -50,7 +60,9 @@ Runtime-selectable cellular electrophysiology models. The base class is
 This library is used by:
 
 - `MyocardiumDomain` reaction-diffusion workflows
+
 - `ConductionSystemDomain` graph-based workflows
+
 - `singleCellSolver`
 
 The `ionicModel/` subfolder now contains both the classic base/factory code and
@@ -63,8 +75,11 @@ Verification infrastructure for spatial electrophysiology and ECG workflows.
 Main layers:
 
 - `electroVerification/` — base `electroVerificationModel`
+
 - `monodomainVerification/`
+
 - `bidomainVerification/`
+
 - `ecgVerification/` — base `ecgVerificationModel` and ECG-specific verifiers
 
 These are not ionic models. They are separate runtime-selected verifier
@@ -78,6 +93,7 @@ Runtime-selectable active-tension models driven by an upstream
 Current concrete models:
 
 - `GoktepeKuhl`
+
 - `NashPanfilov`
 
 The implementation is integration-point based and scalar-state based. It is not
@@ -100,9 +116,13 @@ The staged Purkinje, ECG, and bath-style electro couplers live under
 The main spatial electrophysiology stack. It contains:
 
 - top-level orchestration in `core/`
+
 - domain state owners in `electroDomains/`
+
 - numerical solver kernels in `myocardiumModels/`, `conductionSystemModels/`,
+
   and `ecgModels/`
+
 - staged inter-domain couplers in `electroCouplers/`
 
 Current top-level electro entry is selected from `myocardiumSolver` in
@@ -110,7 +130,9 @@ Current top-level electro entry is selected from `myocardiumSolver` in
 `electrophysiologyModel`, registered under:
 
 - `monodomainSolver`
+
 - `bidomainSolver`
+
 - `eikonalSolver`
 
 `singleCellSolver` is not a separate `src/` library. It is compiled inside
@@ -121,30 +143,29 @@ Current top-level electro entry is selected from `myocardiumSolver` in
 ### Understand the current electro runtime path
 
 1. `src/electroModels/README.md`
-2. `src/electroModels/core/README.md`
-3. `src/electroModels/core/ARCHITECTURE.md`
+1. `src/electroModels/core/README.md`
+1. `src/electroModels/core/ARCHITECTURE.md`
 
 ### Trace Purkinje-to-myocardium coupling
 
 1. `src/electroModels/electroDomains/README.md`
-2. `src/electroModels/conductionSystemModels/README.md`
-3. `src/electroModels/electroCouplers/README.md`
+1. `src/electroModels/conductionSystemModels/README.md`
+1. `src/electroModels/electroCouplers/README.md`
 
 ### Add or debug an ionic model
 
 1. `src/ionicModels/README.md`
-2. `src/ionicModels/IONIC_MODEL_ARCHITECTURE.md`
+1. `src/ionicModels/IONIC_MODEL_ARCHITECTURE.md`
 
 ### Understand verification hooks
 
 1. `src/verificationModels/README.md`
-2. `src/verificationModels/VERIFICATION_MODELS_ARCHITECTURE.md`
+1. `src/verificationModels/VERIFICATION_MODELS_ARCHITECTURE.md`
 
 ### Get the full electrophysiology picture
 
 1. `src/electroModels/README.md`
-2. `src/electroModels/ARCHITECTURE.md`
-3. `src/electroModels/core/README.md`
-4. `src/electroModels/core/ARCHITECTURE.md`
-5. folder-level READMEs for the subsystem you are changing
-
+1. `src/electroModels/ARCHITECTURE.md`
+1. `src/electroModels/core/README.md`
+1. `src/electroModels/core/ARCHITECTURE.md`
+1. folder-level READMEs for the subsystem you are changing
