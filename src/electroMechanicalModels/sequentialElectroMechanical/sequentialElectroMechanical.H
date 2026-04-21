@@ -34,6 +34,7 @@ SourceFiles
 #define sequentialElectroMechanical_H
 
 #include "electroMechanicalModel.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -81,7 +82,7 @@ class sequentialElectroMechanical
 public:
 
     //- Runtime type information
-    TypeName("sequentialElectroMechanical");
+    OverrideTypeName("sequentialElectroMechanical");
 
 
     // Constructors
@@ -105,7 +106,7 @@ public:
         // Edit
 
             //- Evolve the electro-mechanical model
-            virtual bool evolve();
+            virtual bool evolve() override;
 };
 
 

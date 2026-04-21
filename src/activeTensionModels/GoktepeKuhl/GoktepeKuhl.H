@@ -27,6 +27,7 @@ License
 #include "scalarField.H"
 #include "dictionary.H"
 #include "GoktepeKuhl_2004Names.H"
+#include "overrideTypeName.H"
 
 namespace Foam
 {
@@ -108,7 +109,7 @@ protected:
 
 public:
 
-    TypeName("GoktepeKuhl");
+    OverrideTypeName("GoktepeKuhl");
 
     GoktepeKuhl(const dictionary& dict, const label num);
 
