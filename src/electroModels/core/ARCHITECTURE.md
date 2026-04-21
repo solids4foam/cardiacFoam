@@ -32,10 +32,12 @@ Abstract lifecycle contract that all electro domains implement. Stored as
 Domain-agnostic: works with volumetric meshes, 1D graphs, or abstract solvers.
 
 ```
+
 electroDomainInterface
 ├─ MyocardiumDomain  (myocardiumDomain/)
 ├─ ConductionSystemDomain  (conductionSystemDomain/)
 └─ ECGDomain  (ecgDomain/)
+
 ```
 
 ---
@@ -56,11 +58,13 @@ Specialised contract for 3D FVM-based domains. A 1D graph solver implements
 | `const dimensionedScalar& Cm()` | Membrane capacitance [F/m²] |
 
 ```
+
 electroVolumeFieldDomain
 ├─ myocardiumSolver (abstract)
 │  ├─ monodomainSolver
 │  └─ bidomainSolver
 └─ myocardiumDomain (concrete)
+
 ```
 
 ---
@@ -81,9 +85,11 @@ Read-only, pointer-based state interface for one-way downstream coupling
 | `subsetFaceMapPtr()` / `subsetCellMapPtr()` | Non-null only for submesh strategy |
 
 Consumer pattern:
+
 ```cpp
 const auto* VmPtr = stateProvider.VmPtr();
 if (VmPtr) { compute_ecg_field(*VmPtr); }
+
 ```
 
 Breaks cyclic dependencies: ECG reads state without a callback to myocardium.
@@ -109,9 +115,13 @@ OpenFOAM `physicsModel` subclass. The public entry point to the entire
 electrophysiology system.
 
 - Inherits: `physicsModel`, `IOdictionary`, `electroStateProvider`
+
 - Reads `constant/electroProperties`
+
 - Owns the assembled `electrophysicsSystem`
+
 - Exposes `evolve(timeValue, deltaT)` called by the main solver each timestep
+
 - Collects per-phase performance timings
 
 ---
@@ -121,10 +131,15 @@ electrophysiology system.
 Domain container and advance coordinator.
 
 - `autoPtr<myocardiumDomainInterface> myocardium_` — primary domain
+
 - `autoPtr<electrophysicsAdvanceScheme> advanceScheme_`
+
 - `PtrList<electroDomainInterface> conductionDomains_`
+
 - `PtrList<ElectroDomainCoupler> conductionCouplingModels_`
+
 - `PtrList<electroDomainInterface> ecgDomains_`
+
 - `PtrList<ElectroDomainCoupler> ecgCouplingModels_`
 
 The actual timestep sequence is delegated to `advanceScheme_`; this container
@@ -141,6 +156,7 @@ runtime configuration:
 // Instead of: if (type == "monodomain") { new monodomainSolver... }
 auto myocardium = myocardiumDomainInterface::New(mesh, electroProperties);
 system.setMyocardium(myocardium);  // works with any registered type
+
 ```
 
 Builder functions:
@@ -155,8 +171,11 @@ Builder functions:
 | `configureECGCouplings(...)` | Instantiate myocardium-ECG couplers |
 
 Current rules:
+
 - `conductionNetworkDomains` and `domainCouplings` are optional
+
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
+
 - The old single-domain fallback and `primaryDomain` field were removed
 
 ---
@@ -205,6 +224,7 @@ system.prepareMyocardiumCouplings(t0, dt);
 myocardium.advance(t0, dt, pimplePtr);
 system.prepareECGCouplings(t0, dt);
 system.advanceECGDomains(t0, dt);
+
 ```
 
 ### `advanceSchemes/pimpleStaggeredElectrophysicsAdvanceScheme`
@@ -223,6 +243,7 @@ while (pimplePtr->loop()) {
     system.prepareECGCouplings(t0, dt);
     system.advanceECGDomains(t0, dt);
 }
+
 ```
 
 ---
@@ -241,6 +262,7 @@ TypeName("myDerivedClass");
 // This project:
 OverrideTypeName("myDerivedClass");
 // expands to: virtual const word& type() const override { return typeName; }
+
 ```
 
 Used by all polymorphic solver classes in `electroModels`.
@@ -256,6 +278,7 @@ dimensionally consistent.
 extern const dimensionSet dimVoltage;
 // = [1 2 -3 0 0 -1 0]  (Volts, SI)
 // = dimMass * dimArea / (pow3(dimTime) * dimCurrent)
+
 ```
 
 ---
@@ -276,6 +299,7 @@ domainCouplings
         rPvj                    500.0;
     }
 }
+
 ```
 
 ### Eikonal PVJ
@@ -291,6 +315,7 @@ domainCouplings
         pvjRadius               6e-4;
     }
 }
+
 ```
 
 `bidirectional` is parsed but explicitly rejected as in development for
@@ -303,8 +328,11 @@ domainCouplings
 The intended rule when extending `core`:
 
 - `core` owns orchestration only
+
 - domain layers own domain-family selection and state
+
 - solver folders own numerical kernels
+
 - coupler folders own exchange laws
 
 New solver-family branching should go into a domain-layer factory, not into the
@@ -315,6 +343,7 @@ builder.
 ## Architecture diagram
 
 ```
+
 ┌─────────────────────────────────────────────────────────────┐
 │ electroModel (top-level facade)                             │
 │  • Reads constant/electroProperties                         │
@@ -341,11 +370,13 @@ builder.
 │ • staggered (weak)           │ • configureCouplers()        │
 │ • pimpleStaggered (strong)   │                              │
 └──────────────────────────────┴──────────────────────────────┘
+
 ```
 
 ## File dependency overview
 
 ```
+
 electroModel.H
   ├─ electroStateProvider.H
   ├─ system/electrophysicsSystem.H
@@ -362,6 +393,7 @@ electroModel.H
      └─ dimVoltage.H
 
 overrideTypeName.H  (used by all polymorphic solver classes)
+
 ```
 
 ---

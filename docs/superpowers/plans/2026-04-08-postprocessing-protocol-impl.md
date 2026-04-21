@@ -41,7 +41,9 @@ All paths are relative to `cardiacFoamsacred/applications/scripts/driverFoam/` u
 ## Task 1: Copy `plot_builder.py` and update `__init__.py`
 
 **Files:**
+
 - Create: `openfoam_driver/postprocessing/plot_builder.py`
+
 - Modify: `openfoam_driver/postprocessing/__init__.py`
 
 - [ ] **Step 1: Copy `plot_builder.py` from `driverFOAMagentPreparation`**
@@ -51,14 +53,18 @@ Copy the file verbatim:
 ```bash
 cp /Users/simaocastro/cardiacFoamEPsacred/driverFOAMagentPreparation/openfoam_driver/postprocessing/plot_builder.py \
    /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/applications/scripts/driverFoam/openfoam_driver/postprocessing/plot_builder.py
+
 ```
 
 - [ ] **Step 2: Verify import smoke test**
 
 Run from `cardiacFoamsacred/applications/scripts/driverFoam/`:
+
 ```bash
 python3 -c "from openfoam_driver.postprocessing.plot_builder import GroupShadedColors, PlotSpec, TraceSpec, build_line_traces, load_csv_folder, make_toggle_button, write_plot; print('OK')"
+
 ```
+
 Expected: `OK`
 
 - [ ] **Step 3: Update `__init__.py` to export `plot_builder` symbols and add `PostprocessingProtocol`**
@@ -90,7 +96,6 @@ from .style import (
     write_plotly_html,
 )
 
-
 @runtime_checkable
 class PostprocessingProtocol(Protocol):
     """Typing stub for tutorial post-processing entry points.
@@ -108,7 +113,6 @@ class PostprocessingProtocol(Protocol):
         setup_root: str | None = None,
         **kwargs: object,
     ) -> list[dict]: ...
-
 
 __all__ = [
     # contract
@@ -132,20 +136,25 @@ __all__ = [
     "style_matplotlib_axes",
     "write_plotly_html",
 ]
+
 ```
 
 - [ ] **Step 4: Verify `PostprocessingProtocol` is importable**
 
 ```bash
 python3 -c "from openfoam_driver.postprocessing import PostprocessingProtocol; print('OK')"
+
 ```
+
 Expected: `OK`
 
 - [ ] **Step 5: Run existing tests to confirm nothing broke**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 5 tests` … `OK`
 
 - [ ] **Step 6: Commit**
@@ -153,6 +162,7 @@ Expected: `Ran 5 tests` … `OK`
 ```bash
 git add openfoam_driver/postprocessing/plot_builder.py openfoam_driver/postprocessing/__init__.py
 git commit -m "feat: add plot_builder and PostprocessingProtocol to postprocessing package"
+
 ```
 
 ---
@@ -160,41 +170,51 @@ git commit -m "feat: add plot_builder and PostprocessingProtocol to postprocessi
 ## Task 2: Bump `schema_version` to "1.1" in `driver.py`
 
 **Files:**
+
 - Modify: `openfoam_driver/postprocessing/driver.py` (line 117)
+
 - Modify: `openfoam_driver/tests/test_postprocessing_driver.py` (line 53)
 
 - [ ] **Step 1: Update the failing test first**
 
 In `openfoam_driver/tests/test_postprocessing_driver.py`, change line 53:
+
 ```python
 # Before
 self.assertEqual(manifest["schema_version"], "1.0")
 # After
 self.assertEqual(manifest["schema_version"], "1.1")
+
 ```
 
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_writes_schema_version_and_artifacts -v 2>&1 | tail -5
+
 ```
+
 Expected: `FAIL` — `'1.0' != '1.1'`
 
 - [ ] **Step 3: Bump schema_version in `driver.py`**
 
 In `openfoam_driver/postprocessing/driver.py`, change line 117:
+
 ```python
 # Before
         "schema_version": "1.0",
 # After
         "schema_version": "1.1",
+
 ```
 
 - [ ] **Step 4: Run all postprocessing tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 5 tests` … `OK`
 
 - [ ] **Step 5: Commit**
@@ -202,6 +222,7 @@ Expected: `Ran 5 tests` … `OK`
 ```bash
 git add openfoam_driver/postprocessing/driver.py openfoam_driver/tests/test_postprocessing_driver.py
 git commit -m "feat: bump plots.json schema_version to 1.1"
+
 ```
 
 ---
@@ -209,7 +230,9 @@ git commit -m "feat: bump plots.json schema_version to 1.1"
 ## Task 3: Write `table_writer.py` with tests
 
 **Files:**
+
 - Create: `openfoam_driver/postprocessing/table_writer.py`
+
 - Create: `openfoam_driver/tests/test_table_writer.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -226,7 +249,6 @@ from datetime import datetime
 from pathlib import Path
 
 from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
-
 
 class TestTableWriter(unittest.TestCase):
     def test_writes_csv_with_envelope(self) -> None:
@@ -309,16 +331,18 @@ class TestTableWriter(unittest.TestCase):
                 self.assertFalse(Path(a["path"]).is_absolute())
                 self.assertIn("stem", a["path"])
 
-
 if __name__ == "__main__":
     unittest.main()
+
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_table_writer -v 2>&1 | tail -10
+
 ```
+
 Expected: `ImportError` — `table_writer` does not exist yet
 
 - [ ] **Step 3: Implement `table_writer.py`**
@@ -334,7 +358,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 @dataclass
 class TableMetadata:
@@ -358,7 +381,6 @@ class TableMetadata:
     def __post_init__(self) -> None:
         if not self.generated_at:
             self.generated_at = datetime.now(timezone.utc).isoformat()
-
 
 class TableWriter:
     """Write tutorial summary tables as CSV (with comment envelope) and HTML."""
@@ -458,20 +480,25 @@ class TableWriter:
                 "format": "html",
             },
         ]
+
 ```
 
 - [ ] **Step 4: Run tests to confirm they pass**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_table_writer -v 2>&1 | tail -10
+
 ```
+
 Expected: `Ran 7 tests` … `OK`
 
 - [ ] **Step 5: Run all tests to confirm no regressions**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver openfoam_driver.tests.test_table_writer -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 12 tests` … `OK`
 
 - [ ] **Step 6: Commit**
@@ -479,6 +506,7 @@ Expected: `Ran 12 tests` … `OK`
 ```bash
 git add openfoam_driver/postprocessing/table_writer.py openfoam_driver/tests/test_table_writer.py
 git commit -m "feat: add TableWriter utility for standard tabular output with metadata envelope"
+
 ```
 
 ---
@@ -486,23 +514,28 @@ git commit -m "feat: add TableWriter utility for standard tabular output with me
 ## Task 4: Fix `post_processing_manufactured.py` type annotation
 
 **Files:**
+
 - Modify: `tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/post_processing_manufactured.py` (line 2745)
 
 - [ ] **Step 1: Fix the return type annotation**
 
 In `post_processing_manufactured.py` at line 2745, change:
+
 ```python
 # Before
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
 # After
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> list[dict]:
+
 ```
 
 - [ ] **Step 2: Run existing postprocessing driver tests (uses this script)**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 5 tests` … `OK`
 
 - [ ] **Step 3: Commit**
@@ -510,6 +543,7 @@ Expected: `Ran 5 tests` … `OK`
 ```bash
 git add ../../tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/post_processing_manufactured.py
 git commit -m "fix: correct run_postprocessing return type annotation in manufactured FDA script"
+
 ```
 
 ---
@@ -517,6 +551,7 @@ git commit -m "fix: correct run_postprocessing return type annotation in manufac
 ## Task 5: Fix `postProcessing_restCurves.py` to return artifacts
 
 **Files:**
+
 - Modify: `tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing_restCurves.py` (lines 509–537)
 
 - [ ] **Step 1: Write a failing test in `test_postprocessing_driver.py`**
@@ -549,13 +584,16 @@ def test_restitution_run_postprocessing_returns_list(self) -> None:
         list,
         "run_postprocessing must annotate return as list[dict], not None",
     )
+
 ```
 
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_restitution_run_postprocessing_returns_list -v 2>&1 | tail -5
+
 ```
+
 Expected: `FAIL`
 
 - [ ] **Step 3: Update `run_postprocessing` in `postProcessing_restCurves.py`**
@@ -611,13 +649,16 @@ def run_postprocessing(
             })
 
     return artifacts
+
 ```
 
 - [ ] **Step 4: Run all postprocessing tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 6 tests` … `OK`
 
 - [ ] **Step 5: Commit**
@@ -626,6 +667,7 @@ Expected: `Ran 6 tests` … `OK`
 git add ../../tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing_restCurves.py \
         openfoam_driver/tests/test_postprocessing_driver.py
 git commit -m "fix: make run_postprocessing in restCurves return artifacts list"
+
 ```
 
 ---
@@ -633,6 +675,7 @@ git commit -m "fix: make run_postprocessing in restCurves return artifacts list"
 ## Task 6: Write `NiedererEtAl2012/postProcessing/table_summary.py`
 
 **Files:**
+
 - Create: `tutorials/NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/table_summary.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -669,13 +712,16 @@ def test_niederer_table_summary_produces_csv_and_html(self) -> None:
         self.assertIn("# tutorial: NiedererEtAl2012", csv_text)
         self.assertIn("case_id", csv_text)
         self.assertIn("implicit_TNNP_epicardialCells", csv_text)
+
 ```
 
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_niederer_table_summary_produces_csv_and_html -v 2>&1 | tail -5
+
 ```
+
 Expected: `ERROR` — module `table_summary` not found
 
 - [ ] **Step 3: Create the `postProcessing/` subfolder and write `table_summary.py`**
@@ -702,7 +748,6 @@ if str(TUTORIALS_ROOT) not in sys.path:
 from openfoam_driver.postprocessing.plotting_common import extract_dx_dt
 from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
 
-
 def _parse_filename(filename: str) -> tuple[str, float, float, str]:
     """Return (case_id, dx_mm, dt_ms, solver) from a points CSV filename.
 
@@ -713,7 +758,6 @@ def _parse_filename(filename: str) -> tuple[str, float, float, str]:
     case_id = stem.split("_points_DT")[0]
     solver = case_id.split("_")[0]
     return case_id, round(dx, 4), round(dt, 5), solver
-
 
 def build_summary_rows(output_dir: Path) -> list[dict]:
     files = sorted(output_dir.glob("*points_DT*_DX*.csv"))
@@ -738,7 +782,6 @@ def build_summary_rows(output_dir: Path) -> list[dict]:
 
     return rows
 
-
 def run_postprocessing(
     *, output_dir: str, setup_root: str | None = None, **_: object
 ) -> list[dict]:
@@ -758,25 +801,29 @@ def run_postprocessing(
         meta,
     )
 
-
 if __name__ == "__main__":
     folder = Path(__file__).resolve().parents[1] / "NiedererFoam"
     print(f"[table_summary] Default folder = {folder}")
     run_postprocessing(output_dir=str(folder))
+
 ```
 
 - [ ] **Step 4: Run the test**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_niederer_table_summary_produces_csv_and_html -v 2>&1 | tail -5
+
 ```
+
 Expected: `OK`
 
 - [ ] **Step 5: Run all tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver openfoam_driver.tests.test_table_writer -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 14 tests` … `OK`
 
 - [ ] **Step 6: Commit**
@@ -785,6 +832,7 @@ Expected: `Ran 14 tests` … `OK`
 git add ../../tutorials/NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/table_summary.py \
         openfoam_driver/tests/test_postprocessing_driver.py
 git commit -m "feat: add Niederer activation time table_summary.py"
+
 ```
 
 ---
@@ -792,6 +840,7 @@ git commit -m "feat: add Niederer activation time table_summary.py"
 ## Task 7: Write `singleCell/postProcessing/table_summary.py`
 
 **Files:**
+
 - Create: `tutorials/singleCell/setupSingleCell/postProcessing/table_summary.py` (new subfolder)
 
 - [ ] **Step 1: Write the failing test**
@@ -832,19 +881,23 @@ def test_singlecell_table_summary_produces_csv_and_html(self) -> None:
         self.assertIn("# tutorial: singleCell", csv_text)
         self.assertIn("APD_ms", csv_text)
         self.assertIn("peak_voltage_mV", csv_text)
+
 ```
 
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_singlecell_table_summary_produces_csv_and_html -v 2>&1 | tail -5
+
 ```
+
 Expected: `ERROR` — module `table_summary` not found
 
 - [ ] **Step 3: Create `postProcessing/` subfolder and write `table_summary.py`**
 
 ```bash
 mkdir -p /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/singleCell/setupSingleCell/postProcessing
+
 ```
 
 Create `tutorials/singleCell/setupSingleCell/postProcessing/table_summary.py`:
@@ -874,7 +927,6 @@ from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWrit
 # 10% of excursion above resting remaining = 90% repolarisation
 _APD_REPOL_FRACTION = 0.10
 
-
 def _compute_apd90(time: np.ndarray, vm: np.ndarray) -> float | None:
     """Return APD90 in ms, or None if detection fails."""
     resting = float(vm[0])
@@ -890,7 +942,6 @@ def _compute_apd90(time: np.ndarray, vm: np.ndarray) -> float | None:
             t_repol = float(time[i - 1]) + frac * (float(time[i]) - float(time[i - 1]))
             return (t_repol - float(time[peak_idx])) * 1000.0  # s → ms
     return None
-
 
 def _extract_row(fpath: Path) -> dict | None:
     try:
@@ -914,7 +965,6 @@ def _extract_row(fpath: Path) -> dict | None:
         "peak_voltage_mV": round(float(np.max(vm)), 3),
         "resting_voltage_mV": round(float(vm[0]), 3),
     }
-
 
 def run_postprocessing(
     *, output_dir: str, setup_root: str | None = None, **_: object
@@ -941,25 +991,29 @@ def run_postprocessing(
         meta,
     )
 
-
 if __name__ == "__main__":
     folder = Path(__file__).resolve().parents[2]
     print(f"[table_summary] Default folder = {folder}")
     run_postprocessing(output_dir=str(folder))
+
 ```
 
 - [ ] **Step 4: Run the test**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_singlecell_table_summary_produces_csv_and_html -v 2>&1 | tail -5
+
 ```
+
 Expected: `OK`
 
 - [ ] **Step 5: Run all tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver openfoam_driver.tests.test_table_writer -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 15 tests` … `OK`
 
 - [ ] **Step 6: Commit**
@@ -968,6 +1022,7 @@ Expected: `Ran 15 tests` … `OK`
 git add ../../tutorials/singleCell/setupSingleCell/postProcessing/table_summary.py \
         openfoam_driver/tests/test_postprocessing_driver.py
 git commit -m "feat: add singleCell APD/voltage table_summary.py"
+
 ```
 
 ---
@@ -975,6 +1030,7 @@ git commit -m "feat: add singleCell APD/voltage table_summary.py"
 ## Task 8: Write `restitutionCurves/postProcessing/table_summary.py`
 
 **Files:**
+
 - Create: `tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing/table_summary.py` (new subfolder)
 
 - [ ] **Step 1: Write the failing test**
@@ -1019,19 +1075,23 @@ def test_restitution_table_summary_consolidates_model_csvs(self) -> None:
         self.assertIn("ionic_model", csv_text)
         self.assertIn("TNNP", csv_text)
         self.assertIn("BuenoOrovio", csv_text)
+
 ```
 
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_restitution_table_summary_consolidates_model_csvs -v 2>&1 | tail -5
+
 ```
+
 Expected: `ERROR` — module `table_summary` not found
 
 - [ ] **Step 3: Create `postProcessing/` subfolder and write `table_summary.py`**
 
 ```bash
 mkdir -p /Users/simaocastro/cardiacFoamEPsacred/cardiacFoamsacred/tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing
+
 ```
 
 Create `tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing/table_summary.py`:
@@ -1055,7 +1115,6 @@ if str(TUTORIALS_ROOT) not in sys.path:
     sys.path.insert(0, str(TUTORIALS_ROOT))
 
 from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
-
 
 def run_postprocessing(
     *, output_dir: str, setup_root: str | None = None, **_: object
@@ -1097,25 +1156,29 @@ def run_postprocessing(
         meta,
     )
 
-
 if __name__ == "__main__":
     folder = Path(__file__).resolve().parents[2]
     print(f"[table_summary] Default folder = {folder}")
     run_postprocessing(output_dir=str(folder))
+
 ```
 
 - [ ] **Step 4: Run the test**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver.TestPostprocessingDriver.test_restitution_table_summary_consolidates_model_csvs -v 2>&1 | tail -5
+
 ```
+
 Expected: `OK`
 
 - [ ] **Step 5: Run all tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver openfoam_driver.tests.test_table_writer -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 16 tests` … `OK`
 
 - [ ] **Step 6: Commit**
@@ -1124,6 +1187,7 @@ Expected: `Ran 16 tests` … `OK`
 git add ../../tutorials/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing/table_summary.py \
         openfoam_driver/tests/test_postprocessing_driver.py
 git commit -m "feat: add restitutionCurves consolidated table_summary.py"
+
 ```
 
 ---
@@ -1131,11 +1195,17 @@ git commit -m "feat: add restitutionCurves consolidated table_summary.py"
 ## Task 9: Wire `table_summary` into tutorial specs via defaults
 
 **Files:**
+
 - Modify: `openfoam_driver/core/defaults/niederer_2012.py`
+
 - Modify: `openfoam_driver/core/defaults/single_cell.py`
+
 - Modify: `openfoam_driver/core/defaults/restitution_curves.py`
+
 - Modify: `openfoam_driver/specs/tutorials/niederer_2012.py`
+
 - Modify: `openfoam_driver/specs/tutorials/single_cell.py`
+
 - Modify: `openfoam_driver/specs/tutorials/restitution_curves.py`
 
 ### 9a — Add `TABLE_SUMMARY_RELPATH` to defaults
@@ -1143,8 +1213,10 @@ git commit -m "feat: add restitutionCurves consolidated table_summary.py"
 - [ ] **Step 1: Update `core/defaults/niederer_2012.py`**
 
 After line 55 (`CACHE_POSTPROCESS_FUNCTION = "run_postprocessing"`), add:
+
 ```python
 TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+
 ```
 
 In the `__all__` list (around line 62), add `"TABLE_SUMMARY_RELPATH"` after the existing `POSTPROCESS` entries.
@@ -1152,15 +1224,19 @@ In the `__all__` list (around line 62), add `"TABLE_SUMMARY_RELPATH"` after the 
 - [ ] **Step 2: Update `core/defaults/single_cell.py`**
 
 After line 30 (`POSTPROCESS_FUNCTION_NAME = "run_postprocessing"`), add:
+
 ```python
 TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+
 ```
 
 - [ ] **Step 3: Update `core/defaults/restitution_curves.py`**
 
 After line 49 (`POSTPROCESS_FUNCTION_NAME = "run_postprocessing"`), add:
+
 ```python
 TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+
 ```
 
 In the `__all__` list, add `"TABLE_SUMMARY_RELPATH"`.
@@ -1174,12 +1250,17 @@ print(niederer_2012.TABLE_SUMMARY_RELPATH)
 print(single_cell.TABLE_SUMMARY_RELPATH)
 print(restitution_curves.TABLE_SUMMARY_RELPATH)
 "
+
 ```
+
 Expected:
+
 ```
+
 postProcessing/table_summary.py
 postProcessing/table_summary.py
 postProcessing/table_summary.py
+
 ```
 
 ### 9b — Update `niederer_2012.py` spec
@@ -1187,32 +1268,42 @@ postProcessing/table_summary.py
 - [ ] **Step 5: Add `table_summary_relpath` to `_postprocess()` in `specs/tutorials/niederer_2012.py`**
 
 In `_postprocess()` (starting at line 430), add parameter after `case_postprocess_cache_dirname`:
+
 ```python
     table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 Add a new `PostprocessTask` at the end of the `tasks` list (after the `points_postprocess_relpath` task):
+
 ```python
             PostprocessTask(
                 module_relpath=table_summary_relpath,
             ),
+
 ```
 
 - [ ] **Step 6: Add `table_summary_relpath` to `make_spec()` in `specs/tutorials/niederer_2012.py`**
 
 In `make_spec()` (around line 499–507), add after `case_postprocess_cache_dirname`:
+
 ```python
     table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 In the body of `make_spec()`, after `cache_postprocess_path = Path(cache_postprocess_relpath)`, add:
+
 ```python
     table_summary_path = Path(table_summary_relpath)
+
 ```
 
 In the `partial(_postprocess, ...)` call (around line 595), add:
+
 ```python
             table_summary_relpath=table_summary_path,
+
 ```
 
 ### 9c — Update `single_cell.py` spec
@@ -1220,27 +1311,35 @@ In the `partial(_postprocess, ...)` call (around line 595), add:
 - [ ] **Step 7: Add `table_summary_relpath` to `_postprocess()` in `specs/tutorials/single_cell.py`**
 
 In `_postprocess()` (line 93), add parameter after `strict_artifacts`:
+
 ```python
     table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 Add a new `PostprocessTask` in the `tasks` list after the existing postprocess task:
+
 ```python
             PostprocessTask(
                 module_relpath=table_summary_relpath,
             ),
+
 ```
 
 - [ ] **Step 8: Add `table_summary_relpath` to `make_spec()` in `specs/tutorials/single_cell.py`**
 
 In `make_spec()` (around line 131), add after `postprocess_function_name`:
+
 ```python
     table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 In the body of `make_spec()`, after resolving `postprocess_script_relpath`, add:
+
 ```python
     table_summary_path = Path(table_summary_relpath)
+
 ```
 
 Pass `table_summary_relpath=table_summary_path` to `partial(_postprocess, ...)`.
@@ -1250,27 +1349,35 @@ Pass `table_summary_relpath=table_summary_path` to `partial(_postprocess, ...)`.
 - [ ] **Step 9: Add `table_summary_relpath` to `_postprocess()` in `specs/tutorials/restitution_curves.py`**
 
 In `_postprocess()` (line 160), add parameter after `strict_artifacts`:
+
 ```python
     table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 Add a new `PostprocessTask` after the existing one:
+
 ```python
             PostprocessTask(
                 module_relpath=table_summary_relpath,
             ),
+
 ```
 
 - [ ] **Step 10: Add `table_summary_relpath` to `make_spec()` in `specs/tutorials/restitution_curves.py`**
 
 In `make_spec()` (around line 212), add after `postprocess_function_name`:
+
 ```python
     table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
+
 ```
 
 In body of `make_spec()`, add:
+
 ```python
     table_summary_path = Path(table_summary_relpath)
+
 ```
 
 Pass `table_summary_relpath=table_summary_path` to `partial(_postprocess, ...)`.
@@ -1286,14 +1393,18 @@ from openfoam_driver.specs.tutorials.single_cell import make_spec as s
 from openfoam_driver.specs.tutorials.restitution_curves import make_spec as r
 print('All specs import OK')
 "
+
 ```
+
 Expected: `All specs import OK`
 
 - [ ] **Step 12: Run all tests**
 
 ```bash
 python3 -m unittest openfoam_driver.tests.test_postprocessing_driver openfoam_driver.tests.test_table_writer -v 2>&1 | tail -5
+
 ```
+
 Expected: `Ran 16 tests` … `OK`
 
 - [ ] **Step 13: Commit**
@@ -1306,4 +1417,5 @@ git add openfoam_driver/core/defaults/niederer_2012.py \
         openfoam_driver/specs/tutorials/single_cell.py \
         openfoam_driver/specs/tutorials/restitution_curves.py
 git commit -m "feat: wire table_summary PostprocessTask into NiedererEtAl2012, singleCell, restitutionCurves specs"
+
 ```

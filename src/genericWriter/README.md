@@ -15,6 +15,7 @@ src/genericWriter/
 ├── purkinjeModelIO.{H,C}
 ├── Make/
 └── README.md
+
 ```
 
 ## Purpose
@@ -25,18 +26,29 @@ inside ionic, electro, ECG, Purkinje, or active-tension code.
 ## Main components
 
 - `ionicModelIO`
+
   General ionic-model export, trace writing, field-export planning, and
   selected-variable handling
+
 - `ionicVariableCompatibility`
+
   Shared variable-name compatibility and lookup rules used by ionic exports and
   signal discovery
+
 - `stimulusIO`
+
   Shared stimulus dictionary parsing and evaluation helpers
+
 - `activeTensionIO`
+
   Active-tension output helpers
+
 - `ecgModelIO`
+
   ECG output helpers
+
 - `purkinjeModelIO`
+
   Purkinje/conduction time-series output helpers
 
 ## What this folder does not own
@@ -45,6 +57,7 @@ This folder does not own the physics models themselves. It only provides helper
 logic used by:
 
 - `ionicModels`
-- `electroModels`
-- `activeTensionModels`
 
+- `electroModels`
+
+- `activeTensionModels`

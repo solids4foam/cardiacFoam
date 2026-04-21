@@ -45,4 +45,3 @@ reference helpers used to validate:
 
 This folder does not own the myocardium or ECG solvers themselves. It provides
 verification-side models that are called from those workflows.
-

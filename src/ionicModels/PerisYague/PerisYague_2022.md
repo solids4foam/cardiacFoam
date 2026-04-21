@@ -1,4 +1,8 @@
- PDF To Markdown Converter
+# Peris-Yague 2022 Model: Supplementary Appendix
+
+<!-- markdownlint-disable MD003 MD018 MD022 MD025 MD032 MD052 -->
+
+PDF To Markdown Converter
 Debug View
 Result View
 1 SUPPLEMENTARY APPENDIX
@@ -346,7 +350,7 @@ RT
 exp
 [Na+]
 o
-67. 3
+67\. 3
 
 − 1
 (S58)
@@ -358,7 +362,7 @@ IN aCa=IN aCa,max·
 B 1
 B 2
 (S59)
-B1 = exp[γV F/(RT)][Na+]^3 i[Ca2+]o−exp[(γ−1)V F/(RT)][Na+]^3 o[Ca2+]i (S60)
+B1 = exp[γV F/(RT)]\[Na+\]^3 i[Ca2+]o−exp[(γ−1)V F/(RT)]\[Na+\]^3 o[Ca2+]i (S60)
 B2 = (Km,N a^3 + [Na+]^3 o)(Km,Ca+ [Ca2+]o)·{1 +ksatexp[(γ−1)V F/(RT)]} (S61)
 Background Currents
 
@@ -385,7 +389,7 @@ Fn− 1. 367 · 10 −^13
 −
 Fn− 1. 367 · 10 −^13
 13. 67 · 10 −^16
-#!− 1
+#\!− 1
 (S66)
 v∞= 1−
 1
