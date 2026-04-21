@@ -1,10 +1,10 @@
-# NiedererEtAl2012_EM: Electro-Mechanical Coupling Tutorial
+# NiedererEtAl2011_EM: Electro-Mechanical Coupling Tutorial
 
 ## Purpose
 
 This tutorial demonstrates the electro-mechanical coupling framework in
 cardiacFoam using the `electroMechanicalModel` physics model. It extends the
-electro-only NiedererEtAl2012 benchmark to include a solid mechanics region
+electro-only NiedererEtAl2011 benchmark to include a solid mechanics region
 coupled to the electrophysiology region.
 
 The case uses a 20x3x7 mm tissue slab (Niederer et al. 2011 benchmark
