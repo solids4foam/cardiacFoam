@@ -65,7 +65,7 @@ void Monodomain1DSolver::advance
     // half of each incident edge length. For uniform spacing this reduces to
     // the usual sigma*(V_{i-1}-2V_i+V_{i+1})/dx^2 term.
     const scalar chiCm = domain.chi() * domain.Cm();
-    
+
     // Arrays for the tree solver
     scalarField diag(N, 1.0);       // Main diagonal
     scalarField rhs(N, Zero);       // Right-hand side
@@ -77,7 +77,7 @@ void Monodomain1DSolver::advance
     const labelList& edgeB = domain.edgeEndNodes();
     const scalarField& edgeLength = domain.edgeLengths();
     const scalarField& edgeConductance = domain.edgeConductances();
-    
+
     // Access the topology we built in conductionGraph
     const labelList& parent = domain.graph().parentList;
     const labelList& reverseOrder = domain.graph().reverseOrder;
@@ -187,4 +187,4 @@ void Monodomain1DSolver::advance
     domain.reportAdvanceDiagnostics(t0, dt);
 }
 
-} // End namespace Foam 
+} // End namespace Foam

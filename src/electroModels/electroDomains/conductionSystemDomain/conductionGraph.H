@@ -25,7 +25,6 @@ Description
 
 Author
     Simao Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductionGraph_H

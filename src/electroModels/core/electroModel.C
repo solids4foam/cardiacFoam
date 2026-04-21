@@ -252,7 +252,7 @@ void Foam::electroModel::setDeltaT(Time& runTime)
 
         runTime.setDeltaT(newDeltaT);
     }
-    
+
     physicsModel::setDeltaT(runTime);
 }
 

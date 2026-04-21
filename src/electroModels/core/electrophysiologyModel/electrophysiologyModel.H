@@ -42,7 +42,6 @@ Author
 
 SourceFiles
     electrophysiologyModel.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef electrophysiologyModel_H
