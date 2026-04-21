@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+numberOfSubdomains  6;
+
+method          scotch;
+
+scotchCoeffs
+{
+    //processorWeights
+    //(
+    //    1
+    //    1
+    //    1
+    //    1
+    //);
+    //writeGraph  true;
+    //strategy "b";
+}
+
+// ************************************************************************* //

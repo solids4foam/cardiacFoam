@@ -1,0 +1,241 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    electroModel
+
+Description
+    Virtual base class for electrophysiology solvers.
+
+Author
+    Philip Cardiff, UCD. All rights reserved.
+
+SourceFiles
+    electroModel.C
+\*---------------------------------------------------------------------------*/
+
+#ifndef electroModel_H
+#define electroModel_H
+
+#include "physicsModel.H"
+#include "runTimeSelectionTables.H"
+#include "electromechanicalSignalProvider.H"
+#include "electroStateProvider.H"
+#include "electrophysicsSystem.H"
+#include "Enum.H"
+#include "pimpleControl.H"
+#include "volFields.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam {
+
+/*---------------------------------------------------------------------------*\
+                       Class electroModel Declaration
+\*---------------------------------------------------------------------------*/
+
+class electroModel
+:
+  public physicsModel,
+  public IOdictionary,
+  public electroStateProvider
+{
+public:
+  //- Solution algorithms
+  enum solutionAlgorithm { IMPLICIT, EXPLICIT };
+
+  //- Solution algorithm names
+  static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
+
+private:
+  // Private data
+
+  //- Mesh
+  autoPtr<dynamicFvMesh> meshPtr_;
+
+  //- Electro properties dictionary
+  dictionary electroProperties_;
+
+  //- Pimple control for monitoring the convergence of the outer loop
+  mutable autoPtr<pimpleControl> pimplePtr_;
+
+  //- Solution algorithm, e.g. implicit, explicit
+  //  This enum is used by some of the electro models but not all
+  const solutionAlgorithm solutionAlgorithm_;
+
+  //- Performance timings for the advance step
+  electrophysicsAdvanceTimings advanceTimings_;
+
+  //- Flag: set explicit deltaT once at the start of the simulation
+  bool setDeltaT_;
+
+  // Private Member Functions
+
+  //- Make the pimple control
+  void makePimpleControl() const;
+
+  //- Disallow default bitwise copy construct
+  electroModel(const electroModel &);
+
+  //- Disallow default bitwise assignment
+  void operator=(const electroModel &);
+
+protected:
+  // Protected member functions
+
+  //- Multi-domain electrophysiology system
+  electrophysicsSystem domainSystem_;
+
+  //- Configure ECG domains from electroProperties
+  void configureECGDomains();
+
+  //- Return non-const acess to the pimple control
+  pimpleControl &pimple();
+
+  //- Const access to the solution algorithm enum
+  const solutionAlgorithm &solutionAlg() const { return solutionAlgorithm_; }
+
+public:
+  //- Runtime type information
+  TypeName("electroModel");
+
+  //- Return electro properties dictionary
+  dictionary &electroProperties() { return electroProperties_; }
+
+  //- Return electro properties dictionary
+  const dictionary &electroProperties() const { return electroProperties_; }
+
+  //- Return the electro-model coeff dictionary used to construct the ionic
+  //  model. Ionic keys are expected at this scope.
+  const dictionary &ionicProperties() const;
+
+  // Declare run-time constructor selection table
+
+  declareRunTimeSelectionTable(autoPtr, electroModel, dictionary,
+                               (Time & runTime, const word &region),
+                               (runTime, region));
+
+  // Constructors
+
+  //- Construct from components
+  electroModel(const word &type, Time &runTime,
+               const word &region = dynamicFvMesh::defaultRegion);
+
+  // Selectors
+
+  //- Select constructed from mesh
+  static autoPtr<electroModel> New(Time &runTime,
+                                   const word &region = "region0");
+
+  // Destructor
+
+  virtual ~electroModel();
+
+  // Member Functions
+
+  // Access
+
+  //- Return reference to the mesh
+  dynamicFvMesh &mesh() { return meshPtr_(); }
+
+  //- Return const reference to the mesh
+  const dynamicFvMesh &mesh() const { return meshPtr_(); }
+
+  //- Return time
+  const Time &runTime() const { return meshPtr_().time(); }
+
+  // Edit
+
+  //- Update the size of the time-step
+  virtual void setDeltaT(Time &runTime);
+
+  //- Return transmembrane voltage (needed by composite models)
+  virtual const volScalarField &Vm() const
+  {
+      return domainSystem_.myocardium().Vm();
+  }
+
+  //- Return optional coupling signal provider (e.g. ionic model)
+  virtual const ElectromechanicalSignalProvider *provider() const
+  {
+      return domainSystem_.myocardium().provider();
+  }
+
+  //- Return a named coupling signal as a volScalarField on the electro mesh.
+  //  Supported field names: "Vm", "Cai".
+  //  Values are in the ionic model's native units (mV for Vm, mM for Cai).
+  virtual tmp<volScalarField> couplingField(const word& fieldName) const;
+
+  //- Default electrophysiology state channels; derived models override the
+  //  fields they actually expose.
+  virtual const volScalarField *VmPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().VmPtr();
+      return nullptr;
+  }
+
+  virtual const volScalarField *phiEPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().phiEPtr();
+      return nullptr;
+  }
+
+  virtual const volTensorField *conductivityPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().conductivityPtr();
+      return nullptr;
+  }
+
+  virtual const volTensorField *intracellularConductivityPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().intracellularConductivityPtr();
+      return nullptr;
+  }
+
+  virtual const volTensorField *extracellularConductivityPtr() const
+  {
+      if (domainSystem_.hasMyocardium())
+          return domainSystem_.myocardium().extracellularConductivityPtr();
+      return nullptr;
+  }
+
+  //- Evolve physics over a time-step
+  virtual bool evolve();
+
+  //- Read electroProperties dictionary
+  virtual bool read();
+
+  //- Write fields
+  virtual void writeFields(const Time &runTime);
+
+  //- This function is called at the end of the simulation
+  virtual void end();
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
+
+// ************************************************************************* //

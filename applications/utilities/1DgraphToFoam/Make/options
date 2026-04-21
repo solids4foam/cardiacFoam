@@ -1,0 +1,6 @@
+EXE_INC = \
+    -I../newVtkUnstructuredToFoam \
+    -I$(LIB_SRC)/fileFormats/lnInclude
+
+EXE_LIBS = \
+    -lfileFormats

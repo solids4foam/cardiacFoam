@@ -27,7 +27,6 @@ SourceFiles
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef genericModel_H
@@ -37,6 +36,7 @@ Author
 #include "OFstream.H"
 #include "volFields.H"
 #include "genericModel_YYYYNames.H"
+#include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,9 +56,6 @@ class genericModel
         //- States
         mutable PtrList<scalarField> STATES_;
 
-        //- States - old time
-        mutable PtrList<scalarField> STATES_OLD_;
-
         //- Constants
         mutable scalarField CONSTANTS_;
 
@@ -77,116 +74,116 @@ class genericModel
         //- No copy assignment
         void operator=(const genericModel&) = delete;
 
-
-        public:
-
-        //- Runtime type information
-        TypeName("genericModel");
-
-
-        //override the only available tissue in this model
-        virtual List<word> supportedTissueTypes() const override;
-        virtual List<word> supportedDimensions() const override
+    protected:
+        virtual const PtrList<scalarField>* ioStatesPtr() const override
         {
-            return {}; //No dimensions flag
+            return &STATES_;
         }
 
+        virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+        {
+            return &ALGEBRAIC_;
+        }
+
+        virtual const PtrList<scalarField>* ioRatesPtr() const override
+        {
+            return &RATES_;
+        }
+
+        virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual label ioNumConstants() const override
+        {
+            return NUM_CONSTANTS;
+        }
+
+        virtual const char* const* ioConstantNames() const override;
+
+        virtual const char* const* ioStateNames() const override;
+
+        virtual label ioNumStates() const override
+        {
+            return NUM_STATES;
+        }
+
+        virtual const char* const* ioAlgebraicNames() const override;
+
+        virtual label ioNumAlgebraic() const override
+        {
+            return NUM_ALGEBRAIC;
+        }
+
+public:
+
+    //- Runtime type information
+    OverrideTypeName("genericModel");
 
 
-        // Constructors
-
-            //- Construct given a dictionary, the number of integration points and a
-            //  initial time step for the ODE solver
-            genericModel
-            (
-                const dictionary& dict,
-                const label nIntegrationPoints,
-                const scalar initialDeltaT,
-                const Switch solveVmWithinODESolver = false
-            );
-
-
-        //- Destructor
-        virtual ~genericModel();
-
-
-        // Member Functions
-
-            virtual void writeHeader(OFstream& output) const override;
-            //- Write fields to the given file given the current time
-            virtual void write(const scalar t, OFstream& output) const override;
+    //override the only available tissue in this model
+    virtual List<word> supportedTissueTypes() const override;
+    virtual List<word> supportedDimensions() const override
+    {
+        return {}; //No dimensions flag
+    }
 
 
 
+    // Constructors
 
-            virtual void calculateCurrent
-            (
-                const scalar stepStartTime,
-                const scalar deltaT,
-                const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
-            ) override;
-
-
-            virtual void solveODE
-            (
-                const scalar stepStartTime,
-                const scalar deltaT,
-                const scalarField& Vm,
-                scalarField& Im,
-                Field<Field<scalar>>& states
-            ) override;
+        //- Construct given a dictionary, the number of integration points and a
+        //  initial time step for the ODE solver
+        genericModel
+        (
+            const dictionary& dict,
+            const label nIntegrationPoints,
+            const scalar initialDeltaT,
+            const Switch solveVmWithinODESolver = false
+        );
 
 
-            //- Number of ODE's to solve
-            virtual label nEqns() const override
-            {
-                return NUM_STATES;
-            }
-
-            //- Derivatives of each ODE with respect to the primary unknown in that
-            //  equation
-            virtual void derivatives
-            (
-                const scalar t,
-                const scalarField& y,
-                scalarField& dydt
-            ) const override;
+    //- Destructor
+    virtual ~genericModel();
 
 
-            virtual void updateStatesOld(const Field<Field<scalar>>& states) const;
-            virtual void resetStatesToStatesOld(Field<Field<scalar>>& states) const;
+    // Member Functions
 
-                    // Override to provide variable names for export
-            virtual Foam::wordList exportedFieldNames() const override;
-            virtual wordList debugPrintedNames() const override;
+        virtual void solveODE
+        (
+            const scalar stepStartTime,
+            const scalar deltaT,
+            const scalarField& Vm,
+            scalarField& Im
+        ) override;
 
 
-            // Override to export the variables
-            virtual void exportStates
-            (
-                const Field<Field<scalar>>&,
-                PtrList<volScalarField>&
-            ) override;
+        //- Number of ODE's to solve
+        virtual label nEqns() const override
+        {
+            return NUM_STATES;
+        }
 
-            // Override to print variables in solver
-            void debugPrintFields
-            (
-                label cellI,
-                scalar t1,
-                scalar t2,
-                scalar step
-            ) const override;
+        //- Derivatives of each ODE with respect to the primary unknown in that
+        //  equation
+        virtual void derivatives
+        (
+            const scalar t,
+            const scalarField& y,
+            scalarField& dydt
+        ) const override;
 
-            virtual void sweepCurrent
-            (
-                const word& currentName,
-                scalar Vmin,
-                scalar Vmax,
-                label nPts,
-                const fileName& outputFile
-            ) const override;
+        virtual void sweepCurrent
+        (
+            const word& currentName,
+            scalar Vmin,
+            scalar Vmax,
+            label nPts,
+            const fileName& outputFile
+        ) const override;
+
+        virtual wordList availableSweepCurrents() const override;
 
 
 };
@@ -199,5 +196,3 @@ class genericModel
 #endif
 
 // ************************************************************************* //
-
-

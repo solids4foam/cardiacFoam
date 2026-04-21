@@ -1,0 +1,14 @@
+
+activeTensionModel/activeTensionModel.C
+
+
+
+
+NashPanfilov/NashPanfilov.C
+GoktepeKuhl/GoktepeKuhl.C
+/*NiedererHunterSmith/NiedererHunterSmith.C*/
+
+
+
+
+LIB = $(FOAM_USER_LIBBIN)/libactiveTensionModels

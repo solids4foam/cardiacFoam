@@ -12,6 +12,7 @@ else
     )
     if ! [[ " ${allowed_ver[*]} " == *" $WM_PROJECT_VERSION "* ]]; then
         echo "Unsupported OpenFOAM version sourced!"
+        exit 1
     fi
 fi
 
@@ -23,7 +24,10 @@ fi
 (cd applications && ./Allwclean)
 
 # Clean all tutorials
-(cd tutorials && ./Allclean)
+if [[ -x tutorials/Allclean ]]
+then
+    (cd tutorials && ./Allclean)
+fi
 
 # Clear the tutorialsTest directory
 if [[ -d tutorialsTest ]]
@@ -34,4 +38,4 @@ fi
 
 # Clear all build logs
 echo; echo "Removing all log.Allwmake build logs"; echo
-find . -name log.Allwmake | xargs rm
+find . -name log.Allwmake -exec rm -f {} +

@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #include "Gaur_2021Names.H"
 #include "stimulusIO.H"
 
@@ -229,6 +248,124 @@ static const char* GaurALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Iion_cm",
 };
 
+static const char* GaurCONSTANTS_NAMES[NUM_CONSTANTS] = {
+    "AC_F",
+    "AC_L",
+    "AC_R",
+    "AC_T",
+    "AC_cao",
+    "AC_cli",
+    "AC_clo",
+    "AC_ko",
+    "AC_nao",
+    "AC_pi",
+    "AC_rad",
+    "AC_vmyo1frac",
+    "AC_Ageo",
+    "AC_vcell",
+    "AC_Acap",
+    "AC_vjsr",
+    "AC_vmyo",
+    "AC_vnsr",
+    "AC_vss",
+    "AC_vcsr",
+    "AC_vmyo1",
+    "AC_vnsr1",
+    "AC_vnsr2",
+    "AC_vmyo2",
+    "AC_CaMKo",
+    "AC_ECl",
+    "AC_KmCaM",
+    "AC_KmCaMK",
+    "AC_PKNa",
+    "AC_aCaMK",
+    "AC_bCaMK",
+    "AC_GNa",
+    "AC_GNaL",
+    "AC_tau_hl",
+    "AC_PCa",
+    "AC_vhalf_d",
+    "AC_vhalff",
+    "AC_zca",
+    "AC_PCaK",
+    "AC_PCaNa",
+    "AC_GKr",
+    "AC_GKs",
+    "AC_GK1",
+    "AC_Gto",
+    "AC_SOICR",
+    "AC_grelbarjsrol",
+    "AC_tau_gap",
+    "AC_tauoff",
+    "AC_tauon",
+    "AC_Gncx",
+    "AC_KmCaAct",
+    "AC_kasymm",
+    "AC_kcaoff",
+    "AC_kcaon",
+    "AC_kna1",
+    "AC_kna2",
+    "AC_kna3",
+    "AC_qca",
+    "AC_qna",
+    "AC_wca",
+    "AC_wna",
+    "AC_wnaca",
+    "AC_zna",
+    "AC_h10",
+    "AC_k2",
+    "AC_k5",
+    "AC_h11",
+    "AC_h12",
+    "AC_k1",
+    "AC_h101",
+    "AC_k21",
+    "AC_k51",
+    "AC_h1111",
+    "AC_h121",
+    "AC_k11",
+    "AC_H",
+    "AC_Khp",
+    "AC_Kki",
+    "AC_Kko",
+    "AC_Kmgatp",
+    "AC_Knai0",
+    "AC_Knao0",
+    "AC_Knap",
+    "AC_Kxkur",
+    "AC_MgADP",
+    "AC_MgATP",
+    "AC_Pnak",
+    "AC_delta",
+    "AC_eP",
+    "AC_k1m",
+    "AC_k1p",
+    "AC_k2m",
+    "AC_k2p",
+    "AC_k3m",
+    "AC_k3p2",
+    "AC_k4m",
+    "AC_k4p2",
+    "AC_zk",
+    "AC_a2",
+    "AC_a4",
+    "AC_b1",
+    "AC_GKb",
+    "AC_PNab",
+    "AC_PCab",
+    "AC_GpCa",
+    "AC_BSLmax",
+    "AC_BSRmax",
+    "AC_KmBSL",
+    "AC_KmBSR",
+    "AC_cmdnmax",
+    "AC_csqnmax",
+    "AC_kmcmdn",
+    "AC_kmcsqn",
+    "AC_kmtrpn",
+    "AC_trpnmax",
+};
+
 
 static inline const Foam::HashTable<Foam::wordList>&
 GaurDependencyMap()
@@ -236,25 +373,88 @@ GaurDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
+        // Fast sodium current
+        {"INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+        {"I_Na", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+        {"AV_INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
+
+        // Late sodium current
+        {"INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+        {"I_NaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+        {"AV_INaL_INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
+
+        // L-type Ca current and permeation components
+        {"ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+        {"I_CaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+        {"AV_ICaL_ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
+
+        {"ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+        {"I_CaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+        {"AV_ICaNa", Foam::wordList({"AV_ICaNa","ICaL_d","ICaL_fca","AV_PhiCaNa","AV_f"})},
+
+        {"ICaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+        {"I_CaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+        {"AV_ICaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
+
+        // Potassium currents
+        {"IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+        {"I_Kr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+        {"AV_IKr_IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
+
+        {"IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+        {"I_Ks", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+        {"AV_IKs_IKs", Foam::wordList({"AV_IKs_IKs","IKs_xs1","IKs_xs2","AV_xs1_inf","AV_xs2_inf","AV_tau_xs1","AV_tau_xs2","AV_KsCa"})},
+
+        {"IK1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+        {"I_K1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+        {"AV_IK1_IK1", Foam::wordList({"AV_IK1_IK1","AV_rk1"})},
+
+        {"ITo", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"Ito", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"I_to", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+        {"AV_ITo_ITo", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
+
+        // Exchanger/pump/background currents
+        {"INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+        {"I_NaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+        {"AV_INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
+
+        {"INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"I_NaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+        {"AV_INaK_INaK", Foam::wordList({"AV_INaK_INaK","AV_JnakNa","AV_JnakK"})},
+
+        {"IKb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+        {"I_Kb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+        {"AV_IKb_IKb", Foam::wordList({"AV_IKb_IKb","AV_xkb"})},
+
+        {"INab", Foam::wordList({"AV_INab_INab"})},
+        {"I_Nab", Foam::wordList({"AV_INab_INab"})},
+        {"AV_INab_INab", Foam::wordList({"AV_INab_INab"})},
+
+        {"ICab", Foam::wordList({"AV_ICab_ICab"})},
+        {"I_Cab", Foam::wordList({"AV_ICab_ICab"})},
+        {"AV_ICab_ICab", Foam::wordList({"AV_ICab_ICab"})},
+
+        {"IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"I_pCa", Foam::wordList({"AV_IpCa_IpCa"})},
+        {"AV_IpCa_IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
+
+        // Total ionic current
+        {"Iion", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
+        {"Iion_cm", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
         }
     );
 
     return dep;
 }
 
-inline Foam::scalar computeIstim(Foam::scalar t, const double* C)
+inline Foam::scalar computeIstim
+(
+    Foam::scalar t,
+    const Foam::StimulusProtocol& stimulus
+)
 {
-    return Foam::stimulusIO::computeStimulus
-    (
-        t,
-        C[stim_start],
-        C[stim_period_S1],
-        C[stim_duration],
-        C[stim_amplitude],
-        Foam::label(C[nstim1]),
-        C[stim_period_S2],
-        Foam::label(C[nstim2])
-    );
+    return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 void
 GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
@@ -446,7 +646,7 @@ STATES[cell_v] = -87.3;
 
 
 void
-GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver)
+GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* diffusion */
     ALGEBRAIC[AV_Jdiff] = (STATES[cass] - STATES[cai]) / 0.2;
@@ -711,7 +911,7 @@ GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATE
 
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_INaL_INaL] + ALGEBRAIC[AV_ICaL_ICaL] + ALGEBRAIC[AV_ICaNa] + ALGEBRAIC[AV_ICaK] + ALGEBRAIC[AV_IKr_IKr] + ALGEBRAIC[AV_IKs_IKs] + ALGEBRAIC[AV_IK1_IK1] + ALGEBRAIC[AV_ITo_ITo] + ALGEBRAIC[AV_INaCa_i_INaCa_i] + ALGEBRAIC[AV_INaCa_ss_INaCa_ss] + ALGEBRAIC[AV_INaK_INaK] + ALGEBRAIC[AV_INab_INab] + ALGEBRAIC[AV_IKb_IKb] + ALGEBRAIC[AV_IpCa_IpCa] + ALGEBRAIC[AV_ICab_ICab];
 
-    ALGEBRAIC[Istim] = computeIstim(VOI, CONSTANTS);
+    ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {

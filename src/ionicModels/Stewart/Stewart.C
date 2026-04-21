@@ -17,15 +17,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include <math.h>
 #include "Stewart.H"
 #include "Stewart_2009.H"
+#include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
-#include "HashTable.H"
+
+#include <math.h>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -50,7 +51,6 @@ Foam::Stewart::Stewart
 :
     ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
-    STATES_OLD_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
@@ -58,11 +58,9 @@ Foam::Stewart::Stewart
 
     // 🔑 First, set tissue using base logic + overrides
     ionicModel::setTissueFromDict();
-    Info<< nl << "Calling Stewart initConsts" << endl;
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
-        STATES_OLD_.set(i,  new scalarField(NUM_STATES,     0.0));
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
@@ -76,18 +74,9 @@ Foam::Stewart::Stewart
         );
         if (!utilitiesMode())
         {
-            stimulusIO::loadStimulusProtocol
-            (
-                dict, CONSTANTS_, stim_start, stim_period_S1,stim_duration,
-                stim_amplitude, nstim1, stim_period_S2, nstim2
-            );
+            setStimulusProtocolFromDict(dict);
         }
     }
-    Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 
 }
 
@@ -107,50 +96,6 @@ Foam::List<Foam::word> Foam::Stewart::supportedTissueTypes() const
 }
 
 
-void Foam::Stewart::calculateCurrent
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
-)
-{
-    const scalar tStart = stepStartTime * 1000.0;
-    if (Im.size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Im.size() != Vm.size()" << abort(FatalError);
-    }
-    forAll(STATES_, integrationPtI)
-    {
-        scalarField& STATESI    = STATES_[integrationPtI];
-        scalarField& ALGEBRAICI = ALGEBRAIC_[integrationPtI];
-        scalarField& RATESI     = RATES_[integrationPtI];
-
-        // Update voltage for this integration point
-        STATESI[membrane_V] = Vm[integrationPtI] * 1000;
-
-        ::StewartcomputeVariables
-        (
-            tStart,
-            CONSTANTS_.data(),
-            RATESI.data(),
-            STATESI.data(),
-            ALGEBRAICI.data(),
-            tissue(),
-            solveVmWithinODESolver()
-        );
-        // Jion  is the total ionic current density used by the PDE
-        Im[integrationPtI] = ALGEBRAICI[Iion_cm];
-
-        //copy internal STATES to memory external state buffer.
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
-    }
-}
-
-
 // ------------------------------------------------------------------------- //
 //  Solve ODE with mixed singleCell implementation and 1D-3D condition
 // ------------------------------------------------------------------------- //
@@ -159,13 +104,12 @@ void Foam::Stewart::solveODE
     const scalar stepStartTime,
     const scalar deltaT,
     const scalarField& Vm,
-    scalarField& Im,
-    Field<Field<scalar>>& states
+    scalarField& Im
 )
 {
     const scalar tStart = stepStartTime * 1000;
     const scalar tEnd   = (stepStartTime + deltaT) * 1000;
-    const label monitorCell = 0;
+    const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
     {
@@ -196,8 +140,10 @@ void Foam::Stewart::solveODE
             ALGEBRAICI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
-        if (integrationPtI == monitorCell)
+        if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         // Total ionic current density used by PDE
@@ -227,129 +173,29 @@ void Foam::Stewart::derivatives
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
         tissue(),
         solveVmWithinODESolver()
-    );
-}
-
-void Foam::Stewart::updateStatesOld(const Field<Field<scalar>>&) const
-{
-    saveStateSnapshot(STATES_, STATES_OLD_);
-}
-
-void Foam::Stewart::resetStatesToStatesOld(Field<Field<scalar>>&) const
-{
-    restoreStateSnapshot(STATES_, STATES_OLD_);
+    ,
+            stimulusProtocol()
+        );
 }
 
 // ------------------------------------------------------------------------- //
 //  Writing logic in singleCell and 3D simulations
 
-//Writing functions for singleCell implementation
-Foam::wordList Foam::Stewart::exportedFieldNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            variableExport_,
-            StewartSTATES_NAMES, NUM_STATES,
-            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-    Foam::wordList Foam::Stewart::debugPrintedNames() const
-    {
-        return ionicModelIO::exportedFieldNames
-        (
-            debugVarNames_,
-            StewartSTATES_NAMES, NUM_STATES,
-            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-
-void Foam::Stewart::exportStates
-(
-    const Field<Field<scalar>>&,
-    PtrList<volScalarField>& outFields
-)
+const char* const* Foam::Stewart::ioStateNames() const
 {
-    ionicModelIO::exportStateFields
-    (
-        STATES_,ALGEBRAIC_,
-        exportedFieldNames(),
-        StewartSTATES_NAMES,NUM_STATES,
-        StewartALGEBRAIC_NAMES,NUM_ALGEBRAIC,
-        outFields
-    );
+    return StewartSTATES_NAMES;
 }
 
-void Foam::Stewart::debugPrintFields
-(
-    label cellI,
-    scalar t1,
-    scalar t2,
-    scalar step
-) const
+const char* const* Foam::Stewart::ioConstantNames() const
 {
-    ionicModelIO::debugPrintFields
-    (
-        STATES_, ALGEBRAIC_,
-        debugPrintedNames(),
-        StewartSTATES_NAMES, NUM_STATES,
-        StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC,
-        cellI,t1,t2,step
-    );
+    return StewartCONSTANTS_NAMES;
 }
 
-
-
-void Foam::Stewart::writeHeader(OFstream& os) const
+const char* const* Foam::Stewart::ioAlgebraicNames() const
 {
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelectedHeader(os, names);
-    }
-    else
-    {
-        ionicModelIO::writeHeader
-        (
-            os,
-            StewartSTATES_NAMES, NUM_STATES,
-            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
+    return StewartALGEBRAIC_NAMES;
 }
 
-static Foam::scalar Stewart_vm(const Foam::scalarField& S)
-{
-    return S[0];
-}
-
-void Foam::Stewart::write(const scalar t, OFstream& os) const
-{
-    const wordList names = exportedFieldNames();
-
-    if (!names.empty())
-    {
-        ionicModelIO::writeSelected
-        (
-            t, os,
-            STATES_, ALGEBRAIC_,
-            names,
-            StewartSTATES_NAMES, NUM_STATES,
-            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC
-        );
-    }
-    else
-    {
-        ionicModelIO::write
-        (
-            t,
-            os,
-            STATES_, ALGEBRAIC_, RATES_,
-            Stewart_vm
-        );
-    }
-}
 void Foam::Stewart::sweepCurrent
 (
     const word& currentName,
@@ -379,6 +225,7 @@ void Foam::Stewart::sweepCurrent
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
+    ionicModelIO::SelectedMapCache sweepPlanCache;
 
     // Voltage sweep
     for (label i = 0; i < nPts; ++i)
@@ -400,15 +247,22 @@ void Foam::Stewart::sweepCurrent
             ALGI.data(),
             tissue(),
             solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
         );
 
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps,STATESI,ALGI,
             StewartSTATES_NAMES, NUM_STATES,
-            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC
+            StewartALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            RATESI,
+            sweepPlanCache
         );
     }
-    Info<< "Sweep for " << currentName
-        << " written to " << outputFile << nl;
+}
+
+Foam::wordList Foam::Stewart::availableSweepCurrents() const
+{
+    return StewartDependencyMap().toc();
 }

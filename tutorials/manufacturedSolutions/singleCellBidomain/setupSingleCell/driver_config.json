@@ -1,0 +1,12 @@
+{
+  "case_dir_name": "manufacturedSolutions/singleCellBidomain",
+  "setup_dir_name": "setupSingleCell",
+  "postprocess_strict_artifacts": false,
+  "ionic_models": ["bidomainFDAManufactured"],
+  "ionic_model_tissue_map": {
+    "bidomainFDAManufactured": ["myocyte"]
+  },
+  "stimulus_map": {
+    "bidomainFDAManufactured": 0.0
+  }
+}

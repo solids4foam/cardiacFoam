@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+runApplication cardiacFoam
+
+if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
+    echo "Skipping plotVoltage (CF_SKIP_PLOTS=1)."
+else
+    ./plotVoltage
+fi

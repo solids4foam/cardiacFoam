@@ -1,77 +1,71 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
 #pragma once
+#include "stimulusIO.H"
 
 
-enum CONSTANTS_INDEX{
-    R,              // 0  : gas constant
-    T,              // 1  : temperature
-    F,              // 2  : Faraday constant
-    Cm,             // 3  : membrane capacitance (pF)
-    V_c,            // 4  : cell volume (μm^3)
+enum CONSTANTS_INDEX {
+    R,
+    T,
+    F,
+    Cm,
+    V_c,
+    P_kna,
+    K_o,
+    Na_o,
+    Ca_o,
+    g_K1,
+    g_Kr,
+    g_Ks,
+    g_Na,
+    g_bNa,
+    g_CaL,
+    g_bCa,
+    g_to,
+    P_NaK,
+    K_mk,
+    K_mNa,
+    K_NaCa,
+    K_sat,
+    alpha_NCX,
+    gamma_NCX,
+    Km_Ca,
+    Km_Nai,
+    g_pCa,
+    K_pCa,
+    g_pK,
+    tau_g,
+    a_rel,
+    b_rel,
+    c_rel,
+    K_up,
+    V_leak,
+    Vmax_up,
+    Buf_c,
+    K_buf_c,
+    Buf_sr,
+    K_buf_sr,
+    V_sr,
+    tau_fCa,
 
-    // Stimulus (S1)
-    stim_start,         // 5
-    stim_period_S1,     // 6
-    stim_duration,      // 7
-    stim_amplitude,     // 8
-
-    // Reversal potentials & ion concentrations
-    P_kna,          // 9
-    K_o,            // 10
-    Na_o,           // 11
-    Ca_o,           // 12
-
-    // Conductances
-    g_K1,           // 13
-    g_Kr,           // 14
-    g_Ks,           // 15
-    g_Na,           // 16
-    g_bNa,          // 17
-    g_CaL,          // 18
-    g_bCa,          // 19
-    g_to,           // 20
-
-    // Na/K Pump
-    P_NaK,          // 21
-    K_mk,           // 22
-    K_mNa,          // 23
-
-    // NCX exchanger
-    K_NaCa,         // 24
-    K_sat,          // 25
-    alpha_NCX,      // 26
-    gamma_NCX,      // 27
-    Km_Ca,          // 28
-    Km_Nai,         // 29
-
-    // Calcium pump + potassium pump
-    g_pCa,          // 30
-    K_pCa,          // 31
-    g_pK,           // 32
-
-    // Calcium dynamics (SR release / uptake)
-    tau_g,          // 33
-    a_rel,          // 34
-    b_rel,          // 35
-    c_rel,          // 36
-    K_up,           // 37
-    V_leak,         // 38
-    Vmax_up,        // 39
-
-    // Buffers
-    Buf_c,          // 40
-    K_buf_c,        // 41
-    Buf_sr,         // 42
-    K_buf_sr,       // 43
-    V_sr,           // 44
-    tau_fCa,        // 45
-
-    // Added multi-stimulus parameters (S1/S2 protocol)
-    nstim1,         // 46
-    stim_period_S2, // 47
-    nstim2,         // 48
-
-    NUM_CONSTANTS
-};
+    NUM_CONSTANTS};
 
 
 enum STATES_INDEX {
@@ -176,7 +170,7 @@ enum ALGEBRAIC_INDEX {
 void
 TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver);
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 

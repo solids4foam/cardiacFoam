@@ -1,0 +1,4 @@
+#!/bin/bash
+# Backward compatibility shim for Alltest-regression
+cd "${0%/*}" || exit 1
+exec ./regressionTests/Alltest-regression "$@"

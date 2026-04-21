@@ -1,0 +1,196 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1    # run from this directory (tutorials/regressionTests)
+REGRESSION_ROOT="$(pwd)"
+
+# Continue running remaining cases if one test fails
+set +e
+
+# Check if OpenFOAM has been sourced
+if [[ -z "${WM_PROJECT:-}" ]]
+then
+    echo "Please source the OpenFOAM bashrc first!"
+    exit 1
+fi
+
+allCaseSet=(
+    "singleCell"
+    "NiedererEtAl2012"
+)
+
+# Keep the default CI run fast
+smokeCaseSet=(
+    "singleCell"
+    "NiedererEtAl2012_parallel"
+)
+
+runTutorial()
+{
+    tutorialName="$1"
+    runMode="${2:-serial}"
+    runLog="log.Alltest-regression"
+
+    regressionDir="${REGRESSION_ROOT}/${tutorialName}"
+
+    echo
+    echo "----------------------------------------------------------------------"
+    echo "Running ${tutorialName} (${runMode})"
+    echo "----------------------------------------------------------------------"
+
+    if [ ! -d "${regressionDir}" ]
+    then
+        echo "ERROR: regression directory not found: ${regressionDir}"
+        return 1
+    fi
+
+    regressionScript="./runRegressionTest.sh"
+
+    (
+        cd "${regressionDir}" || exit 1
+
+        if [ ! -x "${regressionScript}" ]
+        then
+            echo "ERROR: missing executable regression script in $(pwd)"
+            exit 1
+        fi
+
+        if [ "${runMode}" = "parallel" ]
+        then
+            "${regressionScript}" parallel > "${runLog}" 2>&1
+        else
+            "${regressionScript}" > "${runLog}" 2>&1
+        fi
+    )
+
+    runStatus=$?
+    if [ "${runStatus}" -ne 0 ]
+    then
+        echo "FAILED: ${tutorialName} (see ${regressionDir}/${runLog})"
+        return 1
+    fi
+
+    echo "PASSED: ${tutorialName}"
+    return 0
+}
+
+appendUniqueCase()
+{
+    newCase="$1"
+    for existingCase in "${cleanupCaseSet[@]:-}"
+    do
+        if [ "${existingCase}" = "${newCase}" ]
+        then
+            return 0
+        fi
+    done
+    cleanupCaseSet+=("${newCase}")
+}
+
+cleanTutorials()
+{
+    for tutorialName in "${cleanupCaseSet[@]:-}"
+    do
+        regressionDir="${REGRESSION_ROOT}/${tutorialName}"
+        
+        if [ -d "${regressionDir}/case" ]
+        then
+            rm -rf "${regressionDir}/case"
+            echo "CLEANED: ${tutorialName} temp regression case"
+        fi
+    done
+}
+
+caseSet=("$@")
+for arg in "${caseSet[@]}"
+do
+    case "${arg}" in
+        -h | --help | help)
+            echo "Usage: ./Alltest-regression [smoke|all|<case>|<case>_parallel ...]"
+            echo "Default: smoke"
+            exit 0
+            ;;
+    esac
+done
+
+if [ "$#" -eq 0 ]
+then
+    caseSet=("smoke")
+fi
+
+if ! command -v cardiacFoam > /dev/null 2>&1
+then
+    echo "cardiacFoam is not available in PATH. Build first with ./Allwmake."
+    exit 1
+fi
+
+expandedCaseSet=()
+for caseName in "${caseSet[@]}"
+do
+    case "${caseName}" in
+        all)
+            expandedCaseSet+=("${allCaseSet[@]}")
+            ;;
+        smoke)
+            expandedCaseSet+=("${smokeCaseSet[@]}")
+            ;;
+        *)
+            expandedCaseSet+=("${caseName}")
+            ;;
+    esac
+done
+
+nFails=0
+failedCases=()
+cleanupCaseSet=()
+
+for caseName in "${expandedCaseSet[@]}"
+do
+    runMode="serial"
+    tutorialName="${caseName}"
+
+    if [[ "${caseName}" == *_parallel ]]
+    then
+        runMode="parallel"
+        tutorialName="${caseName%_parallel}"
+    fi
+
+    if [ -d "${REGRESSION_ROOT}/${tutorialName}" ]
+    then
+        runTutorial "${tutorialName}" "${runMode}"
+        if [ "$?" -ne 0 ]
+        then
+            nFails=$((nFails + 1))
+            failedCases+=("${caseName}")
+            echo "NOTE: ${tutorialName} regression case left for inspection in ${REGRESSION_ROOT}/${tutorialName}/case"
+        else
+            appendUniqueCase "${tutorialName}"
+        fi
+    else
+        echo "ERROR: unknown case '${caseName}' (no regression data found in ${REGRESSION_ROOT}/${tutorialName})."
+        echo "Known aliases: smoke, all, <case>, <case>_parallel"
+        nFails=$((nFails + 1))
+        failedCases+=("${caseName}")
+    fi
+done
+
+echo
+echo "----------------------------------------------------------------------"
+echo "Cleaning regression temporary cases"
+echo "----------------------------------------------------------------------"
+cleanTutorials
+
+echo
+echo "----------------------------------------------------------------------"
+if [ "${nFails}" -eq 0 ]
+then
+    echo "All tutorial regression tests passed."
+    echo "----------------------------------------------------------------------"
+    exit 0
+fi
+
+echo "${nFails} tutorial regression test(s) failed:"
+for caseName in "${failedCases[@]}"
+do
+    echo "  - ${caseName}"
+done
+echo "----------------------------------------------------------------------"
+exit 1

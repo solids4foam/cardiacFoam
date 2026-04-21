@@ -41,7 +41,6 @@ Note
     usefulness of reconstructing the volFields.
 
     Not extensively tested.
-
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"

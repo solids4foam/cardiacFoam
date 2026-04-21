@@ -47,6 +47,8 @@ lex.yy.c
 
 # Corefiles
 core
+!src/electroModels/core/
+!src/electroModels/core/**
 
 # dependency files - anywhere
 *.dep
@@ -97,3 +99,4 @@ SunOS*Gcc*/
 # Generated mesh / field data (VTK)
 *.vtk
 *.vtu
+.worktrees/

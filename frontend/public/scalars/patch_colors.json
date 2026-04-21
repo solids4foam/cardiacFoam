@@ -1,0 +1,59 @@
+{
+  "description": "Anatomical color mapping and chamber grouping for cardiac patches",
+  "chambers": {
+    "Left Ventricle": {
+      "patches": ["endo_lv"],
+      "description": "Left ventricular endocardium"
+    },
+    "Right Ventricle": {
+      "patches": ["endo_rv"],
+      "description": "Right ventricular endocardium"
+    },
+    "Valves": {
+      "patches": ["mitral", "aortic", "tricuspid", "pulmonary"],
+      "description": "Cardiac valve leaflets"
+    },
+    "LV Annulus": {
+      "patches": ["tag_7", "tag_18", "tag_8", "tag_19", "tag_9", "tag_20"],
+      "description": "Annular rings near mitral/aortic valves (inner/outer pairs)"
+    },
+    "RV Annulus": {
+      "patches": ["tag_10", "tag_21", "tag_11", "tag_22", "tag_12", "tag_23", "tag_13", "tag_24"],
+      "description": "Annular rings near tricuspid valve (inner/outer pairs)"
+    },
+    "Basal Structures": {
+      "patches": ["tag_3", "tag_4", "tag_5", "tag_6"],
+      "description": "Large basal/atrial volumes above the ventricles"  
+    }
+  },
+  "patches": {
+    "endo_lv":    { "color": [230, 150, 150], "group": "Left Ventricle",   "label": "LV Endocardium" },
+    "endo_rv":    { "color": [120, 170, 230], "group": "Right Ventricle",  "label": "RV Endocardium" },
+
+    "mitral":     { "color": [200, 140, 220], "group": "Valves",   "label": "Mitral Valve" },
+    "aortic":     { "color": [215, 155, 235], "group": "Valves",   "label": "Aortic Valve" },
+    "tricuspid":  { "color": [185, 125, 210], "group": "Valves",   "label": "Tricuspid Valve" },
+    "pulmonary":  { "color": [225, 165, 240], "group": "Valves",   "label": "Pulmonary Valve" },
+
+    "tag_3":      { "color": [170, 220, 170], "group": "Basal Structures",  "label": "Basal Segment 1" },
+    "tag_4":      { "color": [150, 205, 155], "group": "Basal Structures",  "label": "Basal Segment 2" },
+    "tag_5":      { "color": [140, 195, 145], "group": "Basal Structures",  "label": "Basal Segment 3" },
+    "tag_6":      { "color": [130, 185, 140], "group": "Basal Structures",  "label": "Basal Segment 4" },
+
+    "tag_7":      { "color": [240, 190, 170], "group": "LV Annulus", "label": "LV Annulus Ring 1 (inner)" },
+    "tag_18":     { "color": [235, 180, 160], "group": "LV Annulus", "label": "LV Annulus Ring 1 (outer)" },
+    "tag_8":      { "color": [245, 200, 180], "group": "LV Annulus", "label": "LV Annulus Ring 2 (inner)" },
+    "tag_19":     { "color": [240, 190, 170], "group": "LV Annulus", "label": "LV Annulus Ring 2 (outer)" },
+    "tag_9":      { "color": [250, 210, 190], "group": "LV Annulus", "label": "LV Annulus Ring 3 (inner)" },
+    "tag_20":     { "color": [245, 200, 180], "group": "LV Annulus", "label": "LV Annulus Ring 3 (outer)" },
+
+    "tag_10":     { "color": [130, 210, 220], "group": "RV Annulus", "label": "RV Annulus Ring 1 (inner)" },
+    "tag_21":     { "color": [120, 200, 210], "group": "RV Annulus", "label": "RV Annulus Ring 1 (outer)" },
+    "tag_11":     { "color": [140, 220, 225], "group": "RV Annulus", "label": "RV Annulus Ring 2 (inner)" },
+    "tag_22":     { "color": [130, 210, 215], "group": "RV Annulus", "label": "RV Annulus Ring 2 (outer)" },
+    "tag_12":     { "color": [150, 225, 230], "group": "RV Annulus", "label": "RV Annulus Ring 3 (inner)" },
+    "tag_23":     { "color": [140, 215, 220], "group": "RV Annulus", "label": "RV Annulus Ring 3 (outer)" },
+    "tag_13":     { "color": [110, 195, 205], "group": "RV Annulus", "label": "RV Annulus Ring 4 (inner)" },
+    "tag_24":     { "color": [100, 185, 195], "group": "RV Annulus", "label": "RV Annulus Ring 4 (outer)" }
+  }
+}

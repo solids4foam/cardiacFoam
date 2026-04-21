@@ -1,0 +1,33 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroMechanicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroMechanicalModel  sequentialElectroMechanical;
+
+sequentialElectroMechanicalCoeffs
+{
+    electroRegion   electro;
+    solidRegion     solid;
+
+    // Active tension coupling parameters (simple linear placeholder model):
+    //   Ta = kTa * max(Cai - CaiThreshold, 0)
+    // where Cai is the intracellular calcium from the ionic model in its
+    // native units (e.g. millimolar for TNNP: resting ~0.0002, peak ~0.001).
+    // kTa converts Cai to stress [Pa]. This will be replaced by a dedicated
+    // runtime-selectable active tension model in the future.
+    kTa             kTa [1 -1 -2 0 0 0 0] 1e7;
+    CaiThreshold    CaiThreshold [0 0 0 0 0 0 0] 0.0002;
+}
+
+// ************************************************************************* //

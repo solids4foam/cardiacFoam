@@ -1,0 +1,65 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+DRIVER="$REPO_ROOT/applications/scripts/driverFoam/bin/driverFoam"
+
+if [[ ! -x "$DRIVER" ]]; then
+    echo "Missing driver executable: $DRIVER" >&2
+    exit 1
+fi
+
+run_case() {
+    local label="$1"
+    local tutorial="$2"
+    local config_relpath="$3"
+
+    echo
+    echo "----------------------------------------------------------------------"
+    echo "Running manufactured case: $label"
+    echo "----------------------------------------------------------------------"
+
+    "$DRIVER" all \
+        --tutorial "$tutorial" \
+        --config "$SCRIPT_DIR/$config_relpath"
+}
+
+if [[ "$#" -eq 0 ]]; then
+    set -- monodomainPseudoECG bidomain singleCellMonodomain singleCellBidomain
+fi
+
+for case_name in "$@"; do
+    case "$case_name" in
+        monodomainPseudoECG|monodomain)
+            run_case \
+                "monodomainPseudoECG" \
+                "manufacturedFDA" \
+                "monodomainPseudoECG/setupManufacturedFDA/driver_config.json"
+            ;;
+        bidomain)
+            run_case \
+                "bidomain" \
+                "manufacturedFDABidomain" \
+                "bidomain/setupManufacturedFDA/driver_config.json"
+            ;;
+        singleCellMonodomain)
+            run_case \
+                "singleCellMonodomain" \
+                "singleCell" \
+                "singleCellMonodomain/setupSingleCell/driver_config.json"
+            ;;
+        singleCellBidomain)
+            run_case \
+                "singleCellBidomain" \
+                "singleCell" \
+                "singleCellBidomain/setupSingleCell/driver_config.json"
+            ;;
+        *)
+            echo "Unknown manufactured case '$case_name'." >&2
+            echo "Valid cases: monodomainPseudoECG, bidomain, singleCellMonodomain, singleCellBidomain" >&2
+            exit 1
+            ;;
+    esac
+done
