@@ -44,8 +44,10 @@ Defaults to a smoke set and supports:
 - `<case>`
 - `<case>_parallel`
 
-The regression inputs themselves live under `tutorials/regressionTests/`, while
-the runnable tutorials keep local wrappers for convenience.
+Each covered tutorial owns a `regressionTest.sh` entrypoint. The shared runner
+copies selected tutorial folders to `../tutorialsTest-regression/`, then executes
+those tutorial-local regression scripts in the copied case. Logs and generated
+fields are written only in the copied regression tree.
 
 ## Python automation integration
 
