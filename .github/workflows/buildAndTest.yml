@@ -71,7 +71,7 @@ jobs:
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
-      - name: Tutorial smoke regression
+      - name: Tutorial regression
         if: matrix.mode == 'lightweight'
         shell: bash -l {0}
         run: |
@@ -80,7 +80,7 @@ jobs:
           unset SOLIDS4FOAM_INST_DIR
           export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
 
-          ./tutorials/Alltest-regression smoke
+          ./tutorials/Alltest-regression
 
       - name: PETSc sanity check
         shell: bash -l {0}

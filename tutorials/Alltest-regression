@@ -24,6 +24,9 @@ mkdir -p "${REG_ROOT}"
 REGRESSION_TESTS=(
     "singleCellprotocols/singleCell"
     "NiedererEtAl2011/NiedererEtAl2011verification"
+    "NiedererEtAl2011/monodomainPurkinjeNiedererEtAl2011"
+    "manufacturedSolutions/bidomain"
+    "manufacturedSolutions/monodomainPseudoECG"
 )
 
 failures=0
