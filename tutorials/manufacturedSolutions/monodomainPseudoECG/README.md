@@ -5,7 +5,7 @@ stack with pseudo-ECG verification.
 
 ## Stack
 
-- electro model: `MonoDomainSolver`
+- electro model: `monodomainSolver`
 - ionic model: `monodomainFDAManufactured`
 - field verification:
   `manufacturedFDAMonodomainVerifier` from `libverificationModels`

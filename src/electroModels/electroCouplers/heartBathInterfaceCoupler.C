@@ -104,7 +104,7 @@ const electroStateProvider& requireHeartBathStateProvider
 defineTypeNameAndDebug(heartBathInterfaceCoupler, 0);
 addToRunTimeSelectionTable
 (
-    ElectroDomainCoupler,
+    electroDomainCoupler,
     heartBathInterfaceCoupler,
     dictionary
 );
@@ -135,7 +135,7 @@ heartBathInterfaceCoupler::heartBathInterfaceCoupler
     const dictionary& dict
 )
 :
-    ElectroDomainCoupler(primaryDomain, secondaryDomain),
+    electroDomainCoupler(primaryDomain, secondaryDomain),
     bathDomain_(requireBathDomain(secondaryDomain)),
     heartStateProvider_(requireHeartStateProvider(primaryDomain)),
     copyHeartPhiEToBath_

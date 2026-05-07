@@ -34,15 +34,15 @@ namespace electroModels
 
 // OverrideTypeName("singleCellSolver") in the header sets typeName_() = "singleCellSolver".
 // defineTypeNameWithName registers the static member with that string; the plain
-// defineTypeNameAndDebug(SingleCellSolver, 0) would use #SingleCellSolver and overwrite it.
-defineTypeNameWithName(SingleCellSolver, "singleCellSolver");
-defineDebugSwitch(SingleCellSolver, 0);
-addToRunTimeSelectionTable(electroModel, SingleCellSolver, dictionary);
+// defineTypeNameAndDebug(singleCellSolver, 0) would use #singleCellSolver and overwrite it.
+defineTypeNameWithName(singleCellSolver, "singleCellSolver");
+defineDebugSwitch(singleCellSolver, 0);
+addToRunTimeSelectionTable(electroModel, singleCellSolver, dictionary);
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
+singleCellSolver::singleCellSolver(Time& runTime, const word& region)
 :
     electroModel(typeName, runTime, region),
     ionicModelPtr_
@@ -176,7 +176,7 @@ SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool SingleCellSolver::evolve()
+bool singleCellSolver::evolve()
 {
     const scalar t0 = runTime().value() - runTime().deltaTValue();
     const scalar dt = runTime().deltaTValue();
@@ -229,7 +229,7 @@ bool SingleCellSolver::evolve()
 }
 
 
-void SingleCellSolver::end()
+void singleCellSolver::end()
 {
     runTime().printExecutionTime(Info);
 

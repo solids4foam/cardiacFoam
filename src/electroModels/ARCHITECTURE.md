@@ -65,7 +65,7 @@ The primary 3D cardiac region. This folder now owns the myocardium-domain family
 
 - Role: selects the concrete myocardium domain from the active `myocardiumSolver` contract without leaking solver branching into `core`
 
-**`MyocardiumDomain`**
+**`myocardiumDomain`**
 
 - Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
 
@@ -77,7 +77,7 @@ The primary 3D cardiac region. This folder now owns the myocardium-domain family
 
 - Domain-specific capabilities (not part of the lifecycle interface): `suggestExplicitDeltaT()`, `shouldPostProcess()`, `exportStates()`, `postProcess()`, `provider()`
 
-**`EikonalMyocardiumDomain`**
+**`eikonalMyocardiumDomain`**
 
 - Inherits: `myocardiumDomainInterface`
 
@@ -99,7 +99,7 @@ The primary 3D cardiac region. This folder now owns the myocardium-domain family
 
 The body-surface region. Solves a purely passive Laplace/Poisson equation driven by the myocardial `Vm` gradient as a source term. Has no ionic model.
 
-**`ECGDomain`**
+**`ecgDomain`**
 
 - Inherits: `electroDomainInterface`
 
@@ -119,7 +119,7 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 
 The Purkinje/His-bundle network. Advances activation on a graph or 1D cable, then provides activation timing to the PVJ coupler for injection into the myocardium.
 
-**`ConductionSystemDomain`** — concrete graph-topology conduction domain
+**`conductionSystemDomain`** — concrete graph-topology conduction domain
 
 - Inherits: `electroDomainInterface`, `networkCouplingEndpoint`
 
@@ -131,7 +131,7 @@ The Purkinje/His-bundle network. Advances activation on a graph or 1D cable, the
 
 ## `myocardiumModels/`
 
-Concrete reaction-diffusion implementations of `myocardiumSolver`. Each registers with `addToRunTimeSelectionTable(myocardiumSolver, ...)`. The 3D eikonal myocardium path is owned by `EikonalMyocardiumDomain`, not by this solver family.
+Concrete reaction-diffusion implementations of `myocardiumSolver`. Each registers with `addToRunTimeSelectionTable(myocardiumSolver, ...)`. The 3D eikonal myocardium path is owned by `eikonalMyocardiumDomain`, not by this solver family.
 
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
@@ -177,8 +177,8 @@ Concrete implementations of `conductionSystemSolver`.
 
 | Class | Type name | Method |
 |---|---|---|
-| `Monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
-| `EikonalSolver1D` | `eikonalSolver` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
+| `monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
+| `eikonalSolver1D` | `eikonalSolver` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
 
 **Cable equation (per edge):**
 
@@ -189,9 +189,9 @@ where G = conductance/length
 
 ```
 
-`Monodomain1DSolver` uses the **Hines tree-elimination algorithm** for O(n) implicit solution: forward elimination leaf → root, then back-substitution root → leaf. Requires tree topology (enforced at graph load).
+`monodomain1DSolver` uses the **Hines tree-elimination algorithm** for O(n) implicit solution: forward elimination leaf → root, then back-substitution root → leaf. Requires tree topology (enforced at graph load).
 
-`EikonalSolver1D` uses a single BFS pass: `activationTime[child] = activationTime[parent] + edgeLength / c0`.
+`eikonalSolver1D` uses a single BFS pass: `activationTime[child] = activationTime[parent] + edgeLength / c0`.
 
 ---
 
@@ -201,11 +201,11 @@ Transfers state between domains at each timestep. Runs between domain advances i
 
 | Class | Role |
 |---|---|
-| `electroDomainCouplingEndpoints.H` | Mix-in interfaces: `tissueCouplingEndpoint` (implemented by `MyocardiumDomain`) and `networkCouplingEndpoint` (implemented by conduction system domains). Provide typed access to injection targets and activation sources. |
+| `electroDomainCouplingEndpoints.H` | Mix-in interfaces: `tissueCouplingEndpoint` (implemented by `myocardiumDomain`) and `networkCouplingEndpoint` (implemented by conduction system domains). Provide typed access to injection targets and activation sources. |
 | `electroDomainCoupler.H/C` | Base class for all couplers. Named pair of domain references with `prepareSecondaryCoupling()`, `preparePrimaryCoupling()`, `preparePostPrimaryCoupling()` hooks. |
 | `pvjCoupler/pvjMapper.H/C` | Purkinje–Ventricular Junction topology mapper. Builds the spatial map between conduction-system terminal nodes and the nearest myocardium cells. |
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
-| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it into `MyocardiumDomain::sourceField_`. |
+| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it into `myocardiumDomain::sourceField_`. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
 | `heartBathInterfaceCoupler.H/C` | Bath-interface coupling code still present in the tree. |
 
@@ -219,7 +219,7 @@ network source -= I_pvj  (bidirectional mode only)
 
 ```
 
-`PVJMapper` spatial algorithm: for each PVJ location, find all 3D cells within `pvjRadius`, gather tissue `Vm` as a volume-weighted average, then scatter coupling current back to those cells.
+`pvjMapper` spatial algorithm: for each PVJ location, find all 3D cells within `pvjRadius`, gather tissue `Vm` as a volume-weighted average, then scatter coupling current back to those cells.
 
 ---
 
@@ -266,12 +266,12 @@ monodomainSolverCoeffs
 │  2. reactionDiffusionPvjCoupler.preparePrimaryCoupling(t0, dt)│
 │         → injects current into myocardium sourceField_        │
 │                                                               │
-│  3. MyocardiumDomain.advance(t0, dt)                          │
+│  3. myocardiumDomain.advance(t0, dt)                          │
 │       ├─ ionicModel.computeIonicCurrent()  [per cell, ODE]    │
 │       ├─ myocardiumSolver.solveDiffusion*() [Vm PDE, FVM]     │
 │       └─ phiE solve (bidomain only)                           │
 │                                                               │
-│  4. ECGDomain.advance(t0, dt)                                 │
+│  4. ecgDomain.advance(t0, dt)                                 │
 │       └─ ecgSolver.solve()  [reads Vm from myocardium]        │
 │                                                               │
 │  5. write() / end() on all domains and couplers               │
@@ -285,10 +285,10 @@ monodomainSolverCoeffs
 
 | Domain | Fields owned |
 |---|---|
-| `MyocardiumDomain` | `Vm_`, `Iion_`, `activationTime_`, `sourceField_`, `phiE_` (bidomain only) |
-| `ConductionSystemDomain` | `Vm1D_`, `Iion1D_`, `activationTime_` (per node), `terminalCurrent_`, `terminalSource_` |
-| `EikonalMyocardiumDomain` | `activationTime_` only — no ionic state |
-| `ECGDomain` | electrode config, ECG output — reads Vm from myocardium via `electroStateProvider` |
+| `myocardiumDomain` | `Vm_`, `Iion_`, `activationTime_`, `sourceField_`, `phiE_` (bidomain only) |
+| `conductionSystemDomain` | `Vm1D_`, `Iion1D_`, `activationTime_` (per node), `terminalCurrent_`, `terminalSource_` |
+| `eikonalMyocardiumDomain` | `activationTime_` only — no ionic state |
+| `ecgDomain` | electrode config, ECG output — reads Vm from myocardium via `electroStateProvider` |
 
 ---
 
@@ -298,18 +298,18 @@ monodomainSolverCoeffs
 
 electroDomainInterface
     ├── myocardiumDomainInterface + electroStateProvider + tissueCouplingEndpoint
-    │     ├── MyocardiumDomain
-    │     └── EikonalMyocardiumDomain
-    ├── ECGDomain
-    └── ConductionSystemDomain + networkCouplingEndpoint
+    │     ├── myocardiumDomain
+    │     └── eikonalMyocardiumDomain
+    ├── ecgDomain
+    └── conductionSystemDomain + networkCouplingEndpoint
 
 myocardiumSolver
     ├── monodomainSolver
     └── bidomainSolver        (owns phiE field)
 
 electroStateProvider
-    ← implemented by: MyocardiumDomain
-    ← consumed by:    ECGDomain, electrophysicsSystemBuilder
+    ← implemented by: myocardiumDomain
+    ← consumed by:    ecgDomain, electrophysicsSystemBuilder
 
 ElectromechanicalSignalProvider  (from couplingModels/)
     ← implemented by: ionicModel

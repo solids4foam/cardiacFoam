@@ -26,7 +26,7 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(ConductionSystemDomain, 0);
+defineTypeNameAndDebug(conductionSystemDomain, 0);
 
 namespace
 {
@@ -48,7 +48,7 @@ bool selectedSolverRequiresIonicModel(const dictionary& dict)
 } // End anonymous namespace
 
 
-autoPtr<ConductionSystemDomain> ConductionSystemDomain::New
+autoPtr<conductionSystemDomain> conductionSystemDomain::New
 (
     const fvMesh& mesh,
     const dictionary& dict,
@@ -77,14 +77,14 @@ autoPtr<ConductionSystemDomain> ConductionSystemDomain::New
             << exit(FatalError);
     }
 
-    return autoPtr<ConductionSystemDomain>
+    return autoPtr<conductionSystemDomain>
     (
-        new ConductionSystemDomain(mesh, dict, initialDeltaT)
+        new conductionSystemDomain(mesh, dict, initialDeltaT)
     );
 }
 
 
-void ConductionSystemDomain::readGraphFile(const dictionary& dict)
+void conductionSystemDomain::readGraphFile(const dictionary& dict)
 {
     // graphFile is optional; if not present, skip graph reading (no Purkinje network)
     if (!dict.found("graphFile"))
@@ -169,7 +169,7 @@ void ConductionSystemDomain::readGraphFile(const dictionary& dict)
 }
 
 
-void ConductionSystemDomain::readRootStimulus(const dictionary& dict)
+void conductionSystemDomain::readRootStimulus(const dictionary& dict)
 {
     if (!dict.found("rootStimulus"))
     {
@@ -197,7 +197,7 @@ void ConductionSystemDomain::readRootStimulus(const dictionary& dict)
 }
 
 
-void ConductionSystemDomain::initialiseState(const scalar initialDeltaT)
+void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 {
     if (selectedSolverRequiresIonicModel(coeffsDict_))
     {
@@ -231,13 +231,13 @@ void ConductionSystemDomain::initialiseState(const scalar initialDeltaT)
 
     if (ionicModelPtr_.valid())
     {
-        Info<< "ConductionSystemDomain ionic model: "
+        Info<< "conductionSystemDomain ionic model: "
             << ionicModelPtr_->type() << nl << endl;
     }
 }
 
 
-void ConductionSystemDomain::initialiseOutputControls()
+void conductionSystemDomain::initialiseOutputControls()
 {
     const dictionary& ovDict = coeffsDict_.subOrEmptyDict("outputVariables");
 
@@ -255,7 +255,7 @@ void ConductionSystemDomain::initialiseOutputControls()
 }
 
 
-void ConductionSystemDomain::openOutputFile()
+void conductionSystemDomain::openOutputFile()
 {
     if (!Pstream::master())
     {
@@ -313,13 +313,13 @@ void ConductionSystemDomain::openOutputFile()
 
     if (reportSetup_)
     {
-        Info<< "ConductionSystemDomain: writing to "
+        Info<< "conductionSystemDomain: writing to "
             << outDir/"purkinjeNetwork.dat" << nl << endl;
     }
 }
 
 
-ConductionSystemDomain::ConductionSystemDomain
+conductionSystemDomain::conductionSystemDomain
 (
     const fvMesh& mesh,
     const dictionary& dict,
@@ -367,14 +367,14 @@ ConductionSystemDomain::ConductionSystemDomain
 
     if (reportSetup_)
     {
-        Info<< "ConductionSystemDomain constructed as graph Purkinje model with "
+        Info<< "conductionSystemDomain constructed as graph Purkinje model with "
             << graph_.nNodes << " nodes and " << graph_.nEdges << " edges."
             << nl << endl;
     }
 }
 
 
-void ConductionSystemDomain::advance
+void conductionSystemDomain::advance
 (
     scalar t0,
     scalar dt
@@ -384,7 +384,7 @@ void ConductionSystemDomain::advance
 }
 
 
-void ConductionSystemDomain::assembleAppliedCurrent
+void conductionSystemDomain::assembleAppliedCurrent
 (
     scalar t0,
     scalarField& appliedCurrent
@@ -404,7 +404,7 @@ void ConductionSystemDomain::assembleAppliedCurrent
 }
 
 
-void ConductionSystemDomain::reportAdvanceDiagnostics
+void conductionSystemDomain::reportAdvanceDiagnostics
 (
     scalar t0,
     scalar dt
@@ -433,7 +433,7 @@ void ConductionSystemDomain::reportAdvanceDiagnostics
 }
 
 
-void ConductionSystemDomain::terminalVm(scalarField& values) const
+void conductionSystemDomain::terminalVm(scalarField& values) const
 {
     values.setSize(terminalNodes_.size());
     values = 0.0;
@@ -445,7 +445,7 @@ void ConductionSystemDomain::terminalVm(scalarField& values) const
 }
 
 
-void ConductionSystemDomain::terminalActivationTime(scalarField& values) const
+void conductionSystemDomain::terminalActivationTime(scalarField& values) const
 {
     values.setSize(terminalNodes_.size());
     values = -1.0;
@@ -457,7 +457,7 @@ void ConductionSystemDomain::terminalActivationTime(scalarField& values) const
 }
 
 
-void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values)
+void conductionSystemDomain::setTerminalActivationTime(const scalarField& values)
 {
     if (values.size() != terminalNodes_.size())
     {
@@ -482,7 +482,7 @@ void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values
 }
 
 
-void ConductionSystemDomain::setTerminalCoupling
+void conductionSystemDomain::setTerminalCoupling
 (
     const scalarField& terminalCurrent,
     const scalarField& terminalSource
@@ -511,7 +511,7 @@ void ConductionSystemDomain::setTerminalCoupling
 }
 
 
-void ConductionSystemDomain::write()
+void conductionSystemDomain::write()
 {
     if (!time().outputTime())
     {

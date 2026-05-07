@@ -32,7 +32,7 @@ License
 namespace Foam
 {
 
-addToRunTimeSelectionTable(BathECGSolver, bidomainBathECGSolver, dictionary);
+addToRunTimeSelectionTable(bathECGSolver, bidomainBathECGSolver, dictionary);
 
 
 bidomainBathECGSolver::bidomainBathECGSolver(const dictionary& dict)
@@ -54,7 +54,7 @@ bidomainBathECGSolver::bidomainBathECGSolver(const dictionary& dict)
 
 void bidomainBathECGSolver::solve
 (
-    BathDomain& domain,
+    bathDomain& domain,
     scalar t0,
     scalar dt
 )

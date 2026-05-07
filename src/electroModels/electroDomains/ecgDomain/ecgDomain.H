@@ -16,19 +16,19 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ECGDomain
+    Foam::ecgDomain
 
 Description
     Concrete ECG domain class.
 
-    Owns the electrode configuration, output I/O, and an ECGSolver kernel
+    Owns the electrode configuration, output I/O, and an ecgSolver kernel
     selected at runtime from the 'ecgSolver' dictionary key.  This mirrors
-    the pattern used by MyocardiumDomain: the domain is a single concrete
+    the pattern used by myocardiumDomain: the domain is a single concrete
     class that holds state and delegates the numerical algorithm to a
-    runtime-selectable ECGSolver.
+    runtime-selectable ecgSolver.
 
-    To add a new ECG algorithm (e.g. TorsoECGSolver), register a new
-    ECGSolver subclass — no changes to ECGDomain are needed.
+    To add a new ECG algorithm (e.g. torsoECGSolver), register a new
+    ecgSolver subclass — no changes to ecgDomain are needed.
 
 Author
     Simão Nieto de Castro, UCD.
@@ -38,8 +38,8 @@ SourceFiles
     ecgDomain.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef ECGDomain_H
-#define ECGDomain_H
+#ifndef ecgDomain_H
+#define ecgDomain_H
 
 #include "volFields.H"
 #include "autoPtr.H"
@@ -56,10 +56,10 @@ namespace Foam
 class ecgVerificationModel;
 
 /*---------------------------------------------------------------------------*\
-                       Class ECGDomain Declaration
+                       Class ecgDomain Declaration
 \*---------------------------------------------------------------------------*/
 
-class ECGDomain
+class ecgDomain
 :
     public electroDomainInterface
 {
@@ -67,7 +67,7 @@ class ECGDomain
     autoPtr<OFstream> outputPtr_;
 
     //- Runtime-selected ECG evaluation kernel
-    autoPtr<ECGSolver> solverPtr_;
+    autoPtr<ecgSolver> solverPtr_;
 
     //- Optional ECG verification extension
     autoPtr<ecgVerificationModel> verificationModelPtr_;
@@ -76,10 +76,10 @@ class ECGDomain
     scalarField numericValues_;
 
     //- Disallow copy construct
-    ECGDomain(const ECGDomain&) = delete;
+    ecgDomain(const ecgDomain&) = delete;
 
     //- Disallow assignment
-    void operator=(const ECGDomain&) = delete;
+    void operator=(const ecgDomain&) = delete;
 
 protected:
 
@@ -97,11 +97,11 @@ protected:
 
 public:
 
-    TypeName("ECGDomain");
+    TypeName("ecgDomain");
 
     // Constructors
 
-        ECGDomain
+        ecgDomain
         (
             const electroStateProvider& stateProvider,
             const dictionary& dict,
@@ -109,7 +109,7 @@ public:
         );
 
     // Destructor
-    virtual ~ECGDomain();
+    virtual ~ecgDomain();
 
     // Access
 

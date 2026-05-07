@@ -26,7 +26,7 @@ License
 namespace Foam
 {
 
-PVJMapper::PVJMapper
+pvjMapper::pvjMapper
 (
     const fvMesh& mesh,
     const pointField& terminalLocations,
@@ -185,7 +185,7 @@ PVJMapper::PVJMapper
 }
 
 
-void PVJMapper::gatherVm3DPvjs
+void pvjMapper::gatherVm3DPvjs
 (
     const volScalarField& Vm,
     scalarField& values
@@ -211,7 +211,7 @@ void PVJMapper::gatherVm3DPvjs
 }
 
 
-void PVJMapper::volumetricSource
+void pvjMapper::volumetricSource
 (
     const scalarField& couplingCurrent,
     scalarField& source
@@ -233,7 +233,7 @@ void PVJMapper::volumetricSource
 }
 
 
-void PVJMapper::depositCoupling
+void pvjMapper::depositCoupling
 (
     const scalarField& couplingCurrent,
     volScalarField& sourceField
@@ -255,7 +255,7 @@ void PVJMapper::depositCoupling
 }
 
 
-void PVJMapper::depositActivationTimes
+void pvjMapper::depositActivationTimes
 (
     const scalarField& terminalActivationTime,
     volScalarField& activationTimeField
@@ -300,7 +300,7 @@ void PVJMapper::depositActivationTimes
 }
 
 
-void PVJMapper::gatherActivationTimes
+void pvjMapper::gatherActivationTimes
 (
     const volScalarField& activationTimeField,
     scalarField& terminalActivationTime

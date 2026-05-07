@@ -41,7 +41,7 @@ namespace Foam
 {
 
 class dictionary;
-class ConductionSystemDomain;
+class conductionSystemDomain;
 
 class conductionSystemSolver
 {
@@ -73,7 +73,7 @@ public:
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) = 0;

@@ -91,7 +91,7 @@ Contains myocardium-side solver kernels and related electro models:
 ### `conductionSystemModels/`
 
 Contains Purkinje/conduction solver kernels used by
-`ConductionSystemDomain`:
+`conductionSystemDomain`:
 
 - `monodomain1DSolver`
 
@@ -111,7 +111,7 @@ Contains downstream ECG and bath-related kernels:
 
 Contains staged electro-domain coupling contracts and implementations:
 
-- `ElectroDomainCoupler`
+- `electroDomainCoupler`
 
 - endpoint interfaces
 

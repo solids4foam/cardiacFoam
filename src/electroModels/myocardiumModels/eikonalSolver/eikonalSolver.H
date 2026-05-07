@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    EikonalSolver
+    eikonalSolver
 
 Description
     Solver for computing cardiac activation times by solving an anisotropic
@@ -33,11 +33,11 @@ Author
     Philip Cardiff, UCD.
 
 SourceFiles
-    EikonalSolver.C
+    eikonalSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef EikonalSolver_H
-#define EikonalSolver_H
+#ifndef eikonalSolver_H
+#define eikonalSolver_H
 
 #include "electroModel.H"
 #include "surfaceFields.H"
@@ -51,10 +51,10 @@ namespace electroModels
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class EikonalSolver Declaration
+                        Class eikonalSolver Declaration
 \*---------------------------------------------------------------------------*/
 
-class EikonalSolver
+class eikonalSolver
 :
     public electroModel
 {
@@ -108,10 +108,10 @@ class EikonalSolver
     tmp<volTensorField> initialiseConductivity() const;
 
     //- Disallow default bitwise copy construct
-    EikonalSolver(const EikonalSolver&);
+    eikonalSolver(const eikonalSolver&);
 
     //- Disallow default bitwise assignment
-    void operator=(const EikonalSolver&);
+    void operator=(const eikonalSolver&);
 
 
 public:
@@ -122,14 +122,14 @@ public:
     // Constructors
 
         //- Construct from components
-        EikonalSolver
+        eikonalSolver
         (
             Time& runTime,
             const word& region = dynamicFvMesh::defaultRegion
         );
 
     //- Destructor
-    virtual ~EikonalSolver() {}
+    virtual ~eikonalSolver() {}
 
     // Member Functions
 

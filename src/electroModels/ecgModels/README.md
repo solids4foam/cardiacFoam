@@ -1,7 +1,7 @@
 # ecgModels
 
 This directory contains runtime-selectable ECG evaluation kernels used by
-`ECGDomain`. These models are downstream consumers of myocardium state: they
+`ecgDomain`. These models are downstream consumers of myocardium state: they
 read the finalized electrical solution after the tissue advance and produce ECG
 signals or derived potentials without feeding current back into the tissue.
 
@@ -22,16 +22,16 @@ src/electroModels/ecgModels/
 
 **Concrete solver implementations:**
 
-- **`PseudoECGSolver`** (ECG post-processor)
+- **`pseudoECGSolver`** (ECG post-processor)
   - Registered as `pseudoECG`.
   - Computes pseudo-ECG signals using the Gima-Rudy dipole model.
-  - Reads upstream myocardium state through `ECGDomain`.
+  - Reads upstream myocardium state through `ecgDomain`.
   - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
-- **`BidomainBathECGSolver`** (bath extracellular potential solver)
+- **`bidomainBathECGSolver`** (bath extracellular potential solver)
   - Registered as `bidomainBathECG`.
   - Solves steady-state Laplacian: `∇·(σ_bath·∇φE) = -I_interface`
-  - Reads myocardium transmembrane current through `BathDomain`.
+  - Reads myocardium transmembrane current through `bathDomain`.
   - Abstract interface: `electroDomains/bathDomain/bathECGSolver.H/C`
 
 ## Architectural pattern
@@ -46,7 +46,7 @@ src/electroModels/ecgModels/
 
 ## Execution role
 
-`ECGDomain` is a downstream domain in the `electrophysicsSystem`:
+`ecgDomain` is a downstream domain in the `electrophysicsSystem`:
 
 - it advances after the myocardium
 - it consumes already-updated tissue state

@@ -175,7 +175,7 @@ void configureConductionDomains
         return;
     }
 
-    HashTable<ConductionSystemDomain*> conductionDomainsByName
+    HashTable<conductionSystemDomain*> conductionDomainsByName
     (
         conductionDomainNames.size()
     );
@@ -192,9 +192,9 @@ void configureConductionDomains
                 << exit(FatalError);
         }
 
-        autoPtr<ConductionSystemDomain> conductionDomain
+        autoPtr<conductionSystemDomain> conductionDomain
         (
-            ConductionSystemDomain::New
+            conductionSystemDomain::New
             (
                 mesh,
                 *conductionDomainDicts[i],
@@ -202,7 +202,7 @@ void configureConductionDomains
             )
         );
 
-        ConductionSystemDomain* domainPtr = conductionDomain.ptr();
+        conductionSystemDomain* domainPtr = conductionDomain.ptr();
         conductionDomainsByName.insert(domainName, domainPtr);
         system.appendConductionDomain(domainPtr);
     }
@@ -241,12 +241,12 @@ void configureConductionDomains
                 << exit(FatalError);
         }
 
-        ConductionSystemDomain& conductionDomain =
+        conductionSystemDomain& conductionDomain =
             *conductionDomainsByName[linkedConductionDomain];
 
         system.appendConductionCoupling
         (
-            ElectroDomainCoupler::New
+            electroDomainCoupler::New
             (
                 system.myocardium(),
                 conductionDomain,
@@ -284,7 +284,7 @@ void configureECGDomains
     {
         system.appendECGDomain
         (
-            new ECGDomain
+            new ecgDomain
             (
                 stateProvider,
                 *ecgDomainDicts[i],

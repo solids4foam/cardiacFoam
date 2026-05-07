@@ -18,7 +18,7 @@ src/electroModels/electroDomains/
 
 ## Domain roles
 
-### `MyocardiumDomain`
+### `myocardiumDomain`
 
 Defined under `myocardiumDomain/`.
 
@@ -30,7 +30,7 @@ Defined under `myocardiumDomain/`.
   consumers.
 - Delegates the diffusion kernel to a runtime-selectable `myocardiumSolver`.
 
-### `ConductionSystemDomain`
+### `conductionSystemDomain`
 
 Defined under `conductionSystemDomain/`.
 
@@ -43,13 +43,13 @@ Defined under `conductionSystemDomain/`.
 - Keeps graph-specific utilities such as `conductionGraph` close to the domain
   because they are part of its state model.
 
-### `ECGDomain`
+### `ecgDomain`
 
 Defined under `ecgDomain/`.
 
 - Optional downstream domain advanced after the myocardium.
 - Holds electrode configuration, ECG output, and a runtime-selectable
-  `ECGSolver`.
+  `ecgSolver`.
 - Consumes read-only myocardium state through `electroStateProvider`; it does
   not couple current back into the tissue.
 

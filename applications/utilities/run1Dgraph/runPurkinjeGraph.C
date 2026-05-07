@@ -171,9 +171,9 @@ int main(int argc, char *argv[])
         << "  deltaT: " << runTime.deltaTValue() << nl
         << endl;
 
-    autoPtr<ConductionSystemDomain> conductionDomain
+    autoPtr<conductionSystemDomain> conductionDomain
     (
-        ConductionSystemDomain::New
+        conductionSystemDomain::New
         (
             mesh,
             domainDict,

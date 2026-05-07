@@ -2,7 +2,7 @@
 
 This case is the single integration-point electrophysiology workflow.
 
-- Electro model: `SingleCellSolver`
+- Electro model: `singleCellSolver`
 - Voltage evolution: inside ionic ODE system (`solveVmWithinODESolver=true`)
 - Spatial PDE solve: not used
 
@@ -31,7 +31,7 @@ tutorials/singleCell/
 `constant/electroProperties`:
 
 ```cpp
-electroModel SingleCellSolver;
+electroModel singleCellSolver;
 
 SingleCellSolverCoeffs
 {
@@ -53,7 +53,7 @@ SingleCellSolverCoeffs
 
 ## Outputs
 
-`SingleCellSolver` writes traces to:
+`singleCellSolver` writes traces to:
 
 - `postProcessing/<ionicModel>_<tissue>_<stimulusSuffix>.txt`
 

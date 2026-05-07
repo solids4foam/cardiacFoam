@@ -16,7 +16,7 @@ logic so the feature can be reinstated or ported cleanly.
 
 ## Classes
 
-### `BathDomain`
+### `bathDomain`
 
 `electroDomains/bathDomain/bathDomain.H` / `.C`
 
@@ -60,12 +60,12 @@ Implements three interfaces simultaneously:
 
 ---
 
-### `BathECGSolver`
+### `bathECGSolver`
 
 `ecgModels/bathECGSolver.H` / `.C`
 
-Run-time selectable base class for solvers that act on a `BathDomain`.  No
-multi-mesh logic of its own, but receives the active `BathDomain` (which may be
+Run-time selectable base class for solvers that act on a `bathDomain`.  No
+multi-mesh logic of its own, but receives the active `bathDomain` (which may be
 a submesh or region mesh) on each `solve()` call.
 
 Concrete implementation: `bidomainBathECGSolver` in

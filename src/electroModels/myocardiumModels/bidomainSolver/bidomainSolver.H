@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef BidomainSolver_H
-#define BidomainSolver_H
+#ifndef bidomainSolver_H
+#define bidomainSolver_H
 
 #include "myocardiumSolver.H"
 #include "overrideTypeName.H"
@@ -32,7 +32,7 @@ namespace Foam
 //  Registered in the myocardiumSolver runtime table under
 //  the key "bidomainSolver". Owns the extracellular potential
 //  field phiE, which it allocates during construction.
-class BidomainSolver
+class bidomainSolver
 :
     public myocardiumSolver
 {
@@ -57,7 +57,7 @@ public:
 
     OverrideTypeName("bidomainSolver");
 
-    BidomainSolver
+    bidomainSolver
     (
         const fvMesh& mesh,
         const dictionary& electroProperties

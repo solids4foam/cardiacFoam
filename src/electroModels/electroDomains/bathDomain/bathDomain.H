@@ -24,8 +24,8 @@ License
   See electroCouplers/heartBathInterfaceCoupler for the matching coupler.
 \*---------------------------------------------------------------------------*/
 
-#ifndef BathDomain_H
-#define BathDomain_H
+#ifndef bathDomain_H
+#define bathDomain_H
 
 #include "autoPtr.H"
 #include "fvMesh.H"
@@ -40,13 +40,13 @@ License
 namespace Foam
 {
 
-class BathDomain
+class bathDomain
 :
     public electroDomainInterface,
     public bathCouplingEndpoint,
     public electroStateProvider
 {
-    autoPtr<BathECGSolver> solverPtr_;
+    autoPtr<bathECGSolver> solverPtr_;
     const electroStateProvider& stateProvider_;
     autoPtr<fvMesh> ownedMeshPtr_;
     autoPtr<fvMeshSubset> meshSubsetPtr_;
@@ -58,14 +58,14 @@ class BathDomain
     volScalarField interfaceSource_;
     volScalarField sigmaBath_;
 
-    BathDomain(const BathDomain&) = delete;
-    void operator=(const BathDomain&) = delete;
+    bathDomain(const bathDomain&) = delete;
+    void operator=(const bathDomain&) = delete;
 
 public:
 
     TypeName("bathDomain");
 
-    BathDomain
+    bathDomain
     (
         const electroStateProvider& stateProvider,
         const fvMesh& mesh,
@@ -73,7 +73,7 @@ public:
         const word& domainName = "bath"
     );
 
-    virtual ~BathDomain() = default;
+    virtual ~bathDomain() = default;
 
     virtual const fvMesh& mesh() const override
     {

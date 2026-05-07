@@ -3,7 +3,7 @@
 This case is the single integration-point manufactured-solution workflow for the
 bidomain ionic stack.
 
-- Electro model: `SingleCellSolver`
+- Electro model: `singleCellSolver`
 - Voltage evolution: inside ionic ODE system (`solveVmWithinODESolver=true`)
 - Spatial PDE solve: not used
 
@@ -32,7 +32,7 @@ tutorials/manufacturedSolutions/singleCellBidomain/
 `constant/electroProperties`:
 
 ```cpp
-electroModel SingleCellSolver;
+electroModel singleCellSolver;
 
 SingleCellSolverCoeffs
 {
@@ -54,7 +54,7 @@ SingleCellSolverCoeffs
 
 ## Outputs
 
-`SingleCellSolver` writes traces to:
+`singleCellSolver` writes traces to:
 
 - `postProcessing/<ionicModel>_<tissue>_<stimulusSuffix>.txt`
 

@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    SingleCellSolver
+    singleCellSolver
 
 Description
     Single-cell electrophysiology solver based on OpenFOAM.
@@ -40,11 +40,11 @@ Author
     Philip Cardiff, UCD.
 
 SourceFiles
-    SingleCellSolver.C
+    singleCellSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef SingleCellSolver_H
-#define SingleCellSolver_H
+#ifndef singleCellSolver_H
+#define singleCellSolver_H
 
 #include "electroModel.H"
 #include "ionicModel.H"
@@ -60,10 +60,10 @@ namespace electroModels
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class SingleCellSolver Declaration
+                        Class singleCellSolver Declaration
 \*---------------------------------------------------------------------------*/
 
-class SingleCellSolver
+class singleCellSolver
 :
     public electroModel
 {
@@ -95,10 +95,10 @@ class SingleCellSolver
     scalarField dummyIonicCurrentField_;
 
     //- Disallow default bitwise copy construct
-    SingleCellSolver(const SingleCellSolver&);
+    singleCellSolver(const singleCellSolver&);
 
     //- Disallow default bitwise assignment
-    void operator=(const SingleCellSolver&);
+    void operator=(const singleCellSolver&);
 
 
 public:
@@ -109,18 +109,18 @@ public:
     // Constructors
 
         //- Construct from components
-        SingleCellSolver
+        singleCellSolver
         (
             Time& runTime,
             const word& region = dynamicFvMesh::defaultRegion
         );
 
     //- Destructor
-    virtual ~SingleCellSolver() {}
+    virtual ~singleCellSolver() {}
 
     // Member Functions
 
-        //- SingleCellSolver is ODE-only; deltaT is driven by controlDict.
+        //- singleCellSolver is ODE-only; deltaT is driven by controlDict.
         //  Override to prevent the base class from dereferencing the empty
         //  domainSystem_.
         virtual void setDeltaT(Time& runTime) override

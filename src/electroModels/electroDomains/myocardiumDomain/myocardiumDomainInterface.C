@@ -63,7 +63,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
 
         return autoPtr<myocardiumDomainInterface>
         (
-            new EikonalMyocardiumDomain(mesh, electroProperties)
+            new eikonalMyocardiumDomain(mesh, electroProperties)
         );
     }
 
@@ -71,7 +71,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         ionicModel::New
         (
             electroProperties,
-            MyocardiumDomain::configuredCellCount(mesh, electroProperties),
+            myocardiumDomain::configuredCellCount(mesh, electroProperties),
             initialDeltaT
         );
 
@@ -80,7 +80,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
 
     return autoPtr<myocardiumDomainInterface>
     (
-        MyocardiumDomain::New
+        myocardiumDomain::New
         (
             mesh,
             electroProperties,

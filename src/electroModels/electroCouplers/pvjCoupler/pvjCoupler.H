@@ -27,9 +27,9 @@ License
 namespace Foam
 {
 
-class PVJCoupler
+class pvjCoupler
 :
-    public ElectroDomainCoupler
+    public electroDomainCoupler
 {
 public:
 
@@ -42,7 +42,7 @@ public:
 protected:
 
     networkCouplingEndpoint& networkTerminalDomain_;
-    PVJMapper mapper_;
+    pvjMapper mapper_;
     scalar pvjRadius_;
     CouplingMode couplingMode_;
     Switch reportSetup_;
@@ -58,7 +58,7 @@ protected:
 
     static word couplingModeName(CouplingMode mode);
 
-    PVJCoupler
+    pvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

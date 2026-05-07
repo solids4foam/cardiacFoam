@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ConductionSystemDomain
+    Foam::conductionSystemDomain
 
 Description
     Graph-backed Purkinje/conduction-system domain.
@@ -29,8 +29,8 @@ SourceFiles
     conductionSystemDomain.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef ConductionSystemDomain_H
-#define ConductionSystemDomain_H
+#ifndef conductionSystemDomain_H
+#define conductionSystemDomain_H
 
 #include "autoPtr.H"
 #include "conductionGraph.H"
@@ -51,7 +51,7 @@ namespace Foam
 
 class dictionary;
 
-class ConductionSystemDomain
+class conductionSystemDomain
 :
     public electroDomainInterface,
     public networkCouplingEndpoint
@@ -99,28 +99,28 @@ class ConductionSystemDomain
     void initialiseOutputControls();
     void openOutputFile();
 
-    ConductionSystemDomain(const ConductionSystemDomain&) = delete;
-    void operator=(const ConductionSystemDomain&) = delete;
+    conductionSystemDomain(const conductionSystemDomain&) = delete;
+    void operator=(const conductionSystemDomain&) = delete;
 
 public:
 
     TypeName("conductionSystemDomain");
 
-    static autoPtr<ConductionSystemDomain> New
+    static autoPtr<conductionSystemDomain> New
     (
         const fvMesh& mesh,
         const dictionary& dict,
         scalar initialDeltaT
     );
 
-    ConductionSystemDomain
+    conductionSystemDomain
     (
         const fvMesh& mesh,
         const dictionary& dict,
         scalar initialDeltaT
     );
 
-    virtual ~ConductionSystemDomain() = default;
+    virtual ~conductionSystemDomain() = default;
 
     virtual const Time& time() const override
     {

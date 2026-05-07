@@ -30,11 +30,11 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(BathECGSolver, 0);
-defineRunTimeSelectionTable(BathECGSolver, dictionary);
+defineTypeNameAndDebug(bathECGSolver, 0);
+defineRunTimeSelectionTable(bathECGSolver, dictionary);
 
 
-autoPtr<BathECGSolver> BathECGSolver::New(const dictionary& dict)
+autoPtr<bathECGSolver> bathECGSolver::New(const dictionary& dict)
 {
     const word solverType
     (
@@ -54,7 +54,7 @@ autoPtr<BathECGSolver> BathECGSolver::New(const dictionary& dict)
             << exit(FatalError);
     }
 
-    return autoPtr<BathECGSolver>(ctorPtr(dict));
+    return autoPtr<bathECGSolver>(ctorPtr(dict));
 }
 
 } // End namespace Foam

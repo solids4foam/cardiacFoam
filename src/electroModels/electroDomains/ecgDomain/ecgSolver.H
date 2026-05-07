@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef ECGSolver_H
-#define ECGSolver_H
+#ifndef ecgSolver_H
+#define ecgSolver_H
 
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
@@ -28,18 +28,18 @@ namespace Foam
 {
 
 class dictionary;
-class ECGDomain;
+class ecgDomain;
 
-class ECGSolver
+class ecgSolver
 {
 public:
 
-    TypeName("ECGSolver");
+    TypeName("ecgSolver");
 
     declareRunTimeSelectionTable
     (
         autoPtr,
-        ECGSolver,
+        ecgSolver,
         dictionary,
         (
             const dictionary& dict
@@ -47,15 +47,15 @@ public:
         (dict)
     );
 
-    ECGSolver() = default;
+    ecgSolver() = default;
 
-    static autoPtr<ECGSolver> New(const dictionary& dict);
+    static autoPtr<ecgSolver> New(const dictionary& dict);
 
-    virtual ~ECGSolver() = default;
+    virtual ~ecgSolver() = default;
 
     virtual void compute
     (
-        const ECGDomain& domain,
+        const ecgDomain& domain,
         scalarField& values
     ) = 0;
 };

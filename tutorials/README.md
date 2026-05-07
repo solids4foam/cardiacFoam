@@ -4,9 +4,9 @@ This folder contains reference and regression cases for `cardiacFoam`.
 
 ## Current tutorial cases
 
-- `singleCell` : single-point ODE workflow (`SingleCellSolver`)
+- `singleCell` : single-point ODE workflow (`singleCellSolver`)
 - `Niederer/` : grouped slab verification and Purkinje coupling cases
-  - `NiedererEtAl2012verification` : slab verification workflow (`MonoDomainSolver`)
+  - `NiedererEtAl2012verification` : slab verification workflow (`monodomainSolver`)
   - `NiedererEtAl2012MonodomainPurkinje` : Niederer slab extended with a small 1D Purkinje network
   - `NiedererEtAl2012EikonalPurkinje` : Niederer slab configured for 3D eikonal + 1D Purkinje activation tests
 - `ECG` : monodomain + ECG output workflow (`electroModel` with nested `ECG`)

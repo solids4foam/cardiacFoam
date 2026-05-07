@@ -34,18 +34,18 @@ namespace electroModels
 
 // OverrideTypeName("eikonalSolver") in the header declares typeName_() == "eikonalSolver".
 // defineTypeNameWithName registers the static member accordingly; the plain
-// defineTypeNameAndDebug(EikonalSolver, 0) would use #EikonalSolver and overwrite it.
-defineTypeNameWithName(EikonalSolver, "eikonalSolver");
-defineDebugSwitch(EikonalSolver, 0);
+// defineTypeNameAndDebug(eikonalSolver, 0) would use #eikonalSolver and overwrite it.
+defineTypeNameWithName(eikonalSolver, "eikonalSolver");
+defineDebugSwitch(eikonalSolver, 0);
 // Do not register this legacy top-level implementation in the electroModel
 // table.  The canonical eikonal workflow is selected through
-// electrophysiologyModel and assembled as EikonalMyocardiumDomain; registering
+// electrophysiologyModel and assembled as eikonalMyocardiumDomain; registering
 // both under "eikonalSolver" creates a duplicate runtime-selection entry.
 
 
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
 
-tmp<volTensorField> EikonalSolver::initialiseConductivity() const
+tmp<volTensorField> eikonalSolver::initialiseConductivity() const
 {
     tmp<volTensorField> tresult
     (
@@ -111,7 +111,7 @@ tmp<volTensorField> EikonalSolver::initialiseConductivity() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-EikonalSolver::EikonalSolver(Time& runTime, const word& region)
+eikonalSolver::eikonalSolver(Time& runTime, const word& region)
 :
     electroModel(typeName, runTime, region),
     psi_
@@ -197,7 +197,7 @@ EikonalSolver::EikonalSolver(Time& runTime, const word& region)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool EikonalSolver::evolve()
+bool eikonalSolver::evolve()
 {
     if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
     {

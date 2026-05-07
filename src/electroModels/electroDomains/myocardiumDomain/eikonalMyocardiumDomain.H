@@ -29,7 +29,7 @@ License
 namespace Foam
 {
 
-class EikonalMyocardiumDomain
+class eikonalMyocardiumDomain
 :
     public myocardiumDomainInterface
 {
@@ -56,20 +56,20 @@ class EikonalMyocardiumDomain
 
     tmp<volTensorField> initialiseConductivity() const;
 
-    EikonalMyocardiumDomain(const EikonalMyocardiumDomain&) = delete;
-    void operator=(const EikonalMyocardiumDomain&) = delete;
+    eikonalMyocardiumDomain(const eikonalMyocardiumDomain&) = delete;
+    void operator=(const eikonalMyocardiumDomain&) = delete;
 
 public:
 
     using myocardiumDomainInterface::advance;
 
-    EikonalMyocardiumDomain
+    eikonalMyocardiumDomain
     (
         const fvMesh& supportMesh,
         const dictionary& electroProperties
     );
 
-    virtual ~EikonalMyocardiumDomain() = default;
+    virtual ~eikonalMyocardiumDomain() = default;
 
     virtual const fvMesh& mesh() const override
     {

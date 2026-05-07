@@ -28,7 +28,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(ECGDomain, 0);
+defineTypeNameAndDebug(ecgDomain, 0);
 
 
 // * * * * * * * * * * * * Private Helpers * * * * * * * * * * * * * * * * * //
@@ -50,7 +50,7 @@ void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void ECGDomain::readElectrodes(const dictionary& dict)
+void ecgDomain::readElectrodes(const dictionary& dict)
 {
     electrodeNames_.clear();
     electrodePositions_.clear();
@@ -82,7 +82,7 @@ void ECGDomain::readElectrodes(const dictionary& dict)
 }
 
 
-const volScalarField& ECGDomain::Vm() const
+const volScalarField& ecgDomain::Vm() const
 {
     const volScalarField* VmPtr = stateProvider_.VmPtr();
 
@@ -98,7 +98,7 @@ const volScalarField& ECGDomain::Vm() const
 }
 
 
-const volTensorField& ECGDomain::conductivity() const
+const volTensorField& ecgDomain::conductivity() const
 {
     const volTensorField* conductivityPtr = stateProvider_.conductivityPtr();
 
@@ -116,7 +116,7 @@ const volTensorField& ECGDomain::conductivity() const
 
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
-ECGDomain::ECGDomain
+ecgDomain::ecgDomain
 (
     const electroStateProvider& stateProvider,
     const dictionary& dict,
@@ -124,7 +124,7 @@ ECGDomain::ECGDomain
 )
 :
     outputPtr_(),
-    solverPtr_(ECGSolver::New(dict)),
+    solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),
     numericValues_(),
     stateProvider_(stateProvider),
@@ -159,12 +159,12 @@ ECGDomain::ECGDomain
 }
 
 
-ECGDomain::~ECGDomain() = default;
+ecgDomain::~ecgDomain() = default;
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void ECGDomain::evolve
+void ecgDomain::evolve
 (
     scalar t0,
     scalar dt
@@ -190,7 +190,7 @@ void ECGDomain::evolve
 }
 
 
-bool ECGDomain::read(const dictionary& dict)
+bool ecgDomain::read(const dictionary& dict)
 {
     const wordList previousElectrodeNames(electrodeNames_);
 
@@ -254,7 +254,7 @@ bool ECGDomain::read(const dictionary& dict)
 }
 
 
-void ECGDomain::end()
+void ecgDomain::end()
 {
     if (verificationModelPtr_.valid())
     {

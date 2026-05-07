@@ -28,10 +28,10 @@ src/electroModels/electroCouplers/
 coupling models:
 
 - `tissueCouplingEndpoint`
-  - implemented by `MyocardiumDomain`
+  - implemented by `myocardiumDomain`
   - exposes the tissue mesh, `Vm`, and the volumetric `sourceField`
 - `networkCouplingEndpoint`
-  - implemented by `ConductionSystemDomain`
+  - implemented by `conductionSystemDomain`
   - exposes terminal-node locations and voltages
   - accepts terminal coupling currents and matching diagnostic source terms
 
@@ -40,7 +40,7 @@ implementation.
 
 ## Base coupling model
 
-`ElectroDomainCoupler` stores the primary tissue domain and a secondary domain
+`electroDomainCoupler` stores the primary tissue domain and a secondary domain
 and provides three hook points:
 
 - `prepareSecondaryCoupling()`
@@ -62,7 +62,7 @@ orchestration path.
 
 ## PVJ coupling family
 
-`PVJMapper` owns the geometry work needed for 1D-to-3D exchange:
+`pvjMapper` owns the geometry work needed for 1D-to-3D exchange:
 
 - locate myocardium cells associated with terminal Purkinje nodes
 - gather tissue `Vm` at PVJ locations
@@ -70,14 +70,14 @@ orchestration path.
 - distribute those source terms into the myocardium `sourceField`
 - deposit terminal activation times into the myocardium activation field
 
-`PVJCoupler` owns the family-level scaffolding:
+`pvjCoupler` owns the family-level scaffolding:
 
 - `networkCouplingEndpoint` discovery
 - `couplingMode` parsing
-- `PVJMapper`
+- `pvjMapper`
 - shared terminal coupling buffers
 
-`ReactionDiffusionPvjCoupler` then applies the current resistive model at each PVJ:
+`reactionDiffusionPvjCoupler` then applies the current resistive model at each PVJ:
 
 ```text
 network terminal Vm  ----\
@@ -94,7 +94,7 @@ The coupler reuses internal buffers for:
 
 ## Coupling modes
 
-`ReactionDiffusionPvjCoupler` supports:
+`reactionDiffusionPvjCoupler` supports:
 
 - `unidirectional`
   - one-way driving from the Purkinje network into the myocardium
@@ -105,7 +105,7 @@ The coupler reuses internal buffers for:
   - allows retrograde influence from tissue state through the resistive PVJ
     term
 
-`EikonalPvjCoupler` supports:
+`eikonalPvjCoupler` supports:
 
 - `unidirectional`
   - one-way transfer of Purkinje terminal activation times into the myocardium

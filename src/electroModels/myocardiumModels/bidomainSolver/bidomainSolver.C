@@ -29,11 +29,11 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(BidomainSolver, 0);
-addToRunTimeSelectionTable(myocardiumSolver, BidomainSolver, dictionary);
+defineTypeNameAndDebug(bidomainSolver, 0);
+addToRunTimeSelectionTable(myocardiumSolver, bidomainSolver, dictionary);
 
 
-BidomainSolver::BidomainSolver
+bidomainSolver::bidomainSolver
 (
     const fvMesh& mesh,
     const dictionary& electroProperties
@@ -100,7 +100,7 @@ BidomainSolver::BidomainSolver
 }
 
 
-label BidomainSolver::referenceCell() const
+label bidomainSolver::referenceCell() const
 {
     const label refCell = phiE_.mesh().findCell(phiEReferencePoint_);
 
@@ -124,7 +124,7 @@ label BidomainSolver::referenceCell() const
     return refCell;
 }
 
-tmp<volTensorField> BidomainSolver::initialiseConductivityTensor
+tmp<volTensorField> bidomainSolver::initialiseConductivityTensor
 (
     const fvMesh& mesh,
     const word& fieldName,
@@ -180,7 +180,7 @@ tmp<volTensorField> BidomainSolver::initialiseConductivityTensor
 }
 
 
-void BidomainSolver::solveDiffusionExplicit
+void bidomainSolver::solveDiffusionExplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt
@@ -212,7 +212,7 @@ void BidomainSolver::solveDiffusionExplicit
 }
 
 
-void BidomainSolver::solveDiffusionImplicit
+void bidomainSolver::solveDiffusionImplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt
@@ -245,7 +245,7 @@ void BidomainSolver::solveDiffusionImplicit
 }
 
 
-void BidomainSolver::solveDiffusionImplicit
+void bidomainSolver::solveDiffusionImplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt,

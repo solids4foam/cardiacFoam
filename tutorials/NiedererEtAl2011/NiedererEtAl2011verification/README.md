@@ -3,7 +3,7 @@
 This tutorial implements the Niederer slab verification workflow for tissue-scale
 monodomain simulations.
 
-- Electro model: `MonoDomainSolver`
+- Electro model: `monodomainSolver`
 - Typical ionic model: `TNNP`
 - Main metric: activation-time behavior and smoke-check fields
 
@@ -37,9 +37,9 @@ tutorials/NiedererEtAl2011/
 `constant/electroProperties`:
 
 ```cpp
-electroModel MonoDomainSolver;
+electroModel monodomainSolver;
 
-MonoDomainSolverCoeffs
+monodomainSolverCoeffs
 {
     ionicModel TNNP;
     tissue epicardialCells;

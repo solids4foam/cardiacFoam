@@ -27,9 +27,9 @@ License
 namespace Foam
 {
 
-class ReactionDiffusionPvjCoupler
+class reactionDiffusionPvjCoupler
 :
-    public PVJCoupler
+    public pvjCoupler
 {
     scalar R_pvj_;
     Switch debugCoupling_;
@@ -51,7 +51,7 @@ public:
 
     OverrideTypeName("reactionDiffusionPvjCoupler");
 
-    ReactionDiffusionPvjCoupler
+    reactionDiffusionPvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

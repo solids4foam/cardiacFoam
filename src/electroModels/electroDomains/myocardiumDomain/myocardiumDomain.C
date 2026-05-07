@@ -106,7 +106,7 @@ void writeMappedCellField
 } // End anonymous namespace
 
 
-autoPtr<MyocardiumDomain> MyocardiumDomain::New
+autoPtr<myocardiumDomain> myocardiumDomain::New
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties,
@@ -128,9 +128,9 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
     const fvMesh& myocardiumMesh =
         resolveMyocardiumMesh(supportMesh, meshSubsetPtr);
 
-    return autoPtr<MyocardiumDomain>
+    return autoPtr<myocardiumDomain>
     (
-        new MyocardiumDomain
+        new myocardiumDomain
         (
             supportMesh,
             electroProperties,
@@ -151,7 +151,7 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
 }
 
 
-label MyocardiumDomain::configuredCellCount
+label myocardiumDomain::configuredCellCount
 (
     const fvMesh& mesh,
     const dictionary& electroProperties
@@ -177,7 +177,7 @@ label MyocardiumDomain::configuredCellCount
 }
 
 
-MyocardiumDomain::MyocardiumDomain
+myocardiumDomain::myocardiumDomain
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties,
@@ -279,12 +279,12 @@ MyocardiumDomain::MyocardiumDomain
 {
     if (reportSetup_)
     {
-        Info<< "MyocardiumDomain initial Vm[min,max]=["
+        Info<< "myocardiumDomain initial Vm[min,max]=["
             << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
 
         if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
         {
-            Info<< "Constructed MyocardiumDomain on submesh '"
+            Info<< "Constructed myocardiumDomain on submesh '"
                 << mesh().name() << "' from cellZone '"
                 << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
                 << "'." << nl << endl;
@@ -304,7 +304,7 @@ MyocardiumDomain::MyocardiumDomain
 }
 
 
-void MyocardiumDomain::updateExternalStimulusCurrent
+void myocardiumDomain::updateExternalStimulusCurrent
 (
     volScalarField& externalStimulusCurrent,
     const ExternalStimulusProtocol& externalStimulus,
@@ -342,7 +342,7 @@ void MyocardiumDomain::updateExternalStimulusCurrent
 }
 
 
-void MyocardiumDomain::updateActivationTime
+void myocardiumDomain::updateActivationTime
 (
     volScalarField& activationTime,
     boolList& calculateActivationTime,
@@ -374,7 +374,7 @@ void MyocardiumDomain::updateActivationTime
 }
 
 
-void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
+void myocardiumDomain::validateNoIonicStimulusInMonodomain() const
 {
     const StimulusProtocol& ionicStim = ionicModel_.stimulusProtocol();
     if
@@ -394,7 +394,7 @@ void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
 }
 
 
-void MyocardiumDomain::bindBidomainField(volScalarField& phiE)
+void myocardiumDomain::bindBidomainField(volScalarField& phiE)
 {
     if (verificationModelPtr_)
     {
@@ -403,7 +403,7 @@ void MyocardiumDomain::bindBidomainField(volScalarField& phiE)
 }
 
 
-void MyocardiumDomain::initialiseProcessing()
+void myocardiumDomain::initialiseProcessing()
 {
     if (verificationModelPtr_)
     {
@@ -478,13 +478,13 @@ void MyocardiumDomain::initialiseProcessing()
 }
 
 
-void MyocardiumDomain::advance(scalar t0, scalar dt)
+void myocardiumDomain::advance(scalar t0, scalar dt)
 {
     advance(t0, dt, nullptr);
 }
 
 
-void MyocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
+void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
 {
     (void)dt;
     // Reset the source field and apply the 3D external box stimulus.
@@ -495,7 +495,7 @@ void MyocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
 }
 
 
-void MyocardiumDomain::advance
+void myocardiumDomain::advance
 (
     scalar t0,
     scalar dt,
@@ -529,7 +529,7 @@ void MyocardiumDomain::advance
 }
 
 
-scalar MyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
+scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 {
     surfaceVectorField n("n", mesh().Sf());
     n /= mesh().magSf();
@@ -550,7 +550,7 @@ scalar MyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 }
 
 
-bool MyocardiumDomain::shouldPostProcess() const
+bool myocardiumDomain::shouldPostProcess() const
 {
     if (verificationModelPtr_)
     {
@@ -560,7 +560,7 @@ bool MyocardiumDomain::shouldPostProcess() const
 }
 
 
-void MyocardiumDomain::exportStates()
+void myocardiumDomain::exportStates()
 {
     if (!outFields_.empty())
     {
@@ -569,7 +569,7 @@ void MyocardiumDomain::exportStates()
 }
 
 
-void MyocardiumDomain::exportPostProcessFields()
+void myocardiumDomain::exportPostProcessFields()
 {
     if (!postProcessFields_.empty())
     {
@@ -578,7 +578,7 @@ void MyocardiumDomain::exportPostProcessFields()
 }
 
 
-void MyocardiumDomain::write()
+void myocardiumDomain::write()
 {
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {
@@ -649,7 +649,7 @@ void MyocardiumDomain::write()
 }
 
 
-void MyocardiumDomain::postProcess()
+void myocardiumDomain::postProcess()
 {
     if (!shouldPostProcess())
     {

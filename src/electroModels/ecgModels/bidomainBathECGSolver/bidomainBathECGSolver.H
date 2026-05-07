@@ -20,7 +20,7 @@ License
 /*---------------------------------------------------------------------------*\
   NOT_COMPILED
   This file is not included in Make/files. Bath ECG coupling is not currently
-  wired into any active orchestration path. Future extension of BathDomain.
+  wired into any active orchestration path. Future extension of bathDomain.
 \*---------------------------------------------------------------------------*/
 
 #ifndef bidomainBathECGSolver_H
@@ -35,7 +35,7 @@ namespace Foam
 
 class bidomainBathECGSolver
 :
-    public BathECGSolver
+    public bathECGSolver
 {
     label phiEReferenceCell_;
     scalar phiEReferenceValue_;
@@ -49,7 +49,7 @@ public:
 
     virtual void solve
     (
-        BathDomain& domain,
+        bathDomain& domain,
         scalar t0,
         scalar dt
     ) override;

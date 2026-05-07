@@ -27,18 +27,18 @@ namespace Foam
 {
 
 class dictionary;
-class BathDomain;
+class bathDomain;
 
-class BathECGSolver
+class bathECGSolver
 {
 public:
 
-    TypeName("BathECGSolver");
+    TypeName("bathECGSolver");
 
     declareRunTimeSelectionTable
     (
         autoPtr,
-        BathECGSolver,
+        bathECGSolver,
         dictionary,
         (
             const dictionary& dict
@@ -46,15 +46,15 @@ public:
         (dict)
     );
 
-    BathECGSolver() = default;
+    bathECGSolver() = default;
 
-    static autoPtr<BathECGSolver> New(const dictionary& dict);
+    static autoPtr<bathECGSolver> New(const dictionary& dict);
 
-    virtual ~BathECGSolver() = default;
+    virtual ~bathECGSolver() = default;
 
     virtual void solve
     (
-        BathDomain& domain,
+        bathDomain& domain,
         scalar t0,
         scalar dt
     ) = 0;

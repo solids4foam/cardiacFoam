@@ -27,13 +27,14 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(PseudoECGSolver, 0);
-addToRunTimeSelectionTable(ECGSolver, PseudoECGSolver, dictionary);
+defineTypeNameWithName(pseudoECGSolver, "pseudoECG");
+defineDebugSwitch(pseudoECGSolver, 0);
+addToRunTimeSelectionTable(ecgSolver, pseudoECGSolver, dictionary);
 
 
-void PseudoECGSolver::compute
+void pseudoECGSolver::compute
 (
-    const ECGDomain& domain,
+    const ecgDomain& domain,
     scalarField& values
 )
 {

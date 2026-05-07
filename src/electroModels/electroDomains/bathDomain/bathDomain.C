@@ -178,10 +178,10 @@ wordList bathPotentialPatchTypes
 }
 
 
-defineTypeNameAndDebug(BathDomain, 0);
+defineTypeNameAndDebug(bathDomain, 0);
 
 
-BathDomain::BathDomain
+bathDomain::bathDomain
 (
     const electroStateProvider& stateProvider,
     const fvMesh& supportMesh,
@@ -189,7 +189,7 @@ BathDomain::BathDomain
     const word& domainName
 )
 :
-    solverPtr_(BathECGSolver::New(dict)),
+    solverPtr_(bathECGSolver::New(dict)),
     stateProvider_(stateProvider),
     ownedMeshPtr_(createBathRegionMesh(supportMesh, dict)),
     meshSubsetPtr_(createBathMeshSubset(supportMesh, dict)),
@@ -253,7 +253,7 @@ BathDomain::BathDomain
         if (sigmaBathValue < 0.0)
         {
             FatalErrorInFunction
-                << "BathDomain '" << domainName
+                << "bathDomain '" << domainName
                 << "' requires either a field file named '"
                 << sigmaBath_.name() << "' or a scalar 'sigmaBath' entry in "
                 << dict.dictName() << "."
@@ -264,7 +264,7 @@ BathDomain::BathDomain
             dimensionedScalar("sigmaBath", conductivityDim, sigmaBathValue);
     }
 
-    Info<< "Constructed BathDomain '" << domainName
+    Info<< "Constructed bathDomain '" << domainName
         << "' on mesh '" << mesh_.name() << "'";
 
     if (ownedMeshPtr_.valid())
@@ -285,7 +285,7 @@ BathDomain::BathDomain
 
     Info<< "." << nl << endl;
 
-    Info<< "BathDomain '" << domainName << "' boundary patches:" << nl;
+    Info<< "bathDomain '" << domainName << "' boundary patches:" << nl;
     forAll(mesh_.boundaryMesh(), patchi)
     {
         const polyPatch& patch = mesh_.boundaryMesh()[patchi];
@@ -297,7 +297,7 @@ BathDomain::BathDomain
     {
         const polyPatch& interfacePatch = mesh_.boundaryMesh()[interfacePatchIndex_];
 
-        Info<< "BathDomain '" << domainName << "' selected interface patch '"
+        Info<< "bathDomain '" << domainName << "' selected interface patch '"
             << interfacePatch.name() << "' has "
             << interfacePatch.size() << " faces." << nl;
 
@@ -314,7 +314,7 @@ BathDomain::BathDomain
 }
 
 
-void BathDomain::advance
+void bathDomain::advance
 (
     scalar t0,
     scalar dt

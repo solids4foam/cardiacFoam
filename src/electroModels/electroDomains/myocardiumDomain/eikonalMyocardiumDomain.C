@@ -133,7 +133,7 @@ void collectActivationConstraints
 } // End anonymous namespace
 
 
-tmp<volTensorField> EikonalMyocardiumDomain::initialiseConductivity() const
+tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 {
     tmp<volTensorField> tresult
     (
@@ -184,7 +184,7 @@ tmp<volTensorField> EikonalMyocardiumDomain::initialiseConductivity() const
 }
 
 
-EikonalMyocardiumDomain::EikonalMyocardiumDomain
+eikonalMyocardiumDomain::eikonalMyocardiumDomain
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties
@@ -286,7 +286,7 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
      && meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
     )
     {
-        Info<< "Constructed EikonalMyocardiumDomain on submesh '"
+        Info<< "Constructed eikonalMyocardiumDomain on submesh '"
             << mesh().name() << "' from cellZone '"
             << electroProperties.lookupOrDefault<word>("cellZone", word::null)
             << "'." << nl << endl;
@@ -294,7 +294,7 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
 }
 
 
-void EikonalMyocardiumDomain::advance
+void eikonalMyocardiumDomain::advance
 (
     scalar t0,
     scalar dt
@@ -304,7 +304,7 @@ void EikonalMyocardiumDomain::advance
 }
 
 
-void EikonalMyocardiumDomain::advance
+void eikonalMyocardiumDomain::advance
 (
     scalar t0,
     scalar dt,
@@ -375,14 +375,14 @@ void EikonalMyocardiumDomain::advance
 }
 
 
-scalar EikonalMyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
+scalar eikonalMyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 {
     (void)maxCo;
     return 1.0;
 }
 
 
-bool EikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
+bool eikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
 {
     InfoInFunction << "Setting deltaT and endTime to 1.0" << endl;
     runTime.setDeltaT(1.0);
@@ -391,7 +391,7 @@ bool EikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
 }
 
 
-void EikonalMyocardiumDomain::write()
+void eikonalMyocardiumDomain::write()
 {
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {

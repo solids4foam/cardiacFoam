@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef MyocardiumDomain_H
-#define MyocardiumDomain_H
+#ifndef myocardiumDomain_H
+#define myocardiumDomain_H
 
 #include "myocardiumDomainInterface.H"
 #include "electromechanicalSignalProvider.H"
@@ -34,7 +34,7 @@ License
 namespace Foam
 {
 
-class MyocardiumDomain
+class myocardiumDomain
 :
     public myocardiumDomainInterface,
     public electroVolumeFieldDomain
@@ -90,7 +90,7 @@ public:
     //- Factory: derives the solver type from the Coeffs subdict name and
     //  delegates to the injecting constructor below.
     //  ("monodomainSolverCoeffs" → selects "monodomainSolver", etc.)
-    static autoPtr<MyocardiumDomain> New
+    static autoPtr<myocardiumDomain> New
     (
         const fvMesh& mesh,
         const dictionary& electroProperties,
@@ -107,7 +107,7 @@ public:
         const dictionary& electroProperties
     );
 
-    MyocardiumDomain
+    myocardiumDomain
     (
         const fvMesh& supportMesh,
         const dictionary& electroProperties,
@@ -120,7 +120,7 @@ public:
         autoPtr<fvMeshSubset> meshSubsetPtr
     );
 
-    virtual ~MyocardiumDomain() = default;
+    virtual ~myocardiumDomain() = default;
 
     virtual const fvMesh& mesh() const override
     {

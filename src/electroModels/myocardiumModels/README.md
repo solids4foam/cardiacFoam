@@ -18,31 +18,31 @@ src/electroModels/myocardiumModels/
 
 ## Tissue-domain solvers
 
-- `MonodomainSolver`
+- `monodomainSolver`
   - Registered as `monodomainSolver`.
   - Solves the standard tissue reaction-diffusion problem for `Vm`.
   - Owns the monodomain conductivity tensor used by explicit and implicit
     diffusion updates.
 
-- `BidomainSolver`
+- `bidomainSolver`
   - Registered as `bidomainSolver`.
   - Solves the coupled tissue system for `Vm` and extracellular potential
     `phiE`.
   - Owns intracellular and extracellular conductivity tensors and the `phiE`
-    field exposed through `MyocardiumDomain`.
+    field exposed through `myocardiumDomain`.
 
-- `EikonalSolver`
+- `eikonalSolver`
   - Registered as `eikonalSolver`.
   - Computes activation times with a reduced-order anisotropic eikonal
     formulation rather than a full ionic-PDE solve.
   - Useful for fast propagation studies where only activation timing is needed.
   - In the current architecture, the eikonal myocardium path is surfaced
-    through `EikonalMyocardiumDomain`, not by forcing the classic
-    reaction-diffusion `MyocardiumDomain` to own it directly.
+    through `eikonalMyocardiumDomain`, not by forcing the classic
+    reaction-diffusion `myocardiumDomain` to own it directly.
 
 ## ODE-only workflow
 
-- `SingleCellSolver`
+- `singleCellSolver`
   - Registered as `singleCellSolver`.
   - Advances one integration point with a runtime-selected ionic model and no
     spatial PDE.
@@ -51,8 +51,8 @@ src/electroModels/myocardiumModels/
 
 ## Relationship to myocardium-domain code
 
-`MyocardiumDomain` owns the reaction-diffusion tissue path, while
-`EikonalMyocardiumDomain` owns the reduced-order activation-time path.
+`myocardiumDomain` owns the reaction-diffusion tissue path, while
+`eikonalMyocardiumDomain` owns the reduced-order activation-time path.
 
 Together, the myocardium-domain layer owns:
 

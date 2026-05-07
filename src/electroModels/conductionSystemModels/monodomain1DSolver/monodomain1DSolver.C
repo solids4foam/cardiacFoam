@@ -25,17 +25,17 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(Monodomain1DSolver, 0);
+defineTypeNameAndDebug(monodomain1DSolver, 0);
 addToRunTimeSelectionTable
 (
     conductionSystemSolver,
-    Monodomain1DSolver,
+    monodomain1DSolver,
     dictionary
 );
 
-void Monodomain1DSolver::advance
+void monodomain1DSolver::advance
 (
-    ConductionSystemDomain& domain,
+    conductionSystemDomain& domain,
     scalar t0,
     scalar dt
 )

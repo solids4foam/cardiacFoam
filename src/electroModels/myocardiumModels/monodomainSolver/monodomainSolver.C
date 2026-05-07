@@ -27,16 +27,16 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(MonodomainSolver, 0);
+defineTypeNameAndDebug(monodomainSolver, 0);
 addToRunTimeSelectionTable
 (
     myocardiumSolver,
-    MonodomainSolver,
+    monodomainSolver,
     dictionary
 );
 
 
-MonodomainSolver::MonodomainSolver
+monodomainSolver::monodomainSolver
 (
     const fvMesh& mesh,
     const dictionary& electroProperties
@@ -45,7 +45,7 @@ MonodomainSolver::MonodomainSolver
     conductivity_(initialiseConductivity(mesh, electroProperties))
 {}
 
-tmp<volTensorField> MonodomainSolver::initialiseConductivity
+tmp<volTensorField> monodomainSolver::initialiseConductivity
 (
     const fvMesh& mesh,
     const dictionary& electroProperties
@@ -100,7 +100,7 @@ tmp<volTensorField> MonodomainSolver::initialiseConductivity
 }
 
 
-void MonodomainSolver::solveDiffusionExplicit
+void monodomainSolver::solveDiffusionExplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt
@@ -118,7 +118,7 @@ void MonodomainSolver::solveDiffusionExplicit
 }
 
 
-void MonodomainSolver::solveDiffusionImplicit
+void monodomainSolver::solveDiffusionImplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt
@@ -136,7 +136,7 @@ void MonodomainSolver::solveDiffusionImplicit
 }
 
 
-void MonodomainSolver::solveDiffusionImplicit
+void monodomainSolver::solveDiffusionImplicit
 (
     electroVolumeFieldDomain& domain,
     scalar dt,

@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef ElectroDomainCoupler_H
-#define ElectroDomainCoupler_H
+#ifndef electroDomainCoupler_H
+#define electroDomainCoupler_H
 
 #include "autoPtr.H"
 #include "electroDomainCouplingEndpoints.H"
@@ -30,7 +30,7 @@ namespace Foam
 class electroDomainInterface;
 
 //- Shared context for coupling models that exchange data between domains.
-class ElectroDomainCoupler
+class electroDomainCoupler
 {
 protected:
 
@@ -40,12 +40,12 @@ protected:
 
 public:
 
-    TypeName("ElectroDomainCoupler");
+    TypeName("electroDomainCoupler");
 
     declareRunTimeSelectionTable
     (
         autoPtr,
-        ElectroDomainCoupler,
+        electroDomainCoupler,
         dictionary,
         (
             tissueCouplingEndpoint& primaryDomain,
@@ -55,7 +55,7 @@ public:
         (primaryDomain, secondaryDomain, dict)
     );
 
-    ElectroDomainCoupler
+    electroDomainCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface&       secondaryDomain
@@ -66,9 +66,9 @@ public:
         secondaryDomain_(secondaryDomain)
     {}
 
-    virtual ~ElectroDomainCoupler() = default;
+    virtual ~electroDomainCoupler() = default;
 
-    static autoPtr<ElectroDomainCoupler> New
+    static autoPtr<electroDomainCoupler> New
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface&       secondaryDomain,

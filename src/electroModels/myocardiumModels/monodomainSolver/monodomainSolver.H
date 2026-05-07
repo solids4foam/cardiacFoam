@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef MonodomainSolver_H
-#define MonodomainSolver_H
+#ifndef monodomainSolver_H
+#define monodomainSolver_H
 
 #include "myocardiumSolver.H"
 #include "overrideTypeName.H"
@@ -31,7 +31,7 @@ namespace Foam
 //- Monodomain FVM reaction-diffusion kernel.
 //  Registered in the myocardiumSolver runtime table under
 //  the key "monodomainSolver".
-class MonodomainSolver
+class monodomainSolver
 :
     public myocardiumSolver
 {
@@ -47,7 +47,7 @@ public:
 
     OverrideTypeName("monodomainSolver");
 
-    MonodomainSolver
+    monodomainSolver
     (
         const fvMesh& mesh,
         const dictionary& electroProperties

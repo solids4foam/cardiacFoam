@@ -21,7 +21,7 @@ License
   NOT_COMPILED
   This file is not included in Make/files. The heart-bath coupler is not
   currently wired into the active electrophysicsSystemBuilder path.
-  Requires BathDomain to be activated first.
+  Requires bathDomain to be activated first.
 \*---------------------------------------------------------------------------*/
 
 #ifndef heartBathInterfaceCoupler_H
@@ -37,7 +37,7 @@ namespace Foam
 
 class heartBathInterfaceCoupler
 :
-    public ElectroDomainCoupler
+    public electroDomainCoupler
 {
     bathCouplingEndpoint& bathDomain_;
     const electroStateProvider& heartStateProvider_;

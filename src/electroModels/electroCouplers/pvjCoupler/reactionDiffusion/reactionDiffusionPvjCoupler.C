@@ -24,16 +24,16 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(ReactionDiffusionPvjCoupler, 0);
+defineTypeNameAndDebug(reactionDiffusionPvjCoupler, 0);
 addToRunTimeSelectionTable
 (
-    ElectroDomainCoupler,
-    ReactionDiffusionPvjCoupler,
+    electroDomainCoupler,
+    reactionDiffusionPvjCoupler,
     dictionary
 );
 
 
-void ReactionDiffusionPvjCoupler::couplingCurrentAtPvjs
+void reactionDiffusionPvjCoupler::couplingCurrentAtPvjs
 (
     const scalarField& networkVm,
     const scalarField& tissueVm,
@@ -56,7 +56,7 @@ void ReactionDiffusionPvjCoupler::couplingCurrentAtPvjs
 }
 
 
-void ReactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
+void reactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
 {
     mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVmBuffer_);
     networkTerminalDomain_.terminalVm(networkVmBuffer_);
@@ -72,7 +72,7 @@ void ReactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
 }
 
 
-void ReactionDiffusionPvjCoupler::reportCouplingDiagnostics
+void reactionDiffusionPvjCoupler::reportCouplingDiagnostics
 (
     const char* phaseName
 ) const
@@ -95,14 +95,14 @@ void ReactionDiffusionPvjCoupler::reportCouplingDiagnostics
 }
 
 
-ReactionDiffusionPvjCoupler::ReactionDiffusionPvjCoupler
+reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
     electroDomainInterface& secondaryDomain,
     const dictionary& dict
 )
 :
-    PVJCoupler(primaryDomain, secondaryDomain, dict),
+    pvjCoupler(primaryDomain, secondaryDomain, dict),
     R_pvj_(dict.get<scalar>("rPvj")),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
     tissueVmBuffer_(),
@@ -119,7 +119,7 @@ ReactionDiffusionPvjCoupler::ReactionDiffusionPvjCoupler
 }
 
 
-void ReactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
+void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
     (void)dt;
@@ -139,7 +139,7 @@ void ReactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 }
 
 
-void ReactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
+void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
     (void)dt;

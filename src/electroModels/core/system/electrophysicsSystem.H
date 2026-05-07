@@ -57,9 +57,9 @@ class electrophysicsSystem
     autoPtr<myocardiumDomainInterface> myocardium_;
     autoPtr<electrophysicsAdvanceScheme> advanceScheme_;
     PtrList<electroDomainInterface> conductionDomains_;
-    PtrList<ElectroDomainCoupler> conductionCouplingModels_;
+    PtrList<electroDomainCoupler> conductionCouplingModels_;
     PtrList<electroDomainInterface> ecgDomains_;
-    PtrList<ElectroDomainCoupler> ecgCouplingModels_;
+    PtrList<electroDomainCoupler> ecgCouplingModels_;
 
 public:
 
@@ -92,7 +92,7 @@ public:
         conductionDomains_.clear();
     }
 
-    void appendConductionCoupling(ElectroDomainCoupler* couplingModel)
+    void appendConductionCoupling(electroDomainCoupler* couplingModel)
     {
         if (!couplingModel)
         {
@@ -126,7 +126,7 @@ public:
         ecgDomains_.clear();
     }
 
-    void appendECGCoupling(ElectroDomainCoupler* couplingModel)
+    void appendECGCoupling(electroDomainCoupler* couplingModel)
     {
         if (!couplingModel)
         {
@@ -183,7 +183,7 @@ public:
         return conductionDomains_;
     }
 
-    const PtrList<ElectroDomainCoupler>& conductionCouplings() const
+    const PtrList<electroDomainCoupler>& conductionCouplings() const
     {
         return conductionCouplingModels_;
     }
@@ -193,7 +193,7 @@ public:
         return ecgDomains_;
     }
 
-    const PtrList<ElectroDomainCoupler>& ecgCouplings() const
+    const PtrList<electroDomainCoupler>& ecgCouplings() const
     {
         return ecgCouplingModels_;
     }

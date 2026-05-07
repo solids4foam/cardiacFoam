@@ -17,15 +17,15 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef PVJMapper_H
-#define PVJMapper_H
+#ifndef pvjMapper_H
+#define pvjMapper_H
 
 #include "volFields.H"
 
 namespace Foam
 {
 
-class PVJMapper
+class pvjMapper
 {
     const fvMesh& mesh_;
     pointField terminalLocations_;
@@ -36,7 +36,7 @@ class PVJMapper
 
 public:
 
-    PVJMapper
+    pvjMapper
     (
         const fvMesh& mesh,
         const pointField& terminalLocations,

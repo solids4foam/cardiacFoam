@@ -50,7 +50,7 @@ struct conductionGraph
     scalarField edgeConductances;
 
     // Tree topology rooted at node 0 (built during readFromDict).
-    // Required by Monodomain1DSolver (Hines algorithm).
+    // Required by monodomain1DSolver (Hines algorithm).
     labelList   parentList;    // parent[i] = parent node (-1 for root)
     labelList   orderList;     // BFS order root→leaves (back-substitution pass)
     labelList   reverseOrder;  // BFS order leaves→root (forward-elimination pass)

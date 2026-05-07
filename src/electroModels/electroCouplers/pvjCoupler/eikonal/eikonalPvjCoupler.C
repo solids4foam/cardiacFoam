@@ -24,29 +24,29 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(EikonalPvjCoupler, 0);
+defineTypeNameAndDebug(eikonalPvjCoupler, 0);
 addToRunTimeSelectionTable
 (
-    ElectroDomainCoupler,
-    EikonalPvjCoupler,
+    electroDomainCoupler,
+    eikonalPvjCoupler,
     dictionary
 );
 
 
-void EikonalPvjCoupler::ensureSupportedMode() const
+void eikonalPvjCoupler::ensureSupportedMode() const
 {
     // Mode checks removed to allow bidirectional eikonal coupling
 }
 
 
-EikonalPvjCoupler::EikonalPvjCoupler
+eikonalPvjCoupler::eikonalPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
     electroDomainInterface& secondaryDomain,
     const dictionary& dict
 )
 :
-    PVJCoupler(primaryDomain, secondaryDomain, dict),
+    pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_()
 {
     if (reportSetup_)
@@ -58,7 +58,7 @@ EikonalPvjCoupler::EikonalPvjCoupler
 }
 
 
-void EikonalPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
+void eikonalPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
     (void)dt;
@@ -85,7 +85,7 @@ void EikonalPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 }
 
 
-void EikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
+void eikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
     (void)dt;

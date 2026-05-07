@@ -59,9 +59,9 @@ Runtime-selectable cellular electrophysiology models. The base class is
 
 This library is used by:
 
-- `MyocardiumDomain` reaction-diffusion workflows
+- `myocardiumDomain` reaction-diffusion workflows
 
-- `ConductionSystemDomain` graph-based workflows
+- `conductionSystemDomain` graph-based workflows
 
 - `singleCellSolver`
 

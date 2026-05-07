@@ -1,7 +1,7 @@
 # conductionSystemModels
 
 This directory contains runtime-selectable solver kernels used by
-`ConductionSystemDomain`. The domain owns the graph topology, PVJ metadata,
+`conductionSystemDomain`. The domain owns the graph topology, PVJ metadata,
 ionic-model state, and terminal-coupling buffers; the classes here implement
 the numerical update applied to that graph state.
 
@@ -16,7 +16,7 @@ src/electroModels/conductionSystemModels/
 
 ## Available solvers
 
-- `Monodomain1DSolver`
+- `monodomain1DSolver`
   - Registered as `monodomain1DSolver`.
   - Advances graph-backed Purkinje state using ionic reaction terms plus an
     implicit cable-equation diffusion step.
@@ -24,7 +24,7 @@ src/electroModels/conductionSystemModels/
     topology prepared by `conductionGraph` and uses graph traversal data built
     by the domain.
 
-- `EikonalSolver1D`
+- `eikonalSolver1D`
   - Registered as `eikonalSolver`.
   - Computes nodal activation times only, using edge lengths and a prescribed
     wave speed `c0`.
@@ -33,7 +33,7 @@ src/electroModels/conductionSystemModels/
 
 ## Relationship to graph/domain code
 
-The solver kernels depend on state owned by `ConductionSystemDomain`, including:
+The solver kernels depend on state owned by `conductionSystemDomain`, including:
 
 - `conductionGraph`
 - nodal `Vm1D`, `Iion1D`, and `activationTime`

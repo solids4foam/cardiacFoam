@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Monodomain1DSolver
+    Foam::monodomain1DSolver
 
 Description
     Implicit monodomain cable-equation solver for a tree conduction-system
@@ -34,11 +34,11 @@ Author
     Simao Nieto de Castro, UCD.
 
 SourceFiles
-    Monodomain1DSolver.C
+    monodomain1DSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef MonoDomain1DSolver_H
-#define MonoDomain1DSolver_H
+#ifndef monodomain1DSolver_H
+#define monodomain1DSolver_H
 
 #include "conductionSystemSolver.H"
 #include "fvMesh.H"
@@ -49,7 +49,7 @@ SourceFiles
 namespace Foam
 {
 
-class Monodomain1DSolver
+class monodomain1DSolver
 :
     public conductionSystemSolver
 {
@@ -59,12 +59,12 @@ public:
 
     OverrideTypeName("monodomain1DSolver");
 
-    Monodomain1DSolver(const fvMesh&, const dictionary&)
+    monodomain1DSolver(const fvMesh&, const dictionary&)
     {}
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) override;

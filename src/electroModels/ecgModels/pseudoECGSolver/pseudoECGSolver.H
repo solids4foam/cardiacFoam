@@ -17,8 +17,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef PseudoECGSolver_H
-#define PseudoECGSolver_H
+#ifndef pseudoECGSolver_H
+#define pseudoECGSolver_H
 
 #include "ecgSolver.H"
 #include "overrideTypeName.H"
@@ -26,22 +26,22 @@ License
 namespace Foam
 {
 
-class ECGDomain;
+class ecgDomain;
 
-class PseudoECGSolver
+class pseudoECGSolver
 :
-    public ECGSolver
+    public ecgSolver
 {
 public:
 
     OverrideTypeName("pseudoECG");
 
-    explicit PseudoECGSolver(const dictionary&)
+    explicit pseudoECGSolver(const dictionary&)
     {}
 
     virtual void compute
     (
-        const ECGDomain& domain,
+        const ecgDomain& domain,
         scalarField& values
     ) override;
 };

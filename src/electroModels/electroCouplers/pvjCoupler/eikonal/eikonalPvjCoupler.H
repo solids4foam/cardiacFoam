@@ -26,9 +26,9 @@ License
 namespace Foam
 {
 
-class EikonalPvjCoupler
+class eikonalPvjCoupler
 :
-    public PVJCoupler
+    public pvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
 
@@ -38,7 +38,7 @@ public:
 
     OverrideTypeName("eikonalPvjCoupler");
 
-    EikonalPvjCoupler
+    eikonalPvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

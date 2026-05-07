@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::EikonalSolver1D
+    Foam::eikonalSolver1D
 
 Description
     Eikonal-equation activation-time solver for the 1D conduction system
@@ -27,7 +27,7 @@ Description
     No ionic model is required — the single parameter c0 [m/s] is read
     from the solver coefficients sub-dictionary.
 
-    This solver is the 1D counterpart of EikonalSolver (3D myocardium)
+    This solver is the 1D counterpart of eikonalSolver (3D myocardium)
     and is registered in the conductionSystemSolver runtime table
     under the key "eikonalSolver".
 
@@ -45,8 +45,8 @@ SourceFiles
     eikonalSolver1D.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef EikonalSolver1D_H
-#define EikonalSolver1D_H
+#ifndef eikonalSolver1D_H
+#define eikonalSolver1D_H
 
 #include "dimensionedScalar.H"
 #include "conductionSystemSolver.H"
@@ -57,7 +57,7 @@ SourceFiles
 namespace Foam
 {
 
-class EikonalSolver1D
+class eikonalSolver1D
 :
     public conductionSystemSolver
 {
@@ -67,11 +67,11 @@ public:
 
     OverrideTypeName("eikonalSolver1D");
 
-    EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs);
+    eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs);
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) override;
