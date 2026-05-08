@@ -13,7 +13,7 @@ echo "============================================================"
 echo "cardiacFoam regression tests"
 echo "============================================================"
 
-ROOT_DIR="$(pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
 
 # Create regression root directory
