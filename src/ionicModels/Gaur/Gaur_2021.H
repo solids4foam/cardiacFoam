@@ -646,7 +646,7 @@ STATES[cell_v] = -87.3;
 
 
 void
-GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* diffusion */
     ALGEBRAIC[AV_Jdiff] = (STATES[cass] - STATES[cai]) / 0.2;
