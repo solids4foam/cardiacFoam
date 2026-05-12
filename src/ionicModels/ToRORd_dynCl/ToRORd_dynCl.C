@@ -138,7 +138,6 @@ void Foam::ToRORd_dynCl::solveODE
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()
@@ -171,7 +170,6 @@ void Foam::ToRORd_dynCl::derivatives
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
-        tissue(),
         solveVmWithinODESolver()
     ,
             stimulusProtocol()
@@ -245,7 +243,6 @@ void Foam::ToRORd_dynCl::sweepCurrent
             RATESI.data(),
             STATESI.data(),
             ALGI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()

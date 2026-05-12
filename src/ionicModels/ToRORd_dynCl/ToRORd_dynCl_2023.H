@@ -777,6 +777,23 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
     CONSTANTS[AC_btp] = 1.25 * CONSTANTS[AC_bt];
     CONSTANTS[AC_a_relp] = 0.5 * CONSTANTS[AC_btp] / 1.0;
 
+    // Tissue-dependent algebraic parameters (promoted from hot-path branches
+    // in ToRORd_dynClcomputeVariables — see spec
+    // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.2).
+    {
+        const bool isEndo = (tissueFlag == 1);
+        const bool isMCell = (tissueFlag == 2);
+
+        // AV_delta_epi: only the endo branch produces a sigmoid term.
+        // M-cells and epi reduce to constant 1.0 via amp = 0.
+        CONSTANTS[deltaEpiAmp]   = isEndo ? 0.95 : 0.0;
+        CONSTANTS[deltaEpiShift] = isEndo ? 70.0 : 0.0;
+        CONSTANTS[deltaEpiScale] = isEndo ?  5.0 : 1.0;  // must be non-zero
+
+        // AV_Jrel_inf and AV_Jrel_infp scale by 1.7 only in M-cells.
+        CONSTANTS[jrelTissueScale] = isMCell ? 1.7 : 1.0;
+    }
+
     /* --- Initial values --- */
 
     STATES[V]          = tissueSelect(tissueFlag, -89.74808, -91.33918, -90.74563);
@@ -845,7 +862,7 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
 
 }
 void
-ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* CaMK */
     ALGEBRAIC[AV_CaMKb] = CONSTANTS[AC_CaMKo] * (1.0 - STATES[CaMKt]) / (1.0 + CONSTANTS[AC_KmCaM] / STATES[Cass]);
@@ -945,7 +962,11 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_AiF] = 1.0 / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] - 213.6) / 151.2));
     ALGEBRAIC[AV_ass] = 1.0 / (1.0 + exp(-(STATES[V] + CONSTANTS[AC_EKshift] - 14.34) / 14.82));
     ALGEBRAIC[AV_assp] = 1.0 / (1.0 + exp(-(STATES[V] + CONSTANTS[AC_EKshift] - 24.34) / 14.82));
-    ALGEBRAIC[AV_delta_epi] = ((tissueFlag == 1) ? 1.0 - 0.95 / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] + 70.0) / 5.0)) : 1.0);
+    // AV_delta_epi: tissue dependence promoted to CONSTANTS[deltaEpi*] —
+    // amp == 0 in non-endo collapses the sigmoid term back to constant 1.0.
+    ALGEBRAIC[AV_delta_epi] = 1.0 - CONSTANTS[deltaEpiAmp]
+        / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] + CONSTANTS[deltaEpiShift])
+                     / CONSTANTS[deltaEpiScale]));
     ALGEBRAIC[AV_dti_develop] = 1.354 + 0.0001 / (exp((STATES[V] + CONSTANTS[AC_EKshift] - 167.4) / 15.89) + exp(-(STATES[V] + CONSTANTS[AC_EKshift] - 12.23) / 0.2154));
     ALGEBRAIC[AV_dti_recover] = 1.0 - 0.5 / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] + 70.0) / 20.0));
     ALGEBRAIC[AV_iss] = 1.0 / (1.0 + exp((STATES[V] + CONSTANTS[AC_EKshift] + 43.94) / 5.711));
@@ -1125,8 +1146,9 @@ ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_E2] = ALGEBRAIC[AV_x2] / (ALGEBRAIC[AV_x1] + ALGEBRAIC[AV_x2] + ALGEBRAIC[AV_x3] + ALGEBRAIC[AV_x4]);
     ALGEBRAIC[AV_E3] = ALGEBRAIC[AV_x3] / (ALGEBRAIC[AV_x1] + ALGEBRAIC[AV_x2] + ALGEBRAIC[AV_x3] + ALGEBRAIC[AV_x4]);
     ALGEBRAIC[AV_E4] = ALGEBRAIC[AV_x4] / (ALGEBRAIC[AV_x1] + ALGEBRAIC[AV_x2] + ALGEBRAIC[AV_x3] + ALGEBRAIC[AV_x4]);
-    ALGEBRAIC[AV_Jrel_inf] = ((tissueFlag == 2.0) ? ALGEBRAIC[AV_Jrel_inf_b] * 1.7 : ALGEBRAIC[AV_Jrel_inf_b]);
-    ALGEBRAIC[AV_Jrel_infp] = ((tissueFlag == 2.0) ? ALGEBRAIC[AV_Jrel_infp_b] * 1.7 : ALGEBRAIC[AV_Jrel_infp_b]);
+    // Jrel scalings: M-cell-only 1.7x factor promoted to CONSTANTS[jrelTissueScale].
+    ALGEBRAIC[AV_Jrel_inf]  = ALGEBRAIC[AV_Jrel_inf_b]  * CONSTANTS[jrelTissueScale];
+    ALGEBRAIC[AV_Jrel_infp] = ALGEBRAIC[AV_Jrel_infp_b] * CONSTANTS[jrelTissueScale];
     ALGEBRAIC[AV_k3_i] = ALGEBRAIC[AV_k3p_i] + ALGEBRAIC[AV_k3pp_i];
     ALGEBRAIC[AV_k3_ss] = ALGEBRAIC[AV_k3p_ss] + ALGEBRAIC[AV_k3pp_ss];
     ALGEBRAIC[AV_k4_i] = ALGEBRAIC[AV_k4p_i] + ALGEBRAIC[AV_k4pp_i];

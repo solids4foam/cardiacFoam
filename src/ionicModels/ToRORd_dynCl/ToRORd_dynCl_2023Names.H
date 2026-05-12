@@ -461,6 +461,14 @@ enum CONSTANTS_INDEX {
     AC_btp,
     AC_a_relp,
 
+    // Tissue-dependent algebraic parameters (promoted from hot-path branches
+    // in ToRORd_dynClcomputeVariables — see spec
+    // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.2)
+    deltaEpiAmp,
+    deltaEpiShift,
+    deltaEpiScale,
+    jrelTissueScale,
+
     NUM_CONSTANTS};
 
 
@@ -468,4 +476,4 @@ void
 ToRORd_dynClinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
 
 void
-ToRORd_dynClcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,int tissueFlag,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+ToRORd_dynClcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
