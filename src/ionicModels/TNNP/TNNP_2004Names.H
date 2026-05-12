@@ -65,6 +65,20 @@ enum CONSTANTS_INDEX {
     V_sr,
     tau_fCa,
 
+    // Tissue-dependent algebraic parameters (promoted from hot-path branches
+    // in TNNPcomputeRates / TNNPcomputeVariables — see spec
+    // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1)
+    sInfPrefactor,
+    sInfShift,
+    sInfScale,
+    tauSGaussAmp,
+    tauSGaussShift,
+    tauSGaussWidth,
+    tauSSigmoidAmp,
+    tauSSigmoidShift,
+    tauSSigmoidScale,
+    tauSOffset,
+
     NUM_CONSTANTS};
 
 
@@ -170,7 +184,7 @@ enum ALGEBRAIC_INDEX {
 void
 TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 

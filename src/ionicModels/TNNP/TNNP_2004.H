@@ -350,6 +350,31 @@ CONSTANTS[g_to] = (tissueFlag == 3)
           ? 0.073
           : 0.294;
 
+// Tissue-dependent algebraic parameters (promoted from hot-path branches
+// in TNNPcomputeRates / TNNPcomputeVariables — see spec
+// docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1).
+// Original branch: only tissueFlag == 1 (endo) selects the first set;
+// M-cells and epi share the second set.
+{
+    const bool isEndo = (tissueFlag == 1);
+
+    CONSTANTS[sInfPrefactor]    = isEndo ?    1.00000 :    1.10000;
+    CONSTANTS[sInfShift]        = isEndo ?   20.00000 :   28.00000;
+    CONSTANTS[sInfScale]        = isEndo ?    5.00000 :    6.00000;
+
+    CONSTANTS[tauSGaussAmp]     = isEndo ?   85.00000 : 1000.00000;
+    CONSTANTS[tauSGaussShift]   = isEndo ?   45.00000 :   67.00000;
+    CONSTANTS[tauSGaussWidth]   = isEndo ?  320.00000 : 1000.00000;
+
+    // Sigmoid term: amp == 0 in non-endo collapses the whole term;
+    // scale must remain non-zero to avoid 1/0 in IEEE math.
+    CONSTANTS[tauSSigmoidAmp]   = isEndo ?    5.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidShift] = isEndo ?  -20.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidScale] = isEndo ?    5.00000 :    1.00000;
+
+    CONSTANTS[tauSOffset]       = isEndo ?    3.00000 :    8.00000;
+}
+
 STATES[s] = 1;
 STATES[r] = 0;
 CONSTANTS[P_NaK] = 1.362;
@@ -383,7 +408,7 @@ CONSTANTS[tau_fCa] = 2.00000;
 }
 
 void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 //INa
@@ -422,13 +447,18 @@ ALGEBRAIC[d_fCa] = (ALGEBRAIC[fCa_inf] - STATES[fCa])/CONSTANTS[tau_fCa];
 RATES[fCa] = (ALGEBRAIC[fCa_inf]>STATES[fCa]&&STATES[V]>- 60.0000 ? 0.00000 : ALGEBRAIC[d_fCa]);
 
 //Ito
-//Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1)
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
-    : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
-ALGEBRAIC[tau_s] = (tissueFlag == 1)
-     ? 85.0000*exp(- pow(STATES[V]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[V] - 20.0000)/5.00000))+3.00000
-     : 1000.0000*exp(- pow(STATES[V]+67.0000, 2.00000)/1000.000)+8.00000;
+// Ito (tissue dependence now lives in CONSTANTS[sInf*] and CONSTANTS[tauS*],
+// set per tissue in TNNPinitConsts — see spec §3.1).
+ALGEBRAIC[s_inf] = CONSTANTS[sInfPrefactor]
+    / (1.00000 + exp((STATES[V] + CONSTANTS[sInfShift]) / CONSTANTS[sInfScale]));
+ALGEBRAIC[tau_s] =
+      CONSTANTS[tauSGaussAmp]
+      * exp(- pow(STATES[V] + CONSTANTS[tauSGaussShift], 2.00000)
+            / CONSTANTS[tauSGaussWidth])
+    + CONSTANTS[tauSSigmoidAmp]
+      / (1.00000 + exp((STATES[V] + CONSTANTS[tauSSigmoidShift])
+                       / CONSTANTS[tauSSigmoidScale]))
+    + CONSTANTS[tauSOffset];
 RATES[s] = (ALGEBRAIC[s_inf] - STATES[s])/ALGEBRAIC[tau_s];
 ALGEBRAIC[r_inf] = 1.00000/(1.00000+exp((20.0000 - STATES[V])/6.00000));
 ALGEBRAIC[tau_r] =  9.50000*exp(- pow(STATES[V]+40.0000, 2.00000)/1800.00)+0.800000;
@@ -513,20 +543,24 @@ RATES[Ca_SR] =  ALGEBRAIC[ddt_Ca_sr_total]*ALGEBRAIC[f_JCa_sr_free];
 
 
 void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 ALGEBRAIC[f_inf] = 1.00000/(1.00000+exp((STATES[V]+20.0000)/7.00000));
 ALGEBRAIC[tau_f] =  1125.00*exp(- pow(STATES[V]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[V])/10.0000));
 
-//Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1)
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
-    : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
-
-ALGEBRAIC[tau_s] = (tissueFlag == 1)
-     ? 85.0000*exp(- pow(STATES[V]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[V] - 20.0000)/5.00000))+3.00000
-     : 1000.0000*exp(- pow(STATES[V]+67.0000, 2.00000)/1000.000)+8.00000;
+// Ito (tissue dependence now lives in CONSTANTS[sInf*] and CONSTANTS[tauS*],
+// set per tissue in TNNPinitConsts — see spec §3.1).
+ALGEBRAIC[s_inf] = CONSTANTS[sInfPrefactor]
+    / (1.00000 + exp((STATES[V] + CONSTANTS[sInfShift]) / CONSTANTS[sInfScale]));
+ALGEBRAIC[tau_s] =
+      CONSTANTS[tauSGaussAmp]
+      * exp(- pow(STATES[V] + CONSTANTS[tauSGaussShift], 2.00000)
+            / CONSTANTS[tauSGaussWidth])
+    + CONSTANTS[tauSSigmoidAmp]
+      / (1.00000 + exp((STATES[V] + CONSTANTS[tauSSigmoidShift])
+                       / CONSTANTS[tauSSigmoidScale]))
+    + CONSTANTS[tauSOffset];
 
 ALGEBRAIC[r_inf] = 1.00000/(1.00000+exp((20.0000 - STATES[V])/6.00000));
 ALGEBRAIC[tau_r] =  9.50000*exp(- pow(STATES[V]+40.0000, 2.00000)/1800.00)+0.800000;

@@ -150,7 +150,6 @@ void Foam::TNNP::solveODE
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()
@@ -162,7 +161,6 @@ void Foam::TNNP::solveODE
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()
@@ -195,7 +193,6 @@ void Foam::TNNP::derivatives
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
-        tissue(),
         solveVmWithinODESolver()
     ,
             stimulusProtocol()
@@ -254,7 +251,6 @@ void Foam::TNNP::sweepCurrent
             RATESI.data(),
             STATESI.data(),
             ALGI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()
