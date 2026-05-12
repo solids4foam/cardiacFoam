@@ -138,7 +138,21 @@ Source: `src/ionicModels/Gaur/Gaur_2021Names.H`, `Gaur_2021.H`.
 
 - **ToRORd_dynCl `CaMKt`** — CaMK trapping fraction in `[0,1]`. Appears as `(1 - CaMKt)` and bare `CaMKt` in `CaMKb` / `CaMKa`; a negative value would corrupt downstream phosphorylation fractions. Clamp `[0,1]`.
 
-- **ToRORd_dynCl `IKr_C1..C3, I, O`** — five Markov states for the IKr channel. Each individual occupancy is in `[0,1]`, *and* mathematically `C1 + C2 + C3 + I + O = 1`. A per-state `[0,1]` clamp prevents NaN propagation but does **not** enforce the sum-to-1 constraint; small drift will accumulate over many substeps. **Implementer decision needed:** for SoA-Euler, either (a) accept the drift for short integration windows and rely on the per-state clamp, or (b) add a renormalisation pass (`STATES[i] /= sum`) after the Markov block. For now this inventory specifies the per-state `[0,1]` clamp only; flag for follow-up.
+- **ToRORd_dynCl `IKr_C1..C3, I, O`** — five Markov states for the IKr channel. Each individual occupancy is in `[0,1]`, *and* mathematically `C1 + C2 + C3 + I + O = 1`. A per-state `[0,1]` clamp prevents NaN propagation but does not enforce the sum-to-1 constraint; small drift accumulates over many substeps. **Decision (recorded 2026-05-12):** **add the renormalisation pass** after the IKr Markov state update, before the next substep. Cost is ~15 FLOPs per cell per substep (5 reads + 4 adds + 1 div + 5 mults + 5 writes) against an evaluator that's ~10,000+ FLOPs per cell — well under 0.5% overhead. Cannot explode: the per-state `[0,1]` clamp already in this inventory handles negative-drift; renormalisation enforces the joint sum, improving long-time accuracy vs RKF45 without changing short-time correctness. Reference snippet for the SoA-shim implementer:
+
+  ```cpp
+  // After the IKr Markov state update, before the next substep:
+  const double sum = STATES[IKr_C1] + STATES[IKr_C2] + STATES[IKr_C3]
+                   + STATES[IKr_I]  + STATES[IKr_O];
+  const double inv = 1.0 / sum;
+  STATES[IKr_C1] *= inv;
+  STATES[IKr_C2] *= inv;
+  STATES[IKr_C3] *= inv;
+  STATES[IKr_I]  *= inv;
+  STATES[IKr_O]  *= inv;
+  ```
+
+  In SoA layout this becomes one fully-coherent pass over five contiguous state slots per cell. On GPU it's a single warp-wide reciprocal — negligible relative to the launch.
 
 - **ToRORd_dynCl `ICaL_nca_ss`, `ICaL_nca_i`** — Ca-binding occupancy fractions, structurally in `[0,1]`. Treating as gates is safe.
 

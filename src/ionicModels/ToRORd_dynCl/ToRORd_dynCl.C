@@ -130,6 +130,26 @@ void Foam::ToRORd_dynCl::solveODE
         // Advance ODE system for all states
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
+        // Enforce sum-to-1 invariant on the IKr Markov state vector
+        // (C1 + C2 + C3 + I + O == 1). The 5 channel-state probabilities
+        // are mass-conserving by construction, but explicit integration
+        // (and adaptive integration to a lesser extent) lets a small drift
+        // accumulate. Single divide + 5 mults per cell per step; cost is
+        // negligible against the full evaluator. Required by the future
+        // SoA-Euler path; harmless here.
+        // See docs/superpowers/specs/clamp-inventory.md for rationale.
+        {
+            const scalar sum =
+                STATESI[IKr_C1] + STATESI[IKr_C2] + STATESI[IKr_C3]
+              + STATESI[IKr_I]  + STATESI[IKr_O];
+            const scalar inv = 1.0/sum;
+            STATESI[IKr_C1] *= inv;
+            STATESI[IKr_C2] *= inv;
+            STATESI[IKr_C3] *= inv;
+            STATESI[IKr_I]  *= inv;
+            STATESI[IKr_O]  *= inv;
+        }
+
         // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::ToRORd_dynClcomputeVariables
         (
