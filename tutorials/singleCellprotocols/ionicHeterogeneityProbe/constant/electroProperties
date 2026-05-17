@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
+|  \\    /   O peration     | Version:  v2412                                 |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -14,17 +14,13 @@ FoamFile
     object      electroProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 myocardiumSolver singleCellSolver;
+
 singleCellSolverCoeffs
 {
-
-    // Cell model selection
-
-    ionicModel    TWorld;
-    tissue    endocardialCells;
-
-
-    // Time integration settings
+    ionicModel    BuenoOrovio;
+    tissue        endocardialCells;
 
     solutionAlgorithm explicit;
     solver          RKF45;
@@ -33,32 +29,15 @@ singleCellSolverCoeffs
     absTol          1e-6;
     relTol          1e-4;
 
-
-    // Stimulus protocol
-    singleCellStimulus
+    ionicHeterogeneity
     {
-        stim_start      20;
-        stim_duration   1;
-        stim_amplitude  60;
-        stim_period_S1  1000;
-        nstim1          3;
-        stim_period_S2  0;
-        nstim2          0;
+        mode              transmuralBands;
+        field             t;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0.1;
+        smoothing         smoothstep;
     }
-
-
-
-    // optional I/O control
-
-    writeAfterTime  0;
-
-    outputVariables
-    {
-        ionic
-        {
-            export (Vm s);
-            debug (Vm);
-        }
-    }
-
 }
+
+// ************************************************************************* //

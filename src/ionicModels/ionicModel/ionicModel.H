@@ -98,6 +98,10 @@ class ionicModel
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
         }
+        const dictionary& dict() const
+        {
+            return dict_;
+        }
         wordList variableExport_;
         wordList debugVarNames_;
         mutable ionicModelIO::FullPlanCache fullWritePlanCache_;
@@ -254,6 +258,12 @@ public:
             const scalarField& Vm,
             scalarField& Im
         ) = 0;
+
+        virtual void configureIonicHeterogeneity
+        (
+            const scalarField& transmuralDistance,
+            const dictionary& heterogeneityDict
+        );
 
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;

@@ -59,6 +59,12 @@ class BuenoOrovio
         //- Constants
         mutable scalarField CONSTANTS_;
 
+        //- Optional per-integration-point constants for transmural maps
+        mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
+
+        //- Active point used by ODESystem::derivatives callback
+        mutable label activeIntegrationPoint_;
+
         //- Algebraic
         mutable PtrList<scalarField> ALGEBRAIC_;
 
@@ -73,6 +79,8 @@ class BuenoOrovio
 
         //- No copy assignment
         void operator=(const BuenoOrovio&) = delete;
+
+        scalarField& constants(const label integrationPtI) const;
 
 protected:
         static scalar transformedVm(const scalarField& S)
@@ -169,6 +177,12 @@ protected:
                 const scalar deltaT,
                 const scalarField& Vm,
                 scalarField& Im
+            ) override;
+
+            virtual void configureIonicHeterogeneity
+            (
+                const scalarField& transmuralDistance,
+                const dictionary& heterogeneityDict
             ) override;
 
 

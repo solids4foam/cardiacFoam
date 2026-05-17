@@ -100,6 +100,21 @@ Foam::ionicModel::~ionicModel()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+void Foam::ionicModel::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    (void)transmuralDistance;
+    (void)heterogeneityDict;
+
+    FatalErrorInFunction
+        << "ionicHeterogeneity was requested for ionic model " << type()
+        << ", but this model does not support spatial ionic heterogeneity."
+        << exit(FatalError);
+}
+
 bool Foam::ionicModel::utilitiesMode() const
 {
     return dict_.found("utilities")

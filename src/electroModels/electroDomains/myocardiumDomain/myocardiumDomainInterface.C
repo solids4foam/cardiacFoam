@@ -23,6 +23,8 @@ License
 #include "ionicModel.H"
 #include "electroVerificationModel.H"
 #include "error.H"
+#include "fvMeshSubset.H"
+#include "volFields.H"
 
 namespace Foam
 {
@@ -37,6 +39,62 @@ word myocardiumSolverType(const dictionary& electroProperties)
     return coeffDictName.endsWith("Coeffs")
         ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
         : coeffDictName;
+}
+
+
+scalarField readTransmuralDistance
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties,
+    const dictionary& heterogeneityDict
+)
+{
+    const word fieldName =
+        heterogeneityDict.lookupOrDefault<word>("field", "t");
+
+    volScalarField transmuralField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh
+    );
+
+    const scalarField& fullValues = transmuralField.primitiveField();
+
+    if (!electroProperties.found("cellZone"))
+    {
+        return fullValues;
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << mesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    fvMeshSubset subset(mesh);
+    subset.setCellSubset(mesh.cellZones()[zoneId]);
+
+    const labelUList& cellMap = subset.cellMap();
+    scalarField mappedValues(cellMap.size(), 0.0);
+
+    forAll(cellMap, subCellI)
+    {
+        mappedValues[subCellI] = fullValues[cellMap[subCellI]];
+    }
+
+    return mappedValues;
 }
 
 } // End anonymous namespace
@@ -74,6 +132,21 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             myocardiumDomain::configuredCellCount(mesh, electroProperties),
             initialDeltaT
         );
+
+    if (electroProperties.found("ionicHeterogeneity"))
+    {
+        const dictionary& heterogeneityDict =
+            electroProperties.subDict("ionicHeterogeneity");
+
+        const scalarField transmuralDistance =
+            readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
+
+        ionicModelPtr->configureIonicHeterogeneity
+        (
+            transmuralDistance,
+            heterogeneityDict
+        );
+    }
 
     verificationModelPtr =
         electroVerificationModel::New(electroProperties);

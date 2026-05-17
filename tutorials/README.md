@@ -5,6 +5,8 @@ This folder contains reference and regression cases for `cardiacFoam`.
 ## Current tutorial cases
 
 - `singleCell` : single-point ODE workflow (`singleCellSolver`)
+- `ionicHeterogeneityProbe` : meshless Bueno-Orovio transmural heterogeneity
+  probe with 2D/3D plotting
 - `Niederer/` : grouped slab verification and Purkinje coupling cases
   - `NiedererEtAl2012verification` : slab verification workflow (`monodomainSolver`)
   - `NiedererEtAl2012MonodomainPurkinje` : Niederer slab extended with a small 1D Purkinje network

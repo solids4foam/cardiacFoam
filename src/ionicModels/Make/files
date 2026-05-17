@@ -1,5 +1,6 @@
 ionicModel/ionicModel.C
 ionicModel/ionicSelector.C
+ionicModel/ionicHeterogeneity.C
 
 monodomainFDAManufactured/monodomainFDAManufactured.C
 bidomainFDAManufactured/bidomainFDAManufactured.C
@@ -13,6 +14,7 @@ BuenoOrovio/BuenoOrovio.C
 ToRORd_dynCl/ToRORd_dynCl.C
 Trovato/Trovato.C
 ORd/ORd.C
+TWorld/TWorld.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
 AlievPanfilov/AlievPanfilov.C
