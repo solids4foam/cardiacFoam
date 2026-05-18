@@ -41,6 +41,15 @@ reference helpers used to validate:
 - `ecgVerification/`
   ECG verification helpers such as pseudo-ECG manufactured verification
 
+Registered verifier types include:
+
+- `manufacturedFDAMonodomainVerifier`
+- `manufacturedFDABidomainVerifier`
+- `manufacturedFDABathBidomainVerifier`
+- `singleCellManufacturedFDABidomainVerifier`
+- `pseudoECGManufacturedVerifier`
+- `bathECGManufacturedVerifier`
+
 ## What this folder does not own
 
 This folder does not own the myocardium or ECG solvers themselves. It provides

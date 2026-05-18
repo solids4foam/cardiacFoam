@@ -21,10 +21,12 @@ License
 #include "conductionSystemDomain.H"
 #include "ecgDomain.H"
 #include "electroDomainCoupler.H"
+#include "electroStateDomain.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 
 #include "DynamicList.H"
+#include "HashTable.H"
 
 namespace Foam
 {
@@ -150,6 +152,67 @@ void configureAdvanceScheme
 }
 
 
+void configurePotentialDomain
+(
+    electrophysicsSystem& system,
+    const fvMesh&         mesh,
+    const dictionary&     electroProperties
+)
+{
+    system.clearPotentialDomain();
+
+    const word oldUnifiedPhiEKey("useUnifiedPhiE");
+    const word oldPotentialDomainKey("bodyPotentialDomain");
+
+    if (electroProperties.found(oldUnifiedPhiEKey))
+    {
+        FatalErrorInFunction
+            << "'" << oldUnifiedPhiEKey << "' has been removed. Configure "
+            << "unified bidomain-bath solves with:" << nl
+            << "potentialDomain" << nl
+            << "{" << nl
+            << "    type extracellularPotentialDomain;" << nl
+            << "    ..." << nl
+            << "}" << exit(FatalError);
+    }
+
+    if (electroProperties.found(oldPotentialDomainKey))
+    {
+        FatalErrorInFunction
+            << "'" << oldPotentialDomainKey << "' has been renamed. Use:" << nl
+            << "potentialDomain" << nl
+            << "{" << nl
+            << "    type extracellularPotentialDomain;" << nl
+            << "    ..." << nl
+            << "}"
+            << exit(FatalError);
+    }
+
+    if (!electroProperties.found("potentialDomain"))
+    {
+        return;
+    }
+
+    if (!system.hasMyocardium())
+    {
+        FatalErrorInFunction
+            << "configurePotentialDomain requires the myocardium domain "
+            << "to be configured first."
+            << exit(FatalError);
+    }
+
+    system.setPotentialDomain
+    (
+        electroStateDomain::New
+        (
+            mesh,
+            system.myocardium(),
+            electroProperties.subDict("potentialDomain")
+        ).ptr()
+    );
+}
+
+
 void configureConductionDomains
 (
     electrophysicsSystem& system,
@@ -260,36 +323,170 @@ void configureConductionDomains
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& stateProvider,
+    const electroStateProvider& myocardiumStateProvider,
+    const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 )
 {
-    system.endECGDomains();
-    system.clearECGDomains();
     system.endECGCouplings();
     system.clearECGCouplings();
+    system.endECGDomains();
+    system.clearECGDomains();
 
     DynamicList<word> ecgDomainNames;
     DynamicList<const dictionary*> ecgDomainDicts;
+    const dictionary* sharedElectrodePositionsPtr = nullptr;
+    const dictionary* manufacturedBidomainPtr =
+        electroProperties.findDict("manufacturedBidomain");
+    const dictionary* potentialDomainPtr =
+        electroProperties.findDict("potentialDomain");
 
-    appendSubDictionaries
-    (
-        electroProperties,
-        "ecgDomains",
-        ecgDomainNames,
-        ecgDomainDicts
-    );
+    if (electroProperties.found("ecgDomains"))
+    {
+        const dictionary& ecgDomainsDict =
+            electroProperties.subDict("ecgDomains");
+
+        sharedElectrodePositionsPtr =
+            ecgDomainsDict.findDict("electrodePositions");
+
+        forAllConstIter(dictionary, ecgDomainsDict, iter)
+        {
+            const entry& e = iter();
+
+            if (!e.isDict() || e.keyword() == "electrodePositions")
+            {
+                continue;
+            }
+
+            ecgDomainNames.append(e.keyword());
+            ecgDomainDicts.append(&e.dict());
+        }
+    }
+
+    HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
 
     forAll(ecgDomainNames, i)
     {
-        system.appendECGDomain
+        const word& domainName = ecgDomainNames[i];
+        const dictionary& domainDict = *ecgDomainDicts[i];
+        const word ecgSolverType
         (
+            domainDict.lookupOrDefault<word>("ecgSolver", "pseudoECG")
+        );
+
+        if (ecgDomainsByName.found(domainName))
+        {
+            FatalErrorInFunction
+                << "Duplicate ECG domain name '" << domainName
+                << "' while configuring post-myocardium domains."
+                << exit(FatalError);
+        }
+
+        const electroStateProvider* stateProviderPtr = nullptr;
+
+        if (ecgSolverType == "pseudoECG")
+        {
+            stateProviderPtr = &myocardiumStateProvider;
+        }
+        else if (ecgSolverType == "bathECG")
+        {
+            FatalErrorInFunction
+                << "ECG domain '" << domainName
+                << "' selects removed ecgSolver bathECG. Bidomain-bath "
+                << "cases now use a unified potentialDomain with type "
+                << "extracellularPotentialDomain, and ECG output should use "
+                << "ecgSolver bathECGProbe to sample the solved global phiE."
+                << exit(FatalError);
+        }
+        else if (ecgSolverType == "bathECGProbe")
+        {
+            const word myocardiumSolverType
+            (
+                electroProperties.lookupOrDefault<word>
+                (
+                    "myocardiumSolver",
+                    "unset"
+                )
+            );
+
+            if (myocardiumSolverType != "bidomainSolver")
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver bathECGProbe, but "
+                    << "myocardiumSolver is '" << myocardiumSolverType
+                    << "'. bathECGProbe requires myocardiumSolver "
+                    << "bidomainSolver because it samples the "
+                    << "extracellular potential phiE."
+                    << exit(FatalError);
+            }
+
+            if (!potentialStateProviderPtr)
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver bathECGProbe, but no "
+                    << "potentialDomain is configured. Add:" << nl
+                    << "potentialDomain" << nl
+                    << "{" << nl
+                    << "    type extracellularPotentialDomain;" << nl
+                    << "    ..." << nl
+                    << "}" << exit(FatalError);
+            }
+
+            stateProviderPtr = potentialStateProviderPtr;
+        }
+        else
+        {
+            FatalErrorInFunction
+                << "ECG domain '" << domainName
+                << "' selects ecgSolver '" << ecgSolverType
+                << "', but provider routing is only defined for "
+                << "pseudoECG and bathECGProbe."
+                << exit(FatalError);
+        }
+
+        ecgDomain* domainPtr =
             new ecgDomain
             (
-                stateProvider,
-                *ecgDomainDicts[i],
-                ecgDomainNames[i]
-            )
+                *stateProviderPtr,
+                domainDict,
+                domainName,
+                sharedElectrodePositionsPtr,
+                manufacturedBidomainPtr,
+                potentialDomainPtr
+            );
+
+        ecgDomainsByName.insert(domainName, domainPtr);
+        system.appendECGDomain(domainPtr);
+    }
+
+    forAll(ecgDomainNames, i)
+    {
+        const dictionary& domainDict = *ecgDomainDicts[i];
+
+        if (!domainDict.found("coupling"))
+        {
+            continue;
+        }
+
+        if (!system.hasMyocardium())
+        {
+            FatalErrorInFunction
+                << "ECG domain '" << ecgDomainNames[i]
+                << "' configures a coupling block, but no myocardium domain "
+                << "is available as the primary coupling endpoint."
+                << exit(FatalError);
+        }
+
+        system.appendECGCoupling
+        (
+            electroDomainCoupler::New
+            (
+                system.myocardium(),
+                *ecgDomainsByName[ecgDomainNames[i]],
+                domainDict.subDict("coupling")
+            ).ptr()
         );
     }
 }

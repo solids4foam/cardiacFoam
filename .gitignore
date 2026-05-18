@@ -47,7 +47,7 @@ tutorials/fluidSolidInteraction-preCICE/tutorials
 lex.yy.c
 
 # Corefiles
-core
+/core
 !src/electroModels/core/
 !src/electroModels/core/**
 

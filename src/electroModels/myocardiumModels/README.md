@@ -32,18 +32,18 @@ src/electroModels/myocardiumModels/
     field exposed through `myocardiumDomain`.
 
 - `eikonalSolver`
-  - Registered as `eikonalSolver`.
+  - Not registered as a dictionary-selectable top-level solver.
   - Computes activation times with a reduced-order anisotropic eikonal
     formulation rather than a full ionic-PDE solve.
   - Useful for fast propagation studies where only activation timing is needed.
-  - In the current architecture, the eikonal myocardium path is surfaced
-    through `eikonalMyocardiumDomain`, not by forcing the classic
-    reaction-diffusion `myocardiumDomain` to own it directly.
+  - The canonical dictionary path is `myocardiumSolver eikonalSolver`, which
+    selects `electrophysiologyModel` and builds `eikonalMyocardiumDomain`.
 
 ## ODE-only workflow
 
 - `singleCellSolver`
-  - Registered as `singleCellSolver`.
+  - Registered as `singleCellSolver` in the parent `electroModel` table, not in
+    the `myocardiumSolver` diffusion-solver table.
   - Advances one integration point with a runtime-selected ionic model and no
     spatial PDE.
   - Used for ionic-model testing, calibration, and waveform generation rather

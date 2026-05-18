@@ -65,10 +65,18 @@ void configureConductionDomains
     scalar                initialDeltaT
 );
 
+void configurePotentialDomain
+(
+    electrophysicsSystem& system,
+    const fvMesh&         mesh,
+    const dictionary&     electroProperties
+);
+
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& stateProvider,
+    const electroStateProvider& myocardiumStateProvider,
+    const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 );
 

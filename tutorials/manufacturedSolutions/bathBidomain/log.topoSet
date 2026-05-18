@@ -1,0 +1,53 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8dbc61e11c-20241220 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : topoSet
+Date   : May 18 2026
+Time   : 10:27:55
+Host   : macbook
+PID    : 49113
+I/O    : uncollated
+Case   : /Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/bathBidomain
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create polyMesh for time = 0
+
+Reading topoSetDict
+
+Time = 0
+    mesh not changed.
+Created cellSet myocardiumCells
+    Applying source boxToCell
+    Adding cells with centre within boxes 1((0 -1 -1) (1 2 2))
+    cellSet myocardiumCells now size 80
+Created cellSet bathCells
+    Applying source boxToCell
+    Adding cells with centre within boxes 1((-1.1 -1 -1) (0 2 2))
+    cellSet bathCells now size 80
+Read set cellSet bathCells size:80
+    Applying source boxToCell
+    Adding cells with centre within boxes 1((1 -1 -1) (2.1 2 2))
+    cellSet bathCells now size 160
+Created cellZoneSet myocardium
+    Applying source setToCellZone
+    Adding all cells from cell set: myocardiumCells ...
+    cellZoneSet myocardium now size 80
+Created cellZoneSet bath
+    Applying source setToCellZone
+    Adding all cells from cell set: bathCells ...
+    cellZoneSet bath now size 160
+
+End
+

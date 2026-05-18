@@ -39,9 +39,11 @@ public:
     explicit pseudoECGSolver(const dictionary&)
     {}
 
-    virtual void compute
+    virtual void solve
     (
-        const ecgDomain& domain,
+        ecgDomain& domain,
+        scalar t0,
+        scalar dt,
         scalarField& values
     ) override;
 };

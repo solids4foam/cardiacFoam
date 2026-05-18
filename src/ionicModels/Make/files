@@ -4,6 +4,7 @@ ionicModel/ionicHeterogeneity.C
 
 monodomainFDAManufactured/monodomainFDAManufactured.C
 bidomainFDAManufactured/bidomainFDAManufactured.C
+bathBidomainFDAManufactured/bathBidomainFDAManufactured.C
 
 
 TNNP/TNNP.C

@@ -456,6 +456,10 @@ static const char* ToRORd_dynClCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_a_rel",
     "AC_btp",
     "AC_a_relp",
+    "deltaEpiAmp",
+    "deltaEpiShift",
+    "deltaEpiScale",
+    "jrelTissueScale",
 };
 
 static inline const Foam::HashTable<Foam::wordList>&

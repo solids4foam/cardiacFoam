@@ -23,6 +23,7 @@ License
 #include "autoPtr.H"
 #include "PtrList.H"
 #include "electroDomainInterface.H"
+#include "electroStateDomain.H"
 #include "electroDomainCoupler.H"
 #include "myocardiumDomainInterface.H"
 #include "electrophysicsAdvanceScheme.H"
@@ -55,6 +56,7 @@ Architecture
 class electrophysicsSystem
 {
     autoPtr<myocardiumDomainInterface> myocardium_;
+    autoPtr<electroStateDomain> potentialDomain_;
     autoPtr<electrophysicsAdvanceScheme> advanceScheme_;
     PtrList<electroDomainInterface> conductionDomains_;
     PtrList<electroDomainCoupler> conductionCouplingModels_;
@@ -68,6 +70,20 @@ public:
     void setMyocardium(myocardiumDomainInterface* myocardium)
     {
         myocardium_.reset(myocardium);
+    }
+
+    void setPotentialDomain(electroStateDomain* domain)
+    {
+        potentialDomain_.reset(domain);
+    }
+
+    void clearPotentialDomain()
+    {
+        if (potentialDomain_.valid() && myocardium_.valid())
+        {
+            myocardium_().unbindExternalPhiE();
+        }
+        potentialDomain_.clear();
     }
 
     void setAdvanceScheme(electrophysicsAdvanceScheme* advanceScheme)
@@ -178,6 +194,16 @@ public:
         return myocardium_.valid();
     }
 
+    bool hasPotentialDomain() const
+    {
+        return potentialDomain_.valid();
+    }
+
+    const electroStateProvider& potentialStateProvider() const
+    {
+        return potentialDomain_();
+    }
+
     const PtrList<electroDomainInterface>& conductionDomains() const
     {
         return conductionDomains_;
@@ -224,11 +250,17 @@ public:
 
     void prepareECGCouplings(scalar t0, scalar dt);
 
+    void preparePotentialDomain(scalar t0, scalar dt);
+
+    void advancePotentialDomain(scalar t0, scalar dt);
+
     void advanceECGDomains(scalar t0, scalar dt);
 
     void writeConductionDomains();
 
     void writeConductionCouplings();
+
+    void writePotentialDomain();
 
     void endConductionDomains();
 

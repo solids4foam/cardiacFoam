@@ -25,7 +25,7 @@ src/electroModels/conductionSystemModels/
     by the domain.
 
 - `eikonalSolver1D`
-  - Registered as `eikonalSolver`.
+  - Registered as `eikonalSolver1D`.
   - Computes nodal activation times only, using edge lengths and a prescribed
     wave speed `c0`.
   - Intended for reduced-order conduction studies where full ionic state is

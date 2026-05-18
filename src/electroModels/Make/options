@@ -44,10 +44,12 @@ EXE_INC = \
     -IelectroDomains \
     -IelectroDomains/conductionSystemDomain \
     -IelectroDomains/ecgDomain \
+    -IelectroDomains/extracellularPotentialDomain \
     -IelectroDomains/myocardiumDomain \
     -IconductionSystemModels \
     -ImyocardiumModels \
     -IecgModels \
+    -IecgModels/bathECGProbe \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
     -IelectroCouplers/pvjCoupler/eikonal \

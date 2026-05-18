@@ -240,6 +240,30 @@ public:
 
     virtual void write() override;
 
+    virtual bool supportsSplitReactionDiffusion() const override
+    {
+        return true;
+    }
+
+    virtual void solveReactionStep(scalar t0, scalar dt) override;
+
+    virtual void solveDiffusionStep
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    ) override;
+
+    virtual void finalizeDiffusionStep() override;
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    ) override;
+
+    virtual void unbindExternalPhiE() override;
+
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
 
     virtual bool shouldPostProcess() const override;

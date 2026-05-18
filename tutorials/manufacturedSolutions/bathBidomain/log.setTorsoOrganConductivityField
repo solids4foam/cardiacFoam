@@ -1,0 +1,45 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _8dbc61e11c-20241220 OPENFOAM=2412 version=v2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : setTorsoOrganConductivityField
+Date   : May 18 2026
+Time   : 10:27:55
+Host   : macbook
+PID    : 49114
+I/O    : uncollated
+Case   : /Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/bathBidomain
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+
+========== setTorsoOrganConductivityField ==========
+Reading "system/setTorsoOrganConductivityFieldDict"
+
+Writing field 'bodyAndOrgansConductivity'
+
+Available cellZones:
+  myocardium (80 cells)
+  bath (160 cells)
+
+Configured conductivity mapping:
+  bath: sigma=0.0230827, cells=160
+  myocardium: sigma=0.0230827, cells=80
+
+Assigned cells: 240 / 240
+min(bodyAndOrgansConductivity) = 0.0230827, max(bodyAndOrgansConductivity) = 0.0230827
+
+End
+

@@ -95,13 +95,31 @@ bidomainSolver::bidomainSolver
     (
         electroProperties.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)
     ),
-    phiEReferencePoint_(electroProperties.get<point>("phiERefPoint"))
+    phiEReferencePoint_
+    (
+        electroProperties.found("phiERefPoint")
+      ? electroProperties.get<point>("phiERefPoint")
+      : point::zero
+    ),
+    hasPhiEReferencePoint_(electroProperties.found("phiERefPoint")),
+    externalPhiEBasePtr_(nullptr),
+    externalPhiECellMapPtr_(nullptr)
 {
 }
 
 
 label bidomainSolver::referenceCell() const
 {
+    if (!hasPhiEReferencePoint_)
+    {
+        FatalErrorInFunction
+            << "bidomainSolver requires phiERefPoint when it solves the "
+            << "local extracellular potential. For bidomain-bath cases, "
+            << "configure potentialDomain with type "
+            << "extracellularPotentialDomain so a global phiE field is bound."
+            << exit(FatalError);
+    }
+
     const label refCell = phiE_.mesh().findCell(phiEReferencePoint_);
 
     if (Pstream::parRun())
@@ -123,6 +141,62 @@ label bidomainSolver::referenceCell() const
 
     return refCell;
 }
+
+
+bool bidomainSolver::externalPhiEBound() const
+{
+    return externalPhiEBasePtr_ && externalPhiECellMapPtr_;
+}
+
+
+void bidomainSolver::bindExternalPhiE
+(
+    const volScalarField& phiE,
+    const labelUList& heartCellMap
+)
+{
+    externalPhiEBasePtr_ = &phiE;
+    externalPhiECellMapPtr_ = &heartCellMap;
+}
+
+
+void bidomainSolver::unbindExternalPhiE()
+{
+    externalPhiEBasePtr_ = nullptr;
+    externalPhiECellMapPtr_ = nullptr;
+}
+
+
+void bidomainSolver::restrictExternalPhiE()
+{
+    if (!externalPhiEBound())
+    {
+        FatalErrorInFunction
+            << "restrictExternalPhiE called before external phiE was bound."
+            << exit(FatalError);
+    }
+
+    const scalarField& globalPhiE = externalPhiEBasePtr_->primitiveField();
+    const labelUList& cellMap = *externalPhiECellMapPtr_;
+    scalarField& localPhiE = phiE_.primitiveFieldRef();
+
+    if (cellMap.size() != localPhiE.size())
+    {
+        FatalErrorInFunction
+            << "External phiE cell map size " << cellMap.size()
+            << " does not match bidomain submesh cell count "
+            << localPhiE.size() << "."
+            << exit(FatalError);
+    }
+
+    forAll(cellMap, cellI)
+    {
+        localPhiE[cellI] = globalPhiE[cellMap[cellI]];
+    }
+
+    phiE_.correctBoundaryConditions();
+}
+
 
 tmp<volTensorField> bidomainSolver::initialiseConductivityTensor
 (
@@ -187,23 +261,31 @@ void bidomainSolver::solveDiffusionExplicit
 )
 {
     (void)dt;
-    const label refCell = referenceCell();
 
-    fvScalarMatrix phiEqn
-    (
-        fvm::laplacian(GiPlusGe_, phiE_)
-     == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
-    );
-    if (refCell >= 0)
+    if (externalPhiEBound())
     {
-        phiEqn.setReference(refCell, phiEReferenceValue_, true);
+        restrictExternalPhiE();
     }
-    solve(phiEqn);
+    else
+    {
+        const label refCell = referenceCell();
+
+        fvScalarMatrix phiEqn
+        (
+            fvm::laplacian(GiPlusGe_, phiE_)
+         == -fvc::laplacian(Gi_, domain.Vm())
+        );
+        if (refCell >= 0)
+        {
+            phiEqn.setReference(refCell, phiEReferenceValue_, true);
+        }
+        solve(phiEqn);
+    }
 
     solve
     (
         domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvc::div(Gi_ & fvc::grad(domain.Vm() + phiE_))
+      == fvc::laplacian(Gi_, domain.Vm() + phiE_)
        - domain.chi()*domain.Cm()*domain.Iion()
        + domain.sourceField()
     );
@@ -219,24 +301,32 @@ void bidomainSolver::solveDiffusionImplicit
 )
 {
     (void)dt;
-    const label refCell = referenceCell();
 
-    fvScalarMatrix phiEqn
-    (
-        fvm::laplacian(GiPlusGe_, phiE_)
-     == -fvc::div(Gi_ & fvc::grad(domain.Vm()))
-    );
-    if (refCell >= 0)
+    if (externalPhiEBound())
     {
-        phiEqn.setReference(refCell, phiEReferenceValue_, true);
+        restrictExternalPhiE();
     }
-    solve(phiEqn);
+    else
+    {
+        const label refCell = referenceCell();
+
+        fvScalarMatrix phiEqn
+        (
+            fvm::laplacian(GiPlusGe_, phiE_)
+         == -fvc::laplacian(Gi_, domain.Vm())
+        );
+        if (refCell >= 0)
+        {
+            phiEqn.setReference(refCell, phiEReferenceValue_, true);
+        }
+        solve(phiEqn);
+    }
 
     solve
     (
         domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
       == fvm::laplacian(Gi_, domain.Vm())
-       + fvc::div(Gi_ & fvc::grad(phiE_))
+       + fvc::laplacian(Gi_, phiE_)
        - domain.chi()*domain.Cm()*domain.Iion()
         + domain.sourceField()
     );

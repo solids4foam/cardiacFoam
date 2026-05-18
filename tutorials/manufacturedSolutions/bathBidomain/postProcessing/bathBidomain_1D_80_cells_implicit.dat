@@ -1,0 +1,20 @@
+# Bath-bidomain manufactured solution error summary
+# dimension 1D
+# cellsPerDirection 80
+# steps 1427
+# dt 0.000140174
+# time 0.200028
+# k 0.707107
+# alpha 0.01
+# se 0.0461655
+# sigmaB 0.0230827
+# groundElectrode yes
+# phiEErrorMesh region0
+# phiEErrorCellZone bath
+# field L1 L2 Linf
+Vm 4.24627e-06 5.39426e-06 1.06648e-05
+phiE 0.000198507 0.000280502 0.00039701
+phiI 0.000194277 0.000196677 0.000237036
+u1 7.09677e-06 8.00894e-06 1.34976e-05
+u2 1.86698e-06 2.22459e-06 4.69806e-06
+u3 0 0 0

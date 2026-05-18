@@ -529,6 +529,99 @@ void myocardiumDomain::advance
 }
 
 
+void myocardiumDomain::solveReactionStep(scalar t0, scalar dt)
+{
+    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
+    Iion_.correctBoundaryConditions();
+}
+
+
+void myocardiumDomain::solveDiffusionStep
+(
+    scalar t0,
+    scalar dt,
+    pimpleControl* pimplePtr
+)
+{
+    (void)t0;
+
+    if (pimplePtr)
+    {
+        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
+    }
+    else if (useExplicitAlgorithm_)
+    {
+        diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "solveDiffusionStep() requires a pimpleControl instance "
+               "for implicit algorithms."
+            << exit(FatalError);
+    }
+}
+
+
+void myocardiumDomain::finalizeDiffusionStep()
+{
+    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+}
+
+
+void myocardiumDomain::bindExternalPhiE
+(
+    const volScalarField& phiE,
+    const labelUList& heartCellMap
+)
+{
+    diffusionSolverPtr_->bindExternalPhiE(phiE, heartCellMap);
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->bindBidomainField
+        (
+            const_cast<volScalarField&>(phiE),
+            heartCellMap
+        );
+
+        verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
+    }
+
+    if (reportSetup_)
+    {
+        Info<< "myocardiumDomain: bound bidomainSolver to external global "
+            << "phiE on mesh '" << phiE.mesh().name() << "'." << endl;
+    }
+}
+
+
+void myocardiumDomain::unbindExternalPhiE()
+{
+    diffusionSolverPtr_->unbindExternalPhiE();
+
+    if (verificationModelPtr_)
+    {
+        if (const volScalarField* phiEPtr = diffusionSolverPtr_->phiEPtr())
+        {
+            verificationModelPtr_->bindBidomainField
+            (
+                *const_cast<volScalarField*>(phiEPtr)
+            );
+        }
+        else
+        {
+            verificationModelPtr_->unbindBidomainField();
+        }
+    }
+
+    if (reportSetup_)
+    {
+        Info<< "myocardiumDomain: unbound external global phiE." << endl;
+    }
+}
+
+
 scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 {
     surfaceVectorField n("n", mesh().Sf());

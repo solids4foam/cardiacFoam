@@ -12,9 +12,9 @@ src/electroModels/ecgModels/
 ├── pseudoECGSolver/
 │   ├── pseudoECGSolver.H
 │   └── pseudoECGSolver.C
-├── bidomainBathECGSolver/
-│   ├── bidomainBathECGSolver.H
-│   └── bidomainBathECGSolver.C
+├── bathECGProbe/
+│   ├── bathECGProbe.H
+│   └── bathECGProbe.C
 └── README.md
 ```
 
@@ -28,21 +28,24 @@ src/electroModels/ecgModels/
   - Reads upstream myocardium state through `ecgDomain`.
   - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
-- **`bidomainBathECGSolver`** (bath extracellular potential solver)
-  - Registered as `bidomainBathECG`.
-  - Solves steady-state Laplacian: `∇·(σ_bath·∇φE) = -I_interface`
-  - Reads myocardium transmembrane current through `bathDomain`.
-  - Abstract interface: `electroDomains/bathDomain/bathECGSolver.H/C`
+- **`bathECGProbe`** (electrode sampler on the unified bath potential)
+  - Registered as `bathECGProbe`.
+  - Samples the globally solved `phiE` field at electrode positions on the
+    union (heart + bath) mesh; parallel-safe via list reduction.
+  - The global `phiE` solve is owned by `extracellularPotentialDomain` — see
+    [../electroDomains/extracellularPotentialDomain/](../electroDomains/extracellularPotentialDomain/).
+  - Selected by routing the ECG-domain state provider to the configured
+    `potentialDomain` (done in `electrophysicsSystemBuilder::configureECGDomains`).
+  - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
 ## Architectural pattern
 
-- **Abstract solver interfaces** live in domain folders (`electroDomains/`):
-  - `ecgDomain/ecgSolver.H/C`
-  - `bathDomain/bathECGSolver.H/C`
-  
+- **Abstract solver interface** lives in the domain folder:
+  - `electroDomains/ecgDomain/ecgSolver.H/C`
+
 - **Concrete solver implementations** live here in `ecgModels/`:
   - `pseudoECGSolver/`
-  - `bidomainBathECGSolver/`
+  - `bathECGProbe/`
 
 ## Execution role
 
@@ -56,5 +59,6 @@ See [../electroDomains/README.md](../electroDomains/README.md) for the
 domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep sequence.
 
-Bath-related solver code is still present in this folder, but bath is not part
-of the active `core` orchestration path at the moment.
+`bathECGProbe` is part of the active orchestration path. It is wired by
+`electrophysicsSystemBuilder` when an ECG domain selects `bathECGProbe` and a
+top-level `potentialDomain` provides the global `phiE` state.

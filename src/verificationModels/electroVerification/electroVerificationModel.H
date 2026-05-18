@@ -79,6 +79,18 @@ public:
 
     virtual void bindBidomainField(volScalarField& phiE) {}
 
+    virtual void bindBidomainField
+    (
+        volScalarField& phiE,
+        const labelUList& heartCellMap
+    )
+    {
+        (void)heartCellMap;
+        bindBidomainField(phiE);
+    }
+
+    virtual void unbindBidomainField() {}
+
     virtual void postProcess
     (
         const ionicModel& model,

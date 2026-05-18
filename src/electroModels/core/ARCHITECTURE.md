@@ -105,6 +105,12 @@ Breaks cyclic dependencies: ECG reads state without a callback to myocardium.
 and `eikonalSolver` — the same top-level wrapper is used for all
 myocardium-centred spatial workflows.
 
+Inside `electrophysiologyModel`, `myocardiumDomainInterface::New(...)` performs
+the secondary myocardium-domain dispatch. `monodomainSolver` and
+`bidomainSolver` resolve through the `myocardiumSolver` table; `eikonalSolver`
+builds `eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
+the parent `electroModel` table and does not enter this secondary dispatch.
+
 ---
 
 ## Top-level model files
@@ -379,6 +385,7 @@ builder.
 
 electroModel.H
   ├─ electroStateProvider.H
+  ├─ electroStateDomain.H
   ├─ system/electrophysicsSystem.H
   │  ├─ electroDomainInterface.H
   │  │  ├─ myocardiumDomain (implements)

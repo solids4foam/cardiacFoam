@@ -11,7 +11,6 @@ coupling family.
 src/electroModels/electroCouplers/
 ├── electroDomainCouplingEndpoints.H   # Domain-side coupling interfaces
 ├── electroDomainCoupler.{H,C}         # Base class for staged couplers
-├── heartBathInterfaceCoupler.{H,C}    # Bath-interface coupling code still present
 ├── pvjCoupler/
 │   ├── pvjCoupler.{H,C}               # PVJ family base class
 │   ├── pvjMapper.{H,C}                # PVJ geometry and source projection
@@ -54,11 +53,14 @@ and provides three hook points:
 This split supports staged domain updates without hard-wiring a single coupling
 order into each domain.
 
-## Other shipped coupling code
+## Bath / extracellular potential coupling
 
-`heartBathInterfaceCoupler` is still compiled in this tree. It is bath-related
-coupling code, but bath is not currently part of the active `core`
-orchestration path.
+Bath coupling is no longer implemented through a dedicated coupler class. The
+unified extracellular potential is now owned by `extracellularPotentialDomain`
+(an `electroStateDomain`) which solves a global elliptic phiE on the union of
+heart and bath cell zones and binds a restricted view of phiE back into the
+bidomain myocardium solver. See
+[../electroDomains/extracellularPotentialDomain/](../electroDomains/extracellularPotentialDomain/).
 
 ## PVJ coupling family
 

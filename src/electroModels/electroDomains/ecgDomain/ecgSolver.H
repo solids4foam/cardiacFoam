@@ -53,9 +53,11 @@ public:
 
     virtual ~ecgSolver() = default;
 
-    virtual void compute
+    virtual void solve
     (
-        const ecgDomain& domain,
+        ecgDomain& domain,
+        scalar t0,
+        scalar dt,
         scalarField& values
     ) = 0;
 };

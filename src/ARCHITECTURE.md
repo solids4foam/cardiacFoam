@@ -12,14 +12,16 @@ src/
 ├── verificationModels/   Verification and manufactured-solution models
 ├── activeTensionModels/  Runtime-selectable active-tension ODE models
 ├── couplingModels/       Shared electromechanical signal interfaces
-└── electroModels/        Spatial electrophysiology domains, solvers, couplers
+├── electroModels/        Spatial electrophysiology domains, solvers, couplers
+└── electroMechanicalModels/ Electromechanics wrappers built in full solids4foam mode
 
 ```
 
 Build order from `src/Allwmake`:
 
 ```text
-genericWriter → ionicModels → verificationModels → activeTensionModels → electroModels
+couplingModels lnInclude → genericWriter → ionicModels → verificationModels →
+activeTensionModels → electroModels → electroMechanicalModels (full mode only)
 
 ```
 
@@ -106,7 +108,7 @@ contracts, not the staged electro-domain couplers.
 
 Current contents:
 
-- `common/electromechanicalSignalProvider.H`
+- `electromechanicalSignalProvider.H`
 
 The staged Purkinje, ECG, and bath-style electro couplers live under
 `src/electroModels/electroCouplers/`, not here.
@@ -126,8 +128,8 @@ The main spatial electrophysiology stack. It contains:
 - staged inter-domain couplers in `electroCouplers/`
 
 Current top-level electro entry is selected from `myocardiumSolver` in
-`electroProperties`. The assembled multi-domain wrapper is
-`electrophysiologyModel`, registered under:
+`electroProperties`. That key first dispatches in the parent `electroModel`
+runtime-selection table:
 
 - `monodomainSolver`
 
@@ -135,8 +137,20 @@ Current top-level electro entry is selected from `myocardiumSolver` in
 
 - `eikonalSolver`
 
-`singleCellSolver` is not a separate `src/` library. It is compiled inside
-`electroModels/myocardiumModels/`.
+- `singleCellSolver`
+
+For the spatial entries, the assembled multi-domain wrapper is
+`electrophysiologyModel`. It then performs the secondary dispatch into the
+`myocardiumSolver` table (`monodomainSolver`, `bidomainSolver`) or builds
+`eikonalMyocardiumDomain` for the canonical eikonal workflow. `singleCellSolver`
+is registered directly in the parent `electroModel` table and bypasses the
+myocardium-domain factory. It is not a separate `src/` library; it is compiled
+inside `electroModels/myocardiumModels/`.
+
+### `electroMechanicalModels` — `libelectroMechanicalModels`
+
+Full electromechanical wrappers that are built only when the solids4foam
+dependency is available. Lightweight EP-only builds skip this library.
 
 ## Reading guides
 

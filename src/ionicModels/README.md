@@ -106,8 +106,11 @@ Current `Make/files` entries:
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`
+- `TWorld`
+- `PerisYague`
 - `monodomainFDAManufactured`
 - `bidomainFDAManufactured`
+- `bathBidomainFDAManufactured`
 
 ## Build target
 

@@ -121,7 +121,7 @@ protected:
         public:
 
         //- Runtime type information
-        OverrideTypeName("PerisYague_2022");
+        OverrideTypeName("PerisYague");
 
 
         //override the only available tissue in this model

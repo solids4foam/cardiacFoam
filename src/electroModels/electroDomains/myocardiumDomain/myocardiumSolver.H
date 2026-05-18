@@ -85,6 +85,14 @@ public:
 
     virtual const volTensorField& explicitConductivityField() const = 0;
 
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    );
+
+    virtual void unbindExternalPhiE();
+
     virtual void solveDiffusionExplicit
     (
         electroVolumeFieldDomain& domain,

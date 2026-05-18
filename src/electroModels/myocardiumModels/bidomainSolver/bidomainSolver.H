@@ -43,6 +43,9 @@ class bidomainSolver
     volTensorField GiPlusGe_;
     scalar phiEReferenceValue_;
     point phiEReferencePoint_;
+    bool hasPhiEReferencePoint_;
+    const volScalarField* externalPhiEBasePtr_;
+    const labelUList* externalPhiECellMapPtr_;
 
     tmp<volTensorField> initialiseConductivityTensor
     (
@@ -52,6 +55,10 @@ class bidomainSolver
     ) const;
 
     label referenceCell() const;
+
+    bool externalPhiEBound() const;
+
+    void restrictExternalPhiE();
 
 public:
 
@@ -92,6 +99,29 @@ public:
     {
         return Gi_;
     }
+
+    const volTensorField& intracellularConductivity() const
+    {
+        return Gi_;
+    }
+
+    const volTensorField& extracellularConductivity() const
+    {
+        return Ge_;
+    }
+
+    const volTensorField& totalConductivity() const
+    {
+        return GiPlusGe_;
+    }
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    ) override;
+
+    virtual void unbindExternalPhiE() override;
 
     virtual void solveDiffusionExplicit
     (

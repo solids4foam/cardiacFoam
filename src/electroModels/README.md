@@ -99,13 +99,12 @@ Contains Purkinje/conduction solver kernels used by
 
 ### `ecgModels/`
 
-Contains downstream ECG and bath-related kernels:
+Contains downstream ECG kernels:
 
-- `pseudoECGSolver`
+- `pseudoECG` (implemented by class `pseudoECGSolver`)
 
-- `bathECGSolver`
-
-- `bidomainBathECGSolver`
+- `bathECGProbe` — electrode sampler on the global phiE from
+  `extracellularPotentialDomain`
 
 ### `electroCouplers/`
 
@@ -117,7 +116,9 @@ Contains staged electro-domain coupling contracts and implementations:
 
 - PVJ coupling family
 
-- `heartBathInterfaceCoupler` code remains present in the tree
+Bath coupling no longer needs a dedicated coupler — the unified
+`extracellularPotentialDomain` directly binds its restricted phiE view into
+the bidomain myocardium solver.
 
 ## Read next
 

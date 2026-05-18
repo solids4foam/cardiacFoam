@@ -16,10 +16,10 @@ electroModels/
 │   ├── advanceSchemes/         Time-step orchestration strategies
 │   └── electrophysiologyModel/ Concrete myocardium-centred entry point
 ├── electroDomains/             Physical domain implementations
-│   ├── myocardiumDomain/       3D myocardium: Vm PDE + ionic ODE
-│   ├── ecgDomain/              ECG body region: elliptic Vm-driven PDE
-│   ├── bathDomain/             Bath-side domain (not currently wired)
-│   └── conductionSystemDomain/ Purkinje/conduction network: 1D graph ODE
+│   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE
+│   ├── ecgDomain/                       ECG body region: elliptic Vm-driven PDE
+│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath)
+│   └── conductionSystemDomain/          Purkinje/conduction network: 1D graph ODE
 ├── myocardiumModels/           Run-time-selectable myocardium diffusion solvers
 ├── ecgModels/                  Run-time-selectable ECG field solvers
 ├── conductionSystemModels/     Run-time-selectable conduction system solvers
@@ -44,7 +44,7 @@ The framework backbone. It owns orchestration only. Domain-family selection is p
 | `advanceSchemes/pimpleStaggered/` | PIMPLE iterative strong coupling: repeats the conduction/myocardium block until convergence. |
 | `electroDomainInterface.H` | Minimal lifecycle contract that all electro domains implement. Pure virtual: `time()`, `advance(t0, dt)`. Optional no-ops: `prepareTimeStep()`, `write()`, `end()`. |
 | `electroStateProvider.H` | Read-only field interface implemented by domains that expose fields upstream: `VmPtr()`, `phiEPtr()`, `conductivityPtr()`. Consumed by ECG solver and the builder. |
-| `dimVoltage.H` | Shared dimension set for voltage fields (`[0 2 -3 0 0 -1 0]`, i.e. V). Avoids repeated inline dimension literals across all solvers. |
+| `dimVoltage.H` | Shared dimension set for voltage fields (`[1 2 -3 0 0 -1 0]`, i.e. V). Avoids repeated inline dimension literals across all solvers. |
 | `overrideTypeName.H` | Macro to assign a lowercase runtime type name independent of C++ class name, used with `addToRunTimeSelectionTable`. |
 
 ---
@@ -107,11 +107,22 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 
 - Owns: `autoPtr<ecgSolver>`
 
-**`bathDomain`**
+**`extracellularPotentialDomain`** — unified global extracellular potential
+domain. Implements `electroStateDomain`.
 
-- Bath-side domain code is still present and compiled in this tree
+- Inherits: `electroDomainInterface`, `electroStateProvider`
 
-- It is not currently assembled by the active `core` orchestration path
+- Owns: `phiE` field on a base mesh covering the heart cell zone plus one or
+  more bath cell zones.
+
+- Solves an elliptic Poisson equation for `phiE` driven by the scattered heart
+  `Vm`, with Dirichlet `groundPatches` and Neumann `surfaceCurrentPatches`.
+
+- Binds a restricted local view of `phiE` back into the bidomain myocardium
+  solver via `bindExternalPhiE`, so the bidomain solver no longer solves a
+  local phiE.
+
+- Exposes `phiE` to `bathECGProbe`-class ECG solvers for electrode sampling.
 
 **`ecgSolver`** — abstract ECG solver base. Registered implementations selected by the `ecgSolver` key in `electroProperties`.
 
@@ -125,20 +136,24 @@ The Purkinje/His-bundle network. Advances activation on a graph or 1D cable, the
 
 - Owns: `autoPtr<conductionSystemSolver>`, `conductionGraph`, ionic model state, PVJ metadata
 
-- `conductionSystemSolver` — abstract 1D solver; registered implementations selected under `purkinjeNetworkModelCoeffs`
+- `conductionSystemSolver` — abstract 1D solver; registered implementations selected under `purkinjeGraphModelCoeffs`
 
 ---
 
 ## `myocardiumModels/`
 
-Concrete reaction-diffusion implementations of `myocardiumSolver`. Each registers with `addToRunTimeSelectionTable(myocardiumSolver, ...)`. The 3D eikonal myocardium path is owned by `eikonalMyocardiumDomain`, not by this solver family.
+Concrete reaction-diffusion implementations of `myocardiumSolver`. Only `monodomainSolver` and `bidomainSolver` register in this table. The `myocardiumSolver` dictionary key is a top-level selector: it first dispatches through the parent `electroModel` table, then `electrophysiologyModel` builds the concrete myocardium domain through `myocardiumDomainInterface::New(...)`.
 
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
 | `monodomainSolver` | `monodomainSolver` | `∂Vm/∂t − ∇·(σᵢ∇Vm) = Iion` | Standard single-domain FVM |
 | `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Allocates and owns `phiE` field; registered as a full factory entry |
-| `eikonalSolver` | `eikonalSolver` | Activation-time wavefront `\|∇ψ\| = 1/c(x)` | No ionic ODE; anisotropy via Riemannian metric from conductivity tensor |
-| `singleCellSolver` | `singleCellSolver` | ODE only: `Cm dVm/dt = −Iion + Istim` | No spatial PDE; used for ionic model validation and waveform generation |
+
+`singleCellSolver` is registered in the parent `electroModel` table and bypasses
+the myocardium-domain factory. The canonical 3D eikonal workflow selects
+`myocardiumSolver eikonalSolver`, enters `electrophysiologyModel`, and builds
+`eikonalMyocardiumDomain`; the legacy `myocardiumModels/eikonalSolver` class is
+not a runtime-selected top-level solver.
 
 **Monodomain PDE:**
 
@@ -166,8 +181,7 @@ Concrete implementations of `ecgSolver`.
 | Class | Type name | Method | Notes |
 |---|---|---|---|
 | `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
-| `bathECGSolver` | `bathECGSolver` | Bath-related ECG solve | Code still present in tree |
-| `bidomainBathECGSolver` | `bidomainBathECGSolver` | Bidomain + bath-side ECG solve | Code still present in tree |
+| `bathECGProbe` | `bathECGProbe` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
 
 ---
 
@@ -178,7 +192,7 @@ Concrete implementations of `conductionSystemSolver`.
 | Class | Type name | Method |
 |---|---|---|
 | `monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
-| `eikonalSolver1D` | `eikonalSolver` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
+| `eikonalSolver1D` | `eikonalSolver1D` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
 
 **Cable equation (per edge):**
 
@@ -207,7 +221,13 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
 | `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it into `myocardiumDomain::sourceField_`. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
-| `heartBathInterfaceCoupler.H/C` | Bath-interface coupling code still present in the tree. |
+
+Bath/extracellular-potential coupling is **not** a coupler class in this
+codebase. `extracellularPotentialDomain` (an `electroStateDomain` under
+`electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve
+and binds a restricted view of it back into the bidomain myocardium solver
+directly, replacing the older `bathDomain` / `bathECGSolver` /
+`bidomainBathECGSolver` / `heartBathInterfaceCoupler` triad.
 
 **PVJ coupling equation** (`reactionDiffusionPvjCoupler`):
 
@@ -239,7 +259,7 @@ monodomainSolverCoeffs
         {
             conductionSystemDomain  purkinjeNetworkModel;
             // ...
-            purkinjeNetworkModelCoeffs
+            purkinjeGraphModelCoeffs
             {
                 conductionSystemSolver  monodomain1DSolver;  // default; or: eikonalSolver
                 ionicModel  BuenoOrovio;

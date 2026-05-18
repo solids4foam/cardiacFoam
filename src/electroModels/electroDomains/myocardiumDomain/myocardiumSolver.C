@@ -56,6 +56,31 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
     return autoPtr<myocardiumSolver>(ctorPtr(mesh, coeffs));
 }
 
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void myocardiumSolver::bindExternalPhiE
+(
+    const volScalarField& phiE,
+    const labelUList& heartCellMap
+)
+{
+    (void)phiE;
+    (void)heartCellMap;
+
+    FatalErrorInFunction
+        << "The selected myocardiumSolver cannot bind an external phiE field."
+        << exit(FatalError);
+}
+
+
+void myocardiumSolver::unbindExternalPhiE()
+{
+    FatalErrorInFunction
+        << "The selected myocardiumSolver cannot unbind an external phiE field."
+        << exit(FatalError);
+}
+
 } // End namespace Foam
 
 // ************************************************************************* //

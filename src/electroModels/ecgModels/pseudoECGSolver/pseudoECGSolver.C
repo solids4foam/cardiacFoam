@@ -32,12 +32,17 @@ defineDebugSwitch(pseudoECGSolver, 0);
 addToRunTimeSelectionTable(ecgSolver, pseudoECGSolver, dictionary);
 
 
-void pseudoECGSolver::compute
+void pseudoECGSolver::solve
 (
-    const ecgDomain& domain,
+    ecgDomain& domain,
+    scalar t0,
+    scalar dt,
     scalarField& values
 )
 {
+    (void)t0;
+    (void)dt;
+
     // Gima-Rudy dipole:
     //   phi_pseudo(P) = -sum_c
     //     [ (conductivity . grad(Vm))_c . r_vec * V_c / |r|^3 ]

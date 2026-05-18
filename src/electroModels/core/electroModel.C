@@ -226,10 +226,16 @@ void Foam::electroModel::writeFields(const Time& runTime)
 
 void Foam::electroModel::configureECGDomains()
 {
+    const electroStateProvider* potentialStateProviderPtr =
+        domainSystem_.hasPotentialDomain()
+      ? &domainSystem_.potentialStateProvider()
+      : nullptr;
+
     electrophysicsSystemBuilder::configureECGDomains
     (
         domainSystem_,
         domainSystem_.myocardium(),
+        potentialStateProviderPtr,
         electroProperties_
     );
 }

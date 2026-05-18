@@ -64,7 +64,26 @@ bool staggeredElectrophysicsAdvanceScheme::advance
     system.prepareMyocardiumCouplings(t0, dt);
     timings.couplingTime += timer.timeIncrement();
 
-    myocardium.advance(t0, dt, pimplePtr);
+    if (system.hasPotentialDomain())
+    {
+        if (!myocardium.supportsSplitReactionDiffusion())
+        {
+            FatalErrorInFunction
+                << "Unified phiE requires a split reaction/diffusion "
+                << "myocardium domain."
+                << exit(FatalError);
+        }
+
+        myocardium.solveReactionStep(t0, dt);
+        system.preparePotentialDomain(t0, dt);
+        system.advancePotentialDomain(t0, dt);
+        myocardium.solveDiffusionStep(t0, dt, pimplePtr);
+        myocardium.finalizeDiffusionStep();
+    }
+    else
+    {
+        myocardium.advance(t0, dt, pimplePtr);
+    }
     timings.primaryDomainTime = timer.timeIncrement();
 
     system.prepareECGCouplings(t0, dt);

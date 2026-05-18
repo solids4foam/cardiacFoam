@@ -126,6 +126,13 @@ Foam::electrophysiologyModel::electrophysiologyModel
         electroProperties()
     );
 
+    electrophysicsSystemBuilder::configurePotentialDomain
+    (
+        domainSystem_,
+        mesh(),
+        electroProperties()
+    );
+
     electrophysicsSystemBuilder::configureConductionDomains
     (
         domainSystem_,
@@ -135,6 +142,19 @@ Foam::electrophysiologyModel::electrophysiologyModel
     );
 
     configureECGDomains();
+
+    if (electroProperties().lookupOrDefault<Switch>("writeInitialFields", false))
+    {
+        if (domainSystem_.hasPotentialDomain())
+        {
+            domainSystem_.preparePotentialDomain
+            (
+                runTime.value(),
+                runTime.deltaTValue()
+            );
+            domainSystem_.writePotentialDomain();
+        }
+    }
 }
 
 

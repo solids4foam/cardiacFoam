@@ -73,6 +73,65 @@ public:
         pimpleControl* pimplePtr
     ) = 0;
 
+    virtual bool supportsSplitReactionDiffusion() const
+    {
+        return false;
+    }
+
+    virtual void solveReactionStep(scalar t0, scalar dt)
+    {
+        (void)t0;
+        (void)dt;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support split "
+            << "reaction/diffusion advance."
+            << exit(FatalError);
+    }
+
+    virtual void solveDiffusionStep
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    )
+    {
+        (void)t0;
+        (void)dt;
+        (void)pimplePtr;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support split "
+            << "reaction/diffusion advance."
+            << exit(FatalError);
+    }
+
+    virtual void finalizeDiffusionStep()
+    {}
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    )
+    {
+        (void)phiE;
+        (void)heartCellMap;
+
+        FatalErrorInFunction
+            << "The selected myocardium domain cannot bind an external phiE "
+            << "field. Unified phiE requires a bidomain myocardium domain."
+            << exit(FatalError);
+    }
+
+    virtual void unbindExternalPhiE()
+    {
+        FatalErrorInFunction
+            << "The selected myocardium domain cannot unbind an external phiE "
+            << "field. Unified phiE requires a bidomain myocardium domain."
+            << exit(FatalError);
+    }
+
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const = 0;
 
     virtual bool shouldPostProcess() const = 0;
