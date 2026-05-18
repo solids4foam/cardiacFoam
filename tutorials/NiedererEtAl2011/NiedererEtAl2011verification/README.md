@@ -4,7 +4,7 @@ This tutorial implements the Niederer slab verification workflow for tissue-scal
 monodomain simulations.
 
 - Electro model: `monodomainSolver`
-- Typical ionic model: `TNNP`
+- Typical ionic model: `BuenoOrovio`
 - Main metric: activation-time behavior and smoke-check fields
 
 ## Folder structure
@@ -26,7 +26,8 @@ tutorials/NiedererEtAl2011/
 │       ├── cache_postProcessing.py
 │       ├── line_postProcessing.py
 │       └── points_postProcessing.py
-├── runRegressionTest.sh
+├── NiedererEtAl2012.reference
+├── regressionTest.sh
 ├── Allrun
 ├── Allclean
 └── README.md
@@ -37,15 +38,15 @@ tutorials/NiedererEtAl2011/
 `constant/electroProperties`:
 
 ```cpp
-electroModel monodomainSolver;
+myocardiumSolver monodomainSolver;
 
 monodomainSolverCoeffs
 {
-    ionicModel TNNP;
+    ionicModel BuenoOrovio;
     tissue epicardialCells;
     solutionAlgorithm implicit;   // or explicit via sweeps
 
-    monodomainStimulus
+    externalStimulus
     {
         ...
     }
@@ -67,8 +68,8 @@ Manual:
 ```bash
 ./Allrun
 ./Allrun parallel
-./runRegressionTest.sh
-./runRegressionTest.sh parallel
+./regressionTest.sh
+./regressionTest.sh parallel
 ```
 
 Driver-managed sweep:
@@ -82,8 +83,5 @@ Driver sweeps are controlled by
 
 ## Regression behavior
 
-`runRegressionTest.sh` is a local wrapper around
-`tutorials/regressionTests/NiedererEtAl2011/runRegressionTest.sh`. The shared
-regression folder stores the override dictionaries and
-`NiedererEtAl2011.reference`, while the runnable case stays focused on the base
-tutorial setup.
+`regressionTest.sh` is local to this case and validates against the reference
+file stored in the case directory.

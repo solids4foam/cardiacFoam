@@ -4,54 +4,52 @@ This folder contains reference and regression cases for `cardiacFoam`.
 
 ## Current tutorial cases
 
-- `singleCell` : single-point ODE workflow (`singleCellSolver`)
-- `ionicHeterogeneityProbe` : meshless Bueno-Orovio transmural heterogeneity
-  probe with 2D/3D plotting
-- `Niederer/` : grouped slab verification and Purkinje coupling cases
-  - `NiedererEtAl2012verification` : slab verification workflow (`monodomainSolver`)
-  - `NiedererEtAl2012MonodomainPurkinje` : Niederer slab extended with a small 1D Purkinje network
-  - `NiedererEtAl2012EikonalPurkinje` : Niederer slab configured for 3D eikonal + 1D Purkinje activation tests
-- `ECG` : monodomain + ECG output workflow (`electroModel` with nested `ECG`)
-- `manufacturedSolutions/` : grouped manufactured-solution verification cases
-  - `monodomainPseudoECG` : spatial manufactured-solution verification with pseudo-ECG (`monodomainFDAManufactured`)
-  - `bidomain` : spatial manufactured-solution verification (`bidomainFDAManufactured`)
-  - `singleCellMonodomain` : single-cell manufactured-solution verification
-  - `singleCellBidomain` : single-cell manufactured-solution verification
-- `regressionTests/` : shared regression assets separated from runnable tutorial folders
-  - `NiedererEtAl2012` : Niederer slab regression overrides and checkpoints
-  - `singleCell` : single-cell regression overrides and checkpoints
-- `restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps (single-cell)
-- `vortexDynamics` : 2D wave dynamics (monodomain)
+- `singleCellprotocols/singleCell` : single-point ODE workflow (`singleCellSolver`)
+- `singleCellprotocols/ionicHeterogeneityProbe` : meshless Bueno-Orovio
+  transmural heterogeneity probe with 2D/3D plotting
+- `singleCellprotocols/restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps
+  (`singleCellSolver`)
+- `NiedererEtAl2011/NiedererEtAl2011verification` : slab verification workflow
+  (`myocardiumSolver monodomainSolver`)
+- `NiedererEtAl2011/monodomainPurkinjeNiedererEtAl2011` : Niederer slab with a
+  small 1D Purkinje network
+- `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` : legacy
+  electromechanical case; its electro dictionaries still use the old
+  `electroModel monoDomainElectro` layout and need a separate migration before
+  they are treated as current examples
+- `manufacturedSolutions/monodomainPseudoECG` : spatial manufactured-solution
+  verification with pseudo-ECG (`monodomainFDAManufactured`)
+- `manufacturedSolutions/bidomain` : spatial manufactured-solution verification
+  (`bidomainFDAManufactured`)
+- `manufacturedSolutions/bathBidomain` : bidomain-with-bath manufactured
+  verification (`bathBidomainFDAManufactured`, `bathECGProbe`)
+- `manufacturedSolutions/singleCellMonodomain` : single-cell manufactured
+  monodomain verification
+- `manufacturedSolutions/singleCellBidomain` : single-cell manufactured
+  bidomain verification
 
 ## Common script pattern
 
 Most runnable cases provide:
 
-- `Allrun` : run simulation (and sometimes post-process)
+- `Allrun` : run simulation and sometimes post-process
 - `Allclean` : remove generated output
-- optional `runRegressionTest.sh` : thin wrapper to case-specific numerical checks
+- optional `regressionTest.sh` or `runRegressionTest.sh` : case-local numerical
+  checks
 
 ## Cross-case regression entrypoint
 
 From `tutorials/`:
 
 ```bash
-./regressionTests/Alltest-regression
+./Alltest-regression
 ```
 
-Defaults to a smoke set and supports:
-
-- `smoke`
-- `all`
-- `<case>`
-- `<case>_parallel`
-
-Each covered tutorial owns a `regressionTest.sh` entrypoint. The shared runner
-copies selected tutorial folders to `../tutorialsTest-regression/`, then executes
-those tutorial-local regression scripts in the copied case. Logs and generated
-fields are written only in the copied regression tree.
+Each covered tutorial owns its regression script and reference file locally;
+there is no separate shared regression tree.
 
 ## Python automation integration
 
-The shared driver (`foamctl` / `openfoam_driver`) maps these case folders to tutorial
-specs and can run parameter sweeps with reproducible manifests and post-processing.
+The shared driver (`foamctl` / `openfoam_driver`) maps these case folders to
+tutorial specs and can run parameter sweeps with reproducible manifests and
+post-processing.

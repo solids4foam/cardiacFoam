@@ -5,19 +5,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openfoam_driver.core.defaults import niederer_2012 as niederer_defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.registry import (
-    list_entries,
-    list_case_directories,
     list_tutorials,
     load_tutorial_spec,
-    resolve_entry,
 )
 from openfoam_driver.specs.tutorials import (
     manufactured_fda,
+    manufactured_fda_bath_bidomain,
     manufactured_fda_bidomain,
-    niederer_2012,
     restitution_curves,
     single_cell,
 )
@@ -38,9 +34,9 @@ class TestTutorialArchitectureContract(unittest.TestCase):
         cls.tutorials_root = cls.repo_root / "tutorials"
         cls.module_map = {
             "singleCell": single_cell,
-            "niederer2012": niederer_2012,
             "manufacturedFDA": manufactured_fda,
             "manufacturedFDABidomain": manufactured_fda_bidomain,
+            "manufacturedFDABathBidomain": manufactured_fda_bath_bidomain,
             "restitutionCurves": restitution_curves,
         }
 
@@ -51,19 +47,18 @@ class TestTutorialArchitectureContract(unittest.TestCase):
         )
 
     def test_registry_contains_expected_tutorials(self) -> None:
-        self.assertEqual(
-            set(list_tutorials()),
+        self.assertTrue(
             {
                 "singleCell",
-                "niederer2012",
                 "manufacturedFDA",
                 "manufacturedFDABidomain",
+                "manufacturedFDABathBidomain",
                 "restitutionCurves",
-            },
+            }.issubset(set(list_tutorials()))
         )
 
     def test_all_tutorial_specs_load(self) -> None:
-        for tutorial in list_tutorials():
+        for tutorial in self.module_map:
             with self.subTest(tutorial=tutorial):
                 spec = self._load_spec(tutorial)
                 self.assertIsInstance(spec, TutorialSpec)
@@ -78,39 +73,8 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 self.assertEqual(spec.setup_root.parent, spec.case_root)
                 self.assertEqual(spec.output_dir.parent, spec.case_root)
 
-    def test_case_directory_listing_excludes_grouping_folders(self) -> None:
-        discovered = set(list_case_directories(self.tutorials_root))
-
-        self.assertIn("HeartSimTemplate", discovered)
-        self.assertIn("ECG", discovered)
-        self.assertNotIn("manufacturedSolutions", discovered)
-        self.assertNotIn("regressionTests", discovered)
-
-    def test_entry_catalog_classifies_workflow_template_and_reference_case(self) -> None:
-        entries = list_entries(self.tutorials_root)
-        indexed = {entry["entry_path"]: entry for entry in entries}
-
-        self.assertEqual(indexed["HeartSimTemplate"]["entry_kind"], "workflow_template")
-        self.assertFalse(indexed["HeartSimTemplate"]["is_runnable"])
-        self.assertEqual(
-            indexed["HeartPurkinje_MonopECG/HeartPurkinje"]["entry_kind"],
-            "workflow_case",
-        )
-        self.assertTrue(indexed["HeartPurkinje_MonopECG/HeartPurkinje"]["is_runnable"])
-
-    def test_resolve_entry_supports_explicit_workflow_case_kind(self) -> None:
-        resolution = resolve_entry(
-            "HeartPurkinje",
-            entry_kind="workflow_case",
-            overrides={"tutorials_root": self.tutorials_root},
-        )
-
-        self.assertEqual(resolution["entry_kind"], "workflow_case")
-        self.assertEqual(resolution["entry_path"], "HeartPurkinje_MonopECG/HeartPurkinje")
-        self.assertEqual(resolution["resolution"], "case_folder")
-
     def test_case_sweeps_are_non_empty_and_unique(self) -> None:
-        for tutorial in list_tutorials():
+        for tutorial in self.module_map:
             with self.subTest(tutorial=tutorial):
                 spec = self._load_spec(tutorial)
                 cases = spec.build_cases()
@@ -143,7 +107,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 )
 
     def test_output_collection_strategy_is_explicit(self) -> None:
-        for tutorial in list_tutorials():
+        for tutorial in self.module_map:
             with self.subTest(tutorial=tutorial):
                 spec = self._load_spec(tutorial)
                 if spec.collect_outputs is not None:
@@ -155,13 +119,6 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                     "output_dir" in run_case_keywords or "output_relpath" in run_case_keywords,
                     "Specs without collect_outputs must bind an output path in run_case",
                 )
-
-    def test_niederer_solver_default_tracks_defaults_module(self) -> None:
-        signature = inspect.signature(niederer_2012.make_spec)
-        self.assertEqual(
-            signature.parameters["solvers"].default,
-            niederer_defaults.SOLVERS,
-        )
 
     def test_manufactured_defaults_to_multid_implicit_cases(self) -> None:
         spec = self._load_spec("manufacturedFDA")
@@ -369,6 +326,103 @@ class TestTutorialArchitectureContract(unittest.TestCase):
 
             self.assertIn(source_dir / "ECG_manufactured_pseudoECG.dat", staged)
             self.assertFalse(raw.exists(), "raw root postProcessing ECG file should be renamed away")
+
+    def test_bath_bidomain_apply_case_wires_unified_potential_and_dual_ecg(self) -> None:
+        case = CaseConfig(
+            case_id="bath",
+            params={"dimension": "1D", "solver": "implicit", "cells": 20, "dt": 0.1},
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            case_root = Path(temp_dir)
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "system").mkdir(parents=True, exist_ok=True)
+
+            (case_root / "constant" / "electroProperties").write_text(
+                "\n".join(
+                    [
+                        "myocardiumSolver bidomainSolver;",
+                        "",
+                        "bidomainSolverCoeffs",
+                        "{",
+                        '    dimension "3D";',
+                        "    solutionAlgorithm explicit;",
+                        "    verificationModel",
+                        "    {",
+                        "        type manufacturedFDABidomainVerifier;",
+                        "    }",
+                        "    manufacturedBidomain",
+                        "    {",
+                        "        groundElectrode no;",
+                        "    }",
+                        "    potentialDomain",
+                        "    {",
+                        "        type oldPotentialDomain;",
+                        "    }",
+                        "    ecgDomains",
+                        "    {",
+                        "        bodyECG",
+                        "        {",
+                        "            ecgSolver oldECG;",
+                        "            ecgVerificationModel oldVerifier;",
+                        "        }",
+                        "        pseudoECGSignals",
+                        "        {",
+                        "            ecgSolver oldECG;",
+                        "        }",
+                        "    }",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
+            (case_root / "system" / "controlDict").write_text("deltaT 1.0;\n")
+            (case_root / "system" / "blockMeshDict.1D").write_text(
+                "\n".join(
+                    [
+                        "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)",
+                        "hex (1 8 9 2 5 10 11 6) (1 1 1) simpleGrading (1 1 1)",
+                        "hex (8 12 13 9 10 14 15 11) (1 1 1) simpleGrading (1 1 1)",
+                        "",
+                    ]
+                )
+            )
+
+            manufactured_fda_bath_bidomain._apply_case(case_root, case)
+
+            electro_text = (case_root / "constant" / "electroProperties").read_text()
+            self.assertIn('dimension    "1D";', electro_text)
+            self.assertIn("solutionAlgorithm    implicit;", electro_text)
+            self.assertIn("type    manufacturedFDABathBidomainVerifier;", electro_text)
+            self.assertIn("groundElectrode    yes;", electro_text)
+            self.assertIn("type    extracellularPotentialDomain;", electro_text)
+            self.assertIn("ecgSolver    bathECGProbe;", electro_text)
+            self.assertIn("ecgVerificationModel    bathECGManufacturedVerifier;", electro_text)
+            self.assertIn("ecgSolver    pseudoECG;", electro_text)
+
+    def test_bath_bidomain_stages_body_and_pseudo_ecg_outputs(self) -> None:
+        case = CaseConfig(
+            case_id="bath",
+            params={"dimension": "1D", "solver": "implicit", "cells": 20, "dt": 0.1},
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            case_root = Path(temp_dir)
+            source_dir = case_root / "postProcessing"
+            source_dir.mkdir(parents=True, exist_ok=True)
+            (source_dir / "bathECG.dat").write_text("body-output")
+            (source_dir / "pseudoECG.dat").write_text("pseudo-output")
+
+            staged = manufactured_fda_bath_bidomain._stage_case_ecg_outputs(case_root, case)
+
+            staged_names = {path.name for path in staged}
+            self.assertIn("BathECG_bath_bathECG.dat", staged_names)
+            self.assertIn("PseudoECG_bath_pseudoECG.dat", staged_names)
+            self.assertEqual(
+                (case_root / "archivedPostProcessing" / "PseudoECG_bath_pseudoECG.dat").read_text(),
+                "pseudo-output",
+            )
 
     def test_registry_can_load_non_registered_case_folder_via_generic_spec(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

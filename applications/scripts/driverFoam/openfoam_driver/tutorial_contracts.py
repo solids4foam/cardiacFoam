@@ -1,3 +1,11 @@
+"""CLI-only tutorial descriptors.
+
+This module stays for CLI consumers (``introspection.py``, ``listVerifiers``,
+``listIonicModels``). New automation should prefer Run documents; see
+``schemas/run-document.json`` and the ``RunDocument`` model in
+``openfoam_driver.core.runtime.run_model``.
+"""
+
 from __future__ import annotations
 
 import json

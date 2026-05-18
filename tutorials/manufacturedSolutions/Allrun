@@ -27,7 +27,7 @@ run_case() {
 }
 
 if [[ "$#" -eq 0 ]]; then
-    set -- monodomainPseudoECG bidomain singleCellMonodomain singleCellBidomain
+    set -- monodomainPseudoECG bidomain bathBidomain singleCellMonodomain singleCellBidomain
 fi
 
 for case_name in "$@"; do
@@ -44,6 +44,12 @@ for case_name in "$@"; do
                 "manufacturedFDABidomain" \
                 "bidomain/setupManufacturedFDA/driver_config.json"
             ;;
+        bathBidomain)
+            run_case \
+                "bathBidomain" \
+                "manufacturedFDABathBidomain" \
+                "bathBidomain/setupManufacturedFDA/driver_config.json"
+            ;;
         singleCellMonodomain)
             run_case \
                 "singleCellMonodomain" \
@@ -58,7 +64,7 @@ for case_name in "$@"; do
             ;;
         *)
             echo "Unknown manufactured case '$case_name'." >&2
-            echo "Valid cases: monodomainPseudoECG, bidomain, singleCellMonodomain, singleCellBidomain" >&2
+            echo "Valid cases: monodomainPseudoECG, bidomain, bathBidomain, singleCellMonodomain, singleCellBidomain" >&2
             exit 1
             ;;
     esac

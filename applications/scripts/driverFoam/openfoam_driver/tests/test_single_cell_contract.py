@@ -4,6 +4,8 @@ import ast
 import unittest
 from pathlib import Path
 
+from openfoam_driver.core.runtime.registry import load_tutorial_spec
+
 
 class TestSingleCellContract(unittest.TestCase):
     @classmethod
@@ -17,13 +19,11 @@ class TestSingleCellContract(unittest.TestCase):
         if repo_root is None:
             raise RuntimeError("Could not locate repository root from test path")
 
-        cls.module_path = (
-            repo_root
-            / "tutorials"
-            / "singleCell"
-            / "setupSingleCell"
-            / "singleCellinteractivePlots.py"
+        spec = load_tutorial_spec(
+            "singleCell",
+            overrides={"tutorials_root": repo_root / "tutorials"},
         )
+        cls.module_path = spec.setup_root / "singleCellinteractivePlots.py"
         cls.tree = ast.parse(cls.module_path.read_text())
 
     def test_load_simulation_data_no_output_folder_dependency(self) -> None:

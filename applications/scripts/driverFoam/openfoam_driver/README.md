@@ -48,7 +48,6 @@ In addition to these curated specs, the driver can also run:
 
 - `genericCase` / `randomCase` with `case_dir_name` supplied in config
 - any existing case folder directly, for example `foamctl sim --entry ECG`
-- workflow entries such as `HeartSimTemplate` and `HeartPurkinje`
 
 ## Install and run
 
@@ -89,21 +88,14 @@ Useful flags:
 - `--config <json>`
 - `--tutorials-root <path>`
 
-The `describe` action is the GUI-prep entrypoint. It resolves the requested
-entry and prints:
+The `describe` action resolves the requested entry and prints:
 
 - the `make_spec(...)` parameter schema and defaults
 - resolved case/setup/output paths
 - the planned cases for the current configuration
 - the grouped dict-entry catalog for `physicsProperties` and `electroProperties`
-- the recommended GUI routes and view-models
 - the launch plan for `sim`, `post`, and `all`, including the exact driver
   command and expected manifest path
-
-GUI-focused contract document:
-
-- `applications/scripts/driverFoam/openfoam_driver/GUI_CONTRACT.md`
-- `applications/scripts/driverFoam/openfoam_driver/FRONTEND_HANDOFF.md`
 
 ## Config override model
 
@@ -157,10 +149,9 @@ known override paths for:
 - ECG keys
 - active-tension keys
 
-The catalog now also carries GUI-oriented hints per entry:
+The catalog also carries machine-readable metadata per entry:
 
 - `value_kind`
-- `ui_control`
 - `enum_values`
 - `dynamic_path`
 

@@ -5,7 +5,7 @@ stack with pseudo-ECG verification.
 
 ## Stack
 
-- electro model: `monodomainSolver`
+- myocardium solver: `monodomainSolver`
 - ionic model: `monodomainFDAManufactured`
 - field verification:
   `manufacturedFDAMonodomainVerifier` from `libverificationModels`
@@ -36,7 +36,7 @@ That split is now:
 - concrete manufactured field verifier:
   `verificationModels/monodomainVerification`
 - manufactured ECG verification:
-  `verificationModels/pseudoECGVerification`
+  `verificationModels/ecgVerification`
 
 ## Outputs
 

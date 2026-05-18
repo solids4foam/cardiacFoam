@@ -63,7 +63,6 @@ class TestDictEntryCatalog(unittest.TestCase):
     def test_catalog_exposes_gui_value_hints_for_key_entries(self) -> None:
         type_entry = PHYSICS_PROPERTY_ENTRIES[0]
         self.assertEqual(type_entry.value_kind, "enum")
-        self.assertEqual(type_entry.ui_control, "select")
         self.assertIn("electroMechanicalModel", type_entry.enum_values)
 
         monodomain_entries = {

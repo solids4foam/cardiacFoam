@@ -6,6 +6,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 
 - `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
+- `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
 - `singleCellMonodomain` : single-cell manufactured-solution verification for the monodomain ionic workflow
 - `singleCellBidomain` : single-cell manufactured-solution verification for the bidomain ionic workflow
 

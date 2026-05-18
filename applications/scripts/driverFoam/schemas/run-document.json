@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunDocument",
+  "description": "cardiacFoam Run document v1. Every Run doc declares version: \"1\"; breaking schema changes bump version and add a migration step.",
+  "type": "object",
+  "required": ["version", "id", "name", "status", "config"],
+  "properties": {
+    "version": {"const": "1"},
+    "id": {"type": "string", "minLength": 1},
+    "name": {"type": "string", "minLength": 1},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "lastModified": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["draft", "queued", "running", "completed", "failed"]},
+    "config": {
+      "type": "object",
+      "required": ["anatomy", "physics", "stimulus", "solver"],
+      "properties": {
+        "anatomy":  {"type": "object"},
+        "physics":  {"type": "object"},
+        "stimulus": {"type": "object"},
+        "solver":   {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "validation": {"type": "object"},
+    "results":    {"type": ["object", "null"]},
+    "reports": {
+      "type": "object",
+      "description": "Resolved per-run reports. Written by the workspace on the completed transition via resolveReports(run, catalog). See Spec §3, §5a.",
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "url", "status"],
+            "properties": {
+              "id":    {"type": "string"},
+              "title": {"type": "string"},
+              "url":   {"type": "string"},
+              "status": {"enum": ["ready", "generating", "failed"]},
+              "generatedAt": {"type": "string", "format": "date-time"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "generatedAt": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

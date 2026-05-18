@@ -9,18 +9,21 @@ This case is the single integration-point electrophysiology workflow.
 ## Folder structure
 
 ```text
-tutorials/singleCell/
+tutorials/singleCellprotocols/singleCell/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
 │   └── sweepCurrents
 ├── system/
-│   ├── blockMeshDict
-│   └── controlDict
+│   ├── controlDict
+│   ├── decomposeParDict
+│   ├── fvSchemes
+│   └── fvSolution
 ├── setupSingleCell/
 │   ├── run_cases.sh
 │   └── singleCellinteractivePlots.py
-├── runRegressionTest.sh
+├── singleCell.reference
+├── regressionTest.sh
 ├── Allrun
 ├── Allclean
 └── README.md
@@ -31,9 +34,9 @@ tutorials/singleCell/
 `constant/electroProperties`:
 
 ```cpp
-electroModel singleCellSolver;
+myocardiumSolver singleCellSolver;
 
-SingleCellSolverCoeffs
+singleCellSolverCoeffs
 {
     ionicModel ...;
     tissue ...;
@@ -65,7 +68,7 @@ Manual:
 
 ```bash
 ./Allrun
-./runRegressionTest.sh
+./regressionTest.sh
 ```
 
 Driver-managed sweep:
@@ -79,7 +82,5 @@ then collects outputs and post-processes in `setupSingleCell`.
 
 ## Regression behavior
 
-`runRegressionTest.sh` is a local wrapper around
-`tutorials/regressionTests/singleCell/runRegressionTest.sh`. The shared
-regression folder stores the reference trace and any override files, keeping the
-main tutorial folder clean.
+`regressionTest.sh` is local to this case and validates against
+`singleCell.reference`.

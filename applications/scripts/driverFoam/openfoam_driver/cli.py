@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Path to JSON file with make_spec overrides. Supports either a top-level "
             "tutorial map (keys: singleCell, niederer2012, manufacturedFDA, "
-            "manufacturedFDABidomain, "
+            "manufacturedFDABidomain, manufacturedFDABathBidomain, "
             "restitutionCurves, genericCase/randomCase) or a direct parameter "
             "object for the selected tutorial."
         ),

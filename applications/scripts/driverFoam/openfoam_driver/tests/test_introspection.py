@@ -37,8 +37,6 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(payload["entry"]["entry_name"], "singleCell")
         self.assertIn("singleCell", payload["registered_tutorials"])
         self.assertIn("ionic_models", payload["make_spec"]["parameters"])
-        self.assertIn("gui_schema", payload)
-        self.assertEqual(payload["gui_schema"]["routes"][0]["path"], "/entries")
         self.assertIn("entry_catalog", payload)
         self.assertIsInstance(payload["entry_catalog"], list)
         self.assertIn("workflow_catalog", payload)
@@ -81,10 +79,6 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("Allrun", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("README.md", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("ionicModel", payload["tutorial_contract"]["case_parameters"])
-        self.assertIn(
-            "regressionTests/singleCell",
-            payload["tutorial_contract"]["reference_cases"],
-        )
         self.assertIn("launch", payload)
         self.assertEqual(payload["launch"]["sim"]["action"], "sim")
         self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))
@@ -200,61 +194,6 @@ class TestIntrospection(unittest.TestCase):
         payload = json.loads(stream.getvalue())
         self.assertEqual(payload["resolved_name"], "singleCell")
         self.assertEqual(payload["entry_kind"], "registered_tutorial")
-
-    def test_heartsimtemplate_exposes_machine_readable_authoring_contract(self) -> None:
-        payload = describe_tutorial(
-            "HeartSimTemplate",
-            overrides={"tutorials_root": self.tutorials_root},
-        )
-
-        contract = payload["tutorial_contract"]
-        self.assertEqual(contract["name"], "HeartSimTemplate")
-        self.assertEqual(contract["resolution"], "case_folder")
-        self.assertEqual(payload["entry_kind"], "workflow_template")
-        self.assertFalse(payload["is_runnable"])
-        self.assertEqual(contract["authoring_contract_path"], "workflow_contract.json")
-        self.assertIsNotNone(contract["authoring_contract"])
-        self.assertEqual(
-            contract["authoring_contract"]["tutorial_family"],
-            "HeartSimTemplate",
-        )
-        self.assertEqual(
-            contract["authoring_contract"]["workflow_templates"][0]["workflow_id"],
-            "monodomain_purkinje_pseudo_ecg",
-        )
-        self.assertEqual(
-            contract["authoring_contract"]["workflow_templates"][0]["required_blocks"][1],
-            "monodomainSolverCoeffs.externalStimulus",
-        )
-        self.assertNotIn(
-            "purkinjeNetworkModelCoeffs",
-            json.dumps(contract["authoring_contract"]),
-        )
-
-    def test_heartpurkinje_entry_is_exposed_as_runnable_workflow_case(self) -> None:
-        payload = describe_tutorial(
-            "HeartPurkinje",
-            overrides={"tutorials_root": self.tutorials_root},
-        )
-
-        self.assertEqual(payload["entry_kind"], "workflow_case")
-        self.assertTrue(payload["is_runnable"])
-        self.assertEqual(payload["entry"]["entry_path"], "HeartPurkinje_MonopECG/HeartPurkinje")
-        self.assertTrue(payload["spec"]["setup_root"].endswith("setupHeartPurkinje"))
-        self.assertEqual(payload["workflow"]["workflow_family"], "HeartSimTemplate")
-        self.assertEqual(
-            payload["workflow"]["template_entry"]["entry_name"],
-            "HeartSimTemplate",
-        )
-        self.assertIn(
-            "HeartPurkinje_MonopECG/HeartPurkinje",
-            {
-                item["entry_path"]
-                for item in payload["entry_catalog"]
-                if item["entry_kind"] == "workflow_case"
-            },
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

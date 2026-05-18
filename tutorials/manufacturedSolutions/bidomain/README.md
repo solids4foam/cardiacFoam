@@ -7,7 +7,7 @@ bidomain stack.
 
 ## Stack
 
-- electro model: `bidomainSolver`
+- myocardium solver: `bidomainSolver`
 - ionic model: `bidomainFDAManufactured`
 - field verification:
   `manufacturedFDABidomainVerifier` from `libverificationModels`

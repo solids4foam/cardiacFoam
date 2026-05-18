@@ -128,7 +128,13 @@ class TestPostprocessingDriver(unittest.TestCase):
 
     def test_manufactured_postprocess_writes_csv_without_optional_plotting_deps(self) -> None:
         repo_root = _repo_root_from_test()
-        setup_root = repo_root / "tutorials" / "manufacturedSolutions" / "monodomain" / "setupManufacturedFDA"
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "manufacturedSolutions"
+            / "monodomainPseudoECG"
+            / "setupManufacturedFDA"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
@@ -171,7 +177,13 @@ class TestPostprocessingDriver(unittest.TestCase):
 
     def test_manufactured_postprocess_ignores_stale_outputs_not_in_manifest(self) -> None:
         repo_root = _repo_root_from_test()
-        setup_root = repo_root / "tutorials" / "manufacturedSolutions" / "monodomain" / "setupManufacturedFDA"
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "manufacturedSolutions"
+            / "monodomainPseudoECG"
+            / "setupManufacturedFDA"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
@@ -246,6 +258,7 @@ class TestPostprocessingDriver(unittest.TestCase):
         module_path = (
             repo_root
             / "tutorials"
+            / "singleCellprotocols"
             / "restitutionCurves_s1s2Protocol"
             / "setupRestitutionCurves_s1s2Protocol"
             / "postProcessing_restCurves.py"
@@ -270,39 +283,15 @@ class TestPostprocessingDriver(unittest.TestCase):
         )
 
 
-    def test_niederer_table_summary_produces_csv_and_html(self) -> None:
-        repo_root = _repo_root_from_test()
-        setup_root = (
-            repo_root / "tutorials" / "NiedererEtAl2012" / "setupNiedererEtAl2012"
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output_dir = Path(temp_dir)
-            # Write a fake points CSV matching the expected pattern
-            csv_content = "activationTime,Points:0,Points:1,Points:2\n0.042,0.0,0.0,0.007\n0.055,0.02,0.003,0.007\n"
-            (output_dir / "implicit_TNNP_epicardialCells_points_DT001_DX01.csv").write_text(csv_content)
-
-            run_postprocess_tasks(
-                setup_root=setup_root,
-                output_dir=output_dir,
-                tutorial_name="NiedererEtAl2012",
-                tasks=[
-                    PostprocessTask(
-                        module_relpath=Path("postProcessing/table_summary.py")
-                    )
-                ],
-            )
-
-            self.assertTrue((output_dir / "NiedererEtAl2012_summary.csv").exists())
-            self.assertTrue((output_dir / "NiedererEtAl2012_summary.html").exists())
-            csv_text = (output_dir / "NiedererEtAl2012_summary.csv").read_text()
-            self.assertIn("# tutorial: NiedererEtAl2012", csv_text)
-            self.assertIn("case_id", csv_text)
-            self.assertIn("implicit_TNNP_epicardialCells", csv_text)
-
     def test_singlecell_table_summary_produces_csv_and_html(self) -> None:
         repo_root = _repo_root_from_test()
-        setup_root = repo_root / "tutorials" / "singleCell" / "setupSingleCell"
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "singleCellprotocols"
+            / "singleCell"
+            / "setupSingleCell"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
@@ -330,7 +319,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertTrue((output_dir / "singleCell_summary.csv").exists())
             self.assertTrue((output_dir / "singleCell_summary.html").exists())
             csv_text = (output_dir / "singleCell_summary.csv").read_text()
-            self.assertIn("# tutorial: singleCell", csv_text)
+            self.assertIn("# entry: singleCell", csv_text)
             self.assertIn("APD_ms", csv_text)
             self.assertIn("peak_voltage_mV", csv_text)
 
@@ -340,6 +329,7 @@ class TestPostprocessingDriver(unittest.TestCase):
         setup_root = (
             repo_root
             / "tutorials"
+            / "singleCellprotocols"
             / "restitutionCurves_s1s2Protocol"
             / "setupRestitutionCurves_s1s2Protocol"
         )
@@ -368,7 +358,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             self.assertTrue((output_dir / "restitutionCurves_summary.csv").exists())
             self.assertTrue((output_dir / "restitutionCurves_summary.html").exists())
             csv_text = (output_dir / "restitutionCurves_summary.csv").read_text()
-            self.assertIn("# tutorial: restitutionCurves_s1s2Protocol", csv_text)
+            self.assertIn("# entry: restitutionCurves_s1s2Protocol", csv_text)
             self.assertIn("ionic_model", csv_text)
             self.assertIn("TNNP", csv_text)
             self.assertIn("BuenoOrovio", csv_text)

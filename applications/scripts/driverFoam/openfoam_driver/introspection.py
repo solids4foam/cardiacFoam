@@ -16,7 +16,6 @@ from .core.runtime.registry import (
 )
 from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
-from .gui_schema import describe_gui_schema
 from .ionic_model_catalog import (
     IONIC_MODEL_CATALOG,
     SOLVER_COMPATIBILITY_RULES,
@@ -529,7 +528,6 @@ def describe_entry(
         "dict_entries": _dict_entry_catalog(),
         "ionic_model_catalog": _ionic_model_catalog(),
         "active_tension_catalog": _active_tension_catalog(),
-        "gui_schema": describe_gui_schema(),
         "launch": describe_launch_matrix(
             entry,
             entry_kind=resolution["entry_kind"],

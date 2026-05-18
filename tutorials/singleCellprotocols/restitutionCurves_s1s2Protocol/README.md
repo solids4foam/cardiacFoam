@@ -9,7 +9,7 @@ This tutorial runs single-cell S1-S2 pacing sweeps to generate restitution curve
 ## Folder structure
 
 ```text
-tutorials/restitutionCurves_s1s2Protocol/
+tutorials/singleCellprotocols/restitutionCurves_s1s2Protocol/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
@@ -36,9 +36,9 @@ tutorials/restitutionCurves_s1s2Protocol/
 `constant/electroProperties`:
 
 ```cpp
-electroModel singleCellSolver;
+myocardiumSolver singleCellSolver;
 
-SingleCellSolverCoeffs
+singleCellSolverCoeffs
 {
     ionicModel ...;
     tissue ...;
