@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Final, Literal
 
 
 ArtifactFormat = Literal[
@@ -62,6 +63,64 @@ class DataArtifact:
     time_indexed: bool = False
     """True for OpenFOAM time-directory style outputs that produce one file
     per write interval. ``path_pattern`` will typically contain ``{time}``."""
+
+    def __post_init__(self) -> None:
+        # Catch typos like {caseId} or {run_id} at construction so they never
+        # reach artifacts_manifest.json. Expansion-time validation alone is
+        # not enough: an agent may read path_pattern literally without ever
+        # calling expand_path_pattern.
+        _validate_path_pattern(self.path_pattern)
+
+
+_PATH_PATTERN_PLACEHOLDER: Final[re.Pattern[str]] = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+_KNOWN_PATH_PLACEHOLDERS: Final[frozenset[str]] = frozenset({"case_id", "time"})
+
+
+def _validate_path_pattern(pattern: str) -> None:
+    """Raise ``ValueError`` if ``pattern`` contains any placeholder not in
+    :data:`_KNOWN_PATH_PLACEHOLDERS`. Does not require values — this is shape
+    validation, not expansion. Called from :class:`DataArtifact.__post_init__`
+    so typos surface at construction rather than at expand-time."""
+    for match in _PATH_PATTERN_PLACEHOLDER.finditer(pattern):
+        name = match.group(1)
+        if name not in _KNOWN_PATH_PLACEHOLDERS:
+            raise ValueError(
+                f"unknown placeholder {{{name}}} in path pattern {pattern!r}; "
+                f"recognised placeholders are {sorted(_KNOWN_PATH_PLACEHOLDERS)}"
+            )
+
+
+def expand_path_pattern(
+    pattern: str,
+    *,
+    case_id: str | None = None,
+    time: str | None = None,
+) -> str:
+    """Substitute ``{case_id}`` and ``{time}`` placeholders in a path pattern.
+
+    The set of recognised placeholders is closed (see
+    :data:`_KNOWN_PATH_PLACEHOLDERS`). Encountering an unknown ``{foo}`` token
+    raises ``ValueError`` so authors cannot silently introduce a third
+    placeholder convention.
+
+    Passing an unused keyword (e.g., ``time=`` when the pattern has no
+    ``{time}``) is tolerated — callers compose artifacts uniformly and should
+    not have to inspect every pattern before invoking the helper.
+    """
+    _validate_path_pattern(pattern)
+    values = {"case_id": case_id, "time": time}
+
+    def _resolve(match: re.Match[str]) -> str:
+        name = match.group(1)
+        value = values[name]
+        if value is None:
+            raise ValueError(
+                f"path pattern {pattern!r} references {{{name}}} but no "
+                f"{name}= was supplied"
+            )
+        return value
+
+    return _PATH_PATTERN_PLACEHOLDER.sub(_resolve, pattern)
 
 
 @dataclass(frozen=True)

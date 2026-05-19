@@ -354,6 +354,7 @@ def _manifest_schema() -> dict[str, Any]:
             "failed_cases": "integer — cases with status 'failed'",
             "error": "string | null — top-level error message if run failed early",
             "plots_manifest_path": "string | null — path to plots.json if postprocess produced plots",
+            "artifacts_manifest_path": "string | null — path to artifacts_manifest.json (predicted DataArtifacts for the current case state; v2.2+)",
             "human_report_path": "string — path to run_report.md",
             "results": "array of CaseResult objects — see case_result_fields",
         },

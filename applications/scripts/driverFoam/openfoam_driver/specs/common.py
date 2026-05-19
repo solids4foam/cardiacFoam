@@ -49,6 +49,40 @@ def detect_electro_coeffs_scope(electro_properties_path: Path) -> str:
     return f"{detect_myocardium_solver_name(electro_properties_path)}Coeffs"
 
 
+def detect_ionic_model_name(electro_properties_path: Path) -> str:
+    """Return the ionicModel value from the active <solver>Coeffs block.
+
+    Uses the same line-based scan as :func:`detect_myocardium_solver_name`
+    rather than a full OpenFOAM dictionary parser. The scope is identified
+    by entering the brace following the relevant ``<solver>Coeffs`` header
+    and looking for the first ``ionicModel`` key inside it. Raises
+    ``KeyError`` if ionicModel is not declared.
+    """
+    scope = detect_electro_coeffs_scope(electro_properties_path)
+    in_scope = False
+    depth = 0
+    for line in electro_properties_path.read_text().splitlines():
+        stripped = line.split("//", 1)[0].strip()
+        if not in_scope:
+            if stripped == scope or stripped.startswith(f"{scope} ") or stripped.startswith(f"{scope}{{"):
+                in_scope = True
+            continue
+        if "{" in stripped:
+            depth += stripped.count("{")
+        if stripped.startswith("ionicModel") and depth == 1:
+            tokens = stripped.rstrip(";").split()
+            if len(tokens) >= 2:
+                return tokens[1]
+        if "}" in stripped:
+            depth -= stripped.count("}")
+            if depth <= 0:
+                break
+    raise KeyError(
+        f"Could not determine ionicModel from {electro_properties_path} "
+        f"(scope {scope!r})"
+    )
+
+
 def _resolve_scope_tokens(
     path: str,
     *,

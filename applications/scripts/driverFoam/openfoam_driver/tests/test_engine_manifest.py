@@ -268,6 +268,139 @@ class TestActionEventsJsonl(unittest.TestCase):
             self.assertEqual(event_types[-1], "sim_finished")
 
 
+class TestArtifactsManifest(unittest.TestCase):
+    """artifacts_manifest.json contract (plan v2 §3b).
+
+    Sidecar manifest written next to run_manifest.json, listing the predicted
+    DataArtifacts for the current on-disk case state. Always written so
+    agents have a stable polling target; the artifacts list may be empty.
+    """
+
+    def _write_single_cell_electro_properties(self, case_root: Path) -> None:
+        (case_root / "constant").mkdir(parents=True, exist_ok=True)
+        (case_root / "constant" / "electroProperties").write_text(
+            "myocardiumSolver singleCellSolver;\n"
+            "singleCellSolverCoeffs\n"
+            "{\n"
+            "    ionicModel    AlievPanfilov;\n"
+            "    tissue        myocyte;\n"
+            "}\n"
+        )
+
+    def _build_spec(self, root: Path, *, with_electro: bool = True) -> TutorialSpec:
+        case_root = root / "case"
+        setup_root = root / "setup"
+        output_dir = root / "output"
+        case_root.mkdir()
+        setup_root.mkdir()
+        if with_electro:
+            self._write_single_cell_electro_properties(case_root)
+        return TutorialSpec(
+            name="artifacts",
+            case_root=case_root,
+            setup_root=setup_root,
+            output_dir=output_dir,
+            build_cases=lambda: [CaseConfig("only", {})],
+            apply_case=lambda _c, _case: None,
+            run_case=lambda _c, _s, _case: None,
+        )
+
+    def test_artifacts_manifest_written_after_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            artifacts_path = spec.output_dir / "artifacts_manifest.json"
+            self.assertTrue(
+                artifacts_path.exists(),
+                "engine must write artifacts_manifest.json as a sidecar to run_manifest.json",
+            )
+            payload = json.loads(artifacts_path.read_text())
+            self.assertIn("schema_version", payload)
+            self.assertIn("artifacts", payload)
+            self.assertEqual(payload["run_id"],
+                             json.loads((spec.output_dir / "run_manifest.json").read_text())["run_id"])
+
+    def test_artifacts_match_predictor_output(self) -> None:
+        from openfoam_driver.core.runtime.artifacts import predict_data_artifacts
+
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            payload = json.loads(
+                (spec.output_dir / "artifacts_manifest.json").read_text()
+            )
+            predicted = predict_data_artifacts(spec.case_root, spec)
+            self.assertEqual(len(payload["artifacts"]), len(predicted))
+            ids = {a["artifact_id"] for a in payload["artifacts"]}
+            self.assertEqual(ids, {a.artifact_id for a in predicted})
+            for emitted, expected in zip(payload["artifacts"], predicted):
+                self.assertEqual(emitted["artifact_id"], expected.artifact_id)
+                self.assertEqual(emitted["format"], expected.format)
+                self.assertEqual(tuple(emitted["variables"]), expected.variables)
+                self.assertEqual(emitted["produced_by"], expected.produced_by)
+
+    def test_run_manifest_records_artifacts_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            run_manifest = json.loads(
+                (spec.output_dir / "run_manifest.json").read_text()
+            )
+            self.assertEqual(
+                run_manifest["artifacts_manifest_path"],
+                str(spec.output_dir / "artifacts_manifest.json"),
+            )
+
+    def test_artifacts_manifest_written_atomically(self) -> None:
+        """Mirrors the run_manifest atomicity contract — agents poll both."""
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            artifacts_path = spec.output_dir / "artifacts_manifest.json"
+
+            tmp_existed_at_replace: list[bool] = []
+            saw_artifacts_dst = False
+            real_replace = os.replace
+
+            def tracking_replace(src, dst):
+                nonlocal saw_artifacts_dst
+                src_path = Path(src)
+                dst_path = Path(dst)
+                if dst_path == artifacts_path:
+                    saw_artifacts_dst = True
+                    tmp_existed_at_replace.append(src_path.exists())
+                    self.assertEqual(src_path.parent, artifacts_path.parent)
+                    self.assertTrue(
+                        src_path.name.startswith("artifacts_manifest.json")
+                        and src_path.name.endswith(".tmp")
+                    )
+                return real_replace(src, dst)
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.engine.os.replace",
+                side_effect=tracking_replace,
+            ):
+                DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            self.assertTrue(saw_artifacts_dst,
+                            "no os.replace targeting artifacts_manifest.json")
+            self.assertTrue(all(tmp_existed_at_replace))
+            leftovers = list(spec.output_dir.glob("artifacts_manifest.json*.tmp"))
+            self.assertEqual(leftovers, [])
+
+    def test_empty_artifacts_when_no_electro_properties(self) -> None:
+        """File still written (stable polling target); artifacts list empty."""
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp), with_electro=False)
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+            payload = json.loads(
+                (spec.output_dir / "artifacts_manifest.json").read_text()
+            )
+            self.assertEqual(payload["artifacts"], [])
+
+
 class TestDriverEngineManifestAtomicity(unittest.TestCase):
     """run_manifest.json must be readable by polling agents at any instant.
 

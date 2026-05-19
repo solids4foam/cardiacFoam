@@ -7,6 +7,11 @@ during dry runs):
   change. Writes go through a sibling ``run_manifest.json.tmp`` file and an
   ``os.replace`` so polling readers never observe a torn document. Schema is
   versioned via the ``schema_version`` key; v2.x is additive-only.
+* ``artifacts_manifest.json`` — sidecar listing the predicted
+  :class:`DataArtifact` set for the current on-disk case state (plan v2 §3).
+  Always present once a run starts so agents have a stable polling target;
+  the ``artifacts`` list may be empty when nothing can yet be derived.
+  Linked from ``run_manifest['artifacts_manifest_path']``.
 * ``action_events.jsonl`` — append-only event log. Each event is a single
   ``json.dumps(event) + "\n"`` write, so a line is either fully present or
   not present at all. Agents may ``tail -F`` the file safely.
@@ -23,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from .artifacts import predict_data_artifacts
 from .models import CaseConfig, TutorialSpec
 
 
@@ -463,6 +469,29 @@ class DriverEngine:
         report_path.write_text("\n".join(lines).rstrip() + "\n")
         return report_path
 
+    def _write_artifacts_manifest(self, destination_root: Path) -> Path | None:
+        """Emit the sidecar artifacts_manifest.json (plan v2 §3b).
+
+        Always written when ``destination_root`` is reachable, so agents have
+        a stable polling target. The artifacts list may be empty when the
+        predictor cannot derive anything yet (e.g., electroProperties not
+        present, unknown solver). Atomic via .tmp + os.replace, identical to
+        the run_manifest pattern.
+        """
+        artifacts = predict_data_artifacts(self.spec.case_root, self.spec)
+        payload = {
+            "schema_version": "1.0",
+            "run_id": self.run_id,
+            "case_root": str(self.spec.case_root),
+            "predicted_at_utc": _utc_now(),
+            "artifacts": [asdict(a) for a in artifacts],
+        }
+        path = destination_root / "artifacts_manifest.json"
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(payload, indent=2))
+        os.replace(tmp, path)
+        return path
+
     def _write_manifest(
         self,
         results: list[CaseResult],
@@ -475,7 +504,9 @@ class DriverEngine:
         finished_at_utc: str | None = None,
     ) -> None:
         destination_root = self._manifest_destination_root()
+        destination_root.mkdir(parents=True, exist_ok=True)
         plots_manifest = self.spec.output_dir / "plots.json"
+        artifacts_manifest_path = self._write_artifacts_manifest(destination_root)
         total = total_cases if total_cases is not None else len(results)
         manifest = {
             "schema_version": "2.2",
@@ -503,6 +534,7 @@ class DriverEngine:
             "failed_cases": sum(1 for item in results if item.status == "failed"),
             "error": error,
             "plots_manifest_path": str(plots_manifest) if plots_manifest.exists() else None,
+            "artifacts_manifest_path": str(artifacts_manifest_path) if artifacts_manifest_path else None,
             "results": [asdict(item) for item in results],
         }
 

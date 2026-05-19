@@ -12,7 +12,11 @@ import dataclasses
 import typing
 import unittest
 
-from openfoam_driver.core.runtime.models import ArtifactFormat, DataArtifact
+from openfoam_driver.core.runtime.models import (
+    ArtifactFormat,
+    DataArtifact,
+    expand_path_pattern,
+)
 
 
 class TestDataArtifact(unittest.TestCase):
@@ -51,6 +55,32 @@ class TestDataArtifact(unittest.TestCase):
         with self.assertRaises(dataclasses.FrozenInstanceError):
             artifact.artifact_id = "y"  # type: ignore[misc]
 
+    def test_construction_rejects_unknown_placeholder(self) -> None:
+        """A typo (e.g. {caseId}) in path_pattern must fail at construction,
+        not silently propagate into artifacts_manifest.json where it can
+        only be detected when an agent tries to expand it later."""
+        with self.assertRaises(ValueError) as ctx:
+            DataArtifact(
+                artifact_id="typo",
+                path_pattern="postProcessing/{caseId}.txt",
+                format="csv_probe",
+            )
+        self.assertIn("caseId", str(ctx.exception))
+
+    def test_construction_with_known_placeholders_succeeds(self) -> None:
+        DataArtifact(
+            artifact_id="ok",
+            path_pattern="results/{case_id}/{time}/Vm",
+            format="openfoam_time_dirs",
+        )
+
+    def test_construction_with_no_placeholders_succeeds(self) -> None:
+        DataArtifact(
+            artifact_id="static",
+            path_pattern="postProcessing/exact_error.json",
+            format="json_summary",
+        )
+
     def test_accepts_variables_tuple(self) -> None:
         artifact = DataArtifact(
             artifact_id="ionic",
@@ -81,6 +111,63 @@ class TestArtifactFormatLiteral(unittest.TestCase):
             "ArtifactFormat enum changed — update plan section 2.1 and every "
             "consumer that branches on format before changing this assertion.",
         )
+
+
+class TestExpandPathPattern(unittest.TestCase):
+    """Path-pattern placeholders ({case_id}, {time}) are the only documented
+    substitution language. The helper enforces the closed set so a predictor
+    or utility-manifest author cannot silently invent a third placeholder."""
+
+    def test_no_placeholders_returns_pattern_unchanged(self) -> None:
+        out = expand_path_pattern("postProcessing/probes.dat", case_id="c1")
+        self.assertEqual(out, "postProcessing/probes.dat")
+
+    def test_substitutes_case_id(self) -> None:
+        out = expand_path_pattern("results/{case_id}/log", case_id="caseA")
+        self.assertEqual(out, "results/caseA/log")
+
+    def test_substitutes_time(self) -> None:
+        out = expand_path_pattern(
+            "postProcessing/probes/{time}/Vm", case_id="c1", time="0.01"
+        )
+        self.assertEqual(out, "postProcessing/probes/0.01/Vm")
+
+    def test_substitutes_both_placeholders(self) -> None:
+        out = expand_path_pattern(
+            "out/{case_id}/{time}/field", case_id="c2", time="0.5"
+        )
+        self.assertEqual(out, "out/c2/0.5/field")
+
+    def test_repeated_placeholder_is_substituted_everywhere(self) -> None:
+        out = expand_path_pattern("{case_id}/{case_id}.log", case_id="x")
+        self.assertEqual(out, "x/x.log")
+
+    def test_missing_case_id_for_pattern_that_needs_it_raises(self) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            expand_path_pattern("results/{case_id}/log", case_id=None)
+        self.assertIn("case_id", str(ctx.exception))
+
+    def test_missing_time_for_pattern_that_needs_it_raises(self) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            expand_path_pattern(
+                "postProcessing/{time}/Vm", case_id="c1", time=None
+            )
+        self.assertIn("time", str(ctx.exception))
+
+    def test_unknown_placeholder_raises(self) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            expand_path_pattern("out/{foo}/x", case_id="c1")
+        self.assertIn("foo", str(ctx.exception))
+        self.assertIn("unknown placeholder", str(ctx.exception).lower())
+
+    def test_unused_kwargs_are_tolerated(self) -> None:
+        """Passing time= when the pattern has no {time} is not an error.
+        Callers compose artifacts uniformly; they should not have to inspect
+        each pattern before calling."""
+        out = expand_path_pattern(
+            "postProcessing/static.csv", case_id="c1", time="0.01"
+        )
+        self.assertEqual(out, "postProcessing/static.csv")
 
 
 if __name__ == "__main__":
