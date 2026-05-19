@@ -1,0 +1,31 @@
+# applications/utilities/ionicHeterogeneityProbe/utility.manifest.toml
+
+name = "ionicHeterogeneityProbe"
+description = "Probe BuenoOrovio transmural heterogeneity setup with synthetic 0-D ODE samples."
+
+purpose = """
+Runs the BuenoOrovio ionic model at nSamples transmural-distance values (0–1)
+without constructing a mesh, writing Vm trace CSV files and action-potential
+metrics (RMP, peak, APD30/50/70/90, maxdV/dt) to postProcessing/ionicHeterogeneityProbe/.
+Adjacent-sample waveform smoothness and APD envelope checks are also performed,
+producing smoothness_report.csv and APD_envelope_report.csv. Returns exit code 1
+if any sample or transition fails, allowing use as a CI gate.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/ionicHeterogeneityProbe",
+]
+
+outputs = [
+  "postProcessing/ionicHeterogeneityProbe/Vm_traces.csv",
+  "postProcessing/ionicHeterogeneityProbe/AP_metrics.csv",
+  "postProcessing/ionicHeterogeneityProbe/smoothness_report.csv",
+  "postProcessing/ionicHeterogeneityProbe/APD_envelope_report.csv",
+]
+
+requires_mesh = false
+
+example = "ionicHeterogeneityProbe -case ./singleCell_run"
+
+category = "verification"

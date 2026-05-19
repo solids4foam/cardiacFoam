@@ -1,0 +1,35 @@
+# applications/utilities/runPurkinjeGraph/utility.manifest.toml
+
+name = "runPurkinjeGraph"
+description = "Advance a Purkinje graph conductionSystemDomain in isolation without myocardium coupling."
+
+purpose = """
+Diagnostic utility that constructs the conductionSystemDomain specified in
+constant/electroProperties and time-steps it forward (up to nSteps steps at
+deltaT) without creating any myocardium solver, ECG domain, or deformation
+coupling. Time directories are written at the case writeInterval. This is useful
+for validating 1D Purkinje graph connectivity, initial conditions, and ionic
+evolution before running the full coupled solver.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/purkinjeGraph",
+  "system/controlDict",
+]
+
+outputs = [
+  "<time>/",
+]
+
+requires_mesh = true
+
+flags = [
+  { name = "-conductionDomain", description = "Name of the conductionNetworkDomains entry to run (defaults to the first entry).", takes_value = true },
+  { name = "-nSteps", description = "Number of graph-only time steps to advance.", takes_value = true },
+  { name = "-deltaT", description = "Override time-step size for this diagnostic run.", takes_value = true },
+]
+
+example = "runPurkinjeGraph -case ./purkinje_run -nSteps 5000 -deltaT 0.0001"
+
+category = "verification"

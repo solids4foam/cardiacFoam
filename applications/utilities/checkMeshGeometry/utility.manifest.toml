@@ -1,0 +1,30 @@
+# applications/utilities/checkMeshGeometry/utility.manifest.toml
+
+name = "checkMeshGeometry"
+description = "Check mesh geometry units and auto-scale to SI metres if the mesh is in mm or µm."
+
+purpose = """
+Reads constant/polyMesh, inspects the bounding box, and detects whether the
+mesh is in metres, millimetres, or micrometres by examining the maximum
+dimension. If the units appear non-SI the mesh is automatically rescaled to
+metres and rewritten to constant/polyMesh. Pass -noScale to suppress the write
+and only receive the diagnostic report.
+"""
+
+inputs = [
+  "constant/polyMesh",
+]
+
+outputs = [
+  "constant/polyMesh",
+]
+
+requires_mesh = true
+
+flags = [
+  { name = "-noScale", description = "Suppress automatic scaling even if units appear incorrect.", takes_value = false },
+]
+
+example = "checkMeshGeometry -case ./myCase"
+
+category = "mesh"

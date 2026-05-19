@@ -1,0 +1,39 @@
+# applications/utilities/setFibreField/utility.manifest.toml
+
+name = "setFibreField"
+description = "Compute and write fibre orientation fields for cardiac simulations from a transmural distance field."
+
+purpose = """
+Solves a Laplace equation on the mesh to produce a transmural-distance scalar
+field t (with endocardium = 0, epicardium = 1), then computes orthonormal
+transmural (et), normal (en), and longitudinal (el) directions using the
+Rossi-Lassila approach. The fibre direction f0 is obtained by rotating el about
+et by an angle that varies linearly from alphaEndo (60°) to alphaEpi (-60°). All
+six volumetric and surface fields are written to the current time directory.
+Currently hard-coded for the Land et al. (2015) ellipsoidal ventricle benchmark
+geometry — alphaEndo/alphaEpi are compile-time constants.
+"""
+
+inputs = [
+  "0/t",
+]
+
+outputs = [
+  "0/t",
+  "0/et",
+  "0/en",
+  "0/el",
+  "0/alphaRadians",
+  "0/f0",
+  "0/etf",
+  "0/enf",
+  "0/elf",
+  "0/alphaRadiansf",
+  "0/f0f",
+]
+
+requires_mesh = true
+
+example = "setFibreField -case ./ellipsoid_run"
+
+category = "field-setup"

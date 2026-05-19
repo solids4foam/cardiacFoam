@@ -1,0 +1,31 @@
+# applications/utilities/newVtkUnstructuredToFoam/utility.manifest.toml
+
+name = "newVtkUnstructuredToFoam"
+description = "Convert a legacy ASCII VTK unstructured grid to an OpenFOAM mesh, including tensor fields."
+
+purpose = """
+Extended version of the standard vtkUnstructuredToFoam that additionally
+reads scalar, vector, and tensor CELL_DATA fields from the VTK file and
+reconstructs them as volFields on the imported fvMesh. The resulting mesh is
+written to constant/polyMesh with no boundary-patch information (all faces are
+assigned to a single default patch). Pass -no-fields to import only the mesh
+topology without attempting to reconstruct fields.
+"""
+
+inputs = [
+  "<vtk-file>",
+]
+
+outputs = [
+  "constant/polyMesh",
+]
+
+requires_mesh = false
+
+flags = [
+  { name = "-no-fields", description = "Skip reconstruction of volFields from VTK CELL_DATA.", takes_value = false },
+]
+
+example = "newVtkUnstructuredToFoam myMesh.vtk -case ./myCase"
+
+category = "io-conversion"
