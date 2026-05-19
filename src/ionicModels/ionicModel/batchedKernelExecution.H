@@ -21,6 +21,9 @@ Class
 
 Description
     Reusable batched-kernel execution layer for SoA ionic stepping.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef batchedKernelExecution_H

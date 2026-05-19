@@ -58,7 +58,7 @@ blockMesh -dict system/blockMeshDict.1D
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --tutorial manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setupManufacturedFDA/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setupManufacturedFDA/driver_config.json
 ```
 
 The driver is the intended entrypoint for large dimension / cell-count / time-step

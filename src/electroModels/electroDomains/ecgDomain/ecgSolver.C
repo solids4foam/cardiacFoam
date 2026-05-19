@@ -37,16 +37,6 @@ autoPtr<ecgSolver> ecgSolver::New(const dictionary& dict)
 
     Info<< "Selecting ecgSolver " << solverType << nl;
 
-    if (solverType == "bathECG")
-    {
-        FatalErrorInFunction
-            << "ecgSolver bathECG has been removed. Bidomain-bath cases now "
-            << "use a unified potentialDomain with type "
-            << "extracellularPotentialDomain, and ECG output should use "
-            << "ecgSolver bathECGProbe to sample the solved global phiE."
-            << exit(FatalError);
-    }
-
     auto* ctorPtr = dictionaryConstructorTable(solverType);
 
     if (!ctorPtr)

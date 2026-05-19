@@ -27,7 +27,7 @@ myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
-ecgModels/bathECGProbe/bathECGProbe.C
+ecgModels/torsoECG/torsoECG.C
 
 /* Conduction system models */
 conductionSystemModels/monodomain1DSolver/monodomain1DSolver.C

@@ -16,20 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::purkinjeModelIO
+    purkinjeModelIO
 
 Description
     Static utility class for Purkinje network model I/O operations.
 
-    Provides file-writing helpers used by purkinjeNetworkModel:
-
-      - openTimeSeries : create a column-header .dat file
-      - writeRow       : append one timestep row
-
-    The class has no member data; all methods are static.
-
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
     Philip Cardiff, UCD.
 
 SourceFiles

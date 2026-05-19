@@ -20,6 +20,9 @@ Description
     the FDA manufactured solution. Mirrors the heart-only variant; kept in
     a separate header so the two ionic models never share linkage-level
     symbols and can diverge independently.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef bathBidomainFDAManufactured_2014Names_H

@@ -21,7 +21,7 @@ License
 #include "conductionSystemDomain.H"
 #include "ecgDomain.H"
 #include "electroDomainCoupler.H"
-#include "electroStateDomain.H"
+#include "extracellularPotentialDomain.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 
@@ -32,11 +32,6 @@ namespace Foam
 {
 namespace electrophysicsSystemBuilder
 {
-
-// Terminology used by the orchestration layer:
-//   primary domain        = myocardium
-//   conduction domains    = pre-myocardium graph / Purkinje domains
-//   ECG domains           = post-myocardium ECG domains
 
 namespace
 {
@@ -152,7 +147,7 @@ void configureAdvanceScheme
 }
 
 
-void configurePotentialDomain
+void configureBathPotentialDomain
 (
     electrophysicsSystem& system,
     const fvMesh&         mesh,
@@ -161,34 +156,7 @@ void configurePotentialDomain
 {
     system.clearPotentialDomain();
 
-    const word oldUnifiedPhiEKey("useUnifiedPhiE");
-    const word oldPotentialDomainKey("bodyPotentialDomain");
-
-    if (electroProperties.found(oldUnifiedPhiEKey))
-    {
-        FatalErrorInFunction
-            << "'" << oldUnifiedPhiEKey << "' has been removed. Configure "
-            << "unified bidomain-bath solves with:" << nl
-            << "potentialDomain" << nl
-            << "{" << nl
-            << "    type extracellularPotentialDomain;" << nl
-            << "    ..." << nl
-            << "}" << exit(FatalError);
-    }
-
-    if (electroProperties.found(oldPotentialDomainKey))
-    {
-        FatalErrorInFunction
-            << "'" << oldPotentialDomainKey << "' has been renamed. Use:" << nl
-            << "potentialDomain" << nl
-            << "{" << nl
-            << "    type extracellularPotentialDomain;" << nl
-            << "    ..." << nl
-            << "}"
-            << exit(FatalError);
-    }
-
-    if (!electroProperties.found("potentialDomain"))
+    if (!electroProperties.found("bathPotentialDomain"))
     {
         return;
     }
@@ -196,19 +164,19 @@ void configurePotentialDomain
     if (!system.hasMyocardium())
     {
         FatalErrorInFunction
-            << "configurePotentialDomain requires the myocardium domain "
+            << "configureBathPotentialDomain requires the myocardium domain "
             << "to be configured first."
             << exit(FatalError);
     }
 
     system.setPotentialDomain
     (
-        electroStateDomain::New
+        new extracellularPotentialDomain
         (
             mesh,
             system.myocardium(),
-            electroProperties.subDict("potentialDomain")
-        ).ptr()
+            electroProperties.subDict("bathPotentialDomain")
+        )
     );
 }
 
@@ -338,8 +306,8 @@ void configureECGDomains
     const dictionary* sharedElectrodePositionsPtr = nullptr;
     const dictionary* manufacturedBidomainPtr =
         electroProperties.findDict("manufacturedBidomain");
-    const dictionary* potentialDomainPtr =
-        electroProperties.findDict("potentialDomain");
+    const dictionary* bathPotentialDomainPtr =
+        electroProperties.findDict("bathPotentialDomain");
 
     if (electroProperties.found("ecgDomains"))
     {
@@ -388,17 +356,7 @@ void configureECGDomains
         {
             stateProviderPtr = &myocardiumStateProvider;
         }
-        else if (ecgSolverType == "bathECG")
-        {
-            FatalErrorInFunction
-                << "ECG domain '" << domainName
-                << "' selects removed ecgSolver bathECG. Bidomain-bath "
-                << "cases now use a unified potentialDomain with type "
-                << "extracellularPotentialDomain, and ECG output should use "
-                << "ecgSolver bathECGProbe to sample the solved global phiE."
-                << exit(FatalError);
-        }
-        else if (ecgSolverType == "bathECGProbe")
+        else if (ecgSolverType == "torsoECG")
         {
             const word myocardiumSolverType
             (
@@ -413,9 +371,9 @@ void configureECGDomains
             {
                 FatalErrorInFunction
                     << "ECG domain '" << domainName
-                    << "' selects ecgSolver bathECGProbe, but "
+                    << "' selects ecgSolver torsoECG, but "
                     << "myocardiumSolver is '" << myocardiumSolverType
-                    << "'. bathECGProbe requires myocardiumSolver "
+                    << "'. torsoECG requires myocardiumSolver "
                     << "bidomainSolver because it samples the "
                     << "extracellular potential phiE."
                     << exit(FatalError);
@@ -425,12 +383,16 @@ void configureECGDomains
             {
                 FatalErrorInFunction
                     << "ECG domain '" << domainName
-                    << "' selects ecgSolver bathECGProbe, but no "
-                    << "potentialDomain is configured. Add:" << nl
-                    << "potentialDomain" << nl
+                    << "' selects ecgSolver torsoECG, but no "
+                    << "bathPotentialDomain is configured inside "
+                    << "bidomainSolverCoeffs. Add:" << nl
+                    << "bidomainSolverCoeffs" << nl
                     << "{" << nl
-                    << "    type extracellularPotentialDomain;" << nl
-                    << "    ..." << nl
+                    << "    bathPotentialDomain" << nl
+                    << "    {" << nl
+                    << "        bathCellZones (...);" << nl
+                    << "        ..." << nl
+                    << "    }" << nl
                     << "}" << exit(FatalError);
             }
 
@@ -442,7 +404,7 @@ void configureECGDomains
                 << "ECG domain '" << domainName
                 << "' selects ecgSolver '" << ecgSolverType
                 << "', but provider routing is only defined for "
-                << "pseudoECG and bathECGProbe."
+                << "pseudoECG and torsoECG."
                 << exit(FatalError);
         }
 
@@ -454,7 +416,7 @@ void configureECGDomains
                 domainName,
                 sharedElectrodePositionsPtr,
                 manufacturedBidomainPtr,
-                potentialDomainPtr
+                bathPotentialDomainPtr
             );
 
         ecgDomainsByName.insert(domainName, domainPtr);

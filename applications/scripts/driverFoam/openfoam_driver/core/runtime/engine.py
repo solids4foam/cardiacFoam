@@ -1,6 +1,22 @@
+"""DriverEngine: orchestrates tutorial sweeps and emits agent-readable artifacts.
+
+Agent-facing contracts emitted under ``spec.output_dir`` (or ``setup_root``
+during dry runs):
+
+* ``run_manifest.json`` — single document, fully rewritten on every state
+  change. Writes go through a sibling ``run_manifest.json.tmp`` file and an
+  ``os.replace`` so polling readers never observe a torn document. Schema is
+  versioned via the ``schema_version`` key; v2.x is additive-only.
+* ``action_events.jsonl`` — append-only event log. Each event is a single
+  ``json.dumps(event) + "\n"`` write, so a line is either fully present or
+  not present at all. Agents may ``tail -F`` the file safely.
+* ``run_report.md`` — human-readable companion to ``run_manifest.json``.
+"""
+
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -462,7 +478,7 @@ class DriverEngine:
         plots_manifest = self.spec.output_dir / "plots.json"
         total = total_cases if total_cases is not None else len(results)
         manifest = {
-            "schema_version": "2.1",
+            "schema_version": "2.2",
             "run_id": self.run_id,
             "requested_action": self.requested_action,
             "entry": self._entry_name(),
@@ -495,5 +511,7 @@ class DriverEngine:
 
         destination_root.mkdir(parents=True, exist_ok=True)
         manifest_path = destination_root / "run_manifest.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2))
+        tmp_path = manifest_path.with_name(manifest_path.name + ".tmp")
+        tmp_path.write_text(json.dumps(manifest, indent=2))
+        os.replace(tmp_path, manifest_path)
         print(f"Run manifest written to: {manifest_path}")

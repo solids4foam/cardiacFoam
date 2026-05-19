@@ -72,9 +72,8 @@ Owns the long-lived state of each physical domain:
 
 - ECG
 
-- bath code is still present in the tree, but not part of the active core
-
-  orchestration path at the moment
+- extracellular potential / bath ECG through `extracellularPotentialDomain`
+  and `torsoECG`
 
 ### `myocardiumModels/`
 
@@ -103,7 +102,7 @@ Contains downstream ECG kernels:
 
 - `pseudoECG` (implemented by class `pseudoECGSolver`)
 
-- `bathECGProbe` — electrode sampler on the global phiE from
+- `torsoECG` — electrode sampler on the global phiE from
   `extracellularPotentialDomain`
 
 ### `electroCouplers/`

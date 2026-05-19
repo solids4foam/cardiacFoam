@@ -23,6 +23,7 @@ Description
 
 Author
     Philip Cardiff, UCD. All rights reserved.
+    Simao Nieto de Castro. All rights reserved.
 
 SourceFiles
     electroModel.C

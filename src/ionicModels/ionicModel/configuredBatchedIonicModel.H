@@ -22,6 +22,9 @@ Description
     Shared metadata/configuration layer for batched GPU-oriented ionic models.
     It keeps the per-model class focused on model math by centralizing
     constants storage, metadata hooks, and affine Vm-state mapping.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef configuredBatchedIonicModel_H

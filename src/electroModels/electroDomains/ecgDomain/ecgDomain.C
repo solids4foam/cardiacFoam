@@ -45,8 +45,8 @@ word selectedECGSolverType(const dictionary& dict)
 word outputFileName(const word& solverType)
 {
     return
-        solverType == "bathECGProbe"
-      ? word("bathECG.dat")
+        solverType == "torsoECG"
+      ? word("torsoECG.dat")
       : word("pseudoECG.dat");
 }
 
@@ -238,7 +238,7 @@ ecgDomain::ecgDomain
         (void)Vm();
         (void)conductivity();
     }
-    else if (solverType_ == "bathECGProbe")
+    else if (solverType_ == "torsoECG")
     {
         (void)phiE();
     }

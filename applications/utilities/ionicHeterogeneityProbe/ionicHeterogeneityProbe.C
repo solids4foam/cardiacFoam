@@ -23,6 +23,8 @@ Description
     transmural-distance samples. Writes Vm traces, action-potential metrics,
     and adjacent-sample smoothness checks.
 
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"

@@ -12,9 +12,9 @@ src/electroModels/ecgModels/
 ├── pseudoECGSolver/
 │   ├── pseudoECGSolver.H
 │   └── pseudoECGSolver.C
-├── bathECGProbe/
-│   ├── bathECGProbe.H
-│   └── bathECGProbe.C
+├── torsoECG/
+│   ├── torsoECG.H
+│   └── torsoECG.C
 └── README.md
 ```
 
@@ -28,14 +28,15 @@ src/electroModels/ecgModels/
   - Reads upstream myocardium state through `ecgDomain`.
   - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
-- **`bathECGProbe`** (electrode sampler on the unified bath potential)
-  - Registered as `bathECGProbe`.
+- **`torsoECG`** (electrode sampler on the unified bath potential)
+  - Registered as `torsoECG`.
   - Samples the globally solved `phiE` field at electrode positions on the
     union (heart + bath) mesh; parallel-safe via list reduction.
   - The global `phiE` solve is owned by `extracellularPotentialDomain` — see
     [../electroDomains/extracellularPotentialDomain/](../electroDomains/extracellularPotentialDomain/).
   - Selected by routing the ECG-domain state provider to the configured
-    `potentialDomain` (done in `electrophysicsSystemBuilder::configureECGDomains`).
+    `bathPotentialDomain` inside `bidomainSolverCoeffs` (done in
+    `electrophysicsSystemBuilder::configureECGDomains`).
   - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
 ## Architectural pattern
@@ -45,7 +46,7 @@ src/electroModels/ecgModels/
 
 - **Concrete solver implementations** live here in `ecgModels/`:
   - `pseudoECGSolver/`
-  - `bathECGProbe/`
+  - `torsoECG/`
 
 ## Execution role
 
@@ -59,6 +60,7 @@ See [../electroDomains/README.md](../electroDomains/README.md) for the
 domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep sequence.
 
-`bathECGProbe` is part of the active orchestration path. It is wired by
-`electrophysicsSystemBuilder` when an ECG domain selects `bathECGProbe` and a
-top-level `potentialDomain` provides the global `phiE` state.
+`torsoECG` is part of the active orchestration path. It is wired by
+`electrophysicsSystemBuilder` when an ECG domain selects `torsoECG` and a
+`bidomainSolverCoeffs.bathPotentialDomain` block provides the global `phiE`
+state.

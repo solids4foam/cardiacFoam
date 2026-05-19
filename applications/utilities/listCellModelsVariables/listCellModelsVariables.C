@@ -25,7 +25,7 @@ Description
     written to a file in postProcessing/.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"

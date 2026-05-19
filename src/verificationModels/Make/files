@@ -5,7 +5,7 @@ ecgVerification/bathECGManufacturedVerifier.C
 monodomainVerification/manufacturedFDAMonodomainVerifier.C
 bidomainVerification/manufacturedFDABidomainVerifier.C
 bidomainVerification/singleCellManufacturedFDABidomainVerifier.C
-bidomainVerification/manufacturedFDABathBidomainVerifier.C
+bathBidomainVerification/manufacturedFDABathBidomainVerifier.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libverificationModels

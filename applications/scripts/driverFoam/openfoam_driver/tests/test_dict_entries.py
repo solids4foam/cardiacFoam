@@ -32,6 +32,7 @@ class TestDictEntryCatalog(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
             "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
             "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach",
+            "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones",
             "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
             "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel",
             "$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",

@@ -14,6 +14,15 @@ License
 
     You should have received a copy of the GNU General Public License along
     with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    bathECGManufacturedVerifier
+
+Description
+    Bath ECG manufactured verifier.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef bathECGManufacturedVerifier_H
@@ -46,9 +55,6 @@ class bathECGManufacturedVerifier
     List<scalar> electrodeErrorL2Sum_;
     List<scalar> electrodeErrorLinf_;
     bool summaryWritten_;
-
-    static const dictionary& verificationDict(const dictionary& dict);
-    static const dictionary& manufacturedDict(const dictionary& dict);
 
     void initialiseOutput();
     void resizeStatistics();

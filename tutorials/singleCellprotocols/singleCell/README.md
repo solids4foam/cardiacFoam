@@ -74,7 +74,7 @@ Manual:
 Driver-managed sweep:
 
 ```bash
-foamctl all --tutorial singleCell
+foamctl all --entry singleCell
 ```
 
 The Python driver mutates ionic model, tissue, and stimulus amplitude for each case,

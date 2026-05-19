@@ -16,22 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::monodomain1DSolver
+    monodomain1DSolver
 
 Description
-    Implicit monodomain cable-equation solver for a tree conduction-system
-    graph. Uses the same reaction/diffusion splitting as the 3-D myocardium:
-
-        1.  Solve the ionic-model ODE  (reaction step)
-        2.  Solve the implicit cable equation  (diffusion step)
-
-    The cable equation is discretised as a 1-D finite-volume graph problem.
-    Each graph node owns a control length assembled from half of each incident
-    edge length. Edge diffusion uses sigma/L flux coefficients and is solved
-    with a tree Hines elimination pass.
+    Implicit monodomain cable-equation solver for a tree conduction-system graph.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 
 SourceFiles
     monodomain1DSolver.C

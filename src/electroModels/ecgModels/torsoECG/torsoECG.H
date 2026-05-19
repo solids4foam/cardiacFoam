@@ -14,10 +14,19 @@ License
 
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    torsoECG
+
+Description
+    Torso ECG.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef bathECGProbe_H
-#define bathECGProbe_H
+#ifndef torsoECG_H
+#define torsoECG_H
 
 #include "ecgSolver.H"
 #include "labelList.H"
@@ -27,7 +36,7 @@ License
 namespace Foam
 {
 
-class bathECGProbe
+class torsoECG
 :
     public ecgSolver
 {
@@ -39,9 +48,9 @@ class bathECGProbe
 
 public:
 
-    OverrideTypeName("bathECGProbe");
+    OverrideTypeName("torsoECG");
 
-    explicit bathECGProbe(const dictionary& dict);
+    explicit torsoECG(const dictionary& dict);
 
     virtual void solve
     (

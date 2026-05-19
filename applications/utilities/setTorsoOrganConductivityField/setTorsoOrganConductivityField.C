@@ -25,6 +25,9 @@ Description
     Conductivities are assigned from the cellZones sub-dictionary. Unknown
     cellZone names are fatal. A default conductivity is optional and is only
     used for cells not covered by any configured zone.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
@@ -148,14 +151,9 @@ int main(int argc, char *argv[])
             << exit(FatalError);
     }
 
-    const bool haveDefault =
-        dict.found("defaultSigma") || dict.found("defaultConductivity");
+    const bool haveDefault = dict.found("defaultSigma");
     const scalar defaultSigma =
-    (
-        dict.found("defaultSigma")
-      ? dict.get<scalar>("defaultSigma")
-      : dict.lookupOrDefault<scalar>("defaultConductivity", 0.0)
-    );
+        haveDefault ? dict.get<scalar>("defaultSigma") : 0.0;
 
     volScalarField conductivity
     (

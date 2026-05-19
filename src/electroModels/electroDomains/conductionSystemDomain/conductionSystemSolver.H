@@ -16,17 +16,16 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::conductionSystemSolver
+    conductionSystemSolver
 
 Description
     Abstract base class for conduction-system solvers.
 
-    Concrete implementations are
-    registered in the runtime selection table under the dictionary key
-    "conductionSystemSolver".
-
 SourceFiles
     conductionSystemSolver.C
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductionSystemSolver_H

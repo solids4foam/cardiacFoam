@@ -350,14 +350,15 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                         "    verificationModel",
                         "    {",
                         "        type manufacturedFDABidomainVerifier;",
+                        "        groundElectrode no;",
                         "    }",
                         "    manufacturedBidomain",
                         "    {",
                         "        groundElectrode no;",
                         "    }",
-                        "    potentialDomain",
+                        "    bathPotentialDomain",
                         "    {",
-                        "        type oldPotentialDomain;",
+                        "        bathCellZones (bath);",
                         "    }",
                         "    ecgDomains",
                         "    {",
@@ -396,8 +397,9 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             self.assertIn("solutionAlgorithm    implicit;", electro_text)
             self.assertIn("type    manufacturedFDABathBidomainVerifier;", electro_text)
             self.assertIn("groundElectrode    yes;", electro_text)
-            self.assertIn("type    extracellularPotentialDomain;", electro_text)
-            self.assertIn("ecgSolver    bathECGProbe;", electro_text)
+            self.assertIn("bathPotentialDomain", electro_text)
+            self.assertRegex(electro_text, r"bathCellZones\s+\(bath\);")
+            self.assertIn("ecgSolver    torsoECG;", electro_text)
             self.assertIn("ecgVerificationModel    bathECGManufacturedVerifier;", electro_text)
             self.assertIn("ecgSolver    pseudoECG;", electro_text)
 
@@ -411,13 +413,13 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             case_root = Path(temp_dir)
             source_dir = case_root / "postProcessing"
             source_dir.mkdir(parents=True, exist_ok=True)
-            (source_dir / "bathECG.dat").write_text("body-output")
+            (source_dir / "torsoECG.dat").write_text("body-output")
             (source_dir / "pseudoECG.dat").write_text("pseudo-output")
 
             staged = manufactured_fda_bath_bidomain._stage_case_ecg_outputs(case_root, case)
 
             staged_names = {path.name for path in staged}
-            self.assertIn("BathECG_bath_bathECG.dat", staged_names)
+            self.assertIn("BathECG_bath_torsoECG.dat", staged_names)
             self.assertIn("PseudoECG_bath_pseudoECG.dat", staged_names)
             self.assertEqual(
                 (case_root / "archivedPostProcessing" / "PseudoECG_bath_pseudoECG.dat").read_text(),

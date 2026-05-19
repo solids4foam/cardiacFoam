@@ -7,17 +7,12 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
-- `singleCellMonodomain` : single-cell manufactured-solution verification for the monodomain ionic workflow
-- `singleCellBidomain` : single-cell manufactured-solution verification for the bidomain ionic workflow
 
 ## Naming Pattern
 
-The subdirectory names follow:
-
-- `<model>` for spatial PDE manufactured cases
-- `singleCell<model>` for zero-dimensional manufactured cases
-
-This keeps all manufactured cases under one parent while preserving the distinction between PDE and single-cell workflows.
+The subdirectory names follow the spatial PDE target being verified. The
+single-cell manufactured cases were removed because the 3D manufactured
+workflows cover the maintained verification path.
 
 ## Driver Usage
 
@@ -31,5 +26,5 @@ Run only selected cases:
 
 ```bash
 ./Allrun monodomainPseudoECG bidomain
-./Allrun singleCellMonodomain singleCellBidomain
+./Allrun bathBidomain
 ```

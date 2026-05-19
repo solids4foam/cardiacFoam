@@ -17,19 +17,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["sim", "post", "all", "describe"],
         help="Pipeline stage to execute",
     )
-    selector_group = parser.add_mutually_exclusive_group(required=True)
-    selector_group.add_argument(
+    parser.add_argument(
         "--entry",
+        required=True,
         help=(
             "Entry name or relative workflow/case path to run "
             f"({', '.join(list_tutorials())}, genericCase)"
-        ),
-    )
-    selector_group.add_argument(
-        "--tutorial",
-        help=(
-            "Legacy alias for --entry. Accepts the same values and remains "
-            "supported for compatibility."
         ),
     )
     parser.add_argument(
@@ -51,10 +44,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         help=(
             "Path to JSON file with make_spec overrides. Supports either a top-level "
-            "tutorial map (keys: singleCell, niederer2012, manufacturedFDA, "
+            "entry map (keys: singleCell, niederer2012, manufacturedFDA, "
             "manufacturedFDABidomain, manufacturedFDABathBidomain, "
             "restitutionCurves, genericCase/randomCase) or a direct parameter "
-            "object for the selected tutorial."
+            "object for the selected entry."
         ),
     )
     parser.add_argument(
@@ -95,18 +88,6 @@ def _load_spec_overrides(config_path: str, entry: str) -> dict:
 def _normalize_spec_overrides(overrides: dict) -> dict:
     normalized = dict(overrides)
 
-    legacy_tutorial_name = normalized.pop("tutorial_name", None)
-    if legacy_tutorial_name is not None:
-        legacy_tutorial_name = str(legacy_tutorial_name)
-        case_dir_name = normalized.get("case_dir_name")
-        if case_dir_name is None:
-            normalized["case_dir_name"] = legacy_tutorial_name
-        elif str(case_dir_name) != legacy_tutorial_name:
-            raise ValueError(
-                "Config keys 'tutorial_name' and 'case_dir_name' must match. "
-                "Use only 'case_dir_name'."
-            )
-
     case_dir_name = normalized.get("case_dir_name")
     setup_dir_name = normalized.get("setup_dir_name")
     if case_dir_name is not None and setup_dir_name is not None:
@@ -127,9 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "describe" and args.continue_on_error:
         parser.error("--continue-on-error is not valid with action=describe")
 
-    selected_entry = args.entry or args.tutorial
-    if selected_entry is None:
-        parser.error("One of --entry or --tutorial is required")
+    selected_entry = args.entry
 
     overrides = _load_spec_overrides(args.config, selected_entry) if args.config else None
     if args.tutorials_root:

@@ -16,23 +16,14 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ecgDomain
+    ecgDomain
 
 Description
     Concrete ECG domain class.
 
-    Owns the electrode configuration, output I/O, and an ecgSolver kernel
-    selected at runtime from the 'ecgSolver' dictionary key.  This mirrors
-    the pattern used by myocardiumDomain: the domain is a single concrete
-    class that holds state and delegates the numerical algorithm to a
-    runtime-selectable ecgSolver.
-
-    To add a new ECG algorithm (e.g. torsoECGSolver), register a new
-    ecgSolver subclass — no changes to ecgDomain are needed.
-
 Author
-    Simão Nieto de Castro, UCD.
-    Philip Cardiff, UCD.
+    Simao Nieto de Castro. All rights reserved.
+    Philip Cardiff, UCD. All rights reserved.
 
 SourceFiles
     ecgDomain.C

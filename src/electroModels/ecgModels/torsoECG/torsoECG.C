@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 \*---------------------------------------------------------------------------*/
 
-#include "bathECGProbe.H"
+#include "torsoECG.H"
 
 #include "ecgDomain.H"
 #include "addToRunTimeSelectionTable.H"
@@ -56,11 +56,11 @@ label nearestCell
 
 } // End anonymous namespace
 
-defineTypeNameAndDebug(bathECGProbe, 0);
-addToRunTimeSelectionTable(ecgSolver, bathECGProbe, dictionary);
+defineTypeNameAndDebug(torsoECG, 0);
+addToRunTimeSelectionTable(ecgSolver, torsoECG, dictionary);
 
 
-bathECGProbe::bathECGProbe(const dictionary& dict)
+torsoECG::torsoECG(const dictionary& dict)
 :
     reportElectrodeLookup_
     (
@@ -71,14 +71,14 @@ bathECGProbe::bathECGProbe(const dictionary& dict)
 {}
 
 
-void bathECGProbe::buildElectrodeCells(const ecgDomain& domain)
+void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 {
     const volScalarField* phiEPtr = domain.phiEPtr();
 
     if (!phiEPtr)
     {
         FatalErrorInFunction
-            << "bathECGProbe requires a global phiE field from the ECG "
+            << "torsoECG requires a global phiE field from the ECG "
             << "state provider."
             << exit(FatalError);
     }
@@ -118,7 +118,7 @@ void bathECGProbe::buildElectrodeCells(const ecgDomain& domain)
 
             if (reportElectrodeLookup_ && electrodeCells_[electrodeI] >= 0)
             {
-                Info<< "bathECGProbe: electrode "
+                Info<< "torsoECG: electrode "
                     << domain.electrodeNames()[electrodeI]
                     << " at " << electrodes[electrodeI]
                     << " is outside findCell ownership; using nearest cell "
@@ -143,7 +143,7 @@ void bathECGProbe::buildElectrodeCells(const ecgDomain& domain)
 
     if (reportElectrodeLookup_)
     {
-        Info<< "bathECGProbe: located " << electrodes.size()
+        Info<< "torsoECG: located " << electrodes.size()
             << " electrodes on phiE mesh '" << phiEMesh.name() << "'."
             << endl;
     }
@@ -152,7 +152,7 @@ void bathECGProbe::buildElectrodeCells(const ecgDomain& domain)
 }
 
 
-void bathECGProbe::solve
+void torsoECG::solve
 (
     ecgDomain& domain,
     scalar t0,
@@ -173,7 +173,7 @@ void bathECGProbe::solve
     if (!phiEPtr)
     {
         FatalErrorInFunction
-            << "bathECGProbe requires phiE, but domain.phiEPtr() returned null."
+            << "torsoECG requires phiE, but domain.phiEPtr() returned null."
             << exit(FatalError);
     }
 

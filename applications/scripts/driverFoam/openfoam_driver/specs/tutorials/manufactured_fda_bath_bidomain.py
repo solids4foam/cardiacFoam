@@ -90,9 +90,9 @@ def _apply_case(
         f"{electro_properties_scope}.dimension": f'"{dimension}"',
         f"{electro_properties_scope}.solutionAlgorithm": solver,
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
+        f"{electro_properties_scope}.verificationModel.groundElectrode": True,
         f"{electro_properties_scope}.manufacturedBidomain.groundElectrode": True,
-        f"{electro_properties_scope}.potentialDomain.type": "extracellularPotentialDomain",
-        f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "bathECGProbe",
+        f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "torsoECG",
         f"{electro_properties_scope}.ecgDomains.bodyECG.ecgVerificationModel":
             "bathECGManufacturedVerifier",
         f"{electro_properties_scope}.ecgDomains.pseudoECGSignals.ecgSolver": "pseudoECG",
@@ -177,7 +177,7 @@ def _stage_case_ecg_outputs(case_root: Path, case: CaseConfig) -> list[Path]:
     destination_dir.mkdir(parents=True, exist_ok=True)
 
     ecg_outputs = (
-        ("BathECG", "bathECG.dat"),
+        ("BathECG", "torsoECG.dat"),
         ("BathECG", "manufacturedBathECG.dat"),
         ("BathECG", "manufacturedBathECGSummary.dat"),
         ("PseudoECG", "pseudoECG.dat"),

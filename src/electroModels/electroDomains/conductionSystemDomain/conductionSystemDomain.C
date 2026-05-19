@@ -64,16 +64,11 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
         )
     );
 
-    if
-    (
-        domainType != "purkinjeGraphModel"
-     && domainType != "conductionSystemDomain"
-    )
+    if (domainType != "purkinjeGraphModel")
     {
         FatalErrorInFunction
             << "Unsupported conductionSystemDomain type '" << domainType
-            << "'. Supported graph domain types are 'purkinjeGraphModel' and "
-            << "'conductionSystemDomain'."
+            << "'. Only 'purkinjeGraphModel' is supported."
             << exit(FatalError);
     }
 
@@ -244,7 +239,7 @@ void conductionSystemDomain::initialiseOutputControls()
     exportVars_ = ovDict.getOrDefault<wordList>
     (
         "export",
-        wordList{"Vm", "Icoupling"}
+        wordList{"Vm", "IcouplingSource"}
     );
 
     debugVars_ = ovDict.getOrDefault<wordList>
@@ -287,7 +282,7 @@ void conductionSystemDomain::openOutputFile()
                 colNames.append("node" + Foam::name(nodeI) + "_activationTime");
             }
         }
-        else if (var == "Icoupling" || var == "IcouplingSource")
+        else if (var == "IcouplingSource")
         {
             forAll(terminalNodes_, i)
             {
@@ -327,14 +322,7 @@ conductionSystemDomain::conductionSystemDomain
 )
 :
     supportMesh_(mesh),
-    coeffsDict_
-    (
-        dict.found("purkinjeGraphModelCoeffs")
-      ? dict.subDict("purkinjeGraphModelCoeffs")
-      : dict.found("purkinjeNetworkModelCoeffs")
-      ? dict.subDict("purkinjeNetworkModelCoeffs")
-      : dict
-    ),
+    coeffsDict_(dict.subDict("purkinjeGraphModelCoeffs")),
     graph_(),
     solverPtr_(conductionSystemSolver::New(mesh, coeffsDict_)),
     rootNode_(0),
@@ -542,7 +530,7 @@ void conductionSystemDomain::write()
                 values.append(activationTime_[i]);
             }
         }
-        else if (var == "Icoupling" || var == "IcouplingSource")
+        else if (var == "IcouplingSource")
         {
             forAll(terminalSource_, i)
             {

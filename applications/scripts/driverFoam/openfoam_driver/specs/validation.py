@@ -56,11 +56,27 @@ def primary_phase(entry) -> Phase | None:
     return None
 
 
+_COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
+
+
+def slot_key(driver_path: str) -> str:
+    """Map a driver_path to its slot key inside a phase slice.
+
+    Strips the ``$ELECTRO_MODEL_COEFFS.`` prefix when present; otherwise
+    returns the path as-is. Multi-segment unprefixed paths are kept intact
+    so that nested-group leaves don't collide with top-level keys of the
+    same name (e.g. ``$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiEReferenceValue`` must not overwrite the
+    top-level ``type`` entry inside the physics slice).
+    """
+    if driver_path.startswith(_COEFFS_PREFIX):
+        return driver_path[len(_COEFFS_PREFIX):]
+    return driver_path
+
+
 def _slice_value(run, phase: Phase, driver_path: str):
-    """Look up a leaf-name key inside a phase slice of the Run config."""
+    """Look up the slot value for a driver_path inside a phase slice."""
     slice_ = run.config.get(phase, {}) or {}
-    key = driver_path.split(".")[-1]
-    return slice_.get(key)
+    return slice_.get(slot_key(driver_path))
 
 
 def validate_run(run) -> list[ValidationError]:

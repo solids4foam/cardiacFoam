@@ -32,6 +32,9 @@ Description
     No `bath` runtime switch exists on this model -- the user selects it
     by name. This replaces the legacy `manufacturedBidomain { bath yes; }`
     fork inside bidomainFDAManufactured.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef bathBidomainFDAManufactured_H

@@ -21,7 +21,7 @@ License
 #include "DynamicList.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
-#include "bidomainVerification/manufacturedFDABathBidomainReference.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 #include "ecgModelIO.H"
 
 namespace Foam
@@ -198,34 +198,6 @@ void validateGroundedFDABathBoundarySetup
 }
 
 
-const dictionary& bathECGManufacturedVerifier::verificationDict
-(
-    const dictionary& dict
-)
-{
-    if (dict.found("bathECGManufacturedVerifierCoeffs"))
-    {
-        return dict.subDict("bathECGManufacturedVerifierCoeffs");
-    }
-
-    return dict;
-}
-
-
-const dictionary& bathECGManufacturedVerifier::manufacturedDict
-(
-    const dictionary& dict
-)
-{
-    if (dict.found("manufacturedBidomain"))
-    {
-        return dict.subDict("manufacturedBidomain");
-    }
-
-    return verificationDict(dict);
-}
-
-
 bathECGManufacturedVerifier::bathECGManufacturedVerifier
 (
     const electroStateProvider& stateProvider,
@@ -294,25 +266,13 @@ void bathECGManufacturedVerifier::initialiseOutput()
 
 bool bathECGManufacturedVerifier::read(const dictionary& dict)
 {
-    const dictionary& cfg = verificationDict(dict);
-    const dictionary& manufactured = manufacturedDict(dict);
+    const dictionary& manufactured = dict.subDict("manufacturedBidomain");
 
-    enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
-    k_ = manufactured.lookupOrDefault<scalar>
-    (
-        "k",
-        cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0))
-    );
-    alpha_ = manufactured.lookupOrDefault<scalar>
-    (
-        "alpha",
-        cfg.lookupOrDefault<scalar>("alpha", 0.01)
-    );
-    groundElectrode_ = manufactured.lookupOrDefault<Switch>
-    (
-        "groundElectrode",
-        cfg.lookupOrDefault<Switch>("groundElectrode", true)
-    );
+    enabled_ = manufactured.lookupOrDefault<Switch>("enabled", true);
+    k_ = manufactured.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
+    alpha_ = manufactured.lookupOrDefault<scalar>("alpha", 0.01);
+    groundElectrode_ =
+        manufactured.lookupOrDefault<Switch>("groundElectrode", true);
 
     if (!groundElectrode_)
     {

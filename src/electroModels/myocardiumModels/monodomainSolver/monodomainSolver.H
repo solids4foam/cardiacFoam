@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    monodomainSolver
+
+Description
+    Monodomain FVM reaction-diffusion kernel.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef monodomainSolver_H
@@ -28,9 +36,6 @@ License
 namespace Foam
 {
 
-//- Monodomain FVM reaction-diffusion kernel.
-//  Registered in the myocardiumSolver runtime table under
-//  the key "monodomainSolver".
 class monodomainSolver
 :
     public myocardiumSolver

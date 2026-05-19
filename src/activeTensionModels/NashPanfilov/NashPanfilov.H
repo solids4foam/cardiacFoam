@@ -15,6 +15,17 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::NashPanfilov
+
+Description
+    Nash-Panfilov (2004) active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    NashPanfilov.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef NashPanfilov_H

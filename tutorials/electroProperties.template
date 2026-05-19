@@ -134,8 +134,6 @@ monodomainSolverCoeffs
         {
             // Factory key — selects the conduction domain implementation.
             // Canonical runtime type: purkinjeGraphModel
-            // Legacy compatibility alias may appear in older files:
-            // conductionSystemDomain
             conductionSystemDomain  purkinjeGraphModel;
 
             // Coefficients for the graph-level conduction solver
@@ -180,7 +178,7 @@ monodomainSolverCoeffs
 
                 outputVariables
                 {
-                    export  (Vm Icoupling);
+                    export  (Vm IcouplingSource);
                     debug   (Vm);
                 }
             }
@@ -390,51 +388,51 @@ monodomainSolverCoeffs
 // Bath-coupled ECG support
 // ─────────────────────────────────────────────────────────────────────────────
 // For body-surface ECG over an immersed heart, configure the unified
-// bidomain+bath solve via a top-level 'potentialDomain' subdict, then enable
-// 'bathECGProbe' under ecgDomains. Requires myocardiumSolver = bidomainSolver.
+// bidomain+bath solve via a 'bathPotentialDomain' subdict inside the active
+// bidomainSolverCoeffs block, then enable 'torsoECG' under ecgDomains.
+// Requires myocardiumSolver = bidomainSolver.
 //
 // Canonical key sources (every key below appears verbatim in C++):
 //   src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C
-//   src/electroModels/ecgModels/bathECGProbe/bathECGProbe.C
+//   src/electroModels/ecgModels/torsoECG/torsoECG.C
 //   src/electroModels/electroDomains/ecgDomain/ecgDomain.C
 //   src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C
 //   src/electroModels/core/system/electrophysicsSystemBuilder.C
 
 myocardiumSolver  bidomainSolver;
 
-// Top-level: unified extracellular-potential domain (heart + bath).
-potentialDomain
-{
-    type extracellularPotentialDomain;          // RTS type (electroStateDomain)
-
-    // Required: cellZones treated as the conductive bath.
-    bathCellZones ( bath );
-
-    // Optional (defaults shown).
-    heartCellZone          myocardium;                 // word
-    bathConductivityField  bodyAndOrgansConductivity;  // word — field name to read
-    phiEReferenceValue     0.0;                        // scalar [V]
-    reportSetup            false;                      // Switch — log mesh wiring
-
-    // Optional Neumann reference point. Omit to skip applying a reference.
-    phiERefPoint           ( 0 0 0 );                   // point [m]
-
-    // Optional Dirichlet "ground" patches:  patchName  scalarValue;
-    groundPatches
-    {
-        ground   0.0;
-    }
-
-    // Optional Neumann surface-current patches:  patchName  scalarValue;
-    surfaceCurrentPatches
-    {
-        skin     0.01;
-    }
-}
-
 bidomainSolverCoeffs
 {
     // ... usual bidomain coefficients (conductivity, chi, cm, ionicModel, ...) ...
+
+    // Optional unified extracellular-potential domain (heart + bath/torso/organs).
+    // Omit this block for myocardium-only bidomain simulations.
+    bathPotentialDomain
+    {
+        // Required: cellZones treated as conductive bath, torso, or organs.
+        bathCellZones ( bath torso organs );
+
+        // Optional (defaults shown).
+        heartCellZone          myocardium;                 // word
+        bathConductivityField  bodyAndOrgansConductivity;  // word - field name to read
+        phiEReferenceValue     0.0;                        // scalar [V]
+        reportSetup            false;                      // Switch - log mesh wiring
+
+        // Optional Neumann reference point. Omit to skip applying a reference.
+        phiERefPoint           ( 0 0 0 );                   // point [m]
+
+        // Optional Dirichlet "ground" patches:  patchName  scalarValue;
+        groundPatches
+        {
+            ground   0.0;
+        }
+
+        // Optional Neumann surface-current patches:  patchName  scalarValue;
+        surfaceCurrentPatches
+        {
+            skin     0.01;
+        }
+    }
 
     ecgDomains
     {
@@ -449,7 +447,7 @@ bidomainSolverCoeffs
 
         bodySurfaceBathECG
         {
-            ecgSolver              bathECGProbe;   // RTS type — reads phiE from bath
+            ecgSolver              torsoECG;   // RTS type — reads phiE from bath
             reportElectrodeLookup  true;           // Switch — log nearest-cell fallback
 
             // Optional per-domain override of the shared electrodePositions:

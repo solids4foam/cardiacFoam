@@ -22,12 +22,12 @@ run_case() {
     echo "----------------------------------------------------------------------"
 
     "$DRIVER" all \
-        --tutorial "$tutorial" \
+        --entry "$tutorial" \
         --config "$SCRIPT_DIR/$config_relpath"
 }
 
 if [[ "$#" -eq 0 ]]; then
-    set -- monodomainPseudoECG bidomain bathBidomain singleCellMonodomain singleCellBidomain
+    set -- monodomainPseudoECG bidomain bathBidomain
 fi
 
 for case_name in "$@"; do
@@ -50,21 +50,9 @@ for case_name in "$@"; do
                 "manufacturedFDABathBidomain" \
                 "bathBidomain/setupManufacturedFDA/driver_config.json"
             ;;
-        singleCellMonodomain)
-            run_case \
-                "singleCellMonodomain" \
-                "singleCell" \
-                "singleCellMonodomain/setupSingleCell/driver_config.json"
-            ;;
-        singleCellBidomain)
-            run_case \
-                "singleCellBidomain" \
-                "singleCell" \
-                "singleCellBidomain/setupSingleCell/driver_config.json"
-            ;;
         *)
             echo "Unknown manufactured case '$case_name'." >&2
-            echo "Valid cases: monodomainPseudoECG, bidomain, bathBidomain, singleCellMonodomain, singleCellBidomain" >&2
+            echo "Valid cases: monodomainPseudoECG, bidomain, bathBidomain" >&2
             exit 1
             ;;
     esac

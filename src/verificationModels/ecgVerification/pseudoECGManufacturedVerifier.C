@@ -37,25 +37,6 @@ addToRunTimeSelectionTable
 );
 
 
-const dictionary& pseudoECGManufacturedVerifier::verificationDict
-(
-    const dictionary& dict
-)
-{
-    if (dict.found("pseudoECGManufacturedVerifierCoeffs"))
-    {
-        return dict.subDict("pseudoECGManufacturedVerifierCoeffs");
-    }
-
-    if (dict.found("manufactured"))
-    {
-        return dict.subDict("manufactured");
-    }
-
-    return dict;
-}
-
-
 pseudoECGManufacturedVerifier::pseudoECGManufacturedVerifier
 (
     const electroStateProvider& stateProvider,
@@ -385,7 +366,7 @@ bool pseudoECGManufacturedVerifier::read(const dictionary& dict)
     checkQuadratureOrders_[2] = 24;
     checkQuadratureOrders_[3] = 48;
 
-    const dictionary& cfg = verificationDict(dict);
+    const dictionary& cfg = dict.subDict("manufactured");
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
 
     if (cfg.found("dimension"))
@@ -422,9 +403,9 @@ bool pseudoECGManufacturedVerifier::read(const dictionary& dict)
     }
     else
     {
+        // Default: one comparison quadrature order.
         checkQuadratureOrders_.setSize(1);
-        checkQuadratureOrders_[0] =
-            cfg.lookupOrDefault<label>("checkQuadratureOrder", 6);
+        checkQuadratureOrders_[0] = 6;
     }
 
     if (checkQuadratureOrders_.empty())

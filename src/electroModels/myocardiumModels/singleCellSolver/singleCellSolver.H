@@ -21,23 +21,9 @@ Class
 Description
     Single-cell electrophysiology solver based on OpenFOAM.
 
-    This solver advances a single cardiac cell model in time using a
-    run-time selectable ionic model. In contrast to electrophysiologyModel,
-    no spatial voltage PDE is solved; instead, the transmembrane voltage
-    Vm is integrated directly as part of the ionic model ODE system.
-
-    The solver is primarily intended for:
-      - single-cell action potential simulations,
-      - testing and validation of ionic models,
-      - debugging and development of electrophysiology model components.
-
-    External stimulation is prescribed via a stimulus protocol dictionary.
-    Output is written as time series of states, algebraic variables and rates
-    using ionicModelIO.
-
 Author
-    Simao Nieto de Castro, UCD.
-    Philip Cardiff, UCD.
+    Simao Nieto de Castro. All rights reserved.
+    Philip Cardiff, UCD. All rights reserved.
 
 SourceFiles
     singleCellSolver.C

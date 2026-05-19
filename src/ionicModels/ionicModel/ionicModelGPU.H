@@ -22,6 +22,9 @@ Description
     GPU-oriented ionic-model layer that preserves the existing solver-facing
     ionicModel API while separating direct SoA/device-friendly I/O access from
     host diagnostic/export fallback behavior.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicModelGPU_H

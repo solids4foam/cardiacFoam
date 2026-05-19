@@ -41,15 +41,17 @@ bidomainSolverCoeffs
 
     verificationModel
     {
-        type    manufacturedFDABathBidomainVerifier;
-        phiEErrorCellZone bath;
+        type            manufacturedFDABathBidomainVerifier;
+        k               0.7071067811865476;
+        alpha           0.01;
+        groundElectrode yes;
     }
 
     manufacturedBidomain
     {
         k               0.7071067811865476;
         alpha           0.01;
-        groundElectrode    yes;
+        groundElectrode yes;
     }
 
     dimension    "1D";
@@ -60,9 +62,8 @@ bidomainSolverCoeffs
     initialODEStep 1e-5;
     maxSteps 1000000000;
 
-    potentialDomain
+    bathPotentialDomain
     {
-        type extracellularPotentialDomain;
         heartCellZone myocardium;
         bathCellZones (bath);
         bathConductivityField bodyAndOrgansConductivity;
@@ -90,7 +91,7 @@ bidomainSolverCoeffs
 
         bodyECG
         {
-            ecgSolver bathECGProbe;
+            ecgSolver torsoECG;
 
             ecgVerificationModel    bathECGManufacturedVerifier;
         }

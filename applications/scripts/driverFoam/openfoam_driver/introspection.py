@@ -317,7 +317,7 @@ def _manifest_schema() -> dict[str, Any]:
             "It is written to output_dir/run_manifest.json and updated after every "
             "case completes. Poll this file to track run progress."
         ),
-        "schema_version": "2.1",
+        "schema_version": "2.2",
         "file_location": "output_dir/run_manifest.json  (see launch.<action>.manifest_path)",
         "companion_file": (
             "output_dir/action_events.jsonl — append-only JSONL log with one "
@@ -329,7 +329,7 @@ def _manifest_schema() -> dict[str, Any]:
             "Reading the file is safe at any time — it is written atomically."
         ),
         "top_level_fields": {
-            "schema_version": "string — manifest format version (currently '2.1')",
+            "schema_version": "string — manifest format version (currently '2.2'; v2.x is additive-only)",
             "run_id": "string — unique ID for this run (timestamp + random suffix)",
             "requested_action": "string — 'sim', 'post', or 'all'",
             "entry": "string — selected entry name",

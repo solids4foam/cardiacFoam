@@ -1,7 +1,6 @@
 {
   "manufacturedFDA": {
-    "tutorial_name": "manufacturedFDA",
-    "case_dir_name": "manufacturedFDA",
+    "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
     "setup_dir_name": "setupManufacturedFDA",
     "dimensions": ["1D"],
     "solver_types": ["implicit"],
@@ -10,8 +9,7 @@
     "piecewise_sweep": true
   },
   "singleCell": {
-    "tutorial_name": "singleCell",
-    "case_dir_name": "singleCell",
+    "case_dir_name": "singleCellprotocols/singleCell",
     "setup_dir_name": "setupSingleCell",
     "ionic_models": ["TNNP", "Gaur"],
     "ionic_model_tissue_map": {
@@ -25,9 +23,8 @@
     "output_glob": "*.txt"
   },
   "niederer2012": {
-    "tutorial_name": "niederer2012",
-    "case_dir_name": "NiedererEtAl2012",
-    "setup_dir_name": "setupNiedererEtAl2012",
+    "case_dir_name": "NiedererEtAl2011/NiedererEtAl2011verification",
+    "setup_dir_name": "setupNiedererEtAl2011",
     "ionic_models": ["TNNP"],
     "ionic_model_tissue_map": {
       "TNNP": ["epicardialCells"]
@@ -41,8 +38,7 @@
     }
   },
   "restitutionCurves": {
-    "tutorial_name": "restitutionCurves",
-    "case_dir_name": "restitutionCurves_s1s2Protocol",
+    "case_dir_name": "singleCellprotocols/restitutionCurves_s1s2Protocol",
     "setup_dir_name": "setupRestitutionCurves_s1s2Protocol",
     "ionic_models": ["BuenoOrovio"],
     "ionic_model_tissue_map": {

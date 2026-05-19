@@ -15,6 +15,15 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electrophysicsSystem
+
+Description
+    Orchestrates the execution of a multi-domain electrophysiology system
+    using a domain separation architecture.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electrophysicsSystem_H
@@ -30,28 +39,6 @@ License
 
 namespace Foam
 {
-
-/*---------------------------------------------------------------------------*\
-                    Class electrophysicsSystem
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Description
-    Orchestrates the execution of a multi-domain electrophysiology system
-    using a domain separation architecture.
-
-    Terminology used by this container:
-    - primary domain        = myocardium
-    - conduction domains    = pre-myocardium graph / Purkinje domains
-    - ECG domains           = post-myocardium ECG domains advanced after myocardium
-
-Architecture
-    See ARCHITECTURE.md for detailed explanation of:
-    - Domain separation philosophy
-    - electroStateProvider interface and one-way coupling pattern
-    - Dependency inversion between solvers and domains
-    - Why this design improves extensibility and testability
-
-\*---------------------------------------------------------------------------*/
 
 class electrophysicsSystem
 {

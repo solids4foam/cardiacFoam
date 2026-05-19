@@ -15,6 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::bidomainFDAManufactured
+
+Description
+    Manufactured-solution ionic model for FDA bidomain
+    verification.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    bidomainFDAManufactured.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef bidomainFDAManufactured_H

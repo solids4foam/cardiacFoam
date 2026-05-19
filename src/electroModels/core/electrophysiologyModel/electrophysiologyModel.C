@@ -126,7 +126,7 @@ Foam::electrophysiologyModel::electrophysiologyModel
         electroProperties()
     );
 
-    electrophysicsSystemBuilder::configurePotentialDomain
+    electrophysicsSystemBuilder::configureBathPotentialDomain
     (
         domainSystem_,
         mesh(),

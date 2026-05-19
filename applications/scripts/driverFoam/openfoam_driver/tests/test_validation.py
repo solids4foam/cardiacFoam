@@ -19,7 +19,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import ValidationError, validate_run
+from openfoam_driver.specs.validation import ValidationError, slot_key, validate_run
 
 _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
@@ -56,7 +56,7 @@ def _filled_run(**overrides) -> RunDocument:
         if ph is None:
             continue
         config.setdefault(ph, {})
-        key = e.driver_path.split(".")[-1]
+        key = slot_key(e.driver_path)
         if e.value_kind == "enum" and e.enum_values:
             config[ph][key] = e.enum_values[0]
         else:

@@ -8,20 +8,20 @@ License
     option) any later version.
 
     cardiacFoam is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
-    You should have received a copy of the GNU General Public License along
-    with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
 \*---------------------------------------------------------------------------*/
 
 #include "manufacturedFDABathBidomainVerifier.H"
 
 #include "OFstream.H"
 #include "OSspecific.H"
-#include "bidomainVerification/manufacturedFDABathBidomainReference.H"
-#include "dimVoltage.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 #include "ionicModel.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -71,7 +71,7 @@ bool shouldReportManufacturedErrors(const volScalarField& Vm)
 }
 
 
-label globalCellCount(const fvMesh& mesh)
+label globalManufacturedCellCount(const fvMesh& mesh)
 {
     label totalCells = mesh.nCells();
     reduce(totalCells, sumOp<label>());
@@ -143,59 +143,6 @@ Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
 }
 
 
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact,
-    const labelUList& cells
-)
-{
-    if (numeric.size() != exact.size())
-    {
-        FatalErrorInFunction
-            << "Cannot compute manufactured norms for fields with different "
-            << "sizes: numeric=" << numeric.size()
-            << ", exact=" << exact.size() << "."
-            << exit(FatalError);
-    }
-
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(cells, i)
-    {
-        const label cellI = cells[i];
-        const scalar diff = Foam::mag(numeric[cellI] - exact[cellI]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = cells.size();
-    reduce(n, sumOp<label>());
-
-    if (n == 0)
-    {
-        FatalErrorInFunction
-            << "Cannot compute manufactured norms over an empty cell set."
-            << exit(FatalError);
-    }
-
-    const scalar denom = scalar(n);
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/denom, Foam::sqrt(sumSq/denom)),
-        maxAbs
-    );
-}
-
-
 Tuple2<Tuple2<scalar, scalar>, scalar> nanNorms()
 {
     const scalar nan = std::numeric_limits<scalar>::quiet_NaN();
@@ -204,44 +151,6 @@ Tuple2<Tuple2<scalar, scalar>, scalar> nanNorms()
         Tuple2<scalar, scalar>(nan, nan),
         nan
     );
-}
-
-
-labelList selectedCells
-(
-    const fvMesh& mesh,
-    const word& cellZoneName
-)
-{
-    if (cellZoneName.empty())
-    {
-        labelList cells(mesh.nCells());
-        forAll(cells, cellI)
-        {
-            cells[cellI] = cellI;
-        }
-        return cells;
-    }
-
-    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
-
-    if (zoneId < 0)
-    {
-        FatalErrorInFunction
-            << "Cannot find manufactured phiE error cellZone '"
-            << cellZoneName << "' on mesh '" << mesh.name() << "'."
-            << exit(FatalError);
-    }
-
-    const cellZone& zone = mesh.cellZones()[zoneId];
-    labelList cells(zone.size());
-
-    forAll(zone, i)
-    {
-        cells[i] = zone[i];
-    }
-
-    return cells;
 }
 
 
@@ -255,6 +164,16 @@ word dimensionName(const label dimension)
 }
 
 } // End anonymous namespace
+
+
+// Return the verificationModel sub-dictionary, which holds all
+// bath-bidomain verifier parameters (k, alpha, groundElectrode,
+// enabled, outputFile).
+const dictionary&
+manufacturedFDABathBidomainVerifier::verificationDict() const
+{
+    return dict().subDict("verificationModel");
+}
 
 
 manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
@@ -271,57 +190,29 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     k_(1.0/Foam::sqrt(2.0)),
     alpha_(0.01),
     groundElectrode_(true),
-    outputFileName_(),
-    phiEErrorCellZoneName_(word::null)
+    outputFileName_()
 {
     const dictionary& cfg = verificationDict();
-    const dictionary& coeffDict = this->dict();
 
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
+    // solutionAlgorithm is a solver-level key (lives in the parent
+    // bidomainSolverCoeffs dict, not in verificationModel).
     useExplicitAlgorithm_ =
-        coeffDict.lookupOrDefault<word>("solutionAlgorithm", "implicit")
+        dict.lookupOrDefault<word>("solutionAlgorithm", "implicit")
      == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
     groundElectrode_ = cfg.lookupOrDefault<Switch>("groundElectrode", true);
     outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
-    phiEErrorCellZoneName_ =
-        cfg.lookupOrDefault<word>("phiEErrorCellZone", word::null);
-
-    if (const dictionary* verifierDict = coeffDict.findDict("verificationModel"))
-    {
-        phiEErrorCellZoneName_ =
-            verifierDict->lookupOrDefault<word>
-            (
-                "phiEErrorCellZone",
-                phiEErrorCellZoneName_
-            );
-    }
 
     if (!groundElectrode_)
     {
         FatalErrorInFunction
             << type()
             << " currently implements the FDA ground-electrode variant only. "
-            << "Set manufacturedBidomain { groundElectrode yes; }."
+            << "Set verificationModel { groundElectrode yes; }."
             << exit(FatalError);
     }
-}
-
-
-const dictionary& manufacturedFDABathBidomainVerifier::verificationDict() const
-{
-    if (dict().found("manufacturedBidomain"))
-    {
-        return dict().subDict("manufacturedBidomain");
-    }
-
-    if (dict().found("manufacturedFDABathBidomainVerifierCoeffs"))
-    {
-        return dict().subDict("manufacturedFDABathBidomainVerifierCoeffs");
-    }
-
-    return dict();
 }
 
 
@@ -550,9 +441,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
     scalarField phiEExact;
     computeManufacturedFDABathPhiE(phiEExact, phiEX, t, k_, alpha_, se);
 
-    const labelList phiECells =
-        selectedCells(phiEMesh, phiEErrorCellZoneName_);
-    const auto phiENorms = computeNorms(phiEValues, phiEExact, phiECells);
+    const auto phiENorms = computeNorms(phiEValues, phiEExact);
 
     auto phiINorms = nanNorms();
     if (phiEValues.size() == VmValues.size() && &phiEMesh == &mesh)
@@ -591,7 +480,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const auto u2Norms = computeNorms(u2Values, u2Exact);
     const auto u3Norms = computeNorms(u3Values, u3Exact);
 
-    const label totalCells = globalCellCount(mesh);
+    const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);
     const scalar dt = time.deltaTValue();
     const label nSteps = max(label(0), time.timeIndex());
@@ -647,8 +536,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
             << "# se " << se << "\n"
             << "# sigmaB " << manufacturedFDABathSigmaB(se) << "\n"
             << "# groundElectrode " << groundElectrode_ << "\n"
-            << "# phiEErrorMesh " << phiEMesh.name() << "\n"
-            << "# phiEErrorCellZone " << phiEErrorCellZoneName_ << "\n"
+            << "# phiEMesh " << phiEMesh.name() << "\n"
             << "# field L1 L2 Linf\n"
             << "Vm " << VmNorms.first().first() << " "
             << VmNorms.first().second() << " " << VmNorms.second() << "\n"

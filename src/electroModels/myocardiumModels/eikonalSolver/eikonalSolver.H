@@ -22,15 +22,9 @@ Description
     Solver for computing cardiac activation times by solving an anisotropic
     eikonal-type equation.
 
-    The solver computes the activation time field psi(x), whose isocontours
-    represent the propagation of the electrical depolarisation wavefront
-    through cardiac tissue. The governing equation is a steady nonlinear
-    eikonal-diffusion formulation derived as a simplification of the cardiac
-    bidomain model, accounting for tissue anisotropy through a conductivity
-    tensor.
-
 Author
-    Philip Cardiff, UCD.
+    Simao Nieto de Castro. All rights reserved.
+    Philip Cardiff, UCD. All rights reserved.
 
 SourceFiles
     eikonalSolver.C

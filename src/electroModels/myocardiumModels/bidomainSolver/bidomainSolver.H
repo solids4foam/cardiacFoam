@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    bidomainSolver
+
+Description
+    Bidomain FVM reaction-diffusion kernel.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef bidomainSolver_H
@@ -28,10 +36,6 @@ License
 namespace Foam
 {
 
-//- Bidomain FVM reaction-diffusion kernel.
-//  Registered in the myocardiumSolver runtime table under
-//  the key "bidomainSolver". Owns the extracellular potential
-//  field phiE, which it allocates during construction.
 class bidomainSolver
 :
     public myocardiumSolver

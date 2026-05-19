@@ -1,6 +1,7 @@
 /*---------------------------------------------------------------------------*\
 License
     This file is part of cardiacFoam.
+
     cardiacFoam is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
@@ -15,22 +16,14 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::extracellularPotentialDomain
+    extracellularPotentialDomain
 
 Description
     Owns the unified extracellular potential field phiE on the base
-    (union) mesh covering both heart and bath cellZones. Solves a
-    single elliptic equation
-        div(sigmaTotal * grad(phiE)) = -div(sigmaIglobal * grad(Vmglobal))
-    where sigmaTotal = sigma_i + sigma_e in the heart cellZone and
-    sigma_b in the bath cellZone, sigmaIglobal = sigma_i in the heart
-    and zero elsewhere, and Vmglobal is the heart Vm scattered to the
-    base mesh (zero outside the heart).
+    mesh covering both heart and bath cellZones.
 
-    This class replaces the iterative Dirichlet-Neumann coupling
-    between bidomainSolver's local phiE and the bath ECG solver's
-    local phiE. The interface conditions are enforced naturally as
-    internal FV face conditions on the union mesh.
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef extracellularPotentialDomain_H

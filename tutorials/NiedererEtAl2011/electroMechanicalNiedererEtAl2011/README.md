@@ -11,7 +11,7 @@ The case uses a 20x3x7 mm tissue slab (Niederer et al. 2011 benchmark
 geometry) with:
 
 - **Electro region**: monodomain reaction-diffusion PDE with the TNNP ionic
-  model
+  model, selected through `myocardiumSolver monodomainSolver`
 - **Solid region**: nonlinear total Lagrangian solid solver with the
   `electroMechanicalLaw` (neo-Hookean passive + active tension)
 
@@ -33,7 +33,7 @@ adds it as a fibre-aligned active stress component.
 constant/
     physicsProperties              # type electroMechanicalModel
     electroMechanicalProperties    # coupling scheme selection
-    electro/                       # electro region dictionaries
+    electro/electroProperties      # current myocardiumSolver electro region dictionary
     solid/                         # solid region dictionaries
 system/
     controlDict                    # shared time control
@@ -46,6 +46,30 @@ system/
 
 The electro region creates its fields internally (Vm, etc.) with default
 values. The mesh is generated once via `blockMesh` and copied to both regions.
+
+## Electro dictionary
+
+The electro region uses the same canonical dictionary keys as the electro-only
+Niederer case:
+
+```cpp
+myocardiumSolver monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    ionicModel TNNP;
+    tissue epicardialCells;
+    solutionAlgorithm explicit;
+
+    externalStimulus
+    {
+        ...
+    }
+}
+```
+
+The former top-level electro selector and split include fragments are no longer
+used by this case.
 
 ## Coupling parameters
 

@@ -15,6 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::activeTensionModel
+
+Description
+    Virtual base class for active tension models that couple
+    electrophysiology to mechanical contraction.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    activeTensionModel.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef activeTensionModel_H

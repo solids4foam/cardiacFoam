@@ -21,6 +21,9 @@ Application
 Description
     Convert a legacy ASCII VTK 1D graph stored as UNSTRUCTURED_GRID/POLYDATA
     lines into a Foam dictionary while preserving point and line metadata.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"

@@ -39,11 +39,11 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn("purkinjeGraphModelCoeffs", template)
 
         # Bath-coupled ECG support keys (canonical C++ key set; see spec §3.1).
-        self.assertIn("potentialDomain", template)
+        self.assertIn("bathPotentialDomain", template)
         self.assertIn("extracellularPotentialDomain", template)
         self.assertIn("bathCellZones", template)
         self.assertIn("bathConductivityField", template)
-        self.assertIn("bathECGProbe", template)
+        self.assertIn("torsoECG", template)
         self.assertIn("groundPatches", template)
         self.assertIn("surfaceCurrentPatches", template)
 
@@ -160,7 +160,7 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn('"phiERefPoint"', bidomain_solver)
         self.assertIn('"ecgSolver"', ecg_solver)
         self.assertIn('"electrodePositions"', ecg_domain)
-        self.assertIn("bathECGProbe requires myocardiumSolver", system_builder)
+        self.assertIn("torsoECG requires myocardiumSolver", system_builder)
         self.assertIn("bidomainSolver because it samples the", system_builder)
         self.assertIn('"electroDomainCoupler"', electro_coupler)
         self.assertIn('"purkinjeGraphModel"', conduction_domain_selector)
@@ -189,6 +189,7 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             "myocardiumSolver",
             "$ELECTRO_MODEL_COEFFS.solutionAlgorithm",
             "$ELECTRO_MODEL_COEFFS.verificationModel.type",
+            "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones",
             "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
             "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>",
             "$ELECTRO_MODEL_COEFFS.conductivityIntracellular",

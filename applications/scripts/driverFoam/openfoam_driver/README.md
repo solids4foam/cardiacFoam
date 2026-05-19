@@ -40,9 +40,8 @@ This keeps all tutorial workflows on one engine while allowing per-tutorial swee
 - `niederer2012`
 - `manufacturedFDA`
 - `manufacturedFDABidomain`
+- `manufacturedFDABathBidomain`
 - `restitutionCurves`
-
-Aliases are handled in `core/runtime/registry.py`.
 
 In addition to these curated specs, the driver can also run:
 
@@ -64,7 +63,7 @@ Run examples:
 foamctl all --entry niederer2012
 foamctl sim --entry manufacturedFDA --dry-run
 foamctl sim --entry manufacturedFDABidomain --dry-run
-driverFoam sim --tutorial singleCell   # legacy compatibility alias
+driverFoam sim --entry singleCell
 
 # module invocation
 python3 -m openfoam_driver all --entry singleCell
@@ -229,7 +228,7 @@ Expected per tutorial setup assets:
 
 - `singleCell/setupSingleCell/singleCellinteractivePlots.py`
 - `manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/post_processing_manufactured.py`
-- `NiedererEtAl2012/setupNiedererEtAl2012/postProcessing/{cache_postProcessing.py,line_postProcessing.py,points_postProcessing.py}`
+- `NiedererEtAl2011/NiedererEtAl2011verification/setupNiedererEtAl2011/postProcessing/{cache_postProcessing.py,line_postProcessing.py,points_postProcessing.py}`
 - `restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing_restCurves.py`
 
 ## Architecture tests

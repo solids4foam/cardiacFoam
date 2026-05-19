@@ -122,7 +122,7 @@ domain. Implements `electroStateDomain`.
   solver via `bindExternalPhiE`, so the bidomain solver no longer solves a
   local phiE.
 
-- Exposes `phiE` to `bathECGProbe`-class ECG solvers for electrode sampling.
+- Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 
 **`ecgSolver`** — abstract ECG solver base. Registered implementations selected by the `ecgSolver` key in `electroProperties`.
 
@@ -181,7 +181,7 @@ Concrete implementations of `ecgSolver`.
 | Class | Type name | Method | Notes |
 |---|---|---|---|
 | `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
-| `bathECGProbe` | `bathECGProbe` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
+| `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
 
 ---
 

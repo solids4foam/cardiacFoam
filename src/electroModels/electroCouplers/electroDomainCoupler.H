@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electroDomainCoupler
+
+Description
+    Shared context for coupling models that exchange data between domains.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroDomainCoupler_H
@@ -29,7 +37,6 @@ namespace Foam
 
 class electroDomainInterface;
 
-//- Shared context for coupling models that exchange data between domains.
 class electroDomainCoupler
 {
 protected:

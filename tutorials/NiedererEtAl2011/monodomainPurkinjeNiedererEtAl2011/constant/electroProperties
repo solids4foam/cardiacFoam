@@ -75,8 +75,8 @@ monodomainSolverCoeffs
 
                 outputVariables
                 {
-                    export ( Icoupling);
-                    debug  ( Icoupling);
+                    export ( IcouplingSource);
+                    debug  ( IcouplingSource);
                 }
             }
         }

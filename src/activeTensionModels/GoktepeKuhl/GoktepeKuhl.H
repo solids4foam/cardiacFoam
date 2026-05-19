@@ -15,6 +15,17 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::GoktepeKuhl
+
+Description
+    Goktepe-Kuhl (2010) active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    GoktepeKuhl.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef GoktepeKuhl_H

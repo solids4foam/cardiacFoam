@@ -27,7 +27,7 @@ Usage
     checkMeshGeometry
 
 Author
-    cardiacFoam developers.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"

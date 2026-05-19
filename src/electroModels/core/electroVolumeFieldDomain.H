@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electroVolumeFieldDomain
+
+Description
+    Minimal field contract for volume electrophysiology diffusion solvers.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroVolumeFieldDomain_H
@@ -27,7 +35,6 @@ License
 namespace Foam
 {
 
-//- Minimal field contract for volume electrophysiology diffusion solvers.
 class electroVolumeFieldDomain
 {
 public:

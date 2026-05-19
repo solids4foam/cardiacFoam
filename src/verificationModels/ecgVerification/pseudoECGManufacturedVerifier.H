@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    pseudoECGManufacturedVerifier
+
+Description
+    Pseudo-ECG manufactured verifier.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef pseudoECGManufacturedVerifier_H
@@ -56,8 +64,6 @@ class pseudoECGManufacturedVerifier
     List<List<scalar>> referenceDeltaLinf_;
 
     bool summaryWritten_;
-
-    static const dictionary& verificationDict(const dictionary& dict);
 
     void resizeCheckStorage();
     void initialiseOutput();

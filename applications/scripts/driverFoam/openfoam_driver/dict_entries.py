@@ -526,6 +526,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/verificationModels/electroVerification/electroVerificationModel.C",
                 "src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H",
                 "src/verificationModels/bidomainVerification/manufacturedFDABidomainVerifier.H",
+                "src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.H",
                 "src/verificationModels/bidomainVerification/singleCellManufacturedFDABidomainVerifier.H",
             ),
             value_kind="enum",
@@ -538,28 +539,18 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
     ),
-    "potential_domain": (
+    "bath_potential_domain": (
         DictEntry(
-            driver_path="potentialDomain.type",
-            phases=frozenset({"physics"}),
-            description="Top-level extracellular-potential domain selector for bidomain+bath solves.",
-            source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.H",),
-            value_kind="enum",
-            enum_values=("extracellularPotentialDomain",),
-            required=False,
-            constraints=("Required when bathECGProbe or bidomainSolver uses a unified heart+bath potential domain.",),
-        ),
-        DictEntry(
-            driver_path="potentialDomain.bathCellZones",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones",
             phases=frozenset({"anatomy", "physics"}),
-            description="Cell zones treated as conductive bath tissue in the unified extracellular-potential domain.",
+            description="Cell zones treated as conductive bath, torso, or organ tissue in the unified extracellular-potential domain.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="word_list",
             required=True,
-            constraints=("Required when potentialDomain is configured.",),
+            constraints=("Required when bathPotentialDomain is configured.",),
         ),
         DictEntry(
-            driver_path="potentialDomain.heartCellZone",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.heartCellZone",
             phases=frozenset({"anatomy", "physics"}),
             description="Cell zone treated as myocardium inside the unified extracellular-potential domain.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -568,7 +559,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="myocardium",
         ),
         DictEntry(
-            driver_path="potentialDomain.bathConductivityField",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathConductivityField",
             phases=frozenset({"physics"}),
             description="Volume field name containing bath/organ conductivity values.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -577,7 +568,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="bodyAndOrgansConductivity",
         ),
         DictEntry(
-            driver_path="potentialDomain.phiEReferenceValue",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiEReferenceValue",
             phases=frozenset({"physics"}),
             description="Extracellular-potential reference value used when a reference cell is applied.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -587,7 +578,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="0.0",
         ),
         DictEntry(
-            driver_path="potentialDomain.reportSetup",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.reportSetup",
             phases=frozenset({"solver"}),
             description="Switch that logs heart/bath mesh wiring and boundary setup.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -596,7 +587,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value="false",
         ),
         DictEntry(
-            driver_path="potentialDomain.phiERefPoint",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiERefPoint",
             phases=frozenset({"physics"}),
             description="Point used to locate the reference cell for pure-Neumann extracellular-potential boundaries.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -604,7 +595,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="potentialDomain.groundPatches.<patch>",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.groundPatches.<patch>",
             phases=frozenset({"physics"}),
             description="Dirichlet ground-patch value map for extracellular potential.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -613,7 +604,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
         ),
         DictEntry(
-            driver_path="potentialDomain.surfaceCurrentPatches.<patch>",
+            driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.surfaceCurrentPatches.<patch>",
             phases=frozenset({"physics", "stimulus"}),
             description="Neumann surface-current patch map; values are scalar surface-current values.",
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
@@ -682,20 +673,20 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/electroModels/electroDomains/ecgDomain/ecgSolver.C",
             ),
             value_kind="enum",
-            enum_values=("bathECGProbe", "pseudoECG"),
+            enum_values=("torsoECG", "pseudoECG"),
             dynamic_path=True,
             required=False,
-            constraints=("Only applicable when ecgDomains block is present in electroProperties. bathECGProbe requires potentialDomain with bidomainSolver.",),
+            constraints=("Only applicable when ecgDomains block is present in electroProperties. torsoECG requires bathPotentialDomain with bidomainSolver.",),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.reportElectrodeLookup",
             phases=frozenset({"solver"}),
-            description="Switch controlling bathECGProbe electrode-to-cell lookup logging.",
-            source_refs=("src/electroModels/ecgModels/bathECGProbe/bathECGProbe.C",),
+            description="Switch controlling torsoECG electrode-to-cell lookup logging.",
+            source_refs=("src/electroModels/ecgModels/torsoECG/torsoECG.C",),
             value_kind="boolean",
             dynamic_path=True,
             required=False,
-            constraints=("Only applicable when ecgSolver=bathECGProbe.",),
+            constraints=("Only applicable when ecgSolver=torsoECG.",),
             typical_value="true",
         ),
         DictEntry(
@@ -732,7 +723,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.checkQuadratureOrders",
             phases=frozenset({"physics"}),
-            description="Additional quadrature orders used to compare manufactured pseudo-ECG reference convergence.",
+            description=(
+                "List of quadrature orders used to compare manufactured pseudo-ECG "
+                "reference convergence. Default when omitted: a single-element list [6]."
+            ),
             source_refs=("src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C",),
             value_kind="label_list",
             dynamic_path=True,
@@ -820,8 +814,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
             ),
             value_kind="enum",
-            enum_values=("purkinjeGraphModel", "conductionSystemDomain"),
-            notes="conductionSystemDomain is a legacy compatibility alias; prefer purkinjeGraphModel for new dictionaries.",
+            enum_values=("purkinjeGraphModel",),
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when conductionNetworkDomains block is present.",),
@@ -1002,12 +995,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "this dict has 'export' and 'debug' directly inside "
                 "outputVariables, with NO 'ionic' sub-block (unlike the "
                 "myocardium-side outputVariables.ionic.export). Valid tokens "
-                "are a hardcoded set: Vm, Iion, activationTime, Icoupling, "
-                "IcouplingSource, IcouplingCurrent. (Icoupling and "
-                "IcouplingSource alias to the same column.) Unknown tokens "
-                "are silently dropped without a warning — see the if/else "
-                "ladder at conductionSystemDomain.C:253. Default: "
-                "(Vm Icoupling)."
+                "are a hardcoded set: Vm, Iion, activationTime, "
+                "IcouplingSource, IcouplingCurrent. Unknown tokens are "
+                "silently dropped without a warning — see the if/else "
+                "ladder in conductionSystemDomain.C. Default: "
+                "(Vm IcouplingSource)."
             ),
             source_refs=(
                 "src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C",
@@ -1023,7 +1015,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "Word list of variables printed to terminal every 10 time "
                 "steps. Same flat layout and same valid-token set as the "
                 "Purkinje outputVariables.export entry: Vm, Iion, "
-                "activationTime, Icoupling, IcouplingSource, IcouplingCurrent. "
+                "activationTime, IcouplingSource, IcouplingCurrent. "
                 "Default: empty."
             ),
             source_refs=(

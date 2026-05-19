@@ -16,15 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::conductionGraph
+    conductionGraph
 
 Description
-    Value type holding 1D graph topology for a conduction network:
-    nodes, edges, lengths, and conductances. Loaded from a dictionary
-    containing a 'conductionEdges' list of (nodeA nodeB length conductance) tuples.
+    Value type holding 1D graph topology for a conduction network.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductionGraph_H

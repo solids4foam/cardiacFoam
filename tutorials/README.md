@@ -13,20 +13,14 @@ This folder contains reference and regression cases for `cardiacFoam`.
   (`myocardiumSolver monodomainSolver`)
 - `NiedererEtAl2011/monodomainPurkinjeNiedererEtAl2011` : Niederer slab with a
   small 1D Purkinje network
-- `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` : legacy
-  electromechanical case; its electro dictionaries still use the old
-  `electroModel monoDomainElectro` layout and need a separate migration before
-  they are treated as current examples
+- `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` : electromechanical
+  Niederer slab using `electroMechanicalModel` with monodomain electrophysiology
 - `manufacturedSolutions/monodomainPseudoECG` : spatial manufactured-solution
   verification with pseudo-ECG (`monodomainFDAManufactured`)
 - `manufacturedSolutions/bidomain` : spatial manufactured-solution verification
   (`bidomainFDAManufactured`)
 - `manufacturedSolutions/bathBidomain` : bidomain-with-bath manufactured
-  verification (`bathBidomainFDAManufactured`, `bathECGProbe`)
-- `manufacturedSolutions/singleCellMonodomain` : single-cell manufactured
-  monodomain verification
-- `manufacturedSolutions/singleCellBidomain` : single-cell manufactured
-  bidomain verification
+  verification (`bathBidomainFDAManufactured`, `torsoECG`)
 
 ## Common script pattern
 

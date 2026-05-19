@@ -14,6 +14,15 @@ License
 
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    electroStateDomain
+
+Description
+    Electro domain that both advances in time and exposes read-only state.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroStateDomain_H
@@ -31,7 +40,6 @@ namespace Foam
 class fvMesh;
 class myocardiumDomainInterface;
 
-//- Electro domain that both advances in time and exposes read-only state.
 class electroStateDomain
 :
     public electroDomainInterface,

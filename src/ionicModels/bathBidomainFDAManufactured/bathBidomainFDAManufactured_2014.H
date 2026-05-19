@@ -28,6 +28,9 @@ Description
     The dV/dt = 0 invariant and the (u1, u2) dynamics are unchanged. STATES,
     ALGEBRAIC and CONSTANTS layouts are owned by this header; see
     bathBidomainFDAManufactured_2014Names.H for the enum.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "bathBidomainFDAManufactured_2014Names.H"

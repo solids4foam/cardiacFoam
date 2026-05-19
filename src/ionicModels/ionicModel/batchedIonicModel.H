@@ -21,6 +21,9 @@ Class
 Description
     Reusable base for GPU-friendly ionic models that execute as batched,
     explicit cell updates while preserving the existing ionicModel API.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef batchedIonicModel_H

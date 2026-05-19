@@ -31,39 +31,39 @@ From repository root:
 
 ```bash
 # OpenFOAM-style wrapper script
-applications/scripts/driverFoam/bin/driverFoam sim --tutorial singleCell
-applications/scripts/driverFoam/bin/driverFoam post --tutorial singleCell
+applications/scripts/driverFoam/bin/driverFoam sim --entry singleCell
+applications/scripts/driverFoam/bin/driverFoam post --entry singleCell
 
 # after adding scripts to PATH
 export PATH="$PWD/applications/scripts/driverFoam/bin:$PATH"
-driverFoam sim --tutorial singleCell
+driverFoam sim --entry singleCell
 
 # installed entrypoints (after pip install -e applications/scripts/driverFoam)
-driverFoam sim --tutorial singleCell
-foamctl sim --tutorial singleCell
-foamctl post --tutorial singleCell
-foamctl all --tutorial singleCell
-foamctl sim --tutorial niederer2012 --dry-run
-foamctl sim --tutorial manufacturedFDA --dry-run
-foamctl sim --tutorial singleCell --tutorials-root tutorials
+driverFoam sim --entry singleCell
+foamctl sim --entry singleCell
+foamctl post --entry singleCell
+foamctl all --entry singleCell
+foamctl sim --entry niederer2012 --dry-run
+foamctl sim --entry manufacturedFDA --dry-run
+foamctl sim --entry singleCell --tutorials-root tutorials
 
 # or without installing entrypoint
-python applications/scripts/driverFoam/run_openfoam_driver.py sim --tutorial singleCell
-python applications/scripts/driverFoam/run_openfoam_driver.py post --tutorial singleCell
-python applications/scripts/driverFoam/run_openfoam_driver.py all --tutorial singleCell
+python applications/scripts/driverFoam/run_openfoam_driver.py sim --entry singleCell
+python applications/scripts/driverFoam/run_openfoam_driver.py post --entry singleCell
+python applications/scripts/driverFoam/run_openfoam_driver.py all --entry singleCell
 
 # module invocation (after `pip install -e applications/scripts/driverFoam`)
-python3 -m openfoam_driver sim --tutorial singleCell
+python3 -m openfoam_driver sim --entry singleCell
 
 # with JSON overrides
-python -m openfoam_driver sim --tutorial singleCell \
+python -m openfoam_driver sim --entry singleCell \
   --config applications/scripts/driverFoam/spec_overrides.example.json
 ```
 
 ## Dry-run
 
 ```bash
-python applications/scripts/driverFoam/run_openfoam_driver.py sim --tutorial singleCell --dry-run
+python applications/scripts/driverFoam/run_openfoam_driver.py sim --entry singleCell --dry-run
 ```
 
 ## Spec Overrides (JSON)
@@ -89,7 +89,7 @@ Units are **ms** for time and **mm** for space.
 | `ionic_models` | `string[]` | Ionic models to sweep. |
 | `ionic_model_tissue_map` | `object` | Map: model -> list of tissues. |
 | `stimulus_map` | `object` | Map: model -> stimulus amplitude. |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellSolverCoeffs`). |
 | `output_glob` | `string` | Pattern for files collected into output dir (default `*.txt`). |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
 | `postprocess_script_relpath` | `string` | Setup-relative Python postprocess script. |
@@ -104,7 +104,7 @@ Units are **ms** for time and **mm** for space.
 | `dimensions` | `string[]` | Dimensions to run: `1D`, `2D`, `3D`. |
 | `solver_types` | `string[]` | Solvers to run: `explicit`, `implicit`. |
 | `piecewise_sweep` | `bool` | If true, pairs `dt_values[i]` with `number_cells[i]`. |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `monoDomainElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `monodomainSolverCoeffs`). |
 | `control_dict_relpath` | `string` | Case-relative path to `controlDict`. |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
 | `block_mesh_dict_template` | `string` | Case-relative mesh dict template (`{dimension}` placeholder). |
@@ -121,7 +121,7 @@ Units are **ms** for time and **mm** for space.
 | `solvers` | `string[]` | Solver list (`explicit`, `implicit`). |
 | `slab_size_mm` | `float[3]` | Fixed slab size `(x, y, z)` in **mm** used to derive hex resolution from `dx`. |
 | `end_time_by_dx` | `object` | Map: `dx` -> end time (**ms**). |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `monoDomainElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `monodomainSolverCoeffs`). |
 | `control_dict_relpath` | `string` | Case-relative path to `controlDict`. |
 | `block_mesh_dict_relpath` | `string` | Case-relative path to `blockMeshDict`. |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
@@ -147,7 +147,7 @@ Units are **ms** for time and **mm** for space.
 | `s2_intervals_ms` | `int[]` | S2 intervals (**ms**). |
 | `n_s1` | `int` | Number of S1 beats. |
 | `n_s2` | `int` | Number of S2 beats. |
-| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellElectroCoeffs`). |
+| `electro_properties_scope` | `string` | Sub-dictionary scope in `electroProperties` (default `singleCellSolverCoeffs`). |
 | `electro_properties_relpath` | `string` | Case-relative path to electro dictionary (default `constant/electroProperties`). |
 | `control_dict_relpath` | `string` | Case-relative path to `controlDict`. |
 | `postprocess_script_relpath` | `string` | Setup-relative Python postprocess script. |
@@ -165,7 +165,7 @@ Remaining setup-folder dependencies are postprocess/export assets:
 
 - `post_processing_manufactured.py`
 
-### `NiedererEtAl2012/setupNiedererEtAl2012`
+### `NiedererEtAl2011/NiedererEtAl2011verification/setupNiedererEtAl2011`
 
 - `simulation/exportParaview_Niederer.py`
 - `simulation/Niederer_Points.txt`

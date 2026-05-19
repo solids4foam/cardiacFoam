@@ -65,7 +65,7 @@ Defined under `extracellularPotentialDomain/`.
   restricted local view of `phiE` back into the myocardium via
   `bindExternalPhiE`. With this binding the bidomain solver no longer solves
   its own local phiE.
-- Provides the `electroStateProvider` accessed by `bathECGProbe`-class ECG
+- Provides the `electroStateProvider` accessed by `torsoECG`-class ECG
   domains for electrode sampling on the full union mesh.
 
 ## Relationship to sibling directories

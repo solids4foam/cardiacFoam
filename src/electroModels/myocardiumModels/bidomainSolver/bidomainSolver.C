@@ -115,8 +115,7 @@ label bidomainSolver::referenceCell() const
         FatalErrorInFunction
             << "bidomainSolver requires phiERefPoint when it solves the "
             << "local extracellular potential. For bidomain-bath cases, "
-            << "configure potentialDomain with type "
-            << "extracellularPotentialDomain so a global phiE field is bound."
+            << "configure bathPotentialDomain so a global phiE field is bound."
             << exit(FatalError);
     }
 

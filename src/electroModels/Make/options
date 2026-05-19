@@ -49,7 +49,7 @@ EXE_INC = \
     -IconductionSystemModels \
     -ImyocardiumModels \
     -IecgModels \
-    -IecgModels/bathECGProbe \
+    -IecgModels/torsoECG \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
     -IelectroCouplers/pvjCoupler/eikonal \

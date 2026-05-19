@@ -177,23 +177,11 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("launch", payload)
         self.assertEqual(payload["entry_kind"], "registered_tutorial")
 
-    def test_cli_legacy_tutorial_alias_still_works(self) -> None:
+    def test_cli_describe_requires_entry_name(self) -> None:
         stream = io.StringIO()
-        with redirect_stdout(stream):
-            exit_code = main(
-                [
-                    "describe",
-                    "--tutorial",
-                    "singleCell",
-                    "--tutorials-root",
-                    str(self.tutorials_root),
-                ]
-            )
-
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stream.getvalue())
-        self.assertEqual(payload["resolved_name"], "singleCell")
-        self.assertEqual(payload["entry_kind"], "registered_tutorial")
+        with self.assertRaises(SystemExit):
+            with redirect_stdout(stream):
+                main(["describe", "--tutorials-root", str(self.tutorials_root)])
 
 if __name__ == "__main__":
     unittest.main()

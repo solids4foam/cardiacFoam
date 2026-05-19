@@ -19,7 +19,7 @@
     "piecewise_sweep": true
   },
   "singleCell": {
-    "case_dir_name": "singleCell",
+    "case_dir_name": "singleCellprotocols/singleCell",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP", "Gaur"],
     "ionic_model_tissue_map": {
@@ -36,7 +36,8 @@
     "output_glob": "*.txt"
   },
   "niederer2012": {
-    "case_dir_name": "NiedererEtAl2012",
+    "case_dir_name": "NiedererEtAl2011/NiedererEtAl2011verification",
+    "setup_dir_name": "setupNiedererEtAl2011",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP"],
     "ionic_model_tissue_map": {
@@ -51,7 +52,7 @@
     }
   },
   "restitutionCurves": {
-    "case_dir_name": "restitutionCurves_s1s2Protocol",
+    "case_dir_name": "singleCellprotocols/restitutionCurves_s1s2Protocol",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["BuenoOrovio"],
     "ionic_model_tissue_map": {

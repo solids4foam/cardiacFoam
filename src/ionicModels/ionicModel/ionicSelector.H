@@ -15,6 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::ionicSelector
+
+Description
+    Utility class for selecting and querying registered
+    ionic model families by name.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    ionicSelector.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicSelector_H

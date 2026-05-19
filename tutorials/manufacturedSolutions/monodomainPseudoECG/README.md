@@ -59,7 +59,7 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --tutorial manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/driver_config.json
 ```
 
 The driver is the intended entrypoint for large dimension / cell-count / time-step
