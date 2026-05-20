@@ -32,6 +32,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
     Phase,
 )
+from openfoam_driver.solver_coupling import SOLVER_COMPATIBILITY_RULES
 
 _PHASE_ORDER: tuple[Phase, ...] = (
     "anatomy", "physics", "stimulus", "solver",
@@ -217,6 +218,16 @@ def validate_run(
     # which the section below evaluates programmatically.)
     errors.extend(_evaluate_structured(entry_list, context))
 
+    # 4) Solver-coupling consistency (P5e). Closes the
+    # conductionSystemSolver / electroDomainCoupler gap that the four-family
+    # structured constraints could not express (cross-domain pairing).
+    errors.extend(_evaluate_solver_coupling(context))
+
+    # 5) Block-reference integrity (P5e). Closes the
+    # domainCouplings.<name>.conductionNetworkDomain gap (referential
+    # integrity to a sibling block).
+    errors.extend(_evaluate_block_references(context))
+
     return errors
 
 
@@ -283,5 +294,188 @@ def _evaluate_structured(
                         ),
                         level="error",
                     ))
+
+    return errors
+
+
+# -------- P5e: Cross-block and pairing validators --------
+#
+# The three constraints listed in plan §5 as prose-only
+# (conductionSystemSolver, electroDomainCoupler, conductionNetworkDomain)
+# share two non-DictEntry features:
+#   1. their predicates need a wildcard scan over slot_keys with dynamic
+#      <name> segments, and
+#   2. their rules are already captured elsewhere (SOLVER_COMPATIBILITY_RULES
+#      for the first two; the conductionNetworkDomains block declarations
+#      for the third).
+#
+# We honour the convergence principle: both evaluators consult existing
+# tables/context rather than introducing a fifth DictEntry family.
+
+
+_CONDUCTION_SOLVER_SUFFIX = ".purkinjeGraphModelCoeffs.conductionSystemSolver"
+_COUPLER_SUFFIX = ".electroDomainCoupler"
+_NETWORK_REF_SUFFIX = ".conductionNetworkDomain"
+_CONDUCTION_NET_PREFIX = "conductionNetworkDomains."
+_DOMAIN_COUPLINGS_PREFIX = "domainCouplings."
+
+
+def _is_template_slot_key(key: str) -> bool:
+    """Slot keys carrying an un-substituted dynamic-path placeholder
+    (e.g. ``domainCouplings.<name>.conductionNetworkDomain``) are template
+    forms that ``_filled_run`` synthesises for required-field coverage but
+    do not represent a real run-time coupling. Both P5e evaluators skip
+    them so they do not generate false-positive dangling-reference or
+    coupler-mismatch errors on stub-filled fixtures."""
+    return "<" in key or ">" in key
+
+
+def _find_conduction_system_solver(context: dict[str, Any]) -> str | None:
+    """Locate the conductionSystemSolver value if any conductionNetworkDomain
+    block declares one. Returns the solver name or None if no Purkinje
+    coupling is declared."""
+    for key, val in context.items():
+        if _is_template_slot_key(key):
+            continue
+        if (
+            key.startswith(_CONDUCTION_NET_PREFIX)
+            and key.endswith(_CONDUCTION_SOLVER_SUFFIX)
+        ):
+            return str(val)
+    return None
+
+
+def _find_declared_couplers(context: dict[str, Any]) -> list[str]:
+    """Return every electroDomainCoupler value declared under
+    domainCouplings.<name>.electroDomainCoupler."""
+    return [
+        str(val) for key, val in context.items()
+        if not _is_template_slot_key(key)
+        and key.startswith(_DOMAIN_COUPLINGS_PREFIX)
+        and key.endswith(_COUPLER_SUFFIX)
+    ]
+
+
+def _evaluate_solver_coupling(context: dict[str, Any]) -> list[ValidationError]:
+    """Enforce SOLVER_COMPATIBILITY_RULES on the (myocardium, purkinje)
+    pair declared in context, plus the required coupler.
+
+    Silent when no Purkinje coupling is declared (the common case for
+    single-cell / pure-myocardium runs).
+    """
+    errors: list[ValidationError] = []
+    myocardium = context.get("myocardiumSolver")
+    if myocardium is None:
+        return errors
+
+    purkinje = _find_conduction_system_solver(context)
+    declared_couplers = _find_declared_couplers(context)
+
+    # Build a "no Purkinje declared" placeholder so the rules table still
+    # works for the bidomain-without-Purkinje invalid case (where the rule
+    # uses "*" as the wildcard for the Purkinje side).
+    purkinje_for_rule_match = purkinje if purkinje is not None else None
+
+    for rule in SOLVER_COMPATIBILITY_RULES:
+        if rule["myocardium_solver"] != myocardium:
+            continue
+        # Wildcard '*' on the rule side matches any non-None Purkinje value;
+        # otherwise the values must match exactly.
+        rule_purkinje = rule["purkinje_solver"]
+        if rule_purkinje == "*":
+            # The wildcard rules only fire when SOMETHING declares Purkinje.
+            if purkinje_for_rule_match is None:
+                continue
+        elif rule_purkinje != purkinje_for_rule_match:
+            continue
+
+        if not rule["valid"]:
+            errors.append(ValidationError(
+                phase="physics",
+                field="myocardiumSolver/conductionSystemSolver",
+                message=(
+                    f"Incompatible solver pair: myocardiumSolver={myocardium} "
+                    f"with conductionSystemSolver={purkinje_for_rule_match}. "
+                    f"{rule.get('reason', '')}"
+                ).strip(),
+                level="error",
+            ))
+            continue
+
+        # Valid pair: check the required coupler is the one declared.
+        required = rule.get("required_coupler")
+        if required is None:
+            continue
+        if not declared_couplers:
+            errors.append(ValidationError(
+                phase="physics",
+                field="electroDomainCoupler",
+                message=(
+                    f"electroDomainCoupler is required for myocardiumSolver="
+                    f"{myocardium} + conductionSystemSolver={purkinje}; "
+                    f"expected {required}."
+                ),
+                level="error",
+            ))
+        else:
+            for actual in declared_couplers:
+                if actual != required:
+                    errors.append(ValidationError(
+                        phase="physics",
+                        field="electroDomainCoupler",
+                        message=(
+                            f"electroDomainCoupler={actual!r} is incompatible "
+                            f"with myocardiumSolver={myocardium} + "
+                            f"conductionSystemSolver={purkinje}; "
+                            f"expected {required}."
+                        ),
+                        level="error",
+                    ))
+
+    return errors
+
+
+def _evaluate_block_references(
+    context: dict[str, Any],
+) -> list[ValidationError]:
+    """Every domainCouplings.<name>.conductionNetworkDomain must point at a
+    network name that has at least one declared sub-key under
+    conductionNetworkDomains.<that-name>.*.
+
+    Empty context, no domainCouplings, or no conductionNetworkDomain
+    references → no errors emitted.
+    """
+    errors: list[ValidationError] = []
+    declared_networks: set[str] = set()
+    for key in context:
+        if _is_template_slot_key(key):
+            continue
+        if not key.startswith(_CONDUCTION_NET_PREFIX):
+            continue
+        rest = key[len(_CONDUCTION_NET_PREFIX):]
+        if "." not in rest:
+            continue  # malformed; only count fully-qualified declarations
+        declared_networks.add(rest.split(".", 1)[0])
+
+    for key, val in context.items():
+        if _is_template_slot_key(key):
+            continue
+        if not (
+            key.startswith(_DOMAIN_COUPLINGS_PREFIX)
+            and key.endswith(_NETWORK_REF_SUFFIX)
+        ):
+            continue
+        referenced = str(val)
+        if referenced not in declared_networks:
+            errors.append(ValidationError(
+                phase="physics",
+                field=key,
+                message=(
+                    f"conductionNetworkDomain references {referenced!r} but "
+                    f"no matching block is declared under "
+                    f"conductionNetworkDomains.{referenced}.*"
+                ),
+                level="error",
+            ))
 
     return errors

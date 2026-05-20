@@ -273,3 +273,181 @@ def test_validate_run_accepts_default_entries_for_backward_compat():
     run = _filled_run()
     errors = [e for e in validate_run(run) if e.level == "error"]
     assert errors == []
+
+
+# -------- P5e.1/2: solver-coupling evaluator --------
+#
+# The three prose-only entries (conductionSystemSolver, electroDomainCoupler,
+# conductionNetworkDomain) don't fit the four DictEntry families, but the
+# rules they encode are already machine-readable via
+# SOLVER_COMPATIBILITY_RULES in solver_coupling.py. These tests pin the
+# behaviour we expect from _evaluate_solver_coupling.
+
+
+def _coupling_run(myocardium: str, *,
+                  purkinje: str | None = None,
+                  coupler: str | None = None,
+                  network_name: str = "purkinjeNet",
+                  coupling_name: str = "lvCoupling") -> RunDocument:
+    """Build a run with selected solver + optional Purkinje pairing.
+
+    Dynamic-path slot_keys (e.g. domainCouplings.lvCoupling.electroDomainCoupler)
+    are written into the physics slice — matches how _flatten_context will
+    expose them.
+    """
+    config: dict[str, dict] = {
+        "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
+    }
+    config["physics"]["myocardiumSolver"] = myocardium
+    if purkinje is not None:
+        config["physics"][
+            f"conductionNetworkDomains.{network_name}."
+            f"purkinjeGraphModelCoeffs.conductionSystemSolver"
+        ] = purkinje
+        # The network must be declared as a block — i.e. at least one
+        # sub-key exists under conductionNetworkDomains.<name>.*.
+        config["physics"][
+            f"conductionNetworkDomains.{network_name}.purkinjeGraphModelCoeffs.someKey"
+        ] = "x"
+    if coupler is not None:
+        config["physics"][
+            f"domainCouplings.{coupling_name}.electroDomainCoupler"
+        ] = coupler
+        # A coupling references the network by name.
+        config["physics"][
+            f"domainCouplings.{coupling_name}.conductionNetworkDomain"
+        ] = network_name
+    return RunDocument(id="r1", name="r", status="draft", config=config)
+
+
+def test_solver_coupling_silent_when_no_purkinje_pairing():
+    """No conductionSystemSolver in context → no coupling rules fire."""
+    run = _coupling_run("monodomainSolver")
+    errors = validate_run(run, entries=[])
+    coupling_errors = [
+        e for e in errors
+        if "coupling" in e.message.lower() or "coupler" in e.message.lower()
+    ]
+    assert coupling_errors == []
+
+
+def test_solver_coupling_valid_monodomain_pair_silent():
+    """Valid pair (mono + monodomain1D + reactionDiffusionPvjCoupler)
+    must not emit any solver-coupling error."""
+    run = _coupling_run(
+        "monodomainSolver",
+        purkinje="monodomain1DSolver",
+        coupler="reactionDiffusionPvjCoupler",
+    )
+    errors = validate_run(run, entries=[])
+    coupling_errors = [
+        e for e in errors
+        if "incompatible" in e.message.lower()
+        or "required_coupler" in e.message.lower()
+    ]
+    assert coupling_errors == [], (
+        f"valid pair must not error, got: {[e.message for e in errors]}"
+    )
+
+
+def test_solver_coupling_flags_incompatible_mono_eikonal_pair():
+    """mono myocardium + eikonal Purkinje is invalid per the rules table."""
+    run = _coupling_run(
+        "monodomainSolver",
+        purkinje="eikonalSolver",
+        coupler="reactionDiffusionPvjCoupler",
+    )
+    errors = validate_run(run, entries=[])
+    incompat = [e for e in errors if "incompatible" in e.message.lower()]
+    assert len(incompat) >= 1, (
+        f"expected incompatible-pair error, got: {[e.message for e in errors]}"
+    )
+
+
+def test_solver_coupling_flags_bidomain_with_purkinje():
+    """bidomainSolver does not support Purkinje coupling at all."""
+    run = _coupling_run(
+        "bidomainSolver",
+        purkinje="monodomain1DSolver",
+        coupler="reactionDiffusionPvjCoupler",
+    )
+    errors = validate_run(run, entries=[])
+    bidomain_errors = [
+        e for e in errors
+        if "bidomain" in e.message.lower() and "purkinje" in e.message.lower()
+    ]
+    assert len(bidomain_errors) >= 1
+
+
+def test_solver_coupling_flags_wrong_coupler_for_valid_pair():
+    """Valid mono+monodomain1D pair but the wrong coupler → error citing
+    the required_coupler."""
+    run = _coupling_run(
+        "monodomainSolver",
+        purkinje="monodomain1DSolver",
+        coupler="eikonalPvjCoupler",   # wrong; should be reactionDiffusionPvjCoupler
+    )
+    errors = validate_run(run, entries=[])
+    coupler_errors = [
+        e for e in errors
+        if "reactiondiffusionpvjcoupler" in e.message.lower()
+    ]
+    assert len(coupler_errors) >= 1, (
+        f"expected error citing reactionDiffusionPvjCoupler, got: "
+        f"{[e.message for e in errors]}"
+    )
+
+
+# -------- P5e.3/4: block-reference evaluator --------
+
+
+def test_block_reference_silent_when_no_couplings():
+    """No domainCouplings in context → no block-reference rules fire."""
+    run = _coupling_run("monodomainSolver")
+    errors = validate_run(run, entries=[])
+    ref_errors = [e for e in errors if "reference" in e.message.lower()]
+    assert ref_errors == []
+
+
+def test_block_reference_silent_when_target_block_declared():
+    """conductionNetworkDomain references a name that has at least one
+    sub-key under conductionNetworkDomains.<name>.* → no error."""
+    run = _coupling_run(
+        "monodomainSolver",
+        purkinje="monodomain1DSolver",
+        coupler="reactionDiffusionPvjCoupler",
+        network_name="purkinjeNet",
+        coupling_name="lvCoupling",
+    )
+    errors = validate_run(run, entries=[])
+    dangling_errors = [
+        e for e in errors
+        if "reference" in e.message.lower()
+        and ("not declared" in e.message.lower() or "dangling" in e.message.lower())
+    ]
+    assert dangling_errors == []
+
+
+def test_block_reference_flags_dangling_target():
+    """conductionNetworkDomain points at a name that has no matching block
+    declaration → error."""
+    config: dict[str, dict] = {
+        "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
+    }
+    config["physics"]["myocardiumSolver"] = "monodomainSolver"
+    config["physics"][
+        "domainCouplings.lvCoupling.conductionNetworkDomain"
+    ] = "ghostNet"   # never declared under conductionNetworkDomains.ghostNet.*
+    run = RunDocument(id="r1", name="r", status="draft", config=config)
+
+    errors = validate_run(run, entries=[])
+    dangling = [
+        e for e in errors
+        if "ghostNet" in e.message
+        and ("not declared" in e.message.lower()
+             or "no matching" in e.message.lower())
+    ]
+    assert len(dangling) >= 1, (
+        f"expected dangling-reference error for ghostNet, got: "
+        f"{[e.message for e in errors]}"
+    )
