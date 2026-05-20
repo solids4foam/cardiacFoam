@@ -296,6 +296,11 @@ def make_spec(
         metadata={
             "python": sys.executable,
             "notes": "S1–S2 restitution protocol sweep on ionic model, tissue, and S2 interval.",
+            "workflow_dag": {
+                "steps": [
+                    {"id": "solve", "command": "cardiacFoam", "depends_on": []},
+                ]
+            },
             "ionic_models": ionic_models_list,
             "s1_interval_ms": s1_interval_ms,
             "n_s1": n_s1,

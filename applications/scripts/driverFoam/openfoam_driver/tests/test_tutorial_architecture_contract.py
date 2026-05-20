@@ -426,6 +426,28 @@ class TestTutorialArchitectureContract(unittest.TestCase):
                 "pseudo-output",
             )
 
+    def test_every_registered_spec_declares_workflow_dag(self) -> None:
+        """Every spec-factory tutorial must declare a workflow_dag with at least one step."""
+        for tutorial in self.module_map:
+            with self.subTest(tutorial=tutorial):
+                spec = self._load_spec(tutorial)
+                dag = spec.metadata.get("workflow_dag")
+                self.assertIsNotNone(
+                    dag,
+                    f"spec '{tutorial}' is missing 'workflow_dag' in metadata",
+                )
+                self.assertIn("steps", dag, f"workflow_dag for '{tutorial}' must have a 'steps' key")
+                steps = dag["steps"]
+                self.assertGreater(
+                    len(steps), 0,
+                    f"workflow_dag for '{tutorial}' must have at least one step",
+                )
+                for step in steps:
+                    self.assertIn("id", step)
+                    self.assertIn("command", step)
+                    self.assertIn("depends_on", step)
+                    self.assertIsInstance(step["depends_on"], list)
+
     def test_registry_can_load_non_registered_case_folder_via_generic_spec(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tutorials_root = Path(temp_dir)

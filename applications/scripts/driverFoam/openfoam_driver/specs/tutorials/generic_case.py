@@ -240,6 +240,11 @@ def make_spec(
         ),
         metadata={
             "notes": "Generic case runner for arbitrary tutorial folders.",
+            "workflow_dag": {
+                "steps": [
+                    {"id": "run", "command": "Allrun", "depends_on": []},
+                ]
+            },
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),
             "run_script_relpath": str(run_script_path),

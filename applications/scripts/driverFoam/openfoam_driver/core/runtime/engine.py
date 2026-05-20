@@ -535,6 +535,7 @@ class DriverEngine:
             "error": error,
             "plots_manifest_path": str(plots_manifest) if plots_manifest.exists() else None,
             "artifacts_manifest_path": str(artifacts_manifest_path) if artifacts_manifest_path else None,
+            "workflow_dag": self.spec.metadata.get("workflow_dag"),
             "results": [asdict(item) for item in results],
         }
 

@@ -2,6 +2,7 @@
 
 name = "sweepCurrents"
 description = "Sweep ionic currents and gating variables against membrane voltage for a configured ionic model."
+category = "post-processing"
 
 purpose = """
 Reads constant/sweepCurrents (which specifies the ionicModel, tissue type,
@@ -22,7 +23,11 @@ outputs = [
 ]
 
 requires_mesh = false
-
 example = "sweepCurrents -case ./singleCell_run"
 
-category = "post-processing"
+[[produces]]
+artifact_id = "current_sweep_csv"
+path_pattern = "postProcessing/<model>_<tissue>_<current>_sweep.txt"
+format = "csv_sweep"
+description = "CSV file of ionic current and gating variable values over a Vm sweep range."
+produced_by = "sweepCurrents"

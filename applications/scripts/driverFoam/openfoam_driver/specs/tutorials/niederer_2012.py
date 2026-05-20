@@ -616,6 +616,22 @@ def make_spec(
                 "Niederer Et Al. 2012 slab benchmark sweep "
                 "with OpenFOAM functionObject sampling."
             ),
+            "workflow_dag": {
+                "steps": [
+                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+                    {
+                        "id": "samplePoints",
+                        "command": "postProcess -func Niedererpoints -latestTime",
+                        "depends_on": ["solve"],
+                    },
+                    {
+                        "id": "sampleLines",
+                        "command": "postProcess -func Niedererlines -latestTime",
+                        "depends_on": ["solve"],
+                    },
+                ]
+            },
             "dx_values": dx_values_list,
             "dt_values": dt_values_list,
             "slab_size_mm": slab_size_mm_list,

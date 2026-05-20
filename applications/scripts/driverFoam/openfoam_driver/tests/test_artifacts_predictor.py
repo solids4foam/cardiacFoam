@@ -94,22 +94,29 @@ class TestPredictorSingleCell(unittest.TestCase):
             self.assertIn("recovery_r", artifact.variables)
 
     def test_variables_change_with_ionic_model(self) -> None:
-        """Convergence guard: the same predictor against TNNP must yield
-        a different variable set (TNNP has many more states), proving the
-        predictor consults the catalog rather than hard-coding."""
-        with tempfile.TemporaryDirectory() as temp:
-            case_root = Path(temp) / "case"
-            case_root.mkdir()
-            _write_single_cell_electro_properties(case_root, ionic_model="TNNP")
-            spec = _make_spec(case_root)
+        """Convergence guard: the predictor must return different variables
+        for different ionic models. Post-§3d-1 the variables come from
+        recommended_exports (or the export list when declared); the exact
+        names differ across models, proving catalog consultation."""
+        with tempfile.TemporaryDirectory() as temp_a, tempfile.TemporaryDirectory() as temp_b:
+            case_a = Path(temp_a) / "case"
+            case_b = Path(temp_b) / "case"
+            case_a.mkdir()
+            case_b.mkdir()
+            _write_single_cell_electro_properties(case_a, ionic_model="TNNP")
+            _write_single_cell_electro_properties(case_b, ionic_model="AlievPanfilov")
 
-            artifacts = predict_data_artifacts(case_root, spec)
-            self.assertEqual(len(artifacts), 1)
-            (artifact,) = artifacts
-            self.assertGreater(
-                len(artifact.variables), 5,
-                "TNNP has many state variables — predictor returned too few",
+            (artifact_tnnp,) = predict_data_artifacts(case_a, _make_spec(case_a))
+            (artifact_ap,) = predict_data_artifacts(case_b, _make_spec(case_b))
+
+            self.assertNotEqual(
+                set(artifact_tnnp.variables), set(artifact_ap.variables),
+                "predictor returned identical variables for two different "
+                "ionic models — catalog consultation is broken",
             )
+            # TNNP.recommended_exports references a calcium variable;
+            # AlievPanfilov has no calcium.
+            self.assertIn("calcium_Cai", artifact_tnnp.variables)
 
     def test_unknown_ionic_model_returns_empty_variables(self) -> None:
         """The predictor must not raise on a model name absent from the
@@ -180,22 +187,36 @@ def _write_pde_electro_properties(
     *,
     solver: str,
     ionic_model: str = "TNNP",
+    export_list: tuple[str, ...] | None = None,
 ) -> None:
     """Synthesize a monodomain/bidomain electroProperties shell.
 
     Mirrors tutorials/manufacturedSolutions/{monodomain,bidomain}/constant/electroProperties
     closely enough for the line-based parsers; everything not relevant to the
-    predictor is omitted.
+    predictor is omitted. When ``export_list`` is supplied, an
+    ``outputVariables.ionic.export ( ... )`` block is injected to exercise
+    the §3d-1 filtering path.
     """
     (case_root / "constant").mkdir(parents=True, exist_ok=True)
-    (case_root / "constant" / "electroProperties").write_text(
+    body = (
         f"myocardiumSolver  {solver};\n"
         f"{solver}Coeffs\n"
         "{\n"
         f"    ionicModel    {ionic_model};\n"
         "    solutionAlgorithm implicit;\n"
-        "}\n"
     )
+    if export_list is not None:
+        body += (
+            "    outputVariables\n"
+            "    {\n"
+            "        ionic\n"
+            "        {\n"
+            f"            export ({' '.join(export_list)});\n"
+            "        }\n"
+            "    }\n"
+        )
+    body += "}\n"
+    (case_root / "constant" / "electroProperties").write_text(body)
 
 
 def _write_eikonal_electro_properties(case_root: Path) -> None:
@@ -228,8 +249,10 @@ class TestPredictorMonodomain(unittest.TestCase):
             self.assertEqual(artifact.format, "openfoam_time_dirs")
             self.assertTrue(artifact.time_indexed)
             self.assertIn("Vm", artifact.variables)
-            # Catalog-sourced: TNNP has many state variables.
-            self.assertGreater(len(artifact.variables), 5)
+            # Catalog-sourced: TNNP.recommended_exports has calcium_Cai;
+            # this proves the variables come from the catalog rather than
+            # hard-coded in the handler.
+            self.assertIn("calcium_Cai", artifact.variables)
 
     def test_pattern_uses_time_placeholder(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -275,6 +298,83 @@ class TestPredictorEikonal(unittest.TestCase):
             self.assertEqual(artifact.produced_by, "eikonalSolver")
             self.assertIn("psi", artifact.variables)
             self.assertIn("Vm", artifact.variables)
+
+
+class TestPredictorExportListFiltering(unittest.TestCase):
+    """Plan §3d-1: predictor must report what will actually be on disk, not
+    the catalog superset. When ``outputVariables.ionic.export`` is declared,
+    the exported subset wins. When absent, the catalog's
+    ``recommended_exports`` is the fallback."""
+
+    def test_export_list_overrides_catalog_states_for_monodomain(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root,
+                solver="monodomainSolver",
+                ionic_model="monodomainFDAManufactured",
+                export_list=("u1", "u2", "u3"),
+            )
+            spec = _make_spec(case_root)
+            (artifact,) = predict_data_artifacts(case_root, spec)
+            # Solver-provided Vm is always present; ionic part filtered.
+            self.assertEqual(artifact.variables, ("Vm", "u1", "u2", "u3"))
+
+    def test_export_list_overrides_catalog_states_for_bidomain(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root,
+                solver="bidomainSolver",
+                ionic_model="TNNP",
+                export_list=("V", "Cai"),
+            )
+            spec = _make_spec(case_root)
+            (artifact,) = predict_data_artifacts(case_root, spec)
+            self.assertEqual(
+                artifact.variables, ("Vm", "phiE", "phiI", "V", "Cai"),
+            )
+
+    def test_export_list_overrides_catalog_for_single_cell(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            (case_root / "constant").mkdir()
+            (case_root / "constant" / "electroProperties").write_text(
+                "myocardiumSolver singleCellSolver;\n"
+                "singleCellSolverCoeffs\n"
+                "{\n"
+                "    ionicModel    AlievPanfilov;\n"
+                "    outputVariables\n"
+                "    {\n"
+                "        ionic\n"
+                "        {\n"
+                "            export (Vm s);\n"
+                "        }\n"
+                "    }\n"
+                "}\n"
+            )
+            spec = _make_spec(case_root)
+            (artifact,) = predict_data_artifacts(case_root, spec)
+            # singleCell has no solver-provided PDE prefix; export list is
+            # the entire variable set.
+            self.assertEqual(artifact.variables, ("Vm", "s"))
+
+    def test_missing_export_list_falls_back_to_recommended_exports(self) -> None:
+        """AlievPanfilov.recommended_exports = ('u', 'recovery_r') in
+        ionic_model_catalog.py. With no export declaration, the predictor
+        must use the catalog fallback instead of states + algebraic."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_single_cell_electro_properties(
+                case_root, ionic_model="AlievPanfilov"
+            )
+            spec = _make_spec(case_root)
+            (artifact,) = predict_data_artifacts(case_root, spec)
+            self.assertEqual(artifact.variables, ("u", "recovery_r"))
 
 
 class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):

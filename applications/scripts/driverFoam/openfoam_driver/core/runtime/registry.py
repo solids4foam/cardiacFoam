@@ -172,6 +172,13 @@ def _classify_case_entry(case_root: Path, tutorials_root: Path) -> dict[str, obj
         workflow_family = None
         is_runnable = _case_is_runnable(case_root)
 
+    # Extract workflow_dag from the on-disk contract if a steps array is present.
+    workflow_dag: dict[str, object] | None = None
+    if authoring_contract is not None:
+        raw_steps = authoring_contract.get("steps")
+        if isinstance(raw_steps, list) and raw_steps:
+            workflow_dag = {"steps": raw_steps}
+
     return {
         "entry_name": case_root.name,
         "entry_kind": entry_kind,
@@ -179,6 +186,7 @@ def _classify_case_entry(case_root: Path, tutorials_root: Path) -> dict[str, obj
         "is_runnable": is_runnable,
         "source_type": source_type,
         "workflow_family": workflow_family,
+        "workflow_dag": workflow_dag,
     }
 
 
@@ -285,6 +293,20 @@ def _with_entry_metadata(
             "resolution": resolution["resolution"],
         }
     )
+    # For filesystem cases, the on-disk workflow_contract.json is authoritative.
+    # When the registry found a 'steps' array there, set it unconditionally so
+    # it overrides any generic-spec fallback. When there is no on-disk DAG
+    # (resolution key absent or explicitly None from a contract without steps),
+    # leave the spec's own metadata untouched — spec-factory DAGs are preserved.
+    if "workflow_dag" in resolution:
+        on_disk_dag = resolution["workflow_dag"]
+        if on_disk_dag is not None:
+            # On-disk steps win; overwrite spec-factory default.
+            metadata["workflow_dag"] = on_disk_dag
+        else:
+            # Contract present but no steps array (or absent contract) — clear
+            # any generic-spec placeholder so callers see None.
+            metadata["workflow_dag"] = None
     return replace(spec, metadata=metadata)
 
 

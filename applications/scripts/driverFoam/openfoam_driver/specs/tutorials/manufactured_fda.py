@@ -429,6 +429,12 @@ def make_spec(
         ),
         metadata={
             "notes": "Manufactured-solution convergence benchmark",
+            "workflow_dag": {
+                "steps": [
+                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+                ]
+            },
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,

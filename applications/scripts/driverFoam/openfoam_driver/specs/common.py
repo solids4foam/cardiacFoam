@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import shutil
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -81,6 +82,32 @@ def detect_ionic_model_name(electro_properties_path: Path) -> str:
         f"Could not determine ionicModel from {electro_properties_path} "
         f"(scope {scope!r})"
     )
+
+
+_IONIC_EXPORT_RE = re.compile(r"\bexport\s*\(([^)]*)\)", re.DOTALL)
+
+
+def detect_ionic_export_list(
+    electro_properties_path: Path,
+) -> tuple[str, ...] | None:
+    """Return the names declared in ``outputVariables.ionic.export ( ... )``.
+
+    Returns ``None`` when no export declaration is present. The parser is
+    intentionally permissive: it strips ``//`` line comments and matches the
+    first ``export ( ... )`` block in the file. The myocardium ionic export
+    appears before any purkinje-coupling or sub-domain ``export`` by
+    OpenFOAM convention (top-level ``<solver>Coeffs`` precedes
+    ``domainCouplings`` and other nested blocks), so first-match is correct
+    in practice. If this assumption ever breaks, scope this to the active
+    ``<solver>Coeffs`` block using brace-depth tracking.
+    """
+    text = electro_properties_path.read_text()
+    cleaned = "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+    match = _IONIC_EXPORT_RE.search(cleaned)
+    if match is None:
+        return None
+    tokens = tuple(t for t in match.group(1).split() if t)
+    return tokens if tokens else None
 
 
 def _resolve_scope_tokens(

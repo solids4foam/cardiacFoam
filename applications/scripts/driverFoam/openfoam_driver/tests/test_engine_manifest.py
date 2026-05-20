@@ -551,5 +551,92 @@ class TestDriverEngineManifestAtomicity(unittest.TestCase):
             )
 
 
+class TestWorkflowDag(unittest.TestCase):
+    """workflow_dag field in run_manifest.json (plan §6)."""
+
+    _EXAMPLE_DAG = {
+        "steps": [
+            {"id": "mesh", "command": "blockMesh", "depends_on": []},
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+        ]
+    }
+
+    def _build_spec_with_dag(self, root: Path) -> TutorialSpec:
+        case_root = root / "case"
+        setup_root = root / "setup"
+        output_dir = root / "output"
+        case_root.mkdir()
+        setup_root.mkdir()
+        return TutorialSpec(
+            name="dag_test",
+            case_root=case_root,
+            setup_root=setup_root,
+            output_dir=output_dir,
+            build_cases=lambda: [CaseConfig("only", {})],
+            apply_case=lambda _c, _case: None,
+            run_case=lambda _c, _s, _case: None,
+            metadata={"workflow_dag": self._EXAMPLE_DAG},
+        )
+
+    def _build_spec_without_dag(self, root: Path) -> TutorialSpec:
+        case_root = root / "case"
+        setup_root = root / "setup"
+        output_dir = root / "output"
+        case_root.mkdir()
+        setup_root.mkdir()
+        return TutorialSpec(
+            name="no_dag",
+            case_root=case_root,
+            setup_root=setup_root,
+            output_dir=output_dir,
+            build_cases=lambda: [CaseConfig("only", {})],
+            apply_case=lambda _c, _case: None,
+            run_case=lambda _c, _s, _case: None,
+        )
+
+    def test_run_manifest_records_workflow_dag(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec_with_dag(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            manifest = _load_json(spec.output_dir / "run_manifest.json")
+            self.assertIn("workflow_dag", manifest)
+            self.assertEqual(manifest["workflow_dag"], self._EXAMPLE_DAG)
+            # round-trip: steps are preserved exactly
+            steps = manifest["workflow_dag"]["steps"]
+            self.assertEqual(len(steps), 2)
+            self.assertEqual(steps[0]["id"], "mesh")
+            self.assertEqual(steps[0]["command"], "blockMesh")
+            self.assertEqual(steps[0]["depends_on"], [])
+            self.assertEqual(steps[1]["id"], "solve")
+            self.assertEqual(steps[1]["command"], "cardiacFoam")
+            self.assertEqual(steps[1]["depends_on"], ["mesh"])
+
+    def test_run_manifest_workflow_dag_is_none_when_absent(self) -> None:
+        """Spec without workflow_dag → manifest field is None (additive-only)."""
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec_without_dag(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            manifest = _load_json(spec.output_dir / "run_manifest.json")
+            self.assertIn("workflow_dag", manifest)
+            self.assertIsNone(manifest["workflow_dag"])
+
+    def test_workflow_dag_does_not_break_v2_1_consumer(self) -> None:
+        """A v2.2 manifest with workflow_dag still contains every v2.1 required key."""
+        v2_1_required = TestDriverEngineManifestSchemaVersion._V2_1_REQUIRED_KEYS
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec_with_dag(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            manifest = _load_json(spec.output_dir / "run_manifest.json")
+            self.assertEqual(manifest["schema_version"], "2.2")
+            missing = v2_1_required - set(manifest)
+            self.assertEqual(
+                missing, set(),
+                f"v2.2 manifest with workflow_dag is missing v2.1 keys: {sorted(missing)}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

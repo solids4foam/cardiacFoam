@@ -37,13 +37,47 @@ from .models import DataArtifact, TutorialSpec
 SolverHandler = Callable[[Path, TutorialSpec, "str | None"], tuple[DataArtifact, ...]]
 
 
-def _ionic_variables(ionic_model: str | None) -> tuple[str, ...]:
+# Solver-provided PDE field names sourced from the C++ side (plan §3e).
+# A C++ rename means updating these constants AND the lock tests that
+# assert their presence. There is intentionally no catalog backing these
+# yet — see plan §3e for the rationale.
+_MONODOMAIN_FIELDS: tuple[str, ...] = ("Vm",)
+_BIDOMAIN_FIELDS: tuple[str, ...] = ("Vm", "phiE", "phiI")
+_EIKONAL_FIELDS: tuple[str, ...] = ("psi", "Vm")
+
+
+def _exported_ionic_variables(
+    case_root: Path,
+    ionic_model: str | None,
+) -> tuple[str, ...]:
+    """Return the ionic variables that will actually appear on disk.
+
+    Plan §3d-1: prefer the declared ``outputVariables.ionic.export`` list
+    (this is what the C++ writes); fall back to the catalog's
+    ``recommended_exports`` when no declaration is present. Returns ``()``
+    only when both the file-side declaration and the catalog entry are
+    missing.
+
+    Aliasing note: declared export tokens are returned verbatim (the user
+    chose those names because that is what they want to see in the output
+    file). The catalog's ``recommended_exports`` uses C++-internal state
+    names, which may differ from the user-facing aliases. Resolving the
+    alias table is a future follow-up tracked in plan §3d-1.
+    """
+    # Late import to keep specs.common off the model-load path.
+    from ...specs.common import detect_ionic_export_list
+
+    properties = case_root / "constant" / "electroProperties"
+    if properties.exists():
+        declared = detect_ionic_export_list(properties)
+        if declared is not None:
+            return declared
     if ionic_model is None:
         return ()
     entry = IONIC_MODEL_CATALOG.get(ionic_model)
     if entry is None:
         return ()
-    return entry.states + entry.algebraic
+    return entry.recommended_exports
 
 
 def _predict_single_cell(
@@ -56,7 +90,7 @@ def _predict_single_cell(
             artifact_id="single_cell_trace",
             path_pattern="postProcessing/{case_id}.txt",
             format="csv_sweep",
-            variables=_ionic_variables(ionic_model),
+            variables=_exported_ionic_variables(case_root, ionic_model),
             description=(
                 f"Per-case time series produced by singleCellSolver "
                 f"(ionicModel={ionic_model})"
@@ -77,7 +111,7 @@ def _predict_monodomain(
             artifact_id="myocardium_time_series",
             path_pattern="{time}",
             format="openfoam_time_dirs",
-            variables=("Vm",) + _ionic_variables(ionic_model),
+            variables=_MONODOMAIN_FIELDS + _exported_ionic_variables(case_root, ionic_model),
             description=(
                 f"OpenFOAM time directories containing Vm and ionic fields "
                 f"(ionicModel={ionic_model})"
@@ -98,7 +132,7 @@ def _predict_bidomain(
             artifact_id="myocardium_time_series",
             path_pattern="{time}",
             format="openfoam_time_dirs",
-            variables=("Vm", "phiE", "phiI") + _ionic_variables(ionic_model),
+            variables=_BIDOMAIN_FIELDS + _exported_ionic_variables(case_root, ionic_model),
             description=(
                 f"OpenFOAM time directories containing Vm, phiE, phiI and "
                 f"ionic fields (ionicModel={ionic_model})"
@@ -120,7 +154,7 @@ def _predict_eikonal(
             artifact_id="activation_time_field",
             path_pattern="{time}",
             format="openfoam_time_dirs",
-            variables=("psi", "Vm"),
+            variables=_EIKONAL_FIELDS,
             description="Activation time (psi) and recovered Vm from eikonalSolver",
             produced_by="eikonalSolver",
             time_indexed=True,

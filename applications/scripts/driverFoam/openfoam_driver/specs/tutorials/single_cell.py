@@ -198,6 +198,11 @@ def make_spec(
         metadata={
             "python": sys.executable,
             "notes": "Single-cell sweep on ionic model and tissue types.",
+            "workflow_dag": {
+                "steps": [
+                    {"id": "solve", "command": "cardiacFoam", "depends_on": []},
+                ]
+            },
             "ionic_models": ionic_models_list,
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),

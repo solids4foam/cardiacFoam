@@ -18,26 +18,58 @@ The following fields are optional:
     purpose       (str)                – 2–4 sentence extended description.
     inputs        (list[str])          – case-relative paths this utility reads.
     outputs       (list[str])          – case-relative paths this utility writes.
+                                         Deprecated: prefer ``produces``. A
+                                         UserWarning is emitted if ``outputs``
+                                         and ``produces`` disagree.
     requires_mesh (bool, default True) – False for 0-D / file-only tools.
     example       (str)                – representative command-line invocation.
 
     [[flags]]                          – zero or more [[flags]] tables, each
-        name        (str)              – flag name, e.g. "-noScale".
-        description (str)              – what the flag does.
-        takes_value (bool)             – whether the flag accepts an argument.
+        name          (str)              – flag name, e.g. "-noScale".
+        description   (str)              – what the flag does.
+        takes_value   (bool)             – whether the flag accepts an argument.
+        argument_kind (str, optional)    – one of ALLOWED_ARGUMENT_KINDS:
+                                           scalar|label|path|word|word_list|switch
+        required      (bool, default False) – whether the flag is mandatory.
+        default       (str, optional)    – default value as a string.
+
+    positional_args = [...]            – ordered list of positional argument
+        tables, each with:
+        name          (str)
+        argument_kind (str)  – one of ALLOWED_ARGUMENT_KINDS
+        description   (str)
+
+    produces = [...]                   – structured output declarations that
+        supersede ``outputs`` over time. Each entry:
+        artifact_id   (str)   – stable identifier.
+        path_pattern  (str)   – case-relative path; may contain {case_id} or
+                                 {time} placeholders (validated at load time
+                                 via models._validate_path_pattern — Gap B).
+        format        (str)   – one of the ArtifactFormat values from
+                                 core.runtime.models.
+        description   (str, optional)
+        produced_by   (str, optional)  – utility/solver name.
+        variables     (list[str], optional)
+        optional      (bool, default False)
+        time_indexed  (bool, default False)
 
 Public API
 ----------
-    ALLOWED_CATEGORIES   – frozenset of valid category strings.
-    UtilityFlag          – frozen dataclass for a single CLI flag.
-    UtilityManifest      – frozen dataclass for a parsed manifest.
+    ALLOWED_CATEGORIES     – frozenset of valid category strings.
+    ALLOWED_ARGUMENT_KINDS – frozenset of valid argument_kind strings.
+    ALLOWED_ARTIFACT_FORMATS – frozenset of valid produces[*].format strings.
+    PositionalArg          – frozen dataclass for a positional argument.
+    UtilityFlag            – frozen dataclass for a single CLI flag.
+    ProducesEntry          – frozen dataclass for a produces entry.
+    UtilityManifest        – frozen dataclass for a parsed manifest.
     load_utility_manifests(utilities_root) -> dict[str, UtilityManifest]
-    UTILITY_CATALOG      – module-level dict populated at import time.
+    UTILITY_CATALOG        – module-level dict populated at import time.
 """
 
 from __future__ import annotations
 
 import sys
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
@@ -55,6 +87,8 @@ else:
                 "Python < 3.11 requires the 'tomli' package: pip install tomli"
             ) from exc
 
+from .core.runtime.models import _validate_path_pattern
+
 MANIFEST_FILENAME: Final[str] = "utility.manifest.toml"
 
 ALLOWED_CATEGORIES: Final[frozenset[str]] = frozenset(
@@ -65,6 +99,21 @@ ALLOWED_CATEGORIES: Final[frozenset[str]] = frozenset(
         "io-conversion",
         "verification",
         "parametric-sweep",
+    }
+)
+
+ALLOWED_ARGUMENT_KINDS: Final[frozenset[str]] = frozenset(
+    {"scalar", "label", "path", "word", "word_list", "switch"}
+)
+
+ALLOWED_ARTIFACT_FORMATS: Final[frozenset[str]] = frozenset(
+    {
+        "csv_probe",
+        "csv_sweep",
+        "vtk_sequence",
+        "openfoam_time_dirs",
+        "openfoam_log",
+        "json_summary",
     }
 )
 
@@ -81,12 +130,45 @@ _KNOWN_FIELDS: Final[frozenset[str]] = frozenset(
         "flags",
         "example",
         "category",
+        "positional_args",
+        "produces",
     }
 )
 
 _KNOWN_FLAG_FIELDS: Final[frozenset[str]] = frozenset(
-    {"name", "description", "takes_value"}
+    {"name", "description", "takes_value", "argument_kind", "required", "default"}
 )
+
+_KNOWN_POSITIONAL_ARG_FIELDS: Final[frozenset[str]] = frozenset(
+    {"name", "argument_kind", "description"}
+)
+
+_KNOWN_PRODUCES_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "artifact_id",
+        "path_pattern",
+        "format",
+        "description",
+        "produced_by",
+        "variables",
+        "optional",
+        "time_indexed",
+    }
+)
+
+
+@dataclass(frozen=True)
+class PositionalArg:
+    """Metadata for a single positional argument of a utility."""
+
+    name: str
+    """Argument name, e.g. 'vtk_file'."""
+
+    argument_kind: str
+    """One of ALLOWED_ARGUMENT_KINDS."""
+
+    description: str
+    """What the argument represents."""
 
 
 @dataclass(frozen=True)
@@ -101,6 +183,44 @@ class UtilityFlag:
 
     takes_value: bool = False
     """Whether the flag accepts a follow-on argument."""
+
+    argument_kind: str = ""
+    """One of ALLOWED_ARGUMENT_KINDS. Empty string means not specified."""
+
+    required: bool = False
+    """Whether the flag is mandatory."""
+
+    default: str | None = None
+    """Default value as a string, or None if not specified."""
+
+
+@dataclass(frozen=True)
+class ProducesEntry:
+    """Structured output declaration for a utility."""
+
+    artifact_id: str
+    """Stable identifier within the manifest."""
+
+    path_pattern: str
+    """Case-relative path; may contain {case_id} / {time} placeholders."""
+
+    format: str
+    """One of ALLOWED_ARTIFACT_FORMATS."""
+
+    description: str = ""
+    """Human-readable purpose. May be empty."""
+
+    produced_by: str = ""
+    """Utility/solver name that writes this artifact. Empty means implicit."""
+
+    variables: tuple[str, ...] = ()
+    """Per-variable structure inside the file. () means no per-variable structure."""
+
+    optional: bool = False
+    """True when the artifact appears only under specific configurations."""
+
+    time_indexed: bool = False
+    """True for time-directory style outputs."""
 
 
 @dataclass(frozen=True)
@@ -120,7 +240,8 @@ class UtilityManifest:
     """Case-relative paths the utility reads. May be empty."""
 
     outputs: tuple[str, ...]
-    """Case-relative paths the utility writes. May be empty."""
+    """Case-relative paths the utility writes. May be empty.
+    Deprecated: prefer ``produces``. Kept for backward compatibility."""
 
     requires_mesh: bool
     """True when the utility needs a meshed OpenFOAM case."""
@@ -136,6 +257,93 @@ class UtilityManifest:
 
     source_path: Path
     """Absolute path to the manifest file; populated by the loader."""
+
+    positional_args: tuple[PositionalArg, ...] = ()
+    """Ordered list of positional arguments. May be empty."""
+
+    produces: tuple[ProducesEntry, ...] = ()
+    """Structured output declarations. May be empty."""
+
+
+def _parse_positional_arg(raw: object, manifest_path: Path) -> PositionalArg:
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{manifest_path}: each positional_args entry must be a TOML inline table, "
+            f"got {type(raw).__name__!r}"
+        )
+    unknown = set(raw) - _KNOWN_POSITIONAL_ARG_FIELDS
+    if unknown:
+        raise ValueError(
+            f"{manifest_path}: unknown field(s) in positional_args entry: {sorted(unknown)}"
+        )
+    for required_field in ("name", "argument_kind", "description"):
+        if required_field not in raw:
+            raise ValueError(
+                f"{manifest_path}: positional_args entry is missing {required_field!r}"
+            )
+    kind: str = raw["argument_kind"]
+    if kind not in ALLOWED_ARGUMENT_KINDS:
+        raise ValueError(
+            f"{manifest_path}: positional_args entry {raw['name']!r} has unknown "
+            f"argument_kind {kind!r}; allowed: {sorted(ALLOWED_ARGUMENT_KINDS)}"
+        )
+    return PositionalArg(
+        name=raw["name"],
+        argument_kind=kind,
+        description=raw["description"],
+    )
+
+
+def _parse_produces_entry(raw: object, manifest_path: Path) -> ProducesEntry:
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{manifest_path}: each produces entry must be a TOML inline table or table, "
+            f"got {type(raw).__name__!r}"
+        )
+    unknown = set(raw) - _KNOWN_PRODUCES_FIELDS
+    if unknown:
+        raise ValueError(
+            f"{manifest_path}: unknown field(s) in produces entry: {sorted(unknown)}"
+        )
+    for required_field in ("artifact_id", "path_pattern", "format"):
+        if required_field not in raw:
+            raise ValueError(
+                f"{manifest_path}: produces entry is missing {required_field!r}"
+            )
+    fmt: str = raw["format"]
+    if fmt not in ALLOWED_ARTIFACT_FORMATS:
+        raise ValueError(
+            f"{manifest_path}: produces entry {raw['artifact_id']!r} has unknown "
+            f"format {fmt!r}; allowed: {sorted(ALLOWED_ARTIFACT_FORMATS)}"
+        )
+    pattern: str = raw["path_pattern"]
+    # Gap B: validate placeholders at TOML-load time reusing the same validator
+    # used by DataArtifact.__post_init__ so utility-manifest authors cannot
+    # introduce a third placeholder convention.
+    try:
+        _validate_path_pattern(pattern)
+    except ValueError as exc:
+        raise ValueError(
+            f"{manifest_path}: produces entry {raw['artifact_id']!r}: {exc}"
+        ) from exc
+
+    raw_variables = raw.get("variables", [])
+    if not isinstance(raw_variables, list):
+        raise ValueError(
+            f"{manifest_path}: produces entry {raw['artifact_id']!r}: "
+            f"'variables' must be a list, got {type(raw_variables).__name__!r}"
+        )
+
+    return ProducesEntry(
+        artifact_id=raw["artifact_id"],
+        path_pattern=pattern,
+        format=fmt,
+        description=raw.get("description", ""),
+        produced_by=raw.get("produced_by", ""),
+        variables=tuple(raw_variables),
+        optional=bool(raw.get("optional", False)),
+        time_indexed=bool(raw.get("time_indexed", False)),
+    )
 
 
 def _parse_flag(raw: object, manifest_path: Path) -> UtilityFlag:
@@ -155,10 +363,25 @@ def _parse_flag(raw: object, manifest_path: Path) -> UtilityFlag:
         raise ValueError(
             f"{manifest_path}: [[flags]] entry {raw['name']!r} is missing 'description'"
         )
+    argument_kind: str = raw.get("argument_kind", "")
+    if argument_kind and argument_kind not in ALLOWED_ARGUMENT_KINDS:
+        raise ValueError(
+            f"{manifest_path}: [[flags]] entry {raw['name']!r} has unknown "
+            f"argument_kind {argument_kind!r}; allowed: {sorted(ALLOWED_ARGUMENT_KINDS)}"
+        )
+    raw_default = raw.get("default", None)
+    if raw_default is not None and not isinstance(raw_default, str):
+        raise ValueError(
+            f"{manifest_path}: [[flags]] entry {raw['name']!r}: "
+            f"'default' must be a string, got {type(raw_default).__name__!r}"
+        )
     return UtilityFlag(
         name=raw["name"],
         description=raw["description"],
         takes_value=bool(raw.get("takes_value", False)),
+        argument_kind=argument_kind,
+        required=bool(raw.get("required", False)),
+        default=raw_default,
     )
 
 
@@ -201,17 +424,48 @@ def _parse_manifest(toml_path: Path) -> UtilityManifest:
 
     flags = tuple(_parse_flag(f, toml_path) for f in raw_flags)
 
+    raw_positional = raw.get("positional_args", [])
+    if not isinstance(raw_positional, list):
+        raise ValueError(f"{toml_path}: 'positional_args' must be a TOML array")
+
+    positional_args = tuple(_parse_positional_arg(a, toml_path) for a in raw_positional)
+
+    raw_produces = raw.get("produces", [])
+    if not isinstance(raw_produces, list):
+        raise ValueError(f"{toml_path}: 'produces' must be a TOML array")
+
+    produces = tuple(_parse_produces_entry(e, toml_path) for e in raw_produces)
+
+    outputs: tuple[str, ...] = tuple(raw.get("outputs", []))
+
+    # Emit UserWarning if outputs and produces disagree (outputs has paths not
+    # mirrored in any produces entry). This is a deprecation signal — outputs
+    # is kept for backward compatibility but produces should be the authority.
+    if outputs and produces:
+        produces_paths = {e.path_pattern for e in produces}
+        disagreeing = [p for p in outputs if p not in produces_paths]
+        if disagreeing:
+            warnings.warn(
+                f"{toml_path}: 'outputs' contains path(s) {disagreeing!r} not "
+                f"mirrored in any 'produces' entry. Prefer 'produces' as the "
+                f"authoritative output declaration.",
+                UserWarning,
+                stacklevel=2,
+            )
+
     return UtilityManifest(
         name=name,
         description=raw["description"],
         purpose=raw.get("purpose", ""),
         inputs=tuple(raw.get("inputs", [])),
-        outputs=tuple(raw.get("outputs", [])),
+        outputs=outputs,
         requires_mesh=bool(raw.get("requires_mesh", True)),
         flags=flags,
         example=raw.get("example", ""),
         category=category,
         source_path=toml_path,
+        positional_args=positional_args,
+        produces=produces,
     )
 
 
