@@ -240,5 +240,110 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
         )
 
 
+class TestDictEntryStructuredConstraints(unittest.TestCase):
+    """Plan §5: DictEntry exposes four structured-constraint fields so that
+    the prose `constraints` can be migrated entry-by-entry to a form the
+    validator can evaluate.
+
+    The fields are additive (P8 additive-only policy): every existing
+    DictEntry must construct unchanged with empty defaults.
+    """
+
+    def _build_entry(self, **overrides) -> "DictEntry":  # noqa: F821 - imported below
+        from openfoam_driver.dict_entries import DictEntry
+        defaults = {
+            "driver_path": "test.path",
+            "description": "fixture",
+            "source_refs": ("ref.C",),
+        }
+        defaults.update(overrides)
+        return DictEntry(**defaults)
+
+    def test_applicable_when_defaults_empty(self) -> None:
+        entry = self._build_entry()
+        self.assertEqual(entry.applicable_when, {})
+
+    def test_forbidden_when_defaults_empty(self) -> None:
+        entry = self._build_entry()
+        self.assertEqual(entry.forbidden_when, {})
+
+    def test_required_when_defaults_empty(self) -> None:
+        entry = self._build_entry()
+        self.assertEqual(entry.required_when, {})
+
+    def test_mutually_exclusive_with_defaults_empty(self) -> None:
+        entry = self._build_entry()
+        self.assertEqual(entry.mutually_exclusive_with, ())
+
+    def test_applicable_when_accepts_value_predicate(self) -> None:
+        entry = self._build_entry(
+            applicable_when={"myocardiumSolver": "monodomainSolver"},
+        )
+        self.assertEqual(
+            entry.applicable_when, {"myocardiumSolver": "monodomainSolver"},
+        )
+
+    def test_applicable_when_accepts_value_list_predicate(self) -> None:
+        """Some constraints target multiple legal values
+        (e.g. 'manufactured ionic models X, Y, Z')."""
+        entry = self._build_entry(
+            applicable_when={
+                "ionicModel": (
+                    "monodomainFDAManufactured",
+                    "bidomainFDAManufactured",
+                    "bathBidomainFDAManufactured",
+                ),
+            },
+        )
+        self.assertEqual(len(entry.applicable_when["ionicModel"]), 3)
+
+    def test_forbidden_when_accepts_value_predicate(self) -> None:
+        entry = self._build_entry(
+            forbidden_when={"myocardiumSolver": "eikonalSolver"},
+        )
+        self.assertEqual(entry.forbidden_when["myocardiumSolver"], "eikonalSolver")
+
+    def test_required_when_accepts_value_predicate(self) -> None:
+        entry = self._build_entry(
+            required_when={"myocardiumSolver": "singleCellSolver"},
+        )
+        self.assertEqual(
+            entry.required_when["myocardiumSolver"], "singleCellSolver",
+        )
+
+    def test_mutually_exclusive_with_accepts_path_tuple(self) -> None:
+        entry = self._build_entry(
+            mutually_exclusive_with=("stimulusDurationList",),
+        )
+        self.assertEqual(entry.mutually_exclusive_with, ("stimulusDurationList",))
+
+    def test_entry_remains_frozen(self) -> None:
+        """The additive fields must not loosen the existing
+        immutability guarantee on DictEntry."""
+        import dataclasses
+        entry = self._build_entry()
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            entry.applicable_when = {"x": "y"}  # type: ignore[misc]
+
+    def test_existing_entries_in_catalog_have_empty_defaults(self) -> None:
+        """Every entry in the live catalog must still construct cleanly
+        with empty structured-constraint fields — migration is opt-in
+        per-entry, not a forced rewrite."""
+        from openfoam_driver.dict_entries import (
+            ELECTRO_PROPERTY_ENTRY_GROUPS,
+            PHYSICS_PROPERTY_ENTRIES,
+        )
+        all_entries = list(PHYSICS_PROPERTY_ENTRIES)
+        for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+            all_entries.extend(group)
+        self.assertGreater(len(all_entries), 80)  # sanity: we have 87+ today
+        for entry in all_entries:
+            # No AttributeError accessing the new fields.
+            self.assertIsInstance(entry.applicable_when, dict)
+            self.assertIsInstance(entry.forbidden_when, dict)
+            self.assertIsInstance(entry.required_when, dict)
+            self.assertIsInstance(entry.mutually_exclusive_with, tuple)
+
+
 if __name__ == "__main__":
     unittest.main()

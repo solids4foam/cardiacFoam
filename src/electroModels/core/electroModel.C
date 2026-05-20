@@ -221,6 +221,8 @@ void Foam::electroModel::writeFields(const Time& runTime)
     {
         domainSystem_.myocardium().write();
     }
+
+    domainSystem_.writePotentialDomain();
 }
 
 

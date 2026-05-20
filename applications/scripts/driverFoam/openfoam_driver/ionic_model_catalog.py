@@ -59,60 +59,31 @@ class IonicModelEntry:
     """Alternative names for this model."""
 
     recommended_ode_step: float = 1e-5
-    """Suggested ODE timestep for stable integration."""
+    """Suggested ODE timestep for stable integration. Model-specific:
+    stiff full ionic models (TNNP, ORd) need ~1e-5; phenomenological models
+    (AlievPanfilov, BuenoOrovio) tolerate larger steps."""
 
     recommended_stimulus_duration: float | None = 0.002
-    """Suggested stimulus pulse duration in milliseconds."""
+    """Default pulse duration for **volumetric (PDE) external stimulus**
+    (electroProperties.<solver>Coeffs.externalStimulus.stimulusDuration).
+    NOT a single-cell default — single-cell stim_duration is protocol-
+    specific and lives in dict_entries.py with its own typical_value."""
 
     recommended_stimulus_intensity: float | None = 80000.0
-    """Suggested stimulus current intensity in pA."""
+    """Default current density for **volumetric (PDE) external stimulus**
+    (externalStimulus.stimulusIntensity) in A/m³. NOT a single-cell default
+    — single-cell stim_amplitude varies sharply by model class (~60 pA for
+    full ionic models, ~0.4 for phenomenological) and lives in
+    dict_entries.py with model-class guidance in its notes field."""
 
     notes: str = ""
     """Additional notes or warnings."""
 
 
-SOLVER_COMPATIBILITY_RULES: Final[tuple[dict, ...]] = (
-    {
-        "myocardium_solver": "monodomainSolver",
-        "purkinje_solver": "monodomain1DSolver",
-        "required_coupler": "reactionDiffusionPvjCoupler",
-        "valid": True,
-    },
-    {
-        "myocardium_solver": "eikonalSolver",
-        "purkinje_solver": "eikonalSolver",
-        "required_coupler": "eikonalPvjCoupler",
-        "valid": True,
-    },
-    {
-        "myocardium_solver": "monodomainSolver",
-        "purkinje_solver": "eikonalSolver",
-        "required_coupler": None,
-        "valid": False,
-        "reason": "Incompatible physics: reaction-diffusion myocardium cannot couple to eikonal Purkinje",
-    },
-    {
-        "myocardium_solver": "eikonalSolver",
-        "purkinje_solver": "monodomain1DSolver",
-        "required_coupler": None,
-        "valid": False,
-        "reason": "Incompatible physics: eikonal myocardium cannot couple to reaction-diffusion Purkinje",
-    },
-    {
-        "myocardium_solver": "bidomainSolver",
-        "purkinje_solver": "*",
-        "required_coupler": None,
-        "valid": False,
-        "reason": "bidomainSolver does not support Purkinje network coupling",
-    },
-    {
-        "myocardium_solver": "singleCellSolver",
-        "purkinje_solver": "*",
-        "required_coupler": None,
-        "valid": False,
-        "reason": "singleCellSolver has no PDE domain; Purkinje coupling not applicable",
-    },
-)
+# SOLVER_COMPATIBILITY_RULES moved to openfoam_driver/solver_coupling.py;
+# re-exported here for backward compatibility with consumers that imported
+# it from this module. Prefer the new home for new imports.
+from .solver_coupling import SOLVER_COMPATIBILITY_RULES  # noqa: E402, F401
 
 
 IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {

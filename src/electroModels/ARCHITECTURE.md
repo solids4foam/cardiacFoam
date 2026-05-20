@@ -124,6 +124,9 @@ domain. Implements `electroStateDomain`.
 
 - Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 
+- Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
+  output path at OpenFOAM output times.
+
 **`ecgSolver`** — abstract ECG solver base. Registered implementations selected by the `ecgSolver` key in `electroProperties`.
 
 ### `conductionSystemDomain/`

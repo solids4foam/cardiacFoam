@@ -142,19 +142,6 @@ Foam::electrophysiologyModel::electrophysiologyModel
     );
 
     configureECGDomains();
-
-    if (electroProperties().lookupOrDefault<Switch>("writeInitialFields", false))
-    {
-        if (domainSystem_.hasPotentialDomain())
-        {
-            domainSystem_.preparePotentialDomain
-            (
-                runTime.value(),
-                runTime.deltaTValue()
-            );
-            domainSystem_.writePotentialDomain();
-        }
-    }
 }
 
 

@@ -101,6 +101,21 @@ void collectConductionCouplingDicts
     );
 }
 
+
+word myocardiumSolverType(const dictionary& electroProperties)
+{
+    if (electroProperties.found("myocardiumSolver"))
+    {
+        return word(electroProperties.lookup("myocardiumSolver"));
+    }
+
+    const word coeffDictName = electroProperties.dictName();
+
+    return coeffDictName.endsWith("Coeffs")
+      ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
+      : word("unset");
+}
+
 } // End anonymous namespace
 
 
@@ -358,21 +373,14 @@ void configureECGDomains
         }
         else if (ecgSolverType == "torsoECG")
         {
-            const word myocardiumSolverType
-            (
-                electroProperties.lookupOrDefault<word>
-                (
-                    "myocardiumSolver",
-                    "unset"
-                )
-            );
+            const word solverType(myocardiumSolverType(electroProperties));
 
-            if (myocardiumSolverType != "bidomainSolver")
+            if (solverType != "bidomainSolver")
             {
                 FatalErrorInFunction
                     << "ECG domain '" << domainName
                     << "' selects ecgSolver torsoECG, but "
-                    << "myocardiumSolver is '" << myocardiumSolverType
+                    << "myocardiumSolver is '" << solverType
                     << "'. torsoECG requires myocardiumSolver "
                     << "bidomainSolver because it samples the "
                     << "extracellular potential phiE."

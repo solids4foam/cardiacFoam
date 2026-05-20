@@ -59,5 +59,7 @@ blockMesh -dict system/blockMeshDict.1D
 ./runRegressionTest.sh
 ```
 
-Typical outputs include global `phiE`, `torsoECG.dat`, `pseudoECG.dat`,
-`manufacturedBathECG.dat`, and manufactured error summaries in `postProcessing/`.
+Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, `torsoECG.dat`,
+`pseudoECG.dat`, `manufacturedBathECG.dat`, and manufactured error summaries in
+`postProcessing/`. The global bath-potential fields are written at the normal
+OpenFOAM output times configured in `system/controlDict`.

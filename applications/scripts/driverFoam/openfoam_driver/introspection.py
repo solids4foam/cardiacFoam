@@ -16,10 +16,8 @@ from .core.runtime.registry import (
 )
 from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
-from .ionic_model_catalog import (
-    IONIC_MODEL_CATALOG,
-    SOLVER_COMPATIBILITY_RULES,
-)
+from .ionic_model_catalog import IONIC_MODEL_CATALOG
+from .solver_coupling import SOLVER_COMPATIBILITY_RULES
 from .launch import describe_launch_matrix
 from .tutorial_contracts import describe_tutorial_contract
 

@@ -542,6 +542,32 @@ def _plot_bath_ecg_errors(rows, destination: Path) -> Path | None:
     return destination
 
 
+def _plot_bath_ecg_convergence_rates(rows, destination: Path) -> Path | None:
+    if not _has_matplotlib() or not rows:
+        return None
+
+    configure_matplotlib_defaults()
+    labels = [
+        f"{row['Dimension']} {row['Solver']} {row['N_lower']}-{row['N_higher']}"
+        for row in rows
+    ]
+    x_positions = range(len(labels))
+    fig, axis = plt.subplots(figsize=(max(8, len(labels)*1.4), 5))
+    values = [row.get("rate_field_Linf", float("nan")) for row in rows]
+    axis.bar(x_positions, values, width=0.55, label="phiE")
+    axis.axhline(1.0, color="0.35", linewidth=0.8, linestyle="--")
+    axis.axhline(2.0, color="0.35", linewidth=0.8, linestyle=":")
+    axis.set_xticks(list(x_positions))
+    axis.set_xticklabels(labels, rotation=30, ha="right")
+    axis.set_ylabel("Observed rate")
+    axis.set_title("Bath-domain phiE observed convergence rates")
+    axis.grid(True, axis="y", alpha=0.25)
+    axis.legend()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    finalize_matplotlib_figure(fig, save_path=destination, show=False, close=True)
+    return destination
+
+
 def plot_vm_across_dimensions(
     rows,
     *,
@@ -740,11 +766,24 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             bath_ecg_rows,
             output_path / "bath_ecg_phiE_errors.png",
         )
+        bath_ecg_rate_plot = _plot_bath_ecg_convergence_rates(
+            bath_ecg_rate_rows,
+            output_path / "bath_ecg_phiE_convergence_rates.png",
+        )
         if bath_ecg_plot is not None:
             artifacts.append(
                 {
                     "path": str(bath_ecg_plot),
                     "label": "Bath-domain phiE errors",
+                    "kind": "plot",
+                    "format": "png",
+                }
+            )
+        if bath_ecg_rate_plot is not None:
+            artifacts.append(
+                {
+                    "path": str(bath_ecg_rate_plot),
+                    "label": "Bath-domain phiE convergence rates",
                     "kind": "plot",
                     "format": "png",
                 }

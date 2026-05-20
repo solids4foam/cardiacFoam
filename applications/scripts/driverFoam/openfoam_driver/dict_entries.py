@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final, Literal
 
 # Workflow phases used by run documents and catalog exports, in strict order.
@@ -35,6 +35,23 @@ class DictEntry:
     # enforces non-empty once classification lands. Values are drawn from
     # the ``Phase`` literal.
     phases: frozenset[str] = frozenset()
+    # Plan §5 — Structured constraints (P5a, foundation; migration in P5b).
+    # Until each entry's prose ``constraints`` is migrated to one or more
+    # of the structured fields below, the validator falls back to the
+    # English form. All four fields default to empty, so adding an entry
+    # without filling them is the additive backward-compatible case.
+    #
+    # Each ``{key: value}`` pair encodes a value predicate: the entry's
+    # applicability/forbiddenness/requiredness is gated on ``context[key]``
+    # equalling ``value`` (or appearing in the tuple when ``value`` is a
+    # tuple). Block-presence predicates use virtual keys starting with
+    # ``"$"`` (e.g. ``"$ecgDomains_present"``).
+    applicable_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
+    forbidden_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
+    required_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
+    # Sibling-key mutual exclusion. Either side may declare the relation;
+    # the validator treats it as symmetric.
+    mutually_exclusive_with: tuple[str, ...] = ()
 
 
 PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
@@ -125,6 +142,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             required=True,
             constraints=("Not applicable when myocardiumSolver=eikonalSolver.",),
+            forbidden_when={"myocardiumSolver": "eikonalSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.tissue",
@@ -137,6 +155,27 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
             required=True,
             constraints=("Not applicable when myocardiumSolver=eikonalSolver or ionicModel is a manufactured model.",),
+            # Two independent forbidden predicates; each fires independently when
+            # its own condition matches. The manufactured-model set covers all
+            # three FDA models (mono, bi, bath-bi).
+            applicable_when={
+                "myocardiumSolver": ("monodomainSolver", "bidomainSolver", "singleCellSolver"),
+                "ionicModel": (
+                    "AlievPanfilov",
+                    "BuenoOrovio",
+                    "Courtemanche",
+                    "Fabbri",
+                    "Gaur",
+                    "Grandi",
+                    "ORd",
+                    "PerisYague",
+                    "Stewart",
+                    "TNNP",
+                    "ToRORd_dynCl",
+                    "Trovato",
+                    "TWorld",
+                ),
+            },
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
@@ -161,6 +200,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=("1D", "2D", "3D"),
             required=False,
             constraints=("Only applicable for manufactured ionic models (monodomainFDAManufactured, bidomainFDAManufactured, bathBidomainFDAManufactured).",),
+            applicable_when={"ionicModel": (
+                "monodomainFDAManufactured",
+                "bidomainFDAManufactured",
+                "bathBidomainFDAManufactured",
+            )},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.writeAfterTime",
@@ -309,6 +353,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             unit="s",
             typical_value="0.0",
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1",
@@ -320,6 +365,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             unit="s",
             typical_value="1.0",
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_duration",
@@ -331,16 +377,27 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             unit="s",
             typical_value="1.0",
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude",
             phases=frozenset({"stimulus"}),
             description="Stimulus amplitude for the S1/S2 protocol.",
             source_refs=("src/genericWriter/stimulusIO.C",),
+            notes=(
+                "Magnitude is model-class dependent. Full ionic models "
+                "(TNNP, ORd, Grandi, Courtemanche, Fabbri, ...) use values "
+                "around the typical_value below in pA. Phenomenological "
+                "models (AlievPanfilov, BuenoOrovio) use dimensionless "
+                "scaled values around 0.4-1.0; see "
+                "ionic_model_catalog.IonicModelEntry.model_type to detect "
+                "this case before using typical_value verbatim."
+            ),
             value_kind="scalar",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
-            typical_value="0.4",
+            typical_value="60",
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim1",
@@ -350,6 +407,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="integer",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S2",
@@ -359,6 +417,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim2",
@@ -368,6 +427,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="integer",
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
+            required_when={"myocardiumSolver": "singleCellSolver"},
         ),
     ),
     "monodomain": (
@@ -385,6 +445,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required for monodomainSolver and eikonalSolver; not used by singleCellSolver.",),
             unit="S/m",
             typical_value="0.17",
+            required_when={"myocardiumSolver": ("monodomainSolver", "eikonalSolver")},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.chi",
@@ -399,6 +460,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
             unit="1/m",
             typical_value="140000",
+            required_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.cm",
@@ -413,6 +475,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required for monodomainSolver and bidomainSolver; not used by singleCellSolver.",),
             unit="F/m²",
             typical_value="0.01",
+            required_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.infoFrequency",
@@ -430,6 +493,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             required=False,
             constraints=("Mutually exclusive with stimulusLocationMinList.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMinList",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMax",
@@ -439,6 +505,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             required=False,
             constraints=("Mutually exclusive with stimulusLocationMaxList.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMaxList",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMinList",
@@ -448,6 +517,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3_list",
             required=False,
             constraints=("Mutually exclusive with stimulusLocationMin.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMin",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMaxList",
@@ -457,6 +529,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3_list",
             required=False,
             constraints=("Mutually exclusive with stimulusLocationMax.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMax",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTime",
@@ -466,6 +541,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             required=False,
             constraints=("Mutually exclusive with stimulusStartTimeList.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTimeList",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTimeList",
@@ -475,6 +553,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar_list",
             required=False,
             constraints=("Mutually exclusive with stimulusStartTime.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusStartTime",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDuration",
@@ -487,6 +568,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Mutually exclusive with stimulusDurationList.",),
             unit="s",
             typical_value="0.002",
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDurationList",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDurationList",
@@ -496,6 +580,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar_list",
             required=False,
             constraints=("Mutually exclusive with stimulusDuration.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDuration",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
@@ -508,6 +595,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Mutually exclusive with stimulusIntensityList.",),
             unit="A/m³",
             typical_value="50000",
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensityList",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensityList",
@@ -517,6 +607,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar_list",
             required=False,
             constraints=("Mutually exclusive with stimulusIntensity.",),
+            mutually_exclusive_with=(
+                "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity",
+            ),
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.verificationModel.type",
@@ -548,6 +641,13 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word_list",
             required=True,
             constraints=("Required when bathPotentialDomain is configured.",),
+            # Virtual key: the validator sets "$bathPotentialDomain_configured"=True
+            # when bathPotentialDomain.bathCellZones or any sibling key is present.
+            # Since we can't evaluate this without a runtime bath-presence signal,
+            # this predicate is evaluated as always-absent (no validator support yet).
+            # Kept for documentation; the required=True field check still fires
+            # unconditionally via the standard required check path.
+            required_when={"$bathPotentialDomain_configured": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.heartCellZone",
@@ -622,6 +722,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="boolean",
             required=True,
             constraints=("Required when myocardiumSolver=eikonalSolver.",),
+            required_when={"myocardiumSolver": "eikonalSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.stimulusLocationMin",
@@ -631,6 +732,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             required=True,
             constraints=("Required when myocardiumSolver=eikonalSolver.",),
+            required_when={"myocardiumSolver": "eikonalSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.stimulusLocationMax",
@@ -640,6 +742,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             required=True,
             constraints=("Required when myocardiumSolver=eikonalSolver.",),
+            required_when={"myocardiumSolver": "eikonalSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.c0",
@@ -649,6 +752,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             required=True,
             constraints=("Required when myocardiumSolver=eikonalSolver.",),
+            required_when={"myocardiumSolver": "eikonalSolver"},
         ),
     ),
     "ecg": (
@@ -664,6 +768,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            # Virtual key: set by the driver when ecgDomains sub-dict is present.
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
@@ -677,6 +783,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties. torsoECG requires bathPotentialDomain with bidomainSolver.",),
+            # The torsoECG+bidomainSolver requirement is prose-only nuance (cannot be
+            # encoded without multi-key AND across dynamic path segments).
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.reportElectrodeLookup",
@@ -688,6 +797,12 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=False,
             constraints=("Only applicable when ecgSolver=torsoECG.",),
             typical_value="true",
+            # ecgSolver lives under ecgDomains.<name>.ecgSolver — a dynamic path whose
+            # slot key contains the resolved <name> segment, which is not known
+            # statically. This constraint resists structured encoding; prose is the
+            # authoritative form.  The ecgDomains presence guard is a reasonable
+            # approximation since reportElectrodeLookup only appears inside ECG blocks.
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.enabled",
@@ -698,6 +813,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
@@ -709,6 +825,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.referenceQuadratureOrder",
@@ -719,6 +836,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.checkQuadratureOrders",
@@ -732,6 +850,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>",
@@ -743,6 +862,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when ecgDomains block is present in electroProperties.",),
+            applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.coupling.electroDomainCoupler",
@@ -757,6 +877,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when an ECG domain declares a coupling block.",),
+            # Virtual key: set when any ecgDomains.<name>.coupling block is populated.
+            # Approximated here as ecgDomains_present since the coupling block
+            # only appears inside ECG configurations.
+            applicable_when={"$ecgDomains_present": True},
         ),
     ),
     "bidomain": (
@@ -771,6 +895,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required for bidomainSolver.",),
             unit="S/m",
             typical_value="0.17",
+            required_when={"myocardiumSolver": "bidomainSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductivityExtracellular",
@@ -783,6 +908,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=("Required for bidomainSolver.",),
             unit="S/m",
             typical_value="0.62",
+            required_when={"myocardiumSolver": "bidomainSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiERefPoint",
@@ -792,6 +918,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="vector3",
             required=True,
             constraints=("Required for bidomainSolver.",),
+            required_when={"myocardiumSolver": "bidomainSolver"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceValue",
@@ -818,6 +945,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when conductionNetworkDomains block is present.",),
+            # Virtual key: set by the driver when a conductionNetworkDomains sub-dict
+            # is present in the run config. Dynamic-path entries (<name>) cannot be
+            # evaluated against literal slot keys in a flat context.
+            applicable_when={"$conductionNetworkDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile",
@@ -834,6 +965,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=True,
             constraints=("Required when a Purkinje graph is configured.",),
+            # Virtual key: set when conductionNetworkDomains block is present.
+            # Dynamic path prevents static slot-key evaluation.
+            required_when={"$conductionNetworkDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver",
@@ -852,6 +986,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("monodomain1DSolver valid only with monodomainSolver myocardium; eikonalSolver1D valid only with eikonalSolver myocardium.",),
+            # This is a pairing constraint (own value ↔ sibling myocardiumSolver value).
+            # Neither forbidden_when nor required_when can express "iff own value == X
+            # then sibling == Y" without a cross-product of own-value and sibling-value.
+            # Prose-only; no structured form added.
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.ionicModel",
@@ -885,6 +1023,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("Required when conductionSystemSolver=monodomain1DSolver.",),
+            # conductionSystemSolver lives at a dynamic path (sibling key with <name>)
+            # so its slot key in a flat context contains literal "<name>" — it will
+            # never match a real run's resolved key. Prose-only for this predicate;
+            # the virtual-key guard is a reasonable documentation placeholder.
+            required_when={"$conductionNetworkDomains_present": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.tissue",
@@ -1038,6 +1181,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=("GoktepeKuhl", "NashPanfilov"),
             required=False,
             constraints=("Only applicable when electro-mechanical coupling is configured.",),
+            # Virtual key: set when physics.type=electroMechanicalModel. The top-level
+            # "type" key is owned by PHYSICS_PROPERTY_ENTRIES; its slot key is "type".
+            applicable_when={"type": "electroMechanicalModel"},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",
@@ -1051,6 +1197,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=("Vm",),
             required=False,
             constraints=("Only applicable when activeTensionModel is configured.",),
+            # activeTensionModel slot key is "activeTensionModel.activeTensionModel"
+            # (post-prefix strip). Checking for a non-empty value signals presence.
+            applicable_when={"activeTensionModel.activeTensionModel": ("GoktepeKuhl", "NashPanfilov")},
         ),
     ),
     "domain_couplings": (
@@ -1070,6 +1219,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=False,
             constraints=("reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).",),
+            # Pairing constraint (own value ↔ pair of sibling keys across two separate
+            # domains). Not encodable as a single forbidden_when/required_when predicate
+            # without own-value introspection. Prose-only; no structured form added.
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain",
@@ -1085,6 +1237,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=True,
             constraints=("Must match a key in conductionNetworkDomains.",),
+            # Referential-integrity constraint (value must equal a key in a sibling
+            # block). Not encodable in any of the four structured families.
+            # Prose-only; no structured form added.
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj",

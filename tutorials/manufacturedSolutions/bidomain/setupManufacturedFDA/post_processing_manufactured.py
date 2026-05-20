@@ -13,6 +13,9 @@ import shutil
 import sys
 
 try:
+    import matplotlib
+
+    matplotlib.use("Agg", force=True)
     import matplotlib.pyplot as plt
 except ModuleNotFoundError:
     plt = None
@@ -41,7 +44,16 @@ from openfoam_driver.postprocessing.style import (
 )
 from openfoam_driver.core.defaults import manufactured_fda as driver_defaults
 
-RATE_FIELDS = ("Dimension", "Solver", "N_lower", "N_higher", "rate_Vm", "rate_u1", "rate_u2")
+RATE_FIELDS = (
+    "Dimension",
+    "Solver",
+    "N_lower",
+    "N_higher",
+    "rate_Vm",
+    "rate_phiE",
+    "rate_u1",
+    "rate_u2",
+)
 FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells_(explicit|implicit)")
 ECG_SUMMARY_PATTERN = re.compile(
     r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
@@ -58,8 +70,18 @@ DELTA_PATTERN = re.compile(
 )
 SOLVER_MARKERS = {"explicit": "o", "implicit": "s"}
 SOLVER_LINESTYLES = {"explicit": "-", "implicit": "--"}
-FIELD_COLORS = {"Linf_V": "tab:blue", "Linf_u1": "tab:orange", "Linf_u2": "tab:green"}
-FIELD_LABELS = {"Linf_V": "Vm", "Linf_u1": "u1", "Linf_u2": "u2"}
+FIELD_COLORS = {
+    "Linf_V": "tab:blue",
+    "Linf_phiE": "tab:orange",
+    "Linf_u1": "tab:green",
+    "Linf_u2": "tab:red",
+}
+FIELD_LABELS = {
+    "Linf_V": "Vm",
+    "Linf_phiE": "phiE",
+    "Linf_u1": "u1",
+    "Linf_u2": "u2",
+}
 DIMENSION_COLORS = {"1D": "tab:blue", "2D": "tab:orange", "3D": "tab:green"}
 SUPPORTED_ECG_POSTPROCESS_DIMENSIONS = ("3D",)
 ECG_RATE_FIELDS = (
@@ -1006,7 +1028,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
         - Solver     (explicit, implicit)
-        - Linf errors for Vm, u1, u2
+        - Linf errors for Vm, phiE, u1, u2
 
     Returns one row per file.
     """
@@ -1046,21 +1068,23 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         # Extract Linf errors
         linf_matches = re.findall(
             r"Vm\s+\S+\s+\S+\s+(\S+).*?"
+            r"phiE\s+\S+\s+\S+\s+(\S+).*?"
             r"u1\s+\S+\s+\S+\s+(\S+).*?"
             r"u2\s+\S+\s+\S+\s+(\S+)",
             content.replace("\n", " "), re.DOTALL
         )
 
         if linf_matches:
-            Linf_V, Linf_u1, Linf_u2 = map(float, linf_matches[0])
+            Linf_V, Linf_phiE, Linf_u1, Linf_u2 = map(float, linf_matches[0])
         else:
-            Linf_V = Linf_u1 = Linf_u2 = float("nan")
+            Linf_V = Linf_phiE = Linf_u1 = Linf_u2 = float("nan")
 
         data.append({
             "Dimension": dimension,
             "N": N,
             "Solver": solver,
             "Linf_V": Linf_V,
+            "Linf_phiE": Linf_phiE,
             "Linf_u1": Linf_u1,
             "Linf_u2": Linf_u2
         })
@@ -1309,7 +1333,7 @@ def group_ecg_timeseries_cases(cases):
 
 def compute_convergence_rates(rows):
     """
-    Compute convergence rates for Linf errors of Vm, u1, u2.
+    Compute convergence rates for Linf errors of Vm, phiE, u1, u2.
 
     - Groups by Dimension (if present) and Solver.
     - Sorts by N.
@@ -1338,6 +1362,7 @@ def compute_convergence_rates(rows):
                     "N_lower": N1,
                     "N_higher": N2,
                     "rate_Vm": _safe_rate(lower["Linf_V"], higher["Linf_V"], h1, h2),
+                    "rate_phiE": _safe_rate(lower["Linf_phiE"], higher["Linf_phiE"], h1, h2),
                     "rate_u1": _safe_rate(lower["Linf_u1"], higher["Linf_u1"], h1, h2),
                     "rate_u2": _safe_rate(lower["Linf_u2"], higher["Linf_u2"], h1, h2),
                 }
@@ -1384,6 +1409,54 @@ def compute_ecg_convergence_rates(rows):
             )
 
     return convergence_rows
+
+
+def plot_convergence_rates(
+    rows,
+    *,
+    save_path: str | Path | None = None,
+    show: bool = True,
+):
+    if not _has_matplotlib():
+        print("matplotlib is not available; skipping manufactured convergence-rate plot.")
+        return None
+
+    if not rows:
+        return None
+
+    configure_matplotlib_defaults()
+    labels = [
+        f"{row['Dimension']} {row['Solver']} {row['N_lower']}-{row['N_higher']}"
+        for row in rows
+    ]
+    x_positions = range(len(labels))
+    rate_fields = ("rate_Vm", "rate_phiE", "rate_u1", "rate_u2")
+    width = 0.16
+    offsets = [
+        width*(index - (len(rate_fields) - 1)/2)
+        for index in range(len(rate_fields))
+    ]
+
+    fig, ax = plt.subplots(figsize=(max(9, len(labels)*1.35), 5.5))
+    for offset, field in zip(offsets, rate_fields):
+        values = [row.get(field, float("nan")) for row in rows]
+        label = field.removeprefix("rate_")
+        ax.bar([x + offset for x in x_positions], values, width=width, label=label)
+
+    ax.axhline(1.0, color="0.35", linewidth=0.8, linestyle="--")
+    ax.axhline(2.0, color="0.35", linewidth=0.8, linestyle=":")
+    ax.set_xticks(list(x_positions))
+    ax.set_xticklabels(labels, rotation=30, ha="right")
+    style_matplotlib_axes(
+        ax,
+        title="Manufactured-solution observed convergence rates",
+        xlabel="Refinement pair",
+        ylabel="Observed rate",
+        grid_kwargs={"axis": "y", "alpha": 0.25},
+    )
+    ax.legend(ncols=4)
+    finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
+    return Path(save_path) if save_path is not None else None
 
 
 def _finalize_axis_legend(ax) -> None:
@@ -2369,7 +2442,7 @@ def plot_ecg_electrode_geometry(
 
 def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, show: bool = True):
     """
-    Plot Linf errors for Vm, u1, u2 vs N.
+    Plot Linf errors for Vm, phiE, u1, u2 vs N.
     """
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured error plot.")
@@ -2394,14 +2467,20 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
         )
         ax.loglog(
             [row["N"] for row in dimension_rows],
-            [row["Linf_u1"] for row in dimension_rows],
+            [row["Linf_phiE"] for row in dimension_rows],
             marker="s",
+            label=f"phiE ({dimension})",
+        )
+        ax.loglog(
+            [row["N"] for row in dimension_rows],
+            [row["Linf_u1"] for row in dimension_rows],
+            marker="^",
             label=f"u1 ({dimension})",
         )
         ax.loglog(
             [row["N"] for row in dimension_rows],
             [row["Linf_u2"] for row in dimension_rows],
-            marker="^",
+            marker="d",
             label=f"u2 ({dimension})",
         )
 
@@ -2800,6 +2879,11 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
         save_path=output_path / "manufactured_summary_dashboard.png",
         show=False,
     )
+    rate_plot = plot_convergence_rates(
+        convergence_rates,
+        save_path=output_path / "manufactured_convergence_rates.png",
+        show=False,
+    )
     error_plots = plot_errors_implicit_explicit(
         error_rows,
         save_dir=output_path,
@@ -2819,6 +2903,15 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             {
                 "path": str(summary_plot),
                 "label": "Manufactured summary dashboard",
+                "kind": "plot",
+                "format": "png",
+            }
+        )
+    if rate_plot is not None:
+        artifacts.append(
+            {
+                "path": str(rate_plot),
+                "label": "Manufactured convergence rates",
                 "kind": "plot",
                 "format": "png",
             }

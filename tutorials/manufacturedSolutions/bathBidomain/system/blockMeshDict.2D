@@ -23,9 +23,9 @@ vertices
 
 blocks
 (
-    hex (0 1 5 4 8 9 13 12) (20 20 1) simpleGrading (1 1 1)
-    hex (1 2 6 5 9 10 14 13) (20 20 1) simpleGrading (1 1 1)
-    hex (2 3 7 6 10 11 15 14) (20 20 1) simpleGrading (1 1 1)
+    hex (0 1 5 4 8 9 13 12) (80 80 1) simpleGrading (1 1 1)
+    hex (1 2 6 5 9 10 14 13) (80 80 1) simpleGrading (1 1 1)
+    hex (2 3 7 6 10 11 15 14) (80 80 1) simpleGrading (1 1 1)
 );
 
 boundary

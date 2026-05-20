@@ -3,12 +3,37 @@
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-# Default to 1D unless an argument selects another dimension
+# Default direct tutorial use to 1D.  When the shared driver passes
+# "parallel", the mesh has already been generated with the selected
+# system/blockMeshDict.<dimension>.
 DIM=${1:-1D}
-cp system/blockMeshDict.${DIM} system/blockMeshDict
+PARALLEL=false
 
-runApplication blockMesh
+if [[ "${DIM}" == "parallel" ]]
+then
+    DIM=""
+    PARALLEL=true
+fi
+
+if [[ "${2:-}" == "parallel" ]]
+then
+    PARALLEL=true
+fi
+
+if [[ -n "${DIM}" ]]
+then
+    cp system/blockMeshDict.${DIM} system/blockMeshDict
+    runApplication blockMesh
+fi
+
 runApplication topoSet
 runApplication setTorsoOrganConductivityField
 
-runApplication cardiacFoam
+if ${PARALLEL}
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi

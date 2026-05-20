@@ -407,6 +407,7 @@ bidomainSolverCoeffs
 
     // Optional unified extracellular-potential domain (heart + bath/torso/organs).
     // Omit this block for myocardium-only bidomain simulations.
+    // Writes phiE, sigmaTotal, and VmGlobal at normal OpenFOAM output times.
     bathPotentialDomain
     {
         // Required: cellZones treated as conductive bath, torso, or organs.

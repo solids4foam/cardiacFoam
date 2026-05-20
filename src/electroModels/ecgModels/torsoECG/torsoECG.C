@@ -104,11 +104,20 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
             scalar globalDistanceSqr = localDistanceSqr;
             reduce(globalDistanceSqr, minOp<scalar>());
 
-            electrodeCells_[electrodeI] =
+            const bool isNearest
             (
                 localNearest >= 0
              && Foam::mag(localDistanceSqr - globalDistanceSqr)
               <= max(SMALL, ROOTSMALL*max(scalar(1), globalDistanceSqr))
+            );
+
+            label ownerProc = isNearest ? Pstream::myProcNo() : Pstream::nProcs();
+            reduce(ownerProc, minOp<label>());
+
+            electrodeCells_[electrodeI] =
+            (
+                isNearest
+             && Pstream::myProcNo() == ownerProc
               ? localNearest
               : -1
             );
