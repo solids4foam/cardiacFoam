@@ -389,5 +389,155 @@ class TestPhysicsPropertiesBuilder(unittest.TestCase):
         self.assertIn("notARealModel", str(ctx.exception))
 
 
+class TestBuildAndLaunch(unittest.TestCase):
+    """build_and_launch closes the last gap between "agent can construct
+    a dict" and "agent can launch a run". It writes both dicts to a case
+    directory and invokes the engine via the generic_case spec factory.
+    """
+
+    def test_writes_both_dicts_to_case_dir(self) -> None:
+        """The dry_run=True path writes the dicts and exits without
+        running cardiacFoam, so the test never needs the binary."""
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            result = build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "singleCellSolver",
+                    "ionicModel": "AlievPanfilov",
+                    "tissue": "myocyte",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+            )
+            self.assertTrue((case_dir / "constant" / "electroProperties").exists())
+            self.assertTrue((case_dir / "constant" / "physicsProperties").exists())
+            self.assertEqual(result["case_dir"], str(case_dir))
+            self.assertEqual(result["status"], "dry_run_complete")
+
+    def test_existing_case_dir_is_not_overwritten_without_consent(self) -> None:
+        """The wrapper must refuse to clobber an existing case_dir unless
+        the caller explicitly passes `overwrite=True`."""
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            (case_dir / "constant").mkdir(parents=True)
+            (case_dir / "constant" / "electroProperties").write_text("# pre-existing\n")
+
+            with self.assertRaises(FileExistsError):
+                build_and_launch(
+                    electro_selectors={
+                        "myocardiumSolver": "singleCellSolver",
+                        "ionicModel": "AlievPanfilov",
+                        "tissue": "myocyte",
+                    },
+                    physics_selectors={"type": "electroModel"},
+                    case_dir=case_dir,
+                    dry_run=True,
+                )
+
+    def test_overwrite_true_replaces_existing_dicts(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            (case_dir / "constant").mkdir(parents=True)
+            old_text = "# pre-existing electroProperties\n"
+            (case_dir / "constant" / "electroProperties").write_text(old_text)
+
+            build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "singleCellSolver",
+                    "ionicModel": "AlievPanfilov",
+                    "tissue": "myocyte",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+                overwrite=True,
+            )
+            text = (case_dir / "constant" / "electroProperties").read_text()
+            self.assertNotEqual(text, old_text)
+            self.assertIn("myocardiumSolver singleCellSolver;", text)
+
+
+class TestBuildAndLaunchDirectRun(unittest.TestCase):
+    """build_and_launch passes solver_command='cardiacFoam' to make_spec."""
+
+    def _base_selectors(self):
+        return (
+            {"myocardiumSolver": "singleCellSolver", "ionicModel": "AlievPanfilov", "tissue": "myocyte"},
+            {"type": "electroModel"},
+        )
+
+    def test_dry_run_still_completes_without_pre_solve(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._base_selectors()
+        with tempfile.TemporaryDirectory() as d:
+            result = build_and_launch(
+                electro,
+                physics_selectors=physics,
+                case_dir=Path(d) / "case",
+                dry_run=True,
+                pre_solve_commands=["vtkUnstructuredToFoam"],
+            )
+        self.assertEqual(result["status"], "dry_run_complete")
+
+    def test_pre_solve_commands_run_before_solver(self) -> None:
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._base_selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "case"
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                build_and_launch(
+                    electro,
+                    physics_selectors=physics,
+                    case_dir=case_dir,
+                    pre_solve_commands=["vtkUnstructuredToFoam"],
+                )
+            calls = mock_run.call_args_list
+            self.assertGreaterEqual(len(calls), 2)
+            first_args = calls[0].args[0]
+            solver_args = calls[-1].args[0]
+            self.assertIn("vtkUnstructuredToFoam", first_args)
+            self.assertIn("cardiacFoam", solver_args)
+
+    def test_no_pre_solve_calls_only_solver(self) -> None:
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._base_selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "case"
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                build_and_launch(
+                    electro,
+                    physics_selectors=physics,
+                    case_dir=case_dir,
+                )
+            calls = mock_run.call_args_list
+            self.assertEqual(len(calls), 1)
+            self.assertIn("cardiacFoam", calls[0].args[0])
+
+
 if __name__ == "__main__":
     unittest.main()

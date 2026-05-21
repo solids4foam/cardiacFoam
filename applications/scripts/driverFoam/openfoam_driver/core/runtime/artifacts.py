@@ -7,11 +7,18 @@ exploring a case ahead of a real run.
 
 Design discipline (plan v2 section 3):
 
-* **Compose, do not branch.** Solver-aware logic lives in the existing
-  catalogs (``dict_entries.py``, ``ionic_model_catalog.py``,
-  ``active_tension_catalog.py``); the predictor reads them. Reimplementing
-  branching here forks the source of truth and is what the plan exists to
-  prevent.
+* **Compose, do not branch.** Solver-aware logic SHOULD live in existing
+  catalogs; the predictor reads them rather than reimplementing branching.
+  Today the predictor actively consumes
+  ``ionic_model_catalog.IONIC_MODEL_CATALOG`` (state + algebraic variables)
+  and ``specs.common.detect_ionic_export_list`` (user-declared exports).
+  Two further integrations are documented in plan §3d but not yet wired:
+
+    * ``active_tension_catalog`` — latent until the first electromechanical
+      solver handler ships (§3d-2);
+    * ``utility_catalog.UTILITY_CATALOG.produces`` — see Task 2 of the
+      autonomous-agent completion plan.
+
 * **Never raise on shape divergence.** Agents may call the predictor before
   ``apply_case`` has run, or against a partly-mutated case. Missing files,
   unknown solver names, and unknown ionic models all degrade to "return
@@ -31,19 +38,11 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from ...ionic_model_catalog import IONIC_MODEL_CATALOG
+from ...utility_catalog import UTILITY_CATALOG, ProducesEntry
 from .models import DataArtifact, TutorialSpec
 
 
 SolverHandler = Callable[[Path, TutorialSpec, "str | None"], tuple[DataArtifact, ...]]
-
-
-# Solver-provided PDE field names sourced from the C++ side (plan §3e).
-# A C++ rename means updating these constants AND the lock tests that
-# assert their presence. There is intentionally no catalog backing these
-# yet — see plan §3e for the rationale.
-_MONODOMAIN_FIELDS: tuple[str, ...] = ("Vm",)
-_BIDOMAIN_FIELDS: tuple[str, ...] = ("Vm", "phiE", "phiI")
-_EIKONAL_FIELDS: tuple[str, ...] = ("psi", "Vm")
 
 
 def _exported_ionic_variables(
@@ -57,14 +56,7 @@ def _exported_ionic_variables(
     ``recommended_exports`` when no declaration is present. Returns ``()``
     only when both the file-side declaration and the catalog entry are
     missing.
-
-    Aliasing note: declared export tokens are returned verbatim (the user
-    chose those names because that is what they want to see in the output
-    file). The catalog's ``recommended_exports`` uses C++-internal state
-    names, which may differ from the user-facing aliases. Resolving the
-    alias table is a future follow-up tracked in plan §3d-1.
     """
-    # Late import to keep specs.common off the model-load path.
     from ...specs.common import detect_ionic_export_list
 
     properties = case_root / "constant" / "electroProperties"
@@ -80,15 +72,49 @@ def _exported_ionic_variables(
     return entry.recommended_exports
 
 
+def _time_indexed_field_artifact(
+    *,
+    solver: str,
+    field_name: str,
+    ionic_model: str | None,
+    description: str,
+) -> DataArtifact:
+    """Builder for one-file-per-time-dir artifacts (the OpenFOAM AUTO_WRITE
+    convention). `solver` is the lowercase solver tag used to prefix the
+    artifact_id; `field_name` is the on-disk filename inside `<time>/`."""
+    artifact_id = f"{solver}_{field_name.lower()}_series"
+    produced_by = {
+        "monodomain": "monodomainSolver",
+        "bidomain": "bidomainSolver",
+        "eikonal": "eikonalSolver",
+        "single_cell": "singleCellSolver",
+    }[solver]
+    return DataArtifact(
+        artifact_id=artifact_id,
+        path_pattern=f"{{time}}/{field_name}",
+        format="openfoam_time_dirs",
+        variables=(field_name,),
+        description=description,
+        produced_by=produced_by,
+        time_indexed=True,
+    )
+
+
 def _predict_single_cell(
     case_root: Path, spec: TutorialSpec, ionic_model: str | None
 ) -> tuple[DataArtifact, ...]:
+    """Two outputs:
+
+    1. ``postProcessing/<ionicModel>_<tissue>_<protocolSuffix>.txt`` — the
+       OFstream-written time-series trace. Globbed via ``{case_id}_*``.
+    2. ``<time>/Vm`` — AUTO_WRITE on the 1-cell mesh.
+    """
     if ionic_model is None:
         return ()
     return (
         DataArtifact(
             artifact_id="single_cell_trace",
-            path_pattern="postProcessing/{case_id}.txt",
+            path_pattern="postProcessing/{case_id}_*.txt",
             format="csv_sweep",
             variables=_exported_ionic_variables(case_root, ionic_model),
             description=(
@@ -98,68 +124,277 @@ def _predict_single_cell(
             produced_by="singleCellSolver",
             time_indexed=False,
         ),
+        _time_indexed_field_artifact(
+            solver="single_cell",
+            field_name="Vm",
+            ionic_model=ionic_model,
+            description=f"Membrane voltage Vm on 1-cell mesh (singleCellSolver, ionicModel={ionic_model})",
+        ),
     )
 
 
 def _predict_monodomain(
     case_root: Path, spec: TutorialSpec, ionic_model: str | None
 ) -> tuple[DataArtifact, ...]:
+    """Emit one artifact per ``<time>/<field>`` written by the monodomain
+    solver: always ``<time>/Vm``, plus one per declared export token.
+    """
     if ionic_model is None:
         return ()
-    return (
-        DataArtifact(
-            artifact_id="myocardium_time_series",
-            path_pattern="{time}",
-            format="openfoam_time_dirs",
-            variables=_MONODOMAIN_FIELDS + _exported_ionic_variables(case_root, ionic_model),
-            description=(
-                f"OpenFOAM time directories containing Vm and ionic fields "
-                f"(ionicModel={ionic_model})"
-            ),
-            produced_by="monodomainSolver",
-            time_indexed=True,
-        ),
-    )
+    artifacts: list[DataArtifact] = []
+    artifacts.append(_time_indexed_field_artifact(
+        solver="monodomain",
+        field_name="Vm",
+        ionic_model=ionic_model,
+        description=f"Membrane voltage Vm (monodomainSolver, ionicModel={ionic_model})",
+    ))
+    for var in _exported_ionic_variables(case_root, ionic_model):
+        artifacts.append(_time_indexed_field_artifact(
+            solver="monodomain",
+            field_name=var,
+            ionic_model=ionic_model,
+            description=f"Ionic export {var} (monodomainSolver)",
+        ))
+    return tuple(artifacts)
 
 
 def _predict_bidomain(
     case_root: Path, spec: TutorialSpec, ionic_model: str | None
 ) -> tuple[DataArtifact, ...]:
+    """Emit one artifact per ``<time>/<field>`` written by the bidomain
+    solver: Vm + phiE + phiI plus per-export ionic vars."""
     if ionic_model is None:
         return ()
-    return (
-        DataArtifact(
-            artifact_id="myocardium_time_series",
-            path_pattern="{time}",
-            format="openfoam_time_dirs",
-            variables=_BIDOMAIN_FIELDS + _exported_ionic_variables(case_root, ionic_model),
-            description=(
-                f"OpenFOAM time directories containing Vm, phiE, phiI and "
-                f"ionic fields (ionicModel={ionic_model})"
-            ),
-            produced_by="bidomainSolver",
-            time_indexed=True,
-        ),
-    )
+    artifacts: list[DataArtifact] = []
+    for field_name, description in (
+        ("Vm", f"Membrane voltage Vm (bidomainSolver, ionicModel={ionic_model})"),
+        ("phiE", "Extracellular potential phiE (bidomainSolver)"),
+        ("phiI", "Intracellular potential phiI (bidomainSolver)"),
+    ):
+        artifacts.append(_time_indexed_field_artifact(
+            solver="bidomain",
+            field_name=field_name,
+            ionic_model=ionic_model,
+            description=description,
+        ))
+    for var in _exported_ionic_variables(case_root, ionic_model):
+        artifacts.append(_time_indexed_field_artifact(
+            solver="bidomain",
+            field_name=var,
+            ionic_model=ionic_model,
+            description=f"Ionic export {var} (bidomainSolver)",
+        ))
+    return tuple(artifacts)
 
 
 def _predict_eikonal(
     case_root: Path, spec: TutorialSpec, ionic_model: str | None
 ) -> tuple[DataArtifact, ...]:
-    """Eikonal cases do not integrate ionic cells; the ``ionic_model``
-    argument is ignored (and dict_entries.py forbids it being set when
-    myocardiumSolver=eikonalSolver)."""
+    """Emit one artifact per ``<time>/<field>`` written by eikonalSolver:
+    psi (activation time) + Vm (recovered membrane voltage). No ionic
+    exports — eikonal does not integrate cell models."""
     return (
-        DataArtifact(
-            artifact_id="activation_time_field",
-            path_pattern="{time}",
-            format="openfoam_time_dirs",
-            variables=_EIKONAL_FIELDS,
-            description="Activation time (psi) and recovered Vm from eikonalSolver",
-            produced_by="eikonalSolver",
-            time_indexed=True,
+        _time_indexed_field_artifact(
+            solver="eikonal",
+            field_name="psi",
+            ionic_model=None,
+            description="Activation time psi (eikonalSolver)",
+        ),
+        _time_indexed_field_artifact(
+            solver="eikonal",
+            field_name="Vm",
+            ionic_model=None,
+            description="Recovered membrane voltage Vm (eikonalSolver)",
         ),
     )
+
+
+def _predict_ecg(case_root: Path) -> tuple[DataArtifact, ...]:
+    """When ``ecgDomains`` block is declared, predict the ECG time-series
+    file written by the chosen ``ecgSolver``."""
+    from ...specs.common import electro_properties_has_block
+
+    properties = case_root / "constant" / "electroProperties"
+    if not properties.exists():
+        return ()
+    if not electro_properties_has_block(properties, "ecgDomains"):
+        return ()
+
+    text = properties.read_text()
+    artifacts: list[DataArtifact] = []
+    if "pseudoECG" in text:
+        artifacts.append(DataArtifact(
+            artifact_id="ecg_pseudo_ecg",
+            path_pattern="postProcessing/pseudoECG.dat",
+            format="csv_probe",
+            description="Pseudo-ECG time series at the declared electrodes",
+            produced_by="pseudoECG",
+            time_indexed=False,
+        ))
+    if "torsoECG" in text:
+        artifacts.append(DataArtifact(
+            artifact_id="ecg_torso_ecg",
+            path_pattern="postProcessing/torsoECG.dat",
+            format="csv_probe",
+            description="Torso-ECG time series at the declared electrodes",
+            produced_by="torsoECG",
+            time_indexed=False,
+        ))
+    return tuple(artifacts)
+
+
+def _predict_purkinje(case_root: Path) -> tuple[DataArtifact, ...]:
+    """When ``conductionNetworkDomains`` block is declared, predict the two
+    Purkinje outputs: the per-timestep ``.dat`` time series and the
+    per-timestep VTK series (6-digit zero-padded timeIndex; globbed with ``*``).
+    """
+    from ...specs.common import electro_properties_has_block
+
+    properties = case_root / "constant" / "electroProperties"
+    if not properties.exists():
+        return ()
+    if not electro_properties_has_block(properties, "conductionNetworkDomains"):
+        return ()
+
+    return (
+        DataArtifact(
+            artifact_id="purkinje_network_time_series",
+            path_pattern="postProcessing/purkinjeNetwork.dat",
+            format="csv_probe",
+            description=(
+                "Purkinje network time-series — node Vm, activation times, "
+                "PVJ coupling currents (one row per writeInterval)"
+            ),
+            produced_by="conductionSystemDomain",
+            time_indexed=False,
+        ),
+        DataArtifact(
+            artifact_id="purkinje_network_vtk_series",
+            path_pattern="postProcessing/purkinjeNetworkVTK/purkinjeNetwork_*.vtk",
+            format="vtk_sequence",
+            description=(
+                "Per-timestep Purkinje network VTK — one file per write step "
+                "named purkinjeNetwork_<6-digit-timeIndex>.vtk"
+            ),
+            produced_by="conductionSystemDomain",
+            time_indexed=False,
+        ),
+    )
+
+
+def _predict_verification(case_root: Path) -> tuple[DataArtifact, ...]:
+    """When ``verificationModel.type`` is declared, predict the verifier's
+    error-summary file. The exact filename encodes (dimension, cells,
+    algorithm) chosen at runtime — globbed via ``*`` since those tokens
+    aren't recoverable from electroProperties alone.
+    """
+    from ...specs.common import detect_verification_model_type
+
+    properties = case_root / "constant" / "electroProperties"
+    if not properties.exists():
+        return ()
+    verifier_type = detect_verification_model_type(properties)
+    if verifier_type is None:
+        return ()
+    return (
+        DataArtifact(
+            artifact_id="verification_error_summary",
+            path_pattern="postProcessing/*_*_cells_*.dat",
+            format="csv_probe",
+            description=(
+                f"Manufactured-solution L1/L2/Linf error norms emitted by "
+                f"{verifier_type}"
+            ),
+            produced_by=verifier_type,
+            time_indexed=False,
+        ),
+    )
+
+
+def _predict_active_tension(case_root: Path) -> tuple[DataArtifact, ...]:
+    """When an ``activeTensionModel`` block is declared, predict the
+    ``<time>/Ta`` field written by the electromechanical solver.
+
+    Variable list is driven by the declared ``outputVariables.activeTension.export``
+    block when present; otherwise falls back to the catalog's
+    ``recommended_exports`` for the named model.
+    """
+    from ...specs.common import detect_active_tension_model_name, detect_active_tension_export_list
+    from ...active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+
+    properties = case_root / "constant" / "electroProperties"
+    if not properties.exists():
+        return ()
+    at_model = detect_active_tension_model_name(properties)
+    if at_model is None:
+        return ()
+
+    declared = detect_active_tension_export_list(properties)
+    if declared is not None:
+        variables = declared
+    else:
+        entry = ACTIVE_TENSION_MODEL_CATALOG.get(at_model)
+        variables = entry.recommended_exports if entry is not None else ("Ta",)
+
+    return tuple(
+        DataArtifact(
+            artifact_id=f"active_tension_{var}_series",
+            path_pattern=f"{{time}}/{var}",
+            format="openfoam_time_dirs",
+            variables=(var,),
+            description=f"Active tension {var} (activeTensionModel={at_model})",
+            produced_by="sequentialElectroMechanical",
+            time_indexed=True,
+        )
+        for var in variables
+    )
+
+
+def _produces_entry_to_artifact(
+    entry: "ProducesEntry",
+    utility_name: str,
+) -> DataArtifact:
+    """Translate a utility manifest's ProducesEntry into a DataArtifact.
+
+    `produced_by` defaults to the utility name when the manifest leaves
+    it blank — agents need to attribute the artifact regardless.
+    """
+    return DataArtifact(
+        artifact_id=entry.artifact_id,
+        path_pattern=entry.path_pattern,
+        format=entry.format,
+        variables=entry.variables,
+        description=entry.description,
+        produced_by=entry.produced_by or utility_name,
+        optional=entry.optional,
+        time_indexed=entry.time_indexed,
+    )
+
+
+def _predict_from_workflow_utilities(spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+    """Walk spec.metadata['workflow_dag'].steps; for each step whose
+    `command` matches a utility in UTILITY_CATALOG, emit its `produces`
+    entries as DataArtifacts.
+
+    Returns ``()`` when the spec has no workflow_dag, no steps, or no
+    matching utility commands. Unknown command names (e.g. OpenFOAM
+    built-ins like ``blockMesh``) are silently skipped.
+    """
+    dag = spec.metadata.get("workflow_dag") if spec.metadata else None
+    if not dag:
+        return ()
+    steps = dag.get("steps", ())
+    if not steps:
+        return ()
+    derived: list[DataArtifact] = []
+    for step in steps:
+        command = step.get("command")
+        if not command or command not in UTILITY_CATALOG:
+            continue
+        manifest = UTILITY_CATALOG[command]
+        for produce in manifest.produces:
+            derived.append(_produces_entry_to_artifact(produce, command))
+    return tuple(derived)
 
 
 _SOLVER_HANDLERS: dict[str, SolverHandler] = {
@@ -182,18 +417,10 @@ def _merge_static_override(
 
 def _read_solver_and_ionic(case_root: Path) -> tuple[str, str | None] | None:
     """Return ``(myocardium_solver, ionic_model)`` or ``None`` if the
-    electroProperties file is missing entirely.
-
-    Imported lazily and tolerantly: agents may probe cases that don't yet
-    have a constant/electroProperties file. A missing ionicModel inside an
-    existing file is returned as ``(solver, None)`` — eikonal cases are the
-    canonical example.
-    """
+    electroProperties file is missing entirely."""
     properties = case_root / "constant" / "electroProperties"
     if not properties.exists():
         return None
-    # Local import to avoid pulling specs.common at module load time
-    # (specs.common imports subprocess and the postprocessing chain).
     from ...specs.common import (
         detect_ionic_model_name,
         detect_myocardium_solver_name,
@@ -234,7 +461,16 @@ def predict_data_artifacts(
 
     solver, ionic_model = read
     handler = _SOLVER_HANDLERS.get(solver)
-    derived: tuple[DataArtifact, ...] = (
+    solver_derived: tuple[DataArtifact, ...] = (
         handler(case_root, spec, ionic_model) if handler is not None else ()
+    )
+    utility_derived = _predict_from_workflow_utilities(spec)
+    derived = (
+        solver_derived
+        + _predict_ecg(case_root)
+        + _predict_purkinje(case_root)
+        + _predict_verification(case_root)
+        + _predict_active_tension(case_root)
+        + utility_derived
     )
     return _merge_static_override(derived, static_tuple)

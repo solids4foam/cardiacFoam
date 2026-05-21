@@ -27,6 +27,8 @@ def _normalize_case_specs(
     parallel: bool,
     touch_case_foam: bool,
     openfoam_bashrc: str | Path | None,
+    solver_command: str | None,
+    pre_solve_commands: Sequence[str | Sequence[str]],
 ) -> list[CaseConfig]:
     if cases is None:
         payload = {
@@ -36,6 +38,8 @@ def _normalize_case_specs(
             "parallel": parallel,
             "touch_case_foam": touch_case_foam,
             "openfoam_bashrc": str(openfoam_bashrc) if openfoam_bashrc is not None else None,
+            "solver_command": solver_command,
+            "pre_solve_commands": list(pre_solve_commands),
         }
         return [CaseConfig(case_id="default", params=payload)]
 
@@ -62,6 +66,8 @@ def _normalize_case_specs(
                         if item.get("openfoam_bashrc") is not None
                         else (str(openfoam_bashrc) if openfoam_bashrc is not None else None)
                     ),
+                    "solver_command": item.get("solver_command", solver_command),
+                    "pre_solve_commands": list(item.get("pre_solve_commands", pre_solve_commands)),
                 },
             )
         )
@@ -122,6 +128,32 @@ def _run_case(
     subprocess.run(command, check=True)
 
 
+def _run_direct(
+    case_root: Path,
+    setup_root: Path,
+    case: CaseConfig,
+    *,
+    solver_command: str,
+    pre_solve_commands: Sequence[str | Sequence[str]],
+    openfoam_bashrc: str | Path | None,
+) -> None:
+    del setup_root
+    env_prefix: list[str] = []
+    if openfoam_bashrc:
+        env_prefix = ["bash", "-c", f"source {openfoam_bashrc} && exec \"$@\"", "--"]
+
+    for raw_cmd in pre_solve_commands:
+        cmd = list(raw_cmd) if not isinstance(raw_cmd, str) else raw_cmd.split()
+        subprocess.run(env_prefix + cmd if env_prefix else cmd, cwd=case_root, check=True)
+
+    solver_cmd = solver_command.split() if isinstance(solver_command, str) else list(solver_command)
+    subprocess.run(
+        env_prefix + solver_cmd if env_prefix else solver_cmd,
+        cwd=case_root,
+        check=True,
+    )
+
+
 def _collect_outputs(case_root: Path, output_dir: Path, *, patterns: Sequence[str]) -> None:
     for pattern in patterns:
         collect_outputs_by_pattern(case_root, output_dir, pattern=pattern)
@@ -180,6 +212,8 @@ def make_spec(
     postprocess_tasks: Sequence[Mapping[str, Any]] | None = None,
     run_script_relpath: str | Path = RUN_CASE_SCRIPT_RELPATH,
     postprocess_strict_artifacts: bool = False,
+    solver_command: str | None = None,
+    pre_solve_commands: Sequence[str | Sequence[str]] | None = None,
 ) -> TutorialSpec:
     if not str(case_dir_name).strip():
         raise ValueError("case_dir_name cannot be empty")
@@ -205,6 +239,8 @@ def make_spec(
         parallel=parallel,
         touch_case_foam=touch_case_foam,
         openfoam_bashrc=openfoam_bashrc,
+        solver_command=solver_command,
+        pre_solve_commands=tuple(pre_solve_commands or ()),
     )
 
     return TutorialSpec(
@@ -218,10 +254,19 @@ def make_spec(
             electro_properties_relpath=electro_properties_path,
             physics_properties_relpath=physics_properties_path,
         ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
+        run_case=(
+            partial(
+                _run_direct,
+                solver_command=solver_command,
+                pre_solve_commands=tuple(pre_solve_commands or ()),
+                openfoam_bashrc=openfoam_bashrc,
+            )
+            if solver_command is not None
+            else partial(
+                _run_case,
+                tutorials_root=tutorials_root,
+                run_script_relpath=run_script_path,
+            )
         ),
         collect_outputs=(
             partial(_collect_outputs, patterns=tuple(str(item) for item in collect_patterns))
@@ -254,5 +299,7 @@ def make_spec(
             "has_default_electro_property_overrides": bool(electro_property_overrides),
             "has_default_physics_property_overrides": bool(physics_property_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
+            "solver_command": solver_command,
+            "pre_solve_commands": list(pre_solve_commands or ()),
         },
     )

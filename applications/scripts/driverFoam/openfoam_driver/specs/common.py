@@ -84,7 +84,7 @@ def detect_ionic_model_name(electro_properties_path: Path) -> str:
     )
 
 
-_IONIC_EXPORT_RE = re.compile(r"\bexport\s*\(([^)]*)\)", re.DOTALL)
+_IONIC_EXPORT_RE = re.compile(r"\bionic\s*\{[^}]*\bexport\s*\(([^)]*)\)", re.DOTALL)
 
 
 def detect_ionic_export_list(
@@ -104,6 +104,151 @@ def detect_ionic_export_list(
     text = electro_properties_path.read_text()
     cleaned = "\n".join(line.split("//", 1)[0] for line in text.splitlines())
     match = _IONIC_EXPORT_RE.search(cleaned)
+    if match is None:
+        return None
+    tokens = tuple(t for t in match.group(1).split() if t)
+    return tokens if tokens else None
+
+
+_BLOCK_DECL_RE = re.compile(
+    r"^\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?:\{|$)",
+)
+
+
+def electro_properties_has_block(
+    electro_properties_path: Path,
+    block_name: str,
+) -> bool:
+    """Return True if ``electro_properties_path`` declares a top-level
+    OpenFOAM block with the given ``block_name``.
+
+    Matches both inline (``foo { ... }``) and multi-line
+    (``foo\\n{\\n...\\n}``) declarations. Substring matches on keys named
+    similarly (e.g. ``ecgDomainsCount``) are rejected — the regex anchors
+    to a whole identifier followed by an open brace or line end.
+    """
+    text = electro_properties_path.read_text()
+    cleaned_lines = [line.split("//", 1)[0] for line in text.splitlines()]
+    for i, line in enumerate(cleaned_lines):
+        match = _BLOCK_DECL_RE.match(line)
+        if not match or match.group("name") != block_name:
+            continue
+        # The brace may be consumed by the regex (inline `foo {`) or appear
+        # after the match or on the next non-empty line.
+        if "{" in match.group(0):
+            return True
+        rest = line[match.end():].lstrip()
+        if rest.startswith("{"):
+            return True
+        for following in cleaned_lines[i + 1:]:
+            stripped = following.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("{"):
+                return True
+            break
+    return False
+
+
+def detect_verification_model_type(
+    electro_properties_path: Path,
+) -> str | None:
+    """Return the value of ``verificationModel.type`` inside the active
+    ``<solver>Coeffs`` block, or None when no verificationModel is
+    declared."""
+    scope = detect_electro_coeffs_scope(electro_properties_path)
+    in_scope = False
+    in_verification = False
+    depth = 0
+    for line in electro_properties_path.read_text().splitlines():
+        stripped = line.split("//", 1)[0].strip()
+        if not in_scope:
+            if (
+                stripped == scope
+                or stripped.startswith(f"{scope} ")
+                or stripped.startswith(f"{scope}{{")
+            ):
+                in_scope = True
+            continue
+        if "{" in stripped:
+            depth += stripped.count("{")
+        if (
+            not in_verification
+            and stripped.startswith("verificationModel")
+            and depth == 1
+        ):
+            in_verification = True
+        if in_verification and stripped.startswith("type") and depth == 2:
+            tokens = stripped.rstrip(";").split()
+            if len(tokens) >= 2:
+                return tokens[1]
+        if "}" in stripped:
+            depth -= stripped.count("}")
+            if in_verification and depth <= 1:
+                in_verification = False
+            if depth <= 0:
+                break
+    return None
+
+
+_AT_EXPORT_RE = re.compile(
+    r"\bactiveTension\s*\{[^}]*\bexport\s*\(([^)]*)\)", re.DOTALL
+)
+
+
+def detect_active_tension_model_name(
+    electro_properties_path: Path,
+) -> str | None:
+    """Return the ``activeTensionModel`` value from inside ``<solver>Coeffs``.
+
+    Enters the ``<solver>Coeffs`` block via brace-depth tracking, then enters
+    the ``activeTensionModel`` sub-block and reads the ``activeTensionModel``
+    key inside it. Returns ``None`` when no ``activeTensionModel`` block is
+    declared (coupling disabled).
+    """
+    scope = detect_electro_coeffs_scope(electro_properties_path)
+    in_scope = False
+    in_at_block = False
+    depth = 0
+    for line in electro_properties_path.read_text().splitlines():
+        stripped = line.split("//", 1)[0].strip()
+        if not in_scope:
+            if (
+                stripped == scope
+                or stripped.startswith(f"{scope} ")
+                or stripped.startswith(f"{scope}{{")
+            ):
+                in_scope = True
+            continue
+        if "{" in stripped:
+            depth += stripped.count("{")
+        if not in_at_block and stripped.startswith("activeTensionModel") and depth == 1:
+            in_at_block = True
+        if in_at_block and stripped.startswith("activeTensionModel") and depth == 2:
+            tokens = stripped.rstrip(";").split()
+            if len(tokens) >= 2:
+                return tokens[1]
+        if "}" in stripped:
+            depth -= stripped.count("}")
+            if in_at_block and depth <= 1:
+                in_at_block = False
+            if depth <= 0:
+                break
+    return None
+
+
+def detect_active_tension_export_list(
+    electro_properties_path: Path,
+) -> tuple[str, ...] | None:
+    """Return the names declared in ``outputVariables.activeTension.export ( ... )``.
+
+    Returns ``None`` when no active-tension export declaration is present.
+    Mirrors :func:`detect_ionic_export_list` but scoped to the
+    ``activeTension`` sub-block.
+    """
+    text = electro_properties_path.read_text()
+    cleaned = "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+    match = _AT_EXPORT_RE.search(cleaned)
     if match is None:
         return None
     tokens = tuple(t for t in match.group(1).split() if t)

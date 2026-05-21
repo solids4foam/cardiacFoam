@@ -67,6 +67,7 @@ class DriverEngine:
         self.run_id = f"{int(time.time())}-{uuid4().hex[:8]}"
         self.started_at_utc: str | None = None
         self.finished_at_utc: str | None = None
+        self._per_case_realized: list[dict] = []
 
     def run_simulations(self) -> list[CaseResult]:
         cases = self.spec.build_cases()
@@ -182,6 +183,19 @@ class DriverEngine:
                         "duration_s": duration,
                     },
                 )
+                # Per-case reconciliation: capture on-disk state before
+                # the next apply_case can overwrite dict files.
+                predicted_now = predict_data_artifacts(self.spec.case_root, self.spec)
+                case_report = reconcile_artifacts(
+                    self.spec.case_root, predicted_now, case_id=case.case_id,
+                )
+                self._per_case_realized.append({
+                    "case_id": case_report.case_id,
+                    "predicted_count": case_report.predicted_count,
+                    "matched_count": case_report.matched_count,
+                    "missing_count": case_report.missing_count,
+                    "artifacts": list(case_report.artifacts),
+                })
             except Exception as exc:
                 duration = time.time() - start
                 results.append(
@@ -475,26 +489,35 @@ class DriverEngine:
     )
 
     def _write_realized_manifest(self, destination_root: Path) -> Path | None:
-        """Emit the sidecar artifacts_realized.json (plan §10).
+        """Emit the sidecar artifacts_realized.json (plan §10, schema v1.1).
 
-        Called only at terminal status on non-dry runs. Walks predicted
-        artifacts and checks the on-disk reality of ``spec.case_root``.
-        Atomic via the same .tmp + os.replace pattern as the other
-        sidecars. Returns ``None`` if the realized manifest was skipped
-        (dry run or unreachable case_root)."""
+        Called only at terminal status on non-dry runs. Writes one entry
+        per case from the accumulated per-case reports, OR a single entry
+        reflecting the current on-disk state when no per-case work was
+        captured (post-only runs, single-case runs without run_simulations).
+
+        Atomic via the same .tmp + os.replace pattern as the other sidecars.
+        Returns ``None`` if skipped (dry run)."""
         if self.dry_run:
             return None
-        predicted = predict_data_artifacts(self.spec.case_root, self.spec)
-        report = reconcile_artifacts(self.spec.case_root, predicted)
+        if self._per_case_realized:
+            cases = list(self._per_case_realized)
+        else:
+            predicted = predict_data_artifacts(self.spec.case_root, self.spec)
+            report = reconcile_artifacts(self.spec.case_root, predicted, case_id=None)
+            cases = [{
+                "case_id": report.case_id,
+                "predicted_count": report.predicted_count,
+                "matched_count": report.matched_count,
+                "missing_count": report.missing_count,
+                "artifacts": list(report.artifacts),
+            }]
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "run_id": self.run_id,
-            "case_root": report.case_root,
+            "case_root": str(self.spec.case_root),
             "realized_at_utc": _utc_now(),
-            "predicted_count": report.predicted_count,
-            "matched_count": report.matched_count,
-            "missing_count": report.missing_count,
-            "artifacts": list(report.artifacts),
+            "cases": cases,
         }
         path = destination_root / "artifacts_realized.json"
         tmp = path.with_name(path.name + ".tmp")

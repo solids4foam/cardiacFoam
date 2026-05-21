@@ -152,5 +152,144 @@ class TestReportSummary(unittest.TestCase):
             self.assertEqual(report.missing_count, 2)
 
 
+class TestRealPredictorOutputShapes(unittest.TestCase):
+    """Regression tests for the 2026-05-21 audit findings:
+
+    - PDE solver predictors emit `path_pattern="{time}"` — the OpenFOAM
+      time directory itself, not a file inside it. The reconciler must
+      accept directories as matches.
+    - The single-cell predictor emits `path_pattern="postProcessing/{case_id}.txt"`.
+      With no case_id supplied, `{case_id}` becomes a glob wildcard so the
+      reconciler still finds per-case outputs across a sweep.
+    """
+
+    def test_time_directory_alone_is_a_match(self) -> None:
+        """`path_pattern="{time}"` (the monodomain predictor's actual
+        output) must match the time directory itself, reported as kind='dir'."""
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            for t in ("0", "0.001", "0.002"):
+                (case_root / t).mkdir()
+                # Each time dir has a Vm file inside — typical OpenFOAM.
+                (case_root / t / "Vm").write_bytes(b"v")
+            (case_root / "constant").mkdir()  # must be ignored
+
+            artifact = _make_artifact(
+                artifact_id="myocardium_time_series",
+                path_pattern="{time}",
+                format="openfoam_time_dirs",
+                time_indexed=True,
+            )
+            report = reconcile_artifacts(case_root, (artifact,))
+            entry = report.artifacts[0]
+            self.assertEqual(entry["status"], "matched")
+            self.assertEqual(len(entry["matched_files"]), 3)
+            for match in entry["matched_files"]:
+                self.assertEqual(match["kind"], "dir")
+                self.assertIn("entries", match)
+                self.assertGreaterEqual(match["entries"], 1)
+
+    def test_case_id_glob_matches_every_per_case_file(self) -> None:
+        """The single-cell predictor's `postProcessing/{case_id}.txt`
+        with no case_id supplied must glob across every existing per-case
+        file in postProcessing/."""
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            (case_root / "postProcessing").mkdir()
+            for name in ("TNNP_M.txt", "TNNP_epi.txt", "AlievPanfilov_myocyte.txt"):
+                (case_root / "postProcessing" / name).write_bytes(b"x")
+
+            artifact = _make_artifact(
+                artifact_id="single_cell_trace",
+                path_pattern="postProcessing/{case_id}.txt",
+                format="csv_sweep",
+            )
+            report = reconcile_artifacts(case_root, (artifact,))
+            entry = report.artifacts[0]
+            self.assertEqual(entry["status"], "matched")
+            self.assertEqual(len(entry["matched_files"]), 3)
+            for match in entry["matched_files"]:
+                self.assertEqual(match["kind"], "file")
+
+    def test_case_id_literal_substitution_when_supplied(self) -> None:
+        """When `case_id="TNNP_M"` is supplied, only the matching per-case
+        file is matched — not the others."""
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            (case_root / "postProcessing").mkdir()
+            for name in ("TNNP_M.txt", "TNNP_epi.txt", "AlievPanfilov_myocyte.txt"):
+                (case_root / "postProcessing" / name).write_bytes(b"x")
+
+            artifact = _make_artifact(
+                artifact_id="single_cell_trace",
+                path_pattern="postProcessing/{case_id}.txt",
+                format="csv_sweep",
+            )
+            report = reconcile_artifacts(
+                case_root, (artifact,), case_id="TNNP_M",
+            )
+            entry = report.artifacts[0]
+            self.assertEqual(entry["status"], "matched")
+            self.assertEqual(len(entry["matched_files"]), 1)
+            self.assertTrue(entry["matched_files"][0]["path"].endswith("TNNP_M.txt"))
+
+    def test_case_id_literal_missing_when_no_matching_file(self) -> None:
+        """case_id substituted literally but no matching file → missing."""
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            (case_root / "postProcessing").mkdir()
+            (case_root / "postProcessing" / "TNNP_M.txt").write_bytes(b"x")
+
+            artifact = _make_artifact(
+                artifact_id="single_cell_trace",
+                path_pattern="postProcessing/{case_id}.txt",
+                format="csv_sweep",
+            )
+            report = reconcile_artifacts(
+                case_root, (artifact,), case_id="not_a_real_case",
+            )
+            self.assertEqual(report.artifacts[0]["status"], "missing")
+
+    def test_case_id_field_on_report(self) -> None:
+        """The report carries the case_id used (or None for whole-run)."""
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            artifact = _make_artifact(path_pattern="absent.dat")
+            report1 = reconcile_artifacts(case_root, (artifact,))
+            report2 = reconcile_artifacts(case_root, (artifact,), case_id="c1")
+            self.assertIsNone(report1.case_id)
+            self.assertEqual(report2.case_id, "c1")
+
+
+class TestReconcilerCaseId(unittest.TestCase):
+    """The reconciler accepts an optional case_id label so per-case
+    reports can be attributed in multi-case sweeps."""
+
+    def test_case_id_is_recorded_on_report(self) -> None:
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            artifact = _make_artifact(
+                artifact_id="x", path_pattern="absent.dat", format="csv_probe",
+            )
+            report = reconcile_artifacts(case_root, (artifact,), case_id="myCase")
+            self.assertEqual(report.case_id, "myCase")
+
+    def test_default_case_id_is_none(self) -> None:
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp)
+            artifact = _make_artifact(
+                artifact_id="x", path_pattern="absent.dat", format="csv_probe",
+            )
+            report = reconcile_artifacts(case_root, (artifact,))
+            self.assertIsNone(report.case_id)
+
+
 if __name__ == "__main__":
     unittest.main()

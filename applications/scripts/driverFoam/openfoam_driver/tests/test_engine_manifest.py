@@ -675,6 +675,24 @@ class TestArtifactsRealizedManifest(unittest.TestCase):
             run_case=lambda _c, _s, _case: None,
         )
 
+    def _build_sweep_spec(self, root: Path) -> TutorialSpec:
+        """Two-case sweep variant of _build_spec."""
+        case_root = root / "case"
+        setup_root = root / "setup"
+        output_dir = root / "output"
+        case_root.mkdir()
+        setup_root.mkdir()
+        self._write_single_cell_electro_properties(case_root)
+        return TutorialSpec(
+            name="sweep",
+            case_root=case_root,
+            setup_root=setup_root,
+            output_dir=output_dir,
+            build_cases=lambda: [CaseConfig("c1", {}), CaseConfig("c2", {})],
+            apply_case=lambda _c, _case: None,
+            run_case=lambda _c, _s, _case: None,
+        )
+
     def test_artifacts_realized_written_at_terminal_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             spec = self._build_spec(Path(temp))
@@ -683,11 +701,40 @@ class TestArtifactsRealizedManifest(unittest.TestCase):
             realized = spec.output_dir / "artifacts_realized.json"
             self.assertTrue(realized.exists(), "artifacts_realized.json missing")
             payload = json.loads(realized.read_text())
-            self.assertEqual(payload["schema_version"], "1.0")
-            self.assertIn("predicted_count", payload)
-            self.assertIn("matched_count", payload)
-            self.assertIn("missing_count", payload)
-            self.assertIn("artifacts", payload)
+            self.assertEqual(payload["schema_version"], "1.1")
+            self.assertIn("cases", payload)
+            self.assertGreaterEqual(len(payload["cases"]), 1)
+            first = payload["cases"][0]
+            self.assertIn("predicted_count", first)
+            self.assertIn("matched_count", first)
+            self.assertIn("missing_count", first)
+            self.assertIn("artifacts", first)
+
+    def test_realized_manifest_has_one_entry_per_case_in_sweep(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_sweep_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            realized = json.loads(
+                (spec.output_dir / "artifacts_realized.json").read_text()
+            )
+            self.assertEqual(realized["schema_version"], "1.1")
+            self.assertIn("cases", realized)
+            case_ids = [c["case_id"] for c in realized["cases"]]
+            self.assertEqual(case_ids, ["c1", "c2"])
+
+    def test_single_case_run_still_emits_cases_array(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            realized = json.loads(
+                (spec.output_dir / "artifacts_realized.json").read_text()
+            )
+            self.assertEqual(realized["schema_version"], "1.1")
+            self.assertIn("cases", realized)
+            self.assertEqual(len(realized["cases"]), 1)
+            self.assertEqual(realized["cases"][0]["case_id"], "only")
 
     def test_run_manifest_records_artifacts_realized_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

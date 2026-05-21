@@ -12,6 +12,7 @@ is validator-clean.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from openfoam_driver.dict_entries import (
@@ -427,3 +428,93 @@ def build_physics_properties(
             body_lines.append(f"{key} {populated[key]};")
     body = "\n".join(body_lines) + "\n"
     return _foamfile_preamble("physicsProperties") + "\n" + body
+
+
+def build_and_launch(
+    electro_selectors: dict[str, str],
+    *,
+    physics_selectors: dict[str, str],
+    case_dir: "Path",
+    electro_overrides: "dict[str, str] | None" = None,
+    physics_overrides: "dict[str, str] | None" = None,
+    overwrite: bool = False,
+    dry_run: bool = False,
+    pre_solve_commands: "Sequence[str | Sequence[str]] | None" = None,
+    openfoam_bashrc: "str | Path | None" = None,
+) -> dict:
+    """Build both dicts, write them to ``case_dir/constant/``, and (if
+    not dry_run) launch the engine on the resulting case.
+
+    Args:
+        electro_selectors: selectors for build_electro_properties.
+        physics_selectors: selectors for build_physics_properties.
+        case_dir: target case directory. Will be created if absent.
+        electro_overrides / physics_overrides: optional overrides per
+            builder semantics.
+        overwrite: when False (default), an existing
+            ``case_dir/constant/electroProperties`` raises FileExistsError.
+        dry_run: when True, writes the dicts and returns without
+            running the engine.
+        pre_solve_commands: optional commands to run in ``case_dir`` before
+            ``cardiacFoam``. Each item is a string (shell-split) or a list of
+            strings. Example: ``["vtkUnstructuredToFoam",
+            "setTorsoOrganConductivityField"]``.
+        openfoam_bashrc: when set, each command is run after sourcing this
+            OpenFOAM bashrc.
+
+    Returns:
+        A dict carrying ``case_dir`` (str) and either
+        ``status="dry_run_complete"`` or the engine result list under
+        ``results``.
+
+    Raises:
+        FileExistsError: case_dir/constant/electroProperties exists and
+            overwrite=False.
+        ValueError: validator rejected one of the synthesized dicts.
+    """
+    from pathlib import Path as _Path
+
+    case_dir = _Path(case_dir)
+    constant_dir = case_dir / "constant"
+    electro_path = constant_dir / "electroProperties"
+    physics_path = constant_dir / "physicsProperties"
+
+    if electro_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"{electro_path} already exists; pass overwrite=True to replace."
+        )
+
+    electro_text = build_electro_properties(
+        electro_selectors, overrides=electro_overrides,
+    )
+    physics_text = build_physics_properties(
+        physics_selectors, overrides=physics_overrides,
+    )
+
+    constant_dir.mkdir(parents=True, exist_ok=True)
+    electro_path.write_text(electro_text)
+    physics_path.write_text(physics_text)
+
+    if dry_run:
+        return {"case_dir": str(case_dir), "status": "dry_run_complete"}
+
+    from openfoam_driver.specs.tutorials.generic_case import make_spec
+    from openfoam_driver.core.runtime.engine import DriverEngine
+
+    spec = make_spec(
+        tutorials_root=case_dir.parent,
+        case_dir_name=case_dir.name,
+        solver_command="cardiacFoam",
+        pre_solve_commands=list(pre_solve_commands or ()),
+        openfoam_bashrc=openfoam_bashrc,
+    )
+    engine = DriverEngine(spec=spec, requested_action="sim")
+    results = engine.run_simulations()
+    return {
+        "case_dir": str(case_dir),
+        "status": "complete",
+        "results": [
+            {"case_id": r.case_id, "status": r.status, "duration_s": r.duration_s}
+            for r in results
+        ],
+    }

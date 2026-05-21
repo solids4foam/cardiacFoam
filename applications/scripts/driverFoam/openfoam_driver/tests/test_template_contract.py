@@ -217,5 +217,97 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             [path for path in documented if any(fragment in path for fragment in forbidden_fragments)]
         )
 
+class TestMakeSpecDirectRun(unittest.TestCase):
+    """make_spec with solver_command uses _run_direct, not _run_case (Allrun)."""
+
+    def test_spec_accepts_solver_command(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "mycase"
+            case_dir.mkdir()
+            spec = make_spec(
+                tutorials_root=Path(d),
+                case_dir_name="mycase",
+                solver_command="cardiacFoam",
+            )
+            self.assertIsNotNone(spec)
+
+    def test_spec_accepts_pre_solve_commands(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "mycase"
+            case_dir.mkdir()
+            spec = make_spec(
+                tutorials_root=Path(d),
+                case_dir_name="mycase",
+                solver_command="cardiacFoam",
+                pre_solve_commands=["vtkUnstructuredToFoam", "setTorsoOrganConductivityField"],
+            )
+            self.assertIsNotNone(spec)
+
+    def test_run_direct_calls_pre_solve_then_solver(self) -> None:
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "mycase"
+            case_dir.mkdir()
+            spec = make_spec(
+                tutorials_root=Path(d),
+                case_dir_name="mycase",
+                solver_command="cardiacFoam",
+                pre_solve_commands=["vtkUnstructuredToFoam"],
+            )
+            case = spec.build_cases()[0]
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                spec.run_case(case_dir, case_dir, case)
+            calls = mock_run.call_args_list
+            self.assertEqual(len(calls), 2)
+            first_cmd = calls[0].args[0]
+            second_cmd = calls[1].args[0]
+            self.assertIn("vtkUnstructuredToFoam", first_cmd)
+            self.assertIn("cardiacFoam", second_cmd)
+
+    def test_run_direct_skips_pre_solve_when_none(self) -> None:
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "mycase"
+            case_dir.mkdir()
+            spec = make_spec(
+                tutorials_root=Path(d),
+                case_dir_name="mycase",
+                solver_command="cardiacFoam",
+            )
+            case = spec.build_cases()[0]
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                spec.run_case(case_dir, case_dir, case)
+            calls = mock_run.call_args_list
+            self.assertEqual(len(calls), 1)
+            self.assertIn("cardiacFoam", calls[0].args[0])
+
+    def test_metadata_records_solver_command(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "mycase"
+            case_dir.mkdir()
+            spec = make_spec(
+                tutorials_root=Path(d),
+                case_dir_name="mycase",
+                solver_command="cardiacFoam",
+                pre_solve_commands=["vtkUnstructuredToFoam"],
+            )
+            self.assertEqual(spec.metadata["solver_command"], "cardiacFoam")
+            self.assertEqual(spec.metadata["pre_solve_commands"], ["vtkUnstructuredToFoam"])
+
+
 if __name__ == "__main__":
     unittest.main()

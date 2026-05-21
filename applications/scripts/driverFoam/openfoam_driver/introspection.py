@@ -353,7 +353,7 @@ def _manifest_schema() -> dict[str, Any]:
             "error": "string | null — top-level error message if run failed early",
             "plots_manifest_path": "string | null — path to plots.json if postprocess produced plots",
             "artifacts_manifest_path": "string | null — path to artifacts_manifest.json (predicted DataArtifacts for the current case state; v2.2+)",
-            "artifacts_realized_path": "string | null — path to artifacts_realized.json (predicted-vs-actual reconciliation; written only at terminal status on non-dry runs; v2.3+)",
+            "artifacts_realized_path": "string | null — path to artifacts_realized.json (v1.1: cases[] array, one entry per sweep case; predicted-vs-actual reconciliation; written only at terminal status on non-dry runs; v2.3+)",
             "human_report_path": "string — path to run_report.md",
             "results": "array of CaseResult objects — see case_result_fields",
         },

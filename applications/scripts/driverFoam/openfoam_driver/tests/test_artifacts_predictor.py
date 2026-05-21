@@ -77,7 +77,8 @@ class TestPredictorSingleCell(unittest.TestCase):
     def test_emits_artifact_with_variables_from_catalog(self) -> None:
         """AlievPanfilov advertises states ('u', 'recovery_r') in the ionic
         model catalog — the predictor must source variables from there
-        rather than redefining them locally."""
+        rather than redefining them locally. After the 2026-05-21 refactor
+        the path_pattern globs the C++-side protocol suffix."""
         with tempfile.TemporaryDirectory() as temp:
             case_root = Path(temp) / "case"
             case_root.mkdir()
@@ -87,11 +88,17 @@ class TestPredictorSingleCell(unittest.TestCase):
             spec = _make_spec(case_root)
 
             artifacts = predict_data_artifacts(case_root, spec)
-            self.assertEqual(len(artifacts), 1)
-            (artifact,) = artifacts
-            self.assertEqual(artifact.produced_by, "singleCellSolver")
-            self.assertIn("u", artifact.variables)
-            self.assertIn("recovery_r", artifact.variables)
+            ids = {a.artifact_id for a in artifacts}
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertEqual(trace.produced_by, "singleCellSolver")
+            self.assertEqual(
+                trace.path_pattern,
+                "postProcessing/{case_id}_*.txt",
+            )
+            self.assertIn("u", trace.variables)
+            self.assertIn("recovery_r", trace.variables)
+            # Time-indexed Vm artifact must also be present.
+            self.assertIn("single_cell_vm_series", ids)
 
     def test_variables_change_with_ionic_model(self) -> None:
         """Convergence guard: the predictor must return different variables
@@ -106,19 +113,43 @@ class TestPredictorSingleCell(unittest.TestCase):
             _write_single_cell_electro_properties(case_a, ionic_model="TNNP")
             _write_single_cell_electro_properties(case_b, ionic_model="AlievPanfilov")
 
-            (artifact_tnnp,) = predict_data_artifacts(case_a, _make_spec(case_a))
-            (artifact_ap,) = predict_data_artifacts(case_b, _make_spec(case_b))
+            artifacts_tnnp = predict_data_artifacts(case_a, _make_spec(case_a))
+            artifacts_ap = predict_data_artifacts(case_b, _make_spec(case_b))
+
+            trace_tnnp = next(a for a in artifacts_tnnp if a.artifact_id == "single_cell_trace")
+            trace_ap = next(a for a in artifacts_ap if a.artifact_id == "single_cell_trace")
 
             self.assertNotEqual(
-                set(artifact_tnnp.variables), set(artifact_ap.variables),
+                set(trace_tnnp.variables), set(trace_ap.variables),
                 "predictor returned identical variables for two different "
                 "ionic models — catalog consultation is broken",
             )
             # TNNP.recommended_exports references a calcium variable;
             # AlievPanfilov has no calcium.
-            self.assertIn("calcium_Cai", artifact_tnnp.variables)
+            self.assertIn("calcium_Cai", trace_tnnp.variables)
 
-    def test_unknown_ionic_model_returns_empty_variables(self) -> None:
+    def test_single_cell_also_emits_time_indexed_vm_field(self) -> None:
+        """singleCellSolver writes <time>/Vm via AUTO_WRITE (1-cell mesh).
+        The predictor must emit a separate time-indexed artifact for it,
+        alongside the `postProcessing/*_*_*.txt` trace."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_single_cell_electro_properties(
+                case_root, ionic_model="AlievPanfilov"
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("single_cell_trace", ids)
+            self.assertIn("single_cell_vm_series", ids)
+            vm_artifact = next(
+                a for a in artifacts if a.artifact_id == "single_cell_vm_series"
+            )
+            self.assertEqual(vm_artifact.path_pattern, "{time}/Vm")
+            self.assertTrue(vm_artifact.time_indexed)
+
+    def test_unknown_ionic_model_returns_only_vm_and_empty_trace(self) -> None:
         """The predictor must not raise on a model name absent from the
         catalog — agents may mutate dicts to an as-yet-undefined model."""
         with tempfile.TemporaryDirectory() as temp:
@@ -130,9 +161,10 @@ class TestPredictorSingleCell(unittest.TestCase):
             spec = _make_spec(case_root)
 
             artifacts = predict_data_artifacts(case_root, spec)
-            self.assertEqual(len(artifacts), 1)
-            (artifact,) = artifacts
-            self.assertEqual(artifact.variables, ())
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("single_cell_trace", ids)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertEqual(trace.variables, ())
 
 
 class TestPredictorMergesStaticOverride(unittest.TestCase):
@@ -163,9 +195,9 @@ class TestPredictorMergesStaticOverride(unittest.TestCase):
             case_root.mkdir()
             _write_single_cell_electro_properties(case_root)
 
-            # Discover what the derived artifact_id is, then collide on it.
+            # Discover what the derived artifact_ids are, then collide on one.
             derived = predict_data_artifacts(case_root, _make_spec(case_root))
-            self.assertEqual(len(derived), 1)
+            self.assertGreater(len(derived), 0)
             colliding_id = derived[0].artifact_id
 
             static = DataArtifact(
@@ -243,16 +275,13 @@ class TestPredictorMonodomain(unittest.TestCase):
             spec = _make_spec(case_root)
 
             artifacts = predict_data_artifacts(case_root, spec)
-            self.assertEqual(len(artifacts), 1)
-            (artifact,) = artifacts
-            self.assertEqual(artifact.produced_by, "monodomainSolver")
-            self.assertEqual(artifact.format, "openfoam_time_dirs")
-            self.assertTrue(artifact.time_indexed)
-            self.assertIn("Vm", artifact.variables)
-            # Catalog-sourced: TNNP.recommended_exports has calcium_Cai;
-            # this proves the variables come from the catalog rather than
-            # hard-coded in the handler.
-            self.assertIn("calcium_Cai", artifact.variables)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("monodomain_vm_series", ids)
+            self.assertIn("monodomain_calcium_cai_series", ids)
+            for a in artifacts:
+                self.assertTrue(a.time_indexed, f"{a.artifact_id} not time-indexed")
+                self.assertEqual(a.produced_by, "monodomainSolver")
+                self.assertEqual(a.format, "openfoam_time_dirs")
 
     def test_pattern_uses_time_placeholder(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -262,9 +291,12 @@ class TestPredictorMonodomain(unittest.TestCase):
                 case_root, solver="monodomainSolver", ionic_model="AlievPanfilov"
             )
             spec = _make_spec(case_root)
-
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            self.assertIn("{time}", artifact.path_pattern)
+            artifacts = predict_data_artifacts(case_root, spec)
+            for a in artifacts:
+                self.assertTrue(
+                    a.path_pattern.startswith("{time}/"),
+                    f"{a.artifact_id}: {a.path_pattern}",
+                )
 
 
 class TestPredictorBidomain(unittest.TestCase):
@@ -276,28 +308,33 @@ class TestPredictorBidomain(unittest.TestCase):
                 case_root, solver="bidomainSolver", ionic_model="TNNP"
             )
             spec = _make_spec(case_root)
-
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            self.assertEqual(artifact.produced_by, "bidomainSolver")
-            self.assertIn("Vm", artifact.variables)
-            self.assertIn("phiE", artifact.variables)
-            self.assertIn("phiI", artifact.variables)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("bidomain_vm_series", ids)
+            self.assertIn("bidomain_phie_series", ids)
+            self.assertIn("bidomain_phii_series", ids)
+            self.assertIn("bidomain_calcium_cai_series", ids)
+            for a in artifacts:
+                self.assertEqual(a.produced_by, "bidomainSolver")
+                self.assertTrue(a.path_pattern.startswith("{time}/"))
 
 
 class TestPredictorEikonal(unittest.TestCase):
     def test_emits_psi_field_without_ionic_model_lookup(self) -> None:
         """Eikonal cases do not declare ionicModel — the predictor must
-        produce a sensible artifact regardless (no KeyError fallthrough)."""
+        produce exactly psi + Vm per-variable artifacts."""
         with tempfile.TemporaryDirectory() as temp:
             case_root = Path(temp) / "case"
             case_root.mkdir()
             _write_eikonal_electro_properties(case_root)
             spec = _make_spec(case_root)
 
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            self.assertEqual(artifact.produced_by, "eikonalSolver")
-            self.assertIn("psi", artifact.variables)
-            self.assertIn("Vm", artifact.variables)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertEqual(ids, {"eikonal_psi_series", "eikonal_vm_series"})
+            for a in artifacts:
+                self.assertEqual(a.produced_by, "eikonalSolver")
+                self.assertTrue(a.path_pattern.startswith("{time}/"))
 
 
 class TestPredictorExportListFiltering(unittest.TestCase):
@@ -317,9 +354,13 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 export_list=("u1", "u2", "u3"),
             )
             spec = _make_spec(case_root)
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            # Solver-provided Vm is always present; ionic part filtered.
-            self.assertEqual(artifact.variables, ("Vm", "u1", "u2", "u3"))
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            # Per-variable: Vm always + each declared export.
+            self.assertIn("monodomain_vm_series", ids)
+            self.assertIn("monodomain_u1_series", ids)
+            self.assertIn("monodomain_u2_series", ids)
+            self.assertIn("monodomain_u3_series", ids)
 
     def test_export_list_overrides_catalog_states_for_bidomain(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -332,10 +373,13 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 export_list=("V", "Cai"),
             )
             spec = _make_spec(case_root)
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            self.assertEqual(
-                artifact.variables, ("Vm", "phiE", "phiI", "V", "Cai"),
-            )
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("bidomain_vm_series", ids)
+            self.assertIn("bidomain_phie_series", ids)
+            self.assertIn("bidomain_phii_series", ids)
+            self.assertIn("bidomain_v_series", ids)
+            self.assertIn("bidomain_cai_series", ids)
 
     def test_export_list_overrides_catalog_for_single_cell(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -357,10 +401,9 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            # singleCell has no solver-provided PDE prefix; export list is
-            # the entire variable set.
-            self.assertEqual(artifact.variables, ("Vm", "s"))
+            artifacts = predict_data_artifacts(case_root, spec)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertEqual(trace.variables, ("Vm", "s"))
 
     def test_missing_export_list_falls_back_to_recommended_exports(self) -> None:
         """AlievPanfilov.recommended_exports = ('u', 'recovery_r') in
@@ -373,8 +416,9 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 case_root, ionic_model="AlievPanfilov"
             )
             spec = _make_spec(case_root)
-            (artifact,) = predict_data_artifacts(case_root, spec)
-            self.assertEqual(artifact.variables, ("u", "recovery_r"))
+            artifacts = predict_data_artifacts(case_root, spec)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertEqual(trace.variables, ("u", "recovery_r"))
 
 
 class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):
@@ -401,13 +445,13 @@ class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):
             spec = _make_spec(case_root, expected_artifacts=(error_norm,))
 
             artifacts = predict_data_artifacts(case_root, spec)
-            by_id = {a.artifact_id: a for a in artifacts}
-            self.assertIn("myocardium_time_series", by_id)
-            self.assertIn("exact_error_norm", by_id)
-            # Derived artifact gets catalog variables for the manufactured model.
-            derived = by_id["myocardium_time_series"]
-            self.assertEqual(derived.produced_by, "monodomainSolver")
-            self.assertIn("Vm", derived.variables)
+            derived_ids = {a.artifact_id for a in artifacts}
+            # Derived: per-variable artifacts named with the monodomain_ prefix.
+            self.assertTrue(
+                any(i.startswith("monodomain_") for i in derived_ids),
+                f"expected at least one monodomain_* derived artifact, got: {derived_ids}",
+            )
+            self.assertIn("exact_error_norm", derived_ids)
 
 
 class TestPredictorPathPatternContract(unittest.TestCase):
@@ -489,6 +533,359 @@ class TestPredictorGracefulFallback(unittest.TestCase):
 
             artifacts = predict_data_artifacts(case_root, spec)
             self.assertEqual(artifacts, ())
+
+
+class TestPredictorECG(unittest.TestCase):
+    """When ecgDomains is declared in electroProperties, the predictor
+    must add an ECG time-series artifact pointing at the writer's output
+    file (`postProcessing/{pseudoECG,torsoECG}.dat`)."""
+
+    def test_pseudo_ecg_is_predicted_when_block_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "myocardiumSolver bidomainSolver;\n"
+                "bidomainSolverCoeffs\n{\n"
+                "    ionicModel TNNP;\n"
+                "}\n"
+                "ecgDomains\n{\n"
+                "    myECG\n    {\n"
+                "        ecgSolver pseudoECG;\n"
+                "    }\n"
+                "}\n"
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("ecg_pseudo_ecg", ids)
+            ecg = next(a for a in artifacts if a.artifact_id == "ecg_pseudo_ecg")
+            self.assertEqual(ecg.path_pattern, "postProcessing/pseudoECG.dat")
+            self.assertEqual(ecg.format, "csv_probe")
+
+    def test_torso_ecg_is_predicted_when_block_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "myocardiumSolver bidomainSolver;\n"
+                "bidomainSolverCoeffs\n{\n"
+                "    ionicModel TNNP;\n"
+                "}\n"
+                "ecgDomains\n{\n"
+                "    myECG\n    {\n"
+                "        ecgSolver torsoECG;\n"
+                "    }\n"
+                "}\n"
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("ecg_torso_ecg", ids)
+
+    def test_no_ecg_when_block_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root, solver="bidomainSolver", ionic_model="TNNP",
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertNotIn("ecg_pseudo_ecg", ids)
+            self.assertNotIn("ecg_torso_ecg", ids)
+
+
+class TestPredictorPurkinje(unittest.TestCase):
+    """When conductionNetworkDomains is declared, the predictor must
+    add the Purkinje time-series and VTK series artifacts."""
+
+    def test_purkinje_artifacts_emitted_when_block_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "myocardiumSolver monodomainSolver;\n"
+                "monodomainSolverCoeffs\n{\n"
+                "    ionicModel TNNP;\n"
+                "}\n"
+                "conductionNetworkDomains\n{\n"
+                "    purk\n    {\n"
+                "        purkinjeGraphModelCoeffs\n        {\n"
+                "            conductionSystemSolver monodomain1DSolver;\n"
+                "            graphFile purkinjeGraph;\n"
+                "        }\n"
+                "    }\n"
+                "}\n"
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("purkinje_network_time_series", ids)
+            self.assertIn("purkinje_network_vtk_series", ids)
+            vtk = next(
+                a for a in artifacts
+                if a.artifact_id == "purkinje_network_vtk_series"
+            )
+            self.assertEqual(
+                vtk.path_pattern,
+                "postProcessing/purkinjeNetworkVTK/purkinjeNetwork_*.vtk",
+            )
+
+    def test_no_purkinje_when_block_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root, solver="monodomainSolver", ionic_model="TNNP",
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertNotIn("purkinje_network_time_series", ids)
+            self.assertNotIn("purkinje_network_vtk_series", ids)
+
+
+class TestPredictorVerification(unittest.TestCase):
+    """When verificationModel.type is declared, predict the verifier's
+    error-summary .dat output."""
+
+    def test_manufactured_fda_monodomain_verifier_is_predicted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "myocardiumSolver monodomainSolver;\n"
+                "monodomainSolverCoeffs\n{\n"
+                "    ionicModel monodomainFDAManufactured;\n"
+                "    verificationModel\n    {\n"
+                "        type manufacturedFDAMonodomainVerifier;\n"
+                "    }\n"
+                "}\n"
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            self.assertIn("verification_error_summary", ids)
+            verify = next(
+                a for a in artifacts
+                if a.artifact_id == "verification_error_summary"
+            )
+            self.assertTrue(
+                verify.path_pattern.startswith("postProcessing/")
+                and verify.path_pattern.endswith(".dat"),
+                verify.path_pattern,
+            )
+            self.assertIn("*", verify.path_pattern)
+
+    def test_no_verification_when_block_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root, solver="monodomainSolver", ionic_model="TNNP",
+            )
+            spec = _make_spec(case_root)
+            ids = {a.artifact_id for a in predict_data_artifacts(case_root, spec)}
+            self.assertNotIn("verification_error_summary", ids)
+
+
+class TestPredictorComposesUtilityProduces(unittest.TestCase):
+    """Plan §11/Task 2: when a spec's workflow_dag declares utility steps,
+    the predictor merges every matching utility's `produces` entries into
+    its output.
+    """
+
+    def test_workflow_dag_utility_step_contributes_produces(self) -> None:
+        """A monodomain spec whose workflow_dag includes
+        `setTorsoOrganConductivityField` (a real migrated utility) must
+        carry that utility's produces entries in the predicted set."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root,
+                solver="monodomainSolver",
+                ionic_model="TNNP",
+            )
+            spec = _make_spec(case_root)
+            # Inject a workflow_dag step naming a real utility from
+            # UTILITY_CATALOG. setTorsoOrganConductivityField is migrated
+            # under P11a and declares produces.
+            spec_with_dag = TutorialSpec(
+                name=spec.name,
+                case_root=spec.case_root,
+                setup_root=spec.setup_root,
+                output_dir=spec.output_dir,
+                build_cases=spec.build_cases,
+                apply_case=spec.apply_case,
+                run_case=spec.run_case,
+                metadata={
+                    "workflow_dag": {
+                        "steps": [
+                            {"id": "solve", "command": "cardiacFoam",
+                             "depends_on": []},
+                            {"id": "setConductivity",
+                             "command": "setTorsoOrganConductivityField",
+                             "depends_on": ["solve"]},
+                        ],
+                    },
+                },
+            )
+
+            artifacts = predict_data_artifacts(case_root, spec_with_dag)
+            ids = {a.artifact_id for a in artifacts}
+            # The migrated setTorsoOrganConductivityField manifest declares
+            # produces entries — at least one should appear.
+            # (The exact artifact_id depends on the migrated TOML; assert
+            # the produced_by field instead which is stable.)
+            produced_by_utility = [
+                a for a in artifacts
+                if a.produced_by == "setTorsoOrganConductivityField"
+            ]
+            self.assertGreater(
+                len(produced_by_utility), 0,
+                f"expected at least one produces entry from "
+                f"setTorsoOrganConductivityField; got ids: {ids}",
+            )
+
+    def test_unknown_utility_in_dag_is_silently_skipped(self) -> None:
+        """If workflow_dag mentions a command that isn't in UTILITY_CATALOG
+        (e.g. `blockMesh`, which is an OpenFOAM built-in, not a cardiacFoam
+        utility), the predictor proceeds without error."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root, solver="monodomainSolver", ionic_model="TNNP",
+            )
+            base = _make_spec(case_root)
+            spec_with_dag = TutorialSpec(
+                name=base.name,
+                case_root=base.case_root,
+                setup_root=base.setup_root,
+                output_dir=base.output_dir,
+                build_cases=base.build_cases,
+                apply_case=base.apply_case,
+                run_case=base.run_case,
+                metadata={
+                    "workflow_dag": {
+                        "steps": [
+                            {"id": "mesh", "command": "blockMesh",
+                             "depends_on": []},
+                        ],
+                    },
+                },
+            )
+            # Must not raise — predictor returns whatever the solver
+            # handler produced, without any blockMesh contribution.
+            artifacts = predict_data_artifacts(case_root, spec_with_dag)
+            self.assertGreater(len(artifacts), 0)
+            produced_by_blockmesh = [
+                a for a in artifacts if a.produced_by == "blockMesh"
+            ]
+            self.assertEqual(produced_by_blockmesh, [])
+
+    def test_no_workflow_dag_means_no_utility_artifacts(self) -> None:
+        """Specs without workflow_dag (legacy / minimal) still work; the
+        utility composition is a no-op."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root, solver="monodomainSolver", ionic_model="TNNP",
+            )
+            spec = _make_spec(case_root)  # _make_spec gives no workflow_dag
+            artifacts = predict_data_artifacts(case_root, spec)
+            # All artifacts must be from the solver handler, none from
+            # a utility.
+            for a in artifacts:
+                self.assertNotIn(
+                    a.produced_by, ("setTorsoOrganConductivityField",
+                                    "sweepCurrents", "ionicHeterogeneityProbe"),
+                )
+
+
+class TestPredictorActiveTension(unittest.TestCase):
+    """_predict_active_tension fires for monodomain+AT cases and is suppressed
+    when no activeTensionModel block is present."""
+
+    def _write_monodomain_with_at(self, tmp: Path, *, at_model: str, exports: str) -> None:
+        ep = tmp / "constant" / "electroProperties"
+        ep.parent.mkdir(parents=True, exist_ok=True)
+        ep.write_text(
+            f"myocardiumSolver monodomainSolver;\n"
+            f"monodomainSolverCoeffs\n{{\n"
+            f"    ionicModel TNNP;\n"
+            f"    activeTensionModel\n    {{\n"
+            f"        activeTensionModel {at_model};\n"
+            f"    }}\n"
+            f"    outputVariables\n    {{\n"
+            f"        activeTension\n        {{\n"
+            f"            export ( {exports} );\n"
+            f"        }}\n"
+            f"    }}\n"
+            f"}}\n"
+        )
+
+    def test_ta_artifact_emitted_for_nash_panfilov(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            spec = _make_spec(tmp)
+            artifacts = predict_data_artifacts(tmp, spec)
+            ids = [a.artifact_id for a in artifacts]
+            self.assertIn("active_tension_Ta_series", ids)
+
+    def test_ta_artifact_emitted_for_goktepe_kuhl(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            self._write_monodomain_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
+            spec = _make_spec(tmp)
+            artifacts = predict_data_artifacts(tmp, spec)
+            ids = [a.artifact_id for a in artifacts]
+            self.assertIn("active_tension_Ta_series", ids)
+
+    def test_no_at_artifacts_when_block_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            ep = tmp / "constant" / "electroProperties"
+            ep.parent.mkdir(parents=True, exist_ok=True)
+            ep.write_text(
+                "myocardiumSolver monodomainSolver;\n"
+                "monodomainSolverCoeffs\n{\n"
+                "    ionicModel TNNP;\n"
+                "}\n"
+            )
+            spec = _make_spec(tmp)
+            artifacts = predict_data_artifacts(tmp, spec)
+            ids = [a.artifact_id for a in artifacts]
+            self.assertFalse(any("active_tension" in i for i in ids))
+
+    def test_at_artifact_uses_declared_export_list(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            spec = _make_spec(tmp)
+            artifacts = predict_data_artifacts(tmp, spec)
+            at_artifacts = [a for a in artifacts if "active_tension" in a.artifact_id]
+            self.assertEqual(len(at_artifacts), 1)
+            self.assertEqual(at_artifacts[0].artifact_id, "active_tension_Ta_series")
+
+    def test_at_artifact_format_is_openfoam_time_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            spec = _make_spec(tmp)
+            artifacts = predict_data_artifacts(tmp, spec)
+            ta = next(a for a in artifacts if a.artifact_id == "active_tension_Ta_series")
+            self.assertEqual(ta.format, "openfoam_time_dirs")
+            self.assertTrue(ta.time_indexed)
 
 
 if __name__ == "__main__":

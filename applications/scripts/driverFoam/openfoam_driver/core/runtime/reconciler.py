@@ -1,26 +1,34 @@
-"""Post-run artifact reconciliation (plan §10).
+"""Post-run artifact reconciliation (plan §10, fidelity fixes 2026-05-21).
 
-`reconcile_artifacts(case_root, predicted)` walks the predicted
-`DataArtifact` set and checks which expected files exist on disk under
-`case_root`. The resulting `ReconciliationReport` tells the agent which
-predictions were realised and which were not — useful for confirming
-that a run produced what the predictor advertised, and for catching
-predictor drift over time.
+`reconcile_artifacts(case_root, predicted, *, case_id=None)` walks the
+predicted `DataArtifact` set and reports which expected paths exist on
+disk under `case_root`. The resulting `ReconciliationReport` tells the
+agent which predictions were realised, which were not, and for matched
+entries whether the realisation is a file or a directory.
 
-Design notes:
+Design notes (rewritten after the 2026-05-21 audit):
 
-* Non-time-indexed artifacts are checked at a single literal path
-  derived by stripping the closed-set placeholders. A `{case_id}`
-  placeholder is left unresolved at this layer — callers wanting per-case
-  expansion should call the reconciler per case_id (the engine wires this
-  up once per sweep run).
-* Time-indexed artifacts are matched by globbing top-level numeric-looking
-  directory names under `case_root` (the OpenFOAM convention) and then
-  checking the per-time relative path. This avoids walking
-  `constant/`, `system/`, `processor*/`, and any other non-time scope.
-* "Extra files" (on-disk content not advertised by any prediction) is out
-  of scope for v1 — the case tree is large and the value of enumerating
-  every unmodelled file is low. If a real consumer needs it, add it then.
+* **Matching uses `pathlib.Path.glob`**, not literal `exists()`. The
+  predictor's `path_pattern` may contain placeholders (`{case_id}`,
+  `{time}`) AND shell-glob wildcards once substituted. Globbing handles
+  both literal paths (degenerate glob) and wildcards uniformly.
+* **Directories are valid match targets.** The monodomain/bidomain/eikonal
+  predictors emit `path_pattern="{time}"` — the OpenFOAM time directory
+  itself, not a file inside it. Earlier code rejected directories via
+  `is_file()`; the new code accepts both kinds and tags each match with
+  `kind: "file" | "dir"`.
+* **`{case_id}` substitution is explicit.** Callers pass `case_id=` when
+  they want a literal substitution. When omitted, `{case_id}` is replaced
+  with the glob wildcard `*` so the reconciler still finds matches across
+  all per-case outputs in a sweep. Earlier code silently stripped
+  `{case_id}` to empty string, producing malformed paths like
+  `postProcessing/.txt` that never matched anything.
+* **Time-indexed iteration** walks top-level directory names matching
+  the OpenFOAM time-dir convention (decimal numerals) so `constant/`,
+  `system/`, `processor*/` are filtered out by name.
+* **"Extra files"** (on-disk content not advertised by any prediction)
+  remain out of scope. The case tree is large and the value of
+  enumerating every unmodelled file is low.
 """
 from __future__ import annotations
 
@@ -32,9 +40,6 @@ from typing import Iterable
 from .models import DataArtifact
 
 
-# OpenFOAM time directories use a decimal-number naming convention.
-# `constant`, `system`, `processor*`, and any other named directory is
-# excluded by this filter.
 _TIME_DIR_RE: re.Pattern[str] = re.compile(r"^-?\d+(\.\d+)?(e[+\-]?\d+)?$")
 
 
@@ -49,7 +54,12 @@ class ReconciliationReport:
     artifacts: tuple[dict, ...]
     """One entry per predicted artifact, in input order. Each entry is a
     dict with keys: artifact_id, predicted_path, status (matched|missing),
-    matched_files (list of {path, size_bytes}), optional (bool)."""
+    matched_files (list of {path, kind, size_bytes?, entries?}),
+    optional (bool)."""
+
+    case_id: str | None = None
+    """Case identifier when invoked per-case during a sweep. ``None`` for
+    whole-run reconciliations."""
 
 
 def _list_time_dirs(case_root: Path) -> list[str]:
@@ -61,38 +71,73 @@ def _list_time_dirs(case_root: Path) -> list[str]:
     )
 
 
-def _check_path(case_root: Path, relative: str) -> dict | None:
-    """Return a `{path, size_bytes}` dict if the file exists, else None."""
-    full = case_root / relative
-    if not full.exists() or not full.is_file():
-        return None
-    return {"path": str(full), "size_bytes": full.stat().st_size}
+def _entries_for_match(path: Path) -> dict | None:
+    """Build the per-match dict for a single glob hit. Returns None for
+    matches that are neither files nor directories (symlinks to nowhere,
+    etc.) so the caller can skip them silently."""
+    if path.is_file():
+        return {
+            "path": str(path),
+            "kind": "file",
+            "size_bytes": path.stat().st_size,
+        }
+    if path.is_dir():
+        # Count immediate children so an agent inspecting the realized
+        # manifest knows whether the matched dir is non-empty.
+        try:
+            entry_count = sum(1 for _ in path.iterdir())
+        except OSError:
+            entry_count = 0
+        return {
+            "path": str(path),
+            "kind": "dir",
+            "entries": entry_count,
+        }
+    return None
+
+
+def _glob_under(case_root: Path, pattern: str) -> list[dict]:
+    """Glob `case_root` for `pattern` (relative). Returns one match dict
+    per hit. Skips entries that are neither file nor directory."""
+    results: list[dict] = []
+    try:
+        hits = sorted(case_root.glob(pattern))
+    except (NotImplementedError, ValueError):
+        return results
+    for hit in hits:
+        entry = _entries_for_match(hit)
+        if entry is not None:
+            results.append(entry)
+    return results
+
+
+def _substitute_case_id(pattern: str, case_id: str | None) -> str:
+    """Replace `{case_id}` with the literal case_id when supplied, else
+    with the glob wildcard ``*`` so the matcher still finds per-case
+    outputs across a sweep."""
+    return pattern.replace("{case_id}", case_id if case_id is not None else "*")
 
 
 def _reconcile_artifact(
     case_root: Path,
     artifact: DataArtifact,
+    *,
+    case_id: str | None,
 ) -> dict:
     """Classify one artifact, returning the per-entry report dict."""
     matched_files: list[dict] = []
 
     if artifact.time_indexed:
-        # Glob every time directory and check the post-{time} portion.
-        # The pattern is expected to begin with `{time}` for OpenFOAM
-        # outputs; everything after that is the per-time relative path.
         for time_name in _list_time_dirs(case_root):
             resolved = artifact.path_pattern.replace("{time}", time_name)
-            # Strip any unresolved {case_id} — the per-case fan-out is
-            # the engine's responsibility, not the reconciler's.
-            resolved = resolved.replace("{case_id}", "")
-            hit = _check_path(case_root, resolved)
-            if hit is not None:
-                matched_files.append(hit)
+            resolved = _substitute_case_id(resolved, case_id)
+            matched_files.extend(_glob_under(case_root, resolved))
     else:
-        resolved = artifact.path_pattern.replace("{case_id}", "")
-        hit = _check_path(case_root, resolved)
-        if hit is not None:
-            matched_files.append(hit)
+        resolved = _substitute_case_id(artifact.path_pattern, case_id)
+        # Defensive: a non-time-indexed pattern shouldn't contain {time},
+        # but if it does, accept any time dir name via wildcard.
+        resolved = resolved.replace("{time}", "*")
+        matched_files.extend(_glob_under(case_root, resolved))
 
     status = "matched" if matched_files else "missing"
     return {
@@ -107,15 +152,29 @@ def _reconcile_artifact(
 def reconcile_artifacts(
     case_root: Path,
     predicted: Iterable[DataArtifact],
+    *,
+    case_id: str | None = None,
 ) -> ReconciliationReport:
     """Compare `predicted` artifacts against the on-disk state of
-    `case_root`. Returns a `ReconciliationReport` enumerating every
-    predicted artifact and whether (and how) it was realised."""
+    `case_root`.
+
+    Args:
+        case_root: the case directory to inspect.
+        predicted: the predicted artifacts (typically from
+            ``predict_data_artifacts``).
+        case_id: when supplied, substituted into `{case_id}` placeholders
+            literally. When omitted, `{case_id}` becomes the glob wildcard
+            ``*`` so per-case outputs in a sweep still match.
+
+    Returns:
+        A `ReconciliationReport` enumerating every predicted artifact and
+        whether (and how) it was realised.
+    """
     predicted_tuple = tuple(predicted)
     entries: list[dict] = []
     matched_count = 0
     for artifact in predicted_tuple:
-        entry = _reconcile_artifact(case_root, artifact)
+        entry = _reconcile_artifact(case_root, artifact, case_id=case_id)
         if entry["status"] == "matched":
             matched_count += 1
         entries.append(entry)
@@ -125,4 +184,5 @@ def reconcile_artifacts(
         matched_count=matched_count,
         missing_count=len(predicted_tuple) - matched_count,
         artifacts=tuple(entries),
+        case_id=case_id,
     )

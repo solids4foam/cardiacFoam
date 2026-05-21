@@ -345,5 +345,145 @@ class TestDictEntryStructuredConstraints(unittest.TestCase):
             self.assertIsInstance(entry.mutually_exclusive_with, tuple)
 
 
+class TestElectroPropertiesPresenceScans(unittest.TestCase):
+    """specs.common gains three presence helpers used by the predictor's
+    domain-aware handlers (predictor-refinements Task 1).
+    """
+
+    def _write(self, body: str) -> Path:
+        import tempfile
+        from pathlib import Path
+        temp = tempfile.mkdtemp()
+        path = Path(temp) / "electroProperties"
+        path.write_text(body)
+        return path
+
+    def test_has_block_finds_top_level_block(self) -> None:
+        from openfoam_driver.specs.common import electro_properties_has_block
+        path = self._write(
+            "myocardiumSolver bidomainSolver;\n"
+            "bidomainSolverCoeffs\n{\n  ionicModel TNNP;\n}\n"
+            "ecgDomains\n{\n  myECG { ecgSolver pseudoECG; }\n}\n"
+        )
+        self.assertTrue(electro_properties_has_block(path, "ecgDomains"))
+        self.assertFalse(electro_properties_has_block(path, "conductionNetworkDomains"))
+
+    def test_has_block_handles_inline_brace(self) -> None:
+        from openfoam_driver.specs.common import electro_properties_has_block
+        path = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "conductionNetworkDomains { purk { } }\n"
+        )
+        self.assertTrue(
+            electro_properties_has_block(path, "conductionNetworkDomains")
+        )
+
+    def test_has_block_ignores_substring_matches(self) -> None:
+        """The scan must match block declarations, not keys whose names
+        happen to contain the target word."""
+        from openfoam_driver.specs.common import electro_properties_has_block
+        path = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n  ecgDomainsCount 0;\n}\n"
+        )
+        self.assertFalse(electro_properties_has_block(path, "ecgDomains"))
+
+    def test_detect_verification_model_type_present(self) -> None:
+        from openfoam_driver.specs.common import detect_verification_model_type
+        path = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "  ionicModel monodomainFDAManufactured;\n"
+            "  verificationModel\n  {\n"
+            "    type manufacturedFDAMonodomainVerifier;\n"
+            "  }\n"
+            "}\n"
+        )
+        self.assertEqual(
+            detect_verification_model_type(path),
+            "manufacturedFDAMonodomainVerifier",
+        )
+
+    def test_detect_verification_model_type_absent_returns_none(self) -> None:
+        from openfoam_driver.specs.common import detect_verification_model_type
+        path = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n  ionicModel TNNP;\n}\n"
+        )
+        self.assertIsNone(detect_verification_model_type(path))
+
+
+class TestDetectActiveTensionModelName(unittest.TestCase):
+    def _write(self, text: str) -> Path:
+        p = Path(tempfile.mkdtemp()) / "electroProperties"
+        p.write_text(text)
+        return p
+
+    def test_detects_nash_panfilov(self) -> None:
+        from openfoam_driver.specs.common import detect_active_tension_model_name
+        props = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    activeTensionModel\n    {\n"
+            "        activeTensionModel NashPanfilov;\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(detect_active_tension_model_name(props), "NashPanfilov")
+
+    def test_detects_goktepe_kuhl(self) -> None:
+        from openfoam_driver.specs.common import detect_active_tension_model_name
+        props = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    activeTensionModel\n    {\n"
+            "        activeTensionModel GoktepeKuhl;\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(detect_active_tension_model_name(props), "GoktepeKuhl")
+
+    def test_returns_none_when_block_absent(self) -> None:
+        from openfoam_driver.specs.common import detect_active_tension_model_name
+        props = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    ionicModel TNNP;\n"
+            "}\n"
+        )
+        self.assertIsNone(detect_active_tension_model_name(props))
+
+
+class TestDetectActiveTensionExportList(unittest.TestCase):
+    def _write(self, text: str) -> Path:
+        p = Path(tempfile.mkdtemp()) / "electroProperties"
+        p.write_text(text)
+        return p
+
+    def test_detects_ta_export(self) -> None:
+        from openfoam_driver.specs.common import detect_active_tension_export_list
+        props = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    outputVariables\n    {\n"
+            "        activeTension\n        {\n"
+            "            export ( Ta );\n"
+            "        }\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(detect_active_tension_export_list(props), ("Ta",))
+
+    def test_returns_none_when_absent(self) -> None:
+        from openfoam_driver.specs.common import detect_active_tension_export_list
+        props = self._write(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    ionicModel TNNP;\n"
+            "}\n"
+        )
+        self.assertIsNone(detect_active_tension_export_list(props))
+
+
 if __name__ == "__main__":
     unittest.main()
