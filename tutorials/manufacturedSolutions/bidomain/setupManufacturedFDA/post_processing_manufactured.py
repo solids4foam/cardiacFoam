@@ -78,7 +78,7 @@ FIELD_COLORS = {
 }
 FIELD_LABELS = {
     "Linf_V": "Vm",
-    "Linf_phiE": "phiE",
+    "Linf_phiE": "phiE (gauge)",
     "Linf_u1": "u1",
     "Linf_u2": "u2",
 }
@@ -402,6 +402,17 @@ def _parse_vector_literal(literal: str) -> tuple[float, float, float]:
     if len(values) != 3:
         raise ValueError(f"Expected 3-vector literal, got: {literal}")
     return values
+
+
+def _field_linf(content: str, field_name: str) -> float:
+    match = re.search(
+        rf"^{re.escape(field_name)}\s+\S+\s+\S+\s+(\S+)",
+        content,
+        re.MULTILINE,
+    )
+    if not match:
+        return float("nan")
+    return float(match.group(1))
 
 
 def _interpolate_series(
@@ -1028,7 +1039,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
         - Solver     (explicit, implicit)
-        - Linf errors for Vm, phiE, u1, u2
+        - Linf errors for Vm, gauge-corrected phiE, u1, u2
 
     Returns one row per file.
     """
@@ -1065,25 +1076,21 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
         content = f.read_text()
 
-        # Extract Linf errors
-        linf_matches = re.findall(
-            r"Vm\s+\S+\s+\S+\s+(\S+).*?"
-            r"phiE\s+\S+\s+\S+\s+(\S+).*?"
-            r"u1\s+\S+\s+\S+\s+(\S+).*?"
-            r"u2\s+\S+\s+\S+\s+(\S+)",
-            content.replace("\n", " "), re.DOTALL
-        )
-
-        if linf_matches:
-            Linf_V, Linf_phiE, Linf_u1, Linf_u2 = map(float, linf_matches[0])
-        else:
-            Linf_V = Linf_phiE = Linf_u1 = Linf_u2 = float("nan")
+        Linf_V = _field_linf(content, "Vm")
+        Linf_phiE_raw = _field_linf(content, "phiE")
+        Linf_phiE_gauge = _field_linf(content, "phiE_gauge")
+        Linf_phiE = Linf_phiE_gauge
+        if math.isnan(Linf_phiE):
+            Linf_phiE = Linf_phiE_raw
+        Linf_u1 = _field_linf(content, "u1")
+        Linf_u2 = _field_linf(content, "u2")
 
         data.append({
             "Dimension": dimension,
             "N": N,
             "Solver": solver,
             "Linf_V": Linf_V,
+            "Linf_phiE_raw": Linf_phiE_raw,
             "Linf_phiE": Linf_phiE,
             "Linf_u1": Linf_u1,
             "Linf_u2": Linf_u2
@@ -1440,7 +1447,12 @@ def plot_convergence_rates(
     fig, ax = plt.subplots(figsize=(max(9, len(labels)*1.35), 5.5))
     for offset, field in zip(offsets, rate_fields):
         values = [row.get(field, float("nan")) for row in rows]
-        label = field.removeprefix("rate_")
+        label = {
+            "rate_Vm": "Vm",
+            "rate_phiE": "phiE (gauge)",
+            "rate_u1": "u1",
+            "rate_u2": "u2",
+        }[field]
         ax.bar([x + offset for x in x_positions], values, width=width, label=label)
 
     ax.axhline(1.0, color="0.35", linewidth=0.8, linestyle="--")

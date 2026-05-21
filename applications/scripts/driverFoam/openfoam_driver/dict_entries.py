@@ -112,6 +112,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             ),
             value_kind="enum",
             enum_values=("implicit", "explicit"),
+            typical_value="implicit",
             required=True,
         ),
         DictEntry(
@@ -301,6 +302,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             enum_values=("RKF45",),
             required=True,
+            typical_value="RKF45",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.initialODEStep",
@@ -408,6 +410,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             required_when={"myocardiumSolver": "singleCellSolver"},
+            typical_value="3",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S2",
@@ -418,6 +421,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             required_when={"myocardiumSolver": "singleCellSolver"},
+            typical_value="0",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim2",
@@ -428,6 +432,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=True,
             constraints=("Required when myocardiumSolver=singleCellSolver.",),
             required_when={"myocardiumSolver": "singleCellSolver"},
+            typical_value="0",
         ),
     ),
     "monodomain": (
@@ -641,12 +646,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="word_list",
             required=True,
             constraints=("Required when bathPotentialDomain is configured.",),
-            # Virtual key: the validator sets "$bathPotentialDomain_configured"=True
-            # when bathPotentialDomain.bathCellZones or any sibling key is present.
-            # Since we can't evaluate this without a runtime bath-presence signal,
-            # this predicate is evaluated as always-absent (no validator support yet).
-            # Kept for documentation; the required=True field check still fires
-            # unconditionally via the standard required check path.
+            applicable_when={"$bathPotentialDomain_configured": True},
             required_when={"$bathPotentialDomain_configured": True},
         ),
         DictEntry(
@@ -656,6 +656,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="word",
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
             typical_value="myocardium",
         ),
         DictEntry(
@@ -665,6 +666,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="word",
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
             typical_value="bodyAndOrgansConductivity",
         ),
         DictEntry(
@@ -674,6 +676,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="scalar",
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
             unit="V",
             typical_value="0.0",
         ),
@@ -684,6 +687,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="boolean",
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
             typical_value="false",
         ),
         DictEntry(
@@ -693,6 +697,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C",),
             value_kind="vector3",
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.groundPatches.<patch>",
@@ -702,6 +707,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             dynamic_path=True,
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.bathPotentialDomain.surfaceCurrentPatches.<patch>",
@@ -711,6 +717,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="scalar",
             dynamic_path=True,
             required=False,
+            applicable_when={"$bathPotentialDomain_configured": True},
         ),
     ),
     "eikonal_diffusion": (
@@ -913,20 +920,41 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiERefPoint",
             phases=frozenset({"physics"}),
-            description="Point [m] used to locate the cell that pins the extracellular potential reference.",
+            description=(
+                "Point [m] used to locate the cell that pins the extracellular "
+                "potential reference. The bidomain φE equation has pure Neumann "
+                "boundary conditions, leaving φE determined only up to an "
+                "additive constant — one cell must be clamped to break the "
+                "indeterminacy. Monodomain solves only Vm with mixed BCs and "
+                "does not need a reference point."
+            ),
+            notes=(
+                "Applies to plain bidomain and bath-bidomain alike — both run "
+                "on bidomainSolver, only the extracellular domain (heart-only "
+                "vs heart+bath) differs. If the supplied point falls outside "
+                "the mesh the solver falls back to a default cell."
+            ),
             source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="vector3",
             required=True,
             constraints=("Required for bidomainSolver.",),
             required_when={"myocardiumSolver": "bidomainSolver"},
+            typical_value="(0 0 0)",
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.phiEReferenceValue",
             phases=frozenset({"physics"}),
-            description="Value of the extracellular potential at the reference cell.",
+            description=(
+                "Value of the extracellular potential [V] at the reference "
+                "cell located by phiERefPoint. Optional — defaults to 0 V "
+                "when omitted, which is the standard choice for ungrounded "
+                "bidomain solves."
+            ),
             source_refs=("src/electroModels/myocardiumModels/bidomainSolver/bidomainSolver.C",),
             value_kind="scalar",
             required=False,
+            unit="V",
+            typical_value="0",
         ),
     ),
     "conduction_system": (

@@ -136,6 +136,24 @@ def _entry_is_applicable(entry: DictEntry, context: dict[str, Any]) -> bool:
     )
 
 
+def is_required_in_context(entry: DictEntry, context: dict[str, Any]) -> bool:
+    """Whether an entry's ``required`` semantics fire under this context.
+
+    Many entries declare BOTH ``required=True`` and ``required_when={...}``
+    — the author's intent is "required, but only when the predicate
+    matches". This helper reads the two fields together:
+
+    - ``required_when`` non-empty → required iff any predicate matches.
+    - ``required_when`` empty     → ``entry.required`` is taken at face value.
+    """
+    if entry.required_when:
+        return any(
+            _predicate_matches(context, key, expected)
+            for key, expected in entry.required_when.items()
+        )
+    return entry.required
+
+
 def _entry_value_present(entry: DictEntry, context: dict[str, Any]) -> bool:
     """Is the entry's own slot set in the flattened context?"""
     key = slot_key(entry.driver_path)
@@ -174,11 +192,19 @@ def validate_run(
     errors: list[ValidationError] = []
 
     # 1) Required-field checks. Skip entries whose applicable_when fails —
-    #    requiredness is conditional on applicability.
+    #    requiredness is conditional on applicability. When an entry has
+    #    both ``required=True`` and a non-empty ``required_when``, the
+    #    latter narrows the former: requiredness fires only when at least
+    #    one ``required_when`` predicate matches.
     for e in entry_list:
-        if not e.required:
-            continue
         if not _entry_is_applicable(e, context):
+            continue
+        if not is_required_in_context(e, context):
+            continue
+        if e.dynamic_path:
+            # Dynamic-path entries describe templates; concrete required
+            # leaves are the user's responsibility when those blocks are
+            # actually configured.
             continue
         ph = primary_phase(e)
         if ph is None:
@@ -262,20 +288,11 @@ def _evaluate_structured(
                         level="error",
                     ))
 
-        # required_when: fires when ANY predicate matches AND the entry's
-        # slot is unset.
-        if not _entry_value_present(e, context):
-            for key, expected in e.required_when.items():
-                if _predicate_matches(context, key, expected):
-                    errors.append(ValidationError(
-                        phase=ph,
-                        field=e.driver_path,
-                        message=(
-                            f"{e.driver_path} is required when "
-                            f"{_format_predicate({key: expected})}."
-                        ),
-                        level="error",
-                    ))
+        # required_when: handled by section 1 of validate_run via
+        # is_required_in_context. Section 3 does NOT re-emit a violation
+        # to avoid double-firing on the same entry. The structured
+        # required_when field is still consumed — its predicates feed
+        # is_required_in_context which gates section 1's required check.
 
         # mutually_exclusive_with: fires when BOTH this entry's slot is set
         # AND any of the listed sibling slots is also set. To avoid

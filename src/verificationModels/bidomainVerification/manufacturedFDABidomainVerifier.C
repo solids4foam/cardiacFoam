@@ -141,6 +141,36 @@ Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
 }
 
 
+scalar computeVolumeMeanError
+(
+    const fvMesh& mesh,
+    const scalarField& numeric,
+    const scalarField& exact
+)
+{
+    const scalarField& volumes = mesh.V();
+
+    scalar weightedError = 0.0;
+    scalar totalVolume = 0.0;
+
+    forAll(numeric, i)
+    {
+        weightedError += volumes[i]*(numeric[i] - exact[i]);
+        totalVolume += volumes[i];
+    }
+
+    reduce(weightedError, sumOp<scalar>());
+    reduce(totalVolume, sumOp<scalar>());
+
+    if (totalVolume <= VSMALL)
+    {
+        return 0.0;
+    }
+
+    return weightedError/totalVolume;
+}
+
+
 word dimensionName(const label dimension)
 {
     return
@@ -375,9 +405,19 @@ void manufacturedFDABidomainVerifier::postProcess
         phiIValues[i] = VmValues[i] + phiEValues[i];
     }
 
+    const scalar phiEGaugeOffset =
+        computeVolumeMeanError(mesh, phiEValues, phiEExact);
+
+    scalarField phiEExactGauge(phiEExact);
+    scalarField phiIExactGauge(phiIExact);
+    phiEExactGauge += phiEGaugeOffset;
+    phiIExactGauge += phiEGaugeOffset;
+
     const auto VmNorms = computeNorms(VmValues, VmExact);
     const auto phiENorms = computeNorms(phiEValues, phiEExact);
+    const auto phiEGaugeNorms = computeNorms(phiEValues, phiEExactGauge);
     const auto phiINorms = computeNorms(phiIValues, phiIExact);
+    const auto phiIGaugeNorms = computeNorms(phiIValues, phiIExactGauge);
     const auto u1Norms = computeNorms(u1Values, u1Exact);
     const auto u2Norms = computeNorms(u2Values, u2Exact);
 
@@ -415,8 +455,14 @@ void manufacturedFDABidomainVerifier::postProcess
             << VmNorms.first().second() << "   " << VmNorms.second() << nl
             << "phiE      " << phiENorms.first().first() << "   "
             << phiENorms.first().second() << "   " << phiENorms.second() << nl
+            << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
+            << phiEGaugeNorms.first().second() << "   "
+            << phiEGaugeNorms.second() << nl
             << "phiI      " << phiINorms.first().first() << "   "
             << phiINorms.first().second() << "   " << phiINorms.second() << nl
+            << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
+            << phiIGaugeNorms.first().second() << "   "
+            << phiIGaugeNorms.second() << nl
             << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << nl
             << "u2        " << u2Norms.first().first() << "   "
@@ -431,8 +477,14 @@ void manufacturedFDABidomainVerifier::postProcess
             << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
         out << "phiE      " << phiENorms.first().first() << "   "
             << phiENorms.first().second() << "   " << phiENorms.second() << "\n";
+        out << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
+            << phiEGaugeNorms.first().second() << "   "
+            << phiEGaugeNorms.second() << "\n";
         out << "phiI      " << phiINorms.first().first() << "   "
             << phiINorms.first().second() << "   " << phiINorms.second() << "\n";
+        out << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
+            << phiIGaugeNorms.first().second() << "   "
+            << phiIGaugeNorms.second() << "\n";
         out << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
         out << "u2        " << u2Norms.first().first() << "   "
@@ -448,6 +500,7 @@ void manufacturedFDABidomainVerifier::postProcess
         out << "k                     = " << k_ << "\n";
         out << "phiE reference point  = " << phiEReferencePoint_ << "\n";
         out << "phiE reference value  = " << phiEReferenceValue_ << "\n";
+        out << "phiE gauge offset     = " << phiEGaugeOffset << "\n";
     }
 
     errorsReported_ = true;
