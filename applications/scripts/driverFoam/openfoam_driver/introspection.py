@@ -315,7 +315,7 @@ def _manifest_schema() -> dict[str, Any]:
             "It is written to output_dir/run_manifest.json and updated after every "
             "case completes. Poll this file to track run progress."
         ),
-        "schema_version": "2.2",
+        "schema_version": "2.3",
         "file_location": "output_dir/run_manifest.json  (see launch.<action>.manifest_path)",
         "companion_file": (
             "output_dir/action_events.jsonl — append-only JSONL log with one "
@@ -327,7 +327,7 @@ def _manifest_schema() -> dict[str, Any]:
             "Reading the file is safe at any time — it is written atomically."
         ),
         "top_level_fields": {
-            "schema_version": "string — manifest format version (currently '2.2'; v2.x is additive-only)",
+            "schema_version": "string — manifest format version (currently '2.3'; v2.x is additive-only)",
             "run_id": "string — unique ID for this run (timestamp + random suffix)",
             "requested_action": "string — 'sim', 'post', or 'all'",
             "entry": "string — selected entry name",
@@ -353,6 +353,7 @@ def _manifest_schema() -> dict[str, Any]:
             "error": "string | null — top-level error message if run failed early",
             "plots_manifest_path": "string | null — path to plots.json if postprocess produced plots",
             "artifacts_manifest_path": "string | null — path to artifacts_manifest.json (predicted DataArtifacts for the current case state; v2.2+)",
+            "artifacts_realized_path": "string | null — path to artifacts_realized.json (predicted-vs-actual reconciliation; written only at terminal status on non-dry runs; v2.3+)",
             "human_report_path": "string — path to run_report.md",
             "results": "array of CaseResult objects — see case_result_fields",
         },

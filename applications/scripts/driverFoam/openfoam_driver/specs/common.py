@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ..core.runtime.mutators import update_foam_entry
+from ..core.runtime.mutators import remove_foam_dict, update_foam_entry
 
 
 def repo_root_default() -> Path:
@@ -227,6 +227,33 @@ def apply_physics_property_overrides(
     overrides: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
 ) -> None:
     apply_entry_overrides(physics_properties_path, overrides)
+
+
+def remove_electro_property_dict(
+    electro_properties_path: Path,
+    dict_name: str,
+    *,
+    scope: str | Sequence[str] | None = None,
+    missing_ok: bool = False,
+) -> None:
+    resolved_scope = None
+    if scope is not None:
+        raw_scope = (scope,) if isinstance(scope, str) else tuple(scope)
+        resolved_scope = tuple(
+            part
+            for token in raw_scope
+            for part in _resolve_scope_tokens(
+                str(token),
+                electro_properties_path=electro_properties_path,
+            )
+        )
+
+    remove_foam_dict(
+        electro_properties_path,
+        dict_name,
+        scope=resolved_scope,
+        missing_ok=missing_ok,
+    )
 
 
 def resolve_spec_paths(

@@ -24,10 +24,19 @@ outputs = [
 
 requires_mesh = true
 
-flags = [
-  { name = "-dict", description = "Alternative dictionary path (default: system/setTorsoOrganConductivityFieldDict).", takes_value = true },
-]
-
 example = "setTorsoOrganConductivityField -case ./torso_run"
 
 category = "field-setup"
+
+[[flags]]
+name = "-dict"
+description = "Alternative dictionary path (default: system/setTorsoOrganConductivityFieldDict)."
+takes_value = true
+argument_kind = "path"
+
+[[produces]]
+artifact_id = "body_organs_conductivity_field"
+path_pattern = "0/bodyAndOrgansConductivity"
+format = "openfoam_log"
+description = "Scalar volScalarField of per-cell conductivity values ready for use as an ECG torso domain conductivity field."
+produced_by = "setTorsoOrganConductivityField"

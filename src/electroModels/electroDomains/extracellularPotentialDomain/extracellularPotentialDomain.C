@@ -135,6 +135,29 @@ tensor harmonicFaceTensor(const tensor& a, const tensor& b)
     return result;
 }
 
+
+tensor extracellularFaceTensor
+(
+    const tensor& sP,
+    const tensor& sN,
+    const tensor& sigmaIP,
+    const tensor& sigmaIN
+)
+{
+    const bool pIsHeart = magSqr(sigmaIP) > SMALL;
+    const bool nIsHeart = magSqr(sigmaIN) > SMALL;
+
+    if (pIsHeart != nIsHeart)
+    {
+        const tensor heartSigmaE = pIsHeart ? sP - sigmaIP : sN - sigmaIN;
+        const tensor bathSigma = pIsHeart ? sN : sP;
+
+        return harmonicFaceTensor(heartSigmaE, bathSigma);
+    }
+
+    return harmonicFaceTensor(sP, sN);
+}
+
 } // End anonymous namespace
 
 
@@ -444,34 +467,59 @@ void extracellularPotentialDomain::buildHarmonicSigmaTotalSurface()
     {
         const label ownCell = own[faceI];
         const label neiCell = nei[faceI];
-        const tensor& sP = sigmaI[ownCell];
-        const tensor& sN = sigmaI[neiCell];
-        const bool ownIsHeart = magSqr(sigmaIntracellularI[ownCell]) > SMALL;
-        const bool neiIsHeart = magSqr(sigmaIntracellularI[neiCell]) > SMALL;
 
-        if (ownIsHeart != neiIsHeart)
+        SfI[faceI] =
+            extracellularFaceTensor
+            (
+                sigmaI[ownCell],
+                sigmaI[neiCell],
+                sigmaIntracellularI[ownCell],
+                sigmaIntracellularI[neiCell]
+            );
+    }
+
+    forAll(Sf.boundaryField(), patchI)
+    {
+        if (sigma.boundaryField()[patchI].coupled())
         {
-            const tensor heartSigmaE =
-                ownIsHeart
-              ? sP - sigmaIntracellularI[ownCell]
-              : sN - sigmaIntracellularI[neiCell];
-            const tensor bathSigma =
-                ownIsHeart ? sN : sP;
+            const tensorField sigmaP
+            (
+                sigma.boundaryField()[patchI].patchInternalField()
+            );
+            const tensorField sigmaN
+            (
+                sigma.boundaryField()[patchI].patchNeighbourField()
+            );
+            const tensorField sigmaIP
+            (
+                sigmaIglobal.boundaryField()[patchI].patchInternalField()
+            );
+            const tensorField sigmaIN
+            (
+                sigmaIglobal.boundaryField()[patchI].patchNeighbourField()
+            );
 
-            SfI[faceI] = harmonicFaceTensor(heartSigmaE, bathSigma);
+            Field<tensor>& Sfp = Sf.boundaryFieldRef()[patchI];
+
+            forAll(Sfp, faceI)
+            {
+                Sfp[faceI] =
+                    extracellularFaceTensor
+                    (
+                        sigmaP[faceI],
+                        sigmaN[faceI],
+                        sigmaIP[faceI],
+                        sigmaIN[faceI]
+                    );
+            }
         }
         else
         {
-            SfI[faceI] = harmonicFaceTensor(sP, sN);
+            // Physical boundaries use the cell-internal value. The sigmaTotal
+            // fields use zeroGradient BCs, so patchInternalField is consistent.
+            Sf.boundaryFieldRef()[patchI] =
+                sigma.boundaryField()[patchI].patchInternalField();
         }
-    }
-
-    // Boundary patches: take the cell-internal value (sigmaTotal has
-    // zeroGradient BCs, so patchInternalField is the right thing).
-    forAll(Sf.boundaryField(), patchI)
-    {
-        Sf.boundaryFieldRef()[patchI] ==
-            sigma.boundaryField()[patchI].patchInternalField();
     }
 }
 

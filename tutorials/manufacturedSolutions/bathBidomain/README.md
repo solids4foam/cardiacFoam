@@ -59,6 +59,16 @@ blockMesh -dict system/blockMeshDict.1D
 ./runRegressionTest.sh
 ```
 
+Driver-managed 1D/2D/3D parallel convergence sweep:
+
+```bash
+source /Volumes/OpenFOAM-v2412/etc/bashrc
+tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/run_all_dimensions.sh
+```
+
+Use `run_all_dimensions.sh sim` to run simulations only and skip
+post-processing.
+
 Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, `torsoECG.dat`,
 `pseudoECG.dat`, `manufacturedBathECG.dat`, and manufactured error summaries in
 `postProcessing/`. The global bath-potential fields are written at the normal

@@ -49,7 +49,7 @@ bidomainSolverCoeffs
         k 0.7071067811865476;
     }
 
-    dimension    "1D";
+    dimension    "3D";
 
     solutionAlgorithm    implicit;
     CFL 0.1;

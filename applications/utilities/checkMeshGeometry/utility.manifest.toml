@@ -21,10 +21,19 @@ outputs = [
 
 requires_mesh = true
 
-flags = [
-  { name = "-noScale", description = "Suppress automatic scaling even if units appear incorrect.", takes_value = false },
-]
-
 example = "checkMeshGeometry -case ./myCase"
 
 category = "mesh"
+
+[[flags]]
+name = "-noScale"
+description = "Suppress automatic scaling even if units appear incorrect."
+takes_value = false
+argument_kind = "switch"
+
+[[produces]]
+artifact_id = "polymes_scaled"
+path_pattern = "constant/polyMesh"
+format = "openfoam_log"
+description = "Rescaled (or unchanged) OpenFOAM polyMesh directory in SI metres."
+produced_by = "checkMeshGeometry"

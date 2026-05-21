@@ -245,7 +245,7 @@ ecgDomain::ecgDomain
 
     readElectrodes(dict);
 
-    const fileName outDir(mesh_.time().path() / "postProcessing");
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     outputPtr_ =
         ecgModelIO::openTimeSeries
         (

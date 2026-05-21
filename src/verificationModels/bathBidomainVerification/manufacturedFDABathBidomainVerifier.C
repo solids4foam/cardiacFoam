@@ -471,6 +471,16 @@ void manufacturedFDABathBidomainVerifier::postProcess
         forAll(phiIValues, i)
         {
             const label baseCellI = heartCellMap[i];
+            if (baseCellI < 0 || baseCellI >= phiEValues.size())
+            {
+                FatalErrorInFunction
+                    << "Cannot compute manufactured phiI norms: mapped phiE "
+                    << "cell index " << baseCellI << " is outside local phiE "
+                    << "field size " << phiEValues.size()
+                    << " for myocardium cell " << i << "."
+                    << exit(FatalError);
+            }
+
             phiIValues[i] = VmValues[i] + phiEValues[baseCellI];
         }
 
@@ -488,7 +498,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
     fileName outputFile = outputFileName_;
     if (outputFile.empty())
     {
-        const fileName outputDir(time.path()/"postProcessing");
+        const fileName outputDir(time.globalPath()/"postProcessing");
         mkDir(outputDir);
         outputFile =
             outputDir

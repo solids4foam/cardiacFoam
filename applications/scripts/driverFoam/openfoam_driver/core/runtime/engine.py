@@ -30,6 +30,7 @@ from uuid import uuid4
 
 from .artifacts import predict_data_artifacts
 from .models import CaseConfig, TutorialSpec
+from .reconciler import reconcile_artifacts
 
 
 @dataclass
@@ -469,6 +470,38 @@ class DriverEngine:
         report_path.write_text("\n".join(lines).rstrip() + "\n")
         return report_path
 
+    _TERMINAL_STATUSES: tuple[str, ...] = (
+        "completed", "completed_with_failures", "failed", "postprocess_failed",
+    )
+
+    def _write_realized_manifest(self, destination_root: Path) -> Path | None:
+        """Emit the sidecar artifacts_realized.json (plan §10).
+
+        Called only at terminal status on non-dry runs. Walks predicted
+        artifacts and checks the on-disk reality of ``spec.case_root``.
+        Atomic via the same .tmp + os.replace pattern as the other
+        sidecars. Returns ``None`` if the realized manifest was skipped
+        (dry run or unreachable case_root)."""
+        if self.dry_run:
+            return None
+        predicted = predict_data_artifacts(self.spec.case_root, self.spec)
+        report = reconcile_artifacts(self.spec.case_root, predicted)
+        payload = {
+            "schema_version": "1.0",
+            "run_id": self.run_id,
+            "case_root": report.case_root,
+            "realized_at_utc": _utc_now(),
+            "predicted_count": report.predicted_count,
+            "matched_count": report.matched_count,
+            "missing_count": report.missing_count,
+            "artifacts": list(report.artifacts),
+        }
+        path = destination_root / "artifacts_realized.json"
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(payload, indent=2))
+        os.replace(tmp, path)
+        return path
+
     def _write_artifacts_manifest(self, destination_root: Path) -> Path | None:
         """Emit the sidecar artifacts_manifest.json (plan v2 §3b).
 
@@ -507,9 +540,12 @@ class DriverEngine:
         destination_root.mkdir(parents=True, exist_ok=True)
         plots_manifest = self.spec.output_dir / "plots.json"
         artifacts_manifest_path = self._write_artifacts_manifest(destination_root)
+        artifacts_realized_path: Path | None = None
+        if status in self._TERMINAL_STATUSES:
+            artifacts_realized_path = self._write_realized_manifest(destination_root)
         total = total_cases if total_cases is not None else len(results)
         manifest = {
-            "schema_version": "2.2",
+            "schema_version": "2.3",
             "run_id": self.run_id,
             "requested_action": self.requested_action,
             "entry": self._entry_name(),
@@ -535,6 +571,7 @@ class DriverEngine:
             "error": error,
             "plots_manifest_path": str(plots_manifest) if plots_manifest.exists() else None,
             "artifacts_manifest_path": str(artifacts_manifest_path) if artifacts_manifest_path else None,
+            "artifacts_realized_path": str(artifacts_realized_path) if artifacts_realized_path else None,
             "workflow_dag": self.spec.metadata.get("workflow_dag"),
             "results": [asdict(item) for item in results],
         }

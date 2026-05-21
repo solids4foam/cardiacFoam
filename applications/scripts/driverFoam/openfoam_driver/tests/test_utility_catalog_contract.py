@@ -432,8 +432,9 @@ class TestOutputsProducesBackwardCompat(unittest.TestCase):
 
 
 class TestMigratedManifests(unittest.TestCase):
-    """Phase 4: the three migrated manifests parse correctly after migration."""
+    """Phase 4 + 11a: all 9 manifests carry full schema (argument_kind + produces)."""
 
+    # The three original Phase-4 manifests
     def test_1DgraphToFoam_produces_entries(self) -> None:
         """1DgraphToFoam manifest must have at least one produces entry after migration."""
         manifest = UTILITY_CATALOG.get("1DgraphToFoam")
@@ -468,7 +469,7 @@ class TestMigratedManifests(unittest.TestCase):
         self.assertGreater(len(manifest.produces), 0)
 
     def test_migrated_produces_paths_match_outputs(self) -> None:
-        """For the three migrated utilities, every outputs path must appear in produces."""
+        """For the three original migrated utilities, every outputs path must appear in produces."""
         for util_name in ("1DgraphToFoam", "runPurkinjeGraph", "sweepCurrents"):
             manifest = UTILITY_CATALOG.get(util_name)
             self.assertIsNotNone(manifest, f"{util_name} not in catalog")
@@ -479,6 +480,168 @@ class TestMigratedManifests(unittest.TestCase):
                     produces_paths,
                     f"{util_name}: outputs path {out_path!r} not mirrored in produces",
                 )
+
+    # Phase 11a: six newly migrated manifests
+    def test_checkMeshGeometry_produces_entries(self) -> None:
+        """checkMeshGeometry must have at least one produces entry."""
+        manifest = UTILITY_CATALOG.get("checkMeshGeometry")
+        self.assertIsNotNone(manifest, "checkMeshGeometry not found in catalog")
+        self.assertGreater(len(manifest.produces), 0)
+
+    def test_checkMeshGeometry_flag_argument_kinds(self) -> None:
+        """All checkMeshGeometry flags must carry a valid argument_kind."""
+        manifest = UTILITY_CATALOG.get("checkMeshGeometry")
+        self.assertIsNotNone(manifest)
+        for flag in manifest.flags:
+            self.assertIn(
+                flag.argument_kind,
+                ALLOWED_ARGUMENT_KINDS,
+                f"Flag {flag.name!r} has invalid argument_kind {flag.argument_kind!r}",
+            )
+
+    def test_ionicHeterogeneityProbe_produces_entries(self) -> None:
+        """ionicHeterogeneityProbe must have at least four produces entries (one per output CSV)."""
+        manifest = UTILITY_CATALOG.get("ionicHeterogeneityProbe")
+        self.assertIsNotNone(manifest, "ionicHeterogeneityProbe not found in catalog")
+        self.assertGreaterEqual(len(manifest.produces), 4)
+
+    def test_ionicHeterogeneityProbe_produces_paths_match_outputs(self) -> None:
+        """Every ionicHeterogeneityProbe outputs path must appear in produces."""
+        manifest = UTILITY_CATALOG.get("ionicHeterogeneityProbe")
+        self.assertIsNotNone(manifest)
+        produces_paths = {e.path_pattern for e in manifest.produces}
+        for out_path in manifest.outputs:
+            self.assertIn(
+                out_path,
+                produces_paths,
+                f"ionicHeterogeneityProbe: outputs path {out_path!r} not mirrored in produces",
+            )
+
+    def test_listCellModelsVariables_produces_entries(self) -> None:
+        """listCellModelsVariables must have at least one produces entry."""
+        manifest = UTILITY_CATALOG.get("listCellModelsVariables")
+        self.assertIsNotNone(manifest, "listCellModelsVariables not found in catalog")
+        self.assertGreater(len(manifest.produces), 0)
+
+    def test_listCellModelsVariables_produces_paths_match_outputs(self) -> None:
+        """Every listCellModelsVariables outputs path must appear in produces."""
+        manifest = UTILITY_CATALOG.get("listCellModelsVariables")
+        self.assertIsNotNone(manifest)
+        produces_paths = {e.path_pattern for e in manifest.produces}
+        for out_path in manifest.outputs:
+            self.assertIn(
+                out_path,
+                produces_paths,
+                f"listCellModelsVariables: outputs path {out_path!r} not mirrored in produces",
+            )
+
+    def test_setTorsoOrganConductivityField_produces_entries(self) -> None:
+        """setTorsoOrganConductivityField must have at least one produces entry."""
+        manifest = UTILITY_CATALOG.get("setTorsoOrganConductivityField")
+        self.assertIsNotNone(manifest, "setTorsoOrganConductivityField not found in catalog")
+        self.assertGreater(len(manifest.produces), 0)
+
+    def test_setTorsoOrganConductivityField_flag_argument_kinds(self) -> None:
+        """All setTorsoOrganConductivityField flags must carry a valid argument_kind."""
+        manifest = UTILITY_CATALOG.get("setTorsoOrganConductivityField")
+        self.assertIsNotNone(manifest)
+        for flag in manifest.flags:
+            self.assertIn(
+                flag.argument_kind,
+                ALLOWED_ARGUMENT_KINDS,
+                f"Flag {flag.name!r} has invalid argument_kind {flag.argument_kind!r}",
+            )
+
+    def test_setTorsoOrganConductivityField_produces_paths_match_outputs(self) -> None:
+        """Every setTorsoOrganConductivityField outputs path must appear in produces."""
+        manifest = UTILITY_CATALOG.get("setTorsoOrganConductivityField")
+        self.assertIsNotNone(manifest)
+        produces_paths = {e.path_pattern for e in manifest.produces}
+        for out_path in manifest.outputs:
+            self.assertIn(
+                out_path,
+                produces_paths,
+                f"setTorsoOrganConductivityField: outputs path {out_path!r} not mirrored in produces",
+            )
+
+    def test_newVtkUnstructuredToFoam_produces_entries(self) -> None:
+        """newVtkUnstructuredToFoam must have at least one produces entry."""
+        manifest = UTILITY_CATALOG.get("newVtkUnstructuredToFoam")
+        self.assertIsNotNone(manifest, "newVtkUnstructuredToFoam not found in catalog")
+        self.assertGreater(len(manifest.produces), 0)
+
+    def test_newVtkUnstructuredToFoam_flag_argument_kinds(self) -> None:
+        """All newVtkUnstructuredToFoam flags must carry a valid argument_kind."""
+        manifest = UTILITY_CATALOG.get("newVtkUnstructuredToFoam")
+        self.assertIsNotNone(manifest)
+        for flag in manifest.flags:
+            self.assertIn(
+                flag.argument_kind,
+                ALLOWED_ARGUMENT_KINDS,
+                f"Flag {flag.name!r} has invalid argument_kind {flag.argument_kind!r}",
+            )
+
+    def test_newVtkUnstructuredToFoam_positional_args(self) -> None:
+        """newVtkUnstructuredToFoam must have at least one positional_arg (the vtk-file)."""
+        manifest = UTILITY_CATALOG.get("newVtkUnstructuredToFoam")
+        self.assertIsNotNone(manifest)
+        self.assertGreater(len(manifest.positional_args), 0)
+        self.assertEqual(manifest.positional_args[0].argument_kind, "path")
+
+    def test_newVtkUnstructuredToFoam_produces_paths_match_outputs(self) -> None:
+        """Every newVtkUnstructuredToFoam outputs path must appear in produces."""
+        manifest = UTILITY_CATALOG.get("newVtkUnstructuredToFoam")
+        self.assertIsNotNone(manifest)
+        produces_paths = {e.path_pattern for e in manifest.produces}
+        for out_path in manifest.outputs:
+            self.assertIn(
+                out_path,
+                produces_paths,
+                f"newVtkUnstructuredToFoam: outputs path {out_path!r} not mirrored in produces",
+            )
+
+    def test_setFibreField_produces_entries(self) -> None:
+        """setFibreField must have produces entries covering all 11 outputs."""
+        manifest = UTILITY_CATALOG.get("setFibreField")
+        self.assertIsNotNone(manifest, "setFibreField not found in catalog")
+        self.assertGreaterEqual(len(manifest.produces), 11)
+
+    def test_setFibreField_produces_paths_match_outputs(self) -> None:
+        """Every setFibreField outputs path must appear in produces."""
+        manifest = UTILITY_CATALOG.get("setFibreField")
+        self.assertIsNotNone(manifest)
+        produces_paths = {e.path_pattern for e in manifest.produces}
+        for out_path in manifest.outputs:
+            self.assertIn(
+                out_path,
+                produces_paths,
+                f"setFibreField: outputs path {out_path!r} not mirrored in produces",
+            )
+
+    def test_total_migrated_manifest_count(self) -> None:
+        """All 9 utility manifests must carry at least one produces entry."""
+        all_migrated = [
+            "1DgraphToFoam",
+            "runPurkinjeGraph",
+            "sweepCurrents",
+            "checkMeshGeometry",
+            "ionicHeterogeneityProbe",
+            "listCellModelsVariables",
+            "setTorsoOrganConductivityField",
+            "newVtkUnstructuredToFoam",
+            "setFibreField",
+        ]
+        missing_produces = [
+            name
+            for name in all_migrated
+            if UTILITY_CATALOG.get(name) is None
+            or len(UTILITY_CATALOG[name].produces) == 0
+        ]
+        self.assertEqual(
+            missing_produces,
+            [],
+            f"These manifests are not yet fully migrated (missing produces): {missing_produces}",
+        )
 
 
 if __name__ == "__main__":

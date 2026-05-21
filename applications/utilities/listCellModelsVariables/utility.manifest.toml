@@ -26,3 +26,10 @@ requires_mesh = false
 example = "listCellModelsVariables -case ./myCardiacCase"
 
 category = "verification"
+
+[[produces]]
+artifact_id = "list_cell_models_variables_report"
+path_pattern = "postProcessing/listCellModelsVariables.txt"
+format = "openfoam_log"
+description = "Text report listing state, algebraic, constant, and rate variables for the configured ionic/active-tension models."
+produced_by = "listCellModelsVariables"

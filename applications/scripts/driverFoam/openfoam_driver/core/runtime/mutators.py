@@ -179,3 +179,64 @@ def update_foam_entry(
         if scope is None:
             raise KeyError(f"Key '{key}' not found in {file_path}")
         raise KeyError(f"Key '{key}' not found in scope '{scope}' in {file_path}")
+
+
+def remove_foam_dict(
+    file_path: Path,
+    dict_name: str,
+    *,
+    scope: str | list[str] | tuple[str, ...] | None = None,
+    missing_ok: bool = False,
+) -> None:
+    """Remove a dictionary block from an OpenFOAM dictionary-like text file."""
+    if not file_path.exists():
+        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
+
+    lines = file_path.read_text().splitlines(keepends=True)
+    search_start, search_end = _resolve_search_region(lines, scope)
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}\b")
+
+    remove_start: int | None = None
+    remove_end: int | None = None
+
+    i = search_start
+    while i < search_end:
+        candidate = _strip_inline_comment(lines[i])
+        if not header_pattern.match(candidate):
+            i += 1
+            continue
+
+        open_line = i
+        while open_line < search_end and "{" not in _strip_inline_comment(lines[open_line]):
+            open_line += 1
+
+        if open_line >= search_end:
+            raise KeyError(f"Dictionary '{dict_name}' has no opening brace")
+
+        depth = 0
+        saw_open = False
+        for j in range(open_line, search_end):
+            text = _strip_inline_comment(lines[j])
+            for ch in text:
+                if ch == "{":
+                    depth += 1
+                    saw_open = True
+                elif ch == "}" and saw_open:
+                    depth -= 1
+                    if depth == 0:
+                        remove_start = i
+                        remove_end = j + 1
+                        break
+            if remove_end is not None:
+                break
+        break
+
+    if remove_start is None or remove_end is None:
+        if missing_ok:
+            return
+        if scope is None:
+            raise KeyError(f"Dictionary '{dict_name}' not found in {file_path}")
+        raise KeyError(f"Dictionary '{dict_name}' not found in scope '{scope}' in {file_path}")
+
+    del lines[remove_start:remove_end]
+    file_path.write_text("".join(lines))

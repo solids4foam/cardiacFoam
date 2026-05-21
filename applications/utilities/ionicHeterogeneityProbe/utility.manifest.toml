@@ -29,3 +29,31 @@ requires_mesh = false
 example = "ionicHeterogeneityProbe -case ./singleCell_run"
 
 category = "verification"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_vm_traces"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/Vm_traces.csv"
+format = "csv_probe"
+description = "Membrane voltage traces for each transmural sample point."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_ap_metrics"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/AP_metrics.csv"
+format = "csv_probe"
+description = "Action-potential metrics (RMP, peak, APD30/50/70/90, maxdV/dt) per sample."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_smoothness_report"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/smoothness_report.csv"
+format = "json_summary"
+description = "Adjacent-sample waveform smoothness check results."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_apd_envelope_report"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/APD_envelope_report.csv"
+format = "json_summary"
+description = "APD envelope (transmural gradient) validation results."
+produced_by = "ionicHeterogeneityProbe"

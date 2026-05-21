@@ -12,6 +12,7 @@ from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+    remove_electro_property_dict,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
@@ -74,6 +75,7 @@ def _apply_case(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    ecg_enabled: bool = False,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
 ) -> None:
     dimension = str(case.params["dimension"])
@@ -92,15 +94,28 @@ def _apply_case(
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
         f"{electro_properties_scope}.verificationModel.groundElectrode": True,
         f"{electro_properties_scope}.manufacturedBidomain.groundElectrode": True,
-        f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "torsoECG",
-        f"{electro_properties_scope}.ecgDomains.bodyECG.ecgVerificationModel":
-            "bathECGManufacturedVerifier",
-        f"{electro_properties_scope}.ecgDomains.pseudoECGSignals.ecgSolver": "pseudoECG",
     }
+
+    if ecg_enabled:
+        case_overrides.update(
+            {
+                f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "torsoECG",
+                f"{electro_properties_scope}.ecgDomains.bodyECG.ecgVerificationModel":
+                    "bathECGManufacturedVerifier",
+                f"{electro_properties_scope}.ecgDomains.pseudoECGSignals.ecgSolver": "pseudoECG",
+            }
+        )
 
     _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
     set_delta_t(control_dict, dt_value)
     apply_electro_property_overrides(electro_properties, case_overrides)
+    if not ecg_enabled:
+        remove_electro_property_dict(
+            electro_properties,
+            "ecgDomains",
+            scope=electro_properties_scope,
+            missing_ok=True,
+        )
     apply_electro_property_overrides(electro_properties, electro_property_overrides)
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
@@ -113,6 +128,7 @@ def _run_case(
     tutorials_root: Path | None = None,
     run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
+    ecg_enabled: bool = False,
 ) -> None:
     del setup_root
     dimension = str(case.params["dimension"])
@@ -126,8 +142,9 @@ def _run_case(
 
     subprocess.run(command, check=True)
     _archive_case_logs(case_root, case)
-    _stage_case_output(case_root, case)
-    _stage_case_ecg_outputs(case_root, case)
+    _stage_case_output(case_root, case, run_in_parallel=run_in_parallel)
+    if ecg_enabled:
+        _stage_case_ecg_outputs(case_root, case, run_in_parallel=run_in_parallel)
 
 
 def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
@@ -147,15 +164,26 @@ def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
     return destination_root
 
 
-def _stage_case_output(case_root: Path, case: CaseConfig) -> Path:
+def _stage_case_output(
+    case_root: Path,
+    case: CaseConfig,
+    *,
+    run_in_parallel: bool = False,
+) -> Path:
     filename = _case_output_filename(case)
     destination_dir = _archive_output_dir(case_root)
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / filename
-    candidates = (
-        case_root / "postProcessing" / filename,
-        case_root / "processor0" / "postProcessing" / filename,
-    )
+    if run_in_parallel:
+        candidates = (
+            case_root / "processor0" / "postProcessing" / filename,
+            case_root / "postProcessing" / filename,
+        )
+    else:
+        candidates = (
+            case_root / "postProcessing" / filename,
+            case_root / "processor0" / "postProcessing" / filename,
+        )
 
     for candidate in candidates:
         if not candidate.exists():
@@ -171,7 +199,12 @@ def _stage_case_output(case_root: Path, case: CaseConfig) -> Path:
     )
 
 
-def _stage_case_ecg_outputs(case_root: Path, case: CaseConfig) -> list[Path]:
+def _stage_case_ecg_outputs(
+    case_root: Path,
+    case: CaseConfig,
+    *,
+    run_in_parallel: bool = False,
+) -> list[Path]:
     staged_outputs: list[Path] = []
     destination_dir = _archive_output_dir(case_root)
     destination_dir.mkdir(parents=True, exist_ok=True)
@@ -185,10 +218,16 @@ def _stage_case_ecg_outputs(case_root: Path, case: CaseConfig) -> list[Path]:
 
     for prefix, source_name in ecg_outputs:
         destination = destination_dir / f"{prefix}_{case.case_id}_{source_name}"
-        candidates = (
-            case_root / "postProcessing" / source_name,
-            case_root / "processor0" / "postProcessing" / source_name,
-        )
+        if run_in_parallel:
+            candidates = (
+                case_root / "processor0" / "postProcessing" / source_name,
+                case_root / "postProcessing" / source_name,
+            )
+        else:
+            candidates = (
+                case_root / "postProcessing" / source_name,
+                case_root / "processor0" / "postProcessing" / source_name,
+            )
 
         for candidate in candidates:
             if not candidate.exists():
@@ -281,6 +320,7 @@ def make_spec(
     postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
+    ecg_enabled: bool = False,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
@@ -323,6 +363,7 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
             verification_model_type=verification_model_type,
+            ecg_enabled=ecg_enabled,
             block_mesh_dict_template=block_mesh_dict_template,
         ),
         run_case=partial(
@@ -330,6 +371,7 @@ def make_spec(
             tutorials_root=tutorials_root,
             run_script_relpath=Path(run_script_relpath),
             run_in_parallel=run_in_parallel,
+            ecg_enabled=ecg_enabled,
         ),
         collect_outputs=_collect_outputs,
         postprocess=partial(
@@ -363,6 +405,7 @@ def make_spec(
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_relpath),
             "run_in_parallel": run_in_parallel,
+            "ecg_enabled": ecg_enabled,
             "postprocess_script_relpath": str(postprocess_script_relpath),
             "postprocess_function_name": postprocess_function_name,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,

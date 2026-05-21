@@ -60,7 +60,7 @@ class TestDriverEngineManifest(unittest.TestCase):
             self.assertEqual(applied_cases, ["caseA", "caseB"])
             self.assertEqual(ran_cases, ["caseA", "caseB"])
             self.assertEqual(len(results), 2)
-            self.assertEqual(manifest["schema_version"], "2.2")
+            self.assertEqual(manifest["schema_version"], "2.3")
             self.assertEqual(manifest["requested_action"], "all")
             self.assertEqual(manifest["entry"], "dummy")
             self.assertIsNone(manifest["entry_kind"])
@@ -182,7 +182,7 @@ class TestDriverEngineManifestSchemaVersion(unittest.TestCase):
         "results", "human_report_path",
     })
 
-    def test_manifest_schema_version_is_2_2_and_additive(self) -> None:
+    def test_manifest_schema_version_is_2_3_and_additive(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             case_root = root / "case"
@@ -203,7 +203,7 @@ class TestDriverEngineManifestSchemaVersion(unittest.TestCase):
             DriverEngine(spec=spec, requested_action="sim").run_simulations()
 
             manifest = _load_json(output_dir / "run_manifest.json")
-            self.assertEqual(manifest["schema_version"], "2.2")
+            self.assertEqual(manifest["schema_version"], "2.3")
             missing = self._V2_1_REQUIRED_KEYS - set(manifest)
             self.assertEqual(
                 missing, set(),
@@ -630,11 +630,127 @@ class TestWorkflowDag(unittest.TestCase):
             DriverEngine(spec=spec, requested_action="sim").run_simulations()
 
             manifest = _load_json(spec.output_dir / "run_manifest.json")
-            self.assertEqual(manifest["schema_version"], "2.2")
+            self.assertEqual(manifest["schema_version"], "2.3")
             missing = v2_1_required - set(manifest)
             self.assertEqual(
                 missing, set(),
                 f"v2.2 manifest with workflow_dag is missing v2.1 keys: {sorted(missing)}",
+            )
+
+
+class TestArtifactsRealizedManifest(unittest.TestCase):
+    """artifacts_realized.json contract (plan v2 §10).
+
+    Sidecar written at terminal status reporting which predicted artifacts
+    actually appeared on disk. Always present at the end of a non-dry run,
+    so agents have a stable reconciliation target. Linked from
+    run_manifest['artifacts_realized_path'].
+    """
+
+    def _write_single_cell_electro_properties(self, case_root: Path) -> None:
+        (case_root / "constant").mkdir(parents=True, exist_ok=True)
+        (case_root / "constant" / "electroProperties").write_text(
+            "myocardiumSolver singleCellSolver;\n"
+            "singleCellSolverCoeffs\n"
+            "{\n"
+            "    ionicModel    AlievPanfilov;\n"
+            "    tissue        myocyte;\n"
+            "}\n"
+        )
+
+    def _build_spec(self, root: Path) -> TutorialSpec:
+        case_root = root / "case"
+        setup_root = root / "setup"
+        output_dir = root / "output"
+        case_root.mkdir()
+        setup_root.mkdir()
+        self._write_single_cell_electro_properties(case_root)
+        return TutorialSpec(
+            name="realized",
+            case_root=case_root,
+            setup_root=setup_root,
+            output_dir=output_dir,
+            build_cases=lambda: [CaseConfig("only", {})],
+            apply_case=lambda _c, _case: None,
+            run_case=lambda _c, _s, _case: None,
+        )
+
+    def test_artifacts_realized_written_at_terminal_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            realized = spec.output_dir / "artifacts_realized.json"
+            self.assertTrue(realized.exists(), "artifacts_realized.json missing")
+            payload = json.loads(realized.read_text())
+            self.assertEqual(payload["schema_version"], "1.0")
+            self.assertIn("predicted_count", payload)
+            self.assertIn("matched_count", payload)
+            self.assertIn("missing_count", payload)
+            self.assertIn("artifacts", payload)
+
+    def test_run_manifest_records_artifacts_realized_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            run_manifest = json.loads(
+                (spec.output_dir / "run_manifest.json").read_text()
+            )
+            self.assertEqual(
+                run_manifest["artifacts_realized_path"],
+                str(spec.output_dir / "artifacts_realized.json"),
+            )
+
+    def test_realized_manifest_is_written_atomically(self) -> None:
+        """Same atomicity contract as run_manifest + artifacts_manifest —
+        the realized manifest goes through .tmp + os.replace."""
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            realized_path = spec.output_dir / "artifacts_realized.json"
+
+            tmp_existed_at_replace: list[bool] = []
+            saw_realized_dst = False
+            real_replace = os.replace
+
+            def tracking_replace(src, dst):
+                nonlocal saw_realized_dst
+                src_path = Path(src)
+                dst_path = Path(dst)
+                if dst_path == realized_path:
+                    saw_realized_dst = True
+                    tmp_existed_at_replace.append(src_path.exists())
+                    self.assertEqual(src_path.parent, realized_path.parent)
+                    self.assertTrue(
+                        src_path.name.startswith("artifacts_realized.json")
+                        and src_path.name.endswith(".tmp"),
+                        f"unexpected tmp name: {src_path.name}",
+                    )
+                return real_replace(src, dst)
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.engine.os.replace",
+                side_effect=tracking_replace,
+            ):
+                DriverEngine(spec=spec, requested_action="sim").run_simulations()
+
+            self.assertTrue(saw_realized_dst)
+            self.assertTrue(all(tmp_existed_at_replace))
+            leftovers = list(spec.output_dir.glob("artifacts_realized.json*.tmp"))
+            self.assertEqual(leftovers, [])
+
+    def test_realized_manifest_skipped_on_dry_run(self) -> None:
+        """Dry runs never execute case work — no realized artifacts to
+        report. The sidecar must NOT be written."""
+        with tempfile.TemporaryDirectory() as temp:
+            spec = self._build_spec(Path(temp))
+            DriverEngine(
+                spec=spec, dry_run=True, requested_action="sim",
+            ).run_simulations()
+            realized = spec.output_dir / "artifacts_realized.json"
+            self.assertFalse(
+                realized.exists(),
+                "realized sidecar must not be written for dry runs",
             )
 
 

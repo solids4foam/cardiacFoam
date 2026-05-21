@@ -22,10 +22,23 @@ outputs = [
 
 requires_mesh = false
 
-flags = [
-  { name = "-no-fields", description = "Skip reconstruction of volFields from VTK CELL_DATA.", takes_value = false },
+positional_args = [
+  {name = "vtk_file", argument_kind = "path", description = "Input legacy ASCII VTK file (UNSTRUCTURED_GRID) to import."},
 ]
 
 example = "newVtkUnstructuredToFoam myMesh.vtk -case ./myCase"
 
 category = "io-conversion"
+
+[[flags]]
+name = "-no-fields"
+description = "Skip reconstruction of volFields from VTK CELL_DATA."
+takes_value = false
+argument_kind = "switch"
+
+[[produces]]
+artifact_id = "vtk_imported_polymesh"
+path_pattern = "constant/polyMesh"
+format = "openfoam_log"
+description = "Imported OpenFOAM polyMesh directory from the input VTK file, including any reconstructed volFields."
+produced_by = "newVtkUnstructuredToFoam"
