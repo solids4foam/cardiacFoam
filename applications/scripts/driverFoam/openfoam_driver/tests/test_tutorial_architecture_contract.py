@@ -327,7 +327,7 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             self.assertIn(source_dir / "ECG_manufactured_pseudoECG.dat", staged)
             self.assertFalse(raw.exists(), "raw root postProcessing ECG file should be renamed away")
 
-    def test_bath_bidomain_apply_case_wires_unified_potential_and_dual_ecg(self) -> None:
+    def test_bath_bidomain_apply_case_wires_unified_potential_without_default_ecg(self) -> None:
         case = CaseConfig(
             case_id="bath",
             params={"dimension": "1D", "solver": "implicit", "cells": 20, "dt": 0.1},
@@ -399,9 +399,91 @@ class TestTutorialArchitectureContract(unittest.TestCase):
             self.assertIn("groundElectrode    yes;", electro_text)
             self.assertIn("bathPotentialDomain", electro_text)
             self.assertRegex(electro_text, r"bathCellZones\s+\(bath\);")
+            self.assertNotIn("ecgDomains", electro_text)
+
+    def test_bath_bidomain_collect_outputs_ignores_stale_ecg_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            case_root = root / "case"
+            output_dir = root / "output"
+            archived_dir = case_root / "archivedPostProcessing"
+            archived_dir.mkdir(parents=True, exist_ok=True)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            (archived_dir / "bathBidomain_1D_20_cells_implicit.dat").write_text("bath")
+            (archived_dir / "BathECG_stale_torsoECG.dat").write_text("stale-ecg")
+            (archived_dir / "PseudoECG_stale_pseudoECG.dat").write_text("stale-pseudo")
+
+            manufactured_fda_bath_bidomain._collect_outputs(case_root, output_dir)
+
+            self.assertTrue((output_dir / "bathBidomain_1D_20_cells_implicit.dat").exists())
+            self.assertFalse((output_dir / "BathECG_stale_torsoECG.dat").exists())
+            self.assertFalse((output_dir / "PseudoECG_stale_pseudoECG.dat").exists())
+
+    def test_bath_bidomain_ecg_enabled_inserts_surface_ecg_block(self) -> None:
+        case = CaseConfig(
+            case_id="case",
+            params={"dimension": "3D", "solver": "implicit", "cells": 10, "dt": 0.1},
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            case_root = Path(temp_dir)
+            (case_root / "constant").mkdir(parents=True)
+            (case_root / "system").mkdir(parents=True)
+            (case_root / "constant" / "electroProperties").write_text(
+                "\n".join(
+                    [
+                        "myocardiumSolver bidomainSolver;",
+                        "",
+                        "bidomainSolverCoeffs",
+                        "{",
+                        "    dimension \"1D\";",
+                        "    solutionAlgorithm explicit;",
+                        "    verificationModel",
+                        "    {",
+                        "        type none;",
+                        "        groundElectrode no;",
+                        "    }",
+                        "    manufacturedBidomain",
+                        "    {",
+                        "        groundElectrode no;",
+                        "    }",
+                        "    bathPotentialDomain",
+                        "    {",
+                        "        bathCellZones (bath);",
+                        "    }",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
+            (case_root / "system" / "controlDict").write_text("deltaT 1.0;\n")
+            (case_root / "system" / "blockMeshDict.3D").write_text(
+                "\n".join(
+                    [
+                        "hex (0 1 2 3 4 5 6 7) (1 1 1) simpleGrading (1 1 1)",
+                        "hex (1 8 9 2 5 10 11 6) (1 1 1) simpleGrading (1 1 1)",
+                        "hex (8 12 13 9 10 14 15 11) (1 1 1) simpleGrading (1 1 1)",
+                        "",
+                    ]
+                )
+            )
+
+            manufactured_fda_bath_bidomain._apply_case(
+                case_root,
+                case,
+                ecg_enabled=True,
+            )
+
+            electro_text = (case_root / "constant" / "electroProperties").read_text()
+            self.assertIn("ecgDomains", electro_text)
+            self.assertIn("bodyECG", electro_text)
+            self.assertIn("pseudoECGSignals", electro_text)
             self.assertIn("ecgSolver    torsoECG;", electro_text)
-            self.assertIn("ecgVerificationModel    bathECGManufacturedVerifier;", electro_text)
-            self.assertIn("ecgSolver    pseudoECG;", electro_text)
+            self.assertIn("E_left    (-1 0.5 0.5);", electro_text)
+            self.assertIn("E_right   (2 0.5 0.5);", electro_text)
+            self.assertIn("E_side    (1.5 1 0.5);", electro_text)
 
     def test_bath_bidomain_stages_body_and_pseudo_ecg_outputs(self) -> None:
         case = CaseConfig(

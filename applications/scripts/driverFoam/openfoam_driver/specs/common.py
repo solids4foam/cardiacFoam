@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ..core.runtime.mutators import remove_foam_dict, update_foam_entry
+from ..core.runtime.mutators import ensure_foam_dict, remove_foam_dict, update_foam_entry
 
 
 def repo_root_default() -> Path:
@@ -253,6 +253,33 @@ def remove_electro_property_dict(
         dict_name,
         scope=resolved_scope,
         missing_ok=missing_ok,
+    )
+
+
+def ensure_electro_property_dict(
+    electro_properties_path: Path,
+    dict_name: str,
+    block_text: str,
+    *,
+    scope: str | Sequence[str] | None = None,
+) -> bool:
+    resolved_scope = None
+    if scope is not None:
+        raw_scope = (scope,) if isinstance(scope, str) else tuple(scope)
+        resolved_scope = tuple(
+            part
+            for token in raw_scope
+            for part in _resolve_scope_tokens(
+                str(token),
+                electro_properties_path=electro_properties_path,
+            )
+        )
+
+    return ensure_foam_dict(
+        electro_properties_path,
+        dict_name,
+        block_text,
+        scope=resolved_scope,
     )
 
 

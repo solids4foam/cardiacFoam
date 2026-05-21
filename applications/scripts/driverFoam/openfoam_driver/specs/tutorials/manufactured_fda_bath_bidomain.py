@@ -12,6 +12,7 @@ from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+    ensure_electro_property_dict,
     remove_electro_property_dict,
     resolve_run_script_path,
     resolve_spec_paths,
@@ -25,6 +26,31 @@ def _case_output_filename(case: CaseConfig) -> str:
     cells = int(case.params["cells"])
     solver = str(case.params["solver"])
     return f"bathBidomain_{dimension}_{cells}_cells_{solver}.dat"
+
+
+_DEFAULT_ECG_DOMAINS_BLOCK = """    ecgDomains
+    {
+        electrodePositions
+        {
+            E_left    (-1 0.5 0.5);
+            E_right   (2 0.5 0.5);
+            E_side    (1.5 1 0.5);
+        }
+
+        bodyECG
+        {
+            ecgSolver    torsoECG;
+            ecgVerificationModel    bathECGManufacturedVerifier;
+            reportElectrodeLookup    yes;
+        }
+
+        pseudoECGSignals
+        {
+            ecgSolver    pseudoECG;
+        }
+    }
+
+"""
 
 
 def _archive_output_dir(case_root: Path) -> Path:
@@ -97,6 +123,12 @@ def _apply_case(
     }
 
     if ecg_enabled:
+        ensure_electro_property_dict(
+            electro_properties,
+            "ecgDomains",
+            _DEFAULT_ECG_DOMAINS_BLOCK,
+            scope=electro_properties_scope,
+        )
         case_overrides.update(
             {
                 f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "torsoECG",
@@ -244,12 +276,20 @@ def _stage_case_ecg_outputs(
     return staged_outputs
 
 
-def _collect_outputs(case_root: Path, output_dir: Path) -> None:
+def _collect_outputs(
+    case_root: Path,
+    output_dir: Path,
+    *,
+    ecg_enabled: bool = False,
+) -> None:
     archived_dir = _archive_output_dir(case_root)
     archived_outputs = []
     if archived_dir.exists():
         for source in sorted(archived_dir.glob("*.dat")):
-            if source.name.startswith(("bathBidomain_", "BathECG_")):
+            if source.name.startswith("bathBidomain_") or (
+                ecg_enabled
+                and source.name.startswith(("BathECG_", "PseudoECG_"))
+            ):
                 archived_outputs.append(source)
 
     same_output_dir = archived_dir.exists() and archived_dir.resolve() == output_dir.resolve()
@@ -373,7 +413,7 @@ def make_spec(
             run_in_parallel=run_in_parallel,
             ecg_enabled=ecg_enabled,
         ),
-        collect_outputs=_collect_outputs,
+        collect_outputs=partial(_collect_outputs, ecg_enabled=ecg_enabled),
         postprocess=partial(
             _postprocess,
             tutorial_name=tutorial_name,

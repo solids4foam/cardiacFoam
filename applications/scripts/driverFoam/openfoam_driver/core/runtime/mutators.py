@@ -240,3 +240,35 @@ def remove_foam_dict(
 
     del lines[remove_start:remove_end]
     file_path.write_text("".join(lines))
+
+
+def ensure_foam_dict(
+    file_path: Path,
+    dict_name: str,
+    block_text: str,
+    *,
+    scope: str | list[str] | tuple[str, ...] | None = None,
+) -> bool:
+    """Insert a dictionary block if it is missing from the selected scope."""
+    if not file_path.exists():
+        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
+
+    lines = file_path.read_text().splitlines(keepends=True)
+    search_start, search_end = _resolve_search_region(lines, scope)
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}\b")
+
+    for idx in range(search_start, search_end):
+        candidate = _strip_inline_comment(lines[idx])
+        if header_pattern.match(candidate):
+            return False
+
+    block_lines = block_text.splitlines(keepends=True)
+    if not block_lines:
+        raise ValueError("block_text cannot be empty")
+    if not block_lines[-1].endswith("\n"):
+        block_lines[-1] = f"{block_lines[-1]}\n"
+
+    lines[search_end:search_end] = block_lines
+    file_path.write_text("".join(lines))
+
+    return True

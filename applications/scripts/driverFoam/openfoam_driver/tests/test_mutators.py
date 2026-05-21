@@ -4,12 +4,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openfoam_driver.core.runtime.mutators import update_foam_entry
+from openfoam_driver.core.runtime.mutators import (
+    ensure_foam_dict,
+    remove_foam_dict,
+    update_foam_entry,
+)
 from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     detect_electro_coeffs_scope,
+    ensure_electro_property_dict,
     normalize_entry_overrides,
+    remove_electro_property_dict,
 )
 
 
@@ -75,6 +81,37 @@ class TestScopedMutators(unittest.TestCase):
 
             with self.assertRaises(KeyError):
                 update_foam_entry(path, "b", 2, scope="missing")
+
+    def test_remove_foam_dict_removes_nested_dictionary(self) -> None:
+        text = "\n".join(
+            [
+                "outer",
+                "{",
+                "    keep 1;",
+                "    removeMe",
+                "    {",
+                "        nested",
+                "        {",
+                "            value 1;",
+                "        }",
+                "    }",
+                "    after 2;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            remove_foam_dict(path, "removeMe", scope="outer")
+
+            updated = path.read_text()
+            self.assertIn("keep 1;", updated)
+            self.assertIn("after 2;", updated)
+            self.assertNotIn("removeMe", updated)
+            self.assertNotIn("value 1;", updated)
 
     def test_single_cell_stimulus_updates_use_nested_scope(self) -> None:
         text = "\n".join(
@@ -193,6 +230,109 @@ class TestScopedMutators(unittest.TestCase):
             updated = path.read_text()
             self.assertIn("ionicModel    Gaur;", updated)
             self.assertIn("stim_period_S1    750;", updated)
+
+    def test_remove_electro_property_dict_supports_electro_scope_token(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver bidomainSolver;",
+                "",
+                "bidomainSolverCoeffs",
+                "{",
+                "    ecgDomains",
+                "    {",
+                "        ECG",
+                "        {",
+                "            ecgSolver torsoECG;",
+                "        }",
+                "    }",
+                "    bathPotentialDomain",
+                "    {",
+                "        bathCellZones (bath);",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            remove_electro_property_dict(
+                path,
+                "ecgDomains",
+                scope="$ELECTRO_MODEL_COEFFS",
+            )
+
+            updated = path.read_text()
+            self.assertNotIn("ecgDomains", updated)
+            self.assertIn("bathPotentialDomain", updated)
+
+    def test_ensure_foam_dict_inserts_missing_dict_in_scope(self) -> None:
+        text = "\n".join(
+            [
+                "root",
+                "{",
+                "    existing yes;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            inserted = ensure_foam_dict(
+                path,
+                "newBlock",
+                "    newBlock\n    {\n        value 1;\n    }\n",
+                scope="root",
+            )
+            inserted_again = ensure_foam_dict(
+                path,
+                "newBlock",
+                "    newBlock\n    {\n        value 2;\n    }\n",
+                scope="root",
+            )
+
+            updated = path.read_text()
+            self.assertTrue(inserted)
+            self.assertFalse(inserted_again)
+            self.assertEqual(updated.count("newBlock"), 1)
+            self.assertIn("value 1;", updated)
+
+    def test_ensure_electro_property_dict_supports_electro_scope_token(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver bidomainSolver;",
+                "",
+                "bidomainSolverCoeffs",
+                "{",
+                "    bathPotentialDomain",
+                "    {",
+                "        bathCellZones (bath);",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            inserted = ensure_electro_property_dict(
+                path,
+                "ecgDomains",
+                "    ecgDomains\n    {\n        ECG {}\n    }\n",
+                scope="$ELECTRO_MODEL_COEFFS",
+            )
+
+            updated = path.read_text()
+            self.assertTrue(inserted)
+            self.assertIn("ecgDomains", updated)
+            self.assertIn("bathPotentialDomain", updated)
 
     def test_apply_physics_property_overrides_updates_root_dictionary(self) -> None:
         text = "\n".join(

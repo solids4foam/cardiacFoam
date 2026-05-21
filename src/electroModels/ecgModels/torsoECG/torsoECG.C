@@ -94,19 +94,40 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 
         label ownerCount = electrodeCells_[electrodeI] >= 0 ? 1 : 0;
         reduce(ownerCount, sumOp<label>());
+        const label initialOwnerCount = ownerCount;
 
-        if (ownerCount == 0)
+        if (ownerCount != 1)
         {
             scalar localDistanceSqr = GREAT;
-            const label localNearest =
-                nearestCell(phiEMesh, electrodes[electrodeI], localDistanceSqr);
+            label localCandidate = -1;
+
+            if (ownerCount == 0)
+            {
+                localCandidate =
+                    nearestCell
+                    (
+                        phiEMesh,
+                        electrodes[electrodeI],
+                        localDistanceSqr
+                    );
+            }
+            else if (electrodeCells_[electrodeI] >= 0)
+            {
+                localCandidate = electrodeCells_[electrodeI];
+                localDistanceSqr =
+                    Foam::magSqr
+                    (
+                        phiEMesh.C().primitiveField()[localCandidate]
+                      - electrodes[electrodeI]
+                    );
+            }
 
             scalar globalDistanceSqr = localDistanceSqr;
             reduce(globalDistanceSqr, minOp<scalar>());
 
             const bool isNearest
             (
-                localNearest >= 0
+                localCandidate >= 0
              && Foam::mag(localDistanceSqr - globalDistanceSqr)
               <= max(SMALL, ROOTSMALL*max(scalar(1), globalDistanceSqr))
             );
@@ -118,7 +139,7 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
             (
                 isNearest
              && Pstream::myProcNo() == ownerProc
-              ? localNearest
+              ? localCandidate
               : -1
             );
 
@@ -127,14 +148,29 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 
             if (reportElectrodeLookup_ && electrodeCells_[electrodeI] >= 0)
             {
-                Info<< "torsoECG: electrode "
-                    << domain.electrodeNames()[electrodeI]
-                    << " at " << electrodes[electrodeI]
-                    << " is outside findCell ownership; using nearest cell "
-                    << electrodeCells_[electrodeI]
-                    << " at distance " << Foam::sqrt(globalDistanceSqr)
-                    << " on phiE mesh '" << phiEMesh.name() << "'."
-                    << nl;
+                if (initialOwnerCount == 0)
+                {
+                    Info<< "torsoECG: electrode "
+                        << domain.electrodeNames()[electrodeI]
+                        << " at " << electrodes[electrodeI]
+                        << " is outside findCell ownership; using nearest cell "
+                        << electrodeCells_[electrodeI]
+                        << " at distance " << Foam::sqrt(globalDistanceSqr)
+                        << " on phiE mesh '" << phiEMesh.name() << "'."
+                        << nl;
+                }
+                else
+                {
+                    Info<< "torsoECG: electrode "
+                        << domain.electrodeNames()[electrodeI]
+                        << " at " << electrodes[electrodeI]
+                        << " has ambiguous parallel findCell ownership; "
+                        << "using nearest owner cell "
+                        << electrodeCells_[electrodeI]
+                        << " at distance " << Foam::sqrt(globalDistanceSqr)
+                        << " on phiE mesh '" << phiEMesh.name() << "'."
+                        << nl;
+                }
             }
         }
 

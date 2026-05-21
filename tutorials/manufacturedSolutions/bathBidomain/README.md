@@ -8,9 +8,7 @@ This tutorial is the FDA bidomain-with-bath manufactured-solution setup.
 - ionic model: `bathBidomainFDAManufactured`
 - myocardium verifier: `manufacturedFDABathBidomainVerifier`
 - bath potential domain: `bidomainSolverCoeffs.bathPotentialDomain`
-- bath ECG solver: `torsoECG`
-- bath ECG verifier: `bathECGManufacturedVerifier`
-- pseudo ECG solver: `pseudoECG`
+- ECG domains: disabled for the convergence sweep
 
 ## Mesh Layout
 
@@ -22,9 +20,12 @@ The case uses one base mesh over `[-1,2]` with two cellZones:
 `topoSet` creates the zones after `blockMesh`. The
 `bathPotentialDomain` block inside `bidomainSolverCoeffs` enables the global
 heart+bath `phiE` equation and binds that field back into the bidomain solver.
-The ECG stage only samples the already-solved global `phiE` with
-`bodyECG`/`torsoECG`, and computes myocardium-derived pseudoECG with
-`pseudoECGSignals`/`pseudoECG`. It does not own a separate bath PDE.
+ECG sampling is intentionally disabled for the convergence sweep. The
+manufactured bath verification targets the solved fields `Vm`, `phiE`, and
+`phiI`; ECG electrode placement should be handled in a separate ECG-focused
+case with electrodes placed on unambiguous surface locations.
+The driver ECG smoke configuration enables one `torsoECG` domain and one
+`pseudoECG` domain with electrodes on the exterior bath surface.
 
 ## Manufactured Parameters
 
@@ -69,7 +70,16 @@ tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/run_all_dimens
 Use `run_all_dimensions.sh sim` to run simulations only and skip
 post-processing.
 
-Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, `torsoECG.dat`,
-`pseudoECG.dat`, `manufacturedBathECG.dat`, and manufactured error summaries in
-`postProcessing/`. The global bath-potential fields are written at the normal
-OpenFOAM output times configured in `system/controlDict`.
+Parallel ECG ownership smoke run:
+
+```bash
+source /Volumes/OpenFOAM-v2412/etc/bashrc
+applications/scripts/driverFoam/bin/driverFoam sim \
+    --entry manufacturedFDABathBidomain \
+    --config tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/driver_config_ecg_smoke.json
+```
+
+Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and
+manufactured error summaries in `postProcessing/`. The global bath-potential
+fields are written at the normal OpenFOAM output times configured in
+`system/controlDict`.

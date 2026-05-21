@@ -53,7 +53,7 @@ bidomainSolverCoeffs
         groundElectrode    yes;
     }
 
-    dimension    "3D";
+    dimension    "1D";
 
     solutionAlgorithm    implicit;
     CFL 0.1;
