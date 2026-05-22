@@ -512,6 +512,8 @@ def build_and_launch(
     dry_run: bool = False,
     pre_solve_commands: "Sequence[str | Sequence[str]] | None" = None,
     openfoam_bashrc: "str | Path | None" = None,
+    delta_t: "float | str | None" = None,
+    end_time: "float | str | None" = None,
 ) -> dict:
     """Build both dicts, write them to ``case_dir/constant/``, and (if
     not dry_run) launch the engine on the resulting case.
@@ -565,6 +567,14 @@ def build_and_launch(
     constant_dir.mkdir(parents=True, exist_ok=True)
     electro_path.write_text(electro_text)
     physics_path.write_text(physics_text)
+
+    if delta_t is not None or end_time is not None:
+        from openfoam_driver.core.runtime.mutators import update_control_dict
+        update_control_dict(
+            case_dir / "system" / "controlDict",
+            delta_t=delta_t,
+            end_time=end_time,
+        )
 
     if dry_run:
         return {"case_dir": str(case_dir), "status": "dry_run_complete"}

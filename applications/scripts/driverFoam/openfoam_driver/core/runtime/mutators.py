@@ -171,6 +171,24 @@ def read_foam_entry(
     return None
 
 
+def update_control_dict(
+    control_dict_path: Path,
+    *,
+    delta_t: float | str | None = None,
+    end_time: float | str | None = None,
+) -> None:
+    """Patch ``deltaT`` and/or ``endTime`` in an existing OpenFOAM ``controlDict``.
+
+    Each parameter is optional — pass only the values you want to change.
+    Raises ``FileNotFoundError`` (via :func:`update_foam_entry`) if the file
+    does not exist.
+    """
+    if delta_t is not None:
+        update_foam_entry(control_dict_path, "deltaT", delta_t)
+    if end_time is not None:
+        update_foam_entry(control_dict_path, "endTime", end_time)
+
+
 def update_foam_entry(
     file_path: Path,
     key: str,

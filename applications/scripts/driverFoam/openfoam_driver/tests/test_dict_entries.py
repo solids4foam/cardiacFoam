@@ -560,5 +560,79 @@ class TestReadFoamEntry(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestUpdateControlDict(unittest.TestCase):
+    """update_control_dict patches deltaT / endTime in an existing controlDict."""
+
+    @staticmethod
+    def _write_control_dict(d: str) -> Path:
+        p = Path(d) / "controlDict"
+        p.write_text("deltaT    0.05;\nendTime   1.0;\n")
+        return p
+
+    def test_updates_delta_t(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = self._write_control_dict(d)
+            from openfoam_driver.core.runtime.mutators import update_control_dict
+            update_control_dict(p, delta_t=0.001)
+            self.assertIn("0.001", p.read_text())
+
+    def test_updates_end_time(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = self._write_control_dict(d)
+            from openfoam_driver.core.runtime.mutators import update_control_dict
+            update_control_dict(p, end_time=0.5)
+            self.assertIn("0.5", p.read_text())
+
+    def test_updates_both_in_one_call(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = self._write_control_dict(d)
+            from openfoam_driver.core.runtime.mutators import update_control_dict
+            update_control_dict(p, delta_t=0.002, end_time=0.1)
+            text = p.read_text()
+            self.assertIn("0.002", text)
+            self.assertIn("0.1", text)
+
+    def test_none_args_leave_file_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = self._write_control_dict(d)
+            original = p.read_text()
+            from openfoam_driver.core.runtime.mutators import update_control_dict
+            update_control_dict(p)
+            self.assertEqual(p.read_text(), original)
+
+    def test_missing_file_raises_file_not_found(self) -> None:
+        from openfoam_driver.core.runtime.mutators import update_control_dict
+        with self.assertRaises(FileNotFoundError):
+            update_control_dict(Path("/no/such/controlDict"), delta_t=0.001)
+
+
+class TestControlDictEntries(unittest.TestCase):
+    """CONTROL_DICT_ENTRIES catalog shape contract."""
+
+    def test_catalog_exposes_delta_t_and_end_time(self) -> None:
+        from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES
+        driver_paths = {e.driver_path for e in CONTROL_DICT_ENTRIES}
+        self.assertIn("deltaT", driver_paths)
+        self.assertIn("endTime", driver_paths)
+
+    def test_entries_carry_seconds_unit(self) -> None:
+        from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES
+        for entry in CONTROL_DICT_ENTRIES:
+            self.assertEqual(entry.unit, "s",
+                             f"{entry.driver_path} must carry unit='s'")
+
+    def test_entries_belong_to_solver_phase(self) -> None:
+        from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES
+        for entry in CONTROL_DICT_ENTRIES:
+            self.assertIn("solver", entry.phases,
+                          f"{entry.driver_path} must be in solver phase")
+
+    def test_entries_are_marked_required(self) -> None:
+        from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES
+        for entry in CONTROL_DICT_ENTRIES:
+            self.assertTrue(entry.required,
+                            f"{entry.driver_path} must be required=True")
+
+
 if __name__ == "__main__":
     unittest.main()

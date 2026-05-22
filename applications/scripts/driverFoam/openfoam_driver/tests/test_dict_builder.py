@@ -676,5 +676,95 @@ class TestParseElectroProperties(unittest.TestCase):
         self.assertEqual(original_text, rebuilt_text)
 
 
+class TestBuildAndLaunchControlDict(unittest.TestCase):
+    """build_and_launch delta_t / end_time patch an existing system/controlDict."""
+
+    @staticmethod
+    def _selectors():
+        return (
+            {"myocardiumSolver": "singleCellSolver",
+             "ionicModel": "AlievPanfilov",
+             "tissue": "myocyte"},
+            {"type": "electroModel"},
+        )
+
+    @staticmethod
+    def _make_case_with_control_dict(d: str) -> "object":
+        from pathlib import Path
+        case_dir = Path(d) / "case"
+        (case_dir / "system").mkdir(parents=True)
+        (case_dir / "system" / "controlDict").write_text(
+            "deltaT    0.05;\nendTime   1.0;\n"
+        )
+        return case_dir
+
+    def test_delta_t_written_to_control_dict(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = self._make_case_with_control_dict(d)
+            build_and_launch(
+                electro,
+                physics_selectors=physics,
+                case_dir=case_dir,
+                delta_t=0.001,
+                dry_run=True,
+            )
+            text = (case_dir / "system" / "controlDict").read_text()
+            self.assertIn("0.001", text)
+
+    def test_end_time_written_to_control_dict(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = self._make_case_with_control_dict(d)
+            build_and_launch(
+                electro,
+                physics_selectors=physics,
+                case_dir=case_dir,
+                end_time=0.002,
+                dry_run=True,
+            )
+            text = (case_dir / "system" / "controlDict").read_text()
+            self.assertIn("0.002", text)
+
+    def test_none_params_leave_control_dict_unchanged(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = self._make_case_with_control_dict(d)
+            original = (case_dir / "system" / "controlDict").read_text()
+            build_and_launch(
+                electro,
+                physics_selectors=physics,
+                case_dir=case_dir,
+                dry_run=True,
+            )
+            self.assertEqual(
+                (case_dir / "system" / "controlDict").read_text(),
+                original,
+            )
+
+    def test_missing_control_dict_raises_when_delta_t_set(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        electro, physics = self._selectors()
+        with tempfile.TemporaryDirectory() as d:
+            case_dir = Path(d) / "case"
+            case_dir.mkdir()
+            with self.assertRaises(FileNotFoundError):
+                build_and_launch(
+                    electro,
+                    physics_selectors=physics,
+                    case_dir=case_dir,
+                    delta_t=0.001,
+                    dry_run=True,
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

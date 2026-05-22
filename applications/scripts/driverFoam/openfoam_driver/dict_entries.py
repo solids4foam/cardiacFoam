@@ -74,6 +74,45 @@ PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
 )
 
 
+CONTROL_DICT_ENTRIES: Final[tuple[DictEntry, ...]] = (
+    DictEntry(
+        driver_path="deltaT",
+        phases=frozenset({"solver"}),
+        description=(
+            "Simulation time step. Critical for ODE solver stability and "
+            "manufactured-solution convergence tests — sweep alongside mesh "
+            "refinement (number_cells) to measure temporal order. Use a large "
+            "value for smoke-test runs that verify setup before committing to a "
+            "fine-resolution sweep."
+        ),
+        source_refs=(
+            "applications/solvers/cardiacFoam/cardiacFoam.C",
+        ),
+        value_kind="openfoam_literal",
+        unit="s",
+        required=True,
+        typical_value="",
+    ),
+    DictEntry(
+        driver_path="endTime",
+        phases=frozenset({"solver"}),
+        description=(
+            "Simulation end time. Set to a small value (e.g. 1e-3) for a "
+            "smoke-test run that verifies the case launches and runs at least "
+            "one step without crashing, before committing to a full-length "
+            "production run."
+        ),
+        source_refs=(
+            "applications/solvers/cardiacFoam/cardiacFoam.C",
+        ),
+        value_kind="openfoam_literal",
+        unit="s",
+        required=True,
+        typical_value="",
+    ),
+)
+
+
 ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
     "top_level": (
         DictEntry(

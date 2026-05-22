@@ -9,6 +9,7 @@ This is the agent contract for launching, polling, and inspecting cardiacFoam ru
 | Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)`, `describe_launch_matrix()` | `openfoam_driver.introspection` |
 | Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.specs.validation` |
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.specs.dict_builder` |
+| Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.specs.dict_builder` |
 | Build + launch a one-shot run | `build_and_launch(...)` | `openfoam_driver.specs.dict_builder` |
 | Run a registered tutorial | `DriverEngine(spec=..., requested_action=...).run_simulations()` | `openfoam_driver.core.runtime.engine` |
 | Poll progress | Read `run_manifest.json` (atomic), tail `action_events.jsonl` (one JSON per line) | `<output_dir>/` |
@@ -85,7 +86,7 @@ Missing-but-optional artifacts are not errors — they only appear under specifi
 Three layers of discovery:
 
 1. **What tutorials exist?** `from openfoam_driver.introspection import describe_launch_matrix; describe_launch_matrix()` returns every registered entry.
-2. **What dict keys can I set?** Iterate `openfoam_driver.dict_entries.ELECTRO_PROPERTY_ENTRY_GROUPS` and `PHYSICS_PROPERTY_ENTRIES`. Each entry carries `driver_path`, `value_kind`, `enum_values`, `unit`, `typical_value`, and structured constraints (`applicable_when`, `forbidden_when`, `required_when`, `mutually_exclusive_with`).
+2. **What dict keys can I set?** Iterate `openfoam_driver.dict_entries.ELECTRO_PROPERTY_ENTRY_GROUPS` and `PHYSICS_PROPERTY_ENTRIES` for case-physics entries. For time-control use `openfoam_driver.dict_entries.CONTROL_DICT_ENTRIES` (`deltaT`, `endTime`). Each entry carries `driver_path`, `value_kind`, `enum_values`, `unit`, `typical_value`, and structured constraints (`applicable_when`, `forbidden_when`, `required_when`, `mutually_exclusive_with`).
 3. **What ionic models can I pick?** `from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
 
 ## What the validator catches
@@ -106,9 +107,9 @@ If the dict builder rejects your input with `ValueError`, the message lists ever
 
 ```python
 build_electro_properties(
-    electro_selectors={"myocardiumSolver": "monodomainSolver",
-                       "ionicModel": "TNNP",
-                       "tissue": "epicardialCells"},
+    selectors={"myocardiumSolver": "monodomainSolver",
+               "ionicModel": "TNNP",
+               "tissue": "epicardialCells"},
     overrides={
         "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude": "60",
         "$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "implicit",
@@ -122,8 +123,8 @@ Override paths use the full `$ELECTRO_MODEL_COEFFS.<key>` form. Top-level keys (
 
 ```python
 build_electro_properties(
-    electro_selectors={"myocardiumSolver": "bidomainSolver",
-                       "ionicModel": "bathBidomainFDAManufactured"},
+    selectors={"myocardiumSolver": "bidomainSolver",
+               "ionicModel": "bathBidomainFDAManufactured"},
     overrides={
         "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones": "(bath organ)",
         "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.heartCellZone": "myocardium",
@@ -133,6 +134,59 @@ build_electro_properties(
 
 Declaring any `bathPotentialDomain.*` override auto-enables the bath block — the bath leaves typical-value default unless overridden.
 
+### Read back an existing dict
+
+```python
+from openfoam_driver.specs.dict_builder import parse_electro_properties
+
+parsed = parse_electro_properties("/path/to/case/constant/electroProperties")
+# {"selectors": {"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", ...},
+#  "overrides": {"$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "explicit", ...}}
+```
+
+Pass the result directly to `build_electro_properties` to round-trip:
+
+```python
+from openfoam_driver.specs.dict_builder import build_electro_properties, parse_electro_properties
+
+parsed = parse_electro_properties(existing_path)
+text = build_electro_properties(parsed["selectors"], overrides=parsed["overrides"] or None)
+```
+
+Only non-default values appear in `overrides` — entries matching the catalog's `typical_value` are omitted. `dynamic_path` entries and keys outside the catalog are silently ignored.
+
+### Run a smoke test before a full sweep
+
+```python
+build_and_launch(
+    electro_selectors={
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+    },
+    physics_selectors={"type": "electroModel"},
+    case_dir="/path/to/case",
+    end_time=0.001,   # 1 ms — just enough to verify the case launches
+    delta_t=0.0001,
+)
+```
+
+If the call returns without raising, the case structure, boundary conditions, and property files are consistent enough to run. Then widen `end_time` for production. Requires an existing `system/controlDict` in the case directory — `build_and_launch` patches it in-place.
+
+### Run with pre-solve commands
+
+```python
+build_and_launch(
+    electro_selectors={...},
+    physics_selectors={"type": "electroModel"},
+    case_dir="/tmp/my_run/case",
+    pre_solve_commands=["blockMesh", "setTorsoOrganConductivityField"],
+    openfoam_bashrc="/opt/openfoam/etc/bashrc",
+)
+```
+
+Each entry in `pre_solve_commands` runs in `case_dir` before `cardiacFoam`. Strings are shell-split; lists are passed directly. When `openfoam_bashrc` is set every command is sourced into the OpenFOAM environment.
+
 ### Find past runs
 
 ```python
@@ -141,16 +195,15 @@ for manifest in list_runs("/path/to/runs/dir"):
     print(manifest["run_id"], manifest["status"], manifest["_manifest_path"])
 ```
 
-## What's not yet supported
+## Known gaps
 
-These are known gaps; the agent must not assume them:
+These are real limitations; the agent must not assume them:
 
-- **Active-tension model variables** are predicted for `NashPanfilov` and `GoktepeKuhl` when an `activeTensionModel` block is declared in `electroProperties`. Future C++ models must be added to `active_tension_catalog.py` first.
-- **Reverse parsing** of an existing `electroProperties` is available via `parse_electro_properties(path)` in `openfoam_driver.specs.dict_builder`. Returns `{"selectors": {...}, "overrides": {...}}` that round-trips through `build_electro_properties`.
-- **Bidomain + Purkinje coupling** is currently rejected by the validator — the `bidomainPvjCoupler` C++ class does not exist yet.
-- **Per-step retry / checkpointing through the workflow DAG** is not implemented — the DAG is descriptive metadata.
+- **Bidomain + Purkinje coupling** is rejected by the validator — the `bidomainPvjCoupler` C++ class does not exist yet. Once it lands, add the pairing to `solver_coupling.py`.
+- **Per-step retry / checkpointing through the workflow DAG** is not implemented — the DAG is descriptive metadata only.
+- **Active-tension models beyond NashPanfilov and GoktepeKuhl** are not in `active_tension_catalog.py`. Future C++ models must be registered there before artifact prediction will cover their state variables.
 
-If your agent depends on any of these, expect failure modes and consider the workaround (e.g. start from an existing tutorial template and override the deltas, rather than constructing from scratch).
+If your agent depends on any of these, expect failure and consider a workaround (e.g. starting from an existing tutorial template and overriding deltas rather than constructing from scratch).
 
 ## Where to read further
 
