@@ -106,3 +106,6 @@ SunOS*Gcc*/
 .agents/
 .claude/
 docs/superpowers/
+
+# Generated driverFOAM run reports
+**/setupManufacturedFDA/run_report.md
