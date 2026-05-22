@@ -168,7 +168,7 @@ checkReferenceValues()
 }
 
 ./Allclean > /dev/null 2>&1 || true
-blockMesh -dict system/blockMeshDict.3D > "${BLOCKMESH_LOGFILE}" 2>&1
+blockMesh -dict system/blockMeshDict.1D > "${BLOCKMESH_LOGFILE}" 2>&1
 ./Allrun > "${ALLRUN_LOGFILE}" 2>&1
 
 errorFile="$(findManufacturedErrorFile)" || {
