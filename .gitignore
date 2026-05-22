@@ -101,3 +101,8 @@ SunOS*Gcc*/
 *.vtk
 *.vtu
 .worktrees/
+
+# Local tooling - not part of the repo
+.agents/
+.claude/
+docs/superpowers/
