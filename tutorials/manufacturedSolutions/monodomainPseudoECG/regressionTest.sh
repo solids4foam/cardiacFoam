@@ -14,7 +14,7 @@ REF_FILE="monodomainPseudoECG.reference"
 echo "============================================================"
 echo "Monodomain pseudo-ECG manufactured-solution regression test"
 echo "Manufactured field and pseudo-ECG outputs must be present"
-echo "Mesh: system/blockMeshDict.1D, run mode: parallel"
+echo "Mesh: system/blockMeshDict.3D, run mode: parallel"
 echo "============================================================"
 echo
 
@@ -272,7 +272,7 @@ checkPseudoECGHeader()
 
 ./Allclean > /dev/null 2>&1 || true
 checkElectrodeConfiguration
-blockMesh -dict system/blockMeshDict.1D > "${BLOCKMESH_LOGFILE}" 2>&1
+blockMesh -dict system/blockMeshDict.3D > "${BLOCKMESH_LOGFILE}" 2>&1
 ./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1
 
 errorFile="$(findManufacturedErrorFile)" || {
