@@ -145,8 +145,8 @@ for manifest in list_runs("/path/to/runs/dir"):
 
 These are known gaps; the agent must not assume them:
 
-- **Active-tension model variables** are not yet in the predictor. If you select an electromechanical model, expect the realized artifacts to under-report contraction-state outputs.
-- **Reverse parsing** of an existing `electroProperties` back into selectors+overrides is not implemented.
+- **Active-tension model variables** are predicted for `NashPanfilov` and `GoktepeKuhl` when an `activeTensionModel` block is declared in `electroProperties`. Future C++ models must be added to `active_tension_catalog.py` first.
+- **Reverse parsing** of an existing `electroProperties` is available via `parse_electro_properties(path)` in `openfoam_driver.specs.dict_builder`. Returns `{"selectors": {...}, "overrides": {...}}` that round-trips through `build_electro_properties`.
 - **Bidomain + Purkinje coupling** is currently rejected by the validator — the `bidomainPvjCoupler` C++ class does not exist yet.
 - **Per-step retry / checkpointing through the workflow DAG** is not implemented — the DAG is descriptive metadata.
 

@@ -485,5 +485,80 @@ class TestDetectActiveTensionExportList(unittest.TestCase):
         self.assertIsNone(detect_active_tension_export_list(props))
 
 
+class TestReadFoamEntry(unittest.TestCase):
+    """read_foam_entry returns the raw value string for a key, or None."""
+
+    def test_reads_top_level_key(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text("myocardiumSolver monodomainSolver;\n")
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(p, "myocardiumSolver")
+            self.assertEqual(result, "monodomainSolver")
+
+    def test_reads_scoped_key(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text(
+                "myocardiumSolver monodomainSolver;\n"
+                "monodomainSolverCoeffs\n"
+                "{\n"
+                "    ionicModel TNNP;\n"
+                "    solutionAlgorithm implicit;\n"
+                "}\n"
+            )
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(p, "ionicModel", scope="monodomainSolverCoeffs")
+            self.assertEqual(result, "TNNP")
+
+    def test_reads_nested_scope_key(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text(
+                "singleCellSolverCoeffs\n"
+                "{\n"
+                "    singleCellStimulus\n"
+                "    {\n"
+                "        stim_amplitude 60;\n"
+                "    }\n"
+                "}\n"
+            )
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(
+                p, "stim_amplitude",
+                scope=["singleCellSolverCoeffs", "singleCellStimulus"],
+            )
+            self.assertEqual(result, "60")
+
+    def test_missing_key_returns_none(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text("myocardiumSolver monodomainSolver;\n")
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(p, "notAKey")
+            self.assertIsNone(result)
+
+    def test_missing_scope_returns_none(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text("myocardiumSolver monodomainSolver;\n")
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(p, "ionicModel", scope="noSuchBlock")
+            self.assertIsNone(result)
+
+    def test_strips_inline_comment_from_value(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "f"
+            p.write_text("solutionAlgorithm implicit; // time discretisation\n")
+            from openfoam_driver.core.runtime.mutators import read_foam_entry
+            result = read_foam_entry(p, "solutionAlgorithm")
+            self.assertEqual(result, "implicit")
+
+    def test_nonexistent_file_returns_none(self) -> None:
+        from openfoam_driver.core.runtime.mutators import read_foam_entry
+        result = read_foam_entry(Path("/no/such/file"), "key")
+        self.assertIsNone(result)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -301,6 +301,9 @@ def build_electro_properties(
     return _FOAMFILE_PREAMBLE + "\n" + body
 
 
+# Slot keys that map to selectors (top-level discriminators), not overrides.
+_SELECTOR_KEYS: frozenset[str] = frozenset({"myocardiumSolver", "ionicModel", "tissue"})
+
 _COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
 
 
@@ -376,6 +379,74 @@ def _serialize(
         parts.append("}")
     parts.append("")
     return "\n".join(parts)
+
+
+def _entry_scope_and_key(
+    driver_path: str,
+    coeffs_scope: str,
+) -> tuple[list[str] | None, str]:
+    """Resolve a driver_path to (scope_path, key) suitable for read_foam_entry.
+
+    Examples:
+        "myocardiumSolver"                          → (None, "myocardiumSolver")
+        "$ELECTRO_MODEL_COEFFS.solutionAlgorithm"   → (["monodomainSolverCoeffs"], "solutionAlgorithm")
+        "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude"
+            → (["singleCellSolverCoeffs", "singleCellStimulus"], "stim_amplitude")
+    """
+    if driver_path.startswith(_COEFFS_PREFIX):
+        segments = driver_path[len(_COEFFS_PREFIX):].split(".")
+        if len(segments) == 1:
+            return [coeffs_scope], segments[0]
+        return [coeffs_scope] + segments[:-1], segments[-1]
+    return None, driver_path
+
+
+def parse_electro_properties(
+    electro_properties_path: "Any",
+) -> dict[str, dict[str, str]]:
+    """Parse an existing ``electroProperties`` file into selectors + overrides.
+
+    Reads the file using the same ``ELECTRO_PROPERTY_ENTRY_GROUPS`` catalog
+    that :func:`build_electro_properties` writes from. Returns a dict that
+    round-trips through :func:`build_electro_properties`.
+
+    - ``selectors``: ``myocardiumSolver``, ``ionicModel``, ``tissue`` (when
+      present and applicable).
+    - ``overrides``: full ``driver_path → value`` for every non-default entry
+      found in the file. Values equal to ``entry.typical_value`` are omitted
+      (the builder fills them automatically). Entries with ``dynamic_path=True``
+      are skipped entirely.
+
+    Unknown keys not in the catalog are silently ignored.
+
+    Returns:
+        ``{"selectors": {...}, "overrides": {...}}``
+    """
+    from pathlib import Path as _Path
+    from openfoam_driver.specs.common import detect_myocardium_solver_name
+    from openfoam_driver.core.runtime.mutators import read_foam_entry
+
+    electro_properties_path = _Path(electro_properties_path)
+    solver = detect_myocardium_solver_name(electro_properties_path)
+    coeffs_scope = f"{solver}Coeffs"
+
+    selectors: dict[str, str] = {"myocardiumSolver": solver}
+    overrides: dict[str, str] = {}
+
+    for entry in _all_electro_entries():
+        if entry.dynamic_path:
+            continue
+        scope_path, key = _entry_scope_and_key(entry.driver_path, coeffs_scope)
+        value = read_foam_entry(electro_properties_path, key, scope=scope_path)
+        if value is None:
+            continue
+        sk = slot_key(entry.driver_path)
+        if sk in _SELECTOR_KEYS:
+            selectors[sk] = value
+        elif value != entry.typical_value:
+            overrides[entry.driver_path] = value
+
+    return {"selectors": selectors, "overrides": overrides}
 
 
 def build_physics_properties(

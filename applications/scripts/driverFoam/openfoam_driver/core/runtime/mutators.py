@@ -135,6 +135,42 @@ def validate_foam_entries(file_path: Path, entries: list[dict]) -> list[str]:
     return errors
 
 
+def read_foam_entry(
+    file_path: Path,
+    key: str,
+    *,
+    scope: str | list[str] | tuple[str, ...] | None = None,
+) -> str | None:
+    """Read the value of a key from an OpenFOAM dictionary-like text file.
+
+    Reuses the ``_resolve_search_region`` / ``_find_dict_block_bounds``
+    infrastructure from :func:`update_foam_entry`. Returns the raw value
+    string — trailing semicolon and inline comments stripped — or ``None``
+    if the key or its scope block is absent.
+    """
+    if not file_path.exists():
+        return None
+
+    key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
+    lines = file_path.read_text().splitlines(keepends=True)
+    try:
+        search_start, search_end = _resolve_search_region(lines, scope)
+    except KeyError:
+        return None
+
+    for idx in range(search_start, search_end):
+        line = lines[idx]
+        stripped = _strip_inline_comment(line).strip()
+        if stripped.startswith("//"):
+            continue
+        if not key_pattern.match(line):
+            continue
+        value_part = stripped[len(key):].strip().rstrip(";").strip()
+        return value_part if value_part else None
+
+    return None
+
+
 def update_foam_entry(
     file_path: Path,
     key: str,

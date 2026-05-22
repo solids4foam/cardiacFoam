@@ -539,5 +539,142 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
             self.assertIn("cardiacFoam", calls[0].args[0])
 
 
+class TestParseElectroProperties(unittest.TestCase):
+    """parse_electro_properties reads an existing file back into selectors+overrides."""
+
+    @staticmethod
+    def _build_and_write(tmp_dir, selectors, overrides=None):
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+        text = build_electro_properties(selectors, overrides=overrides)
+        p = Path(tmp_dir) / "electroProperties"
+        p.write_text(text)
+        return p
+
+    def test_returns_dict_with_selectors_and_overrides_keys(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "singleCellSolver",
+                 "ionicModel": "AlievPanfilov",
+                 "tissue": "myocyte"},
+            )
+            result = parse_electro_properties(p)
+            self.assertIn("selectors", result)
+            self.assertIn("overrides", result)
+
+    def test_solver_in_selectors(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "monodomainSolver",
+                 "ionicModel": "TNNP",
+                 "tissue": "epicardialCells"},
+            )
+            result = parse_electro_properties(p)
+            self.assertEqual(result["selectors"]["myocardiumSolver"], "monodomainSolver")
+
+    def test_ionic_model_and_tissue_in_selectors(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "singleCellSolver",
+                 "ionicModel": "AlievPanfilov",
+                 "tissue": "myocyte"},
+            )
+            result = parse_electro_properties(p)
+            self.assertEqual(result["selectors"]["ionicModel"], "AlievPanfilov")
+            self.assertEqual(result["selectors"]["tissue"], "myocyte")
+
+    def test_non_default_override_is_captured(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "singleCellSolver",
+                 "ionicModel": "AlievPanfilov",
+                 "tissue": "myocyte"},
+                overrides={
+                    "$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "explicit",
+                },
+            )
+            result = parse_electro_properties(p)
+            self.assertEqual(
+                result["overrides"].get("$ELECTRO_MODEL_COEFFS.solutionAlgorithm"),
+                "explicit",
+            )
+
+    def test_default_value_absent_from_overrides(self) -> None:
+        """typical_value entries that were not changed must not appear as overrides."""
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "singleCellSolver",
+                 "ionicModel": "AlievPanfilov",
+                 "tissue": "myocyte"},
+            )
+            result = parse_electro_properties(p)
+            self.assertNotIn(
+                "$ELECTRO_MODEL_COEFFS.solutionAlgorithm",
+                result["overrides"],
+            )
+
+    def test_selector_keys_not_duplicated_in_overrides(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "singleCellSolver",
+                 "ionicModel": "AlievPanfilov",
+                 "tissue": "myocyte"},
+            )
+            result = parse_electro_properties(p)
+            override_slot_keys = {
+                k.replace("$ELECTRO_MODEL_COEFFS.", "")
+                for k in result["overrides"]
+            }
+            for sel_key in ("myocardiumSolver", "ionicModel", "tissue"):
+                self.assertNotIn(sel_key, override_slot_keys)
+
+    def test_roundtrip_produces_equivalent_text(self) -> None:
+        """build → write → parse → rebuild must produce same FoamFile text."""
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import (
+            build_electro_properties,
+            parse_electro_properties,
+        )
+        original_selectors = {
+            "myocardiumSolver": "monodomainSolver",
+            "ionicModel": "TNNP",
+            "tissue": "epicardialCells",
+        }
+        original_overrides = {
+            "$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "explicit",
+        }
+        original_text = build_electro_properties(
+            original_selectors, overrides=original_overrides,
+        )
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "electroProperties"
+            p.write_text(original_text)
+            parsed = parse_electro_properties(p)
+
+        rebuilt_text = build_electro_properties(
+            parsed["selectors"], overrides=parsed["overrides"] or None,
+        )
+        self.assertEqual(original_text, rebuilt_text)
+
+
 if __name__ == "__main__":
     unittest.main()

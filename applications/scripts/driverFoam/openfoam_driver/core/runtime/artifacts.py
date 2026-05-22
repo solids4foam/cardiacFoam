@@ -10,14 +10,12 @@ Design discipline (plan v2 section 3):
 * **Compose, do not branch.** Solver-aware logic SHOULD live in existing
   catalogs; the predictor reads them rather than reimplementing branching.
   Today the predictor actively consumes
-  ``ionic_model_catalog.IONIC_MODEL_CATALOG`` (state + algebraic variables)
-  and ``specs.common.detect_ionic_export_list`` (user-declared exports).
-  Two further integrations are documented in plan §3d but not yet wired:
-
-    * ``active_tension_catalog`` — latent until the first electromechanical
-      solver handler ships (§3d-2);
-    * ``utility_catalog.UTILITY_CATALOG.produces`` — see Task 2 of the
-      autonomous-agent completion plan.
+  ``ionic_model_catalog.IONIC_MODEL_CATALOG`` (state + algebraic variables),
+  ``specs.common.detect_ionic_export_list`` (user-declared exports),
+  ``active_tension_catalog.ACTIVE_TENSION_MODEL_CATALOG`` (AT state variables,
+  fired when ``activeTensionModel`` block is present), and
+  ``utility_catalog.UTILITY_CATALOG.produces`` (pre/post-solve utility outputs
+  declared in ``workflow_dag`` steps).
 
 * **Never raise on shape divergence.** Agents may call the predictor before
   ``apply_case`` has run, or against a partly-mutated case. Missing files,
