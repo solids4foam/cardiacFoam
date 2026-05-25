@@ -22,6 +22,7 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
@@ -37,6 +38,25 @@ namespace Foam
     (
         ionicModel, Stewart, dictionary
     );
+
+    const ionicModelFamilyInfo& StewartFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            StewartCONSTANTS_NAMES,
+            StewartSTATES_NAMES,
+            StewartALGEBRAIC_NAMES,
+            membrane_V,
+            1000.0,
+            1000.0,
+            0.0,
+            nullptr
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

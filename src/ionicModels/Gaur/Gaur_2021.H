@@ -23,6 +23,8 @@ Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
+#pragma once
+
 #include "Gaur_2021Names.H"
 #include "stimulusIO.H"
 
@@ -462,7 +464,7 @@ inline Foam::scalar computeIstim
 {
     return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
-void
+inline void
 GaurinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
 
@@ -651,7 +653,7 @@ STATES[cell_v] = -87.3;
 }
 
 
-void
+inline void
 GaurcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* diffusion */

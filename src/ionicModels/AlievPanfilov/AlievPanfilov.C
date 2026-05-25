@@ -22,12 +22,20 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
 
 #include <math.h>
 
+namespace
+{
+    Foam::scalar alievPanfilovTransformedVm(const Foam::scalarField& S)
+    {
+        return S[u]*100.0 - 80.0;
+    }
+}
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -38,6 +46,25 @@ namespace Foam
     (
         ionicModel, AlievPanfilov, dictionary
     );
+
+    const ionicModelFamilyInfo& AlievPanfilovFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            AlievPanfilovCONSTANTS_NAMES,
+            AlievPanfilovSTATES_NAMES,
+            AlievPanfilovALGEBRAIC_NAMES,
+            u,
+            1000.0/12.9,
+            10.0,
+            0.8,
+            &alievPanfilovTransformedVm
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

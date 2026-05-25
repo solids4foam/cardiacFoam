@@ -31,6 +31,7 @@ Author
 #define ionicModelGPU_H
 
 #include "ionicModel.H"
+#include "ionicVariableCompatibility.H"
 
 namespace Foam
 {
@@ -48,15 +49,82 @@ class ionicModelGPU
             ionicModelIO::SelectedMapCache& cache
         ) const
         {
-            return ionicModelIO::selectedPlanRef
-            (
-                names,
-                ioStateNames(),
-                ioNumStates(),
-                ioAlgebraicNames(),
-                ioNumAlgebraic(),
-                cache
-            );
+            const char* const* stateNames = ioStateNames();
+            const char* const* algNames = ioAlgebraicNames();
+            const label nStates = ioNumStates();
+            const label nAlg = ioNumAlgebraic();
+
+            const bool cacheHit =
+                   cache.valid
+                && cache.stateNamesPtr == static_cast<const void*>(stateNames)
+                && cache.algNamesPtr == static_cast<const void*>(algNames)
+                && cache.nStates == nStates
+                && cache.nAlg == nAlg
+                && ionicVariableCompatibility::sameWordList
+                   (
+                       cache.exportedNames,
+                       names
+                   );
+
+            if (!cacheHit)
+            {
+                cache.stateNamesPtr = static_cast<const void*>(stateNames);
+                cache.algNamesPtr = static_cast<const void*>(algNames);
+                cache.nStates = nStates;
+                cache.nAlg = nAlg;
+                cache.exportedNames = names;
+
+                List<label> stateIndex;
+                List<label> algIndex;
+                List<label> rateIndex;
+                ionicModelIO::mapVariableNames
+                (
+                    names,
+                    stateNames,
+                    nStates,
+                    algNames,
+                    nAlg,
+                    stateIndex,
+                    algIndex,
+                    rateIndex
+                );
+
+                cache.plan.names = names;
+                cache.plan.source.setSize(names.size());
+                cache.plan.index.setSize(names.size());
+
+                forAll(names, k)
+                {
+                    if
+                    (
+                        names[k] == "Vm"
+                     || ionicVariableCompatibility::isVmLikeName(names[k])
+                    )
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_VM;
+                        cache.plan.index[k] = 0;
+                    }
+                    else if (stateIndex[k] >= 0)
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_STATE;
+                        cache.plan.index[k] = stateIndex[k];
+                    }
+                    else if (rateIndex[k] >= 0)
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_RATE;
+                        cache.plan.index[k] = rateIndex[k];
+                    }
+                    else
+                    {
+                        cache.plan.source[k] = ionicModelIO::COL_ALGEBRAIC;
+                        cache.plan.index[k] = algIndex[k];
+                    }
+                }
+
+                cache.valid = true;
+            }
+
+            return cache.plan;
         }
 
         bool canUseDirectSelectedIO(const wordList& names) const
@@ -132,6 +200,39 @@ protected:
             return selectionNeedsAlgebraics(names);
         }
 
+        bool selectionNeedsAlgebraics(const wordList& names) const
+        {
+            if (!names.size() || !hasIOMetadata())
+            {
+                return false;
+            }
+
+            List<label> stateIndex;
+            List<label> algIndex;
+            List<label> rateIndex;
+            ionicModelIO::mapVariableNames
+            (
+                names,
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                stateIndex,
+                algIndex,
+                rateIndex
+            );
+
+            forAll(names, k)
+            {
+                if (stateIndex[k] < 0 && rateIndex[k] < 0 && algIndex[k] >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         ionicModelGPU
         (
             const dictionary& dict,
@@ -159,13 +260,26 @@ protected:
         ) const = 0;
         virtual label voltageStateIndex() const = 0;
 
+        virtual void prepareIOAccess
+        (
+            const wordList&,
+            const bool
+        ) const
+        {}
+
 public:
+
+        virtual void writeProfilingSummary() const
+        {}
 
         virtual void write(const scalar t, OFstream& os) const override
         {
             const wordList names = exportedFieldNames();
+            const bool needsAlgebraics =
+                !names.size() || gpuSelectionNeedsAlgebraics(names);
+            prepareIOAccess(names, needsAlgebraics);
 
-            if (!canUseDirectSelectedIO(names))
+            if (!names.size() || needsAlgebraics)
             {
                 ionicModel::write(t, os);
                 return;
@@ -208,8 +322,11 @@ public:
         ) override
         {
             const wordList names = exportedFieldNames();
+            const bool needsAlgebraics =
+                !names.size() || gpuSelectionNeedsAlgebraics(names);
+            prepareIOAccess(names, needsAlgebraics);
 
-            if (!canUseDirectSelectedIO(names))
+            if (!names.size() || needsAlgebraics)
             {
                 ionicModel::exportStates(outFields);
                 return;
@@ -252,7 +369,11 @@ public:
             PtrList<volScalarField>& outFields
         ) const override
         {
-            if (!canUseDirectSelectedIO(fieldNames))
+            const bool needsAlgebraics =
+                !fieldNames.size() || gpuSelectionNeedsAlgebraics(fieldNames);
+            prepareIOAccess(fieldNames, needsAlgebraics);
+
+            if (!fieldNames.size() || needsAlgebraics)
             {
                 ionicModel::exportFields(fieldNames, outFields);
                 return;
@@ -304,7 +425,10 @@ public:
                 return;
             }
 
-            if (!canUseDirectSelectedIO(names))
+            const bool needsAlgebraics = gpuSelectionNeedsAlgebraics(names);
+            prepareIOAccess(names, needsAlgebraics);
+
+            if (needsAlgebraics)
             {
                 ionicModel::debugPrintFields(cellI, t1, t2, step);
                 return;
@@ -315,7 +439,7 @@ public:
             scalarField stateValues(ioNumStates(), 0.0);
 
             Info<< "DEBUG cell=" << cellI
-                << " t=" << t1 << "→" << t2;
+                << " t=" << t1 << "->" << t2;
 
             if (step >= 0)
             {
@@ -353,6 +477,8 @@ public:
                     << (gpuCellCount() - 1) << "]."
                     << abort(FatalError);
             }
+
+            prepareIOAccess(wordList(), false);
 
             if (s == CouplingSignal::VM)
             {

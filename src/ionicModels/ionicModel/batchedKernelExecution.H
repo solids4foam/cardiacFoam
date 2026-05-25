@@ -165,6 +165,7 @@ struct BatchedKernelScratchT
     FieldBuffer predictorRateValues;
     FieldBuffer predictorAlgebraicValues;
     FieldBuffer predictorSupportValues;
+    FieldBuffer predictorRLApplies;
 
     BatchedKernelScratchT
     (
@@ -187,7 +188,8 @@ struct BatchedKernelScratchT
             usePredictorEvaluation && !useSupportOnlyHotPath ? nAlgebraics : 0,
             0.0
         ),
-        predictorSupportValues(usePredictorEvaluation ? nSupport : 0, 0.0)
+        predictorSupportValues(usePredictorEvaluation ? nSupport : 0, 0.0),
+        predictorRLApplies(usePredictorState ? nStates : 0, 0.0)
     {}
 
     void resetPrimary(const bool useSupportOnlyHotPath)
@@ -575,6 +577,7 @@ public:
             {
                 scratch.predictorStateValues[stateI] =
                     scratch.stateValues[stateI];
+                scratch.predictorRLApplies[stateI] = 0.0;
                 continue;
             }
 
@@ -589,6 +592,8 @@ public:
                     steadyState,
                     tau
                 );
+
+            scratch.predictorRLApplies[stateI] = useRLForState ? 1.0 : 0.0;
 
             if (useRLForState)
             {
@@ -620,17 +625,8 @@ public:
                 continue;
             }
 
-            scalar steadyState = 0.0;
-            scalar tau = 0.0;
             const bool useRLForState =
-                rushLarsenEnabledForState
-                (
-                    stateI,
-                    scratch,
-                    kernel,
-                    steadyState,
-                    tau
-                );
+                scratch.predictorRLApplies[stateI] != 0.0;
 
             if (useRLForState)
             {

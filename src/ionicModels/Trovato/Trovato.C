@@ -22,6 +22,7 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
@@ -37,6 +38,25 @@ namespace Foam
     (
         ionicModel, Trovato, dictionary
     );
+
+    const ionicModelFamilyInfo& TrovatoFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            TrovatoCONSTANTS_NAMES,
+            TrovatoSTATES_NAMES,
+            TrovatoALGEBRAIC_NAMES,
+            membrane_v,
+            1000.0,
+            1000.0,
+            0.0,
+            nullptr
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

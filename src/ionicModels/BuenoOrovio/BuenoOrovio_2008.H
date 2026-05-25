@@ -27,14 +27,14 @@ Author
 #include "BuenoOrovio_2008Names.H"
 #include "stimulusIO.H"
 
-const char* BuenoOrovioSTATES_NAMES[NUM_STATES] = {
+static const char* BuenoOrovioSTATES_NAMES[NUM_STATES] = {
     "u", // Membrane voltage
     "v", // Fast sodium activation variable
     "w", // Slow sodium activation variable
     "s"  // Slow inactivation variable
 
 };
-const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Jfi",       // 0
     "Jso",       // 1
     "Jsi",       // 2
@@ -50,7 +50,7 @@ const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "wInfty"     // 11
 };
 
-const char* BuenoOrovioCONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* BuenoOrovioCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "uO",
     "uU",
     "thetaV",
@@ -119,7 +119,7 @@ inline Foam::scalar computeIstim
 
 
 
-void
+inline void
 BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
 
@@ -169,7 +169,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
 };
 
 
-void
+inline void
 BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     using Foam::heaviside;

@@ -69,6 +69,9 @@ class batchedIonicModel
         mutable PtrList<scalarField> ioStates_;
         mutable PtrList<scalarField> ioRates_;
         mutable PtrList<scalarField> ioAlgebraics_;
+        mutable scalarField diagStateValues_;
+        mutable scalarField diagRateValues_;
+        mutable scalarField diagAlgebraicValues_;
         mutable bool ioSynchronized_;
         mutable bool transientAlgebraicsSynchronized_;
         mutable scalar ioEvaluationModelTime_;
@@ -166,7 +169,7 @@ protected:
             nSubsteps_(dict.lookupOrDefault<label>("batchedSubsteps", 1)),
             integratorName_
             (
-                dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsenHeun")
+                dict.lookupOrDefault<word>("batchedIntegrator", "euler")
             ),
             profileBatchedModel_
             (
@@ -343,6 +346,21 @@ protected:
             return core_.supportRef(cellI, supportI);
         }
 
+        inline scalar* statesSoAData() const
+        {
+            return core_.statesSoAData();
+        }
+
+        inline scalar* ratesSoAData() const
+        {
+            return core_.ratesSoAData();
+        }
+
+        inline scalar* supportSoAData() const
+        {
+            return core_.supportSoAData();
+        }
+
         inline label nCells() const
         {
             return nCells_;
@@ -481,25 +499,32 @@ protected:
                 }
             }
 
-            scalarField stateValues(nStates_, 0.0);
-            scalarField rateValues(nStates_, 0.0);
-            scalarField algebraicValues(nAlgebraics_, 0.0);
+            if (diagStateValues_.size() != nStates_)
+            {
+                diagStateValues_.setSize(nStates_);
+                diagRateValues_.setSize(nStates_);
+            }
+
+            if (diagAlgebraicValues_.size() != nAlgebraics_)
+            {
+                diagAlgebraicValues_.setSize(nAlgebraics_);
+            }
 
             for (label cellI = 0; cellI < nCells_; ++cellI)
             {
-                gatherCellState(cellI, stateValues);
-                rateValues = 0.0;
-                algebraicValues = 0.0;
+                gatherCellState(cellI, diagStateValues_);
+                diagRateValues_ = 0.0;
+                diagAlgebraicValues_ = 0.0;
 
                 evaluateState
                 (
                     ioEvaluationModelTime_,
-                    stateValues,
-                    rateValues,
-                    algebraicValues
+                    diagStateValues_,
+                    diagRateValues_,
+                    diagAlgebraicValues_
                 );
 
-                ioAlgebraics_[cellI] = algebraicValues;
+                ioAlgebraics_[cellI] = diagAlgebraicValues_;
             }
 
             transientAlgebraicsSynchronized_ = true;
@@ -995,13 +1020,28 @@ protected:
             kernel.dtSubstep = dtSubstep;
             kernel.vmStateI = vmStateI;
             kernel.solveVm = solveVmWithinODESolver();
-            kernel.useHeun = integratorName_ == "heun"
-                || integratorName_ == "rushLarsenHeun"
-                || integratorName_ == "mixed";
-            kernel.useRushLarsen = integratorName_ == "rushLarsenHeun"
-                || integratorName_ == "mixed";
-            kernel.useExplicitEuler =
-                !kernel.useHeun && !kernel.useRushLarsen;
+            const bool useRushLarsenHeun =
+                integratorName_ == "rushLarsenHeun"
+             || integratorName_ == "rlGatesHeunRest"
+             || integratorName_ == "mixed";
+            kernel.useExplicitEuler = integratorName_ == "euler";
+            kernel.useHeun = integratorName_ == "heun" || useRushLarsenHeun;
+            kernel.useRushLarsen = useRushLarsenHeun;
+
+            if
+            (
+               !kernel.useExplicitEuler
+            && !kernel.useHeun
+            && !kernel.useRushLarsen
+            )
+            {
+                FatalIOErrorInFunction(dict())
+                    << "Unknown batchedIntegrator '" << integratorName_
+                    << "' for ionic model " << type() << ". "
+                    << "Valid values are: euler, heun, rushLarsenHeun, "
+                    << "rlGatesHeunRest, mixed."
+                    << exit(FatalIOError);
+            }
             const label sampleCell =
                 emitDebugSample ? sampleIntegrationPoint(nCells_) : -1;
             kernel.useSupportOnlyHotPath =

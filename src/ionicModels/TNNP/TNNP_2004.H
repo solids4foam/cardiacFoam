@@ -25,6 +25,8 @@ Author
 
 #include "dictionary.H"
 #include "scalar.H"
+#pragma once
+
 #include "TNNP_2004Names.H"
 #include "stimulusIO.H"
 
@@ -312,7 +314,7 @@ TNNPDependencyMap()
 
 
 
-void
+inline void
 TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 
 {
@@ -413,7 +415,7 @@ CONSTANTS[tau_fCa] = 2.00000;
 
 }
 
-void
+inline void
 TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
@@ -548,7 +550,7 @@ RATES[Ca_SR] =  ALGEBRAIC[ddt_Ca_sr_total]*ALGEBRAIC[f_JCa_sr_free];
 
 
 
-void
+inline void
 TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 

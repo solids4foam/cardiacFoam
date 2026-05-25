@@ -29,7 +29,7 @@ Author
 #include <cmath>
 
 
-const char* CourtemancheSTATES_NAMES[NUM_STATES] = {
+static const char* CourtemancheSTATES_NAMES[NUM_STATES] = {
     "membrane_V",       // Membrane voltage
     "sodium_Nai",       // Intracellular sodium concentration
     "potassium_Ki",     // Intracellular potassium concentration
@@ -54,7 +54,7 @@ const char* CourtemancheSTATES_NAMES[NUM_STATES] = {
 };
 
 
-const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_ICaL",     // L-type calcium current
     "AV_IK1",      // Inward rectifier potassium current
     "AV_IKr",      // Rapid delayed rectifier potassium current
@@ -106,7 +106,7 @@ const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Istim"
 };
 
-const char* CourtemancheCONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* CourtemancheCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_CMDN_max",
     "AC_CSQN_max",
     "AC_Ca_up_max",

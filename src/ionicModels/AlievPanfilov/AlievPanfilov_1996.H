@@ -27,17 +27,17 @@ Author
 #include "AlievPanfilov_1996Names.H"
 #include "stimulusIO.H"
 
-const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
+static const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
     "u",
     "recovery_r"
 };
-const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_eps",
     "Istim",
     "Iion_cm"
 };
 
-const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_Vp",
     "AC_Vr",
     "AC_Vth",

@@ -28,7 +28,7 @@ Author
 #include "dictionary.H"
 #include <cmath>
 
-const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
+static const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
     "membrane_V",
     "sodium_Nai",
     "potassium_Ki",
@@ -53,7 +53,7 @@ const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
     "ryr_w"
 };
 
-const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_ICaL",
     "AV_IK1",
     "AV_IKr",
@@ -106,7 +106,7 @@ const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Istim"
 };
 
-const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_CMDN_max",
     "AC_CSQN_max",
     "AC_Ca_up_max",

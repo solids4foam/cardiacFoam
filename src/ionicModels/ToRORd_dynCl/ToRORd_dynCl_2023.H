@@ -23,7 +23,10 @@ Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
+#pragma once
+
 #include "ToRORd_dynCl_2023Names.H"
+#include <cmath>
 #include "stimulusIO.H"
 
 static const char* ToRORd_dynClSTATES_NAMES[NUM_STATES] = {
@@ -577,7 +580,7 @@ inline Foam::scalar tissueSelect
            (tissueFlag == 2) ? v2 : v3;
 }
 
-void
+inline void
 ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
 /* CaMK */
@@ -871,7 +874,7 @@ ToRORd_dynClinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tis
 
 
 }
-void
+inline void
 ToRORd_dynClcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* CaMK */

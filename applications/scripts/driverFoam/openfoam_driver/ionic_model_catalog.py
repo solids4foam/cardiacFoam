@@ -409,3 +409,23 @@ def list_models_by_species(species: str) -> list[str]:
         for name, entry in IONIC_MODEL_CATALOG.items()
         if species in entry.species
     ]
+
+
+BATCHED_MODELS = [
+    "AlievPanfilovBatched", "BuenoOrovioBatched", "CourtemancheBatched", 
+    "FabbriBatched", "GaurBatched", "GrandiBatched", 
+    "PerisYagueBatched", "StewartBatched", "TNNPBatched", "ToRORd_dynClBatched", 
+    "TrovatoBatched"
+]
+
+for batched_name in BATCHED_MODELS:
+    parent_name = batched_name.replace("Batched", "")
+    if parent_name in IONIC_MODEL_CATALOG:
+        parent = IONIC_MODEL_CATALOG[parent_name]
+        from dataclasses import replace
+        IONIC_MODEL_CATALOG[batched_name] = replace(
+            parent,
+            description=f"{parent_name} (GPU/SOA Batched version).",
+            aliases=(f"{parent_name} GPU", f"{parent_name} SOA"),
+            notes="GPU ionicModel using SoA architecture."
+        )

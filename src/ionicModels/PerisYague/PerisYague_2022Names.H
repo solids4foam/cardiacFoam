@@ -24,7 +24,6 @@ Author
 
 #pragma once
 #include "stimulusIO.H"
-#include "dictionary.H"
 
 enum CONSTANT_INDEX {
     AC_CMDN_max,

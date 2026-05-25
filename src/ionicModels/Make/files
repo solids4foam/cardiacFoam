@@ -14,13 +14,25 @@ Courtemanche/Courtemanche.C
 BuenoOrovio/BuenoOrovio.C
 ToRORd_dynCl/ToRORd_dynCl.C
 Trovato/Trovato.C
-ORd/ORd.C
 TWorld/TWorld.C
 Stewart/Stewart.C
 Fabbri/Fabbri.C
 AlievPanfilov/AlievPanfilov.C
 PerisYague/PerisYague.C
 
+BuenoOrovioBatched/BuenoOrovioBatched.C
+GaurBatched/GaurBatched.C
+TNNPBatched/TNNPBatched.C
+ToRORd_dynClBatched/ToRORd_dynClBatched.C
+AlievPanfilovBatched/AlievPanfilovBatched.C
+CourtemancheBatched/CourtemancheBatched.C
+StewartBatched/StewartBatched.C
+PerisYagueBatched/PerisYagueBatched.C
+FabbriBatched/FabbriBatched.C
+GrandiBatched/GrandiBatched.C
+TrovatoBatched/TrovatoBatched.C
 
+/* CUDA kernel sources: contents of Make/files-gpu inlined here when CARDIAC_ENABLE_CUDA is set. */
+$(if $(CARDIAC_ENABLE_CUDA),$(shell cat $(PWD)/Make/files-gpu))
 
 LIB = $(FOAM_USER_LIBBIN)/libionicModels
