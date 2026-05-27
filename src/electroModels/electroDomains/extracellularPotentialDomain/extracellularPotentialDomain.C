@@ -644,6 +644,15 @@ void extracellularPotentialDomain::solvePhiE()
             << exit(FatalError);
     }
 
+    // TEMPORARY DIAGNOSTIC (remove once v2312-lightweight scheme lookup
+    // bug is resolved): log the heart sub-mesh registration name and the
+    // field names that determine the laplacianScheme lookup key.
+    Info<< "DIAG[bath]: heartMesh.name()='" << GiPtr->mesh().name()
+        << "' baseMesh.name()='" << baseMesh_.name()
+        << "' GiPtr->name()='" << GiPtr->name()
+        << "' VmPtr->name()='" << VmPtr->name()
+        << "'" << endl;
+
     tmp<volScalarField> tHeartRhs = -fvc::laplacian(*GiPtr, *VmPtr);
     const volScalarField& heartRhs = tHeartRhs();
 
