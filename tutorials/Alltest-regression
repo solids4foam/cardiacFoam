@@ -27,6 +27,7 @@ REGRESSION_TESTS=(
     "NiedererEtAl2011/monodomainPurkinjeNiedererEtAl2011"
     "manufacturedSolutions/bidomain"
     "manufacturedSolutions/monodomainPseudoECG"
+    "manufacturedSolutions/bathBidomain"
 )
 
 failures=0
