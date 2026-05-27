@@ -42,7 +42,6 @@ laplacianSchemes
     laplacian(conductivityIntracellular,Vm)       Gauss linear corrected;
     laplacian(GiPlusGe,phiE)                      Gauss linear corrected;
     laplacian(sigmaTotalf,phiE)                   Gauss linear corrected;
-    "laplacian\(.*,.*\)"                          Gauss linear corrected;
 }
 
 interpolationSchemes
