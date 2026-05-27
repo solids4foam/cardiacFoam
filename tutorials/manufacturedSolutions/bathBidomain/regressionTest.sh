@@ -21,21 +21,20 @@ echo "Mesh: system/blockMeshDict.1D, run mode: serial"
 echo "============================================================"
 echo
 
-# Known-broken combination: OpenFOAM v2312 in lightweight (no solids4foam)
-# mode fails to resolve laplacianSchemes lookup on the heart fvMeshSubset
-# inside extracellularPotentialDomain. The same OpenFOAM v2312 binary
-# passes when solids4foam is present, and v2412/v2512 pass in both modes,
-# so the regression is suppressed only for this single matrix leg. Track
-# the underlying bug separately before removing this skip.
-ofVersion="${WM_PROJECT_VERSION:-unknown}"
-lightweight="${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-${USE_LIGHTWEIGHT_PHYSICSMODEL:-0}}"
-if [[ "${ofVersion}" == *2312* && "${lightweight}" == "1" ]]; then
-    echo "SKIP: bathBidomain regression is suppressed on OpenFOAM v2312 lightweight."
-    echo "      Sub-mesh laplacianSchemes lookup is broken on this combination only."
-    echo "      Other matrix legs (v2312 with-solids4foam, v2412, v2512) still exercise"
-    echo "      this test."
-    exit 0
-fi
+# EXPERIMENT (do not merge as-is): the SKIP guard for v2312 lightweight is
+# disabled while we test whether providing per-region fvSchemes
+# (system/region0SubSet/fvSchemes, system/myocardium/fvSchemes) lets the
+# heart fvMeshSubset resolve its laplacianSchemes lookup on v2312. If this
+# CI run still fails on v2312 lightweight, we restore the skip below.
+# ofVersion="${WM_PROJECT_VERSION:-unknown}"
+# lightweight="${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-${USE_LIGHTWEIGHT_PHYSICSMODEL:-0}}"
+# if [[ "${ofVersion}" == *2312* && "${lightweight}" == "1" ]]; then
+#     echo "SKIP: bathBidomain regression is suppressed on OpenFOAM v2312 lightweight."
+#     echo "      Sub-mesh laplacianSchemes lookup is broken on this combination only."
+#     echo "      Other matrix legs (v2312 with-solids4foam, v2412, v2512) still exercise"
+#     echo "      this test."
+#     exit 0
+# fi
 
 findFirstMatch()
 {
