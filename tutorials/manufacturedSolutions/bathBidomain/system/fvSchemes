@@ -38,7 +38,10 @@ divSchemes
 
 laplacianSchemes
 {
-    default         Gauss linear corrected;
+    default                                       Gauss linear corrected;
+    laplacian(conductivityIntracellular,Vm)       Gauss linear corrected;
+    laplacian(GiPlusGe,phiE)                      Gauss linear corrected;
+    laplacian(sigmaTotalf,phiE)                   Gauss linear corrected;
 }
 
 interpolationSchemes
