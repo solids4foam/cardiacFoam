@@ -72,13 +72,17 @@ jobs:
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
       - name: Tutorial regression
-        if: matrix.mode == 'lightweight'
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
 
-          unset SOLIDS4FOAM_INST_DIR
-          export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
+            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
+          else
+            unset SOLIDS4FOAM_INST_DIR
+            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          fi
 
           ./tutorials/Alltest-regression
 
