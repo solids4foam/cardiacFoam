@@ -171,11 +171,37 @@ checkReferenceValues()
     return "${failures}"
 }
 
+dumpLogTail()
+{
+    local label="$1"
+    local logFile="$2"
+    local maxLines="${3:-80}"
+
+    if [[ -s "${logFile}" ]]; then
+        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
+        tail -n "${maxLines}" "${logFile}"
+        echo "----- end of ${label} -----"
+    else
+        echo "(no log file at ${logFile})"
+    fi
+}
+
 ./Allclean > /dev/null 2>&1 || true
-./Allrun > "${ALLRUN_LOGFILE}" 2>&1
+
+if ! ./Allrun > "${ALLRUN_LOGFILE}" 2>&1; then
+    echo "FAIL: Allrun exited non-zero. Surfacing logs:"
+    dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
+    for stage in blockMesh topoSet setTorsoOrganConductivityField decomposePar cardiacFoam reconstructPar; do
+        dumpLogTail "${stage}" "log.${stage}"
+    done
+    exit 1
+fi
 
 errorFile="$(findManufacturedErrorFile)" || {
     echo "FAIL: bath-bidomain manufactured error summary file not found."
+    echo "Surfacing recent logs to aid debugging:"
+    dumpLogTail "Allrun" "${ALLRUN_LOGFILE}" 40
+    dumpLogTail "cardiacFoam" "log.cardiacFoam"
     exit 1
 }
 
