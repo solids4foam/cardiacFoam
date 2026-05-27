@@ -109,3 +109,16 @@ docs/superpowers/
 
 # Generated driverFOAM run reports
 **/setupManufacturedFDA/run_report.md
+
+# Python bytecode caches
+__pycache__/
+
+# OpenFOAM run artifacts under manufacturedSolutions tutorials
+tutorials/manufacturedSolutions/*/log.*
+tutorials/manufacturedSolutions/*/processor*/
+tutorials/manufacturedSolutions/*/postProcessing/
+tutorials/manufacturedSolutions/*/archivedPostProcessing/
+tutorials/manufacturedSolutions/*/logs/
+tutorials/manufacturedSolutions/*/constant/polyMesh/
+tutorials/manufacturedSolutions/*/0/
+tutorials/manufacturedSolutions/*/0.[0-9]*/
