@@ -67,7 +67,6 @@ struct BatchedKernelConfig
     label vmStateI;
     bool solveVm;
     bool useExplicitEuler;
-    bool useHeun;
     bool useRushLarsen;
     bool useSupportOnlyHotPath;
 
@@ -77,7 +76,6 @@ struct BatchedKernelConfig
         vmStateI(-1),
         solveVm(false),
         useExplicitEuler(false),
-        useHeun(false),
         useRushLarsen(false),
         useSupportOnlyHotPath(false)
     {}
@@ -162,9 +160,6 @@ struct BatchedKernelScratchT
     FieldBuffer algebraicValues;
     FieldBuffer supportValues;
     FieldBuffer predictorStateValues;
-    FieldBuffer predictorRateValues;
-    FieldBuffer predictorAlgebraicValues;
-    FieldBuffer predictorSupportValues;
     FieldBuffer predictorRLApplies;
 
     BatchedKernelScratchT
@@ -173,7 +168,6 @@ struct BatchedKernelScratchT
         const label nAlgebraics,
         const label nSupport,
         const bool usePredictorState,
-        const bool usePredictorEvaluation,
         const bool useSupportOnlyHotPath
     )
     :
@@ -182,13 +176,6 @@ struct BatchedKernelScratchT
         algebraicValues(useSupportOnlyHotPath ? 0 : nAlgebraics, 0.0),
         supportValues(nSupport, 0.0),
         predictorStateValues(usePredictorState ? nStates : 0, 0.0),
-        predictorRateValues(usePredictorEvaluation ? nStates : 0, 0.0),
-        predictorAlgebraicValues
-        (
-            usePredictorEvaluation && !useSupportOnlyHotPath ? nAlgebraics : 0,
-            0.0
-        ),
-        predictorSupportValues(usePredictorEvaluation ? nSupport : 0, 0.0),
         predictorRLApplies(usePredictorState ? nStates : 0, 0.0)
     {}
 
@@ -206,28 +193,6 @@ struct BatchedKernelScratchT
         }
     }
 
-    void resetPredictor
-    (
-        const bool usePredictorEvaluation,
-        const bool useSupportOnlyHotPath
-    )
-    {
-        if (!usePredictorEvaluation)
-        {
-            return;
-        }
-
-        predictorRateValues = 0.0;
-
-        if (useSupportOnlyHotPath)
-        {
-            predictorSupportValues = 0.0;
-        }
-        else
-        {
-            predictorAlgebraicValues = 0.0;
-        }
-    }
 };
 
 
@@ -511,41 +476,6 @@ public:
     }
 
     template<class CellScratch, class KernelConfig>
-    void evaluatePredictorScratchAtTime
-    (
-        const scalar modelTime,
-        CellScratch& scratch,
-        const KernelConfig& kernel
-    ) const
-    {
-        if (kernel.useSupportOnlyHotPath)
-        {
-            hooks_.evaluateHotPathState
-            (
-                modelTime,
-                scratch.predictorStateValues,
-                scratch.predictorRateValues,
-                scratch.predictorSupportValues
-            );
-        }
-        else
-        {
-            hooks_.evaluateState
-            (
-                modelTime,
-                scratch.predictorStateValues,
-                scratch.predictorRateValues,
-                scratch.predictorAlgebraicValues
-            );
-        }
-
-        if (!kernel.solveVm)
-        {
-            scratch.predictorRateValues[kernel.vmStateI] = 0.0;
-        }
-    }
-
-    template<class CellScratch, class KernelConfig>
     void applyExplicitEulerStep
     (
         CellScratch& scratch,
@@ -632,16 +562,6 @@ public:
             {
                 scratch.stateValues[stateI] =
                     scratch.predictorStateValues[stateI];
-            }
-            else if (kernel.useHeun)
-            {
-                scratch.stateValues[stateI] +=
-                    0.5*kernel.dtSubstep
-                   *
-                    (
-                        scratch.rateValues[stateI]
-                      + scratch.predictorRateValues[stateI]
-                    );
             }
             else
             {
@@ -788,17 +708,6 @@ public:
     ) const
     {
         policy_.evaluateScratchAtTime(modelTime, scratch, kernel);
-    }
-
-    template<class CellScratch, class KernelConfig>
-    void evaluatePredictorScratchAtTime
-    (
-        const scalar modelTime,
-        CellScratch& scratch,
-        const KernelConfig& kernel
-    ) const
-    {
-        policy_.evaluatePredictorScratchAtTime(modelTime, scratch, kernel);
     }
 
     template<class CellScratch, class KernelConfig>
@@ -1038,12 +947,6 @@ public:
                     tStart + scalar(substepI)*kernel_.dtSubstep;
 
                 scratch.resetPrimary(kernel_.useSupportOnlyHotPath);
-                scratch.resetPredictor
-                (
-                    kernel_.useHeun,
-                    kernel_.useSupportOnlyHotPath
-                );
-
                 auto evaluateStart = profileStart();
                 backend_.evaluateScratchAtTime(substepTime, scratch, kernel_);
                 addProfileTime(profile.evaluateStateTime, evaluateStart);
@@ -1060,19 +963,6 @@ public:
                 {
                     backend_.buildPredictorState(scratch, kernel_);
                     addProfileTime(profile.stateUpdateTime, updateStart);
-
-                    if (kernel_.useHeun)
-                    {
-                        evaluateStart = profileStart();
-                        backend_.evaluatePredictorScratchAtTime
-                        (
-                            substepTime + kernel_.dtSubstep,
-                            scratch,
-                            kernel_
-                        );
-                        addProfileTime(profile.evaluateStateTime, evaluateStart);
-                        recordEvaluateCall(profile.evaluateStateCalls);
-                    }
 
                     updateStart = profileStart();
                     backend_.applyCorrectorState(scratch, kernel_);

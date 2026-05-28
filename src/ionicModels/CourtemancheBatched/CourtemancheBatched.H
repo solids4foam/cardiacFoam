@@ -29,7 +29,7 @@ SourceFiles
 namespace Foam
 {
 
-class CourtemancheBatched final
+class CourtemancheBatched
 :
     public configuredBatchedIonicModel
 {
@@ -40,6 +40,7 @@ class CourtemancheBatched final
     void operator=(const CourtemancheBatched&) = delete;
 
     bool useSoAEvaluator_;
+    bool useCompactSupport_;
 
 #ifdef HAS_CUDA
     bool useDevice_;
@@ -69,6 +70,16 @@ protected:
         return algebraicValues[Iion_cm];
     }
 
+    virtual scalar ionicCurrentFromHotPathSupport
+    (
+        const scalarUList& supportValues
+    ) const override final;
+
+    virtual bool usesCompactSupport() const override final
+    {
+        return useCompactSupport_;
+    }
+
     virtual void evaluateState
     (
         const scalar modelTime,
@@ -83,6 +94,24 @@ protected:
         const scalarUList& stateValues,
         const scalarUList& rateValues,
         const scalarUList& algebraicValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
+
+    virtual void evaluateHotPathState
+    (
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
+    virtual bool rushLarsenParametersFromHotPathSupport
+    (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& supportValues,
         scalar& steadyState,
         scalar& tau
     ) const override final;
@@ -134,6 +163,28 @@ public:
         const scalarField& y,
         scalarField& dydt
     ) const override final;
+};
+
+class CourtemanchecompactBatched final
+:
+    public CourtemancheBatched
+{
+    CourtemanchecompactBatched(const CourtemanchecompactBatched&) = delete;
+    void operator=(const CourtemanchecompactBatched&) = delete;
+
+public:
+
+    OverrideTypeName("CourtemanchecompactBatched");
+
+    CourtemanchecompactBatched
+    (
+        const dictionary& dict,
+        const label nIntegrationPoints,
+        const scalar initialDeltaT,
+        const Switch solveVmWithinODESolver = false
+    );
+
+    virtual ~CourtemanchecompactBatched() = default;
 };
 
 } // End namespace Foam

@@ -19,39 +19,71 @@ namespace Foam
 enum TROVATO_BATCH_SUPPORT_INDEX
 {
     TROVATO_BATCH_SUPPORT_tau_ICaT_b,
+    TROVATO_BATCH_SUPPORT_gInf_ICaT_b,
     TROVATO_BATCH_SUPPORT_tau_ICaT_g,
+    TROVATO_BATCH_SUPPORT_gInf_ICaT_g,
     TROVATO_BATCH_SUPPORT_tau_IK1_xk1,
+    TROVATO_BATCH_SUPPORT_gInf_IK1_xk1,
     TROVATO_BATCH_SUPPORT_tau_IKr_xrf,
+    TROVATO_BATCH_SUPPORT_gInf_IKr_xrf,
     TROVATO_BATCH_SUPPORT_tau_IKr_xrs,
+    TROVATO_BATCH_SUPPORT_gInf_IKr_xrs,
     TROVATO_BATCH_SUPPORT_tau_IKs_xs1,
+    TROVATO_BATCH_SUPPORT_gInf_IKs_xs1,
     TROVATO_BATCH_SUPPORT_tau_IKs_xs2,
+    TROVATO_BATCH_SUPPORT_gInf_IKs_xs2,
     TROVATO_BATCH_SUPPORT_tau_INa_hf,
+    TROVATO_BATCH_SUPPORT_gInf_INa_hf,
     TROVATO_BATCH_SUPPORT_tau_INa_hs,
+    TROVATO_BATCH_SUPPORT_gInf_INa_hs,
     TROVATO_BATCH_SUPPORT_tau_INa_hsp,
+    TROVATO_BATCH_SUPPORT_gInf_INa_hsp,
     TROVATO_BATCH_SUPPORT_tau_INa_m,
+    TROVATO_BATCH_SUPPORT_gInf_INa_m,
     TROVATO_BATCH_SUPPORT_tau_INa_j,
+    TROVATO_BATCH_SUPPORT_gInf_INa_j,
     TROVATO_BATCH_SUPPORT_tau_INa_jp,
+    TROVATO_BATCH_SUPPORT_gInf_INa_jp,
     TROVATO_BATCH_SUPPORT_tau_If_y,
+    TROVATO_BATCH_SUPPORT_gInf_If_y,
     TROVATO_BATCH_SUPPORT_tau_Ito_a,
+    TROVATO_BATCH_SUPPORT_gInf_Ito_a,
     TROVATO_BATCH_SUPPORT_tau_Ito_i1,
+    TROVATO_BATCH_SUPPORT_gInf_Ito_i1,
     TROVATO_BATCH_SUPPORT_tau_Ito_i2,
+    TROVATO_BATCH_SUPPORT_gInf_Ito_i2,
     TROVATO_BATCH_SUPPORT_tau_INaL_hL,
+    TROVATO_BATCH_SUPPORT_gInf_INaL_hL,
     TROVATO_BATCH_SUPPORT_tau_INaL_mL,
+    TROVATO_BATCH_SUPPORT_gInf_INaL_mL,
     TROVATO_BATCH_SUPPORT_tau_INaL_hLp,
+    TROVATO_BATCH_SUPPORT_gInf_INaL_hLp,
     TROVATO_BATCH_SUPPORT_tau_ICaL_d,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_d,
     TROVATO_BATCH_SUPPORT_tau_ICaL_ff,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_ff,
     TROVATO_BATCH_SUPPORT_tau_ICaL_fs,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_fs,
     TROVATO_BATCH_SUPPORT_tau_ICaL_fcaf,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_fcaf,
     TROVATO_BATCH_SUPPORT_tau_ICaL_fcafp,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_fcafp,
     TROVATO_BATCH_SUPPORT_tau_ICaL_fcas,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_fcas,
     TROVATO_BATCH_SUPPORT_tau_ICaL_ffp,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_ffp,
     TROVATO_BATCH_SUPPORT_tau_ICaL_jca,
+    TROVATO_BATCH_SUPPORT_gInf_ICaL_jca,
     TROVATO_BATCH_SUPPORT_tau_ryr_Jrel1,
+    TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel1,
     TROVATO_BATCH_SUPPORT_tau_ryr_Jrel2,
+    TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel2,
     TROVATO_BATCH_SUPPORT_Iion_cm,
 
     NUM_TROVATO_BATCH_SUPPORT
 };
+
+static_assert(NUM_TROVATO_BATCH_SUPPORT == 61, "Trovato compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void TrovatoComputeVariablesBatch
 (
@@ -760,6 +792,36 @@ CARDIAC_HOST_DEVICE inline void TrovatoComputeVariablesBatch
             SUPPORT_SoA[TROVATO_BATCH_SUPPORT_tau_ICaL_jca * N + cellI] = CONSTANTS[AC_tjca];
             SUPPORT_SoA[TROVATO_BATCH_SUPPORT_tau_ryr_Jrel1 * N + cellI] = alg_AV_ireltau;
             SUPPORT_SoA[TROVATO_BATCH_SUPPORT_tau_ryr_Jrel2 * N + cellI] = alg_AV_ireltau2;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaT_b * N + cellI] = alg_AV_bss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaT_g * N + cellI] = alg_AV_gss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_IK1_xk1 * N + cellI] = alg_AV_xk1ss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_IKr_xrf * N + cellI] = alg_AV_xrss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_IKr_xrs * N + cellI] = alg_AV_xrss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_IKs_xs1 * N + cellI] = alg_AV_xs1ss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_IKs_xs2 * N + cellI] = alg_AV_xs2ss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_hf * N + cellI] = alg_AV_hss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_hs * N + cellI] = alg_AV_hss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_hsp * N + cellI] = alg_AV_hssp;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_m * N + cellI] = alg_AV_mss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_j * N + cellI] = alg_AV_jss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INa_jp * N + cellI] = alg_AV_jss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_If_y * N + cellI] = alg_AV_yss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_Ito_a * N + cellI] = alg_AV_ass;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_Ito_i1 * N + cellI] = alg_AV_iss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_Ito_i2 * N + cellI] = alg_AV_iss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INaL_hL * N + cellI] = alg_AV_hLss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INaL_mL * N + cellI] = alg_AV_mLss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_INaL_hLp * N + cellI] = alg_AV_hLssp;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_d * N + cellI] = alg_AV_dss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_ff * N + cellI] = alg_AV_fss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_fs * N + cellI] = alg_AV_fss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_fcaf * N + cellI] = alg_AV_fcass;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_fcafp * N + cellI] = alg_AV_fcass;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_fcas * N + cellI] = alg_AV_fcass;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_ffp * N + cellI] = alg_AV_fss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ICaL_jca * N + cellI] = alg_AV_fcass;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel1 * N + cellI] = alg_AV_irelss;
+            SUPPORT_SoA[TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel2 * N + cellI] = alg_AV_irelss2;
             SUPPORT_SoA[TROVATO_BATCH_SUPPORT_Iion_cm * N + cellI] = alg_Iion_cm;
         }
     }

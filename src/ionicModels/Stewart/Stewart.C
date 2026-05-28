@@ -84,7 +84,6 @@ Foam::Stewart::Stewart
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         StewartinitConsts
         (
             CONSTANTS_.data(),
@@ -139,18 +138,14 @@ void Foam::Stewart::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
             STATESI[membrane_V] = Vm[integrationPtI]*1000.0;
         }
 
-        // Clamp time step (ms)
         step = min(step, deltaT * 1000.0);
-        // Advance ODE system for all states
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::StewartcomputeVariables
         (
             tEnd,
@@ -166,11 +161,8 @@ void Foam::Stewart::solveODE
         if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
 
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -181,7 +173,6 @@ void Foam::Stewart::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated Stewart code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::StewartcomputeVariables
@@ -225,7 +216,6 @@ void Foam::Stewart::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = StewartDependencyMap();
 
     if (!depMap.found(currentName))
@@ -238,24 +228,19 @@ void Foam::Stewart::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[0] = V;
 
         ::StewartcomputeVariables

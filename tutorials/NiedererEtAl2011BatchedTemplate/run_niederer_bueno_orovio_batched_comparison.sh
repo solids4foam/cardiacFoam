@@ -2,7 +2,7 @@
 # run_niederer_bueno_orovio_batched_comparison.sh
 #
 # Runs the NiedererEtAl2011 Niederer benchmark for each ionic model mode
-# (cpu, batched_euler, batched_heun, batched_rl, batched_soa) and collects
+# (cpu, batched_euler, batched_rl, batched_soa) and collects
 # wall-clock time for the cardiacFoam solve step only.
 #
 # Layout produced:
@@ -23,7 +23,7 @@ CASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ROOT="${RUN_ROOT:-$CASE_ROOT/comparisonRuns}"
 RESULT_ROOT="${RESULT_ROOT:-$CASE_ROOT/comparisonResults}"
 N_RUNS="${N_RUNS:-1}"
-MODES="${MODES:-cpu batched_euler batched_heun batched_rl batched_soa}"
+MODES="${MODES:-cpu batched_euler batched_rl batched_soa}"
 OPENFOAM_BASHRC="${CF_OPENFOAM_BASHRC:-/Volumes/OpenFOAM-v2412/etc/bashrc}"
 N_SUBDOMAINS="${N_SUBDOMAINS:-6}"
 
@@ -45,7 +45,6 @@ config_for_mode()
     case "$1" in
         cpu)            echo "electroProperties.cpu" ;;
         batched_euler)  echo "electroProperties.batched_euler" ;;
-        batched_heun)   echo "electroProperties.batched_heun" ;;
         batched_rl)     echo "electroProperties.batched_rl" ;;
         batched_soa)    echo "electroProperties.batched_soa" ;;
         *)

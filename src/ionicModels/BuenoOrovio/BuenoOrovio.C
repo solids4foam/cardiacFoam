@@ -95,7 +95,6 @@ Foam::BuenoOrovio::BuenoOrovio
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         BuenoOrovioinitConsts
         (
             CONSTANTS_.data(),
@@ -136,7 +135,6 @@ Foam::scalarField& Foam::BuenoOrovio::constants
 
 Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissueTypes() const
 {
-    // All three tissue variants are supported in the generated code
     return {"endocardialCells", "mCells", "epicardialCells"};
 }
 
@@ -262,24 +260,19 @@ void Foam::BuenoOrovio::solveODE
         scalarField& RATESI     = RATES_[integrationPtI];
 
 
-        // Vm fed into the cell model in mV
         if (!solveVmWithinODESolver())
         {
             STATESI[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
         }
-        // Per-cell adaptive time step (in ms) for the ODE solver
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // Clamp ODE step
         step = min(step, deltaT * 1000.0);
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Advance the ODE system
         activeIntegrationPoint_ = integrationPtI;
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update ALGEBRAIC (incl. Jion) and RATES at tEnd
         ::BuenoOroviocomputeVariables
         (
             tEnd,
@@ -296,14 +289,10 @@ void Foam::BuenoOrovio::solveODE
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        //copy internal STATES to memory external state buffer.
         //---------Currently with no use. -------------//
 
-        //----can easily be expanded for all variables------//
-        //copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -315,7 +304,6 @@ void Foam::BuenoOrovio::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated BuenoOrovio code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::BuenoOroviocomputeVariables
@@ -359,7 +347,6 @@ void Foam::BuenoOrovio::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = BuenoOrovioDependencyMap();
 
     if (!depMap.found(currentName))
@@ -372,24 +359,19 @@ void Foam::BuenoOrovio::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[u] = V;
 
         ::BuenoOroviocomputeVariables

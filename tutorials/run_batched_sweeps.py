@@ -17,7 +17,7 @@ RUNS_DIR = TUTORIALS_ROOT / "comparisonResults" / "batched_runs"
 if not RUNS_DIR.exists():
     RUNS_DIR.mkdir(parents=True)
 
-print(f"Starting batched sweeps for {len(BATCHED_MODELS)} models using full matrix (cpu, euler, heun, rl, soa)...")
+print(f"Starting batched sweeps for {len(BATCHED_MODELS)} models using full matrix (cpu, euler, rl, soa)...")
 
 results = []
 
@@ -71,7 +71,7 @@ for model in BATCHED_MODELS:
         # variables from the user's terminal (like a custom MODES array missing 'cpu')
         # don't break the scripts!
         env = os.environ.copy()
-        env["MODES"] = "cpu batched_euler batched_heun batched_rl batched_soa"
+        env["MODES"] = "cpu batched_euler batched_rl batched_soa"
         env["SUBSTEPS"] = "50 20 10 5"
         
         # We stream output to stdout so you can watch it run since it takes a while
@@ -90,6 +90,5 @@ for model in BATCHED_MODELS:
 print("\n--- Summary ---")
 for model, status in results:
     print(f"{model}: {status}")
-
 
 

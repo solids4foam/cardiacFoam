@@ -18,6 +18,7 @@ License
 
 #include "TNNPBatched.H"
 #include "TNNP_2004Batch.H"
+#include "batchedRushLarsenEntry.H"
 #include "TNNP_2004Names.H"
 
 namespace Foam
@@ -64,6 +65,18 @@ namespace Foam
         bool solveVm,
         StimulusProtocolPOD stimulus
     );
+    void launchTnnpFullBatchKernel
+    (
+        double t,
+        const double* d_CONSTANTS,
+        int N,
+        const double* d_STATES,
+        double* d_RATES,
+        double* d_ALGEBRAIC,
+        int tissueFlag,
+        bool solveVm,
+        StimulusProtocolPOD stimulus
+    );
     void launchTnnpEulerStepKernel
     (
         double* d_STATES,
@@ -73,6 +86,11 @@ namespace Foam
         int nStates,
         bool solveVm,
         int vmStateI
+    );
+    void launchTnnpStabilizeKernel
+    (
+        double* d_STATES,
+        int N
     );
     void launchTnnpScaleIonKernel
     (
@@ -95,10 +113,26 @@ namespace Foam
         TNNPBatched,
         dictionary
     );
+    defineTypeNameAndDebug(TNNPcompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        TNNPcompactBatched,
+        dictionary
+    );
 }
 
 namespace
 {
+    bool useCompactTNNPSupport(const Foam::dictionary& dict)
+    {
+        const Foam::word modelName =
+            dict.lookupOrDefault<Foam::word>("ionicModel", Foam::word::null);
+
+        return modelName == "TNNPcompactBatched"
+            || dict.lookupOrDefault<Foam::Switch>("useCompactSupport", false);
+    }
+
     template<class Access>
     void stabilizeTNNPStateValues(Access access)
     {
@@ -149,58 +183,26 @@ namespace
         clampRange(g, 1.0);
     }
 
-    enum class TNNPRLTauSource : unsigned char
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    TNNPRushLarsenDispatch = []()
     {
-        none,
-        lookup,
-        constant
-    };
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
 
-    struct TNNPRLDispatchEntry
-    {
-        TNNPRLTauSource tauSource;
-        Foam::label tauIndex;
-        Foam::label supportIndex;
-    };
+        t[Xr1] = Foam::rlScalarAlgAndSupport(tau_xr1, xr1_inf, Foam::TNNP_BATCH_SUPPORT_tau_xr1, Foam::TNNP_BATCH_SUPPORT_gInf_xr1);
+        t[Xr2] = Foam::rlScalarAlgAndSupport(tau_xr2, xr2_inf, Foam::TNNP_BATCH_SUPPORT_tau_xr2, Foam::TNNP_BATCH_SUPPORT_gInf_xr2);
+        t[Xs]  = Foam::rlScalarAlgAndSupport(tau_xs,  xs_inf,  Foam::TNNP_BATCH_SUPPORT_tau_xs,  Foam::TNNP_BATCH_SUPPORT_gInf_xs);
+        t[m]   = Foam::rlScalarAlgAndSupport(tau_m,   m_inf,   Foam::TNNP_BATCH_SUPPORT_tau_m,   Foam::TNNP_BATCH_SUPPORT_gInf_m);
+        t[h]   = Foam::rlScalarAlgAndSupport(tau_h,   h_inf,   Foam::TNNP_BATCH_SUPPORT_tau_h,   Foam::TNNP_BATCH_SUPPORT_gInf_h);
+        t[j]   = Foam::rlScalarAlgAndSupport(tau_j,   j_inf,   Foam::TNNP_BATCH_SUPPORT_tau_j,   Foam::TNNP_BATCH_SUPPORT_gInf_j);
+        t[d]   = Foam::rlScalarAlgAndSupport(tau_d,   d_inf,   Foam::TNNP_BATCH_SUPPORT_tau_d,   Foam::TNNP_BATCH_SUPPORT_gInf_d);
+        t[f]   = Foam::rlScalarAlgAndSupport(tau_f,   f_inf,   Foam::TNNP_BATCH_SUPPORT_tau_f,   Foam::TNNP_BATCH_SUPPORT_gInf_f);
+        t[fCa] = Foam::rlNone();   // clamped-rate gate — RL returns false on both paths
+        t[s]   = Foam::rlScalarAlgAndSupport(tau_s,   s_inf,   Foam::TNNP_BATCH_SUPPORT_tau_s,   Foam::TNNP_BATCH_SUPPORT_gInf_s);
+        t[r]   = Foam::rlScalarAlgAndSupport(tau_r,   r_inf,   Foam::TNNP_BATCH_SUPPORT_tau_r,   Foam::TNNP_BATCH_SUPPORT_gInf_r);
+        t[g]   = Foam::rlNone();   // clamped-rate gate — RL returns false on both paths
 
-    inline TNNPRLDispatchEntry rlNone()
-    {
-        return {TNNPRLTauSource::none, -1, -1};
-    }
-
-    inline TNNPRLDispatchEntry rlLookup
-    (
-        const Foam::label tauIndex,
-        const Foam::label supportIndex
-    )
-    {
-        return {TNNPRLTauSource::lookup, tauIndex, supportIndex};
-    }
-
-    inline TNNPRLDispatchEntry rlConstant(const Foam::label constantIndex)
-    {
-        return {TNNPRLTauSource::constant, constantIndex, -1};
-    }
-
-    const std::array<TNNPRLDispatchEntry, NUM_STATES> TNNPRushLarsenDispatch = []()
-    {
-        std::array<TNNPRLDispatchEntry, NUM_STATES> entries{};
-        entries.fill(rlNone());
-
-        entries[Xr1] = rlLookup(tau_xr1, Foam::TNNP_BATCH_SUPPORT_tau_xr1);
-        entries[Xr2] = rlLookup(tau_xr2, Foam::TNNP_BATCH_SUPPORT_tau_xr2);
-        entries[Xs] = rlLookup(tau_xs, Foam::TNNP_BATCH_SUPPORT_tau_xs);
-        entries[m] = rlLookup(tau_m, Foam::TNNP_BATCH_SUPPORT_tau_m);
-        entries[h] = rlLookup(tau_h, Foam::TNNP_BATCH_SUPPORT_tau_h);
-        entries[j] = rlLookup(tau_j, Foam::TNNP_BATCH_SUPPORT_tau_j);
-        entries[d] = rlLookup(tau_d, Foam::TNNP_BATCH_SUPPORT_tau_d);
-        entries[f] = rlLookup(tau_f, Foam::TNNP_BATCH_SUPPORT_tau_f);
-        entries[fCa] = rlConstant(tau_fCa);
-        entries[s] = rlLookup(tau_s, Foam::TNNP_BATCH_SUPPORT_tau_s);
-        entries[r] = rlLookup(tau_r, Foam::TNNP_BATCH_SUPPORT_tau_r);
-        entries[g] = rlConstant(tau_g);
-
-        return entries;
+        return t;
     }();
 }
 
@@ -226,13 +228,21 @@ Foam::TNNPBatched::TNNPBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useCompactTNNPSupport(dict)),
     stimulusPOD_()
 #ifdef HAS_CUDA
   , useDevice_(false)
 #endif
 {
     ionicModel::setTissueFromDict();
-    setHotPathSupportSize(NUM_TNNP_BATCH_SUPPORT);
+    if (useCompactSupport_)
+    {
+        setHotPathSupportSize(NUM_TNNP_BATCH_SUPPORT);
+    }
+    else if (useSoAEvaluator_)
+    {
+        setHotPathSupportSize(NUM_ALGEBRAIC);
+    }
 
 #ifdef HAS_CUDA
     if (useSoAEvaluator_)
@@ -260,7 +270,7 @@ Foam::TNNPBatched::TNNPBatched
     if (useSoAEvaluator_)
     {
         const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "rlGatesHeunRest");
+            dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsen");
         if (integrator != "euler")
         {
             WarningInFunction
@@ -313,6 +323,18 @@ Foam::TNNPBatched::~TNNPBatched()
 }
 
 
+Foam::TNNPcompactBatched::TNNPcompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    TNNPBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
+
+
 
 
 void Foam::TNNPBatched::prepareIOAccess
@@ -333,7 +355,7 @@ void Foam::TNNPBatched::prepareIOAccess
         cuda_.syncSupportDeviceToHost
         (
             supportSoAData(),
-            static_cast<std::size_t>(NUM_TNNP_BATCH_SUPPORT),
+            static_cast<std::size_t>(nHotPathSupport()),
             static_cast<std::size_t>(nCells())
         );
     }
@@ -425,7 +447,7 @@ void Foam::TNNPBatched::solveBatched
         (
             static_cast<std::size_t>(N),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_TNNP_BATCH_SUPPORT),
+            static_cast<std::size_t>(nHotPathSupport()),
             static_cast<std::size_t>(CONSTANTS_.size())
         );
         cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
@@ -443,12 +465,24 @@ void Foam::TNNPBatched::solveBatched
         for (label sub = 0; sub < nSub; ++sub)
         {
             const scalar tSub = tStart + scalar(sub)*dtSubstep;
-            launchTnnpBatchKernel
-            (
-                tSub, cuda_.d_constants, static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                tFlag, solveVm, stimulusPOD_
-            );
+            if (useCompactSupport_)
+            {
+                launchTnnpBatchKernel
+                (
+                    tSub, cuda_.d_constants, static_cast<int>(N),
+                    cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                    tFlag, solveVm, stimulusPOD_
+                );
+            }
+            else
+            {
+                launchTnnpFullBatchKernel
+                (
+                    tSub, cuda_.d_constants, static_cast<int>(N),
+                    cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                    tFlag, solveVm, stimulusPOD_
+                );
+            }
             launchTnnpEulerStepKernel
             (
                 cuda_.d_states, cuda_.d_rates,
@@ -458,19 +492,37 @@ void Foam::TNNPBatched::solveBatched
                 solveVm,
                 static_cast<int>(V)
             );
+            launchTnnpStabilizeKernel(cuda_.d_states, static_cast<int>(N));
         }
 
-        launchTnnpBatchKernel
-        (
-            tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            tFlag, solveVm, stimulusPOD_
-        );
+        if (useCompactSupport_)
+        {
+            launchTnnpBatchKernel
+            (
+                tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                tFlag, solveVm, stimulusPOD_
+            );
+        }
+        else
+        {
+            launchTnnpFullBatchKernel
+            (
+                tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                tFlag, solveVm, stimulusPOD_
+            );
+        }
         launchTnnpScaleIonKernel
         (
             cuda_.d_support, cuda_.d_Im, 1.0,        // TNNP Iion is direct
             static_cast<int>(N),
-            static_cast<int>(TNNP_BATCH_SUPPORT_Iion_cm)
+            static_cast<int>
+            (
+                useCompactSupport_
+              ? TNNP_BATCH_SUPPORT_Iion_cm
+              : Iion_cm
+            )
         );
         cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
         cuda_.deviceDirty = true;
@@ -482,12 +534,24 @@ void Foam::TNNPBatched::solveBatched
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-        TNNPComputeRatesBatch
-        (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
-            solveVm, stimulusPOD_
-        );
+        if (useCompactSupport_)
+        {
+            TNNPComputeRatesBatch
+            (
+                tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
+                STATES_SoA, RATES_SoA, SUPPORT_SoA,
+                solveVm, stimulusPOD_
+            );
+        }
+        else
+        {
+            TNNPComputeRatesFullBatch
+            (
+                tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
+                STATES_SoA, RATES_SoA, SUPPORT_SoA,
+                solveVm, stimulusPOD_
+            );
+        }
 
         for (label stateI = 0; stateI < NUM_STATES; ++stateI)
         {
@@ -502,19 +566,46 @@ void Foam::TNNPBatched::solveBatched
                     dtSubstep*RATES_SoA[base + cellI];
             }
         }
+
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            stabilizeTNNPStateValues
+            (
+                [&](const label stateI) -> scalar&
+                {
+                    return STATES_SoA[stateI*N + cellI];
+                }
+            );
+        }
     }
 
-    TNNPComputeRatesBatch
-    (
-        tStart + dtModel, CONSTS,
-        static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
-        solveVm, stimulusPOD_
-    );
-
-    if (SUPPORT_SoA != nullptr)
+    if (useCompactSupport_)
     {
+        TNNPComputeRatesBatch
+        (
+            tStart + dtModel, CONSTS,
+            static_cast<int>(N), 0, static_cast<int>(N),
+            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            solveVm, stimulusPOD_
+        );
+
         const label IionBase = TNNP_BATCH_SUPPORT_Iion_cm*N;
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
+        }
+    }
+    else
+    {
+        TNNPComputeRatesFullBatch
+        (
+            tStart + dtModel, CONSTS,
+            static_cast<int>(N), 0, static_cast<int>(N),
+            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            solveVm, stimulusPOD_
+        );
+
+        const label IionBase = Iion_cm*N;
         for (label cellI = 0; cellI < N; ++cellI)
         {
             Im[cellI] = SUPPORT_SoA[IionBase + cellI];
@@ -529,7 +620,9 @@ Foam::scalar Foam::TNNPBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return supportValues[TNNP_BATCH_SUPPORT_Iion_cm];
+    return useCompactSupport_
+      ? supportValues[TNNP_BATCH_SUPPORT_Iion_cm]
+      : supportValues[Iion_cm];
 }
 
 void Foam::TNNPBatched::stabilizeCellState(const label cellI) const
@@ -582,6 +675,12 @@ void Foam::TNNPBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
+    if (!useCompactSupport_)
+    {
+        evaluateState(modelTime, stateValues, rateValues, supportValues);
+        return;
+    }
+
     TNNPcomputeRatesCompact
     (
         modelTime,
@@ -589,7 +688,7 @@ void Foam::TNNPBatched::evaluateHotPathState
         rateValues.data(),
         const_cast<scalarUList&>(stateValues).data(),
         supportValues.data(),
-                solveVmWithinODESolver(),
+        solveVmWithinODESolver(),
         stimulusProtocol()
     );
 }
@@ -604,35 +703,18 @@ bool Foam::TNNPBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
-    {
-        return false;
-    }
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
 
-    const TNNPRLDispatchEntry& entry = TNNPRushLarsenDispatch[stateI];
-
-    switch (entry.tauSource)
-    {
-        case TNNPRLTauSource::lookup:
-            tau = algebraicValues[entry.tauIndex];
-            break;
-
-        case TNNPRLTauSource::constant:
-            tau = CONSTANTS_[entry.tauIndex];
-            break;
-
-        case TNNPRLTauSource::none:
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    const auto& entry = TNNPRushLarsenDispatch[stateI];
+    return resolveScalarRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        algebraicValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
@@ -645,35 +727,31 @@ bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    if (!useCompactSupport_)
     {
-        return false;
+        return rushLarsenParameters
+        (
+            stateI,
+            stateValues,
+            rateValues,
+            supportValues,
+            steadyState,
+            tau
+        );
     }
 
-    const TNNPRLDispatchEntry& entry = TNNPRushLarsenDispatch[stateI];
-
-    switch (entry.tauSource)
-    {
-        case TNNPRLTauSource::lookup:
-            tau = supportValues[entry.supportIndex];
-            break;
-
-        case TNNPRLTauSource::constant:
-            tau = CONSTANTS_[entry.tauIndex];
-            break;
-
-        case TNNPRLTauSource::none:
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    const auto& entry = TNNPRushLarsenDispatch[stateI];
+    return resolveSupportRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::TNNPBatched::derivatives

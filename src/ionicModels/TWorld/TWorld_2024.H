@@ -1537,8 +1537,6 @@ TWorldcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_hLssp] = 1.0 / (1.0 + exp((STATES[v] + 93.81) / 7.488));
     ALGEBRAIC[AV_mLss] = 1.0 / (1.0 + exp(-(STATES[v] + 42.85) / 5.264));
     ALGEBRAIC[AV_tmL] = 0.1292 * exp(-pow((STATES[v] + 45.79) / 15.54, 2.0)) + 0.06487 * exp(-pow((STATES[v] - 4.823) / 51.12, 2.0));
-    // AV_GNaL: epi-only 0.7 factor lives in CONSTANTS[gnalTissueScale]
-    // (1.0 in non-epi). Branch-free hot path.
     ALGEBRAIC[AV_GNaL] = CONSTANTS[AC_GNaL_b] * CONSTANTS[AC_INaL_multiplier]
                        * (1.0 + ALGEBRAIC[AV_fINaLp]) * CONSTANTS[gnalTissueScale];
     RATES[hL] = (ALGEBRAIC[AV_hLss] - STATES[hL]) / CONSTANTS[AC_thL];

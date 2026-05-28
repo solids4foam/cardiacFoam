@@ -25,10 +25,64 @@ namespace Foam
 
 enum TORORD_DYNCL_BATCH_SUPPORT_INDEX
 {
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INa_m,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_m,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INa_h,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_h,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INa_j,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_j,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INa_hp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_hp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INa_jp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_jp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_mL,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_mL,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_hL,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_hL,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_hLp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_hLp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_a,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_a,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iF,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iF,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iS,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iS,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_ap,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_ap,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iFp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iFp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iSp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iSp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_d,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_d,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_ff,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_ff,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fs,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fs,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcaf,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcaf,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcas,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcas,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_jca,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_jca,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_ffp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_ffp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcafp,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcafp,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_IKs_xs1,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_IKs_xs1,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_IKs_xs2,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_IKs_xs2,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Jrel_np,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Jrel_np,
+    TORORD_DYNCL_BATCH_SUPPORT_tau_Jrel_p,
+    TORORD_DYNCL_BATCH_SUPPORT_gInf_Jrel_p,
     TORORD_DYNCL_BATCH_SUPPORT_Iion_cm,
 
     NUM_TORORD_DYNCL_BATCH_SUPPORT
 };
+
+static_assert(NUM_TORORD_DYNCL_BATCH_SUPPORT == 53, "Unexpected ToRORd_dynCl compact support layout");
 
 CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 (
@@ -654,6 +708,58 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 
         if (SUPPORT_SoA != nullptr)
         {
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INa_m * N + cellI] = a_tm;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_m * N + cellI] = a_mss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INa_h * N + cellI] = a_th;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_h * N + cellI] = a_hss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INa_j * N + cellI] = a_tj;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_j * N + cellI] = a_jss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INa_hp * N + cellI] = a_th;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_hp * N + cellI] = a_hssp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INa_jp * N + cellI] = a_tjp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INa_jp * N + cellI] = a_jss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_mL * N + cellI] = a_tmL;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_mL * N + cellI] = a_mLss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_hL * N + cellI] = c_thL;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_hL * N + cellI] = a_hLss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_INaL_hLp * N + cellI] = c_thLp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_INaL_hLp * N + cellI] = a_hLssp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_a * N + cellI] = a_ta;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_a * N + cellI] = a_ass;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iF * N + cellI] = a_tiF;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iF * N + cellI] = a_iss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iS * N + cellI] = a_tiS;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iS * N + cellI] = a_iss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_ap * N + cellI] = a_ta;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_ap * N + cellI] = a_assp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iFp * N + cellI] = a_tiFp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iFp * N + cellI] = a_iss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Ito_iSp * N + cellI] = a_tiSp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Ito_iSp * N + cellI] = a_iss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_d * N + cellI] = a_td;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_d * N + cellI] = a_dss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_ff * N + cellI] = a_tff;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_ff * N + cellI] = a_fss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fs * N + cellI] = a_tfs;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fs * N + cellI] = a_fss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcaf * N + cellI] = a_tfcaf;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcaf * N + cellI] = a_fcass;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcas * N + cellI] = a_tfcas;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcas * N + cellI] = a_fcass;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_jca * N + cellI] = c_tjca;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_jca * N + cellI] = a_jcass;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_ffp * N + cellI] = a_tffp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_ffp * N + cellI] = a_fss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_ICaL_fcafp * N + cellI] = a_tfcafp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_ICaL_fcafp * N + cellI] = a_fcass;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_IKs_xs1 * N + cellI] = a_txs1;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_IKs_xs1 * N + cellI] = a_xs1ss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_IKs_xs2 * N + cellI] = a_txs2;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_IKs_xs2 * N + cellI] = a_xs2ss;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Jrel_np * N + cellI] = a_tau_rel;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Jrel_np * N + cellI] = a_Jrel_inf;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_tau_Jrel_p * N + cellI] = a_tau_relp;
+            SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_gInf_Jrel_p * N + cellI] = a_Jrel_infp;
             SUPPORT_SoA[TORORD_DYNCL_BATCH_SUPPORT_Iion_cm * N + cellI] = a_Iion_cm;
         }
     }

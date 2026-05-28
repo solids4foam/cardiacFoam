@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Batched Rush-Larsen-Heun integrator, 1 substep per PDE time step.
+// Batched Rush-Larsen integrator, 1 substep per PDE time step.
 
 myocardiumSolver  monodomainSolver;
 
@@ -28,7 +28,7 @@ monodomainSolverCoeffs
     ionicModel    BuenoOrovioBatched;
     tissue    epicardialCells;
 
-    batchedIntegrator rushLarsenHeun;
+    batchedIntegrator rushLarsen;
     batchedSubsteps   1;
 
     outputVariables

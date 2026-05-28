@@ -101,6 +101,8 @@ static const char* CourtemancheALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 
     "AV_cajsr_w_inf",
     "AV_cajsr_w_tau",
+    "AV_ical_fCa_inf",
+    "AV_cajsr_u_inf",
 
     "Iion_cm",
     "Istim"
@@ -478,12 +480,8 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     double AV_I_up;
     double AV_I_up_leak;
 
-    double AV_cajsr_u_inf;
     double AV_cajsr_v_inf;
     double AV_cajsr_v_tau;
-
-
-    double AV_ical_fCa_inf;
 
     double AV_ikr_xr_tau_alpha;
     double AV_ikr_xr_tau_beta;
@@ -517,7 +515,6 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     AV_I_up = CONSTANTS[AC_I_up_max] / (1.0 + CONSTANTS[AC_K_up] / STATES[calcium_Cai]);
     AV_I_up_leak = CONSTANTS[AC_I_up_max] * STATES[calcium_CaUp] / CONSTANTS[AC_Ca_up_max];
 
-    //std::cout << "CURRENTS " << __LINE__ << std::endl;
 
     /* ical */
     ALGEBRAIC[AV_ical_d_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 10.0) / -8.0));
@@ -526,8 +523,8 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
     ALGEBRAIC[AV_ical_f_inf] = 1.0 / (1.0 + exp((STATES[membrane_V] + 28.0) / 6.9));
     ALGEBRAIC[AV_ical_f_tau] = 9.0 / (0.0197 * exp(-pow(0.0337, 2.0) * pow(STATES[membrane_V] + 10.0, 2.0)) + 0.02);
     RATES[ical_f] = (ALGEBRAIC[AV_ical_f_inf] - STATES[ical_f]) / ALGEBRAIC[AV_ical_f_tau];
-    AV_ical_fCa_inf = 1.0 / (1.0 + STATES[calcium_Cai] / 0.00035);
-    RATES[ical_fCa] = (AV_ical_fCa_inf - STATES[ical_fCa]) / CONSTANTS[AC_ical_fCa_tau];
+    ALGEBRAIC[AV_ical_fCa_inf] = 1.0 / (1.0 + STATES[calcium_Cai] / 0.00035);
+    RATES[ical_fCa] = (ALGEBRAIC[AV_ical_fCa_inf] - STATES[ical_fCa]) / CONSTANTS[AC_ical_fCa_tau];
     ALGEBRAIC[AV_ICaL] = CONSTANTS[AC_gCaL] * STATES[ical_d] * STATES[ical_f] * STATES[ical_fCa] * (STATES[membrane_V] - CONSTANTS[AC_ECaL]);
 
     /* ipca */
@@ -557,8 +554,8 @@ CourtemanchecomputeVariables(double VOI, double* CONSTANTS, double* RATES, doubl
 
     AV_Fn = 1e-12 * CONSTANTS[AC_V_rel] * AV_I_rel - 5e-13 / CONSTANTS[AC_F] * (0.5 * ALGEBRAIC[AV_ICaL] - 0.2 * ALGEBRAIC[AV_INaCa]) * CONSTANTS[AC_Cm];
 
-    AV_cajsr_u_inf = 1.0 / (1.0 + exp(-(AV_Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
-    RATES[cajsr_u] = (AV_cajsr_u_inf - STATES[cajsr_u]) / CONSTANTS[AC_cajsr_u_tau];
+    ALGEBRAIC[AV_cajsr_u_inf] = 1.0 / (1.0 + exp(-(AV_Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
+    RATES[cajsr_u] = (ALGEBRAIC[AV_cajsr_u_inf] - STATES[cajsr_u]) / CONSTANTS[AC_cajsr_u_tau];
     AV_cajsr_v_inf = 1.0 - pow(1.0 + exp(-(AV_Fn - 0.2 * CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]), -1.0);
     AV_cajsr_v_tau = 1.91 + 2.09 / (1.0 + exp(-(AV_Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
     RATES[cajsr_v] = (AV_cajsr_v_inf - STATES[cajsr_v]) / AV_cajsr_v_tau;

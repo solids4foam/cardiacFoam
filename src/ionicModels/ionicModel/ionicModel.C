@@ -38,15 +38,6 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
       step_(num, initialDeltaT), tissue_(-1),
       solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    // Required schema:
-    // outputVariables
-    // {
-    //   ionic
-    //   {
-    //     export (...);
-    //     debug  (...);
-    //   }
-    // }
     if (dict_.found("outputVariables"))
     {
         const dictionary& outDict = dict_.subDict("outputVariables");

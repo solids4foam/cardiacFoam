@@ -29,7 +29,7 @@ singleCellSolverCoeffs
     absTol          1e-6;
     relTol          1e-4;
 
-    batchedIntegrator rushLarsenHeun;
+    batchedIntegrator rushLarsen;
     batchedSubsteps   1;
 
     singleCellStimulus

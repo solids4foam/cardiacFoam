@@ -136,7 +136,6 @@ protected:
         // Constructors
 
             //- Construct given a dictionary, the number of integration points and a
-            //  initial time step for the ODE solver
             TNNP
             (
                 const dictionary& dict,
@@ -170,7 +169,6 @@ protected:
             }
 
             //- Derivatives of each ODE with respect to the primary unknown in that
-            //  equation
             virtual void derivatives
             (
                 const scalar t,

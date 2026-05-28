@@ -5,6 +5,7 @@ License
 
 #include "StewartBatched.H"
 #include "Stewart_2009Batch.H"
+#include "batchedRushLarsenEntry.H"
 #include <array>
 #include <cmath>
 
@@ -15,49 +16,27 @@ namespace Foam
 
 namespace
 {
-    enum class StewartRLTauSource : unsigned char
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    StewartRushLarsenDispatch = []()
     {
-        none,
-        lookup
-    };
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
 
-    struct StewartRLDispatchEntry
-    {
-        StewartRLTauSource tauSource;
-        Foam::label tauIndex;
-    };
+        t[Ihyperpolarization_activated_current_y_gate_y]          = Foam::rlScalarAlgAndSupport(AV_tau_y,     AV_y_inf,     Foam::STEWART_BATCH_SUPPORT_tau_y,     Foam::STEWART_BATCH_SUPPORT_gInf_y);
+        t[Irapid_time_dependent_potassium_current_Xr1_gate_Xr1]   = Foam::rlScalarAlgAndSupport(AV_tau_xr1,   AV_xr1_inf,   Foam::STEWART_BATCH_SUPPORT_tau_xr1,   Foam::STEWART_BATCH_SUPPORT_gInf_xr1);
+        t[Irapid_time_dependent_potassium_current_Xr2_gate_Xr2]   = Foam::rlScalarAlgAndSupport(AV_tau_xr2,   AV_xr2_inf,   Foam::STEWART_BATCH_SUPPORT_tau_xr2,   Foam::STEWART_BATCH_SUPPORT_gInf_xr2);
+        t[Islow_time_dependent_potassium_current_Xs_gate_Xs]      = Foam::rlScalarAlgAndSupport(AV_tau_xs,    AV_xs_inf,    Foam::STEWART_BATCH_SUPPORT_tau_xs,    Foam::STEWART_BATCH_SUPPORT_gInf_xs);
+        t[Ifast_sodium_current_m_gate_m]                          = Foam::rlScalarAlgAndSupport(AV_tau_m,     AV_m_inf,     Foam::STEWART_BATCH_SUPPORT_tau_m,     Foam::STEWART_BATCH_SUPPORT_gInf_m);
+        t[Ifast_sodium_current_h_gate_h]                          = Foam::rlScalarAlgAndSupport(AV_tau_h,     AV_h_inf,     Foam::STEWART_BATCH_SUPPORT_tau_h,     Foam::STEWART_BATCH_SUPPORT_gInf_h);
+        t[Ifast_sodium_current_j_gate_j]                          = Foam::rlScalarAlgAndSupport(AV_tau_j,     AV_j_inf,     Foam::STEWART_BATCH_SUPPORT_tau_j,     Foam::STEWART_BATCH_SUPPORT_gInf_j);
+        t[IL_type_Ca_current_d_gate_d]                            = Foam::rlScalarAlgAndSupport(AV_tau_d,     AV_d_inf,     Foam::STEWART_BATCH_SUPPORT_tau_d,     Foam::STEWART_BATCH_SUPPORT_gInf_d);
+        t[IL_type_Ca_current_f_gate_f]                            = Foam::rlScalarAlgAndSupport(AV_tau_f,     AV_f_inf,     Foam::STEWART_BATCH_SUPPORT_tau_f,     Foam::STEWART_BATCH_SUPPORT_gInf_f);
+        t[IL_type_Ca_current_f2_gate_f2]                          = Foam::rlScalarAlgAndSupport(AV_tau_f2,    AV_f2_inf,    Foam::STEWART_BATCH_SUPPORT_tau_f2,    Foam::STEWART_BATCH_SUPPORT_gInf_f2);
+        t[IL_type_Ca_current_fCass_gate_fCass]                    = Foam::rlScalarAlgAndSupport(AV_tau_fCass, AV_fCass_inf, Foam::STEWART_BATCH_SUPPORT_tau_fCass, Foam::STEWART_BATCH_SUPPORT_gInf_fCass);
+        t[Itransient_outward_current_s_gate_s]                    = Foam::rlScalarAlgAndSupport(AV_tau_s,     AV_s_inf,     Foam::STEWART_BATCH_SUPPORT_tau_s,     Foam::STEWART_BATCH_SUPPORT_gInf_s);
+        t[Itransient_outward_current_r_gate_r]                    = Foam::rlScalarAlgAndSupport(AV_tau_r,     AV_r_inf,     Foam::STEWART_BATCH_SUPPORT_tau_r,     Foam::STEWART_BATCH_SUPPORT_gInf_r);
 
-    inline StewartRLDispatchEntry rlNone()
-    {
-        return {StewartRLTauSource::none, -1};
-    }
-
-    inline StewartRLDispatchEntry rlLookup(const Foam::label tauI)
-    {
-        return {StewartRLTauSource::lookup, tauI};
-    }
-
-    const std::array<StewartRLDispatchEntry, NUM_STATES>
-        StewartRushLarsenDispatch = []()
-    {
-        std::array<StewartRLDispatchEntry, NUM_STATES> e{};
-        e.fill(rlNone());
-
-        e[Ihyperpolarization_activated_current_y_gate_y] = rlLookup(AV_tau_y);
-        e[Irapid_time_dependent_potassium_current_Xr1_gate_Xr1] = rlLookup(AV_tau_xr1);
-        e[Irapid_time_dependent_potassium_current_Xr2_gate_Xr2] = rlLookup(AV_tau_xr2);
-        e[Islow_time_dependent_potassium_current_Xs_gate_Xs] = rlLookup(AV_tau_xs);
-        e[Ifast_sodium_current_m_gate_m] = rlLookup(AV_tau_m);
-        e[Ifast_sodium_current_h_gate_h] = rlLookup(AV_tau_h);
-        e[Ifast_sodium_current_j_gate_j] = rlLookup(AV_tau_j);
-        e[IL_type_Ca_current_d_gate_d] = rlLookup(AV_tau_d);
-        e[IL_type_Ca_current_f_gate_f] = rlLookup(AV_tau_f);
-        e[IL_type_Ca_current_f2_gate_f2] = rlLookup(AV_tau_f2);
-        e[IL_type_Ca_current_fCass_gate_fCass] = rlLookup(AV_tau_fCass);
-        e[Itransient_outward_current_s_gate_s] = rlLookup(AV_tau_s);
-        e[Itransient_outward_current_r_gate_r] = rlLookup(AV_tau_r);
-
-        return e;
+        return t;
     }();
 }
 
@@ -107,11 +86,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool useStewartCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "StewartcompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(StewartBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         StewartBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(StewartcompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        StewartcompactBatched,
         dictionary
     );
 }
@@ -138,6 +133,7 @@ Foam::StewartBatched::StewartBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useStewartCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -170,10 +166,13 @@ Foam::StewartBatched::StewartBatched
     }
 #endif
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_STEWART_BATCH_SUPPORT);
+    }
 
+    if (useSoAEvaluator_)
+    {
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
         if (integrator != "euler")
@@ -219,6 +218,17 @@ Foam::StewartBatched::StewartBatched
     }
 }
 
+Foam::StewartcompactBatched::StewartcompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    StewartBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
+
 Foam::StewartBatched::~StewartBatched()
 {
 #ifdef HAS_CUDA
@@ -255,6 +265,63 @@ void Foam::StewartBatched::evaluateState
         tissue(),
         solveVmWithinODESolver(),
         stimulusProtocol()
+    );
+}
+
+Foam::scalar Foam::StewartBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return supportValues[STEWART_BATCH_SUPPORT_Iion_cm];
+}
+
+void Foam::StewartBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    for (const auto& entry : StewartRushLarsenDispatch)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            entry,
+            CONSTANTS_,
+            algebraics,
+            supportValues
+        );
+    }
+
+    supportValues[STEWART_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
+}
+
+bool Foam::StewartBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    const auto& entry = StewartRushLarsenDispatch[stateI];
+    return resolveSupportRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
     );
 }
 
@@ -488,31 +555,18 @@ bool Foam::StewartBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
-    {
-        return false;
-    }
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
 
-    const StewartRLDispatchEntry& entry = StewartRushLarsenDispatch[stateI];
-
-    switch (entry.tauSource)
-    {
-        case StewartRLTauSource::lookup:
-            tau = algebraicValues[entry.tauIndex];
-            break;
-
-        case StewartRLTauSource::none:
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    const auto& entry = StewartRushLarsenDispatch[stateI];
+    return resolveScalarRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        algebraicValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::StewartBatched::derivatives

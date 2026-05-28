@@ -16,7 +16,8 @@ Description
     --- Stage in the GPU port ---
 
     This is the *first stage* of the Gaur GPU port. It plugs Gaur into
-    the existing cell-major batched executor (RL+Heun on host, OpenMP-
+    the existing cell-major batched executor (RL gates plus Euler fallback
+    on host, OpenMP-
     parallel cell loop optional). It is the equivalent of what
     `TNNPBatched` looks like today: a runtime-selectable wrapper around the
     full `GaurcomputeVariables` evaluator, exercised through the
@@ -29,11 +30,10 @@ Description
     commit; see `gpu_validation_strategy.md` for the recipe.
 
     Until that stage lands, `GaurBatched` is functionally similar to the
-    legacy `Gaur` class but uses the host-batched RL+Heun integrator
+    legacy `Gaur` class but uses the host-batched Rush-Larsen integrator
     instead of OpenFOAM's RKF45. The default integrator
-    `batchedIntegrator rlGatesHeunRest;` keeps gate states on Rush-
-    Larsen and the rest on Heun — the same accuracy class as the
-    legacy CPU model in practice.
+    `batchedIntegrator rushLarsen;` keeps supported gate states on
+    Rush-Larsen and updates the remaining states with explicit Euler.
 
 SourceFiles
     GaurBatched.C
@@ -57,7 +57,7 @@ SourceFiles
 namespace Foam
 {
 
-class GaurBatched final
+class GaurBatched
 :
     public configuredBatchedIonicModel
 {
@@ -68,6 +68,7 @@ class GaurBatched final
     void operator=(const GaurBatched&) = delete;
 
     bool useSoAEvaluator_;
+    bool useCompactSupport_;
     mutable StimulusProtocolPOD stimulusPOD_;
 
     void solveBatched
@@ -93,6 +94,16 @@ protected:
         return algebraicValues[Iion_cm];
     }
 
+    virtual scalar ionicCurrentFromHotPathSupport
+    (
+        const scalarUList& supportValues
+    ) const override final;
+
+    virtual bool usesCompactSupport() const override final
+    {
+        return useCompactSupport_;
+    }
+
     virtual void evaluateState
     (
         const scalar modelTime,
@@ -110,6 +121,24 @@ protected:
         scalar& steadyState,
         scalar& tau
     ) const final;
+
+    virtual void evaluateHotPathState
+    (
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
+    virtual bool rushLarsenParametersFromHotPathSupport
+    (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& supportValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
 
 public:
 
@@ -160,6 +189,28 @@ public:
     ) const override final;
 
 
+};
+
+class GaurcompactBatched final
+:
+    public GaurBatched
+{
+    GaurcompactBatched(const GaurcompactBatched&) = delete;
+    void operator=(const GaurcompactBatched&) = delete;
+
+public:
+
+    OverrideTypeName("GaurcompactBatched");
+
+    GaurcompactBatched
+    (
+        const dictionary& dict,
+        const label nIntegrationPoints,
+        const scalar initialDeltaT,
+        const Switch solveVmWithinODESolver = false
+    );
+
+    virtual ~GaurcompactBatched() = default;
 };
 
 } // End namespace Foam

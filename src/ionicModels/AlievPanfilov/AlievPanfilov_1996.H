@@ -108,12 +108,6 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];
 
-    //Tension Variables
-    //STATES[active_tension_Ta] = 0;
-    //CONSTANTS[AC_kTa] = 8.0;
-    //CONSTANTS[AC_e0] = 1.0;
-    //ALGEBRAIC[AV_e] = ((STATES[u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
-    //RATES[active_tension_Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[u] - STATES[active_tension_Ta]);
 
 
     ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);

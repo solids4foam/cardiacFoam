@@ -365,11 +365,11 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
     CONSTANTS[AC_HSR] = 2.5;
     CONSTANTS[AC_MaxSR] = 15.0;
     CONSTANTS[AC_MinSR] = 1.0;
-    CONSTANTS[AC_kiCa] = 500.0;
-    CONSTANTS[AC_kim] = 5.0;
-    CONSTANTS[AC_koCa] = 10000.0;
-    CONSTANTS[AC_kom] = 660.0;
-    CONSTANTS[AC_ks] = 1.48041085099999994e+08;
+    CONSTANTS[AC_kiCa] = 0.5;           // 500  s^-1  → ÷1000 → ms^-1
+    CONSTANTS[AC_kim]  = 0.005;         //   5  s^-1
+    CONSTANTS[AC_koCa] = 10.0;          // 1e4  s^-1
+    CONSTANTS[AC_kom]  = 0.66;          // 660  s^-1
+    CONSTANTS[AC_ks]   = 1.48041085099999994e+05;  // 1.48e8 s^-1
 
     /* Ca_buffering */
     CONSTANTS[AC_CM_tot] = 0.045;
@@ -377,16 +377,16 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
     CONSTANTS[AC_Mgi] = 2.5;
     CONSTANTS[AC_TC_tot] = 0.031;
     CONSTANTS[AC_TMC_tot] = 0.062;
-    CONSTANTS[AC_kb_CM] = 542.0;
-    CONSTANTS[AC_kb_CQ] = 445.0;
-    CONSTANTS[AC_kb_TC] = 446.0;
-    CONSTANTS[AC_kb_TMC] = 7.51;
-    CONSTANTS[AC_kb_TMM] = 751.0;
-    CONSTANTS[AC_kf_CM] = 1642000.0;
-    CONSTANTS[AC_kf_CQ] = 175.4;
-    CONSTANTS[AC_kf_TC] = 88800.0;
-    CONSTANTS[AC_kf_TMC] = 227700.0;
-    CONSTANTS[AC_kf_TMM] = 2277.0;
+    CONSTANTS[AC_kb_CM]  = 0.542;       //   542  s^-1       → ÷1000 → ms^-1
+    CONSTANTS[AC_kb_CQ]  = 0.445;       //   445  s^-1
+    CONSTANTS[AC_kb_TC]  = 0.446;       //   446  s^-1
+    CONSTANTS[AC_kb_TMC] = 0.00751;     //  7.51  s^-1
+    CONSTANTS[AC_kb_TMM] = 0.751;       //   751  s^-1
+    CONSTANTS[AC_kf_CM]  = 1642.0;      // 1642000 mM^-1 s^-1 → ÷1000 → mM^-1 ms^-1
+    CONSTANTS[AC_kf_CQ]  = 0.1754;      //   175.4
+    CONSTANTS[AC_kf_TC]  = 88.8;        // 88800
+    CONSTANTS[AC_kf_TMC] = 227.7;       // 227700
+    CONSTANTS[AC_kf_TMM] = 2.277;       //  2277
 
     /* Cell_parameters */
     CONSTANTS[AC_L_cell] = 67.0;
@@ -412,11 +412,11 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
 
     /* Ca_intracellular_fluxes */
     CONSTANTS[AC_K_up] = 2.86113000000000003e-04;
-    CONSTANTS[AC_P_up_basal] = 5.0;
+    CONSTANTS[AC_P_up_basal] = 0.005;    // 5.0 mM/s → ÷1000 → mM/ms
     CONSTANTS[AC_b_up] = ((CONSTANTS[AC_Iso_1_uM] > 0.0) ? -0.25 : ((CONSTANTS[AC_ACh] > 0.0) ? 0.7 * CONSTANTS[AC_ACh] / (9e-05 + CONSTANTS[AC_ACh]) : 0.0));
     CONSTANTS[AC_slope_up] = 5e-05;
-    CONSTANTS[AC_tau_dif_Ca] = 5.469e-05;
-    CONSTANTS[AC_tau_tr] = 0.04;
+    CONSTANTS[AC_tau_dif_Ca] = 0.05469;  // 5.469e-05 s → ×1000 → ms
+    CONSTANTS[AC_tau_tr]     = 40.0;     // 0.04 s
     CONSTANTS[AC_P_up] = CONSTANTS[AC_P_up_basal] * (1.0 - CONSTANTS[AC_b_up]);
 
     /* Voltage_clamp */
@@ -432,7 +432,7 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
     CONSTANTS[AC_Nao] = 140.0;
 
     /* Membrane */
-    //CONSTANTS[AC_C] = 5.7e-05;
+    CONSTANTS[AC_C] = 0.057;             // 5.7e-05 μF → ×1000 → 0.057 nF (57 pF)
     CONSTANTS[AC_F] = 9.64853414999999950e+04;
     CONSTANTS[AC_Membrane_R] = 8314.472;
     CONSTANTS[AC_T] = 310.0;
@@ -468,7 +468,9 @@ FabbriinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
     CONSTANTS[AC_g_KACh] = 0.00345;
 
     /* i_KACh_a_gate */
-    CONSTANTS[AC_alpha_a] = (3.5988 - 0.025641) / (1.0 + 1.21550000000000005e-06 / pow(1.0 * CONSTANTS[AC_ACh], 1.6951)) + 0.025641;
+    CONSTANTS[AC_alpha_a] = (CONSTANTS[AC_ACh] <= 0.0)
+        ? 0.025641
+        : (3.5988 - 0.025641) / (1.0 + 1.21550000000000005e-06 / pow(1.0 * CONSTANTS[AC_ACh], 1.6951)) + 0.025641;
 
     /* i_Kr */
     CONSTANTS[AC_g_Kr] = 0.00424;
@@ -580,7 +582,7 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_P_tot] = STATES[SR_R] + STATES[SR_O] + STATES[SR_I] + STATES[SR_RI];
     ALGEBRAIC[AV_diff] = STATES[Ca_jsr] - STATES[Ca_sub];
     ALGEBRAIC[AV_j_SRCarel] = CONSTANTS[AC_ks] * STATES[SR_O] * (STATES[Ca_jsr] - STATES[Ca_sub]);
-    ALGEBRAIC[AV_kCaSR] = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + pow(CONSTANTS[AC_EC50_SR] / STATES[Ca_jsr], CONSTANTS[AC_HSR]));
+    ALGEBRAIC[AV_kCaSR] = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + pow(CONSTANTS[AC_EC50_SR] / (STATES[Ca_jsr] > 1e-15 ? STATES[Ca_jsr] : 1e-15), CONSTANTS[AC_HSR]));
     ALGEBRAIC[AV_kiSRCa] = CONSTANTS[AC_kiCa] * ALGEBRAIC[AV_kCaSR];
     ALGEBRAIC[AV_koSRCa] = CONSTANTS[AC_koCa] / ALGEBRAIC[AV_kCaSR];
     RATES[SR_I] = ALGEBRAIC[AV_kiSRCa] * STATES[Ca_sub] * STATES[SR_O] - CONSTANTS[AC_kim] * STATES[SR_I] - (CONSTANTS[AC_kom] * STATES[SR_I] - ALGEBRAIC[AV_koSRCa] * pow(STATES[Ca_sub], 2.0) * STATES[SR_RI]);
@@ -604,10 +606,9 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     RATES[Buffer_fTMM] = ALGEBRAIC[AV_delta_fTMM];
 
 
-
     /* i_CaL_fCa_gate */
     ALGEBRAIC[AV_fCa_infinity] = CONSTANTS[AC_Km_fCa] / (CONSTANTS[AC_Km_fCa] + STATES[Ca_sub]);
-    ALGEBRAIC[AV_tau_fCa] = 0.001 * ALGEBRAIC[AV_fCa_infinity] / CONSTANTS[AC_alpha_fCa];
+    ALGEBRAIC[AV_tau_fCa] = ALGEBRAIC[AV_fCa_infinity] / CONSTANTS[AC_alpha_fCa];  // raw formula is in ms
     RATES[ICaL_fCa_gate_fCa] = (ALGEBRAIC[AV_fCa_infinity] - STATES[ICaL_fCa_gate_fCa]) / ALGEBRAIC[AV_tau_fCa];
 
     /* Ca_intracellular_fluxes */
@@ -625,63 +626,72 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
 
     /* Membrane */
     ALGEBRAIC[AV_V] = ((CONSTANTS[AC_clamp_mode] >= 1.0) ? ALGEBRAIC[AV_V_clamp] : STATES[membrane_V]);
+    if (ALGEBRAIC[AV_V] >  500.0) ALGEBRAIC[AV_V] =  500.0;
+    if (ALGEBRAIC[AV_V] < -500.0) ALGEBRAIC[AV_V] = -500.0;
 
     /* Nai_concentration */
     ALGEBRAIC[AV_Nai] = STATES[Na_i];
 
     /* i_CaL */
-    ALGEBRAIC[AV_i_siCa] = 2.0 * CONSTANTS[AC_P_CaL] * (ALGEBRAIC[AV_V] - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (ALGEBRAIC[AV_V] - 0.0) * 2.0 / CONSTANTS[AC_RTONF]))) * (STATES[Ca_sub] - CONSTANTS[AC_Cao] * exp(-2.0 * (ALGEBRAIC[AV_V] - 0.0) / CONSTANTS[AC_RTONF])) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
-    ALGEBRAIC[AV_i_siK] = 0.000365 * CONSTANTS[AC_P_CaL] * (ALGEBRAIC[AV_V] - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (ALGEBRAIC[AV_V] - 0.0) / CONSTANTS[AC_RTONF]))) * (CONSTANTS[AC_Ki] - CONSTANTS[AC_Ko] * exp(-1.0 * (ALGEBRAIC[AV_V] - 0.0) / CONSTANTS[AC_RTONF])) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
-    ALGEBRAIC[AV_i_siNa] = 1.85e-05 * CONSTANTS[AC_P_CaL] * (ALGEBRAIC[AV_V] - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (ALGEBRAIC[AV_V] - 0.0) / CONSTANTS[AC_RTONF]))) * (ALGEBRAIC[AV_Nai] - CONSTANTS[AC_Nao] * exp(-1.0 * (ALGEBRAIC[AV_V] - 0.0) / CONSTANTS[AC_RTONF])) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
+    {
+        const double _V = ALGEBRAIC[AV_V];
+        const double _R = CONSTANTS[AC_RTONF];
+        const double _g2 = (fabs(_V) < 1e-7) ? (_R * 0.5) : (_V / (1.0 - exp(-2.0 * _V / _R)));
+        const double _g1 = (fabs(_V) < 1e-7) ? _R         : (_V / (1.0 - exp(-_V / _R)));
+        ALGEBRAIC[AV_i_siCa] = 2.0 * CONSTANTS[AC_P_CaL] * _g2 / _R * (STATES[Ca_sub] - CONSTANTS[AC_Cao] * exp(-2.0 * _V / _R)) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
+        ALGEBRAIC[AV_i_siK]  = 0.000365 * CONSTANTS[AC_P_CaL] * _g1 / _R * (CONSTANTS[AC_Ki] - CONSTANTS[AC_Ko] * exp(-_V / _R)) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
+        ALGEBRAIC[AV_i_siNa] = 1.85e-05 * CONSTANTS[AC_P_CaL] * _g1 / _R * (ALGEBRAIC[AV_Nai] - CONSTANTS[AC_Nao] * exp(-_V / _R)) * STATES[ICaL_dL_gate_dL] * STATES[ICaL_fL_gate_fL] * STATES[ICaL_fCa_gate_fCa];
+    }
     ALGEBRAIC[AV_i_CaL_i_CaL] = (ALGEBRAIC[AV_i_siCa] + ALGEBRAIC[AV_i_siK] + ALGEBRAIC[AV_i_siNa]) * (1.0 - CONSTANTS[AC_ACh_block]) * 1.0 * CONSTANTS[AC_i_CaL_Iso_increase];
-
     /* i_CaL_dL_gate */
     ALGEBRAIC[AV_adVm] = ((ALGEBRAIC[AV_V] == -41.8) ? -41.80001 : ((ALGEBRAIC[AV_V] == 0.0) ? 0.0 : ((ALGEBRAIC[AV_V] == -6.8) ? -6.80001 : ALGEBRAIC[AV_V])));
     ALGEBRAIC[AV_bdVm] = ((ALGEBRAIC[AV_V] == -1.8) ? -1.80001 : ALGEBRAIC[AV_V]);
     ALGEBRAIC[AV_alpha_dL] = -0.02839 * (ALGEBRAIC[AV_adVm] + 41.8) / (exp(-(ALGEBRAIC[AV_adVm] + 41.8) / 2.5) - 1.0) - 0.0849 * (ALGEBRAIC[AV_adVm] + 6.8) / (exp(-(ALGEBRAIC[AV_adVm] + 6.8) / 4.8) - 1.0);
     ALGEBRAIC[AV_beta_dL] = 0.01143 * (ALGEBRAIC[AV_bdVm] + 1.8) / (exp((ALGEBRAIC[AV_bdVm] + 1.8) / 2.5) - 1.0);
     ALGEBRAIC[AV_dL_infinity] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] - CONSTANTS[AC_V_dL] - CONSTANTS[AC_Iso_shift_dL]) / (CONSTANTS[AC_k_dL] * (1.0 + CONSTANTS[AC_Iso_slope_dL] / 100.0))));
-    ALGEBRAIC[AV_tau_dL] = 0.001 / (ALGEBRAIC[AV_alpha_dL] + ALGEBRAIC[AV_beta_dL]);
+    ALGEBRAIC[AV_tau_dL] = 1.0 / (ALGEBRAIC[AV_alpha_dL] + ALGEBRAIC[AV_beta_dL]);  // alpha/beta in ms^-1
     RATES[ICaL_dL_gate_dL] = (ALGEBRAIC[AV_dL_infinity] - STATES[ICaL_dL_gate_dL]) / ALGEBRAIC[AV_tau_dL];
 
     /* i_CaL_fL_gate */
-    ALGEBRAIC[AV_tau_fL] = 0.001 * (44.3 + 230.0 * exp(-pow((ALGEBRAIC[AV_V] + 36.0) / 10.0, 2.0)));
+    ALGEBRAIC[AV_tau_fL] = (44.3 + 230.0 * exp(-pow((ALGEBRAIC[AV_V] + 36.0) / 10.0, 2.0)));  // raw in ms
     ALGEBRAIC[AV_fL_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 37.4 + CONSTANTS[AC_shift_fL]) / (5.3 + CONSTANTS[AC_k_fL])));
     RATES[ICaL_fL_gate_fL] = (ALGEBRAIC[AV_fL_infinity] - STATES[ICaL_fL_gate_fL]) / ALGEBRAIC[AV_tau_fL];
-
     /* i_CaT */
-    ALGEBRAIC[AV_i_CaT_i_CaT] = 2.0 * CONSTANTS[AC_P_CaT] * ALGEBRAIC[AV_V] / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * ALGEBRAIC[AV_V] * 2.0 / CONSTANTS[AC_RTONF]))) * (STATES[Ca_sub] - CONSTANTS[AC_Cao] * exp(-2.0 * ALGEBRAIC[AV_V] / CONSTANTS[AC_RTONF])) * STATES[ICaT_dT_gate_dT] * STATES[ICaT_fT_gate_fT];
+    {
+        const double _V = ALGEBRAIC[AV_V];
+        const double _R = CONSTANTS[AC_RTONF];
+        const double _g2 = (fabs(_V) < 1e-7) ? (_R * 0.5) : (_V / (1.0 - exp(-2.0 * _V / _R)));
+        ALGEBRAIC[AV_i_CaT_i_CaT] = 2.0 * CONSTANTS[AC_P_CaT] * _g2 / _R * (STATES[Ca_sub] - CONSTANTS[AC_Cao] * exp(-2.0 * _V / _R)) * STATES[ICaT_dT_gate_dT] * STATES[ICaT_fT_gate_fT];
+    }
 
     /* i_CaT_dT_gate */
     ALGEBRAIC[AV_dT_infinity] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 38.3) / 5.5));
-    ALGEBRAIC[AV_tau_dT] = 0.001 / (1.068 * exp((ALGEBRAIC[AV_V] + 38.3) / 30.0) + 1.068 * exp(-(ALGEBRAIC[AV_V] + 38.3) / 30.0));
+    ALGEBRAIC[AV_tau_dT] = 1.0 / (1.068 * exp((ALGEBRAIC[AV_V] + 38.3) / 30.0) + 1.068 * exp(-(ALGEBRAIC[AV_V] + 38.3) / 30.0));  // alpha/beta in ms^-1
     RATES[ICaT_dT_gate_dT] = (ALGEBRAIC[AV_dT_infinity] - STATES[ICaT_dT_gate_dT]) / ALGEBRAIC[AV_tau_dT];
 
     /* i_CaT_fT_gate */
     ALGEBRAIC[AV_fT_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 58.7) / 3.8));
-    ALGEBRAIC[AV_tau_fT] = 1.0 / (16.67 * exp(-(ALGEBRAIC[AV_V] + 75.0) / 83.3) + 16.67 * exp((ALGEBRAIC[AV_V] + 75.0) / 15.38)) + CONSTANTS[AC_offset_fT];
+    ALGEBRAIC[AV_tau_fT] = 1000.0 / (16.67 * exp(-(ALGEBRAIC[AV_V] + 75.0) / 83.3) + 16.67 * exp((ALGEBRAIC[AV_V] + 75.0) / 15.38)) + CONSTANTS[AC_offset_fT];  // rates in s^-1 → ×1000 → ms
     RATES[ICaT_fT_gate_fT] = (ALGEBRAIC[AV_fT_infinity] - STATES[ICaT_fT_gate_fT]) / ALGEBRAIC[AV_tau_fT];
-
     /* i_KACh_a_gate */
     ALGEBRAIC[AV_beta_a] = 10.0 * exp(0.0133 * (ALGEBRAIC[AV_V] + 40.0));
     ALGEBRAIC[AV_a_infinity] = CONSTANTS[AC_alpha_a] / (CONSTANTS[AC_alpha_a] + ALGEBRAIC[AV_beta_a]);
-    ALGEBRAIC[AV_tau_a] = 1.0 / (CONSTANTS[AC_alpha_a] + ALGEBRAIC[AV_beta_a]);
+    ALGEBRAIC[AV_tau_a] = 1000.0 / (CONSTANTS[AC_alpha_a] + ALGEBRAIC[AV_beta_a]);  // rates in s^-1
     RATES[IKACh_a_gate_a] = (ALGEBRAIC[AV_a_infinity] - STATES[IKACh_a_gate_a]) / ALGEBRAIC[AV_tau_a];
 
     /* i_Kr_pa_gate */
     ALGEBRAIC[AV_alfapaF] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 23.2) / 6.6)) / (8.46553540000000049e-01 / (37.2 * exp(ALGEBRAIC[AV_V] / 11.9) + 0.96 * exp(-ALGEBRAIC[AV_V] / 18.5)));
     ALGEBRAIC[AV_betapaF] = 4.0 * ((37.2 * exp(ALGEBRAIC[AV_V] / 15.9) + 0.96 * exp(-ALGEBRAIC[AV_V] / 22.5)) / 8.46553540000000049e-01 - 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 23.2) / 10.6)) / (8.46553540000000049e-01 / (37.2 * exp(ALGEBRAIC[AV_V] / 15.9) + 0.96 * exp(-ALGEBRAIC[AV_V] / 22.5))));
     ALGEBRAIC[AV_pa_infinity] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 10.0144) / 7.6607));
-    ALGEBRAIC[AV_tau_paF] = 1.0 / (30.0 * exp(ALGEBRAIC[AV_V] / 10.0) + exp(-ALGEBRAIC[AV_V] / 12.0));
-    ALGEBRAIC[AV_tau_paS] = 8.46553540000000049e-01 / (4.2 * exp(ALGEBRAIC[AV_V] / 17.0) + 0.15 * exp(-ALGEBRAIC[AV_V] / 21.6));
+    ALGEBRAIC[AV_tau_paF] = 1000.0 / (30.0 * exp(ALGEBRAIC[AV_V] / 10.0) + exp(-ALGEBRAIC[AV_V] / 12.0));             // s^-1 → ×1000 → ms
+    ALGEBRAIC[AV_tau_paS] = 8.46553540000000049e+02 / (4.2 * exp(ALGEBRAIC[AV_V] / 17.0) + 0.15 * exp(-ALGEBRAIC[AV_V] / 21.6));  // 0.847 s → 847 ms
     RATES[IKr_pa_gate_paF] = (ALGEBRAIC[AV_pa_infinity] - STATES[IKr_pa_gate_paF]) / ALGEBRAIC[AV_tau_paF];
     RATES[IKr_pa_gate_paS] = (ALGEBRAIC[AV_pa_infinity] - STATES[IKr_pa_gate_paS]) / ALGEBRAIC[AV_tau_paS];
 
     /* i_Kr_pi_gate */
     ALGEBRAIC[AV_pi_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 28.6) / 17.1));
-    ALGEBRAIC[AV_tau_pi] = 1.0 / (100.0 * exp(-ALGEBRAIC[AV_V] / 54.645) + 656.0 * exp(ALGEBRAIC[AV_V] / 106.157));
+    ALGEBRAIC[AV_tau_pi] = 1000.0 / (100.0 * exp(-ALGEBRAIC[AV_V] / 54.645) + 656.0 * exp(ALGEBRAIC[AV_V] / 106.157));  // s^-1
     RATES[IKr_pi_gate_piy] = (ALGEBRAIC[AV_pi_infinity] - STATES[IKr_pi_gate_piy]) / ALGEBRAIC[AV_tau_pi];
-
     /* i_Ks */
     ALGEBRAIC[AV_E_Ks] = CONSTANTS[AC_RTONF] * log((CONSTANTS[AC_Ko] + 0.12 * CONSTANTS[AC_Nao]) / (CONSTANTS[AC_Ki] + 0.12 * ALGEBRAIC[AV_Nai]));
     ALGEBRAIC[AV_i_Ks_i_Ks] = CONSTANTS[AC_g_Ks] * (ALGEBRAIC[AV_V] - ALGEBRAIC[AV_E_Ks]) * pow(STATES[IKs_n_gate_n], 2.0);
@@ -690,25 +700,23 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_alpha_n] = 28.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] - 40.0 - CONSTANTS[AC_i_Ks_n_gate_Iso_shift]) / 3.0));
     ALGEBRAIC[AV_beta_n] = 1.0 * exp(-(ALGEBRAIC[AV_V] - CONSTANTS[AC_i_Ks_n_gate_Iso_shift] - 5.0) / 25.0);
     ALGEBRAIC[AV_n_infinity] = sqrt(1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 0.6383 - CONSTANTS[AC_i_Ks_n_gate_Iso_shift]) / 10.7071)));
-    ALGEBRAIC[AV_tau_n] = 1.0 / (ALGEBRAIC[AV_alpha_n] + ALGEBRAIC[AV_beta_n]);
+    ALGEBRAIC[AV_tau_n] = 1000.0 / (ALGEBRAIC[AV_alpha_n] + ALGEBRAIC[AV_beta_n]);  // s^-1
     RATES[IKs_n_gate_n] = (ALGEBRAIC[AV_n_infinity] - STATES[IKs_n_gate_n]) / ALGEBRAIC[AV_tau_n];
 
     /* i_Kur_rKur_gate */
     ALGEBRAIC[AV_r_Kur_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 6.0) / -8.6));
-    ALGEBRAIC[AV_tau_r_Kur] = 0.009 / (1.0 + exp((ALGEBRAIC[AV_V] + 5.0) / 12.0)) + 0.0005;
+    ALGEBRAIC[AV_tau_r_Kur] = 9.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 5.0) / 12.0)) + 0.5;  // 0.009 s → 9 ms, 0.0005 s → 0.5 ms
     RATES[IKur_rKur_gate_r_Kur] = (ALGEBRAIC[AV_r_Kur_infinity] - STATES[IKur_rKur_gate_r_Kur]) / ALGEBRAIC[AV_tau_r_Kur];
 
     /* i_Kur_sKur_gate */
     ALGEBRAIC[AV_s_Kur_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 7.5) / 10.0));
-    ALGEBRAIC[AV_tau_s_Kur] = 0.59 / (1.0 + exp((ALGEBRAIC[AV_V] + 60.0) / 10.0)) + 3.05;
+    ALGEBRAIC[AV_tau_s_Kur] = 590.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 60.0) / 10.0)) + 3050.0;  // 0.59 s → 590 ms, 3.05 s → 3050 ms
     RATES[IKur_sKur_gate_s_Kur] = (ALGEBRAIC[AV_s_Kur_infinity] - STATES[IKur_sKur_gate_s_Kur]) / ALGEBRAIC[AV_tau_s_Kur];
-
     /* i_Na */
     ALGEBRAIC[AV_E_mh] = CONSTANTS[AC_RTONF] * log((CONSTANTS[AC_Nao] + 0.12 * CONSTANTS[AC_Ko]) / (ALGEBRAIC[AV_Nai] + 0.12 * CONSTANTS[AC_Ki]));
     ALGEBRAIC[AV_i_Na_] = CONSTANTS[AC_g_Na] * pow(STATES[INa_m_gate_m], 3.0) * STATES[INa_h_gate_h] * (ALGEBRAIC[AV_V] - ALGEBRAIC[AV_E_mh]);
     ALGEBRAIC[AV_i_Na_L] = CONSTANTS[AC_g_Na_L] * pow(STATES[INa_m_gate_m], 3.0) * (ALGEBRAIC[AV_V] - ALGEBRAIC[AV_E_mh]);
     ALGEBRAIC[AV_i_Na_i_Na] = ALGEBRAIC[AV_i_Na_] + ALGEBRAIC[AV_i_Na_L];
-
     /* i_NaCa */
     ALGEBRAIC[AV_di] = 1.0 + STATES[Ca_sub] / CONSTANTS[AC_Kci] * (1.0 + exp(-CONSTANTS[AC_Qci] * ALGEBRAIC[AV_V] / CONSTANTS[AC_RTONF]) + ALGEBRAIC[AV_Nai] / CONSTANTS[AC_Kcni]) + ALGEBRAIC[AV_Nai] / CONSTANTS[AC_K1ni] * (1.0 + ALGEBRAIC[AV_Nai] / CONSTANTS[AC_K2ni] * (1.0 + ALGEBRAIC[AV_Nai] / CONSTANTS[AC_K3ni]));
     ALGEBRAIC[AV_i_NaCa_do] = 1.0 + CONSTANTS[AC_Cao] / CONSTANTS[AC_Kco] * (1.0 + exp(CONSTANTS[AC_Qco] * ALGEBRAIC[AV_V] / CONSTANTS[AC_RTONF])) + CONSTANTS[AC_Nao] / CONSTANTS[AC_K1no] * (1.0 + CONSTANTS[AC_Nao] / CONSTANTS[AC_K2no] * (1.0 + CONSTANTS[AC_Nao] / CONSTANTS[AC_K3no]));
@@ -724,12 +732,11 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_x3] = ALGEBRAIC[AV_k14] * ALGEBRAIC[AV_k43] * (ALGEBRAIC[AV_k23] + ALGEBRAIC[AV_k21]) + ALGEBRAIC[AV_k12] * ALGEBRAIC[AV_k23] * (ALGEBRAIC[AV_k43] + ALGEBRAIC[AV_k41]);
     ALGEBRAIC[AV_x4] = ALGEBRAIC[AV_k23] * CONSTANTS[AC_k34] * (ALGEBRAIC[AV_k14] + ALGEBRAIC[AV_k12]) + ALGEBRAIC[AV_k14] * ALGEBRAIC[AV_k21] * (CONSTANTS[AC_k34] + ALGEBRAIC[AV_k32]);
     ALGEBRAIC[AV_i_NaCa_i_NaCa] = (1.0 - CONSTANTS[AC_blockade_NaCa]) * CONSTANTS[AC_K_NaCa] * (ALGEBRAIC[AV_x2] * ALGEBRAIC[AV_k21] - ALGEBRAIC[AV_x1] * ALGEBRAIC[AV_k12]) / (ALGEBRAIC[AV_x1] + ALGEBRAIC[AV_x2] + ALGEBRAIC[AV_x3] + ALGEBRAIC[AV_x4]);
-
     /* i_Na_h_gate */
     ALGEBRAIC[AV_alpha_h] = 20.0 * exp(-0.125 * (ALGEBRAIC[AV_V] + 75.0));
     ALGEBRAIC[AV_beta_h] = 2000.0 / (320.0 * exp(-0.1 * (ALGEBRAIC[AV_V] + 75.0)) + 1.0);
     ALGEBRAIC[AV_h_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 69.804) / 4.4565));
-    ALGEBRAIC[AV_tau_h] = 1.0 / (ALGEBRAIC[AV_alpha_h] + ALGEBRAIC[AV_beta_h]);
+    ALGEBRAIC[AV_tau_h] = 1000.0 / (ALGEBRAIC[AV_alpha_h] + ALGEBRAIC[AV_beta_h]);  // s^-1
     RATES[INa_h_gate_h] = (ALGEBRAIC[AV_h_infinity] - STATES[INa_h_gate_h]) / ALGEBRAIC[AV_tau_h];
 
     /* i_Na_m_gate */
@@ -737,27 +744,39 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_beta_m] = 8000.0 * exp(-0.056 * (ALGEBRAIC[AV_V] + 66.0));
     ALGEBRAIC[AV_m_infinity] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] + 42.0504) / 8.3106));
     ALGEBRAIC[AV_alpha_m] = ((fabs(ALGEBRAIC[AV_E0_m]) < CONSTANTS[AC_delta_m]) ? 2000.0 : 200.0 * ALGEBRAIC[AV_E0_m] / (1.0 - exp(-0.1 * ALGEBRAIC[AV_E0_m])));
-    ALGEBRAIC[AV_tau_m] = 1.0 / (ALGEBRAIC[AV_alpha_m] + ALGEBRAIC[AV_beta_m]);
+    ALGEBRAIC[AV_tau_m] = 1000.0 / (ALGEBRAIC[AV_alpha_m] + ALGEBRAIC[AV_beta_m]);  // s^-1
     RATES[INa_m_gate_m] = (ALGEBRAIC[AV_m_infinity] - STATES[INa_m_gate_m]) / ALGEBRAIC[AV_tau_m];
-
     /* i_f_y_gate */
-    ALGEBRAIC[AV_tau_y] = 1.0 / (0.36 * (ALGEBRAIC[AV_V] + 148.8 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift]) / (exp(0.066 * (ALGEBRAIC[AV_V] + 148.8 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift])) - 1.0) + 0.1 * (ALGEBRAIC[AV_V] + 87.3 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift]) / (1.0 - exp(-0.2 * (ALGEBRAIC[AV_V] + 87.3 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift])))) - 0.054;
+    {
+        const double _V  = ALGEBRAIC[AV_V];
+        const double _sh = CONSTANTS[AC_ACh_shift] + CONSTANTS[AC_i_f_y_gate_Iso_shift];
+        const double _x1 = _V + 148.8 - _sh;
+        const double _x2 = _V + 87.3  - _sh;
+        const double _t1 = (fabs(_x1) < 1e-7)
+            ? (0.36 / 0.066)
+            : (0.36 * _x1 / (exp(0.066 * _x1) - 1.0));
+        const double _t2 = (fabs(_x2) < 1e-7)
+            ? 0.5
+            : ((-0.2 * _x2 > 700.0) ? 0.0
+               : (0.1 * _x2 / (1.0 - exp(-0.2 * _x2))));
+        const double _raw_s = 1.0 / (_t1 + _t2) - 0.054;  // result in seconds
+        const double _raw   = _raw_s * 1000.0;             // convert to ms
+        ALGEBRAIC[AV_tau_y] = (_raw > 1.0) ? _raw : 1.0;
+    }
     ALGEBRAIC[AV_y_infinity] = ((ALGEBRAIC[AV_V] < -(80.0 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift])) ? 0.01329 + 0.99921 / (1.0 + exp((ALGEBRAIC[AV_V] + 97.134 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift]) / 8.1752)) : 0.0002501 * exp(-(ALGEBRAIC[AV_V] - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift]) / 12.861));
     RATES[If_y_gate_y] = (ALGEBRAIC[AV_y_infinity] - STATES[If_y_gate_y]) / ALGEBRAIC[AV_tau_y];
-
     /* i_to_q_gate */
     ALGEBRAIC[AV_q_infinity] = 1.0 / (1.0 + exp((ALGEBRAIC[AV_V] + 49.0) / 13.0));
-    ALGEBRAIC[AV_tau_q] = 0.001 * 0.6 * (65.17 / (0.57 * exp(-0.08 * (ALGEBRAIC[AV_V] + 44.0)) + 0.065 * exp(0.1 * (ALGEBRAIC[AV_V] + 45.93))) + 10.1);
+    ALGEBRAIC[AV_tau_q] = 0.6 * (65.17 / (0.57 * exp(-0.08 * (ALGEBRAIC[AV_V] + 44.0)) + 0.065 * exp(0.1 * (ALGEBRAIC[AV_V] + 45.93))) + 10.1);  // raw in ms
     RATES[Ito_q_gate_q] = (ALGEBRAIC[AV_q_infinity] - STATES[Ito_q_gate_q]) / ALGEBRAIC[AV_tau_q];
 
     /* i_to_r_gate */
     ALGEBRAIC[AV_r_infinity] = 1.0 / (1.0 + exp(-(ALGEBRAIC[AV_V] - 19.3) / 15.0));
-    ALGEBRAIC[AV_tau_r] = 0.001 * 0.66 * 1.4 * (15.59 / (1.037 * exp(0.09 * (ALGEBRAIC[AV_V] + 30.61)) + 0.369 * exp(-0.12 * (ALGEBRAIC[AV_V] + 23.84))) + 2.98);
+    ALGEBRAIC[AV_tau_r] = 0.66 * 1.4 * (15.59 / (1.037 * exp(0.09 * (ALGEBRAIC[AV_V] + 30.61)) + 0.369 * exp(-0.12 * (ALGEBRAIC[AV_V] + 23.84))) + 2.98);  // raw in ms
     RATES[Ito_r_gate_r] = (ALGEBRAIC[AV_r_infinity] - STATES[Ito_r_gate_r]) / ALGEBRAIC[AV_tau_r];
-
     /* *remaining* */
-    RATES[Ca_sub] = ALGEBRAIC[AV_j_SRCarel] * CONSTANTS[AC_V_jsr] / CONSTANTS[AC_V_sub] - ((ALGEBRAIC[AV_i_siCa] + ALGEBRAIC[AV_i_CaT_i_CaT] - 2.0 * ALGEBRAIC[AV_i_NaCa_i_NaCa]) / (2.0 * CONSTANTS[AC_F] * CONSTANTS[AC_V_sub]) + ALGEBRAIC[AV_j_Ca_dif] + CONSTANTS[AC_CM_tot] * ALGEBRAIC[AV_delta_fCMs]);
-    ALGEBRAIC[AV_E_Ca] = 0.5 * CONSTANTS[AC_RTONF] * log(CONSTANTS[AC_Cao] / STATES[Ca_sub]);
+    RATES[Ca_sub] = ALGEBRAIC[AV_j_SRCarel] * CONSTANTS[AC_V_jsr] / CONSTANTS[AC_V_sub] - ((ALGEBRAIC[AV_i_siCa] + ALGEBRAIC[AV_i_CaT_i_CaT] - 2.0 * ALGEBRAIC[AV_i_NaCa_i_NaCa]) / (2000.0 * CONSTANTS[AC_F] * CONSTANTS[AC_V_sub]) + ALGEBRAIC[AV_j_Ca_dif] + CONSTANTS[AC_CM_tot] * ALGEBRAIC[AV_delta_fCMs]);
+    ALGEBRAIC[AV_E_Ca] = 0.5 * CONSTANTS[AC_RTONF] * log(CONSTANTS[AC_Cao] / (STATES[Ca_sub] > 1e-15 ? STATES[Ca_sub] : 1e-15));
     ALGEBRAIC[AV_E_Na] = CONSTANTS[AC_RTONF] * log(CONSTANTS[AC_Nao] / ALGEBRAIC[AV_Nai]);
     ALGEBRAIC[AV_i_KACh_i_KACh] = ((CONSTANTS[AC_ACh] > 0.0) ? CONSTANTS[AC_ACh_on] * CONSTANTS[AC_g_KACh] * (ALGEBRAIC[AV_V] - CONSTANTS[AC_E_K]) * (1.0 + exp((ALGEBRAIC[AV_V] + 20.0) / 20.0)) * STATES[IKACh_a_gate_a] : 0.0);
     ALGEBRAIC[AV_i_Kr_i_Kr] = CONSTANTS[AC_g_Kr] * (ALGEBRAIC[AV_V] - CONSTANTS[AC_E_K]) * (0.9 * STATES[IKr_pa_gate_paF] + 0.1 * STATES[IKr_pa_gate_paS]) * STATES[IKr_pi_gate_piy];
@@ -769,20 +788,15 @@ FabbricomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     ALGEBRAIC[AV_i_fK] = STATES[If_y_gate_y] * CONSTANTS[AC_g_f_K] * (ALGEBRAIC[AV_V] - CONSTANTS[AC_E_K]) * (1.0 - CONSTANTS[AC_blockade]);
     ALGEBRAIC[AV_i_fNa] = STATES[If_y_gate_y] * CONSTANTS[AC_g_f_Na] * (ALGEBRAIC[AV_V] - ALGEBRAIC[AV_E_Na]) * (1.0 - CONSTANTS[AC_blockade]);
     ALGEBRAIC[AV_i_to_i_to] = CONSTANTS[AC_g_to] * (ALGEBRAIC[AV_V] - CONSTANTS[AC_E_K]) * STATES[Ito_q_gate_q] * STATES[Ito_r_gate_r];
-    RATES[Na_i] = (1.0 - CONSTANTS[AC_Nai_clamp]) * -1.0 * (ALGEBRAIC[AV_i_Na_i_Na] + ALGEBRAIC[AV_i_fNa] + ALGEBRAIC[AV_i_siNa] + 3.0 * ALGEBRAIC[AV_i_NaK_i_NaK] + 3.0 * ALGEBRAIC[AV_i_NaCa_i_NaCa]) / (1.0 * (CONSTANTS[AC_V_i] + CONSTANTS[AC_V_sub]) * CONSTANTS[AC_F]);
+    RATES[Na_i] = (1.0 - CONSTANTS[AC_Nai_clamp]) * -1.0 * (ALGEBRAIC[AV_i_Na_i_Na] + ALGEBRAIC[AV_i_fNa] + ALGEBRAIC[AV_i_siNa] + 3.0 * ALGEBRAIC[AV_i_NaK_i_NaK] + 3.0 * ALGEBRAIC[AV_i_NaCa_i_NaCa]) / (1000.0 * (CONSTANTS[AC_V_i] + CONSTANTS[AC_V_sub]) * CONSTANTS[AC_F]);
     ALGEBRAIC[AV_i_f_i_f] = ALGEBRAIC[AV_i_fNa] + ALGEBRAIC[AV_i_fK];
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_i_f_i_f] + ALGEBRAIC[AV_i_Kr_i_Kr] + ALGEBRAIC[AV_i_Ks_i_Ks] + ALGEBRAIC[AV_i_to_i_to] + ALGEBRAIC[AV_i_NaK_i_NaK] + ALGEBRAIC[AV_i_NaCa_i_NaCa] + ALGEBRAIC[AV_i_Na_i_Na] + ALGEBRAIC[AV_i_CaL_i_CaL] + ALGEBRAIC[AV_i_CaT_i_CaT] + ALGEBRAIC[AV_i_KACh_i_KACh] + ALGEBRAIC[AV_i_Kur_i_Kur];
-
-    //RATES[membrane_V] = -ALGEBRAIC[AV_i_tot] / CONSTANTS[AC_C];
-
-
-
 
     ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);
 
     if (solveVmWithinODESolver)
     {
-        RATES[membrane_V] = -ALGEBRAIC[Iion_cm] - ALGEBRAIC[Istim];
+        RATES[membrane_V] = -(ALGEBRAIC[Iion_cm] + ALGEBRAIC[Istim]) / CONSTANTS[AC_C];
     }
 
 }

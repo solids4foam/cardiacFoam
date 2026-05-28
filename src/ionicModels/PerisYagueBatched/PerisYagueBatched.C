@@ -4,6 +4,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "PerisYagueBatched.H"
+#include "batchedRushLarsenEntry.H"
 #include <array>
 #include <cmath>
 
@@ -14,63 +15,28 @@ namespace Foam
 
 namespace
 {
-    enum class PerisYagueRLTauSource : unsigned char
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    PerisYagueRushLarsenDispatch = []()
     {
-        none,
-        lookup,
-        constant,
-        literal
-    };
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
 
-    struct PerisYagueRLDispatchEntry
-    {
-        PerisYagueRLTauSource tauSource;
-        Foam::label tauIndex;
-        Foam::scalar tauLiteral;
-    };
+        t[ina_m]     = Foam::rlScalarAlgAndSupport(AV_ina_m_tau,    AV_ina_m_inf,    Foam::PERISYAGUE_BATCH_SUPPORT_tau_m,     Foam::PERISYAGUE_BATCH_SUPPORT_gInf_m);
+        t[ina_h]     = Foam::rlScalarAlgAndSupport(AV_ina_h_tau,    AV_ina_h_inf,    Foam::PERISYAGUE_BATCH_SUPPORT_tau_h,     Foam::PERISYAGUE_BATCH_SUPPORT_gInf_h);
+        t[ina_j]     = Foam::rlScalarAlgAndSupport(AV_ina_j_tau,    AV_ina_j_inf,    Foam::PERISYAGUE_BATCH_SUPPORT_tau_j,     Foam::PERISYAGUE_BATCH_SUPPORT_gInf_j);
+        t[ikr_xr]    = Foam::rlScalarAlgAndSupport(AV_ikr_xr_tau,   AV_ikr_xr_inf,   Foam::PERISYAGUE_BATCH_SUPPORT_tau_xr,    Foam::PERISYAGUE_BATCH_SUPPORT_gInf_xr);
+        t[iks_xs]    = Foam::rlScalarAlgAndSupport(AV_iks_xs_tau,   AV_iks_xs_inf,   Foam::PERISYAGUE_BATCH_SUPPORT_tau_xs,    Foam::PERISYAGUE_BATCH_SUPPORT_gInf_xs);
+        t[ikur_ua]   = Foam::rlScalarAlgAndSupport(AV_ikur_ua_tau,  AV_ikur_ua_inf,  Foam::PERISYAGUE_BATCH_SUPPORT_tau_ua,    Foam::PERISYAGUE_BATCH_SUPPORT_gInf_ua);
+        t[ikur_uif]  = Foam::rlScalarAlgAndSupport(AV_ikur_uif_tau, AV_ikur_uif_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_uif,   Foam::PERISYAGUE_BATCH_SUPPORT_gInf_uif);
+        t[ikur_uis]  = Foam::rlScalarAlgAndSupport(AV_ikur_uis_tau, AV_ikur_uis_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_uis,   Foam::PERISYAGUE_BATCH_SUPPORT_gInf_uis);
+        t[ical_d]    = Foam::rlScalarAlgAndSupport(AV_ical_d_tau,   AV_ical_d_inf,   Foam::PERISYAGUE_BATCH_SUPPORT_tau_d,     Foam::PERISYAGUE_BATCH_SUPPORT_gInf_d);
+        t[ical_f]    = Foam::rlScalarAlgAndSupport(AV_ical_f_tau,   AV_ical_f_inf,   Foam::PERISYAGUE_BATCH_SUPPORT_tau_f,     Foam::PERISYAGUE_BATCH_SUPPORT_gInf_f);
+        t[ical_fCa]  = Foam::rlScalarConstTauAlgInfAndSupport(AC_ical_fCa_tau, AV_ical_fCa_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_fCa, Foam::PERISYAGUE_BATCH_SUPPORT_gInf_fCa);
+        t[iclca_qCa] = Foam::rlScalarLitTauAlgInfAndSupport(2.0, AV_iclca_qCa_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_qCa, Foam::PERISYAGUE_BATCH_SUPPORT_gInf_qCa);
+        t[ryr_u]     = Foam::rlScalarConstTauAlgInfAndSupport(AC_cajsr_u_tau, AV_ryr_u_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_ryr_u, Foam::PERISYAGUE_BATCH_SUPPORT_gInf_ryr_u);
+        t[ryr_w]     = Foam::rlScalarAlgAndSupport(AV_ryr_w_tau, AV_ryr_w_inf, Foam::PERISYAGUE_BATCH_SUPPORT_tau_ryr_w, Foam::PERISYAGUE_BATCH_SUPPORT_gInf_ryr_w);
 
-    inline PerisYagueRLDispatchEntry rlNone()
-    {
-        return {PerisYagueRLTauSource::none, -1, 0.0};
-    }
-
-    inline PerisYagueRLDispatchEntry rlLookup(const Foam::label tauI)
-    {
-        return {PerisYagueRLTauSource::lookup, tauI, 0.0};
-    }
-
-    inline PerisYagueRLDispatchEntry rlConstant(const Foam::label tauI)
-    {
-        return {PerisYagueRLTauSource::constant, tauI, 0.0};
-    }
-
-    inline PerisYagueRLDispatchEntry rlLiteral(const Foam::scalar tau)
-    {
-        return {PerisYagueRLTauSource::literal, -1, tau};
-    }
-
-    const std::array<PerisYagueRLDispatchEntry, NUM_STATES>
-        PerisYagueRushLarsenDispatch = []()
-    {
-        std::array<PerisYagueRLDispatchEntry, NUM_STATES> e{};
-        e.fill(rlNone());
-
-        e[ina_m]     = rlLookup(AV_ina_m_tau);
-        e[ina_h]     = rlLookup(AV_ina_h_tau);
-        e[ina_j]     = rlLookup(AV_ina_j_tau);
-        e[ikr_xr]    = rlLookup(AV_ikr_xr_tau);
-        e[iks_xs]    = rlLookup(AV_iks_xs_tau);
-        e[ikur_ua]   = rlLookup(AV_ikur_ua_tau);
-        e[ikur_uif]  = rlLookup(AV_ikur_uif_tau);
-        e[ikur_uis]  = rlLookup(AV_ikur_uis_tau);
-        e[ical_d]    = rlLookup(AV_ical_d_tau);
-        e[ical_f]    = rlLookup(AV_ical_f_tau);
-        e[ical_fCa]  = rlConstant(AC_ical_fCa_tau);
-        e[iclca_qCa] = rlLiteral(2.0);
-        e[ryr_u]     = rlConstant(AC_cajsr_u_tau);
-        e[ryr_w]     = rlLookup(AV_ryr_w_tau);
-
-        return e;
+        return t;
     }();
 }
 
@@ -120,11 +86,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool usePerisYagueCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "PerisYaguecompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(PerisYagueBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         PerisYagueBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(PerisYaguecompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        PerisYaguecompactBatched,
         dictionary
     );
 }
@@ -151,6 +133,7 @@ Foam::PerisYagueBatched::PerisYagueBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(usePerisYagueCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -183,10 +166,13 @@ Foam::PerisYagueBatched::PerisYagueBatched
     }
 #endif
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_PERISYAGUE_BATCH_SUPPORT);
+    }
 
+    if (useSoAEvaluator_)
+    {
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
         if (integrator != "euler")
@@ -232,6 +218,17 @@ Foam::PerisYagueBatched::PerisYagueBatched
     }
 }
 
+Foam::PerisYaguecompactBatched::PerisYaguecompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    PerisYagueBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
+
 Foam::PerisYagueBatched::~PerisYagueBatched()
 {
 #ifdef HAS_CUDA
@@ -268,6 +265,93 @@ void Foam::PerisYagueBatched::evaluateState
         tissue(),
         solveVmWithinODESolver(),
         stimulusProtocol()
+    );
+}
+
+Foam::scalar Foam::PerisYagueBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return supportValues[PERISYAGUE_BATCH_SUPPORT_Iion_cm];
+}
+
+void Foam::PerisYagueBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    for (const auto& entry : PerisYagueRushLarsenDispatch)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            entry,
+            CONSTANTS_,
+            algebraics,
+            supportValues
+        );
+    }
+
+    const scalar Irel =
+        CONSTANTS_[AC_krel]
+       *stateValues[ryr_u]*stateValues[ryr_u]
+       *stateValues[ryr_v]
+       *stateValues[ryr_w]
+       *(stateValues[calcium_CaRel] - stateValues[calcium_Cai]);
+
+    const scalar Fn =
+        1e-12*CONSTANTS_[AC_V_rel]*Irel
+      - 5e-13/CONSTANTS_[AC_F]
+       *(0.5*algebraics[AV_ICaL] - 0.2*algebraics[AV_INaCa])
+       *CONSTANTS_[AC_Cm];
+
+    supportValues[PERISYAGUE_BATCH_SUPPORT_gInf_ryr_v] =
+        1.0 - 1.0
+       /(1.0 + std::exp(-(Fn - 0.2*CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
+
+    supportValues[PERISYAGUE_BATCH_SUPPORT_tau_ryr_v] =
+        1.91 + 2.09
+       /(1.0 + std::exp(-(Fn - CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
+
+    supportValues[PERISYAGUE_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
+}
+
+bool Foam::PerisYagueBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    if (stateI == ryr_v)
+    {
+        tau = supportValues[PERISYAGUE_BATCH_SUPPORT_tau_ryr_v];
+        steadyState = supportValues[PERISYAGUE_BATCH_SUPPORT_gInf_ryr_v];
+        return tau > VSMALL
+            && std::isfinite(tau)
+            && std::isfinite(steadyState);
+    }
+
+    const auto& entry = PerisYagueRushLarsenDispatch[stateI];
+    return resolveSupportRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
     );
 }
 
@@ -472,8 +556,6 @@ void Foam::PerisYagueBatched::solveBatched
         }
     }
 
-    // Final evaluation at end-of-step to refresh RATES/SUPPORT for the
-    // downstream coupling step (Im extraction below).
     const scalar tEnd = tStart + dtModel;
     PerisYagueComputeVariablesBatch
     (
@@ -512,10 +594,7 @@ bool Foam::PerisYagueBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
-    {
-        return false;
-    }
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
 
     if (stateI == ryr_v)
     {
@@ -545,35 +624,16 @@ bool Foam::PerisYagueBatched::rushLarsenParameters
             && std::isfinite(steadyState);
     }
 
-    const PerisYagueRLDispatchEntry& entry =
-        PerisYagueRushLarsenDispatch[stateI];
-
-    switch (entry.tauSource)
-    {
-        case PerisYagueRLTauSource::lookup:
-            tau = algebraicValues[entry.tauIndex];
-            break;
-
-        case PerisYagueRLTauSource::constant:
-            tau = CONSTANTS_[entry.tauIndex];
-            break;
-
-        case PerisYagueRLTauSource::literal:
-            tau = entry.tauLiteral;
-            break;
-
-        case PerisYagueRLTauSource::none:
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    const auto& entry = PerisYagueRushLarsenDispatch[stateI];
+    return resolveScalarRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        algebraicValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::PerisYagueBatched::derivatives

@@ -74,9 +74,6 @@ class ionicModel
         mutable label tissue_;
 
         //- Flag for enable the update of the transmembrane voltage within the
-        //  the ionic model ODE solver. For example, if calling for a single
-        //  cell, then the governing voltage PDE becomes an ODE so you would
-        //  enable this flag
         mutable Switch solveVmWithinODESolver_;
 
         //- External stimulus protocol (separate from model constants)
@@ -113,9 +110,7 @@ class ionicModel
         mutable ionicModelIO::ExportedNamesCache exportedNamesCache_;
         mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
 
-        // Optional metadata hooks for generic I/O in the base class.
         // Derived models can override these and then rely on base
-        // write/export/debug implementations.
         virtual const PtrList<scalarField>* ioStatesPtr() const
         {
             return nullptr;
@@ -182,7 +177,6 @@ public:
     TypeName("ionicModel");
 
 
-    // Declare run-time constructor selection table
 
         //- Ionic model run-time selection table
         declareRunTimeSelectionTable
@@ -199,7 +193,6 @@ public:
             (dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
         );
 
-    // Selectors
 
         //- Create a ionic model
         static autoPtr<ionicModel> New
@@ -213,7 +206,6 @@ public:
     // Constructors
 
         //- Construct given a dictionary, the number of integration points and a
-        //  initial time step for the ODE solver
         ionicModel
         (
             const dictionary& dict,
@@ -229,12 +221,10 @@ public:
 
     // Member Functions
 
-    /// --- ElectromechanicalSignalProvider interface ---
     bool hasSignal(CouplingSignal s) const override;
     scalar signal(label i, CouplingSignal s) const override;
 
 
-    // Solver Functions
         //- ODE solver
         ODESolver& odeSolver()
         {
@@ -269,7 +259,6 @@ public:
         virtual label nEqns() const override = 0;
 
         //- Derivatives of each ODE with respect to the primary unknown in that
-        //  equation - right side of the equation
         virtual void derivatives
         (
             const scalar t,
@@ -294,7 +283,6 @@ public:
         };
 
 
-    // Read and Get
 
         //- Getter for tissue flag
         label tissue() const
@@ -303,15 +291,6 @@ public:
         }
 
         //- Return the resting membrane potential in SI units (V), derived
-        //  directly from the model's own initial conditions as set by
-        //  initConsts.  This is the 1D analogue of the 3D domain reading Vm
-        //  from the '0/Vm' field file: no external specification is required.
-        //
-        //  For dimensionless models (BuenoOrovio, AlievPanfilov) the
-        //  ioVmTransform() function is applied to convert STATES[0] → mV
-        //  before converting to V.  For all standard CellML models that store
-        //  Vm directly in mV, the transform is nullptr and STATES[0] is used
-        //  as-is.  Falls back to -0.084 V if the model provides no state data.
         virtual scalar vmRest() const
         {
             const auto* statesPtr = ioStatesPtr();
@@ -462,7 +441,6 @@ public:
             return (*algebraicPtr)[integrationPtI];
         }
 
-        // Tissue/variant metadata used by model-side setup code.
         virtual List<word> supportedTissueTypes() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
@@ -497,9 +475,6 @@ public:
         }
 
 
-    // Print, Export and Write
-        // Write and export from internal variables functions
-        // singleCell
         virtual void writeHeader(OFstream& os) const
         {
             if (!hasIOMetadata())
@@ -590,7 +565,6 @@ public:
             }
         }
 
-        // 3D vol fields(defined for states, algebraic and rates.)
         virtual void exportStates
         (
             PtrList<volScalarField>& outFields
@@ -647,7 +621,6 @@ public:
             const PtrList<volScalarField>& inFields
         );
 
-        // Printing function
         virtual void debugPrintFields
         (
             label cellI,
@@ -699,7 +672,6 @@ public:
             );
         }
 
-        // Return names of variables to export
         virtual wordList exportedFieldNames() const
         {
             if (!variableExport_.size())

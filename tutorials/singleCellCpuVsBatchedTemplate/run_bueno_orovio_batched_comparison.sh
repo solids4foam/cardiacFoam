@@ -6,7 +6,7 @@ CASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ROOT="${RUN_ROOT:-$CASE_ROOT/comparisonRuns}"
 RESULT_ROOT="${RESULT_ROOT:-$CASE_ROOT/comparisonResults}"
 N_RUNS="${N_RUNS:-3}"
-MODES="${MODES:-cpu batched_euler batched_heun batched_rl batched_soa}"
+MODES="${MODES:-cpu batched_euler batched_rl batched_soa}"
 CONTROL_END_TIME="${CONTROL_END_TIME:-0.03}"
 OPENFOAM_BASHRC="${CF_OPENFOAM_BASHRC:-/Volumes/OpenFOAM-v2412/etc/bashrc}"
 
@@ -25,9 +25,6 @@ config_for_mode()
             ;;
         batched_euler)
             echo "electroProperties.batched_euler"
-            ;;
-        batched_heun)
-            echo "electroProperties.batched_heun"
             ;;
         batched_rl)
             echo "electroProperties.batched_rl"

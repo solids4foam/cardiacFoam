@@ -2,7 +2,7 @@
 """compare_niederer_bueno_orovio_batched.py
 
 Compare activation times sampled at Niederer benchmark points and line across
-cpu / batched_euler / batched_heun / batched_rl / batched_soa modes.
+cpu / batched_euler / batched_rl / batched_soa modes.
 
 Usage
 -----

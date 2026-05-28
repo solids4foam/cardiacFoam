@@ -104,7 +104,6 @@ class batchedIonicModel
         mutable label solveScratchThreads_;
         mutable label solveScratchSupportSize_;
         mutable bool solveScratchPredictorState_;
-        mutable bool solveScratchPredictorEvaluation_;
         mutable bool solveScratchSupportOnlyHotPath_;
 
         static label maxCellLoopThreads()
@@ -204,7 +203,6 @@ protected:
             solveScratchThreads_(-1),
             solveScratchSupportSize_(-1),
             solveScratchPredictorState_(false),
-            solveScratchPredictorEvaluation_(false),
             solveScratchSupportOnlyHotPath_(false)
         {
             if (nSubsteps_ < 1)
@@ -282,7 +280,6 @@ protected:
             const label nThreads,
             const label supportSize,
             const bool usePredictorState,
-            const bool usePredictorEvaluation,
             const bool useSupportOnlyHotPath
         ) const
         {
@@ -291,7 +288,6 @@ protected:
                 solveScratchThreads_ == nThreads
              && solveScratchSupportSize_ == supportSize
              && solveScratchPredictorState_ == usePredictorState
-             && solveScratchPredictorEvaluation_ == usePredictorEvaluation
              && solveScratchSupportOnlyHotPath_ == useSupportOnlyHotPath
              && solveScratch_.size() == nThreads
             )
@@ -313,7 +309,6 @@ protected:
                         nAlgebraics_,
                         supportSize,
                         usePredictorState,
-                        usePredictorEvaluation,
                         useSupportOnlyHotPath
                     )
                 );
@@ -322,7 +317,6 @@ protected:
             solveScratchThreads_ = nThreads;
             solveScratchSupportSize_ = supportSize;
             solveScratchPredictorState_ = usePredictorState;
-            solveScratchPredictorEvaluation_ = usePredictorEvaluation;
             solveScratchSupportOnlyHotPath_ = useSupportOnlyHotPath;
         }
 
@@ -359,6 +353,11 @@ protected:
         inline scalar* supportSoAData() const
         {
             return core_.supportSoAData();
+        }
+
+        inline scalar* algebraicsSoAData() const
+        {
+            return core_.algebraicsSoAData();
         }
 
         inline label nCells() const
@@ -619,40 +618,6 @@ protected:
             }
         }
 
-        void evaluatePredictorScratchAtTime
-        (
-            const scalar modelTime,
-            CellScratch& scratch,
-            const SolveKernelConfig& kernel
-        ) const
-        {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                evaluateHotPathState
-                (
-                    modelTime,
-                    scratch.predictorStateValues,
-                    scratch.predictorRateValues,
-                    scratch.predictorSupportValues
-                );
-            }
-            else
-            {
-                evaluateState
-                (
-                    modelTime,
-                    scratch.predictorStateValues,
-                    scratch.predictorRateValues,
-                    scratch.predictorAlgebraicValues
-                );
-            }
-
-            if (!kernel.solveVm)
-            {
-                scratch.predictorRateValues[kernel.vmStateI] = 0.0;
-            }
-        }
-
         bool rushLarsenEnabledForState
         (
             const label stateI,
@@ -766,16 +731,6 @@ protected:
                 {
                     scratch.stateValues[stateI] =
                         scratch.predictorStateValues[stateI];
-                }
-                else if (kernel.useHeun)
-                {
-                    scratch.stateValues[stateI] +=
-                        0.5*kernel.dtSubstep
-                       *
-                        (
-                            scratch.rateValues[stateI]
-                          + scratch.predictorRateValues[stateI]
-                        );
                 }
                 else
                 {
@@ -1020,26 +975,19 @@ protected:
             kernel.dtSubstep = dtSubstep;
             kernel.vmStateI = vmStateI;
             kernel.solveVm = solveVmWithinODESolver();
-            const bool useRushLarsenHeun =
-                integratorName_ == "rushLarsenHeun"
-             || integratorName_ == "rlGatesHeunRest"
-             || integratorName_ == "mixed";
             kernel.useExplicitEuler = integratorName_ == "euler";
-            kernel.useHeun = integratorName_ == "heun" || useRushLarsenHeun;
-            kernel.useRushLarsen = useRushLarsenHeun;
+            kernel.useRushLarsen = integratorName_ == "rushLarsen";
 
             if
             (
                !kernel.useExplicitEuler
-            && !kernel.useHeun
             && !kernel.useRushLarsen
             )
             {
                 FatalIOErrorInFunction(dict())
                     << "Unknown batchedIntegrator '" << integratorName_
                     << "' for ionic model " << type() << ". "
-                    << "Valid values are: euler, heun, rushLarsenHeun, "
-                    << "rlGatesHeunRest, mixed."
+                    << "Valid values are: euler, rushLarsen."
                     << exit(FatalIOError);
             }
             const label sampleCell =
@@ -1062,7 +1010,6 @@ protected:
                 nCellLoopThreads,
                 hotPathSupportSize,
                 !kernel.useExplicitEuler,
-                kernel.useHeun,
                 kernel.useSupportOnlyHotPath
             );
 

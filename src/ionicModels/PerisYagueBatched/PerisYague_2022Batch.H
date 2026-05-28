@@ -30,23 +30,41 @@ namespace Foam
 enum PERISYAGUE_BATCH_SUPPORT_INDEX
 {
     PERISYAGUE_BATCH_SUPPORT_tau_m,
+    PERISYAGUE_BATCH_SUPPORT_gInf_m,
     PERISYAGUE_BATCH_SUPPORT_tau_h,
+    PERISYAGUE_BATCH_SUPPORT_gInf_h,
     PERISYAGUE_BATCH_SUPPORT_tau_j,
+    PERISYAGUE_BATCH_SUPPORT_gInf_j,
     PERISYAGUE_BATCH_SUPPORT_tau_xr,
+    PERISYAGUE_BATCH_SUPPORT_gInf_xr,
     PERISYAGUE_BATCH_SUPPORT_tau_xs,
+    PERISYAGUE_BATCH_SUPPORT_gInf_xs,
     PERISYAGUE_BATCH_SUPPORT_tau_ua,
+    PERISYAGUE_BATCH_SUPPORT_gInf_ua,
     PERISYAGUE_BATCH_SUPPORT_tau_uif,
+    PERISYAGUE_BATCH_SUPPORT_gInf_uif,
     PERISYAGUE_BATCH_SUPPORT_tau_uis,
+    PERISYAGUE_BATCH_SUPPORT_gInf_uis,
     PERISYAGUE_BATCH_SUPPORT_tau_d,
+    PERISYAGUE_BATCH_SUPPORT_gInf_d,
     PERISYAGUE_BATCH_SUPPORT_tau_f,
+    PERISYAGUE_BATCH_SUPPORT_gInf_f,
+    PERISYAGUE_BATCH_SUPPORT_tau_fCa,
+    PERISYAGUE_BATCH_SUPPORT_gInf_fCa,
     PERISYAGUE_BATCH_SUPPORT_tau_qCa,
+    PERISYAGUE_BATCH_SUPPORT_gInf_qCa,
+    PERISYAGUE_BATCH_SUPPORT_tau_ryr_u,
+    PERISYAGUE_BATCH_SUPPORT_gInf_ryr_u,
     PERISYAGUE_BATCH_SUPPORT_tau_ryr_v,
+    PERISYAGUE_BATCH_SUPPORT_gInf_ryr_v,
     PERISYAGUE_BATCH_SUPPORT_tau_ryr_w,
+    PERISYAGUE_BATCH_SUPPORT_gInf_ryr_w,
     PERISYAGUE_BATCH_SUPPORT_Iion_cm,
 
     NUM_PERISYAGUE_BATCH_SUPPORT
 };
 
+static_assert(NUM_PERISYAGUE_BATCH_SUPPORT == 31, "Unexpected PerisYague compact support layout");
 
 CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 (
@@ -62,10 +80,8 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
     const StimulusProtocolPOD& stimulus
 )
 {
-    // Stimulus is loop-invariant in cell — compute once.
     const double Istim = computeStimulusPOD(t, stimulus);
 
-    // --- Hoist constants out of the cell loop ---
     const double c_RTF          = CONSTANTS[AC_RTF];
     const double c_FRT          = CONSTANTS[AC_FRT];
     const double c_Nao          = CONSTANTS[AC_Nao];
@@ -118,7 +134,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
     const double c_CSQN_max     = CONSTANTS[AC_CSQN_max];
     const double c_Km_CSQN      = CONSTANTS[AC_Km_CSQN];
 
-    // --- SoA stride bases (resolved at compile time) ---
     const int V_BASE     = membrane_V    * N;
     const int Nai_BASE   = sodium_Nai    * N;
     const int Ki_BASE    = potassium_Ki  * N;
@@ -147,7 +162,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 #endif
     for (int cellI = beginCell; cellI < endCell; ++cellI)
     {
-        // --- SoA state loads ---
         const double V     = STATES_SoA[V_BASE     + cellI];
         const double Nai   = STATES_SoA[Nai_BASE   + cellI];
         const double Ki    = STATES_SoA[Ki_BASE    + cellI];
@@ -171,13 +185,11 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         const double s_v   = STATES_SoA[ryr_v_BASE + cellI];
         const double s_w   = STATES_SoA[ryr_w_BASE + cellI];
 
-        // --- Nernst potentials ---
         const double ENa = c_RTF * std::log(c_Nao / Nai);
         const double EK  = c_RTF * std::log(c_Ko  / Ki);
         const double ECa = 0.5 * c_RTF * std::log(c_Cao / Cai);
         const double ECl = -c_RTF * std::log(c_Clo / Cli);
 
-        // --- INa ---
         const double am = (std::fabs(V + 47.13) < 1e-6)
                           ? 3.2
                           : 0.32 * (V + 47.13) / (1.0 - std::exp(-0.1 * (V + 47.13)));
@@ -206,24 +218,20 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 
         const double INa = c_gNa * s_m * s_m * s_m * s_h * s_j * (V - ENa);
 
-        // --- IK1 ---
         const double IK1 = c_gK1 * (V - EK - 5.0) / (1.0 + std::exp(0.063 * (V + 70.0)));
 
-        // --- IKr ---
         const double axr = 0.0003 * (V + 14.1) / (1.0 - std::exp(-(V + 14.1) / 5.0));
         const double bxr = 7.3898e-5 * (V - 3.3328) / (std::exp((V - 3.3328) / 5.1237) - 1.0);
         const double xr_inf = axr / (axr + bxr);
         const double xr_tau = 1.0 / (axr + bxr);
         const double IKr = c_gKr * s_xr * (V - EK) / (1.0 + std::exp((V + 15.0) / 22.4));
 
-        // --- IKs ---
         const double axs = 4e-5 * (V - 18.80816) / (1.0 - std::exp(-(V - 18.80816) / 17.0));
         const double bxs = 3.5e-5 * (V - 18.80816) / (std::exp((V - 18.80816) / 9.0) - 1.0);
         const double xs_inf = 1.0 / std::sqrt(1.0 + std::exp(-(V - 19.9) / 12.7));
         const double xs_tau = 0.5 / (axs + bxs);
         const double IKs = c_gKs * s_xs * s_xs * (V - EK);
 
-        // --- IKur ---
         const double gKur = c_gKur_amp * (0.005 + 0.05 / (1.0 + std::exp(-(V - 15.0) / 13.0)));
         const double ua_inf = 1.0 / (1.0 + std::exp(-(V + 30.3) / 9.6));
         const double aua = 0.65 / (std::exp(-(V + 10.0) / 8.5) + std::exp(-(V - 30.0) / 59.0));
@@ -242,7 +250,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         const double IKur =
             gKur * s_ua * s_ua * s_ua * (0.25 * s_uif + 0.75 * s_uis) * (V - EK);
 
-        // --- ICaL ---
         const double d_inf = 1.0 / (1.0 + std::exp(-(V + 5.0) / 8.0));
         const double V_plus_5 = V + 5.0;
         const double d_tau = (std::fabs(V_plus_5) < 1e-6)
@@ -258,7 +265,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 
         const double ICaL = c_gCaL * s_d * s_f * s_fCa * (V - 65.0);
 
-        // --- INaK ---
         const double fNaK = 1.0
                             / (1.0 + 0.1245 * std::exp(-0.1 * V * c_FRT)
                                + 0.0365 * c_sigma * std::exp(-V * c_FRT));
@@ -267,7 +273,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
             / (c_Ko + c_KmKo)
             / (1.0 + std::pow(c_KmNai / Nai, 1.5));
 
-        // --- INaCa ---
         const double Nai3  = Nai * Nai * Nai;
         const double Nao3  = c_Nao * c_Nao * c_Nao;
         const double KmNa3 = c_KmNa * c_KmNa * c_KmNa;
@@ -279,13 +284,11 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
             * (1.0 + c_ksat * std::exp((c_gamma - 1.0) * V * c_FRT));
         const double INaCa = c_INaCa_max * B1_NaCa / B2_NaCa;
 
-        // --- Background + IpCa ---
         const double IbNa = c_gbNa * (V - ENa);
         const double IbCa = c_gbCa * (V - ECa);
         const double IbK  = c_gbK  * (V - EK);
         const double IpCa = c_IpCa_max * Cai / (0.0005 + Cai);
 
-        // --- Calcium handling ---
         const double Irel     = c_krel * s_u * s_u * s_v * s_w * (CaRel - Cai);
         const double Itr      = (CaUp - CaRel) / c_tau_tr;
         const double Iup      = c_I_up_max / (1.0 + c_K_up / Cai);
@@ -295,13 +298,11 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
             1e-12 * c_V_rel * Irel
           - 5e-13 / c_F * (0.5 * ICaL - 0.2 * INaCa) * c_Cm;
 
-        // --- IClCa ---
         const double inv_qCa_arg = 1.0 / (1.0 + Fn / 1.1e-10);
         const double qCa_inf = 1.0 - inv_qCa_arg * inv_qCa_arg * inv_qCa_arg;
         const double qCa_tau = 2.0;
         const double IClCa   = c_gClCa * s_qCa * (V - ECl);
 
-        // --- RyR gating ---
         const double w_inf = 1.0 - 1.0 / (1.0 + std::exp(-(V - 40.0) / 17.0));
         const double V_minus_7_9 = V - 7.9;
         const double w_tau = 6.0
@@ -314,7 +315,6 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         const double v_inf_ryr = 1.0 - 1.0 / (1.0 + std::exp(-(Fn - 0.2 * c_c1) / c_c2));
         const double v_tau_ryr = 1.91 + 2.09 / (1.0 + std::exp(-(Fn - c_c1) / c_c2));
 
-        // --- dCa/dt ---
         const double Cai_plus_KmTRPN = Cai + c_Km_TRPN;
         const double Cai_plus_KmCMDN = Cai + c_Km_CMDN;
         const double B1 =
@@ -327,12 +327,10 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 
         const double CaRel_plus_KmCSQN = CaRel + c_Km_CSQN;
 
-        // --- Total ionic current ---
         const double Iion_cm_val =
             INa + IK1 + IKur + IKr + IKs + ICaL + IpCa
           + INaK + INaCa + IbNa + IbCa + IClCa;
 
-        // --- RATES writeback ---
         RATES_SoA[m_BASE     + cellI] = (m_inf  - s_m)   / m_tau;
         RATES_SoA[h_BASE     + cellI] = (h_inf  - s_h)   / h_tau;
         RATES_SoA[j_BASE     + cellI] = (j_inf  - s_j)   / j_tau;
@@ -379,9 +377,26 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_uis   * N + cellI] = uis_tau;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_d     * N + cellI] = d_tau;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_f     * N + cellI] = f_tau;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_fCa   * N + cellI] = c_ical_fCa_tau;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_qCa   * N + cellI] = qCa_tau;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_ryr_u * N + cellI] = c_cajsr_u_tau;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_ryr_v * N + cellI] = v_tau_ryr;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_tau_ryr_w * N + cellI] = w_tau;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_m     * N + cellI] = m_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_h     * N + cellI] = h_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_j     * N + cellI] = j_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_xr    * N + cellI] = xr_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_xs    * N + cellI] = xs_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_ua    * N + cellI] = ua_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_uif   * N + cellI] = uif_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_uis   * N + cellI] = uis_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_d     * N + cellI] = d_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_f     * N + cellI] = f_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_fCa   * N + cellI] = fCa_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_qCa   * N + cellI] = qCa_inf;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_ryr_u * N + cellI] = u_inf_ryr;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_ryr_v * N + cellI] = v_inf_ryr;
+            SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_gInf_ryr_w * N + cellI] = w_inf;
             SUPPORT_SoA[PERISYAGUE_BATCH_SUPPORT_Iion_cm * N + cellI] = Iion_cm_val;
         }
     }

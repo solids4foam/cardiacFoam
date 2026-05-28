@@ -18,23 +18,41 @@ namespace Foam
 enum COURTEMANCHE_BATCH_SUPPORT_INDEX
 {
     COURTEMANCHE_BATCH_SUPPORT_tau_m,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_m,
     COURTEMANCHE_BATCH_SUPPORT_tau_h,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_h,
     COURTEMANCHE_BATCH_SUPPORT_tau_j,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_j,
     COURTEMANCHE_BATCH_SUPPORT_tau_d,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_d,
     COURTEMANCHE_BATCH_SUPPORT_tau_f,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_f,
+    COURTEMANCHE_BATCH_SUPPORT_tau_fCa,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_fCa,
     COURTEMANCHE_BATCH_SUPPORT_tau_oa,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_oa,
     COURTEMANCHE_BATCH_SUPPORT_tau_oi,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_oi,
     COURTEMANCHE_BATCH_SUPPORT_tau_ua,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_ua,
     COURTEMANCHE_BATCH_SUPPORT_tau_ui,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_ui,
     COURTEMANCHE_BATCH_SUPPORT_tau_xr,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_xr,
     COURTEMANCHE_BATCH_SUPPORT_tau_xs,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_xs,
+    COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_u,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_u,
     COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_v,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_v,
     COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_w,
+    COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_w,
     COURTEMANCHE_BATCH_SUPPORT_Iion_cm,
 
     NUM_COURTEMANCHE_BATCH_SUPPORT
 };
 
+static_assert(NUM_COURTEMANCHE_BATCH_SUPPORT == 31, "Unexpected Courtemanche compact support layout");
 
 CARDIAC_HOST_DEVICE inline void CourtemancheComputeVariablesBatch
 (
@@ -318,14 +336,31 @@ CARDIAC_HOST_DEVICE inline void CourtemancheComputeVariablesBatch
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_j       * N + cellI] = j_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_d       * N + cellI] = d_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_f       * N + cellI] = f_tau;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_fCa     * N + cellI] = c_ical_fCa_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_oa      * N + cellI] = oa_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_oi      * N + cellI] = oi_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_ua      * N + cellI] = ua_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_ui      * N + cellI] = ui_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_xr      * N + cellI] = xr_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_xs      * N + cellI] = xs_tau;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_u * N + cellI] = c_cajsr_u_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_v * N + cellI] = v_tau;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_w * N + cellI] = w_tau;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_m       * N + cellI] = m_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_h       * N + cellI] = h_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_j       * N + cellI] = j_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_d       * N + cellI] = d_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_f       * N + cellI] = f_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_fCa     * N + cellI] = fCa_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_oa      * N + cellI] = oa_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_oi      * N + cellI] = oi_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_ua      * N + cellI] = ua_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_ui      * N + cellI] = ui_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_xr      * N + cellI] = xr_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_xs      * N + cellI] = xs_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_u * N + cellI] = u_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_v * N + cellI] = v_inf;
+            SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_w * N + cellI] = w_inf;
             SUPPORT_SoA[COURTEMANCHE_BATCH_SUPPORT_Iion_cm     * N + cellI] = Iion;
         }
     }

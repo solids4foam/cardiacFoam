@@ -50,8 +50,8 @@ namespace Foam
             FabbriSTATES_NAMES,
             FabbriALGEBRAIC_NAMES,
             membrane_V,
-            1000.0,
-            1000.0,
+            1000.0,    // timeScale: OF seconds → ms (model constants now in ms)
+            1000.0,    // vmInputScale: OF Vm in V → model Vm in mV
             0.0,
             nullptr
         };
@@ -84,7 +84,6 @@ Foam::Fabbri::Fabbri
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         FabbriinitConsts
         (
             CONSTANTS_.data(),
@@ -127,8 +126,8 @@ void Foam::Fabbri::solveODE
     scalarField& Im
 )
 {
-    const scalar tStart = stepStartTime * 1000;
-    const scalar tEnd   = (stepStartTime + deltaT) * 1000;
+    const scalar tStart = stepStartTime * 1000.0;
+    const scalar tEnd   = (stepStartTime + deltaT) * 1000.0;
     const label sampleCell = sampleIntegrationPoint(STATES_.size());
 
     forAll(STATES_, integrationPtI)
@@ -139,18 +138,14 @@ void Foam::Fabbri::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
             STATESI[membrane_V] = Vm[integrationPtI]*1000.0;
         }
 
-        // Clamp time step (ms)
         step = min(step, deltaT * 1000.0);
-        // Advance ODE system for all states
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::FabbricomputeVariables
         (
             tEnd,
@@ -166,11 +161,8 @@ void Foam::Fabbri::solveODE
         if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
 
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
     }
 }
 
@@ -181,7 +173,6 @@ void Foam::Fabbri::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated Fabbri code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::FabbricomputeVariables
@@ -225,7 +216,6 @@ void Foam::Fabbri::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = FabbriDependencyMap();
 
     if (!depMap.found(currentName))
@@ -238,24 +228,19 @@ void Foam::Fabbri::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[0] = V;
 
         ::FabbricomputeVariables

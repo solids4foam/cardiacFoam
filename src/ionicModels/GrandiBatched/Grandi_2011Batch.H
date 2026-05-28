@@ -19,24 +19,41 @@ namespace Foam
 enum GRANDI_BATCH_SUPPORT_INDEX
 {
     GRANDI_BATCH_SUPPORT_tau_Ikr_xr,
+    GRANDI_BATCH_SUPPORT_gInf_Ikr_xr,
     GRANDI_BATCH_SUPPORT_tau_Iks_xs,
+    GRANDI_BATCH_SUPPORT_gInf_Iks_xs,
     GRANDI_BATCH_SUPPORT_tau_Ikur_ikur_r,
+    GRANDI_BATCH_SUPPORT_gInf_Ikur_ikur_r,
     GRANDI_BATCH_SUPPORT_tau_Ikur_s,
+    GRANDI_BATCH_SUPPORT_gInf_Ikur_s,
     GRANDI_BATCH_SUPPORT_tau_Ina_h,
+    GRANDI_BATCH_SUPPORT_gInf_Ina_h,
     GRANDI_BATCH_SUPPORT_tau_Ina_j,
+    GRANDI_BATCH_SUPPORT_gInf_Ina_j,
     GRANDI_BATCH_SUPPORT_tau_Ina_m,
+    GRANDI_BATCH_SUPPORT_gInf_Ina_m,
     GRANDI_BATCH_SUPPORT_tau_Inal_hl,
+    GRANDI_BATCH_SUPPORT_gInf_Inal_hl,
     GRANDI_BATCH_SUPPORT_tau_Inal_ml,
+    GRANDI_BATCH_SUPPORT_gInf_Inal_ml,
     GRANDI_BATCH_SUPPORT_tau_Ical_d,
+    GRANDI_BATCH_SUPPORT_gInf_Ical_d,
     GRANDI_BATCH_SUPPORT_tau_Ical_f,
+    GRANDI_BATCH_SUPPORT_gInf_Ical_f,
     GRANDI_BATCH_SUPPORT_tau_Ical_fCaB_jn,
+    GRANDI_BATCH_SUPPORT_gInf_Ical_fCaB_jn,
     GRANDI_BATCH_SUPPORT_tau_Ical_fCaB_sl,
+    GRANDI_BATCH_SUPPORT_gInf_Ical_fCaB_sl,
     GRANDI_BATCH_SUPPORT_tau_Ito_x,
+    GRANDI_BATCH_SUPPORT_gInf_Ito_x,
     GRANDI_BATCH_SUPPORT_tau_Ito_y,
+    GRANDI_BATCH_SUPPORT_gInf_Ito_y,
     GRANDI_BATCH_SUPPORT_Iion_cm,
 
     NUM_GRANDI_BATCH_SUPPORT
 };
+
+static_assert(NUM_GRANDI_BATCH_SUPPORT == 31, "Unexpected Grandi compact support layout");
 
 CARDIAC_HOST_DEVICE inline void GrandiComputeVariablesBatch
 (
@@ -578,6 +595,21 @@ CARDIAC_HOST_DEVICE inline void GrandiComputeVariablesBatch
             SUPPORT_SoA[GRANDI_BATCH_SUPPORT_tau_Ical_fCaB_sl * N + cellI] = 1.0 / (1.7 * state_Ca_sl + 0.0119);
             SUPPORT_SoA[GRANDI_BATCH_SUPPORT_tau_Ito_x * N + cellI] = alg_AV_ito_x_tau;
             SUPPORT_SoA[GRANDI_BATCH_SUPPORT_tau_Ito_y * N + cellI] = alg_AV_ito_y_tau;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ikr_xr * N + cellI] = alg_AV_ikr_xr_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Iks_xs * N + cellI] = alg_AV_iks_xs_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ikur_ikur_r * N + cellI] = alg_AV_ikur_r_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ikur_s * N + cellI] = alg_AV_ikur_s_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ina_h * N + cellI] = alg_AV_ina_h_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ina_j * N + cellI] = alg_AV_ina_j_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ina_m * N + cellI] = alg_AV_ina_m_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Inal_hl * N + cellI] = alg_AV_inal_hl_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Inal_ml * N + cellI] = alg_AV_inal_ml_a / (alg_AV_inal_ml_a + alg_AV_inal_ml_b);
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ical_d * N + cellI] = alg_AV_ical_d_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ical_f * N + cellI] = alg_AV_ical_f_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ical_fCaB_jn * N + cellI] = 1.7 * state_Ca_jn / (1.7 * state_Ca_jn + 0.0119);
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ical_fCaB_sl * N + cellI] = 1.7 * state_Ca_sl / (1.7 * state_Ca_sl + 0.0119);
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ito_x * N + cellI] = alg_AV_ito_x_inf;
+            SUPPORT_SoA[GRANDI_BATCH_SUPPORT_gInf_Ito_y * N + cellI] = alg_AV_ito_y_inf;
             SUPPORT_SoA[GRANDI_BATCH_SUPPORT_Iion_cm * N + cellI] = alg_Iion_cm;
         }
     }

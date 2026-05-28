@@ -1,7 +1,11 @@
 AlievPanfilovBatched/AlievPanfilovBatched_cuda.cu
+BuenoOrovioBatched/BuenoOrovioBatched_cuda.cu
 CourtemancheBatched/CourtemancheBatched_cuda.cu
 FabbriBatched/FabbriBatched_cuda.cu
+GaurBatched/GaurBatched_cuda.cu
 GrandiBatched/GrandiBatched_cuda.cu
 PerisYagueBatched/PerisYagueBatched_cuda.cu
 StewartBatched/StewartBatched_cuda.cu
+TNNPBatched/TNNPBatched_cuda.cu
+ToRORd_dynClBatched/ToRORd_dynClBatched_cuda.cu
 TrovatoBatched/TrovatoBatched_cuda.cu

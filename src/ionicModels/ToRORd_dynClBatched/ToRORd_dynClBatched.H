@@ -14,24 +14,10 @@ Description
     Batched / GPU-portable wrapper for the ToRORd_dynCl 2023 ionic model
     (Tomek-O'Hara-Rudy with dynamic chloride).
 
-    --- Stage in the GPU port ---
-
-    First stage: cell-major batched executor wrapper. Same architectural
-    level as GaurBatched / TNNPBatched today — the model goes through
-    the validated cell-major executor (Heun by default for ToRORd, since
-    no Rush-Larsen dispatch table is provided here). A future iteration
-    may add:
-
-      1. A `rushLarsenParameters` override final exposing the model's many
-         (steady-state, tau) gate pairs to the executor's RL+Heun path.
-      2. A state-major SoA Batch evaluator (`ToRORd_dynCl_2023Batch.H`)
-         + `useSoAEvaluator` switch + `*_cuda.cu` placeholder, mirroring
-         BuenoOrovioBatched.
-
-    For now this class exists primarily as a stress-test target for
-    measurement work: ~40 states is the largest active model in the
-    tree and exercises the integrator + per-cell scratch + write-seam
-    machinery much harder than the smaller models.
+    The class exposes the same compact-support architecture used by the
+    other batched models: a cell-major scalar path, a state-major SoA path,
+    Rush-Larsen tau/steady-state dispatch, and a thin
+    ToRORd_dynClcompactBatched runtime alias that forces compact support.
 
 SourceFiles
     ToRORd_dynClBatched.C
@@ -55,7 +41,7 @@ SourceFiles
 namespace Foam
 {
 
-class ToRORd_dynClBatched final
+class ToRORd_dynClBatched
 :
     public configuredBatchedIonicModel
 {
@@ -66,6 +52,7 @@ class ToRORd_dynClBatched final
     void operator=(const ToRORd_dynClBatched&) = delete;
 
     bool useSoAEvaluator_;
+    bool useCompactSupport_;
 
 #ifdef HAS_CUDA
     bool useDevice_;
@@ -95,6 +82,16 @@ protected:
         return algebraicValues[Iion_cm];
     }
 
+    virtual scalar ionicCurrentFromHotPathSupport
+    (
+        const scalarUList& supportValues
+    ) const override final;
+
+    virtual bool usesCompactSupport() const override final
+    {
+        return useCompactSupport_;
+    }
+
     virtual void evaluateState
     (
         const scalar modelTime,
@@ -102,6 +99,34 @@ protected:
         scalarUList& rateValues,
         scalarUList& algebraicValues
     ) const final;
+
+    virtual bool rushLarsenParameters
+    (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& algebraicValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
+
+    virtual void evaluateHotPathState
+    (
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
+    virtual bool rushLarsenParametersFromHotPathSupport
+    (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& supportValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
 
 public:
 
@@ -152,6 +177,28 @@ public:
     ) const override final;
 
 
+};
+
+class ToRORd_dynClcompactBatched final
+:
+    public ToRORd_dynClBatched
+{
+    ToRORd_dynClcompactBatched(const ToRORd_dynClcompactBatched&) = delete;
+    void operator=(const ToRORd_dynClcompactBatched&) = delete;
+
+public:
+
+    OverrideTypeName("ToRORd_dynClcompactBatched");
+
+    ToRORd_dynClcompactBatched
+    (
+        const dictionary& dict,
+        const label nIntegrationPoints,
+        const scalar initialDeltaT,
+        const Switch solveVmWithinODESolver = false
+    );
+
+    virtual ~ToRORd_dynClcompactBatched() = default;
 };
 
 } // End namespace Foam

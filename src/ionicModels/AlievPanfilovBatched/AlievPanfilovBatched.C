@@ -58,11 +58,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool useAlievPanfilovCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "AlievPanfilovcompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(AlievPanfilovBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         AlievPanfilovBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(AlievPanfilovcompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        AlievPanfilovcompactBatched,
         dictionary
     );
 }
@@ -89,6 +105,7 @@ Foam::AlievPanfilovBatched::AlievPanfilovBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useAlievPanfilovCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -150,9 +167,13 @@ Foam::AlievPanfilovBatched::AlievPanfilovBatched
         setStimulusProtocolFromDict(dict);
     }
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_ALIEVPANFILOV_BATCH_SUPPORT);
+    }
+
+    if (useSoAEvaluator_)
+    {
 
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
@@ -170,6 +191,17 @@ Foam::AlievPanfilovBatched::AlievPanfilovBatched
         }
     }
 }
+
+Foam::AlievPanfilovcompactBatched::AlievPanfilovcompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    AlievPanfilovBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
 
 Foam::AlievPanfilovBatched::~AlievPanfilovBatched()
 {
@@ -208,6 +240,42 @@ void Foam::AlievPanfilovBatched::evaluateState
         solveVmWithinODESolver(),
         stimulusProtocol()
     );
+}
+
+Foam::scalar Foam::AlievPanfilovBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return useCompactSupport_
+      ? 100.0*supportValues[ALIEVPANFILOV_BATCH_SUPPORT_Iion_cm]
+      : ionicCurrentFromEvaluation(supportValues);
+}
+
+void Foam::AlievPanfilovBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    if (!useCompactSupport_)
+    {
+        evaluateState(modelTime, stateValues, rateValues, supportValues);
+        return;
+    }
+
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    supportValues[ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r] =
+        1.0/algebraics[AV_eps];
+    supportValues[ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r] =
+        -CONSTANTS_[AC_k]*stateValues[u]
+       *(stateValues[u] - (CONSTANTS_[AC_a] + 1.0));
+    supportValues[ALIEVPANFILOV_BATCH_SUPPORT_Iion_cm] =
+        algebraics[Iion_cm];
 }
 
 void Foam::AlievPanfilovBatched::prepareIOAccess
@@ -440,20 +508,49 @@ bool Foam::AlievPanfilovBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI != recovery_r)
+    if (stateI != recovery_r) return false;
+
+    const scalar eps = algebraicValues[AV_eps];
+    if (eps <= VSMALL || !std::isfinite(eps)) return false;
+    tau = 1.0/eps;
+
+    const scalar uVal = stateValues[u];
+    steadyState =
+        -CONSTANTS_[AC_k]*uVal*(uVal - (CONSTANTS_[AC_a] + 1.0));
+
+    return std::isfinite(steadyState);
+}
+
+bool Foam::AlievPanfilovBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (!useCompactSupport_)
     {
-        return false;
+        return rushLarsenParameters
+        (
+            stateI,
+            stateValues,
+            rateValues,
+            supportValues,
+            steadyState,
+            tau
+        );
     }
 
-    tau = 1.0/algebraicValues[AV_eps];
+    if (stateI != recovery_r) return false;
 
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
+    tau = supportValues[ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r];
+    if (tau <= VSMALL || !std::isfinite(tau)) return false;
 
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    steadyState = supportValues[ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r];
+    return std::isfinite(steadyState);
 }
 
 void Foam::AlievPanfilovBatched::derivatives

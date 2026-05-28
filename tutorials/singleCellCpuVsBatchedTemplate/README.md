@@ -6,8 +6,7 @@ It compares the adaptive CPU `BuenoOrovio` single-cell path against these
 `BuenoOrovioBatched` modes:
 
 - `batched_euler`: cell-major Euler, `batchedSubsteps 100`
-- `batched_heun`: cell-major Heun, `batchedSubsteps 1`
-- `batched_rl`: cell-major Rush-Larsen gates plus Heun rest, `batchedSubsteps 1`
+- `batched_rl`: cell-major Rush-Larsen gates plus Euler fallback, `batchedSubsteps 1`
 - `batched_soa`: state-major SoA Euler, `useSoAEvaluator true`, `batchedSubsteps 100`
 
 The default run is intentionally short:

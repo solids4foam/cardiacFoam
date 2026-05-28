@@ -19,6 +19,8 @@ License
 #include "BuenoOrovioBatched.H"
 #include "BuenoOrovio_2008.H"
 #include "gpuMath.H"
+#include "batchedRushLarsenEntry.H"
+#include <array>
 
 namespace
 {
@@ -26,6 +28,31 @@ namespace
     {
         return S[0] * 85.7 - 84.0;
     }
+
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    BuenoOrovioRushLarsenDispatch = []()
+    {
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
+
+        t[v] = Foam::rlSupport
+        (
+            Foam::BO_BATCH_SUPPORT_tau_v,
+            Foam::BO_BATCH_SUPPORT_gInf_v
+        );
+        t[w] = Foam::rlSupport
+        (
+            Foam::BO_BATCH_SUPPORT_tau_w,
+            Foam::BO_BATCH_SUPPORT_gInf_w
+        );
+        t[s] = Foam::rlSupport
+        (
+            Foam::BO_BATCH_SUPPORT_tau_s,
+            Foam::BO_BATCH_SUPPORT_gInf_s
+        );
+
+        return t;
+    }();
 }
 
 namespace Foam
@@ -99,11 +126,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool useBuenoOrovioCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "BuenoOroviocompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(BuenoOrovioBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         BuenoOrovioBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(BuenoOroviocompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        BuenoOroviocompactBatched,
         dictionary
     );
 }
@@ -130,6 +173,7 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useBuenoOrovioCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -161,9 +205,13 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
     }
 #endif
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_BO_BATCH_SUPPORT);
+    }
+
+    if (useSoAEvaluator_)
+    {
 
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
@@ -209,6 +257,17 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
         setStimulusProtocolFromDict(dict);
     }
 }
+
+Foam::BuenoOroviocompactBatched::BuenoOroviocompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    BuenoOrovioBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
 
 Foam::BuenoOrovioBatched::~BuenoOrovioBatched()
 {
@@ -485,6 +544,59 @@ void Foam::BuenoOrovioBatched::evaluateState
     );
 }
 
+Foam::scalar Foam::BuenoOrovioBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return useCompactSupport_
+      ? supportValues[BO_BATCH_SUPPORT_Iion]*85.7
+      : ionicCurrentFromEvaluation(supportValues);
+}
+
+void Foam::BuenoOrovioBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    if (!useCompactSupport_)
+    {
+        evaluateState(modelTime, stateValues, rateValues, supportValues);
+        return;
+    }
+
+    using Foam::smoothHeaviside;
+
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    const scalar cellV = stateValues[u];
+
+    const scalar hV = smoothHeaviside(cellV - CONSTANTS_[thetaV]);
+    const scalar invTauV =
+        (1.0 - hV)/algebraics[tauVMinus]
+      + hV/CONSTANTS_[tauVPlus];
+    supportValues[BO_BATCH_SUPPORT_tau_v] = 1.0/invTauV;
+    supportValues[BO_BATCH_SUPPORT_gInf_v] =
+        (1.0 - hV)*algebraics[vInfty]/(algebraics[tauVMinus]*invTauV);
+
+    const scalar hW = smoothHeaviside(cellV - CONSTANTS_[thetaW]);
+    const scalar invTauW =
+        (1.0 - hW)/algebraics[tauWMinus]
+      + hW/CONSTANTS_[tauWPlus];
+    supportValues[BO_BATCH_SUPPORT_tau_w] = 1.0/invTauW;
+    supportValues[BO_BATCH_SUPPORT_gInf_w] =
+        (1.0 - hW)*algebraics[wInfty]/(algebraics[tauWMinus]*invTauW);
+
+    supportValues[BO_BATCH_SUPPORT_tau_s] = algebraics[tauS];
+    supportValues[BO_BATCH_SUPPORT_gInf_s] =
+        0.5*(1.0 + std::tanh(CONSTANTS_[kS]*(cellV - CONSTANTS_[uS])));
+    supportValues[BO_BATCH_SUPPORT_Iion] = algebraics[Jion];
+}
+
 bool Foam::BuenoOrovioBatched::rushLarsenParameters
 (
     const label stateI,
@@ -507,15 +619,14 @@ bool Foam::BuenoOrovioBatched::rushLarsenParameters
             const scalar invTau =
                 (1.0 - hV)/algebraicValues[tauVMinus]
               + hV/CONSTANTS_[tauVPlus];
-
-            if (invTau <= VSMALL)
-            {
-                return false;
-            }
-
+            if (invTau <= VSMALL) return false;
             tau = 1.0/invTau;
-            steadyState = stateValues[v] + rateValues[v]*tau;
-            return true;
+
+            steadyState =
+                (1.0 - hV) * algebraicValues[vInfty]
+              / (algebraicValues[tauVMinus] * invTau);
+
+            return std::isfinite(steadyState);
         }
 
         case w:
@@ -524,33 +635,66 @@ bool Foam::BuenoOrovioBatched::rushLarsenParameters
             const scalar invTau =
                 (1.0 - hW)/algebraicValues[tauWMinus]
               + hW/CONSTANTS_[tauWPlus];
-
-            if (invTau <= VSMALL)
-            {
-                return false;
-            }
-
+            if (invTau <= VSMALL) return false;
             tau = 1.0/invTau;
-            steadyState = stateValues[w] + rateValues[w]*tau;
-            return true;
+
+            steadyState =
+                (1.0 - hW) * algebraicValues[wInfty]
+              / (algebraicValues[tauWMinus] * invTau);
+
+            return std::isfinite(steadyState);
         }
 
         case s:
         {
             tau = algebraicValues[tauS];
+            if (tau <= VSMALL) return false;
 
-            if (tau <= VSMALL)
-            {
-                return false;
-            }
-
-            steadyState = stateValues[s] + rateValues[s]*tau;
-            return true;
+            steadyState = 0.5*(1.0 + std::tanh(
+                CONSTANTS_[kS]*(cellV - CONSTANTS_[uS])
+            ));
+            return std::isfinite(steadyState);
         }
 
         default:
             return false;
     }
+}
+
+bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (!useCompactSupport_)
+    {
+        return rushLarsenParameters
+        (
+            stateI,
+            stateValues,
+            rateValues,
+            supportValues,
+            steadyState,
+            tau
+        );
+    }
+
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    return resolveSupportRushLarsenEntry
+    (
+        BuenoOrovioRushLarsenDispatch[stateI],
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::BuenoOrovioBatched::derivatives

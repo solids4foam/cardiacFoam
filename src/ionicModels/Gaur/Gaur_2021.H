@@ -381,17 +381,14 @@ GaurDependencyMap()
    static const Foam::HashTable<Foam::wordList> dep
     (
         {
-        // Fast sodium current
         {"INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
         {"I_Na", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
         {"AV_INa", Foam::wordList({"AV_INa","I_Na_m","I_Na_h","I_Na_j","AV_m_inf","AV_h_inf","AV_j_inf","AV_tau_m","AV_tau_h","AV_tau_j"})},
 
-        // Late sodium current
         {"INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
         {"I_NaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
         {"AV_INaL_INaL", Foam::wordList({"AV_INaL_INaL","INaL_ml","INaL_hl","AV_ml_inf","AV_hl_inf","AV_tau_ml"})},
 
-        // L-type Ca current and permeation components
         {"ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
         {"I_CaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
         {"AV_ICaL_ICaL", Foam::wordList({"AV_ICaL_ICaL","ICaL_d","ICaL_fca","ICaL_ff","ICaL_fs","AV_d_inf","AV_fca_inf","AV_ff_inf","AV_fs_inf","AV_tau_d","AV_tau_fca","AV_tau_ff","AV_tau_fs"})},
@@ -404,7 +401,6 @@ GaurDependencyMap()
         {"I_CaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
         {"AV_ICaK", Foam::wordList({"AV_ICaK","ICaL_d","ICaL_fca","AV_PhiCaK","AV_f"})},
 
-        // Potassium currents
         {"IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
         {"I_Kr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
         {"AV_IKr_IKr", Foam::wordList({"AV_IKr_IKr","IKr_xr","AV_xr_inf","AV_tau_xr","AV_rkr"})},
@@ -422,7 +418,6 @@ GaurDependencyMap()
         {"I_to", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
         {"AV_ITo_ITo", Foam::wordList({"AV_ITo_ITo","ITo_aa","AV_alpha_aa","AV_beta_aa","AV_rito2","AV_kito2"})},
 
-        // Exchanger/pump/background currents
         {"INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
         {"I_NaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
         {"AV_INaCa", Foam::wordList({"AV_INaCa","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_JncxNa","AV_JncxCa","AV_JncxNa1","AV_JncxCa1"})},
@@ -447,7 +442,6 @@ GaurDependencyMap()
         {"I_pCa", Foam::wordList({"AV_IpCa_IpCa"})},
         {"AV_IpCa_IpCa", Foam::wordList({"AV_IpCa_IpCa"})},
 
-        // Total ionic current
         {"Iion", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
         {"Iion_cm", Foam::wordList({"AV_INa","AV_INaL_INaL","AV_ICaL_ICaL","AV_ICaNa","AV_ICaK","AV_IKr_IKr","AV_IKs_IKs","AV_IK1_IK1","AV_ITo_ITo","AV_INaCa_i_INaCa_i","AV_INaCa_ss_INaCa_ss","AV_INaK_INaK","AV_INab_INab","AV_IKb_IKb","AV_IpCa_IpCa","AV_ICab_ICab","Iion_cm"})},
         }

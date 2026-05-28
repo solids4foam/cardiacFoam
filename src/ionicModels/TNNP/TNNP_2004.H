@@ -185,7 +185,6 @@ TNNPDependencyMap()
     static const Foam::HashTable<Foam::wordList> dep
     (
         {
-            // Fast sodium current
             { "INa",
               Foam::wordList
               ({
@@ -202,14 +201,12 @@ TNNPDependencyMap()
               }) },
 
 
-            // L-type calcium current
             { "ICaL",
               Foam::wordList
               ({
                   "i_CaL",
                   "d_inf","f_inf","fCa_inf",
                   "tau_d","tau_f"
-                  // tau_fCa is CONSTANT
               }) },
             { "I_CaL",
               Foam::wordList
@@ -219,7 +216,6 @@ TNNPDependencyMap()
                   "tau_d","tau_f"
               }) },
 
-            // Transient outward potassium current
             { "Ito",
               Foam::wordList
               ({
@@ -236,7 +232,6 @@ TNNPDependencyMap()
               }) },
 
 
-            // Rapid delayed rectifier potassium current
             { "IKr",
               Foam::wordList
               ({
@@ -252,41 +247,33 @@ TNNPDependencyMap()
                   "tau_xr1","tau_xr2"
                 }) },
 
-            // Slow delayed rectifier potassium current
             { "IKs",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
             { "I_Ks",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
 
-            // Inward rectifier potassium current
             { "IK1",Foam::wordList({"i_K1","xK1_inf"}) },
             { "I_K1",Foam::wordList({"i_K1","xK1_inf"}) },
 
-            // Sodium–potassium pump
             { "INaK",Foam::wordList({"i_NaK"}) },
             { "I_NaK",Foam::wordList({"i_NaK"}) },
 
 
-            // Sodium–calcium exchanger
             { "INaCa",Foam::wordList({"i_NaCa"}) },
             { "I_NaCa",Foam::wordList({"i_NaCa"}) },
 
 
-            // Background currents
             { "IbNa",Foam::wordList({ "i_b_Na" }) },
             { "IbCa",Foam::wordList({ "i_b_Ca" }) },
             { "I_bNa",Foam::wordList({ "i_b_Na" }) },
             { "I_bCa",Foam::wordList({ "i_b_Ca" }) },
 
-            // Plateau / pump currents
             { "IpCa",Foam::wordList({ "i_p_Ca" }) },
             { "IpK", Foam::wordList({ "i_p_K" }) },
             { "I_pCa",Foam::wordList({ "i_p_Ca" }) },
             { "I_pK", Foam::wordList({ "i_p_K" }) },
 
-            // SR release gate (Ca-driven, not Vm sweep)
             { "RyR_g",Foam::wordList({"g_inf"}) },
 
             // ------------------------------------------------------------
-            // Total ionic current
             // ------------------------------------------------------------
             { "Iion",
               Foam::wordList
@@ -374,8 +361,6 @@ CONSTANTS[g_to] = (tissueFlag == 3)
     CONSTANTS[tauSGaussShift]   = isEndo ?   45.00000 :   67.00000;
     CONSTANTS[tauSGaussWidth]   = isEndo ?  320.00000 : 1000.00000;
 
-    // Sigmoid term: amp == 0 in non-endo collapses the whole term;
-    // scale must remain non-zero to avoid 1/0 in IEEE math.
     CONSTANTS[tauSSigmoidAmp]   = isEndo ?    5.00000 :    0.00000;
     CONSTANTS[tauSSigmoidShift] = isEndo ?  -20.00000 :    0.00000;
     CONSTANTS[tauSSigmoidScale] = isEndo ?    5.00000 :    1.00000;

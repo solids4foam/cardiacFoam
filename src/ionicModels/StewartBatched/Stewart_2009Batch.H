@@ -20,22 +20,37 @@ namespace Foam
 enum STEWART_BATCH_SUPPORT_INDEX
 {
     STEWART_BATCH_SUPPORT_tau_y,
+    STEWART_BATCH_SUPPORT_gInf_y,
     STEWART_BATCH_SUPPORT_tau_xr1,
+    STEWART_BATCH_SUPPORT_gInf_xr1,
     STEWART_BATCH_SUPPORT_tau_xr2,
+    STEWART_BATCH_SUPPORT_gInf_xr2,
     STEWART_BATCH_SUPPORT_tau_xs,
+    STEWART_BATCH_SUPPORT_gInf_xs,
     STEWART_BATCH_SUPPORT_tau_m,
+    STEWART_BATCH_SUPPORT_gInf_m,
     STEWART_BATCH_SUPPORT_tau_h,
+    STEWART_BATCH_SUPPORT_gInf_h,
     STEWART_BATCH_SUPPORT_tau_j,
+    STEWART_BATCH_SUPPORT_gInf_j,
     STEWART_BATCH_SUPPORT_tau_d,
+    STEWART_BATCH_SUPPORT_gInf_d,
     STEWART_BATCH_SUPPORT_tau_f,
+    STEWART_BATCH_SUPPORT_gInf_f,
     STEWART_BATCH_SUPPORT_tau_f2,
+    STEWART_BATCH_SUPPORT_gInf_f2,
     STEWART_BATCH_SUPPORT_tau_fCass,
+    STEWART_BATCH_SUPPORT_gInf_fCass,
     STEWART_BATCH_SUPPORT_tau_s,
+    STEWART_BATCH_SUPPORT_gInf_s,
     STEWART_BATCH_SUPPORT_tau_r,
+    STEWART_BATCH_SUPPORT_gInf_r,
     STEWART_BATCH_SUPPORT_Iion_cm,
 
     NUM_STEWART_BATCH_SUPPORT
 };
+
+static_assert(NUM_STEWART_BATCH_SUPPORT == 27, "Unexpected Stewart compact support layout");
 
 CARDIAC_HOST_DEVICE inline void StewartComputeVariablesBatch
 (
@@ -332,6 +347,19 @@ CARDIAC_HOST_DEVICE inline void StewartComputeVariablesBatch
             SUPPORT_SoA[STEWART_BATCH_SUPPORT_tau_fCass * N + cellI] = alg_AV_tau_fCass;
             SUPPORT_SoA[STEWART_BATCH_SUPPORT_tau_s * N + cellI] = alg_AV_tau_s;
             SUPPORT_SoA[STEWART_BATCH_SUPPORT_tau_r * N + cellI] = alg_AV_tau_r;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_y * N + cellI] = alg_AV_y_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_xr1 * N + cellI] = alg_AV_xr1_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_xr2 * N + cellI] = alg_AV_xr2_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_xs * N + cellI] = alg_AV_xs_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_m * N + cellI] = alg_AV_m_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_h * N + cellI] = alg_AV_h_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_j * N + cellI] = alg_AV_j_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_d * N + cellI] = alg_AV_d_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_f * N + cellI] = alg_AV_f_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_f2 * N + cellI] = alg_AV_f2_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_fCass * N + cellI] = alg_AV_fCass_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_s * N + cellI] = alg_AV_s_inf;
+            SUPPORT_SoA[STEWART_BATCH_SUPPORT_gInf_r * N + cellI] = alg_AV_r_inf;
             SUPPORT_SoA[STEWART_BATCH_SUPPORT_Iion_cm * N + cellI] = alg_Iion_cm;
         }
     }

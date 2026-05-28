@@ -88,7 +88,7 @@ file stored in the case directory.
 
 ## CPU vs GPU (Batched) Comparisons
 
-This tutorial includes scripts to benchmark the adaptive CPU ODE solver (`RKF45`) against the fixed-step batched integrators (`batched_euler`, `batched_heun`, `batched_rl`, `batched_soa`).
+This tutorial includes scripts to benchmark the adaptive CPU ODE solver (`RKF45`) against the fixed-step batched integrators (`batched_euler`, `batched_rl`, `batched_soa`).
 
 To run the full suite of comparisons:
 

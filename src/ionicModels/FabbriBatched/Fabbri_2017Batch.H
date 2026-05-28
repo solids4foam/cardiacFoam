@@ -20,26 +20,45 @@ namespace Foam
 enum FABBRI_BATCH_SUPPORT_INDEX
 {
     FABBRI_BATCH_SUPPORT_tau_y,
+    FABBRI_BATCH_SUPPORT_gInf_y,
     FABBRI_BATCH_SUPPORT_tau_m,
+    FABBRI_BATCH_SUPPORT_gInf_m,
     FABBRI_BATCH_SUPPORT_tau_h,
+    FABBRI_BATCH_SUPPORT_gInf_h,
     FABBRI_BATCH_SUPPORT_tau_dL,
+    FABBRI_BATCH_SUPPORT_gInf_dL,
     FABBRI_BATCH_SUPPORT_tau_fL,
+    FABBRI_BATCH_SUPPORT_gInf_fL,
     FABBRI_BATCH_SUPPORT_tau_fCa,
+    FABBRI_BATCH_SUPPORT_gInf_fCa,
     FABBRI_BATCH_SUPPORT_tau_dT,
+    FABBRI_BATCH_SUPPORT_gInf_dT,
     FABBRI_BATCH_SUPPORT_tau_fT,
+    FABBRI_BATCH_SUPPORT_gInf_fT,
     FABBRI_BATCH_SUPPORT_tau_r_Kur,
+    FABBRI_BATCH_SUPPORT_gInf_r_Kur,
     FABBRI_BATCH_SUPPORT_tau_s_Kur,
+    FABBRI_BATCH_SUPPORT_gInf_s_Kur,
     FABBRI_BATCH_SUPPORT_tau_q,
+    FABBRI_BATCH_SUPPORT_gInf_q,
     FABBRI_BATCH_SUPPORT_tau_r,
+    FABBRI_BATCH_SUPPORT_gInf_r,
     FABBRI_BATCH_SUPPORT_tau_paS,
+    FABBRI_BATCH_SUPPORT_gInf_paS,
     FABBRI_BATCH_SUPPORT_tau_paF,
+    FABBRI_BATCH_SUPPORT_gInf_paF,
     FABBRI_BATCH_SUPPORT_tau_pi,
+    FABBRI_BATCH_SUPPORT_gInf_pi,
     FABBRI_BATCH_SUPPORT_tau_n,
+    FABBRI_BATCH_SUPPORT_gInf_n,
     FABBRI_BATCH_SUPPORT_tau_a,
+    FABBRI_BATCH_SUPPORT_gInf_a,
     FABBRI_BATCH_SUPPORT_Iion_cm,
 
     NUM_FABBRI_BATCH_SUPPORT
 };
+
+static_assert(NUM_FABBRI_BATCH_SUPPORT == 35, "Unexpected Fabbri compact support layout");
 
 CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 (
@@ -202,7 +221,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 
         /* Ca_SR_release */
             alg_AV_j_SRCarel = CONSTANTS[AC_ks] * state_SR_O * (state_Ca_jsr - state_Ca_sub);
-            alg_AV_kCaSR = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + pow(CONSTANTS[AC_EC50_SR] / state_Ca_jsr, CONSTANTS[AC_HSR]));
+            alg_AV_kCaSR = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + pow(CONSTANTS[AC_EC50_SR] / (state_Ca_jsr > 1e-15 ? state_Ca_jsr : 1e-15), CONSTANTS[AC_HSR]));
             alg_AV_kiSRCa = CONSTANTS[AC_kiCa] * alg_AV_kCaSR;
             alg_AV_koSRCa = CONSTANTS[AC_koCa] / alg_AV_kCaSR;
             RATES_SoA[SR_I * N + cellI] = alg_AV_kiSRCa * state_Ca_sub * state_SR_O - CONSTANTS[AC_kim] * state_SR_I - (CONSTANTS[AC_kom] * state_SR_I - alg_AV_koSRCa * pow(state_Ca_sub, 2.0) * state_SR_RI);
@@ -229,7 +248,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 
             /* i_CaL_fCa_gate */
             alg_AV_fCa_infinity = CONSTANTS[AC_Km_fCa] / (CONSTANTS[AC_Km_fCa] + state_Ca_sub);
-            alg_AV_tau_fCa = 0.001 * alg_AV_fCa_infinity / CONSTANTS[AC_alpha_fCa];
+            alg_AV_tau_fCa = alg_AV_fCa_infinity / CONSTANTS[AC_alpha_fCa];
             RATES_SoA[ICaL_fCa_gate_fCa * N + cellI] = (alg_AV_fCa_infinity - state_ICaL_fCa_gate_fCa) / alg_AV_tau_fCa;
 
             /* Ca_intracellular_fluxes */
@@ -247,14 +266,22 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 
             /* Membrane */
             alg_AV_V = ((CONSTANTS[AC_clamp_mode] >= 1.0) ? alg_AV_V_clamp : state_membrane_V);
+            if (alg_AV_V >  500.0) alg_AV_V =  500.0;
+            if (alg_AV_V < -500.0) alg_AV_V = -500.0;
 
             /* Nai_concentration */
             alg_AV_Nai = state_Na_i;
 
             /* i_CaL */
-            alg_AV_i_siCa = 2.0 * CONSTANTS[AC_P_CaL] * (alg_AV_V - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (alg_AV_V - 0.0) * 2.0 / CONSTANTS[AC_RTONF]))) * (state_Ca_sub - CONSTANTS[AC_Cao] * exp(-2.0 * (alg_AV_V - 0.0) / CONSTANTS[AC_RTONF])) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
-            alg_AV_i_siK = 0.000365 * CONSTANTS[AC_P_CaL] * (alg_AV_V - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (alg_AV_V - 0.0) / CONSTANTS[AC_RTONF]))) * (CONSTANTS[AC_Ki] - CONSTANTS[AC_Ko] * exp(-1.0 * (alg_AV_V - 0.0) / CONSTANTS[AC_RTONF])) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
-            alg_AV_i_siNa = 1.85e-05 * CONSTANTS[AC_P_CaL] * (alg_AV_V - 0.0) / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * (alg_AV_V - 0.0) / CONSTANTS[AC_RTONF]))) * (alg_AV_Nai - CONSTANTS[AC_Nao] * exp(-1.0 * (alg_AV_V - 0.0) / CONSTANTS[AC_RTONF])) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
+            {
+                const double _V = alg_AV_V;
+                const double _R = CONSTANTS[AC_RTONF];
+                const double _g2 = (fabs(_V) < 1e-7) ? (_R * 0.5) : (_V / (1.0 - exp(-2.0 * _V / _R)));
+                const double _g1 = (fabs(_V) < 1e-7) ? _R         : (_V / (1.0 - exp(-_V / _R)));
+                alg_AV_i_siCa = 2.0 * CONSTANTS[AC_P_CaL] * _g2 / _R * (state_Ca_sub - CONSTANTS[AC_Cao] * exp(-2.0 * _V / _R)) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
+                alg_AV_i_siK  = 0.000365 * CONSTANTS[AC_P_CaL] * _g1 / _R * (CONSTANTS[AC_Ki] - CONSTANTS[AC_Ko] * exp(-_V / _R)) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
+                alg_AV_i_siNa = 1.85e-05 * CONSTANTS[AC_P_CaL] * _g1 / _R * (alg_AV_Nai - CONSTANTS[AC_Nao] * exp(-_V / _R)) * state_ICaL_dL_gate_dL * state_ICaL_fL_gate_fL * state_ICaL_fCa_gate_fCa;
+            }
             alg_AV_i_CaL_i_CaL = (alg_AV_i_siCa + alg_AV_i_siK + alg_AV_i_siNa) * (1.0 - CONSTANTS[AC_ACh_block]) * 1.0 * CONSTANTS[AC_i_CaL_Iso_increase];
 
             /* i_CaL_dL_gate */
@@ -263,43 +290,48 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             alg_AV_alpha_dL = -0.02839 * (alg_AV_adVm + 41.8) / (exp(-(alg_AV_adVm + 41.8) / 2.5) - 1.0) - 0.0849 * (alg_AV_adVm + 6.8) / (exp(-(alg_AV_adVm + 6.8) / 4.8) - 1.0);
             alg_AV_beta_dL = 0.01143 * (alg_AV_bdVm + 1.8) / (exp((alg_AV_bdVm + 1.8) / 2.5) - 1.0);
             alg_AV_dL_infinity = 1.0 / (1.0 + exp(-(alg_AV_V - CONSTANTS[AC_V_dL] - CONSTANTS[AC_Iso_shift_dL]) / (CONSTANTS[AC_k_dL] * (1.0 + CONSTANTS[AC_Iso_slope_dL] / 100.0))));
-            alg_AV_tau_dL = 0.001 / (alg_AV_alpha_dL + alg_AV_beta_dL);
+            alg_AV_tau_dL = 1.0 / (alg_AV_alpha_dL + alg_AV_beta_dL);
             RATES_SoA[ICaL_dL_gate_dL * N + cellI] = (alg_AV_dL_infinity - state_ICaL_dL_gate_dL) / alg_AV_tau_dL;
 
             /* i_CaL_fL_gate */
-            alg_AV_tau_fL = 0.001 * (44.3 + 230.0 * exp(-pow((alg_AV_V + 36.0) / 10.0, 2.0)));
+            alg_AV_tau_fL = (44.3 + 230.0 * exp(-pow((alg_AV_V + 36.0) / 10.0, 2.0)));
             alg_AV_fL_infinity = 1.0 / (1.0 + exp((alg_AV_V + 37.4 + CONSTANTS[AC_shift_fL]) / (5.3 + CONSTANTS[AC_k_fL])));
             RATES_SoA[ICaL_fL_gate_fL * N + cellI] = (alg_AV_fL_infinity - state_ICaL_fL_gate_fL) / alg_AV_tau_fL;
 
             /* i_CaT */
-            alg_AV_i_CaT_i_CaT = 2.0 * CONSTANTS[AC_P_CaT] * alg_AV_V / (CONSTANTS[AC_RTONF] * (1.0 - exp(-1.0 * alg_AV_V * 2.0 / CONSTANTS[AC_RTONF]))) * (state_Ca_sub - CONSTANTS[AC_Cao] * exp(-2.0 * alg_AV_V / CONSTANTS[AC_RTONF])) * state_ICaT_dT_gate_dT * state_ICaT_fT_gate_fT;
+            {
+                const double _V = alg_AV_V;
+                const double _R = CONSTANTS[AC_RTONF];
+                const double _g2 = (fabs(_V) < 1e-7) ? (_R * 0.5) : (_V / (1.0 - exp(-2.0 * _V / _R)));
+                alg_AV_i_CaT_i_CaT = 2.0 * CONSTANTS[AC_P_CaT] * _g2 / _R * (state_Ca_sub - CONSTANTS[AC_Cao] * exp(-2.0 * _V / _R)) * state_ICaT_dT_gate_dT * state_ICaT_fT_gate_fT;
+            }
 
             /* i_CaT_dT_gate */
             alg_AV_dT_infinity = 1.0 / (1.0 + exp(-(alg_AV_V + 38.3) / 5.5));
-            alg_AV_tau_dT = 0.001 / (1.068 * exp((alg_AV_V + 38.3) / 30.0) + 1.068 * exp(-(alg_AV_V + 38.3) / 30.0));
+            alg_AV_tau_dT = 1.0 / (1.068 * exp((alg_AV_V + 38.3) / 30.0) + 1.068 * exp(-(alg_AV_V + 38.3) / 30.0));
             RATES_SoA[ICaT_dT_gate_dT * N + cellI] = (alg_AV_dT_infinity - state_ICaT_dT_gate_dT) / alg_AV_tau_dT;
 
             /* i_CaT_fT_gate */
             alg_AV_fT_infinity = 1.0 / (1.0 + exp((alg_AV_V + 58.7) / 3.8));
-            alg_AV_tau_fT = 1.0 / (16.67 * exp(-(alg_AV_V + 75.0) / 83.3) + 16.67 * exp((alg_AV_V + 75.0) / 15.38)) + CONSTANTS[AC_offset_fT];
+            alg_AV_tau_fT = 1000.0 / (16.67 * exp(-(alg_AV_V + 75.0) / 83.3) + 16.67 * exp((alg_AV_V + 75.0) / 15.38)) + CONSTANTS[AC_offset_fT];
             RATES_SoA[ICaT_fT_gate_fT * N + cellI] = (alg_AV_fT_infinity - state_ICaT_fT_gate_fT) / alg_AV_tau_fT;
 
             /* i_KACh_a_gate */
             alg_AV_beta_a = 10.0 * exp(0.0133 * (alg_AV_V + 40.0));
             alg_AV_a_infinity = CONSTANTS[AC_alpha_a] / (CONSTANTS[AC_alpha_a] + alg_AV_beta_a);
-            alg_AV_tau_a = 1.0 / (CONSTANTS[AC_alpha_a] + alg_AV_beta_a);
+            alg_AV_tau_a = 1000.0 / (CONSTANTS[AC_alpha_a] + alg_AV_beta_a);
             RATES_SoA[IKACh_a_gate_a * N + cellI] = (alg_AV_a_infinity - state_IKACh_a_gate_a) / alg_AV_tau_a;
 
             /* i_Kr_pa_gate */
             alg_AV_pa_infinity = 1.0 / (1.0 + exp(-(alg_AV_V + 10.0144) / 7.6607));
-            alg_AV_tau_paF = 1.0 / (30.0 * exp(alg_AV_V / 10.0) + exp(-alg_AV_V / 12.0));
-            alg_AV_tau_paS = 8.46553540000000049e-01 / (4.2 * exp(alg_AV_V / 17.0) + 0.15 * exp(-alg_AV_V / 21.6));
+            alg_AV_tau_paF = 1000.0 / (30.0 * exp(alg_AV_V / 10.0) + exp(-alg_AV_V / 12.0));
+            alg_AV_tau_paS = 8.46553540000000049e+02 / (4.2 * exp(alg_AV_V / 17.0) + 0.15 * exp(-alg_AV_V / 21.6));
             RATES_SoA[IKr_pa_gate_paF * N + cellI] = (alg_AV_pa_infinity - state_IKr_pa_gate_paF) / alg_AV_tau_paF;
             RATES_SoA[IKr_pa_gate_paS * N + cellI] = (alg_AV_pa_infinity - state_IKr_pa_gate_paS) / alg_AV_tau_paS;
 
             /* i_Kr_pi_gate */
             alg_AV_pi_infinity = 1.0 / (1.0 + exp((alg_AV_V + 28.6) / 17.1));
-            alg_AV_tau_pi = 1.0 / (100.0 * exp(-alg_AV_V / 54.645) + 656.0 * exp(alg_AV_V / 106.157));
+            alg_AV_tau_pi = 1000.0 / (100.0 * exp(-alg_AV_V / 54.645) + 656.0 * exp(alg_AV_V / 106.157));
             RATES_SoA[IKr_pi_gate_piy * N + cellI] = (alg_AV_pi_infinity - state_IKr_pi_gate_piy) / alg_AV_tau_pi;
 
             /* i_Ks */
@@ -310,17 +342,17 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             alg_AV_alpha_n = 28.0 / (1.0 + exp(-(alg_AV_V - 40.0 - CONSTANTS[AC_i_Ks_n_gate_Iso_shift]) / 3.0));
             alg_AV_beta_n = 1.0 * exp(-(alg_AV_V - CONSTANTS[AC_i_Ks_n_gate_Iso_shift] - 5.0) / 25.0);
             alg_AV_n_infinity = sqrt(1.0 / (1.0 + exp(-(alg_AV_V + 0.6383 - CONSTANTS[AC_i_Ks_n_gate_Iso_shift]) / 10.7071)));
-            alg_AV_tau_n = 1.0 / (alg_AV_alpha_n + alg_AV_beta_n);
+            alg_AV_tau_n = 1000.0 / (alg_AV_alpha_n + alg_AV_beta_n);
             RATES_SoA[IKs_n_gate_n * N + cellI] = (alg_AV_n_infinity - state_IKs_n_gate_n) / alg_AV_tau_n;
 
             /* i_Kur_rKur_gate */
             alg_AV_r_Kur_infinity = 1.0 / (1.0 + exp((alg_AV_V + 6.0) / -8.6));
-            alg_AV_tau_r_Kur = 0.009 / (1.0 + exp((alg_AV_V + 5.0) / 12.0)) + 0.0005;
+            alg_AV_tau_r_Kur = 9.0 / (1.0 + exp((alg_AV_V + 5.0) / 12.0)) + 0.5;
             RATES_SoA[IKur_rKur_gate_r_Kur * N + cellI] = (alg_AV_r_Kur_infinity - state_IKur_rKur_gate_r_Kur) / alg_AV_tau_r_Kur;
 
             /* i_Kur_sKur_gate */
             alg_AV_s_Kur_infinity = 1.0 / (1.0 + exp((alg_AV_V + 7.5) / 10.0));
-            alg_AV_tau_s_Kur = 0.59 / (1.0 + exp((alg_AV_V + 60.0) / 10.0)) + 3.05;
+            alg_AV_tau_s_Kur = 590.0 / (1.0 + exp((alg_AV_V + 60.0) / 10.0)) + 3050.0;
             RATES_SoA[IKur_sKur_gate_s_Kur * N + cellI] = (alg_AV_s_Kur_infinity - state_IKur_sKur_gate_s_Kur) / alg_AV_tau_s_Kur;
 
             /* i_Na */
@@ -349,7 +381,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             alg_AV_alpha_h = 20.0 * exp(-0.125 * (alg_AV_V + 75.0));
             alg_AV_beta_h = 2000.0 / (320.0 * exp(-0.1 * (alg_AV_V + 75.0)) + 1.0);
             alg_AV_h_infinity = 1.0 / (1.0 + exp((alg_AV_V + 69.804) / 4.4565));
-            alg_AV_tau_h = 1.0 / (alg_AV_alpha_h + alg_AV_beta_h);
+            alg_AV_tau_h = 1000.0 / (alg_AV_alpha_h + alg_AV_beta_h);
             RATES_SoA[INa_h_gate_h * N + cellI] = (alg_AV_h_infinity - state_INa_h_gate_h) / alg_AV_tau_h;
 
             /* i_Na_m_gate */
@@ -357,22 +389,35 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             alg_AV_beta_m = 8000.0 * exp(-0.056 * (alg_AV_V + 66.0));
             alg_AV_m_infinity = 1.0 / (1.0 + exp(-(alg_AV_V + 42.0504) / 8.3106));
             alg_AV_alpha_m = ((fabs(alg_AV_E0_m) < CONSTANTS[AC_delta_m]) ? 2000.0 : 200.0 * alg_AV_E0_m / (1.0 - exp(-0.1 * alg_AV_E0_m)));
-            alg_AV_tau_m = 1.0 / (alg_AV_alpha_m + alg_AV_beta_m);
+            alg_AV_tau_m = 1000.0 / (alg_AV_alpha_m + alg_AV_beta_m);
             RATES_SoA[INa_m_gate_m * N + cellI] = (alg_AV_m_infinity - state_INa_m_gate_m) / alg_AV_tau_m;
 
             /* i_f_y_gate */
-            alg_AV_tau_y = 1.0 / (0.36 * (alg_AV_V + 148.8 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift]) / (exp(0.066 * (alg_AV_V + 148.8 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift])) - 1.0) + 0.1 * (alg_AV_V + 87.3 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift]) / (1.0 - exp(-0.2 * (alg_AV_V + 87.3 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift])))) - 0.054;
+            {
+                const double _x1 = alg_AV_V + 148.8 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift];
+                const double _x2 = alg_AV_V + 87.3  - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift];
+                const double _t1 = (fabs(_x1) < 1e-7)
+                    ? (0.36 / 0.066)
+                    : (0.36 * _x1 / (exp(0.066 * _x1) - 1.0));
+                const double _t2 = (fabs(_x2) < 1e-7)
+                    ? 0.5
+                    : ((-0.2 * _x2 > 700.0) ? 0.0
+                       : (0.1 * _x2 / (1.0 - exp(-0.2 * _x2))));
+                const double _raw_s = 1.0 / (_t1 + _t2) - 0.054;
+                const double _raw = _raw_s * 1000.0;
+                alg_AV_tau_y = (_raw > 1.0) ? _raw : 1.0;
+            }
             alg_AV_y_infinity = ((alg_AV_V < -(80.0 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift])) ? 0.01329 + 0.99921 / (1.0 + exp((alg_AV_V + 97.134 - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift]) / 8.1752)) : 0.0002501 * exp(-(alg_AV_V - CONSTANTS[AC_ACh_shift] - CONSTANTS[AC_i_f_y_gate_Iso_shift] - CONSTANTS[AC_y_shift]) / 12.861));
             RATES_SoA[If_y_gate_y * N + cellI] = (alg_AV_y_infinity - state_If_y_gate_y) / alg_AV_tau_y;
 
             /* i_to_q_gate */
             alg_AV_q_infinity = 1.0 / (1.0 + exp((alg_AV_V + 49.0) / 13.0));
-            alg_AV_tau_q = 0.001 * 0.6 * (65.17 / (0.57 * exp(-0.08 * (alg_AV_V + 44.0)) + 0.065 * exp(0.1 * (alg_AV_V + 45.93))) + 10.1);
+            alg_AV_tau_q = 0.6 * (65.17 / (0.57 * exp(-0.08 * (alg_AV_V + 44.0)) + 0.065 * exp(0.1 * (alg_AV_V + 45.93))) + 10.1);
             RATES_SoA[Ito_q_gate_q * N + cellI] = (alg_AV_q_infinity - state_Ito_q_gate_q) / alg_AV_tau_q;
 
             /* i_to_r_gate */
             alg_AV_r_infinity = 1.0 / (1.0 + exp(-(alg_AV_V - 19.3) / 15.0));
-            alg_AV_tau_r = 0.001 * 0.66 * 1.4 * (15.59 / (1.037 * exp(0.09 * (alg_AV_V + 30.61)) + 0.369 * exp(-0.12 * (alg_AV_V + 23.84))) + 2.98);
+            alg_AV_tau_r = 0.66 * 1.4 * (15.59 / (1.037 * exp(0.09 * (alg_AV_V + 30.61)) + 0.369 * exp(-0.12 * (alg_AV_V + 23.84))) + 2.98);
             RATES_SoA[Ito_r_gate_r * N + cellI] = (alg_AV_r_infinity - state_Ito_r_gate_r) / alg_AV_tau_r;
 
             /* *remaining* */
@@ -423,6 +468,23 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             SUPPORT_SoA[FABBRI_BATCH_SUPPORT_tau_pi * N + cellI] = alg_AV_tau_pi;
             SUPPORT_SoA[FABBRI_BATCH_SUPPORT_tau_n * N + cellI] = alg_AV_tau_n;
             SUPPORT_SoA[FABBRI_BATCH_SUPPORT_tau_a * N + cellI] = alg_AV_tau_a;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_y * N + cellI] = alg_AV_y_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_m * N + cellI] = alg_AV_m_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_h * N + cellI] = alg_AV_h_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_dL * N + cellI] = alg_AV_dL_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_fL * N + cellI] = alg_AV_fL_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_fCa * N + cellI] = alg_AV_fCa_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_dT * N + cellI] = alg_AV_dT_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_fT * N + cellI] = alg_AV_fT_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_r_Kur * N + cellI] = alg_AV_r_Kur_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_s_Kur * N + cellI] = alg_AV_s_Kur_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_q * N + cellI] = alg_AV_q_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_r * N + cellI] = alg_AV_r_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_paS * N + cellI] = alg_AV_pa_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_paF * N + cellI] = alg_AV_pa_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_pi * N + cellI] = alg_AV_pi_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_n * N + cellI] = alg_AV_n_infinity;
+            SUPPORT_SoA[FABBRI_BATCH_SUPPORT_gInf_a * N + cellI] = alg_AV_a_infinity;
             SUPPORT_SoA[FABBRI_BATCH_SUPPORT_Iion_cm * N + cellI] = alg_Iion_cm;
         }
     }

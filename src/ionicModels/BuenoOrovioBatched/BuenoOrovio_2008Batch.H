@@ -45,12 +45,12 @@ Description
     set up so adding `__device__` later is a build-flag change, not a
     code rewrite. See `gpu_ionic_model_audit.md` Section 6.1.
 
-    Numerical equivalence
-    ---------------------
-    The body uses the same hard-step `heaviside` that
-    `BuenoOroviocomputeVariables` uses, so a per-cell run of this batched
-    function should match the legacy evaluator to floating-point exactness
-    (modulo associativity reordering the compiler may pick).
+    Numerical convention
+    --------------------
+    The batched/GPU-facing evaluator intentionally uses a narrow smooth
+    approximation of the model's step functions. This matches the batched
+    Rush-Larsen extraction path and avoids carrying the scalar CPU hard-step
+    helper into device-oriented code.
 \*---------------------------------------------------------------------------*/
 
 #ifndef BuenoOrovio_2008Batch_H
@@ -60,12 +60,13 @@ Description
 #include "StimulusProtocolPOD.H"
 #include <cmath>
 
-// Local hard-step Heaviside that is host/device callable. Kept identical
-// in semantics to `Foam::heaviside` (see BuenoOrovio/heaviside.H) so the
-// batched and legacy paths match bit-for-bit on the same input.
-CARDIAC_HOST_DEVICE inline double bo_heaviside(const double x)
+CARDIAC_HOST_DEVICE inline double bo_smoothHeaviside
+(
+    const double x,
+    const double width = 1.0e-4
+)
 {
-    return (x > 0.0) ? 1.0 : 0.0;
+    return 0.5 * (1.0 + std::tanh(x / width));
 }
 
 
@@ -79,13 +80,18 @@ namespace Foam
 //  eventual Rush-Larsen-from-support path on this model.
 enum BO_BATCH_SUPPORT_INDEX
 {
-    BO_BATCH_SUPPORT_tauVMinus,
-    BO_BATCH_SUPPORT_tauWMinus,
-    BO_BATCH_SUPPORT_tauS,
+    BO_BATCH_SUPPORT_tau_v,
+    BO_BATCH_SUPPORT_gInf_v,
+    BO_BATCH_SUPPORT_tau_w,
+    BO_BATCH_SUPPORT_gInf_w,
+    BO_BATCH_SUPPORT_tau_s,
+    BO_BATCH_SUPPORT_gInf_s,
     BO_BATCH_SUPPORT_Iion,
 
     NUM_BO_BATCH_SUPPORT
 };
+
+static_assert(NUM_BO_BATCH_SUPPORT == 7, "BuenoOrovio compact support layout drift");
 
 
 //- State-major batched evaluator. One call processes cells
@@ -130,12 +136,8 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
     const StimulusProtocolPOD& stimulus
 )
 {
-    // Stimulus is loop-invariant in cell - compute once.
     const double Istim = computeStimulusPOD(t, stimulus);
 
-    // Hoist constant reads outside the cell loop. The compiler can hoist
-    // these on its own under `-O2`/`-O3`, but doing it explicitly makes
-    // the SIMD step robust under O1 / debug builds and signals intent.
     const double c_uO         = CONSTANTS[uO];
     const double c_uU         = CONSTANTS[uU];
     const double c_thetaV     = CONSTANTS[thetaV];
@@ -165,8 +167,6 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
     const double c_tauWInfty  = CONSTANTS[tauWInfty];
     const double c_wInftyStar = CONSTANTS[wInftyStar];
 
-    // SoA strides for each state. Resolved at compile time on the device
-    // when `u`, `v`, etc. are integer enum values.
     const int U_BASE = u * N;
     const int V_BASE = v * N;
     const int W_BASE = w * N;
@@ -177,20 +177,16 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
 #endif
     for (int cellI = beginCell; cellI < endCell; ++cellI)
     {
-        // SoA loads - one scalar per state per cell.
         const double Su = STATES_SoA[U_BASE + cellI];
         const double Sv = STATES_SoA[V_BASE + cellI];
         const double Sw = STATES_SoA[W_BASE + cellI];
         const double Ss = STATES_SoA[S_BASE + cellI];
 
-        // Heaviside switches - these are the divergence sources on a
-        // SIMT device. On CPU SIMD they predicate cleanly.
-        const double hV  = bo_heaviside(Su - c_thetaV);
-        const double hW  = bo_heaviside(Su - c_thetaW);
-        const double hVm = bo_heaviside(Su - c_thetaVm);
-        const double hO  = bo_heaviside(Su - c_thetaO);
+        const double hV  = bo_smoothHeaviside(Su - c_thetaV);
+        const double hW  = bo_smoothHeaviside(Su - c_thetaW);
+        const double hVm = bo_smoothHeaviside(Su - c_thetaVm);
+        const double hO  = bo_smoothHeaviside(Su - c_thetaO);
 
-        // Time constants
         const double tauSoLocal =
             c_tauSo1 + (c_tauSo2 - c_tauSo1)
             * (1.0 + std::tanh(c_kSo * (Su - c_uSo))) * 0.5;
@@ -205,7 +201,6 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
 
         const double tauSLocal = (1.0 - hW) * c_tauS1 + hW * c_tauS2;
 
-        // Currents
         const double Jfi =
             -Sv * hV * (Su - c_thetaV) * (c_uU - Su) / c_tauFi;
 
@@ -217,42 +212,45 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
 
         const double Jion = Jfi + Jso + Jsi;
 
-        // Steady-state targets
-        const double vInftyLocal = bo_heaviside(c_thetaVm - Su);
+        const double vInftyLocal = bo_smoothHeaviside(c_thetaVm - Su);
 
         const double wInftyLocal =
             (1.0 - hO) * (1.0 - Su / c_tauWInfty)
           + hO * c_wInftyStar;
 
-        // Rates (writes go straight to SoA; rate of u handled below).
-        RATES_SoA[V_BASE + cellI] =
-            (1.0 - hV) * (vInftyLocal - Sv) / tauVMinusLocal
-          - hV * Sv / c_tauVPlus;
+        const double invTauV =
+            (1.0 - hV)/tauVMinusLocal + hV/c_tauVPlus;
+        const double tauVEffective = 1.0/invTauV;
+        const double vSteady =
+            (1.0 - hV)*vInftyLocal/(tauVMinusLocal*invTauV);
 
-        RATES_SoA[W_BASE + cellI] =
-            (1.0 - hW) * (wInftyLocal - Sw) / tauWMinusLocal
-          - hW * Sw / c_tauWPlus;
+        const double invTauW =
+            (1.0 - hW)/tauWMinusLocal + hW/c_tauWPlus;
+        const double tauWEffective = 1.0/invTauW;
+        const double wSteady =
+            (1.0 - hW)*wInftyLocal/(tauWMinusLocal*invTauW);
 
-        RATES_SoA[S_BASE + cellI] =
-            ((1.0 + std::tanh(c_kS * (Su - c_uS))) * 0.5 - Ss) / tauSLocal;
+        const double sSteady =
+            (1.0 + std::tanh(c_kS * (Su - c_uS))) * 0.5;
+
+        RATES_SoA[V_BASE + cellI] = (vSteady - Sv)/tauVEffective;
+        RATES_SoA[W_BASE + cellI] = (wSteady - Sw)/tauWEffective;
+        RATES_SoA[S_BASE + cellI] = (sSteady - Ss)/tauSLocal;
 
         if (solveVm)
         {
             RATES_SoA[U_BASE + cellI] = -Jion - Istim;
         }
 
-        // Optional compact-support output. Layout: SUPPORT[supportI*N + cellI].
         if (SUPPORT_SoA != nullptr)
         {
-            SUPPORT_SoA[BO_BATCH_SUPPORT_tauVMinus * N + cellI] = tauVMinusLocal;
-            SUPPORT_SoA[BO_BATCH_SUPPORT_tauWMinus * N + cellI] = tauWMinusLocal;
-            SUPPORT_SoA[BO_BATCH_SUPPORT_tauS      * N + cellI] = tauSLocal;
-            // BuenoOrovio's `Iion` is unitless (Jion); the host wrapper
-            // applies the `*85.7` scale (see BuenoOrovioBatched.H::
-            // ionicCurrentFromEvaluation). We store the raw Jion here
-            // and let the wrapper scale at extraction time, matching the
-            // existing host-path contract.
-            SUPPORT_SoA[BO_BATCH_SUPPORT_Iion      * N + cellI] = Jion;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_tau_v  * N + cellI] = tauVEffective;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_gInf_v * N + cellI] = vSteady;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_tau_w  * N + cellI] = tauWEffective;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_gInf_w * N + cellI] = wSteady;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_tau_s  * N + cellI] = tauSLocal;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_gInf_s * N + cellI] = sSteady;
+            SUPPORT_SoA[BO_BATCH_SUPPORT_Iion   * N + cellI] = Jion;
         }
     }
 }

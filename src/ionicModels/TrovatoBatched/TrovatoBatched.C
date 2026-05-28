@@ -5,11 +5,65 @@ License
 
 #include "TrovatoBatched.H"
 #include "Trovato_2019Batch.H"
+#include "batchedRushLarsenEntry.H"
+#include <array>
 #include <cmath>
 
 namespace Foam
 {
     const ionicModelFamilyInfo& TrovatoFamilyInfo();
+}
+
+namespace
+{
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    TrovatoRushLarsenDispatch = []()
+    {
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
+
+        t[ICaT_b]       = Foam::rlScalarAlgAndSupport(AV_taub,    AV_bss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaT_b,    Foam::TROVATO_BATCH_SUPPORT_gInf_ICaT_b);
+        t[ICaT_g]       = Foam::rlScalarAlgAndSupport(AV_taug,    AV_gss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaT_g,    Foam::TROVATO_BATCH_SUPPORT_gInf_ICaT_g);
+
+        t[IK1_xk1]      = Foam::rlScalarAlgAndSupport(AV_txk1,    AV_xk1ss,  Foam::TROVATO_BATCH_SUPPORT_tau_IK1_xk1,   Foam::TROVATO_BATCH_SUPPORT_gInf_IK1_xk1);
+
+        t[IKr_xrf]      = Foam::rlScalarAlgAndSupport(AV_txrf,    AV_xrss,   Foam::TROVATO_BATCH_SUPPORT_tau_IKr_xrf,   Foam::TROVATO_BATCH_SUPPORT_gInf_IKr_xrf);
+        t[IKr_xrs]      = Foam::rlScalarAlgAndSupport(AV_txrs,    AV_xrss,   Foam::TROVATO_BATCH_SUPPORT_tau_IKr_xrs,   Foam::TROVATO_BATCH_SUPPORT_gInf_IKr_xrs);
+
+        t[IKs_xs1]      = Foam::rlScalarAlgAndSupport(AV_txs1,    AV_xs1ss,  Foam::TROVATO_BATCH_SUPPORT_tau_IKs_xs1,   Foam::TROVATO_BATCH_SUPPORT_gInf_IKs_xs1);
+        t[IKs_xs2]      = Foam::rlScalarAlgAndSupport(AV_txs2,    AV_xs2ss,  Foam::TROVATO_BATCH_SUPPORT_tau_IKs_xs2,   Foam::TROVATO_BATCH_SUPPORT_gInf_IKs_xs2);
+
+        t[INa_hf]       = Foam::rlScalarAlgAndSupport(AV_thf,     AV_hss,    Foam::TROVATO_BATCH_SUPPORT_tau_INa_hf,    Foam::TROVATO_BATCH_SUPPORT_gInf_INa_hf);
+        t[INa_hs]       = Foam::rlScalarAlgAndSupport(AV_ths,     AV_hss,    Foam::TROVATO_BATCH_SUPPORT_tau_INa_hs,    Foam::TROVATO_BATCH_SUPPORT_gInf_INa_hs);
+        t[INa_hsp]      = Foam::rlScalarAlgAndSupport(AV_thsp,    AV_hssp,   Foam::TROVATO_BATCH_SUPPORT_tau_INa_hsp,   Foam::TROVATO_BATCH_SUPPORT_gInf_INa_hsp);
+        t[INa_m]        = Foam::rlScalarAlgAndSupport(AV_tm,      AV_mss,    Foam::TROVATO_BATCH_SUPPORT_tau_INa_m,     Foam::TROVATO_BATCH_SUPPORT_gInf_INa_m);
+        t[INa_j]        = Foam::rlScalarAlgAndSupport(AV_tj,      AV_jss,    Foam::TROVATO_BATCH_SUPPORT_tau_INa_j,     Foam::TROVATO_BATCH_SUPPORT_gInf_INa_j);
+        t[INa_jp]       = Foam::rlScalarAlgAndSupport(AV_tjp,     AV_jss,    Foam::TROVATO_BATCH_SUPPORT_tau_INa_jp,    Foam::TROVATO_BATCH_SUPPORT_gInf_INa_jp);
+
+        t[If_y]         = Foam::rlScalarAlgAndSupport(AV_tauy,    AV_yss,    Foam::TROVATO_BATCH_SUPPORT_tau_If_y,      Foam::TROVATO_BATCH_SUPPORT_gInf_If_y);
+
+        t[Ito_a]        = Foam::rlScalarAlgAndSupport(AV_taua,    AV_ass,    Foam::TROVATO_BATCH_SUPPORT_tau_Ito_a,     Foam::TROVATO_BATCH_SUPPORT_gInf_Ito_a);
+        t[Ito_i1]       = Foam::rlScalarAlgAndSupport(AV_tauis,   AV_iss,    Foam::TROVATO_BATCH_SUPPORT_tau_Ito_i1,    Foam::TROVATO_BATCH_SUPPORT_gInf_Ito_i1);
+        t[Ito_i2]       = Foam::rlScalarAlgAndSupport(AV_tauif,   AV_iss,    Foam::TROVATO_BATCH_SUPPORT_tau_Ito_i2,    Foam::TROVATO_BATCH_SUPPORT_gInf_Ito_i2);
+
+        t[INaL_hL]      = Foam::rlScalarConstTauAlgInfAndSupport(AC_thL,   AV_hLss,  Foam::TROVATO_BATCH_SUPPORT_tau_INaL_hL,  Foam::TROVATO_BATCH_SUPPORT_gInf_INaL_hL);
+        t[INaL_mL]      = Foam::rlScalarAlgAndSupport(AV_tmL,     AV_mLss,   Foam::TROVATO_BATCH_SUPPORT_tau_INaL_mL,   Foam::TROVATO_BATCH_SUPPORT_gInf_INaL_mL);
+        t[INaL_hLp]     = Foam::rlScalarConstTauAlgInfAndSupport(AC_thLp,  AV_hLssp, Foam::TROVATO_BATCH_SUPPORT_tau_INaL_hLp, Foam::TROVATO_BATCH_SUPPORT_gInf_INaL_hLp);
+
+        t[ICaL_d]       = Foam::rlScalarAlgAndSupport(AV_td,      AV_dss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_d,    Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_d);
+        t[ICaL_ff]      = Foam::rlScalarAlgAndSupport(AV_tff,     AV_fss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_ff,   Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_ff);
+        t[ICaL_fs]      = Foam::rlScalarAlgAndSupport(AV_tfs,     AV_fss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_fs,   Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_fs);
+        t[ICaL_fcaf]    = Foam::rlScalarAlgAndSupport(AV_tfcaf,   AV_fcass,  Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_fcaf, Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_fcaf);
+        t[ICaL_fcafp]   = Foam::rlScalarAlgAndSupport(AV_tfcafp,  AV_fcass,  Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_fcafp, Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_fcafp);
+        t[ICaL_fcas]    = Foam::rlScalarAlgAndSupport(AV_tfcas,   AV_fcass,  Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_fcas, Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_fcas);
+        t[ICaL_ffp]     = Foam::rlScalarAlgAndSupport(AV_tffp,    AV_fss,    Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_ffp,  Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_ffp);
+        t[ICaL_jca]     = Foam::rlScalarConstTauAlgInfAndSupport(AC_tjca,  AV_fcass, Foam::TROVATO_BATCH_SUPPORT_tau_ICaL_jca, Foam::TROVATO_BATCH_SUPPORT_gInf_ICaL_jca);
+
+        t[ryr_Jrel1]    = Foam::rlScalarAlgAndSupport(AV_ireltau,  AV_irelss,  Foam::TROVATO_BATCH_SUPPORT_tau_ryr_Jrel1, Foam::TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel1);
+        t[ryr_Jrel2]    = Foam::rlScalarAlgAndSupport(AV_ireltau2, AV_irelss2, Foam::TROVATO_BATCH_SUPPORT_tau_ryr_Jrel2, Foam::TROVATO_BATCH_SUPPORT_gInf_ryr_Jrel2);
+
+        return t;
+    }();
 }
 
 #include "addToRunTimeSelectionTable.H"
@@ -58,11 +112,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool useTrovatoCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "TrovatocompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(TrovatoBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         TrovatoBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(TrovatocompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        TrovatocompactBatched,
         dictionary
     );
 }
@@ -89,6 +159,7 @@ Foam::TrovatoBatched::TrovatoBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useTrovatoCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -150,9 +221,13 @@ Foam::TrovatoBatched::TrovatoBatched
         setStimulusProtocolFromDict(dict);
     }
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_TROVATO_BATCH_SUPPORT);
+    }
+
+    if (useSoAEvaluator_)
+    {
 
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
@@ -170,6 +245,17 @@ Foam::TrovatoBatched::TrovatoBatched
         }
     }
 }
+
+Foam::TrovatocompactBatched::TrovatocompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    TrovatoBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
 
 Foam::TrovatoBatched::~TrovatoBatched()
 {
@@ -208,6 +294,46 @@ void Foam::TrovatoBatched::evaluateState
         solveVmWithinODESolver(),
         stimulusProtocol()
     );
+}
+
+Foam::scalar Foam::TrovatoBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return useCompactSupport_
+      ? supportValues[Foam::TROVATO_BATCH_SUPPORT_Iion_cm]
+      : ionicCurrentFromEvaluation(supportValues);
+}
+
+void Foam::TrovatoBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    if (!useCompactSupport_)
+    {
+        evaluateState(modelTime, stateValues, rateValues, supportValues);
+        return;
+    }
+
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    for (label stateI = 0; stateI < NUM_STATES; ++stateI)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            TrovatoRushLarsenDispatch[stateI],
+            CONSTANTS_,
+            algebraics,
+            supportValues
+        );
+    }
+    supportValues[Foam::TROVATO_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
 }
 
 void Foam::TrovatoBatched::prepareIOAccess
@@ -373,7 +499,7 @@ void Foam::TrovatoBatched::solveBatched
         (
             cuda_.d_support, cuda_.d_Im, 1.0,
             static_cast<int>(N),
-            static_cast<int>(TROVATO_BATCH_SUPPORT_Iion_cm)
+            static_cast<int>(Foam::TROVATO_BATCH_SUPPORT_Iion_cm)
         );
 
         cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
@@ -420,7 +546,7 @@ void Foam::TrovatoBatched::solveBatched
 
     if (SUPPORT_SoA != nullptr)
     {
-        const label IionBase = TROVATO_BATCH_SUPPORT_Iion_cm*N;
+        const label IionBase = Foam::TROVATO_BATCH_SUPPORT_Iion_cm*N;
         for (label cellI = 0; cellI < N; ++cellI)
         {
             Im[cellI] = SUPPORT_SoA[IionBase + cellI];
@@ -440,115 +566,54 @@ bool Foam::TrovatoBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    const auto& entry = TrovatoRushLarsenDispatch[stateI];
+    return resolveScalarRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        algebraicValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
+}
+
+bool Foam::TrovatoBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (!useCompactSupport_)
     {
-        return false;
+        return rushLarsenParameters
+        (
+            stateI,
+            stateValues,
+            rateValues,
+            supportValues,
+            steadyState,
+            tau
+        );
     }
 
-    switch (stateI)
-    {
-        case ICaT_b:
-            tau = algebraicValues[AV_taub];
-            break;
-        case ICaT_g:
-            tau = algebraicValues[AV_taug];
-            break;
-        case IK1_xk1:
-            tau = algebraicValues[AV_txk1];
-            break;
-        case IKr_xrf:
-            tau = algebraicValues[AV_txrf];
-            break;
-        case IKr_xrs:
-            tau = algebraicValues[AV_txrs];
-            break;
-        case IKs_xs1:
-            tau = algebraicValues[AV_txs1];
-            break;
-        case IKs_xs2:
-            tau = algebraicValues[AV_txs2];
-            break;
-        case INa_hf:
-            tau = algebraicValues[AV_thf];
-            break;
-        case INa_hs:
-            tau = algebraicValues[AV_ths];
-            break;
-        case INa_hsp:
-            tau = algebraicValues[AV_thsp];
-            break;
-        case INa_m:
-            tau = algebraicValues[AV_tm];
-            break;
-        case INa_j:
-            tau = algebraicValues[AV_tj];
-            break;
-        case INa_jp:
-            tau = algebraicValues[AV_tjp];
-            break;
-        case If_y:
-            tau = algebraicValues[AV_tauy];
-            break;
-        case Ito_a:
-            tau = algebraicValues[AV_taua];
-            break;
-        case Ito_i1:
-            tau = algebraicValues[AV_tauis];
-            break;
-        case Ito_i2:
-            tau = algebraicValues[AV_tauif];
-            break;
-        case INaL_hL:
-            tau = CONSTANTS_[AC_thL];
-            break;
-        case INaL_mL:
-            tau = algebraicValues[AV_tmL];
-            break;
-        case INaL_hLp:
-            tau = CONSTANTS_[AC_thLp];
-            break;
-        case ICaL_d:
-            tau = algebraicValues[AV_td];
-            break;
-        case ICaL_ff:
-            tau = algebraicValues[AV_tff];
-            break;
-        case ICaL_fs:
-            tau = algebraicValues[AV_tfs];
-            break;
-        case ICaL_fcaf:
-            tau = algebraicValues[AV_tfcaf];
-            break;
-        case ICaL_fcafp:
-            tau = algebraicValues[AV_tfcafp];
-            break;
-        case ICaL_fcas:
-            tau = algebraicValues[AV_tfcas];
-            break;
-        case ICaL_ffp:
-            tau = algebraicValues[AV_tffp];
-            break;
-        case ICaL_jca:
-            tau = CONSTANTS_[AC_tjca];
-            break;
-        case ryr_Jrel1:
-            tau = algebraicValues[AV_ireltau];
-            break;
-        case ryr_Jrel2:
-            tau = algebraicValues[AV_ireltau2];
-            break;
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
 
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    return resolveSupportRushLarsenEntry
+    (
+        TrovatoRushLarsenDispatch[stateI],
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::TrovatoBatched::derivatives

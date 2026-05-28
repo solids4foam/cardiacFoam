@@ -4,6 +4,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "CourtemancheBatched.H"
+#include "batchedRushLarsenEntry.H"
 #include <array>
 #include <cmath>
 
@@ -14,56 +15,28 @@ namespace Foam
 
 namespace
 {
-    enum class CourtemancheRLTauSource : unsigned char
+    const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
+    CourtemancheRushLarsenDispatch = []()
     {
-        none,
-        lookup,
-        constant
-    };
+        std::array<Foam::batchedRushLarsenEntry, NUM_STATES> t{};
+        t.fill(Foam::rlNone());
 
-    struct CourtemancheRLDispatchEntry
-    {
-        CourtemancheRLTauSource tauSource;
-        Foam::label tauIndex;
-    };
+        t[ina_m]    = Foam::rlScalarAlgAndSupport(AV_ina_m_tau,  AV_ina_m_inf,  Foam::COURTEMANCHE_BATCH_SUPPORT_tau_m,       Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_m);
+        t[ina_h]    = Foam::rlScalarAlgAndSupport(AV_ina_h_tau,  AV_ina_h_inf,  Foam::COURTEMANCHE_BATCH_SUPPORT_tau_h,       Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_h);
+        t[ina_j]    = Foam::rlScalarAlgAndSupport(AV_ina_j_tau,  AV_ina_j_inf,  Foam::COURTEMANCHE_BATCH_SUPPORT_tau_j,       Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_j);
+        t[ical_d]   = Foam::rlScalarAlgAndSupport(AV_ical_d_tau, AV_ical_d_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_d,       Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_d);
+        t[ical_f]   = Foam::rlScalarAlgAndSupport(AV_ical_f_tau, AV_ical_f_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_f,       Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_f);
+        t[ical_fCa] = Foam::rlScalarConstTauAlgInfAndSupport(AC_ical_fCa_tau, AV_ical_fCa_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_fCa, Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_fCa);
+        t[ito_oa]   = Foam::rlScalarAlgAndSupport(AV_ito_oa_tau, AV_ito_oa_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_oa,      Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_oa);
+        t[ito_oi]   = Foam::rlScalarAlgAndSupport(AV_ito_oi_tau, AV_ito_oi_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_oi,      Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_oi);
+        t[ikur_ua]  = Foam::rlScalarAlgAndSupport(AV_ikur_ua_tau, AV_ikur_ua_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_ua,    Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_ua);
+        t[ikur_ui]  = Foam::rlScalarAlgAndSupport(AV_ikur_ui_tau, AV_ikur_ui_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_ui,    Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_ui);
+        t[ikr_xr]   = Foam::rlScalarAlgAndSupport(AV_ikr_xr_tau, AV_ikr_xr_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_xr,      Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_xr);
+        t[iks_xs]   = Foam::rlScalarAlgAndSupport(AV_iks_xs_tau, AV_iks_xs_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_xs,      Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_xs);
+        t[cajsr_u]  = Foam::rlScalarConstTauAlgInfAndSupport(AC_cajsr_u_tau, AV_cajsr_u_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_u, Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_u);
+        t[cajsr_w]  = Foam::rlScalarAlgAndSupport(AV_cajsr_w_tau, AV_cajsr_w_inf, Foam::COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_w, Foam::COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_w);
 
-    inline CourtemancheRLDispatchEntry rlNone()
-    {
-        return {CourtemancheRLTauSource::none, -1};
-    }
-
-    inline CourtemancheRLDispatchEntry rlLookup(const Foam::label tauI)
-    {
-        return {CourtemancheRLTauSource::lookup, tauI};
-    }
-
-    inline CourtemancheRLDispatchEntry rlConstant(const Foam::label tauI)
-    {
-        return {CourtemancheRLTauSource::constant, tauI};
-    }
-
-    const std::array<CourtemancheRLDispatchEntry, NUM_STATES>
-        CourtemancheRushLarsenDispatch = []()
-    {
-        std::array<CourtemancheRLDispatchEntry, NUM_STATES> e{};
-        e.fill(rlNone());
-
-        e[ina_m]   = rlLookup(AV_ina_m_tau);
-        e[ina_h]   = rlLookup(AV_ina_h_tau);
-        e[ina_j]   = rlLookup(AV_ina_j_tau);
-        e[ical_d]  = rlLookup(AV_ical_d_tau);
-        e[ical_f]  = rlLookup(AV_ical_f_tau);
-        e[ical_fCa] = rlConstant(AC_ical_fCa_tau);
-        e[ito_oa]  = rlLookup(AV_ito_oa_tau);
-        e[ito_oi]  = rlLookup(AV_ito_oi_tau);
-        e[ikur_ua] = rlLookup(AV_ikur_ua_tau);
-        e[ikur_ui] = rlLookup(AV_ikur_ui_tau);
-        e[ikr_xr]  = rlLookup(AV_ikr_xr_tau);
-        e[iks_xs]  = rlLookup(AV_iks_xs_tau);
-        e[cajsr_u] = rlConstant(AC_cajsr_u_tau);
-        e[cajsr_w] = rlLookup(AV_cajsr_w_tau);
-
-        return e;
+        return t;
     }();
 }
 
@@ -113,11 +86,27 @@ namespace Foam
 
 namespace Foam
 {
+    bool useCourtemancheCompactSupport(const dictionary& dict)
+    {
+        const word modelName =
+            dict.lookupOrDefault<word>("ionicModel", word::null);
+
+        return modelName == "CourtemanchecompactBatched"
+            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
+    }
+
     defineTypeNameAndDebug(CourtemancheBatched, 0);
     addToRunTimeSelectionTable
     (
         ionicModel,
         CourtemancheBatched,
+        dictionary
+    );
+    defineTypeNameAndDebug(CourtemanchecompactBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        ionicModel,
+        CourtemanchecompactBatched,
         dictionary
     );
 }
@@ -144,6 +133,7 @@ Foam::CourtemancheBatched::CourtemancheBatched
     (
         dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
     ),
+    useCompactSupport_(useCourtemancheCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -176,10 +166,13 @@ Foam::CourtemancheBatched::CourtemancheBatched
     }
 #endif
 
-    if (useSoAEvaluator_)
+    if (useSoAEvaluator_ || useCompactSupport_)
     {
         setHotPathSupportSize(NUM_COURTEMANCHE_BATCH_SUPPORT);
+    }
 
+    if (useSoAEvaluator_)
+    {
         const word integrator =
             dict.lookupOrDefault<word>("batchedIntegrator", "euler");
         if (integrator != "euler")
@@ -225,6 +218,17 @@ Foam::CourtemancheBatched::CourtemancheBatched
     }
 }
 
+Foam::CourtemanchecompactBatched::CourtemanchecompactBatched
+(
+    const dictionary& dict,
+    const label num,
+    const scalar initialDeltaT,
+    const Switch solveVmWithinODESolver
+)
+:
+    CourtemancheBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
+{}
+
 Foam::CourtemancheBatched::~CourtemancheBatched()
 {
 #ifdef HAS_CUDA
@@ -260,6 +264,93 @@ void Foam::CourtemancheBatched::evaluateState
         tissue(),
         solveVmWithinODESolver(),
         stimulusProtocol()
+    );
+}
+
+Foam::scalar Foam::CourtemancheBatched::ionicCurrentFromHotPathSupport
+(
+    const scalarUList& supportValues
+) const
+{
+    return supportValues[COURTEMANCHE_BATCH_SUPPORT_Iion_cm];
+}
+
+void Foam::CourtemancheBatched::evaluateHotPathState
+(
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(modelTime, stateValues, rateValues, algebraics);
+
+    for (const auto& entry : CourtemancheRushLarsenDispatch)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            entry,
+            CONSTANTS_,
+            algebraics,
+            supportValues
+        );
+    }
+
+    const scalar Irel =
+        CONSTANTS_[AC_K_rel]
+       *stateValues[cajsr_u]*stateValues[cajsr_u]
+       *stateValues[cajsr_v]
+       *stateValues[cajsr_w]
+       *(stateValues[calcium_CaRel] - stateValues[calcium_Cai]);
+
+    const scalar Fn =
+        1e-12*CONSTANTS_[AC_V_rel]*Irel
+      - 5e-13/CONSTANTS_[AC_F]
+       *(0.5*algebraics[AV_ICaL] - 0.2*algebraics[AV_INaCa])
+       *CONSTANTS_[AC_Cm];
+
+    supportValues[COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_v] =
+        1.0 - 1.0
+       /(1.0 + std::exp(-(Fn - 0.2*CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
+
+    supportValues[COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_v] =
+        1.91 + 2.09
+       /(1.0 + std::exp(-(Fn - CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
+
+    supportValues[COURTEMANCHE_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
+}
+
+bool Foam::CourtemancheBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    if (stateI == cajsr_v)
+    {
+        tau = supportValues[COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_v];
+        steadyState = supportValues[COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_v];
+        return tau > VSMALL
+            && std::isfinite(tau)
+            && std::isfinite(steadyState);
+    }
+
+    const auto& entry = CourtemancheRushLarsenDispatch[stateI];
+    return resolveSupportRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
     );
 }
 
@@ -501,10 +592,7 @@ bool Foam::CourtemancheBatched::rushLarsenParameters
     scalar& tau
 ) const
 {
-    if (stateI < 0 || stateI >= NUM_STATES)
-    {
-        return false;
-    }
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
 
     if (stateI == cajsr_v)
     {
@@ -534,31 +622,16 @@ bool Foam::CourtemancheBatched::rushLarsenParameters
             && std::isfinite(steadyState);
     }
 
-    const CourtemancheRLDispatchEntry& entry =
-        CourtemancheRushLarsenDispatch[stateI];
-
-    switch (entry.tauSource)
-    {
-        case CourtemancheRLTauSource::lookup:
-            tau = algebraicValues[entry.tauIndex];
-            break;
-
-        case CourtemancheRLTauSource::constant:
-            tau = CONSTANTS_[entry.tauIndex];
-            break;
-
-        case CourtemancheRLTauSource::none:
-        default:
-            return false;
-    }
-
-    if (tau <= VSMALL)
-    {
-        return false;
-    }
-
-    steadyState = stateValues[stateI] + rateValues[stateI]*tau;
-    return std::isfinite(steadyState) && std::isfinite(tau);
+    const auto& entry = CourtemancheRushLarsenDispatch[stateI];
+    return resolveScalarRushLarsenEntry
+    (
+        entry,
+        CONSTANTS_,
+        algebraicValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
 }
 
 void Foam::CourtemancheBatched::derivatives

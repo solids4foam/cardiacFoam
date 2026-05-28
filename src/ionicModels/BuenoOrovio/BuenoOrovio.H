@@ -153,7 +153,6 @@ protected:
         // Constructors
 
             //- Construct given a dictionary, the number of integration points and a
-            //  initial time step for the ODE solver
             BuenoOrovio
             (
                 const dictionary& dict,
@@ -193,7 +192,6 @@ protected:
             }
 
             //- Derivatives of each ODE with respect to the primary unknown in that
-            //  equation
             virtual void derivatives
             (
                 const scalar t,
@@ -201,7 +199,6 @@ protected:
                 scalarField& dydt
             ) const override;
 
-            // CouplingSignalProvider
             virtual bool hasSignal(const CouplingSignal s) const override;
             virtual scalar signal
             (const label i, const CouplingSignal s) const override;

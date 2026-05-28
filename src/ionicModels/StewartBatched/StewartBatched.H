@@ -28,7 +28,7 @@ SourceFiles
 namespace Foam
 {
 
-class StewartBatched final
+class StewartBatched
 :
     public configuredBatchedIonicModel
 {
@@ -39,6 +39,7 @@ class StewartBatched final
     void operator=(const StewartBatched&) = delete;
 
     bool useSoAEvaluator_;
+    bool useCompactSupport_;
 
 #ifdef HAS_CUDA
     bool useDevice_;
@@ -68,6 +69,16 @@ protected:
         return algebraicValues[Iion_cm];
     }
 
+    virtual scalar ionicCurrentFromHotPathSupport
+    (
+        const scalarUList& supportValues
+    ) const override final;
+
+    virtual bool usesCompactSupport() const override final
+    {
+        return useCompactSupport_;
+    }
+
     virtual void evaluateState
     (
         const scalar modelTime,
@@ -82,6 +93,24 @@ protected:
         const scalarUList& stateValues,
         const scalarUList& rateValues,
         const scalarUList& algebraicValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
+
+    virtual void evaluateHotPathState
+    (
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
+    virtual bool rushLarsenParametersFromHotPathSupport
+    (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& supportValues,
         scalar& steadyState,
         scalar& tau
     ) const override final;
@@ -133,6 +162,28 @@ public:
         const scalarField& y,
         scalarField& dydt
     ) const override final;
+};
+
+class StewartcompactBatched final
+:
+    public StewartBatched
+{
+    StewartcompactBatched(const StewartcompactBatched&) = delete;
+    void operator=(const StewartcompactBatched&) = delete;
+
+public:
+
+    OverrideTypeName("StewartcompactBatched");
+
+    StewartcompactBatched
+    (
+        const dictionary& dict,
+        const label nIntegrationPoints,
+        const scalar initialDeltaT,
+        const Switch solveVmWithinODESolver = false
+    );
+
+    virtual ~StewartcompactBatched() = default;
 };
 
 } // End namespace Foam

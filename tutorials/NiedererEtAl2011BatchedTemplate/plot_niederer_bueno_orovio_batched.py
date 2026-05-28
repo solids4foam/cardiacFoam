@@ -56,7 +56,6 @@ from compare_niederer_bueno_orovio_batched import (  # noqa: E402
 MODE_COLORS = {
     "cpu":           "#333333",
     "batched_euler": "#1f77b4",
-    "batched_heun":  "#ff7f0e",
     "batched_rl":    "#2ca02c",
     "batched_soa":   "#d62728",
 }

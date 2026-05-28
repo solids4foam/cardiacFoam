@@ -414,12 +414,12 @@ def list_models_by_species(species: str) -> list[str]:
 BATCHED_MODELS = [
     "AlievPanfilovBatched", "BuenoOrovioBatched", "CourtemancheBatched", 
     "FabbriBatched", "GaurBatched", "GrandiBatched", 
-    "PerisYagueBatched", "StewartBatched", "TNNPBatched", "ToRORd_dynClBatched", 
+    "PerisYagueBatched", "StewartBatched", "TNNPBatched", "TNNPcompactBatched", "ToRORd_dynClBatched", 
     "TrovatoBatched"
 ]
 
 for batched_name in BATCHED_MODELS:
-    parent_name = batched_name.replace("Batched", "")
+    parent_name = "TNNP" if batched_name == "TNNPcompactBatched" else batched_name.replace("Batched", "")
     if parent_name in IONIC_MODEL_CATALOG:
         parent = IONIC_MODEL_CATALOG[parent_name]
         from dataclasses import replace

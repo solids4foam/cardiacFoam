@@ -43,7 +43,7 @@ SourceFiles
 namespace Foam
 {
 
-class TNNPBatched final
+class TNNPBatched
 :
     public configuredBatchedIonicModel
 {
@@ -54,6 +54,7 @@ class TNNPBatched final
     void operator=(const TNNPBatched&) = delete;
 
     bool useSoAEvaluator_;
+    bool useCompactSupport_;
 
     mutable StimulusProtocolPOD stimulusPOD_;
 
@@ -74,7 +75,7 @@ protected:
 
     virtual bool usesCompactSupport() const override final
     {
-        return true;
+        return useCompactSupport_;
     }
 
     virtual scalar ionicCurrentFromEvaluation
@@ -179,6 +180,29 @@ public:
     ) const override final;
 
 
+};
+
+
+class TNNPcompactBatched final
+:
+    public TNNPBatched
+{
+    TNNPcompactBatched(const TNNPcompactBatched&) = delete;
+    void operator=(const TNNPcompactBatched&) = delete;
+
+public:
+
+    OverrideTypeName("TNNPcompactBatched");
+
+    TNNPcompactBatched
+    (
+        const dictionary& dict,
+        const label nIntegrationPoints,
+        const scalar initialDeltaT,
+        const Switch solveVmWithinODESolver = false
+    );
+
+    virtual ~TNNPcompactBatched() = default;
 };
 
 } // End namespace Foam

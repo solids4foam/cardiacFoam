@@ -20,10 +20,13 @@ namespace Foam
 enum ALIEVPANFILOV_BATCH_SUPPORT_INDEX
 {
     ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r,
+    ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r,
     ALIEVPANFILOV_BATCH_SUPPORT_Iion_cm,
 
     NUM_ALIEVPANFILOV_BATCH_SUPPORT
 };
+
+static_assert(NUM_ALIEVPANFILOV_BATCH_SUPPORT == 3, "AlievPanfilov compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void AlievPanfilovComputeVariablesBatch
 (
@@ -76,6 +79,11 @@ CARDIAC_HOST_DEVICE inline void AlievPanfilovComputeVariablesBatch
             [
                 ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r * N + cellI
             ] = 1.0/eps;
+
+            SUPPORT_SoA
+            [
+                ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r * N + cellI
+            ] = recoverySteady;
 
             SUPPORT_SoA
             [

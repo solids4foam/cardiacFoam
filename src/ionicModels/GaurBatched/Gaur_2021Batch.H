@@ -27,20 +27,41 @@ namespace Foam
 enum GAUR_BATCH_SUPPORT_INDEX
 {
     GAUR_BATCH_SUPPORT_tau_m,
+    GAUR_BATCH_SUPPORT_gInf_m,
     GAUR_BATCH_SUPPORT_tau_h,
+    GAUR_BATCH_SUPPORT_gInf_h,
     GAUR_BATCH_SUPPORT_tau_j,
+    GAUR_BATCH_SUPPORT_gInf_j,
     GAUR_BATCH_SUPPORT_tau_ml,
+    GAUR_BATCH_SUPPORT_gInf_ml,
+    GAUR_BATCH_SUPPORT_tau_hl,
+    GAUR_BATCH_SUPPORT_gInf_hl,
     GAUR_BATCH_SUPPORT_tau_d,
+    GAUR_BATCH_SUPPORT_gInf_d,
     GAUR_BATCH_SUPPORT_tau_fca,
+    GAUR_BATCH_SUPPORT_gInf_fca,
     GAUR_BATCH_SUPPORT_tau_ff,
+    GAUR_BATCH_SUPPORT_gInf_ff,
     GAUR_BATCH_SUPPORT_tau_fs,
+    GAUR_BATCH_SUPPORT_gInf_fs,
     GAUR_BATCH_SUPPORT_tau_xr,
+    GAUR_BATCH_SUPPORT_gInf_xr,
     GAUR_BATCH_SUPPORT_tau_xs1,
+    GAUR_BATCH_SUPPORT_gInf_xs1,
     GAUR_BATCH_SUPPORT_tau_xs2,
+    GAUR_BATCH_SUPPORT_gInf_xs2,
+    GAUR_BATCH_SUPPORT_tau_aa,
+    GAUR_BATCH_SUPPORT_gInf_aa,
+    GAUR_BATCH_SUPPORT_tau_Jrel1,
+    GAUR_BATCH_SUPPORT_gInf_Jrel1,
+    GAUR_BATCH_SUPPORT_tau_Jrel2,
+    GAUR_BATCH_SUPPORT_gInf_Jrel2,
     GAUR_BATCH_SUPPORT_Iion_cm,
 
     NUM_GAUR_BATCH_SUPPORT
 };
+
+static_assert(NUM_GAUR_BATCH_SUPPORT == 31, "Unexpected Gaur compact support layout");
 
 CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
 (
@@ -56,10 +77,8 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
     const StimulusProtocolPOD& stimulus
 )
 {
-    // Stimulus is loop-invariant - compute once.
     const double Istim = computeStimulusPOD(t, stimulus);
 
-    // Hoist constant reads outside the cell loop.
     const double c_F = CONSTANTS[AC_F];
     const double c_R = CONSTANTS[AC_R];
     const double c_T = CONSTANTS[AC_T];
@@ -158,7 +177,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
     const double c_kmtrpn = CONSTANTS[AC_kmtrpn];
     const double c_trpnmax = CONSTANTS[AC_trpnmax];
 
-    // SoA strides for each state.
     const int cell_v_BASE = cell_v * N;
     const int nai_BASE = nai * N;
     const int nass_BASE = nass * N;
@@ -194,7 +212,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
 #endif
     for (int cellI = beginCell; cellI < endCell; ++cellI)
     {
-        // Load all states.
         const double s_cell_v = STATES_SoA[cell_v_BASE + cellI];
         const double s_nai = STATES_SoA[nai_BASE + cellI];
         const double s_nass = STATES_SoA[nass_BASE + cellI];
@@ -225,12 +242,10 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double s_ICaL_fs = STATES_SoA[ICaL_fs_BASE + cellI];
         const double s_ICaL_ff = STATES_SoA[ICaL_ff_BASE + cellI];
 
-        // diffusion
         const double Jdiff = (s_cass - s_cai) / 0.2;
         const double JdiffK = (s_kss - s_ki) / 2.0;
         const double JdiffNa = (s_nass - s_nai) / 2.0;
 
-        // CaMK
         const double EK = c_R * c_T / c_F * std::log(c_ko / s_ki);
         const double ENa = c_R * c_T / c_F * std::log(c_nao / s_nai);
         const double vfrt = s_cell_v * c_F / (c_R * c_T);
@@ -240,7 +255,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double diff_CaMKt = c_aCaMK * CaMKb * (CaMKb + s_CaMK_CaMKt) - c_bCaMK * s_CaMK_CaMKt;
         const double CaMK_f = 1.0 / (1.0 + c_KmCaMK / CaMKa);
 
-        // I_Na
         const double aa_h = ((s_cell_v >= -40.0) ? 0.0 : 0.057 * std::exp(-(s_cell_v + 80.0) / 6.8));
         const double aa_j = ((s_cell_v >= -40.0) ? 0.0 : (-25428.0 * std::exp(0.2444 * s_cell_v) - 6.948e-06 * std::exp(-0.04391 * s_cell_v)) * (s_cell_v + 37.78) / (1.0 + std::exp(0.311 * (s_cell_v + 79.23))));
         const double aa_m = 1.0 / (1.0 + std::exp((-60.0 - s_cell_v) / 5.0));
@@ -255,7 +269,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double tau_j = 1.0 / (aa_j + bb_j);
         const double tau_m = aa_m * bb_m;
 
-        // INaL
         const double aml = 0.32 * ((s_cell_v == -47.13) ? 10.0 : -(s_cell_v + 47.13) / (std::exp(-0.1 * (s_cell_v + 47.13)) - 1.0));
         const double bml = 0.08 * std::exp(-s_cell_v / 11.0);
         const double hl_inf = 1.0 / (1.0 + std::exp((s_cell_v + 91.0) / 6.1));
@@ -263,7 +276,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double ml_inf = aml / (aml + bml);
         const double tau_ml = 1.0 / (aml + bml);
 
-        // ICaL
         const double PhiCaK = c_F * (0.75 * s_kss * std::exp(vfrt) - 0.75 * c_ko) * ((s_cell_v == 0.0) ? 1.0 : vfrt / (std::exp(vfrt) - 1.0));
         const double PhiCaL = 2.0 * c_F * (s_cass * std::exp(2.0 * (s_cell_v * c_F / (c_R * c_T))) - 0.341 * c_cao) * ((s_cell_v == 0.0) ? 1.0 : 2.0 * vfrt / (std::exp(2.0 * vfrt) - 1.0));
         const double PhiCaNa = c_F * (0.75 * s_nass * std::exp(vfrt) - 0.75 * c_nao) * ((s_cell_v == 0.0) ? 1.0 : vfrt / (std::exp(vfrt) - 1.0));
@@ -281,13 +293,11 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double ff_inf = f_inf;
         const double fs_inf = f_inf;
 
-        // IKr
         const double rkr = 1.0 / (1.0 + std::exp((s_cell_v + 22.0) / 15.0));
         const double tau_xr = 12.98 + 1.0 / (0.3652 * std::exp((s_cell_v - 31.66) / 3.869) + 4.123e-05 * std::exp(-(s_cell_v - 47.78) / 20.38));
         const double xr_inf = 1.0 / (1.0 + std::exp(-(s_cell_v + 56.8) / 17.8));
         const double IKr_val = c_GKr * std::sqrt(c_ko / 5.4) * s_IKr_xr * rkr * (s_cell_v - EK);
 
-        // IKs
         const double KsCa = 1.0 + 0.6 / (1.0 + std::pow(3.8e-05 / s_cai, 1.4));
         const double tau_xs1 = 300.0 + 1.0 / (1e-06 * std::exp((s_cell_v + 50.0) / 20.0) + 0.04 * std::exp(-(s_cell_v + 50.0) / 20.0));
         const double tau_xs2 = 1.0 / (0.01 * std::exp((s_cell_v - 50.0) / 20.0) + 0.0193 * std::exp(-(s_cell_v + 66.54) / 31.0));
@@ -295,11 +305,9 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double IKs_val = c_GKs * KsCa * s_IKs_xs1 * s_IKs_xs2 * (s_cell_v - EKs);
         const double xs2_inf = xs1_inf;
 
-        // IK1
         const double rk1 = 1.0 / (1.0 + std::exp((s_cell_v + 79.3 - 2.6 * c_ko) / 19.6));
         const double IK1_val = c_GK1 * std::sqrt(c_ko / 5.4) * rk1 * (s_cell_v - EK);
 
-        // ITo
         const double alpha_aa = 0.025 / (1.0 + std::exp((s_cell_v + 58.0) / 5.0));
         const double beta_aa = 1.0 / (5.0 * (1.0 + std::exp((s_cell_v + 19.0) / -9.0)));
         const double rito2 = 1.0 / (1.0 + std::exp(-(s_cell_v + 10.0) / 5.0));
@@ -314,7 +322,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double Jrelol = greljsrol * (s_cajsr - s_cass);
         const double Jrel = s_CICR_Jrel1 + Jrelol;
 
-        // INaCa_i
         const double allo = 1.0 / (1.0 + c_KmCaAct / s_cai * c_KmCaAct / s_cai);
         const double h4 = 1.0 + s_nai / c_kna1 * (1.0 + s_nai / c_kna2);
         const double hca = std::exp(c_qca * s_cell_v * c_F / (c_R * c_T));
@@ -348,7 +355,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double JncxNa = 3.0 * (E4 * k7 - E1 * k8) + E3 * k4pp - E2 * k3pp;
         const double INaCa_i_val = 0.8 * c_Gncx * allo * (c_zna * JncxNa + c_zca * JncxCa);
 
-        // INaCa_ss
         const double allo1 = 1.0 / (1.0 + c_KmCaAct / s_cass * c_KmCaAct / s_cass);
         const double h111 = 1.0 + s_nass / c_kna3 * (1.0 + hna);
         const double h41 = 1.0 + s_nass / c_kna1 * (1.0 + s_nass / c_kna2);
@@ -380,7 +386,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double JncxNa1 = 3.0 * (E41 * k71 - E11 * k81) + E31 * k4pp1 - E21 * k3pp1;
         const double INaCa_ss_val = 0.2 * c_Gncx * allo1 * (c_zna * JncxNa1 + c_zca * JncxCa1);
 
-        // INaK
         const double Knai = c_Knai0 * std::exp(c_delta * s_cell_v * c_F / (3.0 * c_R * c_T));
         const double Knao = c_Knao0 * std::exp((1.0 - c_delta) * s_cell_v * c_F / (3.0 * c_R * c_T));
         const double P_var = c_eP / (1.0 + c_H_const / c_Khp + s_nai / c_Knap + s_ki / c_Kxkur);
@@ -401,16 +406,13 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double JnakNa = 3.0 * (E12 * a3_var - E22 * b3_var);
         const double INaK_val = c_Pnak * (c_zna * JnakNa + c_zk * JnakK);
 
-        // IKb
         const double xkb = 1.0 / (1.0 + exp(-(s_cell_v - 14.48) / 18.34));
         const double IKb_val = c_GKb * xkb * (s_cell_v - EK);
 
-        // INab, ICab, IpCa
         const double INab_val = c_PNab * c_F * (s_nai * std::exp(vfrt) - c_nao) * ((s_cell_v == 0.0) ? 1.0 : vfrt / (std::exp(vfrt) - 1.0));
         const double ICab_val = c_PCab * 2.0 * c_F * (s_cai * std::exp(2.0 * vfrt) - 0.341 * c_cao) * ((s_cell_v == 0.0) ? 1.0 : 2.0 * vfrt / (std::exp(2.0 * vfrt) - 1.0));
         const double IpCa_val = c_GpCa * s_cai / (0.0005 + s_cai);
 
-        // SR_uptake
         const double Jleak = 0.005 * s_cansr / 15.0;
         const double Jtr = (s_cansr - s_cajsr) / 100.0;
         const double Jtr2 = (s_cansr - s_cacsr) / 100.0;
@@ -422,7 +424,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double Jup = (1.0 - fJupp) * Jupnp + fJupp * Jupp - Jleak;
         const double Jup2 = (1.0 - fJupp) * Jupnp2 + fJupp * Jupp2 - Jleak;
 
-        // Concentrations and buffers
         const double Bcacsr = 1.0 / (1.0 + c_csqnmax * c_kmcsqn / ((c_kmcsqn + s_cacsr) * (c_kmcsqn + s_cacsr)));
         const double Bcai = 1.0 / (1.0 + c_cmdnmax * c_kmcmdn / ((c_kmcmdn + s_cai) * (c_kmcmdn + s_cai)) + c_trpnmax * c_kmtrpn / ((c_kmtrpn + s_cai) * (c_kmtrpn + s_cai)));
         const double Bcai2 = 1.0 / (1.0 + c_cmdnmax * c_kmcmdn / ((c_kmcmdn + s_cai2) * (c_kmcmdn + s_cai2)) + c_trpnmax * c_kmtrpn / ((c_kmtrpn + s_cai2) * (c_kmtrpn + s_cai2)));
@@ -454,7 +455,6 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
 
         const double r_cell_v = solveVmWithinODESolver ? (-Iion_cm_val - Istim) : 0.0;
 
-        // Write rates back to SoA
         RATES_SoA[cell_v_BASE + cellI] = r_cell_v;
         RATES_SoA[nai_BASE + cellI] = diff_nai;
         RATES_SoA[nass_BASE + cellI] = diff_nass;
@@ -485,13 +485,13 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         RATES_SoA[ICaL_fs_BASE + cellI] = tau_fs > 0.0 ? (fs_inf - s_ICaL_fs)/tau_fs : 0.0;
         RATES_SoA[ICaL_ff_BASE + cellI] = tau_ff > 0.0 ? (ff_inf - s_ICaL_ff)/tau_ff : 0.0;
 
-        // Write support SoA
         if (SUPPORT_SoA != nullptr)
         {
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_m    * N + cellI] = tau_m;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_h    * N + cellI] = tau_h;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_j    * N + cellI] = tau_j;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_ml   * N + cellI] = tau_ml;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_hl   * N + cellI] = c_tau_hl;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_d    * N + cellI] = tau_d;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_fca  * N + cellI] = tau_fca;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_ff   * N + cellI] = tau_ff;
@@ -499,6 +499,24 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_xr   * N + cellI] = tau_xr;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_xs1  * N + cellI] = tau_xs1;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_xs2  * N + cellI] = tau_xs2;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_aa   * N + cellI] = 1.0/(alpha_aa + beta_aa);
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_Jrel1 * N + cellI] = tau_Jrel1;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_tau_Jrel2 * N + cellI] = tau_Jrel2;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_m    * N + cellI] = m_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_h    * N + cellI] = h_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_j    * N + cellI] = j_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_ml   * N + cellI] = ml_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_hl   * N + cellI] = hl_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_d    * N + cellI] = d_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_fca  * N + cellI] = fca_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_ff   * N + cellI] = ff_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_fs   * N + cellI] = fs_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_xr   * N + cellI] = xr_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_xs1  * N + cellI] = xs1_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_xs2  * N + cellI] = xs2_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_aa   * N + cellI] = alpha_aa/(alpha_aa + beta_aa);
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_Jrel1 * N + cellI] = Jrel1_inf;
+            SUPPORT_SoA[GAUR_BATCH_SUPPORT_gInf_Jrel2 * N + cellI] = Jrel2_inf;
             SUPPORT_SoA[GAUR_BATCH_SUPPORT_Iion_cm  * N + cellI] = Iion_cm_val;
         }
     }
