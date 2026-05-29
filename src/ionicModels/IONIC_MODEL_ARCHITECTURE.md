@@ -9,19 +9,17 @@ factory and are selected from the `ionicModel` entry in `electroProperties`.
 The current compiled model set is defined by
 `src/ionicModels/Make/files`. In this repository that list is:
 
-- `AlievPanfilov`
-- `BuenoOrovio`
-- `Courtemanche`
-- `Fabbri`
-- `Gaur`
-- `Grandi`
-- `ORd`
-- `Stewart`
-- `TNNP`
-- `ToRORd_dynCl`
-- `Trovato`
-- `monodomainFDAManufactured`
-- `bidomainFDAManufactured`
+Scalar models: `AlievPanfilov`, `BuenoOrovio`, `Courtemanche`, `Fabbri`,
+`Gaur`, `Grandi`, `PerisYague`, `Stewart`, `TNNP`, `ToRORd_dynCl`,
+`Trovato`, `TWorld`.
+
+Batched (SoA) models: `AlievPanfilovBatched`, `BuenoOrovioBatched`,
+`CourtemancheBatched`, `FabbriBatched`, `GaurBatched`, `GrandiBatched`,
+`PerisYagueBatched`, `StewartBatched`, `TNNPBatched`, `ToRORd_dynClBatched`,
+`TrovatoBatched`.
+
+Verification models: `monodomainFDAManufactured`, `bidomainFDAManufactured`,
+`bathBidomainFDAManufactured`.
 
 This file describes the architecture that actually exists in this tree. It is
 not intended as a generic survey of cardiac ionic models.
@@ -33,17 +31,30 @@ src/ionicModels/
 ├── ionicModel/                    # Base class, factory, selectors, batched/GPU support headers
 ├── monodomainFDAManufactured/     # Manufactured monodomain ionic wrapper
 ├── bidomainFDAManufactured/       # Manufactured bidomain ionic wrapper
+├── bathBidomainFDAManufactured/   # Manufactured bath-bidomain ionic wrapper
 ├── AlievPanfilov/
+├── AlievPanfilovBatched/
 ├── BuenoOrovio/
+├── BuenoOrovioBatched/
 ├── Courtemanche/
+├── CourtemancheBatched/
 ├── Fabbri/
+├── FabbriBatched/
 ├── Gaur/
+├── GaurBatched/
 ├── Grandi/
-├── ORd/
+├── GrandiBatched/
+├── PerisYague/
+├── PerisYagueBatched/
 ├── Stewart/
+├── StewartBatched/
 ├── TNNP/
+├── TNNPBatched/
 ├── ToRORd_dynCl/
+├── ToRORd_dynClBatched/
 ├── Trovato/
+├── TrovatoBatched/
+├── TWorld/
 ├── Make/
 └── lnInclude/
 ```
@@ -94,8 +105,8 @@ factory code. It also includes:
 - `batchedKernelExecution`
   batched execution helpers
 
-These headers are support infrastructure. They do not mean that this repository
-currently ships separate compiled GPU runtime types in `Make/files`.
+These headers are support infrastructure shared by all 11 `<Model>Batched`
+classes that are compiled via `Make/files`.
 
 ## Effective Derived-Class Contract
 
@@ -241,6 +252,25 @@ Two naming conventions matter here:
 
 These are different layers and should not be conflated.
 
+## Batched (SoA) Support Layer
+
+Each physiological model has a `<Model>Batched` counterpart. These derive from
+`configuredBatchedIonicModel` and use Structure-of-Arrays (SoA) memory layout
+for efficient vectorised and GPU execution.
+
+The batched path uses:
+
+- `<Model>ComputeVariablesBatch` — the single `CARDIAC_HOST_DEVICE inline` function
+  in `<Model>Batch.H` that processes a range `[beginCell, endCell)`.
+- `<Model>RushLarsenDispatch` — a static dispatch table mapping each state index
+  to its effective RL parameters via `rlScalarAlgAndSupport` or `rlNone()`.
+- Compact support — a `<MODEL>_BATCH_SUPPORT_INDEX` enum defining a tight
+  per-cell buffer holding effective `tau`/`gInf` pairs plus `Iion_cm`.
+
+Runtime-selectable compact variants (`<Model>compactBatched`) are aliases that
+enable compact support through `useCompactSupport_` without changing the
+integration equations.
+
 ## Deliberate Non-Claims
 
 This document intentionally does not claim the following, because they are not
@@ -248,7 +278,7 @@ the current truth of this tree:
 
 - a `Mitchell` ionic model
 - a `TenTusscher` folder/runtime type separate from `TNNP`
-- compiled CUDA/GPU ionic-model variants under `src/ionicModels`
+- an `ORd` folder or runtime type separate from `ToRORd_dynCl`
 - a base-class contract centered on `advance()` / `initialGates()`
 
 If those features are added later, this document should be updated from the

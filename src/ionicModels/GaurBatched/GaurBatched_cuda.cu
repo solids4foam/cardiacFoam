@@ -4,8 +4,26 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <cuda_runtime.h>
+#include <cstdio>
 
 #include "Gaur_2021Batch.H"
+
+// ---- file-local kernel error check ----------------------------------------
+#define CUDA_LAUNCH_CHECK()                                                    \
+    do {                                                                       \
+        cudaError_t _err = cudaGetLastError();                                 \
+        if (_err != cudaSuccess)                                               \
+        {                                                                      \
+            fprintf                                                            \
+            (                                                                  \
+                stderr,                                                        \
+                "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
+                __FILE__, __LINE__, cudaGetErrorString(_err)                   \
+            );                                                                 \
+            abort();                                                           \
+        }                                                                      \
+    } while (0)
+// ---------------------------------------------------------------------------
 
 namespace Foam
 {
@@ -109,6 +127,8 @@ void launchGaurBatchKernel
     StimulusProtocolPOD stimulus
 )
 {
+    // GPU path requires homogeneous single-tissue mesh.
+    // Per-cell tissue heterogeneity is not yet implemented on GPU.
     (void)tissueFlag;
     gaurBatchKernel<<<nBlocks(N), blockSize>>>
     (
@@ -116,6 +136,7 @@ void launchGaurBatchKernel
         d_STATES, d_RATES, d_SUPPORT,
         solveVm, stimulus
     );
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -135,6 +156,7 @@ void launchGaurEulerStepKernel
         d_STATES, d_RATES, dt,
         N, nStates, solveVm, vmStateI
     );
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -151,6 +173,88 @@ void launchGaurScaleIonKernel
     (
         d_SUPPORT, d_Im, scale, N, IionSlot
     );
+    CUDA_LAUNCH_CHECK();
+}
+
+
+namespace
+{
+    __global__ void gaurRushLarsenStepKernel
+    (
+        double* __restrict__ STATES,
+        const double* __restrict__ RATES,
+        const double* __restrict__ SUPPORT,
+        const double dt,
+        const int N,
+        const int nStates,
+        const bool solveVm,
+        const int vmStateI
+    )
+    {
+        const int cellI = blockIdx.x*blockDim.x + threadIdx.x;
+        if (cellI >= N)
+        {
+            return;
+        }
+
+        #define GAUR_RL(si, tSlot, iSlot)                                    \
+        {                                                                     \
+            const double _x   = STATES[(si)*N + cellI];                      \
+            const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
+            const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
+            STATES[(si)*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);       \
+        }
+
+        GAUR_RL(I_Na_m,     GAUR_BATCH_SUPPORT_tau_m,      GAUR_BATCH_SUPPORT_gInf_m)
+        GAUR_RL(I_Na_h,     GAUR_BATCH_SUPPORT_tau_h,      GAUR_BATCH_SUPPORT_gInf_h)
+        GAUR_RL(I_Na_j,     GAUR_BATCH_SUPPORT_tau_j,      GAUR_BATCH_SUPPORT_gInf_j)
+        GAUR_RL(INaL_ml,    GAUR_BATCH_SUPPORT_tau_ml,     GAUR_BATCH_SUPPORT_gInf_ml)
+        GAUR_RL(INaL_hl,    GAUR_BATCH_SUPPORT_tau_hl,     GAUR_BATCH_SUPPORT_gInf_hl)
+        GAUR_RL(ICaL_d,     GAUR_BATCH_SUPPORT_tau_d,      GAUR_BATCH_SUPPORT_gInf_d)
+        GAUR_RL(ICaL_fca,   GAUR_BATCH_SUPPORT_tau_fca,    GAUR_BATCH_SUPPORT_gInf_fca)
+        GAUR_RL(ICaL_ff,    GAUR_BATCH_SUPPORT_tau_ff,     GAUR_BATCH_SUPPORT_gInf_ff)
+        GAUR_RL(ICaL_fs,    GAUR_BATCH_SUPPORT_tau_fs,     GAUR_BATCH_SUPPORT_gInf_fs)
+        GAUR_RL(IKr_xr,     GAUR_BATCH_SUPPORT_tau_xr,     GAUR_BATCH_SUPPORT_gInf_xr)
+        GAUR_RL(IKs_xs1,    GAUR_BATCH_SUPPORT_tau_xs1,    GAUR_BATCH_SUPPORT_gInf_xs1)
+        GAUR_RL(IKs_xs2,    GAUR_BATCH_SUPPORT_tau_xs2,    GAUR_BATCH_SUPPORT_gInf_xs2)
+        GAUR_RL(CICR_Jrel1, GAUR_BATCH_SUPPORT_tau_Jrel1,  GAUR_BATCH_SUPPORT_gInf_Jrel1)
+        GAUR_RL(CICR_Jrel2, GAUR_BATCH_SUPPORT_tau_Jrel2,  GAUR_BATCH_SUPPORT_gInf_Jrel2)
+
+        #undef GAUR_RL
+
+        for (int si = 0; si < nStates; ++si)
+        {
+            if (si == I_Na_m   || si == I_Na_h   || si == I_Na_j   ||
+                si == INaL_ml  || si == INaL_hl  || si == ICaL_d   ||
+                si == ICaL_fca || si == ICaL_ff  || si == ICaL_fs  ||
+                si == IKr_xr   || si == IKs_xs1  || si == IKs_xs2  ||
+                si == CICR_Jrel1 || si == CICR_Jrel2) continue;
+            if (!solveVm && si == vmStateI) continue;
+            const int idx = si*N + cellI;
+            STATES[idx] += dt*RATES[idx];
+        }
+    }
+}
+
+
+void launchGaurRushLarsenStepKernel
+(
+    double* d_STATES,
+    const double* d_RATES,
+    const double* d_SUPPORT,
+    double dt,
+    int N,
+    int nStates,
+    bool solveVm,
+    int vmStateI
+)
+{
+    gaurRushLarsenStepKernel<<<nBlocks(N), blockSize>>>
+    (
+        d_STATES, d_RATES, d_SUPPORT,
+        dt, N, nStates, solveVm, vmStateI
+    );
+    CUDA_LAUNCH_CHECK();
 }
 
 } // End namespace Foam

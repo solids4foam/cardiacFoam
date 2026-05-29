@@ -91,10 +91,6 @@ protected:
         const scalarUList& supportValues
     ) const override final;
 
-    virtual void stabilizeStateValues(scalarUList& stateValues) const override final;
-
-    virtual void stabilizeCellState(const label cellI) const override final;
-
     virtual void evaluateState
     (
         const scalar modelTime,

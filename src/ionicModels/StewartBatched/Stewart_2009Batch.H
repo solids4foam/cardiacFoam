@@ -50,7 +50,7 @@ enum STEWART_BATCH_SUPPORT_INDEX
     NUM_STEWART_BATCH_SUPPORT
 };
 
-static_assert(NUM_STEWART_BATCH_SUPPORT == 27, "Unexpected Stewart compact support layout");
+static_assert(NUM_STEWART_BATCH_SUPPORT == 27, "Stewart compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void StewartComputeVariablesBatch
 (

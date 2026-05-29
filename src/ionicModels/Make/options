@@ -17,3 +17,7 @@ LIB_LIBS = \
     -lmeshTools \
     -lODE \
     $(if $(CARDIAC_ENABLE_CUDA),-L$(CUDA_HOME)/lib64 -lcudart)
+
+# Load wmake CUDA compilation rules (.cu -> .o via nvcc) when GPU build is on.
+# General/cuda adds: SUFFIXES += .cu  and  $(OBJECTS_DIR)/%.o : %.cu  recipe.
+$(if $(CARDIAC_ENABLE_CUDA),$(eval sinclude $(WM_DIR)/rules/General/cuda))

@@ -4,8 +4,26 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <cuda_runtime.h>
+#include <cstdio>
 
 #include "AlievPanfilov_1996Batch.H"
+
+// ---- file-local kernel error check ----------------------------------------
+#define CUDA_LAUNCH_CHECK()                                                    \
+    do {                                                                       \
+        cudaError_t _err = cudaGetLastError();                                 \
+        if (_err != cudaSuccess)                                               \
+        {                                                                      \
+            fprintf                                                            \
+            (                                                                  \
+                stderr,                                                        \
+                "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
+                __FILE__, __LINE__, cudaGetErrorString(_err)                   \
+            );                                                                 \
+            abort();                                                           \
+        }                                                                      \
+    } while (0)
+// ---------------------------------------------------------------------------
 
 namespace Foam
 {
@@ -114,6 +132,7 @@ void launchAlievPanfilovBatchKernel
         d_STATES, d_RATES, d_SUPPORT,
         solveVm, stimulus
     );
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -133,6 +152,7 @@ void launchAlievPanfilovEulerStepKernel
         d_STATES, d_RATES, dt,
         N, nStates, solveVm, vmStateI
     );
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -149,6 +169,66 @@ void launchAlievPanfilovScaleIonKernel
     (
         d_SUPPORT, d_Im, scale, N, IionSlot
     );
+    CUDA_LAUNCH_CHECK();
+}
+
+
+namespace
+{
+    __global__ void alievPanfilovRushLarsenStepKernel
+    (
+        double* __restrict__ STATES,
+        const double* __restrict__ RATES,
+        const double* __restrict__ SUPPORT,
+        const double dt,
+        const int N,
+        const int nStates,
+        const bool solveVm,
+        const int vmStateI
+    )
+    {
+        const int cellI = blockIdx.x*blockDim.x + threadIdx.x;
+        if (cellI >= N)
+        {
+            return;
+        }
+
+        // RL update for recovery_r
+        {
+            const double _x   = STATES[recovery_r*N + cellI];
+            const double _inf = SUPPORT[ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r*N + cellI];
+            const double _tau = SUPPORT[ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r*N + cellI];
+            STATES[recovery_r*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);
+        }
+
+        // Euler for u (skipped when !solveVm)
+        if (solveVm || vmStateI != u)
+        {
+            const int idx = u*N + cellI;
+            STATES[idx] += dt*RATES[idx];
+        }
+    }
+}
+
+
+void launchAlievPanfilovRushLarsenStepKernel
+(
+    double* d_STATES,
+    const double* d_RATES,
+    const double* d_SUPPORT,
+    double dt,
+    int N,
+    int nStates,
+    bool solveVm,
+    int vmStateI
+)
+{
+    alievPanfilovRushLarsenStepKernel<<<nBlocks(N), blockSize>>>
+    (
+        d_STATES, d_RATES, d_SUPPORT,
+        dt, N, nStates, solveVm, vmStateI
+    );
+    CUDA_LAUNCH_CHECK();
 }
 
 } // End namespace Foam

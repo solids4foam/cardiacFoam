@@ -8,12 +8,10 @@ License
     option) any later version.
 
 Description
-    State-major SoA Batch evaluator for the ToRORd_dynCl 2023 ionic model.
-    Architectural twin of `BuenoOrovio_2008Batch.H`, `TNNP_2004Batch.H` and `Gaur_2021Batch.H`.
+    State-major (SoA) batched evaluator for the ToRORd_dynCl 2023 ionic model.
 \*---------------------------------------------------------------------------*/
 
-#ifndef ToRORd_dynCl_2023Batch_H
-#define ToRORd_dynCl_2023Batch_H
+#pragma once
 
 #include "ToRORd_dynCl_2023.H"
 #include "ToRORd_dynCl_2023Names.H"
@@ -82,7 +80,7 @@ enum TORORD_DYNCL_BATCH_SUPPORT_INDEX
     NUM_TORORD_DYNCL_BATCH_SUPPORT
 };
 
-static_assert(NUM_TORORD_DYNCL_BATCH_SUPPORT == 53, "Unexpected ToRORd_dynCl compact support layout");
+static_assert(NUM_TORORD_DYNCL_BATCH_SUPPORT == 53, "ToRORd_dynCl compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 (
@@ -98,10 +96,8 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
     const StimulusProtocolPOD& stimulus
 )
 {
-    // Stimulus is loop-invariant - compute once.
     const double Istim = computeStimulusPOD(t, stimulus);
 
-    // Hoist constant reads outside the cell loop.
     const double c_CaMKo = CONSTANTS[AC_CaMKo];
     const double c_KmCaM = CONSTANTS[AC_KmCaM];
     const double c_KmCaMK = CONSTANTS[AC_KmCaMK];
@@ -148,9 +144,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
     const double c_bkik = CONSTANTS[AC_bkik];
     const double c_EKshift = CONSTANTS[AC_EKshift];
 
-    // Tissue-dependent factors promoted to CONSTANTS by ToRORd_dynClinitConsts
-    // (see ToRORd_dynCl_2023.H:802-807). Hoisted here so the per-cell loop is
-    // branchless on tissueFlag, matching the BuenoOrovio / Gaur pattern.
     const double c_deltaEpiAmp     = CONSTANTS[deltaEpiAmp];
     const double c_deltaEpiShift   = CONSTANTS[deltaEpiShift];
     const double c_deltaEpiScale   = CONSTANTS[deltaEpiScale];
@@ -238,7 +231,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
     const double c_btp = CONSTANTS[AC_btp];
     const double c_a_relp = CONSTANTS[AC_a_relp];
 
-    // SoA strides for each state.
     const int V_BASE = V * N;
     const int CaMKt_BASE = CaMKt * N;
     const int Nai_BASE = Nai * N;
@@ -290,7 +282,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 #endif
     for (int cellI = beginCell; cellI < endCell; ++cellI)
     {
-        // Load all states.
         const double s_V = STATES_SoA[V_BASE + cellI];
         const double s_CaMKt = STATES_SoA[CaMKt_BASE + cellI];
         const double s_Nai = STATES_SoA[Nai_BASE + cellI];
@@ -434,8 +425,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
         const double a_AiF = 1.0 / (1.0 + std::exp((s_V + c_EKshift - 213.6) / 151.2));
         const double a_ass = 1.0 / (1.0 + std::exp(-(s_V + c_EKshift - 14.34) / 14.82));
         const double a_assp = 1.0 / (1.0 + std::exp(-(s_V + c_EKshift - 24.34) / 14.82));
-        // Branchless: amp=0 in non-endo collapses to constant 1.0 (matches
-        // ToRORd_dynCl_2023.H:980-982).
         const double a_delta_epi = 1.0 - c_deltaEpiAmp
             / (1.0 + std::exp((s_V + c_EKshift + c_deltaEpiShift) / c_deltaEpiScale));
         const double a_dti_develop = 1.354 + 0.0001 / (std::exp((s_V + c_EKshift - 167.4) / 15.89) + std::exp(-(s_V + c_EKshift - 12.23) / 0.2154));
@@ -614,8 +603,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
         const double a_E2 = a_x2 / (a_x1 + a_x2 + a_x3 + a_x4);
         const double a_E3 = a_x3 / (a_x1 + a_x2 + a_x3 + a_x4);
         const double a_E4 = a_x4 / (a_x1 + a_x2 + a_x3 + a_x4);
-        // Branchless: scale=1.0 in non-mCell preserves the base values (matches
-        // ToRORd_dynCl_2023.H:1162-1164).
         const double a_Jrel_inf  = a_Jrel_inf_b  * c_jrelTissueScale;
         const double a_Jrel_infp = a_Jrel_infp_b * c_jrelTissueScale;
         const double a_k3_i = a_k3p_i + a_k3pp_i;
@@ -659,7 +646,6 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 
         const double r_V = solveVmWithinODESolver ? (-a_Iion_cm - Istim) : 0.0;
 
-        // Write rates back to SoA
         RATES_SoA[V_BASE + cellI] = r_V;
         RATES_SoA[CaMKt_BASE + cellI] = r_CaMKt;
         RATES_SoA[Nai_BASE + cellI] = r_Nai;
@@ -767,4 +753,4 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
 
 } // End namespace Foam
 
-#endif
+// ************************************************************************* //

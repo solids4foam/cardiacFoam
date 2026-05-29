@@ -13,27 +13,10 @@ Class
 Description
     Batched / GPU-portable wrapper for the Gaur 2021 ionic model.
 
-    --- Stage in the GPU port ---
-
-    This is the *first stage* of the Gaur GPU port. It plugs Gaur into
-    the existing cell-major batched executor (RL gates plus Euler fallback
-    on host, OpenMP-
-    parallel cell loop optional). It is the equivalent of what
-    `TNNPBatched` looks like today: a runtime-selectable wrapper around the
-    full `GaurcomputeVariables` evaluator, exercised through the
-    validated cell-major path.
-
-    A future stage will add a state-major SoA evaluator
-    (`Gaur_2021Batch.H`), opt-in `useSoAEvaluator` switch,
-    device buffers, and `GaurBatched_cuda.cu` — mirroring exactly what
-    `BuenoOrovioBatched` looks like today. That stage is not in this
-    commit; see `gpu_validation_strategy.md` for the recipe.
-
-    Until that stage lands, `GaurBatched` is functionally similar to the
-    legacy `Gaur` class but uses the host-batched Rush-Larsen integrator
-    instead of OpenFOAM's RKF45. The default integrator
-    `batchedIntegrator rushLarsen;` keeps supported gate states on
-    Rush-Larsen and updates the remaining states with explicit Euler.
+    The class exposes the common batched-model architecture: cell-major
+    scalar evaluation, optional state-major SoA/CUDA evaluation,
+    Rush-Larsen tau/steady-state dispatch, compact support slots, and a thin
+    GaurcompactBatched runtime alias that forces compact support.
 
 SourceFiles
     GaurBatched.C

@@ -56,6 +56,17 @@ namespace Foam
         double* d_STATES, const double* d_RATES, double dt,
         int N, int nStates, bool solveVm, int vmStateI
     );
+    void launchGaurRushLarsenStepKernel
+    (
+        double* d_STATES,
+        const double* d_RATES,
+        const double* d_SUPPORT,
+        double dt,
+        int N,
+        int nStates,
+        bool solveVm,
+        int vmStateI
+    );
     void launchGaurScaleIonKernel
     (
         const double* d_SUPPORT, double* d_Im,
@@ -384,9 +395,9 @@ void Foam::GaurBatched::solveBatched
                 cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 tFlag, solveVm, stimulusPOD_
             );
-            launchGaurEulerStepKernel
+            launchGaurRushLarsenStepKernel
             (
-                cuda_.d_states, cuda_.d_rates,
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 static_cast<double>(dtSubstep),
                 static_cast<int>(N),
                 static_cast<int>(NUM_STATES),

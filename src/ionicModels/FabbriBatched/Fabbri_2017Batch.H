@@ -3,9 +3,7 @@ License
     This file is part of cardiacFoam.
 
 Description
-    State-major SoA batched evaluator for the Fabbri 2017 ionic model.
-    Generated mechanically from the scalar equation body; no Foam runtime
-    objects are used inside the hot path.
+    State-major (SoA) batched evaluator for the Fabbri 2017 ionic model.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -58,7 +56,7 @@ enum FABBRI_BATCH_SUPPORT_INDEX
     NUM_FABBRI_BATCH_SUPPORT
 };
 
-static_assert(NUM_FABBRI_BATCH_SUPPORT == 35, "Unexpected Fabbri compact support layout");
+static_assert(NUM_FABBRI_BATCH_SUPPORT == 35, "Fabbri compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 (

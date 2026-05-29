@@ -3,8 +3,7 @@ License
     This file is part of cardiacFoam.
 
 Description
-    State-major SoA batched evaluator for the Trovato ionic model.
-    The hot path uses scalar locals and direct SoA rate/support writes.
+    State-major (SoA) batched evaluator for the Trovato 2019 ionic model.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

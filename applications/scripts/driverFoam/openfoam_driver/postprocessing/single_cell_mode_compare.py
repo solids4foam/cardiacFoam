@@ -534,7 +534,7 @@ def compare_single_cell_modes(
             continue
 
         for mode in modes:
-            if mode == reference_mode:
+            if mode == reference_mode and key == reference_key:
                 continue
             candidate = by_key_mode.get((key, mode))
             if candidate is None:

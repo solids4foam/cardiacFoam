@@ -100,7 +100,7 @@ namespace Foam
         StimulusProtocolPOD stimulus
     );
 
-    void launchEulerStepKernel
+    void launchBuenoEulerStepKernel
     (
         double* d_STATES,
         const double* d_RATES,
@@ -111,7 +111,19 @@ namespace Foam
         int vmStateI
     );
 
-    void launchScaleIonKernel
+    void launchBuenoRushLarsenStepKernel
+    (
+        double* d_STATES,
+        const double* d_RATES,
+        const double* d_SUPPORT,
+        double dt,
+        int N,
+        int nStates,
+        bool solveVm,
+        int vmStateI
+    );
+
+    void launchBuenoScaleIonKernel
     (
         const double* d_SUPPORT,
         double* d_Im,
@@ -413,9 +425,9 @@ void Foam::BuenoOrovioBatched::solveBatched
                 cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 tFlag, solveVm, stimulusPOD_
             );
-            launchEulerStepKernel
+            launchBuenoRushLarsenStepKernel
             (
-                cuda_.d_states, cuda_.d_rates,
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 static_cast<double>(dtSubstep),
                 static_cast<int>(N),
                 static_cast<int>(NUM_STATES),
@@ -432,7 +444,7 @@ void Foam::BuenoOrovioBatched::solveBatched
             tFlag, solveVm, stimulusPOD_
         );
 
-        launchScaleIonKernel
+        launchBuenoScaleIonKernel
         (
             cuda_.d_support, cuda_.d_Im, 85.7,
             static_cast<int>(N),

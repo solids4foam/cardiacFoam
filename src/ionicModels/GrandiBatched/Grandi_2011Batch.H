@@ -3,8 +3,7 @@ License
     This file is part of cardiacFoam.
 
 Description
-    State-major SoA batched evaluator for the Grandi ionic model.
-    The hot path uses scalar locals and direct SoA rate/support writes.
+    State-major (SoA) batched evaluator for the Grandi 2011 ionic model.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -53,7 +52,7 @@ enum GRANDI_BATCH_SUPPORT_INDEX
     NUM_GRANDI_BATCH_SUPPORT
 };
 
-static_assert(NUM_GRANDI_BATCH_SUPPORT == 31, "Unexpected Grandi compact support layout");
+static_assert(NUM_GRANDI_BATCH_SUPPORT == 31, "Grandi compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void GrandiComputeVariablesBatch
 (

@@ -3,9 +3,7 @@ License
     This file is part of cardiacFoam.
 
 Description
-    State-major SoA batched evaluator for the Aliev-Panfilov 1996 ionic model.
-    This model uses the reduced voltage state `u`; Vm/Im scaling is handled
-    by the wrapper metadata and extraction path.
+    State-major (SoA) batched evaluator for the Aliev-Panfilov 1996 ionic model.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

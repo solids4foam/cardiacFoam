@@ -18,43 +18,9 @@ License
 Description
     State-major (SoA) batched evaluator for the reduced Bueno-Orovio 2008
     ionic model.
-
-    Why this exists
-    ---------------
-    The existing `BuenoOroviocomputeVariables` in BuenoOrovio_2008.H is a
-    *cell-major* evaluator: it takes one cell's state vector at a time
-    via per-cell scratch buffers (`scalarField`-shaped) and writes the
-    result into a per-cell rate / algebraic vector. That layout cannot be
-    vectorised across cells by the compiler and cannot be launched as a
-    one-thread-per-cell device kernel.
-
-    `BuenoOrovioComputeVariablesBatch` is the same equation set rewritten
-    so the *outer* index is the cell and every state/rate access is a
-    simple SoA stride: `STATES[stateI*N + cell]`. This shape:
-
-      * Lets the host build vectorise across cells with `#pragma omp simd`
-        (AVX2/AVX-512 lanes process the math in parallel).
-      * Is the exact shape a CUDA / HIP / OpenMP-target kernel needs:
-        wrap the body in `for (cell = begin + tid; cell < end; cell += stride)`
-        or launch one thread per cell, and the same source compiles for
-        the device.
-      * Takes a POD stimulus (`StimulusProtocolPOD`) - no Foam types
-        cross the device boundary.
-
-    For now this is host-only. The `CARDIAC_HOST_DEVICE` qualifier is
-    set up so adding `__device__` later is a build-flag change, not a
-    code rewrite. See `gpu_ionic_model_audit.md` Section 6.1.
-
-    Numerical convention
-    --------------------
-    The batched/GPU-facing evaluator intentionally uses a narrow smooth
-    approximation of the model's step functions. This matches the batched
-    Rush-Larsen extraction path and avoids carrying the scalar CPU hard-step
-    helper into device-oriented code.
 \*---------------------------------------------------------------------------*/
 
-#ifndef BuenoOrovio_2008Batch_H
-#define BuenoOrovio_2008Batch_H
+#pragma once
 
 #include "BuenoOrovio_2008Names.H"
 #include "StimulusProtocolPOD.H"
@@ -73,11 +39,6 @@ CARDIAC_HOST_DEVICE inline double bo_smoothHeaviside
 namespace Foam
 {
 
-//- Compact-support index map for the BuenoOrovio batched evaluator.
-//  Compact-support layout: keeps only the slots needed
-//  on the hot path. `BO_BATCH_SUPPORT_Iion` is the only required slot
-//  for a Vm-only solve; the gate-tau values are exposed for an
-//  eventual Rush-Larsen-from-support path on this model.
 enum BO_BATCH_SUPPORT_INDEX
 {
     BO_BATCH_SUPPORT_tau_v,
@@ -94,34 +55,6 @@ enum BO_BATCH_SUPPORT_INDEX
 static_assert(NUM_BO_BATCH_SUPPORT == 7, "BuenoOrovio compact support layout drift");
 
 
-//- State-major batched evaluator. One call processes cells
-//  `[beginCell, endCell)`. State, rate and (optional) support arrays
-//  are SoA: index = `stateI * N + cellI`. Pass `SUPPORT = nullptr` if
-//  no compact-support output is required (e.g. Vm-only Euler step).
-//
-//  Parameters
-//    t            : current model time (ms).
-//    CONSTANTS    : the model's constants array, identical to the one
-//                   built by `BuenoOrovioinitConsts(...)`. Read-only on
-//                   device; pass via constant memory or by value through
-//                   a kernel-launch wrapper if desired.
-//    N            : total number of cells in the SoA buffers (i.e. the
-//                   stride between consecutive states for the same cell).
-//    beginCell,
-//    endCell      : half-open cell range to process.
-//    STATES_SoA   : input states. Layout STATES_SoA[stateI*N + cellI].
-//    RATES_SoA    : output rates, same SoA layout. Always written.
-//    SUPPORT_SoA  : optional output, layout SUPPORT_SoA[supportI*N + cellI].
-//                   Pass `nullptr` if not needed.
-//    solveVm      : if true, write `RATES[u]` from `-Jion - Istim`. If
-//                   false (Vm coupled externally), `RATES[u]` is left
-//                   untouched.
-//    stimulus     : POD stimulus protocol; passed by value.
-//
-//  Tissue type is not a per-evaluator argument: it is baked into CONSTANTS
-//  by `BuenoOrovioinitConsts` at construction time. This matches the
-//  GaurComputeVariablesBatch / TNNPComputeRatesBatch / ToRORd_dynClComputeVariablesBatch
-//  signatures.
 CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
 (
     const double t,
@@ -256,7 +189,5 @@ CARDIAC_HOST_DEVICE inline void BuenoOrovioComputeVariablesBatch
 }
 
 } // End namespace Foam
-
-#endif
 
 // ************************************************************************* //

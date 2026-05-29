@@ -4,8 +4,26 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include <cuda_runtime.h>
+#include <cstdio>
 
 #include "TNNP_2004Batch.H"
+
+// ---- file-local kernel error check ----------------------------------------
+#define CUDA_LAUNCH_CHECK()                                                    \
+    do {                                                                       \
+        cudaError_t _err = cudaGetLastError();                                 \
+        if (_err != cudaSuccess)                                               \
+        {                                                                      \
+            fprintf                                                            \
+            (                                                                  \
+                stderr,                                                        \
+                "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
+                __FILE__, __LINE__, cudaGetErrorString(_err)                   \
+            );                                                                 \
+            abort();                                                           \
+        }                                                                      \
+    } while (0)
+// ---------------------------------------------------------------------------
 
 namespace Foam
 {
@@ -31,37 +49,10 @@ namespace
             return;
         }
 
-        TNNPComputeRatesBatch
+        TNNPComputeVariablesBatch
         (
             t, CONSTANTS, N, cellI, cellI + 1,
             STATES, RATES, SUPPORT,
-            solveVm, stimulus
-        );
-    }
-
-
-    __global__ void tnnpFullBatchKernel
-    (
-        const double t,
-        const double* __restrict__ CONSTANTS,
-        const int N,
-        const double* __restrict__ STATES,
-        double* __restrict__ RATES,
-        double* __restrict__ ALGEBRAIC,
-        const bool solveVm,
-        const StimulusProtocolPOD stimulus
-    )
-    {
-        const int cellI = blockIdx.x*blockDim.x + threadIdx.x;
-        if (cellI >= N)
-        {
-            return;
-        }
-
-        TNNPComputeRatesFullBatch
-        (
-            t, CONSTANTS, N, cellI, cellI + 1,
-            STATES, RATES, ALGEBRAIC,
             solveVm, stimulus
         );
     }
@@ -94,72 +85,6 @@ namespace
             const int idx = stateI*N + cellI;
             STATES[idx] += dt*RATES[idx];
         }
-    }
-
-
-    __global__ void tnnpStabilizeKernel
-    (
-        double* __restrict__ STATES,
-        const int N
-    )
-    {
-        const int cellI = blockIdx.x*blockDim.x + threadIdx.x;
-        if (cellI >= N)
-        {
-            return;
-        }
-
-        constexpr double small = 1.0e-15;
-
-        #define TNNP_STATE(stateI) STATES[(stateI)*N + cellI]
-        #define TNNP_CLAMP_RANGE(stateI, upper)                                \
-            do                                                                 \
-            {                                                                  \
-                if (TNNP_STATE(stateI) < 0.0)                                  \
-                {                                                              \
-                    TNNP_STATE(stateI) = 0.0;                                  \
-                }                                                              \
-                else if (TNNP_STATE(stateI) > (upper))                        \
-                {                                                              \
-                    TNNP_STATE(stateI) = (upper);                              \
-                }                                                              \
-            } while (0)
-
-        if (TNNP_STATE(K_i) < small)
-        {
-            TNNP_STATE(K_i) = small;
-        }
-
-        if (TNNP_STATE(Na_i) < small)
-        {
-            TNNP_STATE(Na_i) = small;
-        }
-
-        if (TNNP_STATE(Ca_i) < small)
-        {
-            TNNP_STATE(Ca_i) = small;
-        }
-
-        if (TNNP_STATE(Ca_SR) < small)
-        {
-            TNNP_STATE(Ca_SR) = small;
-        }
-
-        TNNP_CLAMP_RANGE(Xr1, 1.0);
-        TNNP_CLAMP_RANGE(Xr2, 1.0);
-        TNNP_CLAMP_RANGE(Xs, 1.0);
-        TNNP_CLAMP_RANGE(m, 1.0);
-        TNNP_CLAMP_RANGE(h, 1.0);
-        TNNP_CLAMP_RANGE(j, 1.0);
-        TNNP_CLAMP_RANGE(d, 1.0);
-        TNNP_CLAMP_RANGE(f, 1.0);
-        TNNP_CLAMP_RANGE(fCa, 1.0);
-        TNNP_CLAMP_RANGE(s, 1.1);
-        TNNP_CLAMP_RANGE(r, 1.0);
-        TNNP_CLAMP_RANGE(g, 1.0);
-
-        #undef TNNP_CLAMP_RANGE
-        #undef TNNP_STATE
     }
 
 
@@ -202,6 +127,8 @@ void launchTnnpBatchKernel
     StimulusProtocolPOD stimulus
 )
 {
+    // GPU path requires homogeneous single-tissue mesh.
+    // Per-cell tissue heterogeneity is not yet implemented on GPU.
     (void)tissueFlag;
     tnnpBatchKernel<<<nBlocks(N), blockSize>>>
     (
@@ -209,29 +136,7 @@ void launchTnnpBatchKernel
         d_STATES, d_RATES, d_SUPPORT,
         solveVm, stimulus
     );
-}
-
-
-void launchTnnpFullBatchKernel
-(
-    double t,
-    const double* d_CONSTANTS,
-    int N,
-    const double* d_STATES,
-    double* d_RATES,
-    double* d_ALGEBRAIC,
-    int tissueFlag,
-    bool solveVm,
-    StimulusProtocolPOD stimulus
-)
-{
-    (void)tissueFlag;
-    tnnpFullBatchKernel<<<nBlocks(N), blockSize>>>
-    (
-        t, d_CONSTANTS, N,
-        d_STATES, d_RATES, d_ALGEBRAIC,
-        solveVm, stimulus
-    );
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -251,16 +156,7 @@ void launchTnnpEulerStepKernel
         d_STATES, d_RATES, dt,
         N, nStates, solveVm, vmStateI
     );
-}
-
-
-void launchTnnpStabilizeKernel
-(
-    double* d_STATES,
-    int N
-)
-{
-    tnnpStabilizeKernel<<<nBlocks(N), blockSize>>>(d_STATES, N);
+    CUDA_LAUNCH_CHECK();
 }
 
 
@@ -277,6 +173,82 @@ void launchTnnpScaleIonKernel
     (
         d_SUPPORT, d_Im, scale, N, IionSlot
     );
+    CUDA_LAUNCH_CHECK();
+}
+
+
+namespace
+{
+    __global__ void tnnpRushLarsenStepKernel
+    (
+        double* __restrict__ STATES,
+        const double* __restrict__ RATES,
+        const double* __restrict__ SUPPORT,
+        const double dt,
+        const int N,
+        const int nStates,
+        const bool solveVm,
+        const int vmStateI
+    )
+    {
+        const int cellI = blockIdx.x*blockDim.x + threadIdx.x;
+        if (cellI >= N)
+        {
+            return;
+        }
+
+        #define TNNP_RL(si, tSlot, iSlot)                                    \
+        {                                                                     \
+            const double _x   = STATES[(si)*N + cellI];                      \
+            const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
+            const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
+            STATES[(si)*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);       \
+        }
+
+        TNNP_RL(Xr1, TNNP_BATCH_SUPPORT_tau_xr1, TNNP_BATCH_SUPPORT_gInf_xr1)
+        TNNP_RL(Xr2, TNNP_BATCH_SUPPORT_tau_xr2, TNNP_BATCH_SUPPORT_gInf_xr2)
+        TNNP_RL(Xs,  TNNP_BATCH_SUPPORT_tau_xs,  TNNP_BATCH_SUPPORT_gInf_xs)
+        TNNP_RL(m,   TNNP_BATCH_SUPPORT_tau_m,   TNNP_BATCH_SUPPORT_gInf_m)
+        TNNP_RL(h,   TNNP_BATCH_SUPPORT_tau_h,   TNNP_BATCH_SUPPORT_gInf_h)
+        TNNP_RL(j,   TNNP_BATCH_SUPPORT_tau_j,   TNNP_BATCH_SUPPORT_gInf_j)
+        TNNP_RL(d,   TNNP_BATCH_SUPPORT_tau_d,   TNNP_BATCH_SUPPORT_gInf_d)
+        TNNP_RL(f,   TNNP_BATCH_SUPPORT_tau_f,   TNNP_BATCH_SUPPORT_gInf_f)
+        TNNP_RL(s,   TNNP_BATCH_SUPPORT_tau_s,   TNNP_BATCH_SUPPORT_gInf_s)
+        TNNP_RL(r,   TNNP_BATCH_SUPPORT_tau_r,   TNNP_BATCH_SUPPORT_gInf_r)
+
+        #undef TNNP_RL
+
+        for (int si = 0; si < nStates; ++si)
+        {
+            if (si == Xr1 || si == Xr2 || si == Xs || si == m ||
+                si == h  || si == j   || si == d  || si == f  ||
+                si == s  || si == r) continue;
+            if (!solveVm && si == vmStateI) continue;
+            const int idx = si*N + cellI;
+            STATES[idx] += dt*RATES[idx];
+        }
+    }
+}
+
+
+void launchTnnpRushLarsenStepKernel
+(
+    double* d_STATES,
+    const double* d_RATES,
+    const double* d_SUPPORT,
+    double dt,
+    int N,
+    int nStates,
+    bool solveVm,
+    int vmStateI
+)
+{
+    tnnpRushLarsenStepKernel<<<nBlocks(N), blockSize>>>
+    (
+        d_STATES, d_RATES, d_SUPPORT,
+        dt, N, nStates, solveVm, vmStateI
+    );
+    CUDA_LAUNCH_CHECK();
 }
 
 } // End namespace Foam

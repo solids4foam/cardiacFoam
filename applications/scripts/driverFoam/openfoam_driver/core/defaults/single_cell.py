@@ -41,15 +41,15 @@ IONIC_MODEL_TISSUE_MAP = {
 STIMULUS_MAP = {
     "AlievPanfilov": 0.4,
     "BuenoOrovio": 0.4,
-    "Courtemanche": 65,
+    "Courtemanche": 60,
     "Fabbri": 0,
-    "Gaur": 65,
-    "Grandi": 65,
-    "PerisYague": 65,
-    "Stewart": 65,
-    "TNNP": 65,
-    "ToRORd_dynCl": 65,
-    "Trovato": 65,
+    "Gaur": 60,
+    "Grandi": 60,
+    "PerisYague": 60,
+    "Stewart": 60,
+    "TNNP": 60,
+    "ToRORd_dynCl": 60,
+    "Trovato": 60,
 }
 ELECTRO_PROPERTIES_SCOPE = "singleCellSolverCoeffs"
 ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH

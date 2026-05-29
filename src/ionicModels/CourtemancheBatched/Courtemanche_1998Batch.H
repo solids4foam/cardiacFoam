@@ -52,7 +52,7 @@ enum COURTEMANCHE_BATCH_SUPPORT_INDEX
     NUM_COURTEMANCHE_BATCH_SUPPORT
 };
 
-static_assert(NUM_COURTEMANCHE_BATCH_SUPPORT == 31, "Unexpected Courtemanche compact support layout");
+static_assert(NUM_COURTEMANCHE_BATCH_SUPPORT == 31, "Courtemanche compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void CourtemancheComputeVariablesBatch
 (

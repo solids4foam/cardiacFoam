@@ -117,6 +117,18 @@ namespace Foam
         int vmStateI
     );
 
+    void launchToRORd_dynClRushLarsenStepKernel
+    (
+        double* d_STATES,
+        const double* d_RATES,
+        const double* d_SUPPORT,
+        double dt,
+        int N,
+        int nStates,
+        bool solveVm,
+        int vmStateI
+    );
+
     void launchToRORd_dynClScaleIonKernel
     (
         const double* d_SUPPORT,
@@ -420,9 +432,9 @@ void Foam::ToRORd_dynClBatched::solveBatched
                 cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 tFlag, solveVm, stimulusPOD_
             );
-            launchToRORd_dynClEulerStepKernel
+            launchToRORd_dynClRushLarsenStepKernel
             (
-                cuda_.d_states, cuda_.d_rates,
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 static_cast<double>(dtSubstep),
                 static_cast<int>(N),
                 static_cast<int>(NUM_STATES),

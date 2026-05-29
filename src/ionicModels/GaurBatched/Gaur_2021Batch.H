@@ -8,12 +8,10 @@ License
     option) any later version.
 
 Description
-    State-major SoA Batch evaluator for the Gaur 2021 ionic model.
-    Architectural twin of `BuenoOrovio_2008Batch.H` and `TNNP_2004Batch.H`.
+    State-major (SoA) batched evaluator for the Gaur 2021 ionic model.
 \*---------------------------------------------------------------------------*/
 
-#ifndef Gaur_2021Batch_H
-#define Gaur_2021Batch_H
+#pragma once
 
 #include "Gaur_2021.H"
 #include "Gaur_2021Names.H"
@@ -23,7 +21,6 @@ Description
 namespace Foam
 {
 
-//- Compact-support index map for the Gaur Batch path.
 enum GAUR_BATCH_SUPPORT_INDEX
 {
     GAUR_BATCH_SUPPORT_tau_m,
@@ -61,7 +58,7 @@ enum GAUR_BATCH_SUPPORT_INDEX
     NUM_GAUR_BATCH_SUPPORT
 };
 
-static_assert(NUM_GAUR_BATCH_SUPPORT == 31, "Unexpected Gaur compact support layout");
+static_assert(NUM_GAUR_BATCH_SUPPORT == 31, "Gaur compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
 (
@@ -524,4 +521,4 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
 
 } // End namespace Foam
 
-#endif
+// ************************************************************************* //

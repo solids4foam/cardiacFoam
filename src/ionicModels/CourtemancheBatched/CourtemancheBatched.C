@@ -72,6 +72,18 @@ namespace Foam
         int vmStateI
     );
 
+    void launchCourtemancheRushLarsenStepKernel
+    (
+        double* d_STATES,
+        const double* d_RATES,
+        const double* d_SUPPORT,
+        double dt,
+        int N,
+        int nStates,
+        bool solveVm,
+        int vmStateI
+    );
+
     void launchCourtemancheScaleIonKernel
     (
         const double* d_SUPPORT,
@@ -494,9 +506,9 @@ void Foam::CourtemancheBatched::solveBatched
                 solveVm, stimulusPOD_
             );
 
-            launchCourtemancheEulerStepKernel
+            launchCourtemancheRushLarsenStepKernel
             (
-                cuda_.d_states, cuda_.d_rates,
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
                 static_cast<double>(dtSubstep),
                 static_cast<int>(N),
                 static_cast<int>(NUM_STATES),

@@ -3,16 +3,7 @@ License
     This file is part of cardiacFoam.
 
 Description
-    State-major SoA (batched) evaluator for the Peris-Yague 2022 ionic model.
-    Architectural twin of `BuenoOrovio_2008Batch.H` / `Gaur_2021Batch.H`.
-
-    Layout contract: STATES_SoA, RATES_SoA, SUPPORT_SoA are indexed as
-    `array[stateI * N + cellI]`. The outer loop is over cells; every state
-    access is a simple SoA stride so the compiler can vectorise across cells
-    via `#pragma omp simd`.
-
-    Tissue handling is fully baked into CONSTANTS by `PerisYague_2022initConsts`
-    at construction time — this function does not branch on tissue type.
+    State-major (SoA) batched evaluator for the Peris-Yague 2022 ionic model.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -24,9 +15,6 @@ Description
 namespace Foam
 {
 
-//- Compact-support index map. Only the total ionic current is exposed today
-//  (the host wrapper reads it back as Im). Add slots when future paths need
-//  per-current support.
 enum PERISYAGUE_BATCH_SUPPORT_INDEX
 {
     PERISYAGUE_BATCH_SUPPORT_tau_m,
@@ -64,7 +52,7 @@ enum PERISYAGUE_BATCH_SUPPORT_INDEX
     NUM_PERISYAGUE_BATCH_SUPPORT
 };
 
-static_assert(NUM_PERISYAGUE_BATCH_SUPPORT == 31, "Unexpected PerisYague compact support layout");
+static_assert(NUM_PERISYAGUE_BATCH_SUPPORT == 31, "PerisYague compact support layout drift");
 
 CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 (
