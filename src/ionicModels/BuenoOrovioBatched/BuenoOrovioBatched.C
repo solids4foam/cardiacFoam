@@ -92,6 +92,8 @@ namespace Foam
     (
         double t,
         const double* d_CONSTANTS,
+        const double* d_CELL_CONSTANTS,
+        bool useCellConstants,
         int N,
         const double* d_STATES,
         double* d_RATES,
@@ -291,6 +293,17 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    scalarField flattenedCellConstants;
+    if (hasHeterogeneousConstants())
+    {
+        flattenHeterogeneousConstants(flattenedCellConstants);
+        cuda_.uploadCellConstants
+        (
+            flattenedCellConstants.cdata(),
+            static_cast<std::size_t>(N),
+            static_cast<std::size_t>(CONSTANTS_.size())
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -307,7 +320,11 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
         launchBuenoBatchKernel
         (
-            tSub, cuda_.d_constants, static_cast<int>(N),
+            tSub,
+            cuda_.d_constants,
+            cuda_.d_cellConstants,
+            hasHeterogeneousConstants(),
+            static_cast<int>(N),
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
@@ -324,7 +341,11 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
 
     launchBuenoBatchKernel
     (
-        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        tStart + dtModel,
+        cuda_.d_constants,
+        cuda_.d_cellConstants,
+        hasHeterogeneousConstants(),
+        static_cast<int>(N),
         cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         tFlag, solveVm, stimulusPOD_
     );
@@ -414,6 +435,37 @@ Foam::List<Foam::word> Foam::BuenoOrovioBatched::supportedTissueTypes() const
     return {"endocardialCells", "mCells", "epicardialCells"};
 }
 
+
+Foam::scalarField Foam::BuenoOrovioBatched::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    BuenoOrovioinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        BuenoOrovioCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type()
+    );
+
+    return constants;
+}
+
 void Foam::BuenoOrovioBatched::evaluateState
 (
     const scalar modelTime,
@@ -434,6 +486,32 @@ void Foam::BuenoOrovioBatched::evaluateState
         stimulusProtocol()
     );
 }
+
+
+void Foam::BuenoOrovioBatched::evaluateState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& algebraicValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+
+    BuenoOroviocomputeVariables
+    (
+        modelTime,
+        cellConstants.data(),
+        rateValues.data(),
+        const_cast<scalarUList&>(stateValues).data(),
+        algebraicValues.data(),
+        tissue(),
+        solveVmWithinODESolver(),
+        stimulusProtocol()
+    );
+}
+
 
 Foam::scalar Foam::BuenoOrovioBatched::ionicCurrentFromHotPathSupport
 (
@@ -481,6 +559,46 @@ void Foam::BuenoOrovioBatched::evaluateHotPathState
 }
 
 
+void Foam::BuenoOrovioBatched::evaluateHotPathState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    using Foam::smoothHeaviside;
+
+    scalarField& cellConstants = constants(cellI);
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
+
+    const scalar cellV = stateValues[u];
+
+    const scalar hV = smoothHeaviside(cellV - cellConstants[thetaV]);
+    const scalar invTauV =
+        (1.0 - hV)/algebraics[tauVMinus]
+      + hV/cellConstants[tauVPlus];
+    supportValues[BO_BATCH_SUPPORT_tau_v] = 1.0/invTauV;
+    supportValues[BO_BATCH_SUPPORT_gInf_v] =
+        (1.0 - hV)*algebraics[vInfty]/(algebraics[tauVMinus]*invTauV);
+
+    const scalar hW = smoothHeaviside(cellV - cellConstants[thetaW]);
+    const scalar invTauW =
+        (1.0 - hW)/algebraics[tauWMinus]
+      + hW/cellConstants[tauWPlus];
+    supportValues[BO_BATCH_SUPPORT_tau_w] = 1.0/invTauW;
+    supportValues[BO_BATCH_SUPPORT_gInf_w] =
+        (1.0 - hW)*algebraics[wInfty]/(algebraics[tauWMinus]*invTauW);
+
+    supportValues[BO_BATCH_SUPPORT_tau_s] = algebraics[tauS];
+    supportValues[BO_BATCH_SUPPORT_gInf_s] =
+        0.5*(1.0 + std::tanh(cellConstants[kS]*(cellV - cellConstants[uS])));
+    supportValues[BO_BATCH_SUPPORT_Iion] = algebraics[Jion];
+}
+
+
 bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
 (
     const label stateI,
@@ -497,6 +615,31 @@ bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
     (
         BuenoOrovioRushLarsenDispatch[stateI],
         CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
+}
+
+
+bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label cellI,
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    return resolveSupportRushLarsenEntry
+    (
+        BuenoOrovioRushLarsenDispatch[stateI],
+        constants(cellI),
         supportValues,
         VSMALL,
         steadyState,

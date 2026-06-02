@@ -60,6 +60,7 @@ public:
     double* d_rates     = nullptr;
     double* d_support   = nullptr;
     double* d_constants = nullptr;
+    double* d_cellConstants = nullptr;
     double* d_Im        = nullptr;
 
     bool hostDirty   = true;
@@ -88,12 +89,14 @@ public:
         const std::size_t Nbytes       = sizeof(double)*nStates*nCells;
         const std::size_t supportBytes = sizeof(double)*nSupport*nCells;
         const std::size_t constsBytes  = sizeof(double)*nConstants;
+        const std::size_t cellConstsBytes = sizeof(double)*nConstants*nCells;
         const std::size_t imBytes      = sizeof(double)*nCells;
 
         CARDIAC_CUDA_CHECK(cudaMalloc(&d_states,    Nbytes));
         CARDIAC_CUDA_CHECK(cudaMalloc(&d_rates,     Nbytes));
         CARDIAC_CUDA_CHECK(cudaMalloc(&d_support,   supportBytes));
         CARDIAC_CUDA_CHECK(cudaMalloc(&d_constants, constsBytes));
+        CARDIAC_CUDA_CHECK(cudaMalloc(&d_cellConstants, cellConstsBytes));
         CARDIAC_CUDA_CHECK(cudaMalloc(&d_Im,        imBytes));
         allocated = true;
     }
@@ -104,6 +107,20 @@ public:
         (
             d_constants, h_constants,
             sizeof(double)*nConstants, cudaMemcpyHostToDevice
+        ));
+    }
+
+    void uploadCellConstants
+    (
+        const double* h_cellConstants,
+        const std::size_t nCells,
+        const std::size_t nConstants
+    )
+    {
+        CARDIAC_CUDA_CHECK(cudaMemcpy
+        (
+            d_cellConstants, h_cellConstants,
+            sizeof(double)*nCells*nConstants, cudaMemcpyHostToDevice
         ));
     }
 
@@ -157,6 +174,7 @@ public:
         safeFree(d_rates);
         safeFree(d_support);
         safeFree(d_constants);
+        safeFree(d_cellConstants);
         safeFree(d_Im);
         allocated = false;
     }

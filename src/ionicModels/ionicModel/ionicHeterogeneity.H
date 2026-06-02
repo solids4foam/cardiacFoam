@@ -46,7 +46,8 @@ void validateTransmuralBandConfig
     scalar endoMInterface,
     scalar mEpiInterface,
     scalar transitionWidth,
-    const word& smoothing
+    const word& smoothing,
+    const word& transitionMode
 );
 
 scalar smoothingWeight(scalar x, const word& smoothing);
@@ -57,7 +58,8 @@ TransmuralBandWeights transmuralBandWeights
     scalar endoMInterface,
     scalar mEpiInterface,
     scalar transitionWidth,
-    const word& smoothing
+    const word& smoothing,
+    const word& transitionMode
 );
 
 } // End namespace ionicHeterogeneity

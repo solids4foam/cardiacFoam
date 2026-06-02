@@ -49,6 +49,8 @@ namespace
     (
         const double t,
         const double* __restrict__ CONSTANTS,
+        const double* __restrict__ CELL_CONSTANTS,
+        const bool useCellConstants,
         const int N,
         const double* __restrict__ STATES,
         double* __restrict__ RATES,
@@ -63,9 +65,12 @@ namespace
             return;
         }
 
+        const double* cellConstants =
+            useCellConstants ? CELL_CONSTANTS + cellI*NUM_CONSTANTS : CONSTANTS;
+
         TWorldComputeVariablesBatch
         (
-            t, CONSTANTS, N, cellI, cellI + 1,
+            t, cellConstants, N, cellI, cellI + 1,
             STATES, RATES, SUPPORT,
             solveVm, stimulus
         );
@@ -132,6 +137,8 @@ void launchTWorldBatchKernel
 (
     double t,
     const double* d_CONSTANTS,
+    const double* d_CELL_CONSTANTS,
+    bool useCellConstants,
     int N,
     const double* d_STATES,
     double* d_RATES,
@@ -144,7 +151,7 @@ void launchTWorldBatchKernel
     (void)tissueFlag;
     tWorldBatchKernel<<<nBlocks(N), blockSize>>>
     (
-        t, d_CONSTANTS, N,
+        t, d_CONSTANTS, d_CELL_CONSTANTS, useCellConstants, N,
         d_STATES, d_RATES, d_SUPPORT,
         solveVm, stimulus
     );

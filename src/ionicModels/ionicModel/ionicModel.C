@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ionicModel.H"
+#include "ionicHeterogeneity.H"
 #include "ionicSelector.H"
 #include "ionicVariableCompatibility.H"
 
@@ -316,4 +317,127 @@ Foam::scalarField Foam::ionicModel::constantsForTissue
     // Default: no tissue-specific constant variants. Derived classes that
     // support transmural heterogeneity override this.
     return scalarField();
+}
+
+
+void Foam::ionicModel::configureTransmuralBandHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict,
+    PtrList<scalarField>& heterogeneousConstants
+) const
+{
+    const auto* statesPtr = ioStatesPtr();
+
+    if (statesPtr && transmuralDistance.size() != statesPtr->size())
+    {
+        FatalErrorInFunction
+            << "Transmural distance field has " << transmuralDistance.size()
+            << " values, but " << type() << " was configured with "
+            << statesPtr->size() << " integration points."
+            << exit(FatalError);
+    }
+
+    const word mode =
+        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode != "transmuralBands")
+    {
+        FatalErrorInFunction
+            << "Unsupported " << type() << " ionicHeterogeneity mode '"
+            << mode << "'. Supported mode: transmuralBands."
+            << exit(FatalError);
+    }
+
+    const word smoothing =
+        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
+    const word transitionMode =
+        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
+    const scalar endoMInterface =
+        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
+    const scalar mEpiInterface =
+        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
+    const scalar transitionWidth =
+        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+
+    ionicHeterogeneity::validateTransmuralBandConfig
+    (
+        endoMInterface,
+        mEpiInterface,
+        transitionWidth,
+        smoothing,
+        transitionMode
+    );
+
+    const scalarField endoConstants =
+        constantsForTissue(ionicSelector::tissueFlag("endocardialCells"));
+    const scalarField mCellConstants =
+        constantsForTissue(ionicSelector::tissueFlag("mCells"));
+    const scalarField epiConstants =
+        constantsForTissue(ionicSelector::tissueFlag("epicardialCells"));
+
+    if
+    (
+        endoConstants.empty()
+     || endoConstants.size() != mCellConstants.size()
+     || endoConstants.size() != epiConstants.size()
+    )
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity was requested for ionic model " << type()
+            << ", but this model does not provide endo/M/epi constants."
+            << exit(FatalError);
+    }
+
+    heterogeneousConstants.clear();
+    heterogeneousConstants.setSize(transmuralDistance.size());
+
+    forAll(transmuralDistance, integrationPtI)
+    {
+        const scalar rawT = transmuralDistance[integrationPtI];
+
+        if (rawT < -SMALL || rawT > 1.0 + SMALL)
+        {
+            FatalErrorInFunction
+                << "Transmural distance value t=" << rawT
+                << " at integration point " << integrationPtI
+                << " is outside the expected [0, 1] range."
+                << exit(FatalError);
+        }
+
+        const scalar t = min(max(rawT, scalar(0.0)), scalar(1.0));
+        scalarField mappedConstants(endoConstants.size(), 0.0);
+        const ionicHeterogeneity::TransmuralBandWeights weights =
+            ionicHeterogeneity::transmuralBandWeights
+            (
+                t,
+                endoMInterface,
+                mEpiInterface,
+                transitionWidth,
+                smoothing,
+                transitionMode
+            );
+
+        forAll(mappedConstants, constantI)
+        {
+            mappedConstants[constantI] =
+                weights.endo*endoConstants[constantI]
+              + weights.mCell*mCellConstants[constantI]
+              + weights.epi*epiConstants[constantI];
+        }
+
+        heterogeneousConstants.set
+        (
+            integrationPtI,
+            new scalarField(mappedConstants)
+        );
+    }
+
+    Info<< "Configured " << type()
+        << " transmural ionic heterogeneity using "
+        << "endo/M interface " << endoMInterface
+        << ", M/epi interface " << mEpiInterface
+        << ", transitionWidth " << transitionWidth
+        << ", transitionMode " << transitionMode
+        << ", smoothing " << smoothing << "." << nl << endl;
 }

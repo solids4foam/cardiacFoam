@@ -131,6 +131,8 @@ namespace Foam
     (
         double t,
         const double* d_CONSTANTS,
+        const double* d_CELL_CONSTANTS,
+        bool useCellConstants,
         int N,
         const double* d_STATES,
         double* d_RATES,
@@ -402,6 +404,17 @@ void Foam::TWorldcompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    scalarField flattenedCellConstants;
+    if (hasHeterogeneousConstants())
+    {
+        flattenHeterogeneousConstants(flattenedCellConstants);
+        cuda_.uploadCellConstants
+        (
+            flattenedCellConstants.cdata(),
+            static_cast<std::size_t>(N),
+            static_cast<std::size_t>(CONSTANTS_.size())
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -418,7 +431,11 @@ void Foam::TWorldcompactBatched::solveOnDevice
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
         launchTWorldBatchKernel
         (
-            tSub, cuda_.d_constants, static_cast<int>(N),
+            tSub,
+            cuda_.d_constants,
+            cuda_.d_cellConstants,
+            hasHeterogeneousConstants(),
+            static_cast<int>(N),
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
@@ -435,7 +452,11 @@ void Foam::TWorldcompactBatched::solveOnDevice
 
     launchTWorldBatchKernel
     (
-        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        tStart + dtModel,
+        cuda_.d_constants,
+        cuda_.d_cellConstants,
+        hasHeterogeneousConstants(),
+        static_cast<int>(N),
         cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         tFlag, solveVm, stimulusPOD_
     );
@@ -458,6 +479,37 @@ Foam::List<Foam::word> Foam::TWorldBatched::supportedTissueTypes() const
 }
 
 
+Foam::scalarField Foam::TWorldBatched::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TWorldinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        TWorldCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type()
+    );
+
+    return constants;
+}
+
+
 void Foam::TWorldBatched::evaluateState
 (
     const scalar modelTime,
@@ -470,6 +522,30 @@ void Foam::TWorldBatched::evaluateState
     (
         modelTime,
         CONSTANTS_.data(),
+        rateValues.data(),
+        const_cast<scalarUList&>(stateValues).data(),
+        algebraicValues.data(),
+        solveVmWithinODESolver(),
+        stimulusProtocol()
+    );
+}
+
+
+void Foam::TWorldBatched::evaluateState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& algebraicValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+
+    TWorldcomputeVariables
+    (
+        modelTime,
+        cellConstants.data(),
         rateValues.data(),
         const_cast<scalarUList&>(stateValues).data(),
         algebraicValues.data(),
@@ -513,6 +589,33 @@ void Foam::TWorldBatched::evaluateHotPathState
 }
 
 
+void Foam::TWorldBatched::evaluateHotPathState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
+
+    for (label stateI = 0; stateI < NUM_STATES; ++stateI)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            TWorldRushLarsenDispatch[stateI],
+            cellConstants,
+            algebraics,
+            supportValues
+        );
+    }
+    supportValues[Foam::TWORLD_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
+}
+
+
 void Foam::TWorldBatched::derivatives
 (
     const scalar t,
@@ -541,6 +644,31 @@ bool Foam::TWorldBatched::rushLarsenParametersFromHotPathSupport
     (
         TWorldRushLarsenDispatch[stateI],
         CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
+}
+
+
+bool Foam::TWorldBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label cellI,
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    return resolveSupportRushLarsenEntry
+    (
+        TWorldRushLarsenDispatch[stateI],
+        constants(cellI),
         supportValues,
         VSMALL,
         steadyState,

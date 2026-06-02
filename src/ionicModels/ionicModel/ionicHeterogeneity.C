@@ -27,9 +27,19 @@ void Foam::ionicHeterogeneity::validateTransmuralBandConfig
     const scalar endoMInterface,
     const scalar mEpiInterface,
     const scalar transitionWidth,
-    const word& smoothing
+    const word& smoothing,
+    const word& transitionMode
 )
 {
+    if (transitionMode != "blend" && transitionMode != "hard")
+    {
+        FatalErrorInFunction
+            << "Unsupported ionicHeterogeneity transitionMode '"
+            << transitionMode
+            << "'. Supported transitionMode values: blend, hard."
+            << exit(FatalError);
+    }
+
     if (smoothing != "smoothstep")
     {
         FatalErrorInFunction
@@ -44,8 +54,13 @@ void Foam::ionicHeterogeneity::validateTransmuralBandConfig
      || mEpiInterface >= 1.0
      || endoMInterface >= mEpiInterface
      || transitionWidth < 0.0
-     || endoMInterface + transitionWidth > mEpiInterface + SMALL
-     || mEpiInterface + transitionWidth > 1.0 + SMALL
+     || (
+            transitionMode == "blend"
+         && (
+                endoMInterface + transitionWidth > mEpiInterface + SMALL
+             || mEpiInterface + transitionWidth > 1.0 + SMALL
+            )
+        )
     )
     {
         FatalErrorInFunction
@@ -53,8 +68,10 @@ void Foam::ionicHeterogeneity::validateTransmuralBandConfig
             << "endoMInterface=" << endoMInterface
             << ", mEpiInterface=" << mEpiInterface
             << ", transitionWidth=" << transitionWidth
+            << ", transitionMode=" << transitionMode
             << ". Expected 0 < endoMInterface < mEpiInterface < 1 "
-            << "with non-overlapping transition bands."
+            << "and, for transitionMode blend, non-overlapping "
+            << "transition bands."
             << exit(FatalError);
     }
 }
@@ -87,10 +104,11 @@ Foam::ionicHeterogeneity::transmuralBandWeights
     const scalar endoMInterface,
     const scalar mEpiInterface,
     const scalar transitionWidth,
-    const word& smoothing
+    const word& smoothing,
+    const word& transitionMode
 )
 {
-    if (transitionWidth <= SMALL)
+    if (transitionMode == "hard" || transitionWidth <= SMALL)
     {
         if (t <= endoMInterface)
         {

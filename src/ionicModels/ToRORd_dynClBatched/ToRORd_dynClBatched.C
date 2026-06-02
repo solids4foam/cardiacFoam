@@ -111,6 +111,8 @@ namespace Foam
     (
         double t,
         const double* d_CONSTANTS,
+        const double* d_CELL_CONSTANTS,
+        bool useCellConstants,
         int N,
         const double* d_STATES,
         double* d_RATES,
@@ -384,6 +386,17 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    scalarField flattenedCellConstants;
+    if (hasHeterogeneousConstants())
+    {
+        flattenHeterogeneousConstants(flattenedCellConstants);
+        cuda_.uploadCellConstants
+        (
+            flattenedCellConstants.cdata(),
+            static_cast<std::size_t>(N),
+            static_cast<std::size_t>(CONSTANTS_.size())
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -400,7 +413,11 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
         launchToRORd_dynClBatchKernel
         (
-            tSub, cuda_.d_constants, static_cast<int>(N),
+            tSub,
+            cuda_.d_constants,
+            cuda_.d_cellConstants,
+            hasHeterogeneousConstants(),
+            static_cast<int>(N),
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
@@ -417,7 +434,11 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
 
     launchToRORd_dynClBatchKernel
     (
-        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        tStart + dtModel,
+        cuda_.d_constants,
+        cuda_.d_cellConstants,
+        hasHeterogeneousConstants(),
+        static_cast<int>(N),
         cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         tFlag, solveVm, stimulusPOD_
     );
@@ -440,6 +461,37 @@ Foam::List<Foam::word> Foam::ToRORd_dynClBatched::supportedTissueTypes() const
 }
 
 
+Foam::scalarField Foam::ToRORd_dynClBatched::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    ToRORd_dynClinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        ToRORd_dynClCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type()
+    );
+
+    return constants;
+}
+
+
 void Foam::ToRORd_dynClBatched::evaluateState
 (
     const scalar modelTime,
@@ -452,6 +504,30 @@ void Foam::ToRORd_dynClBatched::evaluateState
     (
         modelTime,
         CONSTANTS_.data(),
+        rateValues.data(),
+        const_cast<scalarUList&>(stateValues).data(),
+        algebraicValues.data(),
+        solveVmWithinODESolver(),
+        stimulusProtocol()
+    );
+}
+
+
+void Foam::ToRORd_dynClBatched::evaluateState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& algebraicValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+
+    ToRORd_dynClcomputeVariables
+    (
+        modelTime,
+        cellConstants.data(),
         rateValues.data(),
         const_cast<scalarUList&>(stateValues).data(),
         algebraicValues.data(),
@@ -496,6 +572,34 @@ void Foam::ToRORd_dynClBatched::evaluateHotPathState
 }
 
 
+void Foam::ToRORd_dynClBatched::evaluateHotPathState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
+
+    for (label stateI = 0; stateI < NUM_STATES; ++stateI)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            ToRORd_dynClRushLarsenDispatch[stateI],
+            cellConstants,
+            algebraics,
+            supportValues
+        );
+    }
+    supportValues[Foam::TORORD_DYNCL_BATCH_SUPPORT_Iion_cm] =
+        algebraics[Iion_cm];
+}
+
+
 void Foam::ToRORd_dynClBatched::derivatives
 (
     const scalar t,
@@ -526,6 +630,31 @@ bool Foam::ToRORd_dynClBatched::rushLarsenParametersFromHotPathSupport
     (
         ToRORd_dynClRushLarsenDispatch[stateI],
         CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
+}
+
+
+bool Foam::ToRORd_dynClBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label cellI,
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    return resolveSupportRushLarsenEntry
+    (
+        ToRORd_dynClRushLarsenDispatch[stateI],
+        constants(cellI),
         supportValues,
         VSMALL,
         steadyState,

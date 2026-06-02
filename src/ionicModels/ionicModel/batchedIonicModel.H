@@ -511,6 +511,7 @@ protected:
 
                 evaluateState
                 (
+                    cellI,
                     ioEvaluationModelTime_,
                     diagStateValues_,
                     diagRateValues_,
@@ -760,6 +761,25 @@ protected:
             return ionicCurrentFromEvaluation(supportValues);
         }
 
+        virtual scalar ionicCurrentFromHotPathSupport
+        (
+            const label cellI,
+            const scalarUList& supportValues
+        ) const
+        {
+            (void)cellI;
+            return ionicCurrentFromHotPathSupport(supportValues);
+        }
+
+        scalar ionicCurrentFromHotPathSupportForCell
+        (
+            const label cellI,
+            const scalarUList& supportValues
+        ) const
+        {
+            return ionicCurrentFromHotPathSupport(cellI, supportValues);
+        }
+
         virtual bool usesCompactSupport() const
         {
             return false;
@@ -782,6 +802,57 @@ protected:
         ) const
         {
             evaluateState(modelTime, stateValues, rateValues, supportValues);
+        }
+
+        virtual void evaluateState
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& algebraicValues
+        ) const
+        {
+            (void)cellI;
+            evaluateState(modelTime, stateValues, rateValues, algebraicValues);
+        }
+
+        virtual void evaluateHotPathState
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& supportValues
+        ) const
+        {
+            evaluateState
+            (
+                cellI,
+                modelTime,
+                stateValues,
+                rateValues,
+                supportValues
+            );
+        }
+
+        void evaluateHotPathStateForCell
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& supportValues
+        ) const
+        {
+            evaluateHotPathState
+            (
+                cellI,
+                modelTime,
+                stateValues,
+                rateValues,
+                supportValues
+            );
         }
 
         virtual bool rushLarsenParameters
@@ -809,6 +880,52 @@ protected:
         {
             return rushLarsenParameters
             (
+                stateI,
+                stateValues,
+                rateValues,
+                supportValues,
+                steadyState,
+                tau
+            );
+        }
+
+        virtual bool rushLarsenParametersFromHotPathSupport
+        (
+            const label cellI,
+            const label stateI,
+            const scalarUList& stateValues,
+            const scalarUList& rateValues,
+            const scalarUList& supportValues,
+            scalar& steadyState,
+            scalar& tau
+        ) const
+        {
+            (void)cellI;
+            return rushLarsenParametersFromHotPathSupport
+            (
+                stateI,
+                stateValues,
+                rateValues,
+                supportValues,
+                steadyState,
+                tau
+            );
+        }
+
+        bool rushLarsenParametersFromHotPathSupportForCell
+        (
+            const label cellI,
+            const label stateI,
+            const scalarUList& stateValues,
+            const scalarUList& rateValues,
+            const scalarUList& supportValues,
+            scalar& steadyState,
+            scalar& tau
+        ) const
+        {
+            return rushLarsenParametersFromHotPathSupport
+            (
+                cellI,
                 stateI,
                 stateValues,
                 rateValues,

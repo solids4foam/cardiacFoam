@@ -169,6 +169,8 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
 
     const word smoothing =
         heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
+    const word transitionMode =
+        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
 
     if (transmuralDistance.size() != STATES_.size())
     {
@@ -191,7 +193,8 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
         endoMInterface,
         mEpiInterface,
         transitionWidth,
-        smoothing
+        smoothing,
+        transitionMode
     );
 
     const scalarField endoConstants =
@@ -226,7 +229,8 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
                 endoMInterface,
                 mEpiInterface,
                 transitionWidth,
-                smoothing
+                smoothing,
+                transitionMode
             );
 
         forAll(mappedConstants, constantI)
@@ -248,6 +252,7 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
         << "endo/M interface " << endoMInterface
         << ", M/epi interface " << mEpiInterface
         << ", transitionWidth " << transitionWidth
+        << ", transitionMode " << transitionMode
         << ", smoothing " << smoothing << "." << nl << endl;
 }
 

@@ -58,6 +58,8 @@ namespace Foam
     (
         double t,
         const double* d_CONSTANTS,
+        const double* d_CELL_CONSTANTS,
+        bool useCellConstants,
         int N,
         const double* d_STATES,
         double* d_RATES,
@@ -296,6 +298,17 @@ void Foam::TNNPcompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    scalarField flattenedCellConstants;
+    if (hasHeterogeneousConstants())
+    {
+        flattenHeterogeneousConstants(flattenedCellConstants);
+        cuda_.uploadCellConstants
+        (
+            flattenedCellConstants.cdata(),
+            static_cast<std::size_t>(N),
+            static_cast<std::size_t>(CONSTANTS_.size())
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -312,7 +325,11 @@ void Foam::TNNPcompactBatched::solveOnDevice
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
         launchTnnpBatchKernel
         (
-            tSub, cuda_.d_constants, static_cast<int>(N),
+            tSub,
+            cuda_.d_constants,
+            cuda_.d_cellConstants,
+            hasHeterogeneousConstants(),
+            static_cast<int>(N),
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
@@ -329,7 +346,11 @@ void Foam::TNNPcompactBatched::solveOnDevice
 
     launchTnnpBatchKernel
     (
-        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        tStart + dtModel,
+        cuda_.d_constants,
+        cuda_.d_cellConstants,
+        hasHeterogeneousConstants(),
+        static_cast<int>(N),
         cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         tFlag, solveVm, stimulusPOD_
     );
@@ -395,6 +416,37 @@ Foam::List<Foam::word> Foam::TNNPBatched::supportedTissueTypes() const
     return {"endocardialCells", "mCells", "epicardialCells"};
 }
 
+
+Foam::scalarField Foam::TNNPBatched::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TNNPinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        TNNP_CONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type()
+    );
+
+    return constants;
+}
+
 void Foam::TNNPBatched::solveODE
 (
     const scalar stepStartTime,
@@ -436,6 +488,30 @@ void Foam::TNNPBatched::evaluateState
     );
 }
 
+
+void Foam::TNNPBatched::evaluateState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& algebraicValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+
+    TNNPcomputeRates
+    (
+        modelTime,
+        cellConstants.data(),
+        rateValues.data(),
+        const_cast<scalarUList&>(stateValues).data(),
+        algebraicValues.data(),
+        solveVmWithinODESolver(),
+        stimulusProtocol()
+    );
+}
+
 void Foam::TNNPBatched::evaluateHotPathState
 (
     const scalar modelTime,
@@ -461,6 +537,33 @@ void Foam::TNNPBatched::evaluateHotPathState
 }
 
 
+void Foam::TNNPBatched::evaluateHotPathState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    scalarField& cellConstants = constants(cellI);
+    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
+    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
+
+    for (const auto& entry : TNNPRushLarsenDispatch)
+    {
+        projectScalarRushLarsenEntryToSupport
+        (
+            entry,
+            cellConstants,
+            algebraics,
+            supportValues
+        );
+    }
+    supportValues[TNNP_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
+}
+
+
 bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
 (
     const label stateI,
@@ -478,6 +581,32 @@ bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
     (
         entry,
         CONSTANTS_,
+        supportValues,
+        VSMALL,
+        steadyState,
+        tau
+    );
+}
+
+
+bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
+(
+    const label cellI,
+    const label stateI,
+    const scalarUList& stateValues,
+    const scalarUList& rateValues,
+    const scalarUList& supportValues,
+    scalar& steadyState,
+    scalar& tau
+) const
+{
+    if (stateI < 0 || stateI >= NUM_STATES) return false;
+
+    const auto& entry = TNNPRushLarsenDispatch[stateI];
+    return resolveSupportRushLarsenEntry
+    (
+        entry,
+        constants(cellI),
         supportValues,
         VSMALL,
         steadyState,

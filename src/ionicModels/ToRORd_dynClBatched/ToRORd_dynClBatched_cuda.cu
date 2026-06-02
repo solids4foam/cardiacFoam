@@ -35,6 +35,8 @@ namespace
     (
         const double t,
         const double* __restrict__ CONSTANTS,
+        const double* __restrict__ CELL_CONSTANTS,
+        const bool useCellConstants,
         const int N,
         const double* __restrict__ STATES,
         double* __restrict__ RATES,
@@ -49,9 +51,12 @@ namespace
             return;
         }
 
+        const double* cellConstants =
+            useCellConstants ? CELL_CONSTANTS + cellI*NUM_CONSTANTS : CONSTANTS;
+
         ToRORd_dynClComputeVariablesBatch
         (
-            t, CONSTANTS, N, cellI, cellI + 1,
+            t, cellConstants, N, cellI, cellI + 1,
             STATES, RATES, SUPPORT,
             solveVm, stimulus
         );
@@ -118,6 +123,8 @@ void launchToRORd_dynClBatchKernel
 (
     double t,
     const double* d_CONSTANTS,
+    const double* d_CELL_CONSTANTS,
+    bool useCellConstants,
     int N,
     const double* d_STATES,
     double* d_RATES,
@@ -127,12 +134,10 @@ void launchToRORd_dynClBatchKernel
     StimulusProtocolPOD stimulus
 )
 {
-    // GPU path requires homogeneous single-tissue mesh.
-    // Per-cell tissue heterogeneity is not yet implemented on GPU.
     (void)tissueFlag;
     toRORd_dynClBatchKernel<<<nBlocks(N), blockSize>>>
     (
-        t, d_CONSTANTS, N,
+        t, d_CONSTANTS, d_CELL_CONSTANTS, useCellConstants, N,
         d_STATES, d_RATES, d_SUPPORT,
         solveVm, stimulus
     );

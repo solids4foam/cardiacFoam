@@ -209,14 +209,16 @@ public:
 
     void evaluateHotPathState
     (
+        const label cellI,
         const scalar modelTime,
         const scalarUList& stateValues,
         scalarUList& rateValues,
         scalarUList& supportValues
     ) const
     {
-        model_.evaluateHotPathState
+        model_.evaluateHotPathStateForCell
         (
+            cellI,
             modelTime,
             stateValues,
             rateValues,
@@ -226,6 +228,7 @@ public:
 
     bool rushLarsenParametersFromHotPathSupport
     (
+        const label cellI,
         const label stateI,
         const scalarUList& stateValues,
         const scalarUList& rateValues,
@@ -234,8 +237,9 @@ public:
         scalar& tau
     ) const
     {
-        return model_.rushLarsenParametersFromHotPathSupport
+        return model_.rushLarsenParametersFromHotPathSupportForCell
         (
+            cellI,
             stateI,
             stateValues,
             rateValues,
@@ -265,10 +269,11 @@ public:
 
     scalar ionicCurrentFromHotPathSupport
     (
+        const label cellI,
         const scalarUList& supportValues
     ) const
     {
-        return model_.ionicCurrentFromHotPathSupport(supportValues);
+        return model_.ionicCurrentFromHotPathSupportForCell(cellI, supportValues);
     }
 
     scalar ionicCurrentFromEvaluation
@@ -320,6 +325,7 @@ class BatchedKernelModelPolicy
     template<class CellScratch, class KernelConfig>
     bool rushLarsenEnabledForState
     (
+        const label cellI,
         const label stateI,
         const CellScratch& scratch,
         const KernelConfig& kernel,
@@ -335,6 +341,7 @@ class BatchedKernelModelPolicy
         const bool hasParameters =
             hooks_.rushLarsenParametersFromHotPathSupport
             (
+                cellI,
                 stateI,
                 scratch.stateValues,
                 scratch.rateValues,
@@ -369,6 +376,7 @@ public:
     template<class CellScratch, class KernelConfig>
     void evaluateScratchAtTime
     (
+        const label cellI,
         const scalar modelTime,
         CellScratch& scratch,
         const KernelConfig& kernel
@@ -376,6 +384,7 @@ public:
     {
         hooks_.evaluateHotPathState
         (
+            cellI,
             modelTime,
             scratch.stateValues,
             scratch.rateValues,
@@ -410,6 +419,7 @@ public:
     template<class CellScratch, class KernelConfig>
     void buildPredictorState
     (
+        const label cellI,
         CellScratch& scratch,
         const KernelConfig& kernel
     ) const
@@ -429,6 +439,7 @@ public:
             const bool useRLForState =
                 rushLarsenEnabledForState
                 (
+                    cellI,
                     stateI,
                     scratch,
                     kernel,
@@ -499,11 +510,12 @@ public:
     template<class CellScratch, class KernelConfig>
     scalar ionicCurrentFromScratch
     (
+        const label cellI,
         const CellScratch& scratch,
         const KernelConfig& kernel
     ) const
     {
-        return hooks_.ionicCurrentFromHotPathSupport(scratch.supportValues);
+        return hooks_.ionicCurrentFromHotPathSupport(cellI, scratch.supportValues);
     }
 
     void stabilizeCellState(const label cellI) const
@@ -598,12 +610,13 @@ public:
     template<class CellScratch, class KernelConfig>
     void evaluateScratchAtTime
     (
+        const label cellI,
         const scalar modelTime,
         CellScratch& scratch,
         const KernelConfig& kernel
     ) const
     {
-        policy_.evaluateScratchAtTime(modelTime, scratch, kernel);
+        policy_.evaluateScratchAtTime(cellI, modelTime, scratch, kernel);
     }
 
     template<class CellScratch, class KernelConfig>
@@ -619,11 +632,12 @@ public:
     template<class CellScratch, class KernelConfig>
     void buildPredictorState
     (
+        const label cellI,
         CellScratch& scratch,
         const KernelConfig& kernel
     ) const
     {
-        policy_.buildPredictorState(scratch, kernel);
+        policy_.buildPredictorState(cellI, scratch, kernel);
     }
 
     template<class CellScratch, class KernelConfig>
@@ -650,11 +664,12 @@ public:
     template<class CellScratch, class KernelConfig>
     scalar ionicCurrentFromScratch
     (
+        const label cellI,
         const CellScratch& scratch,
         const KernelConfig& kernel
     ) const
     {
-        return policy_.ionicCurrentFromScratch(scratch, kernel);
+        return policy_.ionicCurrentFromScratch(cellI, scratch, kernel);
     }
 
     void stabilizeCellState(const label cellI) const
@@ -803,7 +818,7 @@ public:
         scratch.resetPrimary();
 
         auto evaluateStart = profileStart();
-        backend_.evaluateScratchAtTime(tStart, scratch, kernel_);
+        backend_.evaluateScratchAtTime(sampleCell, tStart, scratch, kernel_);
         addProfileTime(profile.evaluateStateTime, evaluateStart);
         recordEvaluateCall(profile.evaluateStateCalls);
 
@@ -844,7 +859,7 @@ public:
 
                 scratch.resetPrimary();
                 auto evaluateStart = profileStart();
-                backend_.evaluateScratchAtTime(substepTime, scratch, kernel_);
+                backend_.evaluateScratchAtTime(cellI, substepTime, scratch, kernel_);
                 addProfileTime(profile.evaluateStateTime, evaluateStart);
                 recordEvaluateCall(profile.evaluateStateCalls);
                 backend_.stepField()[cellI] = kernel_.dtSubstep;
@@ -857,7 +872,7 @@ public:
                 }
                 else
                 {
-                    backend_.buildPredictorState(scratch, kernel_);
+                    backend_.buildPredictorState(cellI, scratch, kernel_);
                     addProfileTime(profile.stateUpdateTime, updateStart);
 
                     updateStart = profileStart();
@@ -872,13 +887,13 @@ public:
 
             scratch.resetPrimary();
             auto evaluateStart = profileStart();
-            backend_.evaluateScratchAtTime(tEnd, scratch, kernel_);
+            backend_.evaluateScratchAtTime(cellI, tEnd, scratch, kernel_);
             addProfileTime(profile.evaluateStateTime, evaluateStart);
             recordEvaluateCall(profile.evaluateStateCalls);
 
             auto finalSyncStart = profileStart();
             backend_.syncEvaluatedOutputs(cellI, scratch, kernel_);
-            Im[cellI] = backend_.ionicCurrentFromScratch(scratch, kernel_);
+            Im[cellI] = backend_.ionicCurrentFromScratch(cellI, scratch, kernel_);
             addProfileTime(profile.finalSyncTime, finalSyncStart);
 
             auto scatterStart = profileStart();

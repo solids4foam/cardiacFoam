@@ -81,6 +81,9 @@ protected:
         const scalarUList& supportValues
     ) const override final;
 
+    virtual scalarField constantsForTissue(const label tissueFlag) const
+        override final;
+
     virtual bool usesCompactSupport() const override final
     {
         return true;
@@ -94,6 +97,15 @@ protected:
         scalarUList& algebraicValues
     ) const final;
 
+    virtual void evaluateState
+    (
+        const label cellI,
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& algebraicValues
+    ) const override final;
+
     virtual void evaluateHotPathState
     (
         const scalar modelTime,
@@ -102,8 +114,28 @@ protected:
         scalarUList& supportValues
     ) const override final;
 
+    virtual void evaluateHotPathState
+    (
+        const label cellI,
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
     virtual bool rushLarsenParametersFromHotPathSupport
     (
+        const label stateI,
+        const scalarUList& stateValues,
+        const scalarUList& rateValues,
+        const scalarUList& supportValues,
+        scalar& steadyState,
+        scalar& tau
+    ) const override final;
+
+    virtual bool rushLarsenParametersFromHotPathSupport
+    (
+        const label cellI,
         const label stateI,
         const scalarUList& stateValues,
         const scalarUList& rateValues,
