@@ -193,10 +193,10 @@ class TestIonicCatalogAudit(unittest.TestCase):
         for name in _MANUFACTURED_FAMILY:
             self.assertNotIn(name, NON_MANUFACTURED_MODELS)
 
-    def test_all_23_non_manufactured_models_present(self) -> None:
-        """All 23 expected non-manufactured models appear in the audit list.
+    def test_all_24_non_manufactured_models_present(self) -> None:
+        """All 24 expected non-manufactured models appear in the audit list.
 
-        12 CPU models + 11 compactBatched GPU models.
+        12 CPU models + 12 compactBatched GPU models.
         ORd removed (C++ implementation deleted as non-functional).
         """
         expected = {
@@ -225,6 +225,7 @@ class TestIonicCatalogAudit(unittest.TestCase):
             "TNNPcompactBatched",
             "ToRORd_dynClcompactBatched",
             "TrovatocompactBatched",
+            "TWorldcompactBatched",
         }
         self.assertEqual(
             expected,

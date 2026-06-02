@@ -306,3 +306,14 @@ void Foam::ionicModel::importFields(const volScalarField& Vm,
         importTransferSelectedPlanCache_
     );
 }
+
+
+Foam::scalarField Foam::ionicModel::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    // Default: no tissue-specific constant variants. Derived classes that
+    // support transmural heterogeneity override this.
+    return scalarField();
+}

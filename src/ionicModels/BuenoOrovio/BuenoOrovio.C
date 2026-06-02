@@ -195,11 +195,11 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
     );
 
     const scalarField endoConstants =
-        constantsForTissue(3, dict());
+        ::constantsForTissue(3, dict());
     const scalarField mCellConstants =
-        constantsForTissue(2, dict());
+        ::constantsForTissue(2, dict());
     const scalarField epiConstants =
-        constantsForTissue(1, dict());
+        ::constantsForTissue(1, dict());
 
     HETEROGENEOUS_CONSTANTS_.clear();
     HETEROGENEOUS_CONSTANTS_.setSize(STATES_.size());

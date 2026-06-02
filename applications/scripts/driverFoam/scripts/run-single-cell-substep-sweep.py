@@ -34,6 +34,7 @@ DEFAULT_MODELS = [
     "TNNPcompactBatched",
     "ToRORd_dynClcompactBatched",
     "TrovatocompactBatched",
+    "TWorldcompactBatched",
 ]
 
 EXCLUDED_CPU_MODELS = {"Fabbri"}
@@ -63,6 +64,7 @@ BATCHED_STIMULUS_MAP = {
     "TNNPcompactBatched": 60,
     "ToRORd_dynClcompactBatched": 60,
     "TrovatocompactBatched": 60,
+    "TWorldcompactBatched": 80000,
 }
 
 

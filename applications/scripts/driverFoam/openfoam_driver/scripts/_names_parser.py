@@ -148,4 +148,5 @@ EXCLUDED_FROM_HEADER_SYNC: frozenset[str] = frozenset({
     "TNNPcompactBatched",
     "ToRORd_dynClcompactBatched",
     "TrovatocompactBatched",
+    "TWorldcompactBatched",
 })

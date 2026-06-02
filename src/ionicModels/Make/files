@@ -31,6 +31,7 @@ PerisYagueBatched/PerisYagueBatched.C
 FabbriBatched/FabbriBatched.C
 GrandiBatched/GrandiBatched.C
 TrovatoBatched/TrovatoBatched.C
+TWorldBatched/TWorldBatched.C
 
 /* CUDA kernel sources: contents of Make/files-gpu inlined here when CARDIAC_ENABLE_CUDA is set. */
 $(if $(CARDIAC_ENABLE_CUDA),$(shell cat $(PWD)/Make/files-gpu))

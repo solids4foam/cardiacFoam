@@ -817,7 +817,7 @@ inline Foam::scalar computeIstim(Foam::scalar t, const Foam::StimulusProtocol& s
     return Foam::stimulusIO::computeStimulus(t, stimulus);
 }
 
-void
+inline void
 TWorldinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
 /* CaMK */
@@ -1246,7 +1246,7 @@ STATES[v] = -8.70655895407835061e+01;
 }
 
 
-void
+inline void
 TWorldcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 /* CaMK */

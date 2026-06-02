@@ -407,6 +407,7 @@ BATCHED_MODELS = [
     "TNNPcompactBatched",
     "ToRORd_dynClcompactBatched",
     "TrovatocompactBatched",
+    "TWorldcompactBatched",
 ]
 
 for batched_name in BATCHED_MODELS:

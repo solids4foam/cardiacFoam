@@ -136,6 +136,15 @@ class ionicModel
             return nullptr;
         }
 
+        virtual scalarField constantsForTissue(const label tissueFlag) const;
+
+        void configureTransmuralBandHeterogeneity
+        (
+            const scalarField& transmuralDistance,
+            const dictionary& heterogeneityDict,
+            PtrList<scalarField>& heterogeneousConstants
+        ) const;
+
         virtual label ioNumConstants() const
         {
             return 0;
