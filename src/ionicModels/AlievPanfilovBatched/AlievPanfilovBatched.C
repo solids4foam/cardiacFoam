@@ -134,6 +134,8 @@ Foam::AlievPanfilovBatched::AlievPanfilovBatched
         dict
     );
 
+    applyIonicConstantOverrides();
+
     for (label cellI = 0; cellI < nCells(); ++cellI)
     {
         for (label stateI = 0; stateI < NUM_STATES; ++stateI)

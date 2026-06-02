@@ -153,6 +153,11 @@ public:
         const word& modelName
     );
 
+    static word constantOverrideOutputSuffix
+    (
+        const dictionary& dict
+    );
+
 
     static const wordList& exportedFieldNamesRef
     (

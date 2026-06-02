@@ -33,6 +33,35 @@ namespace Foam
             return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
         }
 
+        word suffixScalar(const scalar value)
+        {
+            const std::string raw(Foam::name(value).c_str());
+            std::string out;
+            out.reserve(raw.size());
+
+            for (const char c : raw)
+            {
+                if (c == '.')
+                {
+                    out.push_back('p');
+                }
+                else if (c == '-')
+                {
+                    out.push_back('m');
+                }
+                else if (c == '+')
+                {
+                    out.push_back('p');
+                }
+                else
+                {
+                    out.push_back(c);
+                }
+            }
+
+            return word(out);
+        }
+
         std::string canonicalName(const char* raw)
         {
             std::string out;
@@ -678,6 +707,70 @@ namespace Foam
     }
 
 
+    Foam::word Foam::ionicModelIO::constantOverrideOutputSuffix
+    (
+        const dictionary& dict
+    )
+    {
+        if (dict.found("outputSuffix"))
+        {
+            return dict.lookupOrDefault<word>("outputSuffix", word());
+        }
+
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return word();
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+        if (!overrides.found("global"))
+        {
+            return word();
+        }
+
+        const dictionary& global = overrides.subDict("global");
+        word suffix;
+        wordList opNames(2);
+        opNames[0] = "scale";
+        opNames[1] = "set";
+
+        forAll(opNames, opI)
+        {
+            const word& opName = opNames[opI];
+
+            if (!global.found(opName))
+            {
+                continue;
+            }
+
+            const dictionary& opDict = global.subDict(opName);
+
+            forAllConstIter(dictionary, opDict, iter)
+            {
+                const entry& e = iter();
+                if (e.isDict())
+                {
+                    continue;
+                }
+
+                if (!suffix.empty())
+                {
+                    suffix += "_";
+                }
+
+                const word constantName(e.keyword());
+                suffix += opName;
+                suffix += "_";
+                suffix += constantName;
+                suffix += "_";
+                suffix += suffixScalar(readScalar(opDict.lookup(constantName)));
+            }
+        }
+
+        return suffix;
+    }
+
+
     const Foam::wordList& Foam::ionicModelIO::exportedFieldNamesRef
     (
         const wordList& userList,
@@ -1080,5 +1173,3 @@ namespace Foam
 
 
 } // End namespace Foam
-
-
