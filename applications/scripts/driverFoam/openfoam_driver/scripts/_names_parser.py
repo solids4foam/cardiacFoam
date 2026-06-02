@@ -135,4 +135,17 @@ EXCLUDED_FROM_HEADER_SYNC: frozenset[str] = frozenset({
     "monodomainFDAManufactured",
     "bidomainFDAManufactured",
     "bathBidomainFDAManufactured",
+    # compactBatched GPU models live under <Model>Batched/ directories and
+    # have no own *Names.H — they reuse the parent CPU model's header.
+    "AlievPanfilovcompactBatched",
+    "BuenoOroviocompactBatched",
+    "CourtemanchecompactBatched",
+    "FabbricompactBatched",
+    "GaurcompactBatched",
+    "GrandicompactBatched",
+    "PerisYaguecompactBatched",
+    "StewartcompactBatched",
+    "TNNPcompactBatched",
+    "ToRORd_dynClcompactBatched",
+    "TrovatocompactBatched",
 })

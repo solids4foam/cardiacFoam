@@ -92,6 +92,10 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     # (`purkinjeGraphModel`); the value is not registered in any RTST.
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
     ".conductionSystemDomain",
+    # batchedIntegrator selects the ODE integrator for compactBatched GPU
+    # models (euler / rushLarsen / rushLarsenHeun). Not an RTST — it is an
+    # internal solver-algorithm enum with no separate runtime table.
+    "$ELECTRO_MODEL_COEFFS.batchedIntegrator",
 })
 
 

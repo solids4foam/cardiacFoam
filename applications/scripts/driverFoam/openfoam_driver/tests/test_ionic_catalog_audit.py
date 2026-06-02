@@ -28,6 +28,7 @@ import unittest
 from pathlib import Path
 
 from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.scripts._names_parser import EXCLUDED_FROM_HEADER_SYNC
 
 # ---------------------------------------------------------------------------
 # Repository layout
@@ -50,6 +51,14 @@ NON_MANUFACTURED_MODELS: list[str] = [
     name
     for name in IONIC_MODEL_CATALOG
     if name not in _MANUFACTURED_FAMILY
+]
+
+# Models audited against C++ Names.H headers: excludes manufactured family
+# and any models explicitly excluded from header sync (e.g. compactBatched
+# GPU models that reuse the parent CPU model's header).
+HEADER_AUDITED_MODELS: list[str] = [
+    name for name in NON_MANUFACTURED_MODELS
+    if name not in EXCLUDED_FROM_HEADER_SYNC
 ]
 
 # ---------------------------------------------------------------------------
@@ -159,21 +168,21 @@ class TestIonicCatalogAudit(unittest.TestCase):
         )
 
     def test_states_audit(self) -> None:
-        for model in NON_MANUFACTURED_MODELS:
+        for model in HEADER_AUDITED_MODELS:
             with self.subTest(model=model):
                 cpp_states, _, _ = _parse_model(model)
                 cat_states = IONIC_MODEL_CATALOG[model].states
                 self._assert_field_matches(model, "states", cpp_states, cat_states)
 
     def test_algebraic_audit(self) -> None:
-        for model in NON_MANUFACTURED_MODELS:
+        for model in HEADER_AUDITED_MODELS:
             with self.subTest(model=model):
                 _, cpp_algebraic, _ = _parse_model(model)
                 cat_algebraic = IONIC_MODEL_CATALOG[model].algebraic
                 self._assert_field_matches(model, "algebraic", cpp_algebraic, cat_algebraic)
 
     def test_constants_audit(self) -> None:
-        for model in NON_MANUFACTURED_MODELS:
+        for model in HEADER_AUDITED_MODELS:
             with self.subTest(model=model):
                 _, _, cpp_constants = _parse_model(model)
                 cat_constants = IONIC_MODEL_CATALOG[model].constants
@@ -184,22 +193,38 @@ class TestIonicCatalogAudit(unittest.TestCase):
         for name in _MANUFACTURED_FAMILY:
             self.assertNotIn(name, NON_MANUFACTURED_MODELS)
 
-    def test_all_13_non_manufactured_models_present(self) -> None:
-        """All 13 expected non-manufactured models appear in the audit list."""
+    def test_all_23_non_manufactured_models_present(self) -> None:
+        """All 23 expected non-manufactured models appear in the audit list.
+
+        12 CPU models + 11 compactBatched GPU models.
+        ORd removed (C++ implementation deleted as non-functional).
+        """
         expected = {
+            # CPU models (12)
             "AlievPanfilov",
             "BuenoOrovio",
             "Courtemanche",
             "Fabbri",
             "Gaur",
             "Grandi",
-            "ORd",
             "PerisYague",
             "Stewart",
             "TNNP",
             "ToRORd_dynCl",
             "Trovato",
             "TWorld",
+            # GPU compactBatched models (11)
+            "AlievPanfilovcompactBatched",
+            "BuenoOroviocompactBatched",
+            "CourtemanchecompactBatched",
+            "FabbricompactBatched",
+            "GaurcompactBatched",
+            "GrandicompactBatched",
+            "PerisYaguecompactBatched",
+            "StewartcompactBatched",
+            "TNNPcompactBatched",
+            "ToRORd_dynClcompactBatched",
+            "TrovatocompactBatched",
         }
         self.assertEqual(
             expected,

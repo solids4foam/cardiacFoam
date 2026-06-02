@@ -95,7 +95,7 @@ class TestIonicCatalogContract(unittest.TestCase):
 
 
 _FULL_IONIC_MODELS = {
-    "TNNP", "ORd", "Grandi", "Courtemanche", "Fabbri",
+    "TNNP", "Grandi", "Courtemanche", "Fabbri",
     "ToRORd_dynCl", "Trovato", "Stewart", "Gaur", "PerisYague", "TWorld",
 }
 
@@ -159,7 +159,7 @@ class TestRecommendedExportsExpansion(unittest.TestCase):
 
     # Full ionic models — must carry voltage + calcium + ≥3 currents.
     _FULL_IONIC_MODELS: frozenset[str] = frozenset({
-        "TNNP", "ORd", "Grandi", "Courtemanche", "Fabbri",
+        "TNNP", "Grandi", "Courtemanche", "Fabbri",
         "ToRORd_dynCl", "Trovato", "Stewart", "Gaur",
         "PerisYague", "TWorld",
     })
