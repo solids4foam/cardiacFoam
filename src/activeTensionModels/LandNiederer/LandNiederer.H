@@ -53,7 +53,6 @@ Author
 
 SourceFiles
     LandNiederer.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef LandNiederer_H
