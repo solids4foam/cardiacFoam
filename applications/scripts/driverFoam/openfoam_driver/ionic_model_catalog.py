@@ -409,3 +409,30 @@ def list_models_by_species(species: str) -> list[str]:
         for name, entry in IONIC_MODEL_CATALOG.items()
         if species in entry.species
     ]
+
+
+BATCHED_MODELS = [
+    "AlievPanfilovcompactBatched",
+    "BuenoOroviocompactBatched",
+    "CourtemanchecompactBatched",
+    "FabbricompactBatched",
+    "GaurcompactBatched",
+    "GrandicompactBatched",
+    "PerisYaguecompactBatched",
+    "StewartcompactBatched",
+    "TNNPcompactBatched",
+    "ToRORd_dynClcompactBatched",
+    "TrovatocompactBatched",
+]
+
+for batched_name in BATCHED_MODELS:
+    parent_name = batched_name.replace("compactBatched", "")
+    if parent_name in IONIC_MODEL_CATALOG:
+        parent = IONIC_MODEL_CATALOG[parent_name]
+        from dataclasses import replace
+        IONIC_MODEL_CATALOG[batched_name] = replace(
+            parent,
+            description=f"{parent_name} (GPU compact-batched version).",
+            aliases=(f"{parent_name} GPU", f"{parent_name} compact batched"),
+            notes="GPU ionicModel using compact Rush-Larsen batched architecture."
+        )

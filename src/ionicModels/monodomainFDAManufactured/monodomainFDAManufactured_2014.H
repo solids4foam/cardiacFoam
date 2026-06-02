@@ -77,7 +77,6 @@ monodomainFDAManufacturedInitConsts(double* CONSTANTS, double* RATES, double *ST
 void
 monodomainFDAManufacturedComputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int dimension, bool solveVmWithinODESolver)
 {
-    // Local variables
     RATES[V] = 0.0;
     RATES[u1] = pow(STATES[u1] + STATES[u3] - STATES[V], 2.0) * pow(STATES[u2], 2.0) + 0.5 * (STATES[u1] + STATES[u3] - STATES[V]) * pow(STATES[u2], 2.0) * (STATES[V] - STATES[u3]);
     RATES[u2] = - (STATES[u1] + STATES[u3] - STATES[V]) *  pow(STATES[u2], 3);

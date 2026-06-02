@@ -60,8 +60,6 @@ Foam::monodomainFDAManufactured::monodomainFDAManufactured
         ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
         RATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
 
-        // Initialise the constants (repeatedly! it's ok...) and the rates and
-        // states
         monodomainFDAManufacturedInitConsts
         (
             CONSTANTS_.data(),
@@ -70,6 +68,8 @@ Foam::monodomainFDAManufactured::monodomainFDAManufactured
             tissue()
         );
     }
+
+    applyIonicConstantOverrides();
 }
 
 
@@ -133,7 +133,6 @@ void Foam::monodomainFDAManufactured::solveODE
             debugPrintFields(integrationPtI, tStart, tEnd, h);
         }
 
-        // The generic monodomain solver expects ionic current normalized by Cm.
         Im[integrationPtI] = A[Iion] / CONSTANTS_[Cm];
     }
 }

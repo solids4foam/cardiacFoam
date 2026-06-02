@@ -22,12 +22,20 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
 
 #include <math.h>
 
+namespace
+{
+    Foam::scalar alievPanfilovTransformedVm(const Foam::scalarField& S)
+    {
+        return S[u]*100.0 - 80.0;
+    }
+}
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -38,6 +46,25 @@ namespace Foam
     (
         ionicModel, AlievPanfilov, dictionary
     );
+
+    const ionicModelFamilyInfo& AlievPanfilovFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            AlievPanfilovCONSTANTS_NAMES,
+            AlievPanfilovSTATES_NAMES,
+            AlievPanfilovALGEBRAIC_NAMES,
+            u,
+            1000.0/12.9,
+            10.0,
+            0.8,
+            &alievPanfilovTransformedVm
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -64,7 +91,6 @@ Foam::AlievPanfilov::AlievPanfilov
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         AlievPanfilovinitConsts
         (
             CONSTANTS_.data(),
@@ -78,6 +104,8 @@ Foam::AlievPanfilov::AlievPanfilov
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 }
 
 
@@ -91,7 +119,6 @@ Foam::AlievPanfilov::~AlievPanfilov()
 
 Foam::List<Foam::word> Foam::AlievPanfilov::supportedTissueTypes() const
 {
-    // All three tissue variants are supported in the generated code
     return {"myocyte"};
 }
 
@@ -115,23 +142,18 @@ void Foam::AlievPanfilov::solveODE
         scalarField& RATESI     = RATES_[integrationPtI];
 
 
-        // Vm fed into the cell model in mV
         if (!solveVmWithinODESolver())
         {
             STATESI[0] = (Vm[integrationPtI] * 1000.0 + 80)/100;
         }
-        // Per-cell adaptive time step (in ms) for the ODE solver
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // Clamp ODE step
         step = min(step, deltaT * 1000.0/12.9);
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Advance the ODE system
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update ALGEBRAIC (incl. Iion_cm) and RATES at tEnd
         ::AlievPanfilovcomputeVariables
         (
             tEnd,
@@ -148,7 +170,6 @@ void Foam::AlievPanfilov::solveODE
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] * 100;
     }
 }
@@ -161,7 +182,6 @@ void Foam::AlievPanfilov::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated AlievPanfilov code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::AlievPanfilovcomputeVariables
@@ -205,7 +225,6 @@ void Foam::AlievPanfilov::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = AlievPanfilovDependencyMap();
 
     if (!depMap.found(currentName))
@@ -218,24 +237,19 @@ void Foam::AlievPanfilov::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in AP1996 FHN type)
         STATESI[u] = V;
 
         ::AlievPanfilovcomputeVariables

@@ -19,12 +19,225 @@ License
 
 #include "ionicModelIO.H"
 #include "ionicVariableCompatibility.H"
+#include "DynamicList.H"
+
+#include <string>
 
 namespace Foam
 {
 
     namespace
     {
+        inline char toLowerAscii(const char c)
+        {
+            return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+        }
+
+        word suffixScalar(const scalar value)
+        {
+            const std::string raw(Foam::name(value).c_str());
+            std::string out;
+            out.reserve(raw.size());
+
+            for (const char c : raw)
+            {
+                if (c == '.')
+                {
+                    out.push_back('p');
+                }
+                else if (c == '-')
+                {
+                    out.push_back('m');
+                }
+                else if (c == '+')
+                {
+                    out.push_back('p');
+                }
+                else
+                {
+                    out.push_back(c);
+                }
+            }
+
+            return word(out);
+        }
+
+        std::string canonicalName(const char* raw)
+        {
+            std::string out;
+
+            for (const char* p = raw; *p; ++p)
+            {
+                const char c = toLowerAscii(*p);
+
+                if (c == '_' || c == '-' || c == ' ')
+                {
+                    continue;
+                }
+
+                out.push_back(c);
+            }
+
+            if (out.size() > 2 && out[0] == 'a' && out[1] == 'v')
+            {
+                return out.substr(2);
+            }
+
+            return out;
+        }
+
+        label findConstantIndex
+        (
+            const word& requestedName,
+            const char* const constantNames[],
+            const label nConstants
+        )
+        {
+            if (!constantNames || nConstants <= 0)
+            {
+                return -1;
+            }
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (requestedName == constantNames[i])
+                {
+                    return i;
+                }
+            }
+
+            const std::string canonicalRequested =
+                canonicalName(requestedName.c_str());
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (canonicalRequested == canonicalName(constantNames[i]))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        wordList constantNamesList
+        (
+            const char* const constantNames[],
+            const label nConstants
+        )
+        {
+            wordList names(max(nConstants, label(0)));
+            for (label i = 0; i < nConstants; ++i)
+            {
+                names[i] = word(constantNames[i]);
+            }
+            return names;
+        }
+
+        void validateConstantMetadata
+        (
+            const char* const constantNames[],
+            const label nConstants,
+            const word& modelName
+        )
+        {
+            if (!constantNames || nConstants <= 0)
+            {
+                FatalErrorInFunction
+                    << "Constant metadata is not available for ionic model "
+                    << modelName << "." << exit(FatalError);
+            }
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (!constantNames[i] || constantNames[i][0] == '\0')
+                {
+                    FatalErrorInFunction
+                        << "Invalid constant metadata for ionic model "
+                        << modelName << ": constant index " << i
+                        << " has no name. Fix the model's CONSTANTS_NAMES "
+                        << "array so every NUM_CONSTANTS entry has a real "
+                        << "semantic name."
+                        << exit(FatalError);
+                }
+            }
+        }
+
+        struct ConstantOverrideOp
+        {
+            DynamicList<label> indices;
+            DynamicList<scalar> values;
+            DynamicList<word> requestedNames;
+        };
+
+        void collectConstantOverrideOp
+        (
+            const dictionary& opDict,
+            const word& opName,
+            const char* const constantNames[],
+            const label nConstants,
+            const word& modelName,
+            List<label>& seen,
+            const List<label>& otherSeen,
+            ConstantOverrideOp& op
+        )
+        {
+            forAllConstIter(dictionary, opDict, iter)
+            {
+                const entry& e = iter();
+                const word requestedName(e.keyword());
+
+                if (e.isDict())
+                {
+                    FatalErrorInFunction
+                        << "ionicConstantOverrides.global." << opName
+                        << " entry '" << requestedName
+                        << "' for ionic model " << modelName
+                        << " must be a scalar value, not a dictionary."
+                        << exit(FatalError);
+                }
+
+                const label constantI =
+                    findConstantIndex(requestedName, constantNames, nConstants);
+
+                if (constantI < 0)
+                {
+                    FatalErrorInFunction
+                        << "Unknown ionic constant '" << requestedName
+                        << "' in ionicConstantOverrides.global." << opName
+                        << " for ionic model " << modelName << "." << nl
+                        << "Available constants: "
+                        << constantNamesList(constantNames, nConstants)
+                        << exit(FatalError);
+                }
+
+                if (seen[constantI])
+                {
+                    FatalErrorInFunction
+                        << "Duplicate ionic constant override for '"
+                        << constantNames[constantI]
+                        << "' in ionicConstantOverrides.global." << opName
+                        << " for ionic model " << modelName << "."
+                        << exit(FatalError);
+                }
+
+                if (otherSeen[constantI])
+                {
+                    FatalErrorInFunction
+                        << "Ambiguous ionic constant override for '"
+                        << constantNames[constantI]
+                        << "' in ionic model " << modelName
+                        << ": the same constant appears in both scale and set."
+                        << exit(FatalError);
+                }
+
+                seen[constantI] = 1;
+                op.indices.append(constantI);
+                op.values.append(readScalar(opDict.lookup(requestedName)));
+                op.requestedNames.append(requestedName);
+            }
+        }
+
         void emitHeader
         (
             OFstream& os,
@@ -354,6 +567,207 @@ namespace Foam
 
         // Start writing once we pass that time
         return (tEnd >= writeAfterTime);
+    }
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName
+    )
+    {
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return;
+        }
+
+        if (constants.empty())
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides was requested for ionic model "
+                << modelName
+                << ", but constant storage is not available."
+                << exit(FatalError);
+        }
+
+        validateConstantMetadata(constantNames, nConstants, modelName);
+
+        if (constants.size() != nConstants)
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " found " << nConstants << " constant names but "
+                << constants.size() << " stored constant values."
+                << exit(FatalError);
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+
+        forAllConstIter(dictionary, overrides, iter)
+        {
+            const word entryName(iter().keyword());
+            if (entryName != "global")
+            {
+                FatalErrorInFunction
+                    << "Unsupported ionicConstantOverrides entry '"
+                    << entryName << "' for ionic model " << modelName << "."
+                    << nl
+                    << "CPU v1 supports only ionicConstantOverrides.global."
+                    << exit(FatalError);
+            }
+        }
+
+        if (!overrides.found("global"))
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " must contain a 'global' sub-dictionary."
+                << exit(FatalError);
+        }
+
+        const dictionary& global = overrides.subDict("global");
+
+        forAllConstIter(dictionary, global, iter)
+        {
+            const word entryName(iter().keyword());
+            if (entryName != "scale" && entryName != "set")
+            {
+                FatalErrorInFunction
+                    << "Unsupported ionicConstantOverrides.global entry '"
+                    << entryName << "' for ionic model " << modelName << "."
+                    << nl
+                    << "Supported entries are 'scale' and 'set'."
+                    << exit(FatalError);
+            }
+        }
+
+        List<label> scaleSeen(nConstants, 0);
+        List<label> setSeen(nConstants, 0);
+        ConstantOverrideOp scaleOp;
+        ConstantOverrideOp setOp;
+
+        if (global.found("scale"))
+        {
+            collectConstantOverrideOp
+            (
+                global.subDict("scale"),
+                "scale",
+                constantNames,
+                nConstants,
+                modelName,
+                scaleSeen,
+                setSeen,
+                scaleOp
+            );
+        }
+
+        if (global.found("set"))
+        {
+            collectConstantOverrideOp
+            (
+                global.subDict("set"),
+                "set",
+                constantNames,
+                nConstants,
+                modelName,
+                setSeen,
+                scaleSeen,
+                setOp
+            );
+        }
+
+        forAll(scaleOp.indices, opI)
+        {
+            const label constantI = scaleOp.indices[opI];
+            const scalar oldValue = constants[constantI];
+            constants[constantI] *= scaleOp.values[opI];
+
+            Info<< "ionicConstantOverrides: " << modelName
+                << " scaled " << constantNames[constantI]
+                << " (" << scaleOp.requestedNames[opI] << ")"
+                << " by " << scaleOp.values[opI]
+                << ": " << oldValue << " -> " << constants[constantI]
+                << nl;
+        }
+
+        forAll(setOp.indices, opI)
+        {
+            const label constantI = setOp.indices[opI];
+            const scalar oldValue = constants[constantI];
+            constants[constantI] = setOp.values[opI];
+
+            Info<< "ionicConstantOverrides: " << modelName
+                << " set " << constantNames[constantI]
+                << " (" << setOp.requestedNames[opI] << ")"
+                << ": " << oldValue << " -> " << constants[constantI]
+                << nl;
+        }
+    }
+
+
+    Foam::word Foam::ionicModelIO::constantOverrideOutputSuffix
+    (
+        const dictionary& dict
+    )
+    {
+        if (dict.found("outputSuffix"))
+        {
+            return dict.lookupOrDefault<word>("outputSuffix", word());
+        }
+
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return word();
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+        if (!overrides.found("global"))
+        {
+            return word();
+        }
+
+        const dictionary& global = overrides.subDict("global");
+        word suffix;
+        wordList opNames(2);
+        opNames[0] = "scale";
+        opNames[1] = "set";
+
+        forAll(opNames, opI)
+        {
+            const word& opName = opNames[opI];
+
+            if (!global.found(opName))
+            {
+                continue;
+            }
+
+            const dictionary& opDict = global.subDict(opName);
+
+            forAllConstIter(dictionary, opDict, iter)
+            {
+                const entry& e = iter();
+                if (e.isDict())
+                {
+                    continue;
+                }
+
+                if (!suffix.empty())
+                {
+                    suffix += "_";
+                }
+
+                const word constantName(e.keyword());
+                suffix += opName;
+                suffix += "_";
+                suffix += constantName;
+                suffix += "_";
+                suffix += suffixScalar(readScalar(opDict.lookup(constantName)));
+            }
+        }
+
+        return suffix;
     }
 
 
@@ -759,9 +1173,3 @@ namespace Foam
 
 
 } // End namespace Foam
-
-
-
-
-
-

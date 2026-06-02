@@ -40,7 +40,6 @@ namespace Foam {
 
 class ionicSelector {
 public:
-  // Main interface
   static label selectTissue(const dictionary &dict,
                             const List<word> &supportedTissues);
   static label selectDimension(const dictionary &dict,

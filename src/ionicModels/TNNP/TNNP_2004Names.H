@@ -70,9 +70,6 @@ enum CONSTANTS_INDEX {
     V_sr,
     tau_fCa,
 
-    // Tissue-dependent algebraic parameters (promoted from hot-path branches
-    // in TNNPcomputeRates / TNNPcomputeVariables — see spec
-    // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1)
     sInfPrefactor,
     sInfShift,
     sInfScale,

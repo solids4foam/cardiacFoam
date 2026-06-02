@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Final, Literal
+from .ionic_model_catalog import BATCHED_MODELS
 
 # Workflow phases used by run documents and catalog exports, in strict order.
 # Every ``DictEntry`` may declare one or more of these in ``phases``; the
@@ -162,23 +163,25 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/ionicModels/ionicModel/ionicModel.C",
             ),
             value_kind="enum",
-            enum_values=(
-                "AlievPanfilov",
-                "BuenoOrovio",
-                "Courtemanche",
-                "Fabbri",
-                "Gaur",
-                "Grandi",
-                "ORd",
-                "PerisYague",
-                "Stewart",
-                "TNNP",
-                "ToRORd_dynCl",
-                "Trovato",
-                "TWorld",
-                "bathBidomainFDAManufactured",
-                "bidomainFDAManufactured",
-                "monodomainFDAManufactured",
+            enum_values=tuple(
+                [
+                    "AlievPanfilov",
+                    "BuenoOrovio",
+                    "Courtemanche",
+                    "Fabbri",
+                    "Gaur",
+                    "Grandi",
+                    "PerisYague",
+                    "Stewart",
+                    "TNNP",
+                    "ToRORd_dynCl",
+                    "Trovato",
+                    "TWorld",
+                    "bathBidomainFDAManufactured",
+                    "bidomainFDAManufactured",
+                    "monodomainFDAManufactured",
+                ]
+                + BATCHED_MODELS
             ),
             required=True,
             constraints=("Not applicable when myocardiumSolver=eikonalSolver.",),
@@ -200,20 +203,22 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             # three FDA models (mono, bi, bath-bi).
             applicable_when={
                 "myocardiumSolver": ("monodomainSolver", "bidomainSolver", "singleCellSolver"),
-                "ionicModel": (
-                    "AlievPanfilov",
-                    "BuenoOrovio",
-                    "Courtemanche",
-                    "Fabbri",
-                    "Gaur",
-                    "Grandi",
-                    "ORd",
-                    "PerisYague",
-                    "Stewart",
-                    "TNNP",
-                    "ToRORd_dynCl",
-                    "Trovato",
-                    "TWorld",
+                "ionicModel": tuple(
+                    [
+                        "AlievPanfilov",
+                        "BuenoOrovio",
+                        "Courtemanche",
+                        "Fabbri",
+                        "Gaur",
+                        "Grandi",
+                        "PerisYague",
+                        "Stewart",
+                        "TNNP",
+                        "ToRORd_dynCl",
+                        "Trovato",
+                        "TWorld",
+                    ]
+                    + BATCHED_MODELS
                 ),
             },
         ),
@@ -321,6 +326,30 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/activeTensionModels/activeTensionModel/activeTensionModel.H",),
             value_kind="word_list",
             required=False,
+        ),
+    ),
+    "batched_integrator": (
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.batchedIntegrator",
+            phases=frozenset({"solver"}),
+            description="Integration scheme for GPU/SOA batched models.",
+            source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
+            value_kind="enum",
+            enum_values=("euler", "rushLarsen"),
+            required=True,
+            applicable_when={"ionicModel": tuple(BATCHED_MODELS)},
+            required_when={"ionicModel": tuple(BATCHED_MODELS)},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.batchedSubsteps",
+            phases=frozenset({"solver"}),
+            description="Number of substeps for batched ODE integration.",
+            source_refs=("src/ionicModels/ionicModel/ionicModel.C",),
+            value_kind="integer",
+            required=True,
+            typical_value="50",
+            applicable_when={"ionicModel": tuple(BATCHED_MODELS)},
+            required_when={"ionicModel": tuple(BATCHED_MODELS)},
         ),
     ),
     "ode_solver_passthrough": (
@@ -1071,20 +1100,22 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/ionicModels/ionicModel/ionicModel.C",
             ),
             value_kind="enum",
-            enum_values=(
-                "AlievPanfilov",
-                "BuenoOrovio",
-                "Courtemanche",
-                "Fabbri",
-                "Gaur",
-                "Grandi",
-                "ORd",
-                "Stewart",
-                "TNNP",
-                "ToRORd_dynCl",
-                "Trovato",
-                "monodomainFDAManufactured",
-                "bidomainFDAManufactured",
+            enum_values=tuple(
+                [
+                    "AlievPanfilov",
+                    "BuenoOrovio",
+                    "Courtemanche",
+                    "Fabbri",
+                    "Gaur",
+                    "Grandi",
+                    "Stewart",
+                    "TNNP",
+                    "ToRORd_dynCl",
+                    "Trovato",
+                    "monodomainFDAManufactured",
+                    "bidomainFDAManufactured",
+                ]
+                + BATCHED_MODELS
             ),
             notes="Stewart is the canonical human Purkinje model. monodomainFDAManufactured/bidomainFDAManufactured are for verification only.",
             dynamic_path=True,

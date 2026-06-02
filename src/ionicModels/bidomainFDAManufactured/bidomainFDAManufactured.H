@@ -80,6 +80,11 @@ protected:
         return &CONSTANTS_;
     }
 
+    virtual scalarField* ioMutableConstantsPtr() const override
+    {
+        return &CONSTANTS_;
+    }
+
     virtual label ioNumConstants() const override
     {
         return BIDOMAIN_NUM_CONSTANTS;

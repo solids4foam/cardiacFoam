@@ -72,9 +72,6 @@ bathBidomainFDAManufacturedInitConsts
     CONSTANTS[BathBidomainCm] = 2.0;
     CONSTANTS[BathBidomainChi] = 3.0;
 
-    // The bath FDA manufactured solution carries u3 = -alpha*x/se in every
-    // mesh dimension. Beta * (1 - k) absorbs the geometric mismatch from
-    // this linear drift; the scaling is independent of dimensionality.
     const double betaScale = -1.1;
 
     CONSTANTS[BathBidomainBeta] = betaScale*(1.0 - k);

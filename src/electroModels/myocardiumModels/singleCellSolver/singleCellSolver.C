@@ -21,6 +21,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "dimVoltage.H"
 #include "stimulusIO.H"
+#include "ionicModelIO.H"
 #include "OSspecific.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -98,17 +99,26 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
     const fileName outputDir(runTime.path() / "postProcessing");
     mkDir(outputDir);
 
+    const word outputSuffix =
+        ionicModelIO::constantOverrideOutputSuffix(electroProperties());
+
+    word outputName =
+        ionicModelPtr_->type()
+      + "_"
+      + ionicModelPtr_->tissueName()
+      + "_"
+      + stimulusIO::protocolSuffix(electroProperties());
+
+    if (!outputSuffix.empty())
+    {
+        outputName += "_";
+        outputName += outputSuffix;
+    }
+
     const fileName outFile
     (
         outputDir
-      / (
-            ionicModelPtr_->type()
-          + "_"
-          + ionicModelPtr_->tissueName()
-          + "_"
-          + stimulusIO::protocolSuffix(electroProperties())
-          + ".txt"
-        )
+      / (outputName + ".txt")
     );
 
     outputPtr_.reset(new OFstream(outFile));

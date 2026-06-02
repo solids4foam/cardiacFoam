@@ -218,6 +218,26 @@ public:
     {
         return statesSoA_;
     }
+
+    inline scalar* statesSoAData() const
+    {
+        return statesSoA_.data();
+    }
+
+    inline scalar* ratesSoAData() const
+    {
+        return ratesSoA_.data();
+    }
+
+    inline scalar* supportSoAData() const
+    {
+        return nHotPathSupport_ > 0 ? supportSoA_.data() : nullptr;
+    }
+
+    inline scalar* algebraicsSoAData() const
+    {
+        return algebraicsSoA_.size() ? algebraicsSoA_.data() : nullptr;
+    }
 };
 
 } // End namespace Foam

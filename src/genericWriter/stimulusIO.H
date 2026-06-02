@@ -33,6 +33,7 @@ Author
 #include "word.H"
 #include "OFstream.H"
 #include "boundBox.H"
+#include "StimulusProtocolPOD.H"
 
 namespace Foam
 {
@@ -131,6 +132,20 @@ public:
     );
 
     static word protocolSuffix(const dictionary& dict);
+
+    static inline StimulusProtocolPOD toPOD(const StimulusProtocol& s)
+    {
+        StimulusProtocolPOD p;
+        p.stimStart = static_cast<double>(s.stimStart);
+        p.stimPeriodS1 = static_cast<double>(s.stimPeriodS1);
+        p.stimDuration = static_cast<double>(s.stimDuration);
+        p.stimAmplitude = static_cast<double>(s.stimAmplitude);
+        p.stimPeriodS2 = static_cast<double>(s.stimPeriodS2);
+        p.nStim1 = static_cast<int>(s.nStim1);
+        p.nStim2 = static_cast<int>(s.nStim2);
+        p._pad0 = 0;
+        return p;
+    }
 
 };
 

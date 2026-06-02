@@ -38,15 +38,6 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
       step_(num, initialDeltaT), tissue_(-1),
       solveVmWithinODESolver_(solveVmWithinODESolver)
 {
-    // Required schema:
-    // outputVariables
-    // {
-    //   ionic
-    //   {
-    //     export (...);
-    //     debug  (...);
-    //   }
-    // }
     if (dict_.found("outputVariables"))
     {
         const dictionary& outDict = dict_.subDict("outputVariables");
@@ -69,6 +60,33 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
 void ::Foam::ionicModel::setTissueFromDict()
 {
     tissue_ = ionicSelector::selectTissue(dict_, supportedTissueTypes());
+}
+
+void ::Foam::ionicModel::applyIonicConstantOverrides() const
+{
+    if (!dict_.found("ionicConstantOverrides"))
+    {
+        return;
+    }
+
+    scalarField* constantsPtr = ioMutableConstantsPtr();
+    if (!constantsPtr)
+    {
+        FatalErrorInFunction
+            << "ionicConstantOverrides was requested for ionic model "
+            << type()
+            << ", but this model does not expose mutable constants."
+            << exit(FatalError);
+    }
+
+    ionicModelIO::applyConstantOverrides
+    (
+        *constantsPtr,
+        ioConstantNames(),
+        ioNumConstants(),
+        dict_,
+        type()
+    );
 }
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //

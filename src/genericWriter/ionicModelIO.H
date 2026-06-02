@@ -144,6 +144,20 @@ public:
         bool utilitiesMode
     );
 
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName
+    );
+
+    static word constantOverrideOutputSuffix
+    (
+        const dictionary& dict
+    );
+
 
     static const wordList& exportedFieldNamesRef
     (

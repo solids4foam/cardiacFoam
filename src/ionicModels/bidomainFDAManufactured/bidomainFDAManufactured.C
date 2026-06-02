@@ -83,6 +83,8 @@ Foam::bidomainFDAManufactured::bidomainFDAManufactured
             k_
         );
     }
+
+    applyIonicConstantOverrides();
 }
 
 

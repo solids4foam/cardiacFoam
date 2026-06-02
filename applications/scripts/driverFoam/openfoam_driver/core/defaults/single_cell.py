@@ -12,18 +12,44 @@ from .shared import (
 TUTORIAL_NAME = "singleCell"
 CASE_DIR_NAME = "singleCellprotocols/singleCell"
 SETUP_DIR_NAME = "setupSingleCell"
-IONIC_MODELS = ("TNNP", "Gaur", "Courtemanche", "BuenoOrovio")
+IONIC_MODELS = (
+    "AlievPanfilov",
+    "BuenoOrovio",
+    "Courtemanche",
+    "Fabbri",
+    "Gaur",
+    "Grandi",
+    "PerisYague",
+    "Stewart",
+    "TNNP",
+    "ToRORd_dynCl",
+    "Trovato",
+)
 IONIC_MODEL_TISSUE_MAP = {
-    "TNNP": ("epicardialCells", "mCells", "endocardialCells"),
+    "AlievPanfilov": ("myocyte",),
     "BuenoOrovio": ("epicardialCells", "mCells", "endocardialCells"),
-    "Gaur": ("myocyte",),
     "Courtemanche": ("myocyte",),
+    "Fabbri": ("myocyte",),
+    "Gaur": ("myocyte",),
+    "Grandi": ("myocyte",),
+    "PerisYague": ("myocyte",),
+    "Stewart": ("myocyte",),
+    "TNNP": ("epicardialCells", "mCells", "endocardialCells"),
+    "ToRORd_dynCl": ("epicardialCells", "mCells", "endocardialCells"),
+    "Trovato": ("myocyte",),
 }
 STIMULUS_MAP = {
-    "TNNP": 60,
+    "AlievPanfilov": 0.4,
     "BuenoOrovio": 0.4,
-    "Gaur": 60,
     "Courtemanche": 60,
+    "Fabbri": 0,
+    "Gaur": 60,
+    "Grandi": 60,
+    "PerisYague": 60,
+    "Stewart": 60,
+    "TNNP": 60,
+    "ToRORd_dynCl": 60,
+    "Trovato": 60,
 }
 ELECTRO_PROPERTIES_SCOPE = "singleCellSolverCoeffs"
 ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH

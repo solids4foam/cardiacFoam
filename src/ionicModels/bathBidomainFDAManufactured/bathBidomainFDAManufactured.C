@@ -92,6 +92,8 @@ Foam::bathBidomainFDAManufactured::bathBidomainFDAManufactured
             k_
         );
     }
+
+    applyIonicConstantOverrides();
 }
 
 

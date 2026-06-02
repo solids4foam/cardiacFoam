@@ -92,6 +92,12 @@ static const char* GrandiALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_inal_hl_inf",
     "AV_inal_ml_a",
     "AV_inal_ml_b",
+    "AV_inal_ml_tau",
+    "AV_inal_ml_inf",
+    "AV_ical_fCaB_jn_tau",
+    "AV_ical_fCaB_jn_inf",
+    "AV_ical_fCaB_sl_tau",
+    "AV_ical_fCaB_sl_inf",
     "AV_ito_x_inf",
     "AV_ito_x_tau",
     "AV_ito_y_inf",
@@ -703,6 +709,8 @@ GrandicomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     /* inal_ml */
     ALGEBRAIC[AV_inal_ml_a] = 0.32 * (STATES[membrane_V] + 47.13) / (1.0 - exp(-0.1 * (STATES[membrane_V] + 47.13)));
     ALGEBRAIC[AV_inal_ml_b] = 0.08 * exp(-STATES[membrane_V] / 11.0);
+    ALGEBRAIC[AV_inal_ml_tau] = 1.0 / (ALGEBRAIC[AV_inal_ml_a] + ALGEBRAIC[AV_inal_ml_b]);
+    ALGEBRAIC[AV_inal_ml_inf] = ALGEBRAIC[AV_inal_ml_a] * ALGEBRAIC[AV_inal_ml_tau];
 
     /* ito_x */
     ALGEBRAIC[AV_ito_x_inf] = 1.0 / (1.0 + exp(-(STATES[membrane_V] + 1.0) / 11.0));
@@ -774,7 +782,11 @@ GrandicomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STA
     /* ical */
     RATES[Ical_d] = (ALGEBRAIC[AV_ical_d_inf] - STATES[Ical_d]) / ALGEBRAIC[AV_ical_d_tau];
     RATES[Ical_f] = (ALGEBRAIC[AV_ical_f_inf] - STATES[Ical_f]) / ALGEBRAIC[AV_ical_f_tau];
+    ALGEBRAIC[AV_ical_fCaB_jn_tau] = 1.0 / (1.7 * STATES[Ca_jn] + 0.0119);
+    ALGEBRAIC[AV_ical_fCaB_jn_inf] = 1.7 * STATES[Ca_jn] * ALGEBRAIC[AV_ical_fCaB_jn_tau];
     RATES[Ical_fCaB_jn] = (1.7 * STATES[Ca_jn] * (1.0 - STATES[Ical_fCaB_jn]) - 0.0119 * STATES[Ical_fCaB_jn]) * 1.0;
+    ALGEBRAIC[AV_ical_fCaB_sl_tau] = 1.0 / (1.7 * STATES[Ca_sl] + 0.0119);
+    ALGEBRAIC[AV_ical_fCaB_sl_inf] = 1.7 * STATES[Ca_sl] * ALGEBRAIC[AV_ical_fCaB_sl_tau];
     RATES[Ical_fCaB_sl] = (1.7 * STATES[Ca_sl] * (1.0 - STATES[Ical_fCaB_sl]) - 0.0119 * STATES[Ical_fCaB_sl]) * 1.0;
     ALGEBRAIC[AV_ibarca_jn] = CONSTANTS[AC_pCa] * 4.0 * (STATES[membrane_V] * CONSTANTS[AC_F] * CONSTANTS[AC_FRT]) * (0.341 * STATES[Ca_jn] * exp(2.0 * STATES[membrane_V] * CONSTANTS[AC_FRT]) - 0.341 * CONSTANTS[AC_Ca_o]) / (exp(2.0 * STATES[membrane_V] * CONSTANTS[AC_FRT]) - 1.0) * CONSTANTS[AC_f_conducting];
     ALGEBRAIC[AV_ibarca_sl] = CONSTANTS[AC_pCa] * 4.0 * (STATES[membrane_V] * CONSTANTS[AC_F] * CONSTANTS[AC_FRT]) * (0.341 * STATES[Ca_sl] * exp(2.0 * STATES[membrane_V] * CONSTANTS[AC_FRT]) - 0.341 * CONSTANTS[AC_Ca_o]) / (exp(2.0 * STATES[membrane_V] * CONSTANTS[AC_FRT]) - 1.0) * CONSTANTS[AC_f_conducting];

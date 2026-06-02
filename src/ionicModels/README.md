@@ -9,22 +9,33 @@ Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 
 ```text
 src/ionicModels/
-├── ionicModel/            # Base class, selector utilities, runtime selection
-├── monodomainFDAManufactured/  # Manufactured-solution verification model
-├── bidomainFDAManufactured/    # Manufactured-solution verification model
+├── ionicModel/                  # Base class, selector, batched/GPU support headers
+├── monodomainFDAManufactured/   # Manufactured-solution verification model
+├── bidomainFDAManufactured/     # Manufactured-solution verification model
+├── bathBidomainFDAManufactured/ # Manufactured-solution verification model (bath bidomain)
 ├── AlievPanfilov/
+├── AlievPanfilovBatched/
 ├── BuenoOrovio/
+├── BuenoOrovioBatched/
 ├── Courtemanche/
+├── CourtemancheBatched/
 ├── Fabbri/
+├── FabbriBatched/
 ├── Gaur/
+├── GaurBatched/
 ├── Grandi/
-├── ORd/
-├── Stewart/
-├── TNNP/
-├── ToRORd_dynCl/
-├── Trovato/
-├── TWorld/
+├── GrandiBatched/
 ├── PerisYague/
+├── PerisYagueBatched/
+├── Stewart/
+├── StewartBatched/
+├── TNNP/
+├── TNNPBatched/
+├── ToRORd_dynCl/
+├── ToRORd_dynClBatched/
+├── Trovato/
+├── TrovatoBatched/
+├── TWorld/
 ├── Make/
 └── README.md
 ```
@@ -97,19 +108,34 @@ Common behaviors:
 
 Current `Make/files` entries:
 
+**Scalar models:**
 - `AlievPanfilov`
 - `BuenoOrovio`
 - `Courtemanche`
 - `Fabbri`
 - `Gaur`
 - `Grandi`
-- `ORd`
+- `PerisYague`
 - `Stewart`
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`
 - `TWorld`
-- `PerisYague`
+
+**Batched (SoA) models:**
+- `AlievPanfilovBatched`
+- `BuenoOrovioBatched`
+- `CourtemancheBatched`
+- `FabbriBatched`
+- `GaurBatched`
+- `GrandiBatched`
+- `PerisYagueBatched`
+- `StewartBatched`
+- `TNNPBatched`
+- `ToRORd_dynClBatched`
+- `TrovatoBatched`
+
+**Verification models:**
 - `monodomainFDAManufactured`
 - `bidomainFDAManufactured`
 - `bathBidomainFDAManufactured`
