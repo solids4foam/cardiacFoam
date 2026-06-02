@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# Options
+#     -p
+#         if passed, runs the case in parallel
+#
+# Optional environment variables
+#     Mesh density level
+:     "${MESH_LEVEL:=1}"
+#     Number of mesh subdomains (only used in parallel run)
+:     "${NUMBER_OF_SUBDOMAINS:=4}"
+#     Fluid model to be called by solids4Foam (pimpleFluid, newtonIcoFluid)
+:     "${FLUID_MODEL:=pimpleFluid}"
+#     Mesh type:
+#         HEX           structured hexagonal mesh
+#         HEX_GRADED    structured hexagonal graded mesh
+#         CARTESIAN     unstructured hexagonal mesh
+#         TET           unstructured tetrahedral mesh
+#         POLY          unstructured polyhedral mesh
+:     "${MESH:=CARTESIAN}"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+cd "${0%/*}" || exit    # Run from this directory
+set -e
+
+# Source tutorial run functions
+. "${WM_PROJECT_DIR}"/bin/tools/RunFunctions
+
+case "${MESH}" in
+    "HEX" | "HEX_GRADED")
+        # Set the blockMeshDict
+        BLOCKMESHDICT="system/blockMeshDict"
+        if [[ "$MESH" == "HEX_GRADED" ]]
+        then
+            BLOCKMESHDICT="${BLOCKMESHDICT}.graded"
+        fi
+
+        if [[ ! -f "${BLOCKMESHDICT}" ]]
+        then
+            printf "Cannot find ./%s: please add it to ./system/\n\n" \
+                   "${BLOCKMESHDICT}" >&2
+            exit 1
+        fi
+
+        echo "Generating ${MESH} mesh using blockMesh."
+
+        MESH_LEVEL=${MESH_LEVEL} \
+            runApplication -suffix "${MESH}" blockMesh -dict "${BLOCKMESHDICT}"
+
+        if command -v projectPatchToSphere &>/dev/null
+        then
+            printf "%s %s\n" \
+                   "Projecting the 'sphere' patch onto a sphere" \
+                   "of radius 5 whose centre is located at '(0 0 0)'"
+            # The following command is run twice to reduce "point displacement
+            # motion" down to zero. For more information, please take a look at
+            # the output of this command and/or its help using the `-help` flag.
+            runApplication -suffix '1' projectPatchToSphere sphere '(0 0 0)' 0.5
+            runApplication -suffix '2' projectPatchToSphere sphere '(0 0 0)' 0.5
+        fi
+        ;;
+
+    "CARTESIAN")
+        if ! command -v cartesianMesh &> /dev/null
+        then
+            echo "Cartesianmesh not found. Please install it."
+        fi
+
+        # Combine surfaces into one surface
+        cat ./boundingBox.stl ./sphere.stl > geometry.stl
+
+        # Convert the surface from STL to FMS format
+        runApplication surfaceToFMS geometry.stl
+
+        # Generate the mesh using cfMesh
+        MESH_LEVEL="${MESH_LEVEL}" runApplication cartesianMesh
+
+        if command -v projectPatchToSphere &> /dev/null
+        then
+            printf "%s %s\n" \
+                   "Projecting the 'sphere' patch onto a sphere" \
+                   "of radius 5 whose centre is located at '(0 0 0)'"
+            runApplication -suffix '1' projectPatchToSphere sphere '(0 0 0)' 0.5
+            runApplication -suffix '2' projectPatchToSphere sphere '(0 0 0)' 0.5
+        fi
+        ;;
+
+    "TET" | "POLY")
+        if ! command -v gmsh &> /dev/null
+        then
+            echo "gmsh not found: please install it" >&2
+            exit 1
+        fi
+
+        echo "Generating ${MESH} mesh using Gmsh."
+
+        # Generate the mesh using Gmsh
+        runApplication gmsh -3 -format msh2 \
+            -setnumber meshLevel "${MESH_LEVEL}" \
+            gmsh/oscillatingSphereInCube.geo \
+            -o gmsh/oscillatingSphereInCube.msh
+
+        # Convert Gmsh mesh to OpenFOAM format
+        runApplication gmshToFoam gmsh/oscillatingSphereInCube.msh
+
+        if [[ "${MESH}" == "POLY" ]]
+        then
+            # Convert to polyhedral mesh
+            runApplication polyDualMesh 45 -overwrite
+
+            # Combine faces into larger polygons so that the angle between edges
+            # is less than 45 degrees.
+            runApplication combinePatchFaces 45 -overwrite
+        fi
+        ;;
+
+    *)
+        echo "Invalid mesh type: '${MESH}'." >&2
+        echo "Choose one of HEX, HEX_GRADED, CARTESIAN, TET or POLY." >&2
+        exit 1
+        ;;
+esac
+
+# Restore the 0/ directory from 0.orig/
+restore0Dir
+
+if [ "$1" = '-p' ];
+then
+    # Decopose mesh
+    NUMBER_OF_SUBDOMAINS="${NUMBER_OF_SUBDOMAINS}" runApplication decomposePar
+
+        # Fix fixedValueCorrected patches after decomposition
+    python3 - <<'PY'
+from pathlib import Path
+import re
+
+patches = ["xmin", "xmax", "ymin", "ymax", "zmin", "zmax"]
+
+for f in Path(".").glob("processor*/0/U"):
+    s = f.read_text()
+    for p in patches:
+        pattern = rf"({p}\s*\{{[^}}]*?type\s+fixedValueCorrected;)([^}}]*?)(\n\s*\}})"
+        s = re.sub(
+            pattern,
+            lambda m: m.group(0) if "value" in m.group(0)
+            else m.group(1) + m.group(2)
+            + "\n        value           uniform (0 0 0);"
+            + m.group(3),
+            s,
+            flags=re.S,
+        )
+    f.write_text(s)
+PY
+
+    # Run the solver (parallel)
+    FLUID_MODEL="${FLUID_MODEL}" runParallel "$(getApplication)"
+
+    # Deconstruct the result
+    runApplication reconstructPar -no-fields -latestTime
+else
+    # Run the solver (serial)
+    FLUID_MODEL="${FLUID_MODEL}" runApplication "$(getApplication)"
+fi
+
+# Generate the plots
+echo "Generating plots for drag coefficient."
+script="./plotScripts/forceCoeffs.gnuplot"
+dataFile="./postProcessing/forceCoeffs/0/coefficient.dat"
+verificationDataFile="./verificationData/Cd.dat"
+outFile="./Cd.pdf"
+gnuplot -c "${script}" "${dataFile}" "${verificationDataFile}" "${outFile}"

@@ -1,0 +1,78 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| solids4foam: solid mechanics and fluid-solid interaction simulations        |
+| Version:     v2.0                                                           |
+| Web:         https://solids4foam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       pointVectorField;
+    object      pointDisplacement;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 0 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    sphere
+    {
+#if 0
+        type                    codedFixedValue;
+        name                    pointDisplacementSphere;
+        code
+        #{
+            using constant::mathematical::twoPi;
+
+            constexpr scalar D = 1.0;
+            constexpr scalar h = 0.125*D;
+            const scalar t = this->db().time().value();
+
+            operator==(h*(1.0 - cos(twoPi*t))*vector(1, 0, 0));
+        #};
+        value   $internalField;
+#else
+        type                    solidBodyMotionDisplacement;
+        solidBodyMotionFunction oscillatingLinearMotion;
+        /*
+            Reference displacement function written in terms of cosine
+            x(t) = -h*\cos(2*\pi*t) + h
+                 = -h*\sin(2*\pi*t + \pi/2) + h
+                 = -h*\sin(2*\pi*(t + (\pi/2)/(2\pi))) + h
+                 = -h*\sin(2*\pi*(t + 1/4)) + h
+
+            oscillatingLinerMotion function:
+            x =  A*\sin(B*(t + C)) + D
+        */
+        oscillatingLinearMotionCoeffs
+        {
+            h               0.125;          // [m]
+
+            amplitude       (-$h 0 0);      // [m] vector, x-direction motion
+            omega           ${{ 2*pi() }};  // [rad/s] (period = 1s)
+            phaseShift      0.25;           // [s]
+            verticalShift   ($h 0 0);       // [m] vector shift
+        }
+#endif
+    }
+
+    "xmin|xmax"
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    "ymin|ymax|zmin|zmax"
+    {
+        type            slip;
+    }
+}
+
+// ************************************************************************* //

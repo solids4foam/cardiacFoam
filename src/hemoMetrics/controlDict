@@ -1,0 +1,82 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs
+(
+    "libfvMotionSolvers.so"
+    "libmeshTools.so"
+    "libmovingVentricleFvMotionSolver.so"
+);
+
+application     pimpleFoam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         3;
+
+deltaT          0.0001;
+
+writeControl    timeStep;
+
+writeInterval   100;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+adjustTimeStep  no;
+
+maxCo           1;
+
+
+functions
+{
+    hemo
+    {
+        type              hemoMetrics;
+        libs ("libhemoMetrics.so");
+        enabled           true;
+
+        // If omitted, all wall patches are used
+        patches           (WALL);          // e.g. (arteryWall)
+
+        // Laminar properties
+        mu                3.5e-3;      // Pa·s (set your value)
+        rho               1060;        // kg/m3 (not used in WSS here, kept for completeness)
+        U                 U;           // velocity field name
+
+        // Hemodynamic period handling
+        cyclePeriod       1.0;         // s
+        startPhase        2.0;         // Just an offset telling the code when to begin cycle averaging (useful for skipping initial transients).
+    }
+}
+
+
+// ************************************************************************* //

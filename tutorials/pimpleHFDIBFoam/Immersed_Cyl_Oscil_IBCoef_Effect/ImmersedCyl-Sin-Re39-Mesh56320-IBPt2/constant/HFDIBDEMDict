@@ -1,0 +1,140 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Version:  8
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      HFDIBDEMDict;
+}
+
+// --------------------------- Global settings --------------------------------
+
+bodyNames ("cylinder_fits_old_hole");
+
+interpolationSchemes
+{
+    U cellPointFace;
+}
+
+surfaceThreshold        1e-4;
+stepDEM                 0.05;
+
+geometricD              (1 1 1);
+
+recordSimulation        true;
+recordFirstTimeStep     false;
+
+nSolidsInDomain         1000;
+ibCouplingCoeff         0.2;
+
+outputSetup
+{
+    basic        true;
+    iB           false;
+    DEM          false;
+    addModel     true;
+    parallelDEM  false;
+}
+
+virtualMesh
+{
+    level        2;
+    charCellSize 0.01;
+}
+
+// ------------------------------- DEM ----------------------------------------
+
+DEM
+{
+    LcCoeff       4.0;
+    rotationModel chen2012;
+
+    materials
+    {
+        particle
+        {
+            Y     1e7;
+            nu    0.3;
+            mu    0.05;
+            adhN  0;
+            eps   0.5;
+        }
+
+        wall
+        {
+            Y     1e7;
+            nu    0.2;
+            mu    0;
+            adhN  0;
+            eps   0.5;
+        }
+    }
+
+    collisionPatches {}
+}
+
+// ============================ Cylinder body =================================
+
+cylinder_fits_old_hole
+{
+    // Keep as-is unless your solver uses bodyOperation to switch motion handling.
+    // The motion is applied via stlBased sinusoidal translation.
+    bodyOperation 0;
+
+    rho   rho [1 -3 0 0 0 0 0] 5000;
+
+    // No-slip immersed boundary
+    U { BC noSlip; }
+
+    material        particle;
+
+    bodyGeom        stlBased;
+    stlBasedCoeffs
+    {
+      //fileName "constant/triSurface/cylinder.stl";
+        fileName "constant/triSurface/cylinder_fits_old_hole.stl";
+    }
+
+    sdBasedLambda    false;
+    interfaceSpan    2.0;
+    startSynced      false;
+    refineBuffers    2;
+
+    // Do NOT force static at any time
+    timesToSetStatic -1;
+
+    // ---------------------------------------------------------------------
+    // Wan–Turek oscillating cylinder kinematics:
+    // x(t) = x0 + A*sin(2*pi*f*t)
+    // A = 0.25 m, f = 0.25 Hz  => period T = 4.0 s
+    // ---------------------------------------------------------------------
+    deformingBody_sinusoidalTranslation
+    {
+        amplitude   0.25;      // [m]
+        period      4.0;       // [s]  (T = 1/f = 4)
+        phase       0.0;       // [rad]
+        direction   (1 0 0);   // x-direction
+    }
+
+    // KEEP bodyAddition block present (even as no-op) – your code path expects it
+    bodyAddition
+    {
+        addModel           once;
+        distributionCoeffs
+        {
+            addMode         boundBox;
+            stlBaseSize     1e-5;
+            addDomain       boundBox;
+            boundBoxCoeffs
+            {
+                minBound (0 0 0);
+                maxBound (0 0 0);
+            }
+        }
+    }
+}

@@ -25,6 +25,10 @@ wmake $targetType libso ionicModels
 wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
+wmake $targetType libso HFDIBDEM
+wmake $targetType libso decayingTaylorGreenVortexMeshMotion
+wmake $targetType libso hemoMetrics
+wmake $targetType libso movingVentricleRadialFvMotionSolver
 
 if [ "$USE_LIGHTWEIGHT_PHYSICSMODEL" != "1" ]; then
     wmake $targetType libso electroMechanicalModels

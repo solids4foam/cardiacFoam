@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| solids4foam: solid mechanics and fluid-solid interaction simulations        |
+| Version:     v2.0                                                           |
+| Web:         https://solids4foam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs
+(
+    "libcorrectedFvPatchVectorField.so"
+);
+
+application     solids4Foam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         2;
+
+deltaT          0.0025;
+
+writeControl    timeStep;
+
+writeInterval   10;
+
+writeFormat     binary;
+
+writePrecision  6;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable   no;
+
+adjustTimeStep  no;
+
+maxCo           10;
+
+functions
+{
+    // Generate drag (Cd) and lift (Cl) coefficients over the sphere patch
+    forceCoeffs
+    {
+        type            forceCoeffs;
+        libs            (forces);
+
+        // Fluid force and moment on the following patches will be calculated
+        patches         (sphere);
+
+        // Only report drag (Cd) and lift (Cl) coefficients and omit others
+        coefficients    (Cd Cl);
+
+        // Diameter of the sphere
+        D               1.0;
+        h               ${{ 0.125*$D }};
+
+        // Max velocity is the x direction
+        magUxMax        ${{ 2.0 * pi() * $h }};
+
+        // Freestream velocity magnitude
+        magUInf         $magUxMax;
+
+        // Reference length
+        lRef            $D;
+
+        // Reference area
+        Aref            ${{ 0.25 * pi() * $D * $D }};
+
+        // Center of rotation
+        CofR            (0 0 0);
+
+        // Direction of the drag force
+        // C_d = F_x/(0.5*ρ*U^2*A)
+        dragDir         (1 0 0);
+
+        // Direction of the lift force
+        // C_l = F_y/(0.5*ρ*U^2*A)
+        liftDir         (0 1 0);
+
+        // Field names
+        p               p;
+        U               U;
+        rho             rhoInf; // Indicates incompressible
+        rhoInf          1;      // Redundant for incompressible-flow cases
+
+        writeControl    timeStep;
+        writeInterval   1;
+        log             off;
+    }
+}
+
+// ************************************************************************* //

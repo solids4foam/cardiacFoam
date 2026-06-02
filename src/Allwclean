@@ -8,4 +8,8 @@ wclean verificationModels
 wclean activeTensionModels
 wclean electroModels
 wclean electroMechanicalModels
+wclean HFDIBDEM
+wclean decayingTaylorGreenVortexMeshMotion
+wclean hemoMetrics
+wclean movingVentricleRadialFvMotionSolver
 

@@ -1,0 +1,129 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Website:  https://openfoam.org                  |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+
+convertToMeters 1;
+
+// ------------------------------------------------------------
+// Simple quasi-2D mesh
+// Domain: x=[0,24], y=[0,4.1], z=[-0.05,0.05]
+//
+// x-regions:
+//   0    -> 8.5   : fine
+//   8.5  -> 15.5  : finer
+//   15.5 -> 24    : fine
+//
+// y:
+//   uniform, no grading, no bias
+//
+// z:
+//   1 cell, empty front/back
+// ------------------------------------------------------------
+
+vertices
+(
+    // z = -0.05
+    (0      0    -0.05)   // 0
+    (8.5    0    -0.05)   // 1
+    (15.5   0    -0.05)   // 2
+    (24     0    -0.05)   // 3
+
+    (0      4.1  -0.05)   // 4
+    (8.5    4.1  -0.05)   // 5
+    (15.5   4.1  -0.05)   // 6
+    (24     4.1  -0.05)   // 7
+
+    // z = +0.05
+    (0      0     0.05)   // 8
+    (8.5    0     0.05)   // 9
+    (15.5   0     0.05)   // 10
+    (24     0     0.05)   // 11
+
+    (0      4.1   0.05)   // 12
+    (8.5    4.1   0.05)   // 13
+    (15.5   4.1   0.05)   // 14
+    (24     4.1   0.05)   // 15
+);
+
+blocks
+(
+    hex (0 1 5 4 8 9 13 12)      (80 77 1) simpleGrading (1 1 1)
+    hex (1 2 6 5 9 10 14 13)     (100 77 1) simpleGrading (1 1 1)
+    hex (2 3 7 6 10 11 15 14)    (80 77 1) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 4 12 8)
+        );
+    }
+
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (3 11 15 7)
+        );
+    }
+
+    bottomWall
+    {
+        type wall;
+        faces
+        (
+            (0 1 9 8)
+            (1 2 10 9)
+            (2 3 11 10)
+        );
+    }
+
+    topWall
+    {
+        type wall;
+        faces
+        (
+            (4 12 13 5)
+            (5 13 14 6)
+            (6 14 15 7)
+        );
+    }
+
+    frontAndBackPlanes
+    {
+        type empty;
+        faces
+        (
+            (0 1 5 4)
+            (1 2 6 5)
+            (2 3 7 6)
+
+            (8 12 13 9)
+            (9 13 14 10)
+            (10 14 15 11)
+        );
+    }
+);
+
+mergePatchPairs();
