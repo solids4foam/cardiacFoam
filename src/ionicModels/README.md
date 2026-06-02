@@ -109,6 +109,7 @@ Common behaviors:
 Current `Make/files` entries:
 
 **Scalar models:**
+
 - `AlievPanfilov`
 - `BuenoOrovio`
 - `Courtemanche`
@@ -123,6 +124,7 @@ Current `Make/files` entries:
 - `TWorld`
 
 **Batched (SoA) models:**
+
 - `AlievPanfilovBatched`
 - `BuenoOrovioBatched`
 - `CourtemancheBatched`
@@ -136,6 +138,7 @@ Current `Make/files` entries:
 - `TrovatoBatched`
 
 **Verification models:**
+
 - `monodomainFDAManufactured`
 - `bidomainFDAManufactured`
 - `bathBidomainFDAManufactured`
