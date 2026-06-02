@@ -1,3 +1,0 @@
-#!/bin/bash
-
-rm -rf comparisonRuns comparisonResults log.*
