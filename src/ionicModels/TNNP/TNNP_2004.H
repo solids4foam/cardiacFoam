@@ -166,6 +166,16 @@ static const char* TNNP_CONSTANTS_NAMES[NUM_CONSTANTS] = {
     "K_buf_sr",
     "V_sr",
     "tau_fCa",
+    "sInfPrefactor",
+    "sInfShift",
+    "sInfScale",
+    "tauSGaussAmp",
+    "tauSGaussShift",
+    "tauSGaussWidth",
+    "tauSSigmoidAmp",
+    "tauSSigmoidShift",
+    "tauSSigmoidScale",
+    "tauSOffset",
 };
 
 

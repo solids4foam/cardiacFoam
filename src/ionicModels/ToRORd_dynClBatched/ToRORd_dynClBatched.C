@@ -144,22 +144,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useToRORd_dynClCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "ToRORd_dynClcompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(ToRORd_dynClBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        ToRORd_dynClBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(ToRORd_dynClcompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -188,20 +173,16 @@ Foam::ToRORd_dynClBatched::ToRORd_dynClBatched
         NUM_ALGEBRAIC,
         ToRORd_dynClFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useToRORd_dynClCompactSupport(dict)),
-#ifdef HAS_CUDA
-    useDevice_(false),
-#endif
     stimulusPOD_()
+#ifdef HAS_CUDA
+  , useDevice_(false)
+#endif
 {
     ionicModel::setTissueFromDict();
 
+    setHotPathSupportSize(NUM_TORORD_DYNCL_BATCH_SUPPORT);
+
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -214,37 +195,8 @@ Foam::ToRORd_dynClBatched::ToRORd_dynClBatched
             Info<< "ToRORd_dynClBatched: rank " << rank << " using CUDA device "
                 << devId << " of " << nDevices << nl;
         }
-        else
-        {
-            WarningInFunction
-                << "ToRORd_dynClBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
-        }
     }
 #endif
-
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_TORORD_DYNCL_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsen");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` is not yet honored on the batched path; reverting "
-                << "to explicit Euler for the SoA solver. Set "
-                << "`batchedIntegrator euler;` to silence this warning, "
-                << "or unset `useSoAEvaluator` to use the "
-                << "validated cell-major Rush-Larsen path." << nl;
-        }
-    }
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -355,17 +307,31 @@ void Foam::ToRORd_dynClBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
 
-void Foam::ToRORd_dynClBatched::solveBatched
+void Foam::ToRORd_dynClcompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+
+#ifdef HAS_CUDA
+void Foam::ToRORd_dynClcompactBatched::solveOnDevice
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -378,7 +344,8 @@ void Foam::ToRORd_dynClBatched::solveBatched
     const scalar dtModel = deltaT*timeScaleFactor();
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
-    const bool   solveVm = solveVmWithinODESolver();
+    const bool solveVm = solveVmWithinODESolver();
+    const int tFlag = static_cast<int>(tissue());
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -390,150 +357,65 @@ void Foam::ToRORd_dynClBatched::solveBatched
         }
     }
 
-    scalar* const STATES_SoA  = statesSoAData();
-    scalar* const RATES_SoA   = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
-
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        const int tFlag = static_cast<int>(tissue());
-
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_TORORD_DYNCL_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-            launchToRORd_dynClBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                tFlag, solveVm, stimulusPOD_
-            );
-            launchToRORd_dynClRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(V)
-            );
-        }
-
-        launchToRORd_dynClBatchKernel
-        (
-            tStart + dtModel, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            tFlag, solveVm, stimulusPOD_
-        );
-
-        launchToRORd_dynClScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,
-            static_cast<int>(N),
-            static_cast<int>(TORORD_DYNCL_BATCH_SUPPORT_Iion_cm)
-        );
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tStart + dtModel);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        ToRORd_dynClComputeVariablesBatch
+        launchToRORd_dynClBatchKernel
         (
-            tSub,
-            CONSTS,
-            static_cast<int>(N),
-            0, static_cast<int>(N),
-            STATES_SoA,
-            RATES_SoA,
-            SUPPORT_SoA,
-            solveVm,
-            stimulusPOD_
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            tFlag, solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == V)
-            {
-                continue;
-            }
-
-            const label base = stateI*N;
-
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
+        launchToRORd_dynClRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(V)
+        );
     }
 
-    const scalar tEnd = tStart + dtModel;
-    ToRORd_dynClComputeVariablesBatch
+    launchToRORd_dynClBatchKernel
     (
-        tEnd,
-        CONSTS,
-        static_cast<int>(N),
-        0, static_cast<int>(N),
-        STATES_SoA,
-        RATES_SoA,
-        SUPPORT_SoA,
-        solveVm,
-        stimulusPOD_
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+        tFlag, solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = TORORD_DYNCL_BATCH_SUPPORT_Iion_cm*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-    else
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = 0.0;
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
+    launchToRORd_dynClScaleIonKernel
+    (
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(TORORD_DYNCL_BATCH_SUPPORT_Iion_cm)
+    );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
 
 
 Foam::List<Foam::word> Foam::ToRORd_dynClBatched::supportedTissueTypes() const
@@ -568,9 +450,7 @@ Foam::scalar Foam::ToRORd_dynClBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return useCompactSupport_
-      ? supportValues[Foam::TORORD_DYNCL_BATCH_SUPPORT_Iion_cm]
-      : ionicCurrentFromEvaluation(supportValues);
+    return supportValues[Foam::TORORD_DYNCL_BATCH_SUPPORT_Iion_cm];
 }
 
 
@@ -582,12 +462,6 @@ void Foam::ToRORd_dynClBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        evaluateState(modelTime, stateValues, rateValues, supportValues);
-        return;
-    }
-
     scalarField algebraics(NUM_ALGEBRAIC, 0.0);
     evaluateState(modelTime, stateValues, rateValues, algebraics);
 
@@ -618,29 +492,6 @@ void Foam::ToRORd_dynClBatched::derivatives
 }
 
 
-bool Foam::ToRORd_dynClBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& /*stateValues*/,
-    const scalarUList& /*rateValues*/,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    const auto& entry = ToRORd_dynClRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
-    (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
-    );
-}
 
 
 bool Foam::ToRORd_dynClBatched::rushLarsenParametersFromHotPathSupport
@@ -653,19 +504,6 @@ bool Foam::ToRORd_dynClBatched::rushLarsenParametersFromHotPathSupport
     scalar& tau
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        return rushLarsenParameters
-        (
-            stateI,
-            stateValues,
-            rateValues,
-            supportValues,
-            steadyState,
-            tau
-        );
-    }
-
     if (stateI < 0 || stateI >= NUM_STATES) return false;
 
     return resolveSupportRushLarsenEntry

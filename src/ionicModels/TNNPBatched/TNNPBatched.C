@@ -101,12 +101,6 @@ namespace Foam
 namespace Foam
 {
     defineTypeNameAndDebug(TNNPBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        TNNPBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(TNNPcompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -118,15 +112,6 @@ namespace Foam
 
 namespace
 {
-    bool useCompactTNNPSupport(const Foam::dictionary& dict)
-    {
-        const Foam::word modelName =
-            dict.lookupOrDefault<Foam::word>("ionicModel", Foam::word::null);
-
-        return modelName == "TNNPcompactBatched"
-            || dict.lookupOrDefault<Foam::Switch>("useCompactSupport", false);
-    }
-
     const std::array<Foam::batchedRushLarsenEntry, NUM_STATES>
     TNNPRushLarsenDispatch = []()
     {
@@ -168,28 +153,15 @@ Foam::TNNPBatched::TNNPBatched
         NUM_ALGEBRAIC,
         TNNPFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useCompactTNNPSupport(dict)),
     stimulusPOD_()
 #ifdef HAS_CUDA
   , useDevice_(false)
 #endif
 {
     ionicModel::setTissueFromDict();
-    if (useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_TNNP_BATCH_SUPPORT);
-    }
-    else if (useSoAEvaluator_)
-    {
-        setHotPathSupportSize(NUM_ALGEBRAIC);
-    }
+    setHotPathSupportSize(NUM_TNNP_BATCH_SUPPORT);
 
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -204,27 +176,12 @@ Foam::TNNPBatched::TNNPBatched
         else
         {
             WarningInFunction
-                << "TNNPBatched: useSoAEvaluator is on but no CUDA "
-                << "device is visible (" << cudaGetErrorString(err)
-                << "); falling back to host SIMD path." << nl;
+                << "TNNPBatched: no CUDA device visible ("
+                << cudaGetErrorString(err)
+                << "); falling back to host path." << nl;
         }
     }
 #endif
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsen");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for " << type()
-                << " but `batchedIntegrator " << integrator
-                << "` is not honored on the batched path; reverting to "
-                << "explicit Euler. Set `batchedIntegrator euler;` to "
-                << "silence this warning." << nl;
-        }
-    }
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -279,6 +236,111 @@ Foam::TNNPcompactBatched::TNNPcompactBatched
 {}
 
 
+void Foam::TNNPcompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+
+#ifdef HAS_CUDA
+void Foam::TNNPcompactBatched::solveOnDevice
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    const label N = nCells();
+    const label nSub = nSubsteps();
+    const scalar dtModel = deltaT*timeScaleFactor();
+    const scalar dtSubstep = dtModel/scalar(nSub);
+    const scalar tStart = stepStartTime*timeScaleFactor();
+    const bool solveVm = solveVmWithinODESolver();
+    const int tFlag = static_cast<int>(tissue());
+
+    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
+
+    if (!solveVm)
+    {
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            state(cellI, V) = vmToState(Vm[cellI]);
+        }
+    }
+
+    markIODirty();
+    setIOEvaluationModelTime(tStart);
+
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
+    {
+        cuda_.syncStatesHostToDevice
+        (
+            statesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+
+    for (label sub = 0; sub < nSub; ++sub)
+    {
+        const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        launchTnnpBatchKernel
+        (
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            tFlag, solveVm, stimulusPOD_
+        );
+        launchTnnpRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(V)
+        );
+    }
+
+    launchTnnpBatchKernel
+    (
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+        tFlag, solveVm, stimulusPOD_
+    );
+    launchTnnpScaleIonKernel
+    (
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(TNNP_BATCH_SUPPORT_Iion_cm)
+    );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
+}
+#endif // HAS_CUDA
 
 
 void Foam::TNNPBatched::prepareIOAccess
@@ -338,164 +400,17 @@ void Foam::TNNPBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
 
-void Foam::TNNPBatched::solveBatched
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im
-)
-{
-
-    const label N = nCells();
-    const label nSub = nSubsteps();
-    const scalar dtModel = deltaT*timeScaleFactor();
-    const scalar dtSubstep = dtModel/scalar(nSub);
-    const scalar tStart = stepStartTime*timeScaleFactor();
-    const bool   solveVm = solveVmWithinODESolver();
-
-    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
-
-    if (!solveVm)
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            state(cellI, V) = vmToState(Vm[cellI]);
-        }
-    }
-
-    scalar* const STATES_SoA  = statesSoAData();
-    scalar* const RATES_SoA   = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
-
-    markIODirty();
-    setIOEvaluationModelTime(tStart);
-
-#ifdef HAS_CUDA
-    if (useDevice_)
-    {
-        const int tFlag = static_cast<int>(tissue());
-
-        cuda_.allocate
-        (
-            static_cast<std::size_t>(N),
-            static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(nHotPathSupport()),
-            static_cast<std::size_t>(CONSTANTS_.size())
-        );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-            launchTnnpBatchKernel
-            (
-                tSub, cuda_.d_constants, static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                tFlag, solveVm, stimulusPOD_
-            );
-            launchTnnpRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(V)
-            );
-        }
-
-        launchTnnpBatchKernel
-        (
-            tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            tFlag, solveVm, stimulusPOD_
-        );
-        launchTnnpScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,        // TNNP Iion is direct
-            static_cast<int>(N),
-            static_cast<int>(TNNP_BATCH_SUPPORT_Iion_cm)
-        );
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tStart + dtModel);
-        return;
-    }
-#endif // HAS_CUDA
-
-    for (label sub = 0; sub < nSub; ++sub)
-    {
-        const scalar tSub = tStart + scalar(sub)*dtSubstep;
-        TNNPComputeVariablesBatch
-        (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
-            solveVm, stimulusPOD_
-        );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == V) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
-
-    }
-
-    TNNPComputeVariablesBatch
-    (
-        tStart + dtModel, CONSTS,
-        static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
-        solveVm, stimulusPOD_
-    );
-
-    const label IionBase = TNNP_BATCH_SUPPORT_Iion_cm*N;
-    for (label cellI = 0; cellI < N; ++cellI)
-    {
-        Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-    }
-
-    setIOEvaluationModelTime(tStart + dtModel);
-}
 
 Foam::scalar Foam::TNNPBatched::ionicCurrentFromHotPathSupport
 (
     const scalarUList& supportValues
 ) const
 {
-    return useCompactSupport_
-      ? supportValues[TNNP_BATCH_SUPPORT_Iion_cm]
-      : supportValues[Iion_cm];
+    return supportValues[TNNP_BATCH_SUPPORT_Iion_cm];
 }
 
 void Foam::TNNPBatched::evaluateState
@@ -526,12 +441,6 @@ void Foam::TNNPBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        evaluateState(modelTime, stateValues, rateValues, supportValues);
-        return;
-    }
-
     scalarField algebraics(NUM_ALGEBRAIC, 0.0);
     evaluateState(modelTime, stateValues, rateValues, algebraics);
 
@@ -548,29 +457,6 @@ void Foam::TNNPBatched::evaluateHotPathState
     supportValues[TNNP_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
 }
 
-bool Foam::TNNPBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    const auto& entry = TNNPRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
-    (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
-    );
-}
 
 bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
 (
@@ -583,19 +469,6 @@ bool Foam::TNNPBatched::rushLarsenParametersFromHotPathSupport
 ) const
 {
     if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    if (!useCompactSupport_)
-    {
-        return rushLarsenParameters
-        (
-            stateI,
-            stateValues,
-            rateValues,
-            supportValues,
-            steadyState,
-            tau
-        );
-    }
 
     const auto& entry = TNNPRushLarsenDispatch[stateI];
     return resolveSupportRushLarsenEntry

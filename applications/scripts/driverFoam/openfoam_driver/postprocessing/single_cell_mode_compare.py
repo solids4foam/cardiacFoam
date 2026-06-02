@@ -35,7 +35,7 @@ class TraceData:
 
 def _strip_batched_suffix(model: str) -> str:
     if model.endswith("compactBatched"):
-        return model.removesuffix("Batched")
+        return model.removesuffix("compactBatched")
     return model.removesuffix("Batched")
 
 

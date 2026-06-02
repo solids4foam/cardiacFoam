@@ -98,22 +98,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool usePerisYagueCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "PerisYaguecompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(PerisYagueBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        PerisYagueBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(PerisYaguecompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -141,11 +126,6 @@ Foam::PerisYagueBatched::PerisYagueBatched
         NUM_ALGEBRAIC,
         PerisYagueFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(usePerisYagueCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -153,8 +133,9 @@ Foam::PerisYagueBatched::PerisYagueBatched
 {
     ionicModel::setTissueFromDict();
 
+    setHotPathSupportSize(NUM_PERISYAGUE_BATCH_SUPPORT);
+
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -168,37 +149,8 @@ Foam::PerisYagueBatched::PerisYagueBatched
                 << " using CUDA device " << devId
                 << " of " << nDevices << nl;
         }
-        else
-        {
-            WarningInFunction
-                << "PerisYagueBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
-        }
     }
 #endif
-
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_PERISYAGUE_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "euler");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` is not yet honored on the batched path; reverting "
-                << "to explicit Euler for the SoA solver. Set "
-                << "`batchedIntegrator euler;` to silence this warning, "
-                << "or unset `useSoAEvaluator` to use the cell-major "
-                << "integrator path." << nl;
-        }
-    }
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -425,16 +377,29 @@ void Foam::PerisYagueBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
-void Foam::PerisYagueBatched::solveBatched
+void Foam::PerisYaguecompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+#ifdef HAS_CUDA
+void Foam::PerisYaguecompactBatched::solveOnDevice
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -444,10 +409,10 @@ void Foam::PerisYagueBatched::solveBatched
 {
     const label N = nCells();
     const label nSub = nSubsteps();
-    const scalar dtModel = deltaT * timeScaleFactor();
-    const scalar dtSubstep = dtModel / scalar(nSub);
-    const scalar tStart = stepStartTime * timeScaleFactor();
-    const bool   solveVm = solveVmWithinODESolver();
+    const scalar dtModel = deltaT*timeScaleFactor();
+    const scalar dtSubstep = dtModel/scalar(nSub);
+    const scalar tStart = stepStartTime*timeScaleFactor();
+    const bool solveVm = solveVmWithinODESolver();
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -457,196 +422,68 @@ void Foam::PerisYagueBatched::solveBatched
         {
             state(cellI, membrane_V) = vmToState(Vm[cellI]);
         }
-#ifdef HAS_CUDA
-        if (useDevice_)
-        {
-            cuda_.hostDirty = true;
-        }
-#endif
     }
-
-    scalar* const STATES_SoA  = statesSoAData();
-    scalar* const RATES_SoA   = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
 
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_PERISYAGUE_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-            launchPerisYagueBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                solveVm, stimulusPOD_
-            );
-
-            launchPerisYagueRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(membrane_V)
-            );
-        }
-
-        const scalar tEnd = tStart + dtModel;
-        launchPerisYagueBatchKernel
-        (
-            tEnd, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            solveVm, stimulusPOD_
-        );
-
-        launchPerisYagueScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,
-            static_cast<int>(N),
-            static_cast<int>(PERISYAGUE_BATCH_SUPPORT_Iion_cm)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tEnd);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        PerisYagueComputeVariablesBatch
+        launchPerisYagueBatchKernel
         (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == membrane_V) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep * RATES_SoA[base + cellI];
-            }
-        }
+        launchPerisYagueRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(membrane_V)
+        );
     }
 
-    const scalar tEnd = tStart + dtModel;
-    PerisYagueComputeVariablesBatch
+    launchPerisYagueBatchKernel
     (
-        tEnd, CONSTS,
-        static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = PERISYAGUE_BATCH_SUPPORT_Iion_cm * N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-    else
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = 0.0;
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
-}
-
-bool Foam::PerisYagueBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    if (stateI == ryr_v)
-    {
-        const scalar Irel =
-            CONSTANTS_[AC_krel]
-           *stateValues[ryr_u]*stateValues[ryr_u]
-           *stateValues[ryr_v]
-           *stateValues[ryr_w]
-           *(stateValues[calcium_CaRel] - stateValues[calcium_Cai]);
-
-        const scalar Fn =
-            1e-12*CONSTANTS_[AC_V_rel]*Irel
-          - 5e-13/CONSTANTS_[AC_F]
-           *(0.5*algebraicValues[AV_ICaL] - 0.2*algebraicValues[AV_INaCa])
-           *CONSTANTS_[AC_Cm];
-
-        steadyState =
-            1.0 - 1.0
-           /(1.0 + std::exp(-(Fn - 0.2*CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
-
-        tau =
-            1.91 + 2.09
-           /(1.0 + std::exp(-(Fn - CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
-
-        return tau > VSMALL
-            && std::isfinite(tau)
-            && std::isfinite(steadyState);
-    }
-
-    const auto& entry = PerisYagueRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
+    launchPerisYagueScaleIonKernel
     (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(PERISYAGUE_BATCH_SUPPORT_Iion_cm)
     );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
+
 
 void Foam::PerisYagueBatched::derivatives
 (

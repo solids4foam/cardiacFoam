@@ -62,6 +62,33 @@ void ::Foam::ionicModel::setTissueFromDict()
     tissue_ = ionicSelector::selectTissue(dict_, supportedTissueTypes());
 }
 
+void ::Foam::ionicModel::applyIonicConstantOverrides() const
+{
+    if (!dict_.found("ionicConstantOverrides"))
+    {
+        return;
+    }
+
+    scalarField* constantsPtr = ioMutableConstantsPtr();
+    if (!constantsPtr)
+    {
+        FatalErrorInFunction
+            << "ionicConstantOverrides was requested for ionic model "
+            << type()
+            << ", but this model does not expose mutable constants."
+            << exit(FatalError);
+    }
+
+    ionicModelIO::applyConstantOverrides
+    (
+        *constantsPtr,
+        ioConstantNames(),
+        ioNumConstants(),
+        dict_,
+        type()
+    );
+}
+
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
 Foam::autoPtr<Foam::ionicModel> Foam::ionicModel::New(

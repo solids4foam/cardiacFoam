@@ -97,6 +97,8 @@ Foam::Grandi::Grandi
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

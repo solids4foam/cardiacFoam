@@ -104,7 +104,6 @@ class batchedIonicModel
         mutable label solveScratchThreads_;
         mutable label solveScratchSupportSize_;
         mutable bool solveScratchPredictorState_;
-        mutable bool solveScratchSupportOnlyHotPath_;
 
         static label maxCellLoopThreads()
         {
@@ -202,8 +201,7 @@ protected:
             solveScratch_(),
             solveScratchThreads_(-1),
             solveScratchSupportSize_(-1),
-            solveScratchPredictorState_(false),
-            solveScratchSupportOnlyHotPath_(false)
+            solveScratchPredictorState_(false)
         {
             if (nSubsteps_ < 1)
             {
@@ -279,8 +277,7 @@ protected:
         (
             const label nThreads,
             const label supportSize,
-            const bool usePredictorState,
-            const bool useSupportOnlyHotPath
+            const bool usePredictorState
         ) const
         {
             if
@@ -288,7 +285,6 @@ protected:
                 solveScratchThreads_ == nThreads
              && solveScratchSupportSize_ == supportSize
              && solveScratchPredictorState_ == usePredictorState
-             && solveScratchSupportOnlyHotPath_ == useSupportOnlyHotPath
              && solveScratch_.size() == nThreads
             )
             {
@@ -308,8 +304,7 @@ protected:
                         nStates_,
                         nAlgebraics_,
                         supportSize,
-                        usePredictorState,
-                        useSupportOnlyHotPath
+                        usePredictorState
                     )
                 );
             }
@@ -317,7 +312,6 @@ protected:
             solveScratchThreads_ = nThreads;
             solveScratchSupportSize_ = supportSize;
             solveScratchPredictorState_ = usePredictorState;
-            solveScratchSupportOnlyHotPath_ = useSupportOnlyHotPath;
         }
 
         inline scalar& state(const label cellI, const label stateI) const
@@ -591,26 +585,13 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                evaluateHotPathState
-                (
-                    modelTime,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.supportValues
-                );
-            }
-            else
-            {
-                evaluateState
-                (
-                    modelTime,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.algebraicValues
-                );
-            }
+            evaluateHotPathState
+            (
+                modelTime,
+                scratch.stateValues,
+                scratch.rateValues,
+                scratch.supportValues
+            );
 
             if (!kernel.solveVm)
             {
@@ -633,22 +614,12 @@ protected:
             }
 
             const bool hasParameters =
-                kernel.useSupportOnlyHotPath
-              ? rushLarsenParametersFromHotPathSupport
+                rushLarsenParametersFromHotPathSupport
                 (
                     stateI,
                     scratch.stateValues,
                     scratch.rateValues,
                     scratch.supportValues,
-                    steadyState,
-                    tau
-                )
-              : rushLarsenParameters
-                (
-                    stateI,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.algebraicValues,
                     steadyState,
                     tau
                 );
@@ -747,20 +718,8 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                scatterCellRates(cellI, scratch.rateValues);
-                scatterCellSupport(cellI, scratch.supportValues);
-            }
-            else
-            {
-                scatterCellRatesAndAlgebraics
-                (
-                    cellI,
-                    scratch.rateValues,
-                    scratch.algebraicValues
-                );
-            }
+            scatterCellRates(cellI, scratch.rateValues);
+            scatterCellSupport(cellI, scratch.supportValues);
         }
 
         scalar ionicCurrentFromScratch
@@ -769,12 +728,7 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                return ionicCurrentFromHotPathSupport(scratch.supportValues);
-            }
-
-            return ionicCurrentFromEvaluation(scratch.algebraicValues);
+            return ionicCurrentFromHotPathSupport(scratch.supportValues);
         }
 
         bool persistentAlgebraicsEnabled() const
@@ -992,14 +946,8 @@ protected:
             }
             const label sampleCell =
                 emitDebugSample ? sampleIntegrationPoint(nCells_) : -1;
-            kernel.useSupportOnlyHotPath =
-                usesCompactSupport()
-             && nHotPathSupport_ > 0
-             && !utilitiesMode();
             const label hotPathSupportSize =
-                kernel.useSupportOnlyHotPath
-              ? activeHotPathSupportSize(kernel.useExplicitEuler)
-              : nHotPathSupport_;
+                activeHotPathSupportSize(kernel.useExplicitEuler);
             const bool parallelCellLoops = useParallelCellLoops();
             const label nCellLoopThreads =
                 parallelCellLoops ? maxCellLoopThreads() : 1;
@@ -1009,8 +957,7 @@ protected:
             (
                 nCellLoopThreads,
                 hotPathSupportSize,
-                !kernel.useExplicitEuler,
-                kernel.useSupportOnlyHotPath
+                !kernel.useExplicitEuler
             );
 
             SolveStorageBackend storageBackend

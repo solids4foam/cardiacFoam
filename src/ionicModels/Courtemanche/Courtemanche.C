@@ -96,6 +96,8 @@ Foam::Courtemanche::Courtemanche
         }
 
     }
+
+    applyIonicConstantOverrides();
 }
 
 

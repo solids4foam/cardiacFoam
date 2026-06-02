@@ -51,28 +51,14 @@ class ToRORd_dynClBatched
     ToRORd_dynClBatched(const ToRORd_dynClBatched&) = delete;
     void operator=(const ToRORd_dynClBatched&) = delete;
 
-    bool useSoAEvaluator_;
-    bool useCompactSupport_;
-
-#ifdef HAS_CUDA
-    bool useDevice_;
-#endif
+protected:
 
     mutable StimulusProtocolPOD stimulusPOD_;
 
-    void solveBatched
-    (
-        const scalar stepStartTime,
-        const scalar deltaT,
-        const scalarField& Vm,
-        scalarField& Im
-    );
-
 #ifdef HAS_CUDA
+    bool useDevice_;
     mutable batchedIonicCoreCUDA cuda_;
 #endif // HAS_CUDA
-
-protected:
 
     virtual scalar ionicCurrentFromEvaluation
     (
@@ -89,7 +75,7 @@ protected:
 
     virtual bool usesCompactSupport() const override final
     {
-        return useCompactSupport_;
+        return true;
     }
 
     virtual void evaluateState
@@ -99,16 +85,6 @@ protected:
         scalarUList& rateValues,
         scalarUList& algebraicValues
     ) const final;
-
-    virtual bool rushLarsenParameters
-    (
-        const label stateI,
-        const scalarUList& stateValues,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues,
-        scalar& steadyState,
-        scalar& tau
-    ) const override final;
 
     virtual void evaluateHotPathState
     (
@@ -154,7 +130,7 @@ public:
         const scalar deltaT,
         const scalarField& Vm,
         scalarField& Im
-    ) override final;
+    ) override;
 
     virtual void prepareIOAccess
     (
@@ -199,6 +175,26 @@ public:
     );
 
     virtual ~ToRORd_dynClcompactBatched() = default;
+
+    virtual void solveODE
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
+
+protected:
+
+#ifdef HAS_CUDA
+    void solveOnDevice
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    );
+#endif
 };
 
 } // End namespace Foam

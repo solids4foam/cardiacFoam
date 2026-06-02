@@ -97,6 +97,8 @@ Foam::Stewart::Stewart
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

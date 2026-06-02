@@ -24,21 +24,20 @@ from openfoam_driver.postprocessing.single_cell_mode_compare import compare_sing
 
 
 DEFAULT_MODELS = [
-    "AlievPanfilovBatched",
-    "BuenoOrovioBatched",
-    "CourtemancheBatched",
-    "GaurBatched",
-    "GrandiBatched",
-    "PerisYagueBatched",
-    "StewartBatched",
-    "TNNPBatched",
+    "AlievPanfilovcompactBatched",
+    "BuenoOroviocompactBatched",
+    "CourtemanchecompactBatched",
+    "GaurcompactBatched",
+    "GrandicompactBatched",
+    "PerisYaguecompactBatched",
+    "StewartcompactBatched",
     "TNNPcompactBatched",
-    "ToRORd_dynClBatched",
-    "TrovatoBatched",
+    "ToRORd_dynClcompactBatched",
+    "TrovatocompactBatched",
 ]
 
 EXCLUDED_CPU_MODELS = {"Fabbri"}
-EXCLUDED_BATCHED_MODELS = {"FabbriBatched"}
+EXCLUDED_BATCHED_MODELS = {"FabbricompactBatched"}
 
 CPU_STIMULUS_MAP = {
     "AlievPanfilov": 0.5,
@@ -54,17 +53,16 @@ CPU_STIMULUS_MAP = {
 }
 
 BATCHED_STIMULUS_MAP = {
-    "AlievPanfilovBatched": 0.5,
-    "BuenoOrovioBatched": 0.4,
-    "CourtemancheBatched": 60,
-    "GaurBatched": 60,
-    "GrandiBatched": 60,
-    "PerisYagueBatched": 60,
-    "StewartBatched": 60,
-    "TNNPBatched": 60,
+    "AlievPanfilovcompactBatched": 0.5,
+    "BuenoOroviocompactBatched": 0.4,
+    "CourtemanchecompactBatched": 60,
+    "GaurcompactBatched": 60,
+    "GrandicompactBatched": 60,
+    "PerisYaguecompactBatched": 60,
+    "StewartcompactBatched": 60,
     "TNNPcompactBatched": 60,
-    "ToRORd_dynClBatched": 60,
-    "TrovatoBatched": 60,
+    "ToRORd_dynClcompactBatched": 60,
+    "TrovatocompactBatched": 60,
 }
 
 

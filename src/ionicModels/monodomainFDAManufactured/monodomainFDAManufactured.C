@@ -68,6 +68,8 @@ Foam::monodomainFDAManufactured::monodomainFDAManufactured
             tissue()
         );
     }
+
+    applyIonicConstantOverrides();
 }
 
 

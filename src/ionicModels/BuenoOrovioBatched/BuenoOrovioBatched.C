@@ -138,22 +138,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useBuenoOrovioCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "BuenoOroviocompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(BuenoOrovioBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        BuenoOrovioBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(BuenoOroviocompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -181,11 +166,6 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
         NUM_ALGEBRAIC,
         BuenoOrovioFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useBuenoOrovioCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -193,8 +173,9 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
 {
     ionicModel::setTissueFromDict();
 
+    setHotPathSupportSize(NUM_BO_BATCH_SUPPORT);
+
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -207,38 +188,8 @@ Foam::BuenoOrovioBatched::BuenoOrovioBatched
             Info<< "BuenoOrovioBatched: rank " << rank << " using CUDA device "
                 << devId << " of " << nDevices << nl;
         }
-        else
-        {
-            WarningInFunction
-                << "BuenoOrovioBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
-        }
     }
 #endif
-
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_BO_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "euler");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` is not yet honored on the batched path; reverting "
-                << "to explicit Euler for the SoA solver. Set "
-                << "`batchedIntegrator euler;` to silence this warning, "
-                << "or unset `useSoAEvaluator` to use the cell-major "
-                << "integrator path." << nl;
-        }
-    }
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -280,6 +231,111 @@ Foam::BuenoOroviocompactBatched::BuenoOroviocompactBatched
 :
     BuenoOrovioBatched(dict, num, initialDeltaT, solveVmWithinODESolver)
 {}
+
+void Foam::BuenoOroviocompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+#ifdef HAS_CUDA
+void Foam::BuenoOroviocompactBatched::solveOnDevice
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    const label N = nCells();
+    const label nSub = nSubsteps();
+    const scalar dtModel = deltaT*timeScaleFactor();
+    const scalar dtSubstep = dtModel/scalar(nSub);
+    const scalar tStart = stepStartTime*timeScaleFactor();
+    const bool solveVm = solveVmWithinODESolver();
+    const int tFlag = static_cast<int>(tissue());
+
+    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
+
+    if (!solveVm)
+    {
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            state(cellI, u) = vmToState(Vm[cellI]);
+        }
+    }
+
+    markIODirty();
+    setIOEvaluationModelTime(tStart);
+
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
+    {
+        cuda_.syncStatesHostToDevice
+        (
+            statesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+
+    for (label sub = 0; sub < nSub; ++sub)
+    {
+        const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        launchBuenoBatchKernel
+        (
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            tFlag, solveVm, stimulusPOD_
+        );
+        launchBuenoRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(u)
+        );
+    }
+
+    launchBuenoBatchKernel
+    (
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+        tFlag, solveVm, stimulusPOD_
+    );
+    launchBuenoScaleIonKernel
+    (
+        cuda_.d_support, cuda_.d_Im, 85.7,
+        static_cast<int>(N),
+        static_cast<int>(BO_BATCH_SUPPORT_Iion)
+    );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
+}
+#endif // HAS_CUDA
 
 Foam::BuenoOrovioBatched::~BuenoOrovioBatched()
 {
@@ -347,187 +403,7 @@ void Foam::BuenoOrovioBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
-}
-
-
-void Foam::BuenoOrovioBatched::solveBatched
-(
-    const scalar stepStartTime,
-    const scalar deltaT,
-    const scalarField& Vm,
-    scalarField& Im
-)
-{
-
-    const label N = nCells();
-    const label nSub = nSubsteps();
-    const scalar dtModel = deltaT * timeScaleFactor();
-    const scalar dtSubstep = dtModel/scalar(nSub);
-    const scalar tStart = stepStartTime * timeScaleFactor();
-    const bool   solveVm = solveVmWithinODESolver();
-
-    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
-
-    if (!solveVm)
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            state(cellI, u) = vmToState(Vm[cellI]);
-        }
-    }
-
-    scalar* const STATES_SoA  = statesSoAData();
-    scalar* const RATES_SoA   = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
-
-    markIODirty();
-    setIOEvaluationModelTime(tStart);
-
-#ifdef HAS_CUDA
-    if (useDevice_)
-    {
-        const int tFlag = static_cast<int>(tissue());
-
-        cuda_.allocate
-        (
-            static_cast<std::size_t>(N),
-            static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_BO_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
-        );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-            launchBuenoBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                tFlag, solveVm, stimulusPOD_
-            );
-            launchBuenoRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(u)
-            );
-        }
-
-        launchBuenoBatchKernel
-        (
-            tStart + dtModel, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            tFlag, solveVm, stimulusPOD_
-        );
-
-        launchBuenoScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 85.7,
-            static_cast<int>(N),
-            static_cast<int>(BO_BATCH_SUPPORT_Iion)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tStart + dtModel);
-        return;
-    }
-#endif // HAS_CUDA
-
-
-    for (label sub = 0; sub < nSub; ++sub)
-    {
-        const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        BuenoOrovioComputeVariablesBatch
-        (
-            tSub,
-            CONSTS,
-            static_cast<int>(N),
-            0, static_cast<int>(N),
-            STATES_SoA,
-            RATES_SoA,
-            SUPPORT_SoA,
-            solveVm,
-            stimulusPOD_
-        );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == u)
-            {
-                continue;
-            }
-
-            const label base = stateI*N;
-
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
-    }
-
-    const scalar tEnd = tStart + dtModel;
-    BuenoOrovioComputeVariablesBatch
-    (
-        tEnd,
-        CONSTS,
-        static_cast<int>(N),
-        0, static_cast<int>(N),
-        STATES_SoA,
-        RATES_SoA,
-        SUPPORT_SoA,
-        solveVm,
-        stimulusPOD_
-    );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = BO_BATCH_SUPPORT_Iion*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI]*85.7;
-        }
-    }
-    else
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = 0.0;
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
 }
 
 Foam::List<Foam::word> Foam::BuenoOrovioBatched::supportedTissueTypes() const
@@ -561,9 +437,7 @@ Foam::scalar Foam::BuenoOrovioBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return useCompactSupport_
-      ? supportValues[BO_BATCH_SUPPORT_Iion]*85.7
-      : ionicCurrentFromEvaluation(supportValues);
+    return supportValues[BO_BATCH_SUPPORT_Iion];
 }
 
 void Foam::BuenoOrovioBatched::evaluateHotPathState
@@ -574,12 +448,6 @@ void Foam::BuenoOrovioBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        evaluateState(modelTime, stateValues, rateValues, supportValues);
-        return;
-    }
-
     using Foam::smoothHeaviside;
 
     scalarField algebraics(NUM_ALGEBRAIC, 0.0);
@@ -609,69 +477,6 @@ void Foam::BuenoOrovioBatched::evaluateHotPathState
     supportValues[BO_BATCH_SUPPORT_Iion] = algebraics[Jion];
 }
 
-bool Foam::BuenoOrovioBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    using Foam::smoothHeaviside;
-
-    const scalar cellV = stateValues[u];
-
-    switch (stateI)
-    {
-        case v:
-        {
-            const scalar hV = smoothHeaviside(cellV - CONSTANTS_[thetaV]);
-            const scalar invTau =
-                (1.0 - hV)/algebraicValues[tauVMinus]
-              + hV/CONSTANTS_[tauVPlus];
-            if (invTau <= VSMALL) return false;
-            tau = 1.0/invTau;
-
-            steadyState =
-                (1.0 - hV) * algebraicValues[vInfty]
-              / (algebraicValues[tauVMinus] * invTau);
-
-            return std::isfinite(steadyState);
-        }
-
-        case w:
-        {
-            const scalar hW = smoothHeaviside(cellV - CONSTANTS_[thetaW]);
-            const scalar invTau =
-                (1.0 - hW)/algebraicValues[tauWMinus]
-              + hW/CONSTANTS_[tauWPlus];
-            if (invTau <= VSMALL) return false;
-            tau = 1.0/invTau;
-
-            steadyState =
-                (1.0 - hW) * algebraicValues[wInfty]
-              / (algebraicValues[tauWMinus] * invTau);
-
-            return std::isfinite(steadyState);
-        }
-
-        case s:
-        {
-            tau = algebraicValues[tauS];
-            if (tau <= VSMALL) return false;
-
-            steadyState = 0.5*(1.0 + std::tanh(
-                CONSTANTS_[kS]*(cellV - CONSTANTS_[uS])
-            ));
-            return std::isfinite(steadyState);
-        }
-
-        default:
-            return false;
-    }
-}
 
 bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
 (
@@ -683,19 +488,6 @@ bool Foam::BuenoOrovioBatched::rushLarsenParametersFromHotPathSupport
     scalar& tau
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        return rushLarsenParameters
-        (
-            stateI,
-            stateValues,
-            rateValues,
-            supportValues,
-            steadyState,
-            tau
-        );
-    }
-
     if (stateI < 0 || stateI >= NUM_STATES) return false;
 
     return resolveSupportRushLarsenEntry

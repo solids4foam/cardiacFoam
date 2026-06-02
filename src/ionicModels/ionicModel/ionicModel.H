@@ -131,6 +131,11 @@ class ionicModel
             return nullptr;
         }
 
+        virtual scalarField* ioMutableConstantsPtr() const
+        {
+            return nullptr;
+        }
+
         virtual label ioNumConstants() const
         {
             return 0;
@@ -170,6 +175,8 @@ class ionicModel
         {
             return ioStateNames() && ioNumStates() > 0;
         }
+
+        void applyIonicConstantOverrides() const;
 
 public:
 
@@ -372,6 +379,17 @@ public:
             wordList result(nConstants);
             for (label i = 0; i < nConstants; ++i)
             {
+                if (!names[i] || names[i][0] == '\0')
+                {
+                    FatalErrorInFunction
+                        << "Invalid constant metadata for ionic model "
+                        << type() << ": constant index " << i
+                        << " has no name. Fix the model's CONSTANTS_NAMES "
+                        << "array so every NUM_CONSTANTS entry has a real "
+                        << "semantic name."
+                        << exit(FatalError);
+                }
+
                 result[i] = word(names[i]);
             }
             return result;

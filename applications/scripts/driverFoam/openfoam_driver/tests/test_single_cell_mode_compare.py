@@ -50,14 +50,14 @@ class TestSingleCellModeCompare(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             cpu_manifest = _write_manifest(root, "cpu", "Gaur")
-            batched_manifest = _write_manifest(root, "batched_rl", "GaurBatched")
+            batched_manifest = _write_manifest(root, "batched_rl", "GaurcompactBatched")
 
             _write_trace(
                 cpu_manifest.parent / "Gaur_myocyte_S1_1000.txt",
                 [(0.0, -80.0, 0.1), (0.5, -70.0, 0.2), (1.0, -60.0, 0.3)],
             )
             _write_trace(
-                batched_manifest.parent / "GaurBatched_myocyte_S1_1000.txt",
+                batched_manifest.parent / "GaurcompactBatched_myocyte_S1_1000.txt",
                 [(0.0, -79.0, 0.1), (1.0, -58.0, 0.4)],
             )
 
@@ -90,7 +90,7 @@ class TestSingleCellModeCompare(unittest.TestCase):
             failed_manifest = _write_manifest(
                 root,
                 "rl",
-                "GaurBatched",
+                "GaurcompactBatched",
                 status="failed",
             )
 
@@ -99,7 +99,7 @@ class TestSingleCellModeCompare(unittest.TestCase):
                 [(0.0, -80.0, 0.1), (1.0, -60.0, 0.3)],
             )
             _write_trace(
-                failed_manifest.parent / "GaurBatched_myocyte_S1_1000.txt",
+                failed_manifest.parent / "GaurcompactBatched_myocyte_S1_1000.txt",
                 [(0.0, -79.0, 0.1), (1.0, -58.0, 0.4)],
             )
 
@@ -111,7 +111,7 @@ class TestSingleCellModeCompare(unittest.TestCase):
             )
 
             self.assertIn(
-                "rl: skipping case GaurBatched_myocyte with status failed",
+                "rl: skipping case GaurcompactBatched_myocyte with status failed",
                 result["warnings"],
             )
 

@@ -104,6 +104,8 @@ Foam::AlievPanfilov::AlievPanfilov
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 }
 
 

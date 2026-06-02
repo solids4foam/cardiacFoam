@@ -124,22 +124,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useTrovatoCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "TrovatocompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(TrovatoBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        TrovatoBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(TrovatocompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -167,11 +152,6 @@ Foam::TrovatoBatched::TrovatoBatched
         NUM_ALGEBRAIC,
         TrovatoFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useTrovatoCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -179,8 +159,9 @@ Foam::TrovatoBatched::TrovatoBatched
 {
     ionicModel::setTissueFromDict();
 
+    setHotPathSupportSize(NUM_TROVATO_BATCH_SUPPORT);
+
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -193,13 +174,6 @@ Foam::TrovatoBatched::TrovatoBatched
             Info<< "TrovatoBatched: rank " << rank
                 << " using CUDA device " << devId
                 << " of " << nDevices << nl;
-        }
-        else
-        {
-            WarningInFunction
-                << "TrovatoBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
         }
     }
 #endif
@@ -231,30 +205,6 @@ Foam::TrovatoBatched::TrovatoBatched
     if (!utilitiesMode())
     {
         setStimulusProtocolFromDict(dict);
-    }
-
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_TROVATO_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "euler");
-
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` was requested. The SoA path currently uses "
-                << "explicit Euler. Set `batchedIntegrator euler;` "
-                << "to silence this warning, or unset "
-                << "`useSoAEvaluator` to use the cell-major path."
-                << nl;
-        }
     }
 }
 
@@ -313,9 +263,7 @@ Foam::scalar Foam::TrovatoBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return useCompactSupport_
-      ? supportValues[Foam::TROVATO_BATCH_SUPPORT_Iion_cm]
-      : ionicCurrentFromEvaluation(supportValues);
+    return supportValues[Foam::TROVATO_BATCH_SUPPORT_Iion_cm];
 }
 
 void Foam::TrovatoBatched::evaluateHotPathState
@@ -326,12 +274,6 @@ void Foam::TrovatoBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        evaluateState(modelTime, stateValues, rateValues, supportValues);
-        return;
-    }
-
     scalarField algebraics(NUM_ALGEBRAIC, 0.0);
     evaluateState(modelTime, stateValues, rateValues, algebraics);
 
@@ -406,16 +348,29 @@ void Foam::TrovatoBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
-void Foam::TrovatoBatched::solveBatched
+void Foam::TrovatocompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+#ifdef HAS_CUDA
+void Foam::TrovatocompactBatched::solveOnDevice
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -429,6 +384,7 @@ void Foam::TrovatoBatched::solveBatched
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
@@ -437,160 +393,68 @@ void Foam::TrovatoBatched::solveBatched
         {
             state(cellI, membrane_v) = vmToState(Vm[cellI]);
         }
-#ifdef HAS_CUDA
-        if (useDevice_)
-        {
-            cuda_.hostDirty = true;
-        }
-#endif
     }
-
-    scalar* const STATES_SoA = statesSoAData();
-    scalar* const RATES_SoA = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
 
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_TROVATO_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-            launchTrovatoBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                solveVm, stimulusPOD_
-            );
-
-            launchTrovatoRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(membrane_v)
-            );
-        }
-
-        const scalar tEnd = tStart + dtModel;
-        launchTrovatoBatchKernel
-        (
-            tEnd, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            solveVm, stimulusPOD_
-        );
-
-        launchTrovatoScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,
-            static_cast<int>(N),
-            static_cast<int>(Foam::TROVATO_BATCH_SUPPORT_Iion_cm)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tEnd);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        TrovatoComputeVariablesBatch
+        launchTrovatoBatchKernel
         (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == membrane_v) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
+        launchTrovatoRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(membrane_v)
+        );
     }
 
-    const scalar tEnd = tStart + dtModel;
-    TrovatoComputeVariablesBatch
+    launchTrovatoBatchKernel
     (
-        tEnd, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = Foam::TROVATO_BATCH_SUPPORT_Iion_cm*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
-}
-
-bool Foam::TrovatoBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    const auto& entry = TrovatoRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
+    launchTrovatoScaleIonKernel
     (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(Foam::TROVATO_BATCH_SUPPORT_Iion_cm)
     );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
+
 
 bool Foam::TrovatoBatched::rushLarsenParametersFromHotPathSupport
 (
@@ -602,19 +466,6 @@ bool Foam::TrovatoBatched::rushLarsenParametersFromHotPathSupport
     scalar& tau
 ) const
 {
-    if (!useCompactSupport_)
-    {
-        return rushLarsenParameters
-        (
-            stateI,
-            stateValues,
-            rateValues,
-            supportValues,
-            steadyState,
-            tau
-        );
-    }
-
     if (stateI < 0 || stateI >= NUM_STATES) return false;
 
     return resolveSupportRushLarsenEntry

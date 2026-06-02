@@ -97,6 +97,8 @@ Foam::Trovato::Trovato
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

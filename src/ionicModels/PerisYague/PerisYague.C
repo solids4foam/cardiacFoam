@@ -96,6 +96,8 @@ Foam::PerisYague_2022::PerisYague_2022
         }
 
     }
+
+    applyIonicConstantOverrides();
 }
 
 

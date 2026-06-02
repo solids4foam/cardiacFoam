@@ -50,24 +50,14 @@ class GaurBatched
     GaurBatched(const GaurBatched&) = delete;
     void operator=(const GaurBatched&) = delete;
 
-    bool useSoAEvaluator_;
-    bool useCompactSupport_;
-    mutable StimulusProtocolPOD stimulusPOD_;
+protected:
 
-    void solveBatched
-    (
-        const scalar stepStartTime,
-        const scalar deltaT,
-        const scalarField& Vm,
-        scalarField& Im
-    );
+    mutable StimulusProtocolPOD stimulusPOD_;
 
 #ifdef HAS_CUDA
     bool useDevice_;
     mutable batchedIonicCoreCUDA cuda_;
 #endif
-
-protected:
 
     virtual scalar ionicCurrentFromEvaluation
     (
@@ -84,7 +74,7 @@ protected:
 
     virtual bool usesCompactSupport() const override final
     {
-        return useCompactSupport_;
+        return true;
     }
 
     virtual void evaluateState
@@ -93,16 +83,6 @@ protected:
         const scalarUList& stateValues,
         scalarUList& rateValues,
         scalarUList& algebraicValues
-    ) const final;
-
-    virtual bool rushLarsenParameters
-    (
-        const label stateI,
-        const scalarUList& stateValues,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues,
-        scalar& steadyState,
-        scalar& tau
     ) const final;
 
     virtual void evaluateHotPathState
@@ -149,7 +129,7 @@ public:
         const scalar deltaT,
         const scalarField& Vm,
         scalarField& Im
-    ) override final;
+    ) override;
 
     virtual void prepareIOAccess
     (
@@ -194,6 +174,26 @@ public:
     );
 
     virtual ~GaurcompactBatched() = default;
+
+    virtual void solveODE
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
+
+protected:
+
+#ifdef HAS_CUDA
+    void solveOnDevice
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    );
+#endif
 };
 
 } // End namespace Foam

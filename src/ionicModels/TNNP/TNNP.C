@@ -75,6 +75,8 @@ Foam::TNNP::TNNP
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 }
 
 
@@ -256,4 +258,3 @@ Foam::wordList Foam::TNNP::availableSweepCurrents() const
 {
     return TNNPDependencyMap().toc();
 }
-

@@ -97,6 +97,8 @@ Foam::Fabbri::Fabbri
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

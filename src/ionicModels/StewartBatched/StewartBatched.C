@@ -98,22 +98,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useStewartCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "StewartcompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(StewartBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        StewartBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(StewartcompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -141,11 +126,6 @@ Foam::StewartBatched::StewartBatched
         NUM_ALGEBRAIC,
         StewartFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useStewartCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -154,7 +134,6 @@ Foam::StewartBatched::StewartBatched
     ionicModel::setTissueFromDict();
 
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -168,37 +147,10 @@ Foam::StewartBatched::StewartBatched
                 << " using CUDA device " << devId
                 << " of " << nDevices << nl;
         }
-        else
-        {
-            WarningInFunction
-                << "StewartBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
-        }
     }
 #endif
 
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_STEWART_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "euler");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` is not yet honored on the batched path; reverting "
-                << "to explicit Euler for the SoA solver. Set "
-                << "`batchedIntegrator euler;` to silence this warning, "
-                << "or unset `useSoAEvaluator` to use the cell-major "
-                << "integrator path." << nl;
-        }
-    }
+    setHotPathSupportSize(NUM_STEWART_BATCH_SUPPORT);
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -395,16 +347,29 @@ void Foam::StewartBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
-void Foam::StewartBatched::solveBatched
+void Foam::StewartcompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+#ifdef HAS_CUDA
+void Foam::StewartcompactBatched::solveOnDevice
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -418,6 +383,7 @@ void Foam::StewartBatched::solveBatched
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
@@ -426,160 +392,68 @@ void Foam::StewartBatched::solveBatched
         {
             state(cellI, membrane_V) = vmToState(Vm[cellI]);
         }
-#ifdef HAS_CUDA
-        if (useDevice_)
-        {
-            cuda_.hostDirty = true;
-        }
-#endif
     }
-
-    scalar* const STATES_SoA = statesSoAData();
-    scalar* const RATES_SoA = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
 
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_STEWART_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-            launchStewartBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                solveVm, stimulusPOD_
-            );
-
-            launchStewartRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(membrane_V)
-            );
-        }
-
-        const scalar tEnd = tStart + dtModel;
-        launchStewartBatchKernel
-        (
-            tEnd, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            solveVm, stimulusPOD_
-        );
-
-        launchStewartScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,
-            static_cast<int>(N),
-            static_cast<int>(STEWART_BATCH_SUPPORT_Iion_cm)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tEnd);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        StewartComputeVariablesBatch
+        launchStewartBatchKernel
         (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == membrane_V) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
+        launchStewartRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(membrane_V)
+        );
     }
 
-    const scalar tEnd = tStart + dtModel;
-    StewartComputeVariablesBatch
+    launchStewartBatchKernel
     (
-        tEnd, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = STEWART_BATCH_SUPPORT_Iion_cm*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
-}
-
-bool Foam::StewartBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    const auto& entry = StewartRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
+    launchStewartScaleIonKernel
     (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(STEWART_BATCH_SUPPORT_Iion_cm)
     );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
+
 
 void Foam::StewartBatched::derivatives
 (

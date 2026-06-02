@@ -64,6 +64,15 @@ Foam::scalarField constantsForTissue
         dict
     );
 
+    Foam::ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        BuenoOrovioCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict,
+        "BuenoOrovio"
+    );
+
     return constants;
 }
 
@@ -108,6 +117,8 @@ Foam::BuenoOrovio::BuenoOrovio
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 }
 
 

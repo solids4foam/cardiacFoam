@@ -412,20 +412,27 @@ def list_models_by_species(species: str) -> list[str]:
 
 
 BATCHED_MODELS = [
-    "AlievPanfilovBatched", "BuenoOrovioBatched", "CourtemancheBatched", 
-    "FabbriBatched", "GaurBatched", "GrandiBatched", 
-    "PerisYagueBatched", "StewartBatched", "TNNPBatched", "TNNPcompactBatched", "ToRORd_dynClBatched", 
-    "TrovatoBatched"
+    "AlievPanfilovcompactBatched",
+    "BuenoOroviocompactBatched",
+    "CourtemanchecompactBatched",
+    "FabbricompactBatched",
+    "GaurcompactBatched",
+    "GrandicompactBatched",
+    "PerisYaguecompactBatched",
+    "StewartcompactBatched",
+    "TNNPcompactBatched",
+    "ToRORd_dynClcompactBatched",
+    "TrovatocompactBatched",
 ]
 
 for batched_name in BATCHED_MODELS:
-    parent_name = "TNNP" if batched_name == "TNNPcompactBatched" else batched_name.replace("Batched", "")
+    parent_name = batched_name.replace("compactBatched", "")
     if parent_name in IONIC_MODEL_CATALOG:
         parent = IONIC_MODEL_CATALOG[parent_name]
         from dataclasses import replace
         IONIC_MODEL_CATALOG[batched_name] = replace(
             parent,
-            description=f"{parent_name} (GPU/SOA Batched version).",
-            aliases=(f"{parent_name} GPU", f"{parent_name} SOA"),
-            notes="GPU ionicModel using SoA architecture."
+            description=f"{parent_name} (GPU compact-batched version).",
+            aliases=(f"{parent_name} GPU", f"{parent_name} compact batched"),
+            notes="GPU ionicModel using compact Rush-Larsen batched architecture."
         )

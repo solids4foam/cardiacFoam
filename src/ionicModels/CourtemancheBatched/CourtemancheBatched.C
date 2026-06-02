@@ -98,22 +98,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useCourtemancheCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "CourtemanchecompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(CourtemancheBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        CourtemancheBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(CourtemanchecompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -141,11 +126,6 @@ Foam::CourtemancheBatched::CourtemancheBatched
         NUM_ALGEBRAIC,
         CourtemancheFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useCourtemancheCompactSupport(dict)),
 #ifdef HAS_CUDA
     useDevice_(false),
 #endif
@@ -154,7 +134,6 @@ Foam::CourtemancheBatched::CourtemancheBatched
     ionicModel::setTissueFromDict();
 
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -168,37 +147,10 @@ Foam::CourtemancheBatched::CourtemancheBatched
                 << " using CUDA device " << devId
                 << " of " << nDevices << nl;
         }
-        else
-        {
-            WarningInFunction
-                << "CourtemancheBatched: useSoAEvaluator is on but "
-                << "no CUDA device is visible (" << cudaGetErrorString(err)
-                << "); falling back to the host SIMD path." << nl;
-        }
     }
 #endif
 
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_COURTEMANCHE_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "euler");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for "
-                << type() << " but `batchedIntegrator " << integrator
-                << "` is not yet honored on the batched path; reverting "
-                << "to explicit Euler for the SoA solver. Set "
-                << "`batchedIntegrator euler;` to silence this warning, "
-                << "or unset `useSoAEvaluator` to use the cell-major "
-                << "integrator path." << nl;
-        }
-    }
+    setHotPathSupportSize(NUM_COURTEMANCHE_BATCH_SUPPORT);
 
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
@@ -424,16 +376,29 @@ void Foam::CourtemancheBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
-void Foam::CourtemancheBatched::solveBatched
+void Foam::CourtemanchecompactBatched::solveODE
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
+
+#ifdef HAS_CUDA
+void Foam::CourtemanchecompactBatched::solveOnDevice
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -456,195 +421,68 @@ void Foam::CourtemancheBatched::solveBatched
         {
             state(cellI, membrane_V) = vmToState(Vm[cellI]);
         }
-#ifdef HAS_CUDA
-        if (useDevice_)
-        {
-            cuda_.hostDirty = true;
-        }
-#endif
     }
-
-    scalar* const STATES_SoA = statesSoAData();
-    scalar* const RATES_SoA = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
 
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_COURTEMANCHE_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-            launchCourtemancheBatchKernel
-            (
-                tSub, cuda_.d_constants,
-                static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                solveVm, stimulusPOD_
-            );
-
-            launchCourtemancheRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(membrane_V)
-            );
-        }
-
-        const scalar tEnd = tStart + dtModel;
-        launchCourtemancheBatchKernel
-        (
-            tEnd, cuda_.d_constants,
-            static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            solveVm, stimulusPOD_
-        );
-
-        launchCourtemancheScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,
-            static_cast<int>(N),
-            static_cast<int>(COURTEMANCHE_BATCH_SUPPORT_Iion_cm)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tEnd);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-
-        CourtemancheComputeVariablesBatch
+        launchCourtemancheBatchKernel
         (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == membrane_V) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
+        launchCourtemancheRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(membrane_V)
+        );
     }
 
-    const scalar tEnd = tStart + dtModel;
-    CourtemancheComputeVariablesBatch
+    launchCourtemancheBatchKernel
     (
-        tEnd, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
         solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = COURTEMANCHE_BATCH_SUPPORT_Iion_cm*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-    else
-    {
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = 0.0;
-        }
-    }
-
-    setIOEvaluationModelTime(tEnd);
-}
-
-bool Foam::CourtemancheBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    if (stateI == cajsr_v)
-    {
-        const scalar Irel =
-            CONSTANTS_[AC_K_rel]
-           *stateValues[cajsr_u]*stateValues[cajsr_u]
-           *stateValues[cajsr_v]
-           *stateValues[cajsr_w]
-           *(stateValues[calcium_CaRel] - stateValues[calcium_Cai]);
-
-        const scalar Fn =
-            1e-12*CONSTANTS_[AC_V_rel]*Irel
-          - 5e-13/CONSTANTS_[AC_F]
-           *(0.5*algebraicValues[AV_ICaL] - 0.2*algebraicValues[AV_INaCa])
-           *CONSTANTS_[AC_Cm];
-
-        steadyState =
-            1.0 - 1.0
-           /(1.0 + std::exp(-(Fn - 0.2*CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
-
-        tau =
-            1.91 + 2.09
-           /(1.0 + std::exp(-(Fn - CONSTANTS_[AC_c1])/CONSTANTS_[AC_c2]));
-
-        return tau > VSMALL
-            && std::isfinite(tau)
-            && std::isfinite(steadyState);
-    }
-
-    const auto& entry = CourtemancheRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
+    launchCourtemancheScaleIonKernel
     (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(COURTEMANCHE_BATCH_SUPPORT_Iion_cm)
     );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
+    setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
+
 
 void Foam::CourtemancheBatched::derivatives
 (

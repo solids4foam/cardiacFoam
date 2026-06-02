@@ -79,6 +79,8 @@ Foam::TWorld::TWorld
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

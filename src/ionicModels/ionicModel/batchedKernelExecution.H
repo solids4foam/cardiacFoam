@@ -68,7 +68,6 @@ struct BatchedKernelConfig
     bool solveVm;
     bool useExplicitEuler;
     bool useRushLarsen;
-    bool useSupportOnlyHotPath;
 
     BatchedKernelConfig()
     :
@@ -76,8 +75,7 @@ struct BatchedKernelConfig
         vmStateI(-1),
         solveVm(false),
         useExplicitEuler(false),
-        useRushLarsen(false),
-        useSupportOnlyHotPath(false)
+        useRushLarsen(false)
     {}
 };
 
@@ -167,30 +165,21 @@ struct BatchedKernelScratchT
         const label nStates,
         const label nAlgebraics,
         const label nSupport,
-        const bool usePredictorState,
-        const bool useSupportOnlyHotPath
+        const bool usePredictorState
     )
     :
         stateValues(nStates, 0.0),
         rateValues(nStates, 0.0),
-        algebraicValues(useSupportOnlyHotPath ? 0 : nAlgebraics, 0.0),
+        algebraicValues(0, 0.0),
         supportValues(nSupport, 0.0),
         predictorStateValues(usePredictorState ? nStates : 0, 0.0),
         predictorRLApplies(usePredictorState ? nStates : 0, 0.0)
     {}
 
-    void resetPrimary(const bool useSupportOnlyHotPath)
+    void resetPrimary()
     {
+        supportValues = 0.0;
         rateValues = 0.0;
-
-        if (useSupportOnlyHotPath)
-        {
-            supportValues = 0.0;
-        }
-        else
-        {
-            algebraicValues = 0.0;
-        }
     }
 
 };
@@ -218,23 +207,6 @@ public:
         return model_.vmToState(vm);
     }
 
-    void evaluateState
-    (
-        const scalar modelTime,
-        const scalarUList& stateValues,
-        scalarUList& rateValues,
-        scalarUList& algebraicValues
-    ) const
-    {
-        model_.evaluateState
-        (
-            modelTime,
-            stateValues,
-            rateValues,
-            algebraicValues
-        );
-    }
-
     void evaluateHotPathState
     (
         const scalar modelTime,
@@ -249,27 +221,6 @@ public:
             stateValues,
             rateValues,
             supportValues
-        );
-    }
-
-    bool rushLarsenParameters
-    (
-        const label stateI,
-        const scalarUList& stateValues,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues,
-        scalar& steadyState,
-        scalar& tau
-    ) const
-    {
-        return model_.rushLarsenParameters
-        (
-            stateI,
-            stateValues,
-            rateValues,
-            algebraicValues,
-            steadyState,
-            tau
         );
     }
 
@@ -310,21 +261,6 @@ public:
     ) const
     {
         model_.scatterCellSupport(cellI, supportValues);
-    }
-
-    void scatterCellRatesAndAlgebraics
-    (
-        const label cellI,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues
-    ) const
-    {
-        model_.scatterCellRatesAndAlgebraics
-        (
-            cellI,
-            rateValues,
-            algebraicValues
-        );
     }
 
     scalar ionicCurrentFromHotPathSupport
@@ -397,22 +333,12 @@ class BatchedKernelModelPolicy
         }
 
         const bool hasParameters =
-            kernel.useSupportOnlyHotPath
-          ? hooks_.rushLarsenParametersFromHotPathSupport
+            hooks_.rushLarsenParametersFromHotPathSupport
             (
                 stateI,
                 scratch.stateValues,
                 scratch.rateValues,
                 scratch.supportValues,
-                steadyState,
-                tau
-            )
-          : hooks_.rushLarsenParameters
-            (
-                stateI,
-                scratch.stateValues,
-                scratch.rateValues,
-                scratch.algebraicValues,
                 steadyState,
                 tau
             );
@@ -448,26 +374,13 @@ public:
         const KernelConfig& kernel
     ) const
     {
-        if (kernel.useSupportOnlyHotPath)
-        {
-            hooks_.evaluateHotPathState
-            (
-                modelTime,
-                scratch.stateValues,
-                scratch.rateValues,
-                scratch.supportValues
-            );
-        }
-        else
-        {
-            hooks_.evaluateState
-            (
-                modelTime,
-                scratch.stateValues,
-                scratch.rateValues,
-                scratch.algebraicValues
-            );
-        }
+        hooks_.evaluateHotPathState
+        (
+            modelTime,
+            scratch.stateValues,
+            scratch.rateValues,
+            scratch.supportValues
+        );
 
         if (!kernel.solveVm)
         {
@@ -579,20 +492,8 @@ public:
         const KernelConfig& kernel
     ) const
     {
-        if (kernel.useSupportOnlyHotPath)
-        {
-            hooks_.scatterCellRates(cellI, scratch.rateValues);
-            hooks_.scatterCellSupport(cellI, scratch.supportValues);
-        }
-        else
-        {
-            hooks_.scatterCellRatesAndAlgebraics
-            (
-                cellI,
-                scratch.rateValues,
-                scratch.algebraicValues
-            );
-        }
+        hooks_.scatterCellRates(cellI, scratch.rateValues);
+        hooks_.scatterCellSupport(cellI, scratch.supportValues);
     }
 
     template<class CellScratch, class KernelConfig>
@@ -602,12 +503,7 @@ public:
         const KernelConfig& kernel
     ) const
     {
-        if (kernel.useSupportOnlyHotPath)
-        {
-            return hooks_.ionicCurrentFromHotPathSupport(scratch.supportValues);
-        }
-
-        return hooks_.ionicCurrentFromEvaluation(scratch.algebraicValues);
+        return hooks_.ionicCurrentFromHotPathSupport(scratch.supportValues);
     }
 
     void stabilizeCellState(const label cellI) const
@@ -904,7 +800,7 @@ public:
         auto gatherStart = profileStart();
         backend_.gatherCellState(sampleCell, scratch.stateValues);
         addProfileTime(profile.gatherScatterTime, gatherStart);
-        scratch.resetPrimary(kernel_.useSupportOnlyHotPath);
+        scratch.resetPrimary();
 
         auto evaluateStart = profileStart();
         backend_.evaluateScratchAtTime(tStart, scratch, kernel_);
@@ -946,7 +842,7 @@ public:
                 const scalar substepTime =
                     tStart + scalar(substepI)*kernel_.dtSubstep;
 
-                scratch.resetPrimary(kernel_.useSupportOnlyHotPath);
+                scratch.resetPrimary();
                 auto evaluateStart = profileStart();
                 backend_.evaluateScratchAtTime(substepTime, scratch, kernel_);
                 addProfileTime(profile.evaluateStateTime, evaluateStart);
@@ -974,7 +870,7 @@ public:
                 addProfileTime(profile.stabilizeTime, stabilizeStart);
             }
 
-            scratch.resetPrimary(kernel_.useSupportOnlyHotPath);
+            scratch.resetPrimary();
             auto evaluateStart = profileStart();
             backend_.evaluateScratchAtTime(tEnd, scratch, kernel_);
             addProfileTime(profile.evaluateStateTime, evaluateStart);

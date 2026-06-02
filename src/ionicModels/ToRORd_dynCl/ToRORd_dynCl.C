@@ -77,6 +77,8 @@ Foam::ToRORd_dynCl::ToRORd_dynCl
         }
     }
 
+    applyIonicConstantOverrides();
+
 }
 
 

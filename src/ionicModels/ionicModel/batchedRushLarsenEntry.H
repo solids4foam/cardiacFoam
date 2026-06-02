@@ -5,10 +5,8 @@ License
 Description
     Shared dispatch-table entry shape used by every batched ionic model's
     Rush-Larsen extraction. One entry per state. The entry carries fields
-    for BOTH the scalar API (`rushLarsenParameters`, reads algebraicValues)
-    and the support API (`rushLarsenParametersFromHotPathSupport`, reads
-    supportValues). A model populates whichever subset corresponds to its
-    `usesCompactSupport()` path; the other subset's source stays `none`.
+    for the support API (`rushLarsenParametersFromHotPathSupport`, reads
+    supportValues). All models use the compact/hot-path support path.
 
     Each model's dispatch table is:
         std::array<batchedRushLarsenEntry, NUM_STATES>
@@ -59,45 +57,6 @@ struct batchedRushLarsenEntry
 
 
 inline constexpr batchedRushLarsenEntry rlNone() { return {}; }
-
-inline constexpr batchedRushLarsenEntry rlScalarAlg
-(
-    int tauAlg, int gInfAlg
-)
-{
-    batchedRushLarsenEntry e;
-    e.scalarTauSource  = RLScalarSource::algebraic;
-    e.scalarTauIndex   = tauAlg;
-    e.scalarGInfSource = RLScalarSource::algebraic;
-    e.scalarGInfIndex  = gInfAlg;
-    return e;
-}
-
-inline constexpr batchedRushLarsenEntry rlScalarConstTauAlgInf
-(
-    int tauConst, int gInfAlg
-)
-{
-    batchedRushLarsenEntry e;
-    e.scalarTauSource  = RLScalarSource::constant;
-    e.scalarTauIndex   = tauConst;
-    e.scalarGInfSource = RLScalarSource::algebraic;
-    e.scalarGInfIndex  = gInfAlg;
-    return e;
-}
-
-inline constexpr batchedRushLarsenEntry rlScalarLitTauAlgInf
-(
-    double tauLit, int gInfAlg
-)
-{
-    batchedRushLarsenEntry e;
-    e.scalarTauSource  = RLScalarSource::literal;
-    e.scalarTauLiteral = tauLit;
-    e.scalarGInfSource = RLScalarSource::algebraic;
-    e.scalarGInfIndex  = gInfAlg;
-    return e;
-}
 
 inline constexpr batchedRushLarsenEntry rlSupport
 (
@@ -165,55 +124,6 @@ inline constexpr batchedRushLarsenEntry rlScalarLitTauAlgInfAndSupport
     e.supportGInfIndex  = supportGInf;
     return e;
 }
-
-template<class Constants, class Algebraics, class Scalar>
-inline bool resolveScalarRushLarsenEntry
-(
-    const batchedRushLarsenEntry& entry,
-    const Constants& constants,
-    const Algebraics& algebraicValues,
-    const Scalar minTau,
-    Scalar& steadyState,
-    Scalar& tau
-)
-{
-    if (entry.scalarTauSource == RLScalarSource::none) return false;
-
-    switch (entry.scalarTauSource)
-    {
-        case RLScalarSource::algebraic:
-            tau = algebraicValues[entry.scalarTauIndex];
-            break;
-        case RLScalarSource::constant:
-            tau = constants[entry.scalarTauIndex];
-            break;
-        case RLScalarSource::literal:
-            tau = entry.scalarTauLiteral;
-            break;
-        case RLScalarSource::none:
-            return false;
-    }
-
-    if (tau <= minTau || !std::isfinite(tau)) return false;
-
-    switch (entry.scalarGInfSource)
-    {
-        case RLScalarSource::algebraic:
-            steadyState = algebraicValues[entry.scalarGInfIndex];
-            break;
-        case RLScalarSource::constant:
-            steadyState = constants[entry.scalarGInfIndex];
-            break;
-        case RLScalarSource::literal:
-            steadyState = entry.scalarGInfLiteral;
-            break;
-        case RLScalarSource::none:
-            return false;
-    }
-
-    return std::isfinite(steadyState);
-}
-
 
 template<class Constants, class SupportValues, class Scalar>
 inline bool resolveSupportRushLarsenEntry

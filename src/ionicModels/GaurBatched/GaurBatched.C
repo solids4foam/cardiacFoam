@@ -78,22 +78,7 @@ namespace Foam
 
 namespace Foam
 {
-    bool useGaurCompactSupport(const dictionary& dict)
-    {
-        const word modelName =
-            dict.lookupOrDefault<word>("ionicModel", word::null);
-
-        return modelName == "GaurcompactBatched"
-            || dict.lookupOrDefault<Switch>("useCompactSupport", false);
-    }
-
     defineTypeNameAndDebug(GaurBatched, 0);
-    addToRunTimeSelectionTable
-    (
-        ionicModel,
-        GaurBatched,
-        dictionary
-    );
     defineTypeNameAndDebug(GaurcompactBatched, 0);
     addToRunTimeSelectionTable
     (
@@ -156,11 +141,6 @@ Foam::GaurBatched::GaurBatched
         NUM_ALGEBRAIC,
         GaurFamilyInfo()
     ),
-    useSoAEvaluator_
-    (
-        dict.lookupOrDefault<Switch>("useSoAEvaluator", false)
-    ),
-    useCompactSupport_(useGaurCompactSupport(dict)),
     stimulusPOD_()
 #ifdef HAS_CUDA
   , useDevice_(false)
@@ -168,28 +148,9 @@ Foam::GaurBatched::GaurBatched
 {
     ionicModel::setTissueFromDict();
 
-    if (useSoAEvaluator_ || useCompactSupport_)
-    {
-        setHotPathSupportSize(NUM_GAUR_BATCH_SUPPORT);
-    }
-
-    if (useSoAEvaluator_)
-    {
-        const word integrator =
-            dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsen");
-        if (integrator != "euler")
-        {
-            WarningInFunction
-                << "useSoAEvaluator is enabled for " << type()
-                << " but `batchedIntegrator " << integrator
-                << "` is not honored on the batched path; reverting to "
-                << "explicit Euler. Set `batchedIntegrator euler;` to "
-                << "silence this warning." << nl;
-        }
-    }
+    setHotPathSupportSize(NUM_GAUR_BATCH_SUPPORT);
 
 #ifdef HAS_CUDA
-    if (useSoAEvaluator_)
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
@@ -200,13 +161,6 @@ Foam::GaurBatched::GaurBatched
             useDevice_ = true;
             Info<< "GaurBatched: rank " << rank << " using CUDA device "
                 << (rank % nDevices) << " of " << nDevices << nl;
-        }
-        else
-        {
-            WarningInFunction
-                << "GaurBatched: useSoAEvaluator is on but no CUDA "
-                << "device is visible (" << cudaGetErrorString(err)
-                << "); falling back to host SIMD path." << nl;
         }
     }
 #endif
@@ -318,17 +272,11 @@ void Foam::GaurBatched::solveODE
     scalarField& Im
 )
 {
-    if (useSoAEvaluator_ && !utilitiesMode())
-    {
-        solveBatched(stepStartTime, deltaT, Vm, Im);
-        return;
-    }
-
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
 
-void Foam::GaurBatched::solveBatched
+void Foam::GaurcompactBatched::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -336,13 +284,33 @@ void Foam::GaurBatched::solveBatched
     scalarField& Im
 )
 {
+#ifdef HAS_CUDA
+    if (useDevice_ && !utilitiesMode())
+    {
+        solveOnDevice(stepStartTime, deltaT, Vm, Im);
+        return;
+    }
+#endif
+    solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+}
 
+
+#ifdef HAS_CUDA
+void Foam::GaurcompactBatched::solveOnDevice
+(
+    const scalar stepStartTime,
+    const scalar deltaT,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
     const label N = nCells();
     const label nSub = nSubsteps();
     const scalar dtModel = deltaT*timeScaleFactor();
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
-    const bool   solveVm = solveVmWithinODESolver();
+    const bool solveVm = solveVmWithinODESolver();
+    const int tFlag = static_cast<int>(tissue());
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -354,123 +322,65 @@ void Foam::GaurBatched::solveBatched
         }
     }
 
-    scalar* const STATES_SoA  = statesSoAData();
-    scalar* const RATES_SoA   = ratesSoAData();
-    scalar* const SUPPORT_SoA = supportSoAData();
-    const scalar* const CONSTS = CONSTANTS_.cdata();
-
     markIODirty();
     setIOEvaluationModelTime(tStart);
 
-#ifdef HAS_CUDA
-    if (useDevice_)
+    cuda_.allocate
+    (
+        static_cast<std::size_t>(N),
+        static_cast<std::size_t>(NUM_STATES),
+        static_cast<std::size_t>(nHotPathSupport()),
+        static_cast<std::size_t>(CONSTANTS_.size())
+    );
+    cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+
+    if (cuda_.hostDirty)
     {
-        const int tFlag = static_cast<int>(tissue());
-
-        cuda_.allocate
+        cuda_.syncStatesHostToDevice
         (
-            static_cast<std::size_t>(N),
+            statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
-            static_cast<std::size_t>(NUM_GAUR_BATCH_SUPPORT),
-            static_cast<std::size_t>(CONSTANTS_.size())
+            static_cast<std::size_t>(N)
         );
-        cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
-
-        if (cuda_.hostDirty)
-        {
-            cuda_.syncStatesHostToDevice
-            (
-                statesSoAData(),
-                static_cast<std::size_t>(NUM_STATES),
-                static_cast<std::size_t>(N)
-            );
-        }
-
-        for (label sub = 0; sub < nSub; ++sub)
-        {
-            const scalar tSub = tStart + scalar(sub)*dtSubstep;
-            launchGaurBatchKernel
-            (
-                tSub, cuda_.d_constants, static_cast<int>(N),
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                tFlag, solveVm, stimulusPOD_
-            );
-            launchGaurRushLarsenStepKernel
-            (
-                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-                static_cast<double>(dtSubstep),
-                static_cast<int>(N),
-                static_cast<int>(NUM_STATES),
-                solveVm,
-                static_cast<int>(cell_v)
-            );
-        }
-
-        launchGaurBatchKernel
-        (
-            tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            tFlag, solveVm, stimulusPOD_
-        );
-        launchGaurScaleIonKernel
-        (
-            cuda_.d_support, cuda_.d_Im, 1.0,        // Gaur Iion is direct
-            static_cast<int>(N),
-            static_cast<int>(GAUR_BATCH_SUPPORT_Iion_cm)
-        );
-
-        cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
-
-        cuda_.deviceDirty = true;
-        setIOEvaluationModelTime(tStart + dtModel);
-        return;
     }
-#endif // HAS_CUDA
 
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
-        GaurComputeVariablesBatch
+        launchGaurBatchKernel
         (
-            tSub, CONSTS, static_cast<int>(N), 0, static_cast<int>(N),
-            STATES_SoA, RATES_SoA, SUPPORT_SoA,
-            solveVm, stimulusPOD_
+            tSub, cuda_.d_constants, static_cast<int>(N),
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            tFlag, solveVm, stimulusPOD_
         );
-
-        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-        {
-            if (!solveVm && stateI == cell_v) continue;
-            const label base = stateI*N;
-#ifdef _OPENMP
-            #pragma omp simd
-#endif
-            for (label cellI = 0; cellI < N; ++cellI)
-            {
-                STATES_SoA[base + cellI] +=
-                    dtSubstep*RATES_SoA[base + cellI];
-            }
-        }
+        launchGaurRushLarsenStepKernel
+        (
+            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+            static_cast<double>(dtSubstep),
+            static_cast<int>(N),
+            static_cast<int>(NUM_STATES),
+            solveVm,
+            static_cast<int>(cell_v)
+        );
     }
 
-    GaurComputeVariablesBatch
+    launchGaurBatchKernel
     (
-        tStart + dtModel, CONSTS,
-        static_cast<int>(N), 0, static_cast<int>(N),
-        STATES_SoA, RATES_SoA, SUPPORT_SoA,
-        solveVm, stimulusPOD_
+        tStart + dtModel, cuda_.d_constants, static_cast<int>(N),
+        cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+        tFlag, solveVm, stimulusPOD_
     );
-
-    if (SUPPORT_SoA != nullptr)
-    {
-        const label IionBase = GAUR_BATCH_SUPPORT_Iion_cm*N;
-        for (label cellI = 0; cellI < N; ++cellI)
-        {
-            Im[cellI] = SUPPORT_SoA[IionBase + cellI];
-        }
-    }
-
+    launchGaurScaleIonKernel
+    (
+        cuda_.d_support, cuda_.d_Im, 1.0,
+        static_cast<int>(N),
+        static_cast<int>(GAUR_BATCH_SUPPORT_Iion_cm)
+    );
+    cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    cuda_.deviceDirty = true;
     setIOEvaluationModelTime(tStart + dtModel);
 }
+#endif // HAS_CUDA
 
 
 Foam::List<Foam::word> Foam::GaurBatched::supportedTissueTypes() const
@@ -574,42 +484,6 @@ bool Foam::GaurBatched::rushLarsenParametersFromHotPathSupport
     );
 }
 
-
-bool Foam::GaurBatched::rushLarsenParameters
-(
-    const label stateI,
-    const scalarUList& stateValues,
-    const scalarUList& rateValues,
-    const scalarUList& algebraicValues,
-    scalar& steadyState,
-    scalar& tau
-) const
-{
-    if (stateI < 0 || stateI >= NUM_STATES) return false;
-
-    if (stateI == ITo_aa)
-    {
-        const scalar alpha = algebraicValues[AV_alpha_aa];
-        const scalar beta = algebraicValues[AV_beta_aa];
-        const scalar sum = alpha + beta;
-        if (sum <= VSMALL || !std::isfinite(sum)) return false;
-
-        tau = 1.0/sum;
-        steadyState = alpha/sum;
-        return std::isfinite(steadyState);
-    }
-
-    const auto& entry = GaurRushLarsenDispatch[stateI];
-    return resolveScalarRushLarsenEntry
-    (
-        entry,
-        CONSTANTS_,
-        algebraicValues,
-        VSMALL,
-        steadyState,
-        tau
-    );
-}
 
 
 void Foam::GaurBatched::derivatives

@@ -53,29 +53,18 @@ class TNNPBatched
     TNNPBatched(const TNNPBatched&) = delete;
     void operator=(const TNNPBatched&) = delete;
 
-    bool useSoAEvaluator_;
-    bool useCompactSupport_;
+protected:
 
     mutable StimulusProtocolPOD stimulusPOD_;
-
-    void solveBatched
-    (
-        const scalar stepStartTime,
-        const scalar deltaT,
-        const scalarField& Vm,
-        scalarField& Im
-    );
 
 #ifdef HAS_CUDA
     bool useDevice_;
     mutable batchedIonicCoreCUDA cuda_;
 #endif
 
-protected:
-
     virtual bool usesCompactSupport() const override final
     {
-        return useCompactSupport_;
+        return true;
     }
 
     virtual scalar ionicCurrentFromEvaluation
@@ -105,16 +94,6 @@ protected:
         const scalarUList& stateValues,
         scalarUList& rateValues,
         scalarUList& supportValues
-    ) const override final;
-
-    virtual bool rushLarsenParameters
-    (
-        const label stateI,
-        const scalarUList& stateValues,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues,
-        scalar& steadyState,
-        scalar& tau
     ) const override final;
 
     virtual bool rushLarsenParametersFromHotPathSupport
@@ -153,7 +132,7 @@ public:
         const scalar deltaT,
         const scalarField& Vm,
         scalarField& Im
-    ) override final;
+    ) override;
 
     virtual void prepareIOAccess
     (
@@ -199,6 +178,26 @@ public:
     );
 
     virtual ~TNNPcompactBatched() = default;
+
+    virtual void solveODE
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
+
+protected:
+
+#ifdef HAS_CUDA
+    void solveOnDevice
+    (
+        const scalar stepStartTime,
+        const scalar deltaT,
+        const scalarField& Vm,
+        scalarField& Im
+    );
+#endif
 };
 
 } // End namespace Foam
