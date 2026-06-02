@@ -13,6 +13,7 @@ core/
 ├── electroModel.H/.C                  Top-level physicsModel façade
 ├── electroDomainInterface.H           Domain lifecycle contract (pure abstract)
 ├── electroStateProvider.H             Read-only state sharing interface
+├── electroStateDomain.H/.C            Abstract domain that also exposes state; base for extracellularPotentialDomain
 ├── electroVolumeFieldDomain.H         3D FVM domain contract
 ├── dimVoltage.H                       Shared voltage dimension set
 ├── overrideTypeName.H                 Runtime type-name helper macro
@@ -82,6 +83,7 @@ and output field lists. Delegates spatial domain assembly to
 | `electroModel.H/.C` | `physicsModel` subclass. Reads `constant/electroProperties`, owns the assembled `electrophysicsSystem`, drives the time loop via `evolve()`. |
 | `electroDomainInterface.H` | Minimal lifecycle contract for all domain types: `time()`, `advance(t0,dt)`, `write()`, `end()`. |
 | `electroStateProvider.H` | Read-only field interface: `VmPtr()`, `phiEPtr()`, `conductivityPtr()`. Consumed by ECG domains. |
+| `electroStateDomain.H/.C` | Abstract domain that both advances in time and exposes read-only state. Base for `extracellularPotentialDomain`. |
 | `electroVolumeFieldDomain.H` | Contract for 3D FVM domains: exposes `mesh()`, `VmRef()`, `Iion()`, `chi()`, `Cm()`. |
 | `dimVoltage.H` | Shared `dimensionSet` for all voltage fields (V, SI). |
 | `overrideTypeName.H` | Drops `override` onto OpenFOAM's `TypeName()` to suppress `-Winconsistent-missing-override`. |

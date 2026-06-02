@@ -34,6 +34,7 @@ SourceFiles
 #define sequentialElectroMechanical_H
 
 #include "electroMechanicalModel.H"
+#include "activeTensionModel.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -55,19 +56,25 @@ class sequentialElectroMechanical
     // Private data
 
         //- Active tension field registered on the solid mesh.
-        //  Populated each time step from the electro model's Cai field
+        //  Populated each time step by activeTensionModel::calculateTension()
         //  and picked up by electroMechanicalLaw via objectRegistry lookup.
         volScalarField Ta_;
 
-        //- Scaling factor: Ta = kTa * max(Cai - CaiThreshold, 0)
-        //  Units: [Pa / Cai-unit]. The ionic model returns Cai in its
-        //  native units (e.g. mM for TNNP). This factor converts to stress.
-        //  This simple linear model is a placeholder; it will be replaced by
-        //  a dedicated runtime-selectable active tension model in the future.
-        const dimensionedScalar kTa_;
+        //- Scaling factor applied to activeTensionModel output before writing
+        //  into Ta_.  Active tension models return kPa; Ta_ is in Pa.
+        //  Default: 1e3 (kPa → Pa).  Set to 1.0 for dimensionless models.
+        scalar TaScale_;
 
-        //- Threshold Cai below which no active tension is generated
-        const dimensionedScalar CaiThreshold_;
+        //- Per-cell stretch field passed to calculateTension().
+        //  Phase 1: uniform 1.0 (no solid feedback).
+        //  Phase 2: lambda = sqrt(f0.C.f0) from solid deformation gradient.
+        scalarField lambdaField_;
+
+        //- Runtime-selectable active tension model
+        autoPtr<activeTensionModel> activeTensionModel_;
+
+        //- Flag: print solid objectRegistry probe on first evolve() call only
+        bool firstTimeStep_;
 
 
     // Private Member Functions

@@ -60,22 +60,44 @@ sequentialElectroMechanical::sequentialElectroMechanical
         dimensionedScalar("zero", dimPressure, 0.0),
         "zeroGradient"
     ),
-    kTa_
+    TaScale_
     (
-        "kTa",
-        dimPressure,
-        electroMechanicalProperties()
+        electroMechanicalProperties().lookupOrDefault<scalar>("TaScale", 1e3)
     ),
-    CaiThreshold_
+    lambdaField_(electro().mesh().nCells(), 1.0),
+    activeTensionModel_
     (
-        "CaiThreshold",
-        dimless,
-        electroMechanicalProperties()
-    )
+        activeTensionModel::New
+        (
+            electroMechanicalProperties(),
+            electro().mesh().nCells()
+        )
+    ),
+    firstTimeStep_(true)
 {
-    Info<< "    Active tension coupling parameters:" << nl
-        << "        kTa = " << kTa_.value() << " Pa/(Cai unit)" << nl
-        << "        CaiThreshold = " << CaiThreshold_.value() << nl
+    const ElectromechanicalSignalProvider* prov = electro().provider();
+
+    if (prov)
+    {
+        activeTensionModel_->setElectromechanicalSignalProvider(*prov);
+    }
+
+    activeTensionModel_->validateProvider();
+
+    if (solid().mesh().nCells() != electro().mesh().nCells())
+    {
+        FatalErrorInFunction
+            << "sequentialElectroMechanical requires conforming meshes "
+            << "(same cell count). Solid has "
+            << solid().mesh().nCells() << " cells, electro has "
+            << electro().mesh().nCells() << " cells."
+            << abort(FatalError);
+    }
+
+    Info<< "    Active tension model: "
+        << activeTensionModel_->type() << nl
+        << "    TaScale (model units -> Pa): " << TaScale_ << nl
+        << "    Integration points: " << electro().mesh().nCells() << nl
         << endl;
 }
 
@@ -86,30 +108,53 @@ bool sequentialElectroMechanical::evolve()
 {
     Info<< "Evolving " << type() << endl;
 
-    // Evolve the electro model
+    // Phase 2 readiness probe: on the first time step report whether the
+    // solid objectRegistry holds the fields needed to compute lambda.
+    if (firstTimeStep_)
+    {
+        const bool hasD  =
+            solid().mesh().foundObject<volVectorField>("D");
+        const bool hasF0 =
+            solid().mesh().foundObject<volVectorField>("f0");
+
+        Info<< nl
+            << "  [Phase2 probe] solid objectRegistry fields for lambda:" << nl
+            << "    D   (displacement)      : "
+            << (hasD  ? "FOUND"  : "NOT FOUND") << nl
+            << "    f0  (fibre direction)   : "
+            << (hasF0 ? "FOUND"  : "NOT FOUND") << nl;
+
+        if (hasD && hasF0)
+        {
+            Info<< "    -> Both present: Phase 2 lambda feedback is ready." << nl;
+        }
+        else
+        {
+            Info<< "    -> Missing fields: lambda will stay at 1.0 "
+                << "until Phase 2 is wired." << nl;
+        }
+        Info<< endl;
+
+        firstTimeStep_ = false;
+    }
+
     electro().evolve();
 
-    // Extract intracellular calcium from the electro model
-    const tmp<volScalarField> tCai = electro().couplingField("Cai");
-    const scalarField& Cai = tCai().primitiveField();
+    const scalar t  = runTime().value();
+    const scalar dt = runTime().deltaT().value();
 
-    // Compute active tension using a simple linear model:
-    //   Ta = kTa * max(Cai - CaiThreshold, 0)
-    // This is a placeholder that will be replaced by a dedicated
-    // runtime-selectable active tension model in the future.
     scalarField& TaI = Ta_.primitiveFieldRef();
-    forAll(TaI, cellI)
+
+    activeTensionModel_->calculateTension(t, dt, lambdaField_, TaI);
+
+    if (TaScale_ != 1.0)  // skip no-op multiply; 1.0 is exactly representable
     {
-        TaI[cellI] =
-            kTa_.value()
-           *max(Cai[cellI] - CaiThreshold_.value(), scalar(0));
+        TaI *= TaScale_;
     }
+
     Ta_.correctBoundaryConditions();
 
-    // Evolve the solid model
     solid().evolve();
-
-    // Update total fields at the end of the time-step
     solid().updateTotalFields();
 
     return true;

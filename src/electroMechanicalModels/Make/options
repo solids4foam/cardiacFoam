@@ -36,6 +36,7 @@ EXE_INC = \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../couplingModels/lnInclude \
+    -I../activeTensionModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/blockCoupledSolids4FoamTools/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/RBFMeshMotionSolver/lnInclude \
@@ -53,6 +54,7 @@ LIB_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
     -lelectroModels \
+    -lactiveTensionModels \
     -lionicModels \
     -lgenericWriter \
     -lfiniteVolume \

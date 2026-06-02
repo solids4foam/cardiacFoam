@@ -55,12 +55,15 @@ Compiled in `libionicModels`:
 - `Gaur`
 - `Grandi`
 - `ORd`
+- `PerisYague`
 - `Stewart`
 - `TNNP`
 - `ToRORd_dynCl`
 - `Trovato`
+- `TWorld`
 - `monodomainFDAManufactured` (manufactured monodomain verification model)
 - `bidomainFDAManufactured` (manufactured bidomain verification model)
+- `bathBidomainFDAManufactured` (manufactured bath-bidomain verification model)
 
 ## Tutorial and automation architecture
 
@@ -74,6 +77,7 @@ Current tutorial specs in the Python driver:
 - `niederer2012`
 - `manufacturedFDA`
 - `manufacturedFDABidomain`
+- `manufacturedFDABathBidomain`
 - `restitutionCurves`
 
 The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.
