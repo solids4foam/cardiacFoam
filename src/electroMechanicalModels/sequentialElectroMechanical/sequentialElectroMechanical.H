@@ -60,9 +60,9 @@ class sequentialElectroMechanical
         //  and picked up by electroMechanicalLaw via objectRegistry lookup.
         volScalarField Ta_;
 
-        //- Per-cell stretch field passed to calculateTension().
-        //  Phase 1: uniform 1.0 (no solid feedback).
-        //  Phase 2: lambda = sqrt(f0.C.f0) from solid deformation gradient.
+        //- Per-cell fibre stretch passed to calculateTension().
+        //  lambda = sqrt(f0.C.f0) computed from the solid deformation
+        //  gradient by updateLambda(); 1.0 in the undeformed reference state.
         scalarField lambdaField_;
 
         //- Runtime-selectable active tension model
@@ -73,6 +73,13 @@ class sequentialElectroMechanical
 
 
     // Private Member Functions
+
+        //- Update lambdaField_ (fibre stretch) from the solid deformation.
+        //  lambda = sqrt(f0 & C & f0) = mag(F & f0), with F = I + grad(D)^T.
+        //  Uses the displacement from the previous converged step (explicit
+        //  coupling), consistent with the sequential scheme. Falls back to
+        //  1.0 if D or f0 are not available on the solid mesh.
+        void updateLambda();
 
         //- Disallow default bitwise copy construct
         sequentialElectroMechanical(const sequentialElectroMechanical&);

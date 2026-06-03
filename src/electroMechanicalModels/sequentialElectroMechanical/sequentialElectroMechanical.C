@@ -19,6 +19,7 @@ License
 
 #include "sequentialElectroMechanical.H"
 #include "addToRunTimeSelectionTable.H"
+#include "fvcGrad.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -117,21 +118,19 @@ sequentialElectroMechanical::sequentialElectroMechanical
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool sequentialElectroMechanical::evolve()
+void sequentialElectroMechanical::updateLambda()
 {
-    Info<< "Evolving " << type() << endl;
+    const fvMesh& solidMesh = solid().mesh();
 
-    // Phase 2 readiness probe: on the first time step report whether the
-    // solid objectRegistry holds the fields needed to compute lambda.
+    const bool hasD  = solidMesh.foundObject<volVectorField>("D");
+    const bool hasF0 = solidMesh.foundObject<volVectorField>("f0");
+
+    // On the first call report whether the fields needed for the stretch
+    // feedback are available on the solid mesh.
     if (firstTimeStep_)
     {
-        const bool hasD  =
-            solid().mesh().foundObject<volVectorField>("D");
-        const bool hasF0 =
-            solid().mesh().foundObject<volVectorField>("f0");
-
         Info<< nl
-            << "  [Phase2 probe] solid objectRegistry fields for lambda:" << nl
+            << "  [lambda feedback] solid objectRegistry fields:" << nl
             << "    D   (displacement)      : "
             << (hasD  ? "FOUND"  : "NOT FOUND") << nl
             << "    f0  (fibre direction)   : "
@@ -139,19 +138,48 @@ bool sequentialElectroMechanical::evolve()
 
         if (hasD && hasF0)
         {
-            Info<< "    -> Both present: Phase 2 lambda feedback is ready." << nl;
+            Info<< "    -> Fibre stretch lambda computed from D and f0." << nl;
         }
         else
         {
-            Info<< "    -> Missing fields: lambda will stay at 1.0 "
-                << "until Phase 2 is wired." << nl;
+            Info<< "    -> Missing fields: lambda held at 1.0." << nl;
         }
         Info<< endl;
 
         firstTimeStep_ = false;
     }
 
+    if (!hasD || !hasF0)
+    {
+        lambdaField_ = 1.0;
+        return;
+    }
+
+    const volVectorField& D  = solidMesh.lookupObject<volVectorField>("D");
+    const volVectorField& f0 = solidMesh.lookupObject<volVectorField>("f0");
+
+    // Deformation gradient F = I + grad(D)^T (total Lagrangian convention,
+    // matching solids4foam mechanicalLaw). The fibre stretch follows from
+    // lambda^2 = f0 & C & f0 = (F & f0) & (F & f0), i.e. lambda = mag(F & f0).
+    const volTensorField gradD(fvc::grad(D));
+
+    forAll(lambdaField_, cellI)
+    {
+        const tensor F(I + gradD[cellI].T());
+        lambdaField_[cellI] = mag(F & f0[cellI]);
+    }
+}
+
+
+bool sequentialElectroMechanical::evolve()
+{
+    Info<< "Evolving " << type() << endl;
+
     electro().evolve();
+
+    // Update the fibre stretch from the (lagged) solid deformation before
+    // evaluating the active tension.
+    updateLambda();
 
     const scalar t  = runTime().value();
     const scalar dt = runTime().deltaT().value();
