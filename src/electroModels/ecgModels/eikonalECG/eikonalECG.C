@@ -117,9 +117,9 @@ void eikonalECG::reconstructVm
             {
                 VmValues[cellI] = eikonalECG_templates::evaluateTemplate
                 (
-                    localTime, 
-                    eikonalECG_templates::endoTimes, 
-                    eikonalECG_templates::endoValues, 
+                    localTime,
+                    eikonalECG_templates::endoTimes,
+                    eikonalECG_templates::endoValues,
                     eikonalECG_templates::numEndoSamples
                 );
             }
@@ -127,9 +127,9 @@ void eikonalECG::reconstructVm
             {
                 VmValues[cellI] = eikonalECG_templates::evaluateTemplate
                 (
-                    localTime, 
-                    eikonalECG_templates::midTimes, 
-                    eikonalECG_templates::midValues, 
+                    localTime,
+                    eikonalECG_templates::midTimes,
+                    eikonalECG_templates::midValues,
                     eikonalECG_templates::numMidSamples
                 );
             }
@@ -137,9 +137,9 @@ void eikonalECG::reconstructVm
             {
                 VmValues[cellI] = eikonalECG_templates::evaluateTemplate
                 (
-                    localTime, 
-                    eikonalECG_templates::epiTimes, 
-                    eikonalECG_templates::epiValues, 
+                    localTime,
+                    eikonalECG_templates::epiTimes,
+                    eikonalECG_templates::epiValues,
                     eikonalECG_templates::numEpiSamples
                 );
             }
@@ -259,7 +259,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     const dictionary& hetDict = electroProperties.subDict("ionicHeterogeneity");
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
-    
+
     if (transitionMode != "hard")
     {
         FatalErrorInFunction
@@ -298,7 +298,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
                 tField[cellI], endoMInterface, mEpiInterface,
                 transitionWidth, smoothing, transitionMode
             );
-        
+
         wEndo_[cellI] = w.endo;
         wMid_[cellI]  = w.mCell;
         wEpi_[cellI]  = w.epi;
