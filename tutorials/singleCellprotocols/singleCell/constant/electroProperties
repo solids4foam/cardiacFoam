@@ -20,8 +20,8 @@ singleCellSolverCoeffs
 
     // Cell model selection
 
-    ionicModel    TWorldcompactBatched;
-    tissue    endocardialCells;
+    ionicModel    AlievPanfilov;
+    tissue    	  myocyte;
 
 
     // Time integration settings

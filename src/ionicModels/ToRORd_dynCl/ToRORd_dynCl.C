@@ -129,7 +129,12 @@ Foam::scalarField Foam::ToRORd_dynCl::constantsForTissue
 
     ionicModelIO::applyConstantOverrides
     (
-        constants, ToRORd_dynClCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type()
+        constants,
+        ToRORd_dynClCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type(),
+        tissueFlag
     );
 
     return constants;

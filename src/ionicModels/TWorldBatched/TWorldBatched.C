@@ -503,7 +503,8 @@ Foam::scalarField Foam::TWorldBatched::constantsForTissue
         TWorldCONSTANTS_NAMES,
         NUM_CONSTANTS,
         dict(),
-        type()
+        type(),
+        tissueFlag
     );
 
     return constants;

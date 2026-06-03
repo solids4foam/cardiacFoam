@@ -91,7 +91,15 @@ monodomainSolverCoeffs
 
     // ── Ionic constant overrides (optional) ─────────────────────────────────
     // Scale or set individual ionic model constants at runtime without
-    // recompiling. Applies to every cell uniformly (global scope).
+    // recompiling. The `global` scope applies to every tissue preset. Tissue
+    // scopes apply only to the selected preset and are applied after `global`.
+    // Supported scopes:
+    //   global | endocardialCells | mCells | epicardialCells | myocyte
+    //
+    // Tissue scopes are useful with `ionicHeterogeneity`, where each cell can
+    // receive blended or hard-assigned endocardial / M-cell / epicardial
+    // constants. For example, an `epicardialCells` block changes only the
+    // epicardial preset before transmural hard assignment or blending.
     //
     // Syntax:
     //   ionicConstantOverrides
@@ -100,6 +108,10 @@ monodomainSolverCoeffs
     //       {
     //           scale { <AC_constantName>  <factor>; ... }   // multiply by factor
     //           set   { <AC_constantName>  <value>;  ... }   // set absolute value
+    //       }
+    //       epicardialCells
+    //       {
+    //           scale { <AC_constantName>  <factor>; ... }   // epi-only
     //       }
     //   }
     //
@@ -114,8 +126,9 @@ monodomainSolverCoeffs
     //   LQT1 — KCNQ1 (IKs) 50% block:
     //     scale { AC_g_Ks  0.5; }
     //
-    //   Brugada / ischaemia — INa 30% reduction:
-    //     scale { AC_g_Na  0.7; }
+    //   Brugada / ischaemia — epicardial Ito amplification or INa reduction:
+    //     epicardialCells { scale { AC_g_to  1.5; } }
+    //     epicardialCells { scale { AC_g_Na  0.7; } }
     //
     //   ICaL gain-of-function (Timothy syndrome):
     //     scale { AC_g_CaL  2.0; }
@@ -133,6 +146,14 @@ monodomainSolverCoeffs
     //         scale
     //         {
     //             AC_g_Kr   0.5;   // 50% IKr block (LQT2 / hERG drug effect)
+    //         }
+    //     }
+    //
+    //     epicardialCells
+    //     {
+    //         scale
+    //         {
+    //             AC_g_to   1.5;   // example: epicardial-only Ito change
     //         }
     //     }
     // }

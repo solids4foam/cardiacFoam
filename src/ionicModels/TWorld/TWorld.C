@@ -126,7 +126,12 @@ Foam::scalarField Foam::TWorld::constantsForTissue
 
     ionicModelIO::applyConstantOverrides
     (
-        constants, TWorldCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type()
+        constants,
+        TWorldCONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type(),
+        tissueFlag
     );
 
     return constants;

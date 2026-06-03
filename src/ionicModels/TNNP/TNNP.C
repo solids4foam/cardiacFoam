@@ -137,7 +137,12 @@ Foam::scalarField Foam::TNNP::constantsForTissue
 
     ionicModelIO::applyConstantOverrides
     (
-        constants, TNNP_CONSTANTS_NAMES, NUM_CONSTANTS, dict(), type()
+        constants,
+        TNNP_CONSTANTS_NAMES,
+        NUM_CONSTANTS,
+        dict(),
+        type(),
+        tissueFlag
     );
 
     return constants;

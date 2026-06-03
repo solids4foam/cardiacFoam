@@ -441,7 +441,8 @@ Foam::scalarField Foam::TNNPBatched::constantsForTissue
         TNNP_CONSTANTS_NAMES,
         NUM_CONSTANTS,
         dict(),
-        type()
+        type(),
+        tissueFlag
     );
 
     return constants;

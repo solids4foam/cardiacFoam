@@ -70,7 +70,8 @@ Foam::scalarField constantsForTissue
         BuenoOrovioCONSTANTS_NAMES,
         NUM_CONSTANTS,
         dict,
-        "BuenoOrovio"
+        "BuenoOrovio",
+        tissueFlag
     );
 
     return constants;

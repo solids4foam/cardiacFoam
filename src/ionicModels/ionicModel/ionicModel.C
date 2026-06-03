@@ -86,7 +86,8 @@ void ::Foam::ionicModel::applyIonicConstantOverrides() const
         ioConstantNames(),
         ioNumConstants(),
         dict_,
-        type()
+        type(),
+        tissue_
     );
 }
 

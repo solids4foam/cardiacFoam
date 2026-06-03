@@ -485,7 +485,8 @@ Foam::scalarField Foam::ToRORd_dynClBatched::constantsForTissue
         ToRORd_dynClCONSTANTS_NAMES,
         NUM_CONSTANTS,
         dict(),
-        type()
+        type(),
+        tissueFlag
     );
 
     return constants;

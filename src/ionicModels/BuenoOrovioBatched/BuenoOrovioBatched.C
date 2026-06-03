@@ -460,7 +460,8 @@ Foam::scalarField Foam::BuenoOrovioBatched::constantsForTissue
         BuenoOrovioCONSTANTS_NAMES,
         NUM_CONSTANTS,
         dict(),
-        type()
+        type(),
+        tissueFlag
     );
 
     return constants;
