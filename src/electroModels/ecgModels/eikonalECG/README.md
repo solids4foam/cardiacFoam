@@ -42,6 +42,7 @@ or regenerate from a reference singleCell tutorial run).
 ### When to regenerate
 
 Regenerate `tissueTemplates.H` if:
+
 - A new ionic model is adopted as the reference (current templates are
   TNNP-based for human ventricular tissue).
 - Tissue properties (conductivity, chi, cm) change significantly enough
