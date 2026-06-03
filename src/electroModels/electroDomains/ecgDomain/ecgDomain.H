@@ -131,6 +131,8 @@ public:
 
         const volScalarField& Vm() const;
 
+        const volScalarField& activationTime() const;
+
         const volTensorField& conductivity() const;
 
         const volScalarField& phiE() const;
@@ -144,6 +146,11 @@ public:
         virtual const volScalarField* VmPtr() const override
         {
             return stateProvider_.VmPtr();
+        }
+
+        virtual const volScalarField* activationTimePtr() const override
+        {
+            return stateProvider_.activationTimePtr();
         }
 
         virtual const volScalarField* phiEPtr() const override
@@ -193,6 +200,12 @@ public:
 
         //- Refresh model coefficients from the ECG sub-dictionary.
         virtual bool read(const dictionary& dict);
+
+        void recordVerification
+        (
+            scalar sampleTime,
+            const scalarField& values
+        );
 
         virtual void write() override {}
 

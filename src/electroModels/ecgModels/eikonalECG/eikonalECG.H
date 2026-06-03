@@ -16,54 +16,75 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    ecgSolver
+    eikonalECG
 
 Description
-    Abstract base class for ECG solvers.
+    Template-voltage surrogate ECG solver for eikonal activation-time fields.
 
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef ecgSolver_H
-#define ecgSolver_H
+#ifndef eikonalECG_H
+#define eikonalECG_H
 
+#include "ecgSolver.H"
+#include "OFstream.H"
+#include "Switch.H"
 #include "autoPtr.H"
-#include "runTimeSelectionTables.H"
-#include "scalarField.H"
+#include "overrideTypeName.H"
+#include "volFields.H"
 
 namespace Foam
 {
 
-class dictionary;
-class ecgDomain;
-
-class ecgSolver
+class eikonalECG
+:
+    public ecgSolver
 {
+    scalarField templateTimes_;
+    scalarField templateValues_;
+    Switch useManufacturedTemplate_;
+
+    scalar startTime_;
+    scalar endTime_;
+    scalar deltaT_;
+    Switch report_;
+
+    bool written_;
+    scalarField lastValues_;
+    autoPtr<OFstream> outputPtr_;
+    autoPtr<volScalarField> VmPtr_;
+
+    scalar templateValue(scalar localTime) const;
+
+    void validateTemplate() const;
+
+    void reconstructVm
+    (
+        scalar sampleTime,
+        const volScalarField& activationTime,
+        volScalarField& Vm
+    ) const;
+
+    void calculatePseudoECG
+    (
+        const ecgDomain& domain,
+        const volScalarField& Vm,
+        scalarField& values
+    ) const;
+
+    volScalarField& surrogateVm(ecgDomain& domain);
+
 public:
 
-    TypeName("ecgSolver");
+    OverrideTypeName("eikonalECG");
 
-    declareRunTimeSelectionTable
-    (
-        autoPtr,
-        ecgSolver,
-        dictionary,
-        (
-            const dictionary& dict
-        ),
-        (dict)
-    );
+    explicit eikonalECG(const dictionary& dict);
 
-    ecgSolver() = default;
-
-    static autoPtr<ecgSolver> New(const dictionary& dict);
-
-    virtual ~ecgSolver() = default;
-
-    virtual bool writesOwnTimeSeries() const
+    virtual bool writesOwnTimeSeries() const override
     {
-        return false;
+        return true;
     }
 
     virtual void solve
@@ -72,7 +93,7 @@ public:
         scalar t0,
         scalar dt,
         scalarField& values
-    ) = 0;
+    ) override;
 };
 
 } // End namespace Foam

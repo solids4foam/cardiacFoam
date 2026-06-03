@@ -37,6 +37,8 @@ Author
 namespace Foam
 {
 
+class manufacturedEikonalVerifier;
+
 class eikonalMyocardiumDomain
 :
     public myocardiumDomainInterface
@@ -61,6 +63,7 @@ class eikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
+    autoPtr<manufacturedEikonalVerifier> verificationModelPtr_;
 
     tmp<volTensorField> initialiseConductivity() const;
 
@@ -77,7 +80,7 @@ public:
         const dictionary& electroProperties
     );
 
-    virtual ~eikonalMyocardiumDomain() = default;
+    virtual ~eikonalMyocardiumDomain();
 
     virtual const fvMesh& mesh() const override
     {
@@ -139,6 +142,11 @@ public:
         return &Vm_;
     }
 
+    virtual const volScalarField* activationTimePtr() const override
+    {
+        return &activationTime_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &conductivity_;
@@ -167,16 +175,12 @@ public:
 
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
 
-    virtual bool shouldPostProcess() const override
-    {
-        return false;
-    }
+    virtual bool shouldPostProcess() const override;
 
     virtual void exportStates() override
     {}
 
-    virtual void postProcess() override
-    {}
+    virtual void postProcess() override;
 
     virtual bool applyModelTimeControls(Time& runTime) const override;
 };

@@ -49,6 +49,7 @@ EXE_INC = \
     -IconductionSystemModels \
     -ImyocardiumModels \
     -IecgModels \
+    -IecgModels/eikonalECG \
     -IecgModels/torsoECG \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
@@ -60,6 +61,8 @@ EXE_INC = \
     -IadvanceSchemes/pimpleStaggered \
     -I../ionicModels/lnInclude \
     -I../verificationModels/lnInclude \
+    -I../verificationModels \
+    -I../verificationModels/eikonalVerification \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
     -I../couplingModels/lnInclude \

@@ -43,6 +43,7 @@ public:
     struct Requirements
     {
         bool needVm = false;
+        bool needActivationTime = false;
         bool needPhiE = false;
         bool needConductivity = false;
     };
@@ -55,6 +56,7 @@ protected:
     List<vector> electrodePositions_;
 
     const volScalarField& requireVm() const;
+    const volScalarField& requireActivationTime() const;
     const volScalarField& requirePhiE() const;
     const volTensorField& requireConductivity() const;
 
@@ -108,6 +110,12 @@ public:
     virtual bool read(const dictionary& dict) = 0;
 
     virtual void record(const List<scalar>& numericValues) = 0;
+
+    virtual void record
+    (
+        scalar sampleTime,
+        const List<scalar>& numericValues
+    );
 
     virtual void end() {}
 };

@@ -21,6 +21,15 @@ mechanical
     {
         type            electroMechanicalLaw;
         rho             rho [1 -3 0 0 0 0 0] 1060;
+
+        // The active tension is supplied at run time as the "Ta" field by the
+        // electro-mechanical coupling (sequentialElectroMechanical). These two
+        // entries are still required by the electroMechanicalLaw constructor;
+        // they are only used as the fallback constant/ramped tension when no
+        // "Ta" field is present, so they are left at zero here.
+        activeTension   activeTension [1 -1 -2 0 0 0 0] 0;
+        rampTime        0;
+
         passiveMechanicalLaw
         {
             type            neoHookeanElastic;

@@ -21,6 +21,7 @@ License
 #include "error.H"
 #include "DynamicList.H"
 #include "Switch.H"
+#include "manufacturedEikonalVerifier.H"
 
 namespace Foam
 {
@@ -259,7 +260,8 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     eikonalAdvectionDiffusionApproach_
     (
         electroProperties.lookup("eikonalAdvectionDiffusionApproach")
-    )
+    ),
+    verificationModelPtr_()
 {
     const boundBox bb
     (
@@ -291,7 +293,22 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             << electroProperties.lookupOrDefault<word>("cellZone", word::null)
             << "'." << nl << endl;
     }
+
+    verificationModelPtr_ =
+        manufacturedEikonalVerifier::New
+        (
+            electroProperties_,
+            mesh(),
+            conductivity_,
+            chi_,
+            Cm_,
+            c0_,
+            eikonalAdvectionDiffusionApproach_
+        );
 }
+
+
+eikonalMyocardiumDomain::~eikonalMyocardiumDomain() = default;
 
 
 void eikonalMyocardiumDomain::advance
@@ -321,6 +338,11 @@ void eikonalMyocardiumDomain::advance
         activationValues[stimulusCellIDs_[i]] = 0.0;
     }
     activationTime_.correctBoundaryConditions();
+
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->applyConstraints(activationTime_);
+    }
 
     labelList constrainedCells;
     scalarField constrainedValues;
@@ -388,6 +410,23 @@ bool eikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
     runTime.setDeltaT(1.0);
     runTime.setEndTime(runTime.deltaT());
     return true;
+}
+
+
+bool eikonalMyocardiumDomain::shouldPostProcess() const
+{
+    return
+        verificationModelPtr_.valid()
+     && verificationModelPtr_->shouldPostProcess();
+}
+
+
+void eikonalMyocardiumDomain::postProcess()
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->postProcess(activationTime_);
+    }
 }
 
 

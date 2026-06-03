@@ -59,6 +59,11 @@ word ecgVerificationModel::selectedType(const dictionary& dict)
         return "pseudoECGManufacturedVerifier";
     }
 
+    if (dict.found("manufacturedEikonalECG"))
+    {
+        return "eikonalECGManufacturedVerifier";
+    }
+
     return word::null;
 }
 
@@ -116,6 +121,22 @@ const volScalarField& ecgVerificationModel::requireVm() const
 }
 
 
+const volScalarField& ecgVerificationModel::requireActivationTime() const
+{
+    const volScalarField* fieldPtr = stateProvider_.activationTimePtr();
+
+    if (!fieldPtr)
+    {
+        FatalErrorInFunction
+            << "ECG verification model requires activationTime, but the "
+            << "selected electroStateProvider does not expose it."
+            << exit(FatalError);
+    }
+
+    return *fieldPtr;
+}
+
+
 const volScalarField& ecgVerificationModel::requirePhiE() const
 {
     const volScalarField* fieldPtr = stateProvider_.phiEPtr();
@@ -157,6 +178,11 @@ void ecgVerificationModel::validateProvider() const
         (void)requireVm();
     }
 
+    if (needs.needActivationTime)
+    {
+        (void)requireActivationTime();
+    }
+
     if (needs.needPhiE)
     {
         (void)requirePhiE();
@@ -166,6 +192,17 @@ void ecgVerificationModel::validateProvider() const
     {
         (void)requireConductivity();
     }
+}
+
+
+void ecgVerificationModel::record
+(
+    scalar sampleTime,
+    const List<scalar>& numericValues
+)
+{
+    (void)sampleTime;
+    record(numericValues);
 }
 
 

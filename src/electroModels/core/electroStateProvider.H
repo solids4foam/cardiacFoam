@@ -66,6 +66,11 @@ public:
         return nullptr;
     }
 
+    virtual const volScalarField* activationTimePtr() const
+    {
+        return nullptr;
+    }
+
     virtual const volScalarField* phiEPtr() const
     {
         return nullptr;

@@ -44,6 +44,11 @@ word selectedECGSolverType(const dictionary& dict)
 
 word outputFileName(const word& solverType)
 {
+    if (solverType == "eikonalECG")
+    {
+        return word("eikonalECG.dat");
+    }
+
     return
         solverType == "torsoECG"
       ? word("torsoECG.dat")
@@ -171,6 +176,22 @@ const volScalarField& ecgDomain::Vm() const
 }
 
 
+const volScalarField& ecgDomain::activationTime() const
+{
+    const volScalarField* activationTimePtr = stateProvider_.activationTimePtr();
+
+    if (!activationTimePtr)
+    {
+        FatalErrorInFunction
+            << "ECG model requires an activation-time field, "
+            << "but the selected electroStateProvider does not expose one."
+            << exit(FatalError);
+    }
+
+    return *activationTimePtr;
+}
+
+
 const volTensorField& ecgDomain::conductivity() const
 {
     const volTensorField* conductivityPtr = stateProvider_.conductivityPtr();
@@ -238,6 +259,11 @@ ecgDomain::ecgDomain
         (void)Vm();
         (void)conductivity();
     }
+    else if (solverType_ == "eikonalECG")
+    {
+        (void)activationTime();
+        (void)conductivity();
+    }
     else if (solverType_ == "torsoECG")
     {
         (void)phiE();
@@ -246,13 +272,16 @@ ecgDomain::ecgDomain
     readElectrodes(dict);
 
     const fileName outDir(mesh_.time().globalPath() / "postProcessing");
-    outputPtr_ =
-        ecgModelIO::openTimeSeries
-        (
-            outDir,
-            outputFileName(solverType_),
-            electrodeNames_
-        );
+    if (!solverPtr_->writesOwnTimeSeries())
+    {
+        outputPtr_ =
+            ecgModelIO::openTimeSeries
+            (
+                outDir,
+                outputFileName(solverType_),
+                electrodeNames_
+            );
+    }
 
     const dictionary verificationDict =
         withInheritedManufacturedBidomain
@@ -287,12 +316,12 @@ void ecgDomain::evolve
 {
     solverPtr_->solve(*this, t0, dt, numericValues_);
 
-    if (verificationModelPtr_.valid())
+    if (!solverPtr_->writesOwnTimeSeries() && verificationModelPtr_.valid())
     {
         verificationModelPtr_->record(numericValues_);
     }
 
-    if (mesh_.time().outputTime())
+    if (!solverPtr_->writesOwnTimeSeries() && mesh_.time().outputTime())
     {
         ecgModelIO::writeRow
         (
@@ -374,6 +403,19 @@ bool ecgDomain::read(const dictionary& dict)
     );
 
     return true;
+}
+
+
+void ecgDomain::recordVerification
+(
+    scalar sampleTime,
+    const scalarField& values
+)
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->record(sampleTime, values);
+    }
 }
 
 

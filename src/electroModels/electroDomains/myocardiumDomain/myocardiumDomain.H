@@ -175,6 +175,11 @@ public:
         return &Vm_;
     }
 
+    virtual const volScalarField* activationTimePtr() const override
+    {
+        return &activationTime_;
+    }
+
     virtual const volScalarField* phiEPtr() const override
     {
         return diffusionSolverPtr_->phiEPtr();

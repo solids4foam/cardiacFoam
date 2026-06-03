@@ -116,6 +116,7 @@ word myocardiumSolverType(const dictionary& electroProperties)
       : word("unset");
 }
 
+
 } // End anonymous namespace
 
 
@@ -371,6 +372,24 @@ void configureECGDomains
         {
             stateProviderPtr = &myocardiumStateProvider;
         }
+        else if (ecgSolverType == "eikonalECG")
+        {
+            const word solverType(myocardiumSolverType(electroProperties));
+
+            if (solverType != "eikonalSolver")
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver eikonalECG, but "
+                    << "myocardiumSolver is '" << solverType
+                    << "'. eikonalECG requires myocardiumSolver "
+                    << "eikonalSolver because it reconstructs Vm from "
+                    << "the activation-time field."
+                    << exit(FatalError);
+            }
+
+            stateProviderPtr = &myocardiumStateProvider;
+        }
         else if (ecgSolverType == "torsoECG")
         {
             const word solverType(myocardiumSolverType(electroProperties));
@@ -412,7 +431,7 @@ void configureECGDomains
                 << "ECG domain '" << domainName
                 << "' selects ecgSolver '" << ecgSolverType
                 << "', but provider routing is only defined for "
-                << "pseudoECG and torsoECG."
+                << "pseudoECG, eikonalECG, and torsoECG."
                 << exit(FatalError);
         }
 
