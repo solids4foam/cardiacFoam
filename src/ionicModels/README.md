@@ -159,9 +159,11 @@ phenotypes (endo, mid-myocardial, epi) across the wall thickness.
 ### Supported models
 
 **Scalar CPU models:**
+
 - `BuenoOrovio` (only)
 
 **Batched/GPU models:**
+
 - `BuenoOrovioBatched`
 - `TNNPBatched`
 - `TWorldBatched`
