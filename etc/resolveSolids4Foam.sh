@@ -14,6 +14,9 @@ _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _bundledSolids4Foam="$_thisDir/../modules/solids4foam"
 _bundledPhysicsModel="$_thisDir/../modules/physicsModel"
 _solids4FoamHeader="src/solids4FoamModels/physicsModel/physicsModel.H"
+# A solids4foam tree is "built" once its lnInclude has been generated; test for
+# a representative header there to avoid selecting an un-built source tree.
+_s4fLnHeader="src/solids4FoamModels/lnInclude/physicsModel.H"
 
 useLightweightPhysicsModel()
 {
@@ -52,17 +55,38 @@ then
             "SOLIDS4FOAM_INST_DIR is set, but solids4foam is not compiled or is missing $_solids4FoamHeader."
     fi
     echo
-elif [ -f "$_bundledSolids4Foam/$_solids4FoamHeader" ]
-then
-    echo
-    echo "Using bundled compiled solids4foam."
-    SOLIDS4FOAM_INST_DIR="$_bundledSolids4Foam"
-    export USE_LIGHTWEIGHT_PHYSICSMODEL=0
 else
-    echo "NOTE: solids4foam not compiled or not initialized."
-    echo "To use solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
-    echo "  git submodule update --init --recursive"
-    useLightweightPhysicsModel "Falling back to lightweight electrophysiology compilation."
+    # SOLIDS4FOAM_INST_DIR not set: auto-discover a *built* solids4foam so it
+    # doesn't have to be exported every time. A candidate counts only when its
+    # lnInclude is populated (i.e. actually compiled) — this avoids silently
+    # selecting an un-built source tree (e.g. a freshly checked-out submodule),
+    # which otherwise fails the build with missing headers (solidModel.H, ...).
+    _s4fFound=""
+    for _cand in "$HOME/solids4foam" "$WM_PROJECT_USER_DIR/solids4foam" "$_bundledSolids4Foam"
+    do
+        if [ -n "$_cand" ] && [ -f "$_cand/$_s4fLnHeader" ]
+        then
+            _s4fFound="$_cand"
+            break
+        fi
+    done
+
+    if [ -n "$_s4fFound" ]
+    then
+        echo
+        echo "Auto-detected built solids4foam at: $_s4fFound"
+        SOLIDS4FOAM_INST_DIR="$_s4fFound"
+        export USE_LIGHTWEIGHT_PHYSICSMODEL=0
+    elif [ -f "$_bundledSolids4Foam/$_solids4FoamHeader" ]
+    then
+        useLightweightPhysicsModel \
+            "Bundled solids4foam is present but not built (empty lnInclude). Build it with 'cd modules/solids4foam && ./Allwmake', or set SOLIDS4FOAM_INST_DIR to a built install. Using lightweight for now."
+    else
+        echo "NOTE: solids4foam not compiled or not initialized."
+        echo "To use solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
+        echo "  git submodule update --init --recursive"
+        useLightweightPhysicsModel "Falling back to lightweight electrophysiology compilation."
+    fi
 fi
 
 echo "Using SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"

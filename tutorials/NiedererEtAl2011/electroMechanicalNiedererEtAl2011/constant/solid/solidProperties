@@ -17,21 +17,21 @@ solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
 
 nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
 {
-    // Maximum number of momentum correctors
-    nCorrectors             10000;
+    nCorrectors     200;
 
-    // Solution tolerance for displacement
-    solutionTolerance       1e-6;
+    // Relative residual: converge when residual < rTol * initialResidual.
+    // The solver plateaus at ~5% of initial residual; 0.1 accepts that.
+    rTol            0.1;
 
-    // Alternative solution tolerance for displacement
-    alternativeTolerance    1e-7;
+    // Absolute residual: converge when residual < aTol
+    aTol            1e-6;
 
-    // Write frequency for the residuals
-    infoFrequency           100;
+    // Step norm: converge when deltaX < sTol * xNorm
+    sTol            1e-4;
 
-    // Enable predictor to pre-compute sigma (including active tension)
-    // before the momentum loop
-    predictor               true;
+    infoFrequency   1;
+
+    predictor       true;
 }
 
 // ************************************************************************* //

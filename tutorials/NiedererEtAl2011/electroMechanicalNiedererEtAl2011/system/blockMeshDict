@@ -29,7 +29,7 @@ vertices
 blocks
 (
     // deltaX = 0.5 mm
-    hex (0 1 2 3 4 5 6 7) (40 6 14) simpleGrading (1 1 1)
+    hex (0 1 2 3 4 5 6 7) (80 12 28) simpleGrading (1 1 1)
 );
 
 edges
@@ -38,13 +38,24 @@ edges
 
 boundary
 (
-    walls
+    // x=0 face: fixed to prevent rigid body motion.
+    // Fibers run along x so the slab shortens toward x=20mm.
+    xFixed
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+
+    // All other faces: traction-free, allowing free contraction.
+    freeFaces
     {
         type patch;
         faces
         (
             (3 7 6 2)
-            (0 4 7 3)
             (2 6 5 1)
             (1 5 4 0)
             (0 3 2 1)

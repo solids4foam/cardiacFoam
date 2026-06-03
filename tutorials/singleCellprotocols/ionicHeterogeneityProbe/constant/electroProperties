@@ -36,6 +36,7 @@ singleCellSolverCoeffs
         endoMInterface    0.3;
         mEpiInterface     0.7;
         transitionWidth   0.1;
+        transitionMode    blend;
         smoothing         smoothstep;
     }
 }

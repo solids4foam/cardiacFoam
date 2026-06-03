@@ -21,13 +21,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.005;
+endTime         0.02;
 
-deltaT          5e-05;
+deltaT          1e-05;
 
 writeControl    runTime;
 
-writeInterval   5e-4;
+writeInterval   5e-3;
 
 purgeWrite      0;
 
@@ -43,7 +43,14 @@ timePrecision   6;
 
 runTimeModifiable false;
 
-// Max Courant number for the explicit electro solver time step
 maxCo           0.02;
+
+functions
+{
+    Taprobes
+    {
+        #include "Taprobes"
+    }
+}
 
 // ************************************************************************* //

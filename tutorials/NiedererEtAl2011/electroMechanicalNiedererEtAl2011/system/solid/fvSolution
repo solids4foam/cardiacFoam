@@ -19,7 +19,7 @@ solvers
     {
         solver          PCG;
         preconditioner  FDIC;
-        tolerance       1e-11;
+        tolerance       1e-9;
         relTol          0.001;
     }
 }
@@ -28,10 +28,7 @@ relaxationFactors
 {
     equations
     {
-    }
-
-    fields
-    {
+        D    0.7;
     }
 }
 

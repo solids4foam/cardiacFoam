@@ -64,6 +64,17 @@ def _filled_run(**overrides) -> RunDocument:
             config[ph][key] = "stub"
     for ph, slice_ in overrides.get("config", {}).items():
         config.setdefault(ph, {}).update(slice_)
+    # Normalize the stubbed tissue to one compatible with the final ionicModel
+    # so the helper yields a genuinely valid run (the generic enum_values[0]
+    # fill can otherwise pair, e.g., AlievPanfilov with epicardialCells, which
+    # the tissue-compatibility rule now rejects). Unknown models are left as-is.
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    phys = config.get("physics", {})
+    model = phys.get("ionicModel")
+    if model and "tissue" in phys:
+        entry = IONIC_MODEL_CATALOG.get(model)
+        if entry and entry.compatible_tissues and phys["tissue"] not in entry.compatible_tissues:
+            phys["tissue"] = entry.compatible_tissues[0]
     return RunDocument(id="r1", name="r", status="draft", config=config)
 
 

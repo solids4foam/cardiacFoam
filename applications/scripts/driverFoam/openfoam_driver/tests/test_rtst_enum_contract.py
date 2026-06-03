@@ -96,6 +96,11 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     # models (euler / rushLarsen / rushLarsenHeun). Not an RTST — it is an
     # internal solver-algorithm enum with no separate runtime table.
     "$ELECTRO_MODEL_COEFFS.batchedIntegrator",
+    # ionicHeterogeneity enums are plain dictionary words parsed directly by
+    # ionicHeterogeneity.C / ionicModel.C (lookupOrDefault), not RTST types.
+    "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode",            # transmuralBands
+    "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode",  # blend/hard
+    "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing",       # smoothstep
 })
 
 

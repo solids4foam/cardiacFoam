@@ -19,8 +19,8 @@ Class
     Foam::AlievPanfilov
 
 Description
-    Wrapper class for calling from the cellML ionic model for the Bueno Orovio
-    2008 reduced ionic model.
+    Wrapper class for calling from the cellML ionic model for the Aliev Panfilov
+    1996 reduced ionic model.
 
 SourceFiles
     AlievPanfilov.C
@@ -44,7 +44,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class Bueno Orovio Declaration
+                         Class AlievPanfilov Declaration
 \*---------------------------------------------------------------------------*/
 
 class AlievPanfilov

@@ -76,7 +76,7 @@ Foam::Grandi::Grandi
     RATES_(num)
 {
 
-    // 🔑 First, set tissue using base logic + overrides
+    // First, set tissue using base logic and overrides
     ionicModel::setTissueFromDict();
     forAll(STATES_, i)
     {
@@ -118,7 +118,7 @@ Foam::List<Foam::word> Foam::Grandi::supportedTissueTypes() const
 
 
 // ------------------------------------------------------------------------- //
-//  Solve ODE with mixed singleCell implementation and 1D-3D condition
+//  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
 void Foam::Grandi::solveODE
 (

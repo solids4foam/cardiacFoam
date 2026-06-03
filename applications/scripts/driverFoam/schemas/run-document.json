@@ -16,7 +16,7 @@
       "required": ["anatomy", "physics", "stimulus", "solver"],
       "properties": {
         "anatomy":  {"type": "object"},
-        "physics":  {"type": "object"},
+        "physics":  {"$ref": "#/$defs/physicsSlice"},
         "stimulus": {"type": "object"},
         "solver":   {"type": "object"}
       },
@@ -49,5 +49,58 @@
       "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "physicsSlice": {
+      "type": "object",
+      "description": "Physics-phase configuration as flat slot-keys (the post-$ELECTRO_MODEL_COEFFS slot_key form used by RunDocument.config). Nested OpenFOAM blocks are encoded as dot-separated leaf keys, e.g. 'ionicHeterogeneity.endoMInterface'. Only the most structured keys are described here; additional keys are permitted. The authoritative, complete key catalogue is the exported dict-catalog (openfoam_driver.dict_entries).",
+      "properties": {
+        "myocardiumSolver": {
+          "type": "string",
+          "description": "Top-level myocardium solver selector (monodomainSolver | bidomainSolver | singleCellSolver | eikonalSolver). See the dict-catalog for the authoritative enum."
+        },
+        "ionicModel": {
+          "type": "string",
+          "description": "Ionic cell model selector. See the dict-catalog / ionic_model_catalog for the authoritative enum (includes compactBatched GPU variants)."
+        },
+        "tissue": {
+          "type": "string",
+          "enum": ["epicardialCells", "mCells", "endocardialCells", "myocyte"],
+          "description": "Tissue selector for ionic-model specialisation. Must be one of the chosen ionicModel's compatible_tissues (enforced by validate_run)."
+        },
+        "ionicHeterogeneity.field": {
+          "type": "string",
+          "description": "Name of the transmural-distance field (0=endo, 1=epi) that drives the heterogeneity blend."
+        },
+        "ionicHeterogeneity.mode": {
+          "type": "string",
+          "enum": ["transmuralBands"],
+          "description": "Heterogeneity application mode. Only 'transmuralBands' is supported."
+        },
+        "ionicHeterogeneity.endoMInterface": {
+          "type": ["string", "number"],
+          "description": "Normalized transmural position of the endo/M boundary, in (0, mEpiInterface). Solver default 0.3."
+        },
+        "ionicHeterogeneity.mEpiInterface": {
+          "type": ["string", "number"],
+          "description": "Normalized transmural position of the M/epi boundary, in (endoMInterface, 1). Solver default 0.7."
+        },
+        "ionicHeterogeneity.transitionWidth": {
+          "type": ["string", "number"],
+          "description": "Width of the smooth transition band; 0 selects hard transitions. Solver default 0.1."
+        },
+        "ionicHeterogeneity.transitionMode": {
+          "type": "string",
+          "enum": ["blend", "hard"],
+          "description": "Transition style between tissue bands."
+        },
+        "ionicHeterogeneity.smoothing": {
+          "type": "string",
+          "enum": ["smoothstep"],
+          "description": "Smoothing curve applied within transition bands."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
 }

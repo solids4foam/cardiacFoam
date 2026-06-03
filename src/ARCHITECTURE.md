@@ -70,6 +70,14 @@ This library is used by:
 The `ionicModel/` subfolder now contains both the classic base/factory code and
 batched or GPU-oriented support headers.
 
+**Tissue heterogeneity support:** Ionic models can optionally configure transmural
+spatial heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial)
+through the `ionicHeterogeneity` dictionary block. This is implemented via the
+`configureIonicHeterogeneity(...)` virtual override, supported by the
+`ionicHeterogeneity.H/C` utility headers. Currently implemented in scalar `BuenoOrovio`
+and batched models `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`,
+`ToRORd_dynClBatched`. See `src/ionicModels/README.md` for configuration details.
+
 ### `verificationModels` — `libverificationModels`
 
 Verification infrastructure for spatial electrophysiology and ECG workflows.

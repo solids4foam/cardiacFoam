@@ -54,7 +54,6 @@ Compiled in `libionicModels`:
 - `Fabbri`
 - `Gaur`
 - `Grandi`
-- `ORd`
 - `PerisYague`
 - `Stewart`
 - `TNNP`

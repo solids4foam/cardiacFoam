@@ -254,6 +254,14 @@ def validate_run(
     # integrity to a sibling block).
     errors.extend(_evaluate_block_references(context))
 
+    # 6) Tissue heterogeneity (Phase 2). Cross-field rules the four predicate
+    # families cannot express: model-capability gate + interface ordering.
+    errors.extend(_evaluate_heterogeneity(context))
+
+    # 7) Tissue / ionic-model compatibility (warning-level). The tissue
+    # selector should be one of the chosen model's compatible_tissues.
+    errors.extend(_evaluate_tissue_compatibility(context))
+
     return errors
 
 
@@ -494,5 +502,110 @@ def _evaluate_block_references(
                 ),
                 level="error",
             ))
+
+    return errors
+
+
+# -------- Phase 2: ionic heterogeneity + tissue compatibility --------
+#
+# These cross-field checks cannot be expressed by the four DictEntry
+# predicate families (numeric ordering, catalog cross-reference), so they
+# are evaluated here against the flattened context, mirroring the
+# solver-coupling and block-reference evaluators above.
+
+_HETEROGENEITY_PREFIX = "ionicHeterogeneity."
+
+
+def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
+    """Validate an ``ionicHeterogeneity`` block when one is present.
+
+    Fires only when at least one ``ionicHeterogeneity.*`` slot is set, so
+    runs without heterogeneity are unaffected. Two rules:
+
+    1. The selected ``ionicModel`` must support transmural heterogeneity.
+    2. ``endoMInterface`` must be strictly less than ``mEpiInterface``.
+    """
+    errors: list[ValidationError] = []
+    het_keys = [k for k in context if k.startswith(_HETEROGENEITY_PREFIX)]
+    if not het_keys:
+        return errors
+
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+
+    model = context.get("ionicModel")
+    if model is not None:
+        entry = IONIC_MODEL_CATALOG.get(model)
+        if entry is not None and not getattr(entry, "supports_heterogeneity", False):
+            errors.append(ValidationError(
+                phase="physics",
+                field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity",
+                message=(
+                    f"ionicHeterogeneity is configured but ionicModel "
+                    f"{model!r} does not support transmural heterogeneity. "
+                    f"Supported models: BuenoOrovio, TNNP, TWorld, "
+                    f"ToRORd_dynCl (and their compactBatched variants)."
+                ),
+                level="error",
+            ))
+
+    endo = context.get("ionicHeterogeneity.endoMInterface")
+    mepi = context.get("ionicHeterogeneity.mEpiInterface")
+    if endo is not None and mepi is not None:
+        try:
+            if float(endo) >= float(mepi):
+                errors.append(ValidationError(
+                    phase="physics",
+                    field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.endoMInterface",
+                    message=(
+                        f"endoMInterface ({endo}) must be strictly less than "
+                        f"mEpiInterface ({mepi})."
+                    ),
+                    level="error",
+                ))
+        except (TypeError, ValueError):
+            # Non-numeric values are caught by value-kind handling elsewhere.
+            pass
+
+    return errors
+
+
+def _evaluate_tissue_compatibility(context: dict[str, Any]) -> list[ValidationError]:
+    """Reject a ``tissue`` selector not in the model's compatible set.
+
+    Error-level: the C++ ``ionicSelector`` hard-fails when the tissue is not
+    among the model's ``supportedTissueTypes()``, so an incompatible pairing
+    cannot run. We reject it pre-launch rather than let the solver abort.
+
+    Skipped when the model is unknown (not in the catalogue) or declares no
+    compatible tissues, to avoid false positives. Manufactured models never
+    carry a ``tissue`` selector (their dict entry's ``applicable_when``
+    excludes them), so they are not affected.
+    """
+    errors: list[ValidationError] = []
+    model = context.get("ionicModel")
+    tissue = context.get("tissue")
+    if model is None or tissue is None:
+        return errors
+
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+
+    entry = IONIC_MODEL_CATALOG.get(model)
+    if entry is None or not entry.compatible_tissues:
+        return errors
+    # Manufactured/verification models use the `dimension` selector, not the
+    # biological tissue selector; their `tissue` value is inert, so do not
+    # police it (the "manufactured" sentinel is not a real tissue name).
+    if "manufactured" in entry.compatible_tissues:
+        return errors
+    if tissue not in entry.compatible_tissues:
+        errors.append(ValidationError(
+            phase="physics",
+            field="$ELECTRO_MODEL_COEFFS.tissue",
+            message=(
+                f"tissue {tissue!r} is not in the compatible tissues for "
+                f"ionicModel {model!r}: {list(entry.compatible_tissues)}."
+            ),
+            level="error",
+        ))
 
     return errors

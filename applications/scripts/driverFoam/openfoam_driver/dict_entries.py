@@ -4,6 +4,14 @@ from dataclasses import dataclass, field
 from typing import Final, Literal
 from .ionic_model_catalog import BATCHED_MODELS
 
+# Ionic models that implement transmural tissue heterogeneity
+# (configureIonicHeterogeneity, endo/M/epi blend) on CPU and/or GPU.
+HETEROGENEITY_MODELS: tuple[str, ...] = (
+    "BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl",
+    "BuenoOroviocompactBatched", "TNNPcompactBatched",
+    "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
+)
+
 # Workflow phases used by run documents and catalog exports, in strict order.
 # Every ``DictEntry`` may declare one or more of these in ``phases``; the
 # catalog exporter fans it out to each phase bucket so multi-phase entries
@@ -326,6 +334,108 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=("src/activeTensionModels/activeTensionModel/activeTensionModel.H",),
             value_kind="word_list",
             required=False,
+        ),
+    ),
+    "ionic_heterogeneity": (
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.field",
+            phases=frozenset({"physics"}),
+            description=(
+                "Name of the transmural-distance field (0=endo, 1=epi) that "
+                "drives the heterogeneity blend. Read by the myocardium domain "
+                "when an ionicHeterogeneity block is present."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/myocardiumDomain/myocardiumDomainInterface.C",
+            ),
+            value_kind="word",
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+            examples=("t",),
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode",
+            phases=frozenset({"physics"}),
+            description="Heterogeneity application mode.",
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicModel.C",
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="enum",
+            enum_values=("transmuralBands",),
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.endoMInterface",
+            phases=frozenset({"physics"}),
+            description=(
+                "Transmural position of the endocardium/M-cell boundary, "
+                "normalized in (0, mEpiInterface). Defaults to 0.3 in the solver."
+            ),
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicModel.C",
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="scalar",
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+            constraints=("Must be > 0 and < mEpiInterface.",),
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mEpiInterface",
+            phases=frozenset({"physics"}),
+            description=(
+                "Transmural position of the M-cell/epicardium boundary, "
+                "normalized in (endoMInterface, 1). Defaults to 0.7 in the solver."
+            ),
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicModel.C",
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="scalar",
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+            constraints=("Must be > endoMInterface and < 1.",),
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionWidth",
+            phases=frozenset({"physics"}),
+            description=(
+                "Width of the smooth transition band between tissue regions. "
+                "0 selects hard (sharp) transitions. Defaults to 0.1 in the solver."
+            ),
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicModel.C",
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="scalar",
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode",
+            phases=frozenset({"physics"}),
+            description="Transition style between tissue bands.",
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="enum",
+            enum_values=("blend", "hard"),
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing",
+            phases=frozenset({"physics"}),
+            description="Smoothing curve applied within transition bands.",
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicHeterogeneity.C",
+            ),
+            value_kind="enum",
+            enum_values=("smoothstep",),
+            required=False,
+            applicable_when={"ionicModel": HETEROGENEITY_MODELS},
         ),
     ),
     "batched_integrator": (

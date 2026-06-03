@@ -358,24 +358,24 @@ CONSTANTS[g_to] = (tissueFlag == 3)
 // Tissue-dependent algebraic parameters (promoted from hot-path branches
 // in TNNPcomputeRates / TNNPcomputeVariables — see spec
 // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1).
-// Original branch: only tissueFlag == 1 (endo) selects the first set;
-// M-cells and epi share the second set.
+// Original branch: only tissueFlag == 1 (epi) selects the first set;
+// M-cells and endo share the second set.
 {
-    const bool isEndo = (tissueFlag == 1);
+    const bool isEpi = (tissueFlag == 1);
 
-    CONSTANTS[sInfPrefactor]    = isEndo ?    1.00000 :    1.10000;
-    CONSTANTS[sInfShift]        = isEndo ?   20.00000 :   28.00000;
-    CONSTANTS[sInfScale]        = isEndo ?    5.00000 :    6.00000;
+    CONSTANTS[sInfPrefactor]    = isEpi ?    1.00000 :    1.10000;
+    CONSTANTS[sInfShift]        = isEpi ?   20.00000 :   28.00000;
+    CONSTANTS[sInfScale]        = isEpi ?    5.00000 :    6.00000;
 
-    CONSTANTS[tauSGaussAmp]     = isEndo ?   85.00000 : 1000.00000;
-    CONSTANTS[tauSGaussShift]   = isEndo ?   45.00000 :   67.00000;
-    CONSTANTS[tauSGaussWidth]   = isEndo ?  320.00000 : 1000.00000;
+    CONSTANTS[tauSGaussAmp]     = isEpi ?   85.00000 : 1000.00000;
+    CONSTANTS[tauSGaussShift]   = isEpi ?   45.00000 :   67.00000;
+    CONSTANTS[tauSGaussWidth]   = isEpi ?  320.00000 : 1000.00000;
 
-    CONSTANTS[tauSSigmoidAmp]   = isEndo ?    5.00000 :    0.00000;
-    CONSTANTS[tauSSigmoidShift] = isEndo ?  -20.00000 :    0.00000;
-    CONSTANTS[tauSSigmoidScale] = isEndo ?    5.00000 :    1.00000;
+    CONSTANTS[tauSSigmoidAmp]   = isEpi ?    5.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidShift] = isEpi ?  -20.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidScale] = isEpi ?    5.00000 :    1.00000;
 
-    CONSTANTS[tauSOffset]       = isEndo ?    3.00000 :    8.00000;
+    CONSTANTS[tauSOffset]       = isEpi ?    3.00000 :    8.00000;
 }
 
 STATES[s] = 1;

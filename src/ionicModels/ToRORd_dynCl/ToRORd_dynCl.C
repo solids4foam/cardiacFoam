@@ -56,7 +56,7 @@ Foam::ToRORd_dynCl::ToRORd_dynCl
     RATES_(num)
 {
 
-    // 🔑 First, set tissue using base logic + overrides
+    // First, set tissue using base logic and overrides
     ionicModel::setTissueFromDict();
     forAll(STATES_, i)
     {
@@ -98,8 +98,57 @@ Foam::List<Foam::word> Foam::ToRORd_dynCl::supportedTissueTypes() const
 
 
 // ------------------------------------------------------------------------- //
-//  Solve ODE with mixed singleCell implementation and 1D-3D condition
+//  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
+Foam::scalarField& Foam::ToRORd_dynCl::constants
+(
+    const label integrationPtI
+) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::ToRORd_dynCl::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    ToRORd_dynClinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, ToRORd_dynClCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type()
+    );
+
+    return constants;
+}
+
+
+void Foam::ToRORd_dynCl::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    configureTransmuralBandHeterogeneity
+    (
+        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 void Foam::ToRORd_dynCl::solveODE
 (
     const scalar stepStartTime,
@@ -126,6 +175,7 @@ void Foam::ToRORd_dynCl::solveODE
         }
 
         step = min(step, deltaT * 1000.0);
+        activeIntegrationPoint_ = integrationPtI;
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         {
@@ -143,7 +193,7 @@ void Foam::ToRORd_dynCl::solveODE
         ::ToRORd_dynClcomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -171,7 +221,7 @@ void Foam::ToRORd_dynCl::derivatives
     ::ToRORd_dynClcomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)

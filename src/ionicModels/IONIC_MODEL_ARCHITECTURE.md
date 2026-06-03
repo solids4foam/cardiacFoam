@@ -126,6 +126,7 @@ Common optional overrides used in the current tree are:
 - `geometricDimension()`
 - `ioStatesPtr()`, `ioAlgebraicPtr()`, `ioRatesPtr()`, `ioConstantsPtr()`
 - `ioStateNames()`, `ioAlgebraicNames()`, `ioConstantNames()`
+- `configureIonicHeterogeneity(const scalarField&, const dictionary&)` — applies transmural spatial heterogeneity to ionic properties (see section below)
 - `hasSignal(...)`, `signal(...)` when a model wants custom coupling behavior
 
 ## Tissue And Dimension Selection
@@ -223,6 +224,22 @@ The base implementation can expose signals such as `Vm` and `Cai` from the
 ionic metadata when a derived model provides recognizable state names. Some
 models override `hasSignal(...)` or `signal(...)`, but several simply delegate
 to the base implementation.
+
+## Tissue Heterogeneity
+
+Ionic models can optionally support spatial transmural heterogeneity of cellular
+phenotypes through the `configureIonicHeterogeneity(...)` virtual method. This
+allows different tissue types (endocardial, mid-myocardial, epicardial) to coexist
+within a single spatial mesh via smooth or sharp transitions.
+
+**Configuration:** The `ionicHeterogeneity` dictionary block is read from the
+model coefficients and specifies a transmural distance field, transition boundaries,
+and smoothing parameters. See the detailed schema in `src/ionicModels/README.md`.
+
+**Current support:**
+
+- **Scalar CPU:** `BuenoOrovio` (transmural bands with smooth transitions)
+- **Batched/GPU:** `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`, `ToRORd_dynClBatched`
 
 ## Manufactured Ionic Models
 

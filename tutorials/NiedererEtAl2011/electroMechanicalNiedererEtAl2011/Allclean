@@ -10,4 +10,5 @@ cleanCase
 rm -rf constant/polyMesh
 rm -rf constant/electro/polyMesh
 rm -rf constant/solid/polyMesh
+rm -rf processor*
 rm -f constant/electro/electroProperties.withDefaultValues

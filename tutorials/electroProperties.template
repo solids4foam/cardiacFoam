@@ -66,10 +66,27 @@ monodomainSolverCoeffs
 
     // ── Ionic model ─────────────────────────────────────────────────────────
     // Valid types (registered in ionicModel RTST):
-    //   AlievPanfilov | BuenoOrovio | TNNP | ORd | TWorld | PerisYague | ...
+    //   AlievPanfilov | BuenoOrovio | TNNP | ToRORd_dynCl | TWorld | PerisYague | ...
     //   monodomainFDAManufactured | bidomainFDAManufactured | bathBidomainFDAManufactured
     ionicModel    BuenoOrovio;
     tissue        epicardialCells;   // epicardialCells | endocardialCells | mCells | myocyte
+
+    // ── Tissue heterogeneity (optional) ─────────────────────────────────────
+    // When present, the single `tissue` selector above is replaced by a
+    // spatially varying transmural blend of endocardial / M-cell / epicardial
+    // ionic constants across the wall. Supported ionic models:
+    //   BuenoOrovio | TNNP | TWorld | ToRORd_dynCl  (and their *Batched GPU variants).
+    // Omit this block entirely for a homogeneous run governed solely by `tissue`.
+    // ionicHeterogeneity
+    // {
+    //     field            t;                // transmural-distance field (0=endo, 1=epi)
+    //     mode             transmuralBands;  // only supported mode
+    //     endoMInterface   0.3;              // endo->M boundary, in (0, mEpiInterface)
+    //     mEpiInterface    0.7;              // M->epi boundary, in (endoMInterface, 1)
+    //     transitionWidth  0.1;              // smooth band width; 0 => hard transitions
+    //     transitionMode   blend;            // blend | hard
+    //     smoothing        smoothstep;       // smoothstep
+    // }
 
 
     // ── ODE time-integration ────────────────────────────────────────────────

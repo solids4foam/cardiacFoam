@@ -136,6 +136,7 @@ Current `Make/files` entries:
 - `TNNPBatched`
 - `ToRORd_dynClBatched`
 - `TrovatoBatched`
+- `TWorldBatched`
 
 **Verification models:**
 
@@ -148,6 +149,74 @@ Current `Make/files` entries:
 `Make/files` builds into:
 
 - `$(FOAM_USER_LIBBIN)/libionicModels`
+
+## Tissue heterogeneity
+
+Transmural heterogeneity of ionic properties is supported through the optional
+`ionicHeterogeneity` dictionary block, which allows spatial variation of cellular
+phenotypes (endo, mid-myocardial, epi) across the wall thickness.
+
+### Supported models
+
+**Scalar CPU models:**
+- `BuenoOrovio` (only)
+
+**Batched/GPU models:**
+- `BuenoOrovioBatched`
+- `TNNPBatched`
+- `TWorldBatched`
+- `ToRORd_dynClBatched`
+
+Note: Other scalar models (TNNP, TWorld, ToRORd_dynCl) support tissue-dependent
+constant overrides at initialization but do not implement spatial heterogeneity.
+
+### Configuration
+
+The `ionicHeterogeneity` block is nested within the model coefficients
+(e.g., `monodomainSolverCoeffs`):
+
+```
+ionicHeterogeneity
+{
+    field             t;                  // Name of transmural distance field
+    mode              transmuralBands;    // Heterogeneity mode
+    endoMInterface    0.3;                // Endo-to-M-cell interface
+    mEpiInterface     0.7;                // M-cell-to-epi interface
+    transitionWidth   0.1;                // Smooth transition band width
+    transitionMode    blend;              // Transition type: blend or hard
+    smoothing         smoothstep;         // Smoothing function: smoothstep
+}
+```
+
+**Dictionary keys:**
+
+| Key | Meaning | Default | Accepted values |
+|-----|---------|---------|-----------------|
+| `field` | Name of the transmural distance field (0 at endo, 1 at epi) | `t` | Any field name |
+| `mode` | Heterogeneity application mode | `transmuralBands` | `transmuralBands` |
+| `endoMInterface` | Transmural position of endo/M-cell boundary (normalized [0, 1]) | `0.3` | 0 < value < `mEpiInterface` |
+| `mEpiInterface` | Transmural position of M-cell/epi boundary (normalized [0, 1]) | `0.7` | `endoMInterface` < value < 1 |
+| `transitionWidth` | Width of smooth transition region | `0.1` | ≥ 0; must not cause overlapping bands in blend mode |
+| `transitionMode` | Hard or smooth transitions between bands | `blend` | `blend`, `hard` |
+| `smoothing` | Smoothing function applied to transition zones | `smoothstep` | `smoothstep` |
+
+**Validation rules:**
+
+- 0 < `endoMInterface` < `mEpiInterface` < 1
+- `transitionWidth` ≥ 0
+- In `blend` mode: `endoMInterface + transitionWidth` ≤ `mEpiInterface` and `mEpiInterface + transitionWidth` ≤ 1
+
+### Tissue types
+
+The base selection uses the `tissue` entry (outside `ionicHeterogeneity`):
+
+- `endocardialCells`
+- `mCells`
+- `epicardialCells`
+- `myocyte` (default if not specified)
+
+BuenoOrovio supports all three tissue types; batched models adapt heterogeneity
+weights per tissue class.
 
 ## Adding a new ionic model
 

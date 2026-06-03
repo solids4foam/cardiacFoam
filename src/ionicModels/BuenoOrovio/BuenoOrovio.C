@@ -307,8 +307,6 @@ void Foam::BuenoOrovio::solveODE
 
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
 
-        //---------Currently with no use. -------------//
-
     }
 }
 

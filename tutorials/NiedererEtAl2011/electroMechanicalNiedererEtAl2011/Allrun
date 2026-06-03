@@ -2,24 +2,40 @@
 #-------------------------------------------------------------------------------
 # Allrun script for electro-mechanical coupling tutorial
 #
-# Based on NiedererEtAl2011 with added solid region
+# Usage:
+#   ./Allrun          serial
+#   ./Allrun parallel  parallel (N cores set in system/decomposeParDict)
 #-------------------------------------------------------------------------------
 
-# Source OpenFOAM run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        parallel) parallelRun=true ;;
+    esac
+done
 
 # -------------------------
 # Mesh generation
 # -------------------------
 
 runApplication blockMesh
-
-# Copy mesh to both regions
 cp -r constant/polyMesh constant/electro/polyMesh
 cp -r constant/polyMesh constant/solid/polyMesh
+
+# Transmural-distance field t (0=endo, 1=epi) for ionicHeterogeneity.
+# Must run on the serial mesh before decomposition.
+runApplication setExprFields -region electro -time 0 -ascii
 
 # -------------------------
 # Run solver
 # -------------------------
 
-runApplication cardiacFoam
+if $parallelRun; then
+    runApplication -s electro decomposePar -region electro
+    runApplication -s solid decomposePar -region solid
+    runParallel cardiacFoam
+else
+    runApplication cardiacFoam
+fi

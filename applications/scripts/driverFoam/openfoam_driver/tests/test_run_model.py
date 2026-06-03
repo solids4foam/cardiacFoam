@@ -60,3 +60,41 @@ def test_run_document_round_trip():
     assert back["id"] == "run-0001"
     assert back["config"]["anatomy"] == {}
     assert back["status"] == "draft"
+
+
+def test_schema_accepts_valid_heterogeneity_block(schema):
+    doc = _valid_run_dict()
+    doc["config"]["physics"] = {
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "BuenoOrovio",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.field": "t",
+        "ionicHeterogeneity.mode": "transmuralBands",
+        "ionicHeterogeneity.endoMInterface": "0.3",
+        "ionicHeterogeneity.mEpiInterface": "0.7",
+        "ionicHeterogeneity.transitionMode": "blend",
+        "ionicHeterogeneity.smoothing": "smoothstep",
+    }
+    jsonschema.validate(doc, schema)  # does not raise
+
+
+def test_schema_rejects_unknown_heterogeneity_mode(schema):
+    doc = _valid_run_dict()
+    doc["config"]["physics"] = {"ionicHeterogeneity.mode": "bogusMode"}
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(doc, schema)
+
+
+def test_schema_rejects_unknown_tissue(schema):
+    doc = _valid_run_dict()
+    doc["config"]["physics"] = {"tissue": "notATissue"}
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(doc, schema)
+
+
+def test_schema_still_allows_unlisted_physics_keys(schema):
+    # additionalProperties stays open: the dict-catalog has far more keys
+    # than the schema enumerates.
+    doc = _valid_run_dict()
+    doc["config"]["physics"] = {"someUncataloguedKey": "x"}
+    jsonschema.validate(doc, schema)  # does not raise

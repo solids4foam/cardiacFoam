@@ -66,6 +66,12 @@ class TNNP
         //- Rates
         mutable PtrList<scalarField> RATES_;
 
+        //- Per-integration-point constants when transmural heterogeneity is on
+        mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
+
+        //- Active integration point for derivatives() (no index argument)
+        mutable label activeIntegrationPoint_ = 0;
+
 
     // Private Member Functions
 
@@ -129,8 +135,24 @@ protected:
         OverrideTypeName("TNNP");
 
 
-        //override the only available tissue in this model
+        //- Tissue types supported by this model (endo / M / epi)
         virtual List<word> supportedTissueTypes() const override;
+
+        //- Per-point constants accessor (heterogeneous when configured)
+        scalarField& constants(const label integrationPtI) const;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        //- Build per-point transmural heterogeneity from electroProperties
+        virtual void configureIonicHeterogeneity
+        (
+            const scalarField& transmuralDistance,
+            const dictionary& heterogeneityDict
+        ) override;
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag

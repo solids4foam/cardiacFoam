@@ -60,10 +60,6 @@ sequentialElectroMechanical::sequentialElectroMechanical
         dimensionedScalar("zero", dimPressure, 0.0),
         "zeroGradient"
     ),
-    TaScale_
-    (
-        electroMechanicalProperties().lookupOrDefault<scalar>("TaScale", 1e3)
-    ),
     lambdaField_(electro().mesh().nCells(), 1.0),
     activeTensionModel_
     (
@@ -94,9 +90,26 @@ sequentialElectroMechanical::sequentialElectroMechanical
             << abort(FatalError);
     }
 
+    if (!solid().mesh().foundObject<volVectorField>("f0"))
+    {
+        new volVectorField
+        (
+            IOobject
+            (
+                "f0",
+                runTime.timeName(),
+                solid().mesh(),
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            solid().mesh()
+        );
+
+        Info<< "    Registered f0 in solid objectRegistry." << nl << endl;
+    }
+
     Info<< "    Active tension model: "
         << activeTensionModel_->type() << nl
-        << "    TaScale (model units -> Pa): " << TaScale_ << nl
         << "    Integration points: " << electro().mesh().nCells() << nl
         << endl;
 }
@@ -147,10 +160,7 @@ bool sequentialElectroMechanical::evolve()
 
     activeTensionModel_->calculateTension(t, dt, lambdaField_, TaI);
 
-    if (TaScale_ != 1.0)  // skip no-op multiply; 1.0 is exactly representable
-    {
-        TaI *= TaScale_;
-    }
+    TaI *= 1e3;  // kPa -> Pa
 
     Ta_.correctBoundaryConditions();
 

@@ -20,19 +20,12 @@ sequentialElectroMechanicalCoeffs
     electroRegion   electro;
     solidRegion     solid;
 
-    // Runtime-selectable active tension model.
-    // Available: LandNiederer, NashPanfilov, GoktepeKuhl.
-    // BuenoOrovio and AlievPanfilov (no Cai) require NashPanfilov or GoktepeKuhl.
     activeTensionModel  LandNiederer;
-
-    // Scale factor from model output units to Pa.
-    // LandNiederer, NashPanfilov, GoktepeKuhl all output kPa -> default 1e3.
-    TaScale         1e3;
 
     // ODE solver settings used by LandNiederer.
     ODESolver
     {
-        solver      RK45;
+        solver      RKF45;
         absTol      1e-8;
         relTol      1e-6;
     }
