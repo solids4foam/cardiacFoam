@@ -19,7 +19,12 @@ else
     fi
 fi
 
-# Check and define SOLIDS4FOAM_INST_DIR
+# Check and define SOLIDS4FOAM_INST_DIR.
+# Clear the resolver's one-shot guard first so each top-level build re-resolves
+# from scratch. Otherwise a leftover _SOLIDS4FOAM_RESOLVED in the calling shell
+# (e.g. from a manual 'source etc/resolveSolids4Foam.sh') would make the
+# resolver a no-op and reuse a stale SOLIDS4FOAM_INST_DIR.
+unset _SOLIDS4FOAM_RESOLVED
 source "./etc/resolveSolids4Foam.sh"
 
 # Parse arguments for library compilation

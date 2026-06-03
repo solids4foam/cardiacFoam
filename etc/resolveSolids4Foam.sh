@@ -9,10 +9,14 @@ if [ -n "$_SOLIDS4FOAM_RESOLVED" ]; then
 fi
 export _SOLIDS4FOAM_RESOLVED=1
 
-# Directory containing this script
+# Directory containing this script (absolute). The repo root is its parent;
+# resolve it with cd+pwd so the exported paths never contain a literal '..'
+# (a '..' segment makes $(abspath ...) in Make/options collapse the repo dir
+# name and mismatch CARDIACFOAM_LIGHTWEIGHT_ROOT, breaking the build).
 _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_bundledSolids4Foam="$_thisDir/../modules/solids4foam"
-_bundledPhysicsModel="$_thisDir/../modules/physicsModel"
+_repoRoot="$(cd "$_thisDir/.." && pwd)"
+_bundledSolids4Foam="$_repoRoot/modules/solids4foam"
+_bundledPhysicsModel="$_repoRoot/modules/physicsModel"
 _solids4FoamHeader="src/solids4FoamModels/physicsModel/physicsModel.H"
 # A solids4foam tree is "built" once its lnInclude has been generated; test for
 # a representative header there to avoid selecting an un-built source tree.

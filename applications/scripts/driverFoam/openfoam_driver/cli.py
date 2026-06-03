@@ -46,8 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Path to JSON file with make_spec overrides. Supports either a top-level "
             "entry map (keys: singleCell, niederer2012, manufacturedFDA, "
             "manufacturedFDABidomain, manufacturedFDABathBidomain, "
-            "restitutionCurves, genericCase/randomCase) or a direct parameter "
-            "object for the selected entry."
+            "manufacturedEikonalECG, restitutionCurves, genericCase/randomCase) "
+            "or a direct parameter object for the selected entry."
         ),
     )
     parser.add_argument(

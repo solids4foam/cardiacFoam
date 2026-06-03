@@ -115,6 +115,20 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
+        id="manufacturedEikonalECG",
+        title="Manufactured solution (eikonal ECG)",
+        summary=(
+            "Manufactured eikonal activation-time verification with template "
+            "surrogate ECG and quadrature ECG reference."
+        ),
+        thumbnail="/tutorials/manufactured-eikonal-ecg.png",
+        tags=("manufactured-solution", "verification", "eikonal", "ecg"),
+        preset={
+            "anatomy.mesh": "unit-domain",
+            "physics.ionic_model": "none",
+        },
+    ),
+    TutorialDisplay(
         id="restitutionCurves",
         title="Restitution curves (S1–S2 protocol)",
         summary=(

@@ -147,6 +147,9 @@ eikonalECGManufacturedVerifier::requirements() const
     Requirements needs;
     needs.needActivationTime = true;
     needs.needConductivity = true;
+    needs.needChi = true;
+    needs.needCm = true;
+    needs.needC0 = true;
     return needs;
 }
 
@@ -247,29 +250,41 @@ bool eikonalECGManufacturedVerifier::read(const dictionary& dict)
     const dictionary& cfg = manufacturedDict(dict);
 
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
-    dimension_ = max(label(1), min(mesh_.nGeometricD(), label(3)));
+    const label meshDimension = max(label(1), min(mesh_.nGeometricD(), label(3)));
+    dimension_ = meshDimension;
 
     if (cfg.found("dimension"))
     {
         const word dimensionName(cfg.lookup("dimension"));
+        label requestedDimension = 0;
 
         if (dimensionName == "1D")
         {
-            dimension_ = 1;
+            requestedDimension = 1;
         }
         else if (dimensionName == "2D")
         {
-            dimension_ = 2;
+            requestedDimension = 2;
         }
         else if (dimensionName == "3D")
         {
-            dimension_ = 3;
+            requestedDimension = 3;
         }
         else
         {
             FatalErrorInFunction
                 << "Unsupported manufactured eikonal ECG dimension '"
                 << dimensionName << "'. Expected one of 1D, 2D, or 3D."
+                << exit(FatalError);
+        }
+
+        if (requestedDimension != meshDimension)
+        {
+            FatalErrorInFunction
+                << "Manufactured eikonal ECG dimension '" << dimensionName
+                << "' does not match mesh geometric dimension "
+                << meshDimension << "D. Use a matching dimension or omit the "
+                << "dimension entry."
                 << exit(FatalError);
         }
     }
@@ -424,11 +439,19 @@ void eikonalECGManufacturedVerifier::record
 
     const tensor conductivity =
         manufacturedEikonalConstantConductivity(requireConductivity());
+    const vector exactGradTau =
+        manufacturedEikonalGradTau
+        (
+            conductivity,
+            requireChi().value(),
+            requireCm().value(),
+            requireC0().value()
+        );
     const planarTauFit tauFit =
         fitPlanarTauFromActivationTime(requireActivationTime());
 
-    tau0_ = tauFit.tau0;
-    gradTau_ = tauFit.gradTau;
+    tau0_ = manufacturedEikonalTau0();
+    gradTau_ = exactGradTau;
     planarFitLinf_ = tauFit.linf;
 
     List<scalar> referenceNodes, referenceWeights;

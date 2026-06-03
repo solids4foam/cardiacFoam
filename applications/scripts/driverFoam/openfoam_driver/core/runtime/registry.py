@@ -14,6 +14,9 @@ from ...specs.tutorials.manufactured_fda_bidomain import (
 from ...specs.tutorials.manufactured_fda_bath_bidomain import (
     make_spec as make_manufactured_fda_bath_bidomain_spec,
 )
+from ...specs.tutorials.manufactured_eikonal_ecg import (
+    make_spec as make_manufactured_eikonal_ecg_spec,
+)
 from ...specs.tutorials.generic_case import make_spec as make_generic_case_spec
 from ...specs.tutorials.manufactured_fda import make_spec as make_manufactured_fda_spec
 from ...specs.tutorials.niederer_2012 import make_spec as make_niederer_2012_spec
@@ -31,6 +34,8 @@ SPEC_FACTORIES = {
     "manufacturedfdabidomain": make_manufactured_fda_bidomain_spec,
     "manufacturedFDABathBidomain": make_manufactured_fda_bath_bidomain_spec,
     "manufacturedfdabathbidomain": make_manufactured_fda_bath_bidomain_spec,
+    "manufacturedEikonalECG": make_manufactured_eikonal_ecg_spec,
+    "manufacturedeikonalecg": make_manufactured_eikonal_ecg_spec,
     "restitutionCurves": make_restitution_curves_spec,
     "restitutioncurves": make_restitution_curves_spec,
 }
@@ -43,6 +48,7 @@ REGISTERED_TUTORIALS = (
     "manufacturedFDA",
     "manufacturedFDABidomain",
     "manufacturedFDABathBidomain",
+    "manufacturedEikonalECG",
     "restitutionCurves",
 )
 

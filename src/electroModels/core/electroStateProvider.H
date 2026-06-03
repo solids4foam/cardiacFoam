@@ -29,6 +29,7 @@ Author
 #ifndef electroStateProvider_H
 #define electroStateProvider_H
 
+#include "dimensionedScalar.H"
 #include "volFields.H"
 
 namespace Foam
@@ -77,6 +78,21 @@ public:
     }
 
     virtual const volTensorField* conductivityPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* chiPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* CmPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* c0Ptr() const
     {
         return nullptr;
     }

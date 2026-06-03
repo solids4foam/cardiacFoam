@@ -46,6 +46,9 @@ public:
         bool needActivationTime = false;
         bool needPhiE = false;
         bool needConductivity = false;
+        bool needChi = false;
+        bool needCm = false;
+        bool needC0 = false;
     };
 
 protected:
@@ -59,6 +62,9 @@ protected:
     const volScalarField& requireActivationTime() const;
     const volScalarField& requirePhiE() const;
     const volTensorField& requireConductivity() const;
+    const dimensionedScalar& requireChi() const;
+    const dimensionedScalar& requireCm() const;
+    const dimensionedScalar& requireC0() const;
 
 public:
 

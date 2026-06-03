@@ -152,6 +152,21 @@ public:
         return &conductivity_;
     }
 
+    virtual const dimensionedScalar* chiPtr() const override
+    {
+        return &chi_;
+    }
+
+    virtual const dimensionedScalar* CmPtr() const override
+    {
+        return &Cm_;
+    }
+
+    virtual const dimensionedScalar* c0Ptr() const override
+    {
+        return &c0_;
+    }
+
     virtual const volTensorField* intracellularConductivityPtr() const override
     {
         return &conductivity_;

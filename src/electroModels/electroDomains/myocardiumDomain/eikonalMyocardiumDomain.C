@@ -21,7 +21,9 @@ License
 #include "error.H"
 #include "DynamicList.H"
 #include "Switch.H"
+#include "fixedValueFvPatchFields.H"
 #include "manufacturedEikonalVerifier.H"
+#include "zeroGradientFvPatchFields.H"
 
 namespace Foam
 {
@@ -69,6 +71,58 @@ const fvMesh& resolveMyocardiumMesh
       ? subsetPtr->subMesh()
       : supportMesh
     );
+}
+
+
+bool manufacturedEikonalVerificationEnabled(const dictionary& electroProperties)
+{
+    const dictionary* verificationDictPtr =
+        electroProperties.findDict("verificationModel");
+
+    if (!verificationDictPtr)
+    {
+        return false;
+    }
+
+    const word modelType =
+        verificationDictPtr->lookupOrDefault<word>("type", word::null);
+
+    return
+        modelType == "manufacturedEikonalVerifier"
+     && verificationDictPtr->lookupOrDefault<Switch>("enabled", true);
+}
+
+
+wordList activationTimePatchTypes
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties
+)
+{
+    wordList patchTypes
+    (
+        mesh.boundary().size(),
+        zeroGradientFvPatchScalarField::typeName
+    );
+
+    if (!manufacturedEikonalVerificationEnabled(electroProperties))
+    {
+        return patchTypes;
+    }
+
+    forAll(patchTypes, patchI)
+    {
+        if (mesh.boundaryMesh()[patchI].type() == "empty")
+        {
+            patchTypes[patchI] = "empty";
+        }
+        else
+        {
+            patchTypes[patchI] = fixedValueFvPatchScalarField::typeName;
+        }
+    }
+
+    return patchTypes;
 }
 
 
@@ -205,7 +259,11 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("psi", dimTime, -1.0),
-        "zeroGradient"
+        activationTimePatchTypes
+        (
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            electroProperties
+        )
     ),
     Vm_
     (
@@ -330,7 +388,6 @@ void eikonalMyocardiumDomain::advance
 {
     (void)t0;
     (void)dt;
-    (void)pimplePtr;
 
     scalarField& activationValues = activationTime_.primitiveFieldRef();
     forAll(stimulusCellIDs_, i)
@@ -356,43 +413,58 @@ void eikonalMyocardiumDomain::advance
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
-    gradActivationTime_ = fvc::grad(activationTime_);
-    w_ = M_ & gradActivationTime_;
-    G_ = sqrt((gradActivationTime_ & w_) + smallG);
-
-    if (eikonalAdvectionDiffusionApproach_)
+    auto solveActivationEqn = [&]()
     {
-        a_ = w_/G_;
-        u_ = c0_*a_;
-        phiU_ = (fvc::interpolate(u_) & mesh().Sf());
-        divPhiU_ = fvc::div(phiU_);
+        gradActivationTime_ = fvc::grad(activationTime_);
+        w_ = M_ & gradActivationTime_;
+        G_ = sqrt((gradActivationTime_ & w_) + smallG);
 
-        fvScalarMatrix activationEqn
-        (
-           -fvm::laplacian(M_, activationTime_)
-          + fvm::div(phiU_, activationTime_)
-          + fvm::SuSp(-divPhiU_, activationTime_)
-         == one
-          + fvc::div(phiU_, activationTime_)
-          - divPhiU_*activationTime_
-          - c0_*G_
-        );
+        if (eikonalAdvectionDiffusionApproach_)
+        {
+            a_ = w_/G_;
+            u_ = c0_*a_;
+            phiU_ = (fvc::interpolate(u_) & mesh().Sf());
+            divPhiU_ = fvc::div(phiU_);
 
-        activationEqn.setValues(constrainedCells, constrainedValues);
-        activationEqn.solve("asymmetric_" + activationTime_.name());
+            fvScalarMatrix activationEqn
+            (
+               -fvm::laplacian(M_, activationTime_)
+              + fvm::div(phiU_, activationTime_)
+              + fvm::SuSp(-divPhiU_, activationTime_)
+             == one
+              + fvc::div(phiU_, activationTime_)
+              - divPhiU_*activationTime_
+              - c0_*G_
+            );
+
+            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.solve("asymmetric_" + activationTime_.name());
+        }
+        else
+        {
+            fvScalarMatrix activationEqn
+            (
+               -fvm::laplacian(M_, activationTime_)
+              + c0_*G_
+             == one
+            );
+
+            activationEqn.relax();
+            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.solve();
+        }
+    };
+
+    if (pimplePtr)
+    {
+        while (pimplePtr->loop())
+        {
+            solveActivationEqn();
+        }
     }
     else
     {
-        fvScalarMatrix activationEqn
-        (
-           -fvm::laplacian(M_, activationTime_)
-          + c0_*G_
-         == one
-        );
-
-        activationEqn.relax();
-        activationEqn.setValues(constrainedCells, constrainedValues);
-        activationEqn.solve();
+        solveActivationEqn();
     }
 }
 

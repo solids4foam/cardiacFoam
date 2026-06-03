@@ -163,6 +163,21 @@ public:
             return stateProvider_.conductivityPtr();
         }
 
+        virtual const dimensionedScalar* chiPtr() const override
+        {
+            return stateProvider_.chiPtr();
+        }
+
+        virtual const dimensionedScalar* CmPtr() const override
+        {
+            return stateProvider_.CmPtr();
+        }
+
+        virtual const dimensionedScalar* c0Ptr() const override
+        {
+            return stateProvider_.c0Ptr();
+        }
+
         virtual const volTensorField* intracellularConductivityPtr()
             const override
         {

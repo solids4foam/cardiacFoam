@@ -1,0 +1,14 @@
+#!/bin/sh
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+
+runApplication blockMesh
+
+if [ "${1:-}" = "parallel" ]
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi

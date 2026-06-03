@@ -169,6 +169,54 @@ const volTensorField& ecgVerificationModel::requireConductivity() const
 }
 
 
+const dimensionedScalar& ecgVerificationModel::requireChi() const
+{
+    const dimensionedScalar* valuePtr = stateProvider_.chiPtr();
+
+    if (!valuePtr)
+    {
+        FatalErrorInFunction
+            << "ECG verification model requires chi, but the selected "
+            << "electroStateProvider does not expose it."
+            << exit(FatalError);
+    }
+
+    return *valuePtr;
+}
+
+
+const dimensionedScalar& ecgVerificationModel::requireCm() const
+{
+    const dimensionedScalar* valuePtr = stateProvider_.CmPtr();
+
+    if (!valuePtr)
+    {
+        FatalErrorInFunction
+            << "ECG verification model requires Cm, but the selected "
+            << "electroStateProvider does not expose it."
+            << exit(FatalError);
+    }
+
+    return *valuePtr;
+}
+
+
+const dimensionedScalar& ecgVerificationModel::requireC0() const
+{
+    const dimensionedScalar* valuePtr = stateProvider_.c0Ptr();
+
+    if (!valuePtr)
+    {
+        FatalErrorInFunction
+            << "ECG verification model requires c0, but the selected "
+            << "electroStateProvider does not expose it."
+            << exit(FatalError);
+    }
+
+    return *valuePtr;
+}
+
+
 void ecgVerificationModel::validateProvider() const
 {
     const Requirements needs = requirements();
@@ -191,6 +239,21 @@ void ecgVerificationModel::validateProvider() const
     if (needs.needConductivity)
     {
         (void)requireConductivity();
+    }
+
+    if (needs.needChi)
+    {
+        (void)requireChi();
+    }
+
+    if (needs.needCm)
+    {
+        (void)requireCm();
+    }
+
+    if (needs.needC0)
+    {
+        (void)requireC0();
     }
 }
 
