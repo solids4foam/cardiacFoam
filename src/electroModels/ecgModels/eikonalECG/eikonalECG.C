@@ -26,6 +26,9 @@ License
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
+#include "ionicHeterogeneity.H"
+#include "IOdictionary.H"
+#include "tissueTemplates.H"
 
 namespace Foam
 {
@@ -37,8 +40,6 @@ addToRunTimeSelectionTable(ecgSolver, eikonalECG, dictionary);
 
 eikonalECG::eikonalECG(const dictionary& dict)
 :
-    templateTimes_(),
-    templateValues_(),
     useManufacturedTemplate_(false),
     startTime_(0.0),
     endTime_(0.0),
@@ -47,35 +48,21 @@ eikonalECG::eikonalECG(const dictionary& dict)
     written_(false),
     lastValues_(),
     outputPtr_(),
-    VmPtr_()
+    VmPtr_(),
+    leadVectorsCalculated_(false),
+    leadVectors_(),
+    weightsCalculated_(false)
 {
-    if (dict.found("template"))
-    {
-        const dictionary& templateDict = dict.subDict("template");
-        templateTimes_ = templateDict.get<scalarField>("times");
-        templateValues_ = templateDict.get<scalarField>("values");
-        validateTemplate();
-    }
-    else
-    {
-        const word verifierType =
-            dict.lookupOrDefault<word>("ecgVerificationModel", word::null);
+    const word verifierType =
+        dict.lookupOrDefault<word>("ecgVerificationModel", word::null);
 
-        if
-        (
-            dict.found("manufacturedEikonalECG")
-         || verifierType == "eikonalECGManufacturedVerifier"
-        )
-        {
-            useManufacturedTemplate_ = true;
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "eikonalECG requires a template dictionary unless "
-                << "manufacturedEikonalECG verification is enabled."
-                << exit(FatalError);
-        }
+    if
+    (
+        dict.found("manufacturedEikonalECG")
+     || verifierType == "eikonalECGManufacturedVerifier"
+    )
+    {
+        useManufacturedTemplate_ = true;
     }
 
     const dictionary& samplingDict = dict.subDict("sampling");
@@ -100,79 +87,9 @@ eikonalECG::eikonalECG(const dictionary& dict)
 }
 
 
-void eikonalECG::validateTemplate() const
+scalar eikonalECG::manufacturedTemplateValue(scalar localTime) const
 {
-    if (useManufacturedTemplate_)
-    {
-        return;
-    }
-
-    if (templateTimes_.size() != templateValues_.size())
-    {
-        FatalErrorInFunction
-            << "eikonalECG template.times and template.values must have "
-            << "the same size."
-            << exit(FatalError);
-    }
-
-    if (templateTimes_.size() < 2)
-    {
-        FatalErrorInFunction
-            << "eikonalECG template requires at least two samples."
-            << exit(FatalError);
-    }
-
-    for (label i = 1; i < templateTimes_.size(); ++i)
-    {
-        if (templateTimes_[i] <= templateTimes_[i - 1])
-        {
-            FatalErrorInFunction
-                << "eikonalECG template.times must be strictly increasing."
-                << exit(FatalError);
-        }
-    }
-}
-
-
-scalar eikonalECG::templateValue(scalar localTime) const
-{
-    if (useManufacturedTemplate_)
-    {
-        return manufacturedEikonalTemplateValue(localTime);
-    }
-
-    if (localTime <= templateTimes_.first())
-    {
-        return templateValues_.first();
-    }
-
-    if (localTime >= templateTimes_.last())
-    {
-        return templateValues_.last();
-    }
-
-    label lo = 0;
-    label hi = templateTimes_.size() - 1;
-
-    while (hi - lo > 1)
-    {
-        const label mid = (lo + hi)/2;
-
-        if (templateTimes_[mid] <= localTime)
-        {
-            lo = mid;
-        }
-        else
-        {
-            hi = mid;
-        }
-    }
-
-    const scalar t0 = templateTimes_[lo];
-    const scalar t1 = templateTimes_[hi];
-    const scalar alpha = (localTime - t0)/(t1 - t0);
-
-    return (1.0 - alpha)*templateValues_[lo] + alpha*templateValues_[hi];
+    return manufacturedEikonalTemplateValue(localTime);
 }
 
 
@@ -188,8 +105,45 @@ void eikonalECG::reconstructVm
 
     forAll(VmValues, cellI)
     {
-        VmValues[cellI] =
-            templateValue(sampleTime - activationValues[cellI]);
+        const scalar localTime = sampleTime - activationValues[cellI];
+
+        if (useManufacturedTemplate_)
+        {
+            VmValues[cellI] = manufacturedTemplateValue(localTime);
+        }
+        else
+        {
+            if (wEndo_[cellI] > 0.5)
+            {
+                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+                (
+                    localTime, 
+                    eikonalECG_templates::endoTimes, 
+                    eikonalECG_templates::endoValues, 
+                    eikonalECG_templates::numEndoSamples
+                );
+            }
+            else if (wMid_[cellI] > 0.5)
+            {
+                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+                (
+                    localTime, 
+                    eikonalECG_templates::midTimes, 
+                    eikonalECG_templates::midValues, 
+                    eikonalECG_templates::numMidSamples
+                );
+            }
+            else
+            {
+                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+                (
+                    localTime, 
+                    eikonalECG_templates::epiTimes, 
+                    eikonalECG_templates::epiValues, 
+                    eikonalECG_templates::numEpiSamples
+                );
+            }
+        }
     }
 
     Vm.correctBoundaryConditions();
@@ -203,27 +157,54 @@ void eikonalECG::calculatePseudoECG
     scalarField& values
 ) const
 {
-    const fvMesh& mesh = domain.mesh();
-    const List<vector>& electrodePositions = domain.electrodePositions();
+    const label nElectrodes = domain.electrodePositions().size();
 
     const tmp<volVectorField> tgradVm = fvc::grad(Vm);
     const vectorField& gradVm = tgradVm().primitiveField();
+
+    values.setSize(nElectrodes);
+    values = 0.0;
+
+    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
+    {
+        const List<vector>& z = leadVectors_[electrodeI];
+        scalar ecgVal = 0.0;
+
+        forAll(gradVm, cellI)
+        {
+            ecgVal += gradVm[cellI] & z[cellI];
+        }
+
+        reduce(ecgVal, sumOp<scalar>());
+
+        values[electrodeI] = ecgVal;
+    }
+
+    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
+    {
+        reduce(values[electrodeI], sumOp<scalar>());
+    }
+}
+
+void eikonalECG::calculateLeadVectors(const ecgDomain& domain)
+{
+    const fvMesh& mesh = domain.mesh();
+    const List<vector>& electrodePositions = domain.electrodePositions();
+    const label nElectrodes = electrodePositions.size();
 
     const scalarField& volumes = mesh.V();
     const vectorField& cellCentres = mesh.C().primitiveField();
     const tensorField& conductivityField =
         domain.conductivity().primitiveField();
 
-    const label nElectrodes = electrodePositions.size();
-
-    values.setSize(nElectrodes);
-    values = 0.0;
+    leadVectors_.setSize(nElectrodes);
+    forAll(leadVectors_, i)
+    {
+        leadVectors_[i].setSize(cellCentres.size(), vector::zero);
+    }
 
     forAll(cellCentres, cellI)
     {
-        const vector dipole =
-            (conductivityField[cellI] & gradVm[cellI]) * volumes[cellI];
-
         for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
         {
             const vector rVec =
@@ -232,14 +213,95 @@ void eikonalECG::calculatePseudoECG
 
             if (r > VSMALL)
             {
-                values[electrodeI] += (dipole & rVec)/(r*r*r);
+                leadVectors_[electrodeI][cellI] =
+                    (conductivityField[cellI] & rVec)*(volumes[cellI]/(r*r*r));
             }
         }
     }
 
-    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
+    leadVectorsCalculated_ = true;
+}
+
+void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
+{
+    const fvMesh& mesh = domain.mesh();
+
+    wEndo_.setSize(mesh.nCells(), 1.0);
+    wMid_.setSize(mesh.nCells(), 0.0);
+    wEpi_.setSize(mesh.nCells(), 0.0);
+    weightsCalculated_ = true;
+
+    if (useManufacturedTemplate_)
     {
-        reduce(values[electrodeI], sumOp<scalar>());
+        return;
+    }
+
+    IOdictionary electroProperties
+    (
+        IOobject
+        (
+            "electroProperties",
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        )
+    );
+
+    if (!electroProperties.found("ionicHeterogeneity"))
+    {
+        FatalErrorInFunction
+            << "Heterogeneous templates used, but no ionicHeterogeneity "
+            << "block found in electroProperties."
+            << exit(FatalError);
+    }
+
+    const dictionary& hetDict = electroProperties.subDict("ionicHeterogeneity");
+    const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
+    const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
+    
+    if (transitionMode != "hard")
+    {
+        FatalErrorInFunction
+            << "eikonalECG transmural heterogeneity requires transitionMode 'hard' "
+            << "(found '" << transitionMode << "') because we are stepping between 3 distinct voltage curves."
+            << exit(FatalError);
+    }
+
+    const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
+    const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
+
+    if (!tPtr)
+    {
+        FatalErrorInFunction
+            << "Could not find transmural distance field '" << fieldName << "'."
+            << exit(FatalError);
+    }
+
+    const scalar endoMInterface = hetDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
+    const scalar mEpiInterface = hetDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
+    const scalar transitionWidth = hetDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+    const word smoothing = hetDict.lookupOrDefault<word>("smoothing", "smoothstep");
+
+    ionicHeterogeneity::validateTransmuralBandConfig
+    (
+        endoMInterface, mEpiInterface, transitionWidth, smoothing, transitionMode
+    );
+
+    const scalarField& tField = tPtr->primitiveField();
+
+    forAll(tField, cellI)
+    {
+        const ionicHeterogeneity::TransmuralBandWeights w =
+            ionicHeterogeneity::transmuralBandWeights
+            (
+                tField[cellI], endoMInterface, mEpiInterface,
+                transitionWidth, smoothing, transitionMode
+            );
+        
+        wEndo_[cellI] = w.endo;
+        wMid_[cellI]  = w.mCell;
+        wEpi_[cellI]  = w.epi;
     }
 }
 
@@ -291,6 +353,16 @@ void eikonalECG::solve
     {
         values = lastValues_;
         return;
+    }
+
+    if (!leadVectorsCalculated_)
+    {
+        calculateLeadVectors(domain);
+    }
+
+    if (!weightsCalculated_)
+    {
+        calculateTransmuralWeights(domain);
     }
 
     if (!outputPtr_.valid())

@@ -11,6 +11,21 @@ from .shared import (
 )
 
 
+# Published Niederer et al. (2011) benchmark physics constants
+# Source: doi:10.1098/rsif.2011.0139 and matching tutorial electroProperties
+CONDUCTIVITY = "[-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761)"
+CHI = "[0 -1 0 0 0 0 0] 140000"
+CM = "[-1 -4 4 0 0 2 0] 0.01"
+ODE_SOLVER = "RKF45"
+INITIAL_ODE_STEP = "1e-6"
+MAX_STEPS = 1000000000
+STIMULUS_LOCATION_MIN = "(0 0 5.5e-3)"
+STIMULUS_LOCATION_MAX = "(1.5e-3 1.5e-3 7e-3)"
+STIMULUS_DURATION = "[0 0 1 0 0 0 0] 2e-3"
+STIMULUS_INTENSITY = "[0 -3 0 0 0 1 0] 50000"
+STIMULUS_START_TIME = 0.0
+WRITE_INTERVAL = "5e-3"
+
 TUTORIAL_NAME = "niederer2012"
 CASE_DIR_NAME = "NiedererEtAl2011/NiedererEtAl2011verification"
 SETUP_DIR_NAME = "setupNiedererEtAl2011"
@@ -27,7 +42,7 @@ SLAB_SIZE_MM = (20.0, 3.0, 7.0)
 END_TIME_BY_DX = {
     0.5: 0.2,
     0.2: 0.08,
-    0.1: 0.045,
+    0.1: 0.055,
 }
 BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
@@ -62,6 +77,18 @@ EXCEL_REFERENCE_RELPATH = Path(
 
 # Explicit exports used by the Niederer tutorial spec.
 __all__ = [
+    "CONDUCTIVITY",
+    "CHI",
+    "CM",
+    "ODE_SOLVER",
+    "INITIAL_ODE_STEP",
+    "MAX_STEPS",
+    "STIMULUS_LOCATION_MIN",
+    "STIMULUS_LOCATION_MAX",
+    "STIMULUS_DURATION",
+    "STIMULUS_INTENSITY",
+    "STIMULUS_START_TIME",
+    "WRITE_INTERVAL",
     "TUTORIAL_NAME",
     "CASE_DIR_NAME",
     "SETUP_DIR_NAME",

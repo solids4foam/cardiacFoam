@@ -426,7 +426,21 @@ for batched_name in BATCHED_MODELS:
         from dataclasses import replace
         IONIC_MODEL_CATALOG[batched_name] = replace(
             parent,
-            description=f"{parent_name} (GPU compact-batched version).",
-            aliases=(f"{parent_name} GPU", f"{parent_name} compact batched"),
-            notes="GPU ionicModel using compact Rush-Larsen batched architecture."
+            description=(
+                f"GPU/CUDA variant of {parent_name}. "
+                f"Identical ion dynamics — same states, algebraic variables, and "
+                f"physiological parameters as {parent_name}. "
+                f"Executed on a CUDA-capable GPU using compact Rush-Larsen batched ODE "
+                f"integration. Select this instead of {parent_name} when a CUDA GPU is "
+                f"available; use the non-batched {parent_name} for CPU-only runs. "
+                f"Cannot be mixed with the non-batched variant in the same simulation."
+            ),
+            aliases=(f"{parent_name} GPU", f"{parent_name} CUDA", f"{parent_name} compact batched"),
+            notes=(
+                f"Requires a CUDA-capable GPU. "
+                f"Physics are identical to {parent_name} — see that entry for "
+                f"species, cardiac region, tissue compatibility, and recommended parameters. "
+                f"The 'compactBatched' suffix is a hardware-selection signal only; "
+                f"all electroProperties keys are the same as the non-batched variant."
+            ),
         )

@@ -199,6 +199,56 @@ def _ecg_convergence_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return rates
 
 
+_DELTA_Q_PAT = re.compile(r"Linf_delta_q(\d+)_ref")
+
+
+def _q_checks_from_rows(rows: list[dict[str, str]]) -> list[int]:
+    """Extract unique check quadrature orders from row column names."""
+    orders: set[int] = set()
+    for row in rows:
+        for key in row:
+            m = _DELTA_Q_PAT.fullmatch(key)
+            if m:
+                orders.add(int(m.group(1)))
+    return sorted(orders)
+
+
+def _ecg_quadrature_aggregate_rows(
+    rows: list[dict[str, str]],
+) -> tuple[list[dict[str, str]], list[int]]:
+    """Aggregate |ECG(q_check) - ECG(q_ref)| delta columns over electrodes."""
+    q_checks = _q_checks_from_rows(rows)
+    if not q_checks:
+        return [], []
+
+    aggregated: list[dict[str, str]] = []
+    grouped: dict[tuple[str, str], list[dict[str, str]]] = {}
+
+    for row in rows:
+        if row.get("N", "unknown") == "unknown":
+            continue
+        grouped.setdefault((row["Dimension"], row["N"]), []).append(row)
+
+    for (dimension, n_value), group in sorted(
+        grouped.items(),
+        key=lambda item: (item[0][0], int(item[0][1])),
+    ):
+        summary = {"Dimension": dimension, "N": n_value}
+        for q in q_checks:
+            field = f"Linf_delta_q{q}_ref"
+            values = [_as_float(row.get(field, "")) for row in group]
+            values = [v for v in values if math.isfinite(v)]
+            if values:
+                summary[f"max_{field}"] = _format_float(max(values))
+                summary[f"mean_{field}"] = _format_float(sum(values) / len(values))
+            else:
+                summary[f"max_{field}"] = ""
+                summary[f"mean_{field}"] = ""
+        aggregated.append(summary)
+
+    return aggregated, q_checks
+
+
 def _ecg_aggregate_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     aggregated: list[dict[str, str]] = []
     grouped: dict[tuple[str, str], list[dict[str, str]]] = {}
@@ -347,6 +397,7 @@ def postprocess(output_dir: str | Path) -> None:
     activation_rate_rows = _activation_convergence_rows(activation_rows)
     ecg_rate_rows = _ecg_convergence_rows(ecg_rows)
     ecg_aggregate_rows = _ecg_aggregate_rows(ecg_rows)
+    ecg_quadrature_rows, q_checks = _ecg_quadrature_aggregate_rows(ecg_rows)
 
     _write_csv(
         root / "manufacturedEikonalActivationSummary.csv",
@@ -423,6 +474,16 @@ def postprocess(output_dir: str | Path) -> None:
         ecg_rate_rows,
     )
 
+    if ecg_quadrature_rows:
+        q_delta_fields = ["Dimension", "N"]
+        for q in q_checks:
+            q_delta_fields += [f"max_Linf_delta_q{q}_ref", f"mean_Linf_delta_q{q}_ref"]
+        _write_csv(
+            root / "manufacturedEikonalECGQuadratureSummary.csv",
+            q_delta_fields,
+            ecg_quadrature_rows,
+        )
+
     _write_report(
         root / "manufacturedEikonalECGReport.md",
         activation_rows,
@@ -473,6 +534,12 @@ def run_postprocessing(
             "kind": "report",
             "format": "markdown",
         },
+        {
+            "path": str(root / "manufacturedEikonalECGQuadratureSummary.csv"),
+            "label": "Eikonal ECG quadrature delta table",
+            "kind": "table",
+            "format": "csv",
+        },
     ]
 
     try:
@@ -484,19 +551,24 @@ def run_postprocessing(
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         mod.plot(root)
-        for suffix in ("pdf", "png"):
-            p = root / f"convergence_plot.{suffix}"
-            if p.exists():
-                artifacts.append(
-                    {
-                        "path": str(p),
-                        "label": f"Convergence plot ({suffix})",
-                        "kind": "plot",
-                        "format": suffix,
-                    }
-                )
+        mod.plot_quadrature(root)
+        for stem, label in (
+            ("convergence_plot", "Convergence plot"),
+            ("quadrature_plot",  "Quadrature convergence plot"),
+        ):
+            for suffix in ("pdf", "png"):
+                p = root / f"{stem}.{suffix}"
+                if p.exists():
+                    artifacts.append(
+                        {
+                            "path": str(p),
+                            "label": f"{label} ({suffix})",
+                            "kind": "plot",
+                            "format": suffix,
+                        }
+                    )
     except Exception as exc:  # noqa: BLE001
-        print(f"Warning: convergence plot skipped ({exc})")
+        print(f"Warning: plots skipped ({exc})")
 
     return artifacts
 

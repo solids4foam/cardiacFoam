@@ -119,6 +119,90 @@ CONTROL_DICT_ENTRIES: Final[tuple[DictEntry, ...]] = (
         required=True,
         typical_value="",
     ),
+    DictEntry(
+        driver_path="startTime",
+        phases=frozenset({"solver"}),
+        description="Simulation start time. Almost always 0 for new runs.",
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="openfoam_literal",
+        unit="s",
+        required=True,
+        typical_value="0",
+    ),
+    DictEntry(
+        driver_path="startFrom",
+        phases=frozenset({"solver"}),
+        description=(
+            "Which time directory to start from. "
+            "startTime uses the value of startTime; "
+            "latestTime restarts from the last written time directory."
+        ),
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="enum",
+        enum_values=("startTime", "firstTime", "latestTime"),
+        required=True,
+        typical_value="startTime",
+    ),
+    DictEntry(
+        driver_path="stopAt",
+        phases=frozenset({"solver"}),
+        description="Condition that halts the run.",
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="enum",
+        enum_values=("endTime", "writeNow", "noWriteNow", "nextWrite"),
+        required=True,
+        typical_value="endTime",
+    ),
+    DictEntry(
+        driver_path="writeControl",
+        phases=frozenset({"solver"}),
+        description=(
+            "Trigger for writing output to disk. "
+            "runTime writes every writeInterval seconds of simulation time; "
+            "timeStep writes every writeInterval time steps."
+        ),
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="enum",
+        enum_values=("runTime", "timeStep", "clockTime", "cpuTime"),
+        required=True,
+        typical_value="runTime",
+    ),
+    DictEntry(
+        driver_path="writeInterval",
+        phases=frozenset({"solver"}),
+        description=(
+            "Output writing frequency in units of writeControl. "
+            "When writeControl=runTime this is seconds of simulation time. "
+            "Typical cardiac simulations write every 5 ms."
+        ),
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="openfoam_literal",
+        unit="s (when writeControl=runTime)",
+        required=True,
+        typical_value="5e-3",
+    ),
+    DictEntry(
+        driver_path="writeFormat",
+        phases=frozenset({"solver"}),
+        description="Binary or ASCII output format. ASCII is human-readable; binary is faster and smaller.",
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="enum",
+        enum_values=("ascii", "binary"),
+        required=True,
+        typical_value="ascii",
+    ),
+    DictEntry(
+        driver_path="purgeWrite",
+        phases=frozenset({"solver"}),
+        description=(
+            "Number of output time directories to keep on disk (0 = keep all). "
+            "Use 2-3 when disk space is limited on long convergence sweeps."
+        ),
+        source_refs=("applications/solvers/cardiacFoam/cardiacFoam.C",),
+        value_kind="openfoam_literal",
+        required=True,
+        typical_value="0",
+    ),
 )
 
 
@@ -436,6 +520,52 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=("smoothstep",),
             required=False,
             applicable_when={"ionicModel": HETEROGENEITY_MODELS},
+        ),
+    ),
+    "ionic_constant_overrides": (
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.scale.<AC_name>",
+            phases=frozenset({"physics"}),
+            description=(
+                "Scale an ionic model constant by a multiplicative factor. "
+                "Applied globally (every cell). "
+                "Use for drug effects, channelopathies, or ischaemia: e.g. "
+                "AC_g_Kr 0.5 halves IKr conductance (LQT2/hERG block). "
+                "Constant names have the 'AC_' prefix and are listed in "
+                "ionic_model_catalog.py under the model's 'constants' field. "
+                "scale is applied before set; using both on the same constant is an error."
+            ),
+            source_refs=(
+                "src/genericWriter/ionicModelIO.C",
+                "src/ionicModels/ionicModel/ionicModel.C",
+            ),
+            value_kind="scalar",
+            dynamic_path=True,
+            required=False,
+            notes=(
+                "Common TNNP examples: AC_g_Kr (IKr/hERG), AC_g_Ks (IKs/KCNQ1), "
+                "AC_g_Na (INa/SCN5A), AC_g_CaL (ICaL/CACNA1C), AC_g_K1 (IK1). "
+                "ToRORd_dynCl uses the same AC_ prefix; check the catalog for exact names."
+            ),
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.set.<AC_name>",
+            phases=frozenset({"physics"}),
+            description=(
+                "Set an ionic model constant to an absolute value, overriding the "
+                "hardcoded default entirely. "
+                "Applied globally (every cell). "
+                "Use when a precise literature value is known and scaling from the "
+                "default would be unreliable. "
+                "set is applied after scale; using both on the same constant is an error."
+            ),
+            source_refs=(
+                "src/genericWriter/ionicModelIO.C",
+                "src/ionicModels/ionicModel/ionicModel.C",
+            ),
+            value_kind="scalar",
+            dynamic_path=True,
+            required=False,
         ),
     ),
     "batched_integrator": (
@@ -959,17 +1089,26 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
             phases=frozenset({"physics"}),
-            description="ECG solver selector within the ecgDomains sub-dictionary.",
+            description=(
+                "ECG solver selector within the ecgDomains sub-dictionary. "
+                "pseudoECG: dipole approximation, works with any PDE solver. "
+                "torsoECG: reads phiE from a bath/torso domain, requires bidomainSolver + bathPotentialDomain. "
+                "eikonalECG: fast activation-time surrogate using precomputed tissue templates, requires eikonalSolver; "
+                "a 'sampling' sub-dictionary (start, end, deltaT) is mandatory."
+            ),
             source_refs=(
                 "src/electroModels/electroDomains/ecgDomain/ecgSolver.C",
+                "src/electroModels/ecgModels/eikonalECG/eikonalECG.C",
             ),
             value_kind="enum",
-            enum_values=("torsoECG", "pseudoECG"),
+            enum_values=("pseudoECG", "torsoECG", "eikonalECG"),
             dynamic_path=True,
             required=False,
-            constraints=("Only applicable when ecgDomains block is present in electroProperties. torsoECG requires bathPotentialDomain with bidomainSolver.",),
-            # The torsoECG+bidomainSolver requirement is prose-only nuance (cannot be
-            # encoded without multi-key AND across dynamic path segments).
+            constraints=(
+                "Only applicable when ecgDomains block is present in electroProperties. "
+                "torsoECG requires bathPotentialDomain with bidomainSolver. "
+                "eikonalECG requires eikonalSolver and a mandatory 'sampling' sub-dict.",
+            ),
             applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(

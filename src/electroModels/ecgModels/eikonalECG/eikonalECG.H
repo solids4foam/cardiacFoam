@@ -56,9 +56,19 @@ class eikonalECG
     autoPtr<OFstream> outputPtr_;
     autoPtr<volScalarField> VmPtr_;
 
-    scalar templateValue(scalar localTime) const;
+    // Optimization: precomputed transfer vectors for pseudo-ECG
+    bool leadVectorsCalculated_;
+    List<List<vector>> leadVectors_;
 
-    void validateTemplate() const;
+    bool weightsCalculated_;
+    scalarField wEndo_;
+    scalarField wMid_;
+    scalarField wEpi_;
+
+    scalar manufacturedTemplateValue(scalar localTime) const;
+
+    void calculateLeadVectors(const ecgDomain& domain);
+    void calculateTransmuralWeights(const ecgDomain& domain);
 
     void reconstructVm
     (

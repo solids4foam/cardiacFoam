@@ -176,17 +176,30 @@ def update_control_dict(
     *,
     delta_t: float | str | None = None,
     end_time: float | str | None = None,
+    start_time: float | str | None = None,
+    write_interval: float | str | None = None,
+    write_control: str | None = None,
+    write_format: str | None = None,
+    purge_write: int | str | None = None,
 ) -> None:
-    """Patch ``deltaT`` and/or ``endTime`` in an existing OpenFOAM ``controlDict``.
+    """Patch entries in an existing OpenFOAM ``controlDict``.
 
     Each parameter is optional — pass only the values you want to change.
     Raises ``FileNotFoundError`` (via :func:`update_foam_entry`) if the file
     does not exist.
     """
-    if delta_t is not None:
-        update_foam_entry(control_dict_path, "deltaT", delta_t)
-    if end_time is not None:
-        update_foam_entry(control_dict_path, "endTime", end_time)
+    patches: dict[str, float | str | int] = {
+        "deltaT": delta_t,
+        "endTime": end_time,
+        "startTime": start_time,
+        "writeInterval": write_interval,
+        "writeControl": write_control,
+        "writeFormat": write_format,
+        "purgeWrite": purge_write,
+    }
+    for key, value in patches.items():
+        if value is not None:
+            update_foam_entry(control_dict_path, key, value)
 
 
 def update_foam_entry(

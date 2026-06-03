@@ -89,6 +89,55 @@ monodomainSolverCoeffs
     // }
 
 
+    // ── Ionic constant overrides (optional) ─────────────────────────────────
+    // Scale or set individual ionic model constants at runtime without
+    // recompiling. Applies to every cell uniformly (global scope).
+    //
+    // Syntax:
+    //   ionicConstantOverrides
+    //   {
+    //       global
+    //       {
+    //           scale { <AC_constantName>  <factor>; ... }   // multiply by factor
+    //           set   { <AC_constantName>  <value>;  ... }   // set absolute value
+    //       }
+    //   }
+    //
+    // Constant names: prefix "AC_" + the name listed in ionicModel_year.H
+    // (also available via openfoam_driver/ionic_model_catalog.py, field 'constants').
+    //
+    // Common pathology examples (TNNP model):
+    //
+    //   LQT2 — hERG (IKr) 50% block:
+    //     scale { AC_g_Kr  0.5; }
+    //
+    //   LQT1 — KCNQ1 (IKs) 50% block:
+    //     scale { AC_g_Ks  0.5; }
+    //
+    //   Brugada / ischaemia — INa 30% reduction:
+    //     scale { AC_g_Na  0.7; }
+    //
+    //   ICaL gain-of-function (Timothy syndrome):
+    //     scale { AC_g_CaL  2.0; }
+    //
+    //   Acute ischaemia (combined INa + IK1 depression + IKatp activation):
+    //     scale { AC_g_Na  0.8;  AC_g_K1  0.8; }
+    //
+    // scale and set can be combined; scale is applied first, then set.
+    // Using set on a constant that was also scaled raises a fatal error.
+    //
+    // ionicConstantOverrides
+    // {
+    //     global
+    //     {
+    //         scale
+    //         {
+    //             AC_g_Kr   0.5;   // 50% IKr block (LQT2 / hERG drug effect)
+    //         }
+    //     }
+    // }
+
+
     // ── ODE time-integration ────────────────────────────────────────────────
     solutionAlgorithm  explicit;     // explicit | implicit
     solver             RKF45;        // RKF45 | euler | RK4
@@ -392,6 +441,37 @@ monodomainSolverCoeffs
             ecgSolver  pseudoECG;
 
             // Electrode positions [m]
+            electrodePositions
+            {
+                lead_I   ( 0.1  0.0  0.0 );
+                lead_II  ( 0.0  0.1  0.0 );
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Eikonal ECG (activation-time surrogate — fast, no ionic solve at ECG time)
+// Requires myocardiumSolver = eikonalSolver.
+// The 'sampling' block is REQUIRED: it defines the Vm-response interpolation
+// window used by the tissue templates (see src/electroModels/ecgModels/eikonalECG/).
+// ─────────────────────────────────────────────────────────────────────────────
+
+eikonalSolverCoeffs
+{
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver    eikonalECG;
+
+            sampling                    // REQUIRED — must cover the full action potential
+            {
+                start  0;              // [s] start of Vm-response window
+                end    0.5;            // [s] end of window (>= action potential duration)
+                deltaT 0.005;          // [s] interpolation time step
+            }
+
             electrodePositions
             {
                 lead_I   ( 0.1  0.0  0.0 );

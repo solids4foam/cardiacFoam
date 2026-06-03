@@ -615,11 +615,15 @@ class TestControlDictEntries(unittest.TestCase):
         self.assertIn("deltaT", driver_paths)
         self.assertIn("endTime", driver_paths)
 
-    def test_entries_carry_seconds_unit(self) -> None:
+    def test_time_entries_carry_seconds_unit(self) -> None:
         from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES
+        time_entries = {"deltaT", "endTime", "startTime", "writeInterval"}
         for entry in CONTROL_DICT_ENTRIES:
-            self.assertEqual(entry.unit, "s",
-                             f"{entry.driver_path} must carry unit='s'")
+            if entry.driver_path in time_entries:
+                self.assertTrue(
+                    entry.unit.startswith("s"),
+                    f"{entry.driver_path} must carry a seconds unit, got '{entry.unit}'"
+                )
 
     def test_entries_belong_to_solver_phase(self) -> None:
         from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES

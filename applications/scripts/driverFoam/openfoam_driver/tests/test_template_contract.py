@@ -22,7 +22,7 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.repo_root = _repo_root_from_test()
-        cls.template_path = cls.repo_root / "tutorials" / "electroProperties.template"
+        cls.template_path = cls.repo_root / "tutorials" / "template" / "constant" / "electroProperties"
 
     def test_template_uses_code_backed_selector_keys(self) -> None:
         template = _read(self.template_path)

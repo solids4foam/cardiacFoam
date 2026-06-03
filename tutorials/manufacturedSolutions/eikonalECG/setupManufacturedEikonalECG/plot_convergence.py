@@ -202,9 +202,100 @@ def plot(output_dir: Path) -> None:
     plt.close(fig)
 
 
+def plot_quadrature(output_dir: Path) -> None:
+    """Separate figure: quadrature delta vs N for each check order.
+
+    Shows |ECG(q_check) - ECG(q_ref)| aggregated over electrodes.
+    Flat lines = quadrature accuracy independent of mesh (correct).
+    Lower lines = higher q is closer to the reference (quadrature converging).
+    """
+    quad_csv = output_dir / "manufacturedEikonalECGQuadratureSummary.csv"
+    if not quad_csv.is_file():
+        print(f"Quadrature summary not found, skipping: {quad_csv}")
+        return
+
+    rows = _read_csv(quad_csv)
+    if not rows:
+        return
+
+    # discover q orders from column names
+    q_pat = re.compile(r"max_Linf_delta_q(\d+)_ref")
+    q_checks = sorted(
+        {int(m.group(1)) for r in rows for k in r if (m := q_pat.fullmatch(k))}
+    )
+    if not q_checks:
+        return
+
+    dims = sorted({r["Dimension"] for r in rows if r.get("N", "?") != "?"})
+
+    # colour for q orders (darker = higher order)
+    import colorsys
+    def _q_colour(q, q_list):
+        idx = q_list.index(q) / max(len(q_list) - 1, 1)
+        h, s, v = 0.60, 0.8, 0.3 + 0.6 * idx   # blue family, light→dark
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        return (r, g, b)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    ax_max, ax_mean = axes
+
+    for dim in dims:
+        dim_rows = sorted(
+            [r for r in rows if r["Dimension"] == dim and r.get("N", "?") != "?"],
+            key=lambda r: int(r["N"]),
+        )
+        if not dim_rows:
+            continue
+        dim_marker = {"1D": "o", "2D": "s", "3D": "^"}.get(dim, "o")
+
+        for q in q_checks:
+            colour = _q_colour(q, q_checks)
+            ns, maxs, means = [], [], []
+            for r in dim_rows:
+                n = int(r["N"])
+                mx = _f(r.get(f"max_Linf_delta_q{q}_ref", ""))
+                mn = _f(r.get(f"mean_Linf_delta_q{q}_ref", ""))
+                if not math.isnan(mx):
+                    ns.append(n); maxs.append(mx); means.append(mn)
+
+            lbl = f"{dim} q={q}"
+            ax_max.plot(ns, maxs, color=colour, marker=dim_marker, ms=5,
+                        ls="-", label=lbl)
+            ax_mean.plot(ns, means, color=colour, marker=dim_marker, ms=5,
+                         ls="-", label=lbl)
+
+    for ax, title in (
+        (ax_max,  "Max electrode |ECG(q) − ECG(q=96)| vs N"),
+        (ax_mean, "Mean electrode |ECG(q) − ECG(q=96)| vs N"),
+    ):
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("N  (cells)")
+        ax.set_ylabel("|Δ ECG|  (quadrature delta)")
+        ax.set_title(title)
+        ax.legend(fontsize=7, ncol=2)
+        ax.grid(True, which="both", ls=":", lw=0.4)
+
+    fig.suptitle(
+        "Manufactured eikonal ECG — quadrature convergence\n"
+        r"Template voltage: $U(s)=\sin(2\pi s)$,  $s = t - \tau(\mathbf{x})$",
+        fontsize=10,
+    )
+    fig.tight_layout()
+
+    out_pdf = output_dir / "quadrature_plot.pdf"
+    out_png = output_dir / "quadrature_plot.png"
+    fig.savefig(out_pdf, bbox_inches="tight")
+    fig.savefig(out_png, bbox_inches="tight", dpi=150)
+    print(f"Saved: {out_pdf}")
+    print(f"Saved: {out_png}")
+    plt.close(fig)
+
+
 def main(argv: list[str]) -> int:
     output_dir = Path(argv[1]) if len(argv) > 1 else Path("postProcessing")
     plot(output_dir)
+    plot_quadrature(output_dir)
     return 0
 
 

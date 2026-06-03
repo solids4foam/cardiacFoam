@@ -20,8 +20,8 @@ singleCellSolverCoeffs
 
     // Cell model selection
 
-    ionicModel    AlievPanfilov;
-    tissue    myocyte;
+    ionicModel    TWorldcompactBatched;
+    tissue    endocardialCells;
 
 
     // Time integration settings
@@ -38,8 +38,8 @@ singleCellSolverCoeffs
     singleCellStimulus
     {
         stim_start      20;
-        stim_duration   1;
-        stim_amplitude  0.4;
+        stim_duration   0.5;
+        stim_amplitude  60;
         stim_period_S1  1000;
         nstim1          3;
         stim_period_S2  0;
