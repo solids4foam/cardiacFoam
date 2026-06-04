@@ -26,19 +26,17 @@ during a normal `cardiacFoam` run and is compatible with `plot_pseudo_ecg.py`.
 
 ## Usage
 
-```bash
-# Recompute all stored time steps
-recomputePseudoECG
+    # Recompute all stored time steps
+    recomputePseudoECG
 
-# Selected time range
-recomputePseudoECG -time '0.1:0.5'
+    # Selected time range
+    recomputePseudoECG -time '0.1:0.5'
 
-# Write to a separate file (keep the original)
-recomputePseudoECG -output postProcessing/pseudoECG_corrected.dat
+    # Write to a separate file (keep the original)
+    recomputePseudoECG -output postProcessing/pseudoECG_corrected.dat
 
-# Parallel
-mpirun -np 6 recomputePseudoECG -parallel
-```
+    # Parallel
+    mpirun -np 6 recomputePseudoECG -parallel
 
 ## Options
 

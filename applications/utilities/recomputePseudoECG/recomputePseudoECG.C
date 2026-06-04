@@ -46,7 +46,6 @@ Usage
 
 Author
     Simao Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
