@@ -32,7 +32,7 @@ example = "recomputePseudoECG -case ./LBBB -output postProcessing/pseudoECG_corr
 name = "-output"
 description = "Output file path (default: postProcessing/pseudoECG.dat)."
 takes_value = true
-argument_kind = "fileName"
+argument_kind = "path"
 
 [[flags]]
 name = "-vmField"
@@ -50,12 +50,12 @@ argument_kind = "word"
 name = "-time"
 description = "OpenFOAM time selector string, e.g. '0.1:0.5' or 'latest'."
 takes_value = true
-argument_kind = "string"
+argument_kind = "word"
 
 [[produces]]
 artifact_id = "pseudoECG_dat"
 path_pattern = "postProcessing/pseudoECG.dat"
-format = "space_separated_text"
+format = "csv_probe"
 description = "Pseudo-ECG time series: one row per time step, columns are time V1 V2 V3 V4 V5 V6."
 produced_by = "recomputePseudoECG"
 time_indexed = false

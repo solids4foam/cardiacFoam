@@ -1112,6 +1112,56 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             applicable_when={"$ecgDomains_present": True},
         ),
         DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.start",
+            phases=frozenset({"physics"}),
+            description=(
+                "Start of the Vm-response interpolation window [s] for eikonalECG. "
+                "Usually 0. The tissue template lookup begins at this time."
+            ),
+            source_refs=("src/electroModels/ecgModels/eikonalECG/eikonalECG.C",),
+            value_kind="openfoam_literal",
+            unit="s",
+            required=True,
+            typical_value="0",
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.end",
+            phases=frozenset({"physics"}),
+            description=(
+                "End of the Vm-response interpolation window [s] for eikonalECG. "
+                "Must be >= action potential duration. "
+                "Human ventricular AP: ~0.3–0.5 s. "
+                "Must not exceed tissue template duration (~1.0 s). "
+                "Setting this shorter than APD truncates repolarisation in the ECG."
+            ),
+            source_refs=("src/electroModels/ecgModels/eikonalECG/eikonalECG.C",),
+            value_kind="openfoam_literal",
+            unit="s",
+            required=True,
+            typical_value="0.5",
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.deltaT",
+            phases=frozenset({"physics"}),
+            description=(
+                "Time step of the Vm-response interpolation [s] for eikonalECG. "
+                "Controls ECG output resolution; independent of the solver deltaT. "
+                "Typical range: 0.001–0.005 s. Finer than 0.001 s has no benefit "
+                "as the tissue templates are sampled at 0.1 ms resolution."
+            ),
+            source_refs=("src/electroModels/ecgModels/eikonalECG/eikonalECG.C",),
+            value_kind="openfoam_literal",
+            unit="s",
+            required=True,
+            typical_value="0.005",
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
+        ),
+        DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.reportElectrodeLookup",
             phases=frozenset({"solver"}),
             description="Switch controlling torsoECG electrode-to-cell lookup logging.",
