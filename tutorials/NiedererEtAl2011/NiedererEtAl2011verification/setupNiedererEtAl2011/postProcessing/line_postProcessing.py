@@ -26,9 +26,9 @@ from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plot
 
 # Base colors per DX group
 DX_COLORS = {
-    0.1: "#1f77b4",   # blue
-    0.2: "#2ca02c",   # green
-    0.5: "#eb1616",   # red
+    0.1: "#eb1616",   # red
+    0.2: "#1f77b4",   # blue
+    0.5: "#2ca02c",   # green
 }
 
 
@@ -256,6 +256,16 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
         template="plotly_white",
         showlegend=True
     )
+    
+    # Move legend outside to avoid overlap
+    fig.update_layout(
+        legend=dict(
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
+    )
 
 
     # --- SAVE INITIAL PLOT (CSV only) ---
@@ -268,6 +278,9 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
             fig_initial.data[i].visible = True
 
     write_plotly_html(fig_initial, output_folder / "cardiacFoam_allSimulations.html")
+    with open(output_folder / "cardiacFoam_allSimulations.json", "w") as f:
+        f.write(fig_initial.to_json())
+
 
 
 
@@ -285,6 +298,9 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
         tr.name = rename_cardiacfoam_trace(tr.name)
 
     write_plotly_html(fig_compare, output_folder / "Niederer_vs_cardiacFoam.html")
+    with open(output_folder / "Niederer_vs_cardiacFoam.json", "w") as f:
+        f.write(fig_compare.to_json())
+
 
     if show:
         fig.show()

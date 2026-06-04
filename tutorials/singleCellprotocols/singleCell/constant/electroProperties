@@ -39,7 +39,7 @@ singleCellSolverCoeffs
     {
         stim_start      20;
         stim_duration   0.5;
-        stim_amplitude  60;
+        stim_amplitude  0.4;
         stim_period_S1  1000;
         nstim1          3;
         stim_period_S2  0;

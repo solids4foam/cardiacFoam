@@ -104,6 +104,14 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
 
     graph_.readFromDict(graphDict, reportSetup_);
 
+    const scalar purkinjeConductivity =
+        dict.lookupOrDefault<scalar>("purkinjeConductivity", 1.0);
+
+    graph_.edgeConductances *= purkinjeConductivity;
+
+    Info<< "Purkinje edge conductance multiplier: "
+        << purkinjeConductivity << nl << endl;
+
     rootNode_ = graphDict.lookupOrDefault<label>("rootNode", 0);
     terminalNodes_ = labelList(graphDict.lookup("pvjNodes"));
     nodeLocations_ = pointField(graphDict.lookup("points"));

@@ -205,7 +205,10 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
     output_html = Path(folder) / "activation_surfaces_3d.html"
     write_plotly_html(fig, output_html)
+    with open(Path(folder) / "activation_surfaces_3d.json", "w") as f:
+        f.write(fig.to_json())
     if show:
+
         fig.show()
     return output_html
 

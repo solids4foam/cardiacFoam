@@ -23,6 +23,7 @@ License
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
+#include "mathematicalConstants.H"
 
 namespace Foam
 {
@@ -43,11 +44,6 @@ void pseudoECGSolver::solve
     (void)t0;
     (void)dt;
 
-    // Gima-Rudy dipole:
-    //   phi_pseudo(P) = -sum_c
-    //     [ (conductivity . grad(Vm))_c . r_vec * V_c / |r|^3 ]
-    //   r_vec = C_c - P
-
     const fvMesh& mesh = domain.mesh();
     const List<vector>& electrodePositions = domain.electrodePositions();
 
@@ -56,8 +52,21 @@ void pseudoECGSolver::solve
 
     const scalarField& volumes = mesh.V();
     const vectorField& cellCentres = mesh.C().primitiveField();
-    const tensorField& conductivityField =
-        domain.conductivity().primitiveField();
+    const volTensorField& conductivity = domain.conductivity();
+
+    if (!reportedConductivitySource_)
+    {
+        if (Pstream::master())
+        {
+            Info<< "pseudoECG: using conductivity field '"
+                << conductivity.name() << "' on mesh '" << mesh.name()
+                << "'" << nl << endl;
+        }
+
+        reportedConductivitySource_ = true;
+    }
+
+    const tensorField& conductivityField = conductivity.primitiveField();
 
     const label nElectrodes = electrodePositions.size();
 
@@ -85,6 +94,16 @@ void pseudoECGSolver::solve
     for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
     {
         reduce(values[electrodeI], sumOp<scalar>());
+    }
+
+    if (sigmaE_ > VSMALL)
+    {
+        const scalar norm =
+            1.0 / (4.0 * constant::mathematical::pi * sigmaE_);
+        forAll(values, eI)
+        {
+            values[eI] *= norm;
+        }
     }
 }
 

@@ -190,6 +190,39 @@ void collectActivationConstraints
 
 tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 {
+    const dimensionedTensor zeroConductivity
+    (
+        "zero",
+        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+        tensor::zero
+    );
+
+    tmp<volTensorField> tdiffusivity
+    (
+        new volTensorField
+        (
+            IOobject
+            (
+                "Diffusivity",
+                mesh().time().timeName(),
+                mesh(),
+                IOobject::READ_IF_PRESENT,
+                IOobject::NO_WRITE
+            ),
+            mesh(),
+            zeroConductivity
+        )
+    );
+
+    volTensorField& diffusivity = tdiffusivity.ref();
+    if (diffusivity.headerOk())
+    {
+        Info<< "eikonalMyocardiumDomain: conductivity field read from "
+            << mesh().time().timeName() << "/Diffusivity" << nl << endl;
+
+        return tdiffusivity;
+    }
+
     tmp<volTensorField> tresult
     (
         new volTensorField
@@ -203,37 +236,37 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
                 IOobject::NO_WRITE
             ),
             mesh(),
-            dimensionedTensor
-            (
-                "zero",
-                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                tensor::zero
-            )
+            zeroConductivity
         )
     );
     volTensorField& result = tresult.ref();
 
-    if (!result.headerOk())
+    if (result.headerOk())
     {
-        if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
-        {
-            Info<< "\nconductivity not found on disk, using conductivity from "
-                << electroProperties_.name()
-                << nl << endl;
-        }
+        Info<< "eikonalMyocardiumDomain: conductivity field read from "
+            << mesh().time().timeName() << "/conductivity" << nl << endl;
 
-        result =
-            dimensionedTensor
-            (
-                dimensionedSymmTensor
-                (
-                    "conductivity",
-                    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                    electroProperties_
-                )
-              & tensor(I)
-            );
+        return tresult;
     }
+
+    if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+    {
+        Info<< "\nconductivity/Diffusivity not found on disk, using "
+            << "conductivity from " << electroProperties_.name()
+            << nl << endl;
+    }
+
+    result =
+        dimensionedTensor
+        (
+            dimensionedSymmTensor
+            (
+                "conductivity",
+                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+                electroProperties_
+            )
+          & tensor(I)
+        );
 
     return tresult;
 }

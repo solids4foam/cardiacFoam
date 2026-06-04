@@ -40,11 +40,17 @@ class pseudoECGSolver
 :
     public ecgSolver
 {
+    scalar sigmaE_;
+    bool reportedConductivitySource_;
+
 public:
 
     OverrideTypeName("pseudoECG");
 
-    explicit pseudoECGSolver(const dictionary&)
+    explicit pseudoECGSolver(const dictionary& dict)
+    :
+        sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
+        reportedConductivitySource_(false)
     {}
 
     virtual void solve
