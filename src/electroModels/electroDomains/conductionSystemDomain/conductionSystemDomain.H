@@ -80,6 +80,9 @@ class conductionSystemDomain
 
     autoPtr<ionicModel> ionicModelPtr_;
 
+    label localStartNode_;
+    label nLocalNodes_;
+
     scalarField terminalCurrent_;
     scalarField terminalSource_;
 
@@ -160,6 +163,16 @@ public:
     scalarField& ionicCurrent()
     {
         return Iion1D_;
+    }
+
+    label localStartNode() const
+    {
+        return localStartNode_;
+    }
+
+    label nLocalNodes() const
+    {
+        return nLocalNodes_;
     }
 
     ionicModel& ionicModelRef()

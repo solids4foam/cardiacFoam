@@ -202,12 +202,18 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
 
 void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 {
+    label N = graph_.nNodes;
+    label nodesPerProc = N / Pstream::nProcs();
+    localStartNode_ = Pstream::myProcNo() * nodesPerProc;
+    label endNode = (Pstream::myProcNo() == Pstream::nProcs() - 1) ? N : localStartNode_ + nodesPerProc;
+    nLocalNodes_ = endNode - localStartNode_;
+
     if (selectedSolverRequiresIonicModel(coeffsDict_))
     {
         ionicModelPtr_ = ionicModel::New
         (
             coeffsDict_,
-            graph_.nNodes,
+            nLocalNodes_,
             initialDeltaT,
             false
         );
@@ -346,6 +352,8 @@ conductionSystemDomain::conductionSystemDomain
     Iion1D_(),
     activationTime_(),
     ionicModelPtr_(),
+    localStartNode_(0),
+    nLocalNodes_(0),
     terminalCurrent_(),
     terminalSource_(),
     outputPtr_(),

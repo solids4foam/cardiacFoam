@@ -7,9 +7,14 @@ workflow-case execution, and post-processing.
 
 ```text
 openfoam_driver/
-├── cli.py                          # CLI entrypoint (plan/describe/sim/post/all)
+├── cli.py                          # CLI entrypoint (plan/step/run/describe/sim/post/all)
+├── strict_planning.py              # strict preflight contract report
 ├── core/
 │   ├── runtime/
+│   │   ├── run_model.py           # RunDocument v2 + v1 migration
+│   │   ├── workflow.py            # workflow DAG normalization/validation
+│   │   ├── workflow_state.py      # persisted step state model
+│   │   ├── workflow_runner.py     # one-step strict subprocess runner
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
 │   │   ├── registry.py            # tutorial name -> make_spec factory
 │   │   └── engine.py              # shared simulation/postprocess engine
@@ -18,7 +23,9 @@ openfoam_driver/
 │   ├── common.py                  # mutators/path helpers
 │   └── tutorials/                 # tutorial-specific make_spec modules
 ├── postprocessing/                # shared postprocess runner + artifact manifest
-├── scripts/run_case.sh            # OpenFOAM shell runner (Allclean/Allrun + options)
+├── scripts/                       # OpenFOAM runner, catalog scanners, allowlists
+│   ├── run_case.sh                # Allclean/Allrun wrapper
+│   └── dict_key_allowlist.json    # strict scanner parser/pass-through allowlist
 └── tests/                         # contract and regression tests for architecture
 ```
 
@@ -104,14 +111,46 @@ The `describe` action resolves the requested entry and prints:
 - the launch plan for `sim`, `post`, and `all`, including the exact driver
   command and expected manifest path
 
-The `plan --strict` action resolves the requested entry, validates the planned
-RunDocument v2, checks dict-key catalog coverage, predicts data artifacts, and
-exits non-zero if any machine-readable contract is incomplete.
+## Strict autonomous contract
 
-In strict-plan output, `workflow_dag.steps[*]` is normalized for a future step
+The `plan --strict` action resolves the requested entry, validates the planned
+RunDocument v2, checks dict-key catalog coverage, predicts data artifacts,
+normalizes the workflow DAG, and exits non-zero if any machine-readable
+contract is incomplete. It does not mutate case files.
+
+Programmatic callers use:
+
+```python
+from openfoam_driver.strict_planning import strict_plan
+
+report = strict_plan("singleCell")
+payload = report.to_json()
+```
+
+The JSON report contains:
+
+- `status`: `ok` or `failed`
+- `resolved_entry`: selected entry, case root, setup root, output directory,
+  entry kind, source type, and workflow family
+- `validation_diagnostics`: RunDocument/config validation
+- `workflow_diagnostics`: DAG shape, dependency, command, cwd, and cycle
+  diagnostics
+- `catalog_coverage_errors`: strict C++ dict-key scanner failures
+- `artifact_diagnostics`: unknown solvers, unknown workflow commands, missing
+  utility `produces`, and empty predictions caused by missing catalog coverage
+- `launch`: exact launch command and expected manifest path
+- `workflow_dag`: normalized executable workflow steps
+- `workflow_state`: initial or resumed state snapshot
+- `expected_artifacts`: predicted data artifacts
+- `run_document`: canonical RunDocument v2 payload
+
+In strict-plan output, `workflow_dag.steps[*]` is normalized for the strict step
 runner: `command` contains only the executable name, `args` contains argv
 arguments, `cwd` is case-relative, `depends_on` is validated against known step
 ids, and `produces` lists expected artifact ids when they can be attributed.
+The normalizer rejects duplicate step ids, missing dependencies, cycles, unsafe
+case-relative `cwd` paths, shell metacharacters in command names, and unknown
+step status vocabulary.
 The companion `workflow_state` is an initial, non-executed state snapshot:
 all steps are `pending`, attempts are `0`, logs and exit codes are `null`, and
 `current_step_id` points at the first dependency-free step.
@@ -119,19 +158,28 @@ all steps are `pending`, attempts are `0`, logs and exit codes are `null`, and
 The low-level runner API
 `openfoam_driver.core.runtime.workflow_runner.run_workflow_step(...)` executes
 one normalized step, writes stdout/stderr logs, and returns an updated
-`workflow_state`. It deliberately does not implement multi-step orchestration,
-resume, or retry loops yet.
+`workflow_state`. It accepts only `pending` or explicitly failed steps, checks
+dependencies, confines `cwd` under the case root, records the attempt count,
+and writes state atomically when a state path is supplied.
 
 The `step --strict` action is the CLI wrapper around that low-level runner. It
-runs only the requested step, writes `workflow_state.json` and
-`workflow_logs/<step>.attempt<N>.*.log` under the strict-plan output directory,
-prints the final state JSON, and exits non-zero if strict planning or the step
-execution fails.
+runs only the requested step. If `workflow_state.json` already exists under the
+strict-plan output directory, it loads that saved state before execution;
+otherwise it starts from the strict-plan initial state. It writes
+`workflow_state.json` and `workflow_logs/<step>.attempt<N>.*.log`, prints the
+final state JSON, and exits non-zero if strict planning or the step execution
+fails.
 
 The `run --strict` action reads the same `workflow_state.json` if present and
 executes the next runnable step until the workflow completes or a step fails.
 It does not retry a failed saved state automatically; use `step --strict` for
 explicit manual reruns.
+
+Current strict execution records claimed artifact ids from
+`workflow_dag.steps[*].produces` when a step exits successfully. It does not
+yet reconcile those claimed ids with on-disk files after each step. The next
+autonomy milestone should add post-step artifact reconciliation and fail when
+required predicted artifacts are missing.
 
 ## Config override model
 
@@ -217,12 +265,50 @@ Defaults live in `core/defaults/*.py`.
 
 ## Runtime artifacts
 
-- `run_manifest.json`: written by the engine for every run.
-- `run_report.md`: human-readable summary written alongside the manifest.
-- `plots.json`: written by postprocess runner, includes declared artifact metadata.
+- `workflow_state.json`: written by strict `step`/`run`; contains the current
+  workflow status, current/failed step id, completed steps, attempt counts,
+  logs, exit codes, diagnostics, and claimed produced artifact ids.
+- `workflow_logs/<step>.attempt<N>.stdout.log`: stdout for a strict step
+  attempt.
+- `workflow_logs/<step>.attempt<N>.stderr.log`: stderr for a strict step
+  attempt.
+- `run_manifest.json`: written by the legacy engine for every `sim`/`post`/`all`
+  run.
+- `run_report.md`: human-readable summary written alongside the legacy engine
+  manifest.
+- `plots.json`: written by the postprocess runner, includes declared artifact
+  metadata.
+- `artifacts_manifest.json`: predicted artifact manifest for legacy engine
+  runs.
+- `artifacts_realized.json`: terminal legacy artifact realization report.
 
-`run_manifest.json` is the current machine-facing run-state file for local-app
-integration. The current schema includes:
+`workflow_state.json` is the current machine-facing state file for strict
+autonomous execution. Status vocabulary is:
+
+- `pending`
+- `running`
+- `completed`
+- `failed`
+- `skipped`
+
+Each strict step state reports:
+
+- `step_id`
+- `status`
+- `attempt`
+- `command`
+- `args`
+- `cwd`
+- `started_at`
+- `finished_at`
+- `exit_code`
+- `stdout_log`
+- `stderr_log`
+- `produced_artifacts`
+- `diagnostics`
+
+`run_manifest.json` remains the machine-facing run-state file for legacy
+local-app integration. The current schema includes:
 
 - `schema_version`
 - `run_id`
@@ -275,5 +361,26 @@ Important contract tests:
 - `tests/test_tutorial_architecture_contract.py`
 - `tests/test_single_cell_contract.py`
 - `tests/test_mutators.py`
+- `tests/test_strict_planning.py`
+- `tests/test_workflow_contract.py`
+- `tests/test_workflow_state.py`
+- `tests/test_workflow_runner.py`
+- `tests/test_cli_step.py`
+- `tests/test_agent_readme_contract.py`
+- `tests/test_utility_catalog_contract.py`
+- `tests/test_rtst_enum_contract.py`
+- `tests/test_ionic_catalog_contract.py`
 
-These ensure registry coverage and required `make_spec(...)` keyword contract consistency.
+These ensure registry coverage, required `make_spec(...)` keyword contract
+consistency, strict RunDocument validation, strict workflow execution behavior,
+README legacy-token gates, utility manifest coverage, and catalog drift checks.
+
+Strict dict-key scanner:
+
+```bash
+python3 applications/scripts/driverFoam/scripts/scan-dict-keys.py --strict
+```
+
+This scanner fails when new uncatalogued C++ dict keys appear, stale catalog
+paths remain, or allowlist entries in
+`openfoam_driver/scripts/dict_key_allowlist.json` become unused.
