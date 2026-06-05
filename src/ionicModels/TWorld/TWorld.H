@@ -136,6 +136,9 @@ public:
     //- Tissue types supported by this model (endo / M / epi)
     virtual List<word> supportedTissueTypes() const override;
 
+    //- Sex types supported by this model (neutral / male / female)
+    virtual List<word> supportedSexTypes() const override;
+
     //- Per-point constants accessor (heterogeneous when configured)
     scalarField& constants(const label integrationPtI) const;
 

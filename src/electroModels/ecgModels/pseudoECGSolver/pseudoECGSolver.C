@@ -33,6 +33,43 @@ defineDebugSwitch(pseudoECGSolver, 0);
 addToRunTimeSelectionTable(ecgSolver, pseudoECGSolver, dictionary);
 
 
+void pseudoECGSolver::calculateLeadVectors(const ecgDomain& domain)
+{
+    const fvMesh& mesh = domain.mesh();
+    const List<vector>& electrodePositions = domain.electrodePositions();
+    const label nElectrodes = electrodePositions.size();
+
+    const scalarField& volumes = mesh.V();
+    const vectorField& cellCentres = mesh.C().primitiveField();
+    const tensorField& conductivityField =
+        domain.conductivity().primitiveField();
+
+    leadVectors_.setSize(nElectrodes);
+    forAll(leadVectors_, i)
+    {
+        leadVectors_[i].setSize(cellCentres.size(), vector::zero);
+    }
+
+    forAll(cellCentres, cellI)
+    {
+        for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
+        {
+            const vector rVec =
+                cellCentres[cellI] - electrodePositions[electrodeI];
+            const scalar r = mag(rVec);
+
+            if (r > VSMALL)
+            {
+                leadVectors_[electrodeI][cellI] =
+                    (conductivityField[cellI] & rVec)*(volumes[cellI]/(r*r*r));
+            }
+        }
+    }
+
+    leadVectorsCalculated_ = true;
+}
+
+
 void pseudoECGSolver::solve
 (
     ecgDomain& domain,
@@ -45,50 +82,43 @@ void pseudoECGSolver::solve
     (void)dt;
 
     const fvMesh& mesh = domain.mesh();
-    const List<vector>& electrodePositions = domain.electrodePositions();
-
-    const tmp<volVectorField> tgradVm = fvc::grad(domain.Vm());
-    const vectorField& gradVm = tgradVm().primitiveField();
-
-    const scalarField& volumes = mesh.V();
-    const vectorField& cellCentres = mesh.C().primitiveField();
-    const volTensorField& conductivity = domain.conductivity();
 
     if (!reportedConductivitySource_)
     {
         if (Pstream::master())
         {
             Info<< "pseudoECG: using conductivity field '"
-                << conductivity.name() << "' on mesh '" << mesh.name()
+                << domain.conductivity().name() << "' on mesh '" << mesh.name()
                 << "'" << nl << endl;
         }
 
         reportedConductivitySource_ = true;
     }
 
-    const tensorField& conductivityField = conductivity.primitiveField();
+    if (!leadVectorsCalculated_)
+    {
+        calculateLeadVectors(domain);
+    }
 
-    const label nElectrodes = electrodePositions.size();
+    const tmp<volVectorField> tgradVm = fvc::grad(domain.Vm());
+    const vectorField& gradVm = tgradVm().primitiveField();
+
+    const label nElectrodes = domain.electrodePositions().size();
 
     values.setSize(nElectrodes);
     values = 0.0;
 
-    forAll(cellCentres, cellI)
+    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
     {
-        const vector dipole =
-            (conductivityField[cellI] & gradVm[cellI]) * volumes[cellI];
+        const List<vector>& z = leadVectors_[electrodeI];
+        scalar ecgVal = 0.0;
 
-        for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
+        forAll(gradVm, cellI)
         {
-            const vector rVec =
-                cellCentres[cellI] - electrodePositions[electrodeI];
-            const scalar r = mag(rVec);
-
-            if (r > VSMALL)
-            {
-                values[electrodeI] += (dipole & rVec)/(r*r*r);
-            }
+            ecgVal += gradVm[cellI] & z[cellI];
         }
+
+        values[electrodeI] = ecgVal;
     }
 
     for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)

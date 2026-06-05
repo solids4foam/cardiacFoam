@@ -179,11 +179,6 @@ void eikonalECG::calculatePseudoECG
 
         values[electrodeI] = ecgVal;
     }
-
-    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
-    {
-        reduce(values[electrodeI], sumOp<scalar>());
-    }
 }
 
 void eikonalECG::calculateLeadVectors(const ecgDomain& domain)

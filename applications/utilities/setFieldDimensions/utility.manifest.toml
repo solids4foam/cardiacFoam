@@ -34,7 +34,7 @@ inputs = [
 ]
 
 outputs = [
-  "0/<fieldName>",
+  "0/*",
 ]
 
 requires_mesh = false

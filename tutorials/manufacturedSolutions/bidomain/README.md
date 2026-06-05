@@ -52,7 +52,7 @@ Manual:
 ```bash
 blockMesh -dict system/blockMeshDict.1D
 ./Allrun
-./runRegressionTest.sh
+./regressionTest.sh
 ```
 
 Driver-managed sweeps:

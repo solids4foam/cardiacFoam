@@ -120,10 +120,19 @@ def _predicate_matches(
     """
     if key not in context:
         return False
-    actual = context[key]
+    actual = _normalise_word(context[key])
     if isinstance(expected, tuple):
-        return actual in expected
-    return actual == expected
+        return actual in tuple(_normalise_word(item) for item in expected)
+    return actual == _normalise_word(expected)
+
+
+def _normalise_word(value: Any) -> Any:
+    """Strip one balanced OpenFOAM word/string quote pair for comparisons."""
+    if not isinstance(value, str) or len(value) < 2:
+        return value
+    if (value[0], value[-1]) in {('"', '"'), ("'", "'")}:
+        return value[1:-1]
+    return value
 
 
 def _entry_is_applicable(entry: DictEntry, context: dict[str, Any]) -> bool:
@@ -230,7 +239,9 @@ def validate_run(
         val = _slice_value(run, ph, e.driver_path)
         if val is None or val == "":
             continue
-        if val not in e.enum_values:
+        normalised_val = _normalise_word(val)
+        normalised_enum_values = tuple(_normalise_word(item) for item in e.enum_values)
+        if normalised_val not in normalised_enum_values:
             errors.append(ValidationError(
                 phase=ph,
                 field=e.driver_path,

@@ -53,7 +53,7 @@ Manual:
 
 ```bash
 ./Allrun
-./runRegressionTest.sh
+./regressionTest.sh
 ```
 
 Driver-managed sweeps:

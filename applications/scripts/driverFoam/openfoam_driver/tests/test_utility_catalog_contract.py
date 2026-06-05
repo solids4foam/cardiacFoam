@@ -93,6 +93,18 @@ class TestUtilityCatalogContract(unittest.TestCase):
             "check for duplicate 'name' values across manifests.",
         )
 
+    def test_repository_manifests_load_without_outputs_produces_warnings(self) -> None:
+        """Tracked manifests must use produces as the authoritative output surface."""
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always")
+            load_utility_manifests(UTILITIES_ROOT)
+        compat_warnings = [item for item in captured if issubclass(item.category, UserWarning)]
+        self.assertEqual(
+            compat_warnings,
+            [],
+            "Repository utility manifests should not warn about outputs/produces drift.",
+        )
+
     def test_required_fields_present(self) -> None:
         """Every manifest must have non-empty name, description, and category."""
         violations = []

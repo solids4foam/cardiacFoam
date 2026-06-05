@@ -42,6 +42,10 @@ class pseudoECGSolver
 {
     scalar sigmaE_;
     bool reportedConductivitySource_;
+    bool leadVectorsCalculated_;
+    List<List<vector>> leadVectors_;
+
+    void calculateLeadVectors(const ecgDomain& domain);
 
 public:
 
@@ -50,7 +54,8 @@ public:
     explicit pseudoECGSolver(const dictionary& dict)
     :
         sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
-        reportedConductivitySource_(false)
+        reportedConductivitySource_(false),
+        leadVectorsCalculated_(false)
     {}
 
     virtual void solve

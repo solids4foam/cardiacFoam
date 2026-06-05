@@ -77,6 +77,7 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
 NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.solutionAlgorithm",       # implicit/explicit
     "$ELECTRO_MODEL_COEFFS.tissue",                  # tissue enum
+    "$ELECTRO_MODEL_COEFFS.sex",                     # biological-sex selector
     "$ELECTRO_MODEL_COEFFS.dimension",               # 1D/2D/3D
     "$ELECTRO_MODEL_COEFFS.solver",                  # OpenFOAM ODESolver
     "$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",

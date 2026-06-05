@@ -215,6 +215,7 @@ Foam::TWorldBatched::TWorldBatched
 #endif
 {
     ionicModel::setTissueFromDict();
+    ionicModel::setSexFromDict();
 
     setHotPathSupportSize(NUM_TWORLD_BATCH_SUPPORT);
 
@@ -243,6 +244,7 @@ Foam::TWorldBatched::TWorldBatched
         initialRates,
         initialStates,
         tissue(),
+        sex(),
         dict
     );
 
@@ -478,6 +480,11 @@ Foam::List<Foam::word> Foam::TWorldBatched::supportedTissueTypes() const
     return {"epicardialCells", "mCells", "endocardialCells"};
 }
 
+Foam::List<Foam::word> Foam::TWorldBatched::supportedSexTypes() const
+{
+    return {"neutral", "male", "female"};
+}
+
 
 Foam::scalarField Foam::TWorldBatched::constantsForTissue
 (
@@ -494,6 +501,7 @@ Foam::scalarField Foam::TWorldBatched::constantsForTissue
         rates.data(),
         states.data(),
         tissueFlag,
+        sex(),
         dict()
     );
 

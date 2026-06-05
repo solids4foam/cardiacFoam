@@ -17,6 +17,7 @@ Exit code is always 0.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -32,6 +33,7 @@ from openfoam_driver.scripts._dict_keys_scanner import (  # noqa: E402
     DictRead,
     iter_catalogue_paths,
     scan_dict_reads,
+    strict_dict_key_report,
 )
 
 SRC_ROOT = REPO_ROOT / "src"
@@ -217,7 +219,20 @@ def main() -> int:
         metavar="N",
         help="Maximum rows per section (default: 50).",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Fail on drift not covered by the reviewed allowlist, and fail "
+            "when allowlist entries become unused."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.strict:
+        report = strict_dict_key_report(SRC_ROOT)
+        print(json.dumps(report.to_json(), indent=2))
+        return 0 if report.status == "ok" else 1
 
     print(f"Scanning {_short_path(SRC_ROOT)} ...", file=sys.stderr)
     reads = scan_dict_reads(SRC_ROOT)

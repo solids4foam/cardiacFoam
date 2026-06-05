@@ -58,6 +58,7 @@ Foam::TWorld::TWorld
 
     // First, set tissue using base logic and model overrides
     ionicModel::setTissueFromDict();
+    ionicModel::setSexFromDict();
     forAll(STATES_, i)
     {
         STATES_.set(i,      new scalarField(NUM_STATES,     0.0));
@@ -70,6 +71,7 @@ Foam::TWorld::TWorld
             RATES_[i].data(),
             STATES_[i].data(),
             tissue(),
+            sex(),
             dict
         );
 
@@ -98,6 +100,11 @@ Foam::List<Foam::word> Foam::TWorld::supportedTissueTypes() const
     return {"epicardialCells", "mCells", "endocardialCells"};
 }
 
+Foam::List<Foam::word> Foam::TWorld::supportedSexTypes() const
+{
+    return {"neutral", "male", "female"};
+}
+
 
 // ------------------------------------------------------------------------- //
 Foam::scalarField& Foam::TWorld::constants(const label integrationPtI) const
@@ -121,7 +128,7 @@ Foam::scalarField Foam::TWorld::constantsForTissue
 
     TWorldinitConsts
     (
-        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+        constants.data(), rates.data(), states.data(), tissueFlag, sex(), dict()
     );
 
     ionicModelIO::applyConstantOverrides

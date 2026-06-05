@@ -732,7 +732,7 @@ enum CONSTANTS_INDEX {
 
 
 void
-TWorldinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,const Foam::dictionary& stimulus);
+TWorldinitConsts(double* CONSTANTS,double* RATES,double* STATES,int tissueFlag,int sexFlag,const Foam::dictionary& stimulus);
 
 void
 TWorldcomputeVariables(double VOI,double* CONSTANTS,double* RATES,double* STATES,double* ALGEBRAIC,bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);

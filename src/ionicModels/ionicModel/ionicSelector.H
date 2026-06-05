@@ -44,9 +44,12 @@ public:
                             const List<word> &supportedTissues);
   static label selectDimension(const dictionary &dict,
                                const List<word> &supportedDimensions);
+  static label selectSex(const dictionary &dict,
+                         const List<word> &supportedSexTypes);
 
   static label tissueFlag(const word &t);
   static label dimensionFlag(const word &d);
+  static label sexFlag(const word &s);
 };
 
 } // End namespace Foam

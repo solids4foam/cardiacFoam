@@ -5,16 +5,46 @@ import json
 from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
+from .core.runtime.workflow_runner import run_workflow_step
+from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
+from .strict_planning import strict_plan
+
+
+def _step_payload(
+    *,
+    status: str,
+    entry: str,
+    step: str,
+    workflow_state_path: Path,
+    workflow_state: dict,
+    exit_code: int | None = None,
+    stdout_log: str | None = None,
+    stderr_log: str | None = None,
+    error: str | None = None,
+) -> dict:
+    payload = {
+        "status": status,
+        "entry": entry,
+        "step": step,
+        "exit_code": exit_code,
+        "stdout_log": stdout_log,
+        "stderr_log": stderr_log,
+        "workflow_state_path": str(workflow_state_path),
+        "workflow_state": workflow_state,
+    }
+    if error is not None:
+        payload["error"] = error
+    return payload
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=["sim", "post", "all", "describe"],
+        choices=["sim", "post", "all", "describe", "plan", "step", "run"],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -34,6 +64,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Plan and print simulation cases without running OpenFOAM.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="For action=plan/step/run, fail on incomplete machine-readable coverage.",
+    )
+    parser.add_argument(
+        "--step",
+        help="Workflow step id to execute when action=step.",
     )
     parser.add_argument(
         "--continue-on-error",
@@ -107,6 +146,22 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--dry-run is not valid with action=describe")
     if args.action == "describe" and args.continue_on_error:
         parser.error("--continue-on-error is not valid with action=describe")
+    if args.action == "plan" and args.dry_run:
+        parser.error("--dry-run is not valid with action=plan")
+    if args.action == "plan" and args.continue_on_error:
+        parser.error("--continue-on-error is not valid with action=plan")
+    if args.action == "step" and args.dry_run:
+        parser.error("--dry-run is not valid with action=step")
+    if args.action == "step" and args.continue_on_error:
+        parser.error("--continue-on-error is not valid with action=step")
+    if args.action == "run" and args.dry_run:
+        parser.error("--dry-run is not valid with action=run")
+    if args.action == "run" and args.continue_on_error:
+        parser.error("--continue-on-error is not valid with action=run")
+    if args.action not in {"plan", "step", "run"} and args.strict:
+        parser.error("--strict is only valid with action=plan, action=step, or action=run")
+    if args.action != "step" and args.step:
+        parser.error("--step is only valid with action=step")
 
     selected_entry = args.entry
 
@@ -129,6 +184,174 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
+
+    if args.action == "plan":
+        if not args.strict:
+            parser.error("action=plan currently requires --strict")
+        report = strict_plan(
+            selected_entry,
+            entry_kind=args.entry_kind,
+            overrides=overrides,
+            config_path=args.config,
+        )
+        print(json.dumps(report.to_json(), indent=2))
+        return 0 if report.status == "ok" else 1
+
+    if args.action == "step":
+        if not args.strict:
+            parser.error("action=step currently requires --strict")
+        if not args.step:
+            parser.error("action=step requires --step <id>")
+        report = strict_plan(
+            selected_entry,
+            entry_kind=args.entry_kind,
+            overrides=overrides,
+            config_path=args.config,
+        )
+        if report.status != "ok":
+            print(json.dumps(report.to_json(), indent=2))
+            return 1
+        if report.workflow_dag is None or report.workflow_state is None:
+            print(json.dumps({
+                "status": "failed",
+                "error": "strict plan did not produce workflow_dag and workflow_state",
+            }, indent=2))
+            return 1
+        case_root = Path(report.launch["case_root"])
+        output_dir = Path(report.launch["output_dir"])
+        state_path = output_dir / "workflow_state.json"
+        workflow_state = report.workflow_state
+        if state_path.exists():
+            try:
+                workflow_state = workflow_state_from_json(json.loads(state_path.read_text()))
+            except Exception as exc:
+                print(json.dumps({
+                    "status": "failed",
+                    "entry": selected_entry,
+                    "step": args.step,
+                    "error": f"Could not read existing workflow state: {exc}",
+                    "workflow_state_path": str(state_path),
+                }, indent=2))
+                return 1
+        try:
+            result = run_workflow_step(
+                report.workflow_dag,
+                workflow_state,
+                args.step,
+                case_root=case_root,
+                log_dir=output_dir / "workflow_logs",
+                state_path=state_path,
+            )
+        except Exception as exc:
+            print(json.dumps({
+                "status": "failed",
+                "entry": selected_entry,
+                "step": args.step,
+                "error": str(exc),
+                "workflow_state": report.workflow_state.to_json(),
+            }, indent=2))
+            return 1
+        payload = {
+            "status": "ok" if result.exit_code == 0 else "failed",
+            "entry": selected_entry,
+            "step": args.step,
+            "exit_code": result.exit_code,
+            "stdout_log": result.stdout_log,
+            "stderr_log": result.stderr_log,
+            "workflow_state_path": str(state_path),
+            "workflow_state": result.state.to_json(),
+        }
+        print(json.dumps(payload, indent=2))
+        return 0 if result.exit_code == 0 else 1
+
+    if args.action == "run":
+        if not args.strict:
+            parser.error("action=run currently requires --strict")
+        report = strict_plan(
+            selected_entry,
+            entry_kind=args.entry_kind,
+            overrides=overrides,
+            config_path=args.config,
+        )
+        if report.status != "ok":
+            print(json.dumps(report.to_json(), indent=2))
+            return 1
+        if report.workflow_dag is None or report.workflow_state is None:
+            print(json.dumps({
+                "status": "failed",
+                "error": "strict plan did not produce workflow_dag and workflow_state",
+            }, indent=2))
+            return 1
+        case_root = Path(report.launch["case_root"])
+        output_dir = Path(report.launch["output_dir"])
+        state_path = output_dir / "workflow_state.json"
+        workflow_state = report.workflow_state
+        if state_path.exists():
+            try:
+                workflow_state = workflow_state_from_json(json.loads(state_path.read_text()))
+            except Exception as exc:
+                print(json.dumps({
+                    "status": "failed",
+                    "entry": selected_entry,
+                    "error": f"Could not read existing workflow state: {exc}",
+                    "workflow_state_path": str(state_path),
+                }, indent=2))
+                return 1
+        if workflow_state.status == "failed":
+            print(json.dumps({
+                "status": "failed",
+                "entry": selected_entry,
+                "error": "workflow_state is failed; use action=step to rerun a failed step explicitly",
+                "workflow_state_path": str(state_path),
+                "workflow_state": workflow_state.to_json(),
+            }, indent=2))
+            return 1
+        results = []
+        while workflow_state.current_step_id is not None and workflow_state.status == "pending":
+            step_id = workflow_state.current_step_id
+            try:
+                result = run_workflow_step(
+                    report.workflow_dag,
+                    workflow_state,
+                    step_id,
+                    case_root=case_root,
+                    log_dir=output_dir / "workflow_logs",
+                    state_path=state_path,
+                )
+            except Exception as exc:
+                print(json.dumps(_step_payload(
+                    status="failed",
+                    entry=selected_entry,
+                    step=step_id,
+                    workflow_state_path=state_path,
+                    workflow_state=workflow_state.to_json(),
+                    error=str(exc),
+                ), indent=2))
+                return 1
+            workflow_state = result.state
+            results.append({
+                "step": step_id,
+                "status": "ok" if result.exit_code == 0 else "failed",
+                "exit_code": result.exit_code,
+                "stdout_log": result.stdout_log,
+                "stderr_log": result.stderr_log,
+            })
+            if result.exit_code != 0:
+                break
+        status = "ok" if workflow_state.status == "completed" else "failed"
+        if workflow_state.status == "pending" and workflow_state.current_step_id is None:
+            status = "failed"
+        payload = {
+            "status": status,
+            "entry": selected_entry,
+            "steps": results,
+            "workflow_state_path": str(state_path),
+            "workflow_state": workflow_state.to_json(),
+        }
+        if workflow_state.status == "pending" and workflow_state.current_step_id is None:
+            payload["error"] = "workflow_state is pending but has no current_step_id"
+        print(json.dumps(payload, indent=2))
+        return 0 if status == "ok" else 1
 
     spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
     engine = DriverEngine(

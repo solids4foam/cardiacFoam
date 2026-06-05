@@ -32,6 +32,8 @@ human review only.
 from __future__ import annotations
 
 import re
+import json
+from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -208,6 +210,26 @@ class CataloguePath:
     dynamic_path: bool
 
 
+@dataclass(frozen=True)
+class DictKeyStrictReport:
+    """Allowlist-backed catalogue drift report used by strict planning."""
+
+    status: str
+    absent_keys: tuple[str, ...]
+    stale_paths: tuple[str, ...]
+    unmatched_subdicts: tuple[str, ...]
+    unused_allowlist: tuple[str, ...]
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "absent_keys": list(self.absent_keys),
+            "stale_paths": list(self.stale_paths),
+            "unmatched_subdicts": list(self.unmatched_subdicts),
+            "unused_allowlist": list(self.unused_allowlist),
+        }
+
+
 _WILDCARD_RE = re.compile(r"<[^>]+>")
 _PREFIX = "$ELECTRO_MODEL_COEFFS."
 
@@ -241,3 +263,115 @@ def iter_catalogue_paths() -> Iterable[CataloguePath]:
     for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
         for entry in group:
             yield _parse_path(entry.driver_path, entry.dynamic_path)
+
+
+IGNORED_FOAMFILE_KEYS: frozenset[str] = frozenset(
+    {
+        "version",
+        "format",
+        "class",
+        "object",
+        "location",
+        "dimensions",
+        "internalField",
+        "boundaryField",
+        "FoamFile",
+        "note",
+        "arch",
+        "root",
+        "case",
+        "time",
+        "path",
+    }
+)
+
+
+def _default_allowlist_path() -> Path:
+    return Path(__file__).with_name("dict_key_allowlist.json")
+
+
+def load_dict_key_allowlist(path: Path | None = None) -> dict[str, set[str]]:
+    """Load the reviewed strict-scanner allowlist.
+
+    The file is intentionally JSON so the strict scanner can be used from both
+    tests and the CLI without importing project-specific test fixtures.
+    """
+    allowlist_path = path or _default_allowlist_path()
+    payload = json.loads(allowlist_path.read_text())
+    return {
+        "absent_keys": set(payload.get("absent_keys", [])),
+        "stale_paths": set(payload.get("stale_paths", [])),
+        "unmatched_subdicts": set(payload.get("unmatched_subdicts", [])),
+    }
+
+
+def compute_dict_key_drift(src_root: Path) -> dict[str, set[str]]:
+    """Compute approximate C++ dictionary-reader drift against dict_entries."""
+    reads = scan_dict_reads(src_root)
+    cat_paths = list(iter_catalogue_paths())
+
+    key_reads: dict[str, list[DictRead]] = defaultdict(list)
+    subdict_reads: dict[str, list[DictRead]] = defaultdict(list)
+    for read in reads:
+        if read.kind == "key":
+            key_reads[read.name].append(read)
+        else:
+            subdict_reads[read.name].append(read)
+
+    code_keys_set: set[str] = set(key_reads.keys())
+    cat_leaves: set[str] = set()
+    cat_parent_segs: set[str] = set()
+    for path in cat_paths:
+        if not (path.has_wildcard and path.dynamic_path):
+            cat_leaves.add(path.leaf)
+        for seg in path.parents:
+            if not _WILDCARD_RE.fullmatch(seg):
+                cat_parent_segs.add(seg)
+
+    absent_keys = {
+        key
+        for key in code_keys_set
+        if key not in cat_leaves and key not in IGNORED_FOAMFILE_KEYS
+    }
+    stale_paths = {
+        path.driver_path
+        for path in cat_paths
+        if not (path.has_wildcard and path.dynamic_path)
+        and path.leaf not in code_keys_set
+    }
+    unmatched_subdicts = {
+        name
+        for name in set(subdict_reads) | cat_parent_segs
+        if (name in subdict_reads) != (name in cat_parent_segs)
+    }
+
+    return {
+        "absent_keys": absent_keys,
+        "stale_paths": stale_paths,
+        "unmatched_subdicts": unmatched_subdicts,
+    }
+
+
+def strict_dict_key_report(
+    src_root: Path,
+    *,
+    allowlist_path: Path | None = None,
+) -> DictKeyStrictReport:
+    """Return the allowlist-backed strict scanner result."""
+    drift = compute_dict_key_drift(src_root)
+    allowlist = load_dict_key_allowlist(allowlist_path)
+
+    unexpected: dict[str, set[str]] = {}
+    unused: set[str] = set()
+    for key in ("absent_keys", "stale_paths", "unmatched_subdicts"):
+        unexpected[key] = drift[key] - allowlist[key]
+        unused.update(f"{key}:{item}" for item in sorted(allowlist[key] - drift[key]))
+
+    status = "ok" if not any(unexpected.values()) and not unused else "failed"
+    return DictKeyStrictReport(
+        status=status,
+        absent_keys=tuple(sorted(unexpected["absent_keys"])),
+        stale_paths=tuple(sorted(unexpected["stale_paths"])),
+        unmatched_subdicts=tuple(sorted(unexpected["unmatched_subdicts"])),
+        unused_allowlist=tuple(sorted(unused)),
+    )

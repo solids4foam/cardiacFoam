@@ -7,7 +7,7 @@ workflow-case execution, and post-processing.
 
 ```text
 openfoam_driver/
-├── cli.py                          # CLI entrypoint (sim/post/all)
+├── cli.py                          # CLI entrypoint (plan/describe/sim/post/all)
 ├── core/
 │   ├── runtime/
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
@@ -63,6 +63,9 @@ Run examples:
 foamctl all --entry niederer2012
 foamctl sim --entry manufacturedFDA --dry-run
 foamctl sim --entry manufacturedFDABidomain --dry-run
+foamctl plan --strict --entry singleCell
+foamctl run --strict --entry singleCell
+foamctl step --strict --entry singleCell --step solve
 driverFoam sim --entry singleCell
 
 # module invocation
@@ -79,12 +82,17 @@ applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
 - `post`: run only post-processing hook
 - `all` : `sim` then `post`
 - `describe` : print machine-readable entry/spec metadata as JSON
+- `plan` : print a non-mutating strict machine-readable launch contract as JSON
+- `step` : execute exactly one normalized strict-plan workflow step
+- `run` : execute normalized strict-plan workflow steps until completion or failure
 
 Useful flags:
 
 - `--dry-run`
 - `--continue-on-error`
 - `--config <json>`
+- `--strict` for `plan`, `step`, and `run`
+- `--step <id>` for `step`
 - `--tutorials-root <path>`
 
 The `describe` action resolves the requested entry and prints:
@@ -95,6 +103,35 @@ The `describe` action resolves the requested entry and prints:
 - the grouped dict-entry catalog for `physicsProperties` and `electroProperties`
 - the launch plan for `sim`, `post`, and `all`, including the exact driver
   command and expected manifest path
+
+The `plan --strict` action resolves the requested entry, validates the planned
+RunDocument v2, checks dict-key catalog coverage, predicts data artifacts, and
+exits non-zero if any machine-readable contract is incomplete.
+
+In strict-plan output, `workflow_dag.steps[*]` is normalized for a future step
+runner: `command` contains only the executable name, `args` contains argv
+arguments, `cwd` is case-relative, `depends_on` is validated against known step
+ids, and `produces` lists expected artifact ids when they can be attributed.
+The companion `workflow_state` is an initial, non-executed state snapshot:
+all steps are `pending`, attempts are `0`, logs and exit codes are `null`, and
+`current_step_id` points at the first dependency-free step.
+
+The low-level runner API
+`openfoam_driver.core.runtime.workflow_runner.run_workflow_step(...)` executes
+one normalized step, writes stdout/stderr logs, and returns an updated
+`workflow_state`. It deliberately does not implement multi-step orchestration,
+resume, or retry loops yet.
+
+The `step --strict` action is the CLI wrapper around that low-level runner. It
+runs only the requested step, writes `workflow_state.json` and
+`workflow_logs/<step>.attempt<N>.*.log` under the strict-plan output directory,
+prints the final state JSON, and exits non-zero if strict planning or the step
+execution fails.
+
+The `run --strict` action reads the same `workflow_state.json` if present and
+executes the next runnable step until the workflow completes or a step fails.
+It does not retry a failed saved state automatically; use `step --strict` for
+explicit manual reruns.
 
 ## Config override model
 

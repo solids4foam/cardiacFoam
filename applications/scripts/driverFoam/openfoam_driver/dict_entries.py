@@ -315,6 +315,21 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             },
         ),
         DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.sex",
+            phases=frozenset({"physics"}),
+            description="Optional biological sex selector for ionic models that expose sex-specific variants.",
+            source_refs=(
+                "src/ionicModels/ionicModel/ionicModel.C",
+                "src/ionicModels/ionicModel/ionicSelector.C",
+                "src/ionicModels/TWorld/TWorld.C",
+            ),
+            value_kind="enum",
+            enum_values=("neutral", "male", "female"),
+            required=False,
+            applicable_when={"ionicModel": "TWorld"},
+            constraints=("Only applicable for ionic models whose supportedSexTypes() includes the selected value.",),
+        ),
+        DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
             phases=frozenset({"solver"}),
             description="Time-advance scheme for multi-domain coupling (myocardium, Purkinje, ECG).",

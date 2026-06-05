@@ -57,7 +57,7 @@ Manual 1D smoke run:
 ```bash
 blockMesh -dict system/blockMeshDict.1D
 ./Allrun
-./runRegressionTest.sh
+./regressionTest.sh
 ```
 
 Driver-managed 1D/2D/3D parallel convergence sweep:

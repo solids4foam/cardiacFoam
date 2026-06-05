@@ -36,7 +36,7 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
                              const label num, const scalar initialDeltaT,
                              const Switch solveVmWithinODESolver)
     : ODESystem(), odeSolver_(), dict_(dict),
-      step_(num, initialDeltaT), tissue_(-1),
+      step_(num, initialDeltaT), tissue_(-1), sex_(0),
       solveVmWithinODESolver_(solveVmWithinODESolver)
 {
     if (dict_.found("outputVariables"))
@@ -61,6 +61,17 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
 void ::Foam::ionicModel::setTissueFromDict()
 {
     tissue_ = ionicSelector::selectTissue(dict_, supportedTissueTypes());
+}
+
+void ::Foam::ionicModel::setSexFromDict()
+{
+    const List<word> supported = supportedSexTypes();
+    if (supported.empty())
+    {
+        sex_ = 0;
+        return;
+    }
+    sex_ = ionicSelector::selectSex(dict_, supported);
 }
 
 void ::Foam::ionicModel::applyIonicConstantOverrides() const

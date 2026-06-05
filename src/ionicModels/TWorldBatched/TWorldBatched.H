@@ -143,6 +143,7 @@ public:
     OverrideTypeName("TWorldBatched");
 
     virtual List<word> supportedTissueTypes() const override final;
+    virtual List<word> supportedSexTypes() const override final;
     virtual List<word> supportedDimensions() const override final
     {
         return {};

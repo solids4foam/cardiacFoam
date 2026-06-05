@@ -73,6 +73,9 @@ class ionicModel
         //- Flag for tissue type
         mutable label tissue_;
 
+        //- Flag for biological sex (0=neutral, 1=male, 2=female)
+        mutable label sex_;
+
         //- Flag for enable the update of the transmembrane voltage within the
         mutable Switch solveVmWithinODESolver_;
 
@@ -91,6 +94,8 @@ class ionicModel
     protected:
         virtual void setTissueFromDict();
         void setTissue(label t) { tissue_ = t; }
+        virtual void setSexFromDict();
+        void setSex(label s) { sex_ = s; }
         void setStimulusProtocolFromDict(const dictionary& dict)
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
@@ -306,6 +311,20 @@ public:
             return tissue_;
         }
 
+        //- Getter for sex flag
+        label sex() const
+        {
+            return sex_;
+        }
+
+        virtual word sexName() const
+        {
+            const label s = sex_;
+            return (s == 1) ? "male" :
+                   (s == 2) ? "female" :
+                              "neutral";
+        }
+
         //- Return the resting membrane potential in SI units (V), derived
         virtual scalar vmRest() const
         {
@@ -471,6 +490,11 @@ public:
         virtual List<word> supportedTissueTypes() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+        }
+
+        virtual List<word> supportedSexTypes() const
+        {
+            return {};   // empty = model does not support sex selection
         }
 
         //- Optional verification family tag for manufactured/reference tests.

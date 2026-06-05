@@ -818,7 +818,7 @@ inline Foam::scalar computeIstim(Foam::scalar t, const Foam::StimulusProtocol& s
 }
 
 inline void
-TWorldinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, const Foam::dictionary& stimulus)
+TWorldinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFlag, int sexFlag, const Foam::dictionary& stimulus)
 {
 /* CaMK */
     CONSTANTS[AC_CaMK0] = 0.1;
@@ -852,7 +852,7 @@ TWorldinitConsts(double* CONSTANTS, double* RATES, double* STATES, int tissueFla
     CONSTANTS[AC_vsr] = 0.035 * CONSTANTS[AC_vcell];
 
     /* environment */
-    CONSTANTS[AC_sex] = 0.0;
+    CONSTANTS[AC_sex] = static_cast<double>(sexFlag);
 
     /* extracellular */
     CONSTANTS[AC_cao] = 1.8;
