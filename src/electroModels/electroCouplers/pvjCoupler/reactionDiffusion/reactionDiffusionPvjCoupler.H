@@ -39,7 +39,7 @@ class reactionDiffusionPvjCoupler
 :
     public pvjCoupler
 {
-    scalar R_pvj_;
+    scalarField R_pvj_;
     Switch debugCoupling_;
     mutable scalarField tissueVmBuffer_;
     mutable scalarField networkVmBuffer_;

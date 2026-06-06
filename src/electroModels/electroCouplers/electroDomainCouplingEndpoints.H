@@ -85,6 +85,13 @@ public:
         const scalarField& terminalCurrent,
         const scalarField& terminalSource
     ) = 0;
+
+    //- Terminal-specific PVJ resistances (optional).
+    //  If provided, this overrides the coupler's uniform resistance.
+    virtual const scalarField* terminalResistances() const
+    {
+        return nullptr;
+    }
 };
 
 

@@ -46,6 +46,7 @@ struct conductionGraph
     labelList   edgeNodeB;
     scalarField edgeLengths;
     scalarField edgeConductances;
+    scalarField pvjResistances;
 
     // Tree topology rooted at node 0 (built during readFromDict).
     // Required by monodomain1DSolver (Hines algorithm).
@@ -97,6 +98,16 @@ struct conductionGraph
         {
             Info<< "Conduction graph: " << nNodes << " nodes, "
                 << nEdges << " edges." << endl;
+        }
+
+        if (dict.found("pvjResistances"))
+        {
+            pvjResistances = scalarField(dict.lookup("pvjResistances"));
+            if (reportSetup)
+            {
+                Info<< "Conduction graph: Read " << pvjResistances.size()
+                    << " pvjResistances." << endl;
+            }
         }
 
         buildTreeTopology(reportSetup);

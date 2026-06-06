@@ -155,6 +155,15 @@ public:
         const scalarField& terminalSource
     ) override;
 
+    virtual const scalarField* terminalResistances() const override
+    {
+        if (graph_.pvjResistances.empty())
+        {
+            return nullptr;
+        }
+        return &graph_.pvjResistances;
+    }
+
     scalarField& membranePotential()
     {
         return Vm1D_;

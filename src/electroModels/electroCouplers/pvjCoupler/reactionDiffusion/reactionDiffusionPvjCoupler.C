@@ -51,7 +51,7 @@ void reactionDiffusionPvjCoupler::couplingCurrentAtPvjs
     current.setSize(networkVm.size());
     forAll(current, i)
     {
-        current[i] = (networkVm[i] - tissueVm[i])/R_pvj_;
+        current[i] = (networkVm[i] - tissueVm[i])/R_pvj_[i];
     }
 }
 
@@ -103,14 +103,24 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
 )
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
-    R_pvj_(dict.get<scalar>("rPvj")),
+    R_pvj_(),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
+    const scalarField* pRes = networkTerminalDomain_.terminalResistances();
+    if (pRes)
+    {
+        R_pvj_ = *pRes;
+    }
+    else
+    {
+        R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
+    }
+
     if (reportSetup_)
     {
-        Info << "Reaction-diffusion PVJ coupling model: R_pvj=" << R_pvj_
+        Info << "Reaction-diffusion PVJ coupling model: R_pvj=" << dict.get<scalar>("rPvj")
              << ", pvjRadius=" << pvjRadius_
              << ", couplingMode=" << couplingModeName(couplingMode_)
              << ", debugCoupling=" << debugCoupling_
