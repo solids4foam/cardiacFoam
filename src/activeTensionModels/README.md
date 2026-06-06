@@ -12,8 +12,10 @@ variables for each integration point.
 ```text
 src/activeTensionModels/
 ├── activeTensionModel/   # Base class and runtime selection
-├── GoktepeKuhl/          # Goktepe-Kuhl active tension model
-├── NashPanfilov/         # Nash-Panfilov active tension model
+├── GoktepeKuhl/          # Goktepe-Kuhl phenomenological active tension model
+├── NashPanfilov/         # Nash-Panfilov phenomenological active tension model
+├── LandNiederer/         # Land-Niederer biophysical active tension model
+├── *Batched/             # GPU-ready Batched versions of the models (e.g. NashPanfilovBatched)
 ├── Make/
 ├── lnInclude/
 └── README.md
@@ -34,11 +36,20 @@ Main responsibilities:
   `solveAtPoint(...)`.
 - Provide shared I/O and export helpers through `activeTensionIO`.
 
+## Batched Execution (`Foam::batchedActiveTensionModel`)
+
+For massive parallelism on CPU (OpenMP) and GPU (CUDA), models extending the `batchedActiveTensionModel` base class utilize a Structure-of-Arrays (SoA) data layout. 
+These batched wrappers seamlessly override the main `calculateTension(...)` loop to dispatch execution efficiently across the target backend, perfectly mirroring the `ionicModels` architecture.
+
 ## Available active-tension models
 
-- `GoktepeKuhl`
-- `NashPanfilov`
+### Phenomenological
+- `GoktepeKuhl` & `GoktepeKuhlBatched`
+- `NashPanfilov` & `NashPanfilovBatched`
 
-Both models select their driving electrophysiology signal from dictionary input
-(`couplingSignal`, default `Vm`) and integrate with the same
+### Biophysical
+- `LandNiederer` & `LandNiedererBatched`
+
+All models select their driving electrophysiology signal from dictionary input
+(`couplingSignal`, default `Vm` or `Cai`) and integrate with the
 `ElectromechanicalSignalProvider` interface used by `ionicModel`.

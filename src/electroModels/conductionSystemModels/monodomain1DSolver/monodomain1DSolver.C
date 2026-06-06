@@ -43,7 +43,7 @@ void monodomain1DSolver::advance
     scalarField& Vm = domain.membranePotential();
     scalarField& Iion = domain.ionicCurrent();
     const label N = Vm.size();
-    
+
     const label localStart = domain.localStartNode();
     const label nLocal = domain.nLocalNodes();
 
@@ -53,7 +53,7 @@ void monodomain1DSolver::advance
     {
         localVm[i] = Vm[localStart + i];
     }
-    
+
     scalarField localIion(nLocal, 0.0);
 
     // Integrate ODEs for the full timestep for the local partition

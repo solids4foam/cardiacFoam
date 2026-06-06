@@ -81,18 +81,48 @@ Foam::NashPanfilov::NashPanfilov
 
     Info<< nl << "Initialize NashPanfilov constants:" << nl;
     Info<< "NashPanfilov couplingSignal: Vm" << nl;
+
+    scalarField protoStates(NUM_STATES, 0.0);
+    scalarField protoRates(NUM_STATES, 0.0);
+
+    NashPanfilovinitConsts
+    (
+        CONSTANTS_.data(),
+        protoRates.data(),
+        protoStates.data()
+    );
+
+    if (dict.found("constants"))
+    {
+        const dictionary& cDict = dict.subDict("constants");
+        for (label k = 0; k < NUM_CONSTANTS; ++k)
+        {
+            const word name(NashPanfilovCONSTANTS_NAMES[k]);
+            if (cDict.found(name))
+            {
+                CONSTANTS_[k] = cDict.get<scalar>(name);
+            }
+        }
+    }
+
+    if (dict.found("initialStates"))
+    {
+        const dictionary& sDict = dict.subDict("initialStates");
+        for (label k = 0; k < NUM_STATES; ++k)
+        {
+            const word name(NashPanfilovSTATES_NAMES[k]);
+            if (sDict.found(name))
+            {
+                protoStates[k] = sDict.get<scalar>(name);
+            }
+        }
+    }
+
     forAll(STATES_, integrationPtI)
     {
-        STATES_.set(integrationPtI,    new scalarField(NUM_STATES,    0.0));
+        STATES_.set(integrationPtI,    new scalarField(protoStates));
         ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
         RATES_.set(integrationPtI,     new scalarField(NUM_STATES,    0.0));
-
-        NashPanfilovinitConsts
-        (
-            CONSTANTS_.data(),
-            RATES_[integrationPtI].data(),
-            STATES_[integrationPtI].data()
-        );
     }
     Info<< CONSTANTS_ << nl;
 

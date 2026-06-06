@@ -60,6 +60,11 @@ class sequentialElectroMechanical
         //  and picked up by electroMechanicalLaw via objectRegistry lookup.
         volScalarField Ta_;
 
+        //- Scaling factor applied to activeTensionModel output before writing
+        //  into Ta_.  Active tension models return kPa; Ta_ is in Pa.
+        //  Default: 1e3 (kPa -> Pa).  Set to 1.0 for dimensionless models.
+        scalar TaScale_;
+
         //- Per-cell fibre stretch passed to calculateTension().
         //  lambda = sqrt(f0.C.f0) computed from the solid deformation
         //  gradient by updateLambda(); 1.0 in the undeformed reference state.

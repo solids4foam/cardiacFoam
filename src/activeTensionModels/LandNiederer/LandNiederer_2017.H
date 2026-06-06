@@ -249,7 +249,11 @@ void LandNiederer2017initConsts
 //
 //  VOI is unused (model has no explicit time dependence beyond the inputs).
 // =========================================================================
-void LandNiederer2017computeVariables
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void LandNiederer2017computeVariables
 (
     double /*VOI*/,
     double* CONSTANTS,
