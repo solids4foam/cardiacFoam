@@ -46,6 +46,14 @@ autoPtr<electroVerificationModel> electroVerificationModel::New
 
     Info<< "Selecting electroVerificationModel " << modelType << endl;
 
+    if (!dictionaryConstructorTablePtr_)
+    {
+        FatalErrorInFunction
+            << "electroVerificationModel table is empty. "
+            << "Did you forget to load libverificationModels.so in controlDict?"
+            << exit(FatalError);
+    }
+
     auto cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
 

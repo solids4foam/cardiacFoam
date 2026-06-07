@@ -63,6 +63,14 @@ autoPtr<eikonalVerificationModel> eikonalVerificationModel::New
 
     Info<< "Selecting eikonalVerificationModel " << modelType << endl;
 
+    if (!dictionaryConstructorTablePtr_)
+    {
+        FatalErrorInFunction
+            << "eikonalVerificationModel table is empty. "
+            << "Did you forget to load libverificationModels.so in controlDict?"
+            << exit(FatalError);
+    }
+
     auto cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
 

@@ -89,6 +89,14 @@ autoPtr<ecgVerificationModel> ecgVerificationModel::New
 
     if (!ctorPtr)
     {
+        if (!dictionaryConstructorTablePtr_)
+        {
+            FatalErrorInFunction
+                << "ecgVerificationModel table is empty. "
+                << "Did you forget to load libverificationModels.so in controlDict?"
+                << exit(FatalError);
+        }
+
         FatalErrorInFunction
             << "Unknown ecgVerificationModel type " << modelType << nl
             << "Valid types:" << nl
