@@ -115,7 +115,7 @@ inline scalar manufacturedEikonalSourceTerm
 {
     const tensor M = manufacturedEikonalM(conductivity, chi, Cm);
     const scalar KM = k & (M & k);
-    
+
     if (KM <= VSMALL)
     {
         FatalErrorInFunction

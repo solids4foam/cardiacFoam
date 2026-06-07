@@ -242,7 +242,7 @@ void manufacturedEikonalVerifier::applyConstraints
     {
         const vector& c = centres[cellI];
         bool constrain = false;
-        
+
         if (dimension_ >= 1 && Foam::mag(c.x() - minX) <= tolerance) constrain = true;
         if (dimension_ >= 2 && Foam::mag(c.y() - minY) <= tolerance) constrain = true;
         if (dimension_ >= 3 && Foam::mag(c.z() - minZ) <= tolerance) constrain = true;

@@ -38,16 +38,18 @@ Main responsibilities:
 
 ## Batched Execution (`Foam::batchedActiveTensionModel`)
 
-For massive parallelism on CPU (OpenMP) and GPU (CUDA), models extending the `batchedActiveTensionModel` base class utilize a Structure-of-Arrays (SoA) data layout. 
+For massive parallelism on CPU (OpenMP) and GPU (CUDA), models extending the `batchedActiveTensionModel` base class utilize a Structure-of-Arrays (SoA) data layout.
 These batched wrappers seamlessly override the main `calculateTension(...)` loop to dispatch execution efficiently across the target backend, perfectly mirroring the `ionicModels` architecture.
 
 ## Available active-tension models
 
 ### Phenomenological
+
 - `GoktepeKuhl` & `GoktepeKuhlBatched`
 - `NashPanfilov` & `NashPanfilovBatched`
 
 ### Biophysical
+
 - `LandNiederer` & `LandNiedererBatched`
 
 All models select their driving electrophysiology signal from dictionary input
