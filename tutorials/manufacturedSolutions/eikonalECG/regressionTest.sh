@@ -106,7 +106,7 @@ extractSummaryValue()
 
     case "${key}" in
         cells)
-            awk '/^[[:space:]]*cells:/ {print $2; exit}' "log.blockMesh"
+            awk -F= '/Number of cells/ {gsub(/[[:space:]]/, "", $2); print $2; exit}' "${summaryFile}"
             ;;
         *)
             return 1
@@ -179,7 +179,7 @@ checkReferenceValues()
 
         case "${kind}" in
             summary)
-                actual="$(extractSummaryValue "${summaryFile}" "${key}")"
+                actual="$(extractSummaryValue "${errorFile}" "${key}")"
                 ;;
             error)
                 actual="$(extractErrorMetric "${errorFile}" "${key}" "${metric}")"

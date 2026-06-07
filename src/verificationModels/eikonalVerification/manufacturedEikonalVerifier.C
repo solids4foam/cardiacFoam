@@ -301,6 +301,9 @@ void manufacturedEikonalVerifier::postProcess
     mkDir(outputDir);
     const fileName outputFile(outputDir/"manufacturedEikonalActivationTime.dat");
 
+    label globalCells = exact.size();
+    reduce(globalCells, sumOp<label>());
+
     if (Pstream::master())
     {
         Info<< nl
@@ -313,6 +316,7 @@ void manufacturedEikonalVerifier::postProcess
 
         OFstream os(outputFile);
         os  << "# Eikonal manufactured activation-time summary\n"
+            << "Number of cells = " << globalCells << "\n"
             << "# dimension " << dimensionName(dimension_) << "\n"
             << "# chi " << chi_ << "\n"
             << "# Cm " << Cm_ << "\n"
