@@ -17,10 +17,12 @@ _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _repoRoot="$(cd "$_thisDir/.." && pwd)"
 _bundledSolids4Foam="$_repoRoot/modules/solids4foam"
 _bundledPhysicsModel="$_repoRoot/modules/physicsModel"
-_solids4FoamHeader="src/solids4FoamModels/physicsModel/physicsModel.H"
+# solidModel.H only exists in the full solids4foam, never in the lightweight
+# physicsModel replacement — use it as a reliable discriminator.
+_solids4FoamHeader="src/solids4FoamModels/solidModels/solidModel/solidModel.H"
 # A solids4foam tree is "built" once its lnInclude has been generated; test for
 # a representative header there to avoid selecting an un-built source tree.
-_s4fLnHeader="src/solids4FoamModels/lnInclude/physicsModel.H"
+_s4fLnHeader="src/solids4FoamModels/lnInclude/solidModel.H"
 
 useLightweightPhysicsModel()
 {
@@ -50,7 +52,7 @@ if [ -n "$SOLIDS4FOAM_INST_DIR" ] && [ -d "$SOLIDS4FOAM_INST_DIR" ]
 then
     if [ -f "$SOLIDS4FOAM_INST_DIR/$_solids4FoamHeader" ]
     then
-        echo "Using compiled solids4foam installation."
+        echo "Using full solids4foam installation (solidModel.H found)."
         echo "SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
         echo
         export USE_LIGHTWEIGHT_PHYSICSMODEL=0

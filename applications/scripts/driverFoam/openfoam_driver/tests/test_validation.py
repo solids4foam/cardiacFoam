@@ -375,8 +375,8 @@ def test_solver_coupling_flags_incompatible_mono_eikonal_pair():
     )
 
 
-def test_solver_coupling_flags_bidomain_with_purkinje():
-    """bidomainSolver does not support Purkinje coupling at all."""
+def test_solver_coupling_allows_bidomain_with_monodomain1D():
+    """bidomainSolver supports monodomain1DSolver via reactionDiffusionPvjCoupler."""
     run = _coupling_run(
         "bidomainSolver",
         purkinje="monodomain1DSolver",
@@ -387,7 +387,7 @@ def test_solver_coupling_flags_bidomain_with_purkinje():
         e for e in errors
         if "bidomain" in e.message.lower() and "purkinje" in e.message.lower()
     ]
-    assert len(bidomain_errors) >= 1
+    assert len(bidomain_errors) == 0
 
 
 def test_solver_coupling_flags_wrong_coupler_for_valid_pair():

@@ -37,74 +37,9 @@ addToRunTimeSelectionTable
 );
 
 
+// Anonymous namespace for helpers if needed
 namespace
 {
-
-struct planarTauFit
-{
-    scalar tau0;
-    vector gradTau;
-    scalar linf;
-};
-
-
-planarTauFit fitPlanarTauFromActivationTime
-(
-    const volScalarField& activationTime
-)
-{
-    const scalarField& tau = activationTime.primitiveField();
-    const vectorField& centres = activationTime.mesh().C().primitiveField();
-
-    scalar n = tau.size();
-    scalar sumX = 0.0;
-    scalar sumTau = 0.0;
-    scalar sumXX = 0.0;
-    scalar sumXTau = 0.0;
-
-    forAll(tau, cellI)
-    {
-        const scalar x = centres[cellI].x();
-        sumX += x;
-        sumTau += tau[cellI];
-        sumXX += x*x;
-        sumXTau += x*tau[cellI];
-    }
-
-    reduce(n, sumOp<scalar>());
-    reduce(sumX, sumOp<scalar>());
-    reduce(sumTau, sumOp<scalar>());
-    reduce(sumXX, sumOp<scalar>());
-    reduce(sumXTau, sumOp<scalar>());
-
-    const scalar denominator = n*sumXX - sumX*sumX;
-
-    if (n <= 1 || Foam::mag(denominator) <= VSMALL)
-    {
-        FatalErrorInFunction
-            << "Manufactured eikonal ECG verification requires activation "
-            << "times on at least two distinct x locations to infer the "
-            << "fixed planar tau(x)=tau0+a*x reference."
-            << exit(FatalError);
-    }
-
-    planarTauFit fit;
-    const scalar slope = (n*sumXTau - sumX*sumTau)/denominator;
-    fit.tau0 = (sumTau - slope*sumX)/n;
-    fit.gradTau = vector(slope, 0.0, 0.0);
-    fit.linf = 0.0;
-
-    forAll(tau, cellI)
-    {
-        const scalar exact = fit.tau0 + fit.gradTau.x()*centres[cellI].x();
-        fit.linf = max(fit.linf, Foam::mag(tau[cellI] - exact));
-    }
-
-    reduce(fit.linf, maxOp<scalar>());
-
-    return fit;
-}
-
 } // End anonymous namespace
 
 
@@ -122,9 +57,7 @@ eikonalECGManufacturedVerifier::eikonalECGManufacturedVerifier
     dimension_(max(label(1), min(mesh_.nGeometricD(), label(3)))),
     referenceQuadratureOrder_(96),
     checkQuadratureOrders_(),
-    tau0_(0.0),
-    gradTau_(vector::zero),
-    planarFitLinf_(0.0),
+    k_(vector::zero),
     sampleCount_(0),
     referenceErrorL1Sum_(electrodePositions_.size(), scalar(0)),
     referenceErrorL2Sum_(electrodePositions_.size(), scalar(0)),
@@ -439,20 +372,8 @@ void eikonalECGManufacturedVerifier::record
 
     const tensor conductivity =
         manufacturedEikonalConstantConductivity(requireConductivity());
-    const vector exactGradTau =
-        manufacturedEikonalGradTau
-        (
-            conductivity,
-            requireChi().value(),
-            requireCm().value(),
-            requireC0().value()
-        );
-    const planarTauFit tauFit =
-        fitPlanarTauFromActivationTime(requireActivationTime());
 
-    tau0_ = manufacturedEikonalTau0();
-    gradTau_ = exactGradTau;
-    planarFitLinf_ = tauFit.linf;
+    k_ = manufacturedEikonalK(dimension_);
 
     List<scalar> referenceNodes, referenceWeights;
     pseudoECGManufacturedQuadratureRule
@@ -502,8 +423,7 @@ void eikonalECGManufacturedVerifier::record
                     sampleTime,
                     electrodePositions_[electrodeI],
                     conductivity,
-                    tau0_,
-                    gradTau_,
+                    k_,
                     dimension_,
                     checkNodes[checkI],
                     checkWeights[checkI]
@@ -516,8 +436,7 @@ void eikonalECGManufacturedVerifier::record
                 sampleTime,
                 electrodePositions_[electrodeI],
                 conductivity,
-                tau0_,
-                gradTau_,
+                k_,
                 dimension_,
                 referenceNodes,
                 referenceWeights
@@ -605,9 +524,7 @@ void eikonalECGManufacturedVerifier::writeSummary()
     }
     os << "\n";
     os << "qReference " << referenceQuadratureOrder_ << "\n";
-    os << "tau0 " << tau0_ << "\n";
-    os << "gradTau " << gradTau_ << "\n";
-    os << "planarFitLinf " << planarFitLinf_ << "\n";
+    os << "k " << k_ << "\n";
     os << "Electrode  L1_err_ref  L2_err_ref  Linf_err_ref";
     forAll(checkQuadratureOrders_, checkI)
     {

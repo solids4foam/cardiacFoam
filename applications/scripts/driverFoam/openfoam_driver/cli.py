@@ -241,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
                 case_root=case_root,
                 log_dir=output_dir / "workflow_logs",
                 state_path=state_path,
+                expected_artifacts=report.expected_artifacts,
             )
         except Exception as exc:
             print(json.dumps({
@@ -317,6 +318,7 @@ def main(argv: list[str] | None = None) -> int:
                     case_root=case_root,
                     log_dir=output_dir / "workflow_logs",
                     state_path=state_path,
+                    expected_artifacts=report.expected_artifacts,
                 )
             except Exception as exc:
                 print(json.dumps(_step_payload(

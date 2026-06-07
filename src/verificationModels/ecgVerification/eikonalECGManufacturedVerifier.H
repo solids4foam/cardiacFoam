@@ -46,9 +46,7 @@ class eikonalECGManufacturedVerifier
     label dimension_;
     label referenceQuadratureOrder_;
     List<label> checkQuadratureOrders_;
-    scalar tau0_;
-    vector gradTau_;
-    scalar planarFitLinf_;
+    vector k_;
 
     label sampleCount_;
     List<scalar> referenceErrorL1Sum_;

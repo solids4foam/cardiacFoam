@@ -127,6 +127,8 @@ INTERNAL_RTST_ALLOWLIST: frozenset[str] = frozenset({
     # Only one bath-potential implementation exists today. Users select it
     # by adding bathPotentialDomain, not by typing an electroStateDomain type.
     "electroStateDomain",
+    # Like ecgVerificationModel, there is no catalogue type selector for this yet.
+    "electromechanicalVerificationModel",
 })
 
 

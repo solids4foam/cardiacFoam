@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -345,6 +347,36 @@ def _catalog_diagnostics(repo_root: Path) -> tuple[StrictDiagnostic, ...]:
     return tuple(diagnostics)
 
 
+def _environment_diagnostics(spec) -> tuple[StrictDiagnostic, ...]:
+    if "SKIP_ENV_DIAGNOSTICS" in os.environ:
+        return ()
+    diagnostics: list[StrictDiagnostic] = []
+    if "WM_PROJECT_DIR" not in os.environ:
+        diagnostics.append(_diagnostic(
+            "error",
+            "missing_openfoam_env",
+            "WM_PROJECT_DIR is not set. OpenFOAM environment not sourced.",
+            source="environment"
+        ))
+    if not shutil.which("cardiacFoam"):
+        diagnostics.append(_diagnostic(
+            "error",
+            "missing_executable",
+            "cardiacFoam not found on PATH.",
+            source="environment",
+            field="cardiacFoam"
+        ))
+    if not shutil.which("blockMesh"):
+        diagnostics.append(_diagnostic(
+            "error",
+            "missing_executable",
+            "blockMesh not found on PATH.",
+            source="environment",
+            field="blockMesh"
+        ))
+    return tuple(diagnostics)
+
+
 def strict_plan(
     entry: str,
     *,
@@ -383,11 +415,13 @@ def strict_plan(
     repo_root = _repo_root_from_here()
     catalog_diagnostics = _catalog_diagnostics(repo_root)
     artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
+    env_diagnostics = _environment_diagnostics(spec)
     all_diagnostics = (
         validation_diagnostics
         + workflow_diagnostics
         + catalog_diagnostics
         + artifact_diagnostics
+        + env_diagnostics
     )
     failed = any(
         diagnostic.level == "error"

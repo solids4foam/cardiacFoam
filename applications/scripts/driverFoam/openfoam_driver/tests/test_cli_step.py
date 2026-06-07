@@ -41,7 +41,7 @@ def test_cli_step_executes_single_step_and_writes_state_and_logs() -> None:
         tutorials_root = Path(temp_dir)
         case_root = _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nprintf 'step ok\\n'\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nprintf 'step ok\\n'\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
 
@@ -75,7 +75,7 @@ def test_cli_step_returns_nonzero_for_failing_step() -> None:
         tutorials_root = Path(temp_dir)
         _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nprintf 'step failed\\n' >&2\nexit 7\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nprintf 'step failed\\n' >&2\nexit 7\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
 
@@ -106,7 +106,7 @@ def test_cli_step_refuses_dependency_incomplete_step() -> None:
         tutorials_root = Path(temp_dir)
         _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nexit 0\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nexit 0\n",
             steps=[
                 {"id": "mesh", "command": "Allrun", "depends_on": []},
                 {"id": "solve", "command": "Allrun", "depends_on": ["mesh"]},
@@ -137,7 +137,7 @@ def test_cli_step_continues_from_existing_workflow_state() -> None:
         tutorials_root = Path(temp_dir)
         case_root = _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nprintf 'ran %s\\n' \"$1\"\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nprintf 'ran %s\\n' \"$1\"\n",
             steps=[
                 {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
                 {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
@@ -188,7 +188,7 @@ def test_cli_run_executes_all_runnable_steps_in_order() -> None:
         tutorials_root = Path(temp_dir)
         case_root = _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nprintf 'ran %s\\n' \"$1\"\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nprintf 'ran %s\\n' \"$1\"\n",
             steps=[
                 {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
                 {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
@@ -223,6 +223,8 @@ def test_cli_run_stops_on_failed_step() -> None:
             tutorials_root,
             allrun=(
                 "#!/bin/sh\n"
+                    "mkdir -p postProcessing 0.001\n"
+                    "touch postProcessing/cliStepCase_1.txt 0.001/Vm\n"
                 "if [ \"$1\" = mesh ]; then printf 'mesh\\n'; exit 0; fi\n"
                 "printf 'solve failed\\n' >&2\n"
                 "exit 9\n"
@@ -258,7 +260,7 @@ def test_cli_run_does_not_retry_failed_saved_state() -> None:
         tutorials_root = Path(temp_dir)
         case_root = _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nexit 4\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nexit 4\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
 

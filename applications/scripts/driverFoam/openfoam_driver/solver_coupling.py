@@ -45,10 +45,16 @@ SOLVER_COMPATIBILITY_RULES: Final[tuple[dict, ...]] = (
     },
     {
         "myocardium_solver": "bidomainSolver",
+        "purkinje_solver": "monodomain1DSolver",
+        "required_coupler": "reactionDiffusionPvjCoupler",
+        "valid": True,
+    },
+    {
+        "myocardium_solver": "bidomainSolver",
         "purkinje_solver": "*",
         "required_coupler": None,
         "valid": False,
-        "reason": "bidomainSolver does not support Purkinje network coupling",
+        "reason": "bidomainSolver only supports reaction-diffusion coupling",
     },
     {
         "myocardium_solver": "singleCellSolver",

@@ -1590,7 +1590,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/activeTensionModels/activeTensionModel/activeTensionModel.C",
             ),
             value_kind="enum",
-            enum_values=("GoktepeKuhl", "NashPanfilov", "LandNiederer"),
+            enum_values=(
+                "GoktepeKuhl", "NashPanfilov", "LandNiederer",
+                "GoktepeKuhlBatched", "NashPanfilovBatched", "LandNiedererBatched",
+                "ManufacturedElectromechanics",
+            ),
             required=False,
             constraints=("Only applicable when electro-mechanical coupling is configured.",),
             # Virtual key: set when physics.type=electroMechanicalModel. The top-level

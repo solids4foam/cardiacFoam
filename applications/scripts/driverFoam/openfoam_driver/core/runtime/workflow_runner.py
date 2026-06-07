@@ -14,6 +14,7 @@ from .workflow_state import (
     WorkflowStepState,
     replace_step_state,
 )
+from .models import DataArtifact
 
 
 @dataclass(frozen=True)
@@ -110,6 +111,7 @@ def run_workflow_step(
     log_dir: Path | None = None,
     state_path: Path | None = None,
     env: Mapping[str, str] | None = None,
+    expected_artifacts: tuple[DataArtifact, ...] = (),
 ) -> WorkflowStepRunResult:
     """Execute one normalized workflow step and return the updated state.
 
@@ -196,6 +198,26 @@ def run_workflow_step(
 
     status = "completed" if exit_code == 0 and not diagnostics else "failed"
     produced_artifacts = tuple(str(item) for item in step.get("produces", ())) if status == "completed" else ()
+
+    if status == "completed" and produced_artifacts:
+        import glob
+        missing_artifacts = []
+        for artifact_id in produced_artifacts:
+            for artifact in expected_artifacts:
+                if artifact.artifact_id == artifact_id:
+                    pattern = str(case_root / artifact.path_pattern.format(case_id=case_root.name, time="*"))
+                    if not glob.glob(pattern):
+                        missing_artifacts.append(artifact_id)
+        if missing_artifacts:
+            status = "failed"
+            produced_artifacts = ()
+            diagnostics = (*diagnostics, {
+                "level": "error",
+                "code": "missing_artifacts",
+                "message": f"Step {step_id!r} completed successfully but missing expected artifacts: {', '.join(missing_artifacts)}",
+                "field": step_id,
+            })
+
     final_step = WorkflowStepState(
         step_id=step_id,
         status=status,
