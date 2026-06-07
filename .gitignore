@@ -107,18 +107,28 @@ SunOS*Gcc*/
 .claude/
 docs/superpowers/
 
-# Generated driverFOAM run reports
-**/setupManufacturedFDA/run_report.md
+# Generated driverFOAM run reports and artifacts
+**/setup*/run_report.md
+**/setup*/action_events.jsonl
+**/setup*/artifacts_manifest.json
+**/setup*/cachedCasePostProcessing/
+**/setup*/explicit_only_config.json
+**/setup*/run_config.json
 
 # Python bytecode caches
 __pycache__/
 
-# OpenFOAM run artifacts under manufacturedSolutions tutorials
-tutorials/manufacturedSolutions/*/log.*
-tutorials/manufacturedSolutions/*/processor*/
-tutorials/manufacturedSolutions/*/postProcessing/
-tutorials/manufacturedSolutions/*/archivedPostProcessing/
-tutorials/manufacturedSolutions/*/logs/
-tutorials/manufacturedSolutions/*/constant/polyMesh/
+# OpenFOAM run artifacts under all tutorials
+tutorials/**/log.*
+tutorials/**/processor*/
+tutorials/**/postProcessing/
+tutorials/**/archivedPostProcessing/
+tutorials/**/logs/
+tutorials/**/constant/polyMesh/
+tutorials/**/constant/*/polyMesh/
+tutorials/**/0.[0-9]*/
+tutorials/**/[1-9]*/
+
+# Generated 0 directories and specific untracked cases
 tutorials/manufacturedSolutions/*/0/
-tutorials/manufacturedSolutions/*/0.[0-9]*/
+tutorials/**/0/electro/
