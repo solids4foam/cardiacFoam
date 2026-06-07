@@ -32,7 +32,9 @@ class batchedActiveTensionModel
 :
     public activeTensionModel
 {
-    // Private Data
+protected:
+
+    // Protected Data
 
         label nCells_;
         label nStates_;
@@ -56,6 +58,9 @@ class batchedActiveTensionModel
 
         mutable PtrList<CellScratch> solveScratch_;
         mutable label solveScratchThreads_;
+
+        // Buffer to gather per-cell drive signals (Vm or Cai) before batch dispatch
+        mutable scalarField driveSignals_;
 
         // Private Member Functions
 
@@ -262,8 +267,21 @@ public:
         // Not used by calculateTension in batched models
     }
 
+    // Scalar derivatives override (unused by batched architecture)
+    virtual void derivatives
+    (
+        const scalar t,
+        const scalarField& y,
+        scalarField& dydt
+    ) const override
+    {
+        FatalErrorInFunction
+            << "Batched models do not use the scalar derivatives() function. "
+            << "They execute via evaluateHotPathStateForCell."
+            << abort(FatalError);
+    }
+
     // IO Support Hooks
-    virtual bool hasIOMetadata() const override { return true; }
     virtual label ioNumStates() const override { return nStates_; }
     virtual label ioNumAlgebraic() const override { return nAlgebraics_; }
     virtual const PtrList<scalarField>* ioStatesPtr() const override { syncAllToIO(); return &ioStates_; }

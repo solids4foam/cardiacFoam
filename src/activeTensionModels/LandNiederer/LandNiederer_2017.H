@@ -122,7 +122,7 @@ static const char* LandNiedererCONSTANTS_NAMES[NUM_CONSTANTS] =
 //  Set default parameter values and initial state conditions.
 //  Called once per model instantiation.
 // =========================================================================
-void LandNiederer2017initConsts
+inline void LandNiederer2017initConsts
 (
     double* CONSTANTS,
     double* RATES,

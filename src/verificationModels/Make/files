@@ -1,4 +1,6 @@
 electroVerification/electroVerificationModel.C
+electromechanicsVerification/electromechanicalVerificationModel.C
+electromechanicsVerification/manufacturedElectromechanicsVerifier.C
 ecgVerification/ecgVerificationModel.C
 ecgVerification/pseudoECGManufacturedVerifier.C
 ecgVerification/bathECGManufacturedVerifier.C

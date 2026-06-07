@@ -126,17 +126,21 @@ enum CONSTANTS_INDEX
 // -------------------------------------------------------------------------
 
 //- Initialise constants and state initial conditions.
-void LandNiederer2017initConsts
+inline void LandNiederer2017initConsts
 (
     double* CONSTANTS,
     double* RATES,
     double* STATES
 );
 
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
 //- Compute algebraic variables and ODE rates.
 //  ALGEBRAIC[AV_Cai], ALGEBRAIC[AV_lambda], and ALGEBRAIC[AV_lambda_rate]
 //  must be set by the caller before this function is invoked.
-void LandNiederer2017computeVariables
+CARDIAC_HOST_DEVICE inline void LandNiederer2017computeVariables
 (
     double VOI,
     double* CONSTANTS,

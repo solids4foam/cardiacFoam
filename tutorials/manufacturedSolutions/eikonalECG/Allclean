@@ -1,5 +1,13 @@
-#!/bin/sh
-cd "${0%/*}" || exit 1
-. "${WM_PROJECT_DIR:?}/bin/tools/CleanFunctions"
+#!/bin/bash
 
-cleanCase
+# Enable extended globbing
+shopt -s extglob
+
+# Delete everything that contains a number except "0"
+rm -rf !("0"|*[^0-9]*)
+rm -rf 0.*
+rm -rf 0
+
+rm -rf processor*
+rm -f log.*
+rm -rf constant/polyMesh

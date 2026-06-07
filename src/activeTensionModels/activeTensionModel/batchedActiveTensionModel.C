@@ -169,7 +169,18 @@ void batchedActiveTensionModel::calculateTension
 
     const ElectromechanicalSignalProvider& p = provider();
     const CouplingSignal sig = driveSignal();
-    const scalarField& driveSignalField = p.signal(sig);
+
+    if (driveSignals_.size() != nCells_)
+    {
+        driveSignals_.setSize(nCells_);
+    }
+
+    // Gather per-cell drive signals safely before parallel/GPU dispatch
+    // This avoids calling virtual functions inside OpenMP/CUDA kernels
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        driveSignals_[cellI] = p.signal(cellI, sig);
+    }
 
     // Prepare threads and scratch
     const bool parallel = useParallelCellLoops();
@@ -185,7 +196,7 @@ void batchedActiveTensionModel::calculateTension
         solveScratch_
     );
 
-    executor.solveCells(t, dt, driveSignalField, lambda, Ta);
+    executor.solveCells(t, dt, driveSignals_, lambda, Ta);
 
     ioSynchronized_ = false;
 }

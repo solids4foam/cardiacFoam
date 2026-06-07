@@ -130,7 +130,7 @@ def _apply_case(
 
 
 def _archive_output_dir(case_root: Path) -> Path:
-    return case_root / "archivedPostProcessing"
+    return case_root / "postProcessing"
 
 
 def _candidate_paths(case_root: Path, source_name: str, run_in_parallel: bool) -> tuple[Path, ...]:

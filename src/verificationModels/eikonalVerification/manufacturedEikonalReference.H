@@ -38,15 +38,11 @@ Author
 namespace Foam
 {
 
-inline scalar manufacturedEikonalTau0()
+inline vector manufacturedEikonalK(const label dimension)
 {
-    return 0.0;
-}
-
-
-inline vector manufacturedEikonalDirection()
-{
-    return vector(1.0, 0.0, 0.0);
+    if (dimension == 1) return vector(1.0, 0.0, 0.0);
+    if (dimension == 2) return vector(1.0, 1.0, 0.0);
+    return vector(1.0, 1.0, 1.0);
 }
 
 
@@ -75,81 +71,61 @@ inline tensor manufacturedEikonalM
 }
 
 
+inline scalar manufacturedEikonalTau
+(
+    const vector& point,
+    const vector& k
+)
+{
+    return Foam::exp(k & point);
+}
+
+
+inline scalar manufacturedEikonalTau
+(
+    const scalar x,
+    const scalar y,
+    const scalar z,
+    const vector& k
+)
+{
+    return manufacturedEikonalTau(vector(x, y, z), k);
+}
+
+
 inline vector manufacturedEikonalGradTau
 (
+    const vector& point,
+    const vector& k
+)
+{
+    return k * manufacturedEikonalTau(point, k);
+}
+
+
+inline scalar manufacturedEikonalSourceTerm
+(
+    const vector& point,
     const tensor& conductivity,
     const scalar chi,
     const scalar Cm,
-    const scalar c0
+    const scalar c0,
+    const vector& k
 )
 {
-    const vector n = manufacturedEikonalDirection();
     const tensor M = manufacturedEikonalM(conductivity, chi, Cm);
-    const scalar metric = n & (M & n);
-
-    if (metric <= VSMALL)
+    const scalar KM = k & (M & k);
+    
+    if (KM <= VSMALL)
     {
         FatalErrorInFunction
             << "Manufactured eikonal verification requires positive "
-            << "conductivity in the +x propagation direction."
+            << "conductivity metric."
             << exit(FatalError);
     }
 
-    return n/(c0*Foam::sqrt(metric));
-}
-
-
-inline scalar manufacturedEikonalTau
-(
-    const scalar x,
-    const scalar y,
-    const scalar z,
-    const scalar tau0,
-    const vector& gradTau
-)
-{
-    return tau0 + (gradTau & vector(x, y, z));
-}
-
-
-inline scalar manufacturedEikonalTau
-(
-    const scalar x,
-    const scalar y,
-    const scalar z,
-    const vector& gradTau
-)
-{
-    return
-        manufacturedEikonalTau
-        (
-            x,
-            y,
-            z,
-            manufacturedEikonalTau0(),
-            gradTau
-        );
-}
-
-
-inline scalar manufacturedEikonalTau
-(
-    const vector& point,
-    const scalar tau0,
-    const vector& gradTau
-)
-{
-    return manufacturedEikonalTau(point.x(), point.y(), point.z(), tau0, gradTau);
-}
-
-
-inline scalar manufacturedEikonalTau
-(
-    const vector& point,
-    const vector& gradTau
-)
-{
-    return manufacturedEikonalTau(point.x(), point.y(), point.z(), gradTau);
+    const scalar tau = manufacturedEikonalTau(point, k);
+    return tau * (c0 * Foam::sqrt(KM) - KM) - 1.0;
 }
 
 
@@ -254,19 +230,24 @@ inline scalar manufacturedEikonalECGIntegrand
     const scalar time,
     const vector& electrodePosition,
     const tensor& conductivity,
-    const scalar tau0,
-    const vector& gradTau,
+    const vector& k,
     const label dimension
 )
 {
-    const scalar tau = manufacturedEikonalTau(x, y, z, tau0, gradTau);
+    const vector p(x, y, z);
+    const scalar tau = manufacturedEikonalTau(p, k);
+    const vector gradTau = manufacturedEikonalGradTau(p, k);
+
     const scalar dU =
         manufacturedEikonalTemplateDerivative(time - tau);
     const vector sigmaGradVm = conductivity & (-dU*gradTau);
 
+    const scalar dx = x - electrodePosition.x();
+    const scalar dy = y - electrodePosition.y();
+    const scalar dz = z - electrodePosition.z();
+
     if (dimension == 1)
     {
-        const scalar dx = x - electrodePosition.x();
         const scalar absDx = Foam::mag(dx);
 
         if (absDx <= VSMALL)
@@ -279,8 +260,6 @@ inline scalar manufacturedEikonalECGIntegrand
 
     if (dimension == 2)
     {
-        const scalar dx = x - electrodePosition.x();
-        const scalar dy = y - electrodePosition.y();
         const scalar rSq = dx*dx + dy*dy;
 
         if (rSq <= VSMALL)
@@ -293,9 +272,6 @@ inline scalar manufacturedEikonalECGIntegrand
            /Foam::pow(rSq, 1.5);
     }
 
-    const scalar dx = x - electrodePosition.x();
-    const scalar dy = y - electrodePosition.y();
-    const scalar dz = z - electrodePosition.z();
     const scalar rSq = dx*dx + dy*dy + dz*dz;
 
     if (rSq <= VSMALL)
@@ -317,8 +293,7 @@ inline scalar computeManufacturedEikonalECGReference
     const scalar time,
     const vector& electrodePosition,
     const tensor& conductivity,
-    const scalar tau0,
-    const vector& gradTau,
+    const vector& k,
     const label dimension,
     const UList<scalar>& nodes,
     const UList<scalar>& weights
@@ -335,7 +310,7 @@ inline scalar computeManufacturedEikonalECGReference
             value += weights[i]*manufacturedEikonalECGIntegrand
             (
                 x, 0.0, 0.0, time, electrodePosition, conductivity,
-                tau0, gradTau, dimension
+                k, dimension
             );
         }
 
@@ -354,7 +329,7 @@ inline scalar computeManufacturedEikonalECGReference
                    *manufacturedEikonalECGIntegrand
                     (
                         x, y, 0.0, time, electrodePosition, conductivity,
-                        tau0, gradTau, dimension
+                        k, dimension
                     );
             }
         }
@@ -368,14 +343,14 @@ inline scalar computeManufacturedEikonalECGReference
         forAll(nodes, j)
         {
             const scalar y = jacobian*(nodes[j] + 1.0);
-            forAll(nodes, k)
+            forAll(nodes, kk)
             {
-                const scalar z = jacobian*(nodes[k] + 1.0);
-                value += weights[i]*weights[j]*weights[k]
+                const scalar z = jacobian*(nodes[kk] + 1.0);
+                value += weights[i]*weights[j]*weights[kk]
                    *manufacturedEikonalECGIntegrand
                     (
                         x, y, z, time, electrodePosition, conductivity,
-                        tau0, gradTau, dimension
+                        k, dimension
                     );
             }
         }

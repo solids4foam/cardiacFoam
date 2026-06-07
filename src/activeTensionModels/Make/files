@@ -6,6 +6,7 @@ activeTensionModel/activeTensionModel.C
 
 NashPanfilov/NashPanfilov.C
 GoktepeKuhl/GoktepeKuhl.C
+ManufacturedElectromechanics/ManufacturedElectromechanics.C
 /*NiedererHunterSmith/NiedererHunterSmith.C*/
 LandNiederer/LandNiederer.C
 activeTensionModel/batchedActiveTensionModel.C

@@ -67,7 +67,7 @@ void monodomain1DSolver::advance
     {
         Iion[localStart + i] = localIion[i];
     }
-    reduce(Iion, sumOp<scalarField>());
+    reduce(Iion.begin(), Iion.size(), sumOp<scalar>(), UPstream::msgType(), UPstream::worldComm);
 
     // ---- Step 2: Applied current ----
     appliedCurrentBuffer_.setSize(N);

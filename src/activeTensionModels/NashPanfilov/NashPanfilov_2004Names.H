@@ -50,10 +50,14 @@ enum CONSTANTS_INDEX {
 };
 
 
-void
+inline void
 NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES);
 
-void
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void
 NashPanfilovcomputeVariables
 (
     double VOI,

@@ -164,6 +164,50 @@ autoPtr<manufacturedEikonalVerifier> manufacturedEikonalVerifier::New
 }
 
 
+tmp<volScalarField> manufacturedEikonalVerifier::sourceTerm() const
+{
+    const tensor conductivity =
+        manufacturedEikonalConstantConductivity(conductivity_);
+    const vector k = manufacturedEikonalK(dimension_);
+
+    tmp<volScalarField> tSmms
+    (
+        new volScalarField
+        (
+            IOobject
+            (
+                "Smms",
+                mesh_.time().timeName(),
+                mesh_,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh_,
+            dimensionedScalar("Smms", dimless, 0.0)
+        )
+    );
+
+    volScalarField& Smms = tSmms.ref();
+    const vectorField& centres = mesh_.C().primitiveField();
+    scalarField& SmmsValues = Smms.primitiveFieldRef();
+
+    forAll(SmmsValues, cellI)
+    {
+        SmmsValues[cellI] = manufacturedEikonalSourceTerm
+        (
+            centres[cellI],
+            conductivity,
+            chi_,
+            Cm_,
+            c0_,
+            k
+        );
+    }
+
+    return tSmms;
+}
+
+
 void manufacturedEikonalVerifier::applyConstraints
 (
     volScalarField& activationTime
@@ -174,23 +218,21 @@ void manufacturedEikonalVerifier::applyConstraints
         return;
     }
 
-    scalar minX =  GREAT;
-    scalar maxX = -GREAT;
+    scalar minX = GREAT, minY = GREAT, minZ = GREAT;
     const vectorField& centres = mesh_.C().primitiveField();
 
     forAll(centres, cellI)
     {
         minX = min(minX, centres[cellI].x());
-        maxX = max(maxX, centres[cellI].x());
+        minY = min(minY, centres[cellI].y());
+        minZ = min(minZ, centres[cellI].z());
     }
 
     reduce(minX, minOp<scalar>());
-    reduce(maxX, maxOp<scalar>());
+    reduce(minY, minOp<scalar>());
+    reduce(minZ, minOp<scalar>());
 
-    const tensor conductivity =
-        manufacturedEikonalConstantConductivity(conductivity_);
-    const vector gradTau =
-        manufacturedEikonalGradTau(conductivity, chi_, Cm_, c0_);
+    const vector k = manufacturedEikonalK(dimension_);
 
     scalarField& activationValues = activationTime.primitiveFieldRef();
     activationValues = -1.0;
@@ -198,12 +240,16 @@ void manufacturedEikonalVerifier::applyConstraints
     const scalar tolerance = 1e-8;
     forAll(activationValues, cellI)
     {
-        const scalar x = centres[cellI].x();
-        if (   Foam::mag(x - minX) <= tolerance
-            || Foam::mag(x - maxX) <= tolerance)
+        const vector& c = centres[cellI];
+        bool constrain = false;
+        
+        if (dimension_ >= 1 && Foam::mag(c.x() - minX) <= tolerance) constrain = true;
+        if (dimension_ >= 2 && Foam::mag(c.y() - minY) <= tolerance) constrain = true;
+        if (dimension_ >= 3 && Foam::mag(c.z() - minZ) <= tolerance) constrain = true;
+
+        if (constrain)
         {
-            activationValues[cellI] =
-                manufacturedEikonalTau(centres[cellI], gradTau);
+            activationValues[cellI] = manufacturedEikonalTau(c, k);
         }
     }
 
@@ -212,7 +258,7 @@ void manufacturedEikonalVerifier::applyConstraints
     {
         fvPatchScalarField& patchField = boundary[patchI];
 
-        if (patchField.empty())
+        if (patchField.empty() || patchField.type() == "empty")
         {
             continue;
         }
@@ -221,8 +267,7 @@ void manufacturedEikonalVerifier::applyConstraints
 
         forAll(patchField, faceI)
         {
-            patchField[faceI] =
-                manufacturedEikonalTau(faceCentres[faceI], gradTau);
+            patchField[faceI] = manufacturedEikonalTau(faceCentres[faceI], k);
         }
     }
 
@@ -240,17 +285,14 @@ void manufacturedEikonalVerifier::postProcess
         return;
     }
 
-    const tensor conductivity =
-        manufacturedEikonalConstantConductivity(conductivity_);
-    const vector gradTau =
-        manufacturedEikonalGradTau(conductivity, chi_, Cm_, c0_);
+    const vector k = manufacturedEikonalK(dimension_);
 
     const vectorField& centres = mesh_.C().primitiveField();
     scalarField exact(centres.size(), 0.0);
 
     forAll(exact, cellI)
     {
-        exact[cellI] = manufacturedEikonalTau(centres[cellI], gradTau);
+        exact[cellI] = manufacturedEikonalTau(centres[cellI], k);
     }
 
     const auto norms = computeNorms(activationTime.primitiveField(), exact);
@@ -275,7 +317,7 @@ void manufacturedEikonalVerifier::postProcess
             << "# chi " << chi_ << "\n"
             << "# Cm " << Cm_ << "\n"
             << "# c0 " << c0_ << "\n"
-            << "# gradTau " << gradTau << "\n"
+            << "# k " << k << "\n"
             << "# field L1 L2 Linf\n"
             << "activationTime " << norms.first().first() << " "
             << norms.first().second() << " " << norms.second() << "\n";

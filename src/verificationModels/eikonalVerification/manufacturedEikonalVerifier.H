@@ -85,6 +85,8 @@ public:
 
     void applyConstraints(volScalarField& activationTime) const;
 
+    tmp<volScalarField> sourceTerm() const;
+
     bool shouldPostProcess() const
     {
         return enabled_ && !errorsReported_;

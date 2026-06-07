@@ -35,6 +35,7 @@ SourceFiles
 
 #include "electroMechanicalModel.H"
 #include "activeTensionModel.H"
+#include "electromechanicalVerificationModel.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -72,6 +73,9 @@ class sequentialElectroMechanical
 
         //- Runtime-selectable active tension model
         autoPtr<activeTensionModel> activeTensionModel_;
+
+        //- Optional coupled electromechanics verification model
+        autoPtr<electromechanicalVerificationModel> verificationModelPtr_;
 
         //- Flag: print solid objectRegistry probe on first evolve() call only
         bool firstTimeStep_;

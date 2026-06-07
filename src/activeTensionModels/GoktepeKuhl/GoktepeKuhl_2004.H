@@ -56,7 +56,7 @@ GoktepeKuhlDependencyMap()
 
     return dep;
 }
-void
+inline void
 GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 {
 
@@ -75,7 +75,11 @@ GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 }
 
 
-void
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void
 GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
     /* membrane_potential */

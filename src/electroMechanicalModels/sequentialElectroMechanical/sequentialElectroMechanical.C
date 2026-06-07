@@ -74,6 +74,7 @@ sequentialElectroMechanical::sequentialElectroMechanical
             electro().mesh().nCells()
         )
     ),
+    verificationModelPtr_(),
     firstTimeStep_(true)
 {
     const ElectromechanicalSignalProvider* prov = electro().provider();
@@ -84,6 +85,21 @@ sequentialElectroMechanical::sequentialElectroMechanical
     }
 
     activeTensionModel_->validateProvider();
+
+    if
+    (
+        electromechanicalVerificationModel::configured
+        (
+            electroMechanicalProperties()
+        )
+    )
+    {
+        verificationModelPtr_ =
+            electromechanicalVerificationModel::New
+            (
+                electroMechanicalProperties()
+            );
+    }
 
     if (solid().mesh().nCells() != electro().mesh().nCells())
     {
@@ -111,6 +127,15 @@ sequentialElectroMechanical::sequentialElectroMechanical
         );
 
         Info<< "    Registered f0 in solid objectRegistry." << nl << endl;
+    }
+
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->initialize
+        (
+            const_cast<volScalarField&>(electro().Vm()),
+            solid().D()
+        );
     }
 
     Info<< "    Active tension model: "
@@ -180,6 +205,15 @@ bool sequentialElectroMechanical::evolve()
 {
     Info<< "Evolving " << type() << endl;
 
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->preSolve
+        (
+            const_cast<volScalarField&>(electro().Vm()),
+            solid().D()
+        );
+    }
+
     electro().evolve();
 
     // Update the fibre stretch from the (lagged) solid deformation before
@@ -202,6 +236,15 @@ bool sequentialElectroMechanical::evolve()
 
     solid().evolve();
     solid().updateTotalFields();
+
+    if
+    (
+        verificationModelPtr_.valid()
+     && verificationModelPtr_->shouldPostProcess(electro().Vm(), solid().D())
+    )
+    {
+        verificationModelPtr_->postProcess(electro().Vm(), solid().D(), Ta_);
+    }
 
     return true;
 }

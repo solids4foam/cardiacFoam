@@ -446,6 +446,32 @@ void eikonalMyocardiumDomain::advance
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
+    tmp<volScalarField> tSmms;
+    if (verificationModelPtr_.valid() && verificationModelPtr_->enabled())
+    {
+        tSmms = verificationModelPtr_->sourceTerm();
+    }
+    else
+    {
+        tSmms.reset
+        (
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Smms",
+                    mesh().time().timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh(),
+                dimensionedScalar("Smms", dimless, 0.0)
+            )
+        );
+    }
+    const volScalarField& Smms = tSmms();
+
     auto solveActivationEqn = [&]()
     {
         gradActivationTime_ = fvc::grad(activationTime_);
@@ -468,6 +494,7 @@ void eikonalMyocardiumDomain::advance
               + fvc::div(phiU_, activationTime_)
               - divPhiU_*activationTime_
               - c0_*G_
+              + Smms
             );
 
             activationEqn.setValues(constrainedCells, constrainedValues);
@@ -480,6 +507,7 @@ void eikonalMyocardiumDomain::advance
                -fvm::laplacian(M_, activationTime_)
               + c0_*G_
              == one
+              + Smms
             );
 
             activationEqn.relax();

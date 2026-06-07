@@ -58,7 +58,7 @@ NashPanfilovDependencyMap()
 }
 
 
-void
+inline void
 NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 {
     CONSTANTS[AC_Vp] = 20.0;
@@ -70,8 +70,11 @@ NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
     STATES[Ta] = 0.0;
 }
 
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
 
-void
+CARDIAC_HOST_DEVICE inline void
 NashPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
     ALGEBRAIC[AV_e] = ((ALGEBRAIC[AV_u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
