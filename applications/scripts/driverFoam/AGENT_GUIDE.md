@@ -130,7 +130,7 @@ so the read above is safe at any instant. Do not implement polling that opens
 
 Strict planning predicts artifacts before launch and assigns artifact ids to
 workflow steps when catalog coverage is available. The strict step/run path
-now reconciles claimed artifact ids against on-disk files after each step. If an 
+now reconciles claimed artifact ids against on-disk files after each step. If an
 expected artifact is missing, the step automatically fails with a `missing_artifacts` code.
 
 Legacy engine runs already write `artifacts_realized.json` at terminal status.
@@ -269,9 +269,9 @@ Each entry in `pre_solve_commands` runs in `case_dir` before `cardiacFoam`. Stri
 
 `mutators.py` implements a hybrid parsing architecture for all OpenFOAM dictionary mutations (`read_foam_entry`, `update_foam_entry`, `ensure_foam_dict`, `remove_foam_dict`).
 
-If a target dictionary uses complex OpenFOAM C++ syntax (e.g., `#include` macros, `/* block comments */`, nested scopes, `#calc`), the naive Python regex parser may fail with `KeyError: unbalanced braces` or `KeyError: not found`. 
+If a target dictionary uses complex OpenFOAM C++ syntax (e.g., `#include` macros, `/* block comments */`, nested scopes, `#calc`), the naive Python regex parser may fail with `KeyError: unbalanced braces` or `KeyError: not found`.
 
-To handle this, all mutator functions automatically fallback to using OpenFOAM's native `foamDictionary` C++ executable if it exists in the `PATH`. 
+To handle this, all mutator functions automatically fallback to using OpenFOAM's native `foamDictionary` C++ executable if it exists in the `PATH`.
 If you are writing custom bash scripts or tools that need to query values from these complex dictionaries, do not rely on `grep` or `sed`. Instead, use the native CLI or the `mutators.py` API:
 
 ```bash
@@ -293,7 +293,6 @@ for manifest in list_runs("/path/to/runs/dir"):
 ## Known gaps
 
 These are real limitations; the agent must not assume them:
-
 
 - **Automatic retry/checkpoint policy** is not implemented. `run --strict`
   resumes pending saved state, but it refuses to automatically retry a failed

@@ -65,7 +65,6 @@ monodomainSolverCoeffs
 }
 ```
 
-
 ## Coupling parameters
 
 Set in `constant/electroMechanicalProperties`:

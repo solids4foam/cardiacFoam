@@ -1,6 +1,5 @@
 # Active Tension Models Architecture
 
-
 ## Overview
 
 `src/activeTensionModels` contains runtime-selectable active-tension models

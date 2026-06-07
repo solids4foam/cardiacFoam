@@ -46,4 +46,3 @@ advance scheme remains valid for a simple explanatory case.
 ./Allrun
 ./Allrun parallel
 ```
-

@@ -82,7 +82,7 @@ Current concrete verifier:
 
 - `manufacturedEikonalVerifier`
 
-### Manufactured/reference helpers
+### Eikonal manufactured/reference helpers
 
 Shared analytical helpers live beside the concrete verifiers:
 

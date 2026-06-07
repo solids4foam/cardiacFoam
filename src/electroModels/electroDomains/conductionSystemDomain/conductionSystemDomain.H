@@ -90,7 +90,7 @@ class conductionSystemDomain
     autoPtr<OFstream> outputPtr_;
     wordList exportVars_;
     wordList debugVars_;
-    
+
     wordList ionicExport_;
     labelList ionicExportStateIndices_;
     labelList ionicExportAlgebraicIndices_;

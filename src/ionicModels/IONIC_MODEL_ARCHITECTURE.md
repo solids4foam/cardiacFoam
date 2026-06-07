@@ -283,5 +283,3 @@ The batched path uses:
 Runtime-selectable compact variants (`<Model>compactBatched`) are aliases that
 enable compact support through `useCompactSupport_` without changing the
 integration equations.
-
-
