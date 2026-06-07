@@ -41,11 +41,11 @@ addToRunTimeSelectionTable
 namespace
 {
 
-template<class FieldType>
+template<class FieldType1, class FieldType2>
 std::tuple<scalar, scalar, scalar> errorNorms
 (
-    const FieldType& num,
-    const FieldType& exact
+    const FieldType1& num,
+    const FieldType2& exact
 )
 {
     scalar sumAbs = 0.0;
