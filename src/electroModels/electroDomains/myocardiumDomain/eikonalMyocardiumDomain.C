@@ -22,7 +22,7 @@ License
 #include "DynamicList.H"
 #include "Switch.H"
 #include "fixedValueFvPatchFields.H"
-#include "manufacturedEikonalVerifier.H"
+#include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 
 namespace Foam
@@ -85,10 +85,10 @@ bool manufacturedEikonalVerificationEnabled(const dictionary& electroProperties)
     }
 
     const word modelType =
-        verificationDictPtr->lookupOrDefault<word>("type", word::null);
+        verificationDictPtr->lookupOrDefault<word>("type", "none");
 
     return
-        modelType == "manufacturedEikonalVerifier"
+        modelType != "none"
      && verificationDictPtr->lookupOrDefault<Switch>("enabled", true);
 }
 
@@ -386,7 +386,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     }
 
     verificationModelPtr_ =
-        manufacturedEikonalVerifier::New
+        eikonalVerificationModel::New
         (
             electroProperties_,
             mesh(),

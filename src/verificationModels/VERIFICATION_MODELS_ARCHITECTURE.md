@@ -10,21 +10,22 @@ manufactured/reference helpers they use.
 manufactured/reference code they use:
 
 - `electroVerificationModel`
-  for myocardium-side verification hooks
+  abstract base class — defined in `electroModels/core/verificationModels/`.
 - `ecgVerificationModel`
-  for ECG-side verification hooks
-
-The code here is not structured as `ionicModel` subclasses. That was an older
-shape. The current implementation uses dedicated verifier base classes.
+  abstract base class — defined in `electroModels/core/verificationModels/`.
+- `eikonalVerificationModel`
+  abstract base class — defined in `electroModels/core/verificationModels/`.
 
 ## Directory layout
 
 ```text
 src/verificationModels/
-├── electroVerification/      # Base electro verifier family
 ├── monodomainVerification/   # Monodomain manufactured/reference verifiers
 ├── bidomainVerification/     # Bidomain manufactured/reference verifiers
-├── ecgVerification/          # ECG verifier family
+├── bathBidomainVerification/ # Bath-bidomain manufactured/reference verifiers
+├── eikonalVerification/      # Eikonal manufactured/reference verifiers
+├── ecgVerification/          # ECG verifier family (concrete verifiers only)
+├── electromechanicsVerification/ # Electromechanics verifiers
 ├── Make/
 └── README.md
 ```
@@ -35,8 +36,8 @@ src/verificationModels/
 
 Defined in:
 
-- `electroVerification/electroVerificationModel.H`
-- `electroVerification/electroVerificationModel.C`
+- `electroModels/core/verificationModels/electroVerificationModel.H` ← **authoritative location**
+- `electroModels/core/verificationModels/electroVerificationModel.C`
 
 Role:
 
@@ -61,14 +62,43 @@ Shared analytical helpers live beside the concrete verifiers:
 These provide exact/reference fields and helper formulas used by the concrete
 verification models.
 
+## Eikonal verification
+
+### `eikonalVerificationModel`
+
+Defined in:
+
+- `electroModels/core/verificationModels/eikonalVerificationModel.H` ← **authoritative location**
+- `electroModels/core/verificationModels/eikonalVerificationModel.C`
+
+Role:
+
+- runtime-selection base for eikonal activation-time verifiers
+- constructed from dictionary input
+- provides verification hooks that eikonal spatial workflows can call before or after
+  the main solve
+
+Current concrete verifier:
+
+- `manufacturedEikonalVerifier`
+
+### Manufactured/reference helpers
+
+Shared analytical helpers live beside the concrete verifiers:
+
+- `eikonalVerification/manufacturedEikonalReference.H`
+
+These provide exact/reference fields and helper formulas used by the concrete
+verification models.
+
 ## ECG-side verification
 
 ### `ecgVerificationModel`
 
 Defined in:
 
-- `ecgVerification/ecgVerificationModel.H`
-- `ecgVerification/ecgVerificationModel.C`
+- `electroModels/core/verificationModels/ecgVerificationModel.H` ← **authoritative location**
+- `electroModels/core/verificationModels/ecgVerificationModel.C`
 
 Role:
 
@@ -95,13 +125,4 @@ It does that through:
 - error reporting and summary hooks
 - runtime-selected verifier objects integrated into the main electro stack
 
-## What this layer does not own
-
-This folder does not own:
-
-- the ionic model hierarchy
-- the myocardium solver kernels
-- the ECG solver kernels
-
-It provides verification-side models and reference utilities that are called
-from those workflows.
+This folder does not own the myocardium or ECG solvers. It provides verification-side models called from those workflows.

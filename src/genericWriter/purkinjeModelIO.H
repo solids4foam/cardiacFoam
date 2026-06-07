@@ -41,6 +41,7 @@ SourceFiles
 #include "labelList.H"
 #include "scalarField.H"
 #include "scalarList.H"
+#include "PtrList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -55,6 +56,13 @@ class purkinjeModelIO
 {
 public:
 
+    struct ResolvedTokens
+    {
+        wordList networkTokens;
+        wordList ionicTokens;
+        wordList unknownTokens;
+    };
+
     // Constructors
 
         //- Not instantiable – all methods are static
@@ -62,6 +70,15 @@ public:
 
 
     // Static Member Functions
+
+        static ResolvedTokens filterTokens
+        (
+            const wordList& userExport,
+            const char* const stateNames[],
+            int nStates,
+            const char* const algNames[],
+            int nAlg
+        );
 
         //- Open/create a time-series output file and write the column header.
         //  Creates outDir if it does not exist.
@@ -115,7 +132,9 @@ public:
             const scalarField&  Vm1D,
             const scalarField&  Iion1D,
             const labelList&    pvjNodes,
-            const scalarField&  terminalSource
+            const scalarField&  terminalSource,
+            const PtrList<scalarField>& ionicFields = PtrList<scalarField>(),
+            const wordList&             ionicFieldNames = wordList()
         );
 };
 

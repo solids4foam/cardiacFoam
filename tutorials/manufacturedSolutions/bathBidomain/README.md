@@ -19,12 +19,8 @@ The case uses one base mesh over `[-1,2]` with two cellZones:
 
 `topoSet` creates the zones after `blockMesh`. The
 `bathPotentialDomain` block inside `bidomainSolverCoeffs` enables the global
-heart+bath `phiE` equation and binds that field back into the bidomain solver.
-ECG sampling is intentionally disabled for the convergence sweep. The
-manufactured bath verification targets the solved fields `Vm`, `phiE`, and
-`phiI`; ECG electrode placement should be handled in a separate ECG-focused
-case with electrodes placed on unambiguous surface locations.
-The driver ECG smoke configuration enables one `torsoECG` domain and one
+heart+bath `phiE` equation. ECG sampling is disabled for the convergence sweep;
+the driver ECG smoke configuration enables one `torsoECG` domain and one
 `pseudoECG` domain with electrodes on the exterior bath surface.
 
 ## Manufactured Parameters
@@ -63,7 +59,7 @@ blockMesh -dict system/blockMeshDict.1D
 Driver-managed 1D/2D/3D parallel convergence sweep:
 
 ```bash
-source /Volumes/OpenFOAM-v2412/etc/bashrc
+source $WM_PROJECT_DIR/etc/bashrc
 tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/run_all_dimensions.sh
 ```
 
@@ -73,7 +69,7 @@ post-processing.
 Parallel ECG ownership smoke run:
 
 ```bash
-source /Volumes/OpenFOAM-v2412/etc/bashrc
+source $WM_PROJECT_DIR/etc/bashrc
 applications/scripts/driverFoam/bin/driverFoam sim \
     --entry manufacturedFDABathBidomain \
     --config tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/driver_config_ecg_smoke.json

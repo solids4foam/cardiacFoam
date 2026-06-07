@@ -7,10 +7,12 @@ electrophysiology and ECG workflows.
 
 ```text
 src/verificationModels/
-├── electroVerification/      # Base electro verifier family
 ├── monodomainVerification/   # Monodomain manufactured/reference verifiers
 ├── bidomainVerification/     # Bidomain manufactured/reference verifiers
-├── ecgVerification/          # ECG verification family
+├── bathBidomainVerification/ # Bath-bidomain manufactured/reference verifiers
+├── eikonalVerification/      # Eikonal manufactured/reference verifiers
+├── ecgVerification/          # ECG verifier family (concrete verifiers only)
+├── electromechanicsVerification/ # Electromechanics verifiers
 ├── Make/
 └── README.md
 ```
@@ -28,9 +30,14 @@ reference helpers used to validate:
 ## Main abstractions
 
 - `electroVerificationModel`
-  Base runtime-selection layer for myocardium-side verification hooks
+  Abstract base for myocardium-side verification hooks. Compiled in
+  `electroModels/core/verificationModels/`.
 - `ecgVerificationModel`
-  Base runtime-selection layer for ECG-side verification hooks
+  Abstract base for ECG-side verification hooks. Compiled in
+  `electroModels/core/verificationModels/`.
+- `eikonalVerificationModel`
+  Abstract base for eikonal activation-time verification hooks. Compiled in
+  `electroModels/core/verificationModels/`.
 
 ## Concrete families
 
@@ -38,6 +45,8 @@ reference helpers used to validate:
   Manufactured monodomain references and verifiers
 - `bidomainVerification/`
   Manufactured bidomain references and verifiers
+- `eikonalVerification/`
+  Manufactured eikonal references and verifiers
 - `ecgVerification/`
   ECG verification helpers such as pseudo-ECG manufactured verification
 
@@ -47,6 +56,7 @@ Registered verifier types include:
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
 - `singleCellManufacturedFDABidomainVerifier`
+- `manufacturedEikonalVerifier`
 - `pseudoECGManufacturedVerifier`
 - `bathECGManufacturedVerifier`
 

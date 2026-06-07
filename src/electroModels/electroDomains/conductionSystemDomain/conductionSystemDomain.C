@@ -22,6 +22,7 @@ License
 #include "DynamicList.H"
 #include "IOdictionary.H"
 #include "PstreamReduceOps.H"
+#include "ionicVariableCompatibility.H"
 
 namespace Foam
 {
@@ -250,17 +251,86 @@ void conductionSystemDomain::initialiseOutputControls()
 {
     const dictionary& ovDict = coeffsDict_.subOrEmptyDict("outputVariables");
 
-    exportVars_ = ovDict.getOrDefault<wordList>
+    wordList userExport = ovDict.getOrDefault<wordList>
     (
         "export",
         wordList{"Vm", "IcouplingSource"}
     );
+
+    if (ionicModelPtr_.valid())
+    {
+        purkinjeModelIO::ResolvedTokens resolved = purkinjeModelIO::filterTokens
+        (
+            userExport,
+            ionicModelPtr_->ioStateNames(),
+            ionicModelPtr_->ioNumStates(),
+            ionicModelPtr_->ioAlgebraicNames(),
+            ionicModelPtr_->ioNumAlgebraic()
+        );
+
+        exportVars_ = resolved.networkTokens;
+        ionicExport_ = resolved.ionicTokens;
+
+        if (resolved.unknownTokens.size() > 0)
+        {
+            WarningInFunction
+                << "The following export variables are unknown and will be ignored: "
+                << resolved.unknownTokens << endl;
+        }
+
+        ionicExportStateIndices_.setSize(ionicExport_.size(), -1);
+        ionicExportAlgebraicIndices_.setSize(ionicExport_.size(), -1);
+
+        forAll(ionicExport_, i)
+        {
+            const word& var = ionicExport_[i];
+            bool isVmDummy = false;
+            label sIdx = -1;
+            label aIdx = -1;
+            label rIdx = -1;
+
+            ionicVariableCompatibility::resolveVariable
+            (
+                var,
+                ionicModelPtr_->ioStateNames(),
+                ionicModelPtr_->ioNumStates(),
+                ionicModelPtr_->ioAlgebraicNames(),
+                ionicModelPtr_->ioNumAlgebraic(),
+                isVmDummy,
+                sIdx,
+                aIdx,
+                rIdx
+            );
+
+            if (sIdx >= 0)
+            {
+                ionicExportStateIndices_[i] = sIdx;
+            }
+            else if (aIdx >= 0)
+            {
+                ionicExportAlgebraicIndices_[i] = aIdx;
+            }
+        }
+    }
+    else
+    {
+        exportVars_ = userExport;
+    }
 
     debugVars_ = ovDict.getOrDefault<wordList>
     (
         "debug",
         wordList()
     );
+
+    if (ovDict.found("probeNodes"))
+    {
+        probeNodes_ = ovDict.lookup("probeNodes");
+    }
+    else
+    {
+        probeNodes_ = identity(graph_.nNodes);
+    }
 }
 
 
@@ -324,6 +394,28 @@ void conductionSystemDomain::openOutputFile()
     {
         Info<< "conductionSystemDomain: writing to "
             << outDir/"purkinjeNetwork.dat" << nl << endl;
+    }
+
+    ionicOutputPtrs_.setSize(ionicExport_.size());
+    forAll(ionicExport_, i)
+    {
+        const word& var = ionicExport_[i];
+        DynamicList<word> ionicColNames(probeNodes_.size());
+        forAll(probeNodes_, pI)
+        {
+            ionicColNames.append("node" + Foam::name(probeNodes_[pI]) + "_" + var);
+        }
+
+        ionicOutputPtrs_.set
+        (
+            i,
+            purkinjeModelIO::openTimeSeries
+            (
+                outDir,
+                "purkinjeNetwork_" + var + ".dat",
+                ionicColNames
+            ).ptr()
+        );
     }
 }
 
@@ -567,6 +659,48 @@ void conductionSystemDomain::write()
         purkinjeModelIO::writeRow(outputPtr_.ref(), time().value(), values);
     }
 
+    PtrList<scalarField> ionicFields(ionicExport_.size());
+
+    if (ionicModelPtr_.valid() && ionicExport_.size() > 0)
+    {
+        const auto* statesPtr = ionicModelPtr_->ioStatesPtr();
+        const auto* algebraicPtr = ionicModelPtr_->ioAlgebraicPtr();
+
+        forAll(ionicExport_, i)
+        {
+            scalarField varField(graph_.nNodes, 0.0);
+            label sIdx = ionicExportStateIndices_[i];
+            label aIdx = ionicExportAlgebraicIndices_[i];
+
+            if (sIdx >= 0 && statesPtr)
+            {
+                forAll(varField, nodeI)
+                {
+                    varField[nodeI] = (*statesPtr)[nodeI][sIdx];
+                }
+            }
+            else if (aIdx >= 0 && algebraicPtr)
+            {
+                forAll(varField, nodeI)
+                {
+                    varField[nodeI] = (*algebraicPtr)[nodeI][aIdx];
+                }
+            }
+
+            ionicFields.set(i, new scalarField(varField));
+
+            if (Pstream::master() && ionicOutputPtrs_.set(i))
+            {
+                DynamicList<scalar> ionicValues(probeNodes_.size());
+                forAll(probeNodes_, pI)
+                {
+                    ionicValues.append(varField[probeNodes_[pI]]);
+                }
+                purkinjeModelIO::writeRow(ionicOutputPtrs_[i], time().value(), ionicValues);
+            }
+        }
+    }
+
     if (Pstream::master())
     {
         const fileName vtkDir
@@ -589,7 +723,9 @@ void conductionSystemDomain::write()
             Vm1D_,
             Iion1D_,
             terminalNodes_,
-            terminalSource_
+            terminalSource_,
+            ionicFields,
+            ionicExport_
         );
 
         pvdTimes_.append(time().value());

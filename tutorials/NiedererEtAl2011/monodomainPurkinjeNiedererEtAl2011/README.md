@@ -6,8 +6,6 @@ network coupled into the 3D monodomain tissue.
 - Myocardium solver: `monodomainSolver`
 - Conduction solver: `monodomain1DSolver`
 - PVJ coupler: `reactionDiffusionPvjCoupler`
-- Goal: document a minimal Purkinje-enabled slab case without changing the core
-  Niederer probe layout
 
 ## Folder structure
 
@@ -49,5 +47,3 @@ advance scheme remains valid for a simple explanatory case.
 ./Allrun parallel
 ```
 
-Use the generated fields and the case-local regression reference to inspect how
-the Purkinje terminals alter the activation pattern near the PVJ locations.

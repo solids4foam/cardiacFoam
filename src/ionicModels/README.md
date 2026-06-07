@@ -79,8 +79,7 @@ Optional overrides:
 - `Cai`: available when a state matching intracellular calcium naming exists
   (e.g. `Ca_i`, `Cai`, `calcium_Cai`).
 
-This means most detailed ionic models expose `Vm`/`Cai` without per-model
-signal boilerplate.
+Most ionic models expose `Vm`/`Cai` automatically via base-class metadata.
 
 ## Tissue vs dimension selection
 
@@ -98,11 +97,11 @@ The base class can write/export without model-specific code when metadata hooks 
 
 Common behaviors:
 
-- Filter exported/debug variable lists.
-- Write full or selected headers.
-- Import solver-owned volumetric fields back into ionic state storage when needed.
-- Export selected variables into `volScalarField` lists.
-- Support relaxed variable name compatibility for Vm/rates through `ionicVariableCompatibility`.
+- Filtering of exported/debug variable lists
+- Full or selected header writing
+- Import of solver-owned volumetric fields back into ionic state storage when needed
+- Export of selected variables into `volScalarField` lists
+- Relaxed variable name compatibility for Vm/rates through `ionicVariableCompatibility`
 
 ## Compiled ionic models
 

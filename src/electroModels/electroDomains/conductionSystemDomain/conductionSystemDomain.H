@@ -44,6 +44,7 @@ Author
 #include "purkinjeModelIO.H"
 #include "scalarField.H"
 #include "Switch.H"
+#include "PtrList.H"
 
 namespace Foam
 {
@@ -89,6 +90,12 @@ class conductionSystemDomain
     autoPtr<OFstream> outputPtr_;
     wordList exportVars_;
     wordList debugVars_;
+    
+    wordList ionicExport_;
+    labelList ionicExportStateIndices_;
+    labelList ionicExportAlgebraicIndices_;
+    labelList probeNodes_;
+    PtrList<OFstream> ionicOutputPtrs_;
     Switch reportSetup_;
 
     // PVD time-series index: parallel lists of physical time and VTK filename

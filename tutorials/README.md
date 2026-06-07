@@ -21,6 +21,8 @@ This folder contains reference and regression cases for `cardiacFoam`.
   (`bidomainFDAManufactured`)
 - `manufacturedSolutions/bathBidomain` : bidomain-with-bath manufactured
   verification (`bathBidomainFDAManufactured`, `torsoECG`)
+- `manufacturedSolutions/eikonalECG` : activation-time and ECG manufactured
+  verification for the eikonal solver
 
 ## Common script pattern
 

@@ -130,9 +130,8 @@ so the read above is safe at any instant. Do not implement polling that opens
 
 Strict planning predicts artifacts before launch and assigns artifact ids to
 workflow steps when catalog coverage is available. The strict step/run path
-currently records which artifact ids a successful step claims to produce, but
-it does not yet reconcile those ids against on-disk files after each step. That
-post-step reconciliation is the next autonomy milestone.
+now reconciles claimed artifact ids against on-disk files after each step. If an 
+expected artifact is missing, the step automatically fails with a `missing_artifacts` code.
 
 Legacy engine runs already write `artifacts_realized.json` at terminal status.
 After such a run reaches a terminal status, agents should compare predicted
@@ -165,13 +164,15 @@ Three layers of discovery:
 
 ## What the validator catches
 
-`validate_run(run)` runs five families of checks:
+`validate_run(run)` runs seven families of checks:
 
 - **Required fields** — every `required` entry has a value.
 - **Enum membership** — values for enum-typed entries are in `enum_values`.
 - **Structured constraints** — `applicable_when` / `forbidden_when` / `required_when` / `mutually_exclusive_with`.
-- **Solver coupling** — pairings like (`bidomainSolver`, any Purkinje) reject with the table's stated reason.
+- **Solver coupling** — pairings like (`singleCellSolver`, any Purkinje) reject with the table's stated reason.
 - **Block references** — `domainCouplings.<name>.conductionNetworkDomain` must point at a declared block.
+- **Tissue heterogeneity** — `ionicHeterogeneity` requires a supported `ionicModel` and `endoMInterface < mEpiInterface`.
+- **Tissue compatibility** — `tissue` must be in the `ionicModel`'s `compatible_tissues`.
 
 If the dict builder rejects your input with `ValueError`, the message lists every violation. Fix the selectors or overrides and call again.
 
@@ -264,6 +265,23 @@ build_and_launch(
 
 Each entry in `pre_solve_commands` runs in `case_dir` before `cardiacFoam`. Strings are shell-split; lists are passed directly. When `openfoam_bashrc` is set every command is sourced into the OpenFOAM environment.
 
+### Parsing Complex OpenFOAM Dictionaries (foamDictionary)
+
+`mutators.py` implements a hybrid parsing architecture for all OpenFOAM dictionary mutations (`read_foam_entry`, `update_foam_entry`, `ensure_foam_dict`, `remove_foam_dict`).
+
+If a target dictionary uses complex OpenFOAM C++ syntax (e.g., `#include` macros, `/* block comments */`, nested scopes, `#calc`), the naive Python regex parser may fail with `KeyError: unbalanced braces` or `KeyError: not found`. 
+
+To handle this, all mutator functions automatically fallback to using OpenFOAM's native `foamDictionary` C++ executable if it exists in the `PATH`. 
+If you are writing custom bash scripts or tools that need to query values from these complex dictionaries, do not rely on `grep` or `sed`. Instead, use the native CLI or the `mutators.py` API:
+
+```bash
+# Safely extract a value, ignoring comments and expanding macros
+foamDictionary system/controlDict -entry functions/myFunction/type -value
+
+# Safely modify a value inline
+foamDictionary system/controlDict -entry startTime -set 0.0
+```
+
 ### Find past runs
 
 ```python
@@ -276,20 +294,16 @@ for manifest in list_runs("/path/to/runs/dir"):
 
 These are real limitations; the agent must not assume them:
 
-- **Bidomain + Purkinje coupling** is rejected by the validator — the `bidomainPvjCoupler` C++ class does not exist yet. Once it lands, add the pairing to `solver_coupling.py`.
+
 - **Automatic retry/checkpoint policy** is not implemented. `run --strict`
   resumes pending saved state, but it refuses to automatically retry a failed
   saved state.
-- **Post-step artifact reconciliation** is not implemented. Strict steps record
-  claimed artifact ids from `workflow_dag.steps[*].produces`, but they do not
-  yet verify expected files on disk after each step.
+
 - **Environment preflight** is limited. Strict planning validates catalogs,
   workflow shape, and artifact predictability, but it does not yet prove that
   OpenFOAM is sourced, MPI is available, required executables are on `PATH`, or
   there is sufficient writable disk space.
-- **Per-case workflow sidecars** are not implemented. Workflows are inferred
-  and normalized centrally rather than declared by case-local
-  `workflow_contract.json` files.
+
 - **Active-tension models beyond NashPanfilov and GoktepeKuhl** are not in `active_tension_catalog.py`. Future C++ models must be registered there before artifact prediction will cover their state variables.
 
 If your agent depends on any of these, expect failure and consider a workaround (e.g. starting from an existing tutorial template and overriding deltas rather than constructing from scratch).

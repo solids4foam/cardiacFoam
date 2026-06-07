@@ -27,8 +27,13 @@ core/
 │   ├── staggered/                        Single-pass weak coupling
 │   └── pimpleStaggered/                  Iterative PIMPLE strong coupling
 │
-└── electrophysiologyModel/
-    └── electrophysiologyModel.H/.C    Concrete myocardium-centred entry point
+├── electrophysiologyModel/
+│   └── electrophysiologyModel.H/.C    Concrete myocardium-centred entry point
+│
+└── verificationModels/
+    ├── electroVerificationModel.H/.C  Abstract base for myocardium-side verifiers
+    ├── ecgVerificationModel.H/.C      Abstract base for ECG-side verifiers
+    └── eikonalVerificationModel.H/.C  Abstract base for eikonal-side verifiers
 ```
 
 ### Layout rule
@@ -39,6 +44,12 @@ core/
 The flat headers (`electroDomainInterface.H`, `electroStateProvider.H`, etc.)
 are included by all three subfolders and carry no dependencies on each other, so
 they stay at the root level.
+
+`verificationModels/` lives in `core/` rather than in `src/verificationModels/`
+to break the circular library dependency: concrete verifiers in
+`libverificationModels` must inherit the base class, but that base class needs
+`electroStateProvider` from `libelectroModels`. Compiling the base inside `core`
+keeps the dependency order `electroModels → verificationModels`.
 
 ---
 
@@ -73,6 +84,17 @@ Registers under `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` in
 the runtime selection table. Owns the ionic model, optional verification model,
 and output field lists. Delegates spatial domain assembly to
 `electrophysicsSystemBuilder`.
+
+### `verificationModels/`
+
+Abstract base classes for the two verification families:
+
+- **`electroVerificationModel`** — runtime-selection base for myocardium-side
+  verifiers. Concrete verifiers in `src/verificationModels/` inherit from it.
+- **`ecgVerificationModel`** — runtime-selection base for ECG-side verifiers.
+  Concrete verifiers in `src/verificationModels/ecgVerification/` inherit from it.
+- **`eikonalVerificationModel`** — runtime-selection base for eikonal activation-time
+  verifiers. Concrete verifiers in `src/verificationModels/eikonalVerification/` inherit from it.
 
 ---
 

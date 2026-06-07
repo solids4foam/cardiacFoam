@@ -82,6 +82,28 @@ class TestScopedMutators(unittest.TestCase):
             with self.assertRaises(KeyError):
                 update_foam_entry(path, "b", 2, scope="missing")
 
+    def test_python_parser_fails_on_c_style_comments(self) -> None:
+        text = "\n".join(
+            [
+                "someDict",
+                "{",
+                "    /* This is a block comment with a brace { inside it */",
+                "    value 1;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            # The current update_foam_entry uses brace counting, so the extra {
+            # inside the block comment throws off the parser, causing it to
+            # incorrectly raise a KeyError for unbalanced braces.
+            with self.assertRaises(KeyError):
+                update_foam_entry(path, "value", 2, scope="someDict")
+
     def test_remove_foam_dict_removes_nested_dictionary(self) -> None:
         text = "\n".join(
             [

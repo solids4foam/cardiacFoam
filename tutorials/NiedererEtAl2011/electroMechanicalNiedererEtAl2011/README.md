@@ -61,15 +61,10 @@ monodomainSolverCoeffs
     tissue epicardialCells;
     solutionAlgorithm explicit;
 
-    externalStimulus
-    {
-        ...
-    }
+    externalStimulus { ... }
 }
 ```
 
-The former top-level electro selector and split include fragments are no longer
-used by this case.
 
 ## Coupling parameters
 

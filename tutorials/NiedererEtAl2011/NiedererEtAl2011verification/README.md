@@ -10,7 +10,7 @@ monodomain simulations.
 ## Folder structure
 
 ```text
-tutorials/NiedererEtAl2011/
+tutorials/NiedererEtAl2011/NiedererEtAl2011verification/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties

@@ -2,7 +2,7 @@
 
 Multi-domain spatial electrophysiology framework for OpenFOAM-based cardiac simulation.
 
-Compiled as `libelectroModels`. Provides the full co-simulation infrastructure for three physically distinct cardiac subsystems — myocardium, body-surface ECG, and the conduction system — operating on separate meshes and coupled through well-defined interfaces at every timestep.
+Compiled as `libelectroModels`. Provides co-simulation infrastructure for three cardiac subsystems — myocardium, body-surface ECG, and the conduction system — each on a separate mesh, coupled through typed interfaces at every timestep.
 
 ---
 
@@ -31,7 +31,7 @@ electroModels/
 
 ## `core/`
 
-The framework backbone. It owns orchestration only. Domain-family selection is pushed down into the domain layer via interfaces/factories, so `core` does not branch on myocardium or conduction solver implementations.
+The framework backbone. Owns orchestration only; domain-family selection is delegated to domain-layer factories.
 
 | File | Description |
 |---|---|
@@ -44,36 +44,27 @@ The framework backbone. It owns orchestration only. Domain-family selection is p
 | `advanceSchemes/pimpleStaggered/` | PIMPLE iterative strong coupling: repeats the conduction/myocardium block until convergence. |
 | `electroDomainInterface.H` | Minimal lifecycle contract that all electro domains implement. Pure virtual: `time()`, `advance(t0, dt)`. Optional no-ops: `prepareTimeStep()`, `write()`, `end()`. |
 | `electroStateProvider.H` | Read-only field interface implemented by domains that expose fields upstream: `VmPtr()`, `phiEPtr()`, `conductivityPtr()`. Consumed by ECG solver and the builder. |
-| `dimVoltage.H` | Shared dimension set for voltage fields (`[1 2 -3 0 0 -1 0]`, i.e. V). Avoids repeated inline dimension literals across all solvers. |
-| `overrideTypeName.H` | Macro to assign a lowercase runtime type name independent of C++ class name, used with `addToRunTimeSelectionTable`. |
+| `dimVoltage.H` | Shared dimension set for voltage fields (`[1 2 -3 0 0 -1 0]`, i.e. V). |
+| `overrideTypeName.H` | Macro to assign a lowercase runtime type name, used with `addToRunTimeSelectionTable`. |
 
 ---
 
 ## `electroDomains/`
 
-Each domain owns its mesh, fields, a run-time-selectable solver, and implements `electroDomainInterface`. Domains are almost entirely decoupled from each other — they communicate only through `electroStateProvider` references and `electroCouplers`.
+Domains own specific meshes and fields, communicating via `electroStateProvider` and `electroCouplers`.
 
 ### `myocardiumDomain/`
 
-The primary 3D cardiac region. This folder now owns the myocardium-domain family selection.
-
-**`myocardiumDomainInterface`**
-
-- Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
-
-- Factory: `myocardiumDomainInterface::New(...)`
-
-- Role: selects the concrete myocardium domain from the active `myocardiumSolver` contract without leaking solver branching into `core`
+Primary 3D cardiac region. Selects concrete solvers via `myocardiumDomainInterface`.
 
 **`myocardiumDomain`**
 
 - Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
-
 - Owns: `autoPtr<myocardiumSolver>`, `ionicModel&`
 
 - Fields: `Vm_` (transmembrane voltage), `sourceField_` (external current injection)
 
-- On construction: detects whether the solver provides `phiE` (bidomain case) and binds it; no special-casing needed in the builder
+- On construction: detects whether the solver provides `phiE` (bidomain case) and binds it
 
 - Domain-specific capabilities (not part of the lifecycle interface): `suggestExplicitDeltaT()`, `shouldPostProcess()`, `exportStates()`, `postProcess()`, `provider()`
 
@@ -145,18 +136,14 @@ The Purkinje/His-bundle network. Advances activation on a graph or 1D cable, the
 
 ## `myocardiumModels/`
 
-Concrete reaction-diffusion implementations of `myocardiumSolver`. Only `monodomainSolver` and `bidomainSolver` register in this table. The `myocardiumSolver` dictionary key is a top-level selector: it first dispatches through the parent `electroModel` table, then `electrophysiologyModel` builds the concrete myocardium domain through `myocardiumDomainInterface::New(...)`.
+Concrete reaction-diffusion implementations of `myocardiumSolver`.
 
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
 | `monodomainSolver` | `monodomainSolver` | `∂Vm/∂t − ∇·(σᵢ∇Vm) = Iion` | Standard single-domain FVM |
-| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Allocates and owns `phiE` field; registered as a full factory entry |
+| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Allocates and owns `phiE` field |
 
-`singleCellSolver` is registered in the parent `electroModel` table and bypasses
-the myocardium-domain factory. The canonical 3D eikonal workflow selects
-`myocardiumSolver eikonalSolver`, enters `electrophysiologyModel`, and builds
-`eikonalMyocardiumDomain`; the legacy `myocardiumModels/eikonalSolver` class is
-not a runtime-selected top-level solver.
+`singleCellSolver` is registered in the parent `electroModel` table and bypasses the myocardium-domain factory. The canonical eikonal workflow selects `myocardiumSolver eikonalSolver` and builds `eikonalMyocardiumDomain`.
 
 **Monodomain PDE:**
 
@@ -206,7 +193,7 @@ where G = conductance/length
 
 ```
 
-`monodomain1DSolver` uses the **Hines tree-elimination algorithm** for O(n) implicit solution: forward elimination leaf → root, then back-substitution root → leaf. Requires tree topology (enforced at graph load).
+`monodomain1DSolver` uses the Hines tree-elimination algorithm — O(n). Requires tree topology.
 
 `eikonalSolver1D` uses a single BFS pass: `activationTime[child] = activationTime[parent] + edgeLength / c0`.
 
@@ -225,12 +212,7 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it into `myocardiumDomain::sourceField_`. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
 
-Bath/extracellular-potential coupling is **not** a coupler class in this
-codebase. `extracellularPotentialDomain` (an `electroStateDomain` under
-`electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve
-and binds a restricted view of it back into the bidomain myocardium solver
-directly, replacing the older `bathDomain` / `bathECGSolver` /
-`bidomainBathECGSolver` / `heartBathInterfaceCoupler` triad.
+Bath/extracellular-potential coupling is **not** a coupler class. `extracellularPotentialDomain` (an `electroStateDomain` under `electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve and binds a restricted view of it directly into the bidomain myocardium solver.
 
 **PVJ coupling equation** (`reactionDiffusionPvjCoupler`):
 

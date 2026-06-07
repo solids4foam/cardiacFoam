@@ -19,34 +19,15 @@ src/electroModels/
 
 ```
 
-## Top-level runtime selection
-
-The current top-level electro workflow is selected from:
+The top-level electro workflow is selected via `myocardiumSolver` in `constant/electroProperties`:
 
 ```cpp
-myocardiumSolver  monodomainSolver;
-
+myocardiumSolver  monodomainSolver;  // or: bidomainSolver | eikonalSolver
 ```
 
-or:
+`electroModel::New(...)` reads that key and dispatches to `electrophysiologyModel`.
 
-```cpp
-myocardiumSolver  bidomainSolver;
-
-```
-
-or:
-
-```cpp
-myocardiumSolver  eikonalSolver;
-
-```
-
-`electroModel::New(...)` reads that key and dispatches to the assembled
-orchestration wrapper `electrophysiologyModel`.
-
-`singleCellSolver` is also compiled in this library, but it is not part of the
-multi-domain `electrophysiologyModel` path.
+`singleCellSolver` is compiled in this library but is not part of the multi-domain `electrophysiologyModel` path.
 
 ## Folder roles
 
@@ -115,9 +96,9 @@ Contains staged electro-domain coupling contracts and implementations:
 
 - PVJ coupling family
 
-Bath coupling no longer needs a dedicated coupler — the unified
-`extracellularPotentialDomain` directly binds its restricted phiE view into
-the bidomain myocardium solver.
+Bath coupling is handled directly by `extracellularPotentialDomain`, which owns
+the global `phiE` solve and binds a restricted phiE view into the bidomain
+myocardium solver. No dedicated coupler class is needed.
 
 ## Read next
 

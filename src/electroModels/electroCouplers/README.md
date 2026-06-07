@@ -42,16 +42,9 @@ implementation.
 `electroDomainCoupler` stores the primary tissue domain and a secondary domain
 and provides three hook points:
 
-- `prepareSecondaryCoupling()`
-  - runs before the upstream auxiliary domain advances
-- `preparePrimaryCoupling()`
-  - runs after the auxiliary-domain advance and before the primary myocardium
-    solve
-- `preparePostPrimaryCoupling()`
-  - runs before a downstream domain such as ECG advances
-
-This split supports staged domain updates without hard-wiring a single coupling
-order into each domain.
+- `prepareSecondaryCoupling()` — runs before the upstream auxiliary domain advances
+- `preparePrimaryCoupling()` — runs after the auxiliary-domain advance, before the primary myocardium solve
+- `preparePostPrimaryCoupling()` — runs before a downstream domain such as ECG advances
 
 ## Bath / extracellular potential coupling
 
@@ -98,22 +91,13 @@ The coupler reuses internal buffers for:
 
 `reactionDiffusionPvjCoupler` supports:
 
-- `unidirectional`
-  - one-way driving from the Purkinje network into the myocardium
-  - the myocardium receives injected current
-  - the network-side coupling buffers are zeroed before the network advance
-- `bidirectional`
-  - two-way exchange between network and myocardium
-  - allows retrograde influence from tissue state through the resistive PVJ
-    term
+- `unidirectional` — one-way driving from the Purkinje network into the myocardium
+- `bidirectional` — two-way exchange between network and myocardium
 
 `eikonalPvjCoupler` supports:
 
-- `unidirectional`
-  - one-way transfer of Purkinje terminal activation times into the myocardium
-    eikonal domain
-- `bidirectional`
-  - reserved, but currently stops with an "in development" message
+- `unidirectional` — one-way transfer of Purkinje terminal activation times into the myocardium eikonal domain
+- `bidirectional` — reserved; stops with an "in development" message
 
 ## Runtime sequence
 
@@ -124,8 +108,5 @@ In the default staggered workflow:
 3. The coupler recomputes the PVJ exchange using the updated network state.
 4. The myocardium receives the projected volumetric source and advances.
 
-This is efficient and works well for one-way coupling. Bidirectional coupling
-is stiffer and generally benefits from the iterative
-`pimpleStaggeredElectrophysicsAdvanceScheme`; see
-[../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
-for the timestep-level tradeoffs.
+For bidirectional coupling, use `pimpleStaggeredElectrophysicsAdvanceScheme`;
+see [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md) for the timestep sequence.

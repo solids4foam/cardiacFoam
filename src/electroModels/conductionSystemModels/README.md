@@ -20,9 +20,7 @@ src/electroModels/conductionSystemModels/
   - Registered as `monodomain1DSolver`.
   - Advances graph-backed Purkinje state using ionic reaction terms plus an
     implicit cable-equation diffusion step.
-  - In the current nested implementation, the diffusion solve assumes a tree
-    topology prepared by `conductionGraph` and uses graph traversal data built
-    by the domain.
+  - The diffusion solve assumes a tree topology prepared by `conductionGraph`.
 
 - `eikonalSolver1D`
   - Registered as `eikonalSolver1D`.

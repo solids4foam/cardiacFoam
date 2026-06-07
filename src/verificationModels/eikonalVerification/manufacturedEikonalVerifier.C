@@ -23,9 +23,19 @@ License
 #include "OSspecific.H"
 #include "PstreamReduceOps.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
+#include "addToRunTimeSelectionTable.H"
 
 namespace Foam
 {
+
+defineTypeNameAndDebug(manufacturedEikonalVerifier, 0);
+
+addToRunTimeSelectionTable
+(
+    eikonalVerificationModel,
+    manufacturedEikonalVerifier,
+    dictionary
+);
 
 namespace
 {
@@ -88,6 +98,7 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
     const Switch& eikonalAdvectionDiffusionApproach
 )
 :
+    eikonalVerificationModel(electroProperties),
     mesh_(mesh),
     conductivity_(conductivity),
     chi_(chi.value()),
@@ -112,56 +123,6 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
         << endl;
 }
 
-
-autoPtr<manufacturedEikonalVerifier> manufacturedEikonalVerifier::New
-(
-    const dictionary& electroProperties,
-    const fvMesh& mesh,
-    const volTensorField& conductivity,
-    const dimensionedScalar& chi,
-    const dimensionedScalar& Cm,
-    const dimensionedScalar& c0,
-    const Switch& eikonalAdvectionDiffusionApproach
-)
-{
-    const dictionary* verificationDictPtr =
-        electroProperties.findDict("verificationModel");
-
-    if (!verificationDictPtr)
-    {
-        return autoPtr<manufacturedEikonalVerifier>(nullptr);
-    }
-
-    const word modelType =
-        verificationDictPtr->lookupOrDefault<word>("type", word::null);
-
-    if (modelType.empty() || modelType == "none")
-    {
-        return autoPtr<manufacturedEikonalVerifier>(nullptr);
-    }
-
-    if (modelType != "manufacturedEikonalVerifier")
-    {
-        FatalErrorInFunction
-            << "Unknown eikonal verificationModel type " << modelType
-            << ". Valid type is manufacturedEikonalVerifier."
-            << exit(FatalError);
-    }
-
-    return autoPtr<manufacturedEikonalVerifier>
-    (
-        new manufacturedEikonalVerifier
-        (
-            electroProperties,
-            mesh,
-            conductivity,
-            chi,
-            Cm,
-            c0,
-            eikonalAdvectionDiffusionApproach
-        )
-    );
-}
 
 
 tmp<volScalarField> manufacturedEikonalVerifier::sourceTerm() const

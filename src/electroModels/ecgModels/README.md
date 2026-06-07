@@ -60,7 +60,6 @@ See [../electroDomains/README.md](../electroDomains/README.md) for the
 domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep sequence.
 
-`torsoECG` is part of the active orchestration path. It is wired by
-`electrophysicsSystemBuilder` when an ECG domain selects `torsoECG` and a
-`bidomainSolverCoeffs.bathPotentialDomain` block provides the global `phiE`
-state.
+`torsoECG` is wired by `electrophysicsSystemBuilder` when an ECG domain selects
+`torsoECG` and a `bidomainSolverCoeffs.bathPotentialDomain` block provides the
+global `phiE` state.

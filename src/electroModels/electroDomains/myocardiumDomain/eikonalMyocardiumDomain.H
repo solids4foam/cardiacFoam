@@ -37,7 +37,7 @@ Author
 namespace Foam
 {
 
-class manufacturedEikonalVerifier;
+class eikonalVerificationModel;
 
 class eikonalMyocardiumDomain
 :
@@ -63,7 +63,7 @@ class eikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
-    autoPtr<manufacturedEikonalVerifier> verificationModelPtr_;
+    autoPtr<eikonalVerificationModel> verificationModelPtr_;
 
     tmp<volTensorField> initialiseConductivity() const;
 

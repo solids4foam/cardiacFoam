@@ -20,8 +20,9 @@ src/
 Build order from `src/Allwmake`:
 
 ```text
-couplingModels lnInclude → genericWriter → ionicModels → verificationModels →
-activeTensionModels → electroModels → electroMechanicalModels (full mode only)
+couplingModels lnInclude → genericWriter → ionicModels →
+activeTensionModels → electroModels → verificationModels →
+electroMechanicalModels (full mode only)
 
 ```
 
@@ -72,9 +73,7 @@ batched or GPU-oriented support headers.
 
 **Tissue heterogeneity support:** Ionic models can optionally configure transmural
 spatial heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial)
-through the `ionicHeterogeneity` dictionary block. This is implemented via the
-`configureIonicHeterogeneity(...)` virtual override, supported by the
-`ionicHeterogeneity.H/C` utility headers. Currently implemented in scalar `BuenoOrovio`
+through the `ionicHeterogeneity` dictionary block. Implemented in `BuenoOrovio`
 and batched models `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`,
 `ToRORd_dynClBatched`. See `src/ionicModels/README.md` for configuration details.
 
@@ -82,18 +81,15 @@ and batched models `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`,
 
 Verification infrastructure for spatial electrophysiology and ECG workflows.
 
+This library depends on `electroModels` (compiled after it) because concrete
+verifiers inherit from base classes (e.g., `electroVerificationModel`, `ecgVerificationModel`, and `eikonalVerificationModel`)
+which are defined in `electroModels/core/verificationModels/`.
+
 Main layers:
 
-- `electroVerification/` — base `electroVerificationModel`
-
 - `monodomainVerification/`
-
 - `bidomainVerification/`
-
-- `ecgVerification/` — base `ecgVerificationModel` and ECG-specific verifiers
-
-These are not ionic models. They are separate runtime-selected verifier
-families that hook into myocardium or ECG workflows.
+- `ecgVerification/`
 
 ### `activeTensionModels` — `libactiveTensionModels`
 
@@ -105,9 +101,6 @@ Current concrete models:
 - `GoktepeKuhl`
 
 - `NashPanfilov`
-
-The implementation is integration-point based and scalar-state based. It is not
-a tensor-mechanics framework on its own.
 
 ### `couplingModels`
 
@@ -125,7 +118,8 @@ The staged Purkinje, ECG, and bath-style electro couplers live under
 
 The main spatial electrophysiology stack. It contains:
 
-- top-level orchestration in `core/`
+- top-level orchestration in `core/`, including the abstract base verifiers
+  (`electroVerificationModel`, `ecgVerificationModel`, and `eikonalVerificationModel`) inside `core/verificationModels/`
 
 - domain state owners in `electroDomains/`
 

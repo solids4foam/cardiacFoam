@@ -28,8 +28,9 @@ Author
 #ifndef manufacturedEikonalVerifier_H
 #define manufacturedEikonalVerifier_H
 
+#include "eikonalVerificationModel.H"
+#include "overrideTypeName.H"
 #include "Switch.H"
-#include "autoPtr.H"
 #include "dimensionedScalar.H"
 #include "dictionary.H"
 #include "volFields.H"
@@ -37,7 +38,7 @@ Author
 namespace Foam
 {
 
-class manufacturedEikonalVerifier
+class manufacturedEikonalVerifier : public eikonalVerificationModel
 {
     const fvMesh& mesh_;
     const volTensorField& conductivity_;
@@ -55,6 +56,8 @@ class manufacturedEikonalVerifier
     void operator=(const manufacturedEikonalVerifier&) = delete;
 
 public:
+
+    OverrideTypeName("manufacturedEikonalVerifier");
 
     manufacturedEikonalVerifier
     (
@@ -78,21 +81,21 @@ public:
         const Switch& eikonalAdvectionDiffusionApproach
     );
 
-    bool enabled() const
+    virtual bool enabled() const override
     {
         return enabled_;
     }
 
-    void applyConstraints(volScalarField& activationTime) const;
+    virtual void applyConstraints(volScalarField& activationTime) const override;
 
-    tmp<volScalarField> sourceTerm() const;
+    virtual tmp<volScalarField> sourceTerm() const override;
 
-    bool shouldPostProcess() const
+    virtual bool shouldPostProcess() const override
     {
         return enabled_ && !errorsReported_;
     }
 
-    void postProcess(const volScalarField& activationTime);
+    virtual void postProcess(const volScalarField& activationTime) override;
 };
 
 } // End namespace Foam

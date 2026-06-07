@@ -28,13 +28,10 @@ For this workflow, the ionic model exposes manufactured verification metadata,
 and the exact manufactured reference no longer lives inside the ionic-model
 folder.
 
-That split is now:
-
 - ionic-model-side behavior: `bidomainFDAManufactured`
 - analytical oracle: `verificationModels`
-- generic field verification hook: `modelPrePostProcessors`
-- concrete manufactured field verifier:
-  `verificationModels/bidomainVerification`
+- field verification hook: `modelPrePostProcessors`
+- field verifier: `verificationModels/bidomainVerification`
 
 ## Outputs
 
@@ -60,6 +57,3 @@ Driver-managed sweeps:
 ```bash
 applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setupManufacturedFDA/driver_config.json
 ```
-
-The driver is the intended entrypoint for large dimension / cell-count / time-step
-sweeps.

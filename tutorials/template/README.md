@@ -104,23 +104,6 @@ For a homogeneous slab, `c0 = 0.7 m/s` is a reasonable starting point.
 If using an anisotropic conductivity tensor, c0 should reflect the dominant
 (fibre-direction) velocity.
 
-## Pathology examples (ionicConstantOverrides)
-
-The `tutorials/PATHOS/` directory contains production-ready pathology
-tutorials that demonstrate `ionicConstantOverrides` in use:
-
-| Tutorial | Pathology modelled |
-|----------|--------------------|
-| `PATHOS/BrugadaSyndrome/` | SCN5A INa loss-of-function |
-| `PATHOS/AcuteIschemia/` | Combined INa + IK1 depression |
-| `PATHOS/LBBB/` | Left bundle branch block (conduction delay) |
-| `PATHOS/RBBB/` | Right bundle branch block |
-| `PATHOS/Scar_Ablation/` | Scar tissue + ablation |
-
-Copy the `ionicConstantOverrides` block from one of these and adapt the
-scale/set values for your pathology. See also the `ionicConstantOverrides`
-commented section in `constant/electroProperties` in this template.
-
 ## Utilities
 
 All cardiacFoam utilities are catalogued in

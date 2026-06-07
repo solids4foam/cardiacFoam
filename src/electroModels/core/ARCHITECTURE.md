@@ -155,14 +155,11 @@ just holds the assembled pieces.
 
 ### `system/electrophysicsSystemBuilder.H/C` (namespace)
 
-Dictionary-driven factory. Replaces hard-coded solver branching with
-runtime configuration:
+Dictionary-driven factory.
 
 ```cpp
-// Instead of: if (type == "monodomain") { new monodomainSolver... }
 auto myocardium = myocardiumDomainInterface::New(mesh, electroProperties);
-system.setMyocardium(myocardium);  // works with any registered type
-
+system.setMyocardium(myocardium);
 ```
 
 Builder functions:
@@ -179,10 +176,7 @@ Builder functions:
 Current rules:
 
 - `conductionNetworkDomains` and `domainCouplings` are optional
-
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
-
-- The old single-domain fallback and `primaryDomain` field were removed
 
 ---
 
@@ -329,20 +323,16 @@ domainCouplings
 
 ---
 
-## Extension guidance
+## Extension rules
 
-The intended rule when extending `core`:
+When extending `core`:
 
 - `core` owns orchestration only
+- Domain layers own domain-family selection and state
+- Solver folders own numerical kernels
+- Coupler folders own exchange laws
 
-- domain layers own domain-family selection and state
-
-- solver folders own numerical kernels
-
-- coupler folders own exchange laws
-
-New solver-family branching should go into a domain-layer factory, not into the
-builder.
+New solver-family branching belongs in a domain-layer factory, not in the builder.
 
 ---
 

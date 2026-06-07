@@ -22,7 +22,7 @@ License
 #include "dimVoltage.H"
 #include "ecgDomain.H"
 #include "ecgModelIO.H"
-#include "eikonalVerification/manufacturedEikonalReference.H"
+#include "mathematicalConstants.H"
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
@@ -89,7 +89,7 @@ eikonalECG::eikonalECG(const dictionary& dict)
 
 scalar eikonalECG::manufacturedTemplateValue(scalar localTime) const
 {
-    return manufacturedEikonalTemplateValue(localTime);
+    return Foam::sin(2.0*constant::mathematical::pi*localTime);
 }
 
 

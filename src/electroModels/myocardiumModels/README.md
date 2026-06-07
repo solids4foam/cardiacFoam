@@ -35,7 +35,6 @@ src/electroModels/myocardiumModels/
   - Not registered as a dictionary-selectable top-level solver.
   - Computes activation times with a reduced-order anisotropic eikonal
     formulation rather than a full ionic-PDE solve.
-  - Useful for fast propagation studies where only activation timing is needed.
   - The canonical dictionary path is `myocardiumSolver eikonalSolver`, which
     selects `electrophysiologyModel` and builds `eikonalMyocardiumDomain`.
 
@@ -49,19 +48,7 @@ src/electroModels/myocardiumModels/
   - Used for ionic-model testing, calibration, and waveform generation rather
     than tissue-scale propagation.
 
-## Relationship to myocardium-domain code
-
-`myocardiumDomain` owns the reaction-diffusion tissue path, while
-`eikonalMyocardiumDomain` owns the reduced-order activation-time path.
-
-Together, the myocardium-domain layer owns:
-
-- the tissue fields (`Vm`, `Iion`, `sourceField`, `activationTime`)
-- the ionic model
-- stimulus handling
-- export/post-processing hooks
-
-The solver classes in this directory own the numerical kernel associated with
-the chosen tissue formulation or workflow. See
+The solver classes in this directory own the numerical kernel for the chosen
+tissue formulation. See
 [../electroDomains/README.md](../electroDomains/README.md) for the domain-level
 state and lifecycle.

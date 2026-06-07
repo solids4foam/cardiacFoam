@@ -21,8 +21,7 @@ Batched (SoA) models: `AlievPanfilovBatched`, `BuenoOrovioBatched`,
 Verification models: `monodomainFDAManufactured`, `bidomainFDAManufactured`,
 `bathBidomainFDAManufactured`.
 
-This file describes the architecture that actually exists in this tree. It is
-not intended as a generic survey of cardiac ionic models.
+This file describes the architecture of `src/ionicModels` as it exists in this tree.
 
 ## Directory Layout
 
@@ -89,8 +88,7 @@ addToRunTimeSelectionTable(ionicModel, MyModel, dictionary);
 
 ## `ionicModel/` support layers
 
-The `ionicModel/` folder now contains more than the classic base class and
-factory code. It also includes:
+The `ionicModel/` folder contains:
 
 - `ionicSelector`
   shared tissue/dimension selection logic
@@ -108,11 +106,9 @@ factory code. It also includes:
 These headers are support infrastructure shared by all 11 `<Model>Batched`
 classes that are compiled via `Make/files`.
 
-## Effective Derived-Class Contract
+## Effective derived-class contract
 
-This codebase does not use the old `advance()/nGates()/initialVm()` style
-interface. The effective contract in this repository is the one implemented by
-the current derived classes:
+The effective contract implemented by derived classes is:
 
 - `solveODE(...)`
 - `derivatives(...)`
@@ -288,15 +284,4 @@ Runtime-selectable compact variants (`<Model>compactBatched`) are aliases that
 enable compact support through `useCompactSupport_` without changing the
 integration equations.
 
-## Deliberate Non-Claims
 
-This document intentionally does not claim the following, because they are not
-the current truth of this tree:
-
-- a `Mitchell` ionic model
-- a `TenTusscher` folder/runtime type separate from `TNNP`
-- an `ORd` folder or runtime type separate from `ToRORd_dynCl`
-- a base-class contract centered on `advance()` / `initialGates()`
-
-If those features are added later, this document should be updated from the
-actual source and `Make/files`, not from external expectations.

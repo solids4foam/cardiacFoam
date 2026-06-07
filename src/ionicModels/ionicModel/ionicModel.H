@@ -115,6 +115,7 @@ class ionicModel
         mutable ionicModelIO::ExportedNamesCache exportedNamesCache_;
         mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
 
+    public:
         // Derived models can override these and then rely on base
         virtual const PtrList<scalarField>* ioStatesPtr() const
         {
@@ -189,6 +190,8 @@ class ionicModel
         {
             return ioStateNames() && ioNumStates() > 0;
         }
+
+    protected:
 
         void applyIonicConstantOverrides() const;
 
