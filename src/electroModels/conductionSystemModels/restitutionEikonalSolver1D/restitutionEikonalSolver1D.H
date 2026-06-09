@@ -41,6 +41,7 @@ SourceFiles
 
 #include "conductionSystemSolver.H"
 #include "restitutionModel.H"
+#include "activationHistory.H"
 #include "stimulusIO.H"
 #include "fvMesh.H"
 #include "overrideTypeName.H"
@@ -81,11 +82,12 @@ class restitutionEikonalSolver1D
     labelList   shortDICount_;
     scalarField minDI_;
 
+    // Per-node multiple-activation (multi-beat) history.
+    activationHistory history_;
+
     // Stimulus: shared S1-S2 protocol (timing) applied at node sites.
     labelList        stimSites_;
     StimulusProtocol stimProtocol_;
-
-    scalar  initialAPD_;
 
     // Per-edge conduction heterogeneity: CV scaled by sqrt(g/gRef); an edge
     // with zero conductance is non-conducting (structural block, e.g. LBBB).

@@ -19,6 +19,8 @@ License
 
 #include "restitutionModel.H"
 
+#include "restitutionTemplates.H"
+
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
 
 void Foam::restitutionModel::readCurve
@@ -99,17 +101,32 @@ Foam::scalar Foam::restitutionModel::interpolate
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::restitutionModel::restitutionModel(const dictionary& dict)
+Foam::restitutionModel::restitutionModel()
 :
-    DImin_(dict.get<scalar>("DI_min")),
-    DImax_(dict.get<scalar>("DI_max")),
-    APDmin_(dict.get<scalar>("APD_min")),
-    APDmax_(dict.get<scalar>("APD_max")),
-    CVmin_(dict.get<scalar>("CV_min")),
-    CVmax_(dict.get<scalar>("CV_max"))
+    DImin_(restitutionTemplates::purkinjeDI[0]),
+    DImax_(restitutionTemplates::purkinjeDI[restitutionTemplates::purkinjeSize - 1]),
+    APDmin_(restitutionTemplates::purkinjeAPD[0]),
+    APDmax_(restitutionTemplates::purkinjeAPD[restitutionTemplates::purkinjeSize - 1]),
+    CVmin_(restitutionTemplates::purkinjeCV[0]),
+    CVmax_(restitutionTemplates::purkinjeCV[restitutionTemplates::purkinjeSize - 1])
 {
-    readCurve(dict, "APD_curve", apdDI_, apdVal_);
-    readCurve(dict, "CV_curve", cvDI_, cvVal_);
+    using namespace restitutionTemplates;
+
+    apdDI_.setSize(purkinjeSize);
+    apdVal_.setSize(purkinjeSize);
+    for(label i = 0; i < purkinjeSize; ++i)
+    {
+        apdDI_[i] = purkinjeDI[i];
+        apdVal_[i] = purkinjeAPD[i];
+    }
+
+    cvDI_.setSize(purkinjeSize);
+    cvVal_.setSize(purkinjeSize);
+    for(label i = 0; i < purkinjeSize; ++i)
+    {
+        cvDI_[i] = purkinjeDI[i];
+        cvVal_[i] = purkinjeCV[i];
+    }
 }
 
 

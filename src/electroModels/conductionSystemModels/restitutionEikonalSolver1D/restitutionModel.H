@@ -78,7 +78,7 @@ class restitutionModel
 
 public:
 
-    explicit restitutionModel(const dictionary& dict);
+    restitutionModel();
 
     //- APD for a given diastolic interval (input and output clamped).
     scalar apd(const scalar DI) const;

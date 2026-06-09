@@ -46,14 +46,7 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
     const dictionary& solverCoeffs
 )
 :
-    restitutionPtr_(new restitutionModel(solverCoeffs.subDict("restitution"))),
-    initialAPD_
-    (
-        solverCoeffs.subDict("restitution").lookupOrDefault<scalar>
-        (
-            "initialAPD", 300.0
-        )
-    ),
+    restitutionPtr_(new restitutionModel()),
     useEdgeConductance_
     (
         solverCoeffs.lookupOrDefault<Switch>("useEdgeConductance", true)
@@ -80,8 +73,7 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
             << " period=" << stimProtocol_.stimPeriodS1
             << " n=" << stimProtocol_.nStim1
             << "; S2 coupling=" << stimProtocol_.stimPeriodS2
-            << " n=" << stimProtocol_.nStim2 << nl
-            << "    initialAPD=" << initialAPD_ << endl;
+            << " n=" << stimProtocol_.nStim2 << endl;
     }
 }
 
@@ -97,7 +89,7 @@ void Foam::restitutionEikonalSolver1D::initialiseState
 
     RT_.setSize(N, -GREAT);
     DI_.setSize(N, GREAT);
-    APD_.setSize(N, initialAPD_);
+    APD_.setSize(N, restitutionPtr_->apd(GREAT));
     nextTact_.setSize(N, GREAT);
     minDI_.setSize(N, GREAT);
 
@@ -108,6 +100,8 @@ void Foam::restitutionEikonalSolver1D::initialiseState
     blockCount_.setSize(N, 0);
     wavebreakCount_.setSize(N, 0);
     shortDICount_.setSize(N, 0);
+
+    history_.reset(N);
 
     initialised_ = true;
 }
@@ -187,6 +181,7 @@ void Foam::restitutionEikonalSolver1D::advance
         const scalar DIact = te - RT_[i];
 
         Tact[i] = te;
+        history_.record(i, te);
         DI_[i] = DIact;
         APD_[i] = restitutionPtr_->apd(DIact);
         RT_[i] = te + APD_[i];
@@ -336,6 +331,9 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
         (*sdPtr)[i] = scalar(shortDICount_[i]);
     }
     fields.set(6, sdPtr);
+
+    // Append activationCount + activationTime_1..N for the multi-beat history.
+    history_.appendDiagnostics(names, fields);
 }
 
 
