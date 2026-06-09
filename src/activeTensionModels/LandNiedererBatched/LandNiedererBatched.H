@@ -105,6 +105,11 @@ public:
         return r;
     }
 
+    virtual scalar timeScaleFactor() const override
+    {
+        return 1000.0; // scales dt from s to ms for the batched executor
+    }
+
     virtual void calculateTension
     (
         const scalar t,

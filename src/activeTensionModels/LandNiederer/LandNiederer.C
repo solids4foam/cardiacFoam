@@ -211,7 +211,7 @@ void LandNiederer::derivatives
     // Inject drive signal and stretch into temporary algebraics
     ALGEBRAIC_TMP[AV_Cai]         = currentDriveSignal_;  // [Ca2+]_i, mM
     ALGEBRAIC_TMP[AV_lambda]      = currentLambda_;
-    ALGEBRAIC_TMP[AV_lambda_rate] = currentLambdaRate_;
+    ALGEBRAIC_TMP[AV_lambda_rate] = currentLambdaRate_ * 1e-3; // convert s^-1 to ms^-1
 
     // Compute algebraics and rates (writes into dydt via RATES argument)
     LandNiederer2017computeVariables
@@ -223,7 +223,6 @@ void LandNiederer::derivatives
         ALGEBRAIC_TMP.data()
     );
 }
-
 
 void LandNiederer::jacobian
 (
@@ -273,7 +272,7 @@ void LandNiederer::solveAtPoint
     scalarField& ALGEBRAIC_i = ALGEBRAIC_[i];
     ALGEBRAIC_i[AV_Cai]         = driveVal;
     ALGEBRAIC_i[AV_lambda]      = lambda;
-    ALGEBRAIC_i[AV_lambda_rate] = lambda_rate;
+    ALGEBRAIC_i[AV_lambda_rate] = lambda_rate * 1e-3; // convert s^-1 to ms^-1
 
     // ------------------------------------------------------------------
     // 4. Advance the ODE system over [currentT_, currentT_ + currentDt_]
@@ -281,9 +280,11 @@ void LandNiederer::solveAtPoint
 
     scalarField& STATES_i = STATES_[i];
 
-    scalar tStart = currentT_;
-    scalar tEnd   = currentT_ + currentDt_;
-    scalar step   = currentDt_;
+    // The Land-Niederer biophysics core operates natively in ms, so we must
+    // scale the integration time limits by 1000 to solve the ODE in ms.
+    const scalar tStart = currentT_ * 1000.0;
+    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0;
+    scalar step         = currentDt_ * 1000.0;
 
     odeSolver_->solve(tStart, tEnd, STATES_i, step);
 

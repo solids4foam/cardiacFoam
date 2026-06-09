@@ -173,7 +173,7 @@ void Foam::LandNiedererBatched::evaluateHotPathStateForCell
     // Inject inputs
     algebraicValues[AV_Cai] = driveSignal;
     algebraicValues[AV_lambda] = lambda;
-    algebraicValues[AV_lambda_rate] = lambdaRate_[cellI];
+    algebraicValues[AV_lambda_rate] = lambdaRate_[cellI] * 1e-3; // convert s^-1 to ms^-1
 
     // Compute variables by casting to pointers
     LandNiederer2017computeVariables

@@ -54,15 +54,22 @@ namespace
         if (cellI >= N) return;
 
         // AoS Thread-Local Registers to interface with standard ODE function
-        double localStates[6];
-        double localRates[6];
-        double localAlgebraics[2];
+        double localStates[NUM_STATES];
+        double localRates[NUM_STATES];
+        double localAlgebraics[NUM_ALGEBRAIC];
 
         // Gather from Global SoA
-        for (int i = 0; i < 6; ++i)
+        for (int i = 0; i < NUM_STATES; ++i)
         {
             localStates[i] = STATES[i * N + cellI];
         }
+        for (int i = 0; i < NUM_ALGEBRAIC; ++i)
+        {
+            localAlgebraics[i] = ALGEBRAIC[i * N + cellI];
+        }
+
+        // Convert lambda_rate from s^-1 to ms^-1 for the biophysics core
+        localAlgebraics[AV_lambda_rate] *= 1e-3;
 
         // Compute using the standard biophysics core
         LandNiederer2017computeVariables
@@ -74,12 +81,18 @@ namespace
             localAlgebraics
         );
 
+        // Convert computed rates from ms^-1 back to s^-1
+        for (int i = 0; i < NUM_STATES; ++i)
+        {
+            localRates[i] *= 1000.0;
+        }
+
         // Scatter to Global SoA
-        for (int i = 0; i < 6; ++i)
+        for (int i = 0; i < NUM_STATES; ++i)
         {
             RATES[i * N + cellI] = localRates[i];
         }
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < NUM_ALGEBRAIC; ++i)
         {
             ALGEBRAIC[i * N + cellI] = localAlgebraics[i];
         }
@@ -100,11 +113,11 @@ void launchLandNiedererBatchKernel
     double* d_ALGEBRAIC
 )
 {
-    // LandNiederer has 6 states and 2 algebraics.
+    // LandNiederer has NUM_STATES states and NUM_ALGEBRAIC algebraics.
     landNiedererBatchKernel<<<nBlocks(N), blockSize>>>
     (
         d_CONSTANTS,
-        N, 6, 2,
+        N, NUM_STATES, NUM_ALGEBRAIC,
         d_STATES,
         d_RATES,
         d_ALGEBRAIC

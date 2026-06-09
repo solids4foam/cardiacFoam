@@ -34,6 +34,7 @@ SourceFiles
 
 #include "electroModel.H"
 #include "ionicModel.H"
+#include "activeTensionModel.H"
 #include "electroVerificationModel.H"
 #include "scalarField.H"
 #include "overrideTypeName.H"
@@ -59,6 +60,18 @@ class singleCellSolver
     //- Optional ionic-model pre/post processor selected from the ionic model
     //  type
     autoPtr<electroVerificationModel> verificationModelPtr_;
+
+    //- Run-time selectable active tension model
+    autoPtr<activeTensionModel> activeTensionModelPtr_;
+
+    //- Output file pointer for active tension
+    autoPtr<OFstream> outputTaPtr_;
+
+    //- Fibre stretch for active tension
+    scalarField lambdaField_;
+
+    //- Active tension output values
+    scalarField TaField_;
 
     //- Processor-declared fields used for pre-processing data exchange
     wordList preProcessFieldNames_;

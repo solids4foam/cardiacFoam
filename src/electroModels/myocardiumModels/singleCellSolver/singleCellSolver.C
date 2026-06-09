@@ -79,6 +79,10 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
     ),
     postProcessFields_(),
     outputPtr_(),
+    activeTensionModelPtr_(),
+    outputTaPtr_(),
+    lambdaField_(1, 1.0),
+    TaField_(1, 0.0),
     Vm_
     (
         IOobject
@@ -181,6 +185,28 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
         );
     }
     ionicModelPtr_->writeHeader(output);
+
+    if (electroProperties().found("activeTensionModel"))
+    {
+        activeTensionModelPtr_ = activeTensionModel::New
+        (
+            electroProperties(),
+            1
+        );
+        activeTensionModelPtr_->setElectromechanicalSignalProvider(*ionicModelPtr_);
+        activeTensionModelPtr_->validateProvider();
+
+        const fileName outFileTa
+        (
+            outputDir
+          / (outputName + "_Ta.txt")
+        );
+        outputTaPtr_.reset(new OFstream(outFileTa));
+        outputTaPtr_->setf(std::ios::fixed);
+        outputTaPtr_->precision(7);
+
+        activeTensionModelPtr_->writeHeader(outputTaPtr_.ref());
+    }
 }
 
 
@@ -200,6 +226,11 @@ bool singleCellSolver::evolve()
         Vm_.internalField(),
         dummyIonicCurrentField_
     );
+
+    if (activeTensionModelPtr_)
+    {
+        activeTensionModelPtr_->calculateTension(runTime().value(), dt, lambdaField_, TaField_);
+    }
 
     const bool shouldPostProcess =
         verificationModelPtr_
@@ -233,6 +264,10 @@ bool singleCellSolver::evolve()
     if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false))
     {
         ionicModelPtr_->write(runTime().value(), outputPtr_.ref());
+        if (activeTensionModelPtr_)
+        {
+            activeTensionModelPtr_->write(runTime().value(), outputTaPtr_.ref());
+        }
     }
 
     return true;
@@ -245,6 +280,11 @@ void singleCellSolver::end()
 
     Info<< "Results written to: " << outputPtr_->name() << nl
         << "Format: [Time STATES ALGEBRAIC RATES]" << endl;
+
+    if (activeTensionModelPtr_)
+    {
+        Info<< "Active tension results written to: " << outputTaPtr_->name() << endl;
+    }
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
