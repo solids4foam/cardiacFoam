@@ -43,7 +43,9 @@ bool selectedSolverRequiresIonicModel(const dictionary& dict)
         )
     );
 
-    return solverType != "eikonalSolver1D" && solverType != "eikonalSolver";
+    return solverType != "eikonalSolver1D"
+        && solverType != "eikonalSolver"
+        && solverType != "restitutionEikonalSolver1D";
 }
 
 } // End anonymous namespace
@@ -712,6 +714,36 @@ void conductionSystemDomain::write()
         snprintf(buf, sizeof(buf), "purkinjeNetwork_%06d.vtk", int(time().timeIndex()));
         const word vtkFilename(buf);
 
+        // VTK point-data: activation time, ionic exports, and any solver-
+        // specific diagnostic fields (e.g. restitution DI/APD/indicators).
+        wordList diagNames;
+        PtrList<scalarField> diagFields;
+        if (solverPtr_.valid())
+        {
+            solverPtr_->diagnosticFields(diagNames, diagFields);
+        }
+
+        const label nIonic = ionicExport_.size();
+        const label nDiag = diagNames.size();
+
+        wordList vtkNames(1 + nIonic + nDiag);
+        PtrList<scalarField> vtkFields(1 + nIonic + nDiag);
+
+        vtkNames[0] = "activationTime";
+        vtkFields.set(0, new scalarField(activationTime_));
+
+        forAll(ionicExport_, i)
+        {
+            vtkNames[1 + i] = ionicExport_[i];
+            vtkFields.set(1 + i, new scalarField(ionicFields[i]));
+        }
+
+        forAll(diagNames, i)
+        {
+            vtkNames[1 + nIonic + i] = diagNames[i];
+            vtkFields.set(1 + nIonic + i, new scalarField(diagFields[i]));
+        }
+
         purkinjeModelIO::writeVTK
         (
             vtkDir,
@@ -724,8 +756,8 @@ void conductionSystemDomain::write()
             Iion1D_,
             terminalNodes_,
             terminalSource_,
-            ionicFields,
-            ionicExport_
+            vtkFields,
+            vtkNames
         );
 
         pvdTimes_.append(time().value());

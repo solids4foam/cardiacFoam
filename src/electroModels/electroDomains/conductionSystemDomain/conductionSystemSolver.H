@@ -35,6 +35,9 @@ Author
 #include "fvMesh.H"
 #include "runTimeSelectionTables.H"
 #include "scalar.H"
+#include "scalarField.H"
+#include "wordList.H"
+#include "PtrList.H"
 
 namespace Foam
 {
@@ -76,6 +79,15 @@ public:
         scalar t0,
         scalar dt
     ) = 0;
+
+    //- Append solver-specific per-node diagnostic fields for output.
+    //  Default: no diagnostics.
+    virtual void diagnosticFields
+    (
+        wordList& names,
+        PtrList<scalarField>& fields
+    ) const
+    {}
 };
 
 } // End namespace Foam

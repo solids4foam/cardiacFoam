@@ -11,6 +11,9 @@ core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
 core/system/electrophysicsSystemBuilder.C
 core/electrophysiologyModel/electrophysiologyModel.C
 
+/* Restitution */
+core/restitution/restitutionModel.C
+
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
 electroDomains/conductionSystemDomain/conductionSystemSolver.C
@@ -36,6 +39,7 @@ ecgModels/torsoECG/torsoECG.C
 /* Conduction system models */
 conductionSystemModels/monodomain1DSolver/monodomain1DSolver.C
 conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C
+conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.C
 
 /* Couplers */
 electroCouplers/electroDomainCoupler.C

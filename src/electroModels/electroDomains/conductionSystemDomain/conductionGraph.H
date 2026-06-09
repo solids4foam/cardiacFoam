@@ -54,6 +54,13 @@ struct conductionGraph
     labelList   orderList;     // BFS order root→leaves (back-substitution pass)
     labelList   reverseOrder;  // BFS order leaves→root (forward-elimination pass)
 
+    // CSR undirected adjacency (built in readFromDict). Neighbours of node i
+    // are adjNeighbours[adjOffsets[i] .. adjOffsets[i+1]-1]; the incident edge
+    // index sits in the matching slot of adjEdges.
+    labelList   adjOffsets;
+    labelList   adjNeighbours;
+    labelList   adjEdges;
+
     conductionGraph()
     :
         nNodes(0),
@@ -110,10 +117,48 @@ struct conductionGraph
             }
         }
 
+        buildAdjacency();
+
         buildTreeTopology(reportSetup);
     }
 
 private:
+
+    // Build the CSR undirected adjacency once from the edge lists.
+    void buildAdjacency()
+    {
+        adjOffsets.setSize(nNodes + 1, 0);
+
+        forAll(edgeNodeA, eI)
+        {
+            ++adjOffsets[edgeNodeA[eI] + 1];
+            ++adjOffsets[edgeNodeB[eI] + 1];
+        }
+
+        for (label i = 0; i < nNodes; ++i)
+        {
+            adjOffsets[i + 1] += adjOffsets[i];
+        }
+
+        adjNeighbours.setSize(2*nEdges);
+        adjEdges.setSize(2*nEdges);
+
+        labelList cursor(adjOffsets);
+
+        forAll(edgeNodeA, eI)
+        {
+            const label a = edgeNodeA[eI];
+            const label b = edgeNodeB[eI];
+
+            adjNeighbours[cursor[a]] = b;
+            adjEdges[cursor[a]] = eI;
+            ++cursor[a];
+
+            adjNeighbours[cursor[b]] = a;
+            adjEdges[cursor[b]] = eI;
+            ++cursor[b];
+        }
+    }
 
     // BFS from node 0 to establish parent–child relationships and the
     // two traversal orderings needed by the Hines two-pass algorithm.
