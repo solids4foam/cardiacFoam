@@ -19,6 +19,7 @@ License
 
 #include "restitutionEikonalSolver1D.H"
 #include "conductionSystemDomain.H"
+#include "restitutionTemplates.H"
 #include "addToRunTimeSelectionTable.H"
 #include <queue>
 #include <utility>
@@ -241,6 +242,20 @@ void Foam::restitutionEikonalSolver1D::advance
                     pq.push(std::make_pair(cand, j));
                 }
             }
+        }
+    }
+
+    scalarField& Vm = domain.membranePotential();
+    forAll(Vm, i)
+    {
+        if (Tact[i] < 0.0)
+        {
+            Vm[i] = restitutionTemplates::purkinjeVmValues[0] * 1e-3;
+        }
+        else
+        {
+            scalar localTime = tNow - Tact[i];
+            Vm[i] = restitutionTemplates::evaluatePurkinjeVmTemplate(localTime) * 1e-3;
         }
     }
 }

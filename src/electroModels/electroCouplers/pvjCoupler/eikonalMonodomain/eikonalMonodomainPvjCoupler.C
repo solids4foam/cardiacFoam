@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalMonodomainPvjCoupler.H"
-#include "tissueTemplates.H"
+#include "restitutionTemplates.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -110,7 +110,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     // Anterograde coupling using voltage template
     const label nTerminalNodes = networkTerminalDomain_.terminalNodes().size();
 
-    scalarField terminalVoltage(nTerminalNodes, eikonalECG_templates::endoValues[0]);
+    scalarField terminalVoltage(nTerminalNodes, restitutionTemplates::purkinjeVmValues[0] * 1e-3);
     const scalar currentTime = mesh_.time().value();
 
     for (label i = 0; i < nTerminalNodes; ++i)
@@ -121,13 +121,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         if (currentTime >= tact)
         {
             const scalar localTime = currentTime - tact;
-            terminalVoltage[i] = eikonalECG_templates::evaluateTemplate
-            (
-                localTime,
-                eikonalECG_templates::endoTimes,
-                eikonalECG_templates::endoValues,
-                eikonalECG_templates::numEndoSamples
-            );
+            terminalVoltage[i] = restitutionTemplates::evaluatePurkinjeVmTemplate(localTime) * 1e-3;
         }
     }
 
