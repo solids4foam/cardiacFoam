@@ -106,17 +106,17 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     ensureSupportedMode();
 
     networkTerminalDomain_.terminalActivationTime(terminalActivationBuffer_);
-    
+
     // Anterograde coupling using voltage template
     const label nTerminalNodes = networkTerminalDomain_.terminalNodes().size();
-    
+
     scalarField terminalVoltage(nTerminalNodes, eikonalECG_templates::endoValues[0]);
     const scalar currentTime = mesh_.time().value();
 
     for (label i = 0; i < nTerminalNodes; ++i)
     {
         const scalar tact = terminalActivationBuffer_[i];
-        
+
         // If activated, compute the template voltage
         if (currentTime >= tact)
         {
