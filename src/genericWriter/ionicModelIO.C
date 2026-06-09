@@ -678,7 +678,26 @@ namespace Foam
         }
 
         // Start writing once we pass that time
-        return (tEnd >= writeAfterTime);
+        if (tEnd < writeAfterTime)
+        {
+            return false;
+        }
+
+        scalar writeFrequency = 0.0;
+        if (dict.found("writeFrequency"))
+        {
+            writeFrequency = readScalar(dict.lookup("writeFrequency"));
+        }
+
+        if (writeFrequency > 0.0)
+        {
+            // Write only if we cross a frequency boundary between tBegin and tEnd
+            label stepBegin = std::floor(tBegin / writeFrequency);
+            label stepEnd = std::floor(tEnd / writeFrequency);
+            return (stepEnd > stepBegin);
+        }
+
+        return true;
     }
 
     void Foam::ionicModelIO::applyConstantOverrides
