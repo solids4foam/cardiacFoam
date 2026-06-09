@@ -249,11 +249,6 @@ myocardiumDomain::myocardiumDomain
         dimensionedScalar("zero", dimTime, 0.0),
         "zeroGradient"
     ),
-    calculateActivationTime_
-    (
-        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).nCells(),
-        true
-    ),
     outFields_(outFields),
     preProcessFieldNames_(),
     preProcessFields_(),
@@ -275,7 +270,11 @@ myocardiumDomain::myocardiumDomain
             "solutionAlgorithm", "implicit"
         ) == "explicit"
     ),
-    reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+    reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false)),
+    activationThreshold_
+    (
+        electroProperties_.lookupOrDefault<scalar>("activationThreshold", 0.0)
+    )
 {
     if (reportSetup_)
     {
@@ -342,16 +341,11 @@ void myocardiumDomain::updateExternalStimulusCurrent
 }
 
 
-void myocardiumDomain::updateActivationTime
-(
-    volScalarField& activationTime,
-    boolList& calculateActivationTime,
-    const volScalarField& Vm
-) const
+void myocardiumDomain::updateActivationTime()
 {
-    const scalarField& VmI = Vm.primitiveField();
-    const scalarField& VmOldI = Vm.oldTime().primitiveField();
-    scalarField& activationTimeI = activationTime.primitiveFieldRef();
+    const scalarField& VmI = Vm_.primitiveField();
+    const scalarField& VmOldI = Vm_.oldTime().primitiveField();
+    scalarField& activationTimeI = activationTime_.primitiveFieldRef();
 
     const scalar oldTime =
         mesh().time().value() - mesh().time().deltaTValue();
@@ -359,18 +353,21 @@ void myocardiumDomain::updateActivationTime
 
     forAll(activationTimeI, cellI)
     {
-        if (calculateActivationTime[cellI] && VmI[cellI] > SMALL)
+        if
+        (
+            VmOldI[cellI] <= activationThreshold_
+         && VmI[cellI] > activationThreshold_
+        )
         {
-            calculateActivationTime[cellI] = false;
-
             const scalar w =
-                (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+                (activationThreshold_ - VmOldI[cellI])
+               /(VmI[cellI] - VmOldI[cellI]);
 
             activationTimeI[cellI] = oldTime + w*deltaT;
         }
     }
 
-    activationTime.correctBoundaryConditions();
+    activationTime_.correctBoundaryConditions();
 }
 
 
@@ -525,7 +522,7 @@ void myocardiumDomain::advance
             << exit(FatalError);
     }
 
-    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+    updateActivationTime();
 }
 
 
@@ -565,7 +562,7 @@ void myocardiumDomain::solveDiffusionStep
 
 void myocardiumDomain::finalizeDiffusionStep()
 {
-    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+    updateActivationTime();
 }
 
 

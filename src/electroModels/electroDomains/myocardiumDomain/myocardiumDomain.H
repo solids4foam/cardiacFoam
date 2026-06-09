@@ -56,7 +56,6 @@ protected:
     volScalarField sourceField_;
     volScalarField Iion_;
     volScalarField activationTime_;
-    boolList calculateActivationTime_;
     PtrList<volScalarField>& outFields_;
     wordList preProcessFieldNames_;
     PtrList<volScalarField> preProcessFields_;
@@ -70,6 +69,7 @@ protected:
     ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
     Switch reportSetup_;
+    scalar activationThreshold_;
 
     void updateExternalStimulusCurrent
     (
@@ -78,12 +78,7 @@ protected:
         scalar t0
     ) const;
 
-    void updateActivationTime
-    (
-        volScalarField& activationTime,
-        boolList& calculateActivationTime,
-        const volScalarField& Vm
-    ) const;
+    void updateActivationTime();
 
     void validateNoIonicStimulusInMonodomain() const;
 
