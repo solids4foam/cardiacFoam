@@ -132,3 +132,20 @@ tutorials/**/[1-9]*/
 # Generated 0 directories and specific untracked cases
 tutorials/manufacturedSolutions/*/0/
 tutorials/**/0/electro/
+
+# Large mesh / field exports under tutorials — git cannot handle these
+tutorials/**/*.vtu
+tutorials/**/*.vtk
+tutorials/**/*.vtp
+tutorials/**/*.vtm
+tutorials/**/*.pvd
+tutorials/**/*.dat
+tutorials/**/*.avi
+tutorials/**/*.mp4
+tutorials/**/*.mov
+tutorials/**/*.gif
+tutorials/**/data/
+
+# PATHOS disease cases carry heart-mesh-resolution initial fields (e.g.
+# 0/Diffusivity, hundreds of MB) — exclude the generated 0/ field dirs.
+tutorials/PATHOS/**/0/
