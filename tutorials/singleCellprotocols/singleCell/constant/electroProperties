@@ -20,8 +20,8 @@ singleCellSolverCoeffs
 
     // Cell model selection
 
-    ionicModel    AlievPanfilov;
-    tissue    myocyte;
+    ionicModel    TWorld;
+    tissue        endocardialCells;
 
 
     // Time integration settings
@@ -39,9 +39,9 @@ singleCellSolverCoeffs
     {
         stim_start      20;
         stim_duration   1;
-        stim_amplitude  0.4;
+        stim_amplitude  60;
         stim_period_S1  1000;
-        nstim1          3;
+        nstim1          2;
         stim_period_S2  0;
         nstim2          0;
     }
@@ -56,9 +56,14 @@ singleCellSolverCoeffs
     {
         ionic
         {
-            export (Vm s);
+            export (Vm cai);
             debug (Vm);
+        }
+        activeTension
+        {
+            export (AV_Ta);
         }
     }
 
+    activeTensionModel LandNiederer;
 }
