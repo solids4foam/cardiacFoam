@@ -29,6 +29,7 @@ REGRESSION_TESTS=(
     "manufacturedSolutions/monodomainPseudoECG"
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/bathBidomain"
+    "rotorInstability"
 )
 
 failures=0
