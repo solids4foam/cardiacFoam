@@ -84,7 +84,6 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
 
 void conductionSystemDomain::readGraphFile(const dictionary& dict)
 {
-    // graphFile is optional; if not present, skip graph reading (no Purkinje network)
     if (!dict.found("graphFile"))
     {
         return;
@@ -714,8 +713,6 @@ void conductionSystemDomain::write()
         snprintf(buf, sizeof(buf), "purkinjeNetwork_%06d.vtk", int(time().timeIndex()));
         const word vtkFilename(buf);
 
-        // VTK point-data: activation time, ionic exports, and any solver-
-        // specific diagnostic fields (e.g. restitution DI/APD/indicators).
         wordList diagNames;
         PtrList<scalarField> diagFields;
         if (solverPtr_.valid())

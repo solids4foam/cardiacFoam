@@ -129,6 +129,7 @@ INTERNAL_RTST_ALLOWLIST: frozenset[str] = frozenset({
     "electroStateDomain",
     # Like ecgVerificationModel, there is no catalogue type selector for this yet.
     "electromechanicalVerificationModel",
+    "eikonalVerificationModel",
 })
 
 

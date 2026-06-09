@@ -944,7 +944,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             phases=frozenset({"solver"}),  # TODO: revisit phases
             description="Optional myocardium-side verification hook selector.",
             source_refs=(
-                "src/verificationModels/electroVerification/electroVerificationModel.C",
+                "src/electroModels/core/verificationModels/electroVerificationModel.C",
                 "src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H",
                 "src/verificationModels/bidomainVerification/manufacturedFDABidomainVerifier.H",
                 "src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.H",
@@ -1262,7 +1262,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/electroModels/electroCouplers/electroDomainCoupler.C",
             ),
             value_kind="enum",
-            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
+            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler", "eikonalMonodomainPvjCoupler"),
             dynamic_path=True,
             required=False,
             constraints=("Only applicable when an ECG domain declares a coupling block.",),
@@ -1392,7 +1392,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.H",
             ),
             value_kind="enum",
-            enum_values=("monodomain1DSolver", "eikonalSolver1D"),
+            enum_values=("monodomain1DSolver", "eikonalSolver1D", "restitutionEikonalSolver1D"),
             dynamic_path=True,
             required=False,
             constraints=("monodomain1DSolver valid only with monodomainSolver myocardium; eikonalSolver1D valid only with eikonalSolver myocardium.",),
@@ -1629,9 +1629,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=(
                 "src/electroModels/electroCouplers/electroDomainCoupler.C",
                 "src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C",
+                "src/electroModels/electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C",
             ),
             value_kind="enum",
-            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler"),
+            enum_values=("reactionDiffusionPvjCoupler", "eikonalPvjCoupler", "eikonalMonodomainPvjCoupler"),
             dynamic_path=True,
             required=False,
             constraints=("reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).",),

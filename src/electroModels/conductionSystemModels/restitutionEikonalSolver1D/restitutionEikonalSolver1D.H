@@ -20,14 +20,13 @@ Class
 
 Description
     Dynamic, restitution-aware eikonal activation-time solver on the 1-D
-    conduction graph. Unlike the static eikonalSolver1D, this solver keeps
-    persistent recovery state and runs an event-driven loop each physical
-    timestep: recover refractory nodes, schedule stimuli, propagate candidate
-    arrival times from newly activated sources (refractory nodes block), then
-    accept activations whose scheduled time falls in the step. APD and CV are
-    drawn from a restitutionModel as functions of diastolic interval, so the
-    solver reproduces rate-dependent conduction and conduction block, and
-    reports where its assumptions break down (block / wavebreak / short DI).
+    conduction graph. Keeps persistent recovery state and runs an event-driven
+    loop each physical timestep: recover refractory nodes, schedule stimuli,
+    propagate candidate arrival times from newly activated sources (refractory
+    nodes block), then accept activations whose scheduled time falls in the
+    step. APD and CV are drawn from a restitutionModel as functions of
+    diastolic interval. Reports breakdown indicators (block / wavebreak /
+    short DI). Records multi-beat history via activationHistory.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -67,30 +66,24 @@ class restitutionEikonalSolver1D
 
     autoPtr<restitutionModel> restitutionPtr_;
 
-    // Persistent per-node recovery state.
-    scalarField RT_;                 //- repolarization time
-    scalarField DI_;                 //- diastolic interval at last activation
-    scalarField APD_;                //- APD assigned at last activation
-    scalarField nextTact_;           //- tentative next activation time
-    labelList   state_;              //- excitable / refractory
-    labelList   activatedFrom_;      //- neighbour that triggered activation (-1 = stimulus)
-    labelList   nextTactSource_;     //- proposer of the current nextTact_ (-1 = stimulus)
+    scalarField RT_;
+    scalarField DI_;
+    scalarField APD_;
+    scalarField nextTact_;
+    labelList   state_;
+    labelList   activatedFrom_;
+    labelList   nextTactSource_;
 
-    // Breakdown indicators (cumulative).
     labelList   blockCount_;
     labelList   wavebreakCount_;
     labelList   shortDICount_;
     scalarField minDI_;
 
-    // Per-node multiple-activation (multi-beat) history.
     activationHistory history_;
 
-    // Stimulus: shared S1-S2 protocol (timing) applied at node sites.
     labelList        stimSites_;
     StimulusProtocol stimProtocol_;
 
-    // Per-edge conduction heterogeneity: CV scaled by sqrt(g/gRef); an edge
-    // with zero conductance is non-conducting (structural block, e.g. LBBB).
     Switch  useEdgeConductance_;
     scalar  refConductance_;
 

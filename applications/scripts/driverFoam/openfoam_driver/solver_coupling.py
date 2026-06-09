@@ -37,6 +37,18 @@ SOLVER_COMPATIBILITY_RULES: Final[tuple[dict, ...]] = (
         "reason": "Incompatible physics: reaction-diffusion myocardium cannot couple to eikonal Purkinje",
     },
     {
+        "myocardium_solver": "monodomainSolver",
+        "purkinje_solver": "eikonalSolver1D",
+        "required_coupler": "eikonalMonodomainPvjCoupler",
+        "valid": True,
+    },
+    {
+        "myocardium_solver": "monodomainSolver",
+        "purkinje_solver": "restitutionEikonalSolver1D",
+        "required_coupler": "eikonalMonodomainPvjCoupler",
+        "valid": True,
+    },
+    {
         "myocardium_solver": "eikonalSolver",
         "purkinje_solver": "monodomain1DSolver",
         "required_coupler": None,

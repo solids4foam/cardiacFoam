@@ -48,6 +48,7 @@ electroCouplers/pvjCoupler/pvjMapper.C
 electroCouplers/pvjCoupler/pvjCoupler.C
 electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C
 electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C
+electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libelectroModels

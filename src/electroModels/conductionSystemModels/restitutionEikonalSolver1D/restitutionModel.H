@@ -59,7 +59,6 @@ class restitutionModel
     scalar CVmin_;
     scalar CVmax_;
 
-    // Read a (DI value) pair list, sorted-ascending in DI, into x and y.
     static void readCurve
     (
         const dictionary& dict,
@@ -68,7 +67,6 @@ class restitutionModel
         scalarList& y
     );
 
-    // Clamped piecewise-linear interpolation; x must be ascending.
     static scalar interpolate
     (
         const scalarList& x,
@@ -80,19 +78,15 @@ public:
 
     restitutionModel();
 
-    //- APD for a given diastolic interval (input and output clamped).
     scalar apd(const scalar DI) const;
 
-    //- CV for a given diastolic interval (input and output clamped).
     scalar cv(const scalar DI) const;
 
-    //- Lower DI clamp (used to flag short-DI / railed-curve activations).
     scalar diMin() const noexcept
     {
         return DImin_;
     }
 
-    //- Upper DI clamp (used to sanitise diagnostic DI fields).
     scalar diMax() const noexcept
     {
         return DImax_;

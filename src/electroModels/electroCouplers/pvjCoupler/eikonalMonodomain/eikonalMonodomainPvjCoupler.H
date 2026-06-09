@@ -16,76 +16,48 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    conductionSystemSolver
+    eikonalMonodomainPvjCoupler
 
 Description
-    Abstract base class for conduction-system solvers.
-
-SourceFiles
-    conductionSystemSolver.C
+    Eikonal-to-Monodomain PVJ coupler. Uses voltage template for anterograde
+    coupling and gathers activation times for retrograde coupling.
 
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef conductionSystemSolver_H
-#define conductionSystemSolver_H
+#ifndef eikonalMonodomainPvjCoupler_H
+#define eikonalMonodomainPvjCoupler_H
 
-#include "autoPtr.H"
-#include "fvMesh.H"
-#include "runTimeSelectionTables.H"
-#include "scalar.H"
-#include "scalarField.H"
-#include "wordList.H"
-#include "PtrList.H"
+#include "pvjCoupler.H"
+#include "overrideTypeName.H"
 
 namespace Foam
 {
 
-class dictionary;
-class conductionSystemDomain;
-
-class conductionSystemSolver
+class eikonalMonodomainPvjCoupler
+:
+    public pvjCoupler
 {
+    mutable scalarField terminalActivationBuffer_;
+    scalarField R_pvj_;
+
+    void ensureSupportedMode() const;
+
 public:
 
-    TypeName("conductionSystemSolver");
+    OverrideTypeName("eikonalMonodomainPvjCoupler");
 
-    declareRunTimeSelectionTable
+    eikonalMonodomainPvjCoupler
     (
-        autoPtr,
-        conductionSystemSolver,
-        dictionary,
-        (
-            const fvMesh& mesh,
-            const dictionary& dict
-        ),
-        (mesh, dict)
-    );
-
-    conductionSystemSolver() = default;
-
-    static autoPtr<conductionSystemSolver> New
-    (
-        const fvMesh& mesh,
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain,
         const dictionary& dict
     );
 
-    virtual ~conductionSystemSolver() = default;
+    virtual void prepareSecondaryCoupling(scalar t0, scalar dt) override;
 
-    virtual void advance
-    (
-        conductionSystemDomain& domain,
-        scalar t0,
-        scalar dt
-    ) = 0;
-
-    virtual void diagnosticFields
-    (
-        wordList& names,
-        PtrList<scalarField>& fields
-    ) const
-    {}
+    virtual void preparePrimaryCoupling(scalar t0, scalar dt) override;
 };
 
 } // End namespace Foam

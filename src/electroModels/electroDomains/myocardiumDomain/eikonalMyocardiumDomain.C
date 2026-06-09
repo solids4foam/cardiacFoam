@@ -197,6 +197,51 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
         tensor::zero
     );
 
+    const Switch readConductivityField =
+        electroProperties_.lookupOrDefault<Switch>
+        (
+            "readConductivityField",
+            true
+        );
+
+    if (!readConductivityField)
+    {
+        tmp<volTensorField> tresult
+        (
+            new volTensorField
+            (
+                IOobject
+                (
+                    "conductivity",
+                    mesh().time().timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh(),
+                dimensionedTensor
+                (
+                    dimensionedSymmTensor
+                    (
+                        "conductivity",
+                        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+                        electroProperties_
+                    )
+                  & tensor(I)
+                )
+            )
+        );
+
+        if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+        {
+            Info<< "eikonalMyocardiumDomain: using conductivity from "
+                << electroProperties_.name()
+                << " because readConductivityField is false." << nl << endl;
+        }
+
+        return tresult;
+    }
+
     tmp<volTensorField> tdiffusivity
     (
         new volTensorField

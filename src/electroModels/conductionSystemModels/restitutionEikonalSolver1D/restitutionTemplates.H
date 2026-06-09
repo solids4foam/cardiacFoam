@@ -29,18 +29,12 @@ namespace Foam
 namespace restitutionTemplates
 {
 
-// ========================================================================= //
-// PURKINJE 1D RESTITUTION DATA
-// ========================================================================= //
-
-// TODO: Replace these placeholder values with the real complex data points
 static const int purkinjeSize = 6;
 
 static const scalar purkinjeDI[] = {
     0.01, 0.05, 0.10, 0.20, 0.50, 1.00
 };
 
-// NOTE: seconds, to match purkinjeDI (s) and the solver's SI time. (Were ms.)
 static const scalar purkinjeAPD[] = {
     0.100, 0.150, 0.200, 0.250, 0.300, 0.320
 };

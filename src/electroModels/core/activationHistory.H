@@ -22,13 +22,12 @@ Description
     Per-node multiple-activation (multi-beat) history store. Keeps an
     activation count per node and a dynamically grown list of per-beat
     activation-time fields (activationTime_1, activationTime_2, ...), each
-    initialised to a safe -1 placeholder for nodes that have not yet reached
-    that beat.
+    initialised to -1 for nodes that have not reached that beat.
 
-    This is storage only — detection stays in the owner. Eikonal solvers call
-    record() natively when an activation is accepted; voltage solvers
-    (monodomain / bidomain) would call it from their Vm-threshold state
-    machine. Index-space agnostic: works for 1-D graph nodes or 3-D cells.
+    Storage only; detection stays in the owner. Eikonal solvers call record()
+    when an activation is accepted; voltage solvers (monodomain / bidomain)
+    call it from their Vm-threshold detection. Index-space agnostic: works for
+    1-D graph nodes or 3-D cells.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -54,8 +53,8 @@ namespace Foam
 
 class activationHistory
 {
-    labelList            count_;   //- activations per node
-    PtrList<scalarField> times_;   //- times_[b][i]: (b+1)-th activation time
+    labelList            count_;
+    PtrList<scalarField> times_;
     label                maxCount_;
 
 public:
@@ -65,7 +64,6 @@ public:
         maxCount_(0)
     {}
 
-    //- Reset to N nodes with zero activations.
     void reset(const label N)
     {
         count_.setSize(N, 0);
@@ -73,8 +71,6 @@ public:
         maxCount_ = 0;
     }
 
-    //- Record an activation of node i at time t. Grows the history on demand
-    //  and initialises new beat fields to -1 for all other nodes.
     void record(const label i, const scalar t)
     {
         ++count_[i];
@@ -88,14 +84,11 @@ public:
         times_[count_[i] - 1][i] = t;
     }
 
-    //- Highest activation count reached by any node.
     label maxCount() const noexcept
     {
         return maxCount_;
     }
 
-    //- Append "activationCount" and "activationTime_1..N" to a diagnostic
-    //  field list (the lists are extended, existing entries preserved).
     void appendDiagnostics
     (
         wordList& names,

@@ -48,15 +48,10 @@ struct conductionGraph
     scalarField edgeConductances;
     scalarField pvjResistances;
 
-    // Tree topology rooted at node 0 (built during readFromDict).
-    // Required by monodomain1DSolver (Hines algorithm).
-    labelList   parentList;    // parent[i] = parent node (-1 for root)
-    labelList   orderList;     // BFS order root→leaves (back-substitution pass)
-    labelList   reverseOrder;  // BFS order leaves→root (forward-elimination pass)
+    labelList   parentList;
+    labelList   orderList;
+    labelList   reverseOrder;
 
-    // CSR undirected adjacency (built in readFromDict). Neighbours of node i
-    // are adjNeighbours[adjOffsets[i] .. adjOffsets[i+1]-1]; the incident edge
-    // index sits in the matching slot of adjEdges.
     labelList   adjOffsets;
     labelList   adjNeighbours;
     labelList   adjEdges;
@@ -124,7 +119,6 @@ struct conductionGraph
 
 private:
 
-    // Build the CSR undirected adjacency once from the edge lists.
     void buildAdjacency()
     {
         adjOffsets.setSize(nNodes + 1, 0);
@@ -160,14 +154,10 @@ private:
         }
     }
 
-    // BFS from node 0 to establish parent–child relationships and the
-    // two traversal orderings needed by the Hines two-pass algorithm.
-    // Aborts with a fatal error if the graph is disconnected or not a tree.
     void buildTreeTopology(const bool reportSetup)
     {
         if (nNodes == 0) return;
 
-        // Validate: a tree on N nodes has exactly N-1 edges.
         if (nEdges != nNodes - 1)
         {
             FatalErrorInFunction
@@ -178,7 +168,6 @@ private:
                 << exit(FatalError);
         }
 
-        // Build undirected adjacency list.
         List<DynamicList<label>> adj(nNodes);
         forAll(edgeNodeA, eI)
         {
@@ -220,7 +209,6 @@ private:
                 << exit(FatalError);
         }
 
-        // reverseOrder: reverse of BFS (leaves→root for forward elimination).
         reverseOrder.setSize(nNodes);
         forAll(orderList, i)
         {

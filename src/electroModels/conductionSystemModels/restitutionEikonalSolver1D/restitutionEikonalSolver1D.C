@@ -126,7 +126,6 @@ void Foam::restitutionEikonalSolver1D::advance
     const conductionGraph& G = domain.graph();
     scalarField& Tact = domain.activationTime();
 
-    // 1. Recover refractory nodes whose repolarization time has passed.
     forAll(state_, i)
     {
         if (state_[i] == refractory && tNow >= RT_[i])
@@ -135,9 +134,6 @@ void Foam::restitutionEikonalSolver1D::advance
         }
     }
 
-    // 2. Stimulus: fire the shared S1-S2 protocol at excitable sites. The
-    //    eikonal uses only the pulse timing; refractory sites cannot capture,
-    //    and the refractory state prevents re-firing within a single pulse.
     if (stimulusIO::computeStimulus(tNow, stimProtocol_) != 0)
     {
         forAll(stimSites_, s)
@@ -152,9 +148,6 @@ void Foam::restitutionEikonalSolver1D::advance
         }
     }
 
-    // 3. Event cascade: accept all activations scheduled within this step in
-    //    time order, propagating from each as soon as it fires. A min-heap
-    //    keeps the earliest pending arrival on top; stale entries are skipped.
     using Event = std::pair<scalar, label>;
     std::priority_queue<Event, std::vector<Event>, std::greater<Event>> pq;
 
@@ -177,7 +170,6 @@ void Foam::restitutionEikonalSolver1D::advance
             continue;
         }
 
-        // Accept activation of node i at its scheduled time te.
         const scalar DIact = te - RT_[i];
 
         Tact[i] = te;
@@ -201,8 +193,6 @@ void Foam::restitutionEikonalSolver1D::advance
             ++shortDICount_[i];
         }
 
-        // Propagate to neighbours; the trailing node the wave came from is the
-        // normal wake and is skipped, refractory targets ahead are blocked.
         const label from = activatedFrom_[i];
 
         for (label k = G.adjOffsets[i]; k < G.adjOffsets[i + 1]; ++k)
@@ -231,7 +221,6 @@ void Foam::restitutionEikonalSolver1D::advance
 
                 if (gRel <= SMALL)
                 {
-                    // Non-conducting edge (structural lesion, e.g. LBBB).
                     ++blockCount_[j];
                     ++wavebreakCount_[i];
                     continue;
@@ -278,7 +267,6 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
     names[0] = "APD";
     fields.set(0, new scalarField(APD_));
 
-    // Diastolic interval, with the fully-recovered sentinel capped for display.
     scalarField* diPtr = new scalarField(N, 0.0);
     forAll(*diPtr, i)
     {
@@ -332,7 +320,6 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
     }
     fields.set(6, sdPtr);
 
-    // Append activationCount + activationTime_1..N for the multi-beat history.
     history_.appendDiagnostics(names, fields);
 }
 

@@ -243,15 +243,31 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
         )
     );
 
-    if (!electroProperties.found("ionicHeterogeneity"))
+    const dictionary* hetDictPtr =
+        electroProperties.findDict("ionicHeterogeneity");
+
+    if (!hetDictPtr && electroProperties.found("myocardiumSolver"))
+    {
+        const word myocardiumSolver(electroProperties.lookup("myocardiumSolver"));
+        const dictionary* solverDictPtr =
+            electroProperties.findDict(myocardiumSolver + "Coeffs");
+
+        if (solverDictPtr)
+        {
+            hetDictPtr = solverDictPtr->findDict("ionicHeterogeneity");
+        }
+    }
+
+    if (!hetDictPtr)
     {
         FatalErrorInFunction
             << "Heterogeneous templates used, but no ionicHeterogeneity "
-            << "block found in electroProperties."
+            << "block found in electroProperties or the active myocardium "
+            << "solver Coeffs dictionary."
             << exit(FatalError);
     }
 
-    const dictionary& hetDict = electroProperties.subDict("ionicHeterogeneity");
+    const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
 
@@ -264,7 +280,28 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     }
 
     const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
+    autoPtr<volScalarField> tReadPtr;
     const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
+
+    if (!tPtr)
+    {
+        tReadPtr.reset
+        (
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::MUST_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh
+            )
+        );
+        tPtr = &tReadPtr();
+    }
 
     if (!tPtr)
     {
