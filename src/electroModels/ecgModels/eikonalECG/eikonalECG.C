@@ -285,6 +285,11 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 
     if (!tPtr)
     {
+        // Transmural-distance fields are static anatomical inputs stored in
+        // the latest time directory that contains the field.
+        const word fieldInstance =
+            mesh.time().findInstance(fileName::null, fieldName);
+
         tReadPtr.reset
         (
             new volScalarField
@@ -292,7 +297,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
                 IOobject
                 (
                     fieldName,
-                    mesh.time().timeName(),
+                    fieldInstance,
                     mesh,
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE

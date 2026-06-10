@@ -17,8 +17,8 @@ reaction-diffusion solve at each time step. Instead it uses:
 4. **Pseudo-ECG integration** over the reconstructed Vm field using
    precomputed lead vectors.
 
-This makes ECG computation essentially free after the eikonal solve — the
-templates are evaluated once per output time step, not per solver iteration.
+After the eikonal solve, ECG computation evaluates templates once per output
+time step rather than per solver iteration.
 
 ## Tissue templates (`tissueTemplates.H`)
 
@@ -35,9 +35,9 @@ Each template covers approximately **1 second** of simulated time
 (10001 points, dt = 0.1 ms), downsampled by a factor of 100 from the
 original single-cell ODE output to keep compiler memory usage low.
 
-The template ionic model and stimulus conditions used to generate the file
-are recorded in the generation script (not committed — contact the author
-or regenerate from a reference singleCell tutorial run).
+The template ionic model and stimulus conditions used to generate the file are
+recorded in the local generation workflow. Regenerate the header from a
+reference `singleCell` tutorial run when template provenance changes.
 
 ### When to regenerate
 
@@ -96,9 +96,9 @@ eikonalSolverCoeffs
 | `end` | `0.3`–`0.5` | Must be ≥ AP duration; do not exceed ~1.0 s |
 | `deltaT` | `0.001`–`0.005` | Finer than this has no benefit (template is at 0.1 ms) |
 
-Setting `end` shorter than the AP duration will truncate repolarisation
-in the reconstructed ECG. Setting it longer than 1.0 s will cause a
-lookup out of range (the solver will warn and clamp).
+Setting `end` shorter than the AP duration truncates repolarisation in the
+reconstructed ECG. Setting it longer than 1.0 s requests template samples
+outside the tabulated range; the solver warns and clamps.
 
 ### Transmural heterogeneity
 

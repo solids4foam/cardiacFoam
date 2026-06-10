@@ -41,7 +41,7 @@ Defined under `conductionSystemDomain/`.
 - Implements `networkCouplingEndpoint`, exposing terminal-node voltages and
   accepting terminal coupling currents prepared by electro couplers.
 - Keeps graph-specific utilities such as `conductionGraph` close to the domain
-  because they are part of its state model.
+  as part of its state model.
 
 ### `ecgDomain`
 

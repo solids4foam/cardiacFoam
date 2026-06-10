@@ -94,20 +94,16 @@ CARDIAC_HOST_DEVICE inline double computeStimulusPOD
     double Istim = 0.0;
 
     // ---------- S1 ----------
+    // Gate by nearest pulse index so boundary pulse onsets are retained.
     if (s.stimPeriodS1 > 0.0 && s.nStim1 > 0)
     {
         const double tp = t - s.stimStart;
-        const double trainEnd = s.stimPeriodS1 * static_cast<double>(s.nStim1);
+        const int k = static_cast<int>(std::floor(tp / s.stimPeriodS1 + 0.5));
+        const double phase = tp - k * s.stimPeriodS1;
 
-        if (tp >= 0.0 && tp <= trainEnd)
+        if (k >= 0 && k <= s.nStim1 && phase >= 0.0 && phase <= s.stimDuration)
         {
-            const double phase =
-                tp - std::floor(tp / s.stimPeriodS1) * s.stimPeriodS1;
-
-            if (phase >= 0.0 && phase <= s.stimDuration)
-            {
-                Istim = -s.stimAmplitude;
-            }
+            Istim = -s.stimAmplitude;
         }
     }
 
@@ -117,17 +113,12 @@ CARDIAC_HOST_DEVICE inline double computeStimulusPOD
         const double tS1End =
             s.stimStart + s.stimPeriodS1 * static_cast<double>(s.nStim1);
         const double tp = t - tS1End;
-        const double trainEnd = s.stimPeriodS2 * static_cast<double>(s.nStim2);
+        const int k = static_cast<int>(std::floor(tp / s.stimPeriodS2 + 0.5));
+        const double phase = tp - k * s.stimPeriodS2;
 
-        if (tp >= 0.0 && tp <= trainEnd)
+        if (k >= 0 && k <= s.nStim2 && phase >= 0.0 && phase <= s.stimDuration)
         {
-            const double phase =
-                tp - std::floor(tp / s.stimPeriodS2) * s.stimPeriodS2;
-
-            if (phase >= 0.0 && phase <= s.stimDuration)
-            {
-                Istim = -s.stimAmplitude;
-            }
+            Istim = -s.stimAmplitude;
         }
     }
 

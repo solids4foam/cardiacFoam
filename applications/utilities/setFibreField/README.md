@@ -54,6 +54,6 @@ setFibreField [-region <regionName>]
 ## Notes
 
 - The endocardial and epicardial helix angles (`alphaEndo`, `alphaEpi`) are
-  currently hard-coded as `+60°` and `−60°`. Parameterisation is planned.
+  fixed at `+60°` and `-60°`.
 - The base direction `k = (0, 0, 1)` follows the Rossi-Lassila convention
   for idealized ellipsoidal geometries.

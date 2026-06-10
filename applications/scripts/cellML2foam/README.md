@@ -19,7 +19,7 @@ Install the following tools:
 - `myokit` (CLI must be on PATH)
 - `spatch` (Coccinelle, for source-to-source rewrites)
 
-If `spatch` is unavailable, the pipeline will fail at the ansic → openfoam step.
+If `spatch` is unavailable, the pipeline fails at the ansic -> openfoam step.
 
 ## How to use
 

@@ -2,8 +2,7 @@
 
 Assigns correct SI dimensions to field files that were produced by
 `newVtkUnstructuredToFoam`, which writes every CELL_DATA field as
-dimensionless `[0 0 0 0 0 0 0]` because the VTK format carries no unit
-information.
+dimensionless `[0 0 0 0 0 0 0]`; the VTK format carries no unit information.
 
 The utility patches **only the `dimensions` header line**. It never reads
 or rewrites `internalField` or `boundaryField`, so it is safe and fast

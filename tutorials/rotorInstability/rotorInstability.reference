@@ -5,8 +5,8 @@
 # Probe 2 (0.045 0.025 5e-05) - Far edge
 # Probe 3 (0.025 0.005 5e-05) - Near second stimulus
 # Probe 4 (0.025 0.045 5e-05) - Top edge
-rotorpoints/0/activationTime      4.0    2    0.0207205    1e-4
-rotorpoints/0/activationTime      4.0    3    0.146372     1e-4
-rotorpoints/0/activationTime      4.0    4    0.271792     1e-4
-rotorpoints/0/activationTime      4.0    5    0.146373     1e-4
-rotorpoints/0/activationTime      4.0    6    0.146372     1e-4
+rotorpoints/0/activationTime      4.0    2    3.71307      1e-4
+rotorpoints/0/activationTime      4.0    3    3.99581      1e-4
+rotorpoints/0/activationTime      4.0    4    2.68804      1e-4
+rotorpoints/0/activationTime      4.0    5    3.88118      1e-4
+rotorpoints/0/activationTime      4.0    6    3.81384      1e-4

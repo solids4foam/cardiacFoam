@@ -197,51 +197,6 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
         tensor::zero
     );
 
-    const Switch readConductivityField =
-        electroProperties_.lookupOrDefault<Switch>
-        (
-            "readConductivityField",
-            true
-        );
-
-    if (!readConductivityField)
-    {
-        tmp<volTensorField> tresult
-        (
-            new volTensorField
-            (
-                IOobject
-                (
-                    "conductivity",
-                    mesh().time().timeName(),
-                    mesh(),
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh(),
-                dimensionedTensor
-                (
-                    dimensionedSymmTensor
-                    (
-                        "conductivity",
-                        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                        electroProperties_
-                    )
-                  & tensor(I)
-                )
-            )
-        );
-
-        if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
-        {
-            Info<< "eikonalMyocardiumDomain: using conductivity from "
-                << electroProperties_.name()
-                << " because readConductivityField is false." << nl << endl;
-        }
-
-        return tresult;
-    }
-
     tmp<volTensorField> tdiffusivity
     (
         new volTensorField
@@ -262,6 +217,17 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
     volTensorField& diffusivity = tdiffusivity.ref();
     if (diffusivity.headerOk())
     {
+        if (diffusivity.dimensions() != zeroConductivity.dimensions())
+        {
+            FatalErrorInFunction
+                << "Field " << mesh().time().timeName() << "/Diffusivity has "
+                << "dimensions " << diffusivity.dimensions()
+                << " but the eikonal solver requires conductivity dimensions "
+                << zeroConductivity.dimensions()
+                << " [-1 -3 3 0 0 2 0].  Fix the 'dimensions' entry in the "
+                << "field header." << exit(FatalError);
+        }
+
         Info<< "eikonalMyocardiumDomain: conductivity field read from "
             << mesh().time().timeName() << "/Diffusivity" << nl << endl;
 
@@ -288,6 +254,17 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 
     if (result.headerOk())
     {
+        if (result.dimensions() != zeroConductivity.dimensions())
+        {
+            FatalErrorInFunction
+                << "Field " << mesh().time().timeName() << "/conductivity has "
+                << "dimensions " << result.dimensions()
+                << " but the eikonal solver requires conductivity dimensions "
+                << zeroConductivity.dimensions()
+                << " [-1 -3 3 0 0 2 0].  Fix the 'dimensions' entry in the "
+                << "field header." << exit(FatalError);
+        }
+
         Info<< "eikonalMyocardiumDomain: conductivity field read from "
             << mesh().time().timeName() << "/conductivity" << nl << endl;
 
@@ -542,6 +519,12 @@ void eikonalMyocardiumDomain::advance
               + Smms
             );
 
+            // Under-relax the nonlinear outer loop: G, phiU and divPhiU are
+            // lagged (recomputed from psi each outer iteration), so without
+            // relaxation the deferred-correction fixed point is not contractive
+            // and the outer residual drifts upwards.  relax() also boosts
+            // diagonal dominance, which stabilises the unpreconditioned solve.
+            activationEqn.relax();
             activationEqn.setValues(constrainedCells, constrainedValues);
             activationEqn.solve("asymmetric_" + activationTime_.name());
         }

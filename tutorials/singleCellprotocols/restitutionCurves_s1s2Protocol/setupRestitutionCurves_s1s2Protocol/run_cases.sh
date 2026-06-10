@@ -9,7 +9,7 @@ if [[ -z "$CASE_DIR" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 COMMON_RUNNER="$REPO_ROOT/applications/scripts/driverFoam/openfoam_driver/scripts/run_case.sh"
 
 if [[ ! -x "$COMMON_RUNNER" ]]; then

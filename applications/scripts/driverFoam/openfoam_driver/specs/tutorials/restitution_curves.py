@@ -114,19 +114,20 @@ def _run_case(
     ionic_model = case.params["ionicModel"]
     tissue = case.params["tissue"]
     s2_interval = case.params["s2Interval"]
-    output_dir.mkdir(parents=True, exist_ok=True)
+    model_dir = output_dir / ionic_model / tissue
+    model_dir.mkdir(parents=True, exist_ok=True)
 
-    for source in sorted(case_root.glob("*.txt")):
-        stem = f"{ionic_model}_{tissue}_S2_{s2_interval}"
+    for source in sorted(output_dir.glob(f"{ionic_model}_{tissue}_S1_*_S2_{s2_interval}.txt")):
+        stem = source.stem
 
         # Animate the voltage trace before moving the file
         _animate_voltage_trace(
             data_file=source,
-            output_path=output_dir / f"{stem}.mp4",
+            output_path=model_dir / f"{stem}.mp4",
             title=f"{ionic_model} · {tissue} · S2={s2_interval} ms",
         )
 
-        dest = output_dir / f"{stem}.txt"
+        dest = model_dir / source.name
         if dest.exists():
             dest.unlink()
         shutil.move(str(source), str(dest))

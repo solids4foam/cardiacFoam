@@ -85,7 +85,7 @@ applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
 
 ## CLI actions
 
-- `sim` : apply and run all planned cases
+- `sim` : apply and run all resolved cases
 - `post`: run only post-processing hook
 - `all` : `sim` then `post`
 - `describe` : print machine-readable entry/spec metadata as JSON
@@ -106,14 +106,14 @@ The `describe` action resolves the requested entry and prints:
 
 - the `make_spec(...)` parameter schema and defaults
 - resolved case/setup/output paths
-- the planned cases for the current configuration
+- the resolved cases for the current configuration
 - the grouped dict-entry catalog for `physicsProperties` and `electroProperties`
 - the launch plan for `sim`, `post`, and `all`, including the exact driver
   command and expected manifest path
 
 ## Strict autonomous contract
 
-The `plan --strict` action resolves the requested entry, validates the planned
+The `plan --strict` action resolves the requested entry, validates the resolved
 RunDocument v2, checks dict-key catalog coverage, predicts data artifacts,
 normalizes the workflow DAG, and exits non-zero if any machine-readable
 contract is incomplete. It does not mutate case files.
@@ -175,11 +175,30 @@ executes the next runnable step until the workflow completes or a step fails.
 It does not retry a failed saved state automatically; use `step --strict` for
 explicit manual reruns.
 
-Current strict execution records claimed artifact ids from
-`workflow_dag.steps[*].produces` when a step exits successfully. It does not
-yet reconcile those claimed ids with on-disk files after each step. The next
-autonomy milestone should add post-step artifact reconciliation and fail when
-required predicted artifacts are missing.
+Strict execution records claimed artifact ids from
+`workflow_dag.steps[*].produces` when a step exits successfully. Artifact
+realization is reported by the legacy artifact manifest files described below.
+
+## Restitution-curves workflow
+
+The `restitutionCurves` entry runs the
+`singleCellprotocols/restitutionCurves_s1s2Protocol` tutorial across ionic
+models, tissues, and S2 intervals.
+
+Default supported restitution ionic models and tissues:
+
+- `BuenoOrovio`: `mCells`, `endocardialCells`, `epicardialCells`
+- `TNNP`: `mCells`, `endocardialCells`, `epicardialCells`
+- `Gaur`: `myocyte`
+- `Courtemanche`: `myocyte`
+- `Stewart`: `myocyte`
+
+Per-case collection writes trace text files and voltage-trace MP4 files under:
+
+```text
+<output_dir>/<ionicModel>/<tissue>/<ionicModel>_<tissue>_S1_*_S2_<interval>.txt
+<output_dir>/<ionicModel>/<tissue>/<ionicModel>_<tissue>_S1_*_S2_<interval>.mp4
+```
 
 ## Config override model
 
@@ -209,7 +228,7 @@ Dictionary overrides accept either:
 - or a list of `{key, value, scope}` objects
 
 For `electro_property_overrides`, the special scope token
-`$ELECTRO_MODEL_COEFFS` resolves to the currently selected
+`$ELECTRO_MODEL_COEFFS` resolves to the selected
 `<solver>Coeffs` sub-dictionary in `electroProperties`.
 
 The driver override layer is generic: it does not hardcode a whitelist of
@@ -254,7 +273,7 @@ Notes:
   `"[0 -3 0 0 0 1 0] 50000"` or
   `"[-1 -3 3 0 0 2 0] (0.133418 0 0 0.0176062 0 0.0176062)"`.
 - The catalog lists repository-backed keys. Additional OpenFOAM ODE-solver
-  pass-through keys may also be valid because the dictionaries are forwarded to
+  pass-through keys may also be valid; the dictionaries are forwarded to
   `ODESolver::New(...)`.
 
 Generic-case sweeps can also use a `cases` array. Each case may override
@@ -333,7 +352,7 @@ local-app integration. The current schema includes:
 - `human_report_path`
 - `results`
 
-Each `results` item currently reports:
+Each `results` item reports:
 
 - `case_id`
 - `status`

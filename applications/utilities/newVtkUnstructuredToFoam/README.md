@@ -26,12 +26,12 @@ transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
 ```
 
 Verify with `checkMeshGeometry` — it reports the bounding box. A 20 × 3 × 7 cm
-heart should appear as ~0.2 × 0.03 × 0.07 m, not 200 × 30 × 70 mm.
+heart appears as ~0.2 x 0.03 x 0.07 m, not 200 x 30 x 70 mm.
 
 ### Step 2 — Fix Diffusivity field dimensions
 
-All fields are written as dimensionless ([0 0 0 0 0 0 0]) because the VTK
-format carries no SI unit information. Most fields (fiber, sheet, tags,
+All fields are written as dimensionless ([0 0 0 0 0 0 0]); the VTK format
+carries no SI unit information. Most fields (fiber, sheet, tags,
 uvc_transmural) are genuinely dimensionless and need no change.
 
 Diffusivity is the conductivity tensor and must carry SI units S/m:

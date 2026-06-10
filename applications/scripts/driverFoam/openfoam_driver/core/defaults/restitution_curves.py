@@ -8,6 +8,7 @@ from .shared import (
     OUTPUT_DIR_NAME,
     RUN_CASE_SCRIPT_RELPATH,
 )
+from ...ionic_model_catalog import IONIC_MODEL_CATALOG
 
 
 TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
@@ -17,18 +18,21 @@ SETUP_DIR_NAME = "setupRestitutionCurves_s1s2Protocol"
 IONIC_MODELS = ("BuenoOrovio",)
 
 IONIC_MODEL_TISSUE_MAP = {
-    "TNNP": ("mCells", "endocardialCells", "epicardialCells"),
-    "BuenoOrovio": ("mCells", "endocardialCells", "epicardialCells"),
-    "Gaur": ("myocyte",),
-    "Courtemanche": ("myocyte",),
+    name: entry.compatible_tissues
+    for name, entry in IONIC_MODEL_CATALOG.items()
+    if "manufactured" not in entry.compatible_tissues
 }
 
-STIMULUS_MAP = {
-    "TNNP": 60.0,
-    "BuenoOrovio": 0.4,
-    "Gaur": 60.0,
-    "Courtemanche": 70.0,
-}
+STIMULUS_MAP = {}
+for name, entry in IONIC_MODEL_CATALOG.items():
+    if "manufactured" in entry.compatible_tissues:
+        continue
+    if name.startswith("Fabbri"):
+        STIMULUS_MAP[name] = 0.0
+    elif entry.model_type == "phenomenological":
+        STIMULUS_MAP[name] = 0.4
+    else:
+        STIMULUS_MAP[name] = 60.0
 
 # S1–S2 protocol parameters (intervals in milliseconds)
 S1_INTERVAL_MS = 2000

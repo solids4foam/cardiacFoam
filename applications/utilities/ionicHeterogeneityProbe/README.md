@@ -6,7 +6,7 @@ resulting action potentials are physiologically consistent and vary smoothly
 across the transmural gradient.
 
 > [!NOTE]
-> This utility currently supports only the `BuenoOrovio` ionic model.
+> This utility supports only the `BuenoOrovio` ionic model.
 
 ## What it does
 

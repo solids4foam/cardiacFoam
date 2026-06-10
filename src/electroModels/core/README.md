@@ -45,11 +45,10 @@ The flat headers (`electroDomainInterface.H`, `electroStateProvider.H`, etc.)
 are included by all three subfolders and carry no dependencies on each other, so
 they stay at the root level.
 
-`verificationModels/` lives in `core/` rather than in `src/verificationModels/`
-to break the circular library dependency: concrete verifiers in
-`libverificationModels` must inherit the base class, but that base class needs
-`electroStateProvider` from `libelectroModels`. Compiling the base inside `core`
-keeps the dependency order `electroModels → verificationModels`.
+`verificationModels/` contains the base verifier interfaces compiled into
+`libelectroModels`. Concrete verifiers in `src/verificationModels/` inherit
+from these bases while preserving the dependency order
+`electroModels -> verificationModels`.
 
 ---
 
@@ -74,8 +73,7 @@ of ionic solve, diffusion solve, and cross-domain coupling exchanges:
 - **`staggeredElectrophysicsAdvanceScheme`** — single-pass weak coupling,
   suitable for unidirectional Purkinje-to-myocardium workflows.
 - **`pimpleStaggeredElectrophysicsAdvanceScheme`** — iterative strong coupling
-  using `pimpleControl`, intended for bidirectional Purkinje ↔ myocardium
-  exchange.
+  using `pimpleControl` for bidirectional Purkinje <-> myocardium exchange.
 
 ### `electrophysiologyModel/`
 

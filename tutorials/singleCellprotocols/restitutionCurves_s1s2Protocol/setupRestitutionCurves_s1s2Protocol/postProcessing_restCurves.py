@@ -120,11 +120,15 @@ def detect_beats(time, vm):
     peak_s     = PEAK_SEARCH
 
     candidates = []
+    last_t = None
     for i in range(1, len(dvdt)):
         if dvdt[i-1] < DVDT_THRESHOLD <= dvdt[i]:
             frac = (DVDT_THRESHOLD - dvdt[i-1]) / (dvdt[i] - dvdt[i-1])
             if 0.0 <= frac <= 1.0:
-                candidates.append(time[i-1] + frac * (time[i] - time[i-1]))
+                t_cand = time[i-1] + frac * (time[i] - time[i-1])
+                if last_t is None or (t_cand - last_t) > 0.05:
+                    candidates.append(t_cand)
+                    last_t = t_cand
 
     # ---- DEBUG: list all dv/dt candidates
     print("\n=== DV/DT CANDIDATES ===")
@@ -165,27 +169,53 @@ def detect_beats(time, vm):
         seg_v = vm[mask_peak]
         v_peak = np.max(seg_v)
 
-        # ---- APD90
+        # ---- Reject fake beats (stimulus artifact only)
+        # We ensure the cell actually captured by checking the voltage 3 ms after t_up (i.e. after a 2ms stimulus + 1ms grace)
+        t_check = t_up + 0.003
+        mask_check = (seg_t >= t_check)
+        if np.any(mask_check):
+            v_check = seg_v[mask_check][0]
+            if v_check < -10.0:
+                print(f"❌ Voltage collapsed after stimulus ({v_check:.3f} mV at +3ms). Likely just an artifact.")
+                continue
+        else:
+            if v_peak < -10.0:
+                print(f"❌ Peak voltage too low ({v_peak:.3f} mV). Likely just a stimulus artifact.")
+                continue
+
+        # ---- APD90, APD70, APD50
         v90 = v_base + 0.1 * (v_peak - v_base)
+        v70 = v_base + 0.3 * (v_peak - v_base)
+        v50 = v_base + 0.5 * (v_peak - v_base)
         j_peak = np.argmax(seg_v)
 
-        print(f"v_base = {v_base:.3f}, v_peak = {v_peak:.3f}, v90 = {v90:.3f}")
+        print(f"v_base = {v_base:.3f}, v_peak = {v_peak:.3f}, v90 = {v90:.3f}, v70 = {v70:.3f}, v50 = {v50:.3f}")
         print(f"j_peak index = {j_peak}, t_peak = {seg_t[j_peak]:.6f}")
 
-        t_rep = np.nan
+        t_rep90 = np.nan
+        t_rep70 = np.nan
+        t_rep50 = np.nan
 
         for j in range(j_peak + 1, len(seg_v)):
-            if seg_v[j-1] > v90 >= seg_v[j]:
+            if np.isnan(t_rep50) and seg_v[j-1] > v50 >= seg_v[j]:
+                frac = (v50 - seg_v[j-1]) / (seg_v[j] - seg_v[j-1])
+                t_rep50 = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
+                
+            if np.isnan(t_rep70) and seg_v[j-1] > v70 >= seg_v[j]:
+                frac = (v70 - seg_v[j-1]) / (seg_v[j] - seg_v[j-1])
+                t_rep70 = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
+
+            if np.isnan(t_rep90) and seg_v[j-1] > v90 >= seg_v[j]:
                 frac = (v90 - seg_v[j-1]) / (seg_v[j] - seg_v[j-1])
-                t_rep = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
-                print(f"✅ REPOL FOUND at t = {t_rep:.6f}")
+                t_rep90 = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
+                print(f"✅ REPOL FOUND at t = {t_rep90:.6f}")
                 break
 
             if k < len(candidates) - 1 and seg_t[j] >= candidates[k+1]:
                 print("⚠️ PASSED NEXT t_up WITHOUT REPOL")
                 break
 
-        repol_found = np.isfinite(t_rep)
+        repol_found = np.isfinite(t_rep90)
 
         print(f"RESULT: repol_found = {repol_found}")
 
@@ -194,109 +224,105 @@ def detect_beats(time, vm):
             "v_base": float(v_base),
             "v_peak": float(v_peak),
             "v90": float(v90),
-            "t_repol90": float(t_rep),
+            "v70": float(v70),
+            "v50": float(v50),
+            "t_repol90": float(t_rep90),
+            "t_repol70": float(t_rep70),
+            "t_repol50": float(t_rep50),
             "repol_found": repol_found
         })
 
     return beats
 
-def classify_early_strokes(beats):
-    """
-    A beat is EARLY if repolarization is interrupted
-    by a subsequent upstroke.
-    """
 
-    early_beats = []
-    n = len(beats)
-    if n == 0:
-        return early_beats
 
-    for b in beats:
-        b["early"] = False
-        b["valid_apd"] = b.get("repol_found", False)
-        b["valid_di"] = False
-
-    for i in range(n - 1):
-        curr = beats[i]
-        nextb = beats[i + 1]
-
-        early = False
-        reason = ""
-
-        if curr["repol_found"]:
-            if nextb["t_up"] < curr["t_repol90"]:
-                early = True
-                reason = "next upstroke before APD90"
-        else:
-            early = True
-            reason = "repolarization not completed before next upstroke"
-
-        if early:
-            curr["early"] = True
-            curr["valid_apd"] = False
-            curr["valid_di"] = False
-            early_beats.append(curr)
-
-            print("\n" + "=" * 80)
-            print(f"⚠️ EARLY STROKE DETECTED (beat {i})")
-            print(f"Reason: {reason}")
-            print("-" * 80)
-
-            print(f"t_up (curr)      = {curr['t_up']:.6f}")
-            print(f"t_repol90        = {curr['t_repol90']}")
-            print(f"t_up (next)      = {nextb['t_up']:.6f}")
-
-            if curr["repol_found"]:
-                print(f"APD90            = {curr['t_repol90'] - curr['t_up']:.6f}")
-                print(f"DI (raw)         = {nextb['t_up'] - curr['t_repol90']:.6f}")
-            else:
-                print("APD90            = NOT FOUND (INTERRUPTED)")
-                print(f"DI (raw)         = {nextb['t_up'] - curr['t_up']:.6f}")
-
-            print("=" * 80)
-
-    # DI belongs to the second beat ONLY if first beat was normal
-    for i in range(1, n):
-        if not beats[i - 1]["early"] and beats[i].get("repol_found", False):
-            beats[i]["valid_di"] = True
-
-    return early_beats
 
 
 
 
 # APD / DI
 # ==============================
-def compute_apd_di(beats):
-
+def get_s1_s2_beats(beats, filepath=None, config=None):
     if len(beats) < 2:
         return None, None
 
-    s1 = beats[-2]
-    s2 = beats[-1]
-
-    # ---- EARLY STROKE: reject if S1 was interrupted
-    if s1.get("early", False):
+    if filepath is None:
+        return beats[-2], beats[-1]
+    
+    name = filepath.name
+    m_s1 = re.search(r"S1_(\d+)", name)
+    
+    if config:
+        s1_val = config.get("s1_interval_ms", 1000)
+        n_s1 = config.get("n_s1", 10)
+    else:
+        s1_val = int(m_s1.group(1)) if m_s1 else 1000
+        n_s1 = 10
+    
+    m_s2 = re.search(r"S2_(\d+)", name)
+    s2_val = int(m_s2.group(1)) if m_s2 else 250
+    
+    # The S1 train ends and the first S2 happens based on the config intervals
+    s1_target_time = (n_s1 * s1_val) / 1000.0
+    
+    s1_beat = None
+    s2_beat = None
+    
+    for b in beats:
+        if abs(b["t_up"] - s1_target_time) < 0.1:
+            s1_beat = b
+            break
+            
+    if s1_beat is None:
         return None, None
-
-    if not (
-        s1.get("valid_apd", False) and
-        s2.get("valid_apd", False) and
-        s2.get("valid_di",  False)
-    ):
+        
+    idx = beats.index(s1_beat)
+    if idx + 1 < len(beats):
+        potential_s2 = beats[idx + 1]
+        
+        # We must ensure this is actually the S2 beat. 
+        # If the true S2 beat failed, this might accidentally be the S3 beat!
+        actual_interval_ms = (potential_s2["t_up"] - s1_beat["t_up"]) * 1000.0
+        
+        if abs(actual_interval_ms - s2_val) < 2.0:
+            s2_beat = potential_s2
+        else:
+            # The next successful beat was NOT the S2 beat, meaning S2 failed!
+            return None, None
+    else:
         return None, None
+        
+    return s1_beat, s2_beat
 
-    di  = s2["t_up"]      - s1["t_repol90"]
-    apd = s2["t_repol90"] - s2["t_up"]
+def compute_apd_di(beats, filepath=None, config=None):
+    s1, s2 = get_s1_s2_beats(beats, filepath, config)
+    if s1 is None or s2 is None:
+        return None
 
-    if di <= 0 or apd <= 0:
-        return None, None
+    res = {}
+    
+    # We don't strictly require valid APD90 for APD70/50 to be valid!
+    # But we calculate what we can.
+    
+    for level in [90, 70, 50]:
+        t_rep_s1 = s1.get(f"t_repol{level}", np.nan)
+        t_rep_s2 = s2.get(f"t_repol{level}", np.nan)
+        
+        if np.isfinite(t_rep_s1) and np.isfinite(t_rep_s2) and t_rep_s1 < s2["t_up"]:
+            di = s2["t_up"] - t_rep_s1
+            apd = t_rep_s2 - s2["t_up"]
+            if di > 0 and apd > 0:
+                res[f"DI{level}"] = di
+                res[f"APD{level}"] = apd
+                
+    if not res:
+        return None
+        
+    return res
 
-    return apd, di
 
 
-
-def plot_trace(time, vm, beats, savepath=None):
+def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
     plt.figure(figsize=(11, 4))
     plt.plot(time, vm, color="black", lw=1.2, label="Vm")
 
@@ -318,49 +344,54 @@ def plot_trace(time, vm, beats, savepath=None):
                 alpha=0.6
             )
     # ---- annotate last S1–S2 pair
-    if len(beats) >= 2:
-        s1 = beats[-2]
-        s2 = beats[-1]
+    s1, s2 = get_s1_s2_beats(beats, filepath, config)
+    if s1 is not None and s2 is not None:
 
-        valid_pair = (
-            not s1.get("early", False) and
-            s1.get("repol_found", False) and
-            s1["t_repol90"] < s2["t_up"]
-        )
+        # Find best available repolarization level
+        best_level = None
+        for level in [90, 70, 50]:
+            t_rep = s1.get(f"t_repol{level}", np.nan)
+            if np.isfinite(t_rep) and t_rep < s2["t_up"]:
+                best_level = level
+                break
 
-        if valid_pair:
+        if best_level is not None:
+            t_rep_s1 = s1[f"t_repol{best_level}"]
+            t_rep_s2 = s2[f"t_repol{best_level}"]
+            
             # ---- DI
             plt.axvspan(
-                s1["t_repol90"],
+                t_rep_s1,
                 s2["t_up"],
                 color="tab:blue",
                 alpha=0.5,
-                label="DI"
+                label=f"DI{best_level}"
             )
 
-            # ---- APD90 (S2)
-            plt.axvspan(
-                s2["t_up"],
-                s2["t_repol90"],
-                color="tab:red",
-                alpha=0.5,
-                label="APD90"
-            )
+            # ---- APD
+            if np.isfinite(t_rep_s2):
+                plt.axvspan(
+                    s2["t_up"],
+                    t_rep_s2,
+                    color="tab:red",
+                    alpha=0.5,
+                    label=f"APD{best_level}"
+                )
 
-            di_ms  = (s2["t_up"] - s1["t_repol90"]) * 1e3
-            apd_ms = (s2["t_repol90"] - s2["t_up"]) * 1e3
+            di_ms  = (s2["t_up"] - t_rep_s1) * 1e3
+            apd_ms = (t_rep_s2 - s2["t_up"]) * 1e3
 
-            text = f"DI = {di_ms:.1f} ms\nAPD90 = {apd_ms:.1f} ms"
+            text = f"DI{best_level} = {di_ms:.1f} ms\nAPD{best_level} = {apd_ms:.1f} ms"
 
         else:
-            text = "EARLY DEPOLARIZATION"
+            text = "EXTREME EARLY DEPOLARIZATION"
 
             plt.axvline(
-            s2["t_up"],
-            color="orange",
-            lw=2.5,
-            label="Early depolarization"
-        )
+                s2["t_up"],
+                color="orange",
+                lw=2.5,
+                label="No repol > 50%"
+            )
 
 
         # ---- unified text box (always shown)
@@ -392,11 +423,13 @@ def postprocess_one_ionic_model(
     output_folder: str,
     ionic_model: str,
     tissues: list[str],
-    show_plot: bool = False
+    show_plot: bool = False,
+    config: dict = None
 ):
 
 
-    output_dir = base_dir / output_folder
+    output_dir = base_dir / output_folder / ionic_model
+    print(f"DEBUG: base_dir={base_dir}, output_folder={output_folder}, output_dir={output_dir}")
     if not output_dir.exists():
         print(f"❌ Output folder not found: {output_dir}")
         return
@@ -404,87 +437,98 @@ def postprocess_one_ionic_model(
 
     plt.figure()
     data_rows = []
-    early_files = set()
+    input_dir = output_dir
 
     for tissue in tissues:
-        pattern = f"{ionic_model}_{tissue}_*.txt"
-        files = sorted(
-                output_dir.glob(pattern),
-                key=extract_S2_value
-                      )
-        if not files:
-            print(f"⚠️ No files for {ionic_model} / {tissue}")
-            continue
+        all_restitution_data = []
 
-        di_ms = []
-        apd_ms = []
+        # Find all files for this ionic model + tissue
+        file_pattern = f"*{ionic_model}*{tissue}*.txt"
+        files = list(input_dir.rglob(file_pattern))
+
+        if not files:
+            print(f"No files found for {ionic_model} / {tissue}")
+            continue
 
         for f in files:
             time, vm = load_trace(f)
+            if len(time) < 2:
+                continue
 
             beats = detect_beats(time, vm)
             # Attach filename to beats once
             for b in beats:
                 b["file"] = str(f)
 
-            early_beats = classify_early_strokes(beats)
-            for b in early_beats:
-                early_files.add(b["file"])
+            plot_path = output_dir / f"{f.stem}_annotated.png"
+            plot_trace(time, vm, beats, filepath=f, savepath=plot_path, config=config)
 
-            if show_plot:
-                plot_trace(time, vm, beats)
-
-            apd, di = compute_apd_di(beats)
-            if apd is None or di is None:
+            res = compute_apd_di(beats, f, config=config)
+            if res is None:
                 continue
 
-            di_ms.append(di * 1e3)
-            apd_ms.append(apd * 1e3)
+            row = {"tissue": tissue}
+            
+            if "DI90" in res:
+                row["DI90_ms"] = res["DI90"] * 1e3
+                row["APD90_ms"] = res["APD90"] * 1e3
+            if "DI70" in res:
+                row["DI70_ms"] = res["DI70"] * 1e3
+                row["APD70_ms"] = res["APD70"] * 1e3
+            if "DI50" in res:
+                row["DI50_ms"] = res["DI50"] * 1e3
+                row["APD50_ms"] = res["APD50"] * 1e3
+                
+            all_restitution_data.append(row)
 
-        if not di_ms:
+        if not all_restitution_data:
             print(f"⚠️ No valid restitution points for {ionic_model} / {tissue}")
             continue
 
-        for di, apd in zip(di_ms, apd_ms):
-            data_rows.append({
-                "tissue": tissue,
-                "DI_ms": di,
-                "APD90_ms": apd,
-                            })
+        # Convert to DataFrame and sort by DI90 (or DI70 if 90 is missing)
+        df = pd.DataFrame(all_restitution_data)
+        if "DI90_ms" in df.columns:
+            df = df.sort_values("DI90_ms")
+        elif "DI70_ms" in df.columns:
+            df = df.sort_values("DI70_ms")
 
-        plt.plot(di_ms, apd_ms, marker="o", label=tissue)
+        # Save CSV
+        csv_path = output_dir / f"{ionic_model}_restitution.csv"
+        if csv_path.exists():
+            csv_path.unlink()
+        df.to_csv(csv_path, index=False)
 
-    plt.xlabel("DI (ms)")
-    plt.ylabel("APD90 (ms)")
-    plt.title(f"S1–S2 Restitution – {ionic_model}")
-    plt.legend()
-    plt.grid(True)
+        # Plot restitution curves
+        plt.figure(figsize=(8, 5))
+        
+        if "DI90_ms" in df.columns:
+            valid90 = df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
+            if not valid90.empty:
+                plt.plot(valid90["DI90_ms"], valid90["APD90_ms"], marker='o', label='APD90')
+        
+        if "DI70_ms" in df.columns:
+            valid70 = df.dropna(subset=["DI70_ms", "APD70_ms"]).sort_values("DI70_ms")
+            if not valid70.empty:
+                plt.plot(valid70["DI70_ms"], valid70["APD70_ms"], marker='s', label='APD70')
+                
+        if "DI50_ms" in df.columns:
+            valid50 = df.dropna(subset=["DI50_ms", "APD50_ms"]).sort_values("DI50_ms")
+            if not valid50.empty:
+                plt.plot(valid50["DI50_ms"], valid50["APD50_ms"], marker='^', label='APD50')
 
-    fig_path = output_dir / f"{ionic_model}_restitution.png"
-    plt.savefig(fig_path, dpi=300)
-    if show_plot:
-        plt.show()
-    plt.close()
-    csv_path = output_dir / f"{ionic_model}_restitution.csv"
+        plt.xlabel("Diastolic Interval (ms)")
+        plt.ylabel("Action Potential Duration (ms)")
+        plt.title(f"Restitution Curve - {ionic_model} ({tissue})")
+        plt.grid(True, ls="--", alpha=0.6)
+        plt.legend()
+        plt.tight_layout()
 
-    with csv_path.open("w", newline="") as csvfile:
-        writer = csv.DictWriter(
-            csvfile,
-            fieldnames=["tissue", "DI_ms", "APD90_ms"]
-        )
-        writer.writeheader()
-        writer.writerows(data_rows)
-
-
-    if early_files:
-        print(
-        f"\n⚠️ Early strokes detected for {ionic_model}: "
-        f"{len(early_files)} file(s)")
-
-        early_list_path = output_dir / f"{ionic_model}_early_upstroke_files.txt"
-        with early_list_path.open("w") as f:
-            for fname in sorted(early_files):
-                f.write(fname + "\n")
+        plot_path = output_dir / f"{ionic_model}_restitution.png"
+            
+        plt.savefig(plot_path, dpi=300)
+        if show_plot:
+            plt.show()
+        plt.close()
 
     print(f"✅ Saved plots and data for {ionic_model}")
 
@@ -537,6 +581,7 @@ def run_postprocessing(
             ionic_model=model,
             tissues=tissues,
             show_plot=show_plots,
+            config=kwargs
         )
         fig_path = output_dir_path / f"{model}_restitution.png"
         csv_path = output_dir_path / f"{model}_restitution.csv"
