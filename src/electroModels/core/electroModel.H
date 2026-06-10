@@ -37,7 +37,6 @@ SourceFiles
 #include "electromechanicalSignalProvider.H"
 #include "electroStateProvider.H"
 #include "electrophysicsSystem.H"
-#include "Enum.H"
 #include "pimpleControl.H"
 #include "volFields.H"
 
@@ -55,13 +54,6 @@ class electroModel
   public IOdictionary,
   public electroStateProvider
 {
-public:
-  //- Solution algorithms
-  enum solutionAlgorithm { IMPLICIT, EXPLICIT };
-
-  //- Solution algorithm names
-  static const Enum<solutionAlgorithm> solutionAlgorithmNames_;
-
 private:
   // Private data
 
@@ -74,15 +66,8 @@ private:
   //- Pimple control for monitoring the convergence of the outer loop
   mutable autoPtr<pimpleControl> pimplePtr_;
 
-  //- Solution algorithm, e.g. implicit, explicit
-  //  This enum is used by some of the electro models but not all
-  const solutionAlgorithm solutionAlgorithm_;
-
   //- Performance timings for the advance step
   electrophysicsAdvanceTimings advanceTimings_;
-
-  //- Flag: set explicit deltaT once at the start of the simulation
-  bool setDeltaT_;
 
   // Private Member Functions
 
@@ -106,9 +91,6 @@ protected:
 
   //- Return non-const acess to the pimple control
   pimpleControl &pimple();
-
-  //- Const access to the solution algorithm enum
-  const solutionAlgorithm &solutionAlg() const { return solutionAlgorithm_; }
 
 public:
   //- Runtime type information

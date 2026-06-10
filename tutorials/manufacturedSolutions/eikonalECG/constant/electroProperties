@@ -24,7 +24,6 @@ eikonalSolverCoeffs
     cm   [-1 -4 4 0 0 2 0] 2;
     c0   [0 0 -0.5 0 0 0 0] 1;
 
-    solutionAlgorithm implicit;
 
     eikonalAdvectionDiffusionApproach true;
 

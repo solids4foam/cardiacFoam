@@ -361,7 +361,11 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
         "G",
         sqrt
         (
-            (gradActivationTime_ & w_)
+            max
+            (
+                gradActivationTime_ & w_,
+                dimensionedScalar("zero", dimTime, 0.0)
+            )
           + dimensionedScalar("smallG", dimTime, SMALL)
         )
     ),
@@ -498,7 +502,10 @@ void eikonalMyocardiumDomain::advance
     {
         gradActivationTime_ = fvc::grad(activationTime_);
         w_ = M_ & gradActivationTime_;
-        G_ = sqrt((gradActivationTime_ & w_) + smallG);
+        // Guard against negative dot product: M is positive-definite so
+        // dot(grad, M*grad) >= 0 analytically, but NaN/Inf from a stalled
+        // inner solve or degenerate mesh cells can violate this numerically.
+        G_ = sqrt(max(gradActivationTime_ & w_, dimensionedScalar("zero", dimTime, 0.0)) + smallG);
 
         if (eikonalAdvectionDiffusionApproach_)
         {
@@ -565,7 +572,7 @@ scalar eikonalMyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 }
 
 
-bool eikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
+bool eikonalMyocardiumDomain::applyModelTimeControls(Time& runTime)
 {
     InfoInFunction << "Setting deltaT and endTime to 1.0" << endl;
     runTime.setDeltaT(1.0);

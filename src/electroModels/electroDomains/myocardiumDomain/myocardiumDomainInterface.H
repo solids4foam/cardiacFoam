@@ -148,7 +148,7 @@ public:
 
     virtual void postProcess() = 0;
 
-    virtual bool applyModelTimeControls(Time& runTime) const
+    virtual bool applyModelTimeControls(Time& runTime)
     {
         (void)runTime;
         return false;

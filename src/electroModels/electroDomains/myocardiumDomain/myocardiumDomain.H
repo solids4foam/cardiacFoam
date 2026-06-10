@@ -70,6 +70,7 @@ protected:
     Switch useExplicitAlgorithm_;
     Switch reportSetup_;
     scalar activationThreshold_;
+    bool setDeltaT_;
 
     void updateExternalStimulusCurrent
     (
@@ -273,6 +274,8 @@ public:
     virtual void unbindExternalPhiE() override;
 
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
+
+    virtual bool applyModelTimeControls(Time& runTime) override;
 
     virtual bool shouldPostProcess() const override;
 

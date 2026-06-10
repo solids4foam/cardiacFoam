@@ -598,17 +598,17 @@ class TestParseElectroProperties(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
-                {"myocardiumSolver": "singleCellSolver",
+                {"myocardiumSolver": "monodomainSolver",
                  "ionicModel": "AlievPanfilov",
                  "tissue": "myocyte"},
                 overrides={
-                    "$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "explicit",
+                    "$ELECTRO_MODEL_COEFFS.solutionAlgorithm": "implicit",
                 },
             )
             result = parse_electro_properties(p)
             self.assertEqual(
                 result["overrides"].get("$ELECTRO_MODEL_COEFFS.solutionAlgorithm"),
-                "explicit",
+                "implicit",
             )
 
     def test_default_value_absent_from_overrides(self) -> None:

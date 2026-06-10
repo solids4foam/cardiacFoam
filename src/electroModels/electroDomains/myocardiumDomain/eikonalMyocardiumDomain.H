@@ -197,7 +197,7 @@ public:
 
     virtual void postProcess() override;
 
-    virtual bool applyModelTimeControls(Time& runTime) const override;
+    virtual bool applyModelTimeControls(Time& runTime) override;
 };
 
 } // End namespace Foam

@@ -274,7 +274,8 @@ myocardiumDomain::myocardiumDomain
     activationThreshold_
     (
         electroProperties_.lookupOrDefault<scalar>("activationThreshold", 0.0)
-    )
+    ),
+    setDeltaT_(true)
 {
     if (reportSetup_)
     {
@@ -506,13 +507,13 @@ void myocardiumDomain::advance
     ionicModel_.solveODE(t0, dt, Vm_, Iion_);
     Iion_.correctBoundaryConditions();
 
-    if (pimplePtr)
-    {
-        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
-    }
-    else if (useExplicitAlgorithm_)
+    if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
+    }
+    else if (pimplePtr)
+    {
+        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
     }
     else
     {
@@ -542,13 +543,13 @@ void myocardiumDomain::solveDiffusionStep
 {
     (void)t0;
 
-    if (pimplePtr)
-    {
-        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
-    }
-    else if (useExplicitAlgorithm_)
+    if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
+    }
+    else if (pimplePtr)
+    {
+        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
     }
     else
     {
@@ -637,6 +638,32 @@ scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
     const scalarField dx(1.0/mesh().deltaCoeffs());
 
     return maxCo*gMin(sqr(dx)/Df);
+}
+
+
+bool myocardiumDomain::applyModelTimeControls(Time& runTime)
+{
+    if (!useExplicitAlgorithm_ || !setDeltaT_)
+        return false;
+
+    setDeltaT_ = false;
+
+    const scalar maxCo =
+        runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.1);
+
+    const scalar stableMaxDeltaT = suggestExplicitDeltaT(maxCo);
+
+    if (runTime.deltaTValue() > stableMaxDeltaT)
+    {
+        Info << "Capping deltaT from " << runTime.deltaTValue()
+             << " to " << stableMaxDeltaT
+             << " (explicit stability limit, maxCo = " << maxCo << ")"
+             << endl;
+        runTime.setDeltaT(stableMaxDeltaT);
+        return true;
+    }
+
+    return false;
 }
 
 

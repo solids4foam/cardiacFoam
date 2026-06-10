@@ -240,7 +240,7 @@ void torsoECG::solve
     if (Pstream::parRun())
     {
         Pstream::listCombineGather(values, plusEqOp<scalar>());
-        Pstream::listCombineScatter(values);
+        Pstream::broadcast(values);
     }
 }
 

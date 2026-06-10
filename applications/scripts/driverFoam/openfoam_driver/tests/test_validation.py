@@ -51,7 +51,13 @@ def _filled_run(**overrides) -> RunDocument:
         "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
     }
     for e in _all_entries():
-        if not e.required:
+        is_unconditionally_required = e.required and not e.required_when
+        is_conditionally_required = e.required_when and any(
+            (lambda vals: config.get(ph2, {}).get(k) in (vals if isinstance(vals, tuple) else (vals,)))(v)
+            for k, v in e.required_when.items()
+            for ph2 in _PHASE_ORDER
+        )
+        if not (is_unconditionally_required or is_conditionally_required):
             continue
         ph = next((p for p in _PHASE_ORDER if p in e.phases), None)
         if ph is None:

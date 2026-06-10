@@ -33,18 +33,6 @@ namespace Foam
     defineRunTimeSelectionTable(electroModel, dictionary);
     addToRunTimeSelectionTable(physicsModel, electroModel, physicsModel);
 
-    const Enum<electroModel::solutionAlgorithm>
-    electroModel::solutionAlgorithmNames_
-    ({
-        {
-            electroModel::solutionAlgorithm::IMPLICIT,
-            "implicit"
-        },
-        {
-            electroModel::solutionAlgorithm::EXPLICIT,
-            "explicit"
-        },
-    });
 }
 
 
@@ -120,12 +108,7 @@ Foam::electroModel::electroModel
     ),
     electroProperties_(subDict(type + "Coeffs")),
     pimplePtr_(),
-    solutionAlgorithm_
-    (
-        solutionAlgorithmNames_.get("solutionAlgorithm", electroProperties_)
-    ),
     advanceTimings_(),
-    setDeltaT_(true),
     domainSystem_()
 {}
 
@@ -245,21 +228,8 @@ void Foam::electroModel::configureECGDomains()
 
 void Foam::electroModel::setDeltaT(Time& runTime)
 {
-    if (solutionAlg() == solutionAlgorithm::EXPLICIT && setDeltaT_)
-    {
-        setDeltaT_ = false;
-
-        const scalar maxCo =
-            runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.1);
-
-        const scalar newDeltaT =
-            domainSystem_.myocardium().suggestExplicitDeltaT(maxCo);
-
-        Info << "Setting deltaT = " << newDeltaT << ", maxCo = " << maxCo
-             << endl;
-
-        runTime.setDeltaT(newDeltaT);
-    }
+    if (domainSystem_.hasMyocardium())
+        domainSystem_.myocardium().applyModelTimeControls(runTime);
 
     physicsModel::setDeltaT(runTime);
 }
@@ -307,24 +277,8 @@ bool Foam::electroModel::evolve()
     const scalar dt = runTime().deltaTValue();
     const scalar t0 = runTime().value() - dt;
 
-    pimpleControl* pimplePtr = nullptr;
-
-    if (solutionAlg() == solutionAlgorithm::IMPLICIT)
-    {
-        pimplePtr = &pimple();
-    }
-    else if (solutionAlg() != solutionAlgorithm::EXPLICIT)
-    {
-        FatalErrorInFunction
-            << "Unrecognised solution algorithm. Available options are "
-            << solutionAlgorithmNames_[solutionAlgorithm::IMPLICIT]
-            << ", "
-            << solutionAlgorithmNames_[solutionAlgorithm::EXPLICIT]
-            << endl;
-    }
-
     const bool converged =
-        domainSystem_.advance(t0, dt, pimplePtr, advanceTimings_);
+        domainSystem_.advance(t0, dt, &pimple(), advanceTimings_);
 
     if (domainSystem_.hasMyocardium())
     {

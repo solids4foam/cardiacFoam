@@ -26,7 +26,6 @@ singleCellSolverCoeffs
 
     // Time integration settings
 
-    solutionAlgorithm explicit;
     solver          RKF45;
     initialODEStep  1e-5;
     maxSteps        1000000000;

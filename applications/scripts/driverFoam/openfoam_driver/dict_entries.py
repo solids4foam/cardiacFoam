@@ -237,15 +237,40 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.solutionAlgorithm",
             phases=frozenset({"solver"}),
-            description="Electro solver time-discretisation mode.",
+            description=(
+                "Diffusion step time-discretisation for monodomain and bidomain solvers. "
+                "'explicit' uses an operator-split forward-Euler diffusion step; "
+                "'implicit' uses a pimple-controlled implicit solve. "
+                "Not applicable to eikonalSolver (steady BVP) or singleCellSolver (no diffusion)."
+            ),
             source_refs=(
-                "src/electroModels/core/electroModel.C",
-                "src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.C",
+                "src/electroModels/electroDomains/myocardiumDomain/myocardiumDomain.C",
             ),
             value_kind="enum",
             enum_values=("implicit", "explicit"),
-            typical_value="implicit",
-            required=True,
+            typical_value="explicit",
+            required=False,
+            constraints=(
+                "Only applicable when myocardiumSolver is monodomainSolver or bidomainSolver.",
+            ),
+            required_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
+            forbidden_when={"myocardiumSolver": ("eikonalSolver", "singleCellSolver")},
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.activationThreshold",
+            phases=frozenset({"solver"}),
+            description=(
+                "Vm threshold (volts) used to detect cell activation onset. "
+                "A cell is marked as activated when Vm crosses this value upward. "
+                "Default 0.0 V (rest potential for most models)."
+            ),
+            source_refs=(
+                "src/electroModels/electroDomains/myocardiumDomain/myocardiumDomain.C",
+            ),
+            value_kind="scalar",
+            typical_value="0.0",
+            required=False,
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path="$ELECTRO_MODEL_COEFFS.ionicModel",
@@ -338,7 +363,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
                 "src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C",
                 "src/electroModels/core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C",
             ),
-            notes="staggeredElectrophysicsAdvanceScheme: weakly coupled, fast, stable for unidirectional. pimpleStaggeredElectrophysicsAdvanceScheme: strongly coupled with PIMPLE iteration, stable for bidirectional coupling (requires solutionAlgorithm=implicit).",
+            notes="staggeredElectrophysicsAdvanceScheme: weakly coupled, fast, stable for unidirectional. pimpleStaggeredElectrophysicsAdvanceScheme: strongly coupled with PIMPLE iteration, stable for bidirectional coupling (requires solutionAlgorithm=implicit in monodomainSolverCoeffs/bidomainSolverCoeffs).",
             value_kind="enum",
             enum_values=("staggeredElectrophysicsAdvanceScheme", "pimpleStaggeredElectrophysicsAdvanceScheme"),
             required=False,
@@ -362,6 +387,19 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path="$ELECTRO_MODEL_COEFFS.writeAfterTime",
             phases=frozenset({"solver"}),
             description="Suppresses single-cell trace output before the given time.",
+            source_refs=("src/genericWriter/ionicModelIO.C",),
+            value_kind="scalar",
+            required=False,
+        ),
+        DictEntry(
+            driver_path="$ELECTRO_MODEL_COEFFS.writeFrequency",
+            phases=frozenset({"solver"}),
+            description=(
+                "Output period (seconds) for single-cell trace writing. "
+                "When set, a row is emitted only when a writeFrequency boundary "
+                "is crossed between the previous and current time. "
+                "Omit (or set to 0) to write every step."
+            ),
             source_refs=("src/genericWriter/ionicModelIO.C",),
             value_kind="scalar",
             required=False,

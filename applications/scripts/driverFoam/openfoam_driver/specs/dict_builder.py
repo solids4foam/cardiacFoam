@@ -96,11 +96,18 @@ def select_applicable_entries(
     entries: list[DictEntry] | None = None,
 ) -> list[DictEntry]:
     """Return only entries whose `applicable_when` predicate matches the
-    context. Entries with no `applicable_when` are always included. The
-    `entries` kwarg lets callers (and tests) curate the input pool;
-    default is every electro entry."""
+    context and whose `forbidden_when` predicate does NOT match. Entries
+    with no `applicable_when` are always included. The `entries` kwarg lets
+    callers (and tests) curate the input pool; default is every electro entry."""
     pool = entries if entries is not None else _all_electro_entries()
-    return [e for e in pool if _entry_is_applicable(e, context)]
+    return [
+        e for e in pool
+        if _entry_is_applicable(e, context)
+        and not any(
+            _predicate_matches(context, key, expected)
+            for key, expected in e.forbidden_when.items()
+        )
+    ]
 
 
 def _is_required_in_context(
@@ -253,6 +260,24 @@ def _populated_to_run(
                        status="draft", config=config)
 
 
+def _check_no_forbidden_selectors(context: dict[str, Any]) -> None:
+    """Raise ValueError if the caller explicitly set a key that is forbidden
+    in the current context.  'Explicitly set' means the slot key appears in
+    *context* — i.e., the caller passed it as a selector or override."""
+    for entry in _all_electro_entries():
+        if not entry.forbidden_when:
+            continue
+        key = slot_key(entry.driver_path)
+        if key not in context:
+            continue
+        for pred_key, expected in entry.forbidden_when.items():
+            if _predicate_matches(context, pred_key, expected):
+                raise ValueError(
+                    f"build_electro_properties: '{key}' is forbidden when "
+                    f"{pred_key}={context.get(pred_key)!r}."
+                )
+
+
 def build_electro_properties(
     selectors: dict[str, str],
     *,
@@ -278,6 +303,11 @@ def build_electro_properties(
             or any structured-constraint violation from `validate_run`.
     """
     context = resolve_context(selectors, overrides=overrides)
+
+    # Pre-check: if the caller explicitly provides a key that is forbidden
+    # in this context, reject immediately rather than silently ignoring it.
+    _check_no_forbidden_selectors(context)
+
     entries = select_applicable_entries(context)
     populated = populate_values(
         entries, context, typical_value_fallback=typical_value_fallback,

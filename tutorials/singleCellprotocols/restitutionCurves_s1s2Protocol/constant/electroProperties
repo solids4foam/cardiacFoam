@@ -22,7 +22,6 @@ singleCellSolverCoeffs
     ionicModel    BuenoOrovio;
     tissue    epicardialCells;
 
-    solutionAlgorithm explicit;
     solver Euler;
     initialODEStep 1e-5;
     maxSteps 1000000000;

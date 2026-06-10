@@ -63,6 +63,10 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
             electroProperties()
         )
     ),
+    activeTensionModelPtr_(),
+    outputTaPtr_(),
+    lambdaField_(1, 1.0),
+    TaField_(1, 0.0),
     preProcessFieldNames_
     (
         verificationModelPtr_
@@ -79,10 +83,6 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
     ),
     postProcessFields_(),
     outputPtr_(),
-    activeTensionModelPtr_(),
-    outputTaPtr_(),
-    lambdaField_(1, 1.0),
-    TaField_(1, 0.0),
     Vm_
     (
         IOobject
