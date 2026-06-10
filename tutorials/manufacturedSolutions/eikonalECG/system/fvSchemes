@@ -28,7 +28,7 @@ gradSchemes
 divSchemes
 {
     default         none;
-    div(phiU,psi)  Gauss linear;
+    div(phiU,activationTime)  Gauss linear;
 }
 
 laplacianSchemes

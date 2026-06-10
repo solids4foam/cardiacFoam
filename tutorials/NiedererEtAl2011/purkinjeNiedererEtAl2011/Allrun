@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# Options
+#   solver=monodomain  (default) — monodomain 1-D Purkinje + 3-D reaction-diffusion
+#   solver=eikonal     — eikonal  1-D Purkinje + 3-D steady-state eikonal
+#   parallel           — run in parallel using decomposeParDict
+
+solver="monodomain"
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        solver=*) solver="${arg#solver=}" ;;
+        parallel) parallelRun=true ;;
+    esac
+done
+
+case "$solver" in
+    monodomain|eikonal) ;;
+    *) echo "Unknown solver '$solver'. Use solver=monodomain or solver=eikonal." ; exit 1 ;;
+esac
+
+echo "Using solver: $solver"
+cp "constant/electroProperties.$solver" constant/electroProperties
+
+runApplication blockMesh
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+
+# Niederer benchmark postprocessing (monodomain only — activates Vm probes)
+if [ "$solver" = "monodomain" ]; then
+    runApplication -o postProcess -func Niedererpoints -latestTime
+    runApplication -o postProcess -func Niedererlines  -latestTime
+fi

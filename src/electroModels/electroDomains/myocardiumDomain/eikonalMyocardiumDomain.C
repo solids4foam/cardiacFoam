@@ -306,14 +306,14 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     (
         IOobject
         (
-            "psi",
+            "activationTime",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedScalar("psi", dimTime, -1.0),
+        dimensionedScalar("activationTime", dimTime, -1.0),
         activationTimePatchTypes
         (
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -327,8 +327,8 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             "Vm",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -80.0),
@@ -341,8 +341,8 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             "externalStimulusCurrent",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
@@ -603,16 +603,11 @@ void eikonalMyocardiumDomain::write()
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
-
         writeMappedCellField(activationTime_, supportMesh_, cellMap);
-        writeMappedCellField(Vm_, supportMesh_, cellMap);
-        writeMappedCellField(sourceField_, supportMesh_, cellMap);
         return;
     }
 
     activationTime_.write();
-    Vm_.write();
-    sourceField_.write();
 }
 
 } // End namespace Foam

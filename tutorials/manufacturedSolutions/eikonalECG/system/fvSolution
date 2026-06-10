@@ -17,7 +17,7 @@ FoamFile
 
 solvers
 {
-    "psi|psiFinal"
+    "activationTime|activationTimeFinal"
     {
         solver          PCG;
         preconditioner  diagonal;
@@ -25,7 +25,7 @@ solvers
         relTol          0.1;
     }
 
-    asymmetric_psi
+    asymmetric_activationTime
     {
         solver          PBiCGStab;
         preconditioner  DILU;
@@ -40,7 +40,7 @@ PIMPLE
 
     residualControl
     {
-        psi
+        activationTime
         {
             relTol          0.0;
             tolerance       1e-11;
@@ -52,7 +52,7 @@ relaxationFactors
 {
     equations
     {
-        psi    0.9;
+        activationTime    0.9;
     }
     fields
     {

@@ -75,14 +75,14 @@ relaxationFactors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // B. eikonalSolver
-//    No Vm evolution — psi (activation time) is solved as a steady elliptic
-//    problem. The asymmetric_psi block handles the advection-diffusion form
+//    No Vm evolution — activationTime is solved as a steady elliptic problem.
+//    The asymmetric_activationTime block handles the advection-diffusion form
 //    when eikonalAdvectionDiffusionApproach = true.
 //    Replace the entire solvers/PIMPLE/relaxationFactors block with:
 //
 // solvers
 // {
-//     "psi|psiFinal"
+//     "activationTime|activationTimeFinal"
 //     {
 //         solver          PCG;
 //         preconditioner  diagonal;
@@ -90,7 +90,7 @@ relaxationFactors
 //         relTol          0.1;
 //     }
 //
-//     asymmetric_psi
+//     asymmetric_activationTime
 //     {
 //         solver          PBiCGStab;
 //         preconditioner  DILU;
@@ -105,7 +105,7 @@ relaxationFactors
 //
 //     residualControl
 //     {
-//         psi
+//         activationTime
 //         {
 //             relTol          0.0;
 //             tolerance       1e-11;
@@ -117,7 +117,7 @@ relaxationFactors
 // {
 //     equations
 //     {
-//         psi     0.9;
+//         activationTime     0.9;
 //     }
 // }
 // ─────────────────────────────────────────────────────────────────────────────

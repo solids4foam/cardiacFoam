@@ -3,7 +3,15 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ============================================================
-# Niederer monodomain-Purkinje slab regression test
+# Niederer Purkinje slab regression test
+#
+# Phase 1 — monodomain 1-D Purkinje + 3-D reaction-diffusion
+#   Graph utility run + coupled run with reference-value checks.
+#
+# Phase 2 — eikonal 1-D Purkinje + 3-D steady-state eikonal
+#   Smoke test: runs to completion and writes activationTime.
+#   (Reference activation-time values to be added after first
+#   successful validated run.)
 # ============================================================
 
 REF_FILE="purkinjeSlab.reference"
@@ -13,6 +21,7 @@ GRAPH_STEPS=2000
 BLOCKMESH_LOGFILE="log.blockMesh"
 GRAPH_LOGFILE="log.runPurkinjeGraph"
 ALLRUN_LOGFILE="log.Allrun"
+EIKONAL_LOGFILE="log.Allrun.eikonal"
 
 if [[ "$(uname -s)" == "Darwin" && -n "${WM_PROJECT_DIR:-}" && -n "${WM_OPTIONS:-}" ]]; then
     openfoamLibDir="${WM_PROJECT_DIR}/platforms/${WM_OPTIONS}/lib"
@@ -21,11 +30,9 @@ if [[ "$(uname -s)" == "Darwin" && -n "${WM_PROJECT_DIR:-}" && -n "${WM_OPTIONS:
     fi
 fi
 
-echo "============================================================"
-echo "Niederer monodomain-Purkinje slab regression test"
-echo "Graph utility and coupled PVJ slab run to t=${END_TIME}"
-echo "============================================================"
-echo
+# ----------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------
 
 absDiff()
 {
@@ -193,6 +200,16 @@ checkReferenceValues()
     return "${failures}"
 }
 
+# ================================================================
+# Phase 1 — monodomain 1-D Purkinje + 3-D reaction-diffusion
+# ================================================================
+
+echo "============================================================"
+echo "Phase 1: monodomain 1-D Purkinje + 3-D reaction-diffusion"
+echo "Graph utility and coupled PVJ slab run to t=${END_TIME}"
+echo "============================================================"
+echo
+
 ./Allclean > /dev/null 2>&1 || true
 foamDictionary system/controlDict -entry endTime -set "${END_TIME}" > /dev/null 2>&1
 
@@ -218,6 +235,53 @@ fi
 
 echo "PASS: coupled Purkinje-slab run wrote ${coupledVtk}"
 checkReferenceValues "${graphUtilityVtk}" "${coupledVtk}"
+
+echo
+echo "Phase 1 PASSED"
+
+# ================================================================
+# Phase 2 — eikonal 1-D Purkinje + 3-D steady-state eikonal
+# ================================================================
+
+echo
+echo "============================================================"
+echo "Phase 2: eikonal 1-D Purkinje + 3-D steady-state eikonal"
+echo "Smoke test: run to completion and check activationTime output"
+echo "============================================================"
+echo
+
+./Allclean > /dev/null 2>&1 || true
+
+./Allrun solver=eikonal > "${EIKONAL_LOGFILE}" 2>&1
+
+if grep -q "FatalError" "${EIKONAL_LOGFILE}"; then
+    echo "FAIL: eikonal run produced a FatalError"
+    echo "--- last 20 lines of ${EIKONAL_LOGFILE} ---"
+    tail -20 "${EIKONAL_LOGFILE}"
+    exit 1
+fi
+
+if ! grep -q "^End" "${EIKONAL_LOGFILE}"; then
+    echo "FAIL: eikonal run did not reach normal End"
+    echo "--- last 20 lines of ${EIKONAL_LOGFILE} ---"
+    tail -20 "${EIKONAL_LOGFILE}"
+    exit 1
+fi
+
+# Eikonal solver uses applyModelTimeControls → endTime = deltaT = 1.0
+# so results land in 1/
+if [[ ! -s 1/activationTime ]]; then
+    echo "FAIL: 1/activationTime not written by eikonal run"
+    exit 1
+fi
+
+echo "PASS: eikonal run completed and wrote 1/activationTime"
+
+# TODO: add eikonalActivationTime reference checks here once a validated
+# run has been performed and reference values have been established.
+
+echo
+echo "Phase 2 PASSED"
 
 echo
 echo "============================================================"

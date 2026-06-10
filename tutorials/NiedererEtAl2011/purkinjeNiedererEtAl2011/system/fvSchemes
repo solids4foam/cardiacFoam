@@ -17,20 +17,20 @@ FoamFile
 
 ddtSchemes
 {
-    //default         CrankNicolson 1.0;
-    default         backward; // 2nd order
-    //default         Euler; // 1st order
+    default         backward;
 }
 
 gradSchemes
 {
-    default         leastSquares;
+    // Gauss linear is more stable than leastSquares with anisotropic
+    // conductivity tensors; leastSquares can amplify high-frequency noise.
+    default         Gauss linear;
 }
 
 divSchemes
 {
-    default         none;
-    div(phiU,psi)   Gauss linear;
+    default                          none;
+    div(phiU,activationTime)         Gauss upwind;  // eikonal advection-diffusion
 }
 
 laplacianSchemes
@@ -47,6 +47,5 @@ snGradSchemes
 {
     default         corrected;
 }
-
 
 // ************************************************************************* //

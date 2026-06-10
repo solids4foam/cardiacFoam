@@ -34,9 +34,7 @@ functions
 
         fields
         (
-            psi
-            Vm
-            externalStimulusCurrent
+            activationTime
         );
 
         writeControl    runTime;

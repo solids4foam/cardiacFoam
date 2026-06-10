@@ -17,6 +17,7 @@ FoamFile
 
 solvers
 {
+    // Monodomain Vm field
     "Vm|VmFinal|u|uFinal"
     {
         solver          PCG;
@@ -25,26 +26,44 @@ solvers
         relTol          0.0;
     }
 
-    "psi|psiFinal"
+    // Eikonal activationTime field — symmetric (non-advection branch)
+    "activationTime|activationTimeFinal"
     {
         solver          PCG;
         preconditioner  DIC;
         tolerance       1e-11;
-        relTol          0.1;
+        relTol          1e-5;
+    }
+
+    // Eikonal activationTime field — advection-diffusion branch.
+    // DILU is safe because activationEqn.relax() boosts the diagonal.
+    // relTol 0.01 lets the inner solver exit early on hard Picard steps
+    // rather than stalling at maxIter and producing NaN.
+    asymmetric_activationTime
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-6;
+        relTol          0.01;
+        maxIter         500;
     }
 }
 
-// PIMPLE settings for eikonalElectroActivationFoam
 PIMPLE
 {
     nOuterCorrectors    1000;
 
     residualControl
     {
-        "Vm|psi"
+        Vm
         {
             relTol          0.0;
             tolerance       1e-6;
+        }
+        activationTime
+        {
+            relTol          0.0;
+            tolerance       1e-11;
         }
     }
 }
@@ -53,11 +72,7 @@ relaxationFactors
 {
     equations
     {
-        psi    0.9;
-    }
-    fields
-    {
-        //psi    0.5;
+        activationTime    0.9;
     }
 }
 
