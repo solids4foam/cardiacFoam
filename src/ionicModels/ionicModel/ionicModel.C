@@ -445,11 +445,5 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
         );
     }
 
-    Info<< "Configured " << type()
-        << " transmural ionic heterogeneity using "
-        << "endo/M interface " << endoMInterface
-        << ", M/epi interface " << mEpiInterface
-        << ", transitionWidth " << transitionWidth
-        << ", transitionMode " << transitionMode
-        << ", smoothing " << smoothing << "." << nl << endl;
+
 }

@@ -38,7 +38,7 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
     const dictionary& coeffs
 )
 {
-    Info<< nl << "Selecting myocardiumSolver " << solverType << endl;
+
 
     auto* ctorPtr = dictionaryConstructorTable(solverType);
 

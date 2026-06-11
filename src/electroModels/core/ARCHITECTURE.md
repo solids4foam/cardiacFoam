@@ -132,6 +132,13 @@ electrophysiology system.
 
 ---
 
+### `electrophysiologyModel/printElectrophysiologySummary.H`
+
+Startup banner and configuration summary parser.
+Included in the `electrophysiologyModel` constructor to echo the selected solver hierarchy, advance scheme, active ionic models, tissue heterogeneities, and spatial dimensions to the terminal prior to execution.
+
+---
+
 ### `system/electrophysicsSystem.H/.C`
 
 Domain container and advance coordinator.

@@ -34,10 +34,11 @@ cardiacFoam/
 
 At runtime, solver/model selection is fully dictionary-driven:
 
-1. `applications/solvers/cardiacFoam/cardiacFoam.C` creates `physicsModel::New(runTime)`.
-2. `physicsModel` type is selected from `constant/physicsProperties` (`type`).
-3. For electro runs, `src/electroModels/electroModel::New(...)` selects the solver from `constant/electroProperties` (`myocardiumSolver`).
-4. Electro models (`monodomainSolver`, `bidomainSolver`, `singleCellSolver`, `eikonalSolver`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
+1. `applications/solvers/cardiacFoam/cardiacFoam.C` creates the run time.
+2. `applications/solvers/cardiacFoam/cardiacFoam.C` creates `physicsModel::New(runTime)`.
+3. `physicsModel` type is selected from `constant/physicsProperties` (`type`).
+4. For electro runs, `src/electroModels/electroModel::New(...)` selects the solver from `constant/electroProperties` (`myocardiumSolver`).
+5. Electro models (`monodomainSolver`, `bidomainSolver`, `singleCellSolver`, `eikonalSolver`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
 
 ## Current electro model stack
 

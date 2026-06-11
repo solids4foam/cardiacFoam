@@ -151,8 +151,6 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     // which registers itself under those three names.
     const word modelType(props.lookup("myocardiumSolver"));
 
-    Info<< nl << "Selecting electroModel entry for myocardiumSolver "
-        << modelType << endl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 

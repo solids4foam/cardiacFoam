@@ -142,6 +142,8 @@ Foam::electrophysiologyModel::electrophysiologyModel
     );
 
     configureECGDomains();
+
+#   include "printElectrophysiologySummary.H"
 }
 
 
