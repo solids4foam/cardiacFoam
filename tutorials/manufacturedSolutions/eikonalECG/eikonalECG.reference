@@ -1,5 +1,5 @@
 # kind           key               metric  expected   tolerance
-summary          cells             -       8000       0
+# (mesh: 20^3 = 8000 cells — set in system/blockMeshDict)
 error            activationTime    L1      1.17e-03   1e-04
 error            activationTime    L2      1.70e-03   1e-04
 error            activationTime    Linf    6.91e-03   1e-03

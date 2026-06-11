@@ -36,17 +36,36 @@ findFirstMatch()
 
 findManufacturedErrorFile()
 {
-    local candidate
+    local candidate meshN
+    local -a fallbacks=()
+
+    # The verifier generates convergence-study files for 10/20/40/80 cells per
+    # direction. Pick the file matching the actual simulation mesh so reference
+    # values stay consistent regardless of which study grids the verifier runs.
+    meshN="$(grep -E 'hex \(' system/blockMeshDict \
+             | grep -oE '\) \([0-9]+' \
+             | grep -oE '[0-9]+' \
+             | head -1 2>/dev/null || echo "")"
 
     for candidate in postProcessing/*.dat processor*/postProcessing/*.dat
     do
         if [[ -s "${candidate}" ]] \
             && grep -q 'Eikonal manufactured activation-time summary' "${candidate}" \
             && grep -q 'dimension 3D' "${candidate}"; then
-            echo "${candidate}"
-            return 0
+            if [[ -n "${meshN}" && "${candidate}" == *"3D_${meshN}_cells_"* ]]; then
+                echo "${candidate}"
+                return 0
+            fi
+            fallbacks+=("${candidate}")
         fi
     done
+
+    # Fallback: no mesh-N match — use version-sort and pick the middle entry
+    # (avoids both the coarsest internal-study file and the finest).
+    if [[ ${#fallbacks[@]} -gt 0 ]]; then
+        printf '%s\n' "${fallbacks[@]}" | sort -V | head -$((${#fallbacks[@]} / 2 + 1)) | tail -1
+        return 0
+    fi
 
     return 1
 }

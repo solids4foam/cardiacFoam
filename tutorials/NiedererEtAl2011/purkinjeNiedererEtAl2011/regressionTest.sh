@@ -9,9 +9,8 @@ IFS=$'\n\t'
 #   Graph utility run + coupled run with reference-value checks.
 #
 # Phase 2 — eikonal 1-D Purkinje + 3-D steady-state eikonal
-#   Smoke test: runs to completion and writes activationTime.
-#   (Reference activation-time values to be added after first
-#   successful validated run.)
+#   Run to completion and check quantitative activationTime values
+#   at PVJ nodes against eikonalSlab.reference.
 # ============================================================
 
 REF_FILE="purkinjeSlab.reference"
@@ -263,7 +262,7 @@ echo "Phase 1 PASSED"
 echo
 echo "============================================================"
 echo "Phase 2: eikonal 1-D Purkinje + 3-D steady-state eikonal"
-echo "Smoke test: run to completion and check activationTime output"
+echo "Quantitative checks: PVJ activationTime vs eikonalSlab.reference"
 echo "============================================================"
 echo
 
@@ -271,14 +270,17 @@ echo
 
 ./Allrun solver=eikonal > "${EIKONAL_LOGFILE}" 2>&1
 
-if grep -q "FatalError" "${EIKONAL_LOGFILE}"; then
+# runApplication inside Allrun redirects solver output to log.cardiacFoam,
+# not to the wrapper log — check the solver log for FatalError and End.
+EIKONAL_SOLVER_LOG="log.cardiacFoam"
+if grep -q "FatalError" "${EIKONAL_SOLVER_LOG:-/dev/null}"; then
     echo "FAIL: eikonal run produced a FatalError"
-    echo "--- last 20 lines of ${EIKONAL_LOGFILE} ---"
-    tail -20 "${EIKONAL_LOGFILE}"
+    echo "--- last 20 lines of ${EIKONAL_SOLVER_LOG} ---"
+    tail -20 "${EIKONAL_SOLVER_LOG}"
     exit 1
 fi
 
-if ! grep -q "^End" "${EIKONAL_LOGFILE}"; then
+if ! grep -q "^End" "${EIKONAL_SOLVER_LOG:-/dev/null}"; then
     echo "FAIL: eikonal run did not reach normal End"
     echo "--- last 20 lines of ${EIKONAL_LOGFILE} ---"
     tail -20 "${EIKONAL_LOGFILE}"
