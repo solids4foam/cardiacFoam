@@ -15,31 +15,34 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-myocardiumSolver  eikonalSolver;
+myocardiumSolver  monodomainSolver;
 
-eikonalSolverCoeffs
+monodomainSolverCoeffs
 {
-    // Conductivity, surface-to-volume ratio and membrane capacitance
-    // match the standard NiedererEtAl2011 slab parameters.
     conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
-    chi          [0 -1 0 0 0 0 0]  140000;
-    cm           [-1 -4 4 0 0 2 0] 0.01;
+    chi   [0 -1 0 0 0 0 0] 140000;
+    cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    // Eikonal conduction speed (sqrt of 1/(chi*cm) scaling factor).
-    c0           [0 0 -0.5 0 0 0 0] 1;
+    ionicModel    BuenoOrovio;
+    tissue    epicardialCells;
 
-    eikonalAdvectionDiffusionApproach true;
-    electrophysicsAdvanceScheme       staggeredElectrophysicsAdvanceScheme;
-    reportSetup                       true;
+    outputVariables
+    {
+        ionic
+        {
+            export ( Iion);
+            debug (Vm);
+        }
+    }
 
-    // No direct bounding-box stimulus: all activation constraints are
-    // deposited by the Purkinje-ventricular junction coupler below.
-    stimulusLocationMin (1e6 1e6 1e6);
-    stimulusLocationMax (1e6 1e6 1e6);
+    solutionAlgorithm    explicit;
+    solver RKF45;
+    initialODEStep 1e-6;
+    maxSteps 1000000000;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
-    // ---------------------------------------------------------------
-    // Purkinje network — eikonal 1-D Dijkstra propagation
-    // ---------------------------------------------------------------
+
+
     conductionNetworkDomains
     {
         purkinjeNetwork
@@ -48,48 +51,47 @@ eikonalSolverCoeffs
 
             purkinjeGraphModelCoeffs
             {
-                conductionSystemSolver eikonalSolver1D;
+                conductionSystemSolver monodomain1DSolver;
                 graphFile              purkinjeGraph;
 
-                // Purkinje conduction velocity (m/s).
-                c0      [0 1 -1 0 0 0 0] 2.0;
+                ionicModel             BuenoOrovio;
+                tissue                 epicardialCells;
 
-                // Required by purkinjeGraphModel even for the eikonal solver.
-                chi     140000;
-                cm      0.01;
-                vm1DRest -0.084;
+                chi                    140000;
+                cm                     0.01;
+                vm1DRest               -0.084;
 
-                // Seed the Purkinje root node at t = 0.
                 rootStimulus
                 {
                     node      0;
-                    startTime 0.0;
-                    duration  0.0;
-                    intensity 0.0;
+                    startTime 0.01;
+                    duration  0.002;
+                    intensity 500000.0;
                 }
+
+                solver         RKF45;
+                initialODEStep 1e-6;
+                maxSteps       1000000000;
 
                 outputVariables
                 {
-                    export (activationTime);
-                    debug  ();
+                    export ( IcouplingSource);
+                    debug  ( IcouplingSource);
                 }
             }
         }
     }
 
-    // ---------------------------------------------------------------
-    // Purkinje-ventricular junction: eikonal coupler deposits Purkinje
-    // terminal activation times as Dirichlet constraints on psi.
-    // ---------------------------------------------------------------
     domainCouplings
     {
-        purkinjeToMyocardium
+        couplingA
         {
-            electroDomainCoupler    eikonalPvjCoupler;
+            electroDomainCoupler    reactionDiffusionPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
-            pvjRadius               5e-4;
+            rPvj                    10000;
+            pvjRadius               3e-4;
             couplingMode            unidirectional;
-            reportSetup             true;
+            debugCoupling           true;
         }
     }
 }

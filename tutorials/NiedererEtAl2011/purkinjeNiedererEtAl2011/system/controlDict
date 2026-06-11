@@ -1,19 +1,19 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
+|  \\    /   O peration     | Version:  2412                                  |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 FoamFile
 {
-    version     2.0;
-    format      ascii;
-    class       dictionary;
-    location    "system";
-    object      controlDict;
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "system";
+    object          controlDict;
 }
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 application     cardiacFoam;
 
@@ -23,15 +23,15 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime    	0.1;
+endTime         0.02;
 
-deltaT    	1e-05;
+deltaT          5e-05;
 
-maxCo 		0.1;
+maxCo           0.1;
 
 writeControl    runTime;
 
-writeInterval   5e-3;
+writeInterval   0.005;
 
 purgeWrite      0;
 
@@ -47,11 +47,9 @@ timePrecision   6;
 
 runTimeModifiable false;
 
-
-
-// ************************************************************************* //
-
-
 functions
 {
 }
+
+
+// ************************************************************************* //

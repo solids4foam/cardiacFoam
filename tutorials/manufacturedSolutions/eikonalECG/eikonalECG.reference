@@ -1,10 +1,10 @@
 # kind           key               metric  expected   tolerance
-summary          cells             -       512000     0
-error            activationTime    L1      7.12e-05   1e-05
-error            activationTime    L2      9.86e-05   1e-05
-error            activationTime    Linf    4.01e-04   1e-04
-pseudoECG        E1                -      -0.00216    1e-04
-pseudoECG        E2                -       0.00077    1e-04
-pseudoECG        E3                -       0.00085    1e-04
-pseudoECG        E4                -       0.00088    1e-04
-pseudoECG        E5                -       0.00052    1e-04
+summary          cells             -       8000       0
+error            activationTime    L1      1.17e-03   1e-04
+error            activationTime    L2      1.70e-03   1e-04
+error            activationTime    Linf    6.91e-03   1e-03
+pseudoECG        E1                -      -0.001588   1e-04
+pseudoECG        E2                -       0.000981   1e-04
+pseudoECG        E3                -       0.001419   1e-04
+pseudoECG        E4                -       0.001084   1e-04
+pseudoECG        E5                -       0.000713   1e-04

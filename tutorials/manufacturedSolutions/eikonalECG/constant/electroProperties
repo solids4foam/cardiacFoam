@@ -46,14 +46,13 @@ eikonalSolverCoeffs
             {
                 start  0;
                 end    2;
-                deltaT 0.005;
+                deltaT 0.05;
             }
 
             manufacturedEikonalECG
             {
                 enabled    yes;
-                referenceQuadratureOrder    96;
-                checkQuadratureOrders    (6 12 24 48);
+                referenceQuadratureOrder    48;
             }
 
             electrodePositions

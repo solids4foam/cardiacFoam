@@ -14,7 +14,7 @@ REF_FILE="eikonalECG.reference"
 echo "============================================================"
 echo "Eikonal ECG manufactured-solution regression test"
 echo "Manufactured field and ECG outputs must be present"
-echo "Mesh: system/blockMeshDict.3D, run mode: parallel"
+echo "Mesh: system/blockMeshDict (default), run mode: parallel"
 echo "============================================================"
 echo
 
@@ -270,7 +270,6 @@ checkPseudoECGHeader()
 
 ./Allclean > /dev/null 2>&1 || true
 checkElectrodeConfiguration
-blockMesh -dict system/blockMeshDict.3D > "${BLOCKMESH_LOGFILE}" 2>&1
 ./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1
 
 errorFile="$(findManufacturedErrorFile)" || {

@@ -228,6 +228,7 @@ echo
 
 ./Allclean > /dev/null 2>&1 || true
 foamDictionary system/controlDict -entry endTime -set "${END_TIME}" > /dev/null 2>&1
+cp constant/electroProperties.monodomain constant/electroProperties
 
 blockMesh > "${BLOCKMESH_LOGFILE}" 2>&1
 runPurkinjeGraph -case . -conductionDomain purkinjeNetwork -nSteps "${GRAPH_STEPS}" -deltaT "${DT}" \
