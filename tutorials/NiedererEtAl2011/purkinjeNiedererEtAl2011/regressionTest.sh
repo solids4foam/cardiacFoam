@@ -138,6 +138,19 @@ extractFinalPvjValue()
         postProcessing/purkinjeNetwork.dat
 }
 
+# Eikonal case: Purkinje activation times written to purkinjeNetwork.dat
+# columns: time, node0_activationTime, node1_activationTime, ...
+# nodeN is at column N+2.
+extractEikonalPurkinjeAT()
+{
+    local nodeKey="$1"
+    local nodeNum="${nodeKey#node}"
+    local column=$((nodeNum + 2))
+
+    awk -v col="${column}" '$1 !~ /^#/ {print $col; exit}' \
+        postProcessing/purkinjeNetwork.dat
+}
+
 extractReferenceValue()
 {
     local kind="$1"
@@ -158,6 +171,9 @@ extractReferenceValue()
             ;;
         coupledPVJ)
             extractFinalPvjValue "${key}"
+            ;;
+        eikonalPurkinjeAT)
+            extractEikonalPurkinjeAT "${key}"
             ;;
         *)
             return 1
@@ -277,8 +293,35 @@ fi
 
 echo "PASS: eikonal run completed and wrote 1/activationTime"
 
-# TODO: add eikonalActivationTime reference checks here once a validated
-# run has been performed and reference values have been established.
+# Quantitative checks: Purkinje Dijkstra activation times at key nodes.
+# These are deterministic (Dijkstra) and bitwise-reproducible.
+EIKONAL_REF_FILE="eikonalSlab.reference"
+if [[ ! -f "${EIKONAL_REF_FILE}" ]]; then
+    echo "FAIL: eikonal reference file not found: ${EIKONAL_REF_FILE}"
+    exit 1
+fi
+
+eikonalFailures=0
+eikonalChecks=0
+while IFS=' ' read -r kind key metric expected tolerance; do
+    if [[ -z "${kind}" || "${kind}" == \#* ]]; then
+        continue
+    fi
+    actual="$(extractReferenceValue "${kind}" "${key}" "${metric}" "" "")"
+    eikonalChecks=$((eikonalChecks + 1))
+    if [[ -z "${actual}" ]]; then
+        echo "FAIL: could not extract ${kind} ${key} ${metric}"
+        eikonalFailures=$((eikonalFailures + 1))
+        continue
+    fi
+    checkWithinTolerance "${kind} ${key} ${metric}" "${actual}" "${expected}" "${tolerance}" \
+        || eikonalFailures=$((eikonalFailures + 1))
+done < "${EIKONAL_REF_FILE}"
+
+echo "Eikonal slab reference comparison: ${eikonalChecks} checks, ${eikonalFailures} failures"
+if (( eikonalFailures > 0 )); then
+    exit 1
+fi
 
 echo
 echo "Phase 2 PASSED"
