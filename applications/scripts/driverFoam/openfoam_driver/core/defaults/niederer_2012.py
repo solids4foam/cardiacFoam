@@ -70,7 +70,7 @@ LINE_POSTPROCESS_FUNCTION = "run_postprocessing"
 POINTS_POSTPROCESS_FUNCTION = "run_postprocessing"
 CACHE_POSTPROCESS_FUNCTION = "run_postprocessing"
 CASE_POSTPROCESS_CACHE_DIRNAME = "cachedCasePostProcessing"
-TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+TABLE_SUMMARY_RELPATH = Path("table_summary.py")
 EXCEL_REFERENCE_RELPATH = Path(
     "postProcessing/Niederer_graphs_webplotdigitilizer_points_slab/WebPlotDigitilizerdata.xlsx"
 )

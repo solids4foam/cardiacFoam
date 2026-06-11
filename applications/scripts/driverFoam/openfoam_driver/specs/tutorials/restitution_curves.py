@@ -120,42 +120,11 @@ def _run_case(
     for source in sorted(output_dir.glob(f"{ionic_model}_{tissue}_S1_*_S2_{s2_interval}.txt")):
         stem = source.stem
 
-        # Animate the voltage trace before moving the file
-        _animate_voltage_trace(
-            data_file=source,
-            output_path=model_dir / f"{stem}.mp4",
-            title=f"{ionic_model} · {tissue} · S2={s2_interval} ms",
-        )
-
         dest = model_dir / source.name
         if dest.exists():
             dest.unlink()
         shutil.move(str(source), str(dest))
         print(f"Moved output: {source.name} -> {dest}")
-
-
-def _animate_voltage_trace(
-    data_file: Path,
-    output_path: Path,
-    title: str = "",
-) -> None:
-    """Load animate_trace.py from the tutorial setup dir and call it."""
-    # The module lives in the tutorial's setupRestitutionCurves_s1s2Protocol/
-    # directory, next to this spec's sibling scripts. We discover it relative
-    # to the data file's grandparent (case_root).
-    animate_module = data_file.parent.parent / "setupRestitutionCurves_s1s2Protocol" / "animate_trace.py"
-    if not animate_module.exists():
-        print(f"Warning: animate_trace.py not found at {animate_module}; skipping video.")
-        return
-
-    import importlib.util
-    mod_spec = importlib.util.spec_from_file_location("animate_trace", animate_module)
-    if mod_spec is None or mod_spec.loader is None:
-        print(f"Warning: could not load animate_trace module; skipping video.")
-        return
-    module = importlib.util.module_from_spec(mod_spec)
-    mod_spec.loader.exec_module(module)
-    module.create_voltage_animation(data_file, output_path, title=title)
 
 
 def _postprocess(

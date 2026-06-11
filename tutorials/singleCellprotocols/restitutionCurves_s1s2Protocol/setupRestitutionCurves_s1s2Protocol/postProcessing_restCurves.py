@@ -439,9 +439,9 @@ def postprocess_one_ionic_model(
     data_rows = []
     input_dir = output_dir
 
-    for tissue in tissues:
-        all_restitution_data = []
+    all_restitution_data = []
 
+    for tissue in tissues:
         # Find all files for this ionic model + tissue
         file_pattern = f"*{ionic_model}*{tissue}*.txt"
         files = list(input_dir.rglob(file_pattern))
@@ -460,7 +460,9 @@ def postprocess_one_ionic_model(
             for b in beats:
                 b["file"] = str(f)
 
-            plot_path = output_dir / f"{f.stem}_annotated.png"
+            tissue_dir = output_dir / tissue
+            tissue_dir.mkdir(parents=True, exist_ok=True)
+            plot_path = tissue_dir / f"{f.stem}_annotated.png"
             plot_trace(time, vm, beats, filepath=f, savepath=plot_path, config=config)
 
             res = compute_apd_di(beats, f, config=config)
@@ -481,54 +483,79 @@ def postprocess_one_ionic_model(
                 
             all_restitution_data.append(row)
 
-        if not all_restitution_data:
-            print(f"⚠️ No valid restitution points for {ionic_model} / {tissue}")
+    if not all_restitution_data:
+        print(f"⚠️ No valid restitution points for {ionic_model}")
+        return
+
+    df = pd.DataFrame(all_restitution_data)
+
+    # Save single CSV for the ionic model
+    csv_path = output_dir / f"{ionic_model}_restitution.csv"
+    if csv_path.exists():
+        csv_path.unlink()
+    df.to_csv(csv_path, index=False)
+
+    # Plot combined restitution curves
+    plt.figure(figsize=(10, 6))
+    
+    for tissue in tissues:
+        tissue_df = df[df["tissue"] == tissue]
+        if tissue_df.empty:
             continue
-
-        # Convert to DataFrame and sort by DI90 (or DI70 if 90 is missing)
-        df = pd.DataFrame(all_restitution_data)
-        if "DI90_ms" in df.columns:
-            df = df.sort_values("DI90_ms")
-        elif "DI70_ms" in df.columns:
-            df = df.sort_values("DI70_ms")
-
-        # Save CSV
-        csv_path = output_dir / f"{ionic_model}_restitution.csv"
-        if csv_path.exists():
-            csv_path.unlink()
-        df.to_csv(csv_path, index=False)
-
-        # Plot restitution curves
-        plt.figure(figsize=(8, 5))
-        
-        if "DI90_ms" in df.columns:
-            valid90 = df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
-            if not valid90.empty:
-                plt.plot(valid90["DI90_ms"], valid90["APD90_ms"], marker='o', label='APD90')
-        
-        if "DI70_ms" in df.columns:
-            valid70 = df.dropna(subset=["DI70_ms", "APD70_ms"]).sort_values("DI70_ms")
-            if not valid70.empty:
-                plt.plot(valid70["DI70_ms"], valid70["APD70_ms"], marker='s', label='APD70')
-                
-        if "DI50_ms" in df.columns:
-            valid50 = df.dropna(subset=["DI50_ms", "APD50_ms"]).sort_values("DI50_ms")
-            if not valid50.empty:
-                plt.plot(valid50["DI50_ms"], valid50["APD50_ms"], marker='^', label='APD50')
-
-        plt.xlabel("Diastolic Interval (ms)")
-        plt.ylabel("Action Potential Duration (ms)")
-        plt.title(f"Restitution Curve - {ionic_model} ({tissue})")
-        plt.grid(True, ls="--", alpha=0.6)
-        plt.legend()
-        plt.tight_layout()
-
-        plot_path = output_dir / f"{ionic_model}_restitution.png"
             
-        plt.savefig(plot_path, dpi=300)
-        if show_plot:
-            plt.show()
-        plt.close()
+        if "DI90_ms" in tissue_df.columns:
+            valid90 = tissue_df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
+            if not valid90.empty:
+                plt.plot(valid90["DI90_ms"], valid90["APD90_ms"], marker='o', label=f'{tissue} APD90')
+        
+        if "DI70_ms" in tissue_df.columns:
+            valid70 = tissue_df.dropna(subset=["DI70_ms", "APD70_ms"]).sort_values("DI70_ms")
+            if not valid70.empty:
+                plt.plot(valid70["DI70_ms"], valid70["APD70_ms"], marker='s', label=f'{tissue} APD70')
+                
+        if "DI50_ms" in tissue_df.columns:
+            valid50 = tissue_df.dropna(subset=["DI50_ms", "APD50_ms"]).sort_values("DI50_ms")
+            if not valid50.empty:
+                plt.plot(valid50["DI50_ms"], valid50["APD50_ms"], marker='^', label=f'{tissue} APD50')
+
+    plt.xlabel("Diastolic Interval (ms)")
+    plt.ylabel("Action Potential Duration (ms)")
+    plt.title(f"Restitution Curve - {ionic_model}")
+    plt.grid(True, ls="--", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+
+    plot_path = output_dir / f"{ionic_model}_restitution.png"
+    plt.savefig(plot_path, dpi=300)
+    if show_plot:
+        plt.show()
+    plt.close()
+
+    # Plot APD90 only restitution curves
+    plt.figure(figsize=(10, 6))
+    
+    for tissue in tissues:
+        tissue_df = df[df["tissue"] == tissue]
+        if tissue_df.empty:
+            continue
+            
+        if "DI90_ms" in tissue_df.columns:
+            valid90 = tissue_df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
+            if not valid90.empty:
+                plt.plot(valid90["DI90_ms"], valid90["APD90_ms"], marker='o', label=f'{tissue} APD90')
+
+    plt.xlabel("Diastolic Interval (ms)")
+    plt.ylabel("Action Potential Duration (ms)")
+    plt.title(f"Restitution Curve (APD90) - {ionic_model}")
+    plt.grid(True, ls="--", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+
+    plot_path_apd90 = output_dir / f"{ionic_model}_restitution_APD90.png"
+    plt.savefig(plot_path_apd90, dpi=300)
+    if show_plot:
+        plt.show()
+    plt.close()
 
     print(f"✅ Saved plots and data for {ionic_model}")
 
@@ -583,18 +610,28 @@ def run_postprocessing(
             show_plot=show_plots,
             config=kwargs
         )
-        fig_path = output_dir_path / f"{model}_restitution.png"
-        csv_path = output_dir_path / f"{model}_restitution.csv"
+        model_dir = output_dir_path / model
+        fig_path = model_dir / f"{model}_restitution.png"
+        fig_path_apd90 = model_dir / f"{model}_restitution_APD90.png"
+        csv_path = model_dir / f"{model}_restitution.csv"
+        
         if fig_path.exists():
             artifacts.append({
-                "path": fig_path.name,
-                "label": f"{model} restitution curve",
+                "path": f"{model}/{fig_path.name}",
+                "label": f"{model} restitution curve (All)",
+                "kind": "plot",
+                "format": "png",
+            })
+        if fig_path_apd90.exists():
+            artifacts.append({
+                "path": f"{model}/{fig_path_apd90.name}",
+                "label": f"{model} restitution curve (APD90 only)",
                 "kind": "plot",
                 "format": "png",
             })
         if csv_path.exists():
             artifacts.append({
-                "path": csv_path.name,
+                "path": f"{model}/{csv_path.name}",
                 "label": f"{model} restitution data",
                 "kind": "data",
                 "format": "csv",

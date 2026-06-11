@@ -53,7 +53,7 @@ RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
 OUTPUT_GLOB = "*.txt"
 POSTPROCESS_SCRIPT_RELPATH = Path("postProcessing_restCurves.py")
 POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
-TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+TABLE_SUMMARY_RELPATH = Path("table_summary.py")
 
 # Re-export shared paths used by the spec
 __all__ = [
