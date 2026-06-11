@@ -21,7 +21,7 @@ singleCellSolverCoeffs
     // Cell model selection
 
     ionicModel    TWorld;
-    tissue        epicardialCells;
+    tissue        endocardialCells;
 
 
     // Time integration settings
