@@ -38,15 +38,11 @@ findManufacturedErrorFile()
 {
     local candidate
 
-    candidate="$(findFirstMatch 'postProcessing/*.dat')" || true
-    if [[ -n "${candidate}" ]] && grep -q 'Eikonal manufactured activation-time summary' "${candidate}"; then
-        echo "${candidate}"
-        return 0
-    fi
-
     for candidate in postProcessing/*.dat processor*/postProcessing/*.dat
     do
-        if [[ -s "${candidate}" ]] && grep -q 'Eikonal manufactured activation-time summary' "${candidate}"; then
+        if [[ -s "${candidate}" ]] \
+            && grep -q 'Eikonal manufactured activation-time summary' "${candidate}" \
+            && grep -q 'dimension 3D' "${candidate}"; then
             echo "${candidate}"
             return 0
         fi

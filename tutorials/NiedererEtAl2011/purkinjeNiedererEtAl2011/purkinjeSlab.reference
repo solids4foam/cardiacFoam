@@ -9,10 +9,10 @@ graphUtilityVm    node15          final       0.04032262        1e-6
 coupledVm         node0           final       0.008848017       1e-6
 coupledVm         node8           final       0.03915147        1e-6
 coupledVm         node15          final      -0.068973          1e-6
-coupledPVJ        pvj0            final       26017.597         50
-coupledPVJ        pvj1            final       21208.025         50
-coupledPVJ        pvj2            final       23622.25          50
-coupledPVJ        pvj3            final       38719.737         50
+coupledPVJ        pvj0            final       26017.731         50
+coupledPVJ        pvj1            final       21170.811         50
+coupledPVJ        pvj2            final       30507.451         50
+coupledPVJ        pvj3            final       38719.732         50
 coupledPVJ        pvj4            final       38718.117         50
 coupledPVJ        pvj5            final       32665.641         50
 coupledPVJ        pvj6            final       11042.191         50

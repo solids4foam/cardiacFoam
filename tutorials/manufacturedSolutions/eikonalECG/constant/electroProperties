@@ -53,6 +53,7 @@ eikonalSolverCoeffs
             {
                 enabled    yes;
                 referenceQuadratureOrder    48;
+                // checkQuadratureOrders    (6 12 24 48);  // uncomment for quadrature convergence study
             }
 
             electrodePositions
