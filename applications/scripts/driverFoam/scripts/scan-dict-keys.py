@@ -1,4 +1,31 @@
 #!/usr/bin/env python3
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Script
+#     scan-dict-keys
+#
+# Description
+#     Generates drift reports for dictionary keys and parameter schemas.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """Dict-keys drift report for the cardiacFoam driverFoam Python catalogue.
 
 Compares dictionary keys actually read by the C++ source tree against

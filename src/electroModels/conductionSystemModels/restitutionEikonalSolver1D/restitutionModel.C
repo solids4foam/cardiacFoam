@@ -23,53 +23,6 @@ License
 
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
 
-void Foam::restitutionModel::readCurve
-(
-    const dictionary& dict,
-    const word& key,
-    scalarList& x,
-    scalarList& y
-)
-{
-    const List<scalarList> entries(dict.get<List<scalarList>>(key));
-
-    if (entries.empty())
-    {
-        FatalIOErrorInFunction(dict)
-            << "Restitution curve '" << key << "' is empty."
-            << exit(FatalIOError);
-    }
-
-    x.setSize(entries.size());
-    y.setSize(entries.size());
-
-    forAll(entries, i)
-    {
-        const scalarList& e = entries[i];
-
-        if (e.size() != 2)
-        {
-            FatalIOErrorInFunction(dict)
-                << "Each entry in '" << key << "' must be a (DI value) pair. "
-                << "Entry " << i << " has " << e.size() << " values."
-                << exit(FatalIOError);
-        }
-
-        x[i] = e[0];
-        y[i] = e[1];
-
-        if (i > 0 && x[i] <= x[i - 1])
-        {
-            FatalIOErrorInFunction(dict)
-                << "Entries in '" << key << "' must be strictly ascending in "
-                << "DI. Entry " << i << " (DI=" << x[i] << ") does not follow "
-                << "entry " << (i - 1) << " (DI=" << x[i - 1] << ")."
-                << exit(FatalIOError);
-        }
-    }
-}
-
-
 Foam::scalar Foam::restitutionModel::interpolate
 (
     const scalarList& x,
@@ -105,20 +58,10 @@ Foam::restitutionModel::restitutionModel()
 :
     DImin_(restitutionTemplates::purkinjeDI[0]),
     DImax_(restitutionTemplates::purkinjeDI[restitutionTemplates::purkinjeSize - 1]),
-    APDmin_(restitutionTemplates::purkinjeAPD[0]),
-    APDmax_(restitutionTemplates::purkinjeAPD[restitutionTemplates::purkinjeSize - 1]),
     CVmin_(restitutionTemplates::purkinjeCV[0]),
     CVmax_(restitutionTemplates::purkinjeCV[restitutionTemplates::purkinjeSize - 1])
 {
     using namespace restitutionTemplates;
-
-    apdDI_.setSize(purkinjeSize);
-    apdVal_.setSize(purkinjeSize);
-    for(label i = 0; i < purkinjeSize; ++i)
-    {
-        apdDI_[i] = purkinjeDI[i];
-        apdVal_[i] = purkinjeAPD[i];
-    }
 
     cvDI_.setSize(purkinjeSize);
     cvVal_.setSize(purkinjeSize);
@@ -131,15 +74,6 @@ Foam::restitutionModel::restitutionModel()
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-Foam::scalar Foam::restitutionModel::apd(const scalar DI) const
-{
-    const scalar DIc = min(max(DI, DImin_), DImax_);
-    const scalar value = interpolate(apdDI_, apdVal_, DIc);
-
-    return min(max(value, APDmin_), APDmax_);
-}
-
 
 Foam::scalar Foam::restitutionModel::cv(const scalar DI) const
 {

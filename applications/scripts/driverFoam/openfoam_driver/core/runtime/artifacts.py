@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     artifacts
+#
+# Description
+#     Predicts generated data artifacts based on workflow specifications.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """Predict the data artifacts a tutorial run will (or did) produce.
 
 The predictor is the single agent-facing answer to "what raw data does this

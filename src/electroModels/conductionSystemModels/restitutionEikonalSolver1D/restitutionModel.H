@@ -19,11 +19,9 @@ Class
     Foam::restitutionModel
 
 Description
-    Restitution curves mapping diastolic interval (DI) to action potential
-    duration (APD) and conduction velocity (CV). Both curves are tabulated
-    pairs read from a dictionary and evaluated by clamped piecewise-linear
-    interpolation. Dimension-agnostic: shared by 1D and 3D dynamic eikonal
-    solvers.
+    Conduction velocity restitution curve mapping diastolic interval (DI) to
+    CV. Tabulated from restitutionTemplates and evaluated by clamped
+    piecewise-linear interpolation.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -35,7 +33,6 @@ SourceFiles
 #ifndef restitutionModel_H
 #define restitutionModel_H
 
-#include "dictionary.H"
 #include "scalarList.H"
 
 namespace Foam
@@ -47,25 +44,13 @@ namespace Foam
 
 class restitutionModel
 {
-    scalarList apdDI_;
-    scalarList apdVal_;
     scalarList cvDI_;
     scalarList cvVal_;
 
     scalar DImin_;
     scalar DImax_;
-    scalar APDmin_;
-    scalar APDmax_;
     scalar CVmin_;
     scalar CVmax_;
-
-    static void readCurve
-    (
-        const dictionary& dict,
-        const word& key,
-        scalarList& x,
-        scalarList& y
-    );
 
     static scalar interpolate
     (
@@ -77,8 +62,6 @@ class restitutionModel
 public:
 
     restitutionModel();
-
-    scalar apd(const scalar DI) const;
 
     scalar cv(const scalar DI) const;
 

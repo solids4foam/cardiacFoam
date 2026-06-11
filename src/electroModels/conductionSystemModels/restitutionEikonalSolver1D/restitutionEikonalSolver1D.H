@@ -19,14 +19,15 @@ Class
     Foam::restitutionEikonalSolver1D
 
 Description
-    Dynamic, restitution-aware eikonal activation-time solver on the 1-D
-    conduction graph. Keeps persistent recovery state and runs an event-driven
-    loop each physical timestep: recover refractory nodes, schedule stimuli,
-    propagate candidate arrival times from newly activated sources (refractory
-    nodes block), then accept activations whose scheduled time falls in the
-    step. APD and CV are drawn from a restitutionModel as functions of
-    diastolic interval. Reports breakdown indicators (block / wavebreak /
-    short DI). Records multi-beat history via activationHistory.
+    Restitution-aware eikonal activation-time solver for the 1D conduction
+    graph. State is tracked via lastActTime per node; all regimes are expressed
+    as beat-to-beat intervals (beatInterval = te - lastActTime):
+      beatInterval < minBeatInterval   — refractory / relative refractory (block)
+      beatInterval >= minBeatInterval  — excitable, activated by incoming wave
+      beatInterval >= escapeInterval   — spontaneous firing (funny current)
+    minBeatInterval = apdNominal + minDI. CV is looked up as a function of
+    DI = beatInterval - apdNominal. Reports breakdown indicators and records
+    multi-beat history via activationHistory.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -62,21 +63,16 @@ class restitutionEikonalSolver1D
 :
     public conductionSystemSolver
 {
-    enum nodeState { excitable = 0, refractory = 1 };
-
     autoPtr<restitutionModel> restitutionPtr_;
 
-    scalarField RT_;
+    scalarField lastActTime_;   //- time of last activation [s]; -GREAT if never fired
     scalarField DI_;
-    scalarField APD_;
     scalarField nextTact_;
-    labelList   state_;
     labelList   activatedFrom_;
     labelList   nextTactSource_;
 
     labelList   blockCount_;
     labelList   wavebreakCount_;
-    labelList   shortDICount_;
     scalarField minDI_;
 
     activationHistory history_;
@@ -84,13 +80,18 @@ class restitutionEikonalSolver1D
     labelList        stimSites_;
     StimulusProtocol stimProtocol_;
 
+    scalar  apdNominal_;        //- constant APD [s] (dict: apdNominal)
+    scalar  minBeatInterval_;   //- apdNominal + minDI: minimum beat-to-beat interval [s]
+    scalar  escapeInterval_;    //- spontaneous firing beat-to-beat interval [s] (dict: escapeInterval)
+    scalar  tStart_;            //- simulation start time [s]
+
     Switch  useEdgeConductance_;
     scalar  refConductance_;
 
     Switch  reportSetup_;
     bool    initialised_;
 
-    void initialiseState(const conductionSystemDomain& domain);
+    void initialiseState(const conductionSystemDomain& domain, scalar t0);
 
     restitutionEikonalSolver1D(const restitutionEikonalSolver1D&) = delete;
     void operator=(const restitutionEikonalSolver1D&) = delete;

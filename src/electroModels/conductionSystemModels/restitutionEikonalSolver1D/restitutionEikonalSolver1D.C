@@ -48,6 +48,24 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 )
 :
     restitutionPtr_(new restitutionModel()),
+    apdNominal_
+    (
+        solverCoeffs.lookupOrDefault<scalar>
+        (
+            "apdNominal",
+            restitutionTemplates::purkinjeAPDnominal
+        )
+    ),
+    minBeatInterval_(apdNominal_ + restitutionPtr_->diMin()),
+    escapeInterval_
+    (
+        solverCoeffs.lookupOrDefault<scalar>
+        (
+            "escapeInterval",
+            restitutionTemplates::purkinjeEscapeInterval
+        )
+    ),
+    tStart_(0),
     useEdgeConductance_
     (
         solverCoeffs.lookupOrDefault<Switch>("useEdgeConductance", true)
@@ -74,7 +92,9 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
             << " period=" << stimProtocol_.stimPeriodS1
             << " n=" << stimProtocol_.nStim1
             << "; S2 coupling=" << stimProtocol_.stimPeriodS2
-            << " n=" << stimProtocol_.nStim2 << endl;
+            << " n=" << stimProtocol_.nStim2
+            << "; minBeatInterval=" << minBeatInterval_
+            << " escapeInterval=" << escapeInterval_ << endl;
     }
 }
 
@@ -83,27 +103,26 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 
 void Foam::restitutionEikonalSolver1D::initialiseState
 (
-    const conductionSystemDomain& domain
+    const conductionSystemDomain& domain,
+    const scalar t0
 )
 {
     const label N = domain.graph().nNodes;
 
-    RT_.setSize(N, -GREAT);
+    lastActTime_.setSize(N, -GREAT);
     DI_.setSize(N, GREAT);
-    APD_.setSize(N, restitutionPtr_->apd(GREAT));
     nextTact_.setSize(N, GREAT);
     minDI_.setSize(N, GREAT);
 
-    state_.setSize(N, excitable);
     activatedFrom_.setSize(N, -1);
     nextTactSource_.setSize(N, -1);
 
     blockCount_.setSize(N, 0);
     wavebreakCount_.setSize(N, 0);
-    shortDICount_.setSize(N, 0);
 
     history_.reset(N);
 
+    tStart_ = t0;
     initialised_ = true;
 }
 
@@ -119,7 +138,7 @@ void Foam::restitutionEikonalSolver1D::advance
 {
     if (!initialised_)
     {
-        initialiseState(domain);
+        initialiseState(domain, t0);
     }
 
     const scalar tNow = t0 + dt;
@@ -127,11 +146,14 @@ void Foam::restitutionEikonalSolver1D::advance
     const conductionGraph& G = domain.graph();
     scalarField& Tact = domain.activationTime();
 
-    forAll(state_, i)
+    // Funny current: spontaneous firing at lastActTime + escapeInterval
+    forAll(lastActTime_, i)
     {
-        if (state_[i] == refractory && tNow >= RT_[i])
+        const scalar tEscape = max(lastActTime_[i], tStart_) + escapeInterval_;
+        if (tEscape < nextTact_[i])
         {
-            state_[i] = excitable;
+            nextTact_[i] = tEscape;
+            nextTactSource_[i] = -1;
         }
     }
 
@@ -140,8 +162,9 @@ void Foam::restitutionEikonalSolver1D::advance
         forAll(stimSites_, s)
         {
             const label site = stimSites_[s];
+            const scalar beatInterval = tNow - lastActTime_[site];
 
-            if (state_[site] == excitable && tNow < nextTact_[site])
+            if (beatInterval >= minBeatInterval_ && tNow < nextTact_[site])
             {
                 nextTact_[site] = tNow;
                 nextTactSource_[site] = -1;
@@ -154,9 +177,13 @@ void Foam::restitutionEikonalSolver1D::advance
 
     forAll(nextTact_, i)
     {
-        if (state_[i] == excitable && nextTact_[i] <= tNow)
+        if (nextTact_[i] <= tNow)
         {
-            pq.push(std::make_pair(nextTact_[i], i));
+            const scalar beatInterval = nextTact_[i] - lastActTime_[i];
+            if (beatInterval >= minBeatInterval_)
+            {
+                pq.push(std::make_pair(nextTact_[i], i));
+            }
         }
     }
 
@@ -166,20 +193,19 @@ void Foam::restitutionEikonalSolver1D::advance
         const label  i  = pq.top().second;
         pq.pop();
 
-        if (state_[i] != excitable || te != nextTact_[i])
+        const scalar beatInterval_i = te - lastActTime_[i];
+        if (beatInterval_i < minBeatInterval_ || te != nextTact_[i])
         {
             continue;
         }
 
-        const scalar DIact = te - RT_[i];
+        const scalar DIact = beatInterval_i - apdNominal_;
 
         Tact[i] = te;
         history_.record(i, te);
         DI_[i] = DIact;
-        APD_[i] = restitutionPtr_->apd(DIact);
-        RT_[i] = te + APD_[i];
+        lastActTime_[i] = te;
 
-        state_[i] = refractory;
         activatedFrom_[i] = nextTactSource_[i];
         nextTact_[i] = GREAT;
         nextTactSource_[i] = -1;
@@ -187,11 +213,6 @@ void Foam::restitutionEikonalSolver1D::advance
         if (DIact < minDI_[i])
         {
             minDI_[i] = DIact;
-        }
-
-        if (DIact <= restitutionPtr_->diMin())
-        {
-            ++shortDICount_[i];
         }
 
         const label from = activatedFrom_[i];
@@ -205,7 +226,8 @@ void Foam::restitutionEikonalSolver1D::advance
                 continue;
             }
 
-            if (state_[j] == refractory)
+            const scalar beatInterval_j = te - lastActTime_[j];
+            if (beatInterval_j < minBeatInterval_)
             {
                 ++blockCount_[j];
                 ++wavebreakCount_[i];
@@ -213,7 +235,7 @@ void Foam::restitutionEikonalSolver1D::advance
             }
 
             const label eI = G.adjEdges[k];
-            const scalar DIj = te - RT_[j];
+            const scalar DIj = beatInterval_j - apdNominal_;
             scalar cv = restitutionPtr_->cv(DIj);
 
             if (useEdgeConductance_)
@@ -254,7 +276,7 @@ void Foam::restitutionEikonalSolver1D::advance
         }
         else
         {
-            scalar localTime = tNow - Tact[i];
+            const scalar localTime = tNow - Tact[i];
             Vm[i] = restitutionTemplates::evaluatePurkinjeVmTemplate(localTime) * 1e-3;
         }
     }
@@ -267,7 +289,7 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
     PtrList<scalarField>& fields
 ) const
 {
-    const label N = state_.size();
+    const label N = lastActTime_.size();
 
     if (N == 0)
     {
@@ -276,29 +298,17 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
 
     const scalar diMaxV = restitutionPtr_->diMax();
 
-    names.setSize(7);
-    fields.setSize(7);
-
-    names[0] = "APD";
-    fields.set(0, new scalarField(APD_));
+    names.setSize(4);
+    fields.setSize(4);
 
     scalarField* diPtr = new scalarField(N, 0.0);
     forAll(*diPtr, i)
     {
         (*diPtr)[i] = min(max(DI_[i], scalar(0)), diMaxV);
     }
-    names[1] = "DI";
-    fields.set(1, diPtr);
+    names[0] = "DI";
+    fields.set(0, diPtr);
 
-    names[2] = "state";
-    scalarField* statePtr = new scalarField(N, 0.0);
-    forAll(*statePtr, i)
-    {
-        (*statePtr)[i] = scalar(state_[i]);
-    }
-    fields.set(2, statePtr);
-
-    names[3] = "minDI";
     scalarField* minDIPtr = new scalarField(N, 0.0);
     forAll(*minDIPtr, i)
     {
@@ -309,31 +319,24 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
           : min(max(minDI_[i], scalar(0)), diMaxV)
         );
     }
-    fields.set(3, minDIPtr);
+    names[1] = "minDI";
+    fields.set(1, minDIPtr);
 
-    names[4] = "blockCount";
     scalarField* blockPtr = new scalarField(N, 0.0);
     forAll(*blockPtr, i)
     {
         (*blockPtr)[i] = scalar(blockCount_[i]);
     }
-    fields.set(4, blockPtr);
+    names[2] = "blockCount";
+    fields.set(2, blockPtr);
 
-    names[5] = "wavebreakCount";
     scalarField* wbPtr = new scalarField(N, 0.0);
     forAll(*wbPtr, i)
     {
         (*wbPtr)[i] = scalar(wavebreakCount_[i]);
     }
-    fields.set(5, wbPtr);
-
-    names[6] = "shortDICount";
-    scalarField* sdPtr = new scalarField(N, 0.0);
-    forAll(*sdPtr, i)
-    {
-        (*sdPtr)[i] = scalar(shortDICount_[i]);
-    }
-    fields.set(6, sdPtr);
+    names[3] = "wavebreakCount";
+    fields.set(3, wbPtr);
 
     history_.appendDiagnostics(names, fields);
 }

@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     test_workflow_dag_filesystem_ingest
+#
+# Description
+#     Tests workflow dag filesystem ingest logic and specification contracts.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """Tests for workflow_dag ingest from on-disk workflow_contract.json (plan §6.2).
 
 Filesystem cases (loaded via registry.py) must have their workflow_dag populated

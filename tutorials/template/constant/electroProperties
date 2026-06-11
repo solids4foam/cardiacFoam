@@ -243,10 +243,35 @@ monodomainSolverCoeffs
                 // Default (if omitted): monodomain1DSolver
                 //
                 // Valid types (registered in conductionSystemSolver RTST):
-                //   monodomain1DSolver — implicit cable equation + ionic ODE [DEFAULT]
-                //   eikonalSolver1D    — activation-time only, needs c0 [m/s]
+                //   monodomain1DSolver         — implicit cable equation + ionic ODE [DEFAULT]
+                //   eikonalSolver1D            — activation-time only, needs c0 [m/s]
+                //   restitutionEikonalSolver1D — multi-beat restitution-aware eikonal; no ionic model
                 //
                 conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver1D
+
+                // ── restitutionEikonalSolver1D coefficients ──────────────────
+                // (used only when conductionSystemSolver = restitutionEikonalSolver1D)
+                //
+                // apdNominal       0.290;   // [s] constant ERP; default: purkinjeAPDnominal
+                // escapeInterval   1.1;     // [s] spontaneous firing if no wave arrives (funny current)
+                // useEdgeConductance  true;   // modulate CV by sqrt(g/gRef)
+                // referenceConductance  1.0;  // [S/m] normalisation for edge conductances
+                // reportSetup     false;
+                //
+                // stimulus
+                // {
+                //     sites  ( 0 );       // node indices to stimulate
+                //     singleCellStimulus
+                //     {
+                //         stim_start      0.0;
+                //         stim_duration   0.002;
+                //         stim_amplitude  1.0;
+                //         stim_period_S1  0.8;
+                //         nstim1          5;
+                //         stim_period_S2  0.35;
+                //         nstim2          2;
+                //     }
+                // }
 
                 // --- Eikonal solver: only c0 is required ---
                 // conduction velocity [m/s] (must be dimensioned)
