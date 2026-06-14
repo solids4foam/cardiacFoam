@@ -73,6 +73,7 @@ class StrictPlanReport:
     workflow_diagnostics: tuple[StrictDiagnostic, ...] = ()
     catalog_coverage_errors: tuple[StrictDiagnostic, ...] = ()
     artifact_diagnostics: tuple[StrictDiagnostic, ...] = ()
+    environment_diagnostics: tuple[StrictDiagnostic, ...] = ()
     launch: dict[str, Any] = field(default_factory=dict)
     workflow_dag: dict[str, Any] | None = None
     workflow_state: WorkflowRunState | None = None
@@ -88,6 +89,7 @@ class StrictPlanReport:
             "workflow_diagnostics": [asdict(d) for d in self.workflow_diagnostics],
             "catalog_coverage_errors": [asdict(d) for d in self.catalog_coverage_errors],
             "artifact_diagnostics": [asdict(d) for d in self.artifact_diagnostics],
+            "environment_diagnostics": [asdict(d) for d in self.environment_diagnostics],
             "launch": self.launch,
             "workflow_dag": self.workflow_dag,
             "workflow_state": self.workflow_state.to_json() if self.workflow_state else None,
@@ -108,6 +110,84 @@ _OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
         "topoSet",
     }
 )
+
+_MPI_LAUNCHERS = frozenset({"mpirun", "mpiexec", "orterun"})
+_INTERPRETER_SKIP = frozenset({"python", "python3"})
+# Flags that consume their following token (MPI launcher context only).
+_MPI_VALUE_FLAGS = frozenset({"-np", "-n", "--np"})
+
+
+def _unwrap_mpi_program(args: tuple[str, ...]) -> str | None:
+    """Return the wrapped program from an MPI launcher's args, or None.
+
+    Skips value-taking launcher flags (``-np 4`` / ``-n 4`` / ``--np 4``) and
+    bare flags (``--oversubscribe``), returning the first program token.
+
+    Limitation: only process-count flags are decoded. Other value-taking
+    placement flags (``--host``, ``--hostfile``, ...) are not modelled, so the
+    token following them would be misidentified as the program. This is
+    acceptable for the cardiacFoam workflows we generate, which use plain
+    ``mpirun -np N <solver> -parallel``.
+    """
+    index = 0
+    while index < len(args):
+        token = args[index]
+        if token in _MPI_VALUE_FLAGS:
+            index += 2  # skip the flag and its value
+            continue
+        if token.startswith("-"):
+            index += 1  # bare flag
+            continue
+        return token
+    return None
+
+
+@dataclass(frozen=True)
+class _ExecutableRequirements:
+    executables: tuple[str, ...]
+    is_parallel: bool
+    mpi_launcher_in_dag: bool
+
+
+def _required_executables(workflow_dag: dict[str, Any] | None) -> _ExecutableRequirements:
+    """Derive the executables a plan will invoke from its workflow DAG.
+
+    The authoritative source is each step's ``command`` (not ``launch["command"]``,
+    which is only the ``python -m openfoam_driver`` re-invocation). MPI launcher
+    steps contribute both the launcher and the wrapped program. Parallelism is
+    inferred from an MPI launcher command, a ``-parallel`` arg, or a
+    ``decomposePar`` step.
+    """
+    executables: list[str] = []
+    is_parallel = False
+    mpi_launcher_in_dag = False
+
+    def _add(name: str) -> None:
+        if name and name not in _INTERPRETER_SKIP and name not in executables:
+            executables.append(name)
+
+    for step in (workflow_dag or {}).get("steps", ()):
+        command = str(step.get("command", "")).strip()
+        args = tuple(str(arg) for arg in step.get("args", ()))
+        if not command:
+            continue
+        if command in _MPI_LAUNCHERS:
+            is_parallel = True
+            mpi_launcher_in_dag = True
+            _add(command)
+            wrapped = _unwrap_mpi_program(args)
+            if wrapped is not None:
+                _add(wrapped)
+            continue
+        if command == "decomposePar" or "-parallel" in args:
+            is_parallel = True
+        _add(command)
+
+    return _ExecutableRequirements(
+        executables=tuple(executables),
+        is_parallel=is_parallel,
+        mpi_launcher_in_dag=mpi_launcher_in_dag,
+    )
 
 
 def _repo_root_from_here() -> Path:
@@ -374,33 +454,61 @@ def _catalog_diagnostics(repo_root: Path) -> tuple[StrictDiagnostic, ...]:
     return tuple(diagnostics)
 
 
-def _environment_diagnostics(spec) -> tuple[StrictDiagnostic, ...]:
+def _environment_diagnostics(
+    workflow_dag: dict[str, Any] | None,
+) -> tuple[StrictDiagnostic, ...]:
+    """Preflight the runtime environment against the plan's actual commands."""
     if "SKIP_ENV_DIAGNOSTICS" in os.environ:
         return ()
     diagnostics: list[StrictDiagnostic] = []
+
+    # OpenFOAM environment.
     if "WM_PROJECT_DIR" not in os.environ:
         diagnostics.append(_diagnostic(
             "error",
             "missing_openfoam_env",
             "WM_PROJECT_DIR is not set. OpenFOAM environment not sourced.",
-            source="environment"
+            source="environment",
         ))
-    if not shutil.which("cardiacFoam"):
+    else:
+        # Only meaningful when the base env IS sourced; otherwise the error above
+        # already covers a completely unsourced environment.
+        for var in ("WM_PROJECT_VERSION", "FOAM_USER_LIBBIN"):
+            if var not in os.environ:
+                diagnostics.append(_diagnostic(
+                    "warning",
+                    "partial_openfoam_env",
+                    f"{var} is not set. OpenFOAM environment may be partially sourced.",
+                    source="environment",
+                    field=var,
+                ))
+
+    # Command-aware executable resolution.
+    requirements = _required_executables(workflow_dag)
+    for executable in requirements.executables:
+        if not shutil.which(executable):
+            diagnostics.append(_diagnostic(
+                "error",
+                "missing_executable",
+                f"{executable} not found on PATH.",
+                source="environment",
+                field=executable,
+            ))
+
+    # MPI launcher when parallel but no launcher command is explicit in the DAG.
+    if (
+        requirements.is_parallel
+        and not requirements.mpi_launcher_in_dag
+        and not (shutil.which("mpirun") or shutil.which("mpiexec"))
+    ):
         diagnostics.append(_diagnostic(
             "error",
-            "missing_executable",
-            "cardiacFoam not found on PATH.",
+            "missing_mpi",
+            "Plan is parallel but no MPI launcher (mpirun/mpiexec) found on PATH.",
             source="environment",
-            field="cardiacFoam"
+            field="mpirun",
         ))
-    if not shutil.which("blockMesh"):
-        diagnostics.append(_diagnostic(
-            "error",
-            "missing_executable",
-            "blockMesh not found on PATH.",
-            source="environment",
-            field="blockMesh"
-        ))
+
     return tuple(diagnostics)
 
 
@@ -442,7 +550,7 @@ def strict_plan(
     repo_root = _repo_root_from_here()
     catalog_diagnostics = _catalog_diagnostics(repo_root)
     artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
-    env_diagnostics = _environment_diagnostics(spec)
+    env_diagnostics = _environment_diagnostics(workflow_dag)
     all_diagnostics = (
         validation_diagnostics
         + workflow_diagnostics
@@ -473,6 +581,7 @@ def strict_plan(
         workflow_diagnostics=workflow_diagnostics,
         catalog_coverage_errors=catalog_diagnostics,
         artifact_diagnostics=artifact_diagnostics,
+        environment_diagnostics=env_diagnostics,
         launch=launch,
         workflow_dag=workflow_dag,
         workflow_state=workflow_state,

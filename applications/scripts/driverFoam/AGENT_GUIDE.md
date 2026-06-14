@@ -41,6 +41,7 @@ The `plan --strict` command is non-mutating. It prints JSON with:
 - `validation_diagnostics`: RunDocument and configuration validation results
 - `catalog_coverage_errors`: strict dict-key coverage failures
 - `artifact_diagnostics`: solver/utility/artifact prediction coverage failures
+- `environment_diagnostics`: missing executables, unsourced OpenFOAM env, missing MPI launcher
 - `workflow_dag`: normalized executable steps
 - `workflow_state`: initial pending step state
 - `expected_artifacts`: predicted machine-readable artifacts
@@ -298,10 +299,14 @@ These are real limitations; the agent must not assume them:
   resumes pending saved state, but it refuses to automatically retry a failed
   saved state.
 
-- **Environment preflight** is limited. Strict planning validates catalogs,
-  workflow shape, and artifact predictability, but it does not yet prove that
-  OpenFOAM is sourced, MPI is available, required executables are on `PATH`, or
-  there is sufficient writable disk space.
+- **Environment preflight** is command-aware but not exhaustive. Strict planning
+  derives the executables your plan will run from its `workflow_dag` steps and
+  errors (`environment_diagnostics`, a first-class report field) if any are missing
+  from `PATH`, if `WM_PROJECT_DIR` is unset, or if the plan is parallel but no
+  `mpirun`/`mpiexec` is found. It warns on a partially-sourced environment
+  (`WM_PROJECT_VERSION` / `FOAM_USER_LIBBIN` unset). It does **not** yet check free
+  disk space or output-directory writability. Set `SKIP_ENV_DIAGNOSTICS=1` to bypass
+  the gate (used by the test suite).
 
 - **Active-tension models beyond NashPanfilov and GoktepeKuhl** are not in `active_tension_catalog.py`. Future C++ models must be registered there before artifact prediction will cover their state variables.
 
