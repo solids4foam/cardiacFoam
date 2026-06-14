@@ -295,9 +295,16 @@ for manifest in list_runs("/path/to/runs/dir"):
 
 These are real limitations; the agent must not assume them:
 
-- **Automatic retry/checkpoint policy** is not implemented. `run --strict`
-  resumes pending saved state, but it refuses to automatically retry a failed
-  saved state.
+- **Automatic retry** is mechanical and bounded. `run --strict` retries a step
+  whose failure is classified *retryable* (currently `workflow_step_timeout`) up
+  to its `retry_policy.max_attempts` (or the run's `default_max_attempts`), with
+  exponential backoff (`retry_policy.backoff_seconds`). Fatal failures
+  (`missing_artifacts`, exec errors, generic nonzero exit / FOAM FATAL ERROR) are
+  never retried. Between retryable attempts the persisted `workflow_state.json` is
+  kept resumable, so a crash during backoff resumes into another retry. It does
+  **not** read logs to reclassify failures or mutate configuration between
+  attempts (that is deferred). A *terminal*-failed saved state is still refused by
+  `run --strict`; use `step --strict` to rerun it manually.
 
 - **Environment preflight** is command-aware but not exhaustive. Strict planning
   derives the executables your plan will run from its `workflow_dag` steps and

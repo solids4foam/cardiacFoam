@@ -66,7 +66,7 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
     assert solve_step["command"] == "cardiacFoam"
     assert solve_step["args"] == []
     assert solve_step["cwd"] == "."
-    assert solve_step["retry_policy"] == {"max_attempts": 1}
+    assert solve_step["retry_policy"] == {}
     assert {artifact["artifact_id"] for artifact in payload["expected_artifacts"]} <= set(
         solve_step["produces"]
     )

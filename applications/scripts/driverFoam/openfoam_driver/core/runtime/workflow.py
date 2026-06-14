@@ -56,7 +56,7 @@ class WorkflowStep:
     produces: tuple[str, ...] = ()
     consumes: tuple[str, ...] = ()
     timeout_s: int | None = None
-    retry_policy: dict[str, Any] = field(default_factory=lambda: {"max_attempts": 1})
+    retry_policy: dict[str, Any] = field(default_factory=dict)
     command_display: str = ""
 
     def to_json(self) -> dict[str, Any]:
@@ -216,7 +216,7 @@ def normalize_workflow_dag(
         if produces:
             claimed_artifacts.update(produces)
 
-        retry_policy = raw_step.get("retry_policy", {"max_attempts": 1})
+        retry_policy = raw_step.get("retry_policy", {})
         if not isinstance(retry_policy, dict):
             diagnostics.append(WorkflowDiagnostic(
                 level="error",
@@ -224,10 +224,42 @@ def normalize_workflow_dag(
                 message="Workflow field 'retry_policy' must be an object.",
                 field="retry_policy",
             ))
-            retry_policy = {"max_attempts": 1}
+            retry_policy = {}
+        else:
+            retry_policy = dict(retry_policy)
+            max_attempts = retry_policy.get("max_attempts")
+            if max_attempts is not None and (
+                isinstance(max_attempts, bool)
+                or not isinstance(max_attempts, int)
+                or max_attempts < 1
+            ):
+                diagnostics.append(WorkflowDiagnostic(
+                    level="error",
+                    code="invalid_workflow_field",
+                    message="Workflow field 'retry_policy.max_attempts' must be an integer >= 1.",
+                    field="retry_policy.max_attempts",
+                ))
+                del retry_policy["max_attempts"]
+            backoff_seconds = retry_policy.get("backoff_seconds")
+            if backoff_seconds is not None and (
+                isinstance(backoff_seconds, bool)
+                or not isinstance(backoff_seconds, (int, float))
+                or backoff_seconds < 0
+            ):
+                diagnostics.append(WorkflowDiagnostic(
+                    level="error",
+                    code="invalid_workflow_field",
+                    message="Workflow field 'retry_policy.backoff_seconds' must be a number >= 0.",
+                    field="retry_policy.backoff_seconds",
+                ))
+                del retry_policy["backoff_seconds"]
 
         timeout_s = raw_step.get("timeout_s")
-        if timeout_s is not None and (not isinstance(timeout_s, int) or timeout_s <= 0):
+        if timeout_s is not None and (
+            isinstance(timeout_s, bool)
+            or not isinstance(timeout_s, int)
+            or timeout_s <= 0
+        ):
             diagnostics.append(WorkflowDiagnostic(
                 level="error",
                 code="invalid_workflow_field",

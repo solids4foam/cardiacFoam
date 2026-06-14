@@ -33,6 +33,7 @@ from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
 from .core.runtime.workflow_runner import run_workflow_step
+from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
 from .introspection import describe_entry
@@ -334,39 +335,31 @@ def main(argv: list[str] | None = None) -> int:
                 "workflow_state": workflow_state.to_json(),
             }, indent=2))
             return 1
-        results = []
-        while workflow_state.current_step_id is not None and workflow_state.status == "pending":
-            step_id = workflow_state.current_step_id
+        try:
+            outcome = run_workflow(
+                report.workflow_dag,
+                workflow_state,
+                case_root=case_root,
+                output_dir=output_dir,
+                expected_artifacts=report.expected_artifacts,
+                state_path=state_path,
+            )
+        except Exception as exc:
             try:
-                result = run_workflow_step(
-                    report.workflow_dag,
-                    workflow_state,
-                    step_id,
-                    case_root=case_root,
-                    log_dir=output_dir / "workflow_logs",
-                    state_path=state_path,
-                    expected_artifacts=report.expected_artifacts,
-                )
-            except Exception as exc:
-                print(json.dumps(_step_payload(
-                    status="failed",
-                    entry=selected_entry,
-                    step=step_id,
-                    workflow_state_path=state_path,
-                    workflow_state=workflow_state.to_json(),
-                    error=str(exc),
-                ), indent=2))
-                return 1
-            workflow_state = result.state
-            results.append({
-                "step": step_id,
-                "status": "ok" if result.exit_code == 0 else "failed",
-                "exit_code": result.exit_code,
-                "stdout_log": result.stdout_log,
-                "stderr_log": result.stderr_log,
-            })
-            if result.exit_code != 0:
-                break
+                error_state = workflow_state_from_json(json.loads(state_path.read_text()))
+            except Exception:
+                error_state = workflow_state
+            print(json.dumps(_step_payload(
+                status="failed",
+                entry=selected_entry,
+                step=error_state.current_step_id or workflow_state.current_step_id,
+                workflow_state_path=state_path,
+                workflow_state=error_state.to_json(),
+                error=str(exc),
+            ), indent=2))
+            return 1
+        workflow_state = outcome.state
+        results = list(outcome.steps)
         status = "ok" if workflow_state.status == "completed" else "failed"
         if workflow_state.status == "pending" and workflow_state.current_step_id is None:
             status = "failed"
