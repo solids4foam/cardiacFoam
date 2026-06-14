@@ -1,3 +1,29 @@
+/*---------------------------------------------------------------------------*\
+License
+    This file is part of cardiacFoam.
+
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+
+Description
+    Code snippet to print a formatted summary of the electrophysiology solver
+    configuration, including myocardium, conduction networks, and ECG domains.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+\*---------------------------------------------------------------------------*/
+
 {
     const word myoSolver(this->lookupOrDefault<word>("myocardiumSolver", "none"));
     if (myoSolver != "none" && this->found(myoSolver + "Coeffs"))
