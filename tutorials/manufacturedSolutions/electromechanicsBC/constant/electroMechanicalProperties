@@ -1,0 +1,41 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroMechanicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroMechanicalModel  sequentialElectroMechanical;
+
+sequentialElectroMechanicalCoeffs
+{
+    electroRegion       electro;
+    solidRegion         solid;
+    activeTensionModel  ManufacturedElectromechanics;
+    TaScale             1.0;
+
+    constants
+    {
+        Tmax    1000;
+        V0      1.0;
+        gamma   1.0;
+    }
+
+    electromechanicalVerificationModel
+    {
+        type    manufacturedElectromechanicsVerifier;
+        amplitude           (0.02 0.02 0.02);
+        initializeFields    true;
+        enforceExactFields  false;
+    }
+}
+
+// ************************************************************************* //

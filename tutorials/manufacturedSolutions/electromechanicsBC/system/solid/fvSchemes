@@ -1,0 +1,53 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/solid";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+d2dt2Schemes
+{
+    default            Euler;
+}
+
+ddtSchemes
+{
+    default            Euler;
+}
+
+gradSchemes
+{
+    default            pointCellsLeastSquares;
+}
+
+divSchemes
+{
+    default            Gauss linear;
+}
+
+laplacianSchemes
+{
+    default            Gauss linear skewCorrected 1;
+}
+
+snGradSchemes
+{
+    default            none;
+    snGrad(D)          skewCorrected 1;
+    snGrad(DD)         skewCorrected 1;
+}
+
+interpolationSchemes
+{
+    default            skewCorrected linear;
+}
+
+// ************************************************************************* //
