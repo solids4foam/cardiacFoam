@@ -10,9 +10,10 @@ Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 ```text
 src/ionicModels/
 ├── ionicModel/                  # Base class, selector, batched/GPU support headers
-├── monodomainFDAManufactured/   # Manufactured-solution verification model
-├── bidomainFDAManufactured/     # Manufactured-solution verification model
-├── bathBidomainFDAManufactured/ # Manufactured-solution verification model (bath bidomain)
+├── verificationModels/
+│   ├── monodomainFDAManufactured/   # Manufactured-solution verification model
+│   ├── bidomainFDAManufactured/     # Manufactured-solution verification model
+│   └── bathBidomainFDAManufactured/ # Manufactured-solution verification model (bath bidomain)
 ├── AlievPanfilov/
 ├── AlievPanfilovBatched/
 ├── BuenoOrovio/

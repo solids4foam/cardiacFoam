@@ -50,7 +50,7 @@ Current concrete verifiers include:
 
 - `manufacturedFDAMonodomainVerifier`
 - `manufacturedFDABidomainVerifier`
-- `singleCellManufacturedFDABidomainVerifier`
+- `manufacturedFDABathBidomainVerifier`
 
 ### Manufactured/reference helpers
 

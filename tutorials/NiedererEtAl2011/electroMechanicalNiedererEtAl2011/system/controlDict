@@ -51,6 +51,10 @@ functions
     {
         #include "Taprobes"
     }
+    CaiProbes
+    {
+        #include "CaiProbes"
+    }
 }
 
 // ************************************************************************* //

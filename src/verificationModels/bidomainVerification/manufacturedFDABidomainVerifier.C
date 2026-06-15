@@ -23,10 +23,12 @@ License
 #include "OSspecific.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
 #include "ionicModel.H"
+#include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
 {
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedFDABidomainVerifier, 0);
 addToRunTimeSelectionTable
@@ -35,153 +37,6 @@ addToRunTimeSelectionTable
     manufacturedFDABidomainVerifier,
     dictionary
 );
-
-namespace
-{
-
-label requireFieldIndex(const wordList& names, const word& name, const char* phase)
-{
-    forAll(names, i)
-    {
-        if (names[i] == name)
-        {
-            return i;
-        }
-    }
-
-    FatalErrorInFunction
-        << "Required " << phase << " field '" << name
-        << "' is missing from configured hook fields " << names
-        << exit(FatalError);
-
-    return -1;
-}
-
-
-bool shouldReportManufacturedErrors(const volScalarField& Vm)
-{
-    const Time& time = Vm.mesh().time();
-    const scalar t = time.value();
-    const scalar dt = time.deltaTValue();
-    const scalar endTime = time.endTime().value();
-
-    return t + 0.5*dt >= endTime;
-}
-
-
-label globalManufacturedCellCount(const fvMesh& mesh)
-{
-    label totalCells = mesh.nCells();
-    reduce(totalCells, sumOp<label>());
-    return totalCells;
-}
-
-
-label structuredCellsPerDirection(const label totalCells, const label dimension)
-{
-    if (totalCells <= 0 || dimension <= 0)
-    {
-        return 0;
-    }
-
-    if (dimension == 1)
-    {
-        return totalCells;
-    }
-
-    return max
-    (
-        label(1),
-        label(Foam::pow(scalar(totalCells), 1.0/scalar(dimension)) + 0.5)
-    );
-}
-
-
-scalar structuredManufacturedDx(const label nPerDirection)
-{
-    if (nPerDirection <= 0)
-    {
-        return 0.0;
-    }
-
-    return 1.0/scalar(nPerDirection);
-}
-
-
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(numeric, i)
-    {
-        const scalar diff = Foam::mag(numeric[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = numeric.size();
-    reduce(n, sumOp<label>());
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/scalar(n), Foam::sqrt(sumSq/scalar(n))),
-        maxAbs
-    );
-}
-
-
-scalar computeVolumeMeanError
-(
-    const fvMesh& mesh,
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    const scalarField& volumes = mesh.V();
-
-    scalar weightedError = 0.0;
-    scalar totalVolume = 0.0;
-
-    forAll(numeric, i)
-    {
-        weightedError += volumes[i]*(numeric[i] - exact[i]);
-        totalVolume += volumes[i];
-    }
-
-    reduce(weightedError, sumOp<scalar>());
-    reduce(totalVolume, sumOp<scalar>());
-
-    if (totalVolume <= VSMALL)
-    {
-        return 0.0;
-    }
-
-    return weightedError/totalVolume;
-}
-
-
-word dimensionName(const label dimension)
-{
-    return
-        dimension == 1 ? "1D"
-      : dimension == 2 ? "2D"
-      : dimension == 3 ? "3D"
-                       : "unknown";
-}
-
-} // End anonymous namespace
-
 
 manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 (
@@ -202,11 +57,12 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     const dictionary& cfg = verificationDict();
 
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
-    // solutionAlgorithm is a solver-level key in bidomainSolverCoeffs,
-    // not inside manufacturedBidomain.
+    // solutionAlgorithm is a solver-level key; read it from the parent dict.
     useExplicitAlgorithm_ =
         coeffDict.lookupOrDefault<word>("solutionAlgorithm", "implicit") == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 0.5);
+    // phiEReferenceValue and phiERefPoint are physics parameters that belong
+    // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
     phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
     phiEReferencePoint_ = coeffDict.get<point>("phiERefPoint");
     outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());

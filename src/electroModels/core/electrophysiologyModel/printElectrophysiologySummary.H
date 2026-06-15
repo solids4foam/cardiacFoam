@@ -21,7 +21,6 @@ Description
 
 Author
     Simao Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 {
@@ -29,9 +28,9 @@ Author
     if (myoSolver != "none" && this->found(myoSolver + "Coeffs"))
     {
         const dictionary& coeffs = this->subDict(myoSolver + "Coeffs");
-        
+
         const word advanceScheme(this->lookupOrDefault<word>("electrophysicsAdvanceScheme", "staggeredElectrophysicsAdvanceScheme"));
-        
+
         const label meshDim = this->mesh().nGeometricD();
         string dimStr = Foam::name(meshDim) + "D";
         if (coeffs.found("conductionNetworkDomains"))
@@ -53,12 +52,12 @@ Author
             << "  Advance Scheme      : " << advanceScheme << nl << nl
             << "  " << solverHeader << nl
             << "  " << solverUnderline << nl;
-            
+
         // 1. Myocardium
         const word myoIonic = coeffs.lookupOrDefault<word>("ionicModel", "none");
         Info<< "  myocardium          : " << myoSolver << nl
             << "    Ionic Model       : " << myoIonic << nl;
-            
+
         if (coeffs.found("ionicHeterogeneity"))
         {
             const dictionary& het = coeffs.subDict("ionicHeterogeneity");
@@ -82,7 +81,7 @@ Author
                 Info<< "    Tissue Region     : " << tissue << nl;
             }
         }
-        
+
         // 2. Conduction / Purkinje
         if (coeffs.found("conductionNetworkDomains"))
         {
@@ -94,22 +93,22 @@ Author
                     const word condName = iter().keyword();
                     const dictionary& condDict = iter().dict();
                     const word condSolverWrapper = condDict.lookupOrDefault<word>("conductionSystemDomain", "none");
-                    
+
                     if (condSolverWrapper != "none" && condDict.found(condSolverWrapper + "Coeffs"))
                     {
                         const dictionary& condCoeffs = condDict.subDict(condSolverWrapper + "Coeffs");
                         const word innerSolver = condCoeffs.lookupOrDefault<word>("conductionSystemSolver", condSolverWrapper);
                         const word cIonic = condCoeffs.lookupOrDefault<word>("ionicModel", "none");
-                        
+
                         string padCond("  " + condName);
                         while(padCond.size() < 22) padCond += " ";
-                        
+
                         Info<< nl << padCond.c_str() << ": " << innerSolver << nl;
                         if (cIonic != "none")
                         {
                             Info<< "    Ionic Model       : " << cIonic << nl;
                         }
-                        
+
                         if (condCoeffs.found("ionicHeterogeneity"))
                         {
                             const dictionary& het = condCoeffs.subDict("ionicHeterogeneity");
@@ -143,7 +142,7 @@ Author
                 }
             }
         }
-        
+
         // 3. ECG Domains
         if (coeffs.found("ecgDomains"))
         {
@@ -155,12 +154,12 @@ Author
                     const word ecgName = iter().keyword();
                     const dictionary& ecgDict = iter().dict();
                     const word ecgSolver = ecgDict.lookupOrDefault<word>("ecgSolver", "none");
-                    
+
                     string padEcg("  " + ecgName);
                     while(padEcg.size() < 22) padEcg += " ";
-                    
+
                     Info<< nl << padEcg.c_str() << ": " << ecgSolver << nl;
-                    
+
                     if (ecgDict.found("electrodePositions"))
                     {
                         const dictionary& leadsDict = ecgDict.subDict("electrodePositions");
@@ -170,7 +169,7 @@ Author
                 }
             }
         }
-        
+
         Info<< "=========================================================" << nl << endl;
     }
 }

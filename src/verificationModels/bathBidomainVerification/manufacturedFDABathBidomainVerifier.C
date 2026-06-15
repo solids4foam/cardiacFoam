@@ -23,12 +23,14 @@ License
 #include "OSspecific.H"
 #include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 #include "ionicModel.H"
+#include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
 #include <limits>
 
 namespace Foam
 {
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedFDABathBidomainVerifier, 0);
 addToRunTimeSelectionTable
@@ -41,108 +43,6 @@ addToRunTimeSelectionTable
 namespace
 {
 
-label requireFieldIndex(const wordList& names, const word& name, const char* phase)
-{
-    forAll(names, i)
-    {
-        if (names[i] == name)
-        {
-            return i;
-        }
-    }
-
-    FatalErrorInFunction
-        << "Required " << phase << " field '" << name
-        << "' is missing from configured hook fields " << names
-        << exit(FatalError);
-
-    return -1;
-}
-
-
-bool shouldReportManufacturedErrors(const volScalarField& Vm)
-{
-    const Time& time = Vm.mesh().time();
-    const scalar t = time.value();
-    const scalar dt = time.deltaTValue();
-    const scalar endTime = time.endTime().value();
-
-    return t + 0.5*dt >= endTime;
-}
-
-
-label globalManufacturedCellCount(const fvMesh& mesh)
-{
-    label totalCells = mesh.nCells();
-    reduce(totalCells, sumOp<label>());
-    return totalCells;
-}
-
-
-label structuredCellsPerDirection(const label totalCells, const label dimension)
-{
-    if (totalCells <= 0 || dimension <= 0)
-    {
-        return 0;
-    }
-
-    if (dimension == 1)
-    {
-        return totalCells;
-    }
-
-    return max
-    (
-        label(1),
-        label(Foam::pow(scalar(totalCells), 1.0/scalar(dimension)) + 0.5)
-    );
-}
-
-
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    if (numeric.size() != exact.size())
-    {
-        FatalErrorInFunction
-            << "Cannot compute manufactured norms for fields with different "
-            << "sizes: numeric=" << numeric.size()
-            << ", exact=" << exact.size() << "."
-            << exit(FatalError);
-    }
-
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(numeric, i)
-    {
-        const scalar diff = Foam::mag(numeric[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = numeric.size();
-    reduce(n, sumOp<label>());
-
-    const scalar denom = max(scalar(1), scalar(n));
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/denom, Foam::sqrt(sumSq/denom)),
-        maxAbs
-    );
-}
-
-
 Tuple2<Tuple2<scalar, scalar>, scalar> nanNorms()
 {
     const scalar nan = std::numeric_limits<scalar>::quiet_NaN();
@@ -151,16 +51,6 @@ Tuple2<Tuple2<scalar, scalar>, scalar> nanNorms()
         Tuple2<scalar, scalar>(nan, nan),
         nan
     );
-}
-
-
-word dimensionName(const label dimension)
-{
-    return
-        dimension == 1 ? "1D"
-      : dimension == 2 ? "2D"
-      : dimension == 3 ? "3D"
-                       : "unknown";
 }
 
 } // End anonymous namespace

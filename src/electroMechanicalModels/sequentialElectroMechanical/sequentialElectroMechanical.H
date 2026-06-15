@@ -77,8 +77,8 @@ class sequentialElectroMechanical
         //- Optional coupled electromechanics verification model
         autoPtr<electromechanicalVerificationModel> verificationModelPtr_;
 
-        //- Flag: print solid objectRegistry probe on first evolve() call only
-        bool firstTimeStep_;
+        //- Cached requirements declared by the active tension model at construction
+        activeTensionModel::Requirements activeTensionRequirements_;
 
 
     // Private Member Functions

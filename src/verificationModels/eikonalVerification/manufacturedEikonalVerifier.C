@@ -25,8 +25,11 @@ License
 #include "eikonalVerification/manufacturedEikonalReference.H"
 #include "addToRunTimeSelectionTable.H"
 
+#include "verificationUtils.H"
+
 namespace Foam
 {
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedEikonalVerifier, 0);
 
@@ -40,49 +43,6 @@ addToRunTimeSelectionTable
 namespace
 {
 
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(numeric, i)
-    {
-        const scalar diff = Foam::mag(numeric[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = numeric.size();
-    reduce(n, sumOp<label>());
-
-    const scalar denom = max(scalar(1), scalar(n));
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/denom, Foam::sqrt(sumSq/denom)),
-        maxAbs
-    );
-}
-
-
-word dimensionName(const label dimension)
-{
-    return
-        dimension == 1 ? "1D"
-      : dimension == 2 ? "2D"
-      : dimension == 3 ? "3D"
-                       : "unknown";
-}
 
 } // End anonymous namespace
 
@@ -241,6 +201,8 @@ void manufacturedEikonalVerifier::postProcess
     const volScalarField& activationTime
 )
 {
+    using namespace verificationUtils;
+
     if (!shouldPostProcess())
     {
         return;

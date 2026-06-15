@@ -81,6 +81,7 @@ Current tutorial specs in the Python driver:
 - `manufacturedFDABidomain`
 - `manufacturedFDABathBidomain`
 - `manufacturedEikonalECG`
+- `manufacturedElectromechanicsBC`
 - `restitutionCurves`
 
 The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.
@@ -107,6 +108,11 @@ Run automation from repository root:
 foamctl all --entry singleCell
 foamctl all --entry niederer2012
 ```
+
+Electromechanical tutorials such as
+`tutorials/NiedererEtAl2011/electroMechanicalNiedererEtAl2011` require a full
+`solids4foam`-backed build of `cardiacFoam`. They do not run in the lightweight
+electro-only mode.
 
 ## Regression checks
 

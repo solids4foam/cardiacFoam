@@ -206,8 +206,9 @@ public:
     // Requirements declared by derived models
     struct Requirements
     {
-        bool needVm  = false;
-        bool needCai = false;
+        bool needVm      = false;
+        bool needCai     = false;
+        bool needsLambda = false;
     };
 
     // Derived models declare their required inputs
@@ -455,6 +456,13 @@ public:
     //- Return the CouplingSignal this model reads as its drive input.
     //  Active-tension feedback accepts Vm or Cai.
     virtual CouplingSignal driveSignal() const = 0;
+
+    //- Pre-condition the model to its resting steady state.
+    //  Called by the coupling harness after the signal provider is wired,
+    //  passing the ionic model's initial (resting) Ca_i in mM.
+    //  Base implementation is a no-op; derived classes that need Ca_i
+    //  preconditioning (e.g. LandNiederer) should override.
+    virtual void preconditionToRestingState(const scalar /*restingCai*/) {}
 
     //- Advance ODE and write active tension for a single integration point.
     //  Called by the base calculateTension() loop.

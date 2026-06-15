@@ -187,6 +187,12 @@ public:
         //- Declare that this model needs [Ca2+]_i from the provider
         virtual Requirements requirements() const override;
 
+        //- Run the ODE to resting steady state at the given Ca_i [mM].
+        //  Called automatically by sequentialElectroMechanical after the
+        //  ionic signal provider is wired, so that all integration points
+        //  start from the correct resting equilibrium.
+        virtual void preconditionToRestingState(const scalar restingCai) override;
+
         //- Number of ODEs (= NUM_STATES = 6)
         virtual label nEqns() const override;
 

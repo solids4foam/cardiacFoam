@@ -2,9 +2,9 @@ ionicModel/ionicModel.C
 ionicModel/ionicSelector.C
 ionicModel/ionicHeterogeneity.C
 
-monodomainFDAManufactured/monodomainFDAManufactured.C
-bidomainFDAManufactured/bidomainFDAManufactured.C
-bathBidomainFDAManufactured/bathBidomainFDAManufactured.C
+verificationModels/monodomainFDAManufactured/monodomainFDAManufactured.C
+verificationModels/bidomainFDAManufactured/bidomainFDAManufactured.C
+verificationModels/bathBidomainFDAManufactured/bathBidomainFDAManufactured.C
 
 
 TNNP/TNNP.C

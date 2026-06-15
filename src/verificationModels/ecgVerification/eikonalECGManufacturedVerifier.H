@@ -97,7 +97,12 @@ public:
 
     virtual bool read(const dictionary& dict) override;
 
+    // Base class override for implicitly timed workflows
     virtual void record(const List<scalar>& numericValues) override;
+
+    // Overload for eikonal ECG, which is driven by a post-processing pass
+    // over activation times rather than a time-stepping loop, and thus
+    // requires explicit time stamps.
 
     virtual void record
     (

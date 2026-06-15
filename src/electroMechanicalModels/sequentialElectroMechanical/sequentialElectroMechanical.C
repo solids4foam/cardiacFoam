@@ -75,7 +75,7 @@ sequentialElectroMechanical::sequentialElectroMechanical
         )
     ),
     verificationModelPtr_(),
-    firstTimeStep_(true)
+    activeTensionRequirements_(activeTensionModel_->requirements())
 {
     const ElectromechanicalSignalProvider* prov = electro().provider();
 
@@ -86,19 +86,14 @@ sequentialElectroMechanical::sequentialElectroMechanical
 
     activeTensionModel_->validateProvider();
 
-    if
-    (
-        electromechanicalVerificationModel::configured
-        (
-            electroMechanicalProperties()
-        )
-    )
+    // Pre-condition the active tension model to the ionic model's resting state.
+    // We query Ca_i at cell 0 from the provider — at t=0 all cells share the
+    // same initial Ca_i, so cell 0 is representative of the whole field.
+    // This call is a no-op for models that don't override preconditionToRestingState().
+    if (prov && activeTensionRequirements_.needCai)
     {
-        verificationModelPtr_ =
-            electromechanicalVerificationModel::New
-            (
-                electroMechanicalProperties()
-            );
+        const scalar restingCai = prov->signal(0, CouplingSignal::CAI);
+        activeTensionModel_->preconditionToRestingState(restingCai);
     }
 
     if (solid().mesh().nCells() != electro().mesh().nCells())
@@ -129,6 +124,41 @@ sequentialElectroMechanical::sequentialElectroMechanical
         Info<< "    Registered f0 in solid objectRegistry." << nl << endl;
     }
 
+    if (activeTensionRequirements_.needsLambda)
+    {
+        if (!solid().mesh().foundObject<volVectorField>("D"))
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field D "
+                << "is not in the solid objectRegistry."
+                << abort(FatalError);
+        }
+        if (!solid().mesh().foundObject<volVectorField>("f0"))
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field f0 "
+                << "is not in the solid objectRegistry."
+                << abort(FatalError);
+        }
+    }
+
+    if
+    (
+        electromechanicalVerificationModel::configured
+        (
+            electroMechanicalProperties()
+        )
+    )
+    {
+        verificationModelPtr_ =
+            electromechanicalVerificationModel::New
+            (
+                electroMechanicalProperties()
+            );
+    }
+
     if (verificationModelPtr_.valid())
     {
         verificationModelPtr_->initialize
@@ -155,32 +185,18 @@ void sequentialElectroMechanical::updateLambda()
     const bool hasD  = solidMesh.foundObject<volVectorField>("D");
     const bool hasF0 = solidMesh.foundObject<volVectorField>("f0");
 
-    // On the first call report whether the fields needed for the stretch
-    // feedback are available on the solid mesh.
-    if (firstTimeStep_)
-    {
-        Info<< nl
-            << "  [lambda feedback] solid objectRegistry fields:" << nl
-            << "    D   (displacement)      : "
-            << (hasD  ? "FOUND"  : "NOT FOUND") << nl
-            << "    f0  (fibre direction)   : "
-            << (hasF0 ? "FOUND"  : "NOT FOUND") << nl;
-
-        if (hasD && hasF0)
-        {
-            Info<< "    -> Fibre stretch lambda computed from D and f0." << nl;
-        }
-        else
-        {
-            Info<< "    -> Missing fields: lambda held at 1.0." << nl;
-        }
-        Info<< endl;
-
-        firstTimeStep_ = false;
-    }
-
     if (!hasD || !hasF0)
     {
+        if (activeTensionRequirements_.needsLambda)
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field "
+                << (!hasD ? "D" : "f0")
+                << " disappeared from the solid objectRegistry at t="
+                << runTime().value() << "."
+                << abort(FatalError);
+        }
         lambdaField_ = 1.0;
         return;
     }

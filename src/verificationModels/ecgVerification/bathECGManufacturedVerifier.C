@@ -23,6 +23,8 @@ License
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
+#include "volFields.H"
+#include "verificationUtils.H"
 #include "ecgModelIO.H"
 
 namespace Foam
@@ -38,50 +40,6 @@ addToRunTimeSelectionTable
 
 namespace
 {
-
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    if (numeric.size() != exact.size())
-    {
-        FatalErrorInFunction
-            << "Cannot compute bath ECG manufactured norms for fields with "
-            << "different sizes: numeric=" << numeric.size()
-            << ", exact=" << exact.size() << "."
-            << exit(FatalError);
-    }
-
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(numeric, i)
-    {
-        const scalar diff = Foam::mag(numeric[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = numeric.size();
-    reduce(n, sumOp<label>());
-
-    const scalar denom = max(scalar(1), scalar(n));
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/denom, Foam::sqrt(sumSq/denom)),
-        maxAbs
-    );
-}
-
 
 scalarField phiEOnVerifierMesh
 (
@@ -307,6 +265,8 @@ bool bathECGManufacturedVerifier::read(const dictionary& dict)
 
 void bathECGManufacturedVerifier::record(const List<scalar>& numericValues)
 {
+    using namespace verificationUtils;
+
     if (!enabled_)
     {
         return;

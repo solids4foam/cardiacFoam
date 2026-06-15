@@ -15,6 +15,7 @@ This folder contains reference and regression cases for `cardiacFoam`.
   small 1D Purkinje network
 - `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` : electromechanical
   Niederer slab using `electroMechanicalModel` with monodomain electrophysiology
+  (full `solids4foam` build only; not available in lightweight mode)
 - `manufacturedSolutions/monodomainPseudoECG` : spatial manufactured-solution
   verification with pseudo-ECG (`monodomainFDAManufactured`)
 - `manufacturedSolutions/bidomain` : spatial manufactured-solution verification

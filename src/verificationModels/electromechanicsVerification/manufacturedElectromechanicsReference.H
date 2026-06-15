@@ -32,6 +32,8 @@ Author
 #include "scalarField.H"
 #include "vectorField.H"
 
+#include "monodomainVerification/manufacturedFDAReference.H"
+
 namespace Foam
 {
 
@@ -39,26 +41,15 @@ inline void computeManufacturedElectromechanicsVm
 (
     scalarField& Vm,
     const vectorField& centres,
-    const scalar t
+    const scalar t,
+    const label dimension
 )
 {
-    Vm.setSize(centres.size());
-
-    const scalar pi = constant::mathematical::pi;
-    const scalar ct = Foam::cos(t);
-
-    forAll(centres, cellI)
-    {
-        const scalar x = centres[cellI].x();
-        const scalar y = centres[cellI].y();
-        const scalar z = centres[cellI].z();
-
-        Vm[cellI] =
-            Foam::sin(pi*x)
-           *Foam::sin(pi*y)
-           *Foam::sin(pi*z)
-           *ct;
-    }
+    scalarField X(centres.component(vector::X));
+    scalarField Y(centres.component(vector::Y));
+    scalarField Z(centres.component(vector::Z));
+    
+    computeManufacturedV(Vm, X, Y, Z, t, dimension);
 }
 
 
@@ -67,9 +58,7 @@ inline void computeManufacturedElectromechanicsD
     vectorField& D,
     const vectorField& centres,
     const scalar t,
-    const scalar uAmplitude,
-    const scalar vAmplitude,
-    const scalar wAmplitude
+    const vector& amplitude
 )
 {
     D.setSize(centres.size());
@@ -84,9 +73,9 @@ inline void computeManufacturedElectromechanicsD
 
         D[cellI] = vector
         (
-            uAmplitude*x*x*y*st,
-            vAmplitude*y*y*z*st,
-            wAmplitude*z*z*x*st
+            amplitude.x()*x*x*y*st,
+            amplitude.y()*y*y*z*st,
+            amplitude.z()*z*z*x*st
         );
     }
 }
@@ -96,8 +85,7 @@ inline scalar manufacturedElectromechanicsLambdaX
 (
     const vector& X,
     const scalar t,
-    const scalar uAmplitude,
-    const scalar wAmplitude
+    const vector& amplitude
 )
 {
     const scalar st = Foam::sin(t);
@@ -105,11 +93,34 @@ inline scalar manufacturedElectromechanicsLambdaX
     const scalar y = X.y();
     const scalar z = X.z();
 
-    const scalar F11 = 1.0 + 2.0*uAmplitude*x*y*st;
+    const scalar F11 = 1.0 + 2.0*amplitude.x()*x*y*st;
     const scalar F21 = 0.0;
-    const scalar F31 = wAmplitude*z*z*st;
+    const scalar F31 = amplitude.z()*z*z*st;
 
     return Foam::sqrt(F11*F11 + F21*F21 + F31*F31);
+}
+
+
+inline void computeManufacturedElectromechanicsLambda
+(
+    scalarField& lambda,
+    const vectorField& centres,
+    const scalar t,
+    const vector& amplitude
+)
+{
+    lambda.setSize(centres.size());
+
+    forAll(centres, cellI)
+    {
+        lambda[cellI] =
+            manufacturedElectromechanicsLambdaX
+            (
+                centres[cellI],
+                t,
+                amplitude
+            );
+    }
 }
 
 
@@ -118,15 +129,24 @@ inline void computeManufacturedElectromechanicsTa
     scalarField& Ta,
     const vectorField& centres,
     const scalar t,
-    const scalar uAmplitude,
-    const scalar wAmplitude,
+    const vector& amplitude,
     const scalar Tmax,
     const scalar V0,
-    const scalar gamma
+    const scalar gamma,
+    const label dimension
 )
 {
     scalarField Vm;
-    computeManufacturedElectromechanicsVm(Vm, centres, t);
+    computeManufacturedElectromechanicsVm(Vm, centres, t, dimension);
+
+    scalarField lambda;
+    computeManufacturedElectromechanicsLambda
+    (
+        lambda,
+        centres,
+        t,
+        amplitude
+    );
 
     Ta.setSize(centres.size());
 
@@ -135,19 +155,11 @@ inline void computeManufacturedElectromechanicsTa
     forAll(centres, cellI)
     {
         const scalar Vm2 = Vm[cellI]*Vm[cellI];
-        const scalar lambda =
-            manufacturedElectromechanicsLambdaX
-            (
-                centres[cellI],
-                t,
-                uAmplitude,
-                wAmplitude
-            );
 
         Ta[cellI] =
             Tmax
            *Vm2/(V02 + Vm2)
-           *(1.0 + gamma*(lambda - 1.0));
+           *(1.0 + gamma*(lambda[cellI] - 1.0));
     }
 }
 

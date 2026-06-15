@@ -28,9 +28,10 @@ This file describes the architecture of `src/ionicModels` as it exists in this t
 ```text
 src/ionicModels/
 ├── ionicModel/                    # Base class, factory, selectors, batched/GPU support headers
-├── monodomainFDAManufactured/     # Manufactured monodomain ionic wrapper
-├── bidomainFDAManufactured/       # Manufactured bidomain ionic wrapper
-├── bathBidomainFDAManufactured/   # Manufactured bath-bidomain ionic wrapper
+├── verificationModels/
+│   ├── monodomainFDAManufactured/     # Manufactured monodomain ionic wrapper
+│   ├── bidomainFDAManufactured/       # Manufactured bidomain ionic wrapper
+│   └── bathBidomainFDAManufactured/   # Manufactured bath-bidomain ionic wrapper
 ├── AlievPanfilov/
 ├── AlievPanfilovBatched/
 ├── BuenoOrovio/

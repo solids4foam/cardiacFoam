@@ -42,13 +42,12 @@ class manufacturedElectromechanicsVerifier
 :
     public electromechanicalVerificationModel
 {
-    scalar uAmplitude_;
-    scalar vAmplitude_;
-    scalar wAmplitude_;
+    vector amplitude_;
     scalar Tmax_;
     scalar V0_;
     scalar gamma_;
     scalar TaScale_;
+    label dimension_;
     Switch initializeFields_;
     Switch enforceExactFields_;
     mutable bool errorsReported_;

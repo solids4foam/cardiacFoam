@@ -12,6 +12,8 @@ variables for each integration point.
 ```text
 src/activeTensionModels/
 ├── activeTensionModel/   # Base class and runtime selection
+├── verificationModels/
+│   └── ManufacturedElectromechanics/ # Manufactured electromechanics verification model
 ├── GoktepeKuhl/          # Goktepe-Kuhl phenomenological active tension model
 ├── NashPanfilov/         # Nash-Panfilov phenomenological active tension model
 ├── LandNiederer/         # Land-Niederer biophysical active tension model

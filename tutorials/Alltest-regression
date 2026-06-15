@@ -24,6 +24,7 @@ mkdir -p "${REG_ROOT}"
 REGRESSION_TESTS=(
     "singleCellprotocols/singleCell"
     "NiedererEtAl2011/NiedererEtAl2011verification"
+    "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
     "NiedererEtAl2011/purkinjeNiedererEtAl2011"
     "manufacturedSolutions/bidomain"
     "manufacturedSolutions/monodomainPseudoECG"
@@ -33,6 +34,7 @@ REGRESSION_TESTS=(
 )
 
 failures=0
+skips=0
 
 for testCase in "${REGRESSION_TESTS[@]}"; do
     echo
@@ -56,11 +58,18 @@ for testCase in "${REGRESSION_TESTS[@]}"; do
         continue
     fi
 
-    if ! ./regressionTest.sh; then
+    if ./regressionTest.sh; then
+        echo "PASS: regression test passed in ${testCase}"
+    else
+        rc=$?
+        if (( rc == 77 )); then
+            echo "SKIP: regression test skipped in ${testCase}"
+            skips=$((skips + 1))
+            continue
+        fi
+
         echo "FAIL: regression test failed in ${testCase}"
         failures=$((failures + 1))
-    else
-        echo "PASS: regression test passed in ${testCase}"
     fi
 done
 
@@ -68,9 +77,9 @@ echo
 echo "============================================================"
 
 if (( failures > 0 )); then
-    echo "Regression tests FAILED (${failures} failing case(s))"
+    echo "Regression tests FAILED (${failures} failing case(s), ${skips} skipped case(s))"
     exit 1
 else
-    echo "All regression tests PASSED"
+    echo "All regression tests PASSED (${skips} skipped case(s))"
     exit 0
 fi

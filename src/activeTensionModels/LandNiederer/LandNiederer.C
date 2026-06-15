@@ -183,11 +183,56 @@ LandNiederer::LandNiederer
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * //
 
+void LandNiederer::preconditionToRestingState(const scalar restingCai)
+{
+    // Run the ODE for preconditioningTime ms at constant Ca_i=restingCai,
+    // lambda=1, lambda_rate=0 to drive all states to resting equilibrium.
+    //
+    // The Land-Niederer initial conditions (Ca_TRPN=0, XS=0) are the
+    // equilibrium at Ca_i=0.  At the ionic model's actual resting Ca_i
+    // (e.g. TNNP: 0.2 µM, TWorld: 0.097 µM, ToRORd: 0.075 µM) the true
+    // resting XS is non-zero, so starting from 0 produces a spurious global
+    // Ta transient in all cells simultaneously.
+    const scalar preconditioningTime =
+        dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
+
+    if (preconditioningTime <= SMALL || restingCai <= SMALL)
+    {
+        return;
+    }
+
+    currentDriveSignal_ = restingCai;
+    currentLambda_      = 1.0;
+    currentLambdaRate_  = 0.0;
+
+    // Run a single-point ODE integration; all cells share the same resting IC.
+    scalarField precondStates(STATES_[0]);
+    scalar step = preconditioningTime / 100.0;
+    odeSolver_->solve(0.0, preconditioningTime, precondStates, step);
+
+    forAll(STATES_, i)
+    {
+        STATES_[i] = precondStates;
+    }
+
+    Info<< "    LandNiederer: pre-conditioned " << STATES_.size()
+        << " points to resting steady state" << nl
+        << "      restingCai = " << restingCai << " mM ("
+        << preconditioningTime << " ms integration)" << nl
+        << "      Ca_TRPN   = " << precondStates[Ca_TRPN] << nl
+        << "      TmBlocked = " << precondStates[TmBlocked] << nl
+        << "      XW        = " << precondStates[XW] << nl
+        << "      XS        = " << precondStates[XS] << nl
+        << endl;
+}
+
+
 activeTensionModel::Requirements LandNiederer::requirements() const
 {
     Requirements req;
-    req.needCai = true;
-    req.needVm  = false;
+    req.needCai     = true;
+    req.needVm      = false;
+    req.needsLambda = true;
     return req;
 }
 
@@ -253,6 +298,11 @@ void LandNiederer::solveAtPoint
     if (currentDt_ > SMALL)
     {
         lambda_rate = (lambda - prevLambda_[i]) / currentDt_;
+
+        // Cap to a physiologically plausible range (Land 2017 calibrated at
+        // ~1 ms steps; rates beyond ±20 s^-1 indicate a predictor overshoot
+        // or first-activation transient, not real sarcomere dynamics).
+        lambda_rate = max(min(lambda_rate, scalar(20.0)), scalar(-20.0));
     }
 
     prevLambda_[i] = lambda;

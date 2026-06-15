@@ -25,7 +25,6 @@ reference helpers used to validate:
 - monodomain workflows
 - bidomain workflows
 - ECG workflows
-- selected single-cell manufactured cases
 
 ## Main abstractions
 
@@ -55,10 +54,10 @@ Registered verifier types include:
 - `manufacturedFDAMonodomainVerifier`
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
-- `singleCellManufacturedFDABidomainVerifier`
 - `manufacturedEikonalVerifier`
 - `pseudoECGManufacturedVerifier`
 - `bathECGManufacturedVerifier`
+- `eikonalECGManufacturedVerifier`
 
 ## What this folder does not own
 

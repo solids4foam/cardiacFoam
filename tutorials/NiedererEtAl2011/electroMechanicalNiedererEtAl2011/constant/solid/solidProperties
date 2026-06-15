@@ -31,7 +31,7 @@ nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
 
     infoFrequency   1;
 
-    predictor       true;
+    predictor       false;
 }
 
 // ************************************************************************* //

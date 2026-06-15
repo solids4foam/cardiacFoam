@@ -7,6 +7,11 @@ cardiacFoam using the `electroMechanicalModel` physics model. It extends the
 electro-only NiedererEtAl2011 benchmark to include a solid mechanics region
 coupled to the electrophysiology region.
 
+Unlike the electro-only tutorials, this case requires a full `solids4foam`
+build of `cardiacFoam`. It does not run in lightweight mode, because
+`libelectroMechanicalModels` is only compiled when `cardiacFoam` is built
+against a compiled `solids4foam` installation.
+
 The case uses a 20x3x7 mm tissue slab (Niederer et al. 2011 benchmark
 geometry) with:
 
@@ -22,6 +27,14 @@ This Ta field is passed to the solid region where the `electroMechanicalLaw`
 adds it as a fibre-aligned active stress component.
 
 ## Running
+
+Build requirement:
+
+- compile `solids4foam`
+- rebuild `cardiacFoam` in full mode (`./Allwmake` without the lightweight
+  fallback)
+
+Then run:
 
 ```bash
 ./Allrun

@@ -23,12 +23,18 @@ License
 #include "OSspecific.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
+#include "fvcGrad.H"
 #include "manufacturedElectromechanicsReference.H"
+#include "fvc.H"
+#include "fvm.H"
+#include "verificationUtils.H"
 
 #include <tuple>
 
 namespace Foam
 {
+
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedElectromechanicsVerifier, 0);
 addToRunTimeSelectionTable
@@ -41,48 +47,32 @@ addToRunTimeSelectionTable
 namespace
 {
 
-template<class FieldType1, class FieldType2>
-std::tuple<scalar, scalar, scalar> errorNorms
+void computeNumericalLambda
 (
-    const FieldType1& num,
-    const FieldType2& exact
+    scalarField& lambda,
+    const volVectorField& D
 )
 {
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
+    const fvMesh& mesh = D.mesh();
 
-    forAll(num, i)
+    if (!mesh.foundObject<volVectorField>("f0"))
     {
-        const scalar diff = Foam::mag(num[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
+        FatalErrorInFunction
+            << "manufacturedElectromechanicsVerifier requires 'f0' on the "
+            << mesh.name() << " mesh to evaluate lambda."
+            << exit(FatalError);
     }
 
-    reduce(maxAbs, maxOp<scalar>());
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
+    const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
+    const volTensorField gradD(fvc::grad(D));
 
-    label n = num.size();
-    reduce(n, sumOp<label>());
+    lambda.setSize(D.size());
 
-    return std::tuple<scalar, scalar, scalar>
-    (
-        sumAbs/scalar(n),
-        Foam::sqrt(sumSq/scalar(n)),
-        maxAbs
-    );
-}
-
-
-bool finalTimeReached(const Time& time)
-{
-    const scalar t = time.value();
-    const scalar dt = time.deltaTValue();
-    const scalar endTime = time.endTime().value();
-
-    return t + 0.5*dt >= endTime;
+    forAll(lambda, cellI)
+    {
+        const tensor F(I + gradD[cellI].T());
+        lambda[cellI] = mag(F & f0[cellI]);
+    }
 }
 
 } // End anonymous namespace
@@ -94,17 +84,35 @@ manufacturedElectromechanicsVerifier::manufacturedElectromechanicsVerifier
 )
 :
     electromechanicalVerificationModel(dict),
-    uAmplitude_(dict.lookupOrDefault<scalar>("uAmplitude", 0.02)),
-    vAmplitude_(dict.lookupOrDefault<scalar>("vAmplitude", 0.02)),
-    wAmplitude_(dict.lookupOrDefault<scalar>("wAmplitude", 0.02)),
-    Tmax_(dict.lookupOrDefault<scalar>("Tmax", 1.0)),
-    V0_(dict.lookupOrDefault<scalar>("V0", 1.0)),
-    gamma_(dict.lookupOrDefault<scalar>("gamma", 1.0)),
-    TaScale_(dict.lookupOrDefault<scalar>("TaScale", 1e3)),
+    amplitude_(dict.lookupOrDefault<vector>("amplitude", vector(0.02, 0.02, 0.02))),
+    Tmax_(1.0),
+    V0_(1.0),
+    gamma_(1.0),
+    TaScale_(1.0),
     initializeFields_(dict.lookupOrDefault<Switch>("initializeFields", true)),
     enforceExactFields_(dict.lookupOrDefault<Switch>("enforceExactFields", false)),
     errorsReported_(false)
 {
+    const dictionary& parentDict = dict.parent();
+    if (parentDict.found("constants"))
+    {
+        const dictionary& constDict = parentDict.subDict("constants");
+        Tmax_ = constDict.lookupOrDefault<scalar>("Tmax", dict.lookupOrDefault<scalar>("Tmax", 1.0));
+        V0_ = constDict.lookupOrDefault<scalar>("V0", dict.lookupOrDefault<scalar>("V0", 1.0));
+        gamma_ = constDict.lookupOrDefault<scalar>("gamma", dict.lookupOrDefault<scalar>("gamma", 1.0));
+    }
+    else
+    {
+        Tmax_ = dict.lookupOrDefault<scalar>("Tmax", 1.0);
+        V0_ = dict.lookupOrDefault<scalar>("V0", 1.0);
+        gamma_ = dict.lookupOrDefault<scalar>("gamma", 1.0);
+    }
+    TaScale_ = parentDict.lookupOrDefault<scalar>("TaScale", dict.lookupOrDefault<scalar>("TaScale", 1e3));
+
+    const word dimStr = parentDict.lookupOrDefault<word>("dimension", dict.lookupOrDefault<word>("dimension", "3D"));
+    dimension_ = (dimStr == "1D") ? 1 : ((dimStr == "2D") ? 2 : 3);
+
+
     if (V0_ <= SMALL)
     {
         FatalErrorInFunction
@@ -130,7 +138,8 @@ void manufacturedElectromechanicsVerifier::setExactFields
     (
         VmExact,
         Vm.mesh().C().primitiveField(),
-        t
+        t,
+        dimension_
     );
 
     computeManufacturedElectromechanicsD
@@ -138,9 +147,7 @@ void manufacturedElectromechanicsVerifier::setExactFields
         DExact,
         D.mesh().C().primitiveField(),
         t,
-        uAmplitude_,
-        vAmplitude_,
-        wAmplitude_
+        amplitude_
     );
 
     Vm.primitiveFieldRef() = VmExact;
@@ -188,7 +195,7 @@ bool manufacturedElectromechanicsVerifier::shouldPostProcess
     const volVectorField&
 ) const
 {
-    return !errorsReported_ && finalTimeReached(Vm.mesh().time());
+    return !errorsReported_ && shouldReportManufacturedErrors(Vm);
 }
 
 
@@ -208,13 +215,16 @@ void manufacturedElectromechanicsVerifier::postProcess
 
     scalarField VmExact;
     vectorField DExact;
+    scalarField lambdaExact;
+    scalarField lambdaNum;
     scalarField TaExact;
 
     computeManufacturedElectromechanicsVm
     (
         VmExact,
         Vm.mesh().C().primitiveField(),
-        t
+        t,
+        dimension_
     );
 
     computeManufacturedElectromechanicsD
@@ -222,9 +232,7 @@ void manufacturedElectromechanicsVerifier::postProcess
         DExact,
         D.mesh().C().primitiveField(),
         t,
-        uAmplitude_,
-        vAmplitude_,
-        wAmplitude_
+        amplitude_
     );
 
     computeManufacturedElectromechanicsTa
@@ -232,19 +240,27 @@ void manufacturedElectromechanicsVerifier::postProcess
         TaExact,
         Ta.mesh().C().primitiveField(),
         t,
-        uAmplitude_,
-        wAmplitude_,
+        amplitude_,
         Tmax_*TaScale_,
         V0_,
-        gamma_
+        gamma_,
+        dimension_
     );
 
-    const auto [L1Vm, L2Vm, LinfVm] =
-        errorNorms(Vm.primitiveField(), VmExact);
-    const auto [L1D, L2D, LinfD] =
-        errorNorms(D.primitiveField(), DExact);
-    const auto [L1Ta, L2Ta, LinfTa] =
-        errorNorms(Ta.primitiveField(), TaExact);
+    computeManufacturedElectromechanicsLambda
+    (
+        lambdaExact,
+        D.mesh().C().primitiveField(),
+        t,
+        amplitude_
+    );
+
+    computeNumericalLambda(lambdaNum, D);
+
+    const auto VmNorms = computeNorms(Vm.primitiveField(), VmExact);
+    const auto DNorms = computeNorms(D.primitiveField(), DExact);
+    const auto lambdaNorms = computeNorms(lambdaNum, lambdaExact);
+    const auto TaNorms = computeNorms(Ta.primitiveField(), TaExact);
 
     if (Pstream::master())
     {
@@ -257,17 +273,19 @@ void manufacturedElectromechanicsVerifier::postProcess
             << "Manufactured electromechanics error summary (t = "
             << t << "):" << nl
             << "Field     L1-error       L2-error       Linf-error" << nl
-            << "Vm     " << L1Vm << "   " << L2Vm << "   " << LinfVm << nl
-            << "D      " << L1D << "   " << L2D << "   " << LinfD << nl
-            << "Ta     " << L1Ta << "   " << L2Ta << "   " << LinfTa << nl
+            << "Vm     " << VmNorms.first().first() << "   " << VmNorms.first().second() << "   " << VmNorms.second() << nl
+            << "D      " << DNorms.first().first() << "   " << DNorms.first().second() << "   " << DNorms.second() << nl
+            << "lambda " << lambdaNorms.first().first() << "   " << lambdaNorms.first().second() << "   " << lambdaNorms.second() << nl
+            << "Ta     " << TaNorms.first().first() << "   " << TaNorms.first().second() << "   " << TaNorms.second() << nl
             << endl;
 
         out << "Manufactured electromechanics error summary (t = "
             << t << "):\n";
         out << "Field     L1-error       L2-error       Linf-error\n";
-        out << "Vm     " << L1Vm << "   " << L2Vm << "   " << LinfVm << "\n";
-        out << "D      " << L1D << "   " << L2D << "   " << LinfD << "\n";
-        out << "Ta     " << L1Ta << "   " << L2Ta << "   " << LinfTa << "\n";
+        out << "Vm     " << VmNorms.first().first() << "   " << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
+        out << "D      " << DNorms.first().first() << "   " << DNorms.first().second() << "   " << DNorms.second() << "\n";
+        out << "lambda " << lambdaNorms.first().first() << "   " << lambdaNorms.first().second() << "   " << lambdaNorms.second() << "\n";
+        out << "Ta     " << TaNorms.first().first() << "   " << TaNorms.first().second() << "   " << TaNorms.second() << "\n";
     }
 
     errorsReported_ = true;
