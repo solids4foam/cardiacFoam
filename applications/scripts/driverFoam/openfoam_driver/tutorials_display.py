@@ -156,6 +156,21 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
+        id="manufacturedElectromechanicsBC",
+        title="Manufactured electromechanics (BC-constrained)",
+        summary=(
+            "Electromechanics verification on a manufactured monodomain field "
+            "with boundary-constrained solid motion. Vm is rigorous MMS; "
+            "mechanics diagnostics are refinement-based."
+        ),
+        thumbnail="/tutorials/manufactured-electromechanics-bc.png",
+        tags=("manufactured-solution", "verification", "electromechanics"),
+        preset={
+            "anatomy.mesh": "unit-domain",
+            "physics.ionic_model": "monodomainFDAManufactured",
+        },
+    ),
+    TutorialDisplay(
         id="restitutionCurves",
         title="Restitution curves (S1–S2 protocol)",
         summary=(
