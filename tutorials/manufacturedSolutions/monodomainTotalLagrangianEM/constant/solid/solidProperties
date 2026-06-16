@@ -8,53 +8,21 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "constant/solid";
+    object      solidProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     cardiacFoam;
+solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
 
-startFrom       startTime;
-
-startTime       0;
-
-stopAt          endTime;
-
-endTime         0.05;
-
-deltaT          1e-05;
-
-writeControl    runTime;
-
-writeInterval   5e-3;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable false;
-
-maxCo           0.02;
-
-functions
+nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
 {
-    Taprobes
-    {
-        #include "Taprobes"
-    }
-    CaiProbes
-    {
-        #include "CaiProbes"
-    }
+    nCorrectors     100;
+    rTol            1e-10;
+    aTol            1e-10;
+    sTol            1e-10;
+    infoFrequency   1;
+    predictor       true;
 }
 
 // ************************************************************************* //

@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.1",
+  "tutorial": "manufacturedElectromechanicsMMS",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs",
+  "generated_at_utc": "2026-06-15T17:28:23.292415+00:00",
+  "artifact_count": 5,
+  "artifacts": [
+    {
+      "path": "manufactured_electromechanics_summary.csv",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs/manufactured_electromechanics_summary.csv",
+      "exists": true,
+      "kind": "table",
+      "format": "csv",
+      "label": "Manufactured electromechanics summary table",
+      "task_index": 1,
+      "module": "post_processing_manufactured_electromechanics.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "manufactured_electromechanics_convergence_rates.csv",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs/manufactured_electromechanics_convergence_rates.csv",
+      "exists": true,
+      "kind": "table",
+      "format": "csv",
+      "label": "Manufactured electromechanics convergence rates table",
+      "task_index": 1,
+      "module": "post_processing_manufactured_electromechanics.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "manufactured_electromechanics_vm_across_dimensions.png",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs/manufactured_electromechanics_vm_across_dimensions.png",
+      "exists": true,
+      "kind": "plot",
+      "format": "png",
+      "label": "Manufactured electromechanics Vm across dimensions",
+      "task_index": 1,
+      "module": "post_processing_manufactured_electromechanics.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "manufactured_electromechanics_summary_dashboard.png",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs/manufactured_electromechanics_summary_dashboard.png",
+      "exists": true,
+      "kind": "plot",
+      "format": "png",
+      "label": "Manufactured electromechanics summary dashboard",
+      "task_index": 1,
+      "module": "post_processing_manufactured_electromechanics.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "manufactured_electromechanics_errors_3d.png",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/electromechanicsMMS/outputs/manufactured_electromechanics_errors_3d.png",
+      "exists": true,
+      "kind": "plot",
+      "format": "png",
+      "label": "Manufactured electromechanics errors manufactured_electromechanics_errors_3d",
+      "task_index": 1,
+      "module": "post_processing_manufactured_electromechanics.py",
+      "function": "run_postprocessing"
+    }
+  ]
+}

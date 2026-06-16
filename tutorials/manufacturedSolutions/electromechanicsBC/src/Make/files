@@ -1,4 +1,0 @@
-manufacturedElectromechanicsDisplacement/manufacturedElectromechanicsDisplacementFvPatchVectorField.C
-manufacturedSolidForce/manufacturedSolidForce.C
-
-LIB = $(FOAM_USER_LIBBIN)/libmanufacturedElectromechanicsBC

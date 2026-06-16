@@ -81,7 +81,7 @@ Current tutorial specs in the Python driver:
 - `manufacturedFDABidomain`
 - `manufacturedFDABathBidomain`
 - `manufacturedEikonalECG`
-- `manufacturedElectromechanicsBC`
+- `manufacturedMonodomainTotalLagrangianEM`
 - `restitutionCurves`
 
 The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.

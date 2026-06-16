@@ -55,7 +55,7 @@ monodomainSolverCoeffs
         stimulusLocationMin (0 0 5.5e-3);
         stimulusLocationMax (1.5e-3 1.5e-3 7e-3);
         stimulusDuration [0 0 1 0 0 0 0] 2e-3;
-        stimulusIntensity [0 -3 0 0 0 1 0] 0;
+        stimulusIntensity [0 -3 0 0 0 1 0] 50000;
         stimulusStartTime 0.0;
     }
 }

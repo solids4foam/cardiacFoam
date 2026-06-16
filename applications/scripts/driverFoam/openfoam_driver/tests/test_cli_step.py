@@ -321,3 +321,159 @@ def test_cli_run_does_not_retry_failed_saved_state() -> None:
         assert payload["status"] == "failed"
         assert "failed; use action=step" in payload["error"]
         assert payload["workflow_state"]["steps"][0]["attempt"] == 1
+
+
+def _failed_exit0_runner(
+    workflow_dag,
+    workflow_state,
+    step_id,
+    *,
+    case_root,
+    log_dir,
+    state_path,
+    expected_artifacts=(),
+):
+    """Stub for run_workflow_step: marks the step failed with exit_code == 0.
+
+    Simulates the missing_artifacts case (command 'succeeded' but produced
+    nothing). Writes real stdout/stderr log files and persists state.
+    """
+    from openfoam_driver.core.runtime.workflow_runner import (
+        WorkflowStepRunResult,
+        _step_state_by_id,
+    )
+    from openfoam_driver.core.runtime.workflow_state import (
+        WorkflowStepState,
+        replace_step_state,
+    )
+
+    log_path = Path(log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+    previous = _step_state_by_id(workflow_state, step_id)
+    attempt = previous.attempt + 1
+    stdout_log = log_path / f"{step_id}.attempt{attempt}.stdout.log"
+    stderr_log = log_path / f"{step_id}.attempt{attempt}.stderr.log"
+    stdout_log.write_text("starting solve\n")
+    stderr_log.write_text("FOAM FATAL ERROR: missing expected artifacts\n")
+
+    failed_step = WorkflowStepState(
+        step_id=step_id,
+        status="failed",
+        attempt=attempt,
+        command=previous.command,
+        args=previous.args,
+        cwd=previous.cwd,
+        exit_code=0,
+        stdout_log=str(stdout_log),
+        stderr_log=str(stderr_log),
+        diagnostics=(
+            {"level": "error", "code": "missing_artifacts", "message": "missing"},
+        ),
+    )
+    state = replace_step_state(
+        workflow_state,
+        failed_step,
+        status="failed",
+        current_step_id=step_id,
+        completed_steps=workflow_state.completed_steps,
+        failed_step_id=step_id,
+    )
+    if state_path is not None:
+        Path(state_path).write_text(json.dumps(state.to_json()))
+    return WorkflowStepRunResult(
+        state=state,
+        step_id=step_id,
+        exit_code=0,
+        stdout_log=str(stdout_log),
+        stderr_log=str(stderr_log),
+    )
+
+
+def test_cli_step_attaches_failure_context_on_failure(monkeypatch) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        _write_case(
+            tutorials_root,
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nexit 0\n",
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
+        )
+        monkeypatch.setattr("openfoam_driver.cli.run_workflow_step", _failed_exit0_runner)
+
+        out = StringIO()
+        with redirect_stdout(out):
+            code = main([
+                "step", "--strict",
+                "--entry", "cliStepCase",
+                "--step", "run",
+                "--tutorials-root", str(tutorials_root),
+            ])
+
+        payload = json.loads(out.getvalue())
+        assert code == 1
+        assert payload["status"] == "failed"
+        ctx = payload["failure_context"]
+        assert ctx["step_id"] == "run"
+        assert ctx["exit_code"] == 0
+        assert "FOAM FATAL ERROR" in ctx["stderr_tail"]
+
+
+def test_cli_run_attaches_failure_context_for_failed_step() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        _write_case(
+            tutorials_root,
+            allrun=(
+                "#!/bin/sh\n"
+                "mkdir -p postProcessing 0.001\n"
+                "touch postProcessing/cliStepCase_1.txt 0.001/Vm\n"
+                "if [ \"$1\" = mesh ]; then printf 'mesh\\n'; exit 0; fi\n"
+                "printf 'solve blew up\\n' >&2\n"
+                "exit 9\n"
+            ),
+            steps=[
+                {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
+                {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
+            ],
+        )
+
+        out = StringIO()
+        with redirect_stdout(out):
+            code = main([
+                "run", "--strict",
+                "--entry", "cliStepCase",
+                "--tutorials-root", str(tutorials_root),
+                "--tail-lines", "50",
+            ])
+
+        payload = json.loads(out.getvalue())
+        assert code == 1
+        assert payload["status"] == "failed"
+        ctx = payload["failure_context"]
+        assert ctx["step_id"] == "solve"
+        assert "solve blew up" in ctx["stderr_tail"]
+
+
+def test_cli_step_reports_failed_when_status_failed_with_exit_code_zero(monkeypatch) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        _write_case(
+            tutorials_root,
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm\nexit 0\n",
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
+        )
+        monkeypatch.setattr("openfoam_driver.cli.run_workflow_step", _failed_exit0_runner)
+
+        out = StringIO()
+        with redirect_stdout(out):
+            code = main([
+                "step", "--strict",
+                "--entry", "cliStepCase",
+                "--step", "run",
+                "--tutorials-root", str(tutorials_root),
+            ])
+
+        payload = json.loads(out.getvalue())
+        assert code == 1
+        assert payload["status"] == "failed"
+        assert payload["exit_code"] == 0
+        assert payload["workflow_state"]["status"] == "failed"

@@ -31,11 +31,40 @@ Author
 #include "mathematicalConstants.H"
 #include "scalarField.H"
 #include "vectorField.H"
+#include "IOdictionary.H"
 
 #include "monodomainVerification/manufacturedFDAReference.H"
 
 namespace Foam
 {
+
+//- Single source of truth for the manufactured displacement amplitude.
+//  Both the boundary condition and the manufactured body force read it from
+//  here so they can never disagree about which manufactured solution they are
+//  imposing. The amplitude lives in the (top-level) electroMechanicalProperties
+//  electromechanicalVerificationModel sub-dictionary.
+inline vector manufacturedElectromechanicsAmplitude(const objectRegistry& db)
+{
+    IOdictionary emProps
+    (
+        IOobject
+        (
+            "electroMechanicalProperties",
+            db.time().constant(),
+            db.time(),
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            false
+        )
+    );
+
+    const word emModel(emProps.get<word>("electroMechanicalModel"));
+    const dictionary& emCoeffs = emProps.subDict(emModel + "Coeffs");
+
+    return emCoeffs.subDict("electromechanicalVerificationModel")
+       .get<vector>("amplitude");
+}
+
 
 inline void computeManufacturedElectromechanicsVm
 (

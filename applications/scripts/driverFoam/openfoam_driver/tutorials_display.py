@@ -156,12 +156,11 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="manufacturedElectromechanicsBC",
-        title="Manufactured electromechanics (BC-constrained)",
+        id="manufacturedMonodomainTotalLagrangianEM",
+        title="Manufactured electromechanics (MMS)",
         summary=(
-            "Electromechanics verification on a manufactured monodomain field "
-            "with boundary-constrained solid motion. Vm is rigorous MMS; "
-            "mechanics diagnostics are refinement-based."
+            "Electromechanics verification on a fully coupled manufactured field. "
+            "Vm, D, lambda, and Ta are rigorous MMS targets."
         ),
         thumbnail="/tutorials/manufactured-electromechanics-bc.png",
         tags=("manufactured-solution", "verification", "electromechanics"),

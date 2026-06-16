@@ -134,6 +134,26 @@ workflow steps when catalog coverage is available. The strict step/run path
 now reconciles claimed artifact ids against on-disk files after each step. If an
 expected artifact is missing, the step automatically fails with a `missing_artifacts` code.
 
+### Reading a failed strict step
+
+When `run --strict` fails or a `step --strict` ends `failed`, the printed JSON
+carries a top-level `failure_context` object for the failed step:
+
+- `step_id`, `attempt`, `exit_code` — identity of the failed attempt. Note
+  `exit_code` may be `0` even on failure (e.g. `missing_artifacts`): the
+  contract is **status-driven**, never exit-code-driven.
+- `diagnostics` — the diagnostic codes the runner emitted.
+- `stdout_log` / `stderr_log` — paths, for a full read.
+- `stdout_tail` / `stderr_tail` — the last `--tail-lines` lines (default 200) of
+  each log, bounded to 64 KiB.
+- `stdout_truncated` / `stderr_truncated` — whether content was dropped.
+
+The driver surfaces raw tails and status only. It does **not** judge convergence
+or pick a fix — interpretation and remediation are the agent's job. The loop is:
+read `failure_context` → edit the case dict (e.g. via `build_electro_properties`
+or `mutators.py`) → `step --strict --step <id>` reruns the failed step (the
+`attempt` counter increments).
+
 Legacy engine runs already write `artifacts_realized.json` at terminal status.
 After such a run reaches a terminal status, agents should compare predicted
 artifacts to on-disk reality:

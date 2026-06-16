@@ -173,6 +173,27 @@ void manufacturedElectromechanicsVerifier::initialize
         << nl << endl;
 
     setExactFields(Vm, D);
+
+    // Initialise D.oldTime() to ensure the solids4foam d2dt2 solver computes
+    // the correct initial velocity and acceleration, avoiding a massive initial shock
+    if (D.nOldTimes() == 0)
+    {
+        D.storeOldTime();
+    }
+
+    const scalar t = Vm.mesh().time().value();
+    const scalar dt = Vm.mesh().time().deltaTValue();
+    vectorField DOldExact;
+    computeManufacturedElectromechanicsD
+    (
+        DOldExact,
+        D.mesh().C().primitiveField(),
+        t - dt,
+        amplitude_
+    );
+
+    D.oldTime().primitiveFieldRef() = DOldExact;
+    D.oldTime().correctBoundaryConditions();
 }
 
 

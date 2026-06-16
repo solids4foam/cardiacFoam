@@ -32,7 +32,8 @@ import json
 from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
-from .core.runtime.workflow_runner import run_workflow_step
+from .core.runtime.failure_context import build_failure_context
+from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
@@ -66,6 +67,30 @@ def _step_payload(
     if error is not None:
         payload["error"] = error
     return payload
+
+
+def _terminal_status_label(workflow_status: str) -> str:
+    """Map a WorkflowStepState/WorkflowRunState status to the CLI's ok/failed label.
+
+    The single source of truth for the strict success contract, so step and run
+    cannot drift. Decisions derive from status, never from a subprocess exit code.
+    Any non-completed terminal state (pending, running, failed, skipped) is a
+    failure at this boundary.
+    """
+    return "ok" if workflow_status == "completed" else "failed"
+
+
+def _attach_failure_context(payload: dict, state, step_id: str | None, *, tail_lines: int) -> None:
+    """Attach a failure_context bundle when the named step state is failed.
+
+    Mutates ``payload`` in place. Shared by step and run so the two paths
+    surface failures identically. Never persisted into workflow_state.json.
+    """
+    if step_id is None:
+        return
+    step_state = _step_state_by_id(state, step_id)
+    if step_state.status == "failed":
+        payload["failure_context"] = build_failure_context(step_state, max_lines=tail_lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -103,6 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Workflow step id to execute when action=step.",
     )
     parser.add_argument(
+        "--tail-lines",
+        type=int,
+        default=200,
+        help="For action=step/run --strict, number of log lines to include in failure_context (default 200).",
+    )
+    parser.add_argument(
         "--continue-on-error",
         action="store_true",
         help="Continue executing remaining cases after a failure.",
@@ -113,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Path to JSON file with make_spec overrides. Supports either a top-level "
             "entry map (keys: singleCell, niederer2012, manufacturedFDA, "
             "manufacturedFDABidomain, manufacturedFDABathBidomain, "
-            "manufacturedEikonalECG, manufacturedElectromechanicsBC, "
+            "manufacturedEikonalECG, manufacturedMonodomainTotalLagrangianEM, "
             "restitutionCurves, genericCase/randomCase) "
             "or a direct parameter object for the selected entry."
         ),
@@ -191,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--strict is only valid with action=plan, action=step, or action=run")
     if args.action != "step" and args.step:
         parser.error("--step is only valid with action=step")
+    if args.action not in {"step", "run"} and args.tail_lines != 200:
+        parser.error("--tail-lines is only valid with action=step or action=run")
 
     selected_entry = args.entry
 
@@ -281,18 +314,21 @@ def main(argv: list[str] | None = None) -> int:
                 "workflow_state": report.workflow_state.to_json(),
             }, indent=2))
             return 1
-        payload = {
-            "status": "ok" if result.exit_code == 0 else "failed",
-            "entry": selected_entry,
-            "step": args.step,
-            "exit_code": result.exit_code,
-            "stdout_log": result.stdout_log,
-            "stderr_log": result.stderr_log,
-            "workflow_state_path": str(state_path),
-            "workflow_state": result.state.to_json(),
-        }
+        step_state = _step_state_by_id(result.state, args.step)
+        status = _terminal_status_label(step_state.status)
+        payload = _step_payload(
+            status=status,
+            entry=selected_entry,
+            step=args.step,
+            workflow_state_path=state_path,
+            workflow_state=result.state.to_json(),
+            exit_code=result.exit_code,
+            stdout_log=result.stdout_log,
+            stderr_log=result.stderr_log,
+        )
+        _attach_failure_context(payload, result.state, args.step, tail_lines=args.tail_lines)
         print(json.dumps(payload, indent=2))
-        return 0 if result.exit_code == 0 else 1
+        return 0 if status == "ok" else 1
 
     if args.action == "run":
         if not args.strict:
@@ -361,9 +397,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         workflow_state = outcome.state
         results = list(outcome.steps)
-        status = "ok" if workflow_state.status == "completed" else "failed"
-        if workflow_state.status == "pending" and workflow_state.current_step_id is None:
-            status = "failed"
+        status = _terminal_status_label(workflow_state.status)
         payload = {
             "status": status,
             "entry": selected_entry,
@@ -373,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
         }
         if workflow_state.status == "pending" and workflow_state.current_step_id is None:
             payload["error"] = "workflow_state is pending but has no current_step_id"
+        _attach_failure_context(payload, workflow_state, workflow_state.failed_step_id, tail_lines=args.tail_lines)
         print(json.dumps(payload, indent=2))
         return 0 if status == "ok" else 1
 

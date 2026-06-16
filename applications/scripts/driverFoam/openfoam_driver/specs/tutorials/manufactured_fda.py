@@ -354,7 +354,6 @@ def _collect_outputs(case_root: Path, output_dir: Path) -> None:
         shutil.copytree(source_logs, destination_logs)
         print(f"Copied archived logs -> {destination_logs}")
 
-
 def _postprocess(
     setup_root: Path,
     output_dir: Path,
