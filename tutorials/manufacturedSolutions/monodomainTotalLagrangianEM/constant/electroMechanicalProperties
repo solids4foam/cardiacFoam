@@ -20,7 +20,7 @@ sequentialElectroMechanicalCoeffs
     electroRegion       electro;
     solidRegion         solid;
     activeTensionModel  ManufacturedElectromechanics;
-    TaScale             0.0;
+    TaScale             1.0;
 
     constants
     {
