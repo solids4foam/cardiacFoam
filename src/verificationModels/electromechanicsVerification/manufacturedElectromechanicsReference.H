@@ -77,7 +77,7 @@ inline void computeManufacturedElectromechanicsVm
     scalarField X(centres.component(vector::X));
     scalarField Y(centres.component(vector::Y));
     scalarField Z(centres.component(vector::Z));
-    
+
     computeManufacturedV(Vm, X, Y, Z, t, dimension);
 }
 
