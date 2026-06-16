@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    fvOption that applies a manufactured body force to the solid momentum
+    equation for electromechanics manufactured-solution verification.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "manufacturedSolidForce.H"

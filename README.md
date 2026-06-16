@@ -1,124 +1,80 @@
 # cardiacFoam
 
-`cardiacFoam` is an OpenFOAM toolbox for cardiac electrophysiology and electro-mechanics.
-It can run in two modes:
+`cardiacFoam` is an OpenFOAM toolbox for cardiac electrophysiology and electromechanics. It implements PDE-ODE solvers for tissue-level propagation, single-cell ODE integration, eikonal activation models, ECG computation, and operator-split electromechanical coupling.
 
-- Full mode: with a full `solids4foam` installation (electro + solid + FSI workflows).
-- Electro-only mode: with the lightweight fallback `modules/physicsModel` shipped in this repository.
+It runs in two modes:
 
-## Repository architecture
+- **Full mode** — with a `solids4foam` installation (`modules/solids4foam`). Enables electromechanical coupling and solid mechanics workflows.
+- **Electro-only mode** — with the lightweight `modules/physicsModel` shipped in this repository. No solid mechanics dependency required.
+
+## Repository layout
 
 ```text
 cardiacFoam/
-├── applications/
-│   ├── solvers/cardiacFoam/                 # Main executable
-│   ├── utilities/                           # sweepCurrents, setFibreField, runPurkinjeGraph, ...
-│   └── scripts/
-│       ├── driverFoam/openfoam_driver/      # Python tutorial automation engine
-│       └── cellML2foam/                     # CellML → ionic model generation pipeline
 ├── src/
-│   ├── electroModels/                       # Runtime-selectable electro solvers
-│   ├── ionicModels/                         # Runtime-selectable ionic ODE models
-│   ├── activeTensionModels/                 # Runtime-selectable active-tension models
-│   ├── verificationModels/                  # Manufactured-solution verification layer
-│   ├── electroMechanicalModels/             # Electro-mechanics coupling (solids4foam builds only)
-│   ├── genericWriter/                       # Shared I/O and stimulus parsing helpers
-│   └── couplingModels/                      # Electro-mechanics coupling signal interfaces
+│   ├── electroModels/          # Electro solvers (monodomain, bidomain, eikonal, ECG, conduction system)
+│   ├── ionicModels/            # Ionic ODE models (serial and GPU-batched variants)
+│   ├── activeTensionModels/    # Active tension models for electromechanical coupling
+│   ├── electroMechanicalModels/# Operator-split electromechanical coupling (solids4foam builds only)
+│   ├── couplingModels/         # Signal interfaces between electro and solid solvers
+│   ├── verificationModels/     # Manufactured-solution verification utilities
+│   └── genericWriter/          # Shared I/O and stimulus parsing
+├── applications/
+│   ├── solvers/cardiacFoam/    # Main solver executable
+│   ├── utilities/              # Pre/post-processing utilities (mesh, fibres, ECG, Purkinje, ...)
+│   └── scripts/
+│       ├── driverFoam/         # Python automation engine for tutorials and parameter sweeps
+│       └── cellML2foam/        # CellML → ionic model code generation pipeline
 ├── modules/
-│   └── physicsModel/                        # Lightweight fallback physicsModel
-├── tutorials/                               # Reference cases and regression cases
-└── etc/resolveSolids4Foam.sh                # Backend selection helper
+│   ├── physicsModel/           # Lightweight physicsModel fallback (electro-only builds)
+│   └── solids4foam/            # solids4foam submodule (full builds)
+├── tutorials/                  # Reference and research cases
+└── etc/resolveSolids4Foam.sh   # Build-mode selection helper
 ```
 
-## Runtime execution flow
+Each subdirectory carries its own `README.md` (and `ARCHITECTURE.md` where relevant) with component-level detail.
 
-At runtime, solver/model selection is fully dictionary-driven:
+## What the code contains
 
-1. `applications/solvers/cardiacFoam/cardiacFoam.C` creates the run time.
-2. `applications/solvers/cardiacFoam/cardiacFoam.C` creates `physicsModel::New(runTime)`.
-3. `physicsModel` type is selected from `constant/physicsProperties` (`type`).
-4. For electro runs, `src/electroModels/electroModel::New(...)` selects the solver from `constant/electroProperties` (`myocardiumSolver`).
-5. Electro models (`monodomainSolver`, `bidomainSolver`, `singleCellSolver`, `eikonalSolver`) select ionic models through `ionicModel::New(...)` (`ionicModel` in electro coefficients).
+**Electro solvers** (`src/electroModels/`) — dictionary-driven runtime selection across four domains: myocardium PDE-ODE (monodomain, bidomain), eikonal activation, ECG forward problem, and 1D conduction-system models (Purkinje, restitution-aware eikonal). See [`src/electroModels/README.md`](src/electroModels/README.md).
 
-## Current electro model stack
+**Ionic models** (`src/ionicModels/`) — a library of human and animal cardiac cell models. Every model ships a serial variant and a GPU-batched variant for tissue-scale simulations. Manufactured-solution verification models are included for FDA-style solver validation. See [`src/ionicModels/README.md`](src/ionicModels/README.md).
 
-- `monodomainSolver`: tissue PDE-ODE model, explicit/implicit stepping, activation-time tracking.
-- `bidomainSolver`: coupled intra- and extracellular tissue PDE-ODE model.
-- `singleCellSolver`: single integration-point ODE workflow (no spatial PDE solve).
-- `eikonalSolver`: reduced-order activation-time model.
+**Active tension models** (`src/activeTensionModels/`) — active stress generation models (Nash–Panfilov, Goktepe–Kuhl, Land–Niederer) with serial and GPU-batched variants, and a manufactured-solution verification layer for coupled electromechanics. See [`src/activeTensionModels/README.md`](src/activeTensionModels/README.md).
 
-## Current ionic model stack
+**Electromechanical coupling** (`src/electroMechanicalModels/`, `src/couplingModels/`) — sequential operator-split coupling of the electro and solid solvers. Requires a solids4foam build. See [`src/electroMechanicalModels/README.md`](src/electroMechanicalModels/README.md).
 
-Compiled in `libionicModels`:
+**Utilities** (`applications/utilities/`) — mesh and fibre setup, Purkinje graph runner, ECG recomputation, ionic heterogeneity probing, current sweep, VTK conversion, and more. Each utility has its own README.
 
-- `AlievPanfilov`
-- `BuenoOrovio`
-- `Courtemanche`
-- `Fabbri`
-- `Gaur`
-- `Grandi`
-- `PerisYague`
-- `Stewart`
-- `TNNP`
-- `ToRORd_dynCl`
-- `Trovato`
-- `TWorld`
-- `monodomainFDAManufactured` (manufactured monodomain verification model)
-- `bidomainFDAManufactured` (manufactured bidomain verification model)
-- `bathBidomainFDAManufactured` (manufactured bath-bidomain verification model)
+**Driver** (`applications/scripts/driverFoam/`) — a Python automation engine for running tutorials, parameter sweeps, and post-processing. Produces reproducible run and artifact manifests. See [`applications/scripts/driverFoam/openfoam_driver/README.md`](applications/scripts/driverFoam/openfoam_driver/README.md).
 
-## Tutorial and automation architecture
+**Tutorials** (`tutorials/`) — organised into four groups:
 
-Manual tutorial entry points are in `tutorials/*/Allrun`. For parameter sweeps and post-processing automation, use:
+| Group | Contents |
+|---|---|
+| `singleCellprotocols/` | Single-cell ODE runs, restitution curves, heterogeneity probes |
+| `manufacturedSolutions/` | MMS verification cases for all solver variants incl. electromechanics |
+| `NiedererEtAl2011/` | Benchmark cases: tissue propagation, Purkinje, electromechanics |
+| `rotorInstability/` | Rotor dynamics and re-entry instability cases |
 
-- `applications/scripts/driverFoam/openfoam_driver`
+See [`tutorials/README.md`](tutorials/README.md).
 
-Current tutorial specs in the Python driver:
-
-- `singleCell`
-- `niederer2012`
-- `manufacturedFDA`
-- `manufacturedFDABidomain`
-- `manufacturedFDABathBidomain`
-- `manufacturedEikonalECG`
-- `manufacturedMonodomainTotalLagrangianEM`
-- `restitutionCurves`
-
-The driver writes run manifests and artifact manifests (`run_manifest.json`, `plots.json`) for reproducibility.
-
-## Build and run
+## Build
 
 ```bash
 ./Allwmake
 ```
 
-Run examples:
+Requires an OpenFOAM environment. For GPU-batched ionic models, see [`src/ionicModels/IONIC_MODEL_ARCHITECTURE.md`](src/ionicModels/IONIC_MODEL_ARCHITECTURE.md). For build-mode selection (full vs electro-only), see [`etc/resolveSolids4Foam.sh`](etc/resolveSolids4Foam.sh).
+
+Electromechanical tutorials require a full solids4foam build and will not run in electro-only mode.
+
+## Regression
 
 ```bash
-cd tutorials/singleCellprotocols/singleCell
-./Allrun
-
-cd tutorials/NiedererEtAl2011/NiedererEtAl2011verification
-./Allrun parallel
+tutorials/Alltest-regression
 ```
-
-Run automation from repository root:
-
-```bash
-foamctl all --entry singleCell
-foamctl all --entry niederer2012
-```
-
-Electromechanical tutorials such as
-`tutorials/NiedererEtAl2011/electroMechanicalNiedererEtAl2011` require a full
-`solids4foam`-backed build of `cardiacFoam`. They do not run in the lightweight
-electro-only mode.
-
-## Regression checks
-
-- Tutorial regression entrypoint: `tutorials/Alltest-regression`
-- Driver architecture contract tests: `applications/scripts/driverFoam/openfoam_driver/tests/test_tutorial_architecture_contract.py`
 
 ## Notes
 
-This is active research software. APIs and dictionaries evolve as models and workflows are expanded.
+This is active research software. APIs, dictionaries, and model interfaces evolve as the toolbox is extended.
