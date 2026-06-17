@@ -10,6 +10,7 @@ before driving the orchestrator.
 |---|---|---|
 | Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)`, `describe_launch_matrix()` | `openfoam_driver.introspection` |
 | Build a non-mutating strict launch contract | `strict_plan(...)` | `openfoam_driver.strict_planning` |
+| Execute an agent-authored RunDocument | `foamctl run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
 | Validate RunDocument v2 or migrate v1 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)` | `openfoam_driver.core.runtime.run_model` |
@@ -73,6 +74,57 @@ if payload["status"] != "ok":
     raise RuntimeError(payload)
 print(payload["workflow_state"]["current_step_id"])
 ```
+
+### Executing an agent-authored RunDocument
+
+`plan --strict` emits a complete `run_document` (RunDocument v2) in its JSON
+output. An agent can persist that document, edit it (e.g. tune `config`, add or
+reorder `workflowDag` steps, set per-step `retry_policy`), and execute the
+edited document directly — the driver runs *your* document instead of
+regenerating one from `--entry`:
+
+```bash
+# 1. Plan and capture the run document the planner produced.
+foamctl plan --strict --entry singleCell > plan.json
+python3 -c "import json; json.dump(json.load(open('plan.json'))['run_document'], open('run.json','w'))"
+
+# 2. (optional) edit run.json — config, workflowDag, retry_policy, expectedArtifacts.
+
+# 3. Execute the document. No --entry; --strict is implied by the document.
+foamctl run  --run-document run.json
+foamctl step --run-document run.json --step solve   # single step
+```
+
+`--run-document` is mutually exclusive with `--entry` (and with
+`--config`/`--entry-kind`/`--tutorials-root`). Before executing, the driver:
+
+1. Loads and schema-validates the document (a `version: "1"` document is
+   migrated to v2 automatically).
+2. Runs `validate_run` on its `config`.
+3. Re-normalizes the supplied `workflowDag` and enforces the **command
+   allowlist**: each step's command must be a known OpenFOAM/driver core
+   command, a recognized case script (`Allrun`-family), a `UTILITY_CATALOG`
+   entry, or an executable installed under `$FOAM_APPBIN`/`$FOAM_USER_APPBIN`
+   (any core OpenFOAM app or your own compiled utility). Arbitrary non-OpenFOAM
+   commands are rejected before anything runs. Note: when OpenFOAM is not
+   sourced, only the core set + case scripts + `UTILITY_CATALOG` are accepted.
+4. Requires `launch.caseRoot` and `launch.outputDir`.
+
+If any of these produce an error-level diagnostic, the command prints
+`{"status": "failed", "diagnostics": [...]}` and exits non-zero **without
+executing anything**. Otherwise execution, `workflow_state.json` resume,
+retry/backoff, and `failure_context` behave exactly as for the `--entry` path.
+
+**Command-boundary guarantees.** Steps run argv-style (no shell). A step's
+working directory cannot escape `caseRoot`. Bare command names resolve via
+`PATH` only — a case directory **cannot shadow** a trusted binary such as
+`cardiacFoam`. Only recognized case scripts (`Allrun`-family), named bare
+(`Allrun`) or as `./Allrun`, resolve to case-local files; arbitrary
+`./script` and absolute-path commands are rejected by the allowlist. Note
+this does **not** sandbox the code *inside* an invoked `Allrun` — running a
+case means running its scripts, which is arbitrary case-authored code by
+design. The trust model is local/single-tenant: it assumes `PATH` and the
+`$FOAM_*BIN` variables are not attacker-controlled.
 
 ## Compatibility one-shot loop
 

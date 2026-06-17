@@ -150,6 +150,27 @@ def expand_path_pattern(
     return _PATH_PATTERN_PLACEHOLDER.sub(_resolve, pattern)
 
 
+def data_artifact_from_json(data: dict[str, Any]) -> DataArtifact:
+    """Reconstruct a :class:`DataArtifact` from its JSON dict form.
+
+    Inverse of ``dataclasses.asdict(artifact)``. ``variables`` is coerced
+    back to a tuple of strings; absent optional keys fall back to the
+    dataclass defaults. ``DataArtifact.__post_init__`` still runs, so a
+    malformed ``path_pattern`` (unknown placeholder) raises ``ValueError``
+    here rather than reaching the executor.
+    """
+    return DataArtifact(
+        artifact_id=str(data["artifact_id"]),
+        path_pattern=str(data["path_pattern"]),
+        format=str(data["format"]),
+        variables=tuple(str(v) for v in data.get("variables", ())),
+        description=str(data.get("description", "")),
+        produced_by=str(data.get("produced_by", "")),
+        optional=bool(data.get("optional", False)),
+        time_indexed=bool(data.get("time_indexed", False)),
+    )
+
+
 @dataclass(frozen=True)
 class CaseConfig:
     """A single simulation configuration inside a tutorial sweep."""

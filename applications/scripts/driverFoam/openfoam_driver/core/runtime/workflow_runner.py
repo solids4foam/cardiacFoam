@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from .workflow import CASE_SCRIPT_COMMANDS
 from .workflow_state import (
     WorkflowRunState,
     WorkflowStepState,
@@ -111,11 +112,21 @@ def _dependencies_completed(
 
 
 def _resolve_command(command: str, cwd: Path) -> str:
+    """Resolve a step command to what subprocess should execute.
+
+    - Explicit paths (containing ``/``, e.g. ``./Allrun`` or an absolute
+      path) are used verbatim — the author opted in.
+    - A recognized case-script name (``Allrun``-family) resolves to the
+      case-local executable when present, else falls through to PATH.
+    - Any other bare name resolves via PATH only (subprocess does not search
+      cwd), so a case directory cannot shadow a trusted binary.
+    """
     if "/" in command:
         return command
-    local_command = cwd / command
-    if local_command.is_file() and os.access(local_command, os.X_OK):
-        return str(local_command)
+    if command in CASE_SCRIPT_COMMANDS:
+        local_command = cwd / command
+        if local_command.is_file() and os.access(local_command, os.X_OK):
+            return str(local_command)
     return command
 
 

@@ -19,7 +19,9 @@
 #     workflow
 #
 # Description
-#     Defines models and logic for parsing acyclic workflow dependencies.
+#     Workflow DAG models, normalization, and the command allowlist
+#     (validate_workflow_commands) shared by strict_planning and the
+#     run-document adapter.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -27,15 +29,39 @@
 
 from __future__ import annotations
 
+import os
 import shlex
+import shutil
 from dataclasses import asdict, dataclass, field
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from typing import Any, Iterable
 
 from .models import DataArtifact
 
 
 STEP_STATUS_VALUES = ("pending", "running", "completed", "failed", "skipped")
+
+
+# Single owner of the command allowlist, shared by strict_planning and the
+# run-document adapter (see threat model in the RunDocument execution plan).
+# These OpenFOAM/driver binaries are always allowed and resolve via PATH.
+# Case-local scripts (Allrun-family) live in CASE_SCRIPT_COMMANDS instead.
+OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
+    {
+        "blockMesh",
+        "cardiacFoam",
+        "decomposePar",
+        "postProcess",
+        "reconstructPar",
+        "setExprFields",
+        "topoSet",
+    }
+)
+
+# Bare command names that may resolve to a case-LOCAL executable. Every other
+# bare name resolves via PATH only, so a case dir cannot shadow a trusted
+# binary. Imported by workflow_runner for _resolve_command.
+CASE_SCRIPT_COMMANDS = frozenset({"Allrun", "Allclean", "Allrun.pre", "Allrun.post"})
 
 
 @dataclass(frozen=True)
@@ -376,3 +402,98 @@ def normalize_workflow_dag(
         "step_status_values": list(STEP_STATUS_VALUES),
         "steps": [step.to_json() for step in steps],
     }, tuple(diagnostics)
+
+
+def _is_installed_openfoam_app(command: str) -> bool:
+    """True when ``command`` resolves to an executable installed under
+    ``$FOAM_APPBIN`` or ``$FOAM_USER_APPBIN`` — i.e. a real OpenFOAM
+    application (core or user-compiled). When neither env var is set
+    (OpenFOAM not sourced, e.g. the test suite) this returns ``False``, so
+    the allowlist falls back to the always-on core set + utilities.
+    """
+    roots = []
+    for var in ("FOAM_APPBIN", "FOAM_USER_APPBIN"):
+        value = os.environ.get(var)
+        if value:
+            roots.append(Path(value).resolve())
+    if not roots:
+        return False
+    resolved = shutil.which(command)
+    if not resolved:
+        return False
+    resolved_path = Path(resolved).resolve()
+    return any(resolved_path.is_relative_to(root) for root in roots)
+
+
+def validate_workflow_commands(
+    workflow_dag: dict[str, Any] | None,
+) -> tuple[WorkflowDiagnostic, ...]:
+    """Reject DAG steps whose command is not on the allowlist.
+
+    A command is allowed when it is in :data:`OPENFOAM_OR_DRIVER_COMMANDS`,
+    in :data:`CASE_SCRIPT_COMMANDS`, a ``UTILITY_CATALOG`` entry that declares
+    ``produces``, or an executable installed under ``$FOAM_APPBIN`` /
+    ``$FOAM_USER_APPBIN`` (see :func:`_is_installed_openfoam_app`). An explicit
+    path form (``command`` containing ``/``) is allowed only as ``./<name>``
+    where ``<name>`` is a case script — this keeps the gate in parity with
+    ``_resolve_command`` (which lets ``./Allrun`` through) while still refusing
+    arbitrary ``./script`` and absolute paths. This is the one owner of the
+    command allowlist; both ``strict_plan`` and the run-document adapter call
+    it so neither can drift. Runs on the *normalized* DAG, where ``command``
+    is the bare executable (args already split out).
+    """
+    from ...utility_catalog import UTILITY_CATALOG  # deferred: keep workflow.py import-light (utility_catalog parses manifests at import)
+
+    diagnostics: list[WorkflowDiagnostic] = []
+    for step in (workflow_dag or {}).get("steps", ()):
+        command = step.get("command", "")
+        step_id = str(step.get("id", ""))
+        if not command:
+            diagnostics.append(WorkflowDiagnostic(
+                level="error",
+                code="workflow_step_without_command",
+                message=f"Workflow step {step_id or '<unknown>'!r} has no command.",
+                field=step_id,
+            ))
+            continue
+        if "/" in command:
+            # Explicit path form. Only ``./<case-script>`` is permitted (gate
+            # parity with _resolve_command); an arbitrary ``./script`` or any
+            # absolute path is refused so it cannot bypass the allowlist.
+            if command.startswith("./") and command[2:] in CASE_SCRIPT_COMMANDS:
+                continue
+            diagnostics.append(WorkflowDiagnostic(
+                level="error",
+                code="unknown_workflow_command",
+                message=(
+                    f"Workflow command {command!r} is an explicit path; only "
+                    "./Allrun-family case scripts may be given as a path."
+                ),
+                field=step_id,
+            ))
+            continue
+        if command in OPENFOAM_OR_DRIVER_COMMANDS or command in CASE_SCRIPT_COMMANDS:
+            continue
+        manifest = UTILITY_CATALOG.get(command)
+        if manifest is not None:
+            if manifest.produces:
+                continue
+            diagnostics.append(WorkflowDiagnostic(
+                level="error",
+                code="utility_without_produces",
+                message=f"Utility {command!r} has no authoritative produces entries.",
+                field=step_id,
+            ))
+            continue
+        if _is_installed_openfoam_app(command):
+            continue
+        diagnostics.append(WorkflowDiagnostic(
+            level="error",
+            code="unknown_workflow_command",
+            message=(
+                f"Workflow command {command!r} is not a known OpenFOAM command, "
+                "case script, registered utility, or installed OpenFOAM application."
+            ),
+            field=step_id,
+        ))
+    return tuple(diagnostics)

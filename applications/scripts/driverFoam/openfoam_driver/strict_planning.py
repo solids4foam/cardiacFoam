@@ -37,7 +37,11 @@ from .core.runtime.artifacts import predict_data_artifacts
 from .core.runtime.models import DataArtifact
 from .core.runtime.registry import load_entry_spec
 from .core.runtime.run_model import RunDocument
-from .core.runtime.workflow import WorkflowDiagnostic, normalize_workflow_dag
+from .core.runtime.workflow import (
+    WorkflowDiagnostic,
+    normalize_workflow_dag,
+    validate_workflow_commands,
+)
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .launch import describe_launch
@@ -97,19 +101,6 @@ class StrictPlanReport:
             "run_document": self.run_document.to_json() if self.run_document else None,
         }
 
-
-_OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
-    {
-        "Allrun",
-        "blockMesh",
-        "cardiacFoam",
-        "decomposePar",
-        "postProcess",
-        "reconstructPar",
-        "setExprFields",
-        "topoSet",
-    }
-)
 
 _MPI_LAUNCHERS = frozenset({"mpirun", "mpiexec", "orterun"})
 _INTERPRETER_SKIP = frozenset({"python", "python3"})
@@ -409,32 +400,13 @@ def _artifact_diagnostics(
                 field="ionicModel",
             ))
 
-    for step in (workflow_dag or {}).get("steps", ()):
-        command = step.get("command", "")
-        if not command:
-            diagnostics.append(_diagnostic(
-                "error",
-                "workflow_step_without_command",
-                f"Workflow step {step.get('id', '<unknown>')!r} has no command.",
-            ))
-            continue
-        if command in _OPENFOAM_OR_DRIVER_COMMANDS:
-            continue
-        manifest = UTILITY_CATALOG.get(command)
-        if manifest is None:
-            diagnostics.append(_diagnostic(
-                "error",
-                "unknown_workflow_command",
-                f"Workflow command {command!r} is not a known OpenFOAM command or utility manifest.",
-                field=str(step.get("id", "")),
-            ))
-        elif not manifest.produces:
-            diagnostics.append(_diagnostic(
-                "error",
-                "utility_without_produces",
-                f"Utility {command!r} has no authoritative produces entries.",
-                field=str(step.get("id", "")),
-            ))
+    for diagnostic in validate_workflow_commands(workflow_dag):
+        diagnostics.append(_diagnostic(
+            diagnostic.level,
+            diagnostic.code,
+            diagnostic.message,
+            field=diagnostic.field,
+        ))
 
     return tuple(diagnostics)
 
