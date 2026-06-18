@@ -8,7 +8,7 @@ need to be corrected or a new electrode configuration needs to be evaluated.
 
 1. Reads `constant/electroProperties` and extracts the electrode positions from
    the first `ecgDomains` entry.
-2. Reads the conductivity tensor once from `0/Diffusivity`, or from the active
+2. Reads the conductivity tensor once from `0/conductivity`, or from the active
    solver coefficients when the field is not present on disk.
 3. Iterates over every stored time directory (or a selected range).
 4. For each time step:
@@ -44,12 +44,12 @@ during a normal `cardiacFoam` run and is compatible with `plot_pseudo_ecg.py`.
 |---|---|---|
 | `-output <path>` | `postProcessing/pseudoECG.dat` | Output file path |
 | `-vmField <name>` | `Vm` | Name of the membrane potential field to read |
-| `-sigmaField <name>` | `Diffusivity` | Conductivity tensor field name in `0/` |
+| `-sigmaField <name>` | `conductivity` | Conductivity tensor field name in `0/` |
 | `-time <range>` | all | OpenFOAM time selector, e.g. `'0.1:0.5'` or `'latest'` |
 
 ## Notes
 
-- The conductivity field is read once from `0/Diffusivity` and assumed
+- The conductivity field is read once from `0/conductivity` and assumed
   constant in time. If the field is not present, the utility constructs the
   tensor from the same active `<solver>Coeffs` dictionary used by
   `cardiacFoam`.

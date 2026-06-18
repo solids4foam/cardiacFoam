@@ -54,32 +54,6 @@ tmp<volTensorField> eikonalSolver::initialiseConductivity() const
         tensor::zero
     );
 
-    tmp<volTensorField> tdiffusivity
-    (
-        new volTensorField
-        (
-            IOobject
-            (
-                "Diffusivity",
-                runTime().timeName(),
-                mesh(),
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh(),
-            zeroConductivity
-        )
-    );
-
-    volTensorField& diffusivity = tdiffusivity.ref();
-    if (diffusivity.headerOk())
-    {
-        Info<< "eikonalSolver: conductivity field read from "
-            << runTime().timeName() << "/Diffusivity" << nl << endl;
-
-        return tdiffusivity;
-    }
-
     tmp<volTensorField> tresult
     (
         new volTensorField
@@ -108,7 +82,7 @@ tmp<volTensorField> eikonalSolver::initialiseConductivity() const
 
     if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
     {
-        Info<< "\nconductivity/Diffusivity not found on disk, using "
+        Info<< "\nconductivity not found on disk, using "
             << "conductivity from " << electroProperties().name()
             << nl << endl;
     }

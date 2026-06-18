@@ -57,7 +57,7 @@ Examples
     setFieldDimensions -case ./myCase
 
     # Fix a specific field
-    setFieldDimensions -field Diffusivity -case ./myCase
+    setFieldDimensions -field conductivity -case ./myCase
 
     # Fix a custom field with explicit dimensions
     setFieldDimensions -field myPressure -dim "[1 -1 -2 0 0 0 0]" -case ./myCase
@@ -99,8 +99,6 @@ struct FieldDimEntry
 static const FieldDimEntry catalogue[] =
 {
     // Conductivity tensor / scalar  [S/m] = kg^-1 m^-3 s^3 A^2
-    { "Diffusivity",               dimensionSet(-1, -3, 3, 0, 0, 2, 0),
-      "conductivity tensor from VTK import (S/m)" },
     { "conductivity",              dimensionSet(-1, -3, 3, 0, 0, 2, 0),
       "conductivity tensor from VTK import (S/m)" },
     { "bodyAndOrgansConductivity", dimensionSet(-1, -3, 3, 0, 0, 2, 0),

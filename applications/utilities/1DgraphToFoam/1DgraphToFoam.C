@@ -287,7 +287,7 @@ scalar edgeConductanceFromFields
     static const wordList conductanceNames
     {
         "conductance",
-        "diffusivity",
+        "conductivity",
         "D",
         "sigma",
         "conductivity"

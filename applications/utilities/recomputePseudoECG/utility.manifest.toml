@@ -17,7 +17,7 @@ try new electrode configurations without rerunning the 3-D solver.
 inputs = [
   "constant/electroProperties",
   "constant/polyMesh/",
-  "0/Diffusivity or active <solver>Coeffs conductivity entry",
+  "0/conductivity or active <solver>Coeffs conductivity entry",
   "<time>/Vm",
 ]
 
@@ -42,7 +42,7 @@ argument_kind = "word"
 
 [[flags]]
 name = "-sigmaField"
-description = "Name of the conductivity tensor field in 0/ (default: Diffusivity)."
+description = "Name of the conductivity tensor field in 0/ (default: conductivity)."
 takes_value = true
 argument_kind = "word"
 

@@ -129,18 +129,18 @@ newVtkUnstructuredToFoam myHeart.vtk -case ./myCase
 # 2. Scale from mm to m (ALWAYS required — VTK has no unit information)
 transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
 
-# 3. Fix Diffusivity dimensions (ALL fields come out as [0 0 0 0 0 0 0])
-#    Only Diffusivity needs fixing — fiber, sheet, tags, uvc_transmural are
+# 3. Fix conductivity dimensions (ALL fields come out as [0 0 0 0 0 0 0])
+#    Only conductivity needs fixing — fiber, sheet, tags, uvc_transmural are
 #    genuinely dimensionless and need no change.
 sed -i.bak 's/dimensions.*\[0 0 0 0 0 0 0\]/dimensions      [-1 -3 3 0 0 2 0]/' \
-    myCase/0/Diffusivity
+    myCase/0/conductivity
 
 # 4. Validate
 checkMeshGeometry -case ./myCase   # bounding box sanity
 checkMesh -case ./myCase           # topology / quality
 ```
 
-**On Diffusivity dimensions:** `[-1 -3 3 0 0 2 0]` encodes S/m (conductivity).
+**On conductivity dimensions:** `[-1 -3 3 0 0 2 0]` encodes S/m (conductivity).
 If your VTK file exported conductivity in S/mm rather than S/m, multiply the
 values by 1000 in addition to fixing the header. Most pipelines use S/m.
 
@@ -149,7 +149,7 @@ values by 1000 in addition to fixing the header. Most pipelines use S/m.
 | Utility | When to use |
 |---------|-------------|
 | `setFibreField` | Compute transmural distance `t` and fibre orientation fields (f0, et, en, el) from Laplace solve. Required before `ionicHeterogeneity`. Currently hard-coded for ellipsoidal ventricle geometry (alphaEndo = 60°, alphaEpi = −60°). |
-| `setCardiacScarSeverity` | Compute scar depth/severity scalar fields and optionally scale `Diffusivity` in scar cells. Requires a `constant/polyMesh/sets/scarSet` cellSet and `system/cardiacCoreDict/scarSeverity`. |
+| `setCardiacScarSeverity` | Compute scar depth/severity scalar fields and optionally scale `conductivity` in scar cells. Requires a `constant/polyMesh/sets/scarSet` cellSet and `system/cardiacCoreDict/scarSeverity`. |
 | `setTorsoOrganConductivityField` | Assign conductivity values per cellZone for torso/bath ECG domains. Produces `0/bodyAndOrgansConductivity` for use with `bathPotentialDomain.bathConductivityField`. |
 
 ### Verification (run before full simulation)

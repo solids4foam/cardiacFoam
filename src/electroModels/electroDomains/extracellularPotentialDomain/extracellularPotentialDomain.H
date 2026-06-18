@@ -80,7 +80,7 @@ class extracellularPotentialDomain
     bool hasPhiEReferencePoint_;
 
     // CellZone names.
-    word heartCellZoneName_;
+
     wordList bathCellZoneNames_;
 
     word bathConductivityFieldName_;

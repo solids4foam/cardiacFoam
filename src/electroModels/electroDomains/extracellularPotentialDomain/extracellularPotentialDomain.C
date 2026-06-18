@@ -185,7 +185,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
     ),
     phiEReferenceValue_(dict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)),
     hasPhiEReferencePoint_(dict.found("phiERefPoint")),
-    heartCellZoneName_(dict.lookupOrDefault<word>("heartCellZone", "myocardium")),
     bathCellZoneNames_(dict.lookup("bathCellZones")),
     bathConductivityFieldName_
     (
@@ -218,8 +217,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     if (reportSetup_)
     {
-        Info<< "extracellularPotentialDomain: heartZone=" << heartCellZoneName_
-            << " bathZones=" << bathCellZoneNames_
+        Info<< "extracellularPotentialDomain: bathZones=" << bathCellZoneNames_
             << " bathConductivityField=" << bathConductivityFieldName_;
 
         if (hasPhiEReferencePoint_)

@@ -8,7 +8,7 @@ purpose = """
 newVtkUnstructuredToFoam writes every CELL_DATA field with dimensions
 [0 0 0 0 0 0 0] (dimensionless) because the VTK format carries no unit
 information. Most imported fields (fiber, sheet, uvc_transmural, tags) are
-genuinely dimensionless and need no change. However Diffusivity — the
+genuinely dimensionless and need no change. However conductivity — the
 per-cell conductivity tensor — must carry SI conductivity units S/m to
 maintain dimensional consistency in the solver.
 
@@ -17,7 +17,6 @@ It never reads or rewrites the internalField or boundaryField data, so it is
 fast even on very large meshes (millions of cells).
 
 Built-in catalogue (applied when -field is omitted):
-  Diffusivity               [-1 -3 3 0 0 2 0]  conductivity tensor  (S/m)
   conductivity              [-1 -3 3 0 0 2 0]  conductivity tensor  (S/m)
   bodyAndOrgansConductivity [-1 -3 3 0 0 2 0]  torso conductivity   (S/m)
 

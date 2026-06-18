@@ -197,43 +197,6 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
         tensor::zero
     );
 
-    tmp<volTensorField> tdiffusivity
-    (
-        new volTensorField
-        (
-            IOobject
-            (
-                "Diffusivity",
-                mesh().time().timeName(),
-                mesh(),
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh(),
-            zeroConductivity
-        )
-    );
-
-    volTensorField& diffusivity = tdiffusivity.ref();
-    if (diffusivity.headerOk())
-    {
-        if (diffusivity.dimensions() != zeroConductivity.dimensions())
-        {
-            FatalErrorInFunction
-                << "Field " << mesh().time().timeName() << "/Diffusivity has "
-                << "dimensions " << diffusivity.dimensions()
-                << " but the eikonal solver requires conductivity dimensions "
-                << zeroConductivity.dimensions()
-                << " [-1 -3 3 0 0 2 0].  Fix the 'dimensions' entry in the "
-                << "field header." << exit(FatalError);
-        }
-
-        Info<< "eikonalMyocardiumDomain: conductivity field read from "
-            << mesh().time().timeName() << "/Diffusivity" << nl << endl;
-
-        return tdiffusivity;
-    }
-
     tmp<volTensorField> tresult
     (
         new volTensorField
@@ -273,7 +236,7 @@ tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 
     if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
     {
-        Info<< "\nconductivity/Diffusivity not found on disk, using "
+        Info<< "\nconductivity not found on disk, using "
             << "conductivity from " << electroProperties_.name()
             << nl << endl;
     }

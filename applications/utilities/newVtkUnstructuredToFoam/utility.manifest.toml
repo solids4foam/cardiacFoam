@@ -16,9 +16,9 @@ IMPORTANT — two post-import steps are always required:
 1. Scale mesh to SI metres (VTK files are typically in mm):
        transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
 
-2. Fix Diffusivity dimensions — all CELL_DATA fields are written as dimless
-   [0 0 0 0 0 0 0]. Only Diffusivity (conductivity tensor) needs fixing:
-       sed -i.bak 's/dimensions.*\\[0 0 0 0 0 0 0\\]/dimensions      [-1 -3 3 0 0 2 0]/' 0/Diffusivity
+2. Fix conductivity dimensions — all CELL_DATA fields are written as dimless
+   [0 0 0 0 0 0 0]. Only conductivity (conductivity tensor) needs fixing:
+       sed -i.bak 's/dimensions.*\\[0 0 0 0 0 0 0\\]/dimensions      [-1 -3 3 0 0 2 0]/' 0/conductivity
    Other fields (fiber, sheet, uvc_transmural, tags) are genuinely dimensionless.
 
 Then run: checkMeshGeometry && checkMesh to validate.

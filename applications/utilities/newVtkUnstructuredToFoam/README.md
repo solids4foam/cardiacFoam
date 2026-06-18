@@ -28,17 +28,17 @@ transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
 Verify with `checkMeshGeometry` — it reports the bounding box. A 20 × 3 × 7 cm
 heart appears as ~0.2 x 0.03 x 0.07 m, not 200 x 30 x 70 mm.
 
-### Step 2 — Fix Diffusivity field dimensions
+### Step 2 — Fix conductivity field dimensions
 
 All fields are written as dimensionless ([0 0 0 0 0 0 0]); the VTK format
 carries no SI unit information. Most fields (fiber, sheet, tags,
 uvc_transmural) are genuinely dimensionless and need no change.
 
-Diffusivity is the conductivity tensor and must carry SI units S/m:
+conductivity is the conductivity tensor and must carry SI units S/m:
 
 ```bash
 sed -i.bak 's/dimensions.*\[0 0 0 0 0 0 0\]/dimensions      [-1 -3 3 0 0 2 0]/' \
-    ./myCase/0/Diffusivity
+    ./myCase/0/conductivity
 ```
 
 The correct dimension [-1 -3 3 0 0 2 0] encodes S/m (kg^-1 m^-3 s^3 A^2).
@@ -51,7 +51,7 @@ pipelines export in S/m — check your meshing tool documentation.
 
 | Field          | Class          | Correct dimensions   | Notes                          |
 |----------------|----------------|----------------------|--------------------------------|
-| Diffusivity    | volTensorField | [-1 -3 3 0 0 2 0]   | Conductivity tensor — fix this |
+| conductivity   | volTensorField | [-1 -3 3 0 0 2 0]   | Conductivity tensor — fix this |
 | fiber          | volVectorField | [0 0 0 0 0 0 0]     | Unit fibre direction — OK      |
 | sheet          | volVectorField | [0 0 0 0 0 0 0]     | Unit sheet direction — OK      |
 | uvc_transmural | volScalarField | [0 0 0 0 0 0 0]     | Transmural distance 0-1 — OK   |

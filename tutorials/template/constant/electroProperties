@@ -53,6 +53,7 @@ myocardiumSolver  monodomainSolver;   // 3-D monodomain
 
 monodomainSolverCoeffs
 {
+    // cellZone              heart;   // Optional: Restricts domain to a specific mesh cellZone
     // --- Tissue conductivity tensor (SI: S/m = kg^-1 m^-3 s^3 A^2) ---
     // Isotropic: (sigma 0 0 0 sigma 0 sigma)  Anisotropic: full 6-component Voigt tensor
     conductivity [-1 -3 3 0 0 2 0] (0.1334 0 0 0.01761 0 0.01761);
@@ -70,6 +71,14 @@ monodomainSolverCoeffs
     //   monodomainFDAManufactured | bidomainFDAManufactured | bathBidomainFDAManufactured
     ionicModel    BuenoOrovio;
     tissue        epicardialCells;   // epicardialCells | endocardialCells | mCells | myocyte
+
+    // ── Active tension (optional) ───────────────────────────────────────────
+    // activeTensionModel
+    // {
+    //     activeTensionModel    NashPanfilov;
+    //     couplingSignal        Vm;
+    //     TaScale               1e3;   // scales the raw active tension source
+    // }
 
     // ── Tissue heterogeneity (optional) ─────────────────────────────────────
     // When present, the single `tissue` selector above is replaced by a
@@ -166,6 +175,13 @@ monodomainSolverCoeffs
     maxSteps           1000000000;   // hard limit on ODE steps per macro-step
     // absTol          1e-6;         // (optional) absolute tolerance for adaptive solvers
     // relTol          1e-4;         // (optional) relative tolerance
+
+    // ── Batched/GPU execution (Optional) ────────────────────────────────────
+    // batchedIntegrator       euler;
+    // batchedSubsteps         50;
+    // batchedParallelCells    true;
+    // batchedParallelMinCells 256;
+    // storeBatchedAlgebraics  false;
 
     // ── Time-advance scheme (multi-domain coupling) ──────────────────────────
     // Selects the scheme for advancing coupled domains (myocardium, Purkinje, ECG)
@@ -322,6 +338,8 @@ monodomainSolverCoeffs
             // eikonalPvjCoupler:           unidirectional only
             //                       (bidirectional is currently in development)
             couplingMode unidirectional;
+            // pvjKernel    uniform;    // uniform | gaussian | linear
+            // debugCoupling false;
         }
     }
 }
@@ -335,6 +353,8 @@ monodomainSolverCoeffs
 /*
 bidomainSolverCoeffs
 {
+    // cellZone myocardium;  // required if using bathPotentialDomain below
+
     // Intracellular conductivity tensor  [S/m]
     conductivityIntracellular  [-1 -3 3 0 0 2 0]  (0.1334 0 0 0.01761 0 0.01761);
 
@@ -485,6 +505,7 @@ monodomainSolverCoeffs
             // ECG solver selection (registered in ecgSolver RTST)
             // Valid type: pseudoECG
             ecgSolver  pseudoECG;
+            // sigmaExtracellular  0.2668; // fallback conductivity if 3D tensor is unavailable
 
             // Electrode positions [m]
             electrodePositions
@@ -556,8 +577,6 @@ bidomainSolverCoeffs
         // Required: cellZones treated as conductive bath, torso, or organs.
         bathCellZones ( bath torso organs );
 
-        // Optional (defaults shown).
-        heartCellZone          myocardium;                 // word
         bathConductivityField  bodyAndOrgansConductivity;  // word - field name to read
         phiEReferenceValue     0.0;                        // scalar [V]
         reportSetup            false;                      // Switch - log mesh wiring
@@ -592,6 +611,7 @@ bidomainSolverCoeffs
         bodySurfaceBathECG
         {
             ecgSolver              torsoECG;   // RTS type — reads phiE from bath
+            // torsoSurface           "constant/triSurface/torso.stl"; // needed by torsoECG
             reportElectrodeLookup  true;           // Switch — log nearest-cell fallback
 
             // Optional per-domain override of the shared electrodePositions:

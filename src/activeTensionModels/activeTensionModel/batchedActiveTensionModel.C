@@ -45,7 +45,7 @@ batchedActiveTensionModel::batchedActiveTensionModel
     nAlgebraics_(nAlgebraics),
     nSubsteps_(dict.lookupOrDefault<label>("batchedSubsteps", 1)),
     persistAlgebraics_(dict.lookupOrDefault<Switch>("storeBatchedAlgebraics", false)),
-    useRushLarsen_(dict.lookupOrDefault<Switch>("batchedRushLarsen", false)),
+    useRushLarsen_(dict.lookupOrDefault<word>("batchedIntegrator", "euler") == "rushLarsen"),
     parallelCellUpdates_(dict.lookupOrDefault<Switch>("batchedParallelCells", false)),
     parallelMinCells_(dict.lookupOrDefault<label>("batchedParallelMinCells", 256)),
     core_(nIntegrationPoints, nStates, nAlgebraics),

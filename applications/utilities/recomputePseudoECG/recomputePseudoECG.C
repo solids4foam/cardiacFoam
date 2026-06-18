@@ -40,7 +40,7 @@ Usage
                          (default: postProcessing/pseudoECG.dat)
       -vmField  <name>   Name of the voltage field to read (default: Vm)
       -sigmaField <name> Name of the conductivity tensor field
-                         (default: Diffusivity)
+                         (default: conductivity)
       -tStart   <scalar> Skip time directories earlier than this value
       -tEnd     <scalar> Skip time directories later than this value
 
@@ -183,8 +183,8 @@ int main(int argc, char *argv[])
     (
         "sigmaField",
         "word",
-        "Conductivity tensor field name in 0/ "
-        "(default: Diffusivity)"
+        "name of the conductivity tensor field to read\n"
+        "(default: conductivity)"
     );
 
     #include "setRootCase.H"
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
         args.getOrDefault<word>
         (
             "sigmaField",
-            word("Diffusivity")
+            word("conductivity")
         );
 
     const dictionary& ecgDict = findECGDict(myocardiumCoeffs);

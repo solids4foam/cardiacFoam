@@ -12,7 +12,6 @@ even on very large meshes (millions of cells).
 
 | Field                    | Applied dimensions    | Physical meaning      |
 |--------------------------|-----------------------|-----------------------|
-| `Diffusivity`            | `[-1 -3 3 0 0 2 0]`  | Conductivity tensor S/m |
 | `conductivity`           | `[-1 -3 3 0 0 2 0]`  | Conductivity tensor S/m |
 | `bodyAndOrgansConductivity` | `[-1 -3 3 0 0 2 0]` | Torso conductivity S/m |
 
@@ -26,7 +25,7 @@ Fields that are **not** in the catalogue (`fiber`, `sheet`, `uvc_transmural`,
 setFieldDimensions -case ./myCase
 
 # Fix a specific field
-setFieldDimensions -field Diffusivity -case ./myCase
+setFieldDimensions -field conductivity -case ./myCase
 
 # Fix a custom field with explicit dimensions
 setFieldDimensions -field myField -dim "[-1 -3 3 0 0 2 0]" -case ./myCase

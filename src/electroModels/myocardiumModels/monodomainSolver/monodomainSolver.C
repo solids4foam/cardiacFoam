@@ -58,32 +58,6 @@ tmp<volTensorField> monodomainSolver::initialiseConductivity
         tensor::zero
     );
 
-    tmp<volTensorField> tdiffusivity
-    (
-        new volTensorField
-        (
-            IOobject
-            (
-                "Diffusivity",
-                mesh.time().timeName(),
-                mesh,
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            zeroConductivity
-        )
-    );
-
-    volTensorField& diffusivity = tdiffusivity.ref();
-    if (diffusivity.headerOk())
-    {
-        Info<< "monodomainSolver: conductivity field read from "
-            << mesh.time().timeName() << "/Diffusivity" << nl << endl;
-
-        return tdiffusivity;
-    }
-
     tmp<volTensorField> tresult
     (
         new volTensorField
@@ -113,7 +87,7 @@ tmp<volTensorField> monodomainSolver::initialiseConductivity
     if (electroProperties.lookupOrDefault<Switch>("reportSetup", false))
     {
         Info << nl
-             << "conductivity/Diffusivity not found on disk, using value from "
+             << "conductivity not found on disk, using value from "
              << electroProperties.name()
              << nl << endl;
     }
