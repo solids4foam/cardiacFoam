@@ -2,6 +2,8 @@
 core/electroModel.C
 core/electroStateDomain.C
 core/verificationModels/electroVerificationModel.C
+core/verificationModels/couplingVerificationModel.C
+core/verificationModels/graphVerificationModel.C
 core/verificationModels/ecgVerificationModel.C
 core/verificationModels/eikonalVerificationModel.C
 core/system/electrophysicsSystem.C

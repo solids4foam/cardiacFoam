@@ -31,6 +31,7 @@ Author
 #include "autoPtr.H"
 #include "electroDomainCouplingEndpoints.H"
 #include "runTimeSelectionTables.H"
+#include "couplingVerificationModel.H"
 
 namespace Foam
 {
@@ -44,6 +45,7 @@ protected:
     const fvMesh& mesh_;
     tissueCouplingEndpoint& primaryDomain_;
     electroDomainInterface& secondaryDomain_;
+    autoPtr<couplingVerificationModel> verificationModelPtr_;
 
 public:
 
@@ -90,6 +92,10 @@ public:
         scalar dt
     )
     {
+        if (t0 == 0)
+        {
+            preProcessCoupling();
+        }
         (void)t0;
         (void)dt;
     }
@@ -135,7 +141,27 @@ public:
     virtual void write() {}
 
     //- Optional teardown hook.
-    virtual void end() {}
+    virtual void end()
+    {
+        postProcessCoupling();
+    }
+
+    //- Verification hooks
+    virtual void preProcessCoupling()
+    {
+        if (verificationModelPtr_)
+        {
+            verificationModelPtr_->preProcess(primaryDomain_, secondaryDomain_);
+        }
+    }
+
+    virtual void postProcessCoupling()
+    {
+        if (verificationModelPtr_)
+        {
+            verificationModelPtr_->postProcess(primaryDomain_, secondaryDomain_);
+        }
+    }
 };
 
 } // End namespace Foam

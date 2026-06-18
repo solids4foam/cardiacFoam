@@ -17,65 +17,59 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "electroDomainCoupler.H"
+#include "couplingVerificationModel.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
 {
 
-defineTypeNameAndDebug(electroDomainCoupler, 0);
-defineRunTimeSelectionTable(electroDomainCoupler, dictionary);
+defineTypeNameAndDebug(couplingVerificationModel, 0);
+defineRunTimeSelectionTable(couplingVerificationModel, dictionary);
 
 
-autoPtr<electroDomainCoupler> electroDomainCoupler::New
+autoPtr<couplingVerificationModel> couplingVerificationModel::New
 (
-    tissueCouplingEndpoint& primaryDomain,
-    electroDomainInterface&       secondaryDomain,
-    const dictionary&         dict
+    const dictionary& dict
 )
 {
-    const word modelType
-    (
-        dict.lookupOrDefault<word>("electroDomainCoupler", word::null)
-    );
+    const word modelType(dict.lookupOrDefault<word>("type", word::null));
 
     if (modelType.empty())
     {
         FatalErrorInFunction
-            << "No electro-domain coupling model specified in dictionary '"
+            << "No verification model specified in dictionary '"
             << dict.dictName() << "'." << nl
-            << "Expected key electroDomainCoupler."
+            << "Expected key 'type'."
             << exit(FatalError);
     }
 
-    Info<< "Selecting electroDomainCoupler " << modelType << nl;
+    Info<< "Selecting couplingVerificationModel " << modelType << nl;
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
     if (!ctorPtr)
     {
         FatalErrorInFunction
-            << "Unknown electroDomainCoupler type " << modelType << nl
+            << "Unknown couplingVerificationModel type " << modelType << nl
             << "Valid types:" << nl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    autoPtr<electroDomainCoupler> coupler
-    (
-        ctorPtr(primaryDomain, secondaryDomain, dict)
-    );
-
-    if (dict.found("verificationModel"))
-    {
-        coupler->verificationModelPtr_ = couplingVerificationModel::New
-        (
-            dict.subDict("verificationModel")
-        );
-    }
-
-    return coupler;
+    return autoPtr<couplingVerificationModel>(ctorPtr(dict));
 }
+
+
+word couplingVerificationModel::selectedType(const dictionary& dict)
+{
+    return dict.lookupOrDefault<word>("type", word::null);
+}
+
+
+couplingVerificationModel::couplingVerificationModel(const dictionary& dict)
+:
+    dict_(dict)
+{}
 
 } // End namespace Foam
 

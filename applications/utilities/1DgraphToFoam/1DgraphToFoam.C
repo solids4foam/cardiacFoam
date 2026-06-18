@@ -251,9 +251,13 @@ label rootNodeFromFields
 {
     label rootNode = -1;
 
+    label targetRootVal = 1;
+    if (labelRoles && labelRoles->name() == "NodeType") targetRootVal = 0;
+    else if (scalarRoles && scalarRoles->name() == "NodeType") targetRootVal = 0;
+
     for (label nodeI = 0; nodeI < nPoints; ++nodeI)
     {
-        if (roleAt(nodeI, labelRoles, scalarRoles) == 1)
+        if (roleAt(nodeI, labelRoles, scalarRoles) == targetRootVal)
         {
             if (rootNode != -1)
             {
@@ -335,7 +339,7 @@ pointField writeConductionSolverContract
             << exit(FatalError);
     }
 
-    const wordList nodeRoleNames{"nodeRole", "node_role", "role"};
+    const wordList nodeRoleNames{"nodeRole", "node_role", "role", "NodeType"};
     const IOField<label>* labelRoles =
         findField<label>(pointData, nodeRoleNames);
     const IOField<scalar>* scalarRoles =

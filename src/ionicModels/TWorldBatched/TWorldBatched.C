@@ -533,6 +533,7 @@ Foam::scalarField Foam::TWorldBatched::initialStatesForTissue
         rates.data(),
         states.data(),
         tissueFlag,
+        sex(),
         dict()
     );
 

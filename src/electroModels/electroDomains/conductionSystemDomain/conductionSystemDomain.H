@@ -37,6 +37,7 @@ Author
 #include "electroDomainCouplingEndpoints.H"
 #include "electroDomainInterface.H"
 #include "fvMesh.H"
+#include "graphVerificationModel.H"
 #include "ionicModel.H"
 #include "labelList.H"
 #include "OFstream.H"
@@ -80,6 +81,7 @@ class conductionSystemDomain
     scalarField activationTime_;
 
     autoPtr<ionicModel> ionicModelPtr_;
+    autoPtr<graphVerificationModel> verificationModelPtr_;
 
     label localStartNode_;
     label nLocalNodes_;
@@ -137,6 +139,8 @@ public:
     }
 
     virtual void advance(scalar t0, scalar dt) override;
+    
+    virtual void preProcess();
 
     virtual void write() override;
 

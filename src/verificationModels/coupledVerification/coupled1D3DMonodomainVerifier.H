@@ -16,64 +16,49 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    manufactured1D3DMonodomainVerifier
+    coupled1D3DMonodomainVerifier
 
 Description
     Diagnostic verifier for the staged 1D-3D manufactured monodomain workflow.
 
-    This verifier is intentionally non-intrusive:
-    - it does not overwrite Vm during preProcess,
-    - it binds the live myocardium sourceField so it can inspect the summed
-      source seen by the PDE solve,
-    - it writes coupled-source diagnostics at final time.
+    This verifier operates at the coupler level, meaning it receives both
+    the primary domain (3D myocardium) and secondary domain (1D graph) to
+    compare their values against the analytical coupled solutions.
 
 Author
-    OpenAI. All rights reserved.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef manufactured1D3DMonodomainVerifier_H
-#define manufactured1D3DMonodomainVerifier_H
+#ifndef coupled1D3DMonodomainVerifier_H
+#define coupled1D3DMonodomainVerifier_H
 
-#include "electroVerificationModel.H"
+#include "couplingVerificationModel.H"
 #include "overrideTypeName.H"
 
 namespace Foam
 {
 
-class manufactured1D3DMonodomainVerifier : public electroVerificationModel
+class coupled1D3DMonodomainVerifier : public couplingVerificationModel
 {
-    const volScalarField* sourceFieldPtr_;
     bool reportBaseline3DReference_;
     mutable bool diagnosticsWritten_;
 
 public:
 
-    OverrideTypeName("manufactured1D3DMonodomainVerifier");
+    OverrideTypeName("coupled1D3DMonodomainVerifier");
 
-    explicit manufactured1D3DMonodomainVerifier(const dictionary& dict);
-
-    virtual void bindSourceField(const volScalarField& sourceField) override;
-
-    virtual wordList preProcessFieldNames(const ionicModel& model) const override;
-
-    virtual wordList requiredPostProcessFieldNames
-    (const ionicModel& model) const override;
-
-    virtual bool shouldPostProcess
-    (const ionicModel& model, const volScalarField& Vm) const override;
+    explicit coupled1D3DMonodomainVerifier(const dictionary& dict);
 
     virtual void preProcess
     (
-        ionicModel& model,
-        volScalarField& Vm,
-        PtrList<volScalarField>& fields
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain
     ) override;
 
     virtual void postProcess
     (
-        const ionicModel& model,
-        const volScalarField& Vm,
-        const PtrList<volScalarField>& fields
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain
     ) override;
 };
 

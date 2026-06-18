@@ -131,8 +131,7 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
 
 void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 {
-    (void)t0;
-    (void)dt;
+    pvjCoupler::prepareSecondaryCoupling(t0, dt);
 
     evaluateCoupling("secondary");
 

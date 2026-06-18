@@ -387,7 +387,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind="enum",
             enum_values=("neutral", "male", "female"),
             required=False,
-            applicable_when={"ionicModel": "TWorld"},
+            applicable_when={"ionicModel": ("TWorld", "TWorldBatched")},
             constraints=("Only applicable for ionic models whose supportedSexTypes() includes the selected value.",),
         ),
         DictEntry(

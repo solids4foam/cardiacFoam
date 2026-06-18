@@ -444,8 +444,9 @@ conductionSystemDomain::conductionSystemDomain
     Vm1D_(),
     Iion1D_(),
     activationTime_(),
-    ionicModelPtr_(),
-    localStartNode_(0),
+    ionicModelPtr_(nullptr),
+    verificationModelPtr_(nullptr),
+    localStartNode_(-1),
     nLocalNodes_(0),
     terminalCurrent_(),
     terminalSource_(),
@@ -460,6 +461,14 @@ conductionSystemDomain::conductionSystemDomain
     readRootStimulus(coeffsDict_);
     initialiseState(initialDeltaT);
     initialiseOutputControls();
+    
+    if (coeffsDict_.found("verificationModel"))
+    {
+        verificationModelPtr_ = graphVerificationModel::New
+        (
+            coeffsDict_.subDict("verificationModel")
+        );
+    }
     openOutputFile();
 
     if (reportSetup_)
@@ -471,12 +480,28 @@ conductionSystemDomain::conductionSystemDomain
 }
 
 
-void conductionSystemDomain::advance
-(
-    scalar t0,
-    scalar dt
-)
+void conductionSystemDomain::preProcess()
 {
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->preProcess
+        (
+            time(),
+            ionicModelPtr_.ptr(),
+            Vm1D_,
+            nodeLocations_
+        );
+    }
+}
+
+
+void conductionSystemDomain::advance(scalar t0, scalar dt)
+{
+    if (t0 == 0.0)
+    {
+        preProcess();
+    }
+
     solverPtr_->advance(*this, t0, dt);
 }
 
@@ -605,6 +630,21 @@ void conductionSystemDomain::setTerminalCoupling
 
     terminalCurrent_ = terminalCurrent;
     terminalSource_ = terminalSource;
+}
+
+
+void conductionSystemDomain::end()
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->postProcess
+        (
+            time(),
+            ionicModelPtr_.ptr(),
+            Vm1D_,
+            nodeLocations_
+        );
+    }
 }
 
 

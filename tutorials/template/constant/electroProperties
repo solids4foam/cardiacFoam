@@ -71,6 +71,7 @@ monodomainSolverCoeffs
     //   monodomainFDAManufactured | bidomainFDAManufactured | bathBidomainFDAManufactured
     ionicModel    BuenoOrovio;
     tissue        epicardialCells;   // epicardialCells | endocardialCells | mCells | myocyte
+    // sex           neutral;           // neutral | male | female (only for TWorld / ToRORd_dynCl etc.)
 
     // ── Active tension (optional) ───────────────────────────────────────────
     // activeTensionModel
