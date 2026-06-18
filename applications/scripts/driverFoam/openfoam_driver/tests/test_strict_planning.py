@@ -38,10 +38,78 @@ from openfoam_driver.scripts._dict_keys_scanner import (
     compute_dict_key_drift,
     strict_dict_key_report,
 )
-from openfoam_driver.strict_planning import strict_plan
+from types import SimpleNamespace
+
+from openfoam_driver.strict_planning import (
+    StrictPlanReport,
+    _is_nondimensional_entry,
+    _mesh_geometry_diagnostics,
+    strict_plan,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
+
+
+_FOAM_HEADER = (
+    "FoamFile\n{\n version 2.0;\n format ascii;\n"
+    ' arch "LSB;label=32;scalar=64";\n class vectorField;\n'
+    " object points;\n}\n"
+)
+
+
+def _write_unit_mesh(case_root: Path) -> None:
+    """A [0,1] unit-domain mesh: max_dim == 1.0."""
+    pm = case_root / "constant" / "polyMesh"
+    pm.mkdir(parents=True)
+    pm.joinpath("points").write_text(_FOAM_HEADER + "\n2\n(\n(0 0 0)\n(1 1 1)\n)\n")
+
+
+def test_report_has_mesh_geometry_field() -> None:
+    report = StrictPlanReport(status="ok", entry="x", resolved_entry={})
+    payload = report.to_json()
+    assert "mesh_geometry_diagnostics" in payload
+    assert payload["mesh_geometry_diagnostics"] == []
+
+
+def test_mesh_adapter_flags_non_si(tmp_path: Path) -> None:
+    pm = tmp_path / "constant" / "polyMesh"
+    pm.mkdir(parents=True)
+    pm.joinpath("points").write_text(
+        _FOAM_HEADER + "\n2\n(\n(0 0 0)\n(50 50 50)\n)\n"
+    )
+    diags = _mesh_geometry_diagnostics(tmp_path)
+    codes = {d.code for d in diags}
+    assert "mesh_not_si" in codes
+    assert all(d.source == "mesh_geometry" for d in diags)
+
+
+def test_mesh_gate_skipped_by_env(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("SKIP_MESH_DIAGNOSTICS", "1")
+    assert _mesh_geometry_diagnostics(tmp_path) == ()
+
+
+def test_exempt_short_circuits_unit_domain(tmp_path: Path) -> None:
+    # A [0,1] mesh would classify "mm", but an exempt case must not be flagged.
+    _write_unit_mesh(tmp_path)
+    assert _mesh_geometry_diagnostics(tmp_path, exempt=False) != ()  # baseline
+    assert _mesh_geometry_diagnostics(tmp_path, exempt=True) == ()
+
+
+def test_manufactured_entry_is_nondimensional(tmp_path: Path) -> None:
+    spec = SimpleNamespace(
+        case_root=str(tmp_path),
+        metadata={"entry_name": "manufacturedFDABidomain"},
+    )
+    assert _is_nondimensional_entry(spec) is True
+
+
+def test_plain_entry_is_dimensional(tmp_path: Path) -> None:
+    spec = SimpleNamespace(
+        case_root=str(tmp_path),
+        metadata={"entry_name": "singleCell", "workflow_family": "tutorial"},
+    )
+    assert _is_nondimensional_entry(spec) is False
 
 
 def test_strict_plan_succeeds_for_single_cell() -> None:

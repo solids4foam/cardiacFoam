@@ -36,5 +36,12 @@ python3 setupManufacturedEikonalECG/plot_convergence.py postProcessing
 ```
 
 This writes `postProcessing/convergence_plot.pdf` and `.png` with three panels:
-activation-time error, ECG Linf error, and PIMPLE iteration count — all vs mesh
 spacing h. Cases that hit the nonlinear solver iteration cap are marked with ×.
+
+## Error Calculation and Quadrature
+
+It is important to clarify how the errors are evaluated for the different fields in this verification suite:
+
+1. **Activation Times ($\tau$)**: No quadrature is used here. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
+
+2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature (e.g. $q=96$), which integrates the continuous analytical function down to machine precision. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.

@@ -46,7 +46,12 @@ from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_stat
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .launch import describe_launch
 from .scripts._dict_keys_scanner import strict_dict_key_report
-from .specs.common import detect_ionic_model_name, detect_myocardium_solver_name
+from .specs.common import (
+    detect_ionic_model_name,
+    detect_myocardium_solver_name,
+    detect_verification_model_type,
+)
+from .specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 from .specs.dict_builder import (
     build_electro_properties,
     build_physics_properties,
@@ -78,6 +83,7 @@ class StrictPlanReport:
     catalog_coverage_errors: tuple[StrictDiagnostic, ...] = ()
     artifact_diagnostics: tuple[StrictDiagnostic, ...] = ()
     environment_diagnostics: tuple[StrictDiagnostic, ...] = ()
+    mesh_geometry_diagnostics: tuple[StrictDiagnostic, ...] = ()
     launch: dict[str, Any] = field(default_factory=dict)
     workflow_dag: dict[str, Any] | None = None
     workflow_state: WorkflowRunState | None = None
@@ -94,6 +100,9 @@ class StrictPlanReport:
             "catalog_coverage_errors": [asdict(d) for d in self.catalog_coverage_errors],
             "artifact_diagnostics": [asdict(d) for d in self.artifact_diagnostics],
             "environment_diagnostics": [asdict(d) for d in self.environment_diagnostics],
+            "mesh_geometry_diagnostics": [
+                asdict(d) for d in self.mesh_geometry_diagnostics
+            ],
             "launch": self.launch,
             "workflow_dag": self.workflow_dag,
             "workflow_state": self.workflow_state.to_json() if self.workflow_state else None,
@@ -484,6 +493,51 @@ def _environment_diagnostics(
     return tuple(diagnostics)
 
 
+def _is_nondimensional_entry(spec) -> bool:
+    """Manufactured / verification cases use non-dimensional unit domains
+    (e.g. [0,1], so max_dim == 1.0) and must be exempt from the SI mesh-scale
+    gate, which cannot distinguish a dimensionless domain from a 1 mm mesh."""
+    entry_name = ""
+    family = ""
+    if spec.metadata:
+        entry_name = str(spec.metadata.get("entry_name", "") or "")
+        family = str(spec.metadata.get("workflow_family", "") or "")
+    haystack = f"{entry_name} {family}".lower()
+    if "manufactured" in haystack or "verification" in haystack:
+        return True
+    electro_path = Path(spec.case_root) / "constant" / "electroProperties"
+    if electro_path.exists():
+        try:
+            if detect_verification_model_type(electro_path) is not None:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def _mesh_geometry_diagnostics(
+    case_root: str | Path,
+    *,
+    exempt: bool = False,
+) -> tuple[StrictDiagnostic, ...]:
+    """Adapt mesh-scale detection into StrictDiagnostics for the report.
+
+    ``exempt`` short-circuits the gate for non-dimensional cases.
+    """
+    if exempt or "SKIP_MESH_DIAGNOSTICS" in os.environ:
+        return ()
+    return tuple(
+        _diagnostic(
+            d.level,
+            d.code,
+            d.message,
+            source="mesh_geometry",
+            field=d.region,
+        )
+        for d in _detect_mesh_geometry(Path(case_root))
+    )
+
+
 def strict_plan(
     entry: str,
     *,
@@ -523,12 +577,16 @@ def strict_plan(
     catalog_diagnostics = _catalog_diagnostics(repo_root)
     artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
     env_diagnostics = _environment_diagnostics(workflow_dag)
+    mesh_diagnostics = _mesh_geometry_diagnostics(
+        spec.case_root, exempt=_is_nondimensional_entry(spec)
+    )
     all_diagnostics = (
         validation_diagnostics
         + workflow_diagnostics
         + catalog_diagnostics
         + artifact_diagnostics
         + env_diagnostics
+        + mesh_diagnostics
     )
     failed = any(
         diagnostic.level == "error"
@@ -554,6 +612,7 @@ def strict_plan(
         catalog_coverage_errors=catalog_diagnostics,
         artifact_diagnostics=artifact_diagnostics,
         environment_diagnostics=env_diagnostics,
+        mesh_geometry_diagnostics=mesh_diagnostics,
         launch=launch,
         workflow_dag=workflow_dag,
         workflow_state=workflow_state,

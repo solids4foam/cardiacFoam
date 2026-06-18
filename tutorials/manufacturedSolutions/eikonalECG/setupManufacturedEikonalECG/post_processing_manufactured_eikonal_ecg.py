@@ -390,6 +390,9 @@ def postprocess(output_dir: str | Path) -> None:
             row["source"] = str(summary)
             ecg_rows.append(row)
 
+    activation_rows = [row for row in activation_rows if row.get("N", "unknown") != "unknown"]
+    ecg_rows = [row for row in ecg_rows if row.get("N", "unknown") != "unknown"]
+
     activation_rows.sort(
         key=lambda row: (row.get("Dimension", ""), int(row.get("N", "0")))
     )

@@ -19,12 +19,13 @@ Application
     checkMeshGeometry
 
 Description
-    Reads constant/polyMesh and checks whether the mesh points are in SI
-    meters. If not, warns the user and rescales the mesh to meters based
-    on the detected order of magnitude (mm -> 1e-3, um -> 1e-6).
+    Reads constant/<region>/polyMesh and detects whether the mesh points are in
+    SI metres. Detect-only by default (no write). Pass -rescale to apply the
+    auto-detected factor, or -scale <factor> to apply an explicit one; either
+    rewrites the region to SI metres.
 
 Usage
-    checkMeshGeometry
+    checkMeshGeometry [-region <name>] [-rescale | -scale <factor>]
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -44,12 +45,25 @@ int main(int argc, char* argv[])
     argList::noParallel();
     argList::addNote
     (
-        "Check mesh geometry units and auto-scale to SI meters if needed."
+        "Detect mesh point units and rescale a region to SI metres."
     );
     argList::addBoolOption
     (
-        "noScale",
-        "Suppress automatic scaling even if units appear incorrect"
+        "rescale",
+        "Apply the auto-detected scale factor and rewrite the mesh "
+        "(default: report only, no write)"
+    );
+    argList::addOption
+    (
+        "region",
+        "name",
+        "Mesh region to operate on (default: region0)"
+    );
+    argList::addOption
+    (
+        "scale",
+        "factor",
+        "Apply this explicit scale factor and rewrite (overrides auto-detect)"
     );
 
     #include "setRootCase.H"
@@ -57,11 +71,14 @@ int main(int argc, char* argv[])
 
     Info<< "\n========== checkMeshGeometry ==========\n" << endl;
 
+    const word regionName =
+        args.getOrDefault<word>("region", polyMesh::defaultRegion);
+
     polyMesh mesh
     (
         IOobject
         (
-            polyMesh::defaultRegion,
+            regionName,
             runTime.constant(),
             runTime,
             IOobject::MUST_READ,
@@ -75,54 +92,67 @@ int main(int argc, char* argv[])
     Info<< "Bounding box : " << bb << nl
         << "Max dimension: " << maxDim << " [raw units]" << nl << endl;
 
-    // Threshold-based unit detection
+    // Unit-detection thresholds. MUST mirror
+    // openfoam_driver/specs/mesh_geometry.py (guarded by
+    // test_mesh_geometry_contract.py). mmLower is 20 (not 1) so large SI
+    // domains (whole-torso meshes, ~1-2 m) are not mis-detected as mm.
+    const scalar mmLower = 20.0;
+    const scalar umLower = 1000.0;
+    const scalar umUpper = 1e6;
+
     scalar scaleFactor = 1.0;
     word detectedUnit = "m";
 
-    if (maxDim >= 1.0 && maxDim < 1000.0)
+    if (maxDim >= mmLower && maxDim < umLower)
     {
         scaleFactor = 1e-3;
         detectedUnit = "mm";
     }
-    else if (maxDim >= 1000.0 && maxDim < 1e6)
+    else if (maxDim >= umLower && maxDim < umUpper)
     {
         scaleFactor = 1e-6;
         detectedUnit = "um";
     }
 
-    const bool noScale = args.found("noScale");
+    if (args.found("scale"))
+    {
+        scaleFactor = args.get<scalar>("scale");
+        detectedUnit = "explicit";
+    }
+
+    // Detect-only is the default. A write requires explicit opt-in so the
+    // utility never silently rescales a (possibly non-dimensional) mesh.
+    const bool doWrite = args.found("scale") || args.found("rescale");
 
     if (mag(scaleFactor - 1.0) < SMALL)
     {
-        Info<< "Mesh appears to be in meters. No scaling applied." << nl
+        Info<< "Mesh appears to be in meters (factor 1). Nothing to do." << nl
             << endl;
     }
-    else
+    else if (!doWrite)
     {
         WarningInFunction
             << "Max dimension = " << maxDim
-            << " suggests mesh is in " << detectedUnit
-            << ", not meters.\n"
-            << "  Applying scale factor: " << scaleFactor << "\n"
-            << "  Rewriting constant/polyMesh ..." << nl
-            << endl;
+            << " suggests mesh is in " << detectedUnit << ", not meters.\n"
+            << "  Detect-only (default): no write performed.\n"
+            << "  Re-run with -rescale (auto) or -scale " << scaleFactor
+            << " to apply." << nl << endl;
+    }
+    else
+    {
+        Info<< "Applying scale factor " << scaleFactor
+            << " (" << detectedUnit << ") and rewriting constant/polyMesh ..."
+            << nl << endl;
 
-        if (noScale)
-        {
-            Info<< "  -noScale flag set: skipping write." << nl << endl;
-        }
-        else
-        {
-            pointField newPoints(mesh.points());
-            newPoints *= scaleFactor;
-            mesh.movePoints(newPoints);
-            mesh.write();
+        pointField newPoints(mesh.points());
+        newPoints *= scaleFactor;
+        mesh.movePoints(newPoints);
+        mesh.write();
 
-            const boundBox bbScaled(mesh.points(), false);
-            Info<< "Scaled bounding box : " << bbScaled << nl
-                << "Scaled max dimension: " << bbScaled.maxDim() << " m"
-                << nl << endl;
-        }
+        const boundBox bbScaled(mesh.points(), false);
+        Info<< "Scaled bounding box : " << bbScaled << nl
+            << "Scaled max dimension: " << bbScaled.maxDim() << " m"
+            << nl << endl;
     }
 
     Info<< "End" << nl << endl;
