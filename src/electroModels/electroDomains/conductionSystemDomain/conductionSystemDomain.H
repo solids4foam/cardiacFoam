@@ -144,6 +144,8 @@ public:
 
     virtual void write() override;
 
+    virtual void end() override;
+
     virtual const labelList& terminalNodes() const override
     {
         return terminalNodes_;

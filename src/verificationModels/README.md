@@ -13,6 +13,7 @@ src/verificationModels/
 ├── eikonalVerification/      # Eikonal manufactured/reference verifiers
 ├── ecgVerification/          # ECG verifier family (concrete verifiers only)
 ├── electromechanicsVerification/ # Electromechanics verifiers
+├── coupledVerification/      # Coupled domain verifiers
 ├── Make/
 └── README.md
 ```
@@ -37,6 +38,12 @@ reference helpers used to validate:
 - `eikonalVerificationModel`
   Abstract base for eikonal activation-time verification hooks. Compiled in
   `electroModels/core/verificationModels/`.
+- `couplingVerificationModel`
+  Abstract base for coupled domain verification hooks. Compiled in
+  `electroModels/core/verificationModels/`.
+- `graphVerificationModel`
+  Abstract base for graph verification hooks. Compiled in
+  `electroModels/core/verificationModels/`.
 
 ## Concrete families
 
@@ -48,6 +55,8 @@ reference helpers used to validate:
   Manufactured eikonal references and verifiers
 - `ecgVerification/`
   ECG verification helpers such as pseudo-ECG manufactured verification
+- `coupledVerification/`
+  Coupled domain manufactured references and verifiers
 
 Registered verifier types include:
 
@@ -58,6 +67,9 @@ Registered verifier types include:
 - `pseudoECGManufacturedVerifier`
 - `bathECGManufacturedVerifier`
 - `eikonalECGManufacturedVerifier`
+- `manufacturedGraphVerifier`
+- `manufactured1D3DMonodomainVerifier`
+- `coupled1D3DMonodomainVerifier`
 
 ## What this folder does not own
 

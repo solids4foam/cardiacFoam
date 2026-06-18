@@ -33,7 +33,9 @@ core/
 └── verificationModels/
     ├── electroVerificationModel.H/.C  Abstract base for myocardium-side verifiers
     ├── ecgVerificationModel.H/.C      Abstract base for ECG-side verifiers
-    └── eikonalVerificationModel.H/.C  Abstract base for eikonal-side verifiers
+    ├── eikonalVerificationModel.H/.C  Abstract base for eikonal-side verifiers
+    ├── couplingVerificationModel.H/.C Abstract base for coupling verifiers
+    └── graphVerificationModel.H/.C    Abstract base for graph verifiers
 ```
 
 ### Layout rule
@@ -85,7 +87,7 @@ and output field lists. Delegates spatial domain assembly to
 
 ### `verificationModels/`
 
-Abstract base classes for the two verification families:
+Abstract base classes for the verification families:
 
 - **`electroVerificationModel`** — runtime-selection base for myocardium-side
   verifiers. Concrete verifiers in `src/verificationModels/` inherit from it.
@@ -93,6 +95,10 @@ Abstract base classes for the two verification families:
   Concrete verifiers in `src/verificationModels/ecgVerification/` inherit from it.
 - **`eikonalVerificationModel`** — runtime-selection base for eikonal activation-time
   verifiers. Concrete verifiers in `src/verificationModels/eikonalVerification/` inherit from it.
+- **`couplingVerificationModel`** — runtime-selection base for coupling verifiers.
+  Concrete verifiers inherit from it.
+- **`graphVerificationModel`** — runtime-selection base for graph verifiers.
+  Concrete verifiers inherit from it.
 
 ---
 

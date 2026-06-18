@@ -15,6 +15,10 @@ manufactured/reference code they use:
   abstract base class — defined in `electroModels/core/verificationModels/`.
 - `eikonalVerificationModel`
   abstract base class — defined in `electroModels/core/verificationModels/`.
+- `couplingVerificationModel`
+  abstract base class — defined in `electroModels/core/verificationModels/`.
+- `graphVerificationModel`
+  abstract base class — defined in `electroModels/core/verificationModels/`.
 
 ## Directory layout
 
@@ -26,6 +30,7 @@ src/verificationModels/
 ├── eikonalVerification/      # Eikonal manufactured/reference verifiers
 ├── ecgVerification/          # ECG verifier family (concrete verifiers only)
 ├── electromechanicsVerification/ # Electromechanics verifiers
+├── coupledVerification/      # Coupled domain verifiers
 ├── Make/
 └── README.md
 ```
@@ -51,6 +56,7 @@ Current concrete verifiers include:
 - `manufacturedFDAMonodomainVerifier`
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
+- `manufactured1D3DMonodomainVerifier`
 
 ### Manufactured/reference helpers
 
@@ -109,6 +115,42 @@ Role:
 Current concrete verifier:
 
 - `pseudoECGManufacturedVerifier`
+
+## Coupled verification
+
+### `couplingVerificationModel`
+
+Defined in:
+
+- `electroModels/core/verificationModels/couplingVerificationModel.H` ← **authoritative location**
+- `electroModels/core/verificationModels/couplingVerificationModel.C`
+
+Role:
+
+- runtime-selection base for coupled domains verification
+- provides verification hooks for bidirectional or unidirectional coupled workflows
+
+Current concrete verifiers:
+
+- `coupled1D3DMonodomainVerifier`
+
+## Graph verification
+
+### `graphVerificationModel`
+
+Defined in:
+
+- `electroModels/core/verificationModels/graphVerificationModel.H` ← **authoritative location**
+- `electroModels/core/verificationModels/graphVerificationModel.C`
+
+Role:
+
+- runtime-selection base for 1D graph solver verification
+- constructed from dictionary input
+
+Current concrete verifiers:
+
+- `manufacturedGraphVerifier`
 
 ## What this layer validates
 

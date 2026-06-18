@@ -21,6 +21,7 @@ openfoam_driver/
 │   └── defaults/                  # per-tutorial default parameters
 ├── specs/
 │   ├── common.py                  # mutators/path helpers
+│   ├── mesh_geometry.py           # mesh geometry checks for 1D 3D
 │   └── tutorials/                 # tutorial-specific make_spec modules
 ├── postprocessing/                # shared postprocess runner + artifact manifest
 ├── scripts/                       # OpenFOAM runner, catalog scanners, allowlists
@@ -389,6 +390,8 @@ Important contract tests:
 - `tests/test_utility_catalog_contract.py`
 - `tests/test_rtst_enum_contract.py`
 - `tests/test_ionic_catalog_contract.py`
+- `tests/test_mesh_geometry.py`
+- `tests/test_mesh_geometry_contract.py`
 
 These ensure registry coverage, required `make_spec(...)` keyword contract
 consistency, strict RunDocument validation, strict workflow execution behavior,

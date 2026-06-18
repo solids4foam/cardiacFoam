@@ -82,7 +82,7 @@ and batched models `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`,
 Verification infrastructure for spatial electrophysiology and ECG workflows.
 
 This library depends on `electroModels` (compiled after it) because concrete
-verifiers inherit from base classes (e.g., `electroVerificationModel`, `ecgVerificationModel`, and `eikonalVerificationModel`)
+verifiers inherit from base classes (e.g., `electroVerificationModel`, `ecgVerificationModel`, `eikonalVerificationModel`, `couplingVerificationModel`, and `graphVerificationModel`)
 which are defined in `electroModels/core/verificationModels/`.
 
 Main layers:
@@ -90,6 +90,7 @@ Main layers:
 - `monodomainVerification/`
 - `bidomainVerification/`
 - `ecgVerification/`
+- `coupledVerification/`
 
 ### `activeTensionModels` — `libactiveTensionModels`
 
@@ -119,7 +120,7 @@ The staged Purkinje, ECG, and bath-style electro couplers live under
 The main spatial electrophysiology stack. It contains:
 
 - top-level orchestration in `core/`, including the abstract base verifiers
-  (`electroVerificationModel`, `ecgVerificationModel`, and `eikonalVerificationModel`) inside `core/verificationModels/`
+  (`electroVerificationModel`, `ecgVerificationModel`, `eikonalVerificationModel`, `couplingVerificationModel`, and `graphVerificationModel`) inside `core/verificationModels/`
 
 - domain state owners in `electroDomains/`
 
