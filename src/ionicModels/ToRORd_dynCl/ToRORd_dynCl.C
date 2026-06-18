@@ -112,6 +112,31 @@ Foam::scalarField& Foam::ToRORd_dynCl::constants
     return CONSTANTS_;
 }
 
+void Foam::ToRORd_dynCl::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    configureTransmuralBandHeterogeneity
+    (
+        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_,
+        &HETEROGENEOUS_INITIAL_STATES_
+    );
+
+    if (!HETEROGENEOUS_INITIAL_STATES_.empty())
+    {
+        for (label cellI = 0; cellI < STATES_.size(); ++cellI)
+        {
+            const scalarField& st = HETEROGENEOUS_INITIAL_STATES_[cellI];
+            for (label stateI = 0; stateI < NUM_STATES; ++stateI)
+            {
+                STATES_[cellI][stateI] = st[stateI];
+            }
+        }
+    }
+}
+
 
 Foam::scalarField Foam::ToRORd_dynCl::constantsForTissue
 (
@@ -141,17 +166,28 @@ Foam::scalarField Foam::ToRORd_dynCl::constantsForTissue
 }
 
 
-void Foam::ToRORd_dynCl::configureIonicHeterogeneity
+Foam::scalarField Foam::ToRORd_dynCl::initialStatesForTissue
 (
-    const scalarField& transmuralDistance,
-    const dictionary& heterogeneityDict
-)
+    const label tissueFlag
+) const
 {
-    configureTransmuralBandHeterogeneity
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    ToRORd_dynClinitConsts
     (
-        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
     );
+
+    return states;
 }
+
+
 
 
 void Foam::ToRORd_dynCl::solveODE

@@ -48,6 +48,7 @@ protected:
 
     mutable scalarField CONSTANTS_;
     mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
+    mutable PtrList<scalarField> HETEROGENEOUS_INITIAL_STATES_;
     ionicModelFamilyInfo metadata_;
 
     configuredBatchedIonicModel
@@ -72,6 +73,7 @@ protected:
         ),
         CONSTANTS_(metadata.nConstants, 0.0),
         HETEROGENEOUS_CONSTANTS_(),
+        HETEROGENEOUS_INITIAL_STATES_(),
         metadata_(metadata)
     {}
 
@@ -170,8 +172,21 @@ public:
         (
             transmuralDistance,
             heterogeneityDict,
-            HETEROGENEOUS_CONSTANTS_
+            HETEROGENEOUS_CONSTANTS_,
+            &HETEROGENEOUS_INITIAL_STATES_
         );
+
+        if (!HETEROGENEOUS_INITIAL_STATES_.empty())
+        {
+            for (label cellI = 0; cellI < nCells(); ++cellI)
+            {
+                const scalarField& st = HETEROGENEOUS_INITIAL_STATES_[cellI];
+                for (label stateI = 0; stateI < metadata_.nStates; ++stateI)
+                {
+                    state(cellI, stateI) = st[stateI];
+                }
+            }
+        }
     }
 
 protected:

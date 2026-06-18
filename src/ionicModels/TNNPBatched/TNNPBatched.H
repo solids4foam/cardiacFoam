@@ -83,6 +83,9 @@ protected:
     virtual scalarField constantsForTissue(const label tissueFlag) const
         override final;
 
+    virtual scalarField initialStatesForTissue(const label tissueFlag) const
+        override final;
+
     virtual void evaluateState
     (
         const scalar modelTime,

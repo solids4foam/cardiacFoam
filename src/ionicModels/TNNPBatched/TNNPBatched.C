@@ -448,6 +448,27 @@ Foam::scalarField Foam::TNNPBatched::constantsForTissue
     return constants;
 }
 
+Foam::scalarField Foam::TNNPBatched::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TNNPinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    return states;
+}
+
 void Foam::TNNPBatched::solveODE
 (
     const scalar stepStartTime,

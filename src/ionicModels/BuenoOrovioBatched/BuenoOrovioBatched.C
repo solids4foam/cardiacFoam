@@ -467,6 +467,27 @@ Foam::scalarField Foam::BuenoOrovioBatched::constantsForTissue
     return constants;
 }
 
+Foam::scalarField Foam::BuenoOrovioBatched::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    BuenoOrovioinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    return states;
+}
+
 void Foam::BuenoOrovioBatched::evaluateState
 (
     const scalar modelTime,

@@ -131,20 +131,6 @@ Foam::ionicModel::~ionicModel()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::ionicModel::configureIonicHeterogeneity
-(
-    const scalarField& transmuralDistance,
-    const dictionary& heterogeneityDict
-)
-{
-    (void)transmuralDistance;
-    (void)heterogeneityDict;
-
-    FatalErrorInFunction
-        << "ionicHeterogeneity was requested for ionic model " << type()
-        << ", but this model does not support spatial ionic heterogeneity."
-        << exit(FatalError);
-}
 
 bool Foam::ionicModel::utilitiesMode() const
 {
@@ -321,6 +307,24 @@ void Foam::ionicModel::importFields(const volScalarField& Vm,
 }
 
 
+// * * * * * * * * * * * Heterogeneity Functions * * * * * * * * * * * * * * //
+
+void Foam::ionicModel::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    (void)transmuralDistance;
+    (void)heterogeneityDict;
+
+    FatalErrorInFunction
+        << "ionicHeterogeneity was requested for ionic model " << type()
+        << ", but this model does not support spatial ionic heterogeneity."
+        << exit(FatalError);
+}
+
+
 Foam::scalarField Foam::ionicModel::constantsForTissue
 (
     const label tissueFlag
@@ -332,11 +336,20 @@ Foam::scalarField Foam::ionicModel::constantsForTissue
 }
 
 
+Foam::scalarField Foam::ionicModel::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    return scalarField();
+}
+
 void Foam::ionicModel::configureTransmuralBandHeterogeneity
 (
     const scalarField& transmuralDistance,
     const dictionary& heterogeneityDict,
-    PtrList<scalarField>& heterogeneousConstants
+    PtrList<scalarField>& heterogeneousConstants,
+    PtrList<scalarField>* heterogeneousInitialStates
 ) const
 {
     const auto* statesPtr = ioStatesPtr();
@@ -401,6 +414,27 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
             << exit(FatalError);
     }
 
+    scalarField endoStates, mCellStates, epiStates;
+    bool blendStates = false;
+    if (heterogeneousInitialStates)
+    {
+        endoStates = initialStatesForTissue(ionicSelector::tissueFlag("endocardialCells"));
+        mCellStates = initialStatesForTissue(ionicSelector::tissueFlag("mCells"));
+        epiStates = initialStatesForTissue(ionicSelector::tissueFlag("epicardialCells"));
+
+        if
+        (
+            !endoStates.empty()
+         && endoStates.size() == mCellStates.size()
+         && endoStates.size() == epiStates.size()
+        )
+        {
+            blendStates = true;
+            heterogeneousInitialStates->clear();
+            heterogeneousInitialStates->setSize(transmuralDistance.size());
+        }
+    }
+
     heterogeneousConstants.clear();
     heterogeneousConstants.setSize(transmuralDistance.size());
 
@@ -443,6 +477,23 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
             integrationPtI,
             new scalarField(mappedConstants)
         );
+
+        if (blendStates)
+        {
+            scalarField mappedStates(endoStates.size(), 0.0);
+            forAll(mappedStates, stateI)
+            {
+                mappedStates[stateI] =
+                    weights.endo*endoStates[stateI]
+                  + weights.mCell*mCellStates[stateI]
+                  + weights.epi*epiStates[stateI];
+            }
+            heterogeneousInitialStates->set
+            (
+                integrationPtI,
+                new scalarField(mappedStates)
+            );
+        }
     }
 
 

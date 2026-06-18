@@ -518,6 +518,27 @@ Foam::scalarField Foam::TWorldBatched::constantsForTissue
     return constants;
 }
 
+Foam::scalarField Foam::TWorldBatched::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TWorldinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    return states;
+}
+
 
 void Foam::TWorldBatched::evaluateState
 (

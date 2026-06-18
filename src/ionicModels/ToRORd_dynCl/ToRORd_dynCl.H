@@ -59,6 +59,12 @@ class ToRORd_dynCl
         //- Constants
         mutable scalarField CONSTANTS_;
 
+        //- Heterogeneous Constants
+        mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
+
+        //- Heterogeneous Initial States
+        mutable PtrList<scalarField> HETEROGENEOUS_INITIAL_STATES_;
+
         //- Algebraic
         mutable PtrList<scalarField> ALGEBRAIC_;
 
@@ -140,18 +146,23 @@ protected:
         //- Per-point constants accessor (heterogeneous when configured)
         scalarField& constants(const label integrationPtI) const;
 
-        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
-        virtual scalarField constantsForTissue
-        (
-            const label tissueFlag
-        ) const override;
-
         //- Build per-point transmural heterogeneity from electroProperties
         virtual void configureIonicHeterogeneity
         (
             const scalarField& transmuralDistance,
             const dictionary& heterogeneityDict
         ) override;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        virtual scalarField initialStatesForTissue
+        (
+            const label tissueFlag
+        ) const override;
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
