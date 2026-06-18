@@ -20,7 +20,7 @@ Class
 
 Description
     Manufactured monodomain verifier for the 1D graph.
-    Calculates L1, L2, and Linf errors against exact analytical 
+    Calculates L1, L2, and Linf errors against exact analytical
     solutions across the 1D graph nodes.
 
 Author

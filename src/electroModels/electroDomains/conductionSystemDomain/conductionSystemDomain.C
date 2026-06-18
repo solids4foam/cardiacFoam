@@ -461,7 +461,7 @@ conductionSystemDomain::conductionSystemDomain
     readRootStimulus(coeffsDict_);
     initialiseState(initialDeltaT);
     initialiseOutputControls();
-    
+
     if (coeffsDict_.found("verificationModel"))
     {
         verificationModelPtr_ = graphVerificationModel::New

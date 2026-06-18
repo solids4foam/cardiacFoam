@@ -122,7 +122,7 @@ void manufacturedGraphVerifier::postProcess
     wordList stateNames;
     PtrList<scalarField> algFields;
     wordList algNames;
-    
+
     const_cast<ionicModel*>(model)->exportFields(stateNames, stateFields, algNames, algFields);
 
     label u1Field = -1, u2Field = -1, u3Field = -1;

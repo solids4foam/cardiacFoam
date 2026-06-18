@@ -139,7 +139,7 @@ public:
     }
 
     virtual void advance(scalar t0, scalar dt) override;
-    
+
     virtual void preProcess();
 
     virtual void write() override;
