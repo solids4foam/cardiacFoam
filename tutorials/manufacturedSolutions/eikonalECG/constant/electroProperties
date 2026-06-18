@@ -46,7 +46,7 @@ eikonalSolverCoeffs
             {
                 start  0;
                 end    2;
-                deltaT 0.05;
+                deltaT 0.01;
             }
 
             manufacturedEikonalECG

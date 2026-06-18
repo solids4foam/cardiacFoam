@@ -5,6 +5,7 @@ ecgVerification/bathECGManufacturedVerifier.C
 ecgVerification/eikonalECGManufacturedVerifier.C
 eikonalVerification/manufacturedEikonalVerifier.C
 monodomainVerification/manufacturedFDAMonodomainVerifier.C
+monodomainVerification/manufactured1D3DMonodomainVerifier.C
 bidomainVerification/manufacturedFDABidomainVerifier.C
 bathBidomainVerification/manufacturedFDABathBidomainVerifier.C
 

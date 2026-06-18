@@ -36,6 +36,7 @@ namespace Foam
 {
 
 class ionicModel;
+class conductionSystemDomain;
 
 class electroVerificationModel
 {
@@ -86,6 +87,11 @@ public:
     (const ionicModel& model, const volScalarField& Vm) const = 0;
 
     virtual void bindBidomainField(volScalarField& phiE) {}
+
+    virtual void bindSourceField(const volScalarField& sourceField)
+    {
+        (void)sourceField;
+    }
 
     virtual void bindBidomainField
     (

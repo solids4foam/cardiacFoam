@@ -300,6 +300,11 @@ myocardiumDomain::myocardiumDomain
         validateNoIonicStimulusInMonodomain();
     }
 
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->bindSourceField(sourceField_);
+    }
+
     initialiseProcessing();
 }
 

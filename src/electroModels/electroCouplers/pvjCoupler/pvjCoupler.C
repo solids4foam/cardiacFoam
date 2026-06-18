@@ -84,6 +84,7 @@ pvjCoupler::pvjCoupler
         primaryDomain.mesh(),
         networkTerminalDomain_.terminalLocations(),
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+        dict.lookupOrDefault<word>("pvjKernel", "uniform"),
         dict.lookupOrDefault<Switch>("reportSetup", false)
     ),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),

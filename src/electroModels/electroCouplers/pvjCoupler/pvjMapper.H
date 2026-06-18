@@ -40,6 +40,7 @@ class pvjMapper
     scalar radius_;
     labelList terminalCellIDs_;
     List<labelList> terminalCellSets_;
+    List<scalarList> terminalCellWeights_;
     scalarField sphereVolumes_;
 
 public:
@@ -49,6 +50,7 @@ public:
         const fvMesh& mesh,
         const pointField& terminalLocations,
         scalar radius,
+        const word& kernelType = "uniform",
         bool reportSetup = false
     );
 
