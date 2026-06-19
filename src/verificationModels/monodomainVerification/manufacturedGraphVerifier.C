@@ -71,12 +71,14 @@ void manufacturedGraphVerifier::preProcess
 
     computeManufacturedV(Vm1D, X, Y, Z, t, dimension);
 
-    PtrList<scalarField> stateFields;
-    wordList stateNames;
-    PtrList<scalarField> algFields;
-    wordList algNames;
+    const PtrList<scalarField>* statesPtr = model->ioStatesPtr();
+    if (!statesPtr) return;
 
-    model->exportFields(stateNames, stateFields, algNames, algFields);
+    wordList stateNames;
+    if (model->ioStateNames())
+    {
+        stateNames = wordList(model->ioStateNames(), model->ioNumStates());
+    }
 
     label u1Field = -1, u2Field = -1, u3Field = -1;
     forAll(stateNames, i)
@@ -88,8 +90,8 @@ void manufacturedGraphVerifier::preProcess
 
     if (u1Field != -1 && u2Field != -1 && u3Field != -1)
     {
-        computeManufacturedU(stateFields[u1Field], stateFields[u2Field], stateFields[u3Field], X, Y, Z, t, dimension);
-        model->importFields(Vm1D, stateNames, stateFields, algNames, algFields);
+        PtrList<scalarField>& modStates = const_cast<PtrList<scalarField>&>(*statesPtr);
+        computeManufacturedU(modStates[u1Field], modStates[u2Field], modStates[u3Field], X, Y, Z, t, dimension);
     }
 }
 
@@ -118,12 +120,14 @@ void manufacturedGraphVerifier::postProcess
     computeManufacturedV(VmExact, X, Y, Z, t, dimension);
     computeManufacturedU(u1Exact, u2Exact, u3Exact, X, Y, Z, t, dimension);
 
-    PtrList<scalarField> stateFields;
-    wordList stateNames;
-    PtrList<scalarField> algFields;
-    wordList algNames;
+    const PtrList<scalarField>* statesPtr = model->ioStatesPtr();
+    if (!statesPtr) return;
 
-    const_cast<ionicModel*>(model)->exportFields(stateNames, stateFields, algNames, algFields);
+    wordList stateNames;
+    if (model->ioStateNames())
+    {
+        stateNames = wordList(model->ioStateNames(), model->ioNumStates());
+    }
 
     label u1Field = -1, u2Field = -1, u3Field = -1;
     forAll(stateNames, i)
@@ -137,8 +141,8 @@ void manufacturedGraphVerifier::postProcess
     Tuple2<Tuple2<scalar, scalar>, scalar> u1Norms(Tuple2<scalar, scalar>(0,0),0);
     Tuple2<Tuple2<scalar, scalar>, scalar> u2Norms(Tuple2<scalar, scalar>(0,0),0);
 
-    if (u1Field != -1) u1Norms = computeNorms(stateFields[u1Field], u1Exact);
-    if (u2Field != -1) u2Norms = computeNorms(stateFields[u2Field], u2Exact);
+    if (u1Field != -1) u1Norms = computeNorms((*statesPtr)[u1Field], u1Exact);
+    if (u2Field != -1) u2Norms = computeNorms((*statesPtr)[u2Field], u2Exact);
 
     const fileName outputDir(runTime.path()/"postProcessing");
     mkDir(outputDir);
