@@ -489,7 +489,8 @@ void conductionSystemDomain::preProcess()
             time(),
             ionicModelPtr_.ptr(),
             Vm1D_,
-            nodeLocations_
+            nodeLocations_,
+            localStartNode_
         );
     }
 }
@@ -642,7 +643,8 @@ void conductionSystemDomain::end()
             time(),
             ionicModelPtr_.ptr(),
             Vm1D_,
-            nodeLocations_
+            nodeLocations_,
+            localStartNode_
         );
     }
 }

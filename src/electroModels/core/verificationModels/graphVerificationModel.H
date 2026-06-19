@@ -72,7 +72,8 @@ public:
         const Time& runTime,
         ionicModel* model,
         scalarField& Vm1D,
-        const pointField& nodeLocations
+        const pointField& nodeLocations,
+        label localStartNode
     ) = 0;
 
     virtual void postProcess
@@ -80,7 +81,8 @@ public:
         const Time& runTime,
         const ionicModel* model,
         const scalarField& Vm1D,
-        const pointField& nodeLocations
+        const pointField& nodeLocations,
+        label localStartNode
     ) = 0;
 
 protected:

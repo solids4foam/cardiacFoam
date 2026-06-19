@@ -39,6 +39,54 @@ addToRunTimeSelectionTable
     dictionary
 );
 
+namespace
+{
+
+label stateIndex
+(
+    const wordList& stateNames,
+    const word& stateName
+)
+{
+    const label idx = stateNames.find(stateName);
+
+    if (idx < 0)
+    {
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires ionic state '"
+            << stateName << "' but available states are "
+            << stateNames
+            << exit(FatalError);
+    }
+
+    return idx;
+}
+
+
+wordList stateNames(const ionicModel& model)
+{
+    if (!model.ioStateNames() || model.ioNumStates() <= 0)
+    {
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires ionic model "
+            << model.type()
+            << " to expose state metadata."
+            << exit(FatalError);
+    }
+
+    wordList names(model.ioNumStates());
+    const char* const* rawNames = model.ioStateNames();
+    forAll(names, i)
+    {
+        names[i] = rawNames[i];
+    }
+
+    return names;
+}
+
+} // End anonymous namespace
+
+
 manufacturedGraphVerifier::manufacturedGraphVerifier
 (
     const dictionary& dict
@@ -54,12 +102,15 @@ void manufacturedGraphVerifier::preProcess
     const Time& runTime,
     ionicModel* model,
     scalarField& Vm1D,
-    const pointField& nodeLocations
+    const pointField& nodeLocations,
+    label localStartNode
 )
 {
     if (!model)
     {
-        return;
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires an ionic model."
+            << exit(FatalError);
     }
 
     const label dimension = model->geometricDimension();
@@ -72,26 +123,63 @@ void manufacturedGraphVerifier::preProcess
     computeManufacturedV(Vm1D, X, Y, Z, t, dimension);
 
     const PtrList<scalarField>* statesPtr = model->ioStatesPtr();
-    if (!statesPtr) return;
-
-    wordList stateNames;
-    if (model->ioStateNames())
+    if (!statesPtr)
     {
-        stateNames = wordList(model->ioStateNames(), model->ioNumStates());
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires ionic model "
+            << model->type()
+            << " to expose mutable state storage."
+            << exit(FatalError);
     }
 
-    label u1Field = -1, u2Field = -1, u3Field = -1;
-    forAll(stateNames, i)
+    const wordList names = stateNames(*model);
+    const label u1Idx = stateIndex(names, "u1");
+    const label u2Idx = stateIndex(names, "u2");
+    const label u3Idx = stateIndex(names, "u3");
+
+    PtrList<scalarField>& states =
+        const_cast<PtrList<scalarField>&>(*statesPtr);
+
+    scalarField localX(states.size(), 0.0);
+    scalarField localY(states.size(), 0.0);
+    scalarField localZ(states.size(), 0.0);
+
+    forAll(states, localNodeI)
     {
-        if (stateNames[i] == "u1") u1Field = i;
-        else if (stateNames[i] == "u2") u2Field = i;
-        else if (stateNames[i] == "u3") u3Field = i;
+        const label nodeI = localStartNode + localNodeI;
+
+        if (nodeI < 0 || nodeI >= nodeLocations.size())
+        {
+            FatalErrorInFunction
+                << "Local graph node " << nodeI
+                << " is outside graph node range [0, "
+                << nodeLocations.size() - 1 << "]."
+                << exit(FatalError);
+        }
+
+        localX[localNodeI] = X[nodeI];
+        localY[localNodeI] = Y[nodeI];
+        localZ[localNodeI] = Z[nodeI];
     }
 
-    if (u1Field != -1 && u2Field != -1 && u3Field != -1)
+    scalarField u1Exact, u2Exact, u3Exact;
+    computeManufacturedU
+    (
+        u1Exact,
+        u2Exact,
+        u3Exact,
+        localX,
+        localY,
+        localZ,
+        t,
+        dimension
+    );
+
+    forAll(states, localNodeI)
     {
-        PtrList<scalarField>& modStates = const_cast<PtrList<scalarField>&>(*statesPtr);
-        computeManufacturedU(modStates[u1Field], modStates[u2Field], modStates[u3Field], X, Y, Z, t, dimension);
+        states[localNodeI][u1Idx] = u1Exact[localNodeI];
+        states[localNodeI][u2Idx] = u2Exact[localNodeI];
+        states[localNodeI][u3Idx] = u3Exact[localNodeI];
     }
 }
 
@@ -101,12 +189,20 @@ void manufacturedGraphVerifier::postProcess
     const Time& runTime,
     const ionicModel* model,
     const scalarField& Vm1D,
-    const pointField& nodeLocations
+    const pointField& nodeLocations,
+    label localStartNode
 )
 {
-    if (errorsReported_ || !model)
+    if (errorsReported_)
     {
         return;
+    }
+
+    if (!model)
+    {
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires an ionic model."
+            << exit(FatalError);
     }
 
     const scalar t = runTime.value();
@@ -121,28 +217,46 @@ void manufacturedGraphVerifier::postProcess
     computeManufacturedU(u1Exact, u2Exact, u3Exact, X, Y, Z, t, dimension);
 
     const PtrList<scalarField>* statesPtr = model->ioStatesPtr();
-    if (!statesPtr) return;
-
-    wordList stateNames;
-    if (model->ioStateNames())
+    if (!statesPtr)
     {
-        stateNames = wordList(model->ioStateNames(), model->ioNumStates());
+        FatalErrorInFunction
+            << "manufacturedGraphVerifier requires ionic model "
+            << model->type()
+            << " to expose state storage."
+            << exit(FatalError);
     }
 
-    label u1Field = -1, u2Field = -1, u3Field = -1;
-    forAll(stateNames, i)
+    const wordList names = stateNames(*model);
+    const label u1Idx = stateIndex(names, "u1");
+    const label u2Idx = stateIndex(names, "u2");
+
+    scalarField u1(statesPtr->size(), 0.0);
+    scalarField u2(statesPtr->size(), 0.0);
+    scalarField u1LocalExact(statesPtr->size(), 0.0);
+    scalarField u2LocalExact(statesPtr->size(), 0.0);
+
+    forAll(*statesPtr, localNodeI)
     {
-        if (stateNames[i] == "u1") u1Field = i;
-        else if (stateNames[i] == "u2") u2Field = i;
-        else if (stateNames[i] == "u3") u3Field = i;
+        const label nodeI = localStartNode + localNodeI;
+
+        if (nodeI < 0 || nodeI >= nodeLocations.size())
+        {
+            FatalErrorInFunction
+                << "Local graph node " << nodeI
+                << " is outside graph node range [0, "
+                << nodeLocations.size() - 1 << "]."
+                << exit(FatalError);
+        }
+
+        u1[localNodeI] = (*statesPtr)[localNodeI][u1Idx];
+        u2[localNodeI] = (*statesPtr)[localNodeI][u2Idx];
+        u1LocalExact[localNodeI] = u1Exact[nodeI];
+        u2LocalExact[localNodeI] = u2Exact[nodeI];
     }
 
     auto VmNorms = computeNorms(Vm1D, VmExact);
-    Tuple2<Tuple2<scalar, scalar>, scalar> u1Norms(Tuple2<scalar, scalar>(0,0),0);
-    Tuple2<Tuple2<scalar, scalar>, scalar> u2Norms(Tuple2<scalar, scalar>(0,0),0);
-
-    if (u1Field != -1) u1Norms = computeNorms((*statesPtr)[u1Field], u1Exact);
-    if (u2Field != -1) u2Norms = computeNorms((*statesPtr)[u2Field], u2Exact);
+    auto u1Norms = computeNorms(u1, u1LocalExact);
+    auto u2Norms = computeNorms(u2, u2LocalExact);
 
     const fileName outputDir(runTime.path()/"postProcessing");
     mkDir(outputDir);

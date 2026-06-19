@@ -40,7 +40,6 @@ namespace Foam
 
 class coupled1D3DMonodomainVerifier : public couplingVerificationModel
 {
-    bool reportBaseline3DReference_;
     mutable bool diagnosticsWritten_;
 
 public:

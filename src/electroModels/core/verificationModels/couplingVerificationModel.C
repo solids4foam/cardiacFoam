@@ -32,22 +32,12 @@ autoPtr<couplingVerificationModel> couplingVerificationModel::New
     const dictionary& dict
 )
 {
-    const word modelType(dict.lookupOrDefault<word>("type", word::null));
-
-    if (modelType.empty())
-    {
-        FatalErrorInFunction
-            << "No verification model specified in dictionary '"
-            << dict.dictName() << "'." << nl
-            << "Expected key 'type'."
-            << exit(FatalError);
-    }
+    const word modelType(selectedType(dict));
 
     Info<< "Selecting couplingVerificationModel " << modelType << nl;
 
-    auto* ctorPtr = dictionaryConstructorTable(modelType);
-
-    if (!ctorPtr)
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
+    if (!cstrIter.found())
     {
         FatalErrorInFunction
             << "Unknown couplingVerificationModel type " << modelType << nl
@@ -56,13 +46,13 @@ autoPtr<couplingVerificationModel> couplingVerificationModel::New
             << exit(FatalError);
     }
 
-    return autoPtr<couplingVerificationModel>(ctorPtr(dict));
+    return autoPtr<couplingVerificationModel>(cstrIter()(dict));
 }
 
 
 word couplingVerificationModel::selectedType(const dictionary& dict)
 {
-    return dict.lookupOrDefault<word>("type", word::null);
+    return dict.get<word>("type");
 }
 
 

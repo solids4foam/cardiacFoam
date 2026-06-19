@@ -47,10 +47,6 @@ coupled1D3DMonodomainVerifier::coupled1D3DMonodomainVerifier
 )
 :
     couplingVerificationModel(dict),
-    reportBaseline3DReference_
-    (
-        dict.lookupOrDefault<Switch>("reportBaseline3DReference", false)
-    ),
     diagnosticsWritten_(false)
 {}
 
@@ -61,7 +57,8 @@ void coupled1D3DMonodomainVerifier::preProcess
     electroDomainInterface& secondaryDomain
 )
 {
-    // No pre-processing required for this specific verifier
+    (void)primaryDomain;
+    (void)secondaryDomain;
 }
 
 
@@ -76,8 +73,6 @@ void coupled1D3DMonodomainVerifier::postProcess
         return;
     }
 
-    // Only write diagnostics at the very end. We check if time is complete
-    // or we just assume this is called at `end()`.
     diagnosticsWritten_ = true;
 
     const fvMesh& mesh = primaryDomain.mesh();
