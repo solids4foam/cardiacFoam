@@ -244,6 +244,7 @@ void configureConductionDomains
             conductionSystemDomain::New
             (
                 mesh,
+                domainName,
                 *conductionDomainDicts[i],
                 initialDeltaT
             )

@@ -48,12 +48,79 @@ bool selectedSolverRequiresIonicModel(const dictionary& dict)
         && solverType != "restitutionEikonalSolver1D";
 }
 
+
+void initialiseGraphStateField
+(
+    scalarGlobalIOField& field,
+    const scalarField& defaultValues
+)
+{
+    if (field.filePath().empty())
+    {
+        field = defaultValues;
+        return;
+    }
+
+    if (field.size() != defaultValues.size())
+    {
+        FatalErrorInFunction
+            << field.name() << " size " << field.size()
+            << " does not match graph size " << defaultValues.size()
+            << exit(FatalError);
+    }
+}
+
+
+void writeGraphStateField(scalarGlobalIOField& field)
+{
+    bool writeGood = true;
+    const Time& runTime = field.time();
+
+    field.instance() = runTime.timeName();
+
+    if (Pstream::master())
+    {
+        const fileName outputPath
+        (
+            runTime.globalPath()/field.instance()/field.name()
+        );
+
+        mkDir(outputPath.path());
+        OFstream os
+        (
+            outputPath,
+            IOstreamOption
+            (
+                runTime.writeFormat(),
+                runTime.writeCompression()
+            )
+        );
+
+        writeGood = os.good() && field.writeHeader(os) && field.writeData(os);
+
+        if (writeGood)
+        {
+            IOobject::writeEndDivider(os);
+        }
+    }
+
+    reduce(writeGood, andOp<bool>());
+
+    if (!writeGood)
+    {
+        FatalErrorInFunction
+            << "Failed writing " << field.name()
+            << exit(FatalError);
+    }
+}
+
 } // End anonymous namespace
 
 
 autoPtr<conductionSystemDomain> conductionSystemDomain::New
 (
     const fvMesh& mesh,
+    const word& domainName,
     const dictionary& dict,
     scalar initialDeltaT
 )
@@ -77,7 +144,7 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
 
     return autoPtr<conductionSystemDomain>
     (
-        new conductionSystemDomain(mesh, dict, initialDeltaT)
+        new conductionSystemDomain(mesh, domainName, dict, initialDeltaT)
     );
 }
 
@@ -228,14 +295,22 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
       : coeffsDict_.lookupOrDefault<scalar>("vm1DRest", -0.084)
     );
 
-    Vm1D_.setSize(graph_.nNodes, vmRest);
+    initialiseGraphStateField
+    (
+        Vm1D_,
+        scalarField(graph_.nNodes, vmRest)
+    );
+
     Iion1D_.setSize(graph_.nNodes, 0.0);
-    activationTime_.setSize(graph_.nNodes, -1.0);
+
+    scalarField initialActivationTime(graph_.nNodes, -1.0);
 
     if (rootStartTime_ < GREAT && rootStartTime_ <= SMALL)
     {
-        activationTime_[rootNode_] = rootStartTime_;
+        initialActivationTime[rootNode_] = rootStartTime_;
     }
+
+    initialiseGraphStateField(activationTime_, initialActivationTime);
 
     terminalCurrent_.setSize(terminalNodes_.size(), 0.0);
     terminalSource_.setSize(terminalNodes_.size(), 0.0);
@@ -424,6 +499,7 @@ void conductionSystemDomain::openOutputFile()
 conductionSystemDomain::conductionSystemDomain
 (
     const fvMesh& mesh,
+    const word& domainName,
     const dictionary& dict,
     const scalar initialDeltaT
 )
@@ -441,9 +517,42 @@ conductionSystemDomain::conductionSystemDomain
     rootIntensity_(0.0),
     chi_(coeffsDict_.get<scalar>("chi")),
     Cm_(coeffsDict_.get<scalar>("cm")),
-    Vm1D_(),
-    Iion1D_(),
-    activationTime_(),
+    Vm1D_
+    (
+        IOobject
+        (
+            IOobject::groupName("Vm", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
+    Iion1D_
+    (
+        IOobject
+        (
+            IOobject::groupName("ionicCurrent", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
+    activationTime_
+    (
+        IOobject
+        (
+            IOobject::groupName("activationTime", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
     ionicModelPtr_(nullptr),
     verificationModelPtr_(nullptr),
     localStartNode_(-1),
@@ -469,6 +578,8 @@ conductionSystemDomain::conductionSystemDomain
             coeffsDict_.subDict("verificationModel")
         );
     }
+
+    preProcess();
     openOutputFile();
 
     if (reportSetup_)
@@ -487,7 +598,7 @@ void conductionSystemDomain::preProcess()
         verificationModelPtr_->preProcess
         (
             time(),
-            ionicModelPtr_.ptr(),
+            ionicModelPtr_.valid() ? &ionicModelPtr_() : nullptr,
             Vm1D_,
             nodeLocations_,
             localStartNode_
@@ -498,11 +609,6 @@ void conductionSystemDomain::preProcess()
 
 void conductionSystemDomain::advance(scalar t0, scalar dt)
 {
-    if (t0 == 0.0)
-    {
-        preProcess();
-    }
-
     solverPtr_->advance(*this, t0, dt);
 }
 
@@ -641,7 +747,7 @@ void conductionSystemDomain::end()
         verificationModelPtr_->postProcess
         (
             time(),
-            ionicModelPtr_.ptr(),
+            ionicModelPtr_.valid() ? &ionicModelPtr_() : nullptr,
             Vm1D_,
             nodeLocations_,
             localStartNode_
@@ -656,6 +762,10 @@ void conductionSystemDomain::write()
     {
         return;
     }
+
+    writeGraphStateField(Vm1D_);
+    writeGraphStateField(Iion1D_);
+    writeGraphStateField(activationTime_);
 
     DynamicList<scalar> values;
     for (const word& var : exportVars_)

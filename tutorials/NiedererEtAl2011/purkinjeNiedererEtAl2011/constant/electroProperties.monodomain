@@ -90,6 +90,7 @@ monodomainSolverCoeffs
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    10000;
             pvjRadius               3e-4;
+            pvjKernel               uniform;
             couplingMode            unidirectional;
             debugCoupling           true;
         }

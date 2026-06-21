@@ -47,6 +47,9 @@ from ...specs.tutorials.manufactured_eikonal_ecg import (
 from ...specs.tutorials.manufactured_monodomain_total_lagrangian_em import (
     make_spec as make_manufactured_monodomain_total_lagrangian_em_spec,
 )
+from ...specs.tutorials.manufactured_purkinje_graph import (
+    make_spec as make_manufactured_purkinje_graph_spec,
+)
 from ...specs.tutorials.generic_case import make_spec as make_generic_case_spec
 from ...specs.tutorials.manufactured_fda import make_spec as make_manufactured_fda_spec
 from ...specs.tutorials.niederer_2012 import make_spec as make_niederer_2012_spec
@@ -68,6 +71,8 @@ SPEC_FACTORIES = {
     "manufacturedeikonalecg": make_manufactured_eikonal_ecg_spec,
     "manufacturedMonodomainTotalLagrangianEM": make_manufactured_monodomain_total_lagrangian_em_spec,
     "manufacturedelectromechanicsbc": make_manufactured_monodomain_total_lagrangian_em_spec,
+    "manufacturedPurkinjeGraph": make_manufactured_purkinje_graph_spec,
+    "manufacturedpurkinjegraph": make_manufactured_purkinje_graph_spec,
     "restitutionCurves": make_restitution_curves_spec,
     "restitutioncurves": make_restitution_curves_spec,
 }
@@ -82,6 +87,7 @@ REGISTERED_TUTORIALS = (
     "manufacturedFDABathBidomain",
     "manufacturedEikonalECG",
     "manufacturedMonodomainTotalLagrangianEM",
+    "manufacturedPurkinjeGraph",
     "restitutionCurves",
 )
 

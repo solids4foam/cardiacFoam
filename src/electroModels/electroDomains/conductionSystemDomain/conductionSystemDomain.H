@@ -38,6 +38,7 @@ Author
 #include "electroDomainInterface.H"
 #include "fvMesh.H"
 #include "graphVerificationModel.H"
+#include "globalIOFields.H"
 #include "ionicModel.H"
 #include "labelList.H"
 #include "OFstream.H"
@@ -76,9 +77,9 @@ class conductionSystemDomain
     scalar chi_;
     scalar Cm_;
 
-    scalarField Vm1D_;
-    scalarField Iion1D_;
-    scalarField activationTime_;
+    scalarGlobalIOField Vm1D_;
+    scalarGlobalIOField Iion1D_;
+    scalarGlobalIOField activationTime_;
 
     autoPtr<ionicModel> ionicModelPtr_;
     autoPtr<graphVerificationModel> verificationModelPtr_;
@@ -120,6 +121,7 @@ public:
     static autoPtr<conductionSystemDomain> New
     (
         const fvMesh& mesh,
+        const word& domainName,
         const dictionary& dict,
         scalar initialDeltaT
     );
@@ -127,6 +129,7 @@ public:
     conductionSystemDomain
     (
         const fvMesh& mesh,
+        const word& domainName,
         const dictionary& dict,
         scalar initialDeltaT
     );

@@ -179,6 +179,7 @@ int main(int argc, char *argv[])
         conductionSystemDomain::New
         (
             mesh,
+            selectedDomainName,
             domainDict,
             runTime.deltaTValue()
         )
