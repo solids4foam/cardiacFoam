@@ -33,12 +33,15 @@ from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
 from .core.runtime.failure_context import build_failure_context
+from .core.runtime.remediation import build_candidate_remediations
+from .core.runtime.remediation_audit import append_remediation_record
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
+from .specs.apply_overrides import validate_overrides, apply_overrides, OverrideError
 from .strict_planning import strict_plan, _utility_produces_by_command
 from .core.runtime.run_document_exec import build_execution_inputs, load_run_document
 
@@ -91,7 +94,11 @@ def _attach_failure_context(payload: dict, state, step_id: str | None, *, tail_l
         return
     step_state = _step_state_by_id(state, step_id)
     if step_state.status == "failed":
-        payload["failure_context"] = build_failure_context(step_state, max_lines=tail_lines)
+        fc = build_failure_context(step_state, max_lines=tail_lines)
+        fc["candidate_remediations"] = [
+            hint.to_json() for hint in build_candidate_remediations(fc)
+        ]
+        payload["failure_context"] = fc
 
 
 def _execute_step(
@@ -104,6 +111,7 @@ def _execute_step(
     output_dir: Path,
     expected_artifacts,
     tail_lines: int,
+    apply_overrides_path: str | None = None,
 ) -> int:
     """Run one workflow step, print the JSON payload, return the exit code.
 
@@ -124,6 +132,20 @@ def _execute_step(
                 "workflow_state_path": str(state_path),
             }, indent=2))
             return 1
+    overrides = None
+    if apply_overrides_path is not None:
+        try:
+            overrides = json.loads(Path(apply_overrides_path).read_text())
+            validate_overrides(overrides)
+            apply_overrides(overrides, case_root=case_root)
+        except (OSError, ValueError, OverrideError) as exc:
+            print(json.dumps({
+                "status": "failed",
+                "entry": entry_label,
+                "step": step_id,
+                "error": f"--apply rejected: {exc}",
+            }, indent=2))
+            return 1
     try:
         result = run_workflow_step(
             workflow_dag,
@@ -135,6 +157,15 @@ def _execute_step(
             expected_artifacts=expected_artifacts,
         )
     except Exception as exc:
+        if overrides is not None:
+            try:
+                _attempt = _step_state_by_id(workflow_state, step_id).attempt
+            except Exception:
+                _attempt = 0
+            append_remediation_record(
+                output_dir, step_id=step_id, attempt=_attempt,
+                applied_overrides=overrides, resulting_status="rerun_error",
+            )
         print(json.dumps({
             "status": "failed",
             "entry": entry_label,
@@ -156,6 +187,14 @@ def _execute_step(
         stderr_log=result.stderr_log,
     )
     _attach_failure_context(payload, result.state, step_id, tail_lines=tail_lines)
+    if overrides is not None:
+        append_remediation_record(
+            output_dir,
+            step_id=step_id,
+            attempt=step_state.attempt,
+            applied_overrides=overrides,
+            resulting_status=status,
+        )
     print(json.dumps(payload, indent=2))
     return 0 if status == "ok" else 1
 
@@ -273,6 +312,7 @@ def _run_document_dispatch(args) -> int:
             output_dir=inputs.output_dir,
             expected_artifacts=inputs.expected_artifacts,
             tail_lines=args.tail_lines,
+            apply_overrides_path=args.apply,
         )
     return _execute_run(
         entry_label=run_doc.name,
@@ -333,6 +373,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=200,
         help="For action=step/run --strict, number of log lines to include in failure_context (default 200).",
+    )
+    parser.add_argument(
+        "--apply",
+        metavar="OVERRIDES_JSON",
+        help="action=step only: apply an override set (JSON list of "
+             "{driver_path, value}) to the case, then rerun the step.",
     )
     parser.add_argument(
         "--continue-on-error",
@@ -423,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--strict is only valid with action=plan, action=step, or action=run")
     if args.action != "step" and args.step:
         parser.error("--step is only valid with action=step")
+    if args.apply is not None and args.action != "step":
+        parser.error("--apply is only valid with action=step")
     if args.action not in {"step", "run"} and args.tail_lines != 200:
         parser.error("--tail-lines is only valid with action=step or action=run")
     if args.run_document and args.action not in {"run", "step"}:
@@ -499,6 +547,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=Path(report.launch["output_dir"]),
             expected_artifacts=report.expected_artifacts,
             tail_lines=args.tail_lines,
+            apply_overrides_path=args.apply,
         )
 
     if args.action == "run":

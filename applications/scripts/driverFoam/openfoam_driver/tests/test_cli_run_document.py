@@ -183,3 +183,34 @@ def test_run_document_only_valid_for_run_and_step() -> None:
             assert exc.code == 2
             return
         raise AssertionError("expected SystemExit for --run-document with describe")
+
+
+def test_step_via_run_document_apply_mutates_reruns_and_audits() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        case_root = _write_case(
+            tutorials_root,
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nexit 0\n",
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
+        )
+        (case_root / "system" / "controlDict").write_text("deltaT    0.001;\nendTime    1;\n")
+        doc_path = tutorials_root / "run.json"
+        _plan_to_file(tutorials_root, doc_path)
+        good = tutorials_root / "ov.json"
+        good.write_text('[{"driver_path": "deltaT", "value": "0.0005"}]')
+
+        out = StringIO()
+        with redirect_stdout(out):
+            code = main([
+                "step", "--run-document", str(doc_path), "--step", "run",
+                "--apply", str(good),
+            ])
+
+        payload = json.loads(out.getvalue())
+        assert code == 0, payload
+        assert payload["status"] == "ok"
+        assert "0.0005" in (case_root / "system" / "controlDict").read_text()
+        output_dir = Path(payload["workflow_state_path"]).parent
+        rec = json.loads((output_dir / "remediation_history.jsonl").read_text().splitlines()[0])
+        assert rec["applied_overrides"][0]["driver_path"] == "deltaT"
+        assert rec["resulting_status"] == "ok"

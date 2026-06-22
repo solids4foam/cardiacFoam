@@ -112,3 +112,25 @@ def test_midfile_seek_drops_partial_leading_line(tmp_path):
     # The seek lands mid-"B"; the partial "BB" fragment must be dropped.
     assert ctx["stdout_tail"] == "CCCCCCCCCC\nDDDDDDDDDD"
     assert ctx["stdout_truncated"] is True
+
+
+def test_attach_failure_context_includes_candidate_remediations(tmp_path):
+    from openfoam_driver import cli
+    from openfoam_driver.core.runtime.workflow_state import WorkflowStepState, WorkflowRunState
+
+    step = WorkflowStepState(
+        step_id="solve", status="failed", attempt=1, command="cardiacFoam",
+        args=(), cwd=str(tmp_path), exit_code=1,
+        stdout_log=None, stderr_log=None,
+        diagnostics=({"level": "error", "code": "missing_artifacts",
+                      "message": "x", "field": "solve"},),
+    )
+    state = WorkflowRunState(status="failed", current_step_id="solve",
+                             completed_steps=(), failed_step_id="solve", steps=(step,))
+    payload: dict = {}
+    cli._attach_failure_context(payload, state, "solve", tail_lines=50)
+
+    assert "failure_context" in payload
+    cr = payload["failure_context"]["candidate_remediations"]
+    assert cr and cr[0]["diagnostic_code"] == "missing_artifacts"
+    assert cr[0]["source"] == "static"

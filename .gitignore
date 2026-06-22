@@ -65,10 +65,8 @@ darwin*Gcc*/
 darwin*Clang*/
 linux*Gcc*/
 linux*Icc*/
-darwin*Gcc*/
 darwin*Intel*/
 darwin*Arm*/
-darwin*Clang*/
 linuxming*/
 SiCortex*Gcc*/
 solaris*Gcc*/
@@ -78,16 +76,29 @@ SunOS*Gcc*/
 /*.html
 
 # patch residue
-*.orig
 *.rej
 
-# python-compile
+# C++ Tooling & IDEs
+compile_commands.json
+.vscode/
+.idea/
+
+# python-compile & environments
 *.pyc
+__pycache__/
+venv/
+.venv/
+env/
 
 # other stuff
 .build
 .hgignore
 .timeStamp
+.trash/
+
+# logs and outputs
+*.log
+outputs/
 
 # source packages - anywhere
 *.tar.bz2
@@ -115,9 +126,6 @@ docs/superpowers/
 **/setup*/explicit_only_config.json
 **/setup*/run_config.json
 
-# Python bytecode caches
-__pycache__/
-
 # OpenFOAM run artifacts under all tutorials
 tutorials/**/log.*
 tutorials/**/processor*/
@@ -134,8 +142,6 @@ tutorials/manufacturedSolutions/*/0/
 tutorials/**/0/electro/
 
 # Large mesh / field exports under tutorials — git cannot handle these
-tutorials/**/*.vtu
-tutorials/**/*.vtk
 tutorials/**/*.vtp
 tutorials/**/*.vtm
 tutorials/**/*.pvd
@@ -145,6 +151,9 @@ tutorials/**/*.mp4
 tutorials/**/*.mov
 tutorials/**/*.gif
 tutorials/**/data/
+
+# Media under tutorials
+tutorials/**/media
 
 # PATHOS disease cases carry heart-mesh-resolution initial fields (e.g.
 # 0/conductivity, hundreds of MB) — exclude the generated 0/ field dirs.

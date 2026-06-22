@@ -170,6 +170,21 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
+        id="manufacturedPurkinjeGraph",
+        title="Manufactured solution (Purkinje graph)",
+        summary=(
+            "Manufactured monodomain solution on a 1D Purkinje graph coupled "
+            "to a 3D domain. Traces mesh refinement convergence on the "
+            "Hines-ordered network."
+        ),
+        thumbnail="/tutorials/manufactured-purkinje-graph.png",
+        tags=("manufactured-solution", "verification", "purkinje", "1D-3D"),
+        preset={
+            "anatomy.mesh": "purkinje-graph",
+            "physics.ionic_model": "monodomainFDAManufactured",
+        },
+    ),
+    TutorialDisplay(
         id="restitutionCurves",
         title="Restitution curves (S1–S2 protocol)",
         summary=(

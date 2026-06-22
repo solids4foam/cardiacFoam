@@ -112,6 +112,9 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
     ".purkinjeGraphModelCoeffs.tissue",
+    # pvjKernel selects the PVJ spatial-spreading kernel (uniform / ...) via a
+    # plain lookupOrDefault<word> in pvjCoupler.C, not a runtime table.
+    "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjKernel",
     # The user-facing `myocardiumSolver` value is a UNION of the
     # `electroModel` RTST and the `myocardiumSolver` RTST, plus the
     # eikonalMyocardiumDomain factory — no single base to check against.
@@ -157,6 +160,11 @@ INTERNAL_RTST_ALLOWLIST: frozenset[str] = frozenset({
     # Like ecgVerificationModel, there is no catalogue type selector for this yet.
     "electromechanicalVerificationModel",
     "eikonalVerificationModel",
+    # Coupling- and graph-side manufactured verifiers (1D-3D Purkinje work).
+    # Like the other *VerificationModel hierarchies, selected via the
+    # verificationModel subdict, not a dedicated catalogue type enum.
+    "couplingVerificationModel",
+    "graphVerificationModel",
 })
 
 

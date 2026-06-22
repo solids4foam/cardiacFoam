@@ -206,6 +206,31 @@ read `failure_context` → edit the case dict (e.g. via `build_electro_propertie
 or `mutators.py`) → `step --strict --step <id>` reruns the failed step (the
 `attempt` counter increments).
 
+To shorten that loop, `failure_context` also carries a
+`candidate_remediations` array — **suggestions only**, the driver never applies
+them. Each entry has `diagnostic_code`, `driver_path`, `change` (a human-readable
+transform such as `"halve"`, descriptive — never executed by the driver),
+`rationale`, `source` (`"static"` | `"log_signature"`), and `confidence`. A hint
+with an empty `driver_path` is advisory (no mutation). The ladder is deterministic
+first: static diagnostic-code hints win; the log-signature layer (e.g. divergence →
+halve `deltaT`) fires only when there is no structured diagnostic code at all.
+
+To apply a chosen fix mechanically, write an overrides file
+(`[{"driver_path": "...", "value": "..."}]`) and run:
+
+```
+foamctl step --strict --step <id> --apply overrides.json
+```
+
+This validates each override for *applyability*, applies it via the dict mutators
+(resolving `$ELECTRO_MODEL_COEFFS.*` to the case's solver-specific coeffs block),
+reruns the step (`attempt++`), and appends one record to `remediation_history.jsonl`
+under the output directory. Only **applyable** keys are accepted: `controlDict`
+leaves (`deltaT`, `endTime`, …) and `$ELECTRO_MODEL_COEFFS.*` entries (flat or
+nested), excluding `dynamic_path`/placeholder (`<...>`) keys. Catalog-addressability
+alone is not enough, and `fvSolution`-level fixes are not yet supported. Invalid
+overrides are rejected **before** any mutation or rerun.
+
 Legacy engine runs already write `artifacts_realized.json` at terminal status.
 After such a run reaches a terminal status, agents should compare predicted
 artifacts to on-disk reality:
