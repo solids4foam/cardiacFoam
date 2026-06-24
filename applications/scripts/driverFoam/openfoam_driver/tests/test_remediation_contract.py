@@ -31,7 +31,7 @@ def _all_hints() -> list[RemediationHint]:
         hints.extend(group)
     # Include log-layer hints by driving them with a synthetic context.
     hints.extend(interpret_log_signatures({"diagnostics": [], "stdout_tail": "",
-                                           "stderr_tail": "FOAM FATAL ERROR"}))
+                                           "stderr_tail": "nan"}))
     return hints
 
 

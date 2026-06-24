@@ -101,7 +101,6 @@ def _static_hints(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...
 # against the combined log tails. Multi-word markers use substring match; short markers
 # are matched as whole tokens to avoid false positives (e.g. "nan" inside "meaning").
 _DIVERGENCE_SUBSTRINGS: tuple[str, ...] = (
-    "foam fatal error",
     "maximum number of iterations",
     "singularity",
     "floating point exception",
@@ -128,7 +127,7 @@ def _has_divergence_signature(failure_context: dict[str, Any]) -> bool:
     ).lower()
     if any(sig in blob for sig in _DIVERGENCE_SUBSTRINGS):
         return True
-    return bool(_DIVERGENCE_TOKENS & set(re.findall(r"[a-z]+", blob)))
+    return bool(_DIVERGENCE_TOKENS & set(re.findall(r"\w+", blob)))
 
 
 def interpret_log_signatures(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...]:
