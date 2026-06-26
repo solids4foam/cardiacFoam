@@ -151,7 +151,7 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
         CONSTANTS[uSo] = (tissueFlag == 2) ? 0.6 : 0.65;
 
         CONSTANTS[tauS1] = 2.7342;
-        CONSTANTS[tauS2] = (tissueFlag == 1) ? 16 : (tissueFlag == 2) ? 4 : 2;
+        CONSTANTS[tauS2] = (tissueFlag == 1) ? 2 : (tissueFlag == 2) ? 4 : 16;
         CONSTANTS[kS] = 2.0994;
         CONSTANTS[uS] = 0.9087;
 
