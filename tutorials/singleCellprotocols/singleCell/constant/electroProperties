@@ -20,8 +20,8 @@ singleCellSolverCoeffs
 
     // Cell model selection
 
-    ionicModel    BuenoOrovio;
-    tissue        mCells;
+    ionicModel    TWorld;
+    tissue        endocardialCells;
 
 
     // Time integration settings
@@ -38,7 +38,7 @@ singleCellSolverCoeffs
     {
         stim_start      20;
         stim_duration   1;
-        stim_amplitude  0.4;
+        stim_amplitude  60;
         stim_period_S1  1000;
         nstim1          2;
         stim_period_S2  0;
@@ -64,5 +64,5 @@ singleCellSolverCoeffs
         }
     }
 
-    activeTensionModel GoktepeKuhl;
+    activeTensionModel LandNiederer;
 }
