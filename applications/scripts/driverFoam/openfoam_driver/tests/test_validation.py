@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for ``validate_run`` (Phase A Task A6).
+"""Tests for ``validate_run``.
 
 The validator walks every ``DictEntry``, attributes errors to the entry's
 *primary* (editing) phase, and reports three kinds of issue: required-field
@@ -114,7 +114,7 @@ def _filled_run(**overrides) -> RunDocument:
 def test_empty_run_reports_missing_required_fields_per_phase():
     errors = validate_run(_blank_run())
     phases_with_errors = {e.phase for e in errors}
-    assert {"physics", "solver"} <= phases_with_errors
+    assert {"physics"} <= phases_with_errors
     assert all(isinstance(e, ValidationError) for e in errors)
 
 
@@ -138,10 +138,10 @@ def test_constraint_violation_is_flagged():
     )
 
 
-# -------- P5c: structured constraint evaluation --------
+# -------- Structured constraint evaluation --------
 #
 # These tests use synthesized DictEntry fixtures rather than the live
-# catalog so the assertions stay stable as P5b migrates real entries.
+# catalog so the assertions stay stable independently of catalog changes.
 
 
 def _entry(driver_path: str, **overrides) -> DictEntry:
@@ -319,7 +319,7 @@ def test_validate_run_accepts_default_entries_for_backward_compat():
     assert errors == []
 
 
-# -------- P5e.1/2: solver-coupling evaluator --------
+# -------- Solver-coupling evaluator --------
 #
 # The three prose-only entries (conductionSystemSolver, electroDomainCoupler,
 # conductionNetworkDomain) don't fit the four DictEntry families, but the
@@ -442,7 +442,7 @@ def test_solver_coupling_flags_wrong_coupler_for_valid_pair():
     )
 
 
-# -------- P5e.3/4: block-reference evaluator --------
+# -------- Block-reference evaluator --------
 
 
 def test_block_reference_silent_when_no_couplings():

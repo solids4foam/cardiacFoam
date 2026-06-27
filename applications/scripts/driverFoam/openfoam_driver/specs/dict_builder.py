@@ -32,8 +32,7 @@ text from selectors + overrides. The pipeline reuses the existing dict-entry
 catalog (`dict_entries.py`), the structured-constraint validator
 (`validation.py`), and the path conventions encoded in `slot_key`.
 
-Convergence (plan §9.1): no new catalog, no new validator. The builder
-composes existing primitives. Every output passes through `validate_run`
+The builder composes existing primitives. Every output passes through `validate_run`
 before being returned; an agent that gets a string back is guaranteed it
 is validator-clean.
 """
@@ -58,9 +57,30 @@ from openfoam_driver.specs.validation import (
 
 
 def _all_electro_entries() -> list[DictEntry]:
+    ordered_keys = [
+        "top_level",
+        "common_model_coeffs",
+        "monodomain",
+        "bidomain",
+        "bath_potential_domain",
+        "eikonal_diffusion",
+        "ionic_heterogeneity",
+        "ionic_constant_overrides",
+        "batched_integrator",
+        "active_tension",
+        "ode_solver_passthrough",
+        "single_cell_stimulus",
+        "conduction_system",
+        "domain_couplings",
+        "ecg"
+    ]
     out: list[DictEntry] = []
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
-        out.extend(group)
+    for k in ordered_keys:
+        if k in ELECTRO_PROPERTY_ENTRY_GROUPS:
+            out.extend(ELECTRO_PROPERTY_ENTRY_GROUPS[k])
+    for k, group in ELECTRO_PROPERTY_ENTRY_GROUPS.items():
+        if k not in ordered_keys:
+            out.extend(group)
     return out
 
 
@@ -90,6 +110,11 @@ def _infer_virtual_presence(ctx: dict[str, Any]) -> None:
             if existing_key.startswith(prefix):
                 ctx[virtual_key] = True
                 break
+                
+    # Support OR logic for ionicHeterogeneity applicability
+    from openfoam_driver.dict_entries import HETEROGENEITY_MODELS
+    if ctx.get("myocardiumSolver") == "eikonalSolver" or ctx.get("ionicModel") in HETEROGENEITY_MODELS:
+        ctx["$ionicHeterogeneity_supported"] = True
 
 
 def resolve_context(
@@ -175,7 +200,7 @@ def check_required(
     `dynamic_path=True` entries are skipped — they describe template paths
     (e.g. ``domainCouplings.<name>.electroDomainCoupler``) rather than
     concrete required leaves. The user's overrides supply concrete paths
-    when those blocks are actually configured; the P5e validators catch
+    when those blocks are actually configured; the cross-block validators catch
     dangling references at run-construction time.
 
     The optional `context` enables `_is_required_in_context` to honour
@@ -214,8 +239,48 @@ def populate_values(
       3. Omit — caller's downstream `check_required` decides whether that's
          a problem for required entries.
     """
+    import re
     populated: dict[str, str] = {}
+    
+    dynamic_entries = []
     for entry in entries:
+        if getattr(entry, "dynamic_path", False):
+            template = slot_key(entry.driver_path)
+            pattern = re.escape(template).replace("<name>", r"([^\.]+)")
+            pattern = pattern.replace("<electrode>", r"([^\.]+)")
+            dynamic_entries.append((entry, template, re.compile(f"^{pattern}$")))
+
+    active_instances: dict[str, set[tuple[str, ...]]] = {}
+    for key, val in context.items():
+        if val in (None, ""):
+            continue
+        for entry, template, regex in dynamic_entries:
+            match = regex.match(key)
+            if match:
+                groups = match.groups()
+                prefix = template.split(".<")[0]
+                active_instances.setdefault(prefix, set()).add(groups)
+
+    for entry in entries:
+        if getattr(entry, "dynamic_path", False):
+            template = slot_key(entry.driver_path)
+            prefix = template.split(".<")[0]
+            if prefix in active_instances:
+                for groups in active_instances[prefix]:
+                    concrete_key = template
+                    if "<name>" in concrete_key and len(groups) > 0:
+                        concrete_key = concrete_key.replace("<name>", groups[0])
+                    if "<electrode>" in concrete_key and len(groups) > 1:
+                        concrete_key = concrete_key.replace("<electrode>", groups[-1])
+                    elif "<electrode>" in concrete_key and len(groups) == 1:
+                        concrete_key = concrete_key.replace("<electrode>", groups[0])
+                        
+                    if concrete_key in context and context[concrete_key] not in (None, ""):
+                        populated[concrete_key] = str(context[concrete_key])
+                    elif typical_value_fallback and entry.typical_value:
+                        populated[concrete_key] = entry.typical_value
+            continue
+
         key = slot_key(entry.driver_path)
         if key in context and context[key] not in (None, ""):
             populated[key] = str(context[key])
@@ -223,7 +288,6 @@ def populate_values(
         if typical_value_fallback and entry.typical_value:
             populated[key] = entry.typical_value
             continue
-        # Omit. Downstream check_required will flag if it was required.
     return populated
 
 
@@ -254,7 +318,7 @@ def _foamfile_preamble(object_name: str) -> str:
     )
 
 
-# Backwards-compat alias — pre-P9b callers and tests reference this name.
+# Backwards-compat alias — some callers and tests reference this name.
 _FOAMFILE_PREAMBLE = _foamfile_preamble("electroProperties")
 
 
@@ -364,7 +428,7 @@ _SELECTOR_KEYS: frozenset[str] = frozenset({"myocardiumSolver", "ionicModel", "t
 _COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
 
 
-def _set_nested(node: dict, path: list[str], value: str) -> None:
+def _set_nested(node: dict, path: list[str], value: Any) -> None:
     """Insert `value` at `path` inside the nested dict `node`, creating
     intermediate sub-dicts as needed. A leaf already present is
     overwritten — the populated dict has unique slot_keys so this is safe."""
@@ -391,9 +455,7 @@ def _serialize_block(tree: dict, indent: int) -> str:
         if isinstance(value, dict):
             lines.append(f"{pad}{key}")
             lines.append(f"{pad}{{")
-            inner = _serialize_block(value, indent + 4)
-            if inner:
-                lines.append(inner)
+            lines.append(_serialize_block(value, indent + 4))
             lines.append(f"{pad}}}")
         else:
             lines.append(f"{pad}{key} {value};")
@@ -411,18 +473,38 @@ def _serialize(
     `$ELECTRO_MODEL_COEFFS.` prefix) are emitted at the root. Everything
     else nests under the resolved `<solver>Coeffs` block.
     """
+    import re
     top_level: dict[str, str] = {}
     coeffs: dict = {}
+    
+    dynamic_patterns = []
     for entry in entries:
-        key = slot_key(entry.driver_path)
-        if key not in populated:
-            continue
-        value = populated[key]
-        if entry.driver_path.startswith(_COEFFS_PREFIX):
-            segments = entry.driver_path[len(_COEFFS_PREFIX):].split(".")
+        if getattr(entry, "dynamic_path", False):
+            template = slot_key(entry.driver_path)
+            pattern = re.escape(template).replace("<name>", r"([^\.]+)")
+            pattern = pattern.replace("<electrode>", r"([^\.]+)")
+            dynamic_patterns.append((entry, re.compile(f"^{pattern}$")))
+
+    for concrete_key, value in populated.items():
+        comment = ""
+        matched_entry = None
+        for entry in entries:
+            if not getattr(entry, "dynamic_path", False):
+                if slot_key(entry.driver_path) == concrete_key:
+                    matched_entry = entry
+                    break
+                    
+        if not matched_entry:
+            for entry, regex in dynamic_patterns:
+                if regex.match(concrete_key):
+                    matched_entry = entry
+                    break
+
+        if matched_entry and matched_entry.driver_path.startswith(_COEFFS_PREFIX):
+            segments = concrete_key.split(".")
             _set_nested(coeffs, segments, value)
         else:
-            top_level[entry.driver_path] = value
+            top_level[concrete_key] = value
 
     parts: list[str] = []
     for key, value in top_level.items():
@@ -624,6 +706,26 @@ def build_and_launch(
     constant_dir.mkdir(parents=True, exist_ok=True)
     electro_path.write_text(electro_text)
     physics_path.write_text(physics_text)
+    
+    system_dir = case_dir / "system"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    
+    from openfoam_driver.specs.system_templates import get_fv_schemes, get_fv_solution, build_control_dict
+    myocardium_solver = electro_selectors.get("myocardiumSolver", "monodomainSolver")
+    
+    fv_schemes_path = system_dir / "fvSchemes"
+    if not fv_schemes_path.exists() or overwrite:
+        fv_schemes_path.write_text(get_fv_schemes(myocardium_solver))
+        
+    fv_solution_path = system_dir / "fvSolution"
+    if not fv_solution_path.exists() or overwrite:
+        fv_solution_path.write_text(get_fv_solution(myocardium_solver))
+        
+    control_dict_path = system_dir / "controlDict"
+    if not control_dict_path.exists() or overwrite:
+        dt = delta_t if delta_t is not None else 1e-4
+        et = end_time if end_time is not None else 1.0
+        control_dict_path.write_text(build_control_dict(delta_t=dt, end_time=et))
 
     if delta_t is not None or end_time is not None:
         from openfoam_driver.core.runtime.mutators import update_control_dict

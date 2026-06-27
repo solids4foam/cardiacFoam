@@ -1,4 +1,4 @@
-"""CLI integration tests for the --run-document execution path (Task 5).
+"""CLI integration tests for the --run-document execution path.
 
 Proves the planning→execution loop: `plan --strict --entry` produces a
 RunDocument; `run --run-document <file>` executes that document. Uses a local

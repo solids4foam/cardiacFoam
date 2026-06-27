@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Post-run artifact reconciliation (plan §10, fidelity fixes 2026-05-21).
+"""Post-run artifact reconciliation.
 
 `reconcile_artifacts(case_root, predicted, *, case_id=None)` walks the
 predicted `DataArtifact` set and reports which expected paths exist on

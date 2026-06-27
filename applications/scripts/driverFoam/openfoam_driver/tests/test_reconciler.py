@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for the post-run artifact reconciler (plan §10).
+"""Tests for the post-run artifact reconciler.
 
 The reconciler walks a list of predicted `DataArtifact` objects and
 compares them against the on-disk state of `case_root`. Output is a

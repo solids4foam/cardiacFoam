@@ -1,4 +1,4 @@
-"""Command-boundary security tests (RunDocument execution plan, Task 2)."""
+"""Command-boundary security tests for RunDocument execution."""
 from __future__ import annotations
 
 import os

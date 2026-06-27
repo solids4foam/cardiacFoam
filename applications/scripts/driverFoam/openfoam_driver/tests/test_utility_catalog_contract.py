@@ -46,7 +46,6 @@ from openfoam_driver.utility_catalog import (
     ALLOWED_ARGUMENT_KINDS,
     MANIFEST_FILENAME,
     UTILITY_CATALOG,
-    UtilityFlag,
     UtilityManifest,
     ProducesEntry,
     load_utility_manifests,

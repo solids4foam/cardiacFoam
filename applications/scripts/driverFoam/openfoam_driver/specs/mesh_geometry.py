@@ -6,6 +6,8 @@
 #     Non-mutating, plan-time detection of mesh point scale. Reads polyMesh
 #     point bounding boxes directly (ASCII/binary/gz) so the strict planner can
 #     flag non-SI meshes and coupled-region scale mismatches before any compute.
+#     Also checks purkinjeGraph dictionary files in constant/ using the same
+#     bounding-box approach (the Purkinje tree spans the biventricular domain).
 #     The rescaling *write* is delegated to the checkMeshGeometry utility.
 #
 # Author
@@ -82,6 +84,9 @@ _COUNT_RE = re.compile(rb"(\d+)\s*\(")
 _ASCII_TRIPLE_RE = re.compile(
     r"\(\s*([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s*\)"
 )
+# Matches the top-level `points` section in a Foam dictionary (e.g. purkinjeGraph).
+# \b prevents matching `pointFields` or `endpointNodes`.
+_GRAPH_POINTS_RE = re.compile(rb"\bpoints\b\s+(\d+)\s*\(")
 
 
 def _bbox_from_flat(coords) -> BoundingBox:
@@ -142,6 +147,52 @@ def read_bounding_box(points_path: Path) -> BoundingBox:
         raise MeshParseError("no ASCII points parsed")
     coords = [float(v) for triple in triples for v in triple]
     return _bbox_from_flat(coords)
+
+
+def read_purkinje_graph_bbox(graph_path: Path) -> BoundingBox:
+    """Return the bounding box of the points section in a purkinjeGraph dict.
+
+    purkinjeGraph is a Foam dictionary (not a standalone field file), so we
+    locate the ``points`` keyword explicitly rather than reusing
+    read_bounding_box, which would land on the earlier ``pvjNodes`` integer
+    list and find no coordinate triples.
+    """
+    data = graph_path.read_bytes()
+    if data[:2] == b"\x1f\x8b":
+        data = gzip.decompress(data)
+
+    m = _GRAPH_POINTS_RE.search(data)
+    if not m:
+        raise MeshParseError(
+            f"could not locate 'points' section in {graph_path.name}"
+        )
+    count = int(m.group(1))
+    if count == 0:
+        raise MeshParseError(f"{graph_path.name} declares zero graph points")
+
+    text = data[m.end():].decode("latin-1")
+    triples = _ASCII_TRIPLE_RE.findall(text)
+    if not triples:
+        raise MeshParseError(f"no coordinate triples found after 'points' in {graph_path.name}")
+
+    coords = [float(v) for triple in triples for v in triple]
+    return _bbox_from_flat(coords)
+
+
+def discover_purkinje_graphs(case_root: Path) -> list[Path]:
+    """Find all purkinjeGraph* dictionary files under constant/.
+
+    Returns plain files (not directories) whose names start with
+    ``purkinjeGraph``.  Typical examples: ``purkinjeGraph``,
+    ``purkinjeGraphScar``.
+    """
+    constant = case_root / "constant"
+    if not constant.is_dir():
+        return []
+    return sorted(
+        p for p in constant.iterdir()
+        if p.is_file() and p.name.startswith("purkinjeGraph")
+    )
 
 
 @dataclass(frozen=True)
@@ -274,6 +325,40 @@ def mesh_geometry_diagnostics(
                     f"they may not share a coordinate frame (advisory: coupling "
                     f"is assumed, not derived from domainCouplings).",
                     other,
+                ))
+
+    # Purkinje graph checks — same classify_scale logic, cross-checked against
+    # the default mesh region when available.
+    mesh_scale = parsed.get("")
+    for graph_path in discover_purkinje_graphs(case_root):
+        name = graph_path.name
+        try:
+            gbbox = read_purkinje_graph_bbox(graph_path)
+        except (MeshParseError, OSError) as exc:
+            diagnostics.append(MeshDiagnostic(
+                "warning", "graph_scale_not_checked",
+                f"Could not parse points from '{name}': {exc}. "
+                f"Verify that the graph was generated in SI metres.",
+                name,
+            ))
+            continue
+        gscale = classify_scale(gbbox.max_dim)
+        if gscale.unit != "m":
+            diagnostics.append(MeshDiagnostic(
+                "error", "graph_not_si",
+                f"'{name}' max dimension {gbbox.max_dim:g} suggests "
+                f"{gscale.unit}, not metres. Regenerate the Purkinje tree "
+                f"after rescaling the mesh with 'checkMeshGeometry -rescale'.",
+                name,
+            ))
+        if mesh_scale is not None:
+            _, mscale = mesh_scale
+            if gscale.unit != mscale.unit:
+                diagnostics.append(MeshDiagnostic(
+                    "error", "graph_mesh_scale_mismatch",
+                    f"'{name}' is in {gscale.unit} but the mesh is in "
+                    f"{mscale.unit}. Rescale both to SI metres before running.",
+                    name,
                 ))
 
     return tuple(diagnostics)

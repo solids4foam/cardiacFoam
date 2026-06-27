@@ -175,7 +175,7 @@ class TestRecommendedExportsExpanded(unittest.TestCase):
 
 
 class TestRecommendedExportsExpansion(unittest.TestCase):
-    """Plan §11.3: full ionic models must advertise at least
+    """Full ionic models must advertise at least
     voltage + calcium + 3 main currents in recommended_exports — the agent
     fallback path (when no outputVariables.ionic.export is declared) uses
     this list, so a minimal 2-variable default is uninformative.

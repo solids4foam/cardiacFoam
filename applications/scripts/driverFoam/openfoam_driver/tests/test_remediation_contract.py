@@ -1,6 +1,5 @@
 from openfoam_driver.core.runtime.remediation import (
     STATIC_REMEDIATION_HINTS,
-    interpret_log_signatures,
     RemediationHint,
 )
 from openfoam_driver.dict_entries import (
@@ -29,9 +28,6 @@ def _all_hints() -> list[RemediationHint]:
     hints: list[RemediationHint] = []
     for group in STATIC_REMEDIATION_HINTS.values():
         hints.extend(group)
-    # Include log-layer hints by driving them with a synthetic context.
-    hints.extend(interpret_log_signatures({"diagnostics": [], "stdout_tail": "",
-                                           "stderr_tail": "nan"}))
     return hints
 
 

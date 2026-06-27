@@ -212,11 +212,13 @@ def _run_case(
     if run_in_parallel:
         command.append("--parallel")
 
-    subprocess.run(
-        command,
-        check=True,
-    )
-    _archive_case_logs(case_root, case)
+    try:
+        subprocess.run(
+            command,
+            check=True,
+        )
+    finally:
+        _archive_case_logs(case_root, case)
     _stage_case_output(case_root, case, run_in_parallel=run_in_parallel)
     _stage_case_ecg_outputs(case_root, case, run_in_parallel=run_in_parallel)
 

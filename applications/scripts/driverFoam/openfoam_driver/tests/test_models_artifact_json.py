@@ -1,4 +1,4 @@
-"""Tests for data_artifact_from_json (RunDocument execution plan, Task 1)."""
+"""Tests for data_artifact_from_json."""
 from __future__ import annotations
 
 import unittest

@@ -1,4 +1,4 @@
-"""Environment preflight gate tests (preflight plan Task 1-3).
+"""Environment preflight gate tests.
 
 Every test overrides SKIP_ENV_DIAGNOSTICS (set suite-wide in conftest.py)
 and monkeypatches shutil.which / os.environ instead of touching the machine.

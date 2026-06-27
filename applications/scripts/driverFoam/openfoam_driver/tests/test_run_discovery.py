@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for run discovery (autonomous-agent completion plan Task 5).
+"""Tests for run discovery.
 
 `list_runs(root)` walks a directory and returns one parsed manifest dict
 per `run_manifest.json` found. Used by agents to inspect past runs

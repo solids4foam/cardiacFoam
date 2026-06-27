@@ -27,8 +27,7 @@
 
 """Audit test: ionic_model_catalog.py Role-A fields vs C++ Names.H enums.
 
-This test is the regression guard described in plan §11.2 (2026-05-19-driverfoam-
-agentic-integration.md).  It directly parses each model's ``*_Names.H`` with an
+This regression guard directly parses each model's ``*_Names.H`` with an
 inline regex, extracts the three enum bodies in declaration order, and asserts
 exact equality against the catalogue's ``states``, ``algebraic``, and
 ``constants`` tuples.

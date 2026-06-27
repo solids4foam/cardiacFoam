@@ -579,7 +579,7 @@ class TestDriverEngineManifestAtomicity(unittest.TestCase):
 
 
 class TestWorkflowDag(unittest.TestCase):
-    """workflow_dag field in run_manifest.json (plan §6)."""
+    """Tests for the workflow_dag field in run_manifest.json."""
 
     _EXAMPLE_DAG = {
         "steps": [

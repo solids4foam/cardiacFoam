@@ -19,7 +19,7 @@
 #     test_retry_policy_normalization
 #
 # Description
-#     retry_policy normalization tests (retry plan Task 1).
+#     retry_policy normalization tests.
 #
 # Author
 #     Simao Nieto de Castro, UCD.

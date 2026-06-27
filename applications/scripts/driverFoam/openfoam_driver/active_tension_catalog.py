@@ -34,6 +34,15 @@ agent can plan active-tension output without running the solver.
 
 All variable names are extracted from C++ source files and are guaranteed to be
 exact.
+
+The ``constants`` field lists only the *user-facing*, dict-overridable parameters.
+Constants that a model *derives* from these at ``initConsts`` (e.g. the
+Land-Niederer transition rates ``AC_k_uw``/``AC_k_ws``/``AC_k_wu``/``AC_k_su``,
+``AC_cds``/``AC_cdw``, ``AC_ktm_block``, ``AC_A``, ``AC_XSSS``, ``AC_XWSS``,
+``AC_fPKA_TnI``, ``AC_PKAForceMultiplier``) are intentionally omitted: overriding
+them has no effect because the solver recomputes them from their inputs. An agent
+may still *reason about* such derived values, but to change one it must override
+the user-facing constant(s) it derives from.
 """
 
 from __future__ import annotations
@@ -107,6 +116,64 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         recommended_exports=("Ta",),
         description="Nash-Panfilov active tension model (2004) - GPU batched implementation.",
         aliases=("Nash-Panfilov GPU",),
+    ),
+    "LandNiederer": ActiveTensionModelEntry(
+        states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        algebraic=(
+            "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
+            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_Ta",
+            "AV_d_Ca_TRPN", "AV_Cai", "AV_lambda", "AV_lambda_rate", "AV_Lfac",
+            "AV_ca50",
+        ),
+        # 21 user-facing (dict-overridable) parameters; 12 further derived
+        # constants (AC_A, AC_XSSS, AC_XWSS, AC_fPKA_TnI, AC_k_uw, AC_k_ws,
+        # AC_k_wu, AC_k_su, AC_cds, AC_cdw, AC_ktm_block, AC_PKAForceMultiplier)
+        # are computed in initConsts and are not set via the case dict.
+        constants=(
+            "AC_TOT_A", "AC_TRPN_n", "AC_Tref", "AC_beta_0", "AC_beta_1", "AC_dr",
+            "AC_fracTnIpo", "AC_contraction_gamma", "AC_gamma_wu", "AC_koff",
+            "AC_ktm_unblock", "AC_lambda_max", "AC_lambda_min", "AC_mu", "AC_nperm",
+            "AC_nu", "AC_perm50", "AC_phi", "AC_wfrac", "AC_fMyBPC_PKA", "AC_fTnI_PKA",
+        ),
+        rates=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        recommended_exports=("Ta",),
+        description=(
+            "Land-Niederer myofilament contraction model (2017): 6-state "
+            "crossbridge/tropomyosin system driven by intracellular Ca and "
+            "sarcomere stretch."
+        ),
+        notes=(
+            "Length- and velocity-dependent active tension (Frank-Starling); "
+            "requires AV_Cai, AV_lambda, AV_lambda_rate to be supplied by the "
+            "caller. Dict also accepts 'preconditioningTime' (default 1000 ms)."
+        ),
+        aliases=("Land-Niederer", "Land2017"),
+    ),
+    "LandNiedererBatched": ActiveTensionModelEntry(
+        states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        algebraic=(
+            "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
+            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_Ta",
+            "AV_d_Ca_TRPN", "AV_Cai", "AV_lambda", "AV_lambda_rate", "AV_Lfac",
+            "AV_ca50",
+        ),
+        constants=(
+            "AC_TOT_A", "AC_TRPN_n", "AC_Tref", "AC_beta_0", "AC_beta_1", "AC_dr",
+            "AC_fracTnIpo", "AC_contraction_gamma", "AC_gamma_wu", "AC_koff",
+            "AC_ktm_unblock", "AC_lambda_max", "AC_lambda_min", "AC_mu", "AC_nperm",
+            "AC_nu", "AC_perm50", "AC_phi", "AC_wfrac", "AC_fMyBPC_PKA", "AC_fTnI_PKA",
+        ),
+        rates=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        recommended_exports=("Ta",),
+        description=(
+            "Land-Niederer myofilament contraction model (2017) - GPU batched "
+            "implementation."
+        ),
+        notes=(
+            "GPU batched variant of LandNiederer; same states/constants. Dict "
+            "also accepts 'preconditioningTime' (default 1000 ms)."
+        ),
+        aliases=("Land-Niederer GPU", "Land2017 GPU"),
     ),
 }
 

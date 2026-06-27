@@ -33,14 +33,13 @@ The validator reports three kinds of issue:
    must have a value in the Run document slice owned by its *primary* phase.
 2. **Enum violations.** Entries with ``value_kind="enum"`` whose value is not
    one of the declared ``enum_values``.
-3. **Structured constraints (P5c/P5b).** Each ``DictEntry`` may declare
+3. **Structured constraints.** Each ``DictEntry`` may declare
    ``applicable_when``, ``forbidden_when``, ``required_when``, and
    ``mutually_exclusive_with``. The validator evaluates these against a
-   flattened view of the run config; rule families and semantics are
-   documented in plan §5.1. The legacy hardcoded ``eikonalSolver``/
-   ``ionicModel`` cross-field check was removed in P5b — the
-   ``ionicModel`` entry now carries ``forbidden_when={"myocardiumSolver":
-   "eikonalSolver"}`` which is evaluated programmatically here.
+   flattened view of the run config. The legacy hardcoded ``eikonalSolver``/
+   ``ionicModel`` cross-field check is now encoded as
+   ``forbidden_when={"myocardiumSolver": "eikonalSolver"}`` on the
+   ``ionicModel`` entry and evaluated programmatically here.
 
 The *primary* phase is the first phase in workflow order
 (``anatomy → physics → stimulus → solver``) that the entry claims.
@@ -276,18 +275,16 @@ def validate_run(
                 level="error",
             ))
 
-    # 3) Structured constraints (P5c/P5b).
-    # (Legacy hardcoded eikonalSolver+ionicModel check removed in P5b — the
-    # ionicModel entry now carries forbidden_when={"myocardiumSolver": "eikonalSolver"}
+    # 3) Structured constraints.
+    # (The ionicModel entry carries forbidden_when={"myocardiumSolver": "eikonalSolver"}
     # which the section below evaluates programmatically.)
     errors.extend(_evaluate_structured(entry_list, context))
 
-    # 4) Solver-coupling consistency (P5e). Closes the
-    # conductionSystemSolver / electroDomainCoupler gap that the four-family
-    # structured constraints could not express (cross-domain pairing).
+    # 4) Solver-coupling consistency. Validates the
+    # conductionSystemSolver / electroDomainCoupler pairing (cross-domain).
     errors.extend(_evaluate_solver_coupling(context))
 
-    # 5) Block-reference integrity (P5e). Closes the
+    # 5) Block-reference integrity. Validates the
     # domainCouplings.<name>.conductionNetworkDomain gap (referential
     # integrity to a sibling block).
     errors.extend(_evaluate_block_references(context))
@@ -361,9 +358,9 @@ def _evaluate_structured(
     return errors
 
 
-# -------- P5e: Cross-block and pairing validators --------
+# -------- Cross-block and pairing validators --------
 #
-# The three constraints listed in plan §5 as prose-only
+# The three cross-domain constraints
 # (conductionSystemSolver, electroDomainCoupler, conductionNetworkDomain)
 # share two non-DictEntry features:
 #   1. their predicates need a wildcard scan over slot_keys with dynamic
@@ -387,7 +384,7 @@ def _is_template_slot_key(key: str) -> bool:
     """Slot keys carrying an un-substituted dynamic-path placeholder
     (e.g. ``domainCouplings.<name>.conductionNetworkDomain``) are template
     forms that ``_filled_run`` synthesises for required-field coverage but
-    do not represent a real run-time coupling. Both P5e evaluators skip
+    do not represent a real run-time coupling. Both cross-block evaluators skip
     them so they do not generate false-positive dangling-reference or
     coupler-mismatch errors on stub-filled fixtures."""
     return "<" in key or ">" in key
@@ -494,6 +491,8 @@ def _evaluate_solver_coupling(context: dict[str, Any]) -> list[ValidationError]:
                         ),
                         level="error",
                     ))
+        
+        break
 
     return errors
 
@@ -552,16 +551,22 @@ def _evaluate_block_references(
 # solver-coupling and block-reference evaluators above.
 
 _HETEROGENEITY_PREFIX = "ionicHeterogeneity."
+_APEX_BASE_PREFIX = "ionicHeterogeneity.apexBaseBands."
 
 
 def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
     """Validate an ``ionicHeterogeneity`` block when one is present.
 
     Fires only when at least one ``ionicHeterogeneity.*`` slot is set, so
-    runs without heterogeneity are unaffected. Two rules:
+    runs without heterogeneity are unaffected. Rules:
 
-    1. The selected ``ionicModel`` must support transmural heterogeneity.
+    1. The selected ``ionicModel`` must support transmural heterogeneity
+       when transmural keys are set.
     2. ``endoMInterface`` must be strictly less than ``mEpiInterface``.
+    3. The selected ``ionicModel`` must support apexBaseBands heterogeneity
+       when any ``apexBaseBands.*`` key is set.
+    4. ``beta`` must be > 0.
+    5. ``scalingMin`` must be > 0 and <= ``scalingMax``.
     """
     errors: list[ValidationError] = []
     het_keys = [k for k in context if k.startswith(_HETEROGENEITY_PREFIX)]
@@ -570,21 +575,24 @@ def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
 
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
 
+    transmural_keys = [k for k in het_keys if not k.startswith(_APEX_BASE_PREFIX)]
+    ab_keys = [k for k in het_keys if k.startswith(_APEX_BASE_PREFIX)]
+
     model = context.get("ionicModel")
-    if model is not None:
-        entry = IONIC_MODEL_CATALOG.get(model)
-        if entry is not None and not getattr(entry, "supports_heterogeneity", False):
-            errors.append(ValidationError(
-                phase="physics",
-                field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity",
-                message=(
-                    f"ionicHeterogeneity is configured but ionicModel "
-                    f"{model!r} does not support transmural heterogeneity. "
-                    f"Supported models: BuenoOrovio, TNNP, TWorld, "
-                    f"ToRORd_dynCl (and their compactBatched variants)."
-                ),
-                level="error",
-            ))
+    entry = IONIC_MODEL_CATALOG.get(model) if model is not None else None
+
+    if transmural_keys and entry is not None and not getattr(entry, "supports_heterogeneity", False):
+        errors.append(ValidationError(
+            phase="physics",
+            field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity",
+            message=(
+                f"ionicHeterogeneity is configured but ionicModel "
+                f"{model!r} does not support transmural heterogeneity. "
+                f"Supported models: BuenoOrovio, TNNP, TWorld, "
+                f"ToRORd_dynCl (and their compactBatched variants)."
+            ),
+            level="error",
+        ))
 
     endo = context.get("ionicHeterogeneity.endoMInterface")
     mepi = context.get("ionicHeterogeneity.mEpiInterface")
@@ -601,8 +609,62 @@ def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
                     level="error",
                 ))
         except (TypeError, ValueError):
-            # Non-numeric values are caught by value-kind handling elsewhere.
             pass
+
+    if ab_keys:
+        if entry is not None and not getattr(entry, "supports_apex_base_heterogeneity", False):
+            errors.append(ValidationError(
+                phase="physics",
+                field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands",
+                message=(
+                    f"ionicHeterogeneity.apexBaseBands is configured but ionicModel "
+                    f"{model!r} does not support apex-to-base heterogeneity. "
+                    f"Supported models: BuenoOrovio, TNNP, TWorld, "
+                    f"ToRORd_dynCl (and their compactBatched variants)."
+                ),
+                level="error",
+            ))
+
+        beta = context.get("ionicHeterogeneity.apexBaseBands.beta")
+        if beta is not None:
+            try:
+                if float(beta) <= 0:
+                    errors.append(ValidationError(
+                        phase="physics",
+                        field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.beta",
+                        message=f"apexBaseBands.beta ({beta}) must be > 0.",
+                        level="error",
+                    ))
+            except (TypeError, ValueError):
+                pass
+
+        scaling_min = context.get("ionicHeterogeneity.apexBaseBands.scalingMin")
+        scaling_max = context.get("ionicHeterogeneity.apexBaseBands.scalingMax")
+        if scaling_min is not None:
+            try:
+                if float(scaling_min) <= 0:
+                    errors.append(ValidationError(
+                        phase="physics",
+                        field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.scalingMin",
+                        message=f"apexBaseBands.scalingMin ({scaling_min}) must be > 0.",
+                        level="error",
+                    ))
+            except (TypeError, ValueError):
+                pass
+        if scaling_min is not None and scaling_max is not None:
+            try:
+                if float(scaling_min) > float(scaling_max):
+                    errors.append(ValidationError(
+                        phase="physics",
+                        field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.scalingMin",
+                        message=(
+                            f"apexBaseBands.scalingMin ({scaling_min}) must be <= "
+                            f"scalingMax ({scaling_max})."
+                        ),
+                        level="error",
+                    ))
+            except (TypeError, ValueError):
+                pass
 
     return errors
 

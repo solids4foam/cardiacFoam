@@ -41,13 +41,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from .active_tension_catalog import (
-    ACTIVE_TENSION_MODEL_CATALOG,
-    ActiveTensionModelEntry,
-    get_active_tension_entry,
-)
-
-
 @dataclass(frozen=True)
 class IonicModelEntry:
     """Metadata for a single ionic model."""
@@ -111,6 +104,11 @@ class IonicModelEntry:
     blend) via configureIonicHeterogeneity. Batched variants inherit this flag
     through dataclasses.replace()."""
 
+    supports_apex_base_heterogeneity: bool = False
+    """Whether the model implements apexBaseBands longitudinal heterogeneity
+    via configureApexBaseBandsHeterogeneity. Batched variants inherit this flag
+    through dataclasses.replace()."""
+
 
 # SOLVER_COMPATIBILITY_RULES moved to openfoam_driver/solver_coupling.py;
 # re-exported here for backward compatibility with consumers that imported
@@ -143,6 +141,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("u", "v", "w", "s"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
+        supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
         species=("generic",),
         cardiac_region=("ventricle",),
@@ -240,6 +239,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("membrane_V", "calcium_Cai", "i_Na", "i_CaL", "i_Kr", "i_Ks", "i_to", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
+        supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
         species=("human",),
         cardiac_region=("ventricle",),
@@ -257,6 +257,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("V", "Cass", "AV_INa_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_Ito_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
+        supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
         species=("human",),
         cardiac_region=("ventricle",),
@@ -290,6 +291,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         recommended_exports=("v", "cai", "contraction_Ca_TRPN", "AV_INa_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_Ito_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
+        supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
         species=("human",),
         cardiac_region=("ventricle",),

@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
@@ -183,8 +183,10 @@ def _run_case(
     if run_in_parallel:
         command.append("--parallel")
 
-    subprocess.run(command, check=True)
-    _archive_case_logs(case_root, case)
+    try:
+        subprocess.run(command, check=True)
+    finally:
+        _archive_case_logs(case_root, case)
     _stage_case_output(case_root, case, run_in_parallel=run_in_parallel)
 
 

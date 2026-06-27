@@ -52,7 +52,13 @@ SOLVER_COMPATIBILITY_RULES: Final[tuple[dict, ...]] = (
     },
     {
         "myocardium_solver": "eikonalSolver",
-        "purkinje_solver": "eikonalSolver",
+        "purkinje_solver": "eikonalSolver1D",
+        "required_coupler": "eikonalPvjCoupler",
+        "valid": True,
+    },
+    {
+        "myocardium_solver": "eikonalSolver",
+        "purkinje_solver": "restitutionEikonalSolver1D",
         "required_coupler": "eikonalPvjCoupler",
         "valid": True,
     },

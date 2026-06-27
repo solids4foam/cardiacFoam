@@ -392,7 +392,7 @@ def build_parser() -> argparse.ArgumentParser:
             "entry map (keys: singleCell, niederer2012, manufacturedFDA, "
             "manufacturedFDABidomain, manufacturedFDABathBidomain, "
             "manufacturedEikonalECG, manufacturedMonodomainTotalLagrangianEM, "
-            "restitutionCurves, genericCase/randomCase) "
+            "manufacturedPurkinjeGraph, restitutionCurves, genericCase/randomCase) "
             "or a direct parameter object for the selected entry."
         ),
     )

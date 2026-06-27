@@ -31,12 +31,13 @@
 """Load and adapt a RunDocument v2 for strict workflow execution.
 
 ``load_run_document(path)`` reads and schema-validates a document (migrating
-v1 explicitly). ``build_execution_inputs(doc)`` turns a document into the same
+v1 explicitly); raises ``ValueError`` or ``json.JSONDecodeError`` on malformed
+input. ``build_execution_inputs(doc)`` turns a document into the same
 ``(workflow_dag, workflow_state, case_root, output_dir, expected_artifacts)``
 tuple ``strict_plan`` produces, so the CLI run/step path is identical for both
-producers. It enforces the same command allowlist as ``strict_plan`` and never
-raises on bad agent input: anything that makes the document non-executable is
-returned as a diagnostic and ``inputs is None``.
+producers. It enforces the same command allowlist as ``strict_plan``; anything
+that makes the document non-executable is returned as a diagnostic with
+``inputs is None``.
 """
 
 from __future__ import annotations

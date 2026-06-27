@@ -268,9 +268,8 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
 
 
 class TestDictEntryStructuredConstraints(unittest.TestCase):
-    """Plan §5: DictEntry exposes four structured-constraint fields so that
-    the prose `constraints` can be migrated entry-by-entry to a form the
-    validator can evaluate.
+    """DictEntry exposes four structured-constraint fields so that
+    constraints can be expressed in a form the validator can evaluate.
 
     The fields are additive (P8 additive-only policy): every existing
     DictEntry must construct unchanged with empty defaults.
@@ -373,8 +372,8 @@ class TestDictEntryStructuredConstraints(unittest.TestCase):
 
 
 class TestElectroPropertiesPresenceScans(unittest.TestCase):
-    """specs.common gains three presence helpers used by the predictor's
-    domain-aware handlers (predictor-refinements Task 1).
+    """Tests for the three presence helpers used by the predictor's
+    domain-aware handlers.
     """
 
     def _write(self, body: str) -> Path:

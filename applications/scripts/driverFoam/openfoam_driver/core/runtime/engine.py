@@ -56,7 +56,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .artifacts import predict_data_artifacts
-from .models import CaseConfig, TutorialSpec
+from .models import TutorialSpec
 from .reconciler import reconcile_artifacts
 
 
@@ -516,7 +516,7 @@ class DriverEngine:
     )
 
     def _write_realized_manifest(self, destination_root: Path) -> Path | None:
-        """Emit the sidecar artifacts_realized.json (plan §10, schema v1.1).
+        """Emit the sidecar artifacts_realized.json (schema v1.1).
 
         Called only at terminal status on non-dry runs. Writes one entry
         per case from the accumulated per-case reports, OR a single entry

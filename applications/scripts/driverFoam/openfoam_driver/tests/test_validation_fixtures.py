@@ -25,15 +25,14 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""P5d — Cross-fixture regression guard for validate_run.
+"""Cross-fixture regression guard for validate_run.
 
 For each of the 7 tutorial spec fixtures, build a representative RunDocument
 that reflects the spec's solver type and assert that ``validate_run`` returns
 zero *error*-level violations.
 
-This catches accidentally over-restrictive structured constraints introduced
-during the P5b migration.  Warnings are permitted; only ``level="error"``
-must be empty for each fixture run.
+This catches accidentally over-restrictive structured constraints.
+Warnings are permitted; only ``level="error"`` must be empty for each fixture run.
 
 Fixture-to-solver mapping (derived from each spec's defaults.ELECTRO_PROPERTIES_SCOPE):
     single_cell          → singleCellSolver
@@ -55,7 +54,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import ValidationError, slot_key, validate_run
+from openfoam_driver.specs.validation import slot_key, validate_run
 
 _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
@@ -198,7 +197,7 @@ def test_representative_run_has_no_validator_errors(spec_label: str, run: RunDoc
     """validate_run must return zero error-level violations for each fixture.
 
     Warnings are permitted.  An error-level violation indicates an over-
-    restrictive structured constraint introduced by P5b migration.
+    restrictive structured constraint.
     """
     errors = [e for e in validate_run(run) if e.level == "error"]
     assert errors == [], (

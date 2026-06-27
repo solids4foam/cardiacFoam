@@ -97,67 +97,18 @@ def _static_hints(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...
     return tuple(out)
 
 
-# Signatures that point at solver temporal instability. Matched case-insensitively
-# against the combined log tails. Multi-word markers use substring match; short markers
-# are matched as whole tokens to avoid false positives (e.g. "nan" inside "meaning").
-_DIVERGENCE_SUBSTRINGS: tuple[str, ...] = (
-    "maximum number of iterations",
-    "singularity",
-    "floating point exception",
-)
-_DIVERGENCE_TOKENS: frozenset[str] = frozenset({"nan", "inf"})
 
-_HALVE_DELTAT_HINT = RemediationHint(
-    diagnostic_code="",
-    driver_path="deltaT",
-    change="halve",
-    rationale=(
-        "Solver divergence / FOAM FATAL with no structured diagnostic code. A smaller "
-        "time step is the conservative first remedy; halve controlDict deltaT and rerun."
-    ),
-    source="log_signature",
-    confidence="low",
-)
-
-
-def _has_divergence_signature(failure_context: dict[str, Any]) -> bool:
-    blob = (
-        f"{failure_context.get('stdout_tail', '') or ''}\n"
-        f"{failure_context.get('stderr_tail', '') or ''}"
-    ).lower()
-    if any(sig in blob for sig in _DIVERGENCE_SUBSTRINGS):
-        return True
-    return bool(_DIVERGENCE_TOKENS & set(re.findall(r"\w+", blob)))
-
-
-def interpret_log_signatures(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...]:
-    """Last-resort: infer a candidate from the bounded log tails.
-
-    Returns the conservative deltaT hint only when a known divergence signature is present
-    in the tails, and () otherwise. By the time this layer runs the deterministic layers
-    had no explanation; interpretation is licensed to *recognize* a known failure, never to
-    guess at an unrecognized one.
-    """
-    try:
-        if _has_divergence_signature(failure_context):
-            return (_HALVE_DELTAT_HINT,)
-        return ()
-    except Exception:
-        return ()
 
 
 def build_candidate_remediations(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...]:
     """Suggestion-only remediation ladder. Never raises; returns () on any problem."""
     try:
-        static = _static_hints(failure_context)
-        if static:
-            return static
-        # Interpretation is licensed only for failures the deterministic layer could not
-        # name at all: a nonzero exit with an empty diagnostics tuple. A coded failure with
-        # no static hint (e.g. workflow_step_timeout) yields no candidate rather than
-        # falling through to a (here, counter-productive) deltaT suggestion.
-        if failure_context.get("diagnostics"):
-            return ()
-        return interpret_log_signatures(failure_context)
+        # 1. Exact diagnostic code matches from the structured catalog
+        hints = _static_hints(failure_context)
+        if hints:
+            return hints
+
+        # 2. No structured hint found; return empty so LLM can reason.
+        return ()
     except Exception:
         return ()

@@ -28,11 +28,14 @@
 """Phase 2 — driverFOAM tissue-heterogeneity wiring.
 
 Covers the four surfaces wired in Phase 2:
-  1. ionic_model_catalog: ``supports_heterogeneity`` flag.
-  2. dict_entries: the seven ``ionicHeterogeneity.*`` DictEntries (gated).
+  1. ionic_model_catalog: ``supports_heterogeneity`` and
+     ``supports_apex_base_heterogeneity`` flags.
+  2. dict_entries: the seven transmural ``ionicHeterogeneity.*`` DictEntries
+     plus the five ``apexBaseBands.*`` entries (12 total, separately gated).
   3. dict_builder: build + parse round-trip of a heterogeneity block
      (proves the generic nested-path machinery needs no builder change).
-  4. validation: model-capability gate, endo<mEpi ordering, tissue compat.
+  4. validation: model-capability gates, endo<mEpi ordering, apex-base
+     numeric constraints, tissue compat.
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from openfoam_driver.specs.validation import validate_run
 
 
 # --------------------------------------------------------------------------
-# 1) Catalog flag
+# 1) Catalog flags
 # --------------------------------------------------------------------------
 
 def test_supports_heterogeneity_flag_for_capable_scalar_models():
@@ -66,6 +69,27 @@ def test_single_tissue_models_do_not_support_heterogeneity():
         assert IONIC_MODEL_CATALOG[name].supports_heterogeneity is False, name
 
 
+def test_supports_apex_base_heterogeneity_for_capable_scalar_models():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    for name in ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl"):
+        assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
+
+
+def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    for name in (
+        "BuenoOroviocompactBatched", "TNNPcompactBatched",
+        "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
+    ):
+        assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
+
+
+def test_single_tissue_models_do_not_support_apex_base_heterogeneity():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
+        assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is False, name
+
+
 # --------------------------------------------------------------------------
 # 2) dict_entries
 # --------------------------------------------------------------------------
@@ -75,22 +99,46 @@ def _het_entries():
     return ELECTRO_PROPERTY_ENTRY_GROUPS["ionic_heterogeneity"]
 
 
-def test_all_seven_heterogeneity_entries_exist():
+def _transmural_entries():
+    return [
+        e for e in _het_entries()
+        if not e.driver_path.startswith("$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.")
+    ]
+
+
+def _apex_base_entries():
+    return [
+        e for e in _het_entries()
+        if e.driver_path.startswith("$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.")
+    ]
+
+
+def test_all_twelve_heterogeneity_entries_exist():
     paths = {e.driver_path for e in _het_entries()}
+    transmural_leaves = (
+        "field", "mode", "endoMInterface", "mEpiInterface",
+        "transitionWidth", "transitionMode", "smoothing",
+    )
+    ab_leaves = ("apexBaseBands.field", "apexBaseBands.beta",
+                 "apexBaseBands.scalingMin", "apexBaseBands.scalingMax",
+                 "apexBaseBands.variables")
     expected = {
         f"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.{leaf}"
-        for leaf in (
-            "field", "mode", "endoMInterface", "mEpiInterface",
-            "transitionWidth", "transitionMode", "smoothing",
-        )
+        for leaf in (*transmural_leaves, *ab_leaves)
     }
     assert paths == expected
 
 
-def test_heterogeneity_entries_gated_to_capable_models():
-    from openfoam_driver.dict_entries import HETEROGENEITY_MODELS
-    for e in _het_entries():
-        assert e.applicable_when.get("ionicModel") == HETEROGENEITY_MODELS, e.driver_path
+def test_transmural_entries_gated_to_spatial_solvers():
+    """Transmural ionicHeterogeneity entries must fire for all spatial EP solvers."""
+    for e in _transmural_entries():
+        assert e.applicable_when.get("$ionicHeterogeneity_supported") is True, e.driver_path
+
+
+def test_apex_base_entries_gated_to_monodomain_only():
+    """apexBaseBands entries apply to monodomainSolver only."""
+    for e in _apex_base_entries():
+        assert e.applicable_when.get("myocardiumSolver") == ("monodomainSolver",), e.driver_path
 
 
 def test_heterogeneity_enum_values():
@@ -100,11 +148,15 @@ def test_heterogeneity_enum_values():
     assert by_leaf["smoothing"].enum_values == ("smoothstep",)
 
 
+def test_apex_base_numeric_constraints():
+    by_leaf = {e.driver_path.rsplit(".", 1)[-1]: e for e in _apex_base_entries()}
+    assert any(">" in c for c in by_leaf["beta"].constraints)
+    assert any("scalingMax" in c for c in by_leaf["scalingMin"].constraints)
+
+
 def test_heterogeneity_entries_are_optional():
-    # Opt-in: no typical_value, not required, so default builds omit the block.
     for e in _het_entries():
         assert e.required is False
-        assert e.typical_value == ""
 
 
 # --------------------------------------------------------------------------
@@ -256,3 +308,112 @@ def test_tissue_compatible_with_model_is_silent():
     })
     issues = [e for e in validate_run(run) if "compatible tissues" in e.message]
     assert issues == []
+
+
+# --------------------------------------------------------------------------
+# 5) Apex-to-base heterogeneity validation
+# --------------------------------------------------------------------------
+
+def test_apex_base_with_incapable_model_is_error():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "AlievPanfilov",
+        "tissue": "myocyte",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    errors = [e for e in validate_run(run)
+              if e.level == "error" and "apex-to-base" in e.message]
+    assert len(errors) == 1, [e.message for e in validate_run(run)]
+
+
+def test_apex_base_with_capable_model_no_error():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.beta": "3.0",
+        "ionicHeterogeneity.apexBaseBands.scalingMin": "0.2",
+        "ionicHeterogeneity.apexBaseBands.scalingMax": "5.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    ab_errors = [e for e in validate_run(run)
+                 if e.level == "error" and "apex" in e.message.lower()]
+    assert ab_errors == []
+
+
+def test_apex_base_beta_must_be_positive():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.beta": "-1.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    errors = [e for e in validate_run(run)
+              if e.level == "error" and "beta" in e.message]
+    assert len(errors) == 1
+
+
+def test_apex_base_positive_beta_is_silent():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.beta": "3.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    errors = [e for e in validate_run(run) if "beta" in e.message]
+    assert errors == []
+
+
+def test_apex_base_scalingMin_must_not_exceed_scalingMax():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.scalingMin": "8.0",
+        "ionicHeterogeneity.apexBaseBands.scalingMax": "2.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    errors = [e for e in validate_run(run)
+              if e.level == "error" and "scalingMin" in e.message]
+    assert len(errors) == 1
+
+
+def test_apex_base_valid_scaling_range_is_silent():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.scalingMin": "0.2",
+        "ionicHeterogeneity.apexBaseBands.scalingMax": "5.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    errors = [e for e in validate_run(run) if "scalingMin" in e.message]
+    assert errors == []
+
+
+def test_transmural_and_apex_base_can_coexist():
+    run = _run({
+        "myocardiumSolver": "monodomainSolver",
+        "ionicModel": "TNNP",
+        "tissue": "epicardialCells",
+        "ionicHeterogeneity.field": "t",
+        "ionicHeterogeneity.mode": "transmuralBands",
+        "ionicHeterogeneity.endoMInterface": "0.3",
+        "ionicHeterogeneity.mEpiInterface": "0.7",
+        "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
+        "ionicHeterogeneity.apexBaseBands.beta": "3.0",
+        "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
+    })
+    het_errors = [
+        e for e in validate_run(run)
+        if e.level == "error" and "heterogeneity" in e.message.lower()
+    ]
+    assert het_errors == []

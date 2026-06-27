@@ -365,7 +365,7 @@ class TestPredictorEikonal(unittest.TestCase):
 
 
 class TestPredictorExportListFiltering(unittest.TestCase):
-    """Plan §3d-1: predictor must report what will actually be on disk, not
+    """Predictor must report what will actually be on disk, not
     the catalog superset. When ``outputVariables.ionic.export`` is declared,
     the exported subset wins. When absent, the catalog's
     ``recommended_exports`` is the fallback."""
@@ -449,8 +449,8 @@ class TestPredictorExportListFiltering(unittest.TestCase):
 
 
 class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):
-    """Plan §3.2 fixture: a verification tutorial declares analytic-error
-    artifacts statically while the predictor still derives the field series.
+    """A verification tutorial declares analytic-error artifacts statically
+    while the predictor still derives the field series.
     Demonstrates that solver-derived + spec-declared artifacts coexist."""
 
     def test_both_derived_and_static_present(self) -> None:
@@ -723,7 +723,7 @@ class TestPredictorVerification(unittest.TestCase):
 
 
 class TestPredictorComposesUtilityProduces(unittest.TestCase):
-    """Plan §11/Task 2: when a spec's workflow_dag declares utility steps,
+    """When a spec's workflow_dag declares utility steps,
     the predictor merges every matching utility's `produces` entries into
     its output.
     """

@@ -39,7 +39,6 @@ from .core.runtime.registry import (
     list_case_directories,
     list_tutorials,
     resolve_entry,
-    resolve_tutorial,
 )
 from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
@@ -520,7 +519,6 @@ def describe_entry(
     make_spec_info = _describe_factory(resolution["factory"])
     return {
         "requested_entry": entry,
-        "requested_tutorial": entry,
         "resolution": resolution["resolution"],
         "resolved_name": resolution["resolved_name"],
         "entry": {

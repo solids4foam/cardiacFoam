@@ -34,28 +34,25 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+import re
+import shutil
+from pathlib import Path, PurePath
+from typing import Any, Iterable
 
 from .common import detect_myocardium_solver_name
 from .dict_builder import _entry_scope_and_key
-from ..core.runtime.mutators import update_control_dict, update_foam_entry
+from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
 from ..dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS
 
 _PREFIX = "$ELECTRO_MODEL_COEFFS."
 
-# controlDict leaf -> update_control_dict kwarg. Only these leaves are *applyable*
-# (startFrom / stopAt are catalog-addressable but update_control_dict has no kwarg for
-# them, so they are rejected at validation time).
-_CONTROL_DICT_KWARG: dict[str, str] = {
-    "deltaT": "delta_t",
-    "endTime": "end_time",
-    "startTime": "start_time",
-    "writeInterval": "write_interval",
-    "writeControl": "write_control",
-    "writeFormat": "write_format",
-    "purgeWrite": "purge_write",
-}
+
+def _is_safe_system_path(path_str: str) -> bool:
+    """Validate that the path is strictly inside system/ and has no traversal segments."""
+    if not path_str.startswith("system/"):
+        return False
+    path = PurePath(path_str)
+    return not path.is_absolute() and ".." not in path.parts
 
 
 class OverrideError(ValueError):
@@ -71,6 +68,26 @@ def _electro_by_path() -> dict[str, Any]:
     return out
 
 
+def _match_dynamic_entry(dp: str, all_entries: Iterable[Any]) -> Any | None:
+    """Return the dynamic catalog entry whose template matches concrete *dp*."""
+    for entry in all_entries:
+        if not getattr(entry, "dynamic_path", False):
+            continue
+
+        template = entry.driver_path
+        pattern_parts: list[str] = []
+        previous_end = 0
+        for placeholder in re.finditer(r"<[^.<>]+>", template):
+            pattern_parts.append(re.escape(template[previous_end:placeholder.start()]))
+            pattern_parts.append(r"[^.]+")
+            previous_end = placeholder.end()
+        pattern_parts.append(re.escape(template[previous_end:]))
+
+        if re.fullmatch("".join(pattern_parts), dp):
+            return entry
+    return None
+
+
 def validate_overrides(overrides: Any) -> None:
     """Reject anything not safely applyable, *before* any write. Raises OverrideError."""
     if not isinstance(overrides, list):
@@ -84,22 +101,30 @@ def validate_overrides(overrides: Any) -> None:
                 f"each override must be an object with 'driver_path' and 'value' (got {ov!r})"
             )
         dp = ov["driver_path"]
-        if dp in _CONTROL_DICT_KWARG:
+        if ":" in dp:
+            file_path, _, entry_path = dp.partition(":")
+            if not _is_safe_system_path(file_path):
+                raise OverrideError(f"override file path {file_path!r} is not a safe system/ path")
+            if not entry_path:
+                raise OverrideError(f"override driver_path {dp!r} is missing an entry path after ':'")
             continue
-        entry = electro.get(dp)
-        if entry is None:
-            raise OverrideError(
-                f"override driver_path {dp!r} is not catalog-addressable / applyable"
-            )
-        if getattr(entry, "dynamic_path", False):
-            raise OverrideError(
-                f"override driver_path {dp!r} is a dynamic_path entry and is not applyable"
-            )
-        if "<" in dp:
+        elif not dp.startswith("$"):
+            # Backward compatibility: flat strings are treated as controlDict entries.
+            continue
+
+        if "<" in dp or ">" in dp:
             raise OverrideError(
                 f"override driver_path {dp!r} contains a placeholder; substitute the "
                 f"concrete name"
             )
+
+        entry = electro.get(dp)
+        if entry is None:
+            entry = _match_dynamic_entry(dp, electro.values())
+            if entry is None:
+                raise OverrideError(
+                    f"override driver_path {dp!r} is not catalog-addressable / applyable"
+                )
         enum_values = getattr(entry, "enum_values", None)
         if enum_values and ov["value"] not in enum_values:
             raise OverrideError(
@@ -118,13 +143,18 @@ def apply_overrides(overrides: list[dict[str, Any]], *, case_root: Path) -> None
     for ov in overrides:
         dp, value = ov["driver_path"], ov["value"]
         try:
-            kwarg = _CONTROL_DICT_KWARG.get(dp)
-            if kwarg is not None:
-                update_control_dict(case_root / "system" / "controlDict", **{kwarg: value})
+            if ":" in dp:
+                file_path, _, entry_path = dp.partition(":")
+                update_foam_entry_via_foamDictionary(case_root / file_path, entry_path, value)
+            elif not dp.startswith("$"):
+                if shutil.which("foamDictionary"):
+                    update_foam_entry_via_foamDictionary(case_root / "system" / "controlDict", dp, value)
+                else:
+                    update_foam_entry(case_root / "system" / "controlDict", dp, value)
             else:
                 if coeffs_scope is None:
                     coeffs_scope = f"{detect_myocardium_solver_name(electro_path)}Coeffs"
                 scope_path, key = _entry_scope_and_key(dp, coeffs_scope)
                 update_foam_entry(electro_path, key, value, scope=scope_path)
-        except (OSError, KeyError, ValueError) as exc:
+        except (OSError, KeyError, ValueError, RuntimeError) as exc:
             raise OverrideError(f"failed to apply override {dp!r}: {exc}") from exc

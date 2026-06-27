@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for workflow_dag ingest from on-disk workflow_contract.json (plan §6.2).
+"""Tests for workflow_dag ingest from on-disk workflow_contract.json.
 
 Filesystem cases (loaded via registry.py) must have their workflow_dag populated
 from the on-disk workflow_contract.json when that file contains a 'steps' array.

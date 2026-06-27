@@ -25,7 +25,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for the dict_builder (plan §9.1).
+"""Tests for the dict_builder.
 
 The builder synthesizes a complete electroProperties dict from
 minimum-viable agent intent (selectors + overrides). It enforces the same
@@ -775,7 +775,7 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
                 original,
             )
 
-    def test_missing_control_dict_raises_when_delta_t_set(self) -> None:
+    def test_control_dict_is_generated_when_delta_t_set(self) -> None:
         import tempfile
         from pathlib import Path
         from openfoam_driver.specs.dict_builder import build_and_launch
@@ -783,14 +783,114 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
             case_dir.mkdir()
-            with self.assertRaises(FileNotFoundError):
-                build_and_launch(
-                    electro,
-                    physics_selectors=physics,
-                    case_dir=case_dir,
-                    delta_t=0.001,
-                    dry_run=True,
-                )
+            build_and_launch(
+                electro,
+                physics_selectors=physics,
+                case_dir=case_dir,
+                delta_t=0.001,
+                dry_run=True,
+            )
+            control_dict_path = case_dir / "system" / "controlDict"
+            self.assertTrue(control_dict_path.exists())
+            self.assertIn("deltaT", control_dict_path.read_text())
+
+
+class TestEikonalECGHeterogeneity(unittest.TestCase):
+    """sigmaExtracellular and ionicHeterogeneity entries for eikonalSolver +
+    eikonalECG: catalog visibility, applicable_when firing, and round-trip."""
+
+    def test_sigmaExtracellular_in_catalog_when_ecgDomains_present(self) -> None:
+        """sigmaExtracellular must appear in select_applicable_entries whenever
+        any ecgDomains override is set ($ecgDomains_present virtual key)."""
+        from openfoam_driver.specs.dict_builder import (
+            resolve_context,
+            select_applicable_entries,
+        )
+        from openfoam_driver.specs.validation import slot_key
+
+        context = resolve_context(
+            selectors={"myocardiumSolver": "eikonalSolver"},
+            overrides={
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.ecgSolver": "eikonalECG",
+            },
+        )
+        entries = select_applicable_entries(context)
+        paths = {e.driver_path for e in entries}
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sigmaExtracellular",
+            paths,
+        )
+
+    def test_sigmaExtracellular_absent_without_ecgDomains(self) -> None:
+        """sigmaExtracellular must NOT appear when no ecgDomains are configured."""
+        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+
+        context = resolve_context(selectors={"myocardiumSolver": "eikonalSolver"})
+        entries = select_applicable_entries(context)
+        paths = {e.driver_path for e in entries}
+        self.assertNotIn(
+            "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sigmaExtracellular",
+            paths,
+        )
+
+    def test_ionic_heterogeneity_entries_applicable_for_eikonalSolver(self) -> None:
+        """All ionicHeterogeneity sub-entries must be selectable for eikonalSolver."""
+        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+
+        context = resolve_context(selectors={"myocardiumSolver": "eikonalSolver"})
+        entries = select_applicable_entries(context)
+        paths = {e.driver_path for e in entries}
+        expected = {
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.field",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.endoMInterface",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mEpiInterface",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionWidth",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode",
+            "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing",
+        }
+        self.assertTrue(expected.issubset(paths), f"Missing: {expected - paths}")
+
+    def test_ionic_heterogeneity_entries_applicable_for_monodomainSolver(self) -> None:
+        """ionicHeterogeneity entries must still fire for monodomainSolver (no regression)."""
+        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+
+        context = resolve_context(
+            selectors={"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", "tissue": "epicardialCells"},
+        )
+        entries = select_applicable_entries(context)
+        paths = {e.driver_path for e in entries}
+        self.assertIn("$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode", paths)
+        self.assertIn("$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing", paths)
+
+    def test_eikonalSolver_with_ionicHeterogeneity_overrides_round_trips(self) -> None:
+        """build_electro_properties must accept eikonalSolver with an explicit
+        ionicHeterogeneity block and write the values into the output dict."""
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+
+        text = build_electro_properties(
+            selectors={"myocardiumSolver": "eikonalSolver"},
+            overrides={
+                # Minimum required eikonalSolver fields without typical_values
+                "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach": "true",
+                "$ELECTRO_MODEL_COEFFS.stimulusLocationMin": "(0 0 0)",
+                "$ELECTRO_MODEL_COEFFS.stimulusLocationMax": "(0.01 0.01 0.01)",
+                "$ELECTRO_MODEL_COEFFS.c0": "60",
+                # ionicHeterogeneity block for eikonalECG blend mode
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.field": "uvc_transmural",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode": "transmuralBands",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.endoMInterface": "0.3",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mEpiInterface": "0.7",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionWidth": "0.1",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode": "blend",
+                "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing": "smoothstep",
+            },
+        )
+        self.assertIn("ionicHeterogeneity", text)
+        self.assertIn("transitionMode blend;", text)
+        self.assertIn("transitionWidth 0.1;", text)
+        self.assertIn("smoothing smoothstep;", text)
+        self.assertIn("field uvc_transmural;", text)
 
 
 if __name__ == "__main__":

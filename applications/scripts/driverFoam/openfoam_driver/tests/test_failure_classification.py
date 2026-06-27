@@ -19,7 +19,7 @@
 #     test_failure_classification
 #
 # Description
-#     Failure classification tests (retry plan Task 2).
+#     Failure classification tests.
 #
 # Author
 #     Simao Nieto de Castro, UCD.

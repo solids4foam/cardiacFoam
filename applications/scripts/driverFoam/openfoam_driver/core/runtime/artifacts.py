@@ -76,8 +76,8 @@ def _exported_ionic_variables(
 ) -> tuple[str, ...]:
     """Return the ionic variables that will actually appear on disk.
 
-    Plan §3d-1: prefer the declared ``outputVariables.ionic.export`` list
-    (this is what the C++ writes); fall back to the catalog's
+    Prefers the declared ``outputVariables.ionic.export`` list
+    (this is what the C++ writes); falls back to the catalog's
     ``recommended_exports`` when no declaration is present. Returns ``()``
     only when both the file-side declaration and the catalog entry are
     missing.

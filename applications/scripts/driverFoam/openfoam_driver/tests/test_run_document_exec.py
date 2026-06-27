@@ -1,4 +1,4 @@
-"""Tests for the RunDocument execution adapter (Task 3).
+"""Tests for the RunDocument execution adapter.
 
 Happy-path execution (a valid config that passes validate_run + a DAG that
 actually runs) is proven end-to-end in test_cli_run_document.py. These unit

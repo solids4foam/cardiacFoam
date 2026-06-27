@@ -225,11 +225,29 @@ foamctl step --strict --step <id> --apply overrides.json
 This validates each override for *applyability*, applies it via the dict mutators
 (resolving `$ELECTRO_MODEL_COEFFS.*` to the case's solver-specific coeffs block),
 reruns the step (`attempt++`), and appends one record to `remediation_history.jsonl`
-under the output directory. Only **applyable** keys are accepted: `controlDict`
-leaves (`deltaT`, `endTime`, …) and `$ELECTRO_MODEL_COEFFS.*` entries (flat or
-nested), excluding `dynamic_path`/placeholder (`<...>`) keys. Catalog-addressability
-alone is not enough, and `fvSolution`-level fixes are not yet supported. Invalid
-overrides are rejected **before** any mutation or rerun.
+under the output directory. The driver accepts three forms of overrides:
+1. `$ELECTRO_MODEL_COEFFS.*`: Catalog-addressable entries. For a `dynamic_path`,
+   replace each template placeholder with the concrete instance name in the
+   `driver_path` (for example,
+   `$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.scale.myChannel`). The
+   concrete key must already exist in the generated dictionary.
+2. `system/path/to/dict:entry_path`: Explicit overrides for any OpenFOAM dictionary (e.g., `system/fvSolution:solvers/V/tolerance`). The file path must be strictly inside `system/`. If the case uses multiple regions (e.g., electromechanics), check `constant/physicsProperties` to determine if you need to target `system/electro/fvSolution` or the top-level `system/fvSolution`.
+   * **Note on entry paths**: `foamDictionary` uses `/` to traverse nested blocks. If a block name contains special characters (like the `Vm|VmFinal|u|uFinal` solver block), you **must** wrap that specific block name in quotes within the path: e.g., `system/electro/fvSolution:solvers/"Vm|VmFinal|u|uFinal"/tolerance`.
+3. Flat string paths (e.g., `deltaT`): Routed to `system/controlDict` for backward compatibility.
+Invalid overrides are rejected **before** any mutation or rerun.
+
+**Derived constants are not overridable.** Some models expose constants that are
+*computed* from other (user-facing) constants at `initConsts` — e.g. the
+Land-Niederer active-tension transition rates (`AC_k_uw`, `AC_k_ws`, `AC_k_wu`,
+`AC_k_su`, `AC_cds`, `AC_cdw`, `AC_ktm_block`, `AC_A`, `AC_XSSS`, `AC_XWSS`,
+`AC_fPKA_TnI`, `AC_PKAForceMultiplier`). The active-tension catalog deliberately
+omits these from its `constants` list, and overriding one has no effect (the
+solver recomputes it from its inputs). To *change* such a quantity, override the
+user-facing constants it derives from. An agent may still **reason about** derived
+values (e.g. predict how halving `AC_dr` shifts `AC_k_su`) — just don't try to set
+them directly. (Note: the ionic catalog, which is auto-generated from the full C++
+constant enum, *does* list derived constants; the same rule applies there — listed
+≠ overridable.)
 
 Legacy engine runs already write `artifacts_realized.json` at terminal status.
 After such a run reaches a terminal status, agents should compare predicted
