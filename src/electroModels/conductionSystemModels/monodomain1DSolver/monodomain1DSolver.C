@@ -201,7 +201,16 @@ void monodomain1DSolver::advance
         Vm[c] = (rhs[c] - parentCoeff[c] * Vm[p]) / diag[c];
     }
 
-
+    // Record first activation time for each node that crosses the threshold.
+    scalarField& actTime = domain.activationTime();
+    const scalar tNew = t0 + dt;
+    for (label i = 0; i < N; i++)
+    {
+        if (actTime[i] < 0.0 && Vm[i] >= activationVmThreshold_)
+        {
+            actTime[i] = tNew;
+        }
+    }
 
     domain.reportAdvanceDiagnostics(t0, dt);
 }

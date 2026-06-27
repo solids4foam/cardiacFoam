@@ -72,6 +72,16 @@ fi
 cp -r constant/polyMesh constant/electro/polyMesh
 cp -r constant/polyMesh constant/solid/polyMesh
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    # libsolids4FoamModels references _PETSC_COMM_WORLD via dynamic lookup.
+    # On macOS flat-namespace the symbol must already be in the namespace when
+    # the library loads, so pre-inject PETSc before any cardiacFoam process starts.
+    _petsc_lib="$(find /opt/homebrew/lib /usr/local/lib -name 'libpetsc.dylib' 2>/dev/null | head -1)"
+    if [[ -n "$_petsc_lib" ]]; then
+        export DYLD_INSERT_LIBRARIES="${_petsc_lib}${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+    fi
+fi
+
 if $parallelRun; then
     runApplication -s electro decomposePar -region electro
     runApplication -s solid decomposePar -region solid

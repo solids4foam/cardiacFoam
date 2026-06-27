@@ -19,7 +19,7 @@ Class
     Foam::GoktepeKuhl
 
 Description
-    Goktepe-Kuhl (2010) active tension model.
+    Goktepe-Kuhl (2004) active tension model.
 
 Author
     Simao Nieto de Castro, UCD.

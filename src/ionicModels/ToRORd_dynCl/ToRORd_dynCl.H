@@ -150,6 +150,12 @@ protected:
             const dictionary& heterogeneityDict
         ) override;
 
+        virtual void configureApexBaseBandsHeterogeneity
+        (
+            const scalarField& apexDist,
+            const dictionary& dict
+        ) override;
+
         //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
         virtual scalarField constantsForTissue
         (

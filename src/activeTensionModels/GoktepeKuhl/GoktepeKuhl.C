@@ -125,10 +125,6 @@ Foam::GoktepeKuhl::GoktepeKuhl
         RATES_.set(integrationPtI,     new scalarField(NUM_STATES,    0.0));
     }
     Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -156,9 +152,9 @@ void Foam::GoktepeKuhl::solveAtPoint
     ALGEBRAICI[::AV_Vm] = driveVal;
     ALGEBRAICI[::AV_u]  = uSignal;
 
-    const scalar tStart = currentT_ * 1000/100;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000/100;
-    scalar step         = currentDt_ * 1000/100;
+    const scalar tStart = currentT_;
+    const scalar tEnd   = currentT_ + currentDt_;
+    scalar step         = currentDt_;
 
     odeSolver_->solve(tStart, tEnd, STATESI, step);
 

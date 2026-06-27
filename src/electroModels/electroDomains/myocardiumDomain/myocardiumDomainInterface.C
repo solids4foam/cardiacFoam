@@ -138,14 +138,36 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         const dictionary& heterogeneityDict =
             electroProperties.subDict("ionicHeterogeneity");
 
-        const scalarField transmuralDistance =
-            readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
-
-        ionicModelPtr->configureIonicHeterogeneity
+        if
         (
-            transmuralDistance,
-            heterogeneityDict
-        );
+            heterogeneityDict.found("mode")
+         || heterogeneityDict.found("field")
+        )
+        {
+            const scalarField transmuralDistance =
+                readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
+
+            ionicModelPtr->configureIonicHeterogeneity
+            (
+                transmuralDistance,
+                heterogeneityDict
+            );
+        }
+
+        if (heterogeneityDict.found("apexBaseBands"))
+        {
+            const dictionary& abDict =
+                heterogeneityDict.subDict("apexBaseBands");
+
+            const scalarField longitudinalDist =
+                readTransmuralDistance(mesh, electroProperties, abDict);
+
+            ionicModelPtr->configureApexBaseBandsHeterogeneity
+            (
+                longitudinalDist,
+                abDict
+            );
+        }
     }
 
     verificationModelPtr =

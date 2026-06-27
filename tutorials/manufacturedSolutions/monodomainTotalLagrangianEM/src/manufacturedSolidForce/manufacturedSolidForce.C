@@ -165,20 +165,14 @@ void manufacturedSolidForce::addSup
     const scalar V0 = V0_;
     const scalar gamma = gamma_;
 
-    const volVectorField* Dptr = mesh_.findObject<volVectorField>("D");
-
     forAll(eqn.source(), celli)
     {
-        scalar X = C[celli].x();
-        scalar Y = C[celli].y();
-        scalar Z = C[celli].z();
-
-        if (Dptr)
-        {
-            X -= (*Dptr)[celli].x();
-            Y -= (*Dptr)[celli].y();
-            Z -= (*Dptr)[celli].z();
-        }
+        // B_expr.H is derived w.r.t. reference coordinates.
+        // The TL solver never moves the mesh, so mesh_.C() IS the reference
+        // coordinate — do NOT subtract D.
+        const scalar X = C[celli].x();
+        const scalar Y = C[celli].y();
+        const scalar Z = C[celli].z();
 
         #include "B_expr.H"
 

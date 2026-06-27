@@ -46,11 +46,17 @@ class monodomain1DSolver
 {
     mutable scalarField appliedCurrentBuffer_;
 
+    // Vm threshold above which a node is considered activated.
+    // Defaults to 0.0 (physical-unit models: rest≈-0.084 V, peak≈+0.05 V).
+    scalar activationVmThreshold_;
+
 public:
 
     OverrideTypeName("monodomain1DSolver");
 
-    monodomain1DSolver(const fvMesh&, const dictionary&)
+    monodomain1DSolver(const fvMesh&, const dictionary& dict)
+    :
+        activationVmThreshold_(dict.lookupOrDefault<scalar>("activationVmThreshold", 0.0))
     {}
 
     virtual void advance

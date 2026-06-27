@@ -45,7 +45,6 @@ enum CONSTANTS_INDEX {
     AC_Vth,
     AC_e0,
     AC_kTa,
-    AC_a,
     NUM_CONSTANTS
 };
 

@@ -293,8 +293,7 @@ scalar edgeConductanceFromFields
         "conductance",
         "conductivity",
         "D",
-        "sigma",
-        "conductivity"
+        "sigma"
     };
 
     const IOField<scalar>* conductance =

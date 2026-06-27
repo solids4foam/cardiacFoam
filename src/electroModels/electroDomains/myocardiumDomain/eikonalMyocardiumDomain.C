@@ -391,6 +391,62 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 eikonalMyocardiumDomain::~eikonalMyocardiumDomain() = default;
 
 
+void eikonalMyocardiumDomain::preInitialiseFromSeeds
+(
+    const labelList& constrainedCells,
+    const scalarField& constrainedValues
+)
+{
+    scalarField& T = activationTime_.primitiveFieldRef();
+
+    // Upper-bound CV from the fastest propagation direction of M
+    scalar maxMdiag = 0;
+    forAll(M_, cellI)
+    {
+        maxMdiag = max(maxMdiag, max(M_[cellI].xx(), max(M_[cellI].yy(), M_[cellI].zz())));
+    }
+    reduce(maxMdiag, maxOp<scalar>());
+    const scalar CV_est = c0_.value() * Foam::sqrt(maxMdiag + SMALL);
+
+    // Seed cells keep their constrained values; all others go to GREAT
+    forAll(T, cellI) { if (T[cellI] < 0) T[cellI] = GREAT; }
+    activationTime_.correctBoundaryConditions();
+
+    // Bellman-Ford relay: propagate minimum arrival time across face connectivity.
+    // Each pass reduces T for cells reachable from seeds; parallel-safe because
+    // correctBoundaryConditions syncs processor patches after every pass.
+    const vectorField& cc = mesh().cellCentres();
+    const label nIntFaces  = mesh().nInternalFaces();
+    const labelList& own   = mesh().faceOwner();
+    const labelList& nei   = mesh().faceNeighbour();
+
+    bool changed = true;
+    while (changed)
+    {
+        changed = false;
+        for (label faceI = 0; faceI < nIntFaces; ++faceI)
+        {
+            const label o = own[faceI];
+            const label n = nei[faceI];
+            const scalar dt = mag(cc[o] - cc[n]) / CV_est;
+
+            if (T[o] < GREAT/2 && T[o] + dt < T[n]) { T[n] = T[o] + dt; changed = true; }
+            if (T[n] < GREAT/2 && T[n] + dt < T[o]) { T[o] = T[n] + dt; changed = true; }
+        }
+        activationTime_.correctBoundaryConditions();
+        reduce(changed, orOp<bool>());
+    }
+
+    // Re-enforce exact seed values (BF may have relaxed them from a closer seed)
+    forAll(constrainedCells, i) { T[constrainedCells[i]] = constrainedValues[i]; }
+
+    // Cells with no path to any seed (disconnected regions) → restore sentinel
+    forAll(T, cellI) { if (T[cellI] >= GREAT/2) T[cellI] = -1; }
+
+    activationTime_.correctBoundaryConditions();
+}
+
+
 void eikonalMyocardiumDomain::advance
 (
     scalar t0,
@@ -431,6 +487,8 @@ void eikonalMyocardiumDomain::advance
         constrainedCells,
         constrainedValues
     );
+
+    preInitialiseFromSeeds(constrainedCells, constrainedValues);
 
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);

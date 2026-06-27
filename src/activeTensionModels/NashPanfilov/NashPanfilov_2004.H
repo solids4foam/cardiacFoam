@@ -34,8 +34,7 @@ static const char* NashPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_Vr",
     "AC_Vth",
     "AC_e0",
-    "AC_kTa",
-    "AC_a"
+    "AC_kTa"
 };
 
 static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
@@ -43,19 +42,6 @@ static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_e",
 
 };
-
-
-static inline const Foam::HashTable<Foam::wordList>&
-NashPanfilovDependencyMap()
-{
-   static const Foam::HashTable<Foam::wordList> dep
-    (
-        {
-        }
-    );
-
-    return dep;
-}
 
 
 inline void

@@ -40,7 +40,6 @@ SourceFiles
 #include "pointField.H"
 #include "labelList.H"
 #include "scalarField.H"
-#include "scalarList.H"
 #include "PtrList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -98,6 +97,16 @@ public:
             const List<scalar>& values
         );
 
+        //- (Re)write a .vtk.series JSON sidecar so that ParaView (≥5.6)
+        //  displays correct physical time values for legacy VTK files.
+        //  Pass all accumulated (time, filename) pairs each call.
+        static void writeVTKSeries
+        (
+            const fileName&   seriesPath,
+            const scalarList& times,
+            const wordList&   filenames
+        );
+
         //- Write one VTK legacy PolyData file for the Purkinje graph at a
         //  given simulation time.  Each call produces an independent
         //  purkinjeNetwork_<timeStepIndex>.vtk file in outDir that ParaView
@@ -111,16 +120,6 @@ public:
         //  Iion1D        : ionic current at every node.
         //  pvjNodes      : node indices of the PVJ terminals.
         //  terminalSource: volumetric source at each PVJ (size = pvjNodes.size()).
-        //- (Re)write a .vtk.series JSON sidecar so that ParaView (≥5.6)
-        //  displays correct physical time values for legacy VTK files.
-        //  Pass all accumulated (time, filename) pairs each call.
-        static void writeVTKSeries
-        (
-            const fileName&   seriesPath,
-            const scalarList& times,
-            const wordList&   filenames
-        );
-
         static void writeVTK
         (
             const fileName&     outDir,

@@ -325,13 +325,27 @@ void Foam::ionicModel::configureIonicHeterogeneity
 }
 
 
+void Foam::ionicModel::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    (void)apexDist;
+    (void)dict;
+
+    FatalErrorInFunction
+        << "apexBaseBands heterogeneity was requested for ionic model " << type()
+        << ", but this model does not support apex-to-base heterogeneity."
+        << exit(FatalError);
+}
+
+
 Foam::scalarField Foam::ionicModel::constantsForTissue
 (
     const label tissueFlag
 ) const
 {
-    // Default: no tissue-specific constant variants. Derived classes that
-    // support transmural heterogeneity override this.
     return scalarField();
 }
 
@@ -343,6 +357,109 @@ Foam::scalarField Foam::ionicModel::initialStatesForTissue
 {
     return scalarField();
 }
+
+void Foam::ionicModel::configureApexBaseBandsHeterogeneityImpl
+(
+    const scalarField& apexDist,
+    const dictionary& dict,
+    PtrList<scalarField>& heterogeneousConstants
+) const
+{
+    const scalar beta =
+        dict.lookupOrDefault<scalar>("beta", 3.0);
+    const scalar scalingMin =
+        dict.lookupOrDefault<scalar>("scalingMin", 0.2);
+    const scalar scalingMax =
+        dict.lookupOrDefault<scalar>("scalingMax", 5.0);
+    const wordList variables(dict.lookup("variables"));
+
+    if (variables.empty())
+    {
+        FatalErrorInFunction
+            << "apexBaseBands: 'variables' list is empty for ionic model "
+            << type() << ". Specify at least one constant name to scale."
+            << exit(FatalError);
+    }
+
+    if (scalingMin <= 0.0 || scalingMax <= 0.0 || scalingMax < scalingMin)
+    {
+        FatalErrorInFunction
+            << "apexBaseBands: invalid scalingMin=" << scalingMin
+            << " scalingMax=" << scalingMax
+            << ". Require 0 < scalingMin <= scalingMax."
+            << exit(FatalError);
+    }
+
+    const label nConst = ioNumConstants();
+    const char* const* names = ioConstantNames();
+    const scalarField* baseConstants = ioConstantsPtr();
+
+    if (!names || nConst <= 0 || !baseConstants || baseConstants->empty())
+    {
+        FatalErrorInFunction
+            << "apexBaseBands was requested for ionic model " << type()
+            << ", but this model does not expose constant metadata "
+            << "(ioConstantNames / ioConstantsPtr)."
+            << exit(FatalError);
+    }
+
+    labelList indices(variables.size(), -1);
+    forAll(variables, vi)
+    {
+        for (label ci = 0; ci < nConst; ci++)
+        {
+            if (word(names[ci]) == variables[vi])
+            {
+                indices[vi] = ci;
+                break;
+            }
+        }
+        if (indices[vi] < 0)
+        {
+            FatalErrorInFunction
+                << "apexBaseBands: variable '" << variables[vi]
+                << "' not found in constant names of ionic model " << type()
+                << ". Available constants: ";
+            for (label ci = 0; ci < nConst; ci++)
+            {
+                FatalErrorInFunction << names[ci] << ' ';
+            }
+            FatalErrorInFunction << exit(FatalError);
+        }
+    }
+
+    if (heterogeneousConstants.empty())
+    {
+        heterogeneousConstants.setSize(apexDist.size());
+        forAll(apexDist, cellI)
+        {
+            heterogeneousConstants.set(cellI, new scalarField(*baseConstants));
+        }
+    }
+    else if (heterogeneousConstants.size() != apexDist.size())
+    {
+        FatalErrorInFunction
+            << "apexBaseBands: longitudinal distance field has "
+            << apexDist.size() << " values but " << type()
+            << " has " << heterogeneousConstants.size()
+            << " heterogeneous constant sets."
+            << exit(FatalError);
+    }
+
+    forAll(apexDist, cellI)
+    {
+        const scalar d = min(max(apexDist[cellI], scalar(0.0)), scalar(1.0));
+        const scalar f =
+            ionicHeterogeneity::apexBaseScale(d, beta, scalingMin, scalingMax);
+
+        scalarField& consts = heterogeneousConstants[cellI];
+        forAll(indices, vi)
+        {
+            consts[indices[vi]] *= f;
+        }
+    }
+}
+
 
 void Foam::ionicModel::configureTransmuralBandHeterogeneity
 (

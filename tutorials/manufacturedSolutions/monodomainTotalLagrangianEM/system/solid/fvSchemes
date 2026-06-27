@@ -25,7 +25,7 @@ ddtSchemes
 
 gradSchemes
 {
-    default            pointCellsLeastSquares;
+    default            Gauss linear;
 }
 
 divSchemes

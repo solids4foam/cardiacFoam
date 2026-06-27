@@ -975,7 +975,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
         }
         else if (tag == "TENSORS")
         {
-            // 'NORMALS Normals float'
+            // 'TENSORS <name> <type>'
             string line;
             inFile.getLine(line);
             IStringStream is(line);

@@ -189,6 +189,18 @@ public:
         }
     }
 
+    virtual void configureApexBaseBandsHeterogeneity
+    (
+        const scalarField& apexDist,
+        const dictionary& dict
+    ) override
+    {
+        configureApexBaseBandsHeterogeneityImpl
+        (
+            apexDist, dict, HETEROGENEOUS_CONSTANTS_
+        );
+    }
+
 protected:
 
     virtual ionicModelIO::VmTransform ioVmTransform() const override

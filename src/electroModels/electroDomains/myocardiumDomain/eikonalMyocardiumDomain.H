@@ -67,6 +67,12 @@ class eikonalMyocardiumDomain
 
     tmp<volTensorField> initialiseConductivity() const;
 
+    void preInitialiseFromSeeds
+    (
+        const labelList& constrainedCells,
+        const scalarField& constrainedValues
+    );
+
     eikonalMyocardiumDomain(const eikonalMyocardiumDomain&) = delete;
     void operator=(const eikonalMyocardiumDomain&) = delete;
 

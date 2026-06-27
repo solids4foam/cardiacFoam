@@ -189,6 +189,12 @@ protected:
                 const dictionary& heterogeneityDict
             ) override;
 
+            virtual void configureApexBaseBandsHeterogeneity
+            (
+                const scalarField& apexDist,
+                const dictionary& dict
+            ) override;
+
 
             //- Number of ODE's to solve
             virtual label nEqns() const override

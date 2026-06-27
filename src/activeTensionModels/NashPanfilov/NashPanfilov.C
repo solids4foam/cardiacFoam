@@ -125,10 +125,6 @@ Foam::NashPanfilov::NashPanfilov
         RATES_.set(integrationPtI,     new scalarField(NUM_STATES,    0.0));
     }
     Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 

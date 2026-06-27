@@ -154,6 +154,13 @@ public:
         const scalarField& transmuralDistance,
         const dictionary& heterogeneityDict
     ) override;
+
+    virtual void configureApexBaseBandsHeterogeneity
+    (
+        const scalarField& apexDist,
+        const dictionary& dict
+    ) override;
+
     virtual List<word> supportedDimensions() const override
     {
         return {}; //No dimensions flag

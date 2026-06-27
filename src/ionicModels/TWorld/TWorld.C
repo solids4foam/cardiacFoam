@@ -158,6 +158,19 @@ void Foam::TWorld::configureIonicHeterogeneity
 }
 
 
+void Foam::TWorld::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl
+    (
+        apexDist, dict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 //  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
 void Foam::TWorld::solveODE

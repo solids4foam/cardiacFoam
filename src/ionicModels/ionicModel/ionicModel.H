@@ -266,16 +266,18 @@ public:
             scalarField& Im
         ) = 0;
 
-    //- Heterogeneity functions
-
-        //- General heterogeneity setup
         virtual void configureIonicHeterogeneity
         (
             const scalarField& transmuralDistance,
             const dictionary& heterogeneityDict
         );
 
-        //- Configure transmural band heterogeneity (Endo, M, Epi)
+        virtual void configureApexBaseBandsHeterogeneity
+        (
+            const scalarField& apexDist,
+            const dictionary& dict
+        );
+
         void configureTransmuralBandHeterogeneity
         (
             const scalarField& transmuralDistance,
@@ -284,10 +286,15 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates = nullptr
         ) const;
 
-        //- Fetch the constants array for a specific tissue type
+        void configureApexBaseBandsHeterogeneityImpl
+        (
+            const scalarField& apexDist,
+            const dictionary& dict,
+            PtrList<scalarField>& heterogeneousConstants
+        ) const;
+
         virtual scalarField constantsForTissue(const label tissueFlag) const;
 
-        //- Fetch the initial states array for a specific tissue type
         virtual scalarField initialStatesForTissue(const label tissueFlag) const;
 
         //- Number of ODE's to solve

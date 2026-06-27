@@ -45,7 +45,7 @@ eikonalECG::eikonalECG(const dictionary& dict)
     endTime_(0.0),
     deltaT_(0.0),
     report_(dict.lookupOrDefault<Switch>("report", true)),
-    written_(false),
+    sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
     lastValues_(),
     outputPtr_(),
     VmPtr_(),
@@ -113,36 +113,37 @@ void eikonalECG::reconstructVm
         }
         else
         {
-            if (wEndo_[cellI] > 0.5)
-            {
-                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+            // Weighted blend of the three tissue templates.  With
+            // transitionMode=hard the weights are binary (0 or 1) and the
+            // result is identical to the previous hard-selection logic.
+            // With transitionMode=blend the weights vary smoothly across
+            // the transition zones, producing a continuous Vm field that
+            // eliminates the sharp surface-dipole artefacts at the band
+            // boundaries.
+            const scalar rawVm =
+                wEndo_[cellI] * eikonalECG_templates::evaluateTemplate
                 (
                     localTime,
                     eikonalECG_templates::endoTimes,
                     eikonalECG_templates::endoValues,
                     eikonalECG_templates::numEndoSamples
-                );
-            }
-            else if (wMid_[cellI] > 0.5)
-            {
-                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+                )
+              + wMid_[cellI] * eikonalECG_templates::evaluateTemplate
                 (
                     localTime,
                     eikonalECG_templates::midTimes,
                     eikonalECG_templates::midValues,
                     eikonalECG_templates::numMidSamples
-                );
-            }
-            else
-            {
-                VmValues[cellI] = eikonalECG_templates::evaluateTemplate
+                )
+              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplate
                 (
                     localTime,
                     eikonalECG_templates::epiTimes,
                     eikonalECG_templates::epiValues,
                     eikonalECG_templates::numEpiSamples
                 );
-            }
+            // Templates are stored in mV; field uses dimVoltage (V).
+            VmValues[cellI] = rawVm * 1e-3;
         }
     }
 
@@ -271,14 +272,6 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
 
-    if (transitionMode != "hard")
-    {
-        FatalErrorInFunction
-            << "eikonalECG transmural heterogeneity requires transitionMode 'hard' "
-            << "(found '" << transitionMode << "') because we are stepping between 3 distinct voltage curves."
-            << exit(FatalError);
-    }
-
     const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
     autoPtr<volScalarField> tReadPtr;
     const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
@@ -386,7 +379,7 @@ void eikonalECG::solve
     (void)t0;
     (void)dt;
 
-    if (written_)
+    if (outputPtr_.valid())
     {
         values = lastValues_;
         return;
@@ -402,16 +395,13 @@ void eikonalECG::solve
         calculateTransmuralWeights(domain);
     }
 
-    if (!outputPtr_.valid())
-    {
-        outputPtr_ =
-            ecgModelIO::openTimeSeries
-            (
-                domain.mesh().time().globalPath()/"postProcessing",
-                "eikonalECG.dat",
-                domain.electrodeNames()
-            );
-    }
+    outputPtr_ =
+        ecgModelIO::openTimeSeries
+        (
+            domain.mesh().time().globalPath()/"postProcessing",
+            "eikonalECG.dat",
+            domain.electrodeNames()
+        );
 
     const volScalarField& activationTime = domain.activationTime();
     volScalarField& Vm = surrogateVm(domain);
@@ -423,6 +413,17 @@ void eikonalECG::solve
     {
         reconstructVm(sampleTime, activationTime, Vm);
         calculatePseudoECG(domain, Vm, lastValues_);
+
+        if (sigmaE_ > VSMALL)
+        {
+            const scalar norm =
+                1.0 / (4.0 * constant::mathematical::pi * sigmaE_);
+            forAll(lastValues_, eI)
+            {
+                lastValues_[eI] *= norm;
+            }
+        }
+
         ecgModelIO::writeRow(outputPtr_.ref(), sampleTime, lastValues_);
         domain.recordVerification(sampleTime, lastValues_);
 
@@ -431,7 +432,6 @@ void eikonalECG::solve
     }
 
     values = lastValues_;
-    written_ = true;
 
     if (report_)
     {

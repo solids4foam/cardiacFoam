@@ -17,7 +17,8 @@ License
 
 Description
     Utilities for transmural heterogeneity weights
-    (endo / M-cell / epi) for spatially varying ionic properties.
+    (endo / M-cell / epi) and apex-to-base gradient scaling
+    for spatially varying ionic properties.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -60,6 +61,14 @@ TransmuralBandWeights transmuralBandWeights
     scalar transitionWidth,
     const word& smoothing,
     const word& transitionMode
+);
+
+scalar apexBaseScale
+(
+    scalar d,
+    scalar beta,
+    scalar scalingMin,
+    scalar scalingMax
 );
 
 } // End namespace ionicHeterogeneity

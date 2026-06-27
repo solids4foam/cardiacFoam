@@ -138,6 +138,19 @@ void Foam::ToRORd_dynCl::configureIonicHeterogeneity
 }
 
 
+void Foam::ToRORd_dynCl::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl
+    (
+        apexDist, dict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 Foam::scalarField Foam::ToRORd_dynCl::constantsForTissue
 (
     const label tissueFlag

@@ -19,6 +19,7 @@ License
 
 #include "ionicHeterogeneity.H"
 #include "error.H"
+#include <cmath>
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -151,6 +152,18 @@ Foam::ionicHeterogeneity::transmuralBandWeights
     }
 
     return {0.0, 0.0, 1.0};
+}
+
+
+Foam::scalar Foam::ionicHeterogeneity::apexBaseScale
+(
+    const scalar d,
+    const scalar beta,
+    const scalar scalingMin,
+    const scalar scalingMax
+)
+{
+    return scalingMin*(1.0 + (scalingMax/scalingMin - 1.0)*std::exp(-beta*d));
 }
 
 // ************************************************************************* //

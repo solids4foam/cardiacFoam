@@ -19,7 +19,7 @@ Class
     Foam::GoktepeKuhlBatched
 
 Description
-    Goktepe-Kuhl (2010) active tension model implemented for batched GPU
+    Goktepe-Kuhl (2004) active tension model implemented for batched GPU
     execution.
 
 Author

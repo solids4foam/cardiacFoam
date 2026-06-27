@@ -258,6 +258,16 @@ void Foam::BuenoOrovio::configureIonicHeterogeneity
 }
 
 
+void Foam::BuenoOrovio::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl(apexDist, dict, HETEROGENEOUS_CONSTANTS_);
+}
+
+
 void Foam::BuenoOrovio::solveODE
 (
     const scalar stepStartTime,

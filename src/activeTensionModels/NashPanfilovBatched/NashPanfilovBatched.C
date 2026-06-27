@@ -40,7 +40,7 @@ const char* const* Foam::NashPanfilovBatched::ioStateNames() const
 const char* const* Foam::NashPanfilovBatched::ioConstantNames() const
 {
     static const char* const names[NUM_CONSTANTS] = {
-        "AC_Vp", "AC_Vr", "AC_Vth", "AC_e0", "AC_kTa", "AC_a"
+        "AC_Vp", "AC_Vr", "AC_Vth", "AC_e0", "AC_kTa"
     };
     return names;
 }

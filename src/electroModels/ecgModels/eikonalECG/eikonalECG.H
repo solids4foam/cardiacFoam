@@ -50,8 +50,8 @@ class eikonalECG
     scalar endTime_;
     scalar deltaT_;
     Switch report_;
+    scalar sigmaE_;
 
-    bool written_;
     scalarField lastValues_;
     autoPtr<OFstream> outputPtr_;
     autoPtr<volScalarField> VmPtr_;
