@@ -697,12 +697,21 @@ void conductionSystemDomain::setTerminalActivationTime(const scalarField& values
             << exit(FatalError);
     }
 
+    const bool acceptsRepeated =
+        solverPtr_->acceptsRepeatedTerminalActivationTimes();
+
     forAll(terminalNodes_, i)
     {
         if (values[i] >= 0.0)
         {
             const label nodeI = terminalNodes_[i];
-            if (activationTime_[nodeI] < 0.0 || values[i] < activationTime_[nodeI])
+
+            if
+            (
+                activationTime_[nodeI] < 0.0
+             || values[i] < activationTime_[nodeI]
+             || (acceptsRepeated && values[i] > activationTime_[nodeI] + SMALL)
+            )
             {
                 activationTime_[nodeI] = values[i];
             }

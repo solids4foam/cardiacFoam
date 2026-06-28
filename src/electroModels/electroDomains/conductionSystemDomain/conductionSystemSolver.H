@@ -86,6 +86,11 @@ public:
         PtrList<scalarField>& fields
     ) const
     {}
+
+    virtual bool acceptsRepeatedTerminalActivationTimes() const
+    {
+        return false;
+    }
 };
 
 } // End namespace Foam

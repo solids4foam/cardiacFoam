@@ -92,6 +92,7 @@ class restitutionEikonalSolver1D
     bool    initialised_;
 
     void initialiseState(const conductionSystemDomain& domain, scalar t0);
+    void importExternalActivations(conductionSystemDomain& domain, scalar tNow);
 
     restitutionEikonalSolver1D(const restitutionEikonalSolver1D&) = delete;
     void operator=(const restitutionEikonalSolver1D&) = delete;
@@ -112,6 +113,11 @@ public:
         scalar t0,
         scalar dt
     ) override;
+
+    virtual bool acceptsRepeatedTerminalActivationTimes() const override
+    {
+        return true;
+    }
 
     virtual void diagnosticFields
     (

@@ -127,6 +127,48 @@ void Foam::restitutionEikonalSolver1D::initialiseState
 }
 
 
+void Foam::restitutionEikonalSolver1D::importExternalActivations
+(
+    conductionSystemDomain& domain,
+    const scalar tNow
+)
+{
+    scalarField& Tact = domain.activationTime();
+    const labelList& terminalNodes = domain.terminalNodes();
+
+    forAll(terminalNodes, i)
+    {
+        const label nodeI = terminalNodes[i];
+        const scalar incomingTime = Tact[nodeI];
+        const scalar lastActTime = lastActTime_[nodeI];
+
+        if (incomingTime <= lastActTime + SMALL)
+        {
+            continue;
+        }
+
+        Tact[nodeI] = lastActTime < 0.0 ? -1.0 : lastActTime;
+
+        if
+        (
+            incomingTime <= tNow
+         && incomingTime - lastActTime >= minBeatInterval_
+        )
+        {
+            if (incomingTime < nextTact_[nodeI])
+            {
+                nextTact_[nodeI] = incomingTime;
+                nextTactSource_[nodeI] = -1;
+            }
+        }
+        else
+        {
+            ++blockCount_[nodeI];
+        }
+    }
+}
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 void Foam::restitutionEikonalSolver1D::advance
@@ -146,7 +188,8 @@ void Foam::restitutionEikonalSolver1D::advance
     const conductionGraph& G = domain.graph();
     scalarField& Tact = domain.activationTime();
 
-    // Funny current: spontaneous firing at lastActTime + escapeInterval
+    importExternalActivations(domain, tNow);
+
     forAll(lastActTime_, i)
     {
         const scalar tEscape = max(lastActTime_[i], tStart_) + escapeInterval_;
