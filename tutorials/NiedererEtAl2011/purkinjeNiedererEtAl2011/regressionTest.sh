@@ -230,8 +230,9 @@ foamDictionary system/controlDict -entry endTime -set "${END_TIME}" > /dev/null 
 cp constant/electroProperties.monodomain constant/electroProperties
 
 blockMesh > "${BLOCKMESH_LOGFILE}" 2>&1
-runPurkinjeGraph -case . -conductionDomain purkinjeNetwork -nSteps "${GRAPH_STEPS}" -deltaT "${DT}" \
-    > "${GRAPH_LOGFILE}" 2>&1
+foamDictionary system/controlDict -entry deltaT -set "${DT}" > /dev/null 2>&1
+runPurkinjeGraph -case . -conductionDomain purkinjeNetwork > "${GRAPH_LOGFILE}" 2>&1
+foamDictionary system/controlDict -entry deltaT -set "5e-05" > /dev/null 2>&1
 graphUtilityVtk="$(latestVtkFile)"
 cp "${graphUtilityVtk}" graphUtilityFinal.vtk
 graphUtilityVtk="graphUtilityFinal.vtk"
