@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "1782662824-2cd50f7a",
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV",
+  "predicted_at_utc": "2026-06-28T16:07:09.909384+00:00",
+  "artifacts": [
+    {
+      "artifact_id": "monodomain_vm_series",
+      "path_pattern": "{time}/Vm",
+      "format": "openfoam_time_dirs",
+      "variables": [
+        "Vm"
+      ],
+      "description": "Ionic export Vm (monodomainSolver)",
+      "produced_by": "monodomainSolver",
+      "optional": false,
+      "time_indexed": true
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "tutorial": "monodomainAndEikonal1DCableCVConvergence",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/outputsCVConvergenceSmoke",
+  "generated_at_utc": "2026-06-28T16:07:09.897916+00:00",
+  "artifact_count": 3,
+  "artifacts": [
+    {
+      "path": "TWorld/monodomainAndEikonal1DCableCVConvergence_summary.csv",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/outputsCVConvergenceSmoke/TWorld/monodomainAndEikonal1DCableCVConvergence_summary.csv",
+      "exists": true,
+      "kind": "table",
+      "format": "csv",
+      "label": "1D cable CV convergence summary",
+      "task_index": 1,
+      "module": "table_summary.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "TWorld/monodomainAndEikonal1DCableCVConvergence_dx_implicit_TWorld_epicardialCells_COND01.png",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/outputsCVConvergenceSmoke/TWorld/monodomainAndEikonal1DCableCVConvergence_dx_implicit_TWorld_epicardialCells_COND01.png",
+      "exists": true,
+      "kind": "plot",
+      "format": "png",
+      "label": "1D cable CV mesh convergence (TWorld | epicardialCells | implicit | conductivity #01)",
+      "task_index": 1,
+      "module": "table_summary.py",
+      "function": "run_postprocessing"
+    },
+    {
+      "path": "TWorld/monodomainAndEikonal1DCableCVConvergence_dt_implicit_TWorld_epicardialCells_COND01.png",
+      "absolute_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/outputsCVConvergenceSmoke/TWorld/monodomainAndEikonal1DCableCVConvergence_dt_implicit_TWorld_epicardialCells_COND01.png",
+      "exists": true,
+      "kind": "plot",
+      "format": "png",
+      "label": "1D cable CV time-step convergence (TWorld | epicardialCells | implicit | conductivity #01)",
+      "task_index": 1,
+      "module": "table_summary.py",
+      "function": "run_postprocessing"
+    }
+  ]
+}

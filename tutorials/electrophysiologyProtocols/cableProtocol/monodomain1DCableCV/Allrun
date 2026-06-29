@@ -1,0 +1,24 @@
+#!/bin/bash
+
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        parallel)
+            parallelRun=true
+            ;;
+    esac
+done
+
+runApplication blockMesh
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+
+python3 setupMonodomain1DCableCV/extract_cv.py

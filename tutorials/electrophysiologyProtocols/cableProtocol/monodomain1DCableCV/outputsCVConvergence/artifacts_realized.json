@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.1",
+  "run_id": "1782674663-5afa9cba",
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV",
+  "realized_at_utc": "2026-06-28T19:24:23.600873+00:00",
+  "cases": [
+    {
+      "case_id": null,
+      "predicted_count": 10,
+      "matched_count": 1,
+      "missing_count": 9,
+      "artifacts": [
+        {
+          "artifact_id": "monodomain_vm_series",
+          "predicted_path": "{time}/Vm",
+          "status": "matched",
+          "matched_files": [
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.002/Vm",
+              "kind": "file",
+              "size_bytes": 5407
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.004/Vm",
+              "kind": "file",
+              "size_bytes": 5374
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.006/Vm",
+              "kind": "file",
+              "size_bytes": 5350
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.008/Vm",
+              "kind": "file",
+              "size_bytes": 5308
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.01/Vm",
+              "kind": "file",
+              "size_bytes": 5080
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.012/Vm",
+              "kind": "file",
+              "size_bytes": 5252
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.014/Vm",
+              "kind": "file",
+              "size_bytes": 5219
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.016/Vm",
+              "kind": "file",
+              "size_bytes": 5192
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.018/Vm",
+              "kind": "file",
+              "size_bytes": 5163
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.02/Vm",
+              "kind": "file",
+              "size_bytes": 5123
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.022/Vm",
+              "kind": "file",
+              "size_bytes": 5066
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.024/Vm",
+              "kind": "file",
+              "size_bytes": 5065
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.026/Vm",
+              "kind": "file",
+              "size_bytes": 5040
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.028/Vm",
+              "kind": "file",
+              "size_bytes": 5026
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.03/Vm",
+              "kind": "file",
+              "size_bytes": 5007
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.032/Vm",
+              "kind": "file",
+              "size_bytes": 5023
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.034/Vm",
+              "kind": "file",
+              "size_bytes": 5025
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.036/Vm",
+              "kind": "file",
+              "size_bytes": 5021
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.038/Vm",
+              "kind": "file",
+              "size_bytes": 5034
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.04/Vm",
+              "kind": "file",
+              "size_bytes": 5013
+            }
+          ],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_v_series",
+          "predicted_path": "{time}/v",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_cai_series",
+          "predicted_path": "{time}/cai",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_contraction_ca_trpn_series",
+          "predicted_path": "{time}/contraction_Ca_TRPN",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_av_ina_ina_series",
+          "predicted_path": "{time}/AV_INa_INa",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_av_ical_ical_series",
+          "predicted_path": "{time}/AV_ICaL_ICaL",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_av_ikr_ikr_series",
+          "predicted_path": "{time}/AV_IKr_IKr",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_av_iks_iks_series",
+          "predicted_path": "{time}/AV_IKs_IKs",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_av_ito_ito_series",
+          "predicted_path": "{time}/AV_Ito_Ito",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        },
+        {
+          "artifact_id": "monodomain_iion_cm_series",
+          "predicted_path": "{time}/Iion_cm",
+          "status": "missing",
+          "matched_files": [],
+          "optional": false
+        }
+      ]
+    }
+  ]
+}

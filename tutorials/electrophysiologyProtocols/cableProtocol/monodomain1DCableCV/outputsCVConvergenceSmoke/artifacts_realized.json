@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.1",
+  "run_id": "1782662824-2cd50f7a",
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV",
+  "realized_at_utc": "2026-06-28T16:07:09.915328+00:00",
+  "cases": [
+    {
+      "case_id": "implicit_TWorld_epicardialCells_DT0.02_DX0.5_COND01",
+      "predicted_count": 1,
+      "matched_count": 1,
+      "missing_count": 0,
+      "artifacts": [
+        {
+          "artifact_id": "monodomain_vm_series",
+          "predicted_path": "{time}/Vm",
+          "status": "matched",
+          "matched_files": [
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.005/Vm",
+              "kind": "file",
+              "size_bytes": 1417
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.01/Vm",
+              "kind": "file",
+              "size_bytes": 1411
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.015/Vm",
+              "kind": "file",
+              "size_bytes": 1407
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.02/Vm",
+              "kind": "file",
+              "size_bytes": 1393
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.025/Vm",
+              "kind": "file",
+              "size_bytes": 1394
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.03/Vm",
+              "kind": "file",
+              "size_bytes": 1390
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.035/Vm",
+              "kind": "file",
+              "size_bytes": 1381
+            },
+            {
+              "path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/0.04/Vm",
+              "kind": "file",
+              "size_bytes": 1378
+            }
+          ],
+          "optional": false
+        }
+      ]
+    }
+  ]
+}

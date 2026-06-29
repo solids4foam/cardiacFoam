@@ -1,0 +1,356 @@
+{
+  "schema_version": "2.3",
+  "run_id": "1781089647-faffc322",
+  "requested_action": "sim",
+  "entry": "restitutionCurves",
+  "entry_kind": "registered_tutorial",
+  "entry_path": "coreProtocols/restitutionCurves_s1s2Protocol",
+  "source_type": "spec_factory",
+  "workflow_family": null,
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/restitutionCurves_s1s2Protocol",
+  "setup_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/restitutionCurves_s1s2Protocol/postProcessing",
+  "dry_run": true,
+  "continue_on_error": false,
+  "status": "planned",
+  "postprocess_status": "skipped",
+  "current_case_id": null,
+  "started_at_utc": "2026-06-10T11:07:27.458120+00:00",
+  "updated_at_utc": "2026-06-10T11:07:27.813174+00:00",
+  "finished_at_utc": "2026-06-10T11:07:27.809169+00:00",
+  "total_cases": 21,
+  "planned_cases": 21,
+  "completed_cases": 0,
+  "failed_cases": 0,
+  "error": null,
+  "plots_manifest_path": null,
+  "artifacts_manifest_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/artifacts_manifest.json",
+  "artifacts_realized_path": null,
+  "workflow_dag": {
+    "steps": [
+      {
+        "id": "solve",
+        "command": "cardiacFoam",
+        "depends_on": []
+      }
+    ]
+  },
+  "results": [
+    {
+      "case_id": "Stewart_myocyte_S2_1500",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 1500
+      },
+      "error": null,
+      "index": 1,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_1200",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 1200
+      },
+      "error": null,
+      "index": 2,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_1000",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 1000
+      },
+      "error": null,
+      "index": 3,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_800",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 800
+      },
+      "error": null,
+      "index": 4,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_600",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 600
+      },
+      "error": null,
+      "index": 5,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_400",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 400
+      },
+      "error": null,
+      "index": 6,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_390",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 390
+      },
+      "error": null,
+      "index": 7,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_380",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 380
+      },
+      "error": null,
+      "index": 8,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_370",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 370
+      },
+      "error": null,
+      "index": 9,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_360",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 360
+      },
+      "error": null,
+      "index": 10,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_350",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 350
+      },
+      "error": null,
+      "index": 11,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_340",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 340
+      },
+      "error": null,
+      "index": 12,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_330",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 330
+      },
+      "error": null,
+      "index": 13,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_320",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 320
+      },
+      "error": null,
+      "index": 14,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_310",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 310
+      },
+      "error": null,
+      "index": 15,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_300",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 300
+      },
+      "error": null,
+      "index": 16,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_290",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 290
+      },
+      "error": null,
+      "index": 17,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_280",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 280
+      },
+      "error": null,
+      "index": 18,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_270",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 270
+      },
+      "error": null,
+      "index": 19,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_260",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 260
+      },
+      "error": null,
+      "index": 20,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "Stewart_myocyte_S2_250",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "Stewart",
+        "tissue": "myocyte",
+        "s2Interval": 250
+      },
+      "error": null,
+      "index": 21,
+      "total_cases": 21,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    }
+  ],
+  "human_report_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/run_report.md"
+}

@@ -1,0 +1,94 @@
+{
+  "case_id": "implicit_BuenoOrovio_epicardialCells_DT0.01_DX0.5_COND01",
+  "probe_positions_m": [
+    {
+      "probe_index": 0,
+      "x": 0.002,
+      "y": 5e-05,
+      "z": 5e-05
+    },
+    {
+      "probe_index": 1,
+      "x": 0.005,
+      "y": 5e-05,
+      "z": 5e-05
+    },
+    {
+      "probe_index": 2,
+      "x": 0.01,
+      "y": 5e-05,
+      "z": 5e-05
+    },
+    {
+      "probe_index": 3,
+      "x": 0.015,
+      "y": 5e-05,
+      "z": 5e-05
+    },
+    {
+      "probe_index": 4,
+      "x": 0.018,
+      "y": 5e-05,
+      "z": 5e-05
+    }
+  ],
+  "activation_times_s": [
+    {
+      "probe_index": 0,
+      "activation_time_s": 0.00446797
+    },
+    {
+      "probe_index": 1,
+      "activation_time_s": 0.0107346
+    },
+    {
+      "probe_index": 2,
+      "activation_time_s": 0.0211627
+    },
+    {
+      "probe_index": 3,
+      "activation_time_s": 0.0326266
+    },
+    {
+      "probe_index": 4,
+      "activation_time_s": 0.0378363
+    }
+  ],
+  "segments": [
+    {
+      "start_probe": 0,
+      "end_probe": 1,
+      "dx_m": 0.003,
+      "dt_s": 0.0062666300000000005,
+      "cv_m_per_s": 0.4787262053129034
+    },
+    {
+      "start_probe": 1,
+      "end_probe": 2,
+      "dx_m": 0.005,
+      "dt_s": 0.0104281,
+      "cv_m_per_s": 0.47947372963435336
+    },
+    {
+      "start_probe": 2,
+      "end_probe": 3,
+      "dx_m": 0.004999999999999999,
+      "dt_s": 0.011463899999999999,
+      "cv_m_per_s": 0.43615174591543887
+    },
+    {
+      "start_probe": 3,
+      "end_probe": 4,
+      "dx_m": 0.002999999999999999,
+      "dt_s": 0.005209700000000005,
+      "cv_m_per_s": 0.5758488972493611
+    }
+  ],
+  "central_cv": {
+    "start_probe": 1,
+    "end_probe": 3,
+    "dx_m": 0.009999999999999998,
+    "dt_s": 0.021892,
+    "cv_m_per_s": 0.45678786771423346
+  }
+}
