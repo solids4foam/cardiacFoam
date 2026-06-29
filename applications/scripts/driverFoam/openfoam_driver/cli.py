@@ -686,6 +686,18 @@ def main(argv: list[str] | None = None) -> int:
         return _dispatch_context(args, context)
 
     spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
+    _legacy_workflow_dag = spec.metadata.get("workflow_dag")
+    _env_diags = _environment_diagnostics(_legacy_workflow_dag)
+    _env_errors = [d for d in _env_diags if d.level == "error"]
+    if _env_errors:
+        print(json.dumps({
+            "status": "failed",
+            "entry": selected_entry,
+            "action": args.action,
+            "error": "Execution environment preflight failed.",
+            "environment_diagnostics": [asdict(d) for d in _env_diags],
+        }, indent=2))
+        return 1
     engine = DriverEngine(
         spec=spec,
         dry_run=args.dry_run,

@@ -862,5 +862,81 @@ class TestArtifactsRealizedManifest(unittest.TestCase):
             )
 
 
+def _make_spec(root: Path, *, fail: bool = False) -> TutorialSpec:
+    case_root = root / "case"
+    output_dir = root / "output"
+    case_root.mkdir(exist_ok=True)
+
+    def build_cases():
+        return [CaseConfig(case_id="c1", params={})]
+
+    def apply_case(case_root, case):
+        pass
+
+    def run_case(case_root, setup_root, case):
+        if fail:
+            raise RuntimeError("simulated failure")
+
+    return TutorialSpec(
+        name="test",
+        case_root=case_root,
+        setup_root=root / "setup",
+        output_dir=output_dir,
+        build_cases=build_cases,
+        apply_case=apply_case,
+        run_case=run_case,
+    )
+
+
+class TestEngineWorkflowState(unittest.TestCase):
+    def _run_engine(self, root: Path, *, fail: bool = False) -> Path:
+        spec = _make_spec(root, fail=fail)
+        engine = DriverEngine(spec=spec, requested_action="sim")
+        try:
+            engine.run_simulations()
+        except Exception:
+            pass
+        return spec.output_dir / "workflow_state.json"
+
+    def test_workflow_state_written_after_successful_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wf_path = self._run_engine(root)
+            assert wf_path.exists(), "workflow_state.json must exist after completed run"
+            state = json.loads(wf_path.read_text())
+            assert state["status"] == "completed"
+            assert state["source"] == "legacy_engine"
+
+    def test_workflow_state_written_failed_status_on_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wf_path = self._run_engine(root, fail=True)
+            assert wf_path.exists(), "workflow_state.json must exist even after failure"
+            state = json.loads(wf_path.read_text())
+            assert state["status"] == "failed"
+            assert state["source"] == "legacy_engine"
+
+    def test_workflow_state_not_written_mid_run(self):
+        """workflow_state.json must not appear until the run reaches a terminal status."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = _make_spec(root)
+            seen_early = []
+
+            original_write = DriverEngine._write_manifest
+
+            def patched_write(self, results, *, status, **kwargs):
+                if status == "running":
+                    wf = self.spec.output_dir / "workflow_state.json"
+                    seen_early.append(wf.exists())
+                original_write(self, results, status=status, **kwargs)
+
+            with mock.patch.object(DriverEngine, "_write_manifest", patched_write):
+                engine = DriverEngine(spec=spec, requested_action="sim")
+                engine.run_simulations()
+
+            assert not any(seen_early), "workflow_state.json written before terminal status"
+
+
 if __name__ == "__main__":
     unittest.main()

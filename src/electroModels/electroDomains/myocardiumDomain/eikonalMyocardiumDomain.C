@@ -442,7 +442,7 @@ void eikonalMyocardiumDomain::preInitialiseFromSeeds
                 const coupledFvPatchScalarField& cpT = refCast<const coupledFvPatchScalarField>(pT);
                 tmp<scalarField> tneiT = cpT.patchNeighbourField();
                 const scalarField& nT = tneiT();
-                
+
                 const labelUList& faceCells = pT.patch().faceCells();
                 tmp<vectorField> tdelta = pT.patch().delta();
                 const vectorField& delta = tdelta();

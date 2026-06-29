@@ -531,6 +531,13 @@ class DriverEngine:
         report_path.write_text("\n".join(lines).rstrip() + "\n")
         return report_path
 
+    _ENGINE_TO_WF_STATUS: dict[str, str] = {
+        "completed": "completed",
+        "completed_with_failures": "failed",
+        "failed": "failed",
+        "postprocess_failed": "failed",
+    }
+
     _TERMINAL_STATUSES: tuple[str, ...] = (
         "completed", "completed_with_failures", "failed", "postprocess_failed",
     )
@@ -613,6 +620,22 @@ class DriverEngine:
         artifacts_realized_path: Path | None = None
         if status in self._TERMINAL_STATUSES:
             artifacts_realized_path = self._write_realized_manifest(destination_root)
+            if not self.dry_run:
+                wf_status = self._ENGINE_TO_WF_STATUS.get(status, "failed")
+                wf_payload = {
+                    "schema_version": "1.0",
+                    "source": "legacy_engine",
+                    "run_id": self.run_id,
+                    "status": wf_status,
+                    "current_step_id": None,
+                    "completed_steps": [],
+                    "failed_step_id": None,
+                    "steps": [],
+                }
+                wf_path = destination_root / "workflow_state.json"
+                wf_tmp = wf_path.with_name(wf_path.name + ".tmp")
+                wf_tmp.write_text(json.dumps(wf_payload, indent=2))
+                os.replace(wf_tmp, wf_path)
         total = total_cases if total_cases is not None else len(results)
         manifest = {
             "schema_version": "2.3",
