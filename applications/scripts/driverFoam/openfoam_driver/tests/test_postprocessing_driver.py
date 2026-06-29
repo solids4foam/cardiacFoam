@@ -52,10 +52,10 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "electrophysiologyProtocols/cableProtocol"
             / "monodomain1DCableCV"
-            / "setupMonodomain1DCableCV"
+            / "setup"
         )
 
-        module_path = setup_root / "postProcessing" / "table_summary.py"
+        module_path = setup_root / "table_summary.py"
         spec = importlib.util.spec_from_file_location("monodomain1d_table_summary", module_path)
         if spec is None or spec.loader is None:
             raise RuntimeError("Could not load monodomain1DCableCV table_summary module")
@@ -88,7 +88,7 @@ class TestPostprocessingDriver(unittest.TestCase):
                 setup_root=setup_root,
                 output_dir=output_dir,
                 tutorial_name="monodomainAndEikonal1DCableCVConvergence",
-                tasks=[PostprocessTask(module_relpath=Path("postProcessing/table_summary.py"))],
+                tasks=[PostprocessTask(module_relpath=Path("table_summary.py"))],
             )
 
             csv_path = output_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
@@ -118,10 +118,10 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "electrophysiologyProtocols/cableProtocol"
             / "monodomain1DCableCV"
-            / "setupMonodomain1DCableCV"
+            / "setup"
         )
 
-        module_path = setup_root / "postProcessing" / "table_summary.py"
+        module_path = setup_root / "table_summary.py"
         spec = importlib.util.spec_from_file_location("monodomain1d_table_summary_nested", module_path)
         if spec is None or spec.loader is None:
             raise RuntimeError("Could not load monodomain1DCableCV table_summary module")
@@ -157,7 +157,7 @@ class TestPostprocessingDriver(unittest.TestCase):
                 setup_root=setup_root,
                 output_dir=output_dir,
                 tutorial_name="monodomainAndEikonal1DCableCVConvergence",
-                tasks=[PostprocessTask(module_relpath=Path("postProcessing/table_summary.py"))],
+                tasks=[PostprocessTask(module_relpath=Path("table_summary.py"))],
             )
 
             csv_path = model_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
@@ -297,7 +297,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "manufacturedSolutions"
             / "monodomainPseudoECG"
-            / "setupManufacturedFDA"
+            / "setup"
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -346,7 +346,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "manufacturedSolutions"
             / "monodomainPseudoECG"
-            / "setupManufacturedFDA"
+            / "setup"
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -424,7 +424,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "electrophysiologyProtocols"
             / "restitutionCurves_s1s2Protocol"
-            / "setupRestitutionCurves_s1s2Protocol"
+            / "setup"
             / "postProcessing_restCurves.py"
         )
         import importlib.util
@@ -454,7 +454,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "electrophysiologyProtocols"
             / "singleCell"
-            / "setupSingleCell"
+            / "setup"
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -475,7 +475,7 @@ class TestPostprocessingDriver(unittest.TestCase):
                 tutorial_name="singleCell",
                 tasks=[
                     PostprocessTask(
-                        module_relpath=Path("postProcessing/table_summary.py")
+                        module_relpath=Path("table_summary.py")
                     )
                 ],
             )
@@ -495,7 +495,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             / "tutorials"
             / "electrophysiologyProtocols"
             / "restitutionCurves_s1s2Protocol"
-            / "setupRestitutionCurves_s1s2Protocol"
+            / "setup"
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -514,7 +514,7 @@ class TestPostprocessingDriver(unittest.TestCase):
                 tutorial_name="restitutionCurves_s1s2Protocol",
                 tasks=[
                     PostprocessTask(
-                        module_relpath=Path("postProcessing/table_summary.py")
+                        module_relpath=Path("table_summary.py")
                     )
                 ],
             )

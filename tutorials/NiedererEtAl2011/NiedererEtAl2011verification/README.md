@@ -21,7 +21,7 @@ tutorials/NiedererEtAl2011/NiedererEtAl2011verification/
 │   ├── fvSchemes
 │   ├── fvSolution
 │   └── smokeCheck.reference
-├── setupNiedererEtAl2011/
+├── setup/
 │   └── postProcessing/
 │       ├── cache_postProcessing.py
 │       ├── line_postProcessing.py

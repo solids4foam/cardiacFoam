@@ -32,7 +32,7 @@ from pathlib import Path
 
 TUTORIAL_NAME = "manufacturedPurkinjeGraph"
 CASE_DIR_NAME = "manufacturedSolutions/monodomain1D3D"
-SETUP_DIR_NAME = "setupManufactured1D3D"
+SETUP_DIR_NAME = "setup"
 OUTPUT_DIR_NAME = "outputs/1dGraphConvergence"
 GRAPH_IDS = ("nodes003", "nodes011", "nodes021", "nodes041", "nodes081", "nodes161")
 N_STEPS = 1427

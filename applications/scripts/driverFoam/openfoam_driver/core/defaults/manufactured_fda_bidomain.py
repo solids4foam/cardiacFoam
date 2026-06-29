@@ -41,7 +41,7 @@ from .manufactured_fda import (
 
 TUTORIAL_NAME = "manufacturedFDABidomain"
 CASE_DIR_NAME = "manufacturedSolutions/bidomain"
-SETUP_DIR_NAME = "setupManufacturedFDA"
+SETUP_DIR_NAME = "setup"
 SOLVER_TYPES = ("implicit",)
 ELECTRO_PROPERTIES_SCOPE = "bidomainSolverCoeffs"
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH

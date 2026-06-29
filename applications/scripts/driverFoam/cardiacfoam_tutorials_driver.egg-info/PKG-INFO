@@ -44,9 +44,9 @@ Each tutorial module in `specs/tutorials/` builds a `TutorialSpec` with:
 
 - `build_cases()`
 - `apply_case(case_root, case)`
-- `run_case(case_root, setup_root, case)`
+- `run_case(case_root, setup, case)`
 - optional `collect_outputs(case_root, output_dir)`
-- optional `postprocess(setup_root, output_dir)`
+- optional `postprocess(setup, output_dir)`
 
 This keeps all tutorial workflows on one engine while allowing per-tutorial sweep logic.
 
@@ -126,7 +126,7 @@ Canonical example config:
 Common override keys across tutorials:
 
 - `case_dir_name`
-- `setup_dir_name`
+- `setup`
 - `output_dir_name`
 - `run_script_relpath`
 - `electro_property_overrides`
@@ -242,10 +242,10 @@ Each `results` item currently reports:
 
 Expected per tutorial setup assets:
 
-- `singleCell/setupSingleCell/singleCellinteractivePlots.py`
-- `manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/post_processing_manufactured.py`
-- `NiedererEtAl2011/NiedererEtAl2011verification/setupNiedererEtAl2011/postProcessing/{cache_postProcessing.py,line_postProcessing.py,points_postProcessing.py}`
-- `restitutionCurves_s1s2Protocol/setupRestitutionCurves_s1s2Protocol/postProcessing_restCurves.py`
+- `singleCell/setup/singleCellinteractivePlots.py`
+- `manufacturedSolutions/monodomainPseudoECG/setup/post_processing_manufactured.py`
+- `NiedererEtAl2011/NiedererEtAl2011verification/setup/postProcessing/{cache_postProcessing.py,line_postProcessing.py,points_postProcessing.py}`
+- `restitutionCurves_s1s2Protocol/setup/postProcessing_restCurves.py`
 
 ## Architecture tests
 

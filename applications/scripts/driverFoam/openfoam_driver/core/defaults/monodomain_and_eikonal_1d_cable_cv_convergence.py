@@ -39,7 +39,7 @@ from .shared import (
 
 TUTORIAL_NAME = "monodomainAndEikonal1DCableCVConvergence"
 CASE_DIR_NAME = "electrophysiologyProtocols/cableProtocol/monodomain1DCableCV"
-SETUP_DIR_NAME = "setupMonodomain1DCableCV"
+SETUP_DIR_NAME = "setup"
 DEFAULT_OUTPUT_DIR_NAME = "outputsCVConvergence"
 DX_VALUES = (0.5, 0.2, 0.1)  # mm
 DT_VALUES = (0.02, 0.01, 0.005)  # ms
@@ -57,7 +57,7 @@ ELECTRO_PROPERTIES_SCOPE = "monodomainSolverCoeffs"
 ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH
 BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
-TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+TABLE_SUMMARY_RELPATH = Path("table_summary.py")
 CV_EXTRACT_SCRIPT_RELPATH = Path("extract_cv.py")
 CABLE_LENGTH_MM = 20.0
 CROSS_SECTION_CELL_COUNTS = (1, 1)

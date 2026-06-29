@@ -34,7 +34,7 @@ from .shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
 
 TUTORIAL_NAME = "manufacturedEikonalECG"
 CASE_DIR_NAME = "manufacturedSolutions/eikonalECG"
-SETUP_DIR_NAME = "setupManufacturedEikonalECG"
+SETUP_DIR_NAME = "setup"
 NUMBER_CELLS = (10, 20, 40, 80)
 DIMENSIONS = ("1D", "2D", "3D")
 SOLVER_TYPES = ("eikonal",)

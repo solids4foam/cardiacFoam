@@ -1,0 +1,8 @@
+{
+  "case_dir_name": "manufacturedSolutions/eikonalECG",
+  "setup_dir_name": "setup",
+  "postprocess_strict_artifacts": false,
+  "run_in_parallel": false,
+  "dimensions": ["1D", "2D", "3D"],
+  "number_cells": [10, 20, 40, 80]
+}

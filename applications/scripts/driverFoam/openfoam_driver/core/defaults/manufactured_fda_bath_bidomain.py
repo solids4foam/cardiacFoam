@@ -42,7 +42,7 @@ from .manufactured_fda import (
 
 TUTORIAL_NAME = "manufacturedFDABathBidomain"
 CASE_DIR_NAME = "manufacturedSolutions/bathBidomain"
-SETUP_DIR_NAME = "setupManufacturedFDA"
+SETUP_DIR_NAME = "setup"
 SOLVER_TYPES = ("implicit",)
 ELECTRO_PROPERTIES_SCOPE = "bidomainSolverCoeffs"
 BLOCK_MESH_DICT_TEMPLATE = "system/blockMeshDict.{dimension}"

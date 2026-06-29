@@ -60,7 +60,7 @@ Driver-managed 1D/2D/3D parallel convergence sweep:
 
 ```bash
 source $WM_PROJECT_DIR/etc/bashrc
-tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/run_all_dimensions.sh
+tutorials/manufacturedSolutions/bathBidomain/setup/run_all_dimensions.sh
 ```
 
 Use `run_all_dimensions.sh sim` to run simulations only and skip
@@ -72,7 +72,7 @@ Parallel ECG ownership smoke run:
 source $WM_PROJECT_DIR/etc/bashrc
 applications/scripts/driverFoam/bin/driverFoam sim \
     --entry manufacturedFDABathBidomain \
-    --config tutorials/manufacturedSolutions/bathBidomain/setupManufacturedFDA/driver_config_ecg_smoke.json
+    --config tutorials/manufacturedSolutions/bathBidomain/setup/driver_config_ecg_smoke.json
 ```
 
 Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and

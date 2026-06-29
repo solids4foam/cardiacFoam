@@ -39,7 +39,7 @@ from .shared import (
 
 TUTORIAL_NAME = "manufacturedFDA"
 CASE_DIR_NAME = "manufacturedSolutions/monodomainPseudoECG"
-SETUP_DIR_NAME = "setupManufacturedFDA"
+SETUP_DIR_NAME = "setup"
 NUMBER_CELLS = (10, 20, 40, 80)
 DT_VALUES = (
     0.00892857,

@@ -40,7 +40,7 @@ tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
 │   ├── controlDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setupMonodomain1DCableCV/
+├── setup/
 │   └── extract_cv.py
 ├── Allrun
 ├── Allclean
@@ -105,7 +105,7 @@ foamctl all --entry monodomainAndEikonal1DCableCVConvergence
 The default sweep config is stored in:
 
 ```text
-setupMonodomain1DCableCV/driver_config.json
+setup/driver_config.json
 ```
 
 That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`

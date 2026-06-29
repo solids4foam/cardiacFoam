@@ -10,7 +10,7 @@
   },
   "manufacturedFDABidomain": {
     "case_dir_name": "manufacturedSolutions/bidomain",
-    "setup_dir_name": "setupManufacturedFDA",
+    "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "dimensions": ["1D"],
     "solver_types": ["implicit"],
@@ -37,7 +37,7 @@
   },
   "niederer2012": {
     "case_dir_name": "NiedererEtAl2011/NiedererEtAl2011verification",
-    "setup_dir_name": "setupNiedererEtAl2011",
+    "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP"],
     "ionic_model_tissue_map": {

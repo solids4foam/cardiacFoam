@@ -19,7 +19,7 @@ tutorials/coreProtocols/singleCell/
 │   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setupSingleCell/
+├── setup/
 │   ├── run_cases.sh
 │   └── singleCellinteractivePlots.py
 ├── singleCell.reference
@@ -78,7 +78,7 @@ foamctl all --entry singleCell
 ```
 
 The Python driver mutates ionic model, tissue, and stimulus amplitude for each case,
-then collects outputs and post-processes in `setupSingleCell`.
+then collects outputs and post-processes in `setup`.
 
 ## Regression behavior
 

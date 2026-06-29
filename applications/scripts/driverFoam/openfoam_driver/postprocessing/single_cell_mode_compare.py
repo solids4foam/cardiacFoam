@@ -501,7 +501,7 @@ def _plot_model(
 
 def _manifest_mode_from_path(path: Path) -> str:
     parent = path.parent
-    if parent.name in {"postProcessing", "setupSingleCell"} and parent.parent.name:
+    if parent.name in {"postProcessing", "setup"} and parent.parent.name:
         return parent.parent.name
     return parent.name
 

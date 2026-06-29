@@ -39,7 +39,7 @@ from ...ionic_model_catalog import IONIC_MODEL_CATALOG
 
 TUTORIAL_NAME = "singleCell"
 CASE_DIR_NAME = "electrophysiologyProtocols/singleCell"
-SETUP_DIR_NAME = "setupSingleCell"
+SETUP_DIR_NAME = "setup"
 IONIC_MODELS = tuple(
     name
     for name, entry in IONIC_MODEL_CATALOG.items()

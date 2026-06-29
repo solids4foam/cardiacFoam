@@ -1,0 +1,60 @@
+{
+  "schema_version": "2.3",
+  "run_id": "1782662811-83ca12ab",
+  "requested_action": "all",
+  "entry": "monodomainAndEikonal1DCableCVConvergence",
+  "entry_kind": "registered_tutorial",
+  "entry_path": "coreProtocols/cableProtocol/monodomain1DCableCV",
+  "source_type": "spec_factory",
+  "workflow_family": null,
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV",
+  "setup_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/setup",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/outputsCVConvergenceSmoke",
+  "dry_run": true,
+  "continue_on_error": false,
+  "status": "planned",
+  "postprocess_status": "skipped",
+  "current_case_id": null,
+  "started_at_utc": "2026-06-28T16:06:51.052468+00:00",
+  "updated_at_utc": "2026-06-28T16:06:51.127055+00:00",
+  "finished_at_utc": "2026-06-28T16:06:51.122634+00:00",
+  "total_cases": 1,
+  "planned_cases": 1,
+  "completed_cases": 0,
+  "failed_cases": 0,
+  "error": null,
+  "plots_manifest_path": null,
+  "artifacts_manifest_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/setup/artifacts_manifest.json",
+  "artifacts_realized_path": null,
+  "workflow_dag": {
+    "steps": [
+      {
+        "id": "run",
+        "command": "Allrun",
+        "depends_on": []
+      }
+    ]
+  },
+  "results": [
+    {
+      "case_id": "implicit_TWorld_epicardialCells_DT0.02_DX0.5_COND01",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "ionicModel": "TWorld",
+        "tissue": "epicardialCells",
+        "dt_ms": 0.02,
+        "dx_mm": 0.5,
+        "solver": "implicit",
+        "conductivity": "[-1 -3 3 0 0 2 0] (0.1334 0 0 0.1334 0 0.1334)",
+        "conductivity_id": 1
+      },
+      "error": null,
+      "index": 1,
+      "total_cases": 1,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    }
+  ],
+  "human_report_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/setup/run_report.md"
+}

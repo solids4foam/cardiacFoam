@@ -131,6 +131,7 @@ docs/superpowers/
 tutorials/**/log.*
 tutorials/**/processor*/
 tutorials/**/postProcessing/
+!tutorials/**/postProcessing/*.py
 tutorials/**/archivedPostProcessing/
 tutorials/**/logs/
 tutorials/**/constant/polyMesh/

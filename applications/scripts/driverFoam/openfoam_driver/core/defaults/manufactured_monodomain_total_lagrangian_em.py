@@ -48,7 +48,7 @@ OUTPUT_RELPATH = Path("postProcessing")
 
 TUTORIAL_NAME = "manufacturedMonodomainTotalLagrangianEM"
 CASE_DIR_NAME = "manufacturedSolutions/monodomainTotalLagrangianEM"
-SETUP_DIR_NAME = "setupManufacturedMonodomainTotalLagrangianEM"
+SETUP_DIR_NAME = "setup"
 SOLVER_TYPES = ("implicit",)
 CONTROL_DICT_RELPATH = CONTROL_DICT_RELPATH
 ELECTRO_PROPERTIES_RELPATH = Path("constant/electro/electroProperties")

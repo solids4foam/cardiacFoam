@@ -55,5 +55,5 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setupManufacturedFDA/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config.json
 ```

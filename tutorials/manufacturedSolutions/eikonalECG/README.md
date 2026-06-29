@@ -16,7 +16,7 @@ blockMesh -dict system/blockMeshDict.3D
 Run the available manufactured dimensions through the setup directory with:
 
 ```sh
-./setupManufacturedEikonalECG/run_all_dimensions.sh
+./setup/run_all_dimensions.sh
 ```
 
 Expected verification outputs:
@@ -26,13 +26,13 @@ Expected verification outputs:
 - `postProcessing/manufacturedEikonalECG.dat`
 - `postProcessing/manufacturedEikonalECGSummary.dat`
 
-The post-processing helper in `setupManufacturedEikonalECG` collects activation
+The post-processing helper in `setup` collects activation
 and ECG summary files into CSV tables for manufactured mesh studies.
 
 After the driver runs, generate the convergence plot with:
 
 ```sh
-python3 setupManufacturedEikonalECG/plot_convergence.py postProcessing
+python3 setup/plot_convergence.py postProcessing
 ```
 
 This writes `postProcessing/convergence_plot.pdf` and `.png` with three panels:
