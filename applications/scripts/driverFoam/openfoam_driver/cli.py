@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .core.runtime.engine import DriverEngine
 from .core.runtime.failure_context import build_failure_context
+from .core.runtime.openfoam_environment import load_openfoam_environment
 from .core.runtime.remediation import build_candidate_remediations
 from .core.runtime.remediation_audit import append_remediation_record
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
@@ -42,8 +44,26 @@ from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
 from .specs.apply_overrides import validate_overrides, apply_overrides, OverrideError
-from .strict_planning import strict_plan, _utility_produces_by_command
+from .strict_planning import (
+    StrictDiagnostic,
+    _environment_diagnostics,
+    _utility_produces_by_command,
+    strict_plan,
+)
 from .core.runtime.run_document_exec import build_execution_inputs, load_run_document
+
+
+@dataclass(frozen=True)
+class _ExecutionContext:
+    entry_label: str
+    workflow_dag: dict
+    planned_state: object
+    case_root: Path
+    output_dir: Path
+    expected_artifacts: tuple
+    environment_diagnostics: tuple[StrictDiagnostic, ...] = ()
+    execution_env: dict[str, str] | None = None
+    source_path: str | None = None
 
 
 def _step_payload(
@@ -84,6 +104,27 @@ def _terminal_status_label(workflow_status: str) -> str:
     return "ok" if workflow_status == "completed" else "failed"
 
 
+def _environment_errors(diagnostics: tuple[StrictDiagnostic, ...]) -> list[StrictDiagnostic]:
+    return [diagnostic for diagnostic in diagnostics if diagnostic.level == "error"]
+
+
+def _refuse_environment_errors(context: _ExecutionContext, *, action: str) -> int | None:
+    errors = _environment_errors(context.environment_diagnostics)
+    if not errors:
+        return None
+    payload = {
+        "status": "failed",
+        "entry": context.entry_label,
+        "action": action,
+        "error": "Execution environment preflight failed.",
+        "environment_diagnostics": [asdict(diagnostic) for diagnostic in context.environment_diagnostics],
+    }
+    if context.source_path is not None:
+        payload["run_document"] = context.source_path
+    print(json.dumps(payload, indent=2))
+    return 1
+
+
 def _attach_failure_context(payload: dict, state, step_id: str | None, *, tail_lines: int) -> None:
     """Attach a failure_context bundle when the named step state is failed.
 
@@ -111,6 +152,7 @@ def _execute_step(
     output_dir: Path,
     expected_artifacts,
     tail_lines: int,
+    execution_env: dict[str, str] | None = None,
     apply_overrides_path: str | None = None,
 ) -> int:
     """Run one workflow step, print the JSON payload, return the exit code.
@@ -155,6 +197,7 @@ def _execute_step(
             log_dir=output_dir / "workflow_logs",
             state_path=state_path,
             expected_artifacts=expected_artifacts,
+            env=execution_env,
         )
     except Exception as exc:
         if overrides is not None:
@@ -208,6 +251,7 @@ def _execute_run(
     output_dir: Path,
     expected_artifacts,
     tail_lines: int,
+    execution_env: dict[str, str] | None = None,
 ) -> int:
     """Run a workflow to completion, print the JSON payload, return the exit code.
 
@@ -244,6 +288,7 @@ def _execute_run(
             output_dir=output_dir,
             expected_artifacts=expected_artifacts,
             state_path=state_path,
+            env=execution_env,
         )
     except Exception as exc:
         try:
@@ -276,13 +321,8 @@ def _execute_run(
     return 0 if status == "ok" else 1
 
 
-def _run_document_dispatch(args) -> int:
-    """Load + validate an agent-authored RunDocument and execute it.
-
-    Shared by action=step and action=run; the two differ only in the final
-    execution helper. Loading is strict (schema-validated via
-    ``load_run_document``); a non-executable document returns its diagnostics.
-    """
+def _context_from_run_document(args) -> _ExecutionContext | None:
+    """Load + validate an agent-authored RunDocument into executor inputs."""
     try:
         run_doc = load_run_document(args.run_document)
     except Exception as exc:
@@ -291,7 +331,7 @@ def _run_document_dispatch(args) -> int:
             "error": f"Could not load run document: {exc}",
             "run_document": args.run_document,
         }, indent=2))
-        return 1
+        return None
     inputs, diagnostics = build_execution_inputs(
         run_doc, utility_produces=_utility_produces_by_command(),
     )
@@ -301,28 +341,103 @@ def _run_document_dispatch(args) -> int:
             "run_document": args.run_document,
             "diagnostics": list(diagnostics),
         }, indent=2))
-        return 1
-    if args.action == "step":
-        return _execute_step(
-            entry_label=run_doc.name,
-            step_id=args.step,
-            workflow_dag=inputs.workflow_dag,
-            planned_state=inputs.workflow_state,
-            case_root=inputs.case_root,
-            output_dir=inputs.output_dir,
-            expected_artifacts=inputs.expected_artifacts,
-            tail_lines=args.tail_lines,
-            apply_overrides_path=args.apply,
-        )
-    return _execute_run(
+        return None
+    execution_env = load_openfoam_environment(
+        explicit_bashrc=args.openfoam_bashrc,
+    ).env
+    return _ExecutionContext(
         entry_label=run_doc.name,
         workflow_dag=inputs.workflow_dag,
         planned_state=inputs.workflow_state,
         case_root=inputs.case_root,
         output_dir=inputs.output_dir,
         expected_artifacts=inputs.expected_artifacts,
-        tail_lines=args.tail_lines,
+        environment_diagnostics=_environment_diagnostics(
+            inputs.workflow_dag,
+            openfoam_bashrc=args.openfoam_bashrc,
+        ),
+        execution_env=execution_env,
+        source_path=args.run_document,
     )
+
+
+def _context_from_entry(
+    *,
+    selected_entry: str,
+    entry_kind: str | None,
+    overrides: dict | None,
+    config_path: str | None,
+    openfoam_bashrc: str | None,
+) -> tuple[_ExecutionContext | None, int]:
+    report = strict_plan(
+        selected_entry,
+        entry_kind=entry_kind,
+        overrides=overrides,
+        config_path=config_path,
+        openfoam_bashrc=openfoam_bashrc,
+    )
+    if report.status != "ok":
+        print(json.dumps(report.to_json(), indent=2))
+        return None, 1
+    if report.workflow_dag is None or report.workflow_state is None:
+        print(json.dumps({
+            "status": "failed",
+            "error": "strict plan did not produce workflow_dag and workflow_state",
+        }, indent=2))
+        return None, 1
+    execution_env = load_openfoam_environment(
+        explicit_bashrc=openfoam_bashrc,
+    ).env
+    return (
+        _ExecutionContext(
+            entry_label=selected_entry,
+            workflow_dag=report.workflow_dag,
+            planned_state=report.workflow_state,
+            case_root=Path(report.launch["case_root"]),
+            output_dir=Path(report.launch["output_dir"]),
+            expected_artifacts=report.expected_artifacts,
+            environment_diagnostics=report.environment_diagnostics,
+            execution_env=execution_env,
+        ),
+        0,
+    )
+
+
+def _dispatch_context(args, context: _ExecutionContext) -> int:
+    blocked = _refuse_environment_errors(context, action=args.action)
+    if blocked is not None:
+        return blocked
+    if args.action == "step":
+        return _execute_step(
+            entry_label=context.entry_label,
+            step_id=args.step,
+            workflow_dag=context.workflow_dag,
+            planned_state=context.planned_state,
+            case_root=context.case_root,
+            output_dir=context.output_dir,
+            expected_artifacts=context.expected_artifacts,
+            tail_lines=args.tail_lines,
+            execution_env=context.execution_env,
+            apply_overrides_path=args.apply,
+        )
+    return _execute_run(
+        entry_label=context.entry_label,
+        workflow_dag=context.workflow_dag,
+        planned_state=context.planned_state,
+        case_root=context.case_root,
+        output_dir=context.output_dir,
+        expected_artifacts=context.expected_artifacts,
+        tail_lines=args.tail_lines,
+        execution_env=context.execution_env,
+    )
+
+
+def _run_document_dispatch(args) -> int:
+    """Execute a validated RunDocument through the shared strict executor."""
+    context = _context_from_run_document(args)
+    if context is None:
+        return 1
+    return _dispatch_context(args, context)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -363,6 +478,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict",
         action="store_true",
         help="For action=plan/step/run, fail on incomplete machine-readable coverage.",
+    )
+    parser.add_argument(
+        "--openfoam-bashrc",
+        help=(
+            "OpenFOAM bashrc to source for strict plan/step/run. Defaults to "
+            "OPENFOAM_BASHRC, $WM_PROJECT_DIR/etc/bashrc, or a known local "
+            "OpenFOAM install path."
+        ),
     )
     parser.add_argument(
         "--step",
@@ -443,30 +566,35 @@ def _normalize_spec_overrides(overrides: dict) -> dict:
     return normalized
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+_FLAG_ERRORS_BY_ACTION = {
+    "post": (("dry_run", "--dry-run is not valid with action=post"),),
+    "describe": (
+        ("dry_run", "--dry-run is not valid with action=describe"),
+        ("continue_on_error", "--continue-on-error is not valid with action=describe"),
+    ),
+    "plan": (
+        ("dry_run", "--dry-run is not valid with action=plan"),
+        ("continue_on_error", "--continue-on-error is not valid with action=plan"),
+    ),
+    "step": (
+        ("dry_run", "--dry-run is not valid with action=step"),
+        ("continue_on_error", "--continue-on-error is not valid with action=step"),
+    ),
+    "run": (
+        ("dry_run", "--dry-run is not valid with action=run"),
+        ("continue_on_error", "--continue-on-error is not valid with action=run"),
+    ),
+}
 
-    if args.action == "post" and args.dry_run:
-        parser.error("--dry-run is not valid with action=post")
-    if args.action == "describe" and args.dry_run:
-        parser.error("--dry-run is not valid with action=describe")
-    if args.action == "describe" and args.continue_on_error:
-        parser.error("--continue-on-error is not valid with action=describe")
-    if args.action == "plan" and args.dry_run:
-        parser.error("--dry-run is not valid with action=plan")
-    if args.action == "plan" and args.continue_on_error:
-        parser.error("--continue-on-error is not valid with action=plan")
-    if args.action == "step" and args.dry_run:
-        parser.error("--dry-run is not valid with action=step")
-    if args.action == "step" and args.continue_on_error:
-        parser.error("--continue-on-error is not valid with action=step")
-    if args.action == "run" and args.dry_run:
-        parser.error("--dry-run is not valid with action=run")
-    if args.action == "run" and args.continue_on_error:
-        parser.error("--continue-on-error is not valid with action=run")
+
+def _validate_args(parser: argparse.ArgumentParser, args) -> None:
+    for flag_name, message in _FLAG_ERRORS_BY_ACTION.get(args.action, ()):
+        if getattr(args, flag_name):
+            parser.error(message)
     if args.action not in {"plan", "step", "run"} and args.strict:
         parser.error("--strict is only valid with action=plan, action=step, or action=run")
+    if args.openfoam_bashrc and args.action not in {"plan", "step", "run"}:
+        parser.error("--openfoam-bashrc is only valid with action=plan, action=step, or action=run")
     if args.action != "step" and args.step:
         parser.error("--step is only valid with action=step")
     if args.apply is not None and args.action != "step":
@@ -481,6 +609,12 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--config/--entry-kind/--tutorials-root are not valid with --run-document")
     if not args.run_document and not args.entry:
         parser.error("--entry is required (or use --run-document with action=run/step)")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    _validate_args(parser, args)
 
     selected_entry = args.entry
 
@@ -512,6 +646,7 @@ def main(argv: list[str] | None = None) -> int:
             entry_kind=args.entry_kind,
             overrides=overrides,
             config_path=args.config,
+            openfoam_bashrc=args.openfoam_bashrc,
         )
         print(json.dumps(report.to_json(), indent=2))
         return 0 if report.status == "ok" else 1
@@ -523,62 +658,32 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("action=step requires --step <id>")
         if args.run_document:
             return _run_document_dispatch(args)
-        report = strict_plan(
-            selected_entry,
+        context, failure_code = _context_from_entry(
+            selected_entry=selected_entry,
             entry_kind=args.entry_kind,
             overrides=overrides,
             config_path=args.config,
+            openfoam_bashrc=args.openfoam_bashrc,
         )
-        if report.status != "ok":
-            print(json.dumps(report.to_json(), indent=2))
-            return 1
-        if report.workflow_dag is None or report.workflow_state is None:
-            print(json.dumps({
-                "status": "failed",
-                "error": "strict plan did not produce workflow_dag and workflow_state",
-            }, indent=2))
-            return 1
-        return _execute_step(
-            entry_label=selected_entry,
-            step_id=args.step,
-            workflow_dag=report.workflow_dag,
-            planned_state=report.workflow_state,
-            case_root=Path(report.launch["case_root"]),
-            output_dir=Path(report.launch["output_dir"]),
-            expected_artifacts=report.expected_artifacts,
-            tail_lines=args.tail_lines,
-            apply_overrides_path=args.apply,
-        )
+        if context is None:
+            return failure_code
+        return _dispatch_context(args, context)
 
     if args.action == "run":
         if not (args.strict or args.run_document):
             parser.error("action=run requires --strict or --run-document")
         if args.run_document:
             return _run_document_dispatch(args)
-        report = strict_plan(
-            selected_entry,
+        context, failure_code = _context_from_entry(
+            selected_entry=selected_entry,
             entry_kind=args.entry_kind,
             overrides=overrides,
             config_path=args.config,
+            openfoam_bashrc=args.openfoam_bashrc,
         )
-        if report.status != "ok":
-            print(json.dumps(report.to_json(), indent=2))
-            return 1
-        if report.workflow_dag is None or report.workflow_state is None:
-            print(json.dumps({
-                "status": "failed",
-                "error": "strict plan did not produce workflow_dag and workflow_state",
-            }, indent=2))
-            return 1
-        return _execute_run(
-            entry_label=selected_entry,
-            workflow_dag=report.workflow_dag,
-            planned_state=report.workflow_state,
-            case_root=Path(report.launch["case_root"]),
-            output_dir=Path(report.launch["output_dir"]),
-            expected_artifacts=report.expected_artifacts,
-            tail_lines=args.tail_lines,
-        )
+        if context is None:
+            return failure_code
+        return _dispatch_context(args, context)
 
     spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
     engine = DriverEngine(

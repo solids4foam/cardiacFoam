@@ -45,6 +45,7 @@ This keeps all tutorial workflows on one engine while allowing per-tutorial swee
 ## Registered tutorials
 
 - `singleCell`
+- `monodomainAndEikonal1DCableCVConvergence`
 - `niederer2012`
 - `manufacturedFDA`
 - `manufacturedFDABidomain`
@@ -133,6 +134,12 @@ The JSON report contains:
 - `status`: `ok` or `failed`
 - `resolved_entry`: selected entry, case root, setup root, output directory,
   entry kind, source type, and workflow family
+- `readiness_score`: weighted 0-100 run-readiness score with blocked/warning
+  stages
+- `simulation_audit`: per-stage explanation of how simulations are created and
+  prepared: `build_cases()`, required OpenFOAM files, dictionary resolution,
+  workflow DAG normalization, artifact prediction, environment preflight, and
+  mesh geometry
 - `validation_diagnostics`: RunDocument/config validation
 - `workflow_diagnostics`: DAG shape, dependency, command, cwd, and cycle
   diagnostics
@@ -183,7 +190,7 @@ realization is reported by the legacy artifact manifest files described below.
 ## Restitution-curves workflow
 
 The `restitutionCurves` entry runs the
-`singleCellprotocols/restitutionCurves_s1s2Protocol` tutorial across ionic
+`electrophysiologyProtocols/restitutionCurves_s1s2Protocol` tutorial across ionic
 models, tissues, and S2 intervals.
 
 Default supported restitution ionic models and tissues:

@@ -70,6 +70,7 @@ def run_workflow(
     runner: Callable[..., Any] = run_workflow_step,
     sleep: Callable[[float], None] = time.sleep,
     state_path: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> WorkflowRunOutcome:
     """Run pending steps to completion, retrying retryable failures.
 
@@ -91,6 +92,7 @@ def run_workflow(
             log_dir=log_dir,
             state_path=resolved_state_path,
             expected_artifacts=expected_artifacts,
+            env=env,
         )
         workflow_state = result.state
         step_state = _step_state_by_id(workflow_state, step_id)

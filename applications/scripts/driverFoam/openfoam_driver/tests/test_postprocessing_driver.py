@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,6 +45,142 @@ def _repo_root_from_test() -> Path:
 
 
 class TestPostprocessingDriver(unittest.TestCase):
+    def test_monodomain_1d_cable_cv_postprocess_writes_csv_and_plots(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "electrophysiologyProtocols/cableProtocol"
+            / "monodomain1DCableCV"
+            / "setupMonodomain1DCableCV"
+        )
+
+        module_path = setup_root / "postProcessing" / "table_summary.py"
+        spec = importlib.util.spec_from_file_location("monodomain1d_table_summary", module_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Could not load monodomain1DCableCV table_summary module")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        has_matplotlib = bool(module._has_matplotlib())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            cases = [
+                ("implicit_BuenoOrovio_epicardialCells_DT0.005_DX0.1_COND01", 0.6951652, 0.01438507),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.01_DX0.1_COND01", 0.68399827, 0.01461992),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.005_DX0.2_COND01", 0.65291796, 0.01531586),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.01_DX0.2_COND01", 0.6433723, 0.01554310),
+            ]
+            for case_id, cv_value, dt_s in cases:
+                payload = {
+                    "case_id": case_id,
+                    "central_cv": {
+                        "start_probe": 1,
+                        "end_probe": 3,
+                        "dx_m": 0.01,
+                        "dt_s": dt_s,
+                        "cv_m_per_s": cv_value,
+                    },
+                }
+                (output_dir / f"{case_id}_cv_summary.json").write_text(json.dumps(payload))
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="monodomainAndEikonal1DCableCVConvergence",
+                tasks=[PostprocessTask(module_relpath=Path("postProcessing/table_summary.py"))],
+            )
+
+            csv_path = output_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
+            html_path = output_dir / "monodomainAndEikonal1DCableCVConvergence_summary.html"
+            manifest = json.loads((output_dir / "plots.json").read_text())
+
+            self.assertTrue(csv_path.exists())
+            self.assertFalse(html_path.exists())
+
+            artifact_paths = {artifact["path"] for artifact in manifest["artifacts"]}
+            self.assertIn("monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
+            self.assertNotIn("monodomainAndEikonal1DCableCVConvergence_summary.html", artifact_paths)
+
+            plot_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "plot"]
+            if has_matplotlib:
+                self.assertEqual(len(plot_artifacts), 2)
+                for artifact in plot_artifacts:
+                    self.assertEqual(artifact["format"], "png")
+                    self.assertTrue((output_dir / artifact["path"]).exists())
+            else:
+                self.assertEqual(len(plot_artifacts), 0)
+
+    def test_monodomain_1d_cable_cv_postprocess_supports_ionic_model_subfolders(self) -> None:
+        repo_root = _repo_root_from_test()
+        setup_root = (
+            repo_root
+            / "tutorials"
+            / "electrophysiologyProtocols/cableProtocol"
+            / "monodomain1DCableCV"
+            / "setupMonodomain1DCableCV"
+        )
+
+        module_path = setup_root / "postProcessing" / "table_summary.py"
+        spec = importlib.util.spec_from_file_location("monodomain1d_table_summary_nested", module_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Could not load monodomain1DCableCV table_summary module")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        has_matplotlib = bool(module._has_matplotlib())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+            model_dir = output_dir / "BuenoOrovio"
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+            cases = [
+                ("implicit_BuenoOrovio_epicardialCells_DT0.005_DX0.1_COND01", 0.6951652, 0.01438507),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.01_DX0.1_COND01", 0.68399827, 0.01461992),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.005_DX0.2_COND01", 0.65291796, 0.01531586),
+                ("implicit_BuenoOrovio_epicardialCells_DT0.01_DX0.2_COND01", 0.6433723, 0.01554310),
+            ]
+            for case_id, cv_value, dt_s in cases:
+                payload = {
+                    "case_id": case_id,
+                    "central_cv": {
+                        "start_probe": 1,
+                        "end_probe": 3,
+                        "dx_m": 0.01,
+                        "dt_s": dt_s,
+                        "cv_m_per_s": cv_value,
+                    },
+                }
+                (model_dir / f"{case_id}_cv_summary.json").write_text(json.dumps(payload))
+
+            run_postprocess_tasks(
+                setup_root=setup_root,
+                output_dir=output_dir,
+                tutorial_name="monodomainAndEikonal1DCableCVConvergence",
+                tasks=[PostprocessTask(module_relpath=Path("postProcessing/table_summary.py"))],
+            )
+
+            csv_path = model_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
+            html_path = model_dir / "monodomainAndEikonal1DCableCVConvergence_summary.html"
+            manifest = json.loads((output_dir / "plots.json").read_text())
+
+            self.assertTrue(csv_path.exists())
+            self.assertFalse(html_path.exists())
+
+            artifact_paths = {artifact["path"] for artifact in manifest["artifacts"]}
+            self.assertIn("BuenoOrovio/monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
+            self.assertNotIn("monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
+
+            plot_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "plot"]
+            if has_matplotlib:
+                self.assertEqual(len(plot_artifacts), 2)
+                for artifact in plot_artifacts:
+                    self.assertTrue(str(artifact["path"]).startswith("BuenoOrovio/"))
+                    self.assertEqual(artifact["format"], "png")
+                    self.assertTrue((output_dir / artifact["path"]).exists())
+            else:
+                self.assertEqual(len(plot_artifacts), 0)
+
     def test_writes_schema_version_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -285,7 +422,7 @@ class TestPostprocessingDriver(unittest.TestCase):
         module_path = (
             repo_root
             / "tutorials"
-            / "singleCellprotocols"
+            / "electrophysiologyProtocols"
             / "restitutionCurves_s1s2Protocol"
             / "setupRestitutionCurves_s1s2Protocol"
             / "postProcessing_restCurves.py"
@@ -315,7 +452,7 @@ class TestPostprocessingDriver(unittest.TestCase):
         setup_root = (
             repo_root
             / "tutorials"
-            / "singleCellprotocols"
+            / "electrophysiologyProtocols"
             / "singleCell"
             / "setupSingleCell"
         )
@@ -356,7 +493,7 @@ class TestPostprocessingDriver(unittest.TestCase):
         setup_root = (
             repo_root
             / "tutorials"
-            / "singleCellprotocols"
+            / "electrophysiologyProtocols"
             / "restitutionCurves_s1s2Protocol"
             / "setupRestitutionCurves_s1s2Protocol"
         )

@@ -38,7 +38,7 @@ from openfoam_driver.cli import main
 
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
-SINGLE_CELL_ROOT = REPO_ROOT / "tutorials" / "singleCellprotocols" / "singleCell"
+SINGLE_CELL_ROOT = REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
 
 
 def _write_case(root: Path, *, allrun: str, steps: list[dict]) -> Path:
@@ -332,6 +332,7 @@ def _failed_exit0_runner(
     log_dir,
     state_path,
     expected_artifacts=(),
+    env=None,
 ):
     """Stub for run_workflow_step: marks the step failed with exit_code == 0.
 

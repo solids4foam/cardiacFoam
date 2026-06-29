@@ -199,6 +199,20 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
             "stimulus.protocol": "s1s2",
         },
     ),
+    TutorialDisplay(
+        id="monodomainAndEikonal1DCableCVConvergence",
+        title="1D Cable CV Convergence (Monodomain & Eikonal)",
+        summary=(
+            "1D cable verification protocol to extract continuous conduction "
+            "velocity profiles and perform mesh resolution convergence sweeps."
+        ),
+        thumbnail="/tutorials/cable-cv-convergence.png",
+        tags=("cable", "cv", "convergence", "monodomain", "eikonal"),
+        preset={
+            "anatomy.mesh": "cable-1d",
+            "physics.ionic_model": "BuenoOrovio",
+        },
+    ),
 )
 
 

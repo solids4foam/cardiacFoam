@@ -433,6 +433,34 @@ void eikonalMyocardiumDomain::preInitialiseFromSeeds
             if (T[o] < GREAT/2 && T[o] + dt < T[n]) { T[n] = T[o] + dt; changed = true; }
             if (T[n] < GREAT/2 && T[n] + dt < T[o]) { T[o] = T[n] + dt; changed = true; }
         }
+
+        forAll(activationTime_.boundaryField(), patchI)
+        {
+            const fvPatchScalarField& pT = activationTime_.boundaryField()[patchI];
+            if (pT.coupled())
+            {
+                const coupledFvPatchScalarField& cpT = refCast<const coupledFvPatchScalarField>(pT);
+                tmp<scalarField> tneiT = cpT.patchNeighbourField();
+                const scalarField& nT = tneiT();
+                
+                const labelUList& faceCells = pT.patch().faceCells();
+                tmp<vectorField> tdelta = pT.patch().delta();
+                const vectorField& delta = tdelta();
+
+                forAll(faceCells, faceI)
+                {
+                    const label cellI = faceCells[faceI];
+                    const scalar dt = mag(delta[faceI]) / CV_est;
+
+                    if (nT[faceI] < GREAT/2 && nT[faceI] + dt < T[cellI])
+                    {
+                        T[cellI] = nT[faceI] + dt;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
         activationTime_.correctBoundaryConditions();
         reduce(changed, orOp<bool>());
     }

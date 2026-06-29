@@ -86,7 +86,7 @@ class TestIntrospection(unittest.TestCase):
         self.assertEqual(payload["tutorial_contract"]["name"], "singleCell")
         self.assertTrue(
             payload["spec"]["case_root"].endswith(
-                "tutorials/singleCellprotocols/singleCell"
+                "tutorials/electrophysiologyProtocols/singleCell"
             )
         )
         self.assertTrue(Path(payload["spec"]["case_root"]).exists())

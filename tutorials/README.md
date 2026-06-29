@@ -4,11 +4,15 @@ This folder contains reference and regression cases for `cardiacFoam`.
 
 ## Current tutorial cases
 
-- `singleCellprotocols/singleCell` : single-point ODE workflow (`singleCellSolver`)
-- `singleCellprotocols/ionicHeterogeneityProbe` : meshless Bueno-Orovio
+- `electrophysiologyProtocols/singleCell` : single-point ODE workflow (`singleCellSolver`)
+- `electrophysiologyProtocols/ionicHeterogeneityProbe` : meshless Bueno-Orovio
   transmural heterogeneity probe with 2D/3D plotting
-- `singleCellprotocols/restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps
+- `electrophysiologyProtocols/restitutionCurves_s1s2Protocol` : S1-S2 pacing sweeps
   (`singleCellSolver`)
+- `electrophysiologyProtocols/cableProtocol/monodomain1DCableCV` : 1D monodomain cable for
+  conduction-velocity calibration (`myocardiumSolver monodomainSolver`)
+  Includes a registered driver convergence entry:
+  `monodomainAndEikonal1DCableCVConvergence`
 - `NiedererEtAl2011/NiedererEtAl2011verification` : slab verification workflow
   (`myocardiumSolver monodomainSolver`)
 - `NiedererEtAl2011/monodomainPurkinjeNiedererEtAl2011` : Niederer slab with a

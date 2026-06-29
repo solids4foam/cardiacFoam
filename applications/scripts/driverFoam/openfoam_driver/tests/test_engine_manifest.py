@@ -189,6 +189,40 @@ class TestDriverEngineManifest(unittest.TestCase):
             self.assertEqual(seen_in_postprocess, ["3D_80_cells_implicit.dat"])
             self.assertTrue((output_dir / "3D_80_cells_implicit.dat").exists())
 
+    def test_run_all_skips_missing_postprocess_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            case_root = root / "case"
+            setup_root = root / "setup"
+            output_dir = root / "output"
+            case_root.mkdir()
+            setup_root.mkdir()
+
+            spec = TutorialSpec(
+                name="noPost",
+                case_root=case_root,
+                setup_root=setup_root,
+                output_dir=output_dir,
+                build_cases=lambda: [CaseConfig("only", {})],
+                apply_case=lambda _case_root, _case: None,
+                run_case=lambda _case_root, _setup_root, _case: None,
+                postprocess=None,
+            )
+
+            results = DriverEngine(spec=spec, requested_action="all").run_all()
+
+            manifest = _load_json(output_dir / "run_manifest.json")
+            events = [
+                json.loads(line)
+                for line in (output_dir / "action_events.jsonl").read_text().splitlines()
+            ]
+            self.assertEqual(len(results), 1)
+            self.assertEqual(manifest["requested_action"], "all")
+            self.assertEqual(manifest["status"], "completed")
+            self.assertEqual(manifest["postprocess_status"], "skipped")
+            self.assertEqual(events[-1]["event"], "all_finished")
+            self.assertEqual(events[-1]["status"], "completed")
+
 class TestDriverEngineManifestSchemaVersion(unittest.TestCase):
     """run_manifest.json schema version contract.
 

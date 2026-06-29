@@ -19,7 +19,7 @@
     "piecewise_sweep": true
   },
   "singleCell": {
-    "case_dir_name": "singleCellprotocols/singleCell",
+    "case_dir_name": "electrophysiologyProtocols/singleCell",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP", "Gaur"],
     "ionic_model_tissue_map": {
@@ -52,7 +52,7 @@
     }
   },
   "restitutionCurves": {
-    "case_dir_name": "singleCellprotocols/restitutionCurves_s1s2Protocol",
+    "case_dir_name": "electrophysiologyProtocols/restitutionCurves_s1s2Protocol",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["BuenoOrovio"],
     "ionic_model_tissue_map": {

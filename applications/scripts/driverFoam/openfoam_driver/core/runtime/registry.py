@@ -51,6 +51,9 @@ from ...specs.tutorials.manufactured_purkinje_graph import (
     make_spec as make_manufactured_purkinje_graph_spec,
 )
 from ...specs.tutorials.generic_case import make_spec as make_generic_case_spec
+from ...specs.tutorials.monodomain_and_eikonal_1d_cable_cv_convergence import (
+    make_spec as make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
+)
 from ...specs.tutorials.manufactured_fda import make_spec as make_manufactured_fda_spec
 from ...specs.tutorials.niederer_2012 import make_spec as make_niederer_2012_spec
 from ...specs.tutorials.restitution_curves import make_spec as make_restitution_curves_spec
@@ -59,6 +62,8 @@ from ...specs.tutorials.single_cell import make_spec as make_single_cell_spec
 SPEC_FACTORIES = {
     "singleCell": make_single_cell_spec,
     "singlecell": make_single_cell_spec,
+    "monodomainAndEikonal1DCableCVConvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
+    "monodomainandeikonal1dcablecvconvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
     "niederer2012": make_niederer_2012_spec,
     "niedereretal2012": make_niederer_2012_spec,
     "manufacturedFDA": make_manufactured_fda_spec,
@@ -81,6 +86,7 @@ SpecFactory = Callable[..., TutorialSpec]
 
 REGISTERED_TUTORIALS = (
     "singleCell",
+    "monodomainAndEikonal1DCableCVConvergence",
     "niederer2012",
     "manufacturedFDA",
     "manufacturedFDABidomain",

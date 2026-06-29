@@ -363,6 +363,29 @@ class DriverEngine:
                 },
             )
             return results
+        final_status = (
+            "completed_with_failures" if any(item.status == "failed" for item in results) else "completed"
+        )
+        if self.spec.postprocess is None:
+            print(f"No post-processing hook is defined for entry '{self._entry_name()}'.")
+            self.finished_at_utc = _utc_now()
+            self._write_manifest(
+                results,
+                status=final_status,
+                current_case_id=None,
+                total_cases=len(results),
+                postprocess_status="skipped",
+                finished_at_utc=self.finished_at_utc,
+            )
+            self._write_action_event(
+                "all_finished",
+                {
+                    "entry": self._entry_name(),
+                    "entry_kind": self._entry_kind(),
+                    "status": final_status,
+                },
+            )
+            return results
         self._write_manifest(
             results,
             status="postprocessing",
@@ -386,9 +409,6 @@ class DriverEngine:
             raise
 
         self.finished_at_utc = _utc_now()
-        final_status = (
-            "completed_with_failures" if any(item.status == "failed" for item in results) else "completed"
-        )
         self._write_manifest(
             results,
             status=final_status,

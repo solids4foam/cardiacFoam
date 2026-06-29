@@ -8,7 +8,7 @@ from openfoam_driver.specs.apply_overrides import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
-SINGLE_CELL = REPO_ROOT / "tutorials" / "singleCellprotocols" / "singleCell"
+SINGLE_CELL = REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
 
 
 def _case(tmp_path: Path) -> Path:

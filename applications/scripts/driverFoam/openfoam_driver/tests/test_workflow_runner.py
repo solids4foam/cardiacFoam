@@ -34,6 +34,7 @@ from pathlib import Path
 
 import pytest
 
+from openfoam_driver.core.runtime.models import DataArtifact
 from openfoam_driver.core.runtime.workflow_runner import run_workflow_step
 from openfoam_driver.core.runtime.workflow_state import initial_workflow_state
 
@@ -119,6 +120,34 @@ def test_run_workflow_step_marks_nonzero_exit_failed() -> None:
         assert payload["steps"][0]["status"] == "failed"
         assert payload["steps"][0]["exit_code"] == 7
         assert Path(result.stderr_log).read_text().strip() == "failure text"
+
+
+def test_run_workflow_step_allows_missing_optional_artifacts() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        dag = _dag(sys.executable, ["-c", "print('ok')"], produces=["optional_vm"])
+        state = initial_workflow_state(dag)
+        assert state is not None
+
+        result = run_workflow_step(
+            dag,
+            state,
+            "run",
+            case_root=root,
+            log_dir=root / "logs",
+            expected_artifacts=(
+                DataArtifact(
+                    artifact_id="optional_vm",
+                    path_pattern="{time}/Vm",
+                    format="openfoam_time_dirs",
+                    optional=True,
+                ),
+            ),
+        )
+
+        payload = result.state.to_json()
+        assert payload["status"] == "completed"
+        assert payload["steps"][0]["status"] == "completed"
 
 
 def test_run_workflow_step_rejects_incomplete_dependencies() -> None:

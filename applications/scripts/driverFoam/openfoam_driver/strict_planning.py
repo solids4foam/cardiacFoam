@@ -28,15 +28,22 @@
 from __future__ import annotations
 
 import os
-import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from .core.runtime.artifacts import predict_data_artifacts
+from .core.runtime.environment_preflight import (
+    _environment_diagnostics,
+    _required_executables,
+    _unwrap_mpi_program,
+    shutil,
+)
 from .core.runtime.models import DataArtifact
 from .core.runtime.registry import load_entry_spec
+from .core.runtime.run_document_adapter import _run_document_from_case
 from .core.runtime.run_model import RunDocument
+from .core.runtime.strict_audit import _build_simulation_audit
 from .core.runtime.workflow import (
     WorkflowDiagnostic,
     normalize_workflow_dag,
@@ -45,6 +52,12 @@ from .core.runtime.workflow import (
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .launch import describe_launch
+from .planning_types import (
+    StrictDiagnostic,
+    SimulationAuditItem,
+    artifact_to_json as _artifact_to_json,
+    diagnostic as _diagnostic,
+)
 from .scripts._dict_keys_scanner import strict_dict_key_report
 from .specs.common import (
     detect_ionic_model_name,
@@ -52,25 +65,6 @@ from .specs.common import (
     detect_verification_model_type,
 )
 from .specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
-from .specs.dict_builder import (
-    build_electro_properties,
-    build_physics_properties,
-    parse_electro_properties,
-    populate_values,
-    resolve_context,
-    select_applicable_entries,
-)
-from .specs.validation import primary_phase, slot_key, validate_run
-from .utility_catalog import UTILITY_CATALOG
-
-
-@dataclass(frozen=True)
-class StrictDiagnostic:
-    level: str
-    code: str
-    message: str
-    source: str = ""
-    field: str = ""
 
 
 @dataclass(frozen=True)
@@ -78,6 +72,8 @@ class StrictPlanReport:
     status: str
     entry: str
     resolved_entry: dict[str, Any]
+    readiness_score: dict[str, Any] = field(default_factory=dict)
+    simulation_audit: tuple[SimulationAuditItem, ...] = ()
     validation_diagnostics: tuple[StrictDiagnostic, ...] = ()
     workflow_diagnostics: tuple[StrictDiagnostic, ...] = ()
     catalog_coverage_errors: tuple[StrictDiagnostic, ...] = ()
@@ -95,6 +91,8 @@ class StrictPlanReport:
             "status": self.status,
             "entry": self.entry,
             "resolved_entry": self.resolved_entry,
+            "readiness_score": self.readiness_score,
+            "simulation_audit": [asdict(item) for item in self.simulation_audit],
             "validation_diagnostics": [asdict(d) for d in self.validation_diagnostics],
             "workflow_diagnostics": [asdict(d) for d in self.workflow_diagnostics],
             "catalog_coverage_errors": [asdict(d) for d in self.catalog_coverage_errors],
@@ -111,101 +109,12 @@ class StrictPlanReport:
         }
 
 
-_MPI_LAUNCHERS = frozenset({"mpirun", "mpiexec", "orterun"})
-_INTERPRETER_SKIP = frozenset({"python", "python3"})
-# Flags that consume their following token (MPI launcher context only).
-_MPI_VALUE_FLAGS = frozenset({"-np", "-n", "--np"})
-
-
-def _unwrap_mpi_program(args: tuple[str, ...]) -> str | None:
-    """Return the wrapped program from an MPI launcher's args, or None.
-
-    Skips value-taking launcher flags (``-np 4`` / ``-n 4`` / ``--np 4``) and
-    bare flags (``--oversubscribe``), returning the first program token.
-
-    Limitation: only process-count flags are decoded. Other value-taking
-    placement flags (``--host``, ``--hostfile``, ...) are not modelled, so the
-    token following them would be misidentified as the program. This is
-    acceptable for the cardiacFoam workflows we generate, which use plain
-    ``mpirun -np N <solver> -parallel``.
-    """
-    index = 0
-    while index < len(args):
-        token = args[index]
-        if token in _MPI_VALUE_FLAGS:
-            index += 2  # skip the flag and its value
-            continue
-        if token.startswith("-"):
-            index += 1  # bare flag
-            continue
-        return token
-    return None
-
-
-@dataclass(frozen=True)
-class _ExecutableRequirements:
-    executables: tuple[str, ...]
-    is_parallel: bool
-    mpi_launcher_in_dag: bool
-
-
-def _required_executables(workflow_dag: dict[str, Any] | None) -> _ExecutableRequirements:
-    """Derive the executables a plan will invoke from its workflow DAG.
-
-    The authoritative source is each step's ``command`` (not ``launch["command"]``,
-    which is only the ``python -m openfoam_driver`` re-invocation). MPI launcher
-    steps contribute both the launcher and the wrapped program. Parallelism is
-    inferred from an MPI launcher command, a ``-parallel`` arg, or a
-    ``decomposePar`` step.
-    """
-    executables: list[str] = []
-    is_parallel = False
-    mpi_launcher_in_dag = False
-
-    def _add(name: str) -> None:
-        if name and name not in _INTERPRETER_SKIP and name not in executables:
-            executables.append(name)
-
-    for step in (workflow_dag or {}).get("steps", ()):
-        command = str(step.get("command", "")).strip()
-        args = tuple(str(arg) for arg in step.get("args", ()))
-        if not command:
-            continue
-        if command in _MPI_LAUNCHERS:
-            is_parallel = True
-            mpi_launcher_in_dag = True
-            _add(command)
-            wrapped = _unwrap_mpi_program(args)
-            if wrapped is not None:
-                _add(wrapped)
-            continue
-        if command == "decomposePar" or "-parallel" in args:
-            is_parallel = True
-        _add(command)
-
-    return _ExecutableRequirements(
-        executables=tuple(executables),
-        is_parallel=is_parallel,
-        mpi_launcher_in_dag=mpi_launcher_in_dag,
-    )
-
-
 def _repo_root_from_here() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:
         if (parent / "src").exists() and (parent / "tutorials").exists():
             return parent
     raise RuntimeError("Could not locate repository root from strict_planning.py")
-
-
-def _diagnostic(level: str, code: str, message: str, *, source: str = "", field: str = "") -> StrictDiagnostic:
-    return StrictDiagnostic(level=level, code=code, message=message, source=source, field=field)
-
-
-def _artifact_to_json(artifact: DataArtifact) -> dict[str, Any]:
-    payload = asdict(artifact)
-    payload["variables"] = list(artifact.variables)
-    return payload
 
 
 def _workflow_diagnostic_to_strict(diagnostic: WorkflowDiagnostic) -> StrictDiagnostic:
@@ -219,6 +128,8 @@ def _workflow_diagnostic_to_strict(diagnostic: WorkflowDiagnostic) -> StrictDiag
 
 
 def _utility_produces_by_command() -> dict[str, tuple[str, ...]]:
+    from .utility_catalog import UTILITY_CATALOG
+
     return {
         command: tuple(produce.artifact_id for produce in manifest.produces)
         for command, manifest in UTILITY_CATALOG.items()
@@ -226,150 +137,13 @@ def _utility_produces_by_command() -> dict[str, tuple[str, ...]]:
     }
 
 
-def _read_physics_type(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    for line in path.read_text().splitlines():
-        stripped = line.split("//", 1)[0].strip()
-        if not stripped.startswith("type"):
-            continue
-        tokens = stripped.rstrip(";").split()
-        if len(tokens) >= 2:
-            return tokens[1]
-    return None
-
-
-def _run_document_from_case(
-    *,
-    entry: str,
-    spec,
-    launch: dict[str, Any],
-    workflow_dag: dict[str, Any] | None,
-    workflow_state: WorkflowRunState | None,
-    expected_artifacts: tuple[DataArtifact, ...],
-) -> tuple[RunDocument, tuple[StrictDiagnostic, ...]]:
-    diagnostics: list[StrictDiagnostic] = []
-    config: dict[str, dict[str, Any]] = {
-        "anatomy": {},
-        "physics": {},
-        "stimulus": {},
-        "solver": {},
-    }
-    case_root = Path(spec.case_root)
-    electro_path = case_root / "constant" / "electroProperties"
-    physics_path = case_root / "constant" / "physicsProperties"
-    physics_type = _read_physics_type(physics_path)
-    if physics_type is None:
-        diagnostics.append(_diagnostic(
-            "error",
-            "missing_physics_properties",
-            f"Could not read physicsProperties type from {physics_path}",
-            source=str(physics_path),
-            field="type",
-        ))
-    else:
-        config["physics"]["type"] = physics_type
-        try:
-            build_physics_properties({"type": physics_type})
-        except Exception as exc:
-            diagnostics.append(_diagnostic(
-                "error",
-                "invalid_physics_properties",
-                str(exc),
-                source=str(physics_path),
-            ))
-
-    if not electro_path.exists():
-        diagnostics.append(_diagnostic(
-            "error",
-            "missing_electro_properties",
-            f"Missing electroProperties at {electro_path}",
-            source=str(electro_path),
-        ))
-    else:
-        try:
-            parsed = parse_electro_properties(electro_path)
-            selectors = parsed["selectors"]
-            overrides = parsed.get("overrides", {})
-            try:
-                build_electro_properties(selectors, overrides=overrides or None)
-            except Exception as exc:
-                diagnostics.append(_diagnostic(
-                    "error",
-                    "invalid_electro_properties",
-                    str(exc),
-                    source=str(electro_path),
-                ))
-            context = resolve_context(selectors, overrides=overrides or None)
-            applicable_entries = select_applicable_entries(context)
-            populated = populate_values(applicable_entries, context)
-            for entry_obj in applicable_entries:
-                key = slot_key(entry_obj.driver_path)
-                if entry_obj.dynamic_path and key not in context:
-                    continue
-                if key not in populated:
-                    continue
-                phase = primary_phase(entry_obj) or "physics"
-                config[phase][key] = populated[key]
-        except Exception as exc:
-            diagnostics.append(_diagnostic(
-                "error",
-                "unparseable_electro_properties",
-                str(exc),
-                source=str(electro_path),
-            ))
-
-    run_doc = RunDocument(
-        id=f"plan-{entry}",
-        name=entry,
-        status="planned" if not diagnostics else "failed",
-        intent={"source": "strict_plan"},
-        config=config,
-        resolvedEntry={
-            "entry": entry,
-            "entryKind": spec.metadata.get("entry_kind"),
-            "entryPath": spec.metadata.get("entry_path"),
-            "resolvedName": spec.metadata.get("entry_name", entry),
-            "sourceType": spec.metadata.get("source_type"),
-            "workflowFamily": spec.metadata.get("workflow_family"),
-            "isRunnable": True,
-        },
-        workflowDag=workflow_dag,
-        workflowState=workflow_state.to_json() if workflow_state else None,
-        launch={
-            "action": launch.get("action"),
-            "command": launch.get("command", []),
-            "commandDisplay": launch.get("command_display", ""),
-            "manifestPath": launch.get("manifest_path"),
-            "caseRoot": launch.get("case_root"),
-            "setupRoot": launch.get("setup_root"),
-            "outputDir": launch.get("output_dir"),
-        },
-        expectedArtifacts=[_artifact_to_json(artifact) for artifact in expected_artifacts],
-        validation={"status": "not_run", "diagnostics": []},
-    )
-    validator_errors = validate_run(run_doc)
-    for error in validator_errors:
-        diagnostics.append(_diagnostic(
-            error.level,
-            "run_validation",
-            error.message,
-            field=error.field,
-            source=error.phase,
-        ))
-    run_doc.validation = {
-        "status": "ok" if not diagnostics else "failed",
-        "diagnostics": [asdict(d) for d in diagnostics],
-    }
-    run_doc.status = "planned" if not any(d.level == "error" for d in diagnostics) else "failed"
-    return run_doc, tuple(diagnostics)
-
-
 def _artifact_diagnostics(
     spec,
     artifacts: tuple[DataArtifact, ...],
     workflow_dag: dict[str, Any] | None,
 ) -> tuple[StrictDiagnostic, ...]:
+    from .core.runtime.workflow import validate_workflow_commands
+
     diagnostics: list[StrictDiagnostic] = []
     case_root = Path(spec.case_root)
     electro_path = case_root / "constant" / "electroProperties"
@@ -435,68 +209,8 @@ def _catalog_diagnostics(repo_root: Path) -> tuple[StrictDiagnostic, ...]:
     return tuple(diagnostics)
 
 
-def _environment_diagnostics(
-    workflow_dag: dict[str, Any] | None,
-) -> tuple[StrictDiagnostic, ...]:
-    """Preflight the runtime environment against the plan's actual commands."""
-    if "SKIP_ENV_DIAGNOSTICS" in os.environ:
-        return ()
-    diagnostics: list[StrictDiagnostic] = []
-
-    # OpenFOAM environment.
-    if "WM_PROJECT_DIR" not in os.environ:
-        diagnostics.append(_diagnostic(
-            "error",
-            "missing_openfoam_env",
-            "WM_PROJECT_DIR is not set. OpenFOAM environment not sourced.",
-            source="environment",
-        ))
-    else:
-        # Only meaningful when the base env IS sourced; otherwise the error above
-        # already covers a completely unsourced environment.
-        for var in ("WM_PROJECT_VERSION", "FOAM_USER_LIBBIN"):
-            if var not in os.environ:
-                diagnostics.append(_diagnostic(
-                    "warning",
-                    "partial_openfoam_env",
-                    f"{var} is not set. OpenFOAM environment may be partially sourced.",
-                    source="environment",
-                    field=var,
-                ))
-
-    # Command-aware executable resolution.
-    requirements = _required_executables(workflow_dag)
-    for executable in requirements.executables:
-        if not shutil.which(executable):
-            diagnostics.append(_diagnostic(
-                "error",
-                "missing_executable",
-                f"{executable} not found on PATH.",
-                source="environment",
-                field=executable,
-            ))
-
-    # MPI launcher when parallel but no launcher command is explicit in the DAG.
-    if (
-        requirements.is_parallel
-        and not requirements.mpi_launcher_in_dag
-        and not (shutil.which("mpirun") or shutil.which("mpiexec"))
-    ):
-        diagnostics.append(_diagnostic(
-            "error",
-            "missing_mpi",
-            "Plan is parallel but no MPI launcher (mpirun/mpiexec) found on PATH.",
-            source="environment",
-            field="mpirun",
-        ))
-
-    return tuple(diagnostics)
-
-
 def _is_nondimensional_entry(spec) -> bool:
-    """Manufactured / verification cases use non-dimensional unit domains
-    (e.g. [0,1], so max_dim == 1.0) and must be exempt from the SI mesh-scale
-    gate, which cannot distinguish a dimensionless domain from a 1 mm mesh."""
+    """Return True when the SI mesh-scale gate is not meaningful."""
     entry_name = ""
     family = ""
     if spec.metadata:
@@ -508,6 +222,8 @@ def _is_nondimensional_entry(spec) -> bool:
     electro_path = Path(spec.case_root) / "constant" / "electroProperties"
     if electro_path.exists():
         try:
+            if detect_myocardium_solver_name(electro_path) == "singleCellSolver":
+                return True
             if detect_verification_model_type(electro_path) is not None:
                 return True
         except Exception:
@@ -520,10 +236,7 @@ def _mesh_geometry_diagnostics(
     *,
     exempt: bool = False,
 ) -> tuple[StrictDiagnostic, ...]:
-    """Adapt mesh-scale detection into StrictDiagnostics for the report.
-
-    ``exempt`` short-circuits the gate for non-dimensional cases.
-    """
+    """Adapt mesh-scale detection into StrictDiagnostics for the report."""
     if exempt or "SKIP_MESH_DIAGNOSTICS" in os.environ:
         return ()
     return tuple(
@@ -538,12 +251,17 @@ def _mesh_geometry_diagnostics(
     )
 
 
+def _has_error(diagnostics: tuple[StrictDiagnostic, ...]) -> bool:
+    return any(diagnostic.level == "error" for diagnostic in diagnostics)
+
+
 def strict_plan(
     entry: str,
     *,
     entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
+    openfoam_bashrc: str | Path | None = None,
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
     spec = load_entry_spec(entry, entry_kind=entry_kind, overrides=overrides)
@@ -576,22 +294,33 @@ def strict_plan(
     repo_root = _repo_root_from_here()
     catalog_diagnostics = _catalog_diagnostics(repo_root)
     artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
-    env_diagnostics = _environment_diagnostics(workflow_dag)
+    env_diagnostics = _environment_diagnostics(
+        workflow_dag,
+        openfoam_bashrc=str(openfoam_bashrc) if openfoam_bashrc is not None else None,
+    )
     mesh_diagnostics = _mesh_geometry_diagnostics(
         spec.case_root, exempt=_is_nondimensional_entry(spec)
     )
-    all_diagnostics = (
-        validation_diagnostics
+    simulation_audit, generation_diagnostics, readiness_score = _build_simulation_audit(
+        spec=spec,
+        workflow_dag=workflow_dag,
+        artifacts=artifacts,
+        validation_diagnostics=validation_diagnostics,
+        workflow_diagnostics=workflow_diagnostics,
+        artifact_diagnostics=artifact_diagnostics,
+        environment_diagnostics=env_diagnostics,
+        mesh_geometry_diagnostics=mesh_diagnostics,
+    )
+    plan_diagnostics = (
+        generation_diagnostics
+        + validation_diagnostics
         + workflow_diagnostics
         + catalog_diagnostics
         + artifact_diagnostics
-        + env_diagnostics
         + mesh_diagnostics
     )
-    failed = any(
-        diagnostic.level == "error"
-        for diagnostic in all_diagnostics
-    )
+    all_diagnostics = plan_diagnostics + env_diagnostics
+    failed = _has_error(plan_diagnostics)
     run_document.status = "failed" if failed else "planned"
     run_document.validation = {
         "status": "failed" if failed else "ok",
@@ -607,6 +336,8 @@ def strict_plan(
             "source_type": spec.metadata.get("source_type"),
             "workflow_family": spec.metadata.get("workflow_family"),
         },
+        readiness_score=readiness_score,
+        simulation_audit=simulation_audit,
         validation_diagnostics=validation_diagnostics,
         workflow_diagnostics=workflow_diagnostics,
         catalog_coverage_errors=catalog_diagnostics,

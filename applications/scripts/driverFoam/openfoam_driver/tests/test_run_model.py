@@ -35,6 +35,7 @@ helpers and catalog exporters.
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 
 import jsonschema
@@ -78,6 +79,17 @@ def _valid_run_dict():
 
 def test_schema_validates_minimal_valid_run(schema):
     jsonschema.validate(_valid_run_dict(), schema)  # does not raise
+
+
+def test_packaged_schema_resource_matches_fixture_schema(schema):
+    packaged = json.loads(
+        resources.files("openfoam_driver.schemas")
+        .joinpath("run-document.json")
+        .read_text()
+    )
+    assert packaged == schema
+    doc = RunDocument.from_json(_valid_run_dict())
+    assert doc.to_json()["version"] == "2"
 
 
 def test_schema_rejects_unknown_status(schema):

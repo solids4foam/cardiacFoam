@@ -243,6 +243,8 @@ def run_workflow_step(
         for artifact_id in produced_artifacts:
             for artifact in expected_artifacts:
                 if artifact.artifact_id == artifact_id:
+                    if artifact.optional:
+                        continue
                     pattern = str(case_root / artifact.path_pattern.format(case_id=case_root.name, time="*"))
                     if not glob.glob(pattern):
                         missing_artifacts.append(artifact_id)

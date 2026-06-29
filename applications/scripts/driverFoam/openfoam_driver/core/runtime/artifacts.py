@@ -103,6 +103,7 @@ def _time_indexed_field_artifact(
     field_name: str,
     ionic_model: str | None,
     description: str,
+    optional: bool = False,
 ) -> DataArtifact:
     """Builder for one-file-per-time-dir artifacts (the OpenFOAM AUTO_WRITE
     convention). `solver` is the lowercase solver tag used to prefix the
@@ -122,6 +123,7 @@ def _time_indexed_field_artifact(
         description=description,
         produced_by=produced_by,
         time_indexed=True,
+        optional=optional,
     )
 
 
@@ -131,15 +133,15 @@ def _predict_single_cell(
     """Two outputs:
 
     1. ``postProcessing/<ionicModel>_<tissue>_<protocolSuffix>.txt`` — the
-       OFstream-written time-series trace. Globbed via ``{case_id}_*``.
-    2. ``<time>/Vm`` — AUTO_WRITE on the 1-cell mesh.
+       OFstream-written time-series trace.
+    2. ``<time>/Vm`` — optional AUTO_WRITE on the 1-cell mesh.
     """
     if ionic_model is None:
         return ()
     return (
         DataArtifact(
             artifact_id="single_cell_trace",
-            path_pattern="postProcessing/{case_id}_*.txt",
+            path_pattern="postProcessing/*.txt",
             format="csv_sweep",
             variables=_exported_ionic_variables(case_root, ionic_model),
             description=(
@@ -154,6 +156,7 @@ def _predict_single_cell(
             field_name="Vm",
             ionic_model=ionic_model,
             description=f"Membrane voltage Vm on 1-cell mesh (singleCellSolver, ionicModel={ionic_model})",
+            optional=True,
         ),
     )
 

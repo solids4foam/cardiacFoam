@@ -83,7 +83,7 @@ def _write_single_cell_electro_properties(
     """Synthesize the minimum-viable single-cell electroProperties.
 
     Mirrors the structure of
-    tutorials/singleCellprotocols/singleCell/constant/electroProperties
+    tutorials/electrophysiologyProtocols/singleCell/constant/electroProperties
     closely enough for the line-based parsers used by the rest of the
     driver to find the relevant keys.
     """
@@ -120,7 +120,7 @@ class TestPredictorSingleCell(unittest.TestCase):
             self.assertEqual(trace.produced_by, "singleCellSolver")
             self.assertEqual(
                 trace.path_pattern,
-                "postProcessing/{case_id}_*.txt",
+                "postProcessing/*.txt",
             )
             self.assertIn("u", trace.variables)
             self.assertIn("recovery_r", trace.variables)
@@ -175,6 +175,7 @@ class TestPredictorSingleCell(unittest.TestCase):
             )
             self.assertEqual(vm_artifact.path_pattern, "{time}/Vm")
             self.assertTrue(vm_artifact.time_indexed)
+            self.assertTrue(vm_artifact.optional)
 
     def test_unknown_ionic_model_returns_only_vm_and_empty_trace(self) -> None:
         """The predictor must not raise on a model name absent from the

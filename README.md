@@ -55,7 +55,7 @@ Each subdirectory carries its own `README.md` (and `ARCHITECTURE.md` where relev
 | `singleCellprotocols/` | Single-cell ODE runs, restitution curves, heterogeneity probes |
 | `manufacturedSolutions/` | MMS verification cases for all solver variants incl. electromechanics |
 | `NiedererEtAl2011/` | Benchmark cases: tissue propagation, Purkinje, electromechanics |
-| `rotorInstability/` | Rotor dynamics and re-entry instability cases |
+| `electrophysiologyProtocols/rotorInstability/` | Rotor dynamics and re-entry instability cases |
 
 See [`tutorials/README.md`](tutorials/README.md).
 

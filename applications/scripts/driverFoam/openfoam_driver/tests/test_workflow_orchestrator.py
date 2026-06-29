@@ -71,7 +71,7 @@ def _make_runner(outcomes):
     state = {"n": 0}
 
     def runner(workflow_dag, run_state, step_id, *, case_root, log_dir,
-               state_path=None, expected_artifacts=()):
+               state_path=None, expected_artifacts=(), env=None):
         status, exit_code, codes = outcomes[state["n"]]
         state["n"] += 1
         prev = next((s for s in run_state.steps if s.step_id == step_id), None)

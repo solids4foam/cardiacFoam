@@ -39,7 +39,7 @@ from ...ionic_model_catalog import IONIC_MODEL_CATALOG
 
 
 TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
-CASE_DIR_NAME = "singleCellprotocols/restitutionCurves_s1s2Protocol"
+CASE_DIR_NAME = "electrophysiologyProtocols/restitutionCurves_s1s2Protocol"
 SETUP_DIR_NAME = "setupRestitutionCurves_s1s2Protocol"
 
 IONIC_MODELS = ("BuenoOrovio",)

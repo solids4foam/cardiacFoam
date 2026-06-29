@@ -17,7 +17,7 @@ from pathlib import Path
 from openfoam_driver.cli import main
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
-SINGLE_CELL_ROOT = REPO_ROOT / "tutorials" / "singleCellprotocols" / "singleCell"
+SINGLE_CELL_ROOT = REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
 
 
 def _write_case(root: Path, *, allrun: str, steps: list[dict]) -> Path:

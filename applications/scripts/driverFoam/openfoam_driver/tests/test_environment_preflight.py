@@ -7,6 +7,7 @@ and monkeypatches shutil.which / os.environ instead of touching the machine.
 import pytest
 
 from openfoam_driver import strict_planning
+from openfoam_driver.core.runtime.openfoam_environment import load_openfoam_environment
 from openfoam_driver.strict_planning import (
     StrictDiagnostic,
     StrictPlanReport,
@@ -34,6 +35,12 @@ def _which_factory(present):
         return f"/usr/bin/{name}" if name in present else None
 
     return fake_which
+
+
+def _diags(workflow_dag):
+    import os
+
+    return _environment_diagnostics(workflow_dag, env=dict(os.environ))
 
 
 def test_required_executables_collects_step_commands():
@@ -96,7 +103,7 @@ def test_missing_executable_is_error(clean_env):
     clean_env.setattr(
         strict_planning.shutil, "which", _which_factory({"blockMesh", "cardiacFoam"})
     )
-    diags = _environment_diagnostics(_dag("blockMesh", "cardiacFoam", "setExprFields"))
+    diags = _diags(_dag("blockMesh", "cardiacFoam", "setExprFields"))
     missing = [d for d in diags if d.code == "missing_executable"]
     assert len(missing) == 1
     assert missing[0].level == "error"
@@ -107,13 +114,13 @@ def test_present_executables_have_no_error(clean_env):
     clean_env.setattr(
         strict_planning.shutil, "which", _which_factory({"blockMesh", "cardiacFoam"})
     )
-    diags = _environment_diagnostics(_dag("blockMesh", "cardiacFoam"))
+    diags = _diags(_dag("blockMesh", "cardiacFoam"))
     assert "missing_executable" not in {d.code for d in diags}
 
 
 def test_mpi_wrapper_checks_launcher_and_program(clean_env):
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"mpirun"}))
-    diags = _environment_diagnostics(
+    diags = _diags(
         _dag(("mpirun", ["-np", "4", "cardiacFoam", "-parallel"]))
     )
     missing = {d.field for d in diags if d.code == "missing_executable"}
@@ -123,20 +130,20 @@ def test_mpi_wrapper_checks_launcher_and_program(clean_env):
 
 def test_parallel_without_launcher_reports_missing_mpi(clean_env):
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag(("cardiacFoam", ["-parallel"])))
+    diags = _diags(_dag(("cardiacFoam", ["-parallel"])))
     assert "missing_mpi" in {d.code for d in diags}
 
 
 def test_serial_plan_has_no_mpi_error(clean_env):
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag("cardiacFoam"))
+    diags = _diags(_dag("cardiacFoam"))
     assert "missing_mpi" not in {d.code for d in diags}
 
 
 def test_missing_wm_project_dir_is_error(clean_env):
     clean_env.delenv("WM_PROJECT_DIR", raising=False)
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag("cardiacFoam"))
+    diags = _diags(_dag("cardiacFoam"))
     errors = [d for d in diags if d.code == "missing_openfoam_env"]
     assert len(errors) == 1
     assert errors[0].level == "error"
@@ -145,7 +152,7 @@ def test_missing_wm_project_dir_is_error(clean_env):
 def test_partial_openfoam_env_is_warning_only(clean_env):
     clean_env.delenv("WM_PROJECT_VERSION", raising=False)
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag("cardiacFoam"))
+    diags = _diags(_dag("cardiacFoam"))
     partial = [d for d in diags if d.code == "partial_openfoam_env"]
     assert len(partial) == 1
     assert partial[0].level == "warning"
@@ -155,14 +162,14 @@ def test_partial_openfoam_env_is_warning_only(clean_env):
 def test_skip_env_diagnostics_short_circuits(monkeypatch):
     monkeypatch.setenv("SKIP_ENV_DIAGNOSTICS", "1")
     monkeypatch.setattr(strict_planning.shutil, "which", _which_factory(set()))
-    assert _environment_diagnostics(_dag("cardiacFoam")) == ()
+    assert _diags(_dag("cardiacFoam")) == ()
 
 
 def test_both_partial_env_vars_missing_yield_two_warnings(clean_env):
     clean_env.delenv("WM_PROJECT_VERSION", raising=False)
     clean_env.delenv("FOAM_USER_LIBBIN", raising=False)
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag("cardiacFoam"))
+    diags = _diags(_dag("cardiacFoam"))
     partial = {d.field for d in diags if d.code == "partial_openfoam_env"}
     assert partial == {"WM_PROJECT_VERSION", "FOAM_USER_LIBBIN"}
 
@@ -172,10 +179,33 @@ def test_no_partial_warnings_when_openfoam_unsourced(clean_env):
     clean_env.delenv("WM_PROJECT_VERSION", raising=False)
     clean_env.delenv("FOAM_USER_LIBBIN", raising=False)
     clean_env.setattr(strict_planning.shutil, "which", _which_factory({"cardiacFoam"}))
-    diags = _environment_diagnostics(_dag("cardiacFoam"))
+    diags = _diags(_dag("cardiacFoam"))
     codes = {d.code for d in diags}
     assert "missing_openfoam_env" in codes
     assert "partial_openfoam_env" not in codes
+
+
+def test_load_openfoam_environment_sources_bashrc(tmp_path, monkeypatch):
+    bashrc = tmp_path / "bashrc"
+    foam_bin = tmp_path / "bin"
+    foam_bin.mkdir()
+    (foam_bin / "cardiacFoam").write_text("#!/bin/sh\n")
+    (foam_bin / "cardiacFoam").chmod(0o755)
+    bashrc.write_text(
+        f"export WM_PROJECT_DIR={tmp_path}\n"
+        "export WM_PROJECT_VERSION=v2412\n"
+        f"export FOAM_USER_LIBBIN={tmp_path / 'lib'}\n"
+        f"export PATH={foam_bin}:$PATH\n"
+    )
+
+    monkeypatch.delenv("SKIP_ENV_DIAGNOSTICS", raising=False)
+    loaded = load_openfoam_environment(explicit_bashrc=bashrc, base_env={})
+
+    assert loaded.error is None
+    assert loaded.env["WM_PROJECT_DIR"] == str(tmp_path)
+    assert loaded.env["WM_PROJECT_VERSION"] == "v2412"
+    diags = _environment_diagnostics(_dag("cardiacFoam"), env=loaded.env)
+    assert not [d for d in diags if d.level == "error"]
 
 
 def test_report_to_json_contains_environment_diagnostics():

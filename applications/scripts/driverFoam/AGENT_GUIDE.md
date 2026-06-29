@@ -39,6 +39,12 @@ The `plan --strict` command is non-mutating. It prints JSON with:
 
 - `status`: `ok` or `failed`
 - `resolved_entry`: case/spec identity and paths
+- `readiness_score`: weighted 0-100 score summarising whether the driver has
+  enough concrete case-generation and run-preparation evidence to execute
+- `simulation_audit`: scored stages showing exactly how simulations are created
+  and prepared: `build_cases()`, required OpenFOAM files, dictionary
+  resolution, workflow DAG normalization, artifact prediction, environment
+  preflight, and mesh geometry
 - `validation_diagnostics`: RunDocument and configuration validation results
 - `catalog_coverage_errors`: strict dict-key coverage failures
 - `artifact_diagnostics`: solver/utility/artifact prediction coverage failures

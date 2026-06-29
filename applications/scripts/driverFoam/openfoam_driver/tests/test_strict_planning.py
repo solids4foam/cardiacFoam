@@ -33,6 +33,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
+from openfoam_driver import strict_planning
 from openfoam_driver.cli import main
 from openfoam_driver.scripts._dict_keys_scanner import (
     compute_dict_key_drift,
@@ -70,6 +71,8 @@ def test_report_has_mesh_geometry_field() -> None:
     payload = report.to_json()
     assert "mesh_geometry_diagnostics" in payload
     assert payload["mesh_geometry_diagnostics"] == []
+    assert payload["readiness_score"] == {}
+    assert payload["simulation_audit"] == []
 
 
 def test_mesh_adapter_flags_non_si(tmp_path: Path) -> None:
@@ -113,10 +116,28 @@ def test_plain_entry_is_dimensional(tmp_path: Path) -> None:
 
 
 def test_strict_plan_succeeds_for_single_cell() -> None:
-    report = strict_plan("singleCell")
+    report = strict_plan("singleCell", openfoam_bashrc="/no/such/openfoam/bashrc")
     payload = report.to_json()
 
     assert payload["status"] == "ok"
+    assert payload["readiness_score"]["score"] == 100
+    assert payload["readiness_score"]["status"] == "ready"
+    assert {
+        item["stage"] for item in payload["simulation_audit"]
+    } == {
+        "simulation_generation",
+        "case_preparation_files",
+        "dictionary_resolution",
+        "workflow_preparation",
+        "artifact_prediction",
+        "environment_preflight",
+        "mesh_geometry",
+    }
+    generation_audit = next(
+        item for item in payload["simulation_audit"]
+        if item["stage"] == "simulation_generation"
+    )
+    assert generation_audit["evidence"]["case_count"] >= 1
     assert payload["resolved_entry"]["entry_kind"] == "registered_tutorial"
     assert payload["expected_artifacts"]
     assert payload["run_document"]["version"] == "2"
@@ -186,6 +207,59 @@ def test_cli_plan_strict_prints_json_and_returns_zero() -> None:
     assert code == 0
     assert payload["status"] == "ok"
     assert payload["launch"]["command"]
+
+
+def test_strict_plan_status_ignores_environment_only_errors(monkeypatch) -> None:
+    monkeypatch.delenv("SKIP_ENV_DIAGNOSTICS", raising=False)
+    monkeypatch.delenv("WM_PROJECT_DIR", raising=False)
+    monkeypatch.setattr(
+        strict_planning.shutil,
+        "which",
+        lambda name, *_, **__: f"/usr/bin/{name}" if name == "cardiacFoam" else None,
+    )
+
+    report = strict_plan("singleCell", openfoam_bashrc="/no/such/openfoam/bashrc")
+    payload = report.to_json()
+
+    assert payload["status"] == "ok"
+    assert payload["run_document"]["status"] == "planned"
+    assert payload["run_document"]["validation"]["status"] == "ok"
+    assert payload["readiness_score"]["status"] == "blocked"
+    assert "environment_preflight" in payload["readiness_score"]["blocked_stages"]
+    assert any(
+        item["code"] == "missing_openfoam_env"
+        for item in payload["environment_diagnostics"]
+    )
+
+
+def test_cli_run_strict_refuses_environment_errors_before_execution(monkeypatch) -> None:
+    monkeypatch.delenv("SKIP_ENV_DIAGNOSTICS", raising=False)
+    monkeypatch.delenv("WM_PROJECT_DIR", raising=False)
+    monkeypatch.setattr(
+        strict_planning.shutil,
+        "which",
+        lambda name, *_, **__: f"/usr/bin/{name}" if name == "cardiacFoam" else None,
+    )
+
+    out = StringIO()
+    with redirect_stdout(out):
+        code = main([
+            "run",
+            "--strict",
+            "--entry",
+            "singleCell",
+            "--openfoam-bashrc",
+            "/no/such/openfoam/bashrc",
+        ])
+
+    payload = json.loads(out.getvalue())
+    assert code == 1
+    assert payload["status"] == "failed"
+    assert payload["error"] == "Execution environment preflight failed."
+    assert any(
+        item["code"] == "missing_openfoam_env"
+        for item in payload["environment_diagnostics"]
+    )
 
 
 def test_strict_plan_fails_on_unknown_workflow_command() -> None:
@@ -258,6 +332,13 @@ def test_strict_plan_fails_on_unknown_workflow_dependency() -> None:
 
     payload = report.to_json()
     assert payload["status"] == "failed"
+    assert payload["readiness_score"]["status"] == "blocked"
+    assert "workflow_preparation" in payload["readiness_score"]["blocked_stages"]
+    workflow_audit = next(
+        item for item in payload["simulation_audit"]
+        if item["stage"] == "workflow_preparation"
+    )
+    assert workflow_audit["points"] == 0
     assert payload["run_document"]["status"] == "failed"
     assert payload["run_document"]["validation"]["status"] == "failed"
     assert any(

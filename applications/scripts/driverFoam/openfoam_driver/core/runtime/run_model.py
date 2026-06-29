@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from importlib import resources
 from typing import Any, Literal
 
 import jsonschema
@@ -44,10 +44,11 @@ import jsonschema
 Phase = Literal["anatomy", "physics", "stimulus", "solver"]
 Status = Literal["draft", "queued", "planning", "planned", "running", "completed", "failed"]
 
-_SCHEMA_PATH = (
-    Path(__file__).resolve().parents[3] / "schemas" / "run-document.json"
+_SCHEMA = json.loads(
+    resources.files("openfoam_driver.schemas")
+    .joinpath("run-document.json")
+    .read_text()
 )
-_SCHEMA = json.loads(_SCHEMA_PATH.read_text())
 
 
 @dataclass
