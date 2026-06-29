@@ -1,9 +1,0 @@
-# entry: monodomain1DCableCVConvergence
-# generated_at: 2026-06-28T18:31:20.612988+00:00
-# units: {"DX_mm": "mm", "DT_ms": "ms", "central_dx_mm": "mm", "central_dt_ms": "ms", "central_cv_m_per_s": "m/s", "reference_cv_m_per_s": "m/s", "abs_error_m_per_s": "m/s", "rel_error_percent": "%"}
-case_id,solver,ionic_model,tissue,DT_ms,DX_mm,conductivity_id,central_dx_mm,central_dt_ms,central_cv_m_per_s,reference_case_id,reference_cv_m_per_s,abs_error_m_per_s,rel_error_percent
-explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,explicit,TWorldcompactBatched,epicardialCells,0.002,0.05,1,10.0,14.20084,0.7041837,explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,0.7041837,0.0,0.0
-explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.1_COND01,explicit,TWorldcompactBatched,epicardialCells,0.002,0.1,1,10.0,14.57813,0.68595904,explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,0.7041837,0.01822466,2.588055
-explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.2_COND01,explicit,TWorldcompactBatched,epicardialCells,0.002,0.2,1,10.0,15.71349,0.63639586,explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,0.7041837,0.06778784,9.626443
-explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.25_COND01,explicit,TWorldcompactBatched,epicardialCells,0.002,0.25,1,10.0,16.35586,0.61140166,explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,0.7041837,0.09278204,13.175829
-explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.5_COND01,explicit,TWorldcompactBatched,epicardialCells,0.002,0.5,1,10.0,21.19951,0.47170902,explicit_TWorldcompactBatched_epicardialCells_DT0.002_DX0.05_COND01,0.7041837,0.23247468,33.013357

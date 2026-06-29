@@ -1,9 +1,0 @@
-# entry: monodomain1DCableCVConvergence
-# generated_at: 2026-06-28T19:43:11.354619+00:00
-# units: {"DX_mm": "mm", "DT_ms": "ms", "central_dx_mm": "mm", "central_dt_ms": "ms", "central_cv_m_per_s": "m/s", "reference_cv_m_per_s": "m/s", "abs_error_m_per_s": "m/s", "rel_error_percent": "%"}
-case_id,solver,ionic_model,tissue,DT_ms,DX_mm,conductivity_id,central_dx_mm,central_dt_ms,central_cv_m_per_s,reference_case_id,reference_cv_m_per_s,abs_error_m_per_s,rel_error_percent
-eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,eikonalSolver,eikonal,none,1000.0,0.05,1,10.0,14.2283,0.70282465,eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,0.70282465,0.0,0.0
-eikonalSolver_eikonal_none_DT1000_DX0.1_COND01,eikonalSolver,eikonal,none,1000.0,0.1,1,10.0,14.2283,0.70282465,eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,0.70282465,0.0,0.0
-eikonalSolver_eikonal_none_DT1000_DX0.2_COND01,eikonalSolver,eikonal,none,1000.0,0.2,1,10.0,14.2283,0.70282465,eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,0.70282465,0.0,0.0
-eikonalSolver_eikonal_none_DT1000_DX0.25_COND01,eikonalSolver,eikonal,none,1000.0,0.25,1,10.0,14.2283,0.70282465,eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,0.70282465,0.0,0.0
-eikonalSolver_eikonal_none_DT1000_DX0.5_COND01,eikonalSolver,eikonal,none,1000.0,0.5,1,10.0,14.2283,0.70282465,eikonalSolver_eikonal_none_DT1000_DX0.05_COND01,0.70282465,0.0,0.0

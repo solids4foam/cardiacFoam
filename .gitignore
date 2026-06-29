@@ -99,6 +99,7 @@ env/
 # logs and outputs
 *.log
 outputs/
+outputs*/
 
 # source packages - anywhere
 *.tar.bz2

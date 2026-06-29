@@ -20,7 +20,7 @@ singleCellSolverCoeffs
 
     // Cell model selection
 
-    ionicModel    TWorldcompactBatched;
+    ionicModel    TWorld;
     tissue    endocardialCells;
 
 
@@ -29,8 +29,6 @@ singleCellSolverCoeffs
     solver          RKF45;
     initialODEStep  1e-5;
     maxSteps        1000000000;
-    batchedSubsteps 5;
-    batchedIntegrator rushLarsen;
     absTol          1e-6;
     relTol          1e-4;
 
@@ -39,8 +37,8 @@ singleCellSolverCoeffs
     singleCellStimulus
     {
         stim_start      20;
-        stim_duration   2;
-        stim_amplitude    60.0;
+        stim_duration   1;
+        stim_amplitude  60;
         stim_period_S1  1000;
         nstim1          2;
         stim_period_S2  0;
