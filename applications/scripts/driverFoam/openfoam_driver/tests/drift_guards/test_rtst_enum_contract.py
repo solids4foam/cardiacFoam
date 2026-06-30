@@ -70,7 +70,7 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
     ),
     "$ELECTRO_MODEL_COEFFS.verificationModel.type": (
         "electroVerificationModel",
-        "strict",
+        "polymorphic",
     ),
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": (
         "ecgSolver",
@@ -251,6 +251,14 @@ class TestRtstEnumContract(unittest.TestCase):
                         set(),
                         f"{c.driver_path} (subset mode): catalogue lists "
                         f"values not registered in {base}: {sorted(extra)}",
+                    )
+                elif mode == "polymorphic":
+                    missing_from_schema = registered - catalogue_set
+                    self.assertEqual(
+                        missing_from_schema,
+                        set(),
+                        f"{c.driver_path} (polymorphic mode): RTST {base} has "
+                        f"items not in python schema catalogue: {sorted(missing_from_schema)}",
                     )
                 else:
                     self.fail(f"unknown comparison mode: {mode!r}")

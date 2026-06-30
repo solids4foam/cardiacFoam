@@ -348,9 +348,9 @@ class TestPredictorBidomain(unittest.TestCase):
 
 
 class TestPredictorEikonal(unittest.TestCase):
-    def test_emits_psi_field_without_ionic_model_lookup(self) -> None:
+    def test_emits_activationTime_field(self) -> None:
         """Eikonal cases do not declare ionicModel — the predictor must
-        produce exactly psi + Vm per-variable artifacts."""
+        produce exactly activationTime per-variable artifacts."""
         with tempfile.TemporaryDirectory() as temp:
             case_root = Path(temp) / "case"
             case_root.mkdir()
@@ -359,7 +359,7 @@ class TestPredictorEikonal(unittest.TestCase):
 
             artifacts = predict_data_artifacts(case_root, spec)
             ids = {a.artifact_id for a in artifacts}
-            self.assertEqual(ids, {"eikonal_psi_series", "eikonal_vm_series"})
+            self.assertEqual(ids, {"eikonal_activationtime_series"})
             for a in artifacts:
                 self.assertEqual(a.produced_by, "eikonalSolver")
                 self.assertTrue(a.path_pattern.startswith("{time}/"))

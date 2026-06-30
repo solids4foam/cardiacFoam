@@ -286,7 +286,14 @@ def populate_values(
             populated[key] = str(context[key])
             continue
         if typical_value_fallback and entry.typical_value:
-            populated[key] = entry.typical_value
+            conflict = False
+            for mx_path in getattr(entry, "mutually_exclusive_with", ()):
+                mx_key = slot_key(mx_path)
+                if mx_key in context and context[mx_key] not in (None, ""):
+                    conflict = True
+                    break
+            if not conflict:
+                populated[key] = entry.typical_value
             continue
     return populated
 

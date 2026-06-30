@@ -214,7 +214,12 @@ def make_spec(
             "notes": "Manufactured Purkinje graph convergence benchmark",
             "workflow_dag": {
                 "steps": [
-                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {
+                        "id": "mesh",
+                        "command": "blockMesh",
+                        "args": ["-dict", "system/blockMeshDict.3D"],
+                        "depends_on": [],
+                    },
                     {
                         "id": "solve",
                         "command": "runPurkinjeGraph",

@@ -454,7 +454,12 @@ def make_spec(
             "notes": "FDA bath-bidomain manufactured-solution convergence benchmark",
             "workflow_dag": {
                 "steps": [
-                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {
+                        "id": "mesh",
+                        "command": "blockMesh",
+                        "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
+                        "depends_on": [],
+                    },
                     {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
                     {
                         "id": "setConductivity",

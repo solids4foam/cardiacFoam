@@ -20,7 +20,7 @@ inputs = [
 ]
 
 outputs = [
-  "<time>/",
+  "{time}/",
 ]
 
 requires_mesh = true
@@ -46,7 +46,7 @@ argument_kind = "scalar"
 
 [[produces]]
 artifact_id = "purkinje_time_dirs"
-path_pattern = "<time>/"
+path_pattern = "{time}/"
 format = "openfoam_time_dirs"
 description = "OpenFOAM time directories containing Purkinje graph field outputs at each write interval."
 produced_by = "runPurkinjeGraph"

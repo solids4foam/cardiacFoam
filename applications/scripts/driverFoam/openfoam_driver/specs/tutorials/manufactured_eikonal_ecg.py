@@ -385,7 +385,12 @@ def make_spec(
             "notes": "Manufactured eikonal activation and ECG benchmark",
             "workflow_dag": {
                 "steps": [
-                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {
+                        "id": "mesh",
+                        "command": "blockMesh",
+                        "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
+                        "depends_on": [],
+                    },
                     {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
                 ]
             },

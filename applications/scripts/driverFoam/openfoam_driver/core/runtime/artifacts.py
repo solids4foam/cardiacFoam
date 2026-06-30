@@ -224,15 +224,9 @@ def _predict_eikonal(
     return (
         _time_indexed_field_artifact(
             solver="eikonal",
-            field_name="psi",
+            field_name="activationTime",
             ionic_model=None,
-            description="Activation time psi (eikonalSolver)",
-        ),
-        _time_indexed_field_artifact(
-            solver="eikonal",
-            field_name="Vm",
-            ionic_model=None,
-            description="Recovered membrane voltage Vm (eikonalSolver)",
+            description="Activation time (eikonalSolver)",
         ),
     )
 
@@ -327,7 +321,7 @@ def _predict_verification(case_root: Path) -> tuple[DataArtifact, ...]:
     return (
         DataArtifact(
             artifact_id="verification_error_summary",
-            path_pattern="postProcessing/*_*_cells_*.dat",
+            path_pattern="postProcessing/manufactured*Summary*.dat" if "Eikonal" in verifier_type else "postProcessing/*_*_cells_*.dat",
             format="csv_probe",
             description=(
                 f"Manufactured-solution L1/L2/Linf error norms emitted by "

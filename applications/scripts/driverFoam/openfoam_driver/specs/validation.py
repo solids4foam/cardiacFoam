@@ -162,7 +162,19 @@ def _normalise_word(value: Any) -> Any:
 
 
 def _entry_is_applicable(entry: DictEntry, context: dict[str, Any]) -> bool:
-    """Evaluate ``applicable_when`` — every predicate must match (AND)."""
+    """Evaluate ``applicable_when`` and ``forbidden_when`` constraints.
+    
+    Returns False if any ``forbidden_when`` predicate matches. Otherwise,
+    returns True if all ``applicable_when`` predicates match (or if
+    ``applicable_when`` is empty).
+    """
+    if entry.forbidden_when:
+        if any(
+            _predicate_matches(context, key, expected)
+            for key, expected in entry.forbidden_when.items()
+        ):
+            return False
+
     if not entry.applicable_when:
         return True
     return all(
@@ -310,9 +322,6 @@ def _evaluate_structured(
                  if _entry_value_present(e, context)}
 
     for e in entries:
-        # Skip entries whose applicable_when precondition fails entirely.
-        if not _entry_is_applicable(e, context):
-            continue
         ph = primary_phase(e) or "physics"
 
         # forbidden_when: fires when ANY predicate matches AND the entry's
@@ -330,6 +339,10 @@ def _evaluate_structured(
                         ),
                         level="error",
                     ))
+
+        # Skip entries whose applicable_when/forbidden_when precondition fails
+        if not _entry_is_applicable(e, context):
+            continue
 
         # required_when: handled by section 1 of validate_run via
         # is_required_in_context. Section 3 does NOT re-emit a violation

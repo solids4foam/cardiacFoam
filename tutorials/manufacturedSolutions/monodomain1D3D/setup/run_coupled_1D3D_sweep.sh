@@ -68,7 +68,7 @@ do
     echo "=== Coupled sweep: ${N_CELLS}^3 mesh / ${GRAPH_ID}  endTime=${ENDTIME}  rPvj=${RPVJ:-default}  pvjRadius=${PVJRADIUS:-default} ==="
 
     # --- 3D mesh ---
-    sed "s/NCELLS/${N_CELLS}/g" \
+    sed "s/(10 10 10)/(${N_CELLS} ${N_CELLS} ${N_CELLS})/g" \
         "$CASE_DIR/system/blockMeshDict.3D" \
         > "$CASE_DIR/system/blockMeshDict.3D.active"
 
