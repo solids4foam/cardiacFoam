@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import product
 from math import prod
-from typing import Any
+from typing import Any, Callable
 
 
 class SweepValidationError(ValueError):
@@ -111,16 +111,71 @@ def _combinations(mode: str, independent: dict[str, list[Any]]) -> list[dict[str
     return [dict(zip(names, row)) for row in rows]
 
 
-def expand_sweep(sweep_spec: dict[str, Any]) -> list[ResolvedCase]:
+def _validate_dependent_declarations(
+    dependent: list[dict[str, Any]],
+    independent_names: set[str],
+) -> None:
+    known_names = set(independent_names)
+    for entry in dependent:
+        if not isinstance(entry, dict):
+            raise SweepValidationError("each dependent entry must be a JSON object")
+        name = entry["name"]
+        if not isinstance(name, str) or not name:
+            raise SweepValidationError("dependent entry names must be non-empty strings")
+        if "derive" not in entry:
+            raise SweepValidationError(f"dependent entry '{name}' is missing required 'derive'")
+        if "of" not in entry:
+            raise SweepValidationError(f"dependent entry '{name}' is missing required 'of'")
+        of = entry["of"] if isinstance(entry["of"], list) else [entry["of"]]
+        for ref in of:
+            if ref not in known_names:
+                raise SweepValidationError(
+                    f"dependent entry '{name}' references '{ref}', which is not "
+                    "an independent variable or an earlier dependent entry "
+                    "(forward references are not allowed)"
+                )
+        if name in known_names:
+            raise SweepValidationError(
+                f"dependent entry '{name}' collision: an independent variable "
+                "or earlier dependent entry already has this name"
+            )
+        known_names.add(name)
+
+
+def expand_sweep(
+    sweep_spec: dict[str, Any],
+    *,
+    get_derivation: Callable[[str], Callable[[dict[str, Any]], dict[str, Any]]] | None = None,
+) -> list[ResolvedCase]:
     sweep = _sweep_block(sweep_spec)
     mode = _mode(sweep)
     independent = _independent_axes(sweep)
+    dependent: list[dict[str, Any]] = sweep.get("dependent", [])
+    if dependent and get_derivation is None:
+        raise SweepValidationError(
+            "expand_sweep requires a get_derivation lookup function when dependent entries are present"
+        )
+
+    _validate_dependent_declarations(dependent, set(independent.keys()))
 
     combinations = _combinations(mode, independent)
 
     cases: list[ResolvedCase] = []
     for index, combo in enumerate(combinations, start=1):
-        cases.append(ResolvedCase(case_id=f"case_{index:04d}", resolved_axis_values=dict(combo)))
+        values: dict[str, Any] = dict(combo)
+        for entry in dependent:
+            of = entry["of"] if isinstance(entry["of"], list) else [entry["of"]]
+            derivation_inputs = {ref: values[ref] for ref in of}
+            fn = get_derivation(entry["derive"])
+            result = fn(derivation_inputs)
+            for key in result:
+                if key in values:
+                    raise SweepValidationError(
+                        f"derivation '{entry['derive']}' returned key '{key}', which "
+                        "collides with an existing value for this case"
+                    )
+            values.update(result)
+        cases.append(ResolvedCase(case_id=f"case_{index:04d}", resolved_axis_values=dict(values)))
     return cases
 
 

@@ -133,3 +133,107 @@ def test_check_case_count_cap_accepts_explicit_override():
         }
     }
     check_case_count_cap(spec, max_cases=500)  # must not raise
+
+
+def _fake_lookup(catalog):
+    def lookup(name):
+        if name not in catalog:
+            raise SweepValidationError(f"Unknown derivation '{name}'")
+        return catalog[name]
+    return lookup
+
+
+def test_dependent_derivation_folds_into_resolved_values():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"ionicModel": ["TNNP"], "deltaT": [1e-6]},
+            "dependent": [{"name": "caseId", "derive": "join", "of": ["ionicModel", "deltaT"]}],
+        },
+    }
+    lookup = _fake_lookup({"join": lambda values: {"caseId": "-".join(str(v) for v in values.values())}})
+    cases = expand_sweep(spec, get_derivation=lookup)
+    assert cases[0].resolved_axis_values["caseId"] == "TNNP-1e-06"
+
+
+def test_later_derivation_can_read_earlier_derivation_output():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"deltaT": [1e-6]},
+            "dependent": [
+                {"name": "doubled", "derive": "double", "of": ["deltaT"]},
+                {"name": "quadrupled", "derive": "double2", "of": ["doubled"]},
+            ],
+        },
+    }
+
+    def _double_dt(values):
+        return {"doubled": values["deltaT"] * 2}
+
+    def _double_doubled(values):
+        return {"quadrupled": values["doubled"] * 2}
+
+    lookup = _fake_lookup({"double": _double_dt, "double2": _double_doubled})
+    cases = expand_sweep(spec, get_derivation=lookup)
+    assert cases[0].resolved_axis_values["quadrupled"] == pytest.approx(4e-6)
+
+
+def test_forward_reference_is_rejected():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"deltaT": [1e-6]},
+            "dependent": [
+                {"name": "a", "derive": "noop", "of": ["b"]},  # "b" declared after "a"
+                {"name": "b", "derive": "noop", "of": ["deltaT"]},
+            ],
+        },
+    }
+    lookup = _fake_lookup({"noop": lambda values: {}})
+    with pytest.raises(SweepValidationError, match="forward|unknown|not yet"):
+        expand_sweep(spec, get_derivation=lookup)
+
+
+def test_unknown_of_reference_is_rejected():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"deltaT": [1e-6]},
+            "dependent": [{"name": "a", "derive": "noop", "of": ["notAnAxis"]}],
+        },
+    }
+    lookup = _fake_lookup({"noop": lambda values: {}})
+    with pytest.raises(SweepValidationError, match="notAnAxis"):
+        expand_sweep(spec, get_derivation=lookup)
+
+
+def test_derivation_key_collision_is_rejected():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"deltaT": [1e-6]},
+            "dependent": [{"name": "deltaT", "derive": "noop", "of": ["deltaT"]}],  # collides
+        },
+    }
+    lookup = _fake_lookup({"noop": lambda values: {"deltaT": 999}})
+    with pytest.raises(SweepValidationError, match="collis"):
+        expand_sweep(spec, get_derivation=lookup)
+
+
+def test_dependent_entries_require_lookup_function():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"deltaT": [1e-6]},
+            "dependent": [{"name": "caseId", "derive": "join", "of": ["deltaT"]}],
+        },
+    }
+    with pytest.raises(SweepValidationError, match="get_derivation|lookup"):
+        expand_sweep(spec)
