@@ -142,6 +142,20 @@ def _validate_dependent_declarations(
         known_names.add(name)
 
 
+def _validate_path_safe_case_id(label: str) -> str:
+    if (
+        not label
+        or label in {".", ".."}
+        or label.strip() != label
+        or "/" in label
+        or "\x00" in label
+    ):
+        raise SweepValidationError(
+            f"caseId {label!r} is not path-safe and cannot be used as a case directory"
+        )
+    return label
+
+
 def expand_sweep(
     sweep_spec: dict[str, Any],
     *,
@@ -160,8 +174,8 @@ def expand_sweep(
 
     combinations = _combinations(mode, independent)
 
-    cases: list[ResolvedCase] = []
-    for index, combo in enumerate(combinations, start=1):
+    resolved_values: list[dict[str, Any]] = []
+    for combo in combinations:
         values: dict[str, Any] = dict(combo)
         for entry in dependent:
             of = entry["of"] if isinstance(entry["of"], list) else [entry["of"]]
@@ -175,8 +189,30 @@ def expand_sweep(
                         "collides with an existing value for this case"
                     )
             values.update(result)
-        cases.append(ResolvedCase(case_id=f"case_{index:04d}", resolved_axis_values=dict(values)))
-    return cases
+        resolved_values.append(values)
+
+    labels: list[str] = []
+    for index, values in enumerate(resolved_values, start=1):
+        label = str(values["caseId"]) if "caseId" in values else f"case_{index:04d}"
+        labels.append(_validate_path_safe_case_id(label))
+
+    if len(set(labels)) != len(labels):
+        seen: dict[str, int] = {}
+        duplicates = set()
+        for label in labels:
+            seen[label] = seen.get(label, 0) + 1
+            if seen[label] > 1:
+                duplicates.add(label)
+        raise SweepValidationError(
+            f"caseId values are not unique across the sweep (duplicates: "
+            f"{sorted(duplicates)}); the caseId derivation must reference enough "
+            "axes to disambiguate every combination"
+        )
+
+    return [
+        ResolvedCase(case_id=label, resolved_axis_values=dict(values))
+        for label, values in zip(labels, resolved_values)
+    ]
 
 
 DEFAULT_MAX_CASES = 200

@@ -237,3 +237,55 @@ def test_dependent_entries_require_lookup_function():
     }
     with pytest.raises(SweepValidationError, match="get_derivation|lookup"):
         expand_sweep(spec)
+
+
+def test_declared_case_id_becomes_case_id():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"ionicModel": ["TNNP"], "deltaT": [1e-6]},
+            "dependent": [{"name": "caseId", "derive": "join", "of": ["ionicModel", "deltaT"]}],
+        },
+    }
+    lookup = _fake_lookup({"join": lambda values: {"caseId": "-".join(str(v) for v in values.values())}})
+    cases = expand_sweep(spec, get_derivation=lookup)
+    assert cases[0].case_id == "TNNP-1e-06"
+
+
+def test_no_case_id_falls_back_to_ordinal():
+    spec = {
+        "base": {},
+        "sweep": {"mode": "cross_product", "independent": {"ionicModel": ["TNNP", "BuenoOrovio"]}, "dependent": []},
+    }
+    cases = expand_sweep(spec)
+    assert [c.case_id for c in cases] == ["case_0001", "case_0002"]
+
+
+def test_non_unique_case_id_is_rejected():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            # varies both ionicModel and deltaT, but caseId only encodes ionicModel -> collision
+            "independent": {"ionicModel": ["TNNP", "TNNP"], "deltaT": [1e-6, 2e-6]},
+            "dependent": [{"name": "caseId", "derive": "join_model_only", "of": ["ionicModel"]}],
+        },
+    }
+    lookup = _fake_lookup({"join_model_only": lambda values: {"caseId": str(values["ionicModel"])}})
+    with pytest.raises(SweepValidationError, match="not unique|collis|duplicate"):
+        expand_sweep(spec, get_derivation=lookup)
+
+
+def test_path_unsafe_case_id_is_rejected_before_materialization():
+    spec = {
+        "base": {},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"ionicModel": ["TNNP"]},
+            "dependent": [{"name": "caseId", "derive": "bad_label", "of": ["ionicModel"]}],
+        },
+    }
+    lookup = _fake_lookup({"bad_label": lambda values: {"caseId": "../bad"}})
+    with pytest.raises(SweepValidationError, match="path-safe|caseId"):
+        expand_sweep(spec, get_derivation=lookup)
