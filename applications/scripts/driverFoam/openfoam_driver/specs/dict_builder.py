@@ -431,6 +431,7 @@ def build_electro_properties(
 
 # Slot keys that map to selectors (top-level discriminators), not overrides.
 _SELECTOR_KEYS: frozenset[str] = frozenset({"myocardiumSolver", "ionicModel", "tissue"})
+SELECTOR_KEYS: frozenset[str] = _SELECTOR_KEYS  # public alias for external consumers (e.g. sweep_routing.py)
 
 _COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
 
