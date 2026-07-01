@@ -122,3 +122,21 @@ def expand_sweep(sweep_spec: dict[str, Any]) -> list[ResolvedCase]:
     for index, combo in enumerate(combinations, start=1):
         cases.append(ResolvedCase(case_id=f"case_{index:04d}", resolved_axis_values=dict(combo)))
     return cases
+
+
+DEFAULT_MAX_CASES = 200
+
+
+def check_case_count_cap(sweep_spec: dict[str, Any], *, max_cases: int = DEFAULT_MAX_CASES) -> None:
+    """Raise before any expansion/materialization if N exceeds the cap.
+
+    Both sweep-plan and sweep-run must call this before expanding or
+    materializing even one case, since materialization writes real files to
+    disk (see design doc's "Per-case filesystem layout").
+    """
+    n = compute_case_count(sweep_spec)
+    if n > max_cases:
+        raise SweepValidationError(
+            f"sweep expands to {n} cases, exceeding max_cases={max_cases}. "
+            "Pass an explicit --max-cases to proceed."
+        )

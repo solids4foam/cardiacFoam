@@ -101,3 +101,35 @@ def test_empty_axis_is_rejected():
     spec = {"sweep": {"mode": "cross_product", "independent": {"a": []}, "dependent": []}}
     with pytest.raises(SweepValidationError, match="empty"):
         compute_case_count(spec)
+
+
+from openfoam_driver.sweep_expansion import DEFAULT_MAX_CASES, check_case_count_cap
+
+
+def test_check_case_count_cap_passes_within_default():
+    spec = {"sweep": {"mode": "cross_product", "independent": {"a": [1, 2]}, "dependent": []}}
+    check_case_count_cap(spec)  # must not raise
+
+
+def test_check_case_count_cap_rejects_over_default():
+    spec = {
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"a": list(range(20)), "b": list(range(20))},
+            "dependent": [],
+        }
+    }
+    assert compute_case_count(spec) > DEFAULT_MAX_CASES
+    with pytest.raises(SweepValidationError, match="max_cases"):
+        check_case_count_cap(spec)
+
+
+def test_check_case_count_cap_accepts_explicit_override():
+    spec = {
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"a": list(range(20)), "b": list(range(20))},
+            "dependent": [],
+        }
+    }
+    check_case_count_cap(spec, max_cases=500)  # must not raise
