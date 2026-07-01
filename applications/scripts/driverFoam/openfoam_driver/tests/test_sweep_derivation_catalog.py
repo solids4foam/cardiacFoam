@@ -49,3 +49,8 @@ def test_case_id_template_rejects_path_unsafe_values():
     fn = get_derivation("case_id_template")
     with pytest.raises(SweepValidationError, match="path-safe|caseId"):
         fn({"ionicModel": "../TNNP"})
+
+
+def test_get_derivation_rejects_non_string_name():
+    with pytest.raises(SweepValidationError, match="derive"):
+        get_derivation(["x"])

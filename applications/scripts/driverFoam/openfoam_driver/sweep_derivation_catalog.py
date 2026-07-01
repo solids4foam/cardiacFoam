@@ -63,6 +63,10 @@ SWEEP_DERIVATION_CATALOG: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] 
 
 def get_derivation(name: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
     """Fixed-registry lookup. No getattr/eval/dynamic import off agent input."""
+    if not isinstance(name, str):
+        raise SweepValidationError(
+            f"'derive' must be a string naming a registered derivation, got {name!r}"
+        )
     try:
         return SWEEP_DERIVATION_CATALOG[name]
     except KeyError:
