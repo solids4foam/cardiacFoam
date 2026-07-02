@@ -263,6 +263,59 @@ def test_resume_leaves_terminal_failed_alone_without_retry_flag(tmp_path):
     assert result["failed_count"] == 1
 
 
+def test_resume_retries_terminal_failed_case_with_retry_flag(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    spec = json.loads(spec_path.read_text())
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    from openfoam_driver.core.runtime.sweep_manifest import (
+        CaseManifestEntry, SweepManifest, compute_spec_hash, write_manifest,
+    )
+    case_dir = output_dir / "TNNP"
+    state_dir = case_dir / "postProcessing"
+    state_dir.mkdir(parents=True)
+    (state_dir / "workflow_state.json").write_text('{"status": "failed"}')
+    manifest = SweepManifest(
+        schema_version="1.0", sweep_spec_hash=compute_spec_hash(spec),
+        created_at="t0", updated_at="t0",
+        cases=[CaseManifestEntry(
+            case_id="TNNP", resolved_axis_values={"ionicModel": "TNNP"},
+            override_hash="sha256:x", run_document_path="TNNP/run_document.json",
+            workflow_state_path="TNNP/postProcessing/workflow_state.json",
+            status="failed", outcome="fresh", started_at="t0", updated_at="t0",
+        )],
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+    fake_report.to_json.return_value = {
+        "status": "ok",
+        "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}},
+    }
+
+    def fake_subprocess_run(cmd, **kwargs):
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "workflow_state.json").write_text('{"status": "completed"}')
+        return mock.Mock(returncode=0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run) as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=True)
+
+    mock_materialize.assert_called_once()
+    mock_run.assert_called_once()
+    assert result["completed_count"] == 1
+    assert result["failed_count"] == 0
+    by_id = {case["case_id"]: case for case in result["cases"]}
+    assert by_id["TNNP"]["outcome"] == "retried"
+    assert by_id["TNNP"]["status"] == "completed"
+
+
 def test_spec_hash_mismatch_is_refused(tmp_path):
     spec_path = tmp_path / "sweep.json"
     _write_spec(spec_path, models=("TNNP",))
