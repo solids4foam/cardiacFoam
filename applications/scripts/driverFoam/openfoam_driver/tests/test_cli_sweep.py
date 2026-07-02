@@ -79,6 +79,21 @@ class TestCliSweepActions(unittest.TestCase):
         assert kwargs["max_cases"] == 500
         assert kwargs["retry_failed"] is True
 
+    def test_sweep_plan_exits_nonzero_when_a_case_failed(self):
+        with mock.patch(
+            "openfoam_driver.cli.sweep_plan",
+            return_value={
+                "case_count": 2,
+                "cases": [
+                    {"case_id": "TNNP", "status": "ok"},
+                    {"case_id": "BadModel", "status": "failed", "materialization_error": "bad ionicModel"},
+                ],
+            },
+        ), mock.patch("builtins.print"):
+            code = main(["sweep-plan", "--spec", "sweep.json", "--output-dir", "/tmp/out"])
+
+        assert code == 1
+
     def test_sweep_plan_rejects_entry_flag(self):
         with mock.patch("builtins.print"):
             with self.assertRaises(SystemExit):

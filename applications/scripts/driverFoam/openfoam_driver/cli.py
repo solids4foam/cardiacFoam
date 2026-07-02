@@ -725,7 +725,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "sweep-plan":
         result = sweep_plan(args.spec, output_dir=args.output_dir, max_cases=args.max_cases)
         print(json.dumps(result, indent=2))
-        return 0
+        any_failed = any(case["status"] != "ok" for case in result["cases"])
+        return 1 if any_failed else 0
 
     if args.action == "sweep-run":
         result = sweep_run(
