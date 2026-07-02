@@ -79,6 +79,16 @@ class TestCliSweepActions(unittest.TestCase):
         assert kwargs["max_cases"] == 500
         assert kwargs["retry_failed"] is True
 
+    def test_sweep_plan_rejects_entry_flag(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main(["sweep-plan", "--spec", "sweep.json", "--output-dir", "/tmp/out", "--entry", "singleCell"])
+
+    def test_non_sweep_action_rejects_spec_flag(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main(["plan", "--strict", "--entry", "singleCell", "--spec", "sweep.json"])
+
 
 if __name__ == "__main__":
     unittest.main()
