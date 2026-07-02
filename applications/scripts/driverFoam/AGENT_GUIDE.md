@@ -23,6 +23,7 @@ before driving the orchestrator.
 | Locate legacy predicted outputs | Read `artifacts_manifest.json` (sidecar, atomic) | `<output_dir>/` |
 | Verify legacy outputs vs predictions | Read `artifacts_realized.json` (written at terminal status) | `<output_dir>/` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
+| Plan/run a parameter sweep | `foamctl sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
 
 ## Preferred strict agent loop
 
@@ -162,6 +163,69 @@ That single call:
 5. Launches `DriverEngine.run_simulations()`.
 6. Returns the per-case results.
 
+## Sweeping a parameter grid
+
+For running many cases off one parameter grid, use `sweep-plan`/`sweep-run`
+instead of hand-looping `build_and_launch`. A `sweep.json` has two top-level
+objects:
+
+- `"base"`: fixed values applied to every case — `electro_selectors`,
+  `physics_selectors`, `electro_overrides`, `physics_overrides`, `delta_t`,
+  `end_time` (same shapes as `build_and_launch`'s kwargs).
+- `"sweep"`: `"mode"` (`"cross_product"` or `"zip"`), `"independent"` (axis
+  name to list of values), and `"dependent"` (a list of
+  `{"name", "derive", "of"}` entries for derived values — currently the only
+  registered `derive` function is `case_id_template`, which joins the named
+  `of` values into a `caseId` label).
+
+```json
+{
+  "base": {
+    "electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "epicardialCells"},
+    "physics_selectors": {"type": "electroModel"}
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {"ionicModel": ["TNNP", "BuenoOrovio"], "deltaT": [1e-6, 2e-6]},
+    "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["ionicModel", "deltaT"]}]
+  }
+}
+```
+
+Each resolved case's axis values route automatically into `build_and_launch`'s
+parameters: `myocardiumSolver`/`ionicModel`/`tissue` go to `electro_selectors`,
+`type` goes to `physics_selectors`, `deltaT`/`endTime` go to the dedicated
+`delta_t`/`end_time` kwargs, and any other controlDict key is rejected
+outright (only `deltaT`/`endTime` are supported sweep axes into
+`system/controlDict`). Everything else falls through to `electro_overrides`.
+
+Every case is *materialized* fresh — `build_and_launch(..., dry_run=True)`
+writes its dict files, plus a generated `Allrun` script and a
+`workflow_contract.json`, into `<output_dir>/<case_id>/`. This is not a
+registered-tutorial lookup; each case is its own on-disk `case_folder` entry.
+If the sweep declares a `caseId` dependent entry, it becomes the case's
+directory name (validated for uniqueness and path-safety); otherwise cases
+are named `case_0001`, `case_0002`, ... in expansion order.
+
+Both actions enforce a safety cap of 200 expanded cases by default (override
+with `--max-cases`), checked before any case is expanded or materialized:
+
+```bash
+foamctl sweep-plan --spec sweep.json --output-dir sweeps/my_sweep/
+foamctl sweep-run --spec sweep.json --output-dir sweeps/my_sweep/
+```
+
+`sweep-plan` materializes and strict-plans every case without launching
+anything. `sweep-run` additionally launches each case and is resumable:
+re-invoking it against the same `--output-dir` skips cases already recorded
+as `completed` in `sweep_manifest.json`, leaves `failed` cases alone unless
+`--retry-failed` is passed, and refuses to proceed at all if `sweep.json` has
+changed since that output directory's manifest was created (a spec-hash
+mismatch) — use a fresh `--output-dir` or resolve the mismatch first.
+
+See `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md`
+for the full design rationale.
+
 ## Polling a long-running legacy run
 
 For legacy engine runs that take minutes, prefer the async-friendly polling
@@ -213,13 +277,16 @@ or `mutators.py`) → `step --strict --step <id>` reruns the failed step (the
 `attempt` counter increments).
 
 To shorten that loop, `failure_context` also carries a
-`candidate_remediations` array — **suggestions only**, the driver never applies
-them. Each entry has `diagnostic_code`, `driver_path`, `change` (a human-readable
-transform such as `"halve"`, descriptive — never executed by the driver),
-`rationale`, `source` (`"static"` | `"log_signature"`), and `confidence`. A hint
-with an empty `driver_path` is advisory (no mutation). The ladder is deterministic
-first: static diagnostic-code hints win; the log-signature layer (e.g. divergence →
-halve `deltaT`) fires only when there is no structured diagnostic code at all.
+`candidate_remediations` array — **suggestions only**, the agent applies them.
+Each entry has `diagnostic_code`, `driver_path`, `change` (a human-readable
+transform, descriptive), `rationale`, `source` (`"static"`), and `confidence`. A
+hint with an empty `driver_path` is advisory. The ladder emits static,
+diagnostic-code-keyed hints; when one matches, it points the agent straight at
+the failure. When none matches, the array is empty and the agent reasons from
+`failure_context` and the catalog. For numerical control such as `deltaT`, the
+per-ODE stability limit is the anchor: around `1e-6` s for biophysical
+(Hodgkin-Huxley-style) ionic models and around `2e-5` s for phenomenological
+models.
 
 To apply a chosen fix mechanically, write an overrides file
 (`[{"driver_path": "...", "value": "..."}]`) and run:
@@ -285,6 +352,18 @@ Three layers of discovery:
 3. **What ionic models can I pick?** `from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
 4. **What utilities are known?** `from openfoam_driver.utility_catalog import UTILITY_CATALOG`. Strict planning fails when a workflow command has missing required `produces` metadata.
 5. **What dict keys have parser limitations?** Read `openfoam_driver/scripts/dict_key_allowlist.json`. Strict dict-key scanning fails when new uncatalogued keys appear, stale catalog paths remain, or allowlist entries become unused.
+
+**Hand-built case directories need both an `Allrun` and a `workflow_contract.json`.**
+A directory resolved as `entry_kind="case_folder"` (any case directory under
+`tutorials_root` that isn't a registered tutorial) needs an executable
+`Allrun` script *and* a `workflow_contract.json` whose `"steps"` array is
+non-empty. Without a populated `"steps"` array, the registry silently sets
+the resolved entry's workflow DAG to `None` — there is no diagnostic that
+names `workflow_contract.json` or `Allrun` specifically, so `strict_plan`
+just blocks at the `workflow_preparation` stage with a generic "workflow DAG
+is missing or invalid" error and no pointer to the actual cause. This was
+undocumented until it was hit directly while building the sweep feature
+(`sweep_materialize.py` writes both files for exactly this reason).
 
 ## What the validator catches
 
@@ -455,3 +534,4 @@ If your agent depends on any of these, expect failure and consider a workaround 
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_runner.py` — low-level strict step executor
 - `applications/scripts/driverFoam/schemas/run-document.json` — canonical RunDocument v2 JSON Schema
 - `docs/superpowers/plans/2026-05-19-driverfoam-agentic-integration.md` — historical architecture rationale
+- `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md` — sweep orchestration design and rationale
