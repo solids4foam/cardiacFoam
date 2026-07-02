@@ -36,7 +36,7 @@ from typing import Any
 
 from ...strict_planning import strict_plan
 from ...sweep_derivation_catalog import get_derivation
-from ...sweep_expansion import check_case_count_cap, expand_sweep
+from ...sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
 from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values
 from .sweep_manifest import (
@@ -45,6 +45,7 @@ from .sweep_manifest import (
     compute_spec_hash,
     compute_override_hash,
     write_manifest,
+    read_manifest,
 )
 
 
@@ -113,71 +114,109 @@ def sweep_run(
     *,
     output_dir: str | Path,
     max_cases: int = 200,
+    retry_failed: bool = False,
 ) -> dict[str, Any]:
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = output_dir / "sweep_manifest.json"
+
+    spec_hash = compute_spec_hash(sweep_spec)
+    existing_status_by_case: dict[str, str] = {}
+    existing_entry_by_case = {}
+    if manifest_path.exists():
+        existing = read_manifest(manifest_path)
+        if existing.sweep_spec_hash != spec_hash:
+            raise SweepValidationError(
+                "sweep.json has changed since this output directory was created "
+                f"(hash mismatch: expected {existing.sweep_spec_hash}, got {spec_hash}); "
+                "spec changed — use a fresh --output-dir or resolve the mismatch."
+            )
+        existing_status_by_case = {c.case_id: c.status for c in existing.cases}
+        existing_entry_by_case = {c.case_id: c for c in existing.cases}
+
     resolved_cases = expand_sweep(sweep_spec, get_derivation=get_derivation)
     base = sweep_spec.get("base", {})
 
     manifest = SweepManifest(
-        schema_version="1.0",
-        sweep_spec_hash=compute_spec_hash(sweep_spec),
+        schema_version="1.0", sweep_spec_hash=spec_hash,
         created_at=_now(), updated_at=_now(), cases=[],
     )
 
     completed_count = 0
     failed_count = 0
+    skipped_count = 0
     case_summaries: list[dict[str, Any]] = []
 
     for case in resolved_cases:
         routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
         case_dir = output_dir / case.case_id
         run_document_path = case_dir / "run_document.json"
+        workflow_state_path = case_dir / "postProcessing" / "workflow_state.json"
 
+        prior_status = existing_status_by_case.get(case.case_id)
+        prior_entry = existing_entry_by_case.get(case.case_id)
+        outcome = "fresh"
         materialization_error = None
         plan_error = None
-        workflow_state_path = case_dir / "postProcessing" / "workflow_state.json"
-        status = "failed"
-        try:
-            materialize_case(case_dir=case_dir, routed=routed)
-            report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
-            payload = report.to_json()
-            if report.status != "ok":
-                plan_error = "strict_plan reported failed status"
-                status = "failed"
-            else:
-                run_document = payload["run_document"]
-                workflow_state_path = _workflow_state_path_from_run_document(run_document)
-                run_document_path.write_text(json.dumps(run_document, indent=2))
-        except (OSError, ValueError) as exc:
-            materialization_error = str(exc)
-        except Exception as exc:
-            plan_error = str(exc)
-        else:
-            if plan_error is None:
-                result = subprocess.run(
-                    [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
-                    capture_output=True, text=True,
-                )
 
-                if workflow_state_path.exists():
-                    state = json.loads(workflow_state_path.read_text())
-                    status = state.get("status", "pending")
-                elif result.returncode != 0:
-                    status = "failed"
-                else:
-                    status = "pending"
-        if status == "completed":
+        if prior_status == "completed":
+            outcome = "skipped"
+            skipped_count += 1
             completed_count += 1
-        else:
+            status = "completed"
+            if prior_entry is not None:
+                workflow_state_path = output_dir / prior_entry.workflow_state_path
+                run_document_path = output_dir / prior_entry.run_document_path
+        elif prior_status == "failed" and not retry_failed:
+            status = "failed"
             failed_count += 1
+            if prior_entry is not None:
+                workflow_state_path = output_dir / prior_entry.workflow_state_path
+                run_document_path = output_dir / prior_entry.run_document_path
+        else:
+            if prior_status == "failed" and retry_failed:
+                outcome = "retried"
+            status = "failed"
+            try:
+                materialize_case(case_dir=case_dir, routed=routed)
+                report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+                payload = report.to_json()
+                if report.status != "ok":
+                    plan_error = "strict_plan reported failed status"
+                else:
+                    run_document = payload["run_document"]
+                    workflow_state_path = _workflow_state_path_from_run_document(run_document)
+                    run_document_path.write_text(json.dumps(run_document, indent=2))
+            except (OSError, ValueError) as exc:
+                materialization_error = str(exc)
+            except Exception as exc:
+                plan_error = str(exc)
+            else:
+                if plan_error is None:
+                    result = subprocess.run(
+                        [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
+                        capture_output=True, text=True,
+                    )
+
+                    if workflow_state_path.exists():
+                        state = json.loads(workflow_state_path.read_text())
+                        status = state.get("status", "pending")
+                    elif result.returncode != 0:
+                        status = "failed"
+                    else:
+                        status = "pending"
+            if status == "completed":
+                completed_count += 1
+            else:
+                failed_count += 1
 
         case_summary = {
             "case_id": case.case_id,
             "status": status,
+            "outcome": outcome,
             "run_document_path": str(run_document_path.relative_to(output_dir)),
             "workflow_state_path": str(workflow_state_path.relative_to(output_dir)),
         }
@@ -187,24 +226,26 @@ def sweep_run(
             case_summary["plan_error"] = plan_error
         case_summaries.append(case_summary)
 
-        entry = CaseManifestEntry(
-            case_id=case.case_id,
-            resolved_axis_values=case.resolved_axis_values,
-            override_hash=compute_override_hash(routed),
-            run_document_path=str(run_document_path.relative_to(output_dir)),
-            workflow_state_path=str(workflow_state_path.relative_to(output_dir)),
-            status=status,
-            outcome="fresh",
-            started_at=_now(),
-            updated_at=_now(),
+        manifest.cases.append(
+            CaseManifestEntry(
+                case_id=case.case_id,
+                resolved_axis_values=case.resolved_axis_values,
+                override_hash=compute_override_hash(routed),
+                run_document_path=str(run_document_path.relative_to(output_dir)),
+                workflow_state_path=str(workflow_state_path.relative_to(output_dir)),
+                status=status,
+                outcome=outcome,
+                started_at=_now(),
+                updated_at=_now(),
+            )
         )
-        manifest.cases.append(entry)
         manifest.updated_at = _now()
-        write_manifest(output_dir / "sweep_manifest.json", manifest)
+        write_manifest(manifest_path, manifest)
 
     return {
         "case_count": len(resolved_cases),
         "completed_count": completed_count,
         "failed_count": failed_count,
+        "skipped_count": skipped_count,
         "cases": case_summaries,
     }

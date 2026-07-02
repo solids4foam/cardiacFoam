@@ -189,3 +189,90 @@ def test_sweep_run_accepts_over_cap_with_explicit_override(tmp_path):
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
         result = sweep_run(spec_path, output_dir=output_dir, max_cases=300)
     assert result["case_count"] == 250
+
+
+def test_resume_skips_terminal_completed_case(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    spec = json.loads(spec_path.read_text())
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    from openfoam_driver.core.runtime.sweep_manifest import (
+        CaseManifestEntry, SweepManifest, compute_spec_hash, write_manifest,
+    )
+    case_dir = output_dir / "TNNP"
+    state_dir = case_dir / "postProcessing"
+    state_dir.mkdir(parents=True)
+    (state_dir / "workflow_state.json").write_text('{"status": "completed"}')
+    manifest = SweepManifest(
+        schema_version="1.0", sweep_spec_hash=compute_spec_hash(spec),
+        created_at="t0", updated_at="t0",
+        cases=[CaseManifestEntry(
+            case_id="TNNP", resolved_axis_values={"ionicModel": "TNNP"},
+            override_hash="sha256:x", run_document_path="TNNP/run_document.json",
+            workflow_state_path="TNNP/postProcessing/workflow_state.json",
+            status="completed", outcome="fresh", started_at="t0", updated_at="t0",
+        )],
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir)
+
+    mock_materialize.assert_not_called()
+    mock_run.assert_not_called()
+    assert result["skipped_count"] == 1
+
+
+def test_resume_leaves_terminal_failed_alone_without_retry_flag(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    spec = json.loads(spec_path.read_text())
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    from openfoam_driver.core.runtime.sweep_manifest import (
+        CaseManifestEntry, SweepManifest, compute_spec_hash, write_manifest,
+    )
+    case_dir = output_dir / "TNNP"
+    state_dir = case_dir / "postProcessing"
+    state_dir.mkdir(parents=True)
+    (state_dir / "workflow_state.json").write_text('{"status": "failed"}')
+    manifest = SweepManifest(
+        schema_version="1.0", sweep_spec_hash=compute_spec_hash(spec),
+        created_at="t0", updated_at="t0",
+        cases=[CaseManifestEntry(
+            case_id="TNNP", resolved_axis_values={"ionicModel": "TNNP"},
+            override_hash="sha256:x", run_document_path="TNNP/run_document.json",
+            workflow_state_path="TNNP/postProcessing/workflow_state.json",
+            status="failed", outcome="fresh", started_at="t0", updated_at="t0",
+        )],
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=False)
+
+    mock_materialize.assert_not_called()
+    mock_run.assert_not_called()
+    assert result["failed_count"] == 1
+
+
+def test_spec_hash_mismatch_is_refused(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    from openfoam_driver.core.runtime.sweep_manifest import SweepManifest, write_manifest
+    write_manifest(
+        output_dir / "sweep_manifest.json",
+        SweepManifest(schema_version="1.0", sweep_spec_hash="sha256:stale", created_at="t0", updated_at="t0", cases=[]),
+    )
+    from openfoam_driver.core.runtime.sweep_runner import sweep_run
+    with pytest.raises(SweepValidationError, match="hash|spec changed"):
+        sweep_run(spec_path, output_dir=output_dir)
