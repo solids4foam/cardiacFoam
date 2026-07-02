@@ -50,14 +50,13 @@ singleCellSolverCoeffs
     // optional I/O control
 
     writeAfterTime  0;
-    writeFrequency  0.001;
 
     outputVariables
     {
         ionic
         {
             export (Vm cai nai ki AV_INa_INa AV_ICaL_ICaL AV_Ito_Ito AV_IKr_IKr AV_IKs_IKs AV_IK1_IK1 AV_INaCa_INaCa AV_INaK_INaK);
-            debug ();
+            debug (Vm);
         }
         activeTension
         {
