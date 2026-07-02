@@ -26,6 +26,7 @@
 #----------------------------------------------------------------------------#
 
 import json
+import subprocess
 from pathlib import Path
 from unittest import mock
 
@@ -109,8 +110,13 @@ def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
     output_dir = tmp_path / "out"
 
     call_log = []
+    real_subprocess_run = subprocess.run  # captured before patching, so real internal
+    # subprocess calls materialize_case makes (e.g. foamDictionary, when it's on PATH)
+    # still execute for real instead of being swallowed by this fake.
 
     def fake_subprocess_run(cmd, **kwargs):
+        if "--run-document" not in cmd:
+            return real_subprocess_run(cmd, **kwargs)
         call_log.append(cmd)
         run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
         run_doc = json.loads(run_doc_path.read_text())
