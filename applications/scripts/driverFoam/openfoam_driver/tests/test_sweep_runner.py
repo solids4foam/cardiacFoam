@@ -101,3 +101,91 @@ def test_sweep_plan_records_materialization_failure_and_continues(tmp_path):
     assert by_id["TNNP"]["status"] == "ok"
     assert by_id["NotARealModel"]["status"] == "failed"
     assert "materialization_error" in by_id["NotARealModel"]
+
+
+def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path)
+    output_dir = tmp_path / "out"
+
+    call_log = []
+
+    def fake_subprocess_run(cmd, **kwargs):
+        call_log.append(cmd)
+        run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
+        run_doc = json.loads(run_doc_path.read_text())
+        workflow_state_path = Path(run_doc["launch"]["outputDir"]) / "workflow_state.json"
+        workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
+        failed = "BuenoOrovio" in str(run_doc_path.parent)
+        state = {"status": "failed" if failed else "completed"}
+        workflow_state_path.write_text(json.dumps(state))
+        return mock.Mock(returncode=1 if failed else 0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert len(call_log) == 2
+    assert (output_dir / "TNNP" / "run_document.json").exists()
+    assert (output_dir / "BuenoOrovio" / "run_document.json").exists()
+
+    manifest_path = output_dir / "sweep_manifest.json"
+    assert manifest_path.exists()
+    from openfoam_driver.core.runtime.sweep_manifest import read_manifest
+    manifest = read_manifest(manifest_path)
+    statuses = {c.case_id: c.status for c in manifest.cases}
+    assert statuses["TNNP"] == "completed"
+    assert statuses["BuenoOrovio"] == "failed"
+    state_paths = {c.case_id: c.workflow_state_path for c in manifest.cases}
+    assert state_paths["TNNP"] == "TNNP/postProcessing/workflow_state.json"
+    assert result["failed_count"] == 1
+    assert result["completed_count"] == 1
+
+
+def test_sweep_run_refuses_over_cap_without_expanding(tmp_path):
+    spec = {
+        "base": {"electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "epicardialCells"},
+                 "physics_selectors": {"type": "electroModel"}},
+        "sweep": {"mode": "cross_product", "independent": {"a": list(range(20)), "b": list(range(20))}, "dependent": []},
+    }
+    spec_path = tmp_path / "sweep.json"
+    spec_path.write_text(json.dumps(spec))
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        with pytest.raises(SweepValidationError):
+            sweep_run(spec_path, output_dir=tmp_path / "out")
+    mock_materialize.assert_not_called()
+    mock_run.assert_not_called()
+
+
+def test_sweep_run_accepts_over_cap_with_explicit_override(tmp_path):
+    spec = {
+        "base": {"electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "epicardialCells"},
+                 "physics_selectors": {"type": "electroModel"}},
+        "sweep": {"mode": "cross_product", "independent": {"ionicModel": ["TNNP"] * 250}, "dependent": []},
+    }
+    spec_path = tmp_path / "sweep.json"
+    spec_path.write_text(json.dumps(spec))
+    output_dir = tmp_path / "out"
+
+    def fake_materialize(*, case_dir, routed):
+        case_dir.mkdir(parents=True, exist_ok=True)
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+    fake_report.to_json.return_value = {
+        "status": "ok",
+        "run_document": {
+            "version": "2",
+            "launch": {"outputDir": str(output_dir / "dummy" / "postProcessing")},
+        },
+    }
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case", side_effect=fake_materialize), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run"):
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, max_cases=300)
+    assert result["case_count"] == 250

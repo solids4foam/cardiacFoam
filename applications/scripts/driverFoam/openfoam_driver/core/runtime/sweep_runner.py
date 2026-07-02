@@ -28,6 +28,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +39,13 @@ from ...sweep_derivation_catalog import get_derivation
 from ...sweep_expansion import check_case_count_cap, expand_sweep
 from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values
+from .sweep_manifest import (
+    CaseManifestEntry,
+    SweepManifest,
+    compute_spec_hash,
+    compute_override_hash,
+    write_manifest,
+)
 
 
 def _load_spec(spec_path: str | Path) -> dict[str, Any]:
@@ -84,3 +94,117 @@ def sweep_plan(
         )
 
     return {"case_count": len(resolved_cases), "cases": case_reports}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _workflow_state_path_from_run_document(run_document: dict[str, Any]) -> Path:
+    try:
+        output_dir = run_document["launch"]["outputDir"]
+    except KeyError as exc:
+        raise ValueError("strict_plan run_document is missing launch.outputDir") from exc
+    return Path(output_dir) / "workflow_state.json"
+
+
+def sweep_run(
+    spec_path: str | Path,
+    *,
+    output_dir: str | Path,
+    max_cases: int = 200,
+) -> dict[str, Any]:
+    sweep_spec = _load_spec(spec_path)
+    check_case_count_cap(sweep_spec, max_cases=max_cases)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    resolved_cases = expand_sweep(sweep_spec, get_derivation=get_derivation)
+    base = sweep_spec.get("base", {})
+
+    manifest = SweepManifest(
+        schema_version="1.0",
+        sweep_spec_hash=compute_spec_hash(sweep_spec),
+        created_at=_now(), updated_at=_now(), cases=[],
+    )
+
+    completed_count = 0
+    failed_count = 0
+    case_summaries: list[dict[str, Any]] = []
+
+    for case in resolved_cases:
+        routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+        case_dir = output_dir / case.case_id
+        run_document_path = case_dir / "run_document.json"
+
+        materialization_error = None
+        plan_error = None
+        workflow_state_path = case_dir / "postProcessing" / "workflow_state.json"
+        status = "failed"
+        try:
+            materialize_case(case_dir=case_dir, routed=routed)
+            report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+            payload = report.to_json()
+            if report.status != "ok":
+                plan_error = "strict_plan reported failed status"
+                status = "failed"
+            else:
+                run_document = payload["run_document"]
+                workflow_state_path = _workflow_state_path_from_run_document(run_document)
+                run_document_path.write_text(json.dumps(run_document, indent=2))
+        except (OSError, ValueError) as exc:
+            materialization_error = str(exc)
+        except Exception as exc:
+            plan_error = str(exc)
+        else:
+            if plan_error is None:
+                result = subprocess.run(
+                    [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
+                    capture_output=True, text=True,
+                )
+
+                if workflow_state_path.exists():
+                    state = json.loads(workflow_state_path.read_text())
+                    status = state.get("status", "pending")
+                elif result.returncode != 0:
+                    status = "failed"
+                else:
+                    status = "pending"
+        if status == "completed":
+            completed_count += 1
+        else:
+            failed_count += 1
+
+        case_summary = {
+            "case_id": case.case_id,
+            "status": status,
+            "run_document_path": str(run_document_path.relative_to(output_dir)),
+            "workflow_state_path": str(workflow_state_path.relative_to(output_dir)),
+        }
+        if materialization_error is not None:
+            case_summary["materialization_error"] = materialization_error
+        if plan_error is not None:
+            case_summary["plan_error"] = plan_error
+        case_summaries.append(case_summary)
+
+        entry = CaseManifestEntry(
+            case_id=case.case_id,
+            resolved_axis_values=case.resolved_axis_values,
+            override_hash=compute_override_hash(routed),
+            run_document_path=str(run_document_path.relative_to(output_dir)),
+            workflow_state_path=str(workflow_state_path.relative_to(output_dir)),
+            status=status,
+            outcome="fresh",
+            started_at=_now(),
+            updated_at=_now(),
+        )
+        manifest.cases.append(entry)
+        manifest.updated_at = _now()
+        write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    return {
+        "case_count": len(resolved_cases),
+        "completed_count": completed_count,
+        "failed_count": failed_count,
+        "cases": case_summaries,
+    }
