@@ -173,10 +173,11 @@ objects:
   `physics_selectors`, `electro_overrides`, `physics_overrides`, `delta_t`,
   `end_time` (same shapes as `build_and_launch`'s kwargs).
 - `"sweep"`: `"mode"` (`"cross_product"` or `"zip"`), `"independent"` (axis
-  name to list of values), and `"dependent"` (a list of
-  `{"name", "derive", "of"}` entries for derived values — currently the only
-  registered `derive` function is `case_id_template`, which joins the named
-  `of` values into a `caseId` label).
+  name to list of values, routed into `build_and_launch`'s parameters per
+  below), and `"dependent"` (a list of `{"name", "derive", "of"}` entries for
+  derived *labels only* — not routed through the selector rules below —
+  currently the only registered `derive` function is `case_id_template`,
+  which joins the named `of` values into a `caseId` label).
 
 ```json
 {
@@ -195,14 +196,14 @@ objects:
 Each resolved case's axis values route automatically into `build_and_launch`'s
 parameters: `myocardiumSolver`/`ionicModel`/`tissue` go to `electro_selectors`,
 `type` goes to `physics_selectors`, `deltaT`/`endTime` go to the dedicated
-`delta_t`/`end_time` kwargs, and any other controlDict key is rejected
-outright (only `deltaT`/`endTime` are supported sweep axes into
-`system/controlDict`). Everything else falls through to `electro_overrides`.
+`delta_t`/`end_time` kwargs, and any other `system/controlDict` key is
+rejected outright. Everything else falls through to `electro_overrides`.
 
-Every case is *materialized* fresh — `build_and_launch(..., dry_run=True)`
-writes its dict files, plus a generated `Allrun` script and a
-`workflow_contract.json`, into `<output_dir>/<case_id>/`. This is not a
-registered-tutorial lookup; each case is its own on-disk `case_folder` entry.
+Every case is *materialized* fresh: `build_and_launch(..., dry_run=True)`
+writes its dict files, and the sweep runner additionally writes a generated
+`Allrun` script and a `workflow_contract.json`, into `<output_dir>/<case_id>/`.
+This is not a registered-tutorial lookup; each case is its own on-disk
+`case_folder` entry.
 If the sweep declares a `caseId` dependent entry, it becomes the case's
 directory name (validated for uniqueness and path-safety); otherwise cases
 are named `case_0001`, `case_0002`, ... in expansion order.
