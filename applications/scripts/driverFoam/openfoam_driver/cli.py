@@ -41,6 +41,7 @@ from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
+from .core.runtime.sweep_runner import sweep_plan, sweep_run
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
 from .specs.apply_overrides import validate_overrides, apply_overrides, OverrideError
@@ -444,7 +445,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=["sim", "post", "all", "describe", "plan", "step", "run"],
+        choices=["sim", "post", "all", "describe", "plan", "step", "run", "sweep-plan", "sweep-run"],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -524,6 +525,25 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Optional path to the tutorials folder. Defaults to '<repo>/tutorials' when present."
         ),
+    )
+    parser.add_argument(
+        "--spec",
+        help="Path to a sweep.json for action=sweep-plan/sweep-run.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        help="Output directory for action=sweep-plan/sweep-run (required for both).",
+    )
+    parser.add_argument(
+        "--max-cases",
+        type=int,
+        default=200,
+        help="Safety cap on expanded sweep case count (default 200).",
+    )
+    parser.add_argument(
+        "--retry-failed",
+        action="store_true",
+        help="For action=sweep-run: rerun cases whose last recorded status was failed.",
     )
     return parser
 
@@ -607,7 +627,24 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--run-document and --entry are mutually exclusive")
     if args.run_document and (args.config or args.entry_kind or args.tutorials_root):
         parser.error("--config/--entry-kind/--tutorials-root are not valid with --run-document")
-    if not args.run_document and not args.entry:
+    if args.action in {"sweep-plan", "sweep-run"}:
+        if args.entry:
+            parser.error(f"--entry is not valid with action={args.action}; use --spec")
+        if args.config or args.entry_kind or args.tutorials_root:
+            parser.error(f"--config/--entry-kind/--tutorials-root are not valid with action={args.action}")
+        if args.strict or args.run_document or args.step or args.apply is not None:
+            parser.error(f"--strict/--run-document/--step/--apply are not valid with action={args.action}")
+    if args.action in {"sweep-plan", "sweep-run"} and not args.spec:
+        parser.error(f"action={args.action} requires --spec")
+    if args.action in {"sweep-plan", "sweep-run"} and not args.output_dir:
+        parser.error(f"action={args.action} requires --output-dir")
+    if args.retry_failed and args.action != "sweep-run":
+        parser.error("--retry-failed is only valid with action=sweep-run")
+    if args.max_cases != 200 and args.action not in {"sweep-plan", "sweep-run"}:
+        parser.error("--max-cases is only valid with action=sweep-plan or action=sweep-run")
+    if args.action not in {"sweep-plan", "sweep-run"} and (args.spec or args.output_dir):
+        parser.error("--spec/--output-dir are only valid with action=sweep-plan or action=sweep-run")
+    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run"}:
         parser.error("--entry is required (or use --run-document with action=run/step)")
 
 
@@ -684,6 +721,21 @@ def main(argv: list[str] | None = None) -> int:
         if context is None:
             return failure_code
         return _dispatch_context(args, context)
+
+    if args.action == "sweep-plan":
+        result = sweep_plan(args.spec, output_dir=args.output_dir, max_cases=args.max_cases)
+        print(json.dumps(result, indent=2))
+        return 0
+
+    if args.action == "sweep-run":
+        result = sweep_run(
+            args.spec,
+            output_dir=args.output_dir,
+            max_cases=args.max_cases,
+            retry_failed=args.retry_failed,
+        )
+        print(json.dumps(result, indent=2))
+        return 1 if result["failed_count"] > 0 else 0
 
     spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
     _legacy_workflow_dag = spec.metadata.get("workflow_dag")

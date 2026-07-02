@@ -1,0 +1,84 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     test_cli_sweep
+#
+# Description
+#     Tests CLI wiring for sweep-plan/sweep-run actions.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
+import json
+import unittest
+from unittest import mock
+
+from openfoam_driver.cli import main
+
+
+class TestCliSweepActions(unittest.TestCase):
+    def test_sweep_plan_dispatches_to_sweep_runner(self):
+        captured = []
+
+        def fake_print(*args, **kwargs):
+            captured.append(" ".join(str(a) for a in args))
+
+        with mock.patch("openfoam_driver.cli.sweep_plan", return_value={"case_count": 2, "cases": []}) as mock_fn, \
+             mock.patch("builtins.print", side_effect=fake_print):
+            code = main(["sweep-plan", "--spec", "sweep.json", "--output-dir", "/tmp/out"])
+
+        assert code == 0
+        mock_fn.assert_called_once()
+        payload = json.loads(captured[0])
+        assert payload["case_count"] == 2
+
+    def test_sweep_plan_requires_output_dir(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main(["sweep-plan", "--spec", "sweep.json"])
+
+    def test_sweep_run_requires_output_dir(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main(["sweep-run", "--spec", "sweep.json"])
+
+    def test_sweep_run_passes_max_cases_and_retry_flag(self):
+        captured = []
+
+        def fake_print(*args, **kwargs):
+            captured.append(" ".join(str(a) for a in args))
+
+        with mock.patch(
+            "openfoam_driver.cli.sweep_run",
+            return_value={"case_count": 1, "completed_count": 1, "failed_count": 0, "skipped_count": 0},
+        ) as mock_fn, mock.patch("builtins.print", side_effect=fake_print):
+            code = main([
+                "sweep-run", "--spec", "sweep.json", "--output-dir", "/tmp/out",
+                "--max-cases", "500", "--retry-failed",
+            ])
+
+        assert code == 0
+        mock_fn.assert_called_once()
+        kwargs = mock_fn.call_args.kwargs
+        assert kwargs["max_cases"] == 500
+        assert kwargs["retry_failed"] is True
+
+
+if __name__ == "__main__":
+    unittest.main()
