@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+import re
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -35,6 +37,7 @@ from openfoam_driver.core.runtime.mutators import (
     ensure_foam_dict,
     remove_foam_dict,
     update_foam_entry,
+    update_foam_entry_via_foamDictionary,
 )
 from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
@@ -44,6 +47,14 @@ from openfoam_driver.specs.common import (
     normalize_entry_overrides,
     remove_electro_property_dict,
 )
+
+
+def assert_entry_present(testcase: unittest.TestCase, text: str, key: str, value: str) -> None:
+    """Assert `key <value>;` appears in `text`, tolerant of the column
+    alignment foamDictionary applies when it re-serializes a whole file
+    (e.g. `keep 1;` becomes `keep            1;`)."""
+    pattern = rf"{re.escape(key)}\s+{re.escape(value)};"
+    testcase.assertRegex(text, pattern)
 
 
 class TestScopedMutators(unittest.TestCase):
@@ -157,8 +168,8 @@ class TestScopedMutators(unittest.TestCase):
             remove_foam_dict(path, "removeMe", scope="outer")
 
             updated = path.read_text()
-            self.assertIn("keep 1;", updated)
-            self.assertIn("after 2;", updated)
+            assert_entry_present(self, updated, "keep", "1")
+            assert_entry_present(self, updated, "after", "2")
             self.assertNotIn("removeMe", updated)
             self.assertNotIn("value 1;", updated)
 
@@ -349,7 +360,7 @@ class TestScopedMutators(unittest.TestCase):
             self.assertTrue(inserted)
             self.assertFalse(inserted_again)
             self.assertEqual(updated.count("newBlock"), 1)
-            self.assertIn("value 1;", updated)
+            assert_entry_present(self, updated, "value", "1")
 
     def test_ensure_electro_property_dict_supports_electro_scope_token(self) -> None:
         text = "\n".join(
@@ -397,6 +408,51 @@ class TestScopedMutators(unittest.TestCase):
 
             apply_physics_property_overrides(path, {"type": "electroMechanicalModel"})
             self.assertIn("type    electroMechanicalModel;", path.read_text())
+
+
+class TestFoamDictionarySilentTruncationGuard(unittest.TestCase):
+    """A malformed OpenFOAM header comment (missing the closing ``\\*---*/``
+    line) makes ``foamDictionary`` treat the whole file as an empty dict; it
+    then exits 0 after silently rewriting the file with only the newly-set
+    key. update_foam_entry_via_foamDictionary must detect that and refuse to
+    leave the file gutted."""
+
+    @unittest.skipUnless(shutil.which("foamDictionary"), "foamDictionary not available")
+    def test_detects_and_reverts_silent_truncation(self) -> None:
+        text = "\n".join(
+            [
+                "/*--------------------------------*- C++ -*----------------------------------*\\",
+                "FoamFile",
+                "{",
+                "    version     2.0;",
+                "    format      ascii;",
+                "    class       dictionary;",
+                "    object      controlDict;",
+                "}",
+                "",
+                "application     cardiacFoam;",
+                "startFrom       startTime;",
+                "startTime       0;",
+                "stopAt          endTime;",
+                "endTime         1.0;",
+                "deltaT          1e-06;",
+                "writeControl    adjustableRunTime;",
+                "writeInterval   0.01;",
+                "purgeWrite      0;",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text(text)
+
+            with self.assertRaises(RuntimeError):
+                update_foam_entry_via_foamDictionary(path, "deltaT", 0.0001)
+
+            reverted = path.read_text()
+            self.assertIn("application", reverted)
+            self.assertIn("writeInterval", reverted)
 
 
 if __name__ == "__main__":

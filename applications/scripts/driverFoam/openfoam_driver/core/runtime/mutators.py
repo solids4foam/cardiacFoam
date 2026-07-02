@@ -278,6 +278,25 @@ def update_control_dict(
             if not success:
                 update_foam_entry(control_dict_path, key, value)
 
+
+_FOAM_ENTRY_LINE = re.compile(r"^[A-Za-z_][\w.]*\s+\S.*;\s*$")
+
+
+def _count_foam_entries(text: str) -> int:
+    """Count lines that look like a top-level ``key value;`` entry.
+
+    A coarse, syntax-unaware count used only to sanity-check that
+    foamDictionary didn't silently discard most of a file's content while
+    still exiting 0 (see update_foam_entry_via_foamDictionary).
+    """
+    count = 0
+    for line in text.splitlines():
+        stripped = _strip_inline_comment(line).strip()
+        if stripped and _FOAM_ENTRY_LINE.match(stripped):
+            count += 1
+    return count
+
+
 def update_foam_entry_via_foamDictionary(
     file_path: Path,
     key: str,
@@ -288,6 +307,8 @@ def update_foam_entry_via_foamDictionary(
     """Update a key using OpenFOAM's foamDictionary utility."""
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
+
+    original_text = file_path.read_text()
 
     scope_path = _normalize_scope(scope)
     entry_path = "/".join(scope_path + [key]) if scope_path else key
@@ -306,6 +327,26 @@ def update_foam_entry_via_foamDictionary(
         raise RuntimeError(
             f"foamDictionary failed to update '{entry_path}' in {file_path}:\n"
             f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        )
+
+    # foamDictionary can exit 0 while having silently rewritten the file as a
+    # near-empty dict (e.g. a malformed header comment makes it fail to parse
+    # the existing content, then `-set` auto-creates the missing key). Byte
+    # count alone doesn't catch this: foamDictionary always re-serializes its
+    # full banner, which can pad a gutted file back up to a similar size. Count
+    # recognizable `key value;` entries instead, and revert + raise if most of
+    # them vanished, instead of leaving a gutted file behind.
+    new_text = file_path.read_text()
+    original_entries = _count_foam_entries(original_text)
+    new_entries = _count_foam_entries(new_text)
+    if original_entries >= 2 and new_entries < original_entries * 0.5:
+        file_path.write_text(original_text)
+        raise RuntimeError(
+            f"foamDictionary reported success but the result has only "
+            f"{new_entries} recognizable entries versus {original_entries} "
+            f"before, for '{entry_path}' in {file_path}; the input likely "
+            "failed to parse (e.g. a malformed header comment). Reverted the "
+            "file to avoid silent data loss."
         )
 
 
