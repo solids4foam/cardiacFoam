@@ -43,7 +43,7 @@ class RemediationHint:
     driver_path: str   # "" => advisory (no mutation)
     change: str        # human-readable transform; descriptive, never executed by the driver
     rationale: str
-    source: str        # "static" | "log_signature"
+    source: str        # "static"
     confidence: str    # "high" | "low"
 
     def to_json(self) -> dict[str, Any]:
@@ -101,14 +101,20 @@ def _static_hints(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...
 
 
 def build_candidate_remediations(failure_context: dict[str, Any]) -> tuple[RemediationHint, ...]:
-    """Suggestion-only remediation ladder. Never raises; returns () on any problem."""
+    """Suggestion-only remediation ladder. Never raises; returns () on any problem.
+
+    Only static, diagnostic-code-keyed hints are emitted. There is no reactive
+    log-signature layer: the driver does not guess numerical fixes (e.g. halving
+    deltaT on divergence) from log tails. Correct per-ODE deltaT is chosen up
+    front from the catalog's typical values, not repaired after the fact.
+    """
     try:
-        # 1. Exact diagnostic code matches from the structured catalog
+        # Exact diagnostic code matches from the structured catalog.
         hints = _static_hints(failure_context)
         if hints:
             return hints
 
-        # 2. No structured hint found; return empty so LLM can reason.
+        # No structured hint found; return empty so the agent can reason.
         return ()
     except Exception:
         return ()
