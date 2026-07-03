@@ -97,7 +97,9 @@ def _diag(level: str, code: str, message: str, field: str = "") -> dict[str, Any
 def _allowed_runs_root(env: dict[str, str] | None = None) -> Path | None:
     """Resolved DRIVERFOAM_ALLOWED_RUNS_ROOT, or None when unset/empty.
 
-    Passed an explicit ``env`` in tests so they need not mutate os.environ.
+    Accepts an explicit ``env`` mapping so callers (including future tests)
+    can inject the value without mutating ``os.environ``; the current tests
+    use ``mock.patch.dict`` on real ``os.environ`` instead.
     """
     source = env if env is not None else os.environ
     value = source.get("DRIVERFOAM_ALLOWED_RUNS_ROOT")

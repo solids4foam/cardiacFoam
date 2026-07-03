@@ -13,6 +13,7 @@ import tempfile
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 from openfoam_driver.cli import main
 
@@ -200,12 +201,10 @@ def test_run_document_respects_allowed_runs_root() -> None:
         other_root = tutorials_root / "somewhere-else"
         other_root.mkdir()
         out = StringIO()
-        with redirect_stdout(out):
-            os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"] = str(other_root)
-            try:
-                code = main(["run", "--run-document", str(doc_path)])
-            finally:
-                del os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"]
+        with redirect_stdout(out), mock.patch.dict(
+            os.environ, {"DRIVERFOAM_ALLOWED_RUNS_ROOT": str(other_root)}
+        ):
+            code = main(["run", "--run-document", str(doc_path)])
         payload = json.loads(out.getvalue())
         assert code != 0, payload
         codes = {d.get("code") for d in payload.get("diagnostics", [])}
@@ -213,12 +212,10 @@ def test_run_document_respects_allowed_runs_root() -> None:
 
         # Allowed root that DOES contain the case -> runs to completion.
         out = StringIO()
-        with redirect_stdout(out):
-            os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"] = str(tutorials_root)
-            try:
-                code = main(["run", "--run-document", str(doc_path)])
-            finally:
-                del os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"]
+        with redirect_stdout(out), mock.patch.dict(
+            os.environ, {"DRIVERFOAM_ALLOWED_RUNS_ROOT": str(tutorials_root)}
+        ):
+            code = main(["run", "--run-document", str(doc_path)])
         payload = json.loads(out.getvalue())
         assert code == 0, payload
         assert payload["status"] == "ok"
