@@ -6,6 +6,7 @@ from openfoam_driver.specs.apply_overrides import (
     apply_overrides,
     OverrideError,
 )
+from openfoam_driver.core.runtime.mutators import read_foam_entry
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 SINGLE_CELL = REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
@@ -62,6 +63,16 @@ def test_validate_accepts_control_and_electro():
         {"driver_path": "$ELECTRO_MODEL_COEFFS.initialODEStep", "value": "2e-5"},
         {"driver_path": "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude", "value": "80"},
     ])
+
+
+def test_validate_rejects_unknown_flat_controldict_key():
+    # A flat (non-$, non-":") driver_path is routed to controlDict for backward
+    # compatibility, but must still be a real controlDict key -- not silently
+    # accepted and only discovered to be bogus (or worse, silently written) at
+    # apply time.
+    with pytest.raises(OverrideError) as exc:
+        validate_overrides([{"driver_path": "notAKey", "value": "1"}])
+    assert "notAKey" in str(exc.value)
 
 
 def test_validate_rejects_malformed_payload():
@@ -140,7 +151,9 @@ def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
         [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
         case_root=case,
     )
-    assert "1e-6" in (case / "system" / "fvSolution").read_text()
+    fv_solution = case / "system" / "fvSolution"
+    tolerance = read_foam_entry(fv_solution, "tolerance", scope=["solvers", "V"])
+    assert float(tolerance) == pytest.approx(1e-6)
 
 
 def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
@@ -152,5 +165,10 @@ def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
         [{"driver_path": "system/electro/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
         case_root=case,
     )
-    assert "1e-6" in (case / "system" / "electro" / "fvSolution").read_text()
-    assert "1e-5" in (case / "system" / "fvSolution").read_text()  # Top-level should be unchanged
+    electro_fv_solution = case / "system" / "electro" / "fvSolution"
+    tolerance = read_foam_entry(electro_fv_solution, "tolerance", scope=["solvers", "V"])
+    assert float(tolerance) == pytest.approx(1e-6)
+    # Top-level should be unchanged
+    top_fv_solution = case / "system" / "fvSolution"
+    top_tolerance = read_foam_entry(top_fv_solution, "tolerance", scope=["solvers", "V"])
+    assert float(top_tolerance) == pytest.approx(1e-5)

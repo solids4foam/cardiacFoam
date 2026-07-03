@@ -42,9 +42,10 @@ from typing import Any, Iterable
 from .common import detect_myocardium_solver_name
 from .dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
-from ..dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS
+from ..dict_entries import CONTROL_DICT_ENTRIES, ELECTRO_PROPERTY_ENTRY_GROUPS
 
 _PREFIX = "$ELECTRO_MODEL_COEFFS."
+_CONTROL_DICT_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in CONTROL_DICT_ENTRIES)
 
 
 def _is_safe_system_path(path_str: str) -> bool:
@@ -110,6 +111,16 @@ def validate_overrides(overrides: Any) -> None:
             continue
         elif not dp.startswith("$"):
             # Backward compatibility: flat strings are treated as controlDict entries.
+            # Still must be a real controlDict key -- otherwise this silently passes
+            # validation and, at apply time, either raises a raw KeyError (no
+            # foamDictionary) or silently writes a brand-new bogus key into
+            # controlDict (foamDictionary auto-creates missing keys on `-set`).
+            if dp not in _CONTROL_DICT_KEYS:
+                known = ", ".join(sorted(_CONTROL_DICT_KEYS))
+                raise OverrideError(
+                    f"override driver_path {dp!r} is not a known controlDict entry. "
+                    f"Known controlDict entries: {known}"
+                )
             continue
 
         if "<" in dp or ">" in dp:
