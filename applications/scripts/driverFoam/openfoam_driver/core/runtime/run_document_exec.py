@@ -48,6 +48,10 @@ from pathlib import Path
 from typing import Any
 
 from .models import DataArtifact, data_artifact_from_json
+# _case_is_runnable is a private helper reused as-is: the plan treats this as
+# an accepted pragmatic tradeoff rather than promoting it to a public API
+# (out of scope here).
+from .registry import _case_is_runnable
 from .run_model import RunDocument
 from .workflow import normalize_workflow_dag, validate_workflow_commands
 from .workflow_state import (
@@ -173,8 +177,6 @@ def build_execution_inputs(
     #     caseRoot is the OpenFOAM/solver output base and must be a runnable
     #     case. Resolve (follow symlinks) so all downstream checks and the
     #     artifact gate operate on one canonical absolute path.
-    from .registry import _case_is_runnable  # deferred: avoid import cycle
-
     resolved_case_root: Path | None = None
     if case_root_raw:
         resolved_case_root = Path(case_root_raw).resolve()
@@ -211,6 +213,10 @@ def build_execution_inputs(
         elif resolved_case_root is not None:
             resolved_output_dir = (resolved_case_root / candidate).resolve()
         else:
+            # resolved_case_root is None here (caseRoot missing/invalid), which
+            # already forces `blocked = True` below regardless of outputDir.
+            # This CWD-relative resolution is never actually used for
+            # execution — computed only so every branch yields a value.
             resolved_output_dir = candidate.resolve()
 
     # 6) Workflow state: prefer the document's snapshot, else derive from DAG.
