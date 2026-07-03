@@ -8,6 +8,7 @@ document non-executable — none of which need a catalog-valid config.
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -201,6 +202,88 @@ class TestCaseRootValidation(unittest.TestCase):
             self.assertIsNotNone(inputs, diagnostics)
             self.assertEqual(inputs.case_root, case.resolve())
             self.assertEqual(inputs.output_dir, (case.resolve() / "output"))
+
+
+class TestAllowedRunsRoot(unittest.TestCase):
+    def test_case_root_outside_allowed_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            allowed = root / "allowed"
+            allowed.mkdir()
+            case = _make_runnable_case(root)  # under root, NOT under allowed
+            doc = _minimal_doc(launch={
+                "caseRoot": str(case),
+                "outputDir": str(case / "output"),
+            })
+            with mock.patch.dict(os.environ, {"DRIVERFOAM_ALLOWED_RUNS_ROOT": str(allowed)}), \
+                 mock.patch(
+                     "openfoam_driver.core.runtime.run_document_exec.validate_run",
+                     return_value=[],
+                 ):
+                inputs, diagnostics = build_execution_inputs(doc)
+            self.assertIsNone(inputs)
+            codes = {d["code"] for d in diagnostics}
+            self.assertIn("case_root_outside_allowed_root", codes)
+
+    def test_output_dir_outside_allowed_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            allowed = root / "allowed"
+            allowed.mkdir()
+            case = _make_runnable_case(allowed)  # case under allowed
+            outside_out = root / "elsewhere"      # outputDir NOT under allowed
+            doc = _minimal_doc(launch={
+                "caseRoot": str(case),
+                "outputDir": str(outside_out),
+            })
+            with mock.patch.dict(os.environ, {"DRIVERFOAM_ALLOWED_RUNS_ROOT": str(allowed)}), \
+                 mock.patch(
+                     "openfoam_driver.core.runtime.run_document_exec.validate_run",
+                     return_value=[],
+                 ):
+                inputs, diagnostics = build_execution_inputs(doc)
+            self.assertIsNone(inputs)
+            codes = {d["code"] for d in diagnostics}
+            self.assertIn("output_dir_outside_allowed_root", codes)
+
+    def test_both_inside_allowed_root_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            allowed = Path(temp)  # everything under the temp dir
+            case = _make_runnable_case(allowed)
+            doc = _minimal_doc(launch={
+                "caseRoot": str(case),
+                "outputDir": str(case / "output"),
+            })
+            with mock.patch.dict(os.environ, {"DRIVERFOAM_ALLOWED_RUNS_ROOT": str(allowed)}), \
+                 mock.patch(
+                     "openfoam_driver.core.runtime.run_document_exec.validate_run",
+                     return_value=[],
+                 ):
+                inputs, diagnostics = build_execution_inputs(doc)
+            self.assertIsNotNone(inputs, diagnostics)
+
+    def test_unset_allowed_root_permits_separate_output_dir(self) -> None:
+        # No DRIVERFOAM_ALLOWED_RUNS_ROOT: an absolute outputDir outside the case
+        # is allowed (matches resolve_spec_paths separate-results-dir layout).
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            case = _make_runnable_case(root)
+            separate_out = root / "results"
+            doc = _minimal_doc(launch={
+                "caseRoot": str(case),
+                "outputDir": str(separate_out),
+            })
+            # patch.dict (clear=False) snapshots + restores os.environ on exit,
+            # so popping the var here is safe and does not disturb PATH etc.
+            with mock.patch.dict(os.environ, {}), \
+                 mock.patch(
+                     "openfoam_driver.core.runtime.run_document_exec.validate_run",
+                     return_value=[],
+                 ):
+                os.environ.pop("DRIVERFOAM_ALLOWED_RUNS_ROOT", None)
+                inputs, diagnostics = build_execution_inputs(doc)
+            self.assertIsNotNone(inputs, diagnostics)
+            self.assertEqual(inputs.output_dir, separate_out.resolve())
 
 
 if __name__ == "__main__":

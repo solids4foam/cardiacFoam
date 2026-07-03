@@ -185,6 +185,45 @@ def test_run_document_only_valid_for_run_and_step() -> None:
         raise AssertionError("expected SystemExit for --run-document with describe")
 
 
+def test_run_document_respects_allowed_runs_root() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        _write_case(
+            tutorials_root,
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nprintf 'ran\\n'\n",
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
+        )
+        doc_path = tutorials_root / "run.json"
+        _plan_to_file(tutorials_root, doc_path)
+
+        # Allowed root that does NOT contain the case -> rejected before running.
+        other_root = tutorials_root / "somewhere-else"
+        other_root.mkdir()
+        out = StringIO()
+        with redirect_stdout(out):
+            os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"] = str(other_root)
+            try:
+                code = main(["run", "--run-document", str(doc_path)])
+            finally:
+                del os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"]
+        payload = json.loads(out.getvalue())
+        assert code != 0, payload
+        codes = {d.get("code") for d in payload.get("diagnostics", [])}
+        assert "case_root_outside_allowed_root" in codes
+
+        # Allowed root that DOES contain the case -> runs to completion.
+        out = StringIO()
+        with redirect_stdout(out):
+            os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"] = str(tutorials_root)
+            try:
+                code = main(["run", "--run-document", str(doc_path)])
+            finally:
+                del os.environ["DRIVERFOAM_ALLOWED_RUNS_ROOT"]
+        payload = json.loads(out.getvalue())
+        assert code == 0, payload
+        assert payload["status"] == "ok"
+
+
 def test_step_via_run_document_apply_mutates_reruns_and_audits() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         tutorials_root = Path(temp_dir)

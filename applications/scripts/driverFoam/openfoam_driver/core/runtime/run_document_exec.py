@@ -43,6 +43,7 @@ that makes the document non-executable is returned as a diagnostic with
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -91,6 +92,18 @@ def load_run_document(path: str | Path) -> RunDocument:
 
 def _diag(level: str, code: str, message: str, field: str = "") -> dict[str, Any]:
     return {"level": level, "code": code, "message": message, "field": field}
+
+
+def _allowed_runs_root(env: dict[str, str] | None = None) -> Path | None:
+    """Resolved DRIVERFOAM_ALLOWED_RUNS_ROOT, or None when unset/empty.
+
+    Passed an explicit ``env`` in tests so they need not mutate os.environ.
+    """
+    source = env if env is not None else os.environ
+    value = source.get("DRIVERFOAM_ALLOWED_RUNS_ROOT")
+    if not value:
+        return None
+    return Path(value).resolve()
 
 
 def build_execution_inputs(
@@ -218,6 +231,26 @@ def build_execution_inputs(
             # This CWD-relative resolution is never actually used for
             # execution — computed only so every branch yields a value.
             resolved_output_dir = candidate.resolve()
+
+    # Opt-in hard boundary: when DRIVERFOAM_ALLOWED_RUNS_ROOT is set, both
+    # resolved paths must sit under it. Runs on resolved paths, so a symlink or
+    # an absolute output_dir cannot escape. Unset -> skipped (no behavior change).
+    allowed_root = _allowed_runs_root()
+    if allowed_root is not None:
+        if resolved_case_root is not None and not resolved_case_root.is_relative_to(allowed_root):
+            diagnostics.append(_diag(
+                "error", "case_root_outside_allowed_root",
+                f"launch.caseRoot resolves outside DRIVERFOAM_ALLOWED_RUNS_ROOT "
+                f"({allowed_root}): {resolved_case_root}.",
+                "launch.caseRoot",
+            ))
+        if resolved_output_dir is not None and not resolved_output_dir.is_relative_to(allowed_root):
+            diagnostics.append(_diag(
+                "error", "output_dir_outside_allowed_root",
+                f"launch.outputDir resolves outside DRIVERFOAM_ALLOWED_RUNS_ROOT "
+                f"({allowed_root}): {resolved_output_dir}.",
+                "launch.outputDir",
+            ))
 
     # 6) Workflow state: prefer the document's snapshot, else derive from DAG.
     workflow_state: WorkflowRunState | None
