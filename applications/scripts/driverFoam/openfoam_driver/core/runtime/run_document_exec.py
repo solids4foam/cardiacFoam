@@ -169,6 +169,50 @@ def build_execution_inputs(
             "launch.outputDir",
         ))
 
+    # 5b) Validate + canonicalize launch paths against the OpenFOAM layout.
+    #     caseRoot is the OpenFOAM/solver output base and must be a runnable
+    #     case. Resolve (follow symlinks) so all downstream checks and the
+    #     artifact gate operate on one canonical absolute path.
+    from .registry import _case_is_runnable  # deferred: avoid import cycle
+
+    resolved_case_root: Path | None = None
+    if case_root_raw:
+        resolved_case_root = Path(case_root_raw).resolve()
+        if not resolved_case_root.exists():
+            diagnostics.append(_diag(
+                "error", "case_root_missing",
+                f"Run document launch.caseRoot does not exist: {case_root_raw}.",
+                "launch.caseRoot",
+            ))
+            resolved_case_root = None
+        elif not resolved_case_root.is_dir():
+            diagnostics.append(_diag(
+                "error", "case_root_not_a_directory",
+                f"Run document launch.caseRoot is not a directory: {case_root_raw}.",
+                "launch.caseRoot",
+            ))
+            resolved_case_root = None
+        elif not _case_is_runnable(resolved_case_root):
+            diagnostics.append(_diag(
+                "error", "case_root_not_a_runnable_case",
+                f"Run document launch.caseRoot is not a runnable OpenFOAM case "
+                f"(missing required constant/ or system/ files): {case_root_raw}.",
+                "launch.caseRoot",
+            ))
+            resolved_case_root = None
+
+    # outputDir is the driver-bookkeeping base. Resolve the same way the driver
+    # builds it (resolve_spec_paths): absolute as-is, relative under caseRoot.
+    resolved_output_dir: Path | None = None
+    if output_dir_raw:
+        candidate = Path(output_dir_raw)
+        if candidate.is_absolute():
+            resolved_output_dir = candidate.resolve()
+        elif resolved_case_root is not None:
+            resolved_output_dir = (resolved_case_root / candidate).resolve()
+        else:
+            resolved_output_dir = candidate.resolve()
+
     # 6) Workflow state: prefer the document's snapshot, else derive from DAG.
     workflow_state: WorkflowRunState | None
     if run_doc.workflowState is not None:
@@ -188,8 +232,8 @@ def build_execution_inputs(
         any(d["level"] == "error" for d in diagnostics)
         or dag is None
         or workflow_state is None
-        or not case_root_raw
-        or not output_dir_raw
+        or resolved_case_root is None
+        or resolved_output_dir is None
     )
     if blocked:
         return None, tuple(diagnostics)
@@ -197,8 +241,8 @@ def build_execution_inputs(
     inputs = RunDocumentExecutionInputs(
         workflow_dag=dag,
         workflow_state=workflow_state,
-        case_root=Path(case_root_raw),
-        output_dir=Path(output_dir_raw),
+        case_root=resolved_case_root,
+        output_dir=resolved_output_dir,
         expected_artifacts=tuple(expected_artifacts),
         run_document=run_doc,
     )
