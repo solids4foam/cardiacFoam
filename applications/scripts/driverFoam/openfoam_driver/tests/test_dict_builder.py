@@ -637,7 +637,15 @@ class TestParseElectroProperties(unittest.TestCase):
                 self.assertNotIn(sel_key, override_slot_keys)
 
     def test_roundtrip_produces_equivalent_text(self) -> None:
-        """build → write → parse → rebuild must produce same FoamFile text."""
+        """build → write → parse → rebuild must produce a semantically
+        equivalent FoamFile: re-parsing the rebuilt text must yield the same
+        selectors/overrides as the original. We deliberately don't compare
+        raw text here — `parse_electro_properties` reads values back via
+        `foamDictionary`, which canonicalizes numeric formatting as a side
+        effect of parsing (e.g. `0.0` -> `0`, `1e-6` -> `1e-06`), so the
+        rebuilt text can legitimately differ cosmetically from the original
+        while still describing the same dict.
+        """
         import tempfile
         from pathlib import Path
         from openfoam_driver.specs.dict_builder import (
@@ -663,7 +671,12 @@ class TestParseElectroProperties(unittest.TestCase):
         rebuilt_text = build_electro_properties(
             parsed["selectors"], overrides=parsed["overrides"] or None,
         )
-        self.assertEqual(original_text, rebuilt_text)
+        with tempfile.TemporaryDirectory() as d2:
+            p2 = Path(d2) / "electroProperties"
+            p2.write_text(rebuilt_text)
+            reparsed = parse_electro_properties(p2)
+
+        self.assertEqual(parsed, reparsed)
 
 
 class TestBuildAndLaunchControlDict(unittest.TestCase):
