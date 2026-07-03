@@ -133,6 +133,9 @@ case means running its scripts, which is arbitrary case-authored code by
 design. The trust model is local/single-tenant: it assumes `PATH` and the
 `$FOAM_*BIN` variables are not attacker-controlled.
 
+See [`SECURITY.md`](SECURITY.md) for the full trust model, output-location
+contract, and the explicit list of what is and is not mitigated.
+
 ## Compatibility one-shot loop
 
 The legacy `build_and_launch(...)` path remains supported for existing scripts,
