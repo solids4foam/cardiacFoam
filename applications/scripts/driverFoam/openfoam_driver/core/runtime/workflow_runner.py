@@ -245,8 +245,16 @@ def run_workflow_step(
                 if artifact.artifact_id == artifact_id:
                     if artifact.optional:
                         continue
-                    pattern = str(case_root / artifact.path_pattern.format(case_id=case_root.name, time="*"))
-                    if not glob.glob(pattern):
+                    expanded = artifact.path_pattern.format(case_id=case_root.name, time="*")
+                    # OpenFOAM output relations: serial/reconstructed outputs live at
+                    # caseRoot/<time>/<field>; a parallel run that has not yet been
+                    # reconstructed writes caseRoot/processor<N>/<time>/<field>. Accept
+                    # either for time-indexed artifacts so a decomposed run does not
+                    # false-fail. postProcessing/config artifacts stay caseRoot-relative.
+                    candidate_patterns = [str(case_root / expanded)]
+                    if artifact.time_indexed:
+                        candidate_patterns.append(str(case_root / "processor*" / expanded))
+                    if not any(glob.glob(p) for p in candidate_patterns):
                         missing_artifacts.append(artifact_id)
         if missing_artifacts:
             status = "failed"

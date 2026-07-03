@@ -150,6 +150,93 @@ def test_run_workflow_step_allows_missing_optional_artifacts() -> None:
         assert payload["steps"][0]["status"] == "completed"
 
 
+def test_run_workflow_step_accepts_decomposed_time_artifact() -> None:
+    # A parallel, not-yet-reconstructed run writes processor0/<time>/<field>.
+    # The required time_indexed artifact must be considered produced.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        script = (
+            "import pathlib; "
+            "d=pathlib.Path('processor0/0.001'); d.mkdir(parents=True); "
+            "(d/'Vm').write_text('x')"
+        )
+        dag = _dag(sys.executable, ["-c", script], produces=["vm_field"])
+        state = initial_workflow_state(dag)
+        assert state is not None
+
+        result = run_workflow_step(
+            dag, state, "run",
+            case_root=root, log_dir=root / "logs",
+            expected_artifacts=(
+                DataArtifact(
+                    artifact_id="vm_field",
+                    path_pattern="{time}/Vm",
+                    format="openfoam_time_dirs",
+                    time_indexed=True,
+                ),
+            ),
+        )
+
+        payload = result.state.to_json()
+        assert payload["status"] == "completed"
+        assert payload["steps"][0]["status"] == "completed"
+        assert payload["steps"][0]["produced_artifacts"] == ["vm_field"]
+
+
+def test_run_workflow_step_accepts_reconstructed_time_artifact() -> None:
+    # Serial / reconstructed location <time>/<field> still satisfies the gate.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        script = (
+            "import pathlib; "
+            "d=pathlib.Path('0.001'); d.mkdir(parents=True); "
+            "(d/'Vm').write_text('x')"
+        )
+        dag = _dag(sys.executable, ["-c", script], produces=["vm_field"])
+        state = initial_workflow_state(dag)
+        assert state is not None
+
+        result = run_workflow_step(
+            dag, state, "run",
+            case_root=root, log_dir=root / "logs",
+            expected_artifacts=(
+                DataArtifact(
+                    artifact_id="vm_field",
+                    path_pattern="{time}/Vm",
+                    format="openfoam_time_dirs",
+                    time_indexed=True,
+                ),
+            ),
+        )
+        assert result.state.to_json()["status"] == "completed"
+
+
+def test_run_workflow_step_missing_time_artifact_still_fails() -> None:
+    # Neither reconstructed nor decomposed location exists -> missing_artifacts.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        dag = _dag(sys.executable, ["-c", "print('ok')"], produces=["vm_field"])
+        state = initial_workflow_state(dag)
+        assert state is not None
+
+        result = run_workflow_step(
+            dag, state, "run",
+            case_root=root, log_dir=root / "logs",
+            expected_artifacts=(
+                DataArtifact(
+                    artifact_id="vm_field",
+                    path_pattern="{time}/Vm",
+                    format="openfoam_time_dirs",
+                    time_indexed=True,
+                ),
+            ),
+        )
+        payload = result.state.to_json()
+        assert payload["status"] == "failed"
+        codes = {d["code"] for d in payload["steps"][0]["diagnostics"]}
+        assert "missing_artifacts" in codes
+
+
 def test_run_workflow_step_rejects_incomplete_dependencies() -> None:
     dag = {
         "schema_version": "1",
