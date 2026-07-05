@@ -35,6 +35,13 @@ by construction.
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[5]
+SINGLE_CELL_ELECTRO_PROPERTIES = (
+    REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
+    / "constant" / "electroProperties"
+)
 
 
 class TestDictBuilderModule(unittest.TestCase):
@@ -460,6 +467,131 @@ class TestBuildAndLaunch(unittest.TestCase):
             self.assertIn("myocardiumSolver singleCellSolver;", text)
 
 
+class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
+    """build_and_launch must leave every case with a real mesh on disk.
+
+    electroModel.C requires a real fvMesh regardless of solver (confirmed via
+    `refCast<const fvMesh>(mesh())` at electroModel.C:344) -- even
+    singleCellSolver needs one. Neither build_and_launch nor
+    sweep_runner.materialize_case provisioned any mesh before this fix, so no
+    solver built from scratch via sweep-run/case_folder could ever complete
+    (see project_driverfoam_sweep_bugs_found memory item #3).
+    """
+
+    def test_single_cell_solver_gets_a_static_polymesh(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            result = build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "singleCellSolver",
+                    "ionicModel": "AlievPanfilov",
+                    "tissue": "myocyte",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+            )
+            poly_mesh = case_dir / "constant" / "polyMesh"
+            for name in ("points", "faces", "owner", "neighbour", "boundary"):
+                self.assertTrue((poly_mesh / name).exists(), f"missing {name}")
+            self.assertFalse(result.get("needs_block_mesh", False))
+
+    def test_spatial_solver_gets_a_block_mesh_dict(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            result = build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "monodomainSolver",
+                    "ionicModel": "TNNP",
+                    "tissue": "epicardialCells",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+            )
+            block_mesh_dict = case_dir / "system" / "blockMeshDict"
+            self.assertTrue(block_mesh_dict.exists())
+            self.assertIn("blocks", block_mesh_dict.read_text())
+            self.assertFalse((case_dir / "constant" / "polyMesh").exists())
+            self.assertTrue(result.get("needs_block_mesh", False))
+
+    def test_dx_kwarg_controls_generated_block_mesh_resolution(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "monodomainSolver",
+                    "ionicModel": "TNNP",
+                    "tissue": "epicardialCells",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+                dx=0.0004,
+            )
+            written = (case_dir / "system" / "blockMeshDict").read_text()
+            self.assertEqual(written, default_block_mesh_dict_text(dx_m=0.0004))
+            self.assertNotEqual(written, default_block_mesh_dict_text())
+
+    def test_dx_kwarg_rejected_for_meshless_solver(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            with self.assertRaisesRegex(ValueError, "dx"):
+                build_and_launch(
+                    electro_selectors={
+                        "myocardiumSolver": "singleCellSolver",
+                        "ionicModel": "AlievPanfilov",
+                        "tissue": "myocyte",
+                    },
+                    physics_selectors={"type": "electroModel"},
+                    case_dir=case_dir,
+                    dry_run=True,
+                    dx=0.0004,
+                )
+
+    def test_existing_mesh_is_not_clobbered_without_overwrite(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import build_and_launch
+
+        with tempfile.TemporaryDirectory() as temp:
+            case_dir = Path(temp) / "case"
+            block_mesh_dict = case_dir / "system" / "blockMeshDict"
+            block_mesh_dict.parent.mkdir(parents=True)
+            block_mesh_dict.write_text("// pre-existing custom mesh\n")
+            (case_dir / "constant").mkdir(parents=True)
+            (case_dir / "constant" / "electroProperties").write_text("# pre-existing\n")
+            build_and_launch(
+                electro_selectors={
+                    "myocardiumSolver": "monodomainSolver",
+                    "ionicModel": "TNNP",
+                    "tissue": "epicardialCells",
+                },
+                physics_selectors={"type": "electroModel"},
+                case_dir=case_dir,
+                dry_run=True,
+                overwrite=True,
+            )
+            self.assertEqual(block_mesh_dict.read_text(), "// pre-existing custom mesh\n")
+
+
 class TestBuildAndLaunchDirectRun(unittest.TestCase):
     """build_and_launch passes solver_command='cardiacFoam' to make_spec."""
 
@@ -582,6 +714,31 @@ class TestParseElectroProperties(unittest.TestCase):
             self.assertEqual(result["selectors"]["ionicModel"], "AlievPanfilov")
             self.assertEqual(result["selectors"]["tissue"], "myocyte")
 
+    def test_ignored_keys_lists_structurally_skipped_dynamic_paths(self) -> None:
+        import tempfile
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        with tempfile.TemporaryDirectory() as d:
+            p = self._build_and_write(
+                d,
+                {"myocardiumSolver": "monodomainSolver",
+                 "ionicModel": "TNNP",
+                 "tissue": "epicardialCells"},
+            )
+            result = parse_electro_properties(p)
+            # Backward compatible: selectors/overrides still present.
+            self.assertIn("selectors", result)
+            self.assertIn("overrides", result)
+            # New: the parser now surfaces the driver_path families it does not
+            # round-trip instead of dropping them silently.
+            self.assertIn("ignored_keys", result)
+            self.assertIsInstance(result["ignored_keys"], list)
+            # dynamic_path entries exist in the catalog, so the list is non-empty
+            # and every entry is a $ELECTRO_MODEL_COEFFS driver_path.
+            self.assertTrue(result["ignored_keys"])
+            self.assertTrue(
+                all(k.startswith("$ELECTRO_MODEL_COEFFS") for k in result["ignored_keys"])
+            )
+
     def test_non_default_override_is_captured(self) -> None:
         import tempfile
         from openfoam_driver.specs.dict_builder import parse_electro_properties
@@ -635,6 +792,55 @@ class TestParseElectroProperties(unittest.TestCase):
             }
             for sel_key in ("myocardiumSolver", "ionicModel", "tissue"):
                 self.assertNotIn(sel_key, override_slot_keys)
+
+    def test_active_tension_model_survives_singlecell_roundtrip(self) -> None:
+        """Regression test: activeTensionModel is a flat word entry directly
+        inside singleCellSolverCoeffs (see singleCellSolver.C's
+        electroProperties().found("activeTensionModel")) — not a
+        'activeTensionModel { activeTensionModel <x>; }' sub-block. Both
+        build_electro_properties (synthesis) and parse_electro_properties
+        (round-trip) must preserve it for singleCellSolver."""
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.specs.dict_builder import (
+            build_electro_properties,
+            parse_electro_properties,
+        )
+        selectors = {
+            "myocardiumSolver": "singleCellSolver",
+            "ionicModel": "TWorld",
+            "tissue": "endocardialCells",
+        }
+        overrides = {"$ELECTRO_MODEL_COEFFS.activeTensionModel": "LandNiederer"}
+
+        text = build_electro_properties(selectors, overrides=overrides)
+        self.assertIn("activeTensionModel LandNiederer;", text)
+        self.assertNotIn("activeTensionModel\n    {", text)
+
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "electroProperties"
+            p.write_text(text)
+            parsed = parse_electro_properties(p)
+
+        self.assertEqual(
+            parsed["overrides"].get("$ELECTRO_MODEL_COEFFS.activeTensionModel"),
+            "LandNiederer",
+        )
+
+    def test_active_tension_model_recovered_from_real_singlecell_tutorial(self) -> None:
+        """The hand-authored singleCell tutorial dict declares
+        'activeTensionModel LandNiederer;' as a flat entry — parsing it must
+        not silently drop that setting."""
+        from openfoam_driver.specs.dict_builder import parse_electro_properties
+
+        if not SINGLE_CELL_ELECTRO_PROPERTIES.exists():
+            self.skipTest("tutorial fixture not present in this checkout")
+
+        result = parse_electro_properties(SINGLE_CELL_ELECTRO_PROPERTIES)
+        self.assertEqual(
+            result["overrides"].get("$ELECTRO_MODEL_COEFFS.activeTensionModel"),
+            "LandNiederer",
+        )
 
     def test_roundtrip_produces_equivalent_text(self) -> None:
         """build → write → parse → rebuild must produce a semantically

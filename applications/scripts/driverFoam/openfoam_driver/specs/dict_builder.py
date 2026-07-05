@@ -595,11 +595,15 @@ def parse_electro_properties(
       found in the file. Values equal to ``entry.typical_value`` are omitted
       (the builder fills them automatically). Entries with ``dynamic_path=True``
       are skipped entirely.
-
-    Unknown keys not in the catalog are silently ignored.
+    - ``ignored_keys``: the ``driver_path`` of every catalog entry this parser
+      structurally does not round-trip (the ``dynamic_path=True`` families). If
+      the source dict sets any of these, they will NOT reappear on a rebuild —
+      inspect the source dict manually. Surfacing them here replaces the old
+      silent drop. (Keys entirely outside the catalog remain un-enumerated —
+      the parser only reads catalogued paths.)
 
     Returns:
-        ``{"selectors": {...}, "overrides": {...}}``
+        ``{"selectors": {...}, "overrides": {...}, "ignored_keys": [...]}``
     """
     from pathlib import Path as _Path
     from openfoam_driver.specs.common import detect_myocardium_solver_name
@@ -611,9 +615,11 @@ def parse_electro_properties(
 
     selectors: dict[str, str] = {"myocardiumSolver": solver}
     overrides: dict[str, str] = {}
+    ignored_keys: list[str] = []
 
     for entry in _all_electro_entries():
         if entry.dynamic_path:
+            ignored_keys.append(entry.driver_path)
             continue
         scope_path, key = _entry_scope_and_key(entry.driver_path, coeffs_scope)
         value = read_foam_entry(electro_properties_path, key, scope=scope_path)
@@ -625,7 +631,11 @@ def parse_electro_properties(
         elif value != entry.typical_value:
             overrides[entry.driver_path] = value
 
-    return {"selectors": selectors, "overrides": overrides}
+    return {
+        "selectors": selectors,
+        "overrides": overrides,
+        "ignored_keys": sorted(set(ignored_keys)),
+    }
 
 
 def build_physics_properties(
