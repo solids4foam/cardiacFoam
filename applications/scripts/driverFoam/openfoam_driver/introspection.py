@@ -41,6 +41,7 @@ from .core.runtime.registry import (
     resolve_entry,
 )
 from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from .capability_manifest import build_capability_manifest, resolve_case_models
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .solver_coupling import SOLVER_COMPATIBILITY_RULES
@@ -517,6 +518,7 @@ def describe_entry(
     workflow_catalog = _workflow_catalog(tutorials_root, entry_catalog)
 
     make_spec_info = _describe_factory(resolution["factory"])
+    _solver, _ionic, _active_tension = resolve_case_models(spec.case_root)
     return {
         "requested_entry": entry,
         "resolution": resolution["resolution"],
@@ -566,6 +568,11 @@ def describe_entry(
             make_spec_info,
         ),
         "manifest_schema": _manifest_schema(),
+        "capability_manifest": build_capability_manifest(
+            resolved_solver=_solver,
+            resolved_ionic_model=_ionic,
+            resolved_active_tension=_active_tension,
+        ),
     }
 
 

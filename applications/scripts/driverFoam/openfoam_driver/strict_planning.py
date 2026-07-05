@@ -50,6 +50,7 @@ from .core.runtime.workflow import (
     validate_workflow_commands,
 )
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
+from .capability_manifest import build_capability_manifest, resolve_case_models
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .launch import describe_launch
 from .planning_types import (
@@ -64,6 +65,7 @@ from .specs.common import (
     detect_myocardium_solver_name,
     detect_verification_model_type,
 )
+from .specs.function_object_fields import function_object_field_diagnostics
 from .specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 
 
@@ -85,6 +87,8 @@ class StrictPlanReport:
     workflow_state: WorkflowRunState | None = None
     expected_artifacts: tuple[DataArtifact, ...] = ()
     run_document: RunDocument | None = None
+    capability_manifest: dict[str, Any] = field(default_factory=dict)
+    function_object_diagnostics: tuple[StrictDiagnostic, ...] = ()
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -106,6 +110,10 @@ class StrictPlanReport:
             "workflow_state": self.workflow_state.to_json() if self.workflow_state else None,
             "expected_artifacts": [_artifact_to_json(a) for a in self.expected_artifacts],
             "run_document": self.run_document.to_json() if self.run_document else None,
+            "capability_manifest": self.capability_manifest,
+            "function_object_diagnostics": [
+                asdict(d) for d in self.function_object_diagnostics
+            ],
         }
 
 
@@ -319,7 +327,22 @@ def strict_plan(
         + artifact_diagnostics
         + mesh_diagnostics
     )
-    all_diagnostics = plan_diagnostics + env_diagnostics
+    resolved_solver, resolved_ionic, resolved_active_tension = resolve_case_models(
+        spec.case_root
+    )
+    capability_manifest = build_capability_manifest(
+        resolved_solver=resolved_solver,
+        resolved_ionic_model=resolved_ionic,
+        resolved_active_tension=resolved_active_tension,
+    )
+    function_object_diagnostics = function_object_field_diagnostics(
+        spec.case_root, samplable=capability_manifest["samplable_fields"]
+    )
+    # Field diagnostics are warn-only: reported (in all_diagnostics) but never
+    # part of plan_diagnostics, so a sampled-field warning cannot fail a plan.
+    all_diagnostics = (
+        plan_diagnostics + env_diagnostics + function_object_diagnostics
+    )
     failed = _has_error(plan_diagnostics)
     run_document.status = "failed" if failed else "planned"
     run_document.validation = {
@@ -349,4 +372,6 @@ def strict_plan(
         workflow_state=workflow_state,
         expected_artifacts=artifacts,
         run_document=run_document,
+        capability_manifest=capability_manifest,
+        function_object_diagnostics=function_object_diagnostics,
     )
