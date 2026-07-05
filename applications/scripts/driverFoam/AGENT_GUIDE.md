@@ -39,6 +39,7 @@ foamctl run --strict --entry singleCell
 The `plan --strict` command is non-mutating. It prints JSON with:
 
 - `status`: `ok` or `failed`
+- `entry`: the raw entry identifier as requested (pre-resolution)
 - `resolved_entry`: case/spec identity and paths
 - `readiness_score`: weighted 0-100 score summarising whether the driver has
   enough concrete case-generation and run-preparation evidence to execute
@@ -47,9 +48,12 @@ The `plan --strict` command is non-mutating. It prints JSON with:
   resolution, workflow DAG normalization, artifact prediction, environment
   preflight, and mesh geometry
 - `validation_diagnostics`: RunDocument and configuration validation results
+- `workflow_diagnostics`: normalized workflow-DAG validation results (command
+  allowlist, DAG structure)
 - `catalog_coverage_errors`: strict dict-key coverage failures
 - `artifact_diagnostics`: solver/utility/artifact prediction coverage failures
 - `environment_diagnostics`: missing executables, unsourced OpenFOAM env, missing MPI launcher
+- `mesh_geometry_diagnostics`: mesh-scale / geometry sanity checks
 - `workflow_dag`: normalized executable steps
 - `workflow_state`: initial pending step state
 - `expected_artifacts`: predicted machine-readable artifacts
@@ -69,6 +73,15 @@ failed step automatically. Use `step --strict` for an explicit manual rerun:
 ```bash
 foamctl step --strict --entry singleCell --step solve
 ```
+
+`--max-total-attempts <N>` caps the total number of step executions across the
+whole run (a retry-storm guard on top of each step's per-step `max_attempts`).
+It defaults to unbounded, preserving prior behavior.
+
+For `sweep-run`, `--case-timeout-s <seconds>` sets a wall-clock timeout per case
+subprocess; a case that exceeds it is recorded as failed (with a `timeout_error`
+in its summary) and the sweep continues to the next case rather than hanging.
+Defaults to no timeout.
 
 Programmatic planning uses the same contract:
 
@@ -199,14 +212,51 @@ objects:
 Each resolved case's axis values route automatically into `build_and_launch`'s
 parameters: `myocardiumSolver`/`ionicModel`/`tissue` go to `electro_selectors`,
 `type` goes to `physics_selectors`, `deltaT`/`endTime` go to the dedicated
-`delta_t`/`end_time` kwargs, and any other `system/controlDict` key is
-rejected outright. Everything else falls through to `electro_overrides`.
+`delta_t`/`end_time` kwargs, `dx` goes to the dedicated `dx` kwarg (mesh
+resolution in mm, see below), any other `system/controlDict` key is rejected
+outright, and any key that isn't a recognized electroProperties/
+physicsProperties driver_path is rejected outright too (it would otherwise
+have no effect on the generated case). Everything recognized falls through
+to `electro_overrides`.
 
 Every case is *materialized* fresh: `build_and_launch(..., dry_run=True)`
 writes its dict files, and the sweep runner additionally writes a generated
 `Allrun` script and a `workflow_contract.json`, into `<output_dir>/<case_id>/`.
 This is not a registered-tutorial lookup; each case is its own on-disk
 `case_folder` entry.
+
+### Mesh provisioning for from-scratch cases
+
+A freshly materialized `case_folder` has no author-supplied mesh, so
+`build_and_launch` provisions one based on `myocardiumSolver`:
+
+- `singleCellSolver` (no real geometry): a bundled static 1-cell polyMesh is
+  copied into `constant/polyMesh/` directly — no `blockMesh` step needed.
+- `monodomainSolver`/`bidomainSolver`/`eikonalSolver` (need real geometry): a
+  generic default `system/blockMeshDict` is written (a small cubic slab,
+  "walls" patch — **not** tuned to any specific tutorial's science), and the
+  generated `Allrun` runs `blockMesh` before `cardiacFoam`. Sweep this mesh's
+  resolution with the `dx` axis (**metres**, isotropic cell size — note this
+  differs from `niederer_2012.py`'s own `DX_VALUES`, which are in
+  millimetres; the two are unrelated mechanisms, see below). `dx` derives
+  the cell count for the fixed default slab size via
+  `specs/mesh_provisioning.py::cell_counts_from_dx`, which raises
+  `ValueError` if `dx` does not evenly divide the slab size — deliberately
+  no silent rounding, matching the same rigor
+  `niederer_2012.py::_replace_blockmesh_resolution` already established for
+  its own (different, millimetre, non-cubic) slab; both now share the
+  `cell_counts_from_dx` calculation, differing only in how the result gets
+  written (`mesh_provisioning.py` generates a fresh file from its own
+  template; `niederer_2012.py` patches an existing author-provided file).
+  `dx` is meaningless for `singleCellSolver` (no geometry to resolve) and
+  raises `ValueError` rather than silently having no effect. `dx` also has
+  nothing to do with real anatomical meshes imported via
+  `vtkUnstructuredToFoam` (most real tutorials) — those are unstructured
+  meshes with no cell-size concept, and this mechanism never touches them.
+- A mesh already present under `constant/polyMesh/` or `system/blockMeshDict`
+  is never clobbered by a repeat `build_and_launch` call, regardless of that
+  call's own `overwrite` flag — this protects a hand-authored custom mesh
+  from being silently replaced by the generic default.
 If the sweep declares a `caseId` dependent entry, it becomes the case's
 directory name (validated for uniqueness and path-safety); otherwise cases
 are named `case_0001`, `case_0002`, ... in expansion order.
@@ -356,6 +406,7 @@ Three layers of discovery:
 3. **What ionic models can I pick?** `from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
 4. **What utilities are known?** `from openfoam_driver.utility_catalog import UTILITY_CATALOG`. Strict planning fails when a workflow command has missing required `produces` metadata.
 5. **What dict keys have parser limitations?** Read `openfoam_driver/scripts/dict_key_allowlist.json`. Strict dict-key scanning fails when new uncatalogued keys appear, stale catalog paths remain, or allowlist entries become unused.
+6. **What commands may a workflow step run, and what fields may a function object sample?** Read the `capability_manifest` block emitted by both `describe --entry <name>` and `plan --strict --entry <name>` (and `describe_entry(...)` / `strict_plan(...).to_json()` programmatically). It is the authoritative, machine-readable accept-surface: `allowed_commands` (`core`, `case_scripts`, `utilities`, plus the `$FOAM_APPBIN` note) mirrors the command allowlist exactly, and `samplable_fields` (`electro` / `solid`) lists the field names the *resolved* model exposes. Author `workflowDag` commands and `functions{}` field lists against this instead of guessing — a command outside `allowed_commands` is rejected before execution, and a field outside `samplable_fields` is dropped silently by the solver (see below).
 
 **Hand-built case directories need both an `Allrun` and a `workflow_contract.json`.**
 A directory resolved as `entry_kind="case_folder"` (any case directory under
@@ -382,6 +433,55 @@ undocumented until it was hit directly while building the sweep feature
 - **Tissue compatibility** — `tissue` must be in the `ionicModel`'s `compatible_tissues`.
 
 If the dict builder rejects your input with `ValueError`, the message lists every violation. Fix the selectors or overrides and call again.
+
+## Function objects (probes, sampling, sets, …)
+
+Function objects are **OpenFOAM's, not driverFOAM's.** Anything you put in a
+case's `controlDict` `functions { … }` block is defined by the OpenFOAM
+documentation, not by this driver — so there is no driver catalog, builder, or
+helper for them, and there shouldn't be. Author them the normal OpenFOAM way:
+
+- **Reuse OpenFOAM's shipped library.** `functions { #includeFunc probes(...) }`
+  pulls a ready-made, documented object from `$FOAM_ETC/caseDicts/postProcessing/`.
+  `ls "$FOAM_ETC/caseDicts/postProcessing"` lists what is available — that
+  directory *is* the reference; do not re-derive these from tutorials.
+- **Or write a full typed block** (`type probes; libs (...); fields (...);
+  probeLocations (...);`) exactly as the OpenFOAM docs specify. To attach it to
+  an existing case, write the fragment into `system/<Name>` and `#include` it
+  from a `functions{}` entry, or set it through the `system/<dict>:<entry>`
+  override form (the `system/path/to/dict:entry_path` form documented above).
+
+**The only parts you can't get from OpenFOAM docs — because they are
+cardiacFoam-specific:**
+
+- **Sample-able field names.** The *object* is OpenFOAM's; the *fields* it can
+  sample are this solver's: membrane voltage `Vm`, `activationTime`, total
+  ionic current `Iion`; active tension `Ta` and fibre stretch `lambda`;
+  bidomain potentials `phiE` / `phiI`; per-ionic-model species (e.g. `Ca_i`).
+  The authoritative, model-specific list is the catalogs already noted under
+  "Discovering what's valid" (`IONIC_MODEL_CATALOG` states / algebraic /
+  `recommended_exports`, `ACTIVE_TENSION_MODEL_CATALOG`). Sample only names that
+  exist for your chosen model, or the solver drops them.
+- **Regions (multi-region cases only).** Electromechanical cases split fields
+  across two regions: `electro` (`Vm`, `Ca_i`, ionic state) and `solid` (`Ta`,
+  `lambda`, mechanics). A function object on such a case must carry
+  `region electro;` or `region solid;` accordingly. Single-region electro cases
+  take no `region` entry.
+
+Outputs land where OpenFOAM puts them:
+`postProcessing/<functionObjectName>/<time>/<field>`.
+
+**Strict planning now checks sampled field names.** `plan --strict` parses each
+`controlDict` `functions{}` sub-dict's `fields (...)` list and emits a
+**warning-level** `unknown_sampled_field` diagnostic (in the report's
+`function_object_diagnostics`) for any field the resolved model does not expose —
+`region solid;` blocks are checked against the mechanics fields, everything else
+against the electro fields (`capability_manifest.samplable_fields`). This is
+**non-blocking**: it never fails a plan, because the catalog can lag the C++
+solver and a false positive must not block a run — but it turns the solver's
+otherwise-silent field drop into a visible signal. `#includeFunc` shorthands are
+not parsed (their field lists live in `$FOAM_ETC/caseDicts`). Set
+`SKIP_FUNCTION_OBJECT_DIAGNOSTICS=1` to bypass the check entirely.
 
 ## Common patterns
 

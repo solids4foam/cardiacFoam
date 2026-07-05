@@ -51,6 +51,14 @@ results directory — it is not forced under `caseRoot`.
 ## Explicitly NOT mitigated
 
 - Arbitrary code inside an invoked `Allrun` (running a case is running its code).
+- Override / spec **values** (not just commands) are written verbatim into case
+  dictionaries. A value containing an OpenFOAM coded entry — `#codeStream`,
+  `#calc`, or a coded function object — is compiled and executed by the solver
+  at run time. The command allowlist gates *what binary runs*, not the *content*
+  of the dicts it reads; dict values are arbitrary code at solve time by design.
+  This is acceptable under the local/single-tenant trust model (the same actor
+  authoring values could run the solver directly) but is NOT a sandbox against a
+  malicious value channel.
 - No rlimit / output-size bounds (local DoS).
 - Trusts the ambient `PATH` and `$FOAM_*BIN`.
 - Assumes a single-tenant host.
