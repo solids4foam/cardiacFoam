@@ -170,7 +170,11 @@ def normalize_workflow_dag(
             WorkflowDiagnostic(
                 level="error",
                 code="missing_workflow_dag",
-                message="Strict planning requires a workflow_dag with steps.",
+                message=(
+                    "Strict planning requires a workflow_dag with steps. A case "
+                    "folder needs an executable Allrun and a workflow_contract.json "
+                    "with a non-empty 'steps' array."
+                ),
                 field="workflow_dag",
             ),
         )

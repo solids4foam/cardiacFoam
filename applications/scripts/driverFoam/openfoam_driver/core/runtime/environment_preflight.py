@@ -30,10 +30,12 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ...planning_types import StrictDiagnostic, diagnostic
 from .openfoam_environment import load_openfoam_environment
+from .workflow import CASE_SCRIPT_COMMANDS
 
 
 _MPI_LAUNCHERS = frozenset({"mpirun", "mpiexec", "orterun"})
@@ -70,7 +72,12 @@ def _required_executables(workflow_dag: dict[str, Any] | None) -> _ExecutableReq
     mpi_launcher_in_dag = False
 
     def _add(name: str) -> None:
-        if name and name not in _INTERPRETER_SKIP and name not in executables:
+        if (
+            name
+            and name not in _INTERPRETER_SKIP
+            and name not in CASE_SCRIPT_COMMANDS
+            and name not in executables
+        ):
             executables.append(name)
 
     for step in (workflow_dag or {}).get("steps", ()):
@@ -95,6 +102,90 @@ def _required_executables(workflow_dag: dict[str, Any] | None) -> _ExecutableReq
         is_parallel=is_parallel,
         mpi_launcher_in_dag=mpi_launcher_in_dag,
     )
+
+
+_SOURCE_SUFFIXES = frozenset({".C", ".H", ".cu", ".cuh"})
+
+
+def _discover_src_root() -> Path | None:
+    """Locate the repository ``src/`` tree from this module's location, or
+    ``None`` if it cannot be found (e.g. an installed-package layout)."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "src").is_dir() and (parent / "tutorials").is_dir():
+            return parent / "src"
+    return None
+
+
+def _newest_source_mtime(src_root: Path) -> float | None:
+    """Return the mtime of the most recently modified C++/CUDA source under
+    ``src_root``, or ``None`` if there are no source files."""
+    newest: float | None = None
+    for dirpath, _dirnames, filenames in os.walk(src_root):
+        for name in filenames:
+            if os.path.splitext(name)[1] in _SOURCE_SUFFIXES:
+                mtime = os.path.getmtime(os.path.join(dirpath, name))
+                if newest is None or mtime > newest:
+                    newest = mtime
+    return newest
+
+
+def _build_staleness_diagnostics(
+    workflow_dag: dict[str, Any] | None,
+    checked_env: dict[str, str],
+    *,
+    src_root: Path | str | None,
+) -> tuple[StrictDiagnostic, ...]:
+    """Warn (never block) when a user-compiled utility the plan invokes is older
+    than the newest C++/CUDA source under ``src_root`` -- i.e. the binary was
+    not rebuilt after the source changed (the classic stale-``libso`` footgun).
+
+    Only executables that resolve under ``$FOAM_USER_APPBIN`` are policed; core
+    OpenFOAM apps and system binaries are never flagged.
+    """
+    if src_root is None:
+        return ()
+    src_root = Path(src_root)
+    if not src_root.exists():
+        return ()
+
+    user_appbin = checked_env.get("FOAM_USER_APPBIN")
+    if not user_appbin:
+        return ()
+    user_appbin_resolved = Path(user_appbin).resolve()
+
+    # Find plan binaries that actually live under the user appbin before doing
+    # the (potentially large) source-tree walk.
+    candidates: list[tuple[str, str]] = []
+    path = checked_env.get("PATH")
+    for executable in _required_executables(workflow_dag).executables:
+        resolved = shutil.which(executable, path=path)
+        if not resolved:
+            continue
+        try:
+            Path(resolved).resolve().relative_to(user_appbin_resolved)
+        except ValueError:
+            continue
+        candidates.append((executable, resolved))
+
+    if not candidates:
+        return ()
+
+    newest_source = _newest_source_mtime(src_root)
+    if newest_source is None:
+        return ()
+
+    diagnostics: list[StrictDiagnostic] = []
+    for executable, resolved in candidates:
+        if os.path.getmtime(resolved) < newest_source:
+            diagnostics.append(diagnostic(
+                "warning",
+                "stale_build",
+                f"{executable} is older than the newest source under {src_root}; "
+                "rebuild (e.g. wmake / wmake libso) before running.",
+                source="environment",
+                field=executable,
+            ))
+    return tuple(diagnostics)
 
 
 def _environment_diagnostics(
@@ -168,5 +259,11 @@ def _environment_diagnostics(
             source="environment",
             field="mpirun",
         ))
+
+    diagnostics.extend(
+        _build_staleness_diagnostics(
+            workflow_dag, checked_env, src_root=_discover_src_root()
+        )
+    )
 
     return tuple(diagnostics)

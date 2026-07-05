@@ -86,3 +86,11 @@ def test_zero_backoff_seconds_accepted():
     dag, diagnostics = _normalize({"backoff_seconds": 0})
     assert dag["steps"][0]["retry_policy"]["backoff_seconds"] == 0
     assert "invalid_workflow_field" not in _codes(diagnostics)
+
+
+def test_missing_dag_message_names_contract_files():
+    _, diagnostics = normalize_workflow_dag(None)
+    missing = [d for d in diagnostics if d.code == "missing_workflow_dag"]
+    assert len(missing) == 1
+    assert "workflow_contract.json" in missing[0].message
+    assert "Allrun" in missing[0].message

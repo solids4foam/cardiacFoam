@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -130,6 +131,49 @@ def _resolve_command(command: str, cwd: Path) -> str:
     return command
 
 
+_DYLD_VAR_NAMES = (
+    "DYLD_LIBRARY_PATH",
+    "DYLD_FALLBACK_LIBRARY_PATH",
+    "DYLD_FRAMEWORK_PATH",
+    "DYLD_FALLBACK_FRAMEWORK_PATH",
+    "DYLD_INSERT_LIBRARIES",
+)
+
+
+def _argv_for_execution(
+    command: str,
+    executable: str,
+    args: tuple[str, ...],
+    env: Mapping[str, str] | None,
+) -> tuple[str, ...]:
+    """Build the argv subprocess should exec for one workflow step.
+
+    Case-local scripts (Allrun-family) are shebang-interpreted by `/bin/sh`,
+    which is SIP-protected on macOS: the OS silently strips inherited
+    `DYLD_*` environment variables before the script's own body runs, even
+    though `env=` correctly carries them into the subprocess call. Values a
+    running process sets on itself (as opposed to inheriting via exec)
+    survive SIP stripping, so DYLD_* values are re-exported as literal text
+    baked into an explicit shell preamble rather than relied upon via `env=`
+    alone. Critically, the preamble must `.` (dot-source) the script rather
+    than `exec` it: `exec` replaces the process image via another kernel-level
+    shebang exec of `/bin/sh`, which re-triggers SIP stripping on the *new*
+    process and wipes the just-exported values again; `.` runs the script's
+    commands inside the already-running (and now-exported) shell process, so
+    no further exec boundary is crossed before `cardiacFoam` itself forks.
+    This is a no-op wrapper (falls through to plain argv) whenever the
+    command isn't a case script or there are no DYLD_* values to preserve.
+    """
+    if command not in CASE_SCRIPT_COMMANDS or not env:
+        return (executable, *args)
+    exports = [f"export {name}={shlex.quote(env[name])}" for name in _DYLD_VAR_NAMES if env.get(name)]
+    if not exports:
+        return (executable, *args)
+    dot_source = ". " + " ".join(shlex.quote(part) for part in (executable, *args))
+    preamble = "; ".join(exports) + "; " + dot_source
+    return ("/bin/sh", "-c", preamble)
+
+
 def _resolve_case_cwd(case_root: Path, cwd: str) -> Path:
     root = Path(case_root).resolve()
     resolved = (root / cwd).resolve()
@@ -209,7 +253,7 @@ def run_workflow_step(
     try:
         with stdout_log.open("w") as stdout_handle, stderr_log.open("w") as stderr_handle:
             completed = subprocess.run(
-                (executable, *args),
+                _argv_for_execution(command, executable, args, env),
                 cwd=resolved_cwd,
                 stdout=stdout_handle,
                 stderr=stderr_handle,

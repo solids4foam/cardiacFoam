@@ -89,6 +89,95 @@ def test_unwrap_mpi_program_edge_cases():
     assert _unwrap_mpi_program(("-np", "4", "cardiacFoam")) == "cardiacFoam"
 
 
+def _make_exec(path):
+    path.write_text("#!/bin/sh\n")
+    path.chmod(0o755)
+
+
+def test_build_staleness_warns_when_user_binary_older_than_source(tmp_path):
+    import os
+
+    from openfoam_driver.core.runtime.environment_preflight import (
+        _build_staleness_diagnostics,
+    )
+
+    src_root = tmp_path / "src"
+    src_root.mkdir()
+    source = src_root / "solver.C"
+    source.write_text("// code")
+    os.utime(source, (2000, 2000))  # source newer than the binary below
+
+    appbin = tmp_path / "appbin"
+    appbin.mkdir()
+    _make_exec(appbin / "myFoam")
+    os.utime(appbin / "myFoam", (1000, 1000))  # stale: older than source
+
+    env = {"PATH": str(appbin), "FOAM_USER_APPBIN": str(appbin)}
+    diags = _build_staleness_diagnostics(_dag("myFoam"), env, src_root=src_root)
+
+    assert len(diags) == 1
+    assert diags[0].level == "warning"
+    assert diags[0].code == "stale_build"
+    assert diags[0].field == "myFoam"
+
+
+def test_build_staleness_silent_when_binary_newer_than_source(tmp_path):
+    import os
+
+    from openfoam_driver.core.runtime.environment_preflight import (
+        _build_staleness_diagnostics,
+    )
+
+    src_root = tmp_path / "src"
+    src_root.mkdir()
+    source = src_root / "solver.C"
+    source.write_text("// code")
+    os.utime(source, (1000, 1000))  # older than the binary
+
+    appbin = tmp_path / "appbin"
+    appbin.mkdir()
+    _make_exec(appbin / "myFoam")
+    os.utime(appbin / "myFoam", (2000, 2000))  # fresh
+
+    env = {"PATH": str(appbin), "FOAM_USER_APPBIN": str(appbin)}
+    diags = _build_staleness_diagnostics(_dag("myFoam"), env, src_root=src_root)
+    assert diags == ()
+
+
+def test_build_staleness_ignores_binaries_outside_user_appbin(tmp_path):
+    # A core/system binary (not under FOAM_USER_APPBIN) is never flagged even if
+    # older than source -- only user-compiled utilities are policed.
+    import os
+
+    from openfoam_driver.core.runtime.environment_preflight import (
+        _build_staleness_diagnostics,
+    )
+
+    src_root = tmp_path / "src"
+    src_root.mkdir()
+    source = src_root / "solver.C"
+    source.write_text("// code")
+    os.utime(source, (2000, 2000))
+
+    sysbin = tmp_path / "sysbin"
+    sysbin.mkdir()
+    _make_exec(sysbin / "blockMesh")
+    os.utime(sysbin / "blockMesh", (1000, 1000))  # older, but not user-compiled
+
+    env = {"PATH": str(sysbin), "FOAM_USER_APPBIN": str(tmp_path / "appbin")}
+    diags = _build_staleness_diagnostics(_dag("blockMesh"), env, src_root=src_root)
+    assert diags == ()
+
+
+def test_build_staleness_no_src_root_is_silent(tmp_path):
+    from openfoam_driver.core.runtime.environment_preflight import (
+        _build_staleness_diagnostics,
+    )
+
+    env = {"PATH": "", "FOAM_USER_APPBIN": str(tmp_path)}
+    assert _build_staleness_diagnostics(_dag("myFoam"), env, src_root=None) == ()
+
+
 @pytest.fixture
 def clean_env(monkeypatch):
     """A fully-sourced OpenFOAM env with the preflight gate enabled."""
@@ -115,6 +204,18 @@ def test_present_executables_have_no_error(clean_env):
         strict_planning.shutil, "which", _which_factory({"blockMesh", "cardiacFoam"})
     )
     diags = _diags(_dag("blockMesh", "cardiacFoam"))
+    assert "missing_executable" not in {d.code for d in diags}
+
+
+def test_case_script_commands_are_not_path_checked(clean_env):
+    # Allrun/Allclean/etc are case-local scripts (CASE_SCRIPT_COMMANDS in
+    # workflow.py), resolved relative to caseRoot at execution time -- they
+    # are never on PATH by design, so shutil.which() must never be asked
+    # about them. Previously this produced a false-positive
+    # "missing_executable" for every Allrun-routed plan (e.g. every
+    # sweep-run case), even with OpenFOAM fully sourced.
+    clean_env.setattr(strict_planning.shutil, "which", _which_factory(set()))
+    diags = _diags(_dag("Allrun"))
     assert "missing_executable" not in {d.code for d in diags}
 
 
