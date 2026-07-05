@@ -42,7 +42,7 @@ def materialize_case(*, case_dir: Path, routed: dict[str, Any]) -> None:
     structurally invalid — the caller treats that as this case's failure,
     not a crash of the whole sweep.
     """
-    build_and_launch(
+    result = build_and_launch(
         electro_selectors=routed["electro_selectors"],
         physics_selectors=routed["physics_selectors"],
         case_dir=case_dir,
@@ -50,12 +50,14 @@ def materialize_case(*, case_dir: Path, routed: dict[str, Any]) -> None:
         physics_overrides=routed["physics_overrides"] or None,
         delta_t=routed["delta_t"],
         end_time=routed["end_time"],
+        dx=routed.get("dx"),
         dry_run=True,
         overwrite=True,
     )
 
+    allrun_body = "blockMesh\ncardiacFoam\n" if result.get("needs_block_mesh") else "cardiacFoam\n"
     allrun_path = case_dir / "Allrun"
-    allrun_path.write_text("#!/bin/sh\ncardiacFoam\n")
+    allrun_path.write_text("#!/bin/sh\n" + allrun_body)
     allrun_path.chmod(allrun_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
     contract_path = case_dir / "workflow_contract.json"

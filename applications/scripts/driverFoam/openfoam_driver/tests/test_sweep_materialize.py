@@ -79,6 +79,44 @@ def test_materialize_case_two_cases_do_not_collide(tmp_path):
     assert "BuenoOrovio" in b and "TNNP" not in b
 
 
+def test_materialize_case_runs_block_mesh_first_for_spatial_solver(tmp_path):
+    # monodomainSolver needs a real fvMesh; provision_mesh writes a default
+    # blockMeshDict for it (see mesh_provisioning.py), so the generated
+    # Allrun must run blockMesh before cardiacFoam -- otherwise cardiacFoam
+    # crashes with "Cannot find file points in polyMesh" (the exact failure
+    # this fix addresses, see project_driverfoam_sweep_bugs_found memory).
+    case_dir = tmp_path / "TNNP_monodomain"
+    materialize_case(
+        case_dir=case_dir,
+        routed={
+            "electro_selectors": {"myocardiumSolver": "monodomainSolver", "tissue": "epicardialCells", "ionicModel": "TNNP"},
+            "physics_selectors": {"type": "electroModel"},
+            "electro_overrides": {}, "physics_overrides": {},
+            "delta_t": None, "end_time": None,
+        },
+    )
+    assert (case_dir / "system" / "blockMeshDict").exists()
+    allrun_text = (case_dir / "Allrun").read_text()
+    assert allrun_text.index("blockMesh") < allrun_text.index("cardiacFoam")
+
+
+def test_materialize_case_honours_dx_for_spatial_solver(tmp_path):
+    from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+
+    case_dir = tmp_path / "TNNP_monodomain_fine"
+    materialize_case(
+        case_dir=case_dir,
+        routed={
+            "electro_selectors": {"myocardiumSolver": "monodomainSolver", "tissue": "epicardialCells", "ionicModel": "TNNP"},
+            "physics_selectors": {"type": "electroModel"},
+            "electro_overrides": {}, "physics_overrides": {},
+            "delta_t": None, "end_time": None, "dx": 0.0004,
+        },
+    )
+    written = (case_dir / "system" / "blockMeshDict").read_text()
+    assert written == default_block_mesh_dict_text(dx_m=0.0004)
+
+
 def test_materialize_case_raises_on_invalid_combination(tmp_path):
     with pytest.raises(ValueError, match="tissue"):
         materialize_case(

@@ -85,6 +85,12 @@ def _archive_output_dir(case_root: Path) -> Path:
 
 
 def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimension: str) -> None:
+    # NOT consolidated onto specs/common.py::replace_single_block_mesh_resolution
+    # (used by manufactured_fda.py/manufactured_eikonal_ecg.py/
+    # manufactured_monodomain_total_lagrangian_em.py): this bath+bidomain
+    # domain has 3 hex blocks, not 1, so it needs the more general
+    # any-"hex ("-line matching + exactly-3-replacements check below, not
+    # the single "hex (0 1 2 3 4 5 6 7)"-specific matcher those three share.
     if not block_mesh_dict_path.exists():
         raise FileNotFoundError(f"Missing mesh dictionary: {block_mesh_dict_path}")
 

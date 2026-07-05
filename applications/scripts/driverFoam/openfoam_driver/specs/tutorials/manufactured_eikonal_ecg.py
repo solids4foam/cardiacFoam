@@ -40,6 +40,7 @@ from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+    replace_single_block_mesh_resolution,
     resolve_run_script_path,
     resolve_spec_paths,
 )
@@ -71,37 +72,10 @@ def _replace_blockmesh_resolution(
     cells: int,
     dimension: str,
 ) -> None:
-    if not block_mesh_dict_path.exists():
-        raise FileNotFoundError(f"Missing mesh dictionary: {block_mesh_dict_path}")
-
-    try:
-        cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(
-            cells=cells
-        )
-    except KeyError as exc:
-        raise ValueError(f"Unsupported dimension: {dimension}") from exc
-
-    replacement = (
-        f"hex (0 1 2 3 4 5 6 7) ({cell_counts}) simpleGrading (1 1 1)\n"
+    replace_single_block_mesh_resolution(
+        block_mesh_dict_path, cells, dimension,
+        resolution_by_dimension=defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION,
     )
-
-    lines = block_mesh_dict_path.read_text().splitlines(keepends=True)
-    replaced = False
-    with block_mesh_dict_path.open("w") as handle:
-        for line in lines:
-            stripped = line.strip()
-            if (
-                not replaced
-                and stripped.startswith("hex (0 1 2 3 4 5 6 7)")
-                and not stripped.startswith("//")
-            ):
-                handle.write(replacement)
-                replaced = True
-            else:
-                handle.write(line)
-
-    if not replaced:
-        raise KeyError(f"Target hex line not found in {block_mesh_dict_path}")
 
 
 def _apply_case(

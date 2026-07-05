@@ -538,3 +538,55 @@ def set_delta_t(control_dict_path: Path, delta_t_seconds: float) -> None:
 
 def set_end_time(control_dict_path: Path, t_s: float) -> None:
     update_foam_entry(control_dict_path, "endTime", t_s)
+
+
+def replace_single_block_mesh_resolution(
+    block_mesh_dict_path: Path,
+    cells: int,
+    dimension: str,
+    *,
+    resolution_by_dimension: Mapping[str, str],
+) -> None:
+    """Rewrite the single ``hex (0 1 2 3 4 5 6 7) (...)`` line in an existing
+    `block_mesh_dict_path` via a cells+dimension template lookup (e.g.
+    ``"{cells} {cells} {cells}"`` for a 3D case). Shared by
+    `manufactured_fda.py`, `manufactured_eikonal_ecg.py`, and
+    `manufactured_monodomain_total_lagrangian_em.py`, which each pass their
+    own (currently identical) `resolution_by_dimension` mapping -- extracted
+    here since the three previously carried byte-for-byte-identical copies
+    of this exact file-patching logic.
+
+    NOT used by `manufactured_fda_bath_bidomain.py`, whose domain has 3 hex
+    blocks (not 1) and needs a genuinely different, more general matcher.
+
+    Raises `ValueError` for an unsupported `dimension`, `FileNotFoundError`
+    if the file doesn't exist, and `KeyError` if no matching hex line is
+    found to replace.
+    """
+    if not block_mesh_dict_path.exists():
+        raise FileNotFoundError(f"Missing mesh dictionary: {block_mesh_dict_path}")
+
+    try:
+        cell_counts = resolution_by_dimension[dimension].format(cells=cells)
+    except KeyError as exc:
+        raise ValueError(f"Unsupported dimension: {dimension}") from exc
+
+    replacement = f"hex (0 1 2 3 4 5 6 7) ({cell_counts}) simpleGrading (1 1 1)\n"
+
+    lines = block_mesh_dict_path.read_text().splitlines(keepends=True)
+    replaced = False
+    with block_mesh_dict_path.open("w") as handle:
+        for line in lines:
+            stripped = line.strip()
+            if (
+                not replaced
+                and stripped.startswith("hex (0 1 2 3 4 5 6 7)")
+                and not stripped.startswith("//")
+            ):
+                handle.write(replacement)
+                replaced = True
+            else:
+                handle.write(line)
+
+    if not replaced:
+        raise KeyError(f"Target hex line not found in {block_mesh_dict_path}")

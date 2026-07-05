@@ -46,6 +46,7 @@ from ..common import (
     resolve_spec_paths,
     set_delta_t,
 )
+from ..mesh_provisioning import cell_counts_from_dx
 from ...core.runtime.models import CaseConfig, TutorialSpec
 
 DEFAULT_POINTS_FUNCTION_OBJECT = getattr(
@@ -86,25 +87,16 @@ def _replace_blockmesh_resolution(
 ) -> None:
     if not block_mesh_dict_path.exists():
         raise FileNotFoundError(f"blockMeshDict not found: {block_mesh_dict_path}")
-
-    if dx <= 0:
-        raise ValueError(f"dx must be positive; got {dx}")
     if len(slab_size_mm) != 3:
         raise ValueError("slab_size_mm must have exactly 3 entries (x, y, z)")
 
-    axis_cell_counts: list[str] = []
-    for axis_length in slab_size_mm:
-        raw_cells = float(axis_length) / dx
-        rounded_cells = int(round(raw_cells))
-        if abs(raw_cells - rounded_cells) > 1e-9:
-            raise ValueError(
-                f"dx={dx} does not evenly divide slab axis length {axis_length} mm"
-            )
-        if rounded_cells <= 0:
-            raise ValueError(
-                f"Computed non-positive cell count for axis length {axis_length} with dx={dx}"
-            )
-        axis_cell_counts.append(str(rounded_cells))
+    # cell_counts_from_dx does the same divide-or-error math (in whatever
+    # unit dx/slab_size_mm share -- mm here) that
+    # specs/mesh_provisioning.py's generic default mesh also needs; shared
+    # rather than duplicated. The file-patching below (this function's own
+    # job) stays local since it's specific to mutating an existing,
+    # author-provided blockMeshDict.
+    axis_cell_counts = [str(count) for count in cell_counts_from_dx(dx, slab_size_mm)]
 
     replacement_line = (
         f"hex (0 1 2 3 4 5 6 7) ({' '.join(axis_cell_counts)}) simpleGrading (1 1 1)\n"

@@ -40,6 +40,7 @@ include-package-data = false
 [tool.setuptools.package-data]
 "openfoam_driver.scripts" = ["dict_key_allowlist.json"]
 "openfoam_driver.schemas" = ["run-document.json"]
+"openfoam_driver.specs" = ["fixtures/single_cell_polymesh/*"]
 
 [tool.setuptools.packages.find]
 where = ["."]

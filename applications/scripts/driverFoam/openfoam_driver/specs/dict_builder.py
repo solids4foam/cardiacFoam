@@ -433,6 +433,38 @@ def build_electro_properties(
 _SELECTOR_KEYS: frozenset[str] = frozenset({"myocardiumSolver", "ionicModel", "tissue"})
 SELECTOR_KEYS: frozenset[str] = _SELECTOR_KEYS  # public alias for external consumers (e.g. sweep_routing.py)
 
+import re as _re
+
+_PLACEHOLDER_RE = _re.compile(r"<[a-zA-Z_]+>")
+
+
+def is_known_override_driver_path(key: str) -> bool:
+    """True if `key` matches a real electro or physics dict-entry driver_path.
+
+    Matching is prefix-agnostic (via `slot_key`) and honours `dynamic_path`
+    templates (e.g. ``domainCouplings.<name>.electroDomainCoupler``) by
+    treating any ``<placeholder>`` segment as a wildcard. This is a pure
+    catalog-membership check — it does not consider whether the entry is
+    *applicable* in a given selector context (that's `select_applicable_entries`'s
+    job, run later inside `build_electro_properties`). Used by callers that
+    need to reject a caller-supplied override path outright before it is ever
+    passed to `build_and_launch` (e.g. `sweep_routing.route_case_values`),
+    rather than silently accepting an override that has no matching entry
+    anywhere and therefore no effect.
+    """
+    normalized = slot_key(key)
+    for entry in list(_all_electro_entries()) + list(PHYSICS_PROPERTY_ENTRIES):
+        entry_key = slot_key(entry.driver_path)
+        if getattr(entry, "dynamic_path", False):
+            # re.escape leaves `<`, `>`, letters and `_` untouched, so
+            # escaping first and substituting placeholders after is safe.
+            pattern = _PLACEHOLDER_RE.sub(r"[^.]+", _re.escape(entry_key))
+            if _re.fullmatch(pattern, normalized):
+                return True
+        elif entry_key == normalized:
+            return True
+    return False
+
 _COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
 
 
@@ -661,6 +693,7 @@ def build_and_launch(
     openfoam_bashrc: "str | Path | None" = None,
     delta_t: "float | str | None" = None,
     end_time: "float | str | None" = None,
+    dx: "float | None" = None,
 ) -> dict:
     """Build both dicts, write them to ``case_dir/constant/``, and (if
     not dry_run) launch the engine on the resulting case.
@@ -681,6 +714,16 @@ def build_and_launch(
             "setTorsoOrganConductivityField"]``.
         openfoam_bashrc: when set, each command is run after sourcing this
             OpenFOAM bashrc.
+        dx: mesh resolution (metres, isotropic cell size) for the generic
+            default ``blockMeshDict`` provisioned for spatial solvers with no
+            author-supplied mesh. Only meaningful for
+            ``monodomainSolver``/``bidomainSolver``/``eikonalSolver``; raises
+            ``ValueError`` for ``singleCellSolver`` (no spatial geometry)
+            rather than silently having no effect, and if it does not evenly
+            divide the default slab's fixed size (no silent rounding).
+            Meaningless for real anatomical meshes imported via
+            ``vtkUnstructuredToFoam`` -- this only controls the generic
+            default slab.
 
     Returns:
         A dict carrying ``case_dir`` (str) and either
@@ -743,8 +786,17 @@ def build_and_launch(
             end_time=end_time,
         )
 
+    from openfoam_driver.specs.mesh_provisioning import provision_mesh
+    needs_block_mesh = provision_mesh(
+        case_dir=case_dir, myocardium_solver=myocardium_solver, dx_m=dx,
+    )
+
     if dry_run:
-        return {"case_dir": str(case_dir), "status": "dry_run_complete"}
+        return {
+            "case_dir": str(case_dir),
+            "status": "dry_run_complete",
+            "needs_block_mesh": needs_block_mesh,
+        }
 
     from openfoam_driver.specs.tutorials.generic_case import make_spec
     from openfoam_driver.core.runtime.engine import DriverEngine

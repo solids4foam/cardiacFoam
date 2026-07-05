@@ -79,3 +79,36 @@ def test_unsupported_control_dict_axis_is_rejected():
     # entries must fail loudly instead of being misrouted as electro overrides.
     with pytest.raises(SweepValidationError, match="startTime|controlDict"):
         route_case_values(base={}, resolved_axis_values={"startTime": 0.0})
+
+
+def test_unrecognized_axis_is_rejected_instead_of_silently_ignored():
+    # A genuinely unknown key matches no selector, no controlDict key, no
+    # catalog driver_path, and isn't the special-cased "dx" mesh-resolution
+    # axis -- it must fail loudly, not fall through to electro_overrides
+    # where it would have zero effect (see project_driverfoam_sweep_bugs_found
+    # memory item #2: this used to be a silent no-op).
+    with pytest.raises(SweepValidationError, match="bogusAxis"):
+        route_case_values(base={}, resolved_axis_values={"bogusAxis": 0.5})
+
+
+def test_dx_routes_to_its_own_dedicated_kwarg():
+    # dx controls the generic default blockMeshDict's resolution for
+    # block-mesh solvers (mesh_provisioning.py); it isn't a catalog
+    # driver_path at all, so it needs its own routed field, same as
+    # deltaT/endTime.
+    routed = route_case_values(base={}, resolved_axis_values={"dx": 0.2})
+    assert routed["dx"] == 0.2
+
+
+def test_dx_base_value_is_preserved_when_not_swept():
+    routed = route_case_values(base={"dx": 0.5}, resolved_axis_values={"ionicModel": "TNNP"})
+    assert routed["dx"] == 0.5
+
+
+def test_recognized_unprefixed_catalog_path_still_routes_to_electro_overrides():
+    # cellZone is one of the few catalog driver_paths with no
+    # $ELECTRO_MODEL_COEFFS. prefix. It must keep routing to electro_overrides.
+    routed = route_case_values(
+        base={}, resolved_axis_values={"cellZone": "epicardium"},
+    )
+    assert routed["electro_overrides"] == {"cellZone": "epicardium"}

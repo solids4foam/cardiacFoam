@@ -45,6 +45,7 @@ from ..common import (
     set_delta_t,
     set_end_time,
 )
+from ..mesh_provisioning import cell_counts_from_dx
 
 
 def _replace_blockmesh_resolution(
@@ -56,15 +57,12 @@ def _replace_blockmesh_resolution(
 ) -> None:
     if not block_mesh_dict_path.exists():
         raise FileNotFoundError(f"blockMeshDict not found: {block_mesh_dict_path}")
-    if dx_mm <= 0:
-        raise ValueError(f"dx_mm must be positive; got {dx_mm}")
 
-    raw_cells = float(cable_length_mm) / dx_mm
-    x_cells = int(round(raw_cells))
-    if abs(raw_cells - x_cells) > 1e-9:
-        raise ValueError(
-            f"dx_mm={dx_mm} does not evenly divide cable length {cable_length_mm} mm"
-        )
+    # cell_counts_from_dx does the same divide-or-error math (shared with
+    # specs/mesh_provisioning.py's generic default mesh and
+    # niederer_2012.py) for the cable's single dx-driven axis; the other two
+    # axes are the caller-supplied cross-section counts, unrelated to dx.
+    (x_cells,) = cell_counts_from_dx(dx_mm, (cable_length_mm,))
 
     replacement_line = (
         "    hex (0 1 2 3 4 5 6 7) "

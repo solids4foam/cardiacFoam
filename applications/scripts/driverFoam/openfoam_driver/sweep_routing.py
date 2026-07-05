@@ -31,7 +31,7 @@ from typing import Any
 
 from .dict_entries import CONTROL_DICT_ENTRIES, PHYSICS_PROPERTY_ENTRIES
 from .sweep_expansion import SweepValidationError
-from .specs.dict_builder import SELECTOR_KEYS
+from .specs.dict_builder import SELECTOR_KEYS, is_known_override_driver_path
 
 _CONTROL_DICT_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in CONTROL_DICT_ENTRIES)
 _SUPPORTED_CONTROL_DICT_KEYS: frozenset[str] = frozenset({"deltaT", "endTime"})
@@ -57,6 +57,7 @@ def route_case_values(
     physics_overrides: dict[str, Any] = dict(base.get("physics_overrides", {}))
     delta_t: Any = base.get("delta_t")
     end_time: Any = base.get("end_time")
+    dx: Any = base.get("dx")
 
     for key, value in resolved_axis_values.items():
         if key in _NON_ROUTABLE_KEYS:
@@ -69,14 +70,23 @@ def route_case_values(
             delta_t = value
         elif key == "endTime":
             end_time = value
+        elif key == "dx":
+            dx = value
         elif key in _UNSUPPORTED_CONTROL_DICT_KEYS:
             known = ", ".join(sorted(_SUPPORTED_CONTROL_DICT_KEYS))
             raise SweepValidationError(
                 f"controlDict sweep axis '{key}' is not supported by this plan; "
                 f"supported controlDict axes are: {known}"
             )
-        else:
+        elif is_known_override_driver_path(key):
             electro_overrides[key] = value
+        else:
+            raise SweepValidationError(
+                f"sweep axis '{key}' is not a recognized selector, controlDict "
+                "key, electroProperties/physicsProperties driver_path, or "
+                "'dx' (mesh resolution for the generic default blockMeshDict); "
+                "it would have no effect on the generated case."
+            )
 
     return {
         "electro_selectors": electro_selectors,
@@ -85,4 +95,5 @@ def route_case_values(
         "physics_overrides": physics_overrides,
         "delta_t": delta_t,
         "end_time": end_time,
+        "dx": dx,
     }
