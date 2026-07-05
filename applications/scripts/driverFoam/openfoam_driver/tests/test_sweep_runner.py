@@ -104,6 +104,35 @@ def test_sweep_plan_records_materialization_failure_and_continues(tmp_path):
     assert "materialization_error" in by_id["NotARealModel"]
 
 
+def test_sweep_plan_records_unrecognized_axis_as_per_case_failure(tmp_path):
+    # route_case_values now raises SweepValidationError for an unrecognized
+    # axis like "bogusAxis" (see sweep_routing.py fix). That per-case error
+    # must be caught and recorded like any other materialization failure,
+    # not propagate uncaught and crash the whole sweep_plan call -- a caller
+    # sweeping N cases with one bad axis should still see a clean per-case
+    # report, the same as an invalid ionicModel does today.
+    spec = {
+        "base": {
+            "electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "myocyte"},
+            "physics_selectors": {"type": "electroModel"},
+        },
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"bogusAxis": [0.5, 0.2]},
+            "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["bogusAxis"]}],
+        },
+    }
+    spec_path = tmp_path / "sweep.json"
+    spec_path.write_text(json.dumps(spec))
+
+    result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+
+    assert result["case_count"] == 2
+    for case in result["cases"]:
+        assert case["status"] == "failed"
+        assert "bogusAxis" in case["materialization_error"]
+
+
 def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
     spec_path = tmp_path / "sweep.json"
     _write_spec(spec_path)
@@ -146,6 +175,36 @@ def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
     assert state_paths["TNNP"] == "TNNP/postProcessing/workflow_state.json"
     assert result["failed_count"] == 1
     assert result["completed_count"] == 1
+
+
+def test_sweep_run_records_unrecognized_axis_as_per_case_failure(tmp_path):
+    # Mirrors test_sweep_plan_records_unrecognized_axis_as_per_case_failure:
+    # route_case_values's SweepValidationError must be caught per-case inside
+    # sweep_run's loop too, not crash the whole call.
+    spec = {
+        "base": {
+            "electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "myocyte"},
+            "physics_selectors": {"type": "electroModel"},
+        },
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"bogusAxis": [0.5, 0.2]},
+            "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["bogusAxis"]}],
+        },
+    }
+    spec_path = tmp_path / "sweep.json"
+    spec_path.write_text(json.dumps(spec))
+
+    from openfoam_driver.core.runtime.sweep_runner import sweep_run
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
+        result = sweep_run(spec_path, output_dir=tmp_path / "out")
+
+    mock_run.assert_not_called()
+    assert result["failed_count"] == 2
+    assert result["completed_count"] == 0
+    for case in result["cases"]:
+        assert case["status"] == "failed"
+        assert "bogusAxis" in case["materialization_error"]
 
 
 def test_sweep_run_refuses_over_cap_without_expanding(tmp_path):
@@ -320,6 +379,49 @@ def test_resume_retries_terminal_failed_case_with_retry_flag(tmp_path):
     by_id = {case["case_id"]: case for case in result["cases"]}
     assert by_id["TNNP"]["outcome"] == "retried"
     assert by_id["TNNP"]["status"] == "completed"
+
+
+def test_sweep_run_case_timeout_marks_failed_and_continues(tmp_path):
+    # A case whose run subprocess exceeds case_timeout_s must be recorded as a
+    # per-case failure (not crash the whole sweep), and the timeout must be
+    # passed through to subprocess.run.
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    output_dir = tmp_path / "out"
+
+    def fake_materialize(*, case_dir, routed):
+        case_dir.mkdir(parents=True, exist_ok=True)
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+    fake_report.to_json.return_value = {
+        "status": "ok",
+        "run_document": {
+            "version": "2",
+            "launch": {"outputDir": str(output_dir / "TNNP" / "postProcessing")},
+        },
+    }
+
+    seen_kwargs = {}
+
+    def fake_subprocess_run(cmd, **kwargs):
+        seen_kwargs.update(kwargs)
+        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case", side_effect=fake_materialize), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, case_timeout_s=0.01)
+
+    assert seen_kwargs.get("timeout") == 0.01
+    assert result["failed_count"] == 1
+    assert result["completed_count"] == 0
+    by_id = {case["case_id"]: case for case in result["cases"]}
+    assert by_id["TNNP"]["status"] == "failed"
+    assert "timeout" in by_id["TNNP"]["timeout_error"].lower()
+    # sweep stayed resumable: manifest was still written
+    assert (output_dir / "sweep_manifest.json").exists()
 
 
 def test_spec_hash_mismatch_is_refused(tmp_path):

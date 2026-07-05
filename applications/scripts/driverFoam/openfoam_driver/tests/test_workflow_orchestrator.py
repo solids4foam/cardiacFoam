@@ -193,6 +193,43 @@ def test_max_attempts_one_bails_on_first_failure(tmp_path):
     assert outcome.state.status == "failed"
 
 
+def test_max_total_attempts_caps_retries_below_per_step_budget(tmp_path):
+    # Per-step budget is generous (5), but the whole-run ceiling is 2: the run
+    # must stop after 2 total attempts even though the step would keep retrying.
+    runner, calls = _make_runner([
+        ("failed", 1, ["workflow_step_timeout"]),
+        ("failed", 1, ["workflow_step_timeout"]),
+        ("failed", 1, ["workflow_step_timeout"]),
+    ])
+    outcome = run_workflow(
+        _dag(retry_policy={"max_attempts": 5}),
+        _initial_state(),
+        case_root=tmp_path, output_dir=tmp_path,
+        max_total_attempts=2,
+        runner=runner, sleep=lambda s: None,
+    )
+    assert calls["n"] == 2  # stopped by the whole-run ceiling, not per-step
+    assert outcome.state.status == "failed"
+    assert outcome.steps[0]["attempts"] == 2
+
+
+def test_max_total_attempts_none_preserves_per_step_behavior(tmp_path):
+    # Default (None) must not change existing behavior: per-step max_attempts wins.
+    runner, _ = _make_runner([
+        ("failed", 1, ["workflow_step_timeout"]),
+        ("completed", 0, []),
+    ])
+    outcome = run_workflow(
+        _dag(retry_policy={"max_attempts": 2, "backoff_seconds": 1}),
+        _initial_state(),
+        case_root=tmp_path, output_dir=tmp_path,
+        max_total_attempts=None,
+        runner=runner, sleep=lambda s: None,
+    )
+    assert outcome.state.status == "completed"
+    assert outcome.steps[0]["attempts"] == 2
+
+
 def test_persisted_state_is_resumable_between_retries(tmp_path):
     state_path = tmp_path / "workflow_state.json"
     captured = {}

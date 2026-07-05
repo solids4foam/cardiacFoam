@@ -68,9 +68,9 @@ def sweep_plan(
 
     case_reports = []
     for case in resolved_cases:
-        routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
         case_dir = output_dir / case.case_id
         try:
+            routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
             materialize_case(case_dir=case_dir, routed=routed)
         except (OSError, ValueError) as exc:
             case_reports.append(
@@ -115,6 +115,7 @@ def sweep_run(
     output_dir: str | Path,
     max_cases: int = 200,
     retry_failed: bool = False,
+    case_timeout_s: float | None = None,
 ) -> dict[str, Any]:
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
@@ -151,7 +152,6 @@ def sweep_run(
     case_summaries: list[dict[str, Any]] = []
 
     for case in resolved_cases:
-        routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
         case_dir = output_dir / case.case_id
         run_document_path = case_dir / "run_document.json"
         workflow_state_path = case_dir / "postProcessing" / "workflow_state.json"
@@ -161,8 +161,23 @@ def sweep_run(
         outcome = "fresh"
         materialization_error = None
         plan_error = None
+        timeout_error = None
 
-        if prior_status == "completed":
+        routing_error: str | None = None
+        try:
+            routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+        except (OSError, ValueError) as exc:
+            # An unrecognized/unroutable axis (e.g. "dx") is a per-case
+            # failure, not a crash of the whole sweep -- same treatment as a
+            # materialize_case failure below.
+            routed = {}
+            routing_error = str(exc)
+
+        if routing_error is not None:
+            status = "failed"
+            materialization_error = routing_error
+            failed_count += 1
+        elif prior_status == "completed":
             outcome = "skipped"
             skipped_count += 1
             completed_count += 1
@@ -196,18 +211,28 @@ def sweep_run(
                 plan_error = str(exc)
             else:
                 if plan_error is None:
-                    result = subprocess.run(
-                        [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
-                        capture_output=True, text=True,
-                    )
-
-                    if workflow_state_path.exists():
-                        state = json.loads(workflow_state_path.read_text())
-                        status = state.get("status", "pending")
-                    elif result.returncode != 0:
+                    try:
+                        result = subprocess.run(
+                            [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
+                            capture_output=True, text=True,
+                            timeout=case_timeout_s,
+                        )
+                    except subprocess.TimeoutExpired as exc:
+                        # A hung case must not block the whole serial sweep: mark
+                        # it failed and continue. The manifest stays resumable.
                         status = "failed"
+                        timeout_error = (
+                            f"case exceeded timeout of {case_timeout_s}s "
+                            f"and was terminated: {exc}"
+                        )
                     else:
-                        status = "pending"
+                        if workflow_state_path.exists():
+                            state = json.loads(workflow_state_path.read_text())
+                            status = state.get("status", "pending")
+                        elif result.returncode != 0:
+                            status = "failed"
+                        else:
+                            status = "pending"
             if status == "completed":
                 completed_count += 1
             else:
@@ -224,6 +249,8 @@ def sweep_run(
             case_summary["materialization_error"] = materialization_error
         if plan_error is not None:
             case_summary["plan_error"] = plan_error
+        if timeout_error is not None:
+            case_summary["timeout_error"] = timeout_error
         case_summaries.append(case_summary)
 
         manifest.cases.append(

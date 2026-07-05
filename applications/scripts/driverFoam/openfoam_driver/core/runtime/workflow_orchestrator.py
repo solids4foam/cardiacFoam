@@ -66,6 +66,7 @@ def run_workflow(
     output_dir: Path,
     expected_artifacts: tuple = (),
     default_max_attempts: int = 1,
+    max_total_attempts: int | None = None,
     classification_overrides: dict[str, str] | None = None,
     runner: Callable[..., Any] = run_workflow_step,
     sleep: Callable[[float], None] = time.sleep,
@@ -77,13 +78,19 @@ def run_workflow(
     The retry decision block (classify -> policy -> backoff -> re-run) is the
     extension point for a future remediation callback, which would drop in
     immediately before the re-run. This path performs no remediation.
+
+    ``max_total_attempts`` caps the number of step executions across the whole
+    run (retry-storm ceiling). ``None`` disables the ceiling, leaving only the
+    per-step ``max_attempts`` bound in force.
     """
     resolved_state_path = state_path or (output_dir / "workflow_state.json")
     log_dir = output_dir / "workflow_logs"
     summaries: dict[str, dict[str, Any]] = {}
+    total_attempts = 0
 
     while workflow_state.current_step_id is not None and workflow_state.status == "pending":
         step_id = workflow_state.current_step_id
+        total_attempts += 1
         result = runner(
             workflow_dag,
             workflow_state,
@@ -111,7 +118,8 @@ def run_workflow(
         max_attempts, backoff_seconds = _resolve_policy(
             _step_by_id(workflow_dag, step_id), default_max_attempts
         )
-        if classification == "retryable" and step_state.attempt < max_attempts:
+        budget_available = max_total_attempts is None or total_attempts < max_total_attempts
+        if classification == "retryable" and step_state.attempt < max_attempts and budget_available:
             # Persist a resumable state so a crash during backoff resumes into a
             # retry rather than a refused "failed" state.
             resumable = replace_step_state(

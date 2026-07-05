@@ -253,6 +253,7 @@ def _execute_run(
     expected_artifacts,
     tail_lines: int,
     execution_env: dict[str, str] | None = None,
+    max_total_attempts: int | None = None,
 ) -> int:
     """Run a workflow to completion, print the JSON payload, return the exit code.
 
@@ -290,6 +291,7 @@ def _execute_run(
             expected_artifacts=expected_artifacts,
             state_path=state_path,
             env=execution_env,
+            max_total_attempts=max_total_attempts,
         )
     except Exception as exc:
         try:
@@ -430,6 +432,7 @@ def _dispatch_context(args, context: _ExecutionContext) -> int:
         expected_artifacts=context.expected_artifacts,
         tail_lines=args.tail_lines,
         execution_env=context.execution_env,
+        max_total_attempts=args.max_total_attempts,
     )
 
 
@@ -544,6 +547,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--retry-failed",
         action="store_true",
         help="For action=sweep-run: rerun cases whose last recorded status was failed.",
+    )
+    parser.add_argument(
+        "--max-total-attempts",
+        type=int,
+        default=None,
+        help=(
+            "For action=run: whole-run ceiling on step executions (retry-storm "
+            "guard). Default: unbounded (only per-step max_attempts applies)."
+        ),
+    )
+    parser.add_argument(
+        "--case-timeout-s",
+        type=float,
+        default=None,
+        help=(
+            "For action=sweep-run: wall-clock timeout per case subprocess; a case "
+            "that exceeds it is marked failed and the sweep continues. Default: none."
+        ),
     )
     return parser
 
@@ -734,6 +755,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             max_cases=args.max_cases,
             retry_failed=args.retry_failed,
+            case_timeout_s=args.case_timeout_s,
         )
         print(json.dumps(result, indent=2))
         return 1 if result["failed_count"] > 0 else 0
