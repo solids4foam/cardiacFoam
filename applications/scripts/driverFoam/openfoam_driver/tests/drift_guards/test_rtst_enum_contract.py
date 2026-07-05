@@ -87,7 +87,7 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
     ),
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
     ".purkinjeGraphModelCoeffs.ionicModel": ("ionicModel", "subset"),
-    "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": (
+    "$ELECTRO_MODEL_COEFFS.activeTensionModel": (
         "activeTensionModel",
         "strict",
     ),
@@ -107,7 +107,7 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.sex",                     # biological-sex selector
     "$ELECTRO_MODEL_COEFFS.dimension",               # 1D/2D/3D
     "$ELECTRO_MODEL_COEFFS.solver",                  # OpenFOAM ODESolver
-    "$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",
+    "$ELECTRO_MODEL_COEFFS.couplingSignal",
     "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"

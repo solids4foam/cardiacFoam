@@ -68,7 +68,7 @@
     "electro_property_overrides": {
       "$ELECTRO_MODEL_COEFFS.ionicModel": "AlievPanfilov",
       "$ELECTRO_MODEL_COEFFS.tissue": "myocyte",
-      "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": "GoktepeKuhl"
+      "$ELECTRO_MODEL_COEFFS.activeTensionModel": "GoktepeKuhl"
     }
   }
 }

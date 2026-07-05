@@ -270,7 +270,7 @@ Examples:
 
 - `physics_property_overrides: { "type": "electroMechanicalModel" }`
 - `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.ionicModel": "TNNP" }`
-- `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": "GoktepeKuhl" }`
+- `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.activeTensionModel": "GoktepeKuhl" }`
 - `electro_property_overrides: { "$ELECTRO_MODEL_COEFFS.ecgDomains.ECG.electrodePositions.V1": "(1 2 3)" }`
 
 Notes:

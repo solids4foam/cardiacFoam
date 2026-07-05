@@ -64,7 +64,7 @@ def test_plan_then_run_document_round_trip_executes() -> None:
         tutorials_root = Path(temp_dir)
         _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nprintf 'ran\\n'\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm 0.001/AV_Ta\nprintf 'ran\\n'\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
         doc_path = tutorials_root / "run.json"
@@ -88,7 +88,7 @@ def test_step_via_run_document_executes_named_step() -> None:
         tutorials_root = Path(temp_dir)
         _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nprintf 'ran\\n'\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm 0.001/AV_Ta\nprintf 'ran\\n'\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
         doc_path = tutorials_root / "run.json"
@@ -191,7 +191,7 @@ def test_run_document_respects_allowed_runs_root() -> None:
         tutorials_root = Path(temp_dir)
         _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nprintf 'ran\\n'\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm 0.001/AV_Ta\nprintf 'ran\\n'\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
         doc_path = tutorials_root / "run.json"
@@ -226,7 +226,7 @@ def test_step_via_run_document_apply_mutates_reruns_and_audits() -> None:
         tutorials_root = Path(temp_dir)
         case_root = _write_case(
             tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm\nexit 0\n",
+            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/runDocCase_1.txt 0.001/Vm 0.001/AV_Ta\nexit 0\n",
             steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
         (case_root / "system" / "controlDict").write_text("deltaT    0.001;\nendTime    1;\n")

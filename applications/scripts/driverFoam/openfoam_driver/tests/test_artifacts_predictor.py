@@ -840,19 +840,19 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
 
 
 class TestPredictorActiveTension(unittest.TestCase):
-    """_predict_active_tension fires for monodomain+AT cases and is suppressed
-    when no activeTensionModel block is present."""
+    """_predict_active_tension fires for singleCellSolver+AT cases and is
+    suppressed when no activeTensionModel entry is present. singleCellSolver
+    is the only solver that currently constructs an activeTensionModel from
+    electroProperties (see singleCellSolver.C)."""
 
-    def _write_monodomain_with_at(self, tmp: Path, *, at_model: str, exports: str) -> None:
+    def _write_single_cell_with_at(self, tmp: Path, *, at_model: str, exports: str) -> None:
         ep = tmp / "constant" / "electroProperties"
         ep.parent.mkdir(parents=True, exist_ok=True)
         ep.write_text(
-            f"myocardiumSolver monodomainSolver;\n"
-            f"monodomainSolverCoeffs\n{{\n"
+            f"myocardiumSolver singleCellSolver;\n"
+            f"singleCellSolverCoeffs\n{{\n"
             f"    ionicModel TNNP;\n"
-            f"    activeTensionModel\n    {{\n"
-            f"        activeTensionModel {at_model};\n"
-            f"    }}\n"
+            f"    activeTensionModel {at_model};\n"
             f"    outputVariables\n    {{\n"
             f"        activeTension\n        {{\n"
             f"            export ( {exports} );\n"
@@ -864,7 +864,7 @@ class TestPredictorActiveTension(unittest.TestCase):
     def test_ta_artifact_emitted_for_nash_panfilov(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ids = [a.artifact_id for a in artifacts]
@@ -873,7 +873,7 @@ class TestPredictorActiveTension(unittest.TestCase):
     def test_ta_artifact_emitted_for_goktepe_kuhl(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            self._write_monodomain_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
+            self._write_single_cell_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ids = [a.artifact_id for a in artifacts]
@@ -898,7 +898,7 @@ class TestPredictorActiveTension(unittest.TestCase):
     def test_at_artifact_uses_declared_export_list(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             at_artifacts = [a for a in artifacts if "active_tension" in a.artifact_id]
@@ -908,7 +908,7 @@ class TestPredictorActiveTension(unittest.TestCase):
     def test_at_artifact_format_is_openfoam_time_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            self._write_monodomain_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ta = next(a for a in artifacts if a.artifact_id == "active_tension_Ta_series")

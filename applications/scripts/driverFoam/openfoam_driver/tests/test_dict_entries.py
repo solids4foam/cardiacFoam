@@ -61,8 +61,8 @@ class TestDictEntryCatalog(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach",
             "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones",
             "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver",
-            "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel",
-            "$ELECTRO_MODEL_COEFFS.activeTensionModel.couplingSignal",
+            "$ELECTRO_MODEL_COEFFS.activeTensionModel",
+            "$ELECTRO_MODEL_COEFFS.couplingSignal",
         }
         self.assertTrue(expected.issubset(documented))
 
@@ -448,11 +448,9 @@ class TestDetectActiveTensionModelName(unittest.TestCase):
     def test_detects_nash_panfilov(self) -> None:
         from openfoam_driver.specs.common import detect_active_tension_model_name
         props = self._write(
-            "myocardiumSolver monodomainSolver;\n"
-            "monodomainSolverCoeffs\n{\n"
-            "    activeTensionModel\n    {\n"
-            "        activeTensionModel NashPanfilov;\n"
-            "    }\n"
+            "myocardiumSolver singleCellSolver;\n"
+            "singleCellSolverCoeffs\n{\n"
+            "    activeTensionModel NashPanfilov;\n"
             "}\n"
         )
         self.assertEqual(detect_active_tension_model_name(props), "NashPanfilov")
@@ -460,11 +458,9 @@ class TestDetectActiveTensionModelName(unittest.TestCase):
     def test_detects_goktepe_kuhl(self) -> None:
         from openfoam_driver.specs.common import detect_active_tension_model_name
         props = self._write(
-            "myocardiumSolver monodomainSolver;\n"
-            "monodomainSolverCoeffs\n{\n"
-            "    activeTensionModel\n    {\n"
-            "        activeTensionModel GoktepeKuhl;\n"
-            "    }\n"
+            "myocardiumSolver singleCellSolver;\n"
+            "singleCellSolverCoeffs\n{\n"
+            "    activeTensionModel GoktepeKuhl;\n"
             "}\n"
         )
         self.assertEqual(detect_active_tension_model_name(props), "GoktepeKuhl")
@@ -472,8 +468,8 @@ class TestDetectActiveTensionModelName(unittest.TestCase):
     def test_returns_none_when_block_absent(self) -> None:
         from openfoam_driver.specs.common import detect_active_tension_model_name
         props = self._write(
-            "myocardiumSolver monodomainSolver;\n"
-            "monodomainSolverCoeffs\n{\n"
+            "myocardiumSolver singleCellSolver;\n"
+            "singleCellSolverCoeffs\n{\n"
             "    ionicModel TNNP;\n"
             "}\n"
         )

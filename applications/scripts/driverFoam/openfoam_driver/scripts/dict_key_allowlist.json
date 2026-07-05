@@ -102,7 +102,6 @@
   ],
   "unmatched_subdicts": [
     "ODESolver",
-    "activeTensionModel",
     "constants",
     "domainCouplings",
     "electromechanicalVerificationModel",

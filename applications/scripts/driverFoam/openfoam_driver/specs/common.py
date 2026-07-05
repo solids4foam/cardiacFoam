@@ -228,14 +228,17 @@ def detect_active_tension_model_name(
 ) -> str | None:
     """Return the ``activeTensionModel`` value from inside ``<solver>Coeffs``.
 
-    Enters the ``<solver>Coeffs`` block via brace-depth tracking, then enters
-    the ``activeTensionModel`` sub-block and reads the ``activeTensionModel``
-    key inside it. Returns ``None`` when no ``activeTensionModel`` block is
+    ``activeTensionModel`` is a flat word entry directly inside
+    ``<solver>Coeffs`` — see ``singleCellSolver.C``'s
+    ``electroProperties().found("activeTensionModel")`` /
+    ``activeTensionModel::New(electroProperties(), ...)``, mirrored by the
+    flat read in ``sequentialElectroMechanical.C``. There is no
+    ``activeTensionModel { ... }`` sub-block in the real C++ or tutorial
+    dicts. Returns ``None`` when no ``activeTensionModel`` entry is
     declared (coupling disabled).
     """
     scope = detect_electro_coeffs_scope(electro_properties_path)
     in_scope = False
-    in_at_block = False
     depth = 0
     for line in electro_properties_path.read_text().splitlines():
         stripped = line.split("//", 1)[0].strip()
@@ -247,18 +250,14 @@ def detect_active_tension_model_name(
             ):
                 in_scope = True
             continue
-        if "{" in stripped:
-            depth += stripped.count("{")
-        if not in_at_block and stripped.startswith("activeTensionModel") and depth == 1:
-            in_at_block = True
-        if in_at_block and stripped.startswith("activeTensionModel") and depth == 2:
+        if depth == 1 and stripped.startswith("activeTensionModel"):
             tokens = stripped.rstrip(";").split()
             if len(tokens) >= 2:
                 return tokens[1]
+        if "{" in stripped:
+            depth += stripped.count("{")
         if "}" in stripped:
             depth -= stripped.count("}")
-            if in_at_block and depth <= 1:
-                in_at_block = False
             if depth <= 0:
                 break
     return None
