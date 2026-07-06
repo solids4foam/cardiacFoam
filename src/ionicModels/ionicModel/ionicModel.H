@@ -42,6 +42,7 @@ Authors
 #include "fvMesh.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
+#include "ionicHeterogeneity.H"
 
 #include "electromechanicalSignalProvider.H"
 
@@ -306,6 +307,21 @@ public:
         (
             const scalarField& fieldValues,
             const dictionary& heterogeneityDict,
+            PtrList<scalarField>& heterogeneousConstants,
+            PtrList<scalarField>* heterogeneousInitialStates
+        ) const;
+
+        //- Shared blending core for configureNamedRegionHeterogeneity and
+        //  the transmuralBands shorthand: given an already-built region
+        //  list (with explicit baselines) and transition controls, resolve
+        //  per-cell constants/initial-states by blending across regions.
+        void blendNamedRegions
+        (
+            const scalarField& fieldValues,
+            const List<ionicHeterogeneity::NamedFieldRegion>& regions,
+            scalar transitionWidth,
+            const word& smoothing,
+            const word& transitionMode,
             PtrList<scalarField>& heterogeneousConstants,
             PtrList<scalarField>* heterogeneousInitialStates
         ) const;

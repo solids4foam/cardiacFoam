@@ -521,109 +521,34 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
         transitionMode
     );
 
-    const scalarField endoConstants =
-        constantsForTissue(ionicSelector::tissueFlag("endocardialCells"));
-    const scalarField mCellConstants =
-        constantsForTissue(ionicSelector::tissueFlag("mCells"));
-    const scalarField epiConstants =
-        constantsForTissue(ionicSelector::tissueFlag("epicardialCells"));
+    // transmuralBands is a shorthand: expand to the same three named
+    // regions (with explicit anatomical baselines) that namedRegions mode
+    // uses directly, and delegate to the shared blending implementation.
+    // This keeps exactly one code path for region-based heterogeneity.
+    List<ionicHeterogeneity::NamedFieldRegion> regions(3);
+    regions[0].name = "endocardialCells";
+    regions[0].rangeMin = 0.0;
+    regions[0].rangeMax = endoMInterface;
+    regions[0].baseline = "endocardialCells";
+    regions[1].name = "mCells";
+    regions[1].rangeMin = endoMInterface;
+    regions[1].rangeMax = mEpiInterface;
+    regions[1].baseline = "mCells";
+    regions[2].name = "epicardialCells";
+    regions[2].rangeMin = mEpiInterface;
+    regions[2].rangeMax = 1.0;
+    regions[2].baseline = "epicardialCells";
 
-    if
+    blendNamedRegions
     (
-        endoConstants.empty()
-     || endoConstants.size() != mCellConstants.size()
-     || endoConstants.size() != epiConstants.size()
-    )
-    {
-        FatalErrorInFunction
-            << "ionicHeterogeneity was requested for ionic model " << type()
-            << ", but this model does not provide endo/M/epi constants."
-            << exit(FatalError);
-    }
-
-    scalarField endoStates, mCellStates, epiStates;
-    bool blendStates = false;
-    if (heterogeneousInitialStates)
-    {
-        endoStates = initialStatesForTissue(ionicSelector::tissueFlag("endocardialCells"));
-        mCellStates = initialStatesForTissue(ionicSelector::tissueFlag("mCells"));
-        epiStates = initialStatesForTissue(ionicSelector::tissueFlag("epicardialCells"));
-
-        if
-        (
-            !endoStates.empty()
-         && endoStates.size() == mCellStates.size()
-         && endoStates.size() == epiStates.size()
-        )
-        {
-            blendStates = true;
-            heterogeneousInitialStates->clear();
-            heterogeneousInitialStates->setSize(transmuralDistance.size());
-        }
-    }
-
-    heterogeneousConstants.clear();
-    heterogeneousConstants.setSize(transmuralDistance.size());
-
-    forAll(transmuralDistance, integrationPtI)
-    {
-        const scalar rawT = transmuralDistance[integrationPtI];
-
-        if (rawT < -SMALL || rawT > 1.0 + SMALL)
-        {
-            FatalErrorInFunction
-                << "Transmural distance value t=" << rawT
-                << " at integration point " << integrationPtI
-                << " is outside the expected [0, 1] range."
-                << exit(FatalError);
-        }
-
-        const scalar t = min(max(rawT, scalar(0.0)), scalar(1.0));
-        scalarField mappedConstants(endoConstants.size(), 0.0);
-        const ionicHeterogeneity::TransmuralBandWeights weights =
-            ionicHeterogeneity::transmuralBandWeights
-            (
-                t,
-                endoMInterface,
-                mEpiInterface,
-                transitionWidth,
-                smoothing,
-                transitionMode
-            );
-
-        forAll(mappedConstants, constantI)
-        {
-            mappedConstants[constantI] =
-                weights.endo*endoConstants[constantI]
-              + weights.mCell*mCellConstants[constantI]
-              + weights.epi*epiConstants[constantI];
-        }
-
-        heterogeneousConstants.set
-        (
-            integrationPtI,
-            new scalarField(mappedConstants)
-        );
-
-        if (blendStates)
-        {
-            scalarField mappedStates(endoStates.size(), 0.0);
-            forAll(mappedStates, stateI)
-            {
-                mappedStates[stateI] =
-                    weights.endo*endoStates[stateI]
-                  + weights.mCell*mCellStates[stateI]
-                  + weights.epi*epiStates[stateI];
-            }
-            heterogeneousInitialStates->set
-            (
-                integrationPtI,
-                new scalarField(mappedStates)
-            );
-        }
-    }
-
-
+        transmuralDistance,
+        regions,
+        transitionWidth,
+        smoothing,
+        transitionMode,
+        heterogeneousConstants,
+        heterogeneousInitialStates
+    );
 }
 
 
@@ -665,6 +590,30 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
             heterogeneityDict.subDict("regions")
         );
 
+    blendNamedRegions
+    (
+        fieldValues,
+        regions,
+        transitionWidth,
+        smoothing,
+        transitionMode,
+        heterogeneousConstants,
+        heterogeneousInitialStates
+    );
+}
+
+
+void Foam::ionicModel::blendNamedRegions
+(
+    const scalarField& fieldValues,
+    const List<ionicHeterogeneity::NamedFieldRegion>& regions,
+    const scalar transitionWidth,
+    const word& smoothing,
+    const word& transitionMode,
+    PtrList<scalarField>& heterogeneousConstants,
+    PtrList<scalarField>* heterogeneousInitialStates
+) const
+{
     wordList regionNames(regions.size());
     forAll(regions, i)
     {
@@ -689,10 +638,10 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
         if (regionConstants[i].empty())
         {
             FatalErrorInFunction
-                << "ionicHeterogeneity mode namedRegions was requested for "
-                << "ionic model " << type() << ", but constantsForTissue() "
-                << "returned no constants. This model does not support "
-                << "region-based heterogeneity."
+                << "ionicHeterogeneity region-based heterogeneity was "
+                << "requested for ionic model " << type() << ", but "
+                << "constantsForTissue() returned no constants. This model "
+                << "does not support region-based heterogeneity."
                 << exit(FatalError);
         }
 
