@@ -212,10 +212,32 @@ Foam::ionicHeterogeneity::parseNamedFieldRegions
                 << exit(FatalError);
         }
 
+        static const wordList anatomicalNames
+        {
+            "epicardialCells", "mCells", "endocardialCells"
+        };
+
+        const word baseline = regionDict.lookupOrDefault<word>
+        (
+            "baseline",
+            anatomicalNames.found(regionName) ? regionName : word("myocyte")
+        );
+
+        if (!anatomicalNames.found(baseline) && baseline != "myocyte")
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << ".baseline '" << baseline << "' is not a supported "
+                << "tissue baseline. Supported: epicardialCells, mCells, "
+                << "endocardialCells, myocyte."
+                << exit(FatalError);
+        }
+
         NamedFieldRegion region;
         region.name = regionName;
         region.rangeMin = range[0];
         region.rangeMax = range[1];
+        region.baseline = baseline;
         regions.append(region);
     }
 
