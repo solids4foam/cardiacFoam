@@ -4,7 +4,9 @@ from openfoam_driver import cli
 
 
 def test_dashboard_action_accepted_without_entry():
-    # --action dashboard must not require --entry; it should call the launcher.
+    # `dashboard` action must not require --entry; it should call the launcher.
+    # (action is a positional CLI arg, not a `--action` flag, unlike this test's
+    # original wording.)
     with mock.patch("openfoam_driver.dashboard.launch.serve") as serve:
         serve.return_value = 0
         rc = cli.main(["dashboard", "--root", "tutorials",
