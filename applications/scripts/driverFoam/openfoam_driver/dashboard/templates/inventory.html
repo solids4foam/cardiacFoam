@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block summary %}{{ total }} cases · {{ ran }} ran · {{ threed }} 3D{% endblock %}
+{% block content %}
+{% for family, cards in families.items() %}
+  <div class="family">{{ family }}</div>
+  <div class="grid">
+  {% for c in cards %}
+    <div class="card">
+      <a href="/case/{{ c.case_id }}">
+        <span class="badge {{ c.status }}">{{ c.status }}</span>
+        <strong>{{ c.name }}</strong>
+        {% if c.goal %}<div class="goal">{{ c.goal|truncate(140) }}</div>{% endif %}
+        {% if c.metrics.get('ecg_peak_to_peak') is not none %}
+          <div class="goal">ECG p-p: {{ c.metrics['ecg_peak_to_peak'] }} ({{ c.metrics['ecg_lead'] }})</div>
+        {% endif %}
+      </a>
+    </div>
+  {% endfor %}
+  </div>
+{% endfor %}
+{% endblock %}

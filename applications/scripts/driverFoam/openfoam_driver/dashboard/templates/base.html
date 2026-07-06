@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cardiacFoam simulations</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>cardiacFoam simulations</h1>
+    <span class="summary">{% block summary %}{% endblock %}</span>
+    <form method="post" action="/rescan" style="margin-left:auto"><button>Rescan</button></form>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>
