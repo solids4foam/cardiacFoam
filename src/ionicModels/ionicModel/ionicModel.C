@@ -679,7 +679,11 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
     {
         regionConstants.set
         (
-            i, new scalarField(constantsForRegion(regionNames[i], regionNames))
+            i,
+            new scalarField
+            (
+                constantsForRegion(regionNames[i], regions[i].baseline, regionNames)
+            )
         );
 
         if (regionConstants[i].empty())
@@ -699,7 +703,10 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
                 i,
                 new scalarField
                 (
-                    initialStatesForRegion(regionNames[i], regionNames)
+                    initialStatesForRegion
+                    (
+                        regionNames[i], regions[i].baseline, regionNames
+                    )
                 )
             );
 
@@ -771,30 +778,14 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
 }
 
 
-Foam::label Foam::ionicModel::anatomicalTissueFlagFor
-(
-    const word& regionName
-) const
-{
-    static const wordList anatomicalNames
-    {
-        "epicardialCells", "mCells", "endocardialCells"
-    };
-
-    return
-        anatomicalNames.found(regionName)
-      ? ionicSelector::tissueFlag(regionName)
-      : ionicSelector::tissueFlag("myocyte");
-}
-
-
 Foam::scalarField Foam::ionicModel::constantsForRegion
 (
     const word& regionName,
+    const word& baseline,
     const wordList& knownRegionNames
 ) const
 {
-    const label tissueFlag = anatomicalTissueFlagFor(regionName);
+    const label tissueFlag = ionicSelector::tissueFlag(baseline);
 
     scalarField constants = constantsForTissue(tissueFlag);
 
@@ -821,12 +812,14 @@ Foam::scalarField Foam::ionicModel::constantsForRegion
 Foam::scalarField Foam::ionicModel::initialStatesForRegion
 (
     const word& regionName,
+    const word& baseline,
     const wordList& knownRegionNames
 ) const
 {
+    (void)regionName;
     (void)knownRegionNames;
 
-    const label tissueFlag = anatomicalTissueFlagFor(regionName);
+    const label tissueFlag = ionicSelector::tissueFlag(baseline);
 
     return initialStatesForTissue(tissueFlag);
 }

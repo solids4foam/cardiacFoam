@@ -310,24 +310,18 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates
         ) const;
 
-        //- Maps a region name to the nearest anatomical tissueFlag
-        //  (epicardialCells/mCells/endocardialCells), falling back to
-        //  myocyte for any other (non-anatomical) region name. Shared by
-        //  constantsForRegion and initialStatesForRegion.
-        label anatomicalTissueFlagFor(const word& regionName) const;
-
-        //- Base constants for an open-ended region name: maps to the
-        //  nearest anatomical tissueFlag (epicardialCells/mCells/
-        //  endocardialCells), falling back to myocyte for any other name,
-        //  then layers the region's own ionicConstantOverrides scope on top.
+        //- Base constants for a region given its explicit baseline
+        //  (epicardialCells/mCells/endocardialCells/myocyte — validated by
+        //  ionicHeterogeneity::parseNamedFieldRegions), then layers the
+        //  region's own ionicConstantOverrides.<regionName> scope on top.
         scalarField constantsForRegion
         (
             const word& regionName,
+            const word& baseline,
             const wordList& knownRegionNames
         ) const;
 
-        //- Initial states for an open-ended region name, using the same
-        //  anatomical-tissueFlag mapping as constantsForRegion. Unlike
+        //- Initial states for a region given its explicit baseline. Unlike
         //  constantsForRegion, this does NOT apply ionicConstantOverrides
         //  — there is no override mechanism for initial states, only
         //  constants. knownRegionNames is accepted for signature symmetry
@@ -335,6 +329,7 @@ public:
         scalarField initialStatesForRegion
         (
             const word& regionName,
+            const word& baseline,
             const wordList& knownRegionNames
         ) const;
 
