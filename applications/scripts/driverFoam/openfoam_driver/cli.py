@@ -448,7 +448,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=["sim", "post", "all", "describe", "plan", "step", "run", "sweep-plan", "sweep-run"],
+        choices=["sim", "post", "all", "describe", "plan", "step", "run", "sweep-plan", "sweep-run", "dashboard"],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -566,6 +566,21 @@ def build_parser() -> argparse.ArgumentParser:
             "that exceeds it is marked failed and the sweep continues. Default: none."
         ),
     )
+    parser.add_argument("--root", dest="dashboard_root", default="tutorials",
+                        help="dashboard: tutorials root to scan (action=dashboard)")
+    parser.add_argument("--store", dest="dashboard_store",
+                        default="dashboard/store.db",
+                        help="dashboard: SQLite annotation store path")
+    parser.add_argument("--host", dest="dashboard_host", default="127.0.0.1",
+                        help="dashboard: bind host")
+    parser.add_argument("--port", dest="dashboard_port", type=int, default=8765,
+                        help="dashboard: bind port")
+    parser.add_argument("--no-3d", dest="dashboard_no_3d", action="store_true",
+                        help="dashboard: skip GLB 3D generation")
+    parser.add_argument("--blender", dest="dashboard_blender", default=None,
+                        help="dashboard: Blender binary path (for render_case)")
+    parser.add_argument("--no-open", dest="dashboard_no_open", action="store_true",
+                        help="dashboard: do not open a browser")
     return parser
 
 
@@ -665,7 +680,7 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--max-cases is only valid with action=sweep-plan or action=sweep-run")
     if args.action not in {"sweep-plan", "sweep-run"} and (args.spec or args.output_dir):
         parser.error("--spec/--output-dir are only valid with action=sweep-plan or action=sweep-run")
-    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run"}:
+    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run", "dashboard"}:
         parser.error("--entry is required (or use --run-document with action=run/step)")
 
 
@@ -673,6 +688,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate_args(parser, args)
+
+    if args.action == "dashboard":
+        from .dashboard.launch import serve
+        return serve(
+            root=Path(args.dashboard_root),
+            store_path=Path(args.dashboard_store),
+            host=args.dashboard_host,
+            port=args.dashboard_port,
+            enable_3d=not args.dashboard_no_3d,
+            blender=args.dashboard_blender,
+            open_browser=not args.dashboard_no_open,
+        )
 
     selected_entry = args.entry
 
