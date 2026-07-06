@@ -311,7 +311,7 @@ Foam::ionicHeterogeneity::namedRegionWeightsAt
     label idx = nRegions - 1;
     for (label i = 0; i < nRegions; ++i)
     {
-        if (t < regions[i].rangeMax || i == nRegions - 1)
+        if (t <= regions[i].rangeMax || i == nRegions - 1)
         {
             idx = i;
             break;
