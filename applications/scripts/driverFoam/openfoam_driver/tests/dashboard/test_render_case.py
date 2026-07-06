@@ -13,8 +13,10 @@ def test_find_blender_prefers_explicit(tmp_path):
     assert render_case.find_blender(str(fake)) == str(fake)
 
 
-def test_find_blender_missing_raises():
-    with mock.patch.object(render_case, "_CANDIDATES", []):
+def test_find_blender_missing_raises(monkeypatch):
+    monkeypatch.delenv("BLENDER", raising=False)
+    with mock.patch.object(render_case, "_CANDIDATES", []), \
+         mock.patch("shutil.which", return_value=None):
         with pytest.raises(FileNotFoundError):
             render_case.find_blender(None)
 
