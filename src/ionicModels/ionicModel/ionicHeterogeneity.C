@@ -20,6 +20,9 @@ License
 #include "ionicHeterogeneity.H"
 #include "error.H"
 #include <cmath>
+#include <algorithm>
+#include "DynamicList.H"
+#include "scalarList.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -164,6 +167,155 @@ Foam::scalar Foam::ionicHeterogeneity::apexBaseScale
 )
 {
     return scalingMin*(1.0 + (scalingMax/scalingMin - 1.0)*std::exp(-beta*d));
+}
+
+
+Foam::List<Foam::ionicHeterogeneity::NamedFieldRegion>
+Foam::ionicHeterogeneity::parseNamedFieldRegions
+(
+    const dictionary& regionsDict
+)
+{
+    DynamicList<NamedFieldRegion> regions;
+
+    forAllConstIter(dictionary, regionsDict, iter)
+    {
+        const word regionName(iter().keyword());
+
+        if (!iter().isDict())
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions entry '" << regionName
+                << "' must be a dictionary."
+                << exit(FatalError);
+        }
+
+        const dictionary& regionDict = regionsDict.subDict(regionName);
+
+        if (!regionDict.found("range"))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << " has no 'range' entry. Field-based regions must "
+                << "declare 'range (min max);'."
+                << exit(FatalError);
+        }
+
+        const scalarList range(regionDict.lookup("range"));
+
+        if (range.size() != 2 || range[0] >= range[1])
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << ".range must be exactly two values (min max) with "
+                << "min < max, got " << range
+                << exit(FatalError);
+        }
+
+        NamedFieldRegion region;
+        region.name = regionName;
+        region.rangeMin = range[0];
+        region.rangeMax = range[1];
+        regions.append(region);
+    }
+
+    if (regions.size() < 2)
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity mode namedRegions requires at least "
+            << "two entries under 'regions', found " << regions.size()
+            << exit(FatalError);
+    }
+
+    std::sort
+    (
+        regions.begin(), regions.end(),
+        [](const NamedFieldRegion& a, const NamedFieldRegion& b)
+        {
+            return a.rangeMin < b.rangeMin;
+        }
+    );
+
+    for (label i = 1; i < regions.size(); ++i)
+    {
+        if (mag(regions[i].rangeMin - regions[i - 1].rangeMax) > SMALL)
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions '" << regions[i - 1].name
+                << "' (range " << regions[i - 1].rangeMin << " "
+                << regions[i - 1].rangeMax << ") and '" << regions[i].name
+                << "' (range " << regions[i].rangeMin << " "
+                << regions[i].rangeMax << ") are not adjacent. Named "
+                << "field regions must tile [0,1] with no gaps or overlaps."
+                << exit(FatalError);
+        }
+    }
+
+    if (mag(regions[0].rangeMin - 0.0) > SMALL)
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity.regions: first region '" << regions[0].name
+            << "' starts at " << regions[0].rangeMin << ", not 0. Named "
+            << "field regions must tile [0,1] with no gaps at the edges."
+            << exit(FatalError);
+    }
+
+    if (mag(regions.last().rangeMax - 1.0) > SMALL)
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity.regions: last region '"
+            << regions.last().name << "' ends at " << regions.last().rangeMax
+            << ", not 1. Named field regions must tile [0,1] with no gaps "
+            << "at the edges."
+            << exit(FatalError);
+    }
+
+    return List<NamedFieldRegion>(regions);
+}
+
+
+Foam::List<Foam::ionicHeterogeneity::NamedRegionWeight>
+Foam::ionicHeterogeneity::namedRegionWeightsAt
+(
+    const scalar t,
+    const List<NamedFieldRegion>& regions,
+    const scalar transitionWidth,
+    const word& smoothing,
+    const word& transitionMode
+)
+{
+    const label nRegions = regions.size();
+
+    label idx = nRegions - 1;
+    for (label i = 0; i < nRegions; ++i)
+    {
+        if (t < regions[i].rangeMax || i == nRegions - 1)
+        {
+            idx = i;
+            break;
+        }
+    }
+
+    if (transitionMode == "hard" || transitionWidth <= SMALL)
+    {
+        return List<NamedRegionWeight>(1, {regions[idx].name, scalar(1.0)});
+    }
+
+    if (idx > 0)
+    {
+        const scalar boundary = regions[idx - 1].rangeMax;
+        if (t < boundary + transitionWidth)
+        {
+            const scalar x = (t - boundary)/transitionWidth;
+            const scalar w = smoothingWeight(x, smoothing);
+            List<NamedRegionWeight> out(2);
+            out[0] = {regions[idx - 1].name, 1.0 - w};
+            out[1] = {regions[idx].name, w};
+            return out;
+        }
+    }
+
+    return List<NamedRegionWeight>(1, {regions[idx].name, scalar(1.0)});
 }
 
 // ************************************************************************* //

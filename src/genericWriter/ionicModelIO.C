@@ -188,6 +188,28 @@ namespace Foam
                 || name == "myocyte";
         }
 
+        bool isKnownOverrideScopeName
+        (
+            const word& name,
+            const wordList& knownScopeNames
+        )
+        {
+            if (name == "global")
+            {
+                return true;
+            }
+
+            forAll(knownScopeNames, i)
+            {
+                if (knownScopeNames[i] == name)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         void collectConstantOverrideOp
         (
             const dictionary& opDict,
@@ -763,13 +785,16 @@ namespace Foam
             const word entryName(iter().keyword());
             if (!isConstantOverrideScopeName(entryName))
             {
-                FatalErrorInFunction
-                    << "Unsupported ionicConstantOverrides entry '"
-                    << entryName << "' for ionic model " << modelName << "."
-                    << nl
-                    << "Supported entries are global, endocardialCells, "
-                    << "mCells, epicardialCells, and myocyte."
-                    << exit(FatalError);
+                // Not one of the fixed global/anatomical/myocyte scopes this
+                // tissueFlag-based overload understands. This may be a
+                // namedRegions-only scope (e.g. a scar/disease region name),
+                // which is validated and applied separately by the
+                // word-scoped applyConstantOverrides overload used by
+                // ionicModel::constantsForRegion(). Skip it here rather
+                // than fatal, since this overload has no visibility into
+                // which named regions are legitimately declared elsewhere
+                // in the dictionary.
+                continue;
             }
 
             if (!iter().isDict())
@@ -806,6 +831,88 @@ namespace Foam
                 modelName,
                 overrides.subDict(tissueScopeName),
                 tissueScopeName
+            );
+        }
+    }
+
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const wordList& knownScopeNames
+    )
+    {
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return;
+        }
+
+        if (constants.empty())
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides was requested for ionic model "
+                << modelName
+                << ", but constant storage is not available."
+                << exit(FatalError);
+        }
+
+        validateConstantMetadata(constantNames, nConstants, modelName);
+
+        if (constants.size() != nConstants)
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " found " << nConstants << " constant names but "
+                << constants.size() << " stored constant values."
+                << exit(FatalError);
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+
+        forAllConstIter(dictionary, overrides, iter)
+        {
+            const word entryName(iter().keyword());
+            if (!isKnownOverrideScopeName(entryName, knownScopeNames))
+            {
+                FatalErrorInFunction
+                    << "Unsupported ionicConstantOverrides entry '"
+                    << entryName << "' for ionic model " << modelName << "."
+                    << nl
+                    << "Declared regions: " << knownScopeNames
+                    << " (plus 'global')."
+                    << exit(FatalError);
+            }
+
+            if (!iter().isDict())
+            {
+                FatalErrorInFunction
+                    << "ionicConstantOverrides entry '" << entryName
+                    << "' for ionic model " << modelName
+                    << " must be a dictionary."
+                    << exit(FatalError);
+            }
+        }
+
+        if (overrides.found("global"))
+        {
+            applyConstantOverrideScope
+            (
+                constants, constantNames, nConstants, modelName,
+                overrides.subDict("global"), "global"
+            );
+        }
+
+        if (!scopeName.empty() && overrides.found(scopeName))
+        {
+            applyConstantOverrideScope
+            (
+                constants, constantNames, nConstants, modelName,
+                overrides.subDict(scopeName), scopeName
             );
         }
     }

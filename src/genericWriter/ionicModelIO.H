@@ -163,6 +163,17 @@ public:
         label tissueFlag
     );
 
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const wordList& knownScopeNames
+    );
+
     static word constantOverrideOutputSuffix
     (
         const dictionary& dict

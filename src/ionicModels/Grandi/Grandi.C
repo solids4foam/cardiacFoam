@@ -113,7 +113,72 @@ Foam::Grandi::~Grandi()
 
 Foam::List<Foam::word> Foam::Grandi::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+}
+
+
+Foam::scalarField& Foam::Grandi::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::Grandi::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    GrandiinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, GrandiCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type(),
+        tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::Grandi::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    GrandiinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
+}
+
+
+void Foam::Grandi::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    configureTransmuralBandHeterogeneity
+    (
+        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
+    );
 }
 
 
@@ -146,12 +211,13 @@ void Foam::Grandi::solveODE
         }
 
         step = min(step, deltaT * 1000.0);
+        activeIntegrationPoint_ = integrationPtI;
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         ::GrandicomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -180,7 +246,7 @@ void Foam::Grandi::derivatives
     ::GrandicomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)

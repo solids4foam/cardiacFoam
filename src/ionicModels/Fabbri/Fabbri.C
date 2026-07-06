@@ -113,7 +113,72 @@ Foam::Fabbri::~Fabbri()
 
 Foam::List<Foam::word> Foam::Fabbri::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+}
+
+
+Foam::scalarField& Foam::Fabbri::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::Fabbri::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    FabbriinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, FabbriCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type(),
+        tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::Fabbri::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    FabbriinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
+}
+
+
+void Foam::Fabbri::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    configureTransmuralBandHeterogeneity
+    (
+        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
+    );
 }
 
 
@@ -146,12 +211,13 @@ void Foam::Fabbri::solveODE
         }
 
         step = min(step, deltaT * 1000.0);
+        activeIntegrationPoint_ = integrationPtI;
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         ::FabbricomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -180,7 +246,7 @@ void Foam::Fabbri::derivatives
     ::FabbricomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)

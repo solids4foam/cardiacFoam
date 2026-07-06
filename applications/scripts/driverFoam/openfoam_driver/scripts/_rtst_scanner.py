@@ -92,11 +92,11 @@ def _index_override_type_names(src_root: Path) -> dict[str, str]:
 
     Each header is scanned for `class Foo { ... OverrideTypeName("X") ... }`
     patterns; each `OverrideTypeName` is paired with the nearest preceding
-    `class <Name>` declaration in the same file. This handles models where
-    the C++ class name (e.g. `PerisYague_2022`) differs from the registered
-    type string (e.g. `PerisYague`), and works uniformly for the simple
-    case (`BuenoOrovio`, `ORd`, …) where the class name and the override
-    name happen to be the same.
+    `class <Name>` declaration in the same file. This handles the general
+    case where a model's C++ class name could differ from its registered
+    type string, and works uniformly for the common case (`BuenoOrovio`,
+    `ORd`, `PerisYague`, …) where the class name and the override name are
+    the same.
 
     Classes without an `OverrideTypeName` simply do not appear in the
     index; the caller falls back to the class name.

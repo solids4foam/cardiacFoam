@@ -119,7 +119,72 @@ Foam::AlievPanfilov::~AlievPanfilov()
 
 Foam::List<Foam::word> Foam::AlievPanfilov::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+}
+
+
+Foam::scalarField& Foam::AlievPanfilov::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::AlievPanfilov::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    AlievPanfilovinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, AlievPanfilovCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type(),
+        tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::AlievPanfilov::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    AlievPanfilovinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
+}
+
+
+void Foam::AlievPanfilov::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    configureTransmuralBandHeterogeneity
+    (
+        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
+    );
 }
 
 
@@ -149,6 +214,7 @@ void Foam::AlievPanfilov::solveODE
         scalar& step = ionicModel::step()[integrationPtI];
 
         step = min(step, deltaT * 1000.0/12.9);
+        activeIntegrationPoint_ = integrationPtI;
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
@@ -157,7 +223,7 @@ void Foam::AlievPanfilov::solveODE
         ::AlievPanfilovcomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -187,7 +253,7 @@ void Foam::AlievPanfilov::derivatives
     ::AlievPanfilovcomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)

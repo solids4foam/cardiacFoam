@@ -483,11 +483,21 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
     const word mode =
         heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
 
+    if (mode == "namedRegions")
+    {
+        configureNamedRegionHeterogeneity
+        (
+            transmuralDistance, heterogeneityDict, heterogeneousConstants,
+            heterogeneousInitialStates
+        );
+        return;
+    }
+
     if (mode != "transmuralBands")
     {
         FatalErrorInFunction
             << "Unsupported " << type() << " ionicHeterogeneity mode '"
-            << mode << "'. Supported mode: transmuralBands."
+            << mode << "'. Supported modes: transmuralBands, namedRegions."
             << exit(FatalError);
     }
 
@@ -615,3 +625,209 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
 
 
 }
+
+
+void Foam::ionicModel::configureNamedRegionHeterogeneity
+(
+    const scalarField& fieldValues,
+    const dictionary& heterogeneityDict,
+    PtrList<scalarField>& heterogeneousConstants,
+    PtrList<scalarField>* heterogeneousInitialStates
+) const
+{
+    const word smoothing =
+        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
+    const word transitionMode =
+        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
+    const scalar transitionWidth =
+        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+
+    if (transitionMode != "blend" && transitionMode != "hard")
+    {
+        FatalErrorInFunction
+            << "Unsupported ionicHeterogeneity transitionMode '"
+            << transitionMode << "' for mode namedRegions. Supported: "
+            << "blend, hard."
+            << exit(FatalError);
+    }
+
+    if (!heterogeneityDict.found("regions"))
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity mode namedRegions requires a 'regions' "
+            << "sub-dictionary for ionic model " << type() << "."
+            << exit(FatalError);
+    }
+
+    const List<ionicHeterogeneity::NamedFieldRegion> regions =
+        ionicHeterogeneity::parseNamedFieldRegions
+        (
+            heterogeneityDict.subDict("regions")
+        );
+
+    wordList regionNames(regions.size());
+    forAll(regions, i)
+    {
+        regionNames[i] = regions[i].name;
+    }
+
+    PtrList<scalarField> regionConstants(regions.size());
+    PtrList<scalarField> regionStates(regions.size());
+    bool blendStates = (heterogeneousInitialStates != nullptr);
+
+    forAll(regions, i)
+    {
+        regionConstants.set
+        (
+            i, new scalarField(constantsForRegion(regionNames[i], regionNames))
+        );
+
+        if (regionConstants[i].empty())
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity mode namedRegions was requested for "
+                << "ionic model " << type() << ", but constantsForTissue() "
+                << "returned no constants. This model does not support "
+                << "region-based heterogeneity."
+                << exit(FatalError);
+        }
+
+        if (blendStates)
+        {
+            regionStates.set
+            (
+                i,
+                new scalarField
+                (
+                    initialStatesForRegion(regionNames[i], regionNames)
+                )
+            );
+
+            if (regionStates[i].empty())
+            {
+                blendStates = false;
+            }
+        }
+    }
+
+    heterogeneousConstants.clear();
+    heterogeneousConstants.setSize(fieldValues.size());
+
+    if (blendStates)
+    {
+        heterogeneousInitialStates->clear();
+        heterogeneousInitialStates->setSize(fieldValues.size());
+    }
+
+    forAll(fieldValues, cellI)
+    {
+        const scalar rawT = fieldValues[cellI];
+
+        if (rawT < -SMALL || rawT > 1.0 + SMALL)
+        {
+            FatalErrorInFunction
+                << "Named-region field value t=" << rawT
+                << " at integration point " << cellI
+                << " is outside the expected [0, 1] range."
+                << exit(FatalError);
+        }
+
+        const scalar t = min(max(rawT, scalar(0.0)), scalar(1.0));
+
+        const List<ionicHeterogeneity::NamedRegionWeight> weights =
+            ionicHeterogeneity::namedRegionWeightsAt
+            (
+                t, regions, transitionWidth, smoothing, transitionMode
+            );
+
+        scalarField mappedConstants(regionConstants[0].size(), 0.0);
+        scalarField mappedStates;
+        if (blendStates)
+        {
+            mappedStates.setSize(regionStates[0].size(), 0.0);
+        }
+
+        forAll(weights, wI)
+        {
+            const label regionI = regionNames.find(weights[wI].name);
+            mappedConstants += weights[wI].weight*regionConstants[regionI];
+
+            if (blendStates)
+            {
+                mappedStates += weights[wI].weight*regionStates[regionI];
+            }
+        }
+
+        heterogeneousConstants.set(cellI, new scalarField(mappedConstants));
+
+        if (blendStates)
+        {
+            heterogeneousInitialStates->set
+            (
+                cellI, new scalarField(mappedStates)
+            );
+        }
+    }
+}
+
+
+Foam::label Foam::ionicModel::anatomicalTissueFlagFor
+(
+    const word& regionName
+) const
+{
+    static const wordList anatomicalNames
+    {
+        "epicardialCells", "mCells", "endocardialCells"
+    };
+
+    return
+        anatomicalNames.found(regionName)
+      ? ionicSelector::tissueFlag(regionName)
+      : ionicSelector::tissueFlag("myocyte");
+}
+
+
+Foam::scalarField Foam::ionicModel::constantsForRegion
+(
+    const word& regionName,
+    const wordList& knownRegionNames
+) const
+{
+    const label tissueFlag = anatomicalTissueFlagFor(regionName);
+
+    scalarField constants = constantsForTissue(tissueFlag);
+
+    if (constants.empty())
+    {
+        return constants;
+    }
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants,
+        ioConstantNames(),
+        ioNumConstants(),
+        dict_,
+        type(),
+        regionName,
+        knownRegionNames
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::ionicModel::initialStatesForRegion
+(
+    const word& regionName,
+    const wordList& knownRegionNames
+) const
+{
+    (void)knownRegionNames;
+
+    const label tissueFlag = anatomicalTissueFlagFor(regionName);
+
+    return initialStatesForTissue(tissueFlag);
+}
+

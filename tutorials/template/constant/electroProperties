@@ -83,19 +83,41 @@ monodomainSolverCoeffs
 
     // ── Tissue heterogeneity (optional) ─────────────────────────────────────
     // When present, the single `tissue` selector above is replaced by a
-    // spatially varying transmural blend of endocardial / M-cell / epicardial
-    // ionic constants across the wall. Supported ionic models:
-    //   BuenoOrovio | TNNP | TWorld | ToRORd_dynCl  (and their *Batched GPU variants).
+    // spatially varying blend of named tissue-region ionic constants across
+    // the wall. Supported ionic models:
+    //   BuenoOrovio | TNNP | TWorld | ToRORd_dynCl | Gaur (and their
+    //   *Batched GPU variants where available).
     // Omit this block entirely for a homogeneous run governed solely by `tissue`.
     // ionicHeterogeneity
     // {
     //     field            t;                // transmural-distance field (0=endo, 1=epi)
-    //     mode             transmuralBands;  // only supported mode
+    //     mode             transmuralBands;  // transmuralBands | namedRegions
     //     endoMInterface   0.3;              // endo->M boundary, in (0, mEpiInterface)
     //     mEpiInterface    0.7;              // M->epi boundary, in (endoMInterface, 1)
     //     transitionWidth  0.1;              // smooth band width; 0 => hard transitions
     //     transitionMode   blend;            // blend | hard
     //     smoothing        smoothstep;       // smoothstep
+    // }
+    //
+    // namedRegions mode replaces endoMInterface/mEpiInterface with an open,
+    // named list of field ranges tiling [0,1] (any names, not just the three
+    // anatomical ones — non-anatomical names fall back to the "myocyte"
+    // baseline plus their own ionicConstantOverrides scope, so this same
+    // block also covers scar/disease-region use cases):
+    // ionicHeterogeneity
+    // {
+    //     field           t;
+    //     mode            namedRegions;
+    //     transitionWidth 0.1;
+    //     transitionMode  blend;
+    //     smoothing       smoothstep;
+    //
+    //     regions
+    //     {
+    //         endocardialCells { range (0.0 0.3); }
+    //         mCells           { range (0.3 0.7); }
+    //         epicardialCells  { range (0.7 1.0); }
+    //     }
     // }
 
 

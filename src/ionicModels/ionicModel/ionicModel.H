@@ -297,6 +297,47 @@ public:
 
         virtual scalarField initialStatesForTissue(const label tissueFlag) const;
 
+        //- namedRegions mode: generalizes configureTransmuralBandHeterogeneity
+        //  to an open, dictionary-declared list of named field regions.
+        //  Dispatched automatically from configureTransmuralBandHeterogeneity
+        //  when heterogeneityDict.mode == "namedRegions" — models do not
+        //  call this directly.
+        void configureNamedRegionHeterogeneity
+        (
+            const scalarField& fieldValues,
+            const dictionary& heterogeneityDict,
+            PtrList<scalarField>& heterogeneousConstants,
+            PtrList<scalarField>* heterogeneousInitialStates
+        ) const;
+
+        //- Maps a region name to the nearest anatomical tissueFlag
+        //  (epicardialCells/mCells/endocardialCells), falling back to
+        //  myocyte for any other (non-anatomical) region name. Shared by
+        //  constantsForRegion and initialStatesForRegion.
+        label anatomicalTissueFlagFor(const word& regionName) const;
+
+        //- Base constants for an open-ended region name: maps to the
+        //  nearest anatomical tissueFlag (epicardialCells/mCells/
+        //  endocardialCells), falling back to myocyte for any other name,
+        //  then layers the region's own ionicConstantOverrides scope on top.
+        scalarField constantsForRegion
+        (
+            const word& regionName,
+            const wordList& knownRegionNames
+        ) const;
+
+        //- Initial states for an open-ended region name, using the same
+        //  anatomical-tissueFlag mapping as constantsForRegion. Unlike
+        //  constantsForRegion, this does NOT apply ionicConstantOverrides
+        //  — there is no override mechanism for initial states, only
+        //  constants. knownRegionNames is accepted for signature symmetry
+        //  but unused.
+        scalarField initialStatesForRegion
+        (
+            const word& regionName,
+            const wordList& knownRegionNames
+        ) const;
+
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
 

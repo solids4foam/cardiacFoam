@@ -29,6 +29,8 @@ Author
 
 #include "scalar.H"
 #include "word.H"
+#include "List.H"
+#include "dictionary.H"
 
 namespace Foam
 {
@@ -46,6 +48,39 @@ void validateTransmuralBandConfig
 (
     scalar endoMInterface,
     scalar mEpiInterface,
+    scalar transitionWidth,
+    const word& smoothing,
+    const word& transitionMode
+);
+
+struct NamedFieldRegion
+{
+    word name;
+    scalar rangeMin;
+    scalar rangeMax;
+};
+
+struct NamedRegionWeight
+{
+    word name;
+    scalar weight;
+};
+
+//- Parse an open dictionary of {name: {range (min max);}} entries into a
+//  list sorted by rangeMin. Fatals if any region is missing 'range', if
+//  a range is malformed, if fewer than two regions are declared, or if
+//  the sorted regions do not tile [0,1] contiguously with no gaps/overlaps
+//  — including at the edges: the first region's rangeMin must be exactly
+//  0 and the last region's rangeMax must be exactly 1 (within SMALL).
+List<NamedFieldRegion> parseNamedFieldRegions(const dictionary& regionsDict);
+
+//- Per-cell region weights (sum to 1) for field value t against a
+//  pre-sorted, contiguous region list. transitionWidth <= SMALL or
+//  transitionMode "hard" gives a single region with weight 1.
+List<NamedRegionWeight> namedRegionWeightsAt
+(
+    scalar t,
+    const List<NamedFieldRegion>& regions,
     scalar transitionWidth,
     const word& smoothing,
     const word& transitionMode
