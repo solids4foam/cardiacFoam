@@ -190,6 +190,15 @@ Foam::ionicHeterogeneity::parseNamedFieldRegions
                 << exit(FatalError);
         }
 
+        if (regionName == "global")
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity region name 'global' is reserved for "
+                << "ionicConstantOverrides.global and cannot be used as a "
+                << "named region."
+                << exit(FatalError);
+        }
+
         const dictionary& regionDict = regionsDict.subDict(regionName);
 
         if (!regionDict.found("range"))
@@ -311,6 +320,9 @@ Foam::ionicHeterogeneity::namedRegionWeightsAt
     label idx = nRegions - 1;
     for (label i = 0; i < nRegions; ++i)
     {
+        // Exact boundaries belong to the lower field region, matching the
+        // legacy transmuralBandWeights() convention for hard assignment and
+        // zero-width transitions.
         if (t <= regions[i].rangeMax || i == nRegions - 1)
         {
             idx = i;

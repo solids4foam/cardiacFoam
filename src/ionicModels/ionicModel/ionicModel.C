@@ -576,6 +576,23 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
             << exit(FatalError);
     }
 
+    if (smoothing != "smoothstep")
+    {
+        FatalErrorInFunction
+            << "Unsupported ionicHeterogeneity smoothing '" << smoothing
+            << "' for mode namedRegions. Supported: smoothstep."
+            << exit(FatalError);
+    }
+
+    if (transitionWidth < 0.0)
+    {
+        FatalErrorInFunction
+            << "Invalid ionicHeterogeneity transitionWidth "
+            << transitionWidth << " for mode namedRegions. Expected a "
+            << "non-negative value."
+            << exit(FatalError);
+    }
+
     if (!heterogeneityDict.found("regions"))
     {
         FatalErrorInFunction
@@ -589,6 +606,26 @@ void Foam::ionicModel::configureNamedRegionHeterogeneity
         (
             heterogeneityDict.subDict("regions")
         );
+
+    if (transitionMode == "blend")
+    {
+        for (label regionI = 1; regionI < regions.size(); ++regionI)
+        {
+            const scalar regionWidth =
+                regions[regionI].rangeMax - regions[regionI].rangeMin;
+
+            if (transitionWidth > regionWidth + SMALL)
+            {
+                FatalErrorInFunction
+                    << "Invalid ionicHeterogeneity transitionWidth "
+                    << transitionWidth << " for mode namedRegions. Region "
+                    << regions[regionI].name << " has width "
+                    << regionWidth << ", so this transition would overlap "
+                    << "the next boundary."
+                    << exit(FatalError);
+            }
+        }
+    }
 
     blendNamedRegions
     (
@@ -751,6 +788,7 @@ Foam::scalarField Foam::ionicModel::constantsForRegion
         dict_,
         type(),
         regionName,
+        baseline,
         knownRegionNames
     );
 
@@ -772,4 +810,3 @@ Foam::scalarField Foam::ionicModel::initialStatesForRegion
 
     return initialStatesForTissue(tissueFlag);
 }
-

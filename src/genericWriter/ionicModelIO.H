@@ -171,6 +171,7 @@ public:
         const dictionary& dict,
         const word& modelName,
         const word& scopeName,
+        const word& baselineScopeName,
         const wordList& knownScopeNames
     );
 

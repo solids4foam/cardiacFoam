@@ -189,6 +189,16 @@ protected:
                 const dictionary& heterogeneityDict
             ) override;
 
+            virtual scalarField constantsForTissue
+            (
+                const label tissueFlag
+            ) const override;
+
+            virtual scalarField initialStatesForTissue
+            (
+                const label tissueFlag
+            ) const override;
+
             virtual void configureApexBaseBandsHeterogeneity
             (
                 const scalarField& apexDist,

@@ -328,8 +328,9 @@ public:
 
         //- Base constants for a region given its explicit baseline
         //  (epicardialCells/mCells/endocardialCells/myocyte — validated by
-        //  ionicHeterogeneity::parseNamedFieldRegions), then layers the
-        //  region's own ionicConstantOverrides.<regionName> scope on top.
+        //  ionicHeterogeneity::parseNamedFieldRegions). constantsForTissue()
+        //  applies global and baseline overrides; this then layers the
+        //  region's own scope when it differs from the baseline.
         scalarField constantsForRegion
         (
             const word& regionName,

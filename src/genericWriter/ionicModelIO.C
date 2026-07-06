@@ -194,7 +194,7 @@ namespace Foam
             const wordList& knownScopeNames
         )
         {
-            if (name == "global")
+            if (isConstantOverrideScopeName(name))
             {
                 return true;
             }
@@ -844,6 +844,7 @@ namespace Foam
         const dictionary& dict,
         const word& modelName,
         const word& scopeName,
+        const word& baselineScopeName,
         const wordList& knownScopeNames
     )
     {
@@ -884,7 +885,7 @@ namespace Foam
                     << entryName << "' for ionic model " << modelName << "."
                     << nl
                     << "Declared regions: " << knownScopeNames
-                    << " (plus 'global')."
+                    << " (plus global/anatomical/myocyte scopes)."
                     << exit(FatalError);
             }
 
@@ -898,16 +899,16 @@ namespace Foam
             }
         }
 
-        if (overrides.found("global"))
-        {
-            applyConstantOverrideScope
-            (
-                constants, constantNames, nConstants, modelName,
-                overrides.subDict("global"), "global"
-            );
-        }
-
-        if (!scopeName.empty() && overrides.found(scopeName))
+        // constantsForRegion() starts from constantsForTissue(), which has
+        // already applied global and the explicit baseline scope. Layer the
+        // region's own scope only when it names a distinct scope; validation
+        // above still catches typos in either fixed or declared scopes.
+        if
+        (
+            !scopeName.empty()
+         && scopeName != baselineScopeName
+         && overrides.found(scopeName)
+        )
         {
             applyConstantOverrideScope
             (
