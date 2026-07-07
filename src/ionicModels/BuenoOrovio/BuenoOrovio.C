@@ -89,10 +89,9 @@ Foam::BuenoOrovio::BuenoOrovio
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
-    HETEROGENEOUS_CONSTANTS_(),
     activeIntegrationPoint_(0),
     ALGEBRAIC_(num),
     RATES_(num)
@@ -151,19 +150,6 @@ Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissueTypes() const
 }
 
 
-void Foam::BuenoOrovio::configureIonicHeterogeneity
-(
-    const scalarField& transmuralDistance,
-    const dictionary& heterogeneityDict
-)
-{
-    configureTransmuralBandHeterogeneity
-    (
-        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
-    );
-}
-
-
 Foam::scalarField Foam::BuenoOrovio::constantsForTissue
 (
     const label tissueFlag
@@ -192,16 +178,6 @@ Foam::scalarField Foam::BuenoOrovio::initialStatesForTissue
     );
 
     return states;
-}
-
-
-void Foam::BuenoOrovio::configureApexBaseBandsHeterogeneity
-(
-    const scalarField& apexDist,
-    const dictionary& dict
-)
-{
-    configureApexBaseBandsHeterogeneityImpl(apexDist, dict, HETEROGENEOUS_CONSTANTS_);
 }
 
 

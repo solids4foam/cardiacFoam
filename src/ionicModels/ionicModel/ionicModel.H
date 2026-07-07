@@ -42,7 +42,6 @@ Authors
 #include "fvMesh.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
-#include "ionicHeterogeneity.H"
 
 #include "electromechanicalSignalProvider.H"
 
@@ -100,10 +99,6 @@ class ionicModel
         void setStimulusProtocolFromDict(const dictionary& dict)
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
-        }
-        const dictionary& dict() const
-        {
-            return dict_;
         }
         wordList variableExport_;
         wordList debugVarNames_;
@@ -190,6 +185,12 @@ class ionicModel
         void applyIonicConstantOverrides() const;
 
 public:
+
+    //- Configuration dictionary for this model instance.
+    const dictionary& dict() const
+    {
+        return dict_;
+    }
 
     //- Runtime type information
     TypeName("ionicModel");
@@ -279,6 +280,8 @@ public:
             const dictionary& dict
         );
 
+        //- Configure region-based heterogeneity through
+        //  ionicHeterogeneityOrchestrator.
         void configureTransmuralBandHeterogeneity
         (
             const scalarField& transmuralDistance,
@@ -287,6 +290,8 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates = nullptr
         ) const;
 
+        //- Configure apex-to-base heterogeneity through
+        //  ionicHeterogeneityOrchestrator.
         void configureApexBaseBandsHeterogeneityImpl
         (
             const scalarField& apexDist,
@@ -297,69 +302,6 @@ public:
         virtual scalarField constantsForTissue(const label tissueFlag) const;
 
         virtual scalarField initialStatesForTissue(const label tissueFlag) const;
-
-        //- namedRegions mode: generalizes configureTransmuralBandHeterogeneity
-        //  to an open, dictionary-declared list of named field regions.
-        //  Dispatched automatically from configureTransmuralBandHeterogeneity
-        //  when heterogeneityDict.mode == "namedRegions" — models do not
-        //  call this directly.
-        void configureNamedRegionHeterogeneity
-        (
-            const scalarField& fieldValues,
-            const dictionary& heterogeneityDict,
-            PtrList<scalarField>& heterogeneousConstants,
-            PtrList<scalarField>* heterogeneousInitialStates
-        ) const;
-
-        //- cellZoneRegions mode: applies heterogeneity based on mesh cell zones.
-        //  Unlike namedRegions, this uses a hard assignment (no transition width)
-        //  since elements belong discretely to zones.
-        void configureCellZoneRegionHeterogeneity
-        (
-            const scalarField& regionIndices,
-            const dictionary& heterogeneityDict,
-            PtrList<scalarField>& heterogeneousConstants,
-            PtrList<scalarField>* heterogeneousInitialStates
-        ) const;
-
-        //- Shared blending core for configureNamedRegionHeterogeneity and
-        //  the transmuralBands shorthand: given an already-built region
-        //  list (with explicit baselines) and transition controls, resolve
-        //  per-cell constants/initial-states by blending across regions.
-        void blendNamedRegions
-        (
-            const scalarField& fieldValues,
-            const List<ionicHeterogeneity::NamedFieldRegion>& regions,
-            scalar transitionWidth,
-            const word& smoothing,
-            const word& transitionMode,
-            PtrList<scalarField>& heterogeneousConstants,
-            PtrList<scalarField>* heterogeneousInitialStates
-        ) const;
-
-        //- Base constants for a region given its explicit baseline
-        //  (epicardialCells/mCells/endocardialCells/myocyte — validated by
-        //  ionicHeterogeneity::parseNamedFieldRegions). constantsForTissue()
-        //  applies global and baseline overrides; this then layers the
-        //  region's own scope when it differs from the baseline.
-        scalarField constantsForRegion
-        (
-            const word& regionName,
-            const word& baseline,
-            const wordList& knownRegionNames
-        ) const;
-
-        //- Initial states for a region given its explicit baseline. Unlike
-        //  constantsForRegion, this does NOT apply ionicConstantOverrides
-        //  — there is no override mechanism for initial states, only
-        //  constants. knownRegionNames is accepted for signature symmetry
-        //  but unused.
-        scalarField initialStatesForRegion
-        (
-            const word& regionName,
-            const word& baseline,
-            const wordList& knownRegionNames
-        ) const;
 
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;

@@ -69,7 +69,7 @@ Foam::Fabbri::Fabbri
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
@@ -166,32 +166,6 @@ Foam::scalarField Foam::Fabbri::initialStatesForTissue
     );
 
     return states;
-}
-
-
-void Foam::Fabbri::configureIonicHeterogeneity
-(
-    const scalarField& transmuralDistance,
-    const dictionary& heterogeneityDict
-)
-{
-    configureTransmuralBandHeterogeneity
-    (
-        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
-    );
-}
-
-
-void Foam::Fabbri::configureApexBaseBandsHeterogeneity
-(
-    const scalarField& apexDist,
-    const dictionary& dict
-)
-{
-    configureApexBaseBandsHeterogeneityImpl
-    (
-        apexDist, dict, HETEROGENEOUS_CONSTANTS_
-    );
 }
 
 

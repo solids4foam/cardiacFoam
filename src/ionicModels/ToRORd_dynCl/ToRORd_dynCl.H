@@ -32,7 +32,7 @@ Author
 #ifndef ToRORd_dynCl_H
 #define ToRORd_dynCl_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
 #include "ToRORd_dynCl_2023Names.H"
@@ -49,7 +49,7 @@ namespace Foam
 
 class ToRORd_dynCl
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -58,9 +58,6 @@ class ToRORd_dynCl
 
         //- Constants
         mutable scalarField CONSTANTS_;
-
-        //- Heterogeneous Constants
-        mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
 
         //- Heterogeneous Initial States
         mutable PtrList<scalarField> HETEROGENEOUS_INITIAL_STATES_;
@@ -148,12 +145,6 @@ protected:
         (
             const scalarField& transmuralDistance,
             const dictionary& heterogeneityDict
-        ) override;
-
-        virtual void configureApexBaseBandsHeterogeneity
-        (
-            const scalarField& apexDist,
-            const dictionary& dict
         ) override;
 
         //- Full constants array for a tissue flag (endo 3, M 2, epi 1)

@@ -32,6 +32,7 @@ Author
 
 #include "batchedIonicModel.H"
 #include "ionicModelFamilyInfo.H"
+#include "ionicHeterogeneityOrchestrator.H"
 #include "error.H"
 
 namespace Foam
@@ -168,8 +169,9 @@ public:
                 << exit(FatalError);
         }
 
-        configureTransmuralBandHeterogeneity
+        ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
         (
+            *this,
             transmuralDistance,
             heterogeneityDict,
             HETEROGENEOUS_CONSTANTS_,
@@ -195,9 +197,9 @@ public:
         const dictionary& dict
     ) override
     {
-        configureApexBaseBandsHeterogeneityImpl
+        ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
         (
-            apexDist, dict, HETEROGENEOUS_CONSTANTS_
+            *this, apexDist, dict, HETEROGENEOUS_CONSTANTS_
         );
     }
 
