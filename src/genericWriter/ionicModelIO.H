@@ -115,8 +115,13 @@ public:
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
-        VmTransform transformVm
+        VmTransform transformVm = nullptr
     );
 
     static void writeSelected

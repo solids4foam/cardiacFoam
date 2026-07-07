@@ -876,6 +876,16 @@ void Foam::ionicModel::configureCellZoneRegionHeterogeneity
     }
 
     const label nCells = regionIndices.size();
+
+    heterogeneousConstants.clear();
+    heterogeneousConstants.setSize(nCells);
+
+    if (heterogeneousInitialStates)
+    {
+        heterogeneousInitialStates->clear();
+        heterogeneousInitialStates->setSize(nCells);
+    }
+
     for (label cellI = 0; cellI < nCells; ++cellI)
     {
         const label rIdx = round(regionIndices[cellI]);
@@ -888,19 +898,14 @@ void Foam::ionicModel::configureCellZoneRegionHeterogeneity
                 << exit(FatalError);
         }
 
-        const scalarField& rConsts = regionConstants[rIdx];
-        forAll(rConsts, cI)
-        {
-            heterogeneousConstants[cI][cellI] = rConsts[cI];
-        }
+        heterogeneousConstants.set(cellI, new scalarField(regionConstants[rIdx]));
 
         if (heterogeneousInitialStates)
         {
-            const scalarField& rStates = regionInitialStates[rIdx];
-            forAll(rStates, sI)
-            {
-                (*heterogeneousInitialStates)[sI][cellI] = rStates[sI];
-            }
+            heterogeneousInitialStates->set
+            (
+                cellI, new scalarField(regionInitialStates[rIdx])
+            );
         }
     }
 }

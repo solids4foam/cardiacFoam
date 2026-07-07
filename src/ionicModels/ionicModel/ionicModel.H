@@ -695,6 +695,11 @@ public:
                     os,
                     *statesPtr,
                     *algebraicPtr,
+                    ioStateNames(),
+                    ioNumStates(),
+                    ioAlgebraicNames(),
+                    ioNumAlgebraic(),
+                    fullWritePlanCache_,
                     *ratesPtr,
                     ioVmTransform()
                 );

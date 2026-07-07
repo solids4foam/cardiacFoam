@@ -613,33 +613,30 @@ namespace Foam
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
         VmTransform transformVm
     )
     {
+        const SelectionPlan& plan =
+            fullPlan
+            (
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                fullPlanCache
+            );
+
         const scalarField& S = STATES[0];
         const scalarField& A = ALGEBRAIC[0];
         const scalarField& R = RATES[0];
 
-        // Keep full-row emission tight; selected/export paths share one plan engine.
-        os << t << " " << (transformVm ? transformVm(S) : S[0]);
-
-        for (label i = 1; i < S.size(); ++i)
-        {
-            os << " " << S[i];
-        }
-
-        forAll(A, i)
-        {
-            os << " " << A[i];
-        }
-
-        forAll(R, i)
-        {
-            os << " " << R[i];
-        }
-
-        os << nl;
+        emitRow(t, os, S, A, R, plan, transformVm);
     }
 
     void Foam::ionicModelIO::writeSelected
