@@ -305,6 +305,88 @@ Foam::ionicHeterogeneity::parseNamedFieldRegions
 }
 
 
+Foam::List<Foam::ionicHeterogeneity::NamedCellZoneRegion>
+Foam::ionicHeterogeneity::parseNamedCellZoneRegions
+(
+    const dictionary& regionsDict
+)
+{
+    DynamicList<NamedCellZoneRegion> regions;
+
+    forAllConstIter(dictionary, regionsDict, iter)
+    {
+        const word regionName(iter().keyword());
+
+        if (!iter().isDict())
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions entry '" << regionName
+                << "' must be a dictionary."
+                << exit(FatalError);
+        }
+
+        if (regionName == "global")
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity region name 'global' is reserved for "
+                << "ionicConstantOverrides.global and cannot be used as a "
+                << "named region."
+                << exit(FatalError);
+        }
+
+        const dictionary& regionDict = regionsDict.subDict(regionName);
+
+        if (!regionDict.found("cellZone"))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << " has no 'cellZone' entry. Cell-zone based regions must "
+                << "declare 'cellZone <word>;'."
+                << exit(FatalError);
+        }
+
+        const word cellZoneName(regionDict.lookup("cellZone"));
+
+        static const wordList anatomicalNames
+        {
+            "epicardialCells", "mCells", "endocardialCells"
+        };
+
+        const word baseline = regionDict.lookupOrDefault<word>
+        (
+            "baseline",
+            anatomicalNames.found(regionName) ? regionName : word("myocyte")
+        );
+
+        if (!anatomicalNames.found(baseline) && baseline != "myocyte")
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << ".baseline '" << baseline << "' is not a supported "
+                << "tissue baseline. Supported: epicardialCells, mCells, "
+                << "endocardialCells, myocyte."
+                << exit(FatalError);
+        }
+
+        NamedCellZoneRegion region;
+        region.name = regionName;
+        region.cellZone = cellZoneName;
+        region.baseline = baseline;
+        regions.append(region);
+    }
+
+    if (regions.size() < 2)
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity mode cellZoneRegions requires at least "
+            << "two entries under 'regions', found " << regions.size()
+            << exit(FatalError);
+    }
+
+    return List<NamedCellZoneRegion>(regions);
+}
+
+
 Foam::List<Foam::ionicHeterogeneity::NamedRegionWeight>
 Foam::ionicHeterogeneity::namedRegionWeightsAt
 (

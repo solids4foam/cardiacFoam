@@ -311,6 +311,17 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates
         ) const;
 
+        //- cellZoneRegions mode: applies heterogeneity based on mesh cell zones.
+        //  Unlike namedRegions, this uses a hard assignment (no transition width)
+        //  since elements belong discretely to zones.
+        void configureCellZoneRegionHeterogeneity
+        (
+            const scalarField& regionIndices,
+            const dictionary& heterogeneityDict,
+            PtrList<scalarField>& heterogeneousConstants,
+            PtrList<scalarField>* heterogeneousInitialStates
+        ) const;
+
         //- Shared blending core for configureNamedRegionHeterogeneity and
         //  the transmuralBands shorthand: given an already-built region
         //  list (with explicit baselines) and transition controls, resolve

@@ -493,11 +493,21 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
         return;
     }
 
+    if (mode == "cellZoneRegions")
+    {
+        configureCellZoneRegionHeterogeneity
+        (
+            transmuralDistance, heterogeneityDict, heterogeneousConstants,
+            heterogeneousInitialStates
+        );
+        return;
+    }
+
     if (mode != "transmuralBands")
     {
         FatalErrorInFunction
             << "Unsupported " << type() << " ionicHeterogeneity mode '"
-            << mode << "'. Supported modes: transmuralBands, namedRegions."
+            << mode << "'. Supported modes: transmuralBands, namedRegions, cellZoneRegions."
             << exit(FatalError);
     }
 
@@ -809,4 +819,88 @@ Foam::scalarField Foam::ionicModel::initialStatesForRegion
     const label tissueFlag = ionicSelector::tissueFlag(baseline);
 
     return initialStatesForTissue(tissueFlag);
+}
+
+
+void Foam::ionicModel::configureCellZoneRegionHeterogeneity
+(
+    const scalarField& regionIndices,
+    const dictionary& heterogeneityDict,
+    PtrList<scalarField>& heterogeneousConstants,
+    PtrList<scalarField>* heterogeneousInitialStates
+) const
+{
+    const dictionary& regionsDict = heterogeneityDict.subDict("regions");
+    const auto regions = ionicHeterogeneity::parseNamedCellZoneRegions(regionsDict);
+    const label nRegions = regions.size();
+
+    // Setup arrays of constant and initial state fields per region
+    PtrList<scalarField> regionConstants(nRegions);
+    PtrList<scalarField> regionInitialStates;
+    if (heterogeneousInitialStates)
+    {
+        regionInitialStates.setSize(nRegions);
+    }
+
+    wordList regionNames(nRegions);
+    forAll(regions, i)
+    {
+        regionNames[i] = regions[i].name;
+    }
+
+    forAll(regions, i)
+    {
+        const word& regionName = regions[i].name;
+        const word& baseline = regions[i].baseline;
+
+        regionConstants.set
+        (
+            i,
+            new scalarField
+            (
+                constantsForRegion(regionName, baseline, regionNames)
+            )
+        );
+
+        if (heterogeneousInitialStates)
+        {
+            regionInitialStates.set
+            (
+                i,
+                new scalarField
+                (
+                    initialStatesForRegion(regionName, baseline, regionNames)
+                )
+            );
+        }
+    }
+
+    const label nCells = regionIndices.size();
+    for (label cellI = 0; cellI < nCells; ++cellI)
+    {
+        const label rIdx = round(regionIndices[cellI]);
+
+        if (rIdx < 0 || rIdx >= nRegions)
+        {
+            FatalErrorInFunction
+                << "Cell " << cellI << " mapped to region index " << rIdx
+                << " but there are only " << nRegions << " cellZone regions defined."
+                << exit(FatalError);
+        }
+
+        const scalarField& rConsts = regionConstants[rIdx];
+        forAll(rConsts, cI)
+        {
+            heterogeneousConstants[cI][cellI] = rConsts[cI];
+        }
+
+        if (heterogeneousInitialStates)
+        {
+            const scalarField& rStates = regionInitialStates[rIdx];
+            forAll(rStates, sI)
+            {
+                (*heterogeneousInitialStates)[sI][cellI] = rStates[sI];
+            }
+        }
+    }
 }

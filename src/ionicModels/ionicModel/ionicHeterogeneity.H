@@ -69,6 +69,13 @@ struct NamedFieldRegion
     word baseline;
 };
 
+struct NamedCellZoneRegion
+{
+    word name;
+    word cellZone;
+    word baseline;
+};
+
 struct NamedRegionWeight
 {
     word name;
@@ -86,6 +93,11 @@ struct NamedRegionWeight
 //  — including at the edges: the first region's rangeMin must be exactly
 //  0 and the last region's rangeMax must be exactly 1 (within SMALL).
 List<NamedFieldRegion> parseNamedFieldRegions(const dictionary& regionsDict);
+
+//- Parse an open dictionary of {name: {cellZone <word>; baseline <word>;}}
+//  entries. 'baseline' follows the same fallback rules as NamedFieldRegion.
+//  Fatals if any region is missing 'cellZone'.
+List<NamedCellZoneRegion> parseNamedCellZoneRegions(const dictionary& regionsDict);
 
 //- Per-cell region weights (sum to 1) for field value t against a
 //  pre-sorted, contiguous region list. transitionWidth <= SMALL or
