@@ -71,11 +71,16 @@ This library is used by:
 The `ionicModel/` subfolder now contains both the classic base/factory code and
 batched or GPU-oriented support headers.
 
-**Tissue heterogeneity support:** Ionic models can optionally configure transmural
-spatial heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial)
-through the `ionicHeterogeneity` dictionary block. Implemented in `BuenoOrovio`
-and batched models `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`,
-`ToRORd_dynClBatched`. See `src/ionicModels/README.md` for configuration details.
+**Tissue heterogeneity support:** Ionic models can optionally configure spatial
+heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial, or
+open-ended named/scar regions) through the `ionicHeterogeneity` dictionary block,
+in one of three modes — `transmuralBands` (fixed 3-zone), `namedRegions` (open,
+field-range-based), or `cellZoneRegions` (mesh-topology-based) — plus an optional
+`apexBaseBands` scaling composable with any mode. All 12 scalar models (via
+`configuredIonicModel`) support this; batched models support it only when their
+`supportedTissueTypes()` includes all three anatomical types (currently
+`BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`, `ToRORd_dynClBatched`). See
+`src/ionicModels/README.md` for configuration details.
 
 ### `verificationModels` — `libverificationModels`
 

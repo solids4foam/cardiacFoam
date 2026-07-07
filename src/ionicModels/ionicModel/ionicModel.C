@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ionicModel.H"
-#include "ionicHeterogeneity.H"
+#include "ionicHeterogeneityOrchestrator.H"
 #include "ionicSelector.H"
 #include "ionicVariableCompatibility.H"
 
@@ -365,99 +365,10 @@ void Foam::ionicModel::configureApexBaseBandsHeterogeneityImpl
     PtrList<scalarField>& heterogeneousConstants
 ) const
 {
-    const scalar beta =
-        dict.lookupOrDefault<scalar>("beta", 3.0);
-    const scalar scalingMin =
-        dict.lookupOrDefault<scalar>("scalingMin", 0.2);
-    const scalar scalingMax =
-        dict.lookupOrDefault<scalar>("scalingMax", 5.0);
-    const wordList variables(dict.lookup("variables"));
-
-    if (variables.empty())
-    {
-        FatalErrorInFunction
-            << "apexBaseBands: 'variables' list is empty for ionic model "
-            << type() << ". Specify at least one constant name to scale."
-            << exit(FatalError);
-    }
-
-    if (scalingMin <= 0.0 || scalingMax <= 0.0 || scalingMax < scalingMin)
-    {
-        FatalErrorInFunction
-            << "apexBaseBands: invalid scalingMin=" << scalingMin
-            << " scalingMax=" << scalingMax
-            << ". Require 0 < scalingMin <= scalingMax."
-            << exit(FatalError);
-    }
-
-    const label nConst = ioNumConstants();
-    const char* const* names = ioConstantNames();
-    const scalarField* baseConstants = ioConstantsPtr();
-
-    if (!names || nConst <= 0 || !baseConstants || baseConstants->empty())
-    {
-        FatalErrorInFunction
-            << "apexBaseBands was requested for ionic model " << type()
-            << ", but this model does not expose constant metadata "
-            << "(ioConstantNames / ioConstantsPtr)."
-            << exit(FatalError);
-    }
-
-    labelList indices(variables.size(), -1);
-    forAll(variables, vi)
-    {
-        for (label ci = 0; ci < nConst; ci++)
-        {
-            if (word(names[ci]) == variables[vi])
-            {
-                indices[vi] = ci;
-                break;
-            }
-        }
-        if (indices[vi] < 0)
-        {
-            FatalErrorInFunction
-                << "apexBaseBands: variable '" << variables[vi]
-                << "' not found in constant names of ionic model " << type()
-                << ". Available constants: ";
-            for (label ci = 0; ci < nConst; ci++)
-            {
-                FatalErrorInFunction << names[ci] << ' ';
-            }
-            FatalErrorInFunction << exit(FatalError);
-        }
-    }
-
-    if (heterogeneousConstants.empty())
-    {
-        heterogeneousConstants.setSize(apexDist.size());
-        forAll(apexDist, cellI)
-        {
-            heterogeneousConstants.set(cellI, new scalarField(*baseConstants));
-        }
-    }
-    else if (heterogeneousConstants.size() != apexDist.size())
-    {
-        FatalErrorInFunction
-            << "apexBaseBands: longitudinal distance field has "
-            << apexDist.size() << " values but " << type()
-            << " has " << heterogeneousConstants.size()
-            << " heterogeneous constant sets."
-            << exit(FatalError);
-    }
-
-    forAll(apexDist, cellI)
-    {
-        const scalar d = min(max(apexDist[cellI], scalar(0.0)), scalar(1.0));
-        const scalar f =
-            ionicHeterogeneity::apexBaseScale(d, beta, scalingMin, scalingMax);
-
-        scalarField& consts = heterogeneousConstants[cellI];
-        forAll(indices, vi)
-        {
-            consts[indices[vi]] *= f;
-        }
-    }
+    ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
+    (
+        *this, apexDist, dict, heterogeneousConstants
+    );
 }
 
 
@@ -469,149 +380,9 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
     PtrList<scalarField>* heterogeneousInitialStates
 ) const
 {
-    const auto* statesPtr = ioStatesPtr();
-
-    if (statesPtr && transmuralDistance.size() != statesPtr->size())
-    {
-        FatalErrorInFunction
-            << "Transmural distance field has " << transmuralDistance.size()
-            << " values, but " << type() << " was configured with "
-            << statesPtr->size() << " integration points."
-            << exit(FatalError);
-    }
-
-    const word mode =
-        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
-
-    if (mode != "transmuralBands")
-    {
-        FatalErrorInFunction
-            << "Unsupported " << type() << " ionicHeterogeneity mode '"
-            << mode << "'. Supported mode: transmuralBands."
-            << exit(FatalError);
-    }
-
-    const word smoothing =
-        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-    const scalar endoMInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-
-    ionicHeterogeneity::validateTransmuralBandConfig
+    ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
     (
-        endoMInterface,
-        mEpiInterface,
-        transitionWidth,
-        smoothing,
-        transitionMode
+        *this, transmuralDistance, heterogeneityDict, heterogeneousConstants,
+        heterogeneousInitialStates
     );
-
-    const scalarField endoConstants =
-        constantsForTissue(ionicSelector::tissueFlag("endocardialCells"));
-    const scalarField mCellConstants =
-        constantsForTissue(ionicSelector::tissueFlag("mCells"));
-    const scalarField epiConstants =
-        constantsForTissue(ionicSelector::tissueFlag("epicardialCells"));
-
-    if
-    (
-        endoConstants.empty()
-     || endoConstants.size() != mCellConstants.size()
-     || endoConstants.size() != epiConstants.size()
-    )
-    {
-        FatalErrorInFunction
-            << "ionicHeterogeneity was requested for ionic model " << type()
-            << ", but this model does not provide endo/M/epi constants."
-            << exit(FatalError);
-    }
-
-    scalarField endoStates, mCellStates, epiStates;
-    bool blendStates = false;
-    if (heterogeneousInitialStates)
-    {
-        endoStates = initialStatesForTissue(ionicSelector::tissueFlag("endocardialCells"));
-        mCellStates = initialStatesForTissue(ionicSelector::tissueFlag("mCells"));
-        epiStates = initialStatesForTissue(ionicSelector::tissueFlag("epicardialCells"));
-
-        if
-        (
-            !endoStates.empty()
-         && endoStates.size() == mCellStates.size()
-         && endoStates.size() == epiStates.size()
-        )
-        {
-            blendStates = true;
-            heterogeneousInitialStates->clear();
-            heterogeneousInitialStates->setSize(transmuralDistance.size());
-        }
-    }
-
-    heterogeneousConstants.clear();
-    heterogeneousConstants.setSize(transmuralDistance.size());
-
-    forAll(transmuralDistance, integrationPtI)
-    {
-        const scalar rawT = transmuralDistance[integrationPtI];
-
-        if (rawT < -SMALL || rawT > 1.0 + SMALL)
-        {
-            FatalErrorInFunction
-                << "Transmural distance value t=" << rawT
-                << " at integration point " << integrationPtI
-                << " is outside the expected [0, 1] range."
-                << exit(FatalError);
-        }
-
-        const scalar t = min(max(rawT, scalar(0.0)), scalar(1.0));
-        scalarField mappedConstants(endoConstants.size(), 0.0);
-        const ionicHeterogeneity::TransmuralBandWeights weights =
-            ionicHeterogeneity::transmuralBandWeights
-            (
-                t,
-                endoMInterface,
-                mEpiInterface,
-                transitionWidth,
-                smoothing,
-                transitionMode
-            );
-
-        forAll(mappedConstants, constantI)
-        {
-            mappedConstants[constantI] =
-                weights.endo*endoConstants[constantI]
-              + weights.mCell*mCellConstants[constantI]
-              + weights.epi*epiConstants[constantI];
-        }
-
-        heterogeneousConstants.set
-        (
-            integrationPtI,
-            new scalarField(mappedConstants)
-        );
-
-        if (blendStates)
-        {
-            scalarField mappedStates(endoStates.size(), 0.0);
-            forAll(mappedStates, stateI)
-            {
-                mappedStates[stateI] =
-                    weights.endo*endoStates[stateI]
-                  + weights.mCell*mCellStates[stateI]
-                  + weights.epi*epiStates[stateI];
-            }
-            heterogeneousInitialStates->set
-            (
-                integrationPtI,
-                new scalarField(mappedStates)
-            );
-        }
-    }
-
-
 }

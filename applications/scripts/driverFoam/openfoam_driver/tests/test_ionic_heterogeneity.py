@@ -29,7 +29,7 @@
 
 Covers the four surfaces wired in Phase 2:
   1. ionic_model_catalog: ``supports_heterogeneity`` and
-     ``supports_apex_base_heterogeneity`` flags.
+     ``supports_apex_base_heterogeneity`` flags plus tissue semantics.
   2. dict_entries: the seven transmural ``ionicHeterogeneity.*`` DictEntries
      plus the five ``apexBaseBands.*`` entries (12 total, separately gated).
   3. dict_builder: build + parse round-trip of a heterogeneity block
@@ -42,6 +42,12 @@ from __future__ import annotations
 
 from openfoam_driver.core.runtime.run_model import RunDocument
 from openfoam_driver.specs.validation import validate_run
+
+_NATIVE_TISSUE_MODELS = ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl")
+_OVERRIDE_ONLY_TISSUE_MODELS = (
+    "AlievPanfilov", "Courtemanche", "Fabbri", "Gaur",
+    "Grandi", "PerisYague", "Stewart", "Trovato",
+)
 
 
 # --------------------------------------------------------------------------
@@ -65,7 +71,10 @@ def test_supports_heterogeneity_inherited_by_batched_variants():
 
 def test_single_tissue_models_do_not_support_heterogeneity():
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
-    for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
+    for name in (
+        "monodomainFDAManufactured", "bidomainFDAManufactured",
+        "bathBidomainFDAManufactured",
+    ):
         assert IONIC_MODEL_CATALOG[name].supports_heterogeneity is False, name
 
 
@@ -84,9 +93,46 @@ def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
 
 
-def test_single_tissue_models_do_not_support_apex_base_heterogeneity():
+def test_native_tissue_labels_mark_models_with_intrinsic_tissue_variants():
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
-    for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
+    expected = ("epicardialCells", "mCells", "endocardialCells")
+    for name in _NATIVE_TISSUE_MODELS:
+        assert IONIC_MODEL_CATALOG[name].native_tissue_labels == expected, name
+        assert IONIC_MODEL_CATALOG[name].approximate_tissue_labels == (), name
+
+
+def test_override_only_models_advertise_approximate_tissue_labels_explicitly():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    expected = ("epicardialCells", "mCells", "endocardialCells")
+    for name in _OVERRIDE_ONLY_TISSUE_MODELS:
+        assert IONIC_MODEL_CATALOG[name].native_tissue_labels == ("myocyte",), name
+        assert IONIC_MODEL_CATALOG[name].approximate_tissue_labels == expected, name
+
+
+def test_default_single_cell_tissue_map_uses_native_tissues_only():
+    from openfoam_driver.core.defaults.single_cell import IONIC_MODEL_TISSUE_MAP
+    assert IONIC_MODEL_TISSUE_MAP["BuenoOrovio"] == (
+        "epicardialCells", "mCells", "endocardialCells",
+    )
+    assert IONIC_MODEL_TISSUE_MAP["Gaur"] == ("myocyte",)
+
+
+def test_default_restitution_tissue_map_uses_native_tissues_only():
+    from openfoam_driver.core.defaults.restitution_curves import IONIC_MODEL_TISSUE_MAP
+    assert IONIC_MODEL_TISSUE_MAP["TNNP"] == (
+        "epicardialCells", "mCells", "endocardialCells",
+    )
+    assert IONIC_MODEL_TISSUE_MAP["Courtemanche"] == ("myocyte",)
+
+
+def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
+    # These models support neither transmural/named-region nor apex-base
+    # heterogeneity at all — the manufactured verification models.
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    for name in (
+        "monodomainFDAManufactured", "bidomainFDAManufactured",
+        "bathBidomainFDAManufactured",
+    ):
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is False, name
 
 
@@ -122,9 +168,14 @@ def test_all_twelve_heterogeneity_entries_exist():
     ab_leaves = ("apexBaseBands.field", "apexBaseBands.beta",
                  "apexBaseBands.scalingMin", "apexBaseBands.scalingMax",
                  "apexBaseBands.variables")
+    region_leaves = (
+        "regions.<region_name>.baseline",
+        "regions.<region_name>.cellZone",
+        "regions.<region_name>.range",
+    )
     expected = {
         f"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.{leaf}"
-        for leaf in (*transmural_leaves, *ab_leaves)
+        for leaf in (*transmural_leaves, *ab_leaves, *region_leaves)
     }
     assert paths == expected
 
@@ -143,7 +194,7 @@ def test_apex_base_entries_gated_to_monodomain_only():
 
 def test_heterogeneity_enum_values():
     by_leaf = {e.driver_path.rsplit(".", 1)[-1]: e for e in _het_entries()}
-    assert by_leaf["mode"].enum_values == ("transmuralBands",)
+    assert set(by_leaf["mode"].enum_values) == {"transmuralBands", "namedRegions", "cellZoneRegions"}
     assert by_leaf["transitionMode"].enum_values == ("blend", "hard")
     assert by_leaf["smoothing"].enum_values == ("smoothstep",)
 
@@ -237,8 +288,8 @@ def _run(physics: dict) -> RunDocument:
 def test_heterogeneity_with_incapable_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",
-        "tissue": "myocyte",
+        "ionicModel": "monodomainFDAManufactured",
+        "tissue": "manufactured",
         "ionicHeterogeneity.field": "t",
         "ionicHeterogeneity.mode": "transmuralBands",
     })
@@ -292,7 +343,7 @@ def test_endoM_less_than_mEpi_is_silent():
 def test_tissue_incompatible_with_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",   # myocyte-only
+        "ionicModel": "AlievPanfilovcompactBatched",   # myocyte-only (not yet wired for heterogeneity)
         "tissue": "epicardialCells",
     })
     errors = [e for e in validate_run(run)
@@ -317,7 +368,7 @@ def test_tissue_compatible_with_model_is_silent():
 def test_apex_base_with_incapable_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",
+        "ionicModel": "bidomainFDAManufactured",
         "tissue": "myocyte",
         "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",

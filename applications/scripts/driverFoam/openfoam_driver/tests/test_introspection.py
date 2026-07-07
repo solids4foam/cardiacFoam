@@ -125,6 +125,7 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("TNNP", catalog["ionic_models"])
         tnnp = catalog["ionic_models"]["TNNP"]
         for key in ("states", "algebraic", "recommended_exports", "compatible_tissues",
+                    "native_tissue_labels", "approximate_tissue_labels",
                     "compatible_solvers", "species", "cardiac_region", "model_type"):
             self.assertIn(key, tnnp, msg=f"Missing key {key!r} on TNNP")
         # tuples must be serialised to lists

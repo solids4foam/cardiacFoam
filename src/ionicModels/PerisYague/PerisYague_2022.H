@@ -28,7 +28,7 @@ Author
 #include "dictionary.H"
 #include <cmath>
 
-static const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
+static const char* PerisYagueSTATES_NAMES[NUM_STATES] = {
     "membrane_V",
     "sodium_Nai",
     "potassium_Ki",
@@ -53,7 +53,7 @@ static const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
     "ryr_w"
 };
 
-static const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* PerisYagueALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_ICaL",
     "AV_IK1",
     "AV_IKr",
@@ -108,7 +108,7 @@ static const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Istim"
 };
 
-static const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* PerisYagueCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_CMDN_max",
     "AC_CSQN_max",
     "AC_Ca_up_max",
@@ -164,7 +164,7 @@ static const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
 };
 
 static inline const Foam::HashTable<Foam::wordList>&
-PerisYague_2022DependencyMap()
+PerisYagueDependencyMap()
 {
     static const Foam::HashTable<Foam::wordList> dep
     (
@@ -206,7 +206,7 @@ PerisYague_2022DependencyMap()
     return dep;
 }
 
-inline Foam::scalar PerisYague_2022computeIstim
+inline Foam::scalar PerisYaguecomputeIstim
 (
     Foam::scalar t,
     const Foam::StimulusProtocol& stimulus
@@ -216,7 +216,7 @@ inline Foam::scalar PerisYague_2022computeIstim
 }
 
 void
-PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
+PerisYagueinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
     CONSTANTS[AC_R] = 8.3143;
     CONSTANTS[AC_T] = 310.0;
@@ -300,7 +300,7 @@ PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int 
 }
 
 void
-PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     double V = STATES[membrane_V];
     double Cai = STATES[calcium_Cai];
@@ -429,7 +429,7 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
 
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa] + ALGEBRAIC[AV_IClCa];
 
-    ALGEBRAIC[Istim] = PerisYague_2022computeIstim(VOI, stimulus);
+    ALGEBRAIC[Istim] = PerisYaguecomputeIstim(VOI, stimulus);
     RATES[membrane_V] = 0.0;
     if (solveVmWithinODESolver)
     {

@@ -33,7 +33,7 @@ Author
 #ifndef AlievPanfilov_H
 #define AlievPanfilov_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "AlievPanfilov_1996Names.H"
 #include "OFstream.H"
 #include "volFields.H"
@@ -49,7 +49,7 @@ namespace Foam
 
 class AlievPanfilov
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -64,6 +64,9 @@ class AlievPanfilov
 
         //- Rates
         mutable PtrList<scalarField> RATES_;
+
+        //- Active integration point for derivatives() (no index argument)
+        mutable label activeIntegrationPoint_ = 0;
 
 
     // Private Member Functions
@@ -138,8 +141,25 @@ protected:
         OverrideTypeName("AlievPanfilov");
 
 
-        //override the only available tissue in this model
+        //- Tissue types supported by this model. "myocyte" preserves the
+        //  existing homogeneous-run behavior; the anatomical three enable
+        //  ionicHeterogeneity (transmuralBands or namedRegions).
         virtual List<word> supportedTissueTypes() const override;
+
+        //- Per-point constants accessor (heterogeneous when configured)
+        scalarField& constants(const label integrationPtI) const;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        virtual scalarField initialStatesForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag

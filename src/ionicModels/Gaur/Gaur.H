@@ -32,7 +32,7 @@ Author
 #ifndef Gaur_H
 #define Gaur_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
 #include "Gaur_2021Names.H"
@@ -49,7 +49,7 @@ namespace Foam
 
 class Gaur
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -64,6 +64,10 @@ class Gaur
 
         //- Rates
         mutable PtrList<scalarField> RATES_;
+
+
+        //- Active integration point for derivatives() (no index argument)
+        mutable label activeIntegrationPoint_ = 0;
 
 
     // Private Member Functions
@@ -128,8 +132,25 @@ protected:
         OverrideTypeName("Gaur");
 
 
-        //override the only available tissue in this model
+        //- Tissue types supported by this model. "myocyte" preserves the
+        //  existing homogeneous-run behavior; the anatomical three enable
+        //  ionicHeterogeneity (transmuralBands or namedRegions).
         virtual List<word> supportedTissueTypes() const override;
+
+        //- Per-point constants accessor (heterogeneous when configured)
+        scalarField& constants(const label integrationPtI) const;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        virtual scalarField initialStatesForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag

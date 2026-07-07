@@ -169,7 +169,7 @@ Foam::PerisYagueBatched::PerisYagueBatched
     double initialRates[NUM_STATES] = {0.0};
     double initialStates[NUM_STATES] = {0.0};
 
-    PerisYague_2022initConsts
+    PerisYagueinitConsts
     (
         CONSTANTS_.data(),
         initialRates,
@@ -235,7 +235,7 @@ void Foam::PerisYagueBatched::evaluateState
     scalarUList& algebraicValues
 ) const
 {
-    PerisYague_2022computeVariables
+    PerisYaguecomputeVariables
     (
         modelTime,
         CONSTANTS_.data(),

@@ -33,7 +33,7 @@ Author
 #ifndef TNNP_H
 #define TNNP_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
 #include "TNNP_2004Names.H"
@@ -50,7 +50,7 @@ namespace Foam
 
 class TNNP
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -66,8 +66,6 @@ class TNNP
         //- Rates
         mutable PtrList<scalarField> RATES_;
 
-        //- Per-integration-point constants when transmural heterogeneity is on
-        mutable PtrList<scalarField> HETEROGENEOUS_CONSTANTS_;
 
         //- Active integration point for derivatives() (no index argument)
         mutable label activeIntegrationPoint_ = 0;
@@ -147,18 +145,6 @@ protected:
             const label tissueFlag
         ) const override;
 
-        //- Build per-point transmural heterogeneity from electroProperties
-        virtual void configureIonicHeterogeneity
-        (
-            const scalarField& transmuralDistance,
-            const dictionary& heterogeneityDict
-        ) override;
-
-        virtual void configureApexBaseBandsHeterogeneity
-        (
-            const scalarField& apexDist,
-            const dictionary& dict
-        ) override;
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag

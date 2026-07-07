@@ -100,10 +100,6 @@ class ionicModel
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
         }
-        const dictionary& dict() const
-        {
-            return dict_;
-        }
         wordList variableExport_;
         wordList debugVarNames_;
         mutable ionicModelIO::FullPlanCache fullWritePlanCache_;
@@ -189,6 +185,12 @@ class ionicModel
         void applyIonicConstantOverrides() const;
 
 public:
+
+    //- Configuration dictionary for this model instance.
+    const dictionary& dict() const
+    {
+        return dict_;
+    }
 
     //- Runtime type information
     TypeName("ionicModel");
@@ -278,6 +280,8 @@ public:
             const dictionary& dict
         );
 
+        //- Configure region-based heterogeneity through
+        //  ionicHeterogeneityOrchestrator.
         void configureTransmuralBandHeterogeneity
         (
             const scalarField& transmuralDistance,
@@ -286,6 +290,8 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates = nullptr
         ) const;
 
+        //- Configure apex-to-base heterogeneity through
+        //  ionicHeterogeneityOrchestrator.
         void configureApexBaseBandsHeterogeneityImpl
         (
             const scalarField& apexDist,
@@ -631,6 +637,11 @@ public:
                     os,
                     *statesPtr,
                     *algebraicPtr,
+                    ioStateNames(),
+                    ioNumStates(),
+                    ioAlgebraicNames(),
+                    ioNumAlgebraic(),
+                    fullWritePlanCache_,
                     *ratesPtr,
                     ioVmTransform()
                 );

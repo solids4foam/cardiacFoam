@@ -32,9 +32,12 @@ from typing import Any, Final, Literal
 from .ionic_model_catalog import BATCHED_MODELS
 
 # Ionic models that implement transmural tissue heterogeneity
-# (configureIonicHeterogeneity, endo/M/epi blend) on CPU and/or GPU.
+# (configureIonicHeterogeneity, endo/M/epi blend and/or namedRegions) on
+# CPU and/or GPU.
 HETEROGENEITY_MODELS: tuple[str, ...] = (
     "BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl",
+    "AlievPanfilov", "Courtemanche", "Fabbri", "Gaur",
+    "Grandi", "PerisYague", "Stewart", "Trovato",
     "BuenoOroviocompactBatched", "TNNPcompactBatched",
     "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
 )
@@ -459,7 +462,31 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Heterogeneity application mode.',
             source_refs=('src/ionicModels/ionicModel/ionicModel.C', 'src/ionicModels/ionicModel/ionicHeterogeneity.C'),
             value_kind='enum',
-            enum_values=('transmuralBands',),
+            enum_values=('transmuralBands', 'namedRegions', 'cellZoneRegions'),
+        ),
+        DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.regions.<region_name>.baseline',
+            description='Baseline phenotype for the region (e.g. endocardialCells, mCells, epicardialCells).',
+            source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
+            value_kind='word',
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode": ("namedRegions", "cellZoneRegions")},
+        ),
+        DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.regions.<region_name>.cellZone',
+            description='Mesh cellZone name defining the bounds of the region.',
+            source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
+            value_kind='word',
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode": ("cellZoneRegions",)},
+        ),
+        DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.regions.<region_name>.range',
+            description='Spatial interval [min, max] for the region along the transmural field.',
+            source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
+            value_kind='scalarList',
+            dynamic_path=True,
+            applicable_when={"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode": ("namedRegions",)},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.endoMInterface',

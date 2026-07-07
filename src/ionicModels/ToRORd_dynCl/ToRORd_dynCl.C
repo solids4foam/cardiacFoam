@@ -22,6 +22,7 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicHeterogeneityOrchestrator.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
@@ -49,7 +50,7 @@ Foam::ToRORd_dynCl::ToRORd_dynCl
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
@@ -118,9 +119,9 @@ void Foam::ToRORd_dynCl::configureIonicHeterogeneity
     const dictionary& heterogeneityDict
 )
 {
-    configureTransmuralBandHeterogeneity
+    ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
     (
-        transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_,
+        *this, transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_,
         &HETEROGENEOUS_INITIAL_STATES_
     );
 
@@ -135,19 +136,6 @@ void Foam::ToRORd_dynCl::configureIonicHeterogeneity
             }
         }
     }
-}
-
-
-void Foam::ToRORd_dynCl::configureApexBaseBandsHeterogeneity
-(
-    const scalarField& apexDist,
-    const dictionary& dict
-)
-{
-    configureApexBaseBandsHeterogeneityImpl
-    (
-        apexDist, dict, HETEROGENEOUS_CONSTANTS_
-    );
 }
 
 

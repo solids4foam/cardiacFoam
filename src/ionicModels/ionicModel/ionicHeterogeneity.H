@@ -29,6 +29,8 @@ Author
 
 #include "scalar.H"
 #include "word.H"
+#include "List.H"
+#include "dictionary.H"
 
 namespace Foam
 {
@@ -46,6 +48,64 @@ void validateTransmuralBandConfig
 (
     scalar endoMInterface,
     scalar mEpiInterface,
+    scalar transitionWidth,
+    const word& smoothing,
+    const word& transitionMode
+);
+
+struct NamedFieldRegion
+{
+    word name;
+    scalar rangeMin;
+    scalar rangeMax;
+
+    //- Explicit tissue baseline this region resolves to via
+    //  constantsForTissue()/initialStatesForTissue(). If the region name
+    //  differs from the baseline, ionicConstantOverrides.<name> is layered
+    //  on top. One of:
+    //  epicardialCells, mCells, endocardialCells, myocyte. Defaults to the
+    //  region's own name if it is one of the three anatomical names,
+    //  otherwise defaults to myocyte — set explicitly to override this.
+    word baseline;
+};
+
+struct NamedCellZoneRegion
+{
+    word name;
+    word cellZone;
+    word baseline;
+};
+
+struct NamedRegionWeight
+{
+    word name;
+    scalar weight;
+};
+
+//- Parse an open dictionary of {name: {range (min max); baseline <word>;}}
+//  entries into a list sorted by rangeMin. 'baseline' is optional per
+//  region (see NamedFieldRegion::baseline for the default rule) but if
+//  given must be one of epicardialCells/mCells/endocardialCells/myocyte.
+//  Fatals if any region is named 'global', if any region is missing
+//  'range', if a range is malformed, if fewer than two regions are
+//  declared, if 'baseline' is not a supported tissue name, or if the
+//  sorted regions do not tile [0,1] contiguously with no gaps/overlaps
+//  — including at the edges: the first region's rangeMin must be exactly
+//  0 and the last region's rangeMax must be exactly 1 (within SMALL).
+List<NamedFieldRegion> parseNamedFieldRegions(const dictionary& regionsDict);
+
+//- Parse an open dictionary of {name: {cellZone <word>; baseline <word>;}}
+//  entries. 'baseline' follows the same fallback rules as NamedFieldRegion.
+//  Fatals if any region is missing 'cellZone'.
+List<NamedCellZoneRegion> parseNamedCellZoneRegions(const dictionary& regionsDict);
+
+//- Per-cell region weights (sum to 1) for field value t against a
+//  pre-sorted, contiguous region list. transitionWidth <= SMALL or
+//  transitionMode "hard" gives a single region with weight 1.
+List<NamedRegionWeight> namedRegionWeightsAt
+(
+    scalar t,
+    const List<NamedFieldRegion>& regions,
     scalar transitionWidth,
     const word& smoothing,
     const word& transitionMode

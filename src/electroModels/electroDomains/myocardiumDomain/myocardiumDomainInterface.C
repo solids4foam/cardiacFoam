@@ -21,6 +21,7 @@ License
 #include "myocardiumDomain.H"
 #include "eikonalMyocardiumDomain.H"
 #include "ionicModel.H"
+#include "ionicHeterogeneity.H"
 #include "electroVerificationModel.H"
 #include "error.H"
 #include "fvMeshSubset.H"
@@ -49,23 +50,71 @@ scalarField readTransmuralDistance
     const dictionary& heterogeneityDict
 )
 {
-    const word fieldName =
-        heterogeneityDict.lookupOrDefault<word>("field", "t");
+    scalarField fullValues;
 
-    volScalarField transmuralField
-    (
-        IOobject
+    const word mode = heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode == "cellZoneRegions")
+    {
+        fullValues.setSize(mesh.nCells(), -1.0);
+        const dictionary& regionsDict = heterogeneityDict.subDict("regions");
+
+        // Parse cellZone regions with the shared validator.
+        const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
+            ionicHeterogeneity::parseNamedCellZoneRegions(regionsDict);
+
+        forAll(regions, regionIndex)
+        {
+            const word& zoneName = regions[regionIndex].cellZone;
+            const label zoneId = mesh.cellZones().findZoneID(zoneName);
+
+            if (zoneId < 0)
+            {
+                FatalErrorInFunction
+                    << "ionicHeterogeneity region '"
+                    << regions[regionIndex].name << "' specifies cellZone '"
+                    << zoneName << "' but it does not exist on mesh '"
+                    << mesh.name() << "'."
+                    << exit(FatalError);
+            }
+
+            const labelList& zoneCells = mesh.cellZones()[zoneId];
+            forAll(zoneCells, i)
+            {
+                if (fullValues[zoneCells[i]] >= 0.0)
+                {
+                    FatalErrorInFunction
+                        << "ionicHeterogeneity cellZoneRegions: cell "
+                        << zoneCells[i] << " belongs to more than one "
+                        << "region's cellZone ('"
+                        << regions[regionIndex].name << "' and an earlier "
+                        << "region both claim it)."
+                        << exit(FatalError);
+                }
+
+                fullValues[zoneCells[i]] = scalar(regionIndex);
+            }
+        }
+    }
+    else
+    {
+        const word fieldName =
+            heterogeneityDict.lookupOrDefault<word>("field", "t");
+
+        const volScalarField transmuralField
         (
-            fieldName,
-            mesh.time().timeName(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE
-        ),
-        mesh
-    );
-
-    const scalarField& fullValues = transmuralField.primitiveField();
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh
+        );
+        fullValues = transmuralField.primitiveField();
+    }
 
     if (!electroProperties.found("cellZone"))
     {

@@ -89,10 +89,9 @@ Foam::BuenoOrovio::BuenoOrovio
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
-    HETEROGENEOUS_CONSTANTS_(),
     activeIntegrationPoint_(0),
     ALGEBRAIC_(num),
     RATES_(num)
@@ -151,120 +150,34 @@ Foam::List<Foam::word> Foam::BuenoOrovio::supportedTissueTypes() const
 }
 
 
-void Foam::BuenoOrovio::configureIonicHeterogeneity
+Foam::scalarField Foam::BuenoOrovio::constantsForTissue
 (
-    const scalarField& transmuralDistance,
-    const dictionary& heterogeneityDict
-)
+    const label tissueFlag
+) const
 {
-    const word mode =
-        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
-
-    if (mode != "transmuralBands")
-    {
-        FatalErrorInFunction
-            << "Unsupported BuenoOrovio ionicHeterogeneity mode '" << mode
-            << "'. Supported mode: transmuralBands."
-            << exit(FatalError);
-    }
-
-    const word smoothing =
-        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-
-    if (transmuralDistance.size() != STATES_.size())
-    {
-        FatalErrorInFunction
-            << "Transmural distance field has " << transmuralDistance.size()
-            << " values, but BuenoOrovio was configured with "
-            << STATES_.size() << " integration points."
-            << exit(FatalError);
-    }
-
-    const scalar endoMInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-
-    ionicHeterogeneity::validateTransmuralBandConfig
-    (
-        endoMInterface,
-        mEpiInterface,
-        transitionWidth,
-        smoothing,
-        transitionMode
-    );
-
-    const scalarField endoConstants =
-        ::constantsForTissue(3, dict());
-    const scalarField mCellConstants =
-        ::constantsForTissue(2, dict());
-    const scalarField epiConstants =
-        ::constantsForTissue(1, dict());
-
-    HETEROGENEOUS_CONSTANTS_.clear();
-    HETEROGENEOUS_CONSTANTS_.setSize(STATES_.size());
-
-    forAll(transmuralDistance, integrationPtI)
-    {
-        const scalar rawT = transmuralDistance[integrationPtI];
-
-        if (rawT < -SMALL || rawT > 1.0 + SMALL)
-        {
-            FatalErrorInFunction
-                << "Transmural distance value t=" << rawT
-                << " at integration point " << integrationPtI
-                << " is outside the expected [0, 1] range."
-                << exit(FatalError);
-        }
-
-        const scalar t = min(max(rawT, scalar(0.0)), scalar(1.0));
-        scalarField mappedConstants(NUM_CONSTANTS, 0.0);
-        const ionicHeterogeneity::TransmuralBandWeights weights =
-            ionicHeterogeneity::transmuralBandWeights
-            (
-                t,
-                endoMInterface,
-                mEpiInterface,
-                transitionWidth,
-                smoothing,
-                transitionMode
-            );
-
-        forAll(mappedConstants, constantI)
-        {
-            mappedConstants[constantI] =
-                weights.endo*endoConstants[constantI]
-              + weights.mCell*mCellConstants[constantI]
-              + weights.epi*epiConstants[constantI];
-        }
-
-        HETEROGENEOUS_CONSTANTS_.set
-        (
-            integrationPtI,
-            new scalarField(mappedConstants)
-        );
-    }
-
-    Info<< "Configured BuenoOrovio transmural ionic heterogeneity using "
-        << "endo/M interface " << endoMInterface
-        << ", M/epi interface " << mEpiInterface
-        << ", transitionWidth " << transitionWidth
-        << ", transitionMode " << transitionMode
-        << ", smoothing " << smoothing << "." << nl << endl;
+    return ::constantsForTissue(tissueFlag, dict());
 }
 
 
-void Foam::BuenoOrovio::configureApexBaseBandsHeterogeneity
+Foam::scalarField Foam::BuenoOrovio::initialStatesForTissue
 (
-    const scalarField& apexDist,
-    const dictionary& dict
-)
+    const label tissueFlag
+) const
 {
-    configureApexBaseBandsHeterogeneityImpl(apexDist, dict, HETEROGENEOUS_CONSTANTS_);
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    BuenoOrovioinitConsts
+    (
+        constants.data(),
+        rates.data(),
+        states.data(),
+        tissueFlag,
+        dict()
+    );
+
+    return states;
 }
 
 

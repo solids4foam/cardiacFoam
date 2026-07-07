@@ -9,7 +9,14 @@ Each model wraps generated ODE code in a shared `Foam::ionicModel` interface.
 
 ```text
 src/ionicModels/
-├── ionicModel/                  # Base class, selector, batched/GPU support headers
+├── ionicModel/                              # Core classes and utilities
+│   ├── ionicModel.H/.C                      # Base class; virtual interface
+│   ├── configuredIonicModel.H               # Scalar model heterogeneity layer
+│   ├── configuredBatchedIonicModel.H        # Batched model heterogeneity layer
+│   ├── ionicHeterogeneity.H/.C              # Transmural/regional weight calculations
+│   ├── ionicHeterogeneityOrchestrator.H/.C # Heterogeneity mode dispatch
+│   ├── ionicSelector.H/.C                   # Tissue/dimension dictionary parsing
+│   └── batchedIonicModel.H/.C               # GPU-oriented base
 ├── verificationModels/
 │   ├── monodomainFDAManufactured/   # Manufactured-solution verification model
 │   ├── bidomainFDAManufactured/     # Manufactured-solution verification model
@@ -152,30 +159,57 @@ Current `Make/files` entries:
 
 ## Tissue heterogeneity
 
-Transmural heterogeneity of ionic properties is supported through the optional
-`ionicHeterogeneity` dictionary block, which allows spatial variation of cellular
-phenotypes (endo, mid-myocardial, epi) across the wall thickness.
+Spatial heterogeneity of ionic properties is supported through the optional
+`ionicHeterogeneity` dictionary block. All non-batched scalar models inherit
+from `configuredIonicModel` and support region-based heterogeneity. Batched
+models support heterogeneity only if their `supportedTissueTypes()` includes
+all three anatomical tissue types (endocardialCells, mCells, epicardialCells).
 
 ### Supported models
 
-**Scalar CPU models:**
+**Scalar CPU models with native tissue baselines in the generated model:**
 
-- `BuenoOrovio` (only)
+- `BuenoOrovio`
+- `TNNP`
+- `ToRORd_dynCl`
+- `TWorld`
 
-**Batched/GPU models:**
+These models branch on tissue selection in their built-in constants and/or
+initial states before any override is applied.
 
-- `BuenoOrovioBatched`
-- `TNNPBatched`
-- `TWorldBatched`
-- `ToRORd_dynClBatched`
+**Scalar CPU models with override-driven region support from one baseline:**
 
-Note: Other scalar models (TNNP, TWorld, ToRORd_dynCl) support tissue-dependent
-constant overrides at initialization but do not implement spatial heterogeneity.
+- `AlievPanfilov`
+- `Courtemanche`
+- `Fabbri`
+- `Gaur`
+- `Grandi`
+- `PerisYague`
+- `Stewart`
+- `Trovato`
+
+These models accept region labels and spatial heterogeneity, but the generated
+core does not provide distinct endo/M/epi baselines. Region differences come
+from `ionicConstantOverrides` and optional apex-to-base scaling applied on top
+of the model baseline.
+
+**Batched/GPU models (heterogeneity support where tissue types permit):**
+
+- `BuenoOrovioBatched` (supports all three tissue types)
+- `TNNPBatched` (supports all three tissue types)
+- `ToRORd_dynClBatched` (supports all three tissue types)
+- `TWorldBatched` (supports all three tissue types)
+- Other batched models (AlievPanfilovBatched, CourtemancheBatched, FabbriBatched, GaurBatched, GrandiBatched, PerisYagueBatched, StewartBatched, TrovatoBatched) support only myocyte tissue and do not support heterogeneity
 
 ### Configuration
 
 The `ionicHeterogeneity` block is nested within the model coefficients
-(e.g., `monodomainSolverCoeffs`):
+(e.g., `monodomainSolverCoeffs`). The mode selects how regions are defined
+and applied.
+
+#### Mode: `transmuralBands` (default)
+
+Classic transmural heterogeneity: partitions the wall by normalized transmural distance.
 
 ```
 ionicHeterogeneity
@@ -190,40 +224,184 @@ ionicHeterogeneity
 }
 ```
 
-**Dictionary keys:**
+| Key | Default | Accepted values |
+|-----|---------|-----------------|
+| `field` | `t` | Any scalar field name (0=endo, 1=epi) |
+| `endoMInterface` | `0.3` | 0 < value < `mEpiInterface` |
+| `mEpiInterface` | `0.7` | `endoMInterface` < value < 1 |
+| `transitionWidth` | `0.1` | ≥ 0; must not cause overlapping bands in blend mode |
+| `transitionMode` | `blend` | `blend`, `hard` |
+| `smoothing` | `smoothstep` | `smoothstep` |
 
-| Key | Meaning | Default | Accepted values |
-|-----|---------|---------|-----------------|
-| `field` | Name of the transmural distance field (0 at endo, 1 at epi) | `t` | Any field name |
-| `mode` | Heterogeneity application mode | `transmuralBands` | `transmuralBands` |
-| `endoMInterface` | Transmural position of endo/M-cell boundary (normalized [0, 1]) | `0.3` | 0 < value < `mEpiInterface` |
-| `mEpiInterface` | Transmural position of M-cell/epi boundary (normalized [0, 1]) | `0.7` | `endoMInterface` < value < 1 |
-| `transitionWidth` | Width of smooth transition region | `0.1` | ≥ 0; must not cause overlapping bands in blend mode |
-| `transitionMode` | Hard or smooth transitions between bands | `blend` | `blend`, `hard` |
-| `smoothing` | Smoothing function applied to transition zones | `smoothstep` | `smoothstep` |
+**Validation:** 0 < `endoMInterface` < `mEpiInterface` < 1, and in blend mode both interfaces must respect transition width constraints.
 
-**Validation rules:**
+#### Mode: `namedRegions`
 
-- 0 < `endoMInterface` < `mEpiInterface` < 1
-- `transitionWidth` ≥ 0
-- In `blend` mode: `endoMInterface + transitionWidth` ≤ `mEpiInterface` and `mEpiInterface + transitionWidth` ≤ 1
+Open dictionary of arbitrary named regions, sorted by field range. Each region carries a baseline tissue and optional overrides scope name.
 
-### Tissue types
+```
+ionicHeterogeneity
+{
+    field             t;                  // Name of field (0 at one extreme, 1 at other)
+    mode              namedRegions;
+    transitionWidth   0.1;                // Smooth transition band width
+    transitionMode    blend;              // Transition type: blend or hard
+    smoothing         smoothstep;         // Smoothing function: smoothstep
+    
+    regions
+    {
+        subendo
+        {
+            range       (0.0 0.3);
+            baseline    endocardialCells;  // Default tissue type for constants
+        }
+        midwall
+        {
+            range       (0.3 0.7);
+            baseline    mCells;
+        }
+        subepi
+        {
+            range       (0.7 1.0);
+            baseline    epicardialCells;
+        }
+    }
+}
+```
 
-The base selection uses the `tissue` entry (outside `ionicHeterogeneity`):
+Each region must declare `range (min max)`. Optional `baseline` defaults to the region name if it is one of `{endocardialCells, mCells, epicardialCells}`, otherwise defaults to `myocyte`. Regions must be contiguous (no gaps/overlaps) and tile [0, 1] exactly.
 
-- `endocardialCells`
-- `mCells`
-- `epicardialCells`
-- `myocyte` (default if not specified)
+#### Mode: `cellZoneRegions`
 
-BuenoOrovio supports all three tissue types; batched models adapt heterogeneity
-weights per tissue class.
+Regions defined by mesh cell zone membership. Each cell is assigned exactly one region (no blending).
+
+```
+ionicHeterogeneity
+{
+    mode cellZoneRegions;
+    
+    regions
+    {
+        infarcted
+        {
+            cellZone    scar_zone;
+            baseline    myocyte;            // Optional; defaults per baseline rule
+        }
+        border_zone
+        {
+            cellZone    border_zone_cells;
+            baseline    epicardialCells;
+        }
+    }
+}
+```
+
+Each region must declare `cellZone <meshCellZoneName>`. Optional `baseline` defaults per the standard rule. No transition width or smoothing; assignment is hard (binary per cell).
+
+#### Apex-to-base exponential scaling
+
+Optional `apexBaseBands` sub-dictionary (applies with any mode) scales selected constants along an apex-to-base gradient:
+
+```
+ionicHeterogeneity
+{
+    mode namedRegions;  // or transmuralBands, or cellZoneRegions
+    regions { ... }
+    
+    apexBaseBands
+    {
+        beta        3.0;        // Exponential power (default)
+        scalingMin  0.2;        // Scale at apex (default)
+        scalingMax  5.0;        // Scale at base (default)
+        variables   (G_K1 G_Na);  // Constant names to scale
+        field       d;          // Apex-to-base distance field
+    }
+}
+```
+
+### Tissue baseline and override scoping
+
+Each region (in any mode) specifies an optional `baseline` tissue keyword:
+- Explicit: one of `epicardialCells`, `mCells`, `endocardialCells`, `myocyte`
+- Default rule: if the region name itself is one of those three anatomical names, use it; otherwise `myocyte`
+
+The baseline determines which `constantsForTissue()` and
+`initialStatesForTissue()` values are used as the region's foundation.
+Overrides are then applied by scope name (see below). For models without
+native endo/M/epi branches, the baseline may still be `epicardialCells`,
+`mCells`, or `endocardialCells`, but those labels only select the override
+path; they do not imply distinct built-in CellML tissue families.
+
+### Constant override scoping (`ionicConstantOverrides`)
+
+Constant overrides are stored in a top-level `ionicConstantOverrides` block with named sub-dictionaries representing scopes:
+
+```
+monodomainSolverCoeffs
+{
+    ionicModel      BuenoOrovio;
+    
+    ionicHeterogeneity { ... }
+    
+    ionicConstantOverrides
+    {
+        global           // Global scope (applied first)
+        {
+            G_K1   0.123;
+            G_Na   0.456;
+        }
+        epicardialCells  // Tissue-name scope
+        {
+            G_K1   0.130;
+        }
+        myocyte          // Fallback tissue name
+        {
+            G_Na   0.450;
+        }
+        scar_region      // Named region scope (if ionicHeterogeneity uses named regions)
+        {
+            G_K1   0.050;
+        }
+    }
+}
+```
+
+Scopes are applied in order:
+1. `global` (always applied first)
+2. Tissue scope matching the region's `baseline` (endocardialCells/mCells/epicardialCells/myocyte)
+3. Named region scope (for namedRegions/cellZoneRegions mode only)
+
+Scopes 2 and 3 are optional. If a constant appears in multiple scopes, later scopes override earlier ones.
 
 ## Adding a new ionic model
 
 1. Add model folder with generated equations and wrapper `.H/.C`.
-2. Derive from `Foam::ionicModel` and implement required methods.
-3. Register runtime type in the model `.C` file.
-4. Add the `.C` file to `src/ionicModels/Make/files`.
-5. Provide metadata hooks if generic export/write behavior is desired.
+
+2. **Choose the base class:**
+   - For a production model that should support heterogeneity: derive from `Foam::configuredIonicModel` (for scalar CPU) or `Foam::configuredBatchedIonicModel` (for batched GPU). These inherit from `ionicModel` and provide `HETEROGENEOUS_CONSTANTS_` storage and forwarding overrides for free.
+   - For a verification/manufactured model or one that explicitly does not support heterogeneity: derive directly from `Foam::ionicModel`. If heterogeneity is requested at runtime, it will fatal with a clear error.
+
+3. Implement required virtual methods:
+   - `solveODE(...)` / `evaluateState(...)`
+   - `derivatives(...)`
+   - `nEqns() const`
+   - `constantsForTissue(tissueFlag)`
+   - `initialStatesForTissue(tissueFlag)`
+
+4. Override metadata hooks for export (optional):
+   - `ioVmTransform()`, `ioStateNames()`, `ioStatesPtr()`, `ioConstantNames()`, etc.
+   - See existing models (e.g., BuenoOrovio.H) for the pattern.
+
+5. Optionally override `supportedTissueTypes()` and `supportedDimensions()` to advertise capabilities.
+   - For `configuredIonicModel` / `configuredBatchedIonicModel` to enable heterogeneity at runtime, `supportedTissueTypes()` must include the anatomical tissue names the model supports.
+   - Batched models are only enabled for heterogeneity if they return all three (endocardialCells, mCells, epicardialCells).
+
+6. Per-cell initial-state blending is handled differently depending on the base class:
+   - `configuredBatchedIonicModel` already applies `HETEROGENEOUS_INITIAL_STATES_` generically in its shared `configureIonicHeterogeneity()` — no batched model needs to override this itself (`ToRORd_dynClBatched` does not).
+   - `configuredIonicModel` does *not* do this generically. If a scalar model needs per-cell initial-state blending, it must override `configureIonicHeterogeneity()` itself and apply `HETEROGENEOUS_INITIAL_STATES_` manually, as `ToRORd_dynCl` does.
+
+7. Register runtime type via `OverrideTypeName("ModelName")` in the class definition.
+
+8. Add the `.C` file to `src/ionicModels/Make/files`.
+
+9. Ensure `constantsForTissue()` and `initialStatesForTissue()` fill the returned fields correctly for each tissue flag (from `ionicModel`'s tissue selector).

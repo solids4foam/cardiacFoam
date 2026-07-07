@@ -115,8 +115,13 @@ public:
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
-        VmTransform transformVm
+        VmTransform transformVm = nullptr
     );
 
     static void writeSelected
@@ -161,6 +166,18 @@ public:
         const dictionary& dict,
         const word& modelName,
         label tissueFlag
+    );
+
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const word& baselineScopeName,
+        const wordList& knownScopeNames
     );
 
     static word constantOverrideOutputSuffix

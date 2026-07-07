@@ -188,6 +188,28 @@ namespace Foam
                 || name == "myocyte";
         }
 
+        bool isKnownOverrideScopeName
+        (
+            const word& name,
+            const wordList& knownScopeNames
+        )
+        {
+            if (isConstantOverrideScopeName(name))
+            {
+                return true;
+            }
+
+            forAll(knownScopeNames, i)
+            {
+                if (knownScopeNames[i] == name)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         void collectConstantOverrideOp
         (
             const dictionary& opDict,
@@ -591,33 +613,30 @@ namespace Foam
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
         VmTransform transformVm
     )
     {
+        const SelectionPlan& plan =
+            fullPlan
+            (
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                fullPlanCache
+            );
+
         const scalarField& S = STATES[0];
         const scalarField& A = ALGEBRAIC[0];
         const scalarField& R = RATES[0];
 
-        // Keep full-row emission tight; selected/export paths share one plan engine.
-        os << t << " " << (transformVm ? transformVm(S) : S[0]);
-
-        for (label i = 1; i < S.size(); ++i)
-        {
-            os << " " << S[i];
-        }
-
-        forAll(A, i)
-        {
-            os << " " << A[i];
-        }
-
-        forAll(R, i)
-        {
-            os << " " << R[i];
-        }
-
-        os << nl;
+        emitRow(t, os, S, A, R, plan, transformVm);
     }
 
     void Foam::ionicModelIO::writeSelected
@@ -758,18 +777,38 @@ namespace Foam
 
         const dictionary& overrides = dict.subDict("ionicConstantOverrides");
 
+        const bool heterogeneityConfigured = dict.found("ionicHeterogeneity");
+
         forAllConstIter(dictionary, overrides, iter)
         {
             const word entryName(iter().keyword());
             if (!isConstantOverrideScopeName(entryName))
             {
-                FatalErrorInFunction
-                    << "Unsupported ionicConstantOverrides entry '"
-                    << entryName << "' for ionic model " << modelName << "."
-                    << nl
-                    << "Supported entries are global, endocardialCells, "
-                    << "mCells, epicardialCells, and myocyte."
-                    << exit(FatalError);
+                if (!heterogeneityConfigured)
+                {
+                    // No ionicHeterogeneity block at all: the only valid
+                    // top-level scopes are 'global' and this model's own
+                    // tissue name, so any other key is unambiguously a
+                    // typo, not a legitimate region name.
+                    FatalErrorInFunction
+                        << "Unsupported ionicConstantOverrides entry '"
+                        << entryName << "' for ionic model " << modelName
+                        << " (no ionicHeterogeneity block is configured, so "
+                        << "the only valid scopes are 'global' and this "
+                        << "model's tissue name)." << nl
+                        << "Supported scopes: global, epicardialCells, "
+                        << "mCells, endocardialCells, myocyte."
+                        << exit(FatalError);
+                }
+
+                // A namedRegions/cellZoneRegions-only scope (e.g. a
+                // scar/disease region name), validated and applied
+                // separately by the word-scoped applyConstantOverrides
+                // overload used by ionicModel::constantsForRegion(). Skip
+                // it here rather than fatal, since this overload has no
+                // visibility into which named regions are legitimately
+                // declared elsewhere in the dictionary.
+                continue;
             }
 
             if (!iter().isDict())
@@ -806,6 +845,89 @@ namespace Foam
                 modelName,
                 overrides.subDict(tissueScopeName),
                 tissueScopeName
+            );
+        }
+    }
+
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const word& baselineScopeName,
+        const wordList& knownScopeNames
+    )
+    {
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return;
+        }
+
+        if (constants.empty())
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides was requested for ionic model "
+                << modelName
+                << ", but constant storage is not available."
+                << exit(FatalError);
+        }
+
+        validateConstantMetadata(constantNames, nConstants, modelName);
+
+        if (constants.size() != nConstants)
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " found " << nConstants << " constant names but "
+                << constants.size() << " stored constant values."
+                << exit(FatalError);
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+
+        forAllConstIter(dictionary, overrides, iter)
+        {
+            const word entryName(iter().keyword());
+            if (!isKnownOverrideScopeName(entryName, knownScopeNames))
+            {
+                FatalErrorInFunction
+                    << "Unsupported ionicConstantOverrides entry '"
+                    << entryName << "' for ionic model " << modelName << "."
+                    << nl
+                    << "Declared regions: " << knownScopeNames
+                    << " (plus global/anatomical/myocyte scopes)."
+                    << exit(FatalError);
+            }
+
+            if (!iter().isDict())
+            {
+                FatalErrorInFunction
+                    << "ionicConstantOverrides entry '" << entryName
+                    << "' for ionic model " << modelName
+                    << " must be a dictionary."
+                    << exit(FatalError);
+            }
+        }
+
+        // constantsForRegion() starts from constantsForTissue(), which has
+        // already applied global and the explicit baseline scope. Layer the
+        // region's own scope only when it names a distinct scope; validation
+        // above still catches typos in either fixed or declared scopes.
+        if
+        (
+            !scopeName.empty()
+         && scopeName != baselineScopeName
+         && overrides.found(scopeName)
+        )
+        {
+            applyConstantOverrideScope
+            (
+                constants, constantNames, nConstants, modelName,
+                overrides.subDict(scopeName), scopeName
             );
         }
     }

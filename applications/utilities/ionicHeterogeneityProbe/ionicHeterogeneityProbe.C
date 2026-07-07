@@ -33,6 +33,7 @@ Author
 #include "OFstream.H"
 #include "OSspecific.H"
 #include "ionicModel.H"
+#include "ionicHeterogeneity.H"
 #include "Switch.H"
 
 #include <cmath>
@@ -339,13 +340,6 @@ int main(int argc, char *argv[])
     }
 
     const word ionicModelName(modelDict.lookup("ionicModel"));
-    if (ionicModelName != "BuenoOrovio")
-    {
-        FatalErrorInFunction
-            << "ionicHeterogeneityProbe v1 supports only BuenoOrovio. "
-            << "Selected ionicModel is " << ionicModelName << "."
-            << exit(FatalError);
-    }
 
     const label nSamples =
         probeDict.lookupOrDefault<label>("nSamples", 101);
@@ -386,10 +380,46 @@ int main(int argc, char *argv[])
 
     const dictionary& heterogeneityDict =
         modelDict.subDict("ionicHeterogeneity");
-    const scalar endoMInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
+    const word heterogeneityMode =
+        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (heterogeneityMode == "cellZoneRegions")
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneityProbe does not support mode "
+            << "cellZoneRegions: there is no continuous distance field to "
+            << "sweep. Use transmuralBands or namedRegions."
+            << exit(FatalError);
+    }
+
+    scalar endoMInterface = 0.3;
+    scalar mEpiInterface = 0.7;
+
+    if (heterogeneityMode == "namedRegions")
+    {
+        // Best-effort defaults for the envelope check: use the boundary
+        // between the first and second, and second and third, regions
+        // once sorted by range. Users can always override via
+        // endoReferenceT/mCellReferenceT/epiReferenceT in the probe dict.
+        const List<ionicHeterogeneity::NamedFieldRegion> regions =
+            ionicHeterogeneity::parseNamedFieldRegions
+            (
+                heterogeneityDict.subDict("regions")
+            );
+
+        if (regions.size() >= 3)
+        {
+            endoMInterface = regions[0].rangeMax;
+            mEpiInterface = regions[regions.size() - 2].rangeMax;
+        }
+    }
+    else
+    {
+        endoMInterface =
+            heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
+        mEpiInterface =
+            heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
+    }
     const scalar endoReferenceT =
         probeDict.lookupOrDefault<scalar>("endoReferenceT", 0.0);
     const scalar mCellReferenceT =

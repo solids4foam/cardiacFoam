@@ -35,7 +35,7 @@ from .shared import (
     OUTPUT_DIR_NAME,
     RUN_CASE_SCRIPT_RELPATH,
 )
-from ...ionic_model_catalog import IONIC_MODEL_CATALOG
+from ...ionic_model_catalog import IONIC_MODEL_CATALOG, planning_tissues
 
 
 TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
@@ -45,7 +45,7 @@ SETUP_DIR_NAME = "setup"
 IONIC_MODELS = ("BuenoOrovio",)
 
 IONIC_MODEL_TISSUE_MAP = {
-    name: entry.compatible_tissues
+    name: planning_tissues(entry)
     for name, entry in IONIC_MODEL_CATALOG.items()
     if "manufactured" not in entry.compatible_tissues
 }

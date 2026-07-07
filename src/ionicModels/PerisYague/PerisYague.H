@@ -16,23 +16,23 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::PerisYague_2022
+    Foam::PerisYague
 
 Description
     Wrapper class for the Peris-Yaguë atrial ionic model 2022.
 
 SourceFiles
-    PerisYague_2022.C
+    PerisYague.C
 
 Author
     Philip Cardiff, UCD.
     Simão Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#ifndef PerisYague_2022_H
-#define PerisYague_2022_H
+#ifndef PerisYague_H
+#define PerisYague_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
 #include "PerisYague_2022Names.H"
@@ -45,12 +45,12 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class PerisYague_2022 Declaration
+                         Class PerisYague Declaration
 \*---------------------------------------------------------------------------*/
 
-class PerisYague_2022
+class PerisYague
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -67,13 +67,17 @@ class PerisYague_2022
         mutable PtrList<scalarField> RATES_;
 
 
+        //- Active integration point for derivatives() (no index argument)
+        mutable label activeIntegrationPoint_ = 0;
+
+
     // Private Member Functions
 
         //- No copy construct
-        PerisYague_2022(const PerisYague_2022&) = delete;
+        PerisYague(const PerisYague&) = delete;
 
         //- No copy assignment
-        void operator=(const PerisYague_2022&) = delete;
+        void operator=(const PerisYague&) = delete;
 
 protected:
         virtual const PtrList<scalarField>* ioStatesPtr() const override
@@ -129,8 +133,25 @@ protected:
         OverrideTypeName("PerisYague");
 
 
-        //override the only available tissue in this model
+        //- Tissue types supported by this model. "myocyte" preserves the
+        //  existing homogeneous-run behavior; the anatomical three enable
+        //  ionicHeterogeneity (transmuralBands or namedRegions).
         virtual List<word> supportedTissueTypes() const override;
+
+        //- Per-point constants accessor (heterogeneous when configured)
+        scalarField& constants(const label integrationPtI) const;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        virtual scalarField initialStatesForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
@@ -141,7 +162,7 @@ protected:
         // Constructors
 
             //- Construct given a dictionary, the number of integration points and a
-            PerisYague_2022
+            PerisYague
             (
                 const dictionary& dict,
                 const label nIntegrationPoints,
@@ -151,7 +172,7 @@ protected:
 
 
         //- Destructor
-        virtual ~PerisYague_2022();
+        virtual ~PerisYague();
 
 
         // Member Functions
