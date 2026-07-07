@@ -629,6 +629,51 @@ def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
         except (TypeError, ValueError):
             pass
 
+    mode = context.get("ionicHeterogeneity.mode", "transmuralBands")
+    if mode == "namedRegions":
+        ranges = []
+        for k, v in context.items():
+            if k.startswith("ionicHeterogeneity.regions.") and k.endswith(".range"):
+                region_name = k.split(".")[2]
+                try:
+                    if isinstance(v, str):
+                        clean_v = v.strip("()[] ")
+                        parts = clean_v.split()
+                        min_v, max_v = float(parts[0]), float(parts[1])
+                    else:
+                        min_v, max_v = float(v[0]), float(v[1])
+                    ranges.append((min_v, max_v, region_name, k))
+                except (ValueError, TypeError, IndexError):
+                    pass
+
+        ranges.sort(key=lambda x: x[0])
+
+        for i in range(len(ranges)):
+            min_v, max_v, name, k = ranges[i]
+            if min_v >= max_v:
+                errors.append(ValidationError(
+                    phase="physics",
+                    field=f"$ELECTRO_MODEL_COEFFS.{k}",
+                    message=f"Region '{name}' range [{min_v}, {max_v}] must be strictly increasing.",
+                    level="error",
+                ))
+            if min_v < 0.0 or max_v > 1.0:
+                errors.append(ValidationError(
+                    phase="physics",
+                    field=f"$ELECTRO_MODEL_COEFFS.{k}",
+                    message=f"Region '{name}' range [{min_v}, {max_v}] must be within [0, 1].",
+                    level="error",
+                ))
+            if i > 0:
+                prev_min, prev_max, prev_name, prev_k = ranges[i - 1]
+                if min_v < prev_max:
+                    errors.append(ValidationError(
+                        phase="physics",
+                        field=f"$ELECTRO_MODEL_COEFFS.{k}",
+                        message=f"Region '{name}' range [{min_v}, {max_v}] overlaps with region '{prev_name}' [{prev_min}, {prev_max}].",
+                        level="error",
+                    ))
+
     if ab_keys:
         if entry is not None and not getattr(entry, "supports_apex_base_heterogeneity", False):
             capable_models = sorted(

@@ -130,9 +130,14 @@ def test_all_twelve_heterogeneity_entries_exist():
     ab_leaves = ("apexBaseBands.field", "apexBaseBands.beta",
                  "apexBaseBands.scalingMin", "apexBaseBands.scalingMax",
                  "apexBaseBands.variables")
+    region_leaves = (
+        "regions.<region_name>.baseline",
+        "regions.<region_name>.cellZone",
+        "regions.<region_name>.range",
+    )
     expected = {
         f"$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.{leaf}"
-        for leaf in (*transmural_leaves, *ab_leaves)
+        for leaf in (*transmural_leaves, *ab_leaves, *region_leaves)
     }
     assert paths == expected
 
@@ -151,7 +156,7 @@ def test_apex_base_entries_gated_to_monodomain_only():
 
 def test_heterogeneity_enum_values():
     by_leaf = {e.driver_path.rsplit(".", 1)[-1]: e for e in _het_entries()}
-    assert by_leaf["mode"].enum_values == ("transmuralBands",)
+    assert set(by_leaf["mode"].enum_values) == {"transmuralBands", "namedRegions", "cellZoneRegions"}
     assert by_leaf["transitionMode"].enum_values == ("blend", "hard")
     assert by_leaf["smoothing"].enum_values == ("smoothstep",)
 
