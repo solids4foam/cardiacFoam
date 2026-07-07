@@ -21,6 +21,7 @@ License
 #include "myocardiumDomain.H"
 #include "eikonalMyocardiumDomain.H"
 #include "ionicModel.H"
+#include "ionicHeterogeneity.H"
 #include "electroVerificationModel.H"
 #include "error.H"
 #include "fvMeshSubset.H"
@@ -58,34 +59,40 @@ scalarField readTransmuralDistance
         fullValues.setSize(mesh.nCells(), -1.0);
         const dictionary& regionsDict = heterogeneityDict.subDict("regions");
 
-        label regionIndex = 0;
-        forAllConstIter(dictionary, regionsDict, iter)
+        // Parse cellZone regions with the shared validator.
+        const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
+            ionicHeterogeneity::parseNamedCellZoneRegions(regionsDict);
+
+        forAll(regions, regionIndex)
         {
-            if (iter().isDict())
+            const word& zoneName = regions[regionIndex].cellZone;
+            const label zoneId = mesh.cellZones().findZoneID(zoneName);
+
+            if (zoneId < 0)
             {
-                const dictionary& regionDict = iter().dict();
-                if (regionDict.found("cellZone"))
+                FatalErrorInFunction
+                    << "ionicHeterogeneity region '"
+                    << regions[regionIndex].name << "' specifies cellZone '"
+                    << zoneName << "' but it does not exist on mesh '"
+                    << mesh.name() << "'."
+                    << exit(FatalError);
+            }
+
+            const labelList& zoneCells = mesh.cellZones()[zoneId];
+            forAll(zoneCells, i)
+            {
+                if (fullValues[zoneCells[i]] >= 0.0)
                 {
-                    const word zoneName(regionDict.lookup("cellZone"));
-                    const label zoneId = mesh.cellZones().findZoneID(zoneName);
-
-                    if (zoneId < 0)
-                    {
-                        FatalErrorInFunction
-                            << "ionicHeterogeneity region '" << iter().keyword()
-                            << "' specifies cellZone '" << zoneName
-                            << "' but it does not exist on mesh '"
-                            << mesh.name() << "'."
-                            << exit(FatalError);
-                    }
-
-                    const labelList& zoneCells = mesh.cellZones()[zoneId];
-                    forAll(zoneCells, i)
-                    {
-                        fullValues[zoneCells[i]] = scalar(regionIndex);
-                    }
+                    FatalErrorInFunction
+                        << "ionicHeterogeneity cellZoneRegions: cell "
+                        << zoneCells[i] << " belongs to more than one "
+                        << "region's cellZone ('"
+                        << regions[regionIndex].name << "' and an earlier "
+                        << "region both claim it)."
+                        << exit(FatalError);
                 }
-                regionIndex++;
+
+                fullValues[zoneCells[i]] = scalar(regionIndex);
             }
         }
     }
@@ -94,7 +101,6 @@ scalarField readTransmuralDistance
         const word fieldName =
             heterogeneityDict.lookupOrDefault<word>("field", "t");
 
-        // Construct temporary field to read values
         const volScalarField transmuralField
         (
             IOobject

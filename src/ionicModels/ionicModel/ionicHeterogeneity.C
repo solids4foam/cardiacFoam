@@ -312,6 +312,7 @@ Foam::ionicHeterogeneity::parseNamedCellZoneRegions
 )
 {
     DynamicList<NamedCellZoneRegion> regions;
+    DynamicList<word> seenZones;
 
     forAllConstIter(dictionary, regionsDict, iter)
     {
@@ -346,6 +347,17 @@ Foam::ionicHeterogeneity::parseNamedCellZoneRegions
         }
 
         const word cellZoneName(regionDict.lookup("cellZone"));
+
+        if (seenZones.found(cellZoneName))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << ": cellZone '" << cellZoneName << "' is already claimed "
+                << "by another region. Each cellZone may be assigned to "
+                << "exactly one region."
+                << exit(FatalError);
+        }
+        seenZones.append(cellZoneName);
 
         static const wordList anatomicalNames
         {
