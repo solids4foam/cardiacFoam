@@ -65,7 +65,10 @@ def test_supports_heterogeneity_inherited_by_batched_variants():
 
 def test_single_tissue_models_do_not_support_heterogeneity():
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
-    for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
+    for name in (
+        "monodomainFDAManufactured", "bidomainFDAManufactured",
+        "bathBidomainFDAManufactured",
+    ):
         assert IONIC_MODEL_CATALOG[name].supports_heterogeneity is False, name
 
 
@@ -84,7 +87,9 @@ def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
 
 
-def test_single_tissue_models_do_not_support_apex_base_heterogeneity():
+def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
+    # These models support transmuralBands/namedRegions heterogeneity but
+    # never override configureApexBaseBandsHeterogeneity.
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is False, name
@@ -237,8 +242,8 @@ def _run(physics: dict) -> RunDocument:
 def test_heterogeneity_with_incapable_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",
-        "tissue": "myocyte",
+        "ionicModel": "monodomainFDAManufactured",
+        "tissue": "manufactured",
         "ionicHeterogeneity.field": "t",
         "ionicHeterogeneity.mode": "transmuralBands",
     })
@@ -292,7 +297,7 @@ def test_endoM_less_than_mEpi_is_silent():
 def test_tissue_incompatible_with_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",   # myocyte-only
+        "ionicModel": "AlievPanfilovcompactBatched",   # myocyte-only (not yet wired for heterogeneity)
         "tissue": "epicardialCells",
     })
     errors = [e for e in validate_run(run)

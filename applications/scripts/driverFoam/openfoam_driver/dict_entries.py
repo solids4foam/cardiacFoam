@@ -32,9 +32,12 @@ from typing import Any, Final, Literal
 from .ionic_model_catalog import BATCHED_MODELS
 
 # Ionic models that implement transmural tissue heterogeneity
-# (configureIonicHeterogeneity, endo/M/epi blend) on CPU and/or GPU.
+# (configureIonicHeterogeneity, endo/M/epi blend and/or namedRegions) on
+# CPU and/or GPU.
 HETEROGENEITY_MODELS: tuple[str, ...] = (
     "BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl",
+    "AlievPanfilov", "Courtemanche", "Fabbri", "Gaur",
+    "Grandi", "PerisYague", "Stewart", "Trovato",
     "BuenoOroviocompactBatched", "TNNPcompactBatched",
     "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
 )

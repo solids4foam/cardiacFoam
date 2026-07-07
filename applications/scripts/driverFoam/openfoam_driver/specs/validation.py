@@ -595,14 +595,19 @@ def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
     entry = IONIC_MODEL_CATALOG.get(model) if model is not None else None
 
     if transmural_keys and entry is not None and not getattr(entry, "supports_heterogeneity", False):
+        capable_models = sorted(
+            n for n, e in IONIC_MODEL_CATALOG.items()
+            if getattr(e, "supports_heterogeneity", False)
+            and not n.endswith("compactBatched")
+        )
         errors.append(ValidationError(
             phase="physics",
             field="$ELECTRO_MODEL_COEFFS.ionicHeterogeneity",
             message=(
                 f"ionicHeterogeneity is configured but ionicModel "
                 f"{model!r} does not support transmural heterogeneity. "
-                f"Supported models: BuenoOrovio, TNNP, TWorld, "
-                f"ToRORd_dynCl (and their compactBatched variants)."
+                f"Supported models: {', '.join(capable_models)} "
+                f"(and their compactBatched variants where available)."
             ),
             level="error",
         ))
