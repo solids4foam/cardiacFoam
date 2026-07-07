@@ -49,23 +49,66 @@ scalarField readTransmuralDistance
     const dictionary& heterogeneityDict
 )
 {
-    const word fieldName =
-        heterogeneityDict.lookupOrDefault<word>("field", "t");
+    scalarField fullValues;
 
-    volScalarField transmuralField
-    (
-        IOobject
+    const word mode = heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode == "cellZoneRegions")
+    {
+        fullValues.setSize(mesh.nCells(), -1.0);
+        const dictionary& regionsDict = heterogeneityDict.subDict("regions");
+
+        label regionIndex = 0;
+        forAllConstIter(dictionary, regionsDict, iter)
+        {
+            if (iter().isDict())
+            {
+                const dictionary& regionDict = iter().dict();
+                if (regionDict.found("cellZone"))
+                {
+                    const word zoneName(regionDict.lookup("cellZone"));
+                    const label zoneId = mesh.cellZones().findZoneID(zoneName);
+
+                    if (zoneId < 0)
+                    {
+                        FatalErrorInFunction
+                            << "ionicHeterogeneity region '" << iter().keyword()
+                            << "' specifies cellZone '" << zoneName
+                            << "' but it does not exist on mesh '"
+                            << mesh.name() << "'."
+                            << exit(FatalError);
+                    }
+
+                    const labelList& zoneCells = mesh.cellZones()[zoneId];
+                    forAll(zoneCells, i)
+                    {
+                        fullValues[zoneCells[i]] = scalar(regionIndex);
+                    }
+                }
+                regionIndex++;
+            }
+        }
+    }
+    else
+    {
+        const word fieldName =
+            heterogeneityDict.lookupOrDefault<word>("field", "t");
+
+        // Construct temporary field to read values
+        const volScalarField transmuralField
         (
-            fieldName,
-            mesh.time().timeName(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE
-        ),
-        mesh
-    );
-
-    const scalarField& fullValues = transmuralField.primitiveField();
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh
+        );
+        fullValues = transmuralField.primitiveField();
+    }
 
     if (!electroProperties.found("cellZone"))
     {
