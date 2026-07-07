@@ -192,6 +192,8 @@ def print_update_snippet(model_name: str, parsed: dict[str, list[str]]) -> None:
     print(f'        constants=({constants_str}),')
     print(f'        recommended_exports=(...),')
     print(f'        compatible_tissues=(...),')
+    print(f'        native_tissue_labels=(...),')
+    print(f'        approximate_tissue_labels=(...),')
     print(f'        compatible_solvers=(...),')
     print(f'        species=(...),')
     print(f'        cardiac_region=(...),')

@@ -58,7 +58,7 @@ class IonicModelEntry:
     """Minimum useful export set (subset of states)."""
 
     compatible_tissues: tuple[str, ...]
-    """Which tissue types this model supports (e.g. epicardialCells, myocyte)."""
+    """Runtime-accepted tissue labels for the ``tissue`` selector."""
 
     compatible_solvers: tuple[str, ...]
     """Which myocardium solvers can host this model."""
@@ -109,6 +109,12 @@ class IonicModelEntry:
     via configureApexBaseBandsHeterogeneity. Batched variants inherit this flag
     through dataclasses.replace()."""
 
+    native_tissue_labels: tuple[str, ...] = ()
+    """Tissue labels represented by distinct baseline physiology in the model equations."""
+
+    approximate_tissue_labels: tuple[str, ...] = ()
+    """Extra runtime-accepted labels implemented only through overrides or scaling."""
+
 
 # SOLVER_COMPATIBILITY_RULES moved to openfoam_driver/solver_coupling.py;
 # re-exported here for backward compatibility with consumers that imported
@@ -123,6 +129,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_Vp", "AC_Vr", "AC_Vth", "AC_epsilon", "AC_k", "AC_mu1", "AC_mu2", "AC_a"),
         recommended_exports=("u", "recovery_r"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -142,6 +150,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("uO", "uU", "thetaV", "thetaW", "thetaVMinus", "thetaO", "tauV1Minus", "tauV2Minus", "tauVPlus", "tauW1Minus", "tauW2Minus", "kWMinus", "uWMinus", "tauWPlus", "tauFi", "tauO1", "tauO2", "tauSo1", "tauSo2", "kSo", "uSo", "tauS1", "tauS2", "kS", "uS", "tauSi", "tauWInfty", "wInftyStar"),
         recommended_exports=("u", "v", "w", "s"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
+        native_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -160,6 +169,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_CMDN_max", "AC_CSQN_max", "AC_Ca_up_max", "AC_Cao", "AC_Cm", "AC_ECaL", "AC_F", "AC_FRT", "AC_INaCa_max", "AC_INaK_max", "AC_I_diff", "AC_I_up_max", "AC_IpCa_max", "AC_KQ10", "AC_K_rel", "AC_K_up", "AC_KmCa", "AC_KmKo", "AC_KmNa", "AC_KmNai", "AC_Km_CMDN", "AC_Km_CSQN", "AC_Km_TRPN", "AC_Ko", "AC_Nao", "AC_R", "AC_RTF", "AC_T", "AC_TRPN_max", "AC_V_cell", "AC_V_i", "AC_V_rel", "AC_V_up", "AC_c1", "AC_c2", "AC_cajsr_u_tau", "AC_g", "AC_gCaL", "AC_gK1", "AC_gKr", "AC_gKs", "AC_gKur_base", "AC_gNa", "AC_gbCa", "AC_gbNa", "AC_gto", "AC_ical_fCa_tau", "AC_ksat", "AC_sigma", "AC_tau_tr"),
         recommended_exports=("membrane_V", "calcium_Cai", "AV_INa", "AV_ICaL", "AV_IKr", "AV_IKs", "AV_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -178,6 +189,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_EC50_SR", "AC_HSR", "AC_MaxSR", "AC_MinSR", "AC_kiCa", "AC_kim", "AC_koCa", "AC_kom", "AC_ks", "AC_CM_tot", "AC_CQ_tot", "AC_Mgi", "AC_TC_tot", "AC_TMC_tot", "AC_kb_CM", "AC_kb_CQ", "AC_kb_TC", "AC_kb_TMC", "AC_kb_TMM", "AC_kf_CM", "AC_kf_CQ", "AC_kf_TC", "AC_kf_TMC", "AC_kf_TMM", "AC_L_cell", "AC_L_sub", "AC_R_cell", "AC_V_i_part", "AC_V_jsr_part", "AC_V_nsr_part", "AC_V_cell", "AC_V_sub", "AC_V_i", "AC_V_jsr", "AC_V_nsr", "AC_ACh", "AC_Iso_1_uM", "AC_Km_fCa", "AC_alpha_fCa", "AC_K_up", "AC_P_up_basal", "AC_b_up", "AC_slope_up", "AC_tau_dif_Ca", "AC_tau_tr", "AC_P_up", "AC_V_holding", "AC_V_test", "AC_t_holding", "AC_t_test", "AC_Cao", "AC_Ki", "AC_Ko", "AC_Nao", "AC_C", "AC_F", "AC_Membrane_R", "AC_T", "AC_clamp_mode", "AC_RTONF", "AC_Nai_clamp", "AC_ACh_block", "AC_i_CaL_Iso_increase", "AC_P_CaL", "AC_Iso_shift_dL", "AC_Iso_slope_dL", "AC_V_dL", "AC_k_dL", "AC_k_fL", "AC_shift_fL", "AC_P_CaT", "AC_offset_fT", "AC_ACh_on", "AC_g_KACh", "AC_alpha_a", "AC_g_Kr", "AC_g_Ks_", "AC_g_Ks", "AC_i_Ks_n_gate_Iso_shift", "AC_g_Kur", "AC_g_Na", "AC_g_Na_L", "AC_K1ni", "AC_K1no", "AC_K2ni", "AC_K2no", "AC_K3ni", "AC_K3no", "AC_K_NaCa", "AC_Kci", "AC_Kcni", "AC_Kco", "AC_Qci", "AC_Qco", "AC_Qn", "AC_blockade_NaCa", "AC_k34", "AC_i_NaK_Iso_increase", "AC_Km_Kp", "AC_Km_Nap", "AC_i_NaK_max", "AC_delta_m", "AC_Km_f", "AC_alpha", "AC_blockade", "AC_g_f", "AC_G_f", "AC_G_f_K", "AC_G_f_Na", "AC_g_f_K", "AC_g_f_Na", "AC_ACh_shift", "AC_i_f_y_gate_Iso_shift", "AC_y_shift", "AC_g_to", "AC_E_K"),
         recommended_exports=("membrane_V", "Ca_i", "AV_i_Na_i_Na", "AV_i_CaL_i_CaL", "AV_i_Kr_i_Kr", "AV_i_f_i_f", "AV_i_to_i_to", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -196,6 +209,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_F", "AC_L", "AC_R", "AC_T", "AC_cao", "AC_cli", "AC_clo", "AC_ko", "AC_nao", "AC_pi", "AC_rad", "AC_vmyo1frac", "AC_Ageo", "AC_vcell", "AC_Acap", "AC_vjsr", "AC_vmyo", "AC_vnsr", "AC_vss", "AC_vcsr", "AC_vmyo1", "AC_vnsr1", "AC_vnsr2", "AC_vmyo2", "AC_CaMKo", "AC_ECl", "AC_KmCaM", "AC_KmCaMK", "AC_PKNa", "AC_aCaMK", "AC_bCaMK", "AC_GNa", "AC_GNaL", "AC_tau_hl", "AC_PCa", "AC_vhalf_d", "AC_vhalff", "AC_zca", "AC_PCaK", "AC_PCaNa", "AC_GKr", "AC_GKs", "AC_GK1", "AC_Gto", "AC_SOICR", "AC_grelbarjsrol", "AC_tau_gap", "AC_tauoff", "AC_tauon", "AC_Gncx", "AC_KmCaAct", "AC_kasymm", "AC_kcaoff", "AC_kcaon", "AC_kna1", "AC_kna2", "AC_kna3", "AC_qca", "AC_qna", "AC_wca", "AC_wna", "AC_wnaca", "AC_zna", "AC_h10", "AC_k2", "AC_k5", "AC_h11", "AC_h12", "AC_k1", "AC_h101", "AC_k21", "AC_k51", "AC_h1111", "AC_h121", "AC_k11", "AC_H", "AC_Khp", "AC_Kki", "AC_Kko", "AC_Kmgatp", "AC_Knai0", "AC_Knao0", "AC_Knap", "AC_Kxkur", "AC_MgADP", "AC_MgATP", "AC_Pnak", "AC_delta", "AC_eP", "AC_k1m", "AC_k1p", "AC_k2m", "AC_k2p", "AC_k3m", "AC_k3p2", "AC_k4m", "AC_k4p2", "AC_zk", "AC_a2", "AC_a4", "AC_b1", "AC_GKb", "AC_PNab", "AC_PCab", "AC_GpCa", "AC_BSLmax", "AC_BSRmax", "AC_KmBSL", "AC_KmBSR", "AC_cmdnmax", "AC_csqnmax", "AC_kmcmdn", "AC_kmcsqn", "AC_kmtrpn", "AC_trpnmax"),
         recommended_exports=("cell_v", "cai", "AV_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_ITo_ITo", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -214,6 +229,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_Bmax_Na_jn", "AC_Bmax_Na_sl", "AC_koff_na", "AC_kon_na", "AC_AF", "AC_C", "AC_ISO", "AC_RA", "AC_JCa_jnsl", "AC_JCa_slmyo", "AC_JNa_jnsl", "AC_JNa_slmyo", "AC_cell_length", "AC_cell_radius", "AC_pi", "AC_Vcell", "AC_Vjn", "AC_Vmyo", "AC_Vsl", "AC_Vsr", "AC_inal_hl_tau", "AC_Ca_o", "AC_Cl_i", "AC_Cl_o", "AC_K_o", "AC_Mg_i", "AC_Na_o", "AC_Fjn", "AC_Fjn_CaL", "AC_Fsl", "AC_Fsl_CaL", "AC_F", "AC_R", "AC_T", "AC_FRT", "AC_Q", "AC_Bmax_CaM", "AC_Bmax_SLhighj", "AC_Bmax_SLhighsl", "AC_Bmax_SLlowj", "AC_Bmax_SLlowsl", "AC_Bmax_SR", "AC_Bmax_TnChigh", "AC_Bmax_TnClow", "AC_Bmax_myosin", "AC_koff_cam", "AC_koff_myoca", "AC_koff_myomg", "AC_koff_slh", "AC_koff_sll", "AC_koff_sr", "AC_koff_tnchca", "AC_koff_tnchmg", "AC_koff_tncl", "AC_kon_cam", "AC_kon_myoca", "AC_kon_myomg", "AC_kon_slh", "AC_kon_sll", "AC_kon_sr", "AC_kon_tnchca", "AC_kon_tnchmg", "AC_kon_tncl", "AC_Bmax_Csqn", "AC_koff_csqn", "AC_kon_csqn", "AC_IbarNaK", "AC_KmKo", "AC_KmNaip", "AC_sigma", "AC_ECl", "AC_J_SR_leak_max", "AC_Kmf", "AC_Kmr", "AC_MaxSR", "AC_MinSR", "AC_Q10SRCaP", "AC_Vmax_SRCaP", "AC_ec50SR", "AC_hillSRCaP", "AC_kiCa", "AC_kim", "AC_koCa", "AC_kom", "AC_ks", "AC_amplitude", "AC_stim_duration", "AC_stim_offset", "AC_stim_period", "AC_gCaB", "AC_Q10CaL", "AC_f_conducting", "AC_fcaCaMSL", "AC_fcaCaj", "AC_pCa_max", "AC_pK_max", "AC_pNa_max", "AC_pCa", "AC_pK", "AC_pNa", "AC_gClB", "AC_GClCa", "AC_KdClCa", "AC_gKp", "AC_gKr_max", "AC_gKr", "AC_gKs_max", "AC_pNaK", "AC_gKs_jn", "AC_gKs_sl", "AC_gKur_max", "AC_gKur", "AC_gNa_max", "AC_gNa", "AC_gNaB", "AC_gNaL_max", "AC_gNaL", "AC_gto_max", "AC_gto", "AC_gK1_max", "AC_gK1", "AC_IbarNCX_max", "AC_Kdact", "AC_KmCai", "AC_KmCao", "AC_KmNai", "AC_KmNao", "AC_Q10NCX", "AC_ksat", "AC_nu", "AC_IbarNCX", "AC_IbarSLCaP", "AC_KmPCa", "AC_Q10SLCaP", "AC_ipca_IpCa_jn_b", "AC_ipca_IpCa_sl_b"),
         recommended_exports=("V", "Cass", "AV_INa", "AV_ICaL", "AV_IKr", "AV_IKs", "AV_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -232,6 +249,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_K_pCa", "AC_g_pCa", "AC_g_CaL", "AC_g_bca", "AC_Buf_c", "AC_Buf_sr", "AC_Buf_ss", "AC_Ca_o", "AC_EC", "AC_K_buf_c", "AC_K_buf_sr", "AC_K_buf_ss", "AC_K_up", "AC_V_leak", "AC_V_rel", "AC_V_sr", "AC_V_ss", "AC_V_xfer", "AC_Vmax_up", "AC_k1_prime", "AC_k2_prime", "AC_k3", "AC_k4", "AC_max_sr", "AC_min_sr", "AC_g_Na", "AC_g_f_K", "AC_g_f_Na", "AC_g_K1", "AC_Cm", "AC_F", "AC_R", "AC_T", "AC_V_c", "AC_K_o", "AC_g_pK", "AC_g_Kr", "AC_P_kna", "AC_g_Ks", "AC_g_bna", "AC_K_NaCa", "AC_K_sat", "AC_Km_Ca", "AC_Km_Nai", "AC_alpha", "AC_sodium_calcium_exchanger_current_gamma", "AC_Na_o", "AC_K_mNa", "AC_K_mk", "AC_P_NaK", "AC_g_sus", "AC_g_to"),
         recommended_exports=("V", "Cai", "AV_i_Na", "AV_i_CaL", "AV_i_Kr", "AV_i_f", "AV_i_to", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -250,6 +269,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("R", "T", "F", "Cm", "V_c", "P_kna", "K_o", "Na_o", "Ca_o", "g_K1", "g_Kr", "g_Ks", "g_Na", "g_bNa", "g_CaL", "g_bCa", "g_to", "P_NaK", "K_mk", "K_mNa", "K_NaCa", "K_sat", "alpha_NCX", "gamma_NCX", "Km_Ca", "Km_Nai", "g_pCa", "K_pCa", "g_pK", "tau_g", "a_rel", "b_rel", "c_rel", "K_up", "V_leak", "Vmax_up", "Buf_c", "K_buf_c", "Buf_sr", "K_buf_sr", "V_sr", "tau_fCa", "sInfPrefactor", "sInfShift", "sInfScale", "tauSGaussAmp", "tauSGaussShift", "tauSGaussWidth", "tauSSigmoidAmp", "tauSSigmoidShift", "tauSSigmoidScale", "tauSOffset"),
         recommended_exports=("membrane_V", "calcium_Cai", "i_Na", "i_CaL", "i_Kr", "i_Ks", "i_to", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
+        native_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -268,6 +288,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_CaMKo", "AC_KmCaM", "AC_KmCaMK", "AC_aCaMK", "AC_bCaMK", "AC_GpCa", "AC_KmCap", "AC_L", "AC_rad", "AC_Ageo", "AC_vcell", "AC_Acap", "AC_vjsr", "AC_vmyo", "AC_vnsr", "AC_vss", "AC_tauCa", "AC_tauCl", "AC_tauK", "AC_tauNa", "AC_cao", "AC_clo", "AC_ko", "AC_nao", "AC_F", "AC_R", "AC_T", "AC_zca", "AC_zcl", "AC_zk", "AC_zna", "AC_Jup_b", "AC_upScale", "AC_PKNa", "AC_Fjunc", "AC_GClCa", "AC_GClb", "AC_KdClCa", "AC_GK1_b", "AC_GK1", "AC_GKb_b", "AC_GKb", "AC_GKs_b", "AC_GKs", "AC_GNa", "AC_GNaL_b", "AC_thL", "AC_GNaL", "AC_thLp", "AC_A_atp", "AC_K_atp", "AC_K_o_n", "AC_fkatp", "AC_gkatp", "AC_akik", "AC_bkik", "AC_EKshift", "AC_Gto_b", "AC_Gto", "AC_Aff", "AC_ICaL_fractionSS", "AC_Io", "AC_Kmn", "AC_PCa_b", "AC_dielConstant", "AC_k2n", "AC_offset", "AC_tjca", "AC_vShift", "AC_Afs", "AC_PCa", "AC_constA", "AC_PCaK", "AC_PCaNa", "AC_PCap", "AC_gamma_cao", "AC_gamma_ko", "AC_gamma_nao", "AC_PCaKp", "AC_PCaNap", "AC_PCab", "AC_GKr_b", "AC_alpha_1", "AC_beta_1", "AC_GKr", "AC_Gncx_b", "AC_INaCa_fractionSS", "AC_KmCaAct", "AC_kasymm", "AC_kcaoff", "AC_kcaon", "AC_kna1", "AC_kna2", "AC_kna3", "AC_qca", "AC_qna", "AC_wca", "AC_wna", "AC_wnaca", "AC_Gncx", "AC_h10_i", "AC_h10_ss", "AC_k2_i", "AC_k2_ss", "AC_k5_i", "AC_k5_ss", "AC_h11_i", "AC_h11_ss", "AC_h12_i", "AC_h12_ss", "AC_k1_i", "AC_k1_ss", "AC_H", "AC_Khp", "AC_Kki", "AC_Kko", "AC_Kmgatp", "AC_Knai0", "AC_Knao0", "AC_Knap", "AC_Kxkur", "AC_MgADP", "AC_MgATP", "AC_Pnak_b", "AC_delta", "AC_eP", "AC_k1m", "AC_k1p", "AC_k2m", "AC_k2p", "AC_k3m", "AC_k3p", "AC_k4m", "AC_k4p", "AC_Pnak", "AC_a2", "AC_a4", "AC_b1", "AC_PNab", "AC_BSLmax", "AC_BSRmax", "AC_KmBSL", "AC_KmBSR", "AC_cmdnmax_b", "AC_csqnmax", "AC_kmcmdn", "AC_kmcsqn", "AC_kmtrpn", "AC_trpnmax", "AC_cmdnmax", "AC_Jrel_b", "AC_bt", "AC_cajsr_half", "AC_a_rel", "AC_btp", "AC_a_relp", "deltaEpiAmp", "deltaEpiShift", "deltaEpiScale", "jrelTissueScale"),
         recommended_exports=("V", "Cass", "AV_INa_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_Ito_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
+        native_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -286,6 +307,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_CaMKo", "AC_KmCaM", "AC_KmCaMK", "AC_aCaMK", "AC_bCaMK", "AC_IP3_IP3", "AC_k0", "AC_k0a", "AC_k1", "AC_k1a", "AC_k2", "AC_k2a", "AC_tauip3", "AC_GpCa", "AC_KmCap", "AC_L", "AC_greekpi", "AC_rad", "AC_Ageo", "AC_vcell", "AC_Acap", "AC_vcsr", "AC_vjsr", "AC_vmyo", "AC_vnsr", "AC_vsl", "AC_vss", "AC_gaptau", "AC_sstau", "AC_cao", "AC_ko", "AC_nao", "AC_F", "AC_R", "AC_T", "AC_zca", "AC_zk", "AC_zna", "AC_Gncx", "AC_KmCaAct", "AC_kasymm", "AC_kcaoff", "AC_kcaon", "AC_kna1", "AC_kna2", "AC_kna3", "AC_qca", "AC_qna", "AC_wca", "AC_wna", "AC_wnaca", "AC_h10_i", "AC_h10_ss", "AC_k2_i", "AC_k2_ss", "AC_k5_i", "AC_k5_ss", "AC_h11_i", "AC_h11_ss", "AC_h12_i", "AC_h12_ss", "AC_k1_i", "AC_k1_ss", "AC_H", "AC_Khp", "AC_Kki", "AC_Kko", "AC_Kmgatp", "AC_Knai0", "AC_Knao0", "AC_Knap", "AC_Kxkur", "AC_MgADP", "AC_MgATP", "AC_Pnak", "AC_delta", "AC_eP", "AC_k1m", "AC_k1p", "AC_k2m", "AC_k2p", "AC_k3m", "AC_k3p", "AC_k4m", "AC_k4p", "AC_a2", "AC_a4", "AC_b1", "AC_dkmplbbar", "AC_dqupcamkbar", "AC_kmup", "AC_nsrbar", "AC_PKNa", "AC_GCaT", "AC_GK1", "AC_GKr", "AC_GKs", "AC_Ahf", "AC_GNa", "AC_hssV1", "AC_hssV2", "AC_mssV1", "AC_mssV2", "AC_mtD1", "AC_mtD2", "AC_mtV1", "AC_mtV2", "AC_mtV3", "AC_mtV4", "AC_Ahs", "AC_GfK", "AC_GfNa", "AC_Gsus", "AC_Gto", "AC_GNaL", "AC_thL", "AC_thLp", "AC_Aff", "AC_Kmn", "AC_PCa", "AC_k2n", "AC_tjca", "AC_Afs", "AC_PCaK", "AC_PCaNa", "AC_PCap", "AC_PCaKp", "AC_PCaNap", "AC_PCab", "AC_PNab", "AC_BSLmax", "AC_BSRmax", "AC_KmBSL", "AC_KmBSR", "AC_cm", "AC_cmdnmax", "AC_cmdnmaxsl", "AC_csqnmax", "AC_csqnmaxsl", "AC_kmcmdn", "AC_kmcsqn", "AC_kmtrpn", "AC_trpnmax", "AC_trpnmaxsl"),
         recommended_exports=("Vm", "Cass", "AV_INa_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_Ito_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -304,6 +327,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_CaMK0", "AC_K_Phos_CaMK", "AC_Km_CaMK_Ca", "AC_PP1_tot", "AC_Whole_cell_PP1", "AC_CaMK_alpha", "AC_alpha_serca", "AC_CaMK_beta", "AC_tau_cal", "AC_tau_plb", "AC_tau_ryr", "AC_Aff", "AC_Afs", "AC_ICaL_fractionSS", "AC_Io", "AC_Kmn", "AC_PCa", "AC_PCaK", "AC_PCaK_P", "AC_PCaKp", "AC_PCaNa", "AC_PCaNa_P", "AC_PCaNap", "AC_PCa_P", "AC_PCa_Pb", "AC_PCa_b", "AC_PCap", "AC_constA", "AC_dielConstant", "AC_fICaLP", "AC_fICaL_P", "AC_gamma_cao", "AC_gamma_ko", "AC_gamma_nao", "AC_k2n", "AC_rateRecovery", "AC_tjca", "AC_GCab", "AC_GCab_b", "AC_GClCa", "AC_GClCa_b", "AC_GClb", "AC_GClb_b", "AC_KdClCa", "AC_GK1", "AC_GK1_b", "AC_IK1_celltype_factor", "AC_IK1_sex_factor", "AC_GKb", "AC_GKb_b", "AC_GKr", "AC_GKr_b", "AC_alpha_1", "AC_IKr_beta_1", "AC_IKr_celltype_factor", "AC_IKr_sex_factor", "AC_GKs", "AC_GKs_b", "AC_P_g_0", "AC_P_g_max", "AC_P_tau_0", "AC_P_tau_max", "AC_P_vh_0", "AC_P_vh_max", "AC_IKs_celltype_factor", "AC_gKs_factor", "AC_kPKA_IKs", "AC_IKs_sex_factor", "AC_GNa", "AC_GNa_P", "AC_GNa_b", "AC_fINa_P", "AC_Gncx", "AC_Gncx_b", "AC_INaCa_fractionSS", "AC_KmCaAct", "AC_INaCa_celltype_factor", "AC_h10_i", "AC_h10_ss", "AC_h11_i", "AC_h11_ss", "AC_h12_i", "AC_h12_ss", "AC_k1_i", "AC_k1_ss", "AC_k2_i", "AC_k2_ss", "AC_k5_i", "AC_k5_ss", "AC_kasymm", "AC_kcaoff", "AC_kcaon", "AC_kna1", "AC_kna2", "AC_kna3", "AC_qca", "AC_qna", "AC_INaCa_sex_factor", "AC_wca", "AC_wna", "AC_wnaca", "AC_IbarNaK", "AC_IbarNaK_b", "AC_KmKo", "AC_KmNaip", "AC_KmNaip_PKA", "AC_GNaL_b", "AC_thL", "AC_thLp", "AC_GNab", "AC_GNab_b", "AC_IbarSLCaP", "AC_IbarSLCaP_b", "AC_KmPCa", "AC_Q10SLCaP", "AC_Gto_fast", "AC_Gto_slow", "AC_fICaL_PKA", "AC_fIKs_PKA", "AC_fINaK_PKA", "AC_fINa_PKA", "AC_fMyBPC_PKA", "AC_fPLB_PKA", "AC_fTnI_PKA", "AC_Km_SERCA_Ca", "AC_Kmf", "AC_Kmf_p", "AC_Kmr", "AC_Max_Vmax_SERCA_Ca", "AC_Q10SRCaP", "AC_Vmax_SRCaP", "AC_Vmax_SRCaP_b", "AC_hillSRCaP", "AC_cellLength", "AC_cellRadius", "AC_vcell", "AC_vjunc", "AC_vmyo", "AC_vsl", "AC_vsr", "AC_A", "AC_Lfac", "AC_PKAForceMultiplier", "AC_TOT_A", "AC_TRPN_n", "AC_Tref", "AC_XSSS", "AC_XWSS", "AC_beta_0", "AC_contraction_beta_1", "AC_ca50", "AC_cds", "AC_cdw", "AC_dr", "AC_fPKA_TnI", "AC_fracTnIpo", "AC_contraction_gamma", "AC_gamma_wu", "AC_k_su", "AC_k_uw", "AC_k_ws", "AC_k_wu", "AC_koff", "AC_ktm_block", "AC_ktm_unblock", "AC_lambda", "AC_lambda0", "AC_lambda_max", "AC_lambda_min", "AC_lambda_rate", "AC_mu", "AC_nperm", "AC_nu", "AC_perm50", "AC_phi", "AC_wfrac", "AC_sex", "AC_cao", "AC_clo", "AC_ko", "AC_nao", "AC_Bmax_CaM", "AC_Bmax_Csqn", "AC_Bmax_Naj", "AC_Bmax_Nasl", "AC_Bmax_SLhighj", "AC_Bmax_SLhighsl", "AC_Bmax_SLlowj", "AC_Bmax_SLlowsl", "AC_Bmax_SR", "AC_Bmax_TnChigh", "AC_Bmax_TnClow", "AC_Bmax_myosin", "AC_J_ca_juncsl", "AC_J_ca_slmyo", "AC_J_na_juncsl", "AC_J_na_slmyo", "AC_koff_cam", "AC_koff_csqn", "AC_koff_myoca", "AC_koff_myomg", "AC_koff_na", "AC_koff_slh", "AC_koff_sll", "AC_koff_sr", "AC_koff_tnchca", "AC_koff_tnchmg", "AC_kon_cam", "AC_kon_csqn", "AC_kon_myoca", "AC_kon_myomg", "AC_kon_na", "AC_kon_slh", "AC_kon_sll", "AC_kon_sr", "AC_kon_tnchca", "AC_kon_tnchmg", "AC_mgi", "AC_Cmem", "AC_Fjunc", "AC_Fsl", "AC_ICaLPCa_multiplier", "AC_ICab_multiplier", "AC_IClCa_multiplier", "AC_IClb_multiplier", "AC_IK1_multiplier", "AC_IKb_multiplier", "AC_IKr_multiplier", "AC_IKs_multiplier", "AC_INaCa_multiplier", "AC_INaK_multiplier", "AC_INaL_multiplier", "AC_INa_multiplier", "AC_INab_multiplier", "AC_IpCa_multiplier", "AC_Itof_multiplier", "AC_Itos_multiplier", "AC_Jrel_multiplier", "AC_Jup_multiplier", "AC_F", "AC_Qpow", "AC_R", "AC_T", "AC_zca", "AC_zcl", "AC_zk", "AC_zna", "AC_PNaK", "AC_CI_to_RI", "AC_MaxSR", "AC_MinSR", "AC_a_rel", "AC_baseRateCaI", "AC_bt", "AC_caExpFactor", "AC_caExpFactor2", "AC_caTransFactor", "AC_caTransFactor2", "AC_caTransFactor2p", "AC_directRelMidpoint", "AC_ec50SR", "AC_ecCaI", "AC_kiCa", "AC_kim", "AC_koCa", "AC_kom", "AC_ks", "AC_maxCaI", "AC_minCaI", "AC_steepnessCaI", "AC_steepnessCaSR", "AC_tauInact", "AC_tauInact2", "gnalTissueScale"),
         recommended_exports=("v", "cai", "contraction_Ca_TRPN", "AV_INa_INa", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IKs_IKs", "AV_Ito_Ito", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells"),
+        native_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -323,6 +347,8 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("AC_CMDN_max", "AC_CSQN_max", "AC_Ca_up_max", "AC_Cao", "AC_Cm", "AC_ECaL", "AC_F", "AC_FRT", "AC_INaCa_max", "AC_INaK_max", "AC_I_diff", "AC_I_up_max", "AC_KQ10", "AC_krel", "AC_K_up", "AC_KmCa", "AC_KmKo", "AC_KmNa", "AC_KmNai", "AC_Km_CMDN", "AC_Km_CSQN", "AC_Km_TRPN", "AC_Ko", "AC_Nao", "AC_Clo", "AC_R", "AC_RTF", "AC_T", "AC_TRPN_max", "AC_V_cell", "AC_V_i", "AC_V_rel", "AC_V_up", "AC_c1", "AC_c2", "AC_cajsr_u_tau", "AC_gNa", "AC_gK1", "AC_gKr", "AC_gKs", "AC_gKur_amp", "AC_gClCa", "AC_gbCa", "AC_gbNa", "AC_gbK", "AC_ical_fCa_tau", "AC_gamma", "AC_ksat", "AC_sigma", "AC_tau_tr", "AC_gCaL", "AC_IpCa_max"),
         recommended_exports=("membrane_V", "calcium_Cai", "AV_INa", "AV_ICaL", "AV_IKr", "AV_IKs", "AV_IClCa", "Iion_cm"),
         compatible_tissues=("epicardialCells", "mCells", "endocardialCells", "myocyte"),
+        native_tissue_labels=("myocyte",),
+        approximate_tissue_labels=("epicardialCells", "mCells", "endocardialCells"),
         supports_heterogeneity=True,
         supports_apex_base_heterogeneity=True,
         compatible_solvers=("monodomainSolver", "bidomainSolver", "singleCellSolver"),
@@ -341,6 +367,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("Cm", "Beta", "Chi"),
         recommended_exports=("V", "u1", "u2", "u3"),
         compatible_tissues=("manufactured",),
+        native_tissue_labels=("manufactured",),
         compatible_solvers=("monodomainSolver", "singleCellSolver"),
         species=("generic",),
         cardiac_region=("manufactured",),
@@ -357,6 +384,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("Cm", "Beta", "Chi"),
         recommended_exports=("V", "u1", "u2", "u3"),
         compatible_tissues=("manufactured",),
+        native_tissue_labels=("manufactured",),
         compatible_solvers=("bidomainSolver", "singleCellSolver"),
         species=("generic",),
         cardiac_region=("manufactured",),
@@ -373,6 +401,7 @@ IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {
         constants=("Cm", "Beta", "Chi"),
         recommended_exports=("V", "u1", "u2", "u3"),
         compatible_tissues=("manufactured",),
+        native_tissue_labels=("manufactured",),
         compatible_solvers=("bidomainSolver",),
         species=("generic",),
         cardiac_region=("manufactured",),
@@ -429,6 +458,10 @@ def list_compatible_ionic_models(
         compatible.append(model_name)
     return compatible
 
+
+def planning_tissues(entry: IonicModelEntry) -> tuple[str, ...]:
+    """Return the tissue labels to enumerate by default in planning workflows."""
+    return entry.native_tissue_labels or entry.compatible_tissues
 
 
 def list_models_by_region(cardiac_region: str) -> list[str]:
@@ -489,6 +522,12 @@ for batched_name in BATCHED_MODELS:
             parent,
             compatible_tissues=(
                 parent.compatible_tissues if heterogeneity_capable else ("myocyte",)
+            ),
+            native_tissue_labels=(
+                parent.native_tissue_labels if heterogeneity_capable else ("myocyte",)
+            ),
+            approximate_tissue_labels=(
+                parent.approximate_tissue_labels if heterogeneity_capable else ()
             ),
             supports_heterogeneity=heterogeneity_capable,
             supports_apex_base_heterogeneity=(

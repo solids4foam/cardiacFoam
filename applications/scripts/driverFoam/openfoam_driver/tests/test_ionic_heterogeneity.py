@@ -29,7 +29,7 @@
 
 Covers the four surfaces wired in Phase 2:
   1. ionic_model_catalog: ``supports_heterogeneity`` and
-     ``supports_apex_base_heterogeneity`` flags.
+     ``supports_apex_base_heterogeneity`` flags plus tissue semantics.
   2. dict_entries: the seven transmural ``ionicHeterogeneity.*`` DictEntries
      plus the five ``apexBaseBands.*`` entries (12 total, separately gated).
   3. dict_builder: build + parse round-trip of a heterogeneity block
@@ -42,6 +42,12 @@ from __future__ import annotations
 
 from openfoam_driver.core.runtime.run_model import RunDocument
 from openfoam_driver.specs.validation import validate_run
+
+_NATIVE_TISSUE_MODELS = ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl")
+_OVERRIDE_ONLY_TISSUE_MODELS = (
+    "AlievPanfilov", "Courtemanche", "Fabbri", "Gaur",
+    "Grandi", "PerisYague", "Stewart", "Trovato",
+)
 
 
 # --------------------------------------------------------------------------
@@ -85,6 +91,38 @@ def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
         "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
     ):
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
+
+
+def test_native_tissue_labels_mark_models_with_intrinsic_tissue_variants():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    expected = ("epicardialCells", "mCells", "endocardialCells")
+    for name in _NATIVE_TISSUE_MODELS:
+        assert IONIC_MODEL_CATALOG[name].native_tissue_labels == expected, name
+        assert IONIC_MODEL_CATALOG[name].approximate_tissue_labels == (), name
+
+
+def test_override_only_models_advertise_approximate_tissue_labels_explicitly():
+    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    expected = ("epicardialCells", "mCells", "endocardialCells")
+    for name in _OVERRIDE_ONLY_TISSUE_MODELS:
+        assert IONIC_MODEL_CATALOG[name].native_tissue_labels == ("myocyte",), name
+        assert IONIC_MODEL_CATALOG[name].approximate_tissue_labels == expected, name
+
+
+def test_default_single_cell_tissue_map_uses_native_tissues_only():
+    from openfoam_driver.core.defaults.single_cell import IONIC_MODEL_TISSUE_MAP
+    assert IONIC_MODEL_TISSUE_MAP["BuenoOrovio"] == (
+        "epicardialCells", "mCells", "endocardialCells",
+    )
+    assert IONIC_MODEL_TISSUE_MAP["Gaur"] == ("myocyte",)
+
+
+def test_default_restitution_tissue_map_uses_native_tissues_only():
+    from openfoam_driver.core.defaults.restitution_curves import IONIC_MODEL_TISSUE_MAP
+    assert IONIC_MODEL_TISSUE_MAP["TNNP"] == (
+        "epicardialCells", "mCells", "endocardialCells",
+    )
+    assert IONIC_MODEL_TISSUE_MAP["Courtemanche"] == ("myocyte",)
 
 
 def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
