@@ -780,20 +780,37 @@ namespace Foam
 
         const dictionary& overrides = dict.subDict("ionicConstantOverrides");
 
+        const bool heterogeneityConfigured = dict.found("ionicHeterogeneity");
+
         forAllConstIter(dictionary, overrides, iter)
         {
             const word entryName(iter().keyword());
             if (!isConstantOverrideScopeName(entryName))
             {
-                // Not one of the fixed global/anatomical/myocyte scopes this
-                // tissueFlag-based overload understands. This may be a
-                // namedRegions-only scope (e.g. a scar/disease region name),
-                // which is validated and applied separately by the
-                // word-scoped applyConstantOverrides overload used by
-                // ionicModel::constantsForRegion(). Skip it here rather
-                // than fatal, since this overload has no visibility into
-                // which named regions are legitimately declared elsewhere
-                // in the dictionary.
+                if (!heterogeneityConfigured)
+                {
+                    // No ionicHeterogeneity block at all: the only valid
+                    // top-level scopes are 'global' and this model's own
+                    // tissue name, so any other key is unambiguously a
+                    // typo, not a legitimate region name.
+                    FatalErrorInFunction
+                        << "Unsupported ionicConstantOverrides entry '"
+                        << entryName << "' for ionic model " << modelName
+                        << " (no ionicHeterogeneity block is configured, so "
+                        << "the only valid scopes are 'global' and this "
+                        << "model's tissue name)." << nl
+                        << "Supported scopes: global, epicardialCells, "
+                        << "mCells, endocardialCells, myocyte."
+                        << exit(FatalError);
+                }
+
+                // A namedRegions/cellZoneRegions-only scope (e.g. a
+                // scar/disease region name), validated and applied
+                // separately by the word-scoped applyConstantOverrides
+                // overload used by ionicModel::constantsForRegion(). Skip
+                // it here rather than fatal, since this overload has no
+                // visibility into which named regions are legitimately
+                // declared elsewhere in the dictionary.
                 continue;
             }
 
