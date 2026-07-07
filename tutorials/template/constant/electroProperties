@@ -100,10 +100,12 @@ monodomainSolverCoeffs
     // }
     //
     // namedRegions mode replaces endoMInterface/mEpiInterface with an open,
-    // named list of field ranges tiling [0,1] (any names, not just the three
-    // anatomical ones — non-anatomical names fall back to the "myocyte"
-    // baseline plus their own ionicConstantOverrides scope, so this same
-    // block also covers scar/disease-region use cases):
+    // named list of field ranges tiling [0,1]. Each region resolves to an
+    // explicit "baseline" (epicardialCells | mCells | endocardialCells |
+    // myocyte) before its own ionicConstantOverrides scope is applied.
+    // baseline defaults to the region's own name if it is one of the three
+    // anatomical names, otherwise defaults to myocyte — set it explicitly
+    // to use a different starting baseline, e.g. for a scar/disease region:
     // ionicHeterogeneity
     // {
     //     field           t;
@@ -114,9 +116,19 @@ monodomainSolverCoeffs
     //
     //     regions
     //     {
-    //         endocardialCells { range (0.0 0.3); }
-    //         mCells           { range (0.3 0.7); }
-    //         epicardialCells  { range (0.7 1.0); }
+    //         endocardialCells { range (0.0 0.3); }                        // baseline defaults to endocardialCells
+    //         mCells           { range (0.3 0.7); }                        // baseline defaults to mCells
+    //         epicardialCells  { range (0.7 1.0); }                        // baseline defaults to epicardialCells
+    //     }
+    //
+    //     // Non-anatomical example: a xenograft/scar region, explicitly
+    //     // starting from the endocardial baseline instead of the myocyte
+    //     // default, then perturbed via its own override scope below.
+    //     // regions
+    //     // {
+    //     //     healthy       { range (0.0 0.6); }
+    //     //     xenograftZone { range (0.6 1.0); baseline endocardialCells; }
+    //     // }
     //     }
     // }
 
