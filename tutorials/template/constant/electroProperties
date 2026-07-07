@@ -129,6 +129,23 @@ monodomainSolverCoeffs
     //     //     healthy       { range (0.0 0.6); }
     //     //     xenograftZone { range (0.6 1.0); baseline endocardialCells; }
     //     // }
+    // }
+    //
+    // cellZoneRegions mode maps cells to regions based on the OpenFOAM
+    // mesh cellZones they belong to. No continuous scalar 'field' is needed.
+    // Transition parameters (transitionWidth, smoothing) are not supported
+    // for cell zones, and boundaries are perfectly sharp.
+    // ionicHeterogeneity
+    // {
+    //     mode cellZoneRegions;
+    //
+    //     regions
+    //     {
+    //         // Each entry defines a cellZone name to match.
+    //         // Like namedRegions, the 'baseline' starts from myocyte unless
+    //         // overridden.
+    //         healthyZone    { baseline mCells; }
+    //         scarTissueZone { baseline myocyte; }
     //     }
     // }
 
