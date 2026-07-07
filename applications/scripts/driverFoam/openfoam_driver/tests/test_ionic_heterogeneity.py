@@ -88,10 +88,13 @@ def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
 
 
 def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
-    # These models support transmuralBands/namedRegions heterogeneity but
-    # never override configureApexBaseBandsHeterogeneity.
+    # These models support neither transmural/named-region nor apex-base
+    # heterogeneity at all — the manufactured verification models.
     from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
-    for name in ("AlievPanfilov", "Courtemanche", "Stewart", "PerisYague"):
+    for name in (
+        "monodomainFDAManufactured", "bidomainFDAManufactured",
+        "bathBidomainFDAManufactured",
+    ):
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is False, name
 
 
@@ -322,7 +325,7 @@ def test_tissue_compatible_with_model_is_silent():
 def test_apex_base_with_incapable_model_is_error():
     run = _run({
         "myocardiumSolver": "monodomainSolver",
-        "ionicModel": "AlievPanfilov",
+        "ionicModel": "bidomainFDAManufactured",
         "tissue": "myocyte",
         "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
