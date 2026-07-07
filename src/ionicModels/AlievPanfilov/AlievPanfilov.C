@@ -188,6 +188,19 @@ void Foam::AlievPanfilov::configureIonicHeterogeneity
 }
 
 
+void Foam::AlievPanfilov::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl
+    (
+        apexDist, dict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 void Foam::AlievPanfilov::solveODE
 (
     const scalar stepStartTime,

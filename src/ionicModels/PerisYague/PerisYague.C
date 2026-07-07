@@ -181,6 +181,19 @@ void Foam::PerisYague::configureIonicHeterogeneity
 }
 
 
+void Foam::PerisYague::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl
+    (
+        apexDist, dict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 void Foam::PerisYague::solveODE
 (
     const scalar stepStartTime,

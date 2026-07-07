@@ -182,6 +182,19 @@ void Foam::Trovato::configureIonicHeterogeneity
 }
 
 
+void Foam::Trovato::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    configureApexBaseBandsHeterogeneityImpl
+    (
+        apexDist, dict, HETEROGENEOUS_CONSTANTS_
+    );
+}
+
+
 // ------------------------------------------------------------------------- //
 //  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
