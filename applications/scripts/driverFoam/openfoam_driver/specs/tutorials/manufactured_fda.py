@@ -47,20 +47,38 @@ from ..common import (
 from ...core.runtime.models import CaseConfig, TutorialSpec
 
 
+def _normalize_convergence_axis(convergence_axis: str) -> str:
+    axis = str(convergence_axis).strip().lower()
+    if axis not in {"spatial", "temporal"}:
+        raise ValueError(
+            f"Unsupported convergence_axis '{convergence_axis}'. "
+            "Expected 'spatial' or 'temporal'."
+        )
+    return axis
+
+
 def _format_dt(dt_value: float) -> str:
     token = f"{dt_value:.12g}".replace(".", "p")
     return token.replace("-", "m")
 
 
-def _case_output_filename(case: CaseConfig) -> str:
+def _case_output_filename(case: CaseConfig, *, convergence_axis: str = "spatial") -> str:
+    axis = _normalize_convergence_axis(convergence_axis)
     dimension = str(case.params["dimension"])
     cells = int(case.params["cells"])
     solver = str(case.params["solver"])
+    if axis == "temporal":
+        dt_value = float(case.params["dt"])
+        return f"{dimension}_{cells}_cells_{solver}_DT{_format_dt(dt_value)}.dat"
     return f"{dimension}_{cells}_cells_{solver}.dat"
 
 
-def _archive_output_dir(case_root: Path) -> Path:
-    return case_root / "postProcessing"
+def _sanitize_archive_tag(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value)
+
+
+def _archive_output_dir(case_root: Path, *, archive_tag: str = "default") -> Path:
+    return case_root / f"driverPostProcessingArchive_{_sanitize_archive_tag(archive_tag)}"
 
 
 def _build_cases(
@@ -172,6 +190,8 @@ def _run_case(
     tutorials_root: Path | None = None,
     run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
+    convergence_axis: str = "spatial",
+    archive_tag: str = "default",
 ) -> None:
     del setup_root
     dimension = str(case.params["dimension"])
@@ -198,8 +218,19 @@ def _run_case(
         )
     finally:
         _archive_case_logs(case_root, case)
-    _stage_case_output(case_root, case, run_in_parallel=run_in_parallel)
-    _stage_case_ecg_outputs(case_root, case, run_in_parallel=run_in_parallel)
+    _stage_case_output(
+        case_root,
+        case,
+        run_in_parallel=run_in_parallel,
+        convergence_axis=convergence_axis,
+        archive_tag=archive_tag,
+    )
+    _stage_case_ecg_outputs(
+        case_root,
+        case,
+        run_in_parallel=run_in_parallel,
+        archive_tag=archive_tag,
+    )
 
 
 def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
@@ -224,21 +255,40 @@ def _stage_case_output(
     case: CaseConfig,
     *,
     run_in_parallel: bool = False,
+    convergence_axis: str = "spatial",
+    archive_tag: str = "default",
 ) -> Path:
-    filename = _case_output_filename(case)
-    destination_dir = _archive_output_dir(case_root)
+    filename = _case_output_filename(case, convergence_axis=convergence_axis)
+    legacy_filename = _case_output_filename(case, convergence_axis="spatial")
+    destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / filename
     if run_in_parallel:
-        candidates = (
+        candidates = [
             case_root / "processor0" / "postProcessing" / filename,
             case_root / "postProcessing" / filename,
-        )
+        ]
     else:
-        candidates = (
+        candidates = [
             case_root / "postProcessing" / filename,
             case_root / "processor0" / "postProcessing" / filename,
-        )
+        ]
+
+    if convergence_axis != "spatial" and legacy_filename != filename:
+        if run_in_parallel:
+            candidates.extend(
+                [
+                    case_root / "processor0" / "postProcessing" / legacy_filename,
+                    case_root / "postProcessing" / legacy_filename,
+                ]
+            )
+        else:
+            candidates.extend(
+                [
+                    case_root / "postProcessing" / legacy_filename,
+                    case_root / "processor0" / "postProcessing" / legacy_filename,
+                ]
+            )
 
     for candidate in candidates:
         if not candidate.exists():
@@ -260,9 +310,10 @@ def _stage_case_ecg_outputs(
     case: CaseConfig,
     *,
     run_in_parallel: bool = False,
+    archive_tag: str = "default",
 ) -> list[Path]:
     staged_outputs: list[Path] = []
-    destination_dir = _archive_output_dir(case_root)
+    destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
     destination_dir.mkdir(parents=True, exist_ok=True)
 
     for source_name in (
@@ -300,8 +351,8 @@ def _stage_case_ecg_outputs(
     return staged_outputs
 
 
-def _collect_outputs(case_root: Path, output_dir: Path) -> None:
-    archived_dir = _archive_output_dir(case_root)
+def _collect_outputs(case_root: Path, output_dir: Path, *, archive_tag: str = "default") -> None:
+    archived_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
     archived_outputs = []
     if archived_dir.exists():
         for source in sorted(archived_dir.glob("*.dat")):
@@ -370,6 +421,7 @@ def make_spec(
     dimensions: Sequence[str] = defaults.DIMENSIONS,
     solver_types: Sequence[str] = defaults.SOLVER_TYPES,
     piecewise_sweep: bool = defaults.PIECEWISE_SWEEP,
+    convergence_axis: str = "spatial",
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     control_dict_relpath: str | Path = defaults.CONTROL_DICT_RELPATH,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
@@ -400,6 +452,8 @@ def make_spec(
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
+    convergence_axis_normalized = _normalize_convergence_axis(convergence_axis)
+    archive_tag = output_dir_name if output_dir_name else defaults.OUTPUT_DIR_NAME
 
     if piecewise_sweep and len(cells_list) != len(dt_values_list):
         raise ValueError(
@@ -447,8 +501,13 @@ def make_spec(
             tutorials_root=tutorials_root,
             run_script_relpath=run_script_path,
             run_in_parallel=run_in_parallel,
+            convergence_axis=convergence_axis_normalized,
+            archive_tag=archive_tag,
         ),
-        collect_outputs=_collect_outputs,
+        collect_outputs=partial(
+            _collect_outputs,
+            archive_tag=archive_tag,
+        ),
         postprocess=partial(
             _postprocess,
             tutorial_name=tutorial_name,
@@ -472,6 +531,7 @@ def make_spec(
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,
+            "convergence_axis": convergence_axis_normalized,
             "control_dict_relpath": str(control_dict_path),
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),
