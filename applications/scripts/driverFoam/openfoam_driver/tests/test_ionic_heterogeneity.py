@@ -186,10 +186,18 @@ def test_transmural_entries_gated_to_spatial_solvers():
         assert e.applicable_when.get("$ionicHeterogeneity_supported") is True, e.driver_path
 
 
-def test_apex_base_entries_gated_to_monodomain_only():
-    """apexBaseBands entries apply to monodomainSolver only."""
+def test_apex_base_entries_gated_to_monodomain_and_bidomain():
+    """apexBaseBands entries apply to monodomainSolver and bidomainSolver.
+
+    Both dispatch through the same myocardiumDomainInterface::New() codepath
+    (myocardiumDomainInterface.C) that parses ionicHeterogeneity.apexBaseBands;
+    eikonalSolver returns early from that factory before ionic-model/heterogeneity
+    setup runs, and singleCellSolver bypasses the factory entirely.
+    """
     for e in _apex_base_entries():
-        assert e.applicable_when.get("myocardiumSolver") == ("monodomainSolver",), e.driver_path
+        assert e.applicable_when.get("myocardiumSolver") == (
+            "monodomainSolver", "bidomainSolver",
+        ), e.driver_path
 
 
 def test_heterogeneity_enum_values():

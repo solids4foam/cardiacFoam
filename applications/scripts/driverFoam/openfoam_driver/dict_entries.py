@@ -425,7 +425,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Name of the apicobasal-distance field (0=apex, 1=base).',
             source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
             value_kind='word',
-            applicable_when={"myocardiumSolver": ("monodomainSolver",)},
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.beta',
@@ -433,7 +433,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
             value_kind='scalar',
             constraints=('Value must be > 0',),
-            applicable_when={"myocardiumSolver": ("monodomainSolver",)},
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.scalingMin',
@@ -441,21 +441,21 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
             value_kind='scalar',
             constraints=('Must be < scalingMax',),
-            applicable_when={"myocardiumSolver": ("monodomainSolver",)},
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.scalingMax',
             description='Maximum scaling.',
             source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
             value_kind='scalar',
-            applicable_when={"myocardiumSolver": ("monodomainSolver",)},
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.apexBaseBands.variables',
             description='Variables to scale.',
             source_refs=('src/ionicModels/ionicModel/ionicHeterogeneity.C',),
             value_kind='wordList',
-            applicable_when={"myocardiumSolver": ("monodomainSolver",)},
+            applicable_when={"myocardiumSolver": ("monodomainSolver", "bidomainSolver")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode',
