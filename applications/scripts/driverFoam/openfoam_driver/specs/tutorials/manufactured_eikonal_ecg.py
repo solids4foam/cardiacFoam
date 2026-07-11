@@ -210,6 +210,12 @@ def _run_case(
         tutorials_root=tutorials_root,
         run_script_relpath=run_script_relpath,
     )
+    # 1D manufactured meshes only have 10-80 cells total; decomposing them
+    # across the tutorial's 6-way decomposeParDict leaves some ranks with
+    # 1-2 cells, which has produced a DILU-preconditioner SIGFPE (degenerate
+    # local matrix) at tight PIMPLE tolerance. 6-way decomposition is fine for
+    # the 2D/3D cases, so only 1D is forced to run serially.
+    case_run_in_parallel = run_in_parallel and dimension != "1D"
     command = [
         "bash",
         "-l",
@@ -219,14 +225,14 @@ def _run_case(
         "--dimension",
         dimension,
     ]
-    if run_in_parallel:
+    if case_run_in_parallel:
         command.append("--parallel")
 
     try:
         subprocess.run(command, check=True)
     finally:
         _archive_case_logs(case_root, case)
-    _stage_case_outputs(case_root, case, run_in_parallel=run_in_parallel)
+    _stage_case_outputs(case_root, case, run_in_parallel=case_run_in_parallel)
 
 
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
