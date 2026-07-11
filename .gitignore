@@ -118,6 +118,7 @@ outputs*/
 .agents/
 .claude/
 docs/superpowers/
+.superpowers/
 
 # Generated driverFOAM run reports and artifacts
 **/setup*/run_report.md
