@@ -26,8 +26,11 @@ Description
       beatInterval >= minBeatInterval  — excitable, activated by incoming wave
       beatInterval >= escapeInterval   — spontaneous firing (funny current)
     minBeatInterval = apdNominal + minDI. CV is looked up as a function of
-    DI = beatInterval - apdNominal. Reports breakdown indicators and records
-    multi-beat history via activationHistory.
+    DI = beatInterval - apdNominal. Reports breakdown indicators. Multi-beat
+    history is not tracked separately: activationTime (owned by
+    conductionSystemDomain) is a single evolving field overwritten at each
+    activation, and the write-time series across output directories is the
+    re-activation history (same convention as the voltage solvers).
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -41,7 +44,6 @@ SourceFiles
 
 #include "conductionSystemSolver.H"
 #include "restitutionModel.H"
-#include "activationHistory.H"
 #include "stimulusIO.H"
 #include "fvMesh.H"
 #include "overrideTypeName.H"
@@ -74,8 +76,6 @@ class restitutionEikonalSolver1D
     labelList   blockCount_;
     labelList   wavebreakCount_;
     scalarField minDI_;
-
-    activationHistory history_;
 
     labelList        stimSites_;
     StimulusProtocol stimProtocol_;

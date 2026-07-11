@@ -120,8 +120,6 @@ void Foam::restitutionEikonalSolver1D::initialiseState
     blockCount_.setSize(N, 0);
     wavebreakCount_.setSize(N, 0);
 
-    history_.reset(N);
-
     tStart_ = t0;
     initialised_ = true;
 }
@@ -149,10 +147,20 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
 
         Tact[nodeI] = lastActTime < 0.0 ? -1.0 : lastActTime;
 
+        if (incomingTime > tNow)
+        {
+            if (incomingTime < nextTact_[nodeI])
+            {
+                nextTact_[nodeI] = incomingTime;
+                nextTactSource_[nodeI] = -1;
+            }
+
+            continue;
+        }
+
         if
         (
-            incomingTime <= tNow
-         && incomingTime - lastActTime >= minBeatInterval_
+            incomingTime - lastActTime >= minBeatInterval_
         )
         {
             if (incomingTime < nextTact_[nodeI])
@@ -245,7 +253,6 @@ void Foam::restitutionEikonalSolver1D::advance
         const scalar DIact = beatInterval_i - apdNominal_;
 
         Tact[i] = te;
-        history_.record(i, te);
         DI_[i] = DIact;
         lastActTime_[i] = te;
 
@@ -380,8 +387,6 @@ void Foam::restitutionEikonalSolver1D::diagnosticFields
     }
     names[3] = "wavebreakCount";
     fields.set(3, wbPtr);
-
-    history_.appendDiagnostics(names, fields);
 }
 
 

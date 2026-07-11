@@ -15,7 +15,6 @@ core/electrophysiologyModel/electrophysiologyModel.C
 
 /* Restitution */
 conductionSystemModels/restitutionEikonalSolver1D/restitutionModel.C
-core/activationHistory.C
 
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
