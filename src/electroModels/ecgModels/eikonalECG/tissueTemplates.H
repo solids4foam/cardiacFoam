@@ -725,6 +725,48 @@ inline scalar evaluateTemplate
     return (1.0 - alpha)*values[lo] + alpha*values[lo + 1];
 }
 
+
+//- Derivative of evaluateTemplate's piecewise-linear interpolant, i.e. the
+//  secant slope between the two bracketing table samples. Flat outside the
+//  table range, matching evaluateTemplate's clamped end values there.
+inline scalar evaluateTemplateDerivative
+(
+    scalar localTime,
+    const scalar* times,
+    const scalar* values,
+    int numSamples
+)
+{
+    if (numSamples < 2) return 0.0;
+    if (localTime <= times[0]) return 0.0;
+    if (localTime >= times[numSamples - 1]) return 0.0;
+
+    const scalar dt = times[1] - times[0];
+    label lo = static_cast<label>((localTime - times[0]) / dt);
+
+    if (lo < 0) lo = 0;
+    if (lo >= numSamples - 1) lo = numSamples - 2;
+
+    scalar exactT0 = times[lo];
+    scalar exactT1 = times[lo + 1];
+
+    if (localTime < exactT0 || localTime > exactT1)
+    {
+        label hi = numSamples - 1;
+        lo = 0;
+        while (hi - lo > 1)
+        {
+            const label mid = (lo + hi)/2;
+            if (times[mid] <= localTime) lo = mid;
+            else hi = mid;
+        }
+        exactT0 = times[lo];
+        exactT1 = times[lo + 1];
+    }
+
+    return (values[lo + 1] - values[lo])/(exactT1 - exactT0);
+}
+
 } // End namespace eikonalECG_templates
 } // End namespace Foam
 

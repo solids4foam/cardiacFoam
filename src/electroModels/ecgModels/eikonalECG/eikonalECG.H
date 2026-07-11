@@ -54,7 +54,6 @@ class eikonalECG
 
     scalarField lastValues_;
     autoPtr<OFstream> outputPtr_;
-    autoPtr<volScalarField> VmPtr_;
 
     // Optimization: precomputed transfer vectors for pseudo-ECG
     bool leadVectorsCalculated_;
@@ -65,26 +64,31 @@ class eikonalECG
     scalarField wMid_;
     scalarField wEpi_;
 
-    scalar manufacturedTemplateValue(scalar localTime) const;
+    scalar manufacturedTemplateDerivative(scalar localTime) const;
 
     void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
 
-    void reconstructVm
+    //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient
+    //  instead of numerically re-differentiating the reconstructed Vm field.
+    //  Differentiating U(t-tau) via a mesh stencil applied to its sampled
+    //  values loses an order of accuracy relative to this chain rule, because
+    //  it re-derives a gradient from an already nonlinear-transformed field
+    //  rather than reusing tau's own smooth, well-resolved gradient.
+    void reconstructGradVm
     (
         scalar sampleTime,
         const volScalarField& activationTime,
-        volScalarField& Vm
+        const volVectorField& gradActivationTime,
+        volVectorField& gradVm
     ) const;
 
     void calculatePseudoECG
     (
         const ecgDomain& domain,
-        const volScalarField& Vm,
+        const volVectorField& gradVm,
         scalarField& values
     ) const;
-
-    volScalarField& surrogateVm(ecgDomain& domain);
 
 public:
 

@@ -48,7 +48,6 @@ eikonalECG::eikonalECG(const dictionary& dict)
     sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
     lastValues_(),
     outputPtr_(),
-    VmPtr_(),
     leadVectorsCalculated_(false),
     leadVectors_(),
     weightsCalculated_(false)
@@ -87,55 +86,53 @@ eikonalECG::eikonalECG(const dictionary& dict)
 }
 
 
-scalar eikonalECG::manufacturedTemplateValue(scalar localTime) const
+scalar eikonalECG::manufacturedTemplateDerivative(scalar localTime) const
 {
-    return Foam::sin(2.0*constant::mathematical::pi*localTime);
+    return
+        2.0*constant::mathematical::pi
+       *Foam::cos(2.0*constant::mathematical::pi*localTime);
 }
 
 
-void eikonalECG::reconstructVm
+void eikonalECG::reconstructGradVm
 (
     scalar sampleTime,
     const volScalarField& activationTime,
-    volScalarField& Vm
+    const volVectorField& gradActivationTime,
+    volVectorField& gradVm
 ) const
 {
     const scalarField& activationValues = activationTime.primitiveField();
-    scalarField& VmValues = Vm.primitiveFieldRef();
+    const vectorField& gradTauValues = gradActivationTime.primitiveField();
+    vectorField& gradVmValues = gradVm.primitiveFieldRef();
 
-    forAll(VmValues, cellI)
+    forAll(gradVmValues, cellI)
     {
         const scalar localTime = sampleTime - activationValues[cellI];
+        scalar dUds;
 
         if (useManufacturedTemplate_)
         {
-            VmValues[cellI] = manufacturedTemplateValue(localTime);
+            dUds = manufacturedTemplateDerivative(localTime);
         }
         else
         {
-            // Weighted blend of the three tissue templates.  With
-            // transitionMode=hard the weights are binary (0 or 1) and the
-            // result is identical to the previous hard-selection logic.
-            // With transitionMode=blend the weights vary smoothly across
-            // the transition zones, producing a continuous Vm field that
-            // eliminates the sharp surface-dipole artefacts at the band
-            // boundaries.
-            const scalar rawVm =
-                wEndo_[cellI] * eikonalECG_templates::evaluateTemplate
+            const scalar rawDUds =
+                wEndo_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::endoTimes,
                     eikonalECG_templates::endoValues,
                     eikonalECG_templates::numEndoSamples
                 )
-              + wMid_[cellI] * eikonalECG_templates::evaluateTemplate
+              + wMid_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::midTimes,
                     eikonalECG_templates::midValues,
                     eikonalECG_templates::numMidSamples
                 )
-              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplate
+              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::epiTimes,
@@ -143,25 +140,24 @@ void eikonalECG::reconstructVm
                     eikonalECG_templates::numEpiSamples
                 );
             // Templates are stored in mV; field uses dimVoltage (V).
-            VmValues[cellI] = rawVm * 1e-3;
+            dUds = rawDUds * 1e-3;
         }
-    }
 
-    Vm.correctBoundaryConditions();
+        // Vm(x,t) = U(t - tau(x))  =>  gradVm = -dU/ds(t-tau) * gradTau
+        gradVmValues[cellI] = -dUds * gradTauValues[cellI];
+    }
 }
 
 
 void eikonalECG::calculatePseudoECG
 (
     const ecgDomain& domain,
-    const volScalarField& Vm,
+    const volVectorField& gradVm,
     scalarField& values
 ) const
 {
     const label nElectrodes = domain.electrodePositions().size();
-
-    const tmp<volVectorField> tgradVm = fvc::grad(Vm);
-    const vectorField& gradVm = tgradVm().primitiveField();
+    const vectorField& gradVmValues = gradVm.primitiveField();
 
     values.setSize(nElectrodes);
     values = 0.0;
@@ -171,9 +167,9 @@ void eikonalECG::calculatePseudoECG
         const List<vector>& z = leadVectors_[electrodeI];
         scalar ecgVal = 0.0;
 
-        forAll(gradVm, cellI)
+        forAll(gradVmValues, cellI)
         {
-            ecgVal += gradVm[cellI] & z[cellI];
+            ecgVal += gradVmValues[cellI] & z[cellI];
         }
 
         reduce(ecgVal, sumOp<scalar>());
@@ -336,38 +332,6 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 }
 
 
-volScalarField& eikonalECG::surrogateVm(ecgDomain& domain)
-{
-    if (!VmPtr_.valid())
-    {
-        VmPtr_.reset
-        (
-            new volScalarField
-            (
-                IOobject
-                (
-                    "eikonalECG_Vm",
-                    domain.mesh().time().timeName(),
-                    domain.mesh(),
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                domain.mesh(),
-                dimensionedScalar
-                (
-                    "zero",
-                    dimVoltage,
-                    0.0
-                ),
-                "zeroGradient"
-            )
-        );
-    }
-
-    return VmPtr_.ref();
-}
-
-
 void eikonalECG::solve
 (
     ecgDomain& domain,
@@ -404,15 +368,35 @@ void eikonalECG::solve
         );
 
     const volScalarField& activationTime = domain.activationTime();
-    volScalarField& Vm = surrogateVm(domain);
+
+    // activationTime is fixed for the whole sampling loop below (the eikonal
+    // solve is steady-state; only sampleTime varies), so its gradient only
+    // needs computing once. Reusing it here (rather than reconstructing Vm
+    // pointwise and differencing it afresh each sample via fvc::grad(Vm)) is
+    // also what recovers the full accuracy of the underlying activation-time
+    // solve in the ECG output -- see reconstructGradVm.
+    const volVectorField gradActivationTime(fvc::grad(activationTime));
+    volVectorField gradVm
+    (
+        IOobject
+        (
+            "eikonalECG_gradVm",
+            domain.mesh().time().timeName(),
+            domain.mesh(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        domain.mesh(),
+        dimensionedVector("zero", dimVoltage/dimLength, Zero)
+    );
 
     scalar sampleTime = startTime_;
     label sampleI = 0;
 
     while (sampleTime <= endTime_ + SMALL)
     {
-        reconstructVm(sampleTime, activationTime, Vm);
-        calculatePseudoECG(domain, Vm, lastValues_);
+        reconstructGradVm(sampleTime, activationTime, gradActivationTime, gradVm);
+        calculatePseudoECG(domain, gradVm, lastValues_);
 
         if (sigmaE_ > VSMALL)
         {
