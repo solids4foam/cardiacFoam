@@ -54,7 +54,34 @@ def test_build_summary_rows_end_to_end(tmp_path):
             "Mesh non-orthogonality Max: 0.01 average: 0.001\nMesh OK.\n"
         )
 
-    rows = build_summary_rows(results_dir, amplitudes=[0.0], resolutions=[10, 20, 40, 80])
+    rows = build_summary_rows(results_dir, amplitudes=["0.0"], resolutions=[10, 20, 40, 80])
     assert len(rows) == 4
     assert rows[0]["order_Vm"] is None
     assert rows[-1]["order_Vm"] == 2.0
+
+
+def test_build_summary_rows_trailing_zero_amplitude_label(tmp_path):
+    # Regression test: amplitude "0.10" (as produced by the bash sweep's
+    # literal word-split token) must NOT be mangled into "0.1" via a float
+    # round-trip -- str(float("0.10")) == "0.1", which previously caused
+    # build_summary_rows to look up a results directory that doesn't exist.
+    results_dir = tmp_path
+    case_dir = results_dir / "0.10"
+    case_dir.mkdir(parents=True, exist_ok=True)
+    (case_dir / "3D_10_cells_implicit.dat").write_text(
+        "Manufactured-solution error summary (t = 0.2):\n"
+        "Field     L1-error       L2-error       Linf-error\n"
+        "Vm     8.0e-02   8.0e-02   8.0e-02\n"
+        "-------------------------------------------------\n\n"
+        "Simulation summary:\n"
+        "Grid spacing (dx)     = 0.1\n"
+        "Time step (dt)        = 0.00892857\n"
+    )
+    (case_dir / "log.checkMesh.10").write_text(
+        "Mesh non-orthogonality Max: 0.01 average: 0.001\nMesh OK.\n"
+    )
+
+    rows = build_summary_rows(results_dir, amplitudes=["0.10"], resolutions=[10])
+    assert len(rows) == 1
+    assert rows[0]["A"] == "0.10"
+    assert rows[0]["order_Vm"] is None

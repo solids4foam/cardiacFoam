@@ -63,14 +63,14 @@ def convergence_order(errors: list[float], refinement_ratio: float = 2.0) -> lis
 
 
 def build_summary_rows(
-    results_dir: Path, amplitudes: list[float], resolutions: list[int]
+    results_dir: Path, amplitudes: list[str], resolutions: list[int]
 ) -> list[dict]:
     rows: list[dict] = []
     for amplitude in amplitudes:
         errors_by_n = []
         for n in resolutions:
-            dat_path = results_dir / str(amplitude) / f"3D_{n}_cells_implicit.dat"
-            checkmesh_path = results_dir / str(amplitude) / f"log.checkMesh.{n}"
+            dat_path = results_dir / amplitude / f"3D_{n}_cells_implicit.dat"
+            checkmesh_path = results_dir / amplitude / f"log.checkMesh.{n}"
             summary = parse_dat_file(dat_path)
             mesh = parse_checkmesh_log(checkmesh_path.read_text())
             errors_by_n.append(summary.l2_vm)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("results_dir", type=Path)
-    parser.add_argument("--amplitudes", type=float, nargs="+", required=True)
+    parser.add_argument("--amplitudes", type=str, nargs="+", required=True)
     parser.add_argument("--resolutions", type=int, nargs="+", default=[10, 20, 40, 80])
     parser.add_argument("--out", type=Path, default=Path("results/summary.csv"))
     args = parser.parse_args()
