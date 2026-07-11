@@ -1,0 +1,14 @@
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 1.279168e-02 (h = 1.000000e-01, A = 0.1, dimension = 3D)
+A=0.10: OK, max non-orthogonality = 4.62181
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 1.918752e-02 (h = 1.000000e-01, A = 0.15, dimension = 3D)
+A=0.15: OK, max non-orthogonality = 6.92164
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 2.558336e-02 (h = 1.000000e-01, A = 0.2, dimension = 3D)
+A=0.20: OK, max non-orthogonality = 9.20835
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 3.197920e-02 (h = 1.000000e-01, A = 0.25, dimension = 3D)
+A=0.25: OK, max non-orthogonality = 11.4779
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 3.837505e-02 (h = 1.000000e-01, A = 0.3, dimension = 3D)
+A=0.30: OK, max non-orthogonality = 13.7263
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 4.477089e-02 (h = 1.000000e-01, A = 0.35, dimension = 3D)
+A=0.35: OK, max non-orthogonality = 15.9501
+constant/polyMesh/points: 729/1331 points displaced, max |delta| = 5.116673e-02 (h = 1.000000e-01, A = 0.4, dimension = 3D)
+A=0.40: OK, max non-orthogonality = 18.1458
