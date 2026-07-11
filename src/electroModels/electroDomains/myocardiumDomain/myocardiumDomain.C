@@ -246,7 +246,7 @@ myocardiumDomain::myocardiumDomain
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedScalar("zero", dimTime, 0.0),
+        dimensionedScalar("unactivated", dimTime, -1.0),
         "zeroGradient"
     ),
     outFields_(outFields),
