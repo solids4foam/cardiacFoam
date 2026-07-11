@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 import math
 import re
@@ -98,15 +99,25 @@ def write_summary_csv(rows: list[dict], out_path: Path) -> None:
         writer.writerows(rows)
 
 
-if __name__ == "__main__":
-    import argparse
+def build_arg_parser() -> argparse.ArgumentParser:
+    """Construct the CLI argument parser.
 
+    NOTE: --amplitudes must stay type=str. The sweep orchestrator
+    (run_nonortho_sweep.sh) names result directories with literal shell
+    tokens like "0.10"; parsing amplitudes as float would silently mangle
+    that into 0.1 (str(float("0.10")) == "0.1"), breaking the directory
+    lookup in build_summary_rows.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("results_dir", type=Path)
     parser.add_argument("--amplitudes", type=str, nargs="+", required=True)
     parser.add_argument("--resolutions", type=int, nargs="+", default=[10, 20, 40, 80])
     parser.add_argument("--out", type=Path, default=Path("results/summary.csv"))
-    args = parser.parse_args()
+    return parser
+
+
+if __name__ == "__main__":
+    args = build_arg_parser().parse_args()
 
     rows = build_summary_rows(args.results_dir, args.amplitudes, args.resolutions)
     write_summary_csv(rows, args.out)

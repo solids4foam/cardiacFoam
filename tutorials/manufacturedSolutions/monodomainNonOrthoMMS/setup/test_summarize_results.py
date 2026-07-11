@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from summarize_results import build_summary_rows, convergence_order, parse_dat_file
+from summarize_results import (
+    build_arg_parser,
+    build_summary_rows,
+    convergence_order,
+    parse_dat_file,
+)
 
 
 def test_convergence_order_second_order_data():
@@ -60,11 +65,30 @@ def test_build_summary_rows_end_to_end(tmp_path):
     assert rows[-1]["order_Vm"] == 2.0
 
 
-def test_build_summary_rows_trailing_zero_amplitude_label(tmp_path):
-    # Regression test: amplitude "0.10" (as produced by the bash sweep's
-    # literal word-split token) must NOT be mangled into "0.1" via a float
-    # round-trip -- str(float("0.10")) == "0.1", which previously caused
-    # build_summary_rows to look up a results directory that doesn't exist.
+def test_cli_amplitudes_preserve_trailing_zero():
+    # Regression test for the original bug: run_nonortho_sweep.sh names
+    # result directories with literal shell tokens like "0.10". The CLI
+    # used to declare --amplitudes with type=float, so argparse itself
+    # mangled "0.10" into the float 0.1 (str(float("0.10")) == "0.1")
+    # before build_summary_rows ever saw it, causing a directory-lookup
+    # mismatch and a crash. This test exercises the actual argparse layer
+    # where that bug lived: reverting --amplitudes back to type=float
+    # makes this assertion fail immediately (args.amplitudes would be
+    # [0.1, 0.2], not ["0.10", "0.20"]).
+    parser = build_arg_parser()
+    args = parser.parse_args(
+        ["some_dir", "--amplitudes", "0.10", "0.20", "--resolutions", "10"]
+    )
+    assert args.amplitudes == ["0.10", "0.20"]
+
+
+def test_build_summary_rows_accepts_trailing_zero_amplitude_label(tmp_path):
+    # Not a regression test for the argparse bug above (build_summary_rows
+    # never mangles its inputs -- it just does path joins on whatever
+    # string it's given, whether or not that string is "float-safe").
+    # This checks the separate, still-legitimate concern that a
+    # "0.10"-named results directory is looked up and parsed without
+    # error.
     results_dir = tmp_path
     case_dir = results_dir / "0.10"
     case_dir.mkdir(parents=True, exist_ok=True)
