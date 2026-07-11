@@ -157,10 +157,9 @@ tutorials/**/data/
 # Media under tutorials
 tutorials/**/media
 
-# simulation dashboard generated artifacts
-dashboard/store.db
-dashboard/assets/
-dashboard/renders/
+# standalone dashboard
+dashboard/
+run_dashboard.sh
 
 # PATHOS disease cases carry heart-mesh-resolution initial fields (e.g.
 # 0/conductivity, hundreds of MB) — exclude the generated 0/ field dirs.
