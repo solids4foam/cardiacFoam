@@ -47,7 +47,8 @@ coupled1D3DMonodomainVerifier::coupled1D3DMonodomainVerifier
 )
 :
     couplingVerificationModel(dict),
-    diagnosticsWritten_(false)
+    diagnosticsWritten_(false),
+    exactMapperPtr_(nullptr)
 {}
 
 
@@ -147,6 +148,123 @@ void coupled1D3DMonodomainVerifier::postProcess
                 << totalCells << nl;
         }
     }
+}
+
+
+void coupled1D3DMonodomainVerifier::correctCoupling
+(
+    tissueCouplingEndpoint& primaryDomain,
+    electroDomainInterface& secondaryDomain,
+    scalar primaryTime,
+    scalar secondaryTime,
+    scalarField& terminalCurrent,
+    scalarField& terminalSource
+)
+{
+    auto* networkDomain =
+        dynamic_cast<networkCouplingEndpoint*>(&secondaryDomain);
+
+    if (!networkDomain)
+    {
+        FatalErrorInFunction
+            << "coupled1D3DMonodomainVerifier::correctCoupling requires a "
+            << "networkCouplingEndpoint secondary domain."
+            << exit(FatalError);
+    }
+
+    const fvMesh& mesh = primaryDomain.mesh();
+    const pointField& terminalLocations = networkDomain->terminalLocations();
+
+    if (!exactMapperPtr_)
+    {
+        exactMapperPtr_.reset
+        (
+            new pvjMapper
+            (
+                mesh,
+                terminalLocations,
+                dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+                dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
+                false
+            )
+        );
+    }
+
+    const vectorField& centres = mesh.C().primitiveField();
+    scalarField X(centres.component(vector::X));
+    scalarField Y(centres.component(vector::Y));
+    scalarField Z(centres.component(vector::Z));
+
+    scalarField VmExact3D;
+    computeManufacturedV(VmExact3D, X, Y, Z, primaryTime, 3);
+
+    volScalarField VmExactField
+    (
+        IOobject
+        (
+            "coupled1D3DMonodomainVerifier:VmExact",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh,
+        dimensionedScalar("VmExactField", dimless, 0.0)
+    );
+    VmExactField.primitiveFieldRef() = VmExact3D;
+
+    scalarField VmExact3DAtTerminals;
+    exactMapperPtr_->gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
+
+    scalarField terminalX(terminalLocations.size());
+    forAll(terminalLocations, i)
+    {
+        terminalX[i] = terminalLocations[i].x();
+    }
+
+    scalarField zeroY(terminalX.size(), 0.0);
+    scalarField zeroZ(terminalX.size(), 0.0);
+
+    scalarField VmExact1D;
+    computeManufacturedV
+    (
+        VmExact1D,
+        terminalX,
+        zeroY,
+        zeroZ,
+        secondaryTime,
+        1
+    );
+
+    const scalarField* terminalResistances =
+        networkDomain->terminalResistances();
+
+    scalarField R_pvj;
+    if (terminalResistances)
+    {
+        R_pvj = *terminalResistances;
+    }
+    else
+    {
+        R_pvj = scalarField
+        (
+            terminalLocations.size(),
+            dict().parent().get<scalar>("rPvj")
+        );
+    }
+
+    scalarField exactCurrent(terminalX.size());
+    forAll(exactCurrent, i)
+    {
+        exactCurrent[i] = (VmExact1D[i] - VmExact3DAtTerminals[i])/R_pvj[i];
+    }
+
+    scalarField exactSource;
+    exactMapperPtr_->volumetricSource(exactCurrent, exactSource);
+
+    terminalCurrent -= exactCurrent;
+    terminalSource -= exactSource;
 }
 
 } // End namespace Foam

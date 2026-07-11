@@ -58,7 +58,7 @@ word couplingVerificationModel::selectedType(const dictionary& dict)
 
 couplingVerificationModel::couplingVerificationModel(const dictionary& dict)
 :
-    dict_(dict)
+    dict_(dict.parent(), dict)
 {}
 
 } // End namespace Foam

@@ -56,7 +56,12 @@ void reactionDiffusionPvjCoupler::couplingCurrentAtPvjs
 }
 
 
-void reactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
+void reactionDiffusionPvjCoupler::evaluateCoupling
+(
+    scalar primaryTime,
+    scalar secondaryTime,
+    const char* phaseName
+)
 {
     mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVmBuffer_);
     networkTerminalDomain_.terminalVm(networkVmBuffer_);
@@ -67,6 +72,19 @@ void reactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
         terminalCurrentBuffer_
     );
     mapper_.volumetricSource(terminalCurrentBuffer_, terminalSourceBuffer_);
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->correctCoupling
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            primaryTime,
+            secondaryTime,
+            terminalCurrentBuffer_,
+            terminalSourceBuffer_
+        );
+    }
 
     reportCouplingDiagnostics(phaseName);
 }
@@ -133,7 +151,7 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 {
     pvjCoupler::prepareSecondaryCoupling(t0, dt);
 
-    evaluateCoupling("secondary");
+    evaluateCoupling(t0, t0, "secondary");
 
     if (couplingMode_ == unidirectional)
     {
@@ -150,10 +168,7 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 
 void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
-    (void)t0;
-    (void)dt;
-
-    evaluateCoupling("primary");
+    evaluateCoupling(t0, t0 + dt, "primary");
 
     mapper_.depositCoupling
     (

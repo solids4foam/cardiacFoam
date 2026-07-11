@@ -34,6 +34,8 @@ Author
 
 #include "couplingVerificationModel.H"
 #include "overrideTypeName.H"
+#include "pvjMapper.H"
+#include "autoPtr.H"
 
 namespace Foam
 {
@@ -41,6 +43,7 @@ namespace Foam
 class coupled1D3DMonodomainVerifier : public couplingVerificationModel
 {
     mutable bool diagnosticsWritten_;
+    mutable autoPtr<pvjMapper> exactMapperPtr_;
 
 public:
 
@@ -58,6 +61,16 @@ public:
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain
+    ) override;
+
+    virtual void correctCoupling
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain,
+        scalar primaryTime,
+        scalar secondaryTime,
+        scalarField& terminalCurrent,
+        scalarField& terminalSource
     ) override;
 };
 

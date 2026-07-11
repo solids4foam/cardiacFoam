@@ -51,7 +51,12 @@ class reactionDiffusionPvjCoupler
         scalarField& current
     ) const;
 
-    void evaluateCoupling(const char* phaseName) const;
+    void evaluateCoupling
+    (
+        scalar primaryTime,
+        scalar secondaryTime,
+        const char* phaseName
+    );
 
     void reportCouplingDiagnostics(const char* phaseName) const;
 
