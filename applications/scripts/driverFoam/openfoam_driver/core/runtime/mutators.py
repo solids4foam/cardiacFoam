@@ -125,45 +125,6 @@ def _resolve_search_region(
     return start, end
 
 
-def validate_foam_entries(file_path: Path, entries: list[dict]) -> list[str]:
-    """
-    Validate that a list of override entries have corresponding keys in the file.
-    Returns a list of error messages for any missing keys.
-    """
-    if not file_path.exists():
-        return [f"Dictionary file not found: {file_path}"]
-
-    lines = file_path.read_text().splitlines(keepends=True)
-    errors = []
-
-    for entry in entries:
-        key = entry["key"]
-        scope = entry.get("scope")
-        key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
-        try:
-            search_start, search_end = _resolve_search_region(lines, scope)
-        except KeyError as e:
-            errors.append(str(e).strip("'"))
-            continue
-
-        found = False
-        for idx in range(search_start, search_end):
-            line = lines[idx].strip()
-            if line.startswith("//"):
-                continue
-            if key_pattern.match(lines[idx]):
-                found = True
-                break
-        
-        if not found:
-            if scope is None:
-                errors.append(f"Key '{key}' not found in {file_path}")
-            else:
-                errors.append(f"Key '{key}' not found in scope '{scope}' in {file_path}")
-
-    return errors
-
-
 def read_foam_entry_via_foamDictionary(
     file_path: Path,
     key: str,

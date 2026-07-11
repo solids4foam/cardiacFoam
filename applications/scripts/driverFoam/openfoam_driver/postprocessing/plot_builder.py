@@ -223,55 +223,10 @@ class GroupShadedColors:
 
         return lighten_hex_color(base_color, amount)
 
-    def base_color_for(self, group: Any) -> str:
-        """Return the unmodified base color for a group (shade position 0)."""
-        if group in self._group_order:
-            group_index = self._group_order.index(group)
-        else:
-            group_index = 0
-        return self._palette[group_index % len(self._palette)]
 
     # ------------------------------------------------------------------
     # Factory
     # ------------------------------------------------------------------
-
-    @classmethod
-    def from_groups_and_traces(
-        cls,
-        filenames: Iterable[str],
-        group_fn: Callable[[str], Any],
-        shade_fn: Callable[[str], Any],
-        palette: list[str] | None = None,
-        max_shade_amount: float = 0.4,
-    ) -> "GroupShadedColors":
-        """Build and fully register a :class:`GroupShadedColors` from filenames.
-
-        Parameters
-        ----------
-        filenames:
-            Iterable of filename strings (basenames or full paths — only the
-            filename part is passed to the key functions).
-        group_fn:
-            Callable ``filename -> group_key`` (e.g. returns the DX float).
-        shade_fn:
-            Callable ``filename -> shade_key`` (e.g. returns the DT float).
-        palette:
-            Optional explicit palette; defaults to :data:`DEFAULT_PALETTE`.
-        max_shade_amount:
-            Forwarded to the constructor.
-
-        Returns
-        -------
-        Fully populated :class:`GroupShadedColors` ready for :meth:`color_for`.
-        """
-        colors = cls(palette=palette, max_shade_amount=max_shade_amount)
-        names = list(filenames)
-        groups = [group_fn(f) for f in names]
-        colors.register_groups(groups)
-        for g in ordered_unique(groups):
-            shades = [shade_fn(f) for f, gg in zip(names, groups) if gg == g]
-            colors.register_shades(g, shades)
-        return colors
 
 
 # ---------------------------------------------------------------------------

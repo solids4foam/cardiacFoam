@@ -263,33 +263,6 @@ def main() -> int:
     return 0
 
 
-# Quick self-test
-def _self_test() -> None:
-    """Verify parse_report_text correctly extracts variable names."""
-    sample = """
-========== listCellModelsVariables ==========
-
-Selected ionicModel: TestModel
-
-Ionic constants (2) --> initial value
-  constants [0] AC_R --> 8314.0
-  constants [1] AC_T --> 310.0
-
-Ionic states (3) --> initial value
-  states [0] Vm --> -85.23
-  states [1] m --> 0.001
-  states [2] h --> 0.9
-
-Ionic algebraic (1)
-  algebraic [0] Iion
-"""
-    result = parse_report_text(sample)
-    assert result["ionic_model"] == "TestModel", f"Expected TestModel, got {result['ionic_model']}"
-    assert result["states"] == ["Vm", "m", "h"], f"Expected ['Vm', 'm', 'h'], got {result['states']}"
-    assert result["algebraic"] == ["Iion"], f"Expected ['Iion'], got {result['algebraic']}"
-    assert result["constants"] == ["AC_R", "AC_T"], f"Expected ['AC_R', 'AC_T'], got {result['constants']}"
-    print("Self-test PASSED")
-
 
 if __name__ == "__main__":
     sys.exit(main())

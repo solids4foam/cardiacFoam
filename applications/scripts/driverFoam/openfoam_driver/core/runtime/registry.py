@@ -294,22 +294,6 @@ def _normalized_registry() -> dict[str, object]:
     return {name.casefold(): factory for name, factory in SPEC_FACTORIES.items()}
 
 
-def _find_case_dir_match(name: str, tutorials_root: Path) -> str | None:
-    requested = name.strip()
-    if not requested:
-        return None
-
-    direct = tutorials_root / requested
-    if _is_case_directory(direct):
-        return requested
-
-    normalized = requested.casefold()
-    for child in tutorials_root.iterdir():
-        if not _is_case_directory(child):
-            continue
-        if child.name.casefold() == normalized:
-            return child.name
-    return None
 
 
 def load_tutorial_spec(name: str, overrides: dict | None = None) -> TutorialSpec:
