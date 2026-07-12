@@ -103,7 +103,7 @@ void electroVerificationModel::allocateFields
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                dimless,
+                dimensioned<scalar>("zero", dimless, scalar(0)),
                 "zeroGradient"
             )
         );
