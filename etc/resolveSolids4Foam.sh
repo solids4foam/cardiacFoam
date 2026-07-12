@@ -50,15 +50,19 @@ fi
 
 if [ -n "$SOLIDS4FOAM_INST_DIR" ] && [ -d "$SOLIDS4FOAM_INST_DIR" ]
 then
-    if [ -f "$SOLIDS4FOAM_INST_DIR/$_solids4FoamHeader" ]
+    if [ -f "$SOLIDS4FOAM_INST_DIR/$_s4fLnHeader" ]
     then
-        echo "Using full solids4foam installation (solidModel.H found)."
+        echo "Using full solids4foam installation (built lnInclude found)."
         echo "SOLIDS4FOAM_INST_DIR=$SOLIDS4FOAM_INST_DIR"
         echo
         export USE_LIGHTWEIGHT_PHYSICSMODEL=0
+    elif [ -f "$SOLIDS4FOAM_INST_DIR/$_solids4FoamHeader" ]
+    then
+        useLightweightPhysicsModel \
+            "SOLIDS4FOAM_INST_DIR is set to a solids4foam source tree, but it is not built (missing $_s4fLnHeader)."
     else
         useLightweightPhysicsModel \
-            "SOLIDS4FOAM_INST_DIR is set, but solids4foam is not compiled or is missing $_solids4FoamHeader."
+            "SOLIDS4FOAM_INST_DIR is set, but it is not a valid solids4foam tree (missing $_solids4FoamHeader)."
     fi
     echo
 else
