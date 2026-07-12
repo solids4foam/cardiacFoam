@@ -24,6 +24,7 @@ esac
 
 echo "Using solver: $solver"
 cp "constant/electroProperties.$solver" constant/electroProperties
+cp "system/controlDict.$solver" system/controlDict
 
 runApplication blockMesh
 
