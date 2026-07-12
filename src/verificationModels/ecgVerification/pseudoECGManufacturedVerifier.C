@@ -108,7 +108,7 @@ void pseudoECGManufacturedVerifier::resizeCheckStorage()
 
 void pseudoECGManufacturedVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().path() / "postProcessing");
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
 
     forAll(electrodeNames_, electrodeI)
@@ -296,7 +296,7 @@ void pseudoECGManufacturedVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().path() / "postProcessing" / "manufacturedPseudoECGSummary.dat"
+        mesh_.time().globalPath() / "postProcessing" / "manufacturedPseudoECGSummary.dat"
     );
     OFstream os(outputFile);
 

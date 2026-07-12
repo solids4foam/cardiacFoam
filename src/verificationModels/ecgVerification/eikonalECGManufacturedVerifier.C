@@ -125,7 +125,7 @@ void eikonalECGManufacturedVerifier::resizeStorage()
 
 void eikonalECGManufacturedVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().path() / "postProcessing");
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
 
     forAll(electrodeNames_, electrodeI)
@@ -508,7 +508,7 @@ void eikonalECGManufacturedVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().path()
+        mesh_.time().globalPath()
       / "postProcessing"
       / "manufacturedEikonalECGSummary.dat"
     );

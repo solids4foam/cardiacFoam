@@ -180,7 +180,7 @@ void manufacturedFDAMonodomainVerifier::postProcess
     const auto u1Norms = computeNorms(fields[u1Idx].primitiveField(), u1Exact);
     const auto u2Norms = computeNorms(fields[u2Idx].primitiveField(), u2Exact);
 
-    const fileName outputDir(mesh.time().path()/"postProcessing");
+    const fileName outputDir(mesh.time().globalPath()/"postProcessing");
     mkDir(outputDir);
     const fileName outputFile
     (

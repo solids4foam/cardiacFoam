@@ -203,7 +203,7 @@ void bathECGManufacturedVerifier::resizeStatistics()
 
 void bathECGManufacturedVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().path() / "postProcessing");
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
 
     columns.append("field_L1");
@@ -361,7 +361,7 @@ void bathECGManufacturedVerifier::writeSummary()
     const scalar count = max(scalar(1), scalar(sampleCount_));
     const fileName outputFile
     (
-        mesh_.time().path() / "postProcessing" / "manufacturedBathECGSummary.dat"
+        mesh_.time().globalPath() / "postProcessing" / "manufacturedBathECGSummary.dat"
     );
     OFstream os(outputFile);
 

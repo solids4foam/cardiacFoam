@@ -285,7 +285,7 @@ void manufacturedElectromechanicsVerifier::postProcess
 
     if (Pstream::master())
     {
-        const fileName outputDir(Vm.mesh().time().path()/"postProcessing");
+        const fileName outputDir(Vm.mesh().time().globalPath()/"postProcessing");
         mkDir(outputDir);
 
         OFstream out(outputDir/"manufacturedElectromechanicsSummary.dat");
