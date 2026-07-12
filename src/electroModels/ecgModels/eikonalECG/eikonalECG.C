@@ -266,6 +266,16 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 
     const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode != "transmuralBands")
+    {
+        FatalErrorInFunction
+            << "eikonalECG supports ionicHeterogeneity mode "
+            << "'transmuralBands' only; mode '" << mode
+            << "' cannot be represented by its three template weights."
+            << exit(FatalError);
+    }
+
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
 
     const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
