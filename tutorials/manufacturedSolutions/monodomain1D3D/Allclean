@@ -1,0 +1,10 @@
+#!/bin/bash
+
+shopt -s extglob
+
+rm -rf !("0"|*[^0-9]*)
+rm -rf 0.*
+rm -rf 0
+rm -rf processor*
+rm -f log.*
+rm -rf constant/polyMesh

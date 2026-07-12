@@ -68,6 +68,18 @@ def _safe_rate(e_coarse: float, e_fine: float, h_coarse: float, h_fine: float) -
     return f"{math.log(e_coarse / e_fine) / math.log(h_coarse / h_fine):.4f}"
 
 
+def _load_matplotlib():
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    return plt
+
+
 # ---------------------------------------------------------------------------
 # Collection
 # ---------------------------------------------------------------------------
@@ -178,6 +190,65 @@ def _write_csv(rows: list[dict], path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Plot output
+# ---------------------------------------------------------------------------
+
+def plot_convergence(rows: list[dict], output_dir: Path) -> list[Path]:
+    plt = _load_matplotlib()
+    if plt is None:
+        print("matplotlib is not available; generated coupled convergence CSV files only.")
+        return []
+
+    series = [
+        ("Linf_3D_Vm", r"3D $V_m$ $L_\infty$", "o", "#1f77b4"),
+        ("Linf_1D_Vm", r"1D $V_m$ $L_\infty$", "s", "#d62728"),
+        ("coupling_sourceL1", r"coupling source $L_1$", "^", "#2ca02c"),
+    ]
+
+    fig, ax = plt.subplots(figsize=(7.5, 4.8))
+    plotted: list[tuple[list[float], list[float]]] = []
+
+    for key, label, marker, colour in series:
+        xs: list[float] = []
+        ys: list[float] = []
+        for row in rows:
+            value = row.get(key)
+            if value is None or value <= 0.0 or not math.isfinite(value):
+                continue
+            xs.append(float(row["N"]))
+            ys.append(float(value))
+        if not xs:
+            continue
+        plotted.append((xs, ys))
+        ax.loglog(xs, ys, marker=marker, color=colour, linewidth=1.8, markersize=5, label=label)
+
+    if plotted:
+        xs, ys = plotted[0]
+        anchor_x = xs[-1]
+        anchor_y = ys[-1]
+        ref_x = [min(xs), max(xs)]
+        ref_y = [anchor_y * (x / anchor_x) ** -2.0 for x in ref_x]
+        ax.loglog(ref_x, ref_y, "k--", linewidth=1.2, label=r"$O(N^{-2})$")
+
+    ax.set_xlabel("3D cells per side, N")
+    ax.set_ylabel("error / residual diagnostic")
+    ax.set_title("Coupled 1D-3D manufactured-solution convergence")
+    ax.grid(True, which="both", linestyle=":", linewidth=0.5)
+    ax.legend(fontsize=9)
+    fig.tight_layout()
+
+    png_path = output_dir / "coupled_1D3D_convergence.png"
+    pdf_path = output_dir / "coupled_1D3D_convergence.pdf"
+    fig.savefig(png_path, bbox_inches="tight", dpi=300)
+    fig.savefig(pdf_path, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Wrote {png_path}")
+    print(f"Wrote {pdf_path}")
+    return [png_path, pdf_path]
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -196,6 +267,7 @@ def run_postprocessing(*, output_dir: str, **_) -> list[dict]:
 
     _write_csv(rows,  summary_csv)
     _write_csv(rates, rates_csv)
+    plot_paths = plot_convergence(rows, out)
 
     # Human-readable table to stdout
     print("\nCoupled 1D-3D convergence summary:")
@@ -221,10 +293,15 @@ def run_postprocessing(*, output_dir: str, **_) -> list[dict]:
                 f"{r.get('rate_coupling_sourceL1', ''):>13}"
             )
 
-    return [
+    artifacts = [
         {"path": str(summary_csv), "label": "Coupled 1D-3D convergence summary", "kind": "table", "format": "csv"},
         {"path": str(rates_csv),   "label": "Coupled 1D-3D convergence rates",   "kind": "table", "format": "csv"},
     ]
+    artifacts.extend(
+        {"path": str(path), "label": "Coupled 1D-3D convergence plot", "kind": "figure", "format": path.suffix[1:]}
+        for path in plot_paths
+    )
+    return artifacts
 
 
 def main() -> int:
