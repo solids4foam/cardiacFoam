@@ -261,9 +261,9 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
             "$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
             common_entries,
         )
-        self.assertIn(
-            "pimpleStaggeredElectrophysicsAdvanceScheme",
+        self.assertEqual(
             common_entries["$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme"].enum_values,
+            ("staggeredElectrophysicsAdvanceScheme",),
         )
 
 

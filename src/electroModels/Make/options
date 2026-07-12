@@ -59,7 +59,6 @@ EXE_INC = \
     -Icore/verificationModels \
     -IadvanceSchemes \
     -IadvanceSchemes/staggered \
-    -IadvanceSchemes/pimpleStaggered \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \

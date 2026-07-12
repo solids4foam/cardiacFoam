@@ -9,7 +9,6 @@ core/verificationModels/eikonalVerificationModel.C
 core/system/electrophysicsSystem.C
 core/advanceSchemes/electrophysicsAdvanceScheme.C
 core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C
-core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C
 core/system/electrophysicsSystemBuilder.C
 core/electrophysiologyModel/electrophysiologyModel.C
 

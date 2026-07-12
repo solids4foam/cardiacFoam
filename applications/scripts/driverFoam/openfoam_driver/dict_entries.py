@@ -337,10 +337,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path='$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme',
             phases=frozenset({'solver'}),
             description='Time-advance scheme for multi-domain coupling (myocardium, Purkinje, ECG).',
-            source_refs=('src/electroModels/core/advanceSchemes/electrophysicsAdvanceScheme.H', 'src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C', 'src/electroModels/core/advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.C'),
-            notes='staggeredElectrophysicsAdvanceScheme: weakly coupled, fast, stable for unidirectional. pimpleStaggeredElectrophysicsAdvanceScheme: strongly coupled with PIMPLE iteration, stable for bidirectional coupling (requires solutionAlgorithm=implicit in monodomainSolverCoeffs/bidomainSolverCoeffs).',
+            source_refs=('src/electroModels/core/advanceSchemes/electrophysicsAdvanceScheme.H', 'src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C'),
+            notes='staggeredElectrophysicsAdvanceScheme: single-pass staggered coupling for myocardium, Purkinje, and ECG domains.',
             value_kind='enum',
-            enum_values=('staggeredElectrophysicsAdvanceScheme', 'pimpleStaggeredElectrophysicsAdvanceScheme'),
+            enum_values=('staggeredElectrophysicsAdvanceScheme',),
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.dimension',
