@@ -1,6 +1,8 @@
-
 #!/bin/bash
-cd ${0%/*} || exit 1    # run from this directory
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Stop at first error
+set -e
 
 # Parse arguments for library compilation
 if [ -f "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments ]
@@ -29,4 +31,3 @@ wmake $targetType libso verificationModels
 if [ "$USE_LIGHTWEIGHT_PHYSICSMODEL" != "1" ]; then
     wmake $targetType libso electroMechanicalModels
 fi
-

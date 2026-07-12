@@ -3,6 +3,8 @@
 # Allclean script for electro-mechanical coupling tutorial
 #-------------------------------------------------------------------------------
 
+cd "${0%/*}" || exit 1
+
 # Source OpenFOAM run functions
 . $WM_PROJECT_DIR/bin/tools/CleanFunctions
 
