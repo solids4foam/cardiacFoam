@@ -22,6 +22,11 @@ Supported `physicsProperties.type` values:
 - `electroModel`
 - `electroMechanicalModel`
 
+The utility reads the canonical `myocardiumSolver` selector and constructs the
+ionic model from its matching `<myocardiumSolver>Coeffs` subdictionary. The
+legacy `electroModel` selector remains supported when it has a matching
+`<electroModel>Coeffs` subdictionary.
+
 ## Usage
 
 ```bash
