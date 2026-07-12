@@ -35,6 +35,29 @@ def test_samplable_fields_for_tnnp_single_cell():
     assert manifest["samplable_fields"]["solid"] == []
 
 
+def test_species_labels_are_not_samplable_fields():
+    manifest = build_capability_manifest(
+        resolved_solver="monodomainSolver", resolved_ionic_model="TNNP"
+    )
+    electro = manifest["samplable_fields"]["electro"]
+    assert "human" not in electro
+    assert "pig" not in electro
+    assert "generic" not in electro
+
+
+def test_plain_spatial_ep_has_no_solid_region():
+    for solver in ("monodomainSolver", "bidomainSolver", "eikonalSolver"):
+        manifest = build_capability_manifest(resolved_solver=solver)
+        assert manifest["samplable_fields"]["solid"] == []
+
+
+def test_single_cell_active_tension_does_not_imply_solid_region():
+    manifest = build_capability_manifest(
+        resolved_solver="singleCellSolver", resolved_active_tension="LandNiederer"
+    )
+    assert manifest["samplable_fields"]["solid"] == []
+
+
 def test_samplable_fields_multi_region_tags_solid():
     manifest = build_capability_manifest(
         resolved_solver="monodomainSolver",

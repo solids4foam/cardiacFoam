@@ -117,13 +117,14 @@ def build_capability_manifest(
         electro.update(ionic_entry.states)
         electro.update(ionic_entry.algebraic)
         electro.update(ionic_entry.recommended_exports)
-        electro.update(ionic_entry.species)
 
     solid: set[str] = set()
-    # A solid/mechanics region exists for every solver except the zero-geometry
-    # single-cell solver, and whenever an active-tension model is resolved.
-    has_solid_region = resolved_active_tension is not None or (
-        resolved_solver is not None and resolved_solver != "singleCellSolver"
+    # A spatial active-tension model is positive evidence of electromechanical
+    # coupling. A spatial EP solver alone does not imply a mechanics region.
+    has_solid_region = (
+        resolved_active_tension is not None
+        and resolved_solver is not None
+        and resolved_solver != "singleCellSolver"
     )
     if has_solid_region:
         solid.update(_SOLID_SOLVER_FIELDS)
@@ -132,7 +133,7 @@ def build_capability_manifest(
         if resolved_active_tension
         else None
     )
-    if at_entry is not None:
+    if has_solid_region and at_entry is not None:
         solid.update(at_entry.states)
         solid.update(at_entry.algebraic)
 
