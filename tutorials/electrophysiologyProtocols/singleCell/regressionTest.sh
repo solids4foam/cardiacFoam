@@ -63,7 +63,7 @@ while IFS=' ' read -r fileName time variable expected tolerance; do
                 }
             }
             END {
-                if (found && bestDiff <= 1e-4) {
+                if (found && bestDiff <= 1e-9) {
                     print actual;
                     exit 0;
                 }
