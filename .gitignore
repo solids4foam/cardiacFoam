@@ -132,7 +132,6 @@ docs/superpowers/
 tutorials/**/log.*
 tutorials/**/processor*/
 tutorials/**/postProcessing/
-!tutorials/**/postProcessing/*.py
 tutorials/**/archivedPostProcessing/
 tutorials/**/logs/
 tutorials/**/constant/polyMesh/
@@ -165,3 +164,11 @@ run_dashboard.sh
 # PATHOS disease cases carry heart-mesh-resolution initial fields (e.g.
 # 0/conductivity, hundreds of MB) — exclude the generated 0/ field dirs.
 tutorials/PATHOS/**/0/
+
+# ParaView/pyvista .foam marker files — zero-byte, auto-created on demand,
+# every case can regenerate one; never meaningful to commit.
+tutorials/**/*.foam
+
+# Quarto build artefacts — only relevant if Quarto is run inside a tutorial dir
+tutorials/**/.quarto/
+tutorials/**/_output/
