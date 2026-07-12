@@ -2,6 +2,7 @@ import os
 import re
 import sys
 from collections import OrderedDict
+from pathlib import Path
 
 DEBUG = False
 
@@ -376,9 +377,10 @@ def build_final_c(init_block, computeVariables_block, init_values_block, discove
 def run_mapping(input_c, output_c, mapping=None, discovered=None, verbose: bool = False):
     global DEBUG
     DEBUG = verbose
+    output_c = Path(output_c)
     model_name, year = parse_model_from_output(output_c)
     model_id = f"{model_name}_{year}"
-    output_h = f"{model_id}Names.H"
+    output_h = output_c.with_name(f"{model_id}Names.H")
 
     with open(input_c) as f:
         src = f.read()
@@ -415,7 +417,7 @@ def run_mapping(input_c, output_c, mapping=None, discovered=None, verbose: bool 
 
     with open(output_c, "w") as f:
         f.write(LICENSE_HEADER)
-        f.write(f'#include "{output_h}"\n')
+        f.write(f'#include "{output_h.name}"\n')
         f.write('#include "stimulusIO.H"\n\n')
         emit_names_array(f, f"{model_name}STATES_NAMES", "STATES", states)
         emit_names_array(f, f"{model_name}ALGEBRAIC_NAMES", "ALGEBRAIC", algebraic)

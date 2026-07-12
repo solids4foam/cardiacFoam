@@ -163,6 +163,7 @@ def run_pipeline(
     start: str,
     end: str,
     model: "Optional[str]" = None,
+    outdir: Path = Path("."),
     verbose: bool = False,
 ):
     validate_pipeline(start, end)
@@ -211,7 +212,8 @@ def run_pipeline(
             if verbose:
                 print(f"    Generating OpenFOAM code (discovered: {discovered_vars})")
             
-            output_h = f"{name}_{year}.H"
+            outdir.mkdir(parents=True, exist_ok=True)
+            output_h = outdir / f"{name}_{year}.H"
             run_mapping(
                 str(current), 
                 output_h, 
@@ -222,7 +224,7 @@ def run_pipeline(
             return {
                 "model": name,
                 "year": year,
-                "header": f"{name}_{year}Names.H",
+                "header": outdir / f"{name}_{year}Names.H",
                 "source": output_h
             }
 

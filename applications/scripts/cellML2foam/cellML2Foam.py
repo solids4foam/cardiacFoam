@@ -154,6 +154,7 @@ def main():
             start=start,
             end=args.to,
             model=args.model,
+            outdir=args.outdir,
             verbose=args.verbose,
         )
 
