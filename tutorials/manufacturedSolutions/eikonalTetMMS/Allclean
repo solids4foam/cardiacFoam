@@ -1,5 +1,6 @@
-
 #!/bin/bash
+
+cd "${0%/*}" || exit 1
 
 # Enable extended globbing
 shopt -s extglob
@@ -9,10 +10,9 @@ rm -rf !("0"|*[^0-9]*)
 rm -rf 0.*
 rm -rf 0
 
-
 rm -rf processor*
 
 rm -f log.*
 
-rm -rf constant/polyMesh  
+rm -rf constant/polyMesh
 rm -rf postProcessing

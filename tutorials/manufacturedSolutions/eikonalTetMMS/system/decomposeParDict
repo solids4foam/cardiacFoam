@@ -10,44 +10,12 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      fvSchemes;
+    object      decomposeParDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-ddtSchemes
-{
-    //default         CrankNicolson 1.0;
-    //default         backward; // 2nd order
-    // default         Euler; // 1st order
-    default none;
-    ddt(Vm) backward;
-}
+numberOfSubdomains  6;
 
-gradSchemes
-{
-    default         Gauss linear; //leastSquares;
-}
-
-divSchemes
-{
-    default         none;
-}
-
-laplacianSchemes
-{
-    default         Gauss linear corrected;
-}
-
-interpolationSchemes
-{
-    default         linear;
-}
-
-snGradSchemes
-{
-    default         corrected;
-}
-
+method          scotch;
 
 // ************************************************************************* //
