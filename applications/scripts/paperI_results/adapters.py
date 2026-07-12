@@ -36,3 +36,47 @@ def from_coupling_summary(path, regime, case="coupling"):
                          "L1": rec.get("L1_1D_Vm", ""), "L2": rec.get("L2_1D_Vm", ""),
                          "Linf": rec.get("Linf_1D_Vm", "")})
     return rows
+
+
+def _parse_activation_dat(path):
+    """Return (L1, L2, Linf) strings from a line 'activationTime L1 L2 Linf'."""
+    for line in Path(path).read_text(errors="ignore").splitlines():
+        parts = line.split()
+        if parts and parts[0].lower().startswith("activationtime") and len(parts) >= 4:
+            return parts[1], parts[2], parts[3]
+    raise ValueError(f"no activationTime line in {path}")
+
+
+def from_eikonal_activation(summary_path, extra_2d_dats=None, case="eikonal"):
+    rows = []
+    with Path(summary_path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            n = int(rec["N"])
+            rows.append(dict(case=case, variant="", dim=rec["Dimension"],
+                             N=rec["N"], h=f"{1.0 / n:g}", field="psi",
+                             L1=rec["activation_L1"], L2=rec["activation_L2"],
+                             Linf=rec["activation_Linf"]))
+    for n, dat in (extra_2d_dats or []):
+        l1, l2, li = _parse_activation_dat(dat)
+        rows.append(dict(case=case, variant="", dim="2D", N=str(n),
+                         h=f"{1.0 / int(n):g}", field="psi",
+                         L1=l1, L2=l2, Linf=li))
+    return rows
+
+
+def from_eikonal_ecg(aggregate_path, case="eikonal"):
+    rows = []
+    with Path(aggregate_path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            n = int(rec["N"])
+            common = dict(case=case, variant="", dim=rec["Dimension"],
+                          N=rec["N"], h=f"{1.0 / n:g}")
+            rows.append({**common, "field": "Phi_e_max",
+                         "L1": rec.get("max_L1_err_ref", ""),
+                         "L2": rec.get("max_L2_err_ref", ""),
+                         "Linf": rec.get("max_Linf_err_ref", "")})
+            rows.append({**common, "field": "Phi_e_mean",
+                         "L1": rec.get("mean_L1_err_ref", ""),
+                         "L2": rec.get("mean_L2_err_ref", ""),
+                         "Linf": rec.get("mean_Linf_err_ref", "")})
+    return rows
