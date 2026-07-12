@@ -35,6 +35,27 @@ REGRESSION_TESTS=(
 
 failures=0
 skips=0
+unexpected_skips=0
+build_mode="${CARDIAC_REGRESSION_BUILD_MODE:-}"
+
+case "${build_mode}" in
+    with-solids4foam)
+        ;;
+    lightweight)
+        ;;
+    *)
+        echo "FAIL: CARDIAC_REGRESSION_BUILD_MODE must be 'with-solids4foam' or 'lightweight'."
+        exit 2
+        ;;
+esac
+
+isExpectedSkip()
+{
+    local skipped_case="$1"
+
+    [[ "${build_mode}" == "lightweight" \
+        && "${skipped_case}" == "NiedererEtAl2011/electroMechanicalNiedererEtAl2011" ]]
+}
 
 for testCase in "${REGRESSION_TESTS[@]}"; do
     echo
@@ -63,8 +84,13 @@ for testCase in "${REGRESSION_TESTS[@]}"; do
     else
         rc=$?
         if (( rc == 77 )); then
-            echo "SKIP: regression test skipped in ${testCase}"
             skips=$((skips + 1))
+            if isExpectedSkip "${testCase}"; then
+                echo "EXPECTED SKIP: regression test skipped in ${testCase}"
+            else
+                echo "FAIL: unexpected regression-test skip in ${testCase}"
+                unexpected_skips=$((unexpected_skips + 1))
+            fi
             continue
         fi
 
@@ -76,10 +102,13 @@ done
 echo
 echo "============================================================"
 
-if (( failures > 0 )); then
-    echo "Regression tests FAILED (${failures} failing case(s), ${skips} skipped case(s))"
+if (( failures > 0 || unexpected_skips > 0 )); then
+    echo "Regression tests FAILED (${failures} failing case(s), ${unexpected_skips} unexpected skip(s), ${skips} total skip(s))"
     exit 1
+elif (( skips > 0 )); then
+    echo "Regression tests PASSED WITH EXPECTED SKIPS (${skips} expected skip(s))"
+    exit 0
 else
-    echo "All regression tests PASSED (${skips} skipped case(s))"
+    echo "All regression tests PASSED (no skips)"
     exit 0
 fi

@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from pathlib import Path
 
@@ -145,6 +147,8 @@ def test_apply_missing_control_dict_raises_override_error(tmp_path):
 def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
     import shutil
     if not shutil.which("foamDictionary"):
+        if os.environ.get("REQUIRE_FOAMDICTIONARY") == "1":
+            pytest.fail("foamDictionary is required for this integration test")
         pytest.skip("foamDictionary not available")
     case = _case(tmp_path)
     apply_overrides(
@@ -159,6 +163,8 @@ def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
 def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
     import shutil
     if not shutil.which("foamDictionary"):
+        if os.environ.get("REQUIRE_FOAMDICTIONARY") == "1":
+            pytest.fail("foamDictionary is required for this integration test")
         pytest.skip("foamDictionary not available")
     case = _case(tmp_path)
     apply_overrides(
