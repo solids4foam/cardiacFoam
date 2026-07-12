@@ -97,6 +97,11 @@ public:
 
     virtual ~LandNiedererBatched() = default;
 
+    virtual void preconditionToRestingState
+    (
+        const scalar restingCai
+    ) override;
+
     virtual Requirements requirements() const override
     {
         Requirements r;

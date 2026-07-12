@@ -22,6 +22,8 @@ License
 #include "../LandNiederer/LandNiederer_2017Names.H"
 #include "../LandNiederer/LandNiederer_2017.H"
 
+#include <cmath>
+
 namespace Foam
 {
     defineTypeNameAndDebug(LandNiedererBatched, 0);
@@ -131,6 +133,84 @@ Foam::LandNiedererBatched::LandNiedererBatched
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void Foam::LandNiedererBatched::preconditionToRestingState
+(
+    const scalar restingCai
+)
+{
+    const scalar preconditioningTime =
+        dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
+
+    if (restingCai < 0)
+    {
+        FatalErrorInFunction
+            << "LandNiedererBatched: resting Ca_i must be non-negative; got "
+            << restingCai << " mM. A negative resting calcium is unphysical "
+            << "and points to a misconfigured electromechanical signal "
+            << "provider." << exit(FatalError);
+    }
+
+    // A resting Ca_i at (or below) zero is already the equilibrium of the
+    // shipped initial conditions, so preconditioning would be a no-op.
+    if (preconditioningTime <= SMALL || restingCai <= SMALL)
+    {
+        return;
+    }
+
+    // Match the scalar LandNiederer model: integrate to resting steady state
+    // over a fixed number of substeps rather than a dictionary-configurable
+    // step size.
+    const label nSteps = 100;
+    const scalar step = preconditioningTime/scalar(nSteps);
+
+    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    BatchedTensionBackend backend(*this);
+    backend.gatherCellState(0, scratch.stateValues);
+
+    for (label stepI = 0; stepI < nSteps; ++stepI)
+    {
+        scratch.resetPrimary();
+        backend.evaluateScratchAtTime
+        (
+            0,
+            stepI*step,
+            restingCai,
+            1.0,
+            scratch
+        );
+
+        if (useRushLarsen_)
+        {
+            backend.buildPredictorState(0, step, scratch);
+            backend.applyCorrectorState(scratch);
+        }
+        else
+        {
+            backend.applyExplicitEulerStep(step, scratch);
+        }
+    }
+
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        core_.scatterCellState(cellI, scratch.stateValues);
+    }
+    core_.clearTransientSolveData(persistAlgebraics_);
+    ioSynchronized_ = false;
+    prevLambda_ = 1.0;
+    lambdaRate_ = 0.0;
+
+    Info<< "    LandNiedererBatched: pre-conditioned " << nCells_
+        << " points to resting steady state" << nl
+        << "      restingCai = " << restingCai << " mM ("
+        << preconditioningTime << " ms integration, "
+        << nSteps << " steps)" << nl
+        << "      Ca_TRPN   = " << scratch.stateValues[Ca_TRPN] << nl
+        << "      TmBlocked = " << scratch.stateValues[TmBlocked] << nl
+        << "      XW        = " << scratch.stateValues[XW] << nl
+        << "      XS        = " << scratch.stateValues[XS] << nl
+        << endl;
+}
 
 void Foam::LandNiedererBatched::calculateTension
 (

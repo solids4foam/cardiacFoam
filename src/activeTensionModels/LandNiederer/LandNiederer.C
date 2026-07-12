@@ -196,6 +196,17 @@ void LandNiederer::preconditionToRestingState(const scalar restingCai)
     const scalar preconditioningTime =
         dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
 
+    if (restingCai < 0)
+    {
+        FatalErrorInFunction
+            << "LandNiederer: resting Ca_i must be non-negative; got "
+            << restingCai << " mM. A negative resting calcium is unphysical "
+            << "and points to a misconfigured electromechanical signal "
+            << "provider." << exit(FatalError);
+    }
+
+    // A resting Ca_i at (or below) zero is already the equilibrium of the
+    // shipped initial conditions, so preconditioning would be a no-op.
     if (preconditioningTime <= SMALL || restingCai <= SMALL)
     {
         return;
