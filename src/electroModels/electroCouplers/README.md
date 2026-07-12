@@ -108,5 +108,4 @@ In the default staggered workflow:
 3. The coupler recomputes the PVJ exchange using the updated network state.
 4. The myocardium receives the projected volumetric source and advances.
 
-For bidirectional coupling, use `pimpleStaggeredElectrophysicsAdvanceScheme`;
-see [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md) for the timestep sequence.
+Bidirectional coupling is not currently exposed as a supported advance scheme.

@@ -174,7 +174,7 @@ Builder functions:
 | Function | Responsibility |
 |---|---|
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
-| `configureAdvanceScheme(...)` | Select staggered vs pimpleStaggered |
+| `configureAdvanceScheme(...)` | Select the runtime advance scheme |
 | `configureConductionDomains(...)` | Load Purkinje graph(s) and instantiate domains |
 | `configureConductionCouplings(...)` | Instantiate PVJ couplers |
 | `configureECGDomains(...)` | Instantiate ECG solver(s) |
@@ -209,7 +209,7 @@ Build every entry in `ecgDomains`. ECG domains consume myocardium state through
 
 `electrophysicsAdvanceScheme` is a runtime-selected orchestration strategy.
 
-**Staged order (both schemes):**
+**Staged order:**
 
 1. Prepare myocardium timestep
 2. Prepare conduction couplings (`prepareSecondaryCoupling`)
@@ -231,25 +231,6 @@ system.prepareMyocardiumCouplings(t0, dt);
 myocardium.advance(t0, dt, pimplePtr);
 system.prepareECGCouplings(t0, dt);
 system.advanceECGDomains(t0, dt);
-
-```
-
-### `advanceSchemes/pimpleStaggeredElectrophysicsAdvanceScheme`
-
-Iterative strong coupling via OpenFOAM's PIMPLE corrector loop. The
-conduction/myocardium block repeats until convergence before ECG advances.
-Requires `solutionAlgorithm implicit` in electroProperties.
-Suitable for bidirectional Purkinje ↔ myocardium exchange.
-
-```cpp
-while (pimplePtr->loop()) {
-    system.prepareConductionCouplings(t0, dt);
-    system.advanceConductionDomains(t0, dt);
-    system.prepareMyocardiumCouplings(t0, dt);
-    myocardium.advance(t0, dt, pimplePtr);
-    system.prepareECGCouplings(t0, dt);
-    system.advanceECGDomains(t0, dt);
-}
 
 ```
 
@@ -358,7 +339,7 @@ New solver-family branching belongs in a domain-layer factory, not in the builde
 ┌─────────────────────────────────────────────────────────────┐
 │ electrophysicsSystem (domain container)                     │
 │  • myocardium (implements electroVolumeFieldDomain)         │
-│  • advanceScheme (staggered or pimpleStaggered)             │
+│  • advanceScheme                                            │
 │  • conductionDomains (Purkinje graphs)                      │
 │  • ecgDomains (ECG solvers)                                 │
 │  • couplers (Purkinje↔myocardium, myocardium→ECG)          │
@@ -371,7 +352,6 @@ New solver-family branching belongs in a domain-layer factory, not in the builde
 ├──────────────────────────────┤ • configureConduction()      │
 │ Implementations:             │ • configureECG()             │
 │ • staggered (weak)           │ • configureCouplers()        │
-│ • pimpleStaggered (strong)   │                              │
 └──────────────────────────────┴──────────────────────────────┘
 
 ```
@@ -389,8 +369,7 @@ electroModel.H
   │  │  ├─ ConductionSystemDomain (implements)
   │  │  └─ ECGDomain (implements)
   │  ├─ advanceSchemes/electrophysicsAdvanceScheme.H
-  │  │  ├─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
-  │  │  └─ advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.H
+  │  │  └─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
   │  └─ ElectroDomainCoupler.H
   └─ system/electrophysicsSystemBuilder.H
      ├─ electroVolumeFieldDomain.H

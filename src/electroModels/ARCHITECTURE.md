@@ -4,6 +4,28 @@ Multi-domain spatial electrophysiology framework for OpenFOAM-based cardiac simu
 
 Compiled as `libelectroModels`. Provides co-simulation infrastructure for three cardiac subsystems — myocardium, body-surface ECG, and the conduction system — each on a separate mesh, coupled through typed interfaces at every timestep.
 
+## Runtime flow and public selectors
+
+```text
+physicsModel::New()             physicsProperties: type electroModel
+  -> electroModel::New()        electroProperties: myocardiumSolver <name>
+     -> electrophysiologyModel  monodomainSolver | bidomainSolver | eikonalSolver
+        -> myocardium domain
+           -> myocardiumSolver  monodomainSolver | bidomainSolver
+```
+
+The eikonal spatial entry uses `eikonalMyocardiumDomain` rather than the
+`myocardiumSolver` kernel table. `singleCellSolver` registers directly in the
+parent `electroModel` table and bypasses this spatial assembly. For spatial
+entries, `<name>Coeffs` is the builder's configuration root; optional public
+blocks include `conductionNetworkDomains`, `ecgDomains`,
+`bathPotentialDomain`, and `domainCouplings`. Domain-specific selectors include
+`conductionSystemSolver` and `ecgSolver`.
+
+This complete electrophysiology path is built in both full solids4foam and
+lightweight modes. The build-mode boundary is outside this library:
+`electroMechanicalModels` is built only in full mode.
+
 ---
 
 ## Directory structure
@@ -41,7 +63,6 @@ The framework backbone. Owns orchestration only; domain-family selection is dele
 | `electrophysiologyModel/` | Top-level myocardium-centered orchestration wrapper registered under `monodomainSolver`, `bidomainSolver`, and `eikonalSolver`. Owns ionic model, verification model, and field export lists. |
 | `advanceSchemes/electrophysicsAdvanceScheme.H/C` | Abstract time-advance strategy. Defines when the ionic solve and the diffusion solve are called relative to each other. |
 | `advanceSchemes/staggered/` | Staggered (operator-split) time advance: single-pass weak coupling. |
-| `advanceSchemes/pimpleStaggered/` | PIMPLE iterative strong coupling: repeats the conduction/myocardium block until convergence. |
 | `electroDomainInterface.H` | Minimal lifecycle contract that all electro domains implement. Pure virtual: `time()`, `advance(t0, dt)`. Optional no-ops: `prepareTimeStep()`, `write()`, `end()`. |
 | `electroStateProvider.H` | Read-only field interface implemented by domains that expose fields upstream: `VmPtr()`, `phiEPtr()`, `conductivityPtr()`. Consumed by ECG solver and the builder. |
 | `dimVoltage.H` | Shared dimension set for voltage fields (`[1 2 -3 0 0 -1 0]`, i.e. V). |
@@ -141,7 +162,7 @@ Concrete reaction-diffusion implementations of `myocardiumSolver`.
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
 | `monodomainSolver` | `monodomainSolver` | `∂Vm/∂t − ∇·(σᵢ∇Vm) = Iion` | Standard single-domain FVM |
-| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Allocates and owns `phiE` field |
+| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Owns a local `phiE`; with a bath domain, synchronizes it from the global `phiE` owner |
 
 `singleCellSolver` is registered in the parent `electroModel` table and bypasses the myocardium-domain factory. The canonical eikonal workflow selects `myocardiumSolver eikonalSolver` and builds `eikonalMyocardiumDomain`.
 
@@ -261,7 +282,6 @@ monodomainSolverCoeffs
 ## Timestep data flow
 
 ```
-
 ┌───────────────────────────────────────────────────────────────┐
 │                    electrophysicsSystem                        │
 │                                                               │
@@ -284,16 +304,15 @@ monodomainSolverCoeffs
 
 ```
 
----
-
 ## Domain field ownership
 
 | Domain | Fields owned |
 |---|---|
-| `myocardiumDomain` | `Vm_`, `Iion_`, `activationTime_`, `sourceField_`, `phiE_` (bidomain only) |
+| `myocardiumDomain` | `Vm_`, `Iion_`, `activationTime_`, `sourceField_`; its bidomain kernel owns local `phiE` and can synchronize it from the bath domain |
 | `conductionSystemDomain` | `Vm1D_`, `Iion1D_`, `activationTime_` (per node), `terminalCurrent_`, `terminalSource_` |
 | `eikonalMyocardiumDomain` | `activationTime_` only — no ionic state |
 | `ecgDomain` | electrode config, ECG output — reads Vm from myocardium via `electroStateProvider` |
+| `extracellularPotentialDomain` | global `phiE`, `sigmaTotal`, and scattered `VmGlobal` |
 
 ---
 
@@ -310,7 +329,7 @@ electroDomainInterface
 
 myocardiumSolver
     ├── monodomainSolver
-    └── bidomainSolver        (owns phiE field)
+    └── bidomainSolver        (owns local phiE; may bind global phiE)
 
 electroStateProvider
     ← implemented by: myocardiumDomain
@@ -321,3 +340,12 @@ ElectromechanicalSignalProvider  (from couplingModels/)
     ← exposed by:     electroModel::provider() → myocardium → ionicModel
 
 ```
+
+## Source boundaries
+
+This directory is hand-maintained project code and is listed explicitly in
+`Make/files`. It consumes `ionicModels`, `genericWriter`, and the selected
+`physicsModel` interface. Generated ionic equation headers live under
+`src/ionicModels`, not here. `modules/solids4foam` is external submodule
+content; compatibility adaptations belong in cardiacFoam or its owned
+lightweight `modules/physicsModel` layer.

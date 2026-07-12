@@ -111,45 +111,55 @@ Common behaviors:
 - Export of selected variables into `volScalarField` lists
 - Relaxed variable name compatibility for Vm/rates through `ionicVariableCompatibility`
 
-## Compiled ionic models
+## Runtime model contract
 
-Current `Make/files` entries:
+The values below are the exact `ionicModel` dictionary selectors registered by
+the sources in `Make/files`. All are built in both full and lightweight modes.
+CUDA kernels are added only when `CARDIAC_ENABLE_CUDA` is set; compact-batched
+models otherwise use their maintained host backend.
 
-**Scalar models:**
+| Purpose | Runtime name | Backend | Source boundary | Known equivalence limitation |
+|---|---|---|---|---|
+| Cell model | `AlievPanfilov` | scalar CPU | maintained wrapper; generated ODE/Names headers | Not numerically identical to compact-batched integration by construction |
+| Cell model | `BuenoOrovio` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Courtemanche` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Fabbri` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Gaur` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Grandi` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `PerisYague` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Stewart` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `TNNP` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `ToRORd_dynCl` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `Trovato` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `TWorld` | scalar CPU | maintained wrapper; generated ODE/Names headers | As above |
+| Cell model | `AlievPanfilovcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `AlievPanfilovBatched` is not a runtime selector |
+| Cell model | `BuenoOroviocompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `BuenoOrovioBatched` is not a runtime selector |
+| Cell model | `CourtemanchecompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `CourtemancheBatched` is not a runtime selector |
+| Cell model | `FabbricompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `FabbriBatched` is not a runtime selector |
+| Cell model | `GaurcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `GaurBatched` is not a runtime selector |
+| Cell model | `GrandicompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `GrandiBatched` is not a runtime selector |
+| Cell model | `PerisYaguecompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `PerisYagueBatched` is not a runtime selector |
+| Cell model | `StewartcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `StewartBatched` is not a runtime selector |
+| Cell model | `TNNPcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `TNNPBatched` is not a runtime selector |
+| Cell model | `ToRORd_dynClcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `ToRORd_dynClBatched` is not a runtime selector |
+| Cell model | `TrovatocompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `TrovatoBatched` is not a runtime selector |
+| Cell model | `TWorldcompactBatched` | SoA host; optional CUDA | maintained wrapper/backend; generated batch equations | `TWorldBatched` is not a runtime selector |
+| Monodomain MMS forcing | `monodomainFDAManufactured` | scalar CPU | maintained verification implementation | Verification-only; not a physiological model |
+| Bidomain MMS forcing | `bidomainFDAManufactured` | scalar CPU | maintained verification implementation | Verification-only; not a physiological model |
+| Bath-bidomain MMS forcing | `bathBidomainFDAManufactured` | scalar CPU | maintained verification implementation | Verification-only; not a physiological model |
 
-- `AlievPanfilov`
-- `BuenoOrovio`
-- `Courtemanche`
-- `Fabbri`
-- `Gaur`
-- `Grandi`
-- `PerisYague`
-- `Stewart`
-- `TNNP`
-- `ToRORd_dynCl`
-- `Trovato`
-- `TWorld`
+### Generated and maintained boundaries
 
-**Batched (SoA) models:**
-
-- `AlievPanfilovBatched`
-- `BuenoOrovioBatched`
-- `CourtemancheBatched`
-- `FabbriBatched`
-- `GaurBatched`
-- `GrandiBatched`
-- `PerisYagueBatched`
-- `StewartBatched`
-- `TNNPBatched`
-- `ToRORd_dynClBatched`
-- `TrovatoBatched`
-- `TWorldBatched`
-
-**Verification models:**
-
-- `monodomainFDAManufactured`
-- `bidomainFDAManufactured`
-- `bathBidomainFDAManufactured`
+- Wrapper `.C`/`.H` files, runtime registration, dictionary handling, host/CUDA
+  dispatch, and heterogeneity orchestration are maintained project code.
+- Year-labelled equation, Names, and Batch headers are generated model code.
+  Change their generator/mapping contract and regenerate rather than hand-editing
+  equations or metadata in isolation.
+- Files listed by `Make/files-gpu` are maintained CUDA integration kernels. Their
+  presence does not create additional runtime names.
+- Scalar and compact-batched variants implement the same named model family but
+  use different layouts and integration paths. Exact trajectory equivalence is
+  not guaranteed; compare with explicit tolerances before changing references.
 
 ## Build target
 
@@ -195,11 +205,11 @@ of the model baseline.
 
 **Batched/GPU models (heterogeneity support where tissue types permit):**
 
-- `BuenoOrovioBatched` (supports all three tissue types)
-- `TNNPBatched` (supports all three tissue types)
-- `ToRORd_dynClBatched` (supports all three tissue types)
-- `TWorldBatched` (supports all three tissue types)
-- Other batched models (AlievPanfilovBatched, CourtemancheBatched, FabbriBatched, GaurBatched, GrandiBatched, PerisYagueBatched, StewartBatched, TrovatoBatched) support only myocyte tissue and do not support heterogeneity
+- `BuenoOroviocompactBatched` (supports all three tissue types)
+- `TNNPcompactBatched` (supports all three tissue types)
+- `ToRORd_dynClcompactBatched` (supports all three tissue types)
+- `TWorldcompactBatched` (supports all three tissue types)
+- Other batched models (`AlievPanfilovcompactBatched`, `CourtemanchecompactBatched`, `FabbricompactBatched`, `GaurcompactBatched`, `GrandicompactBatched`, `PerisYaguecompactBatched`, `StewartcompactBatched`, `TrovatocompactBatched`) support only myocyte tissue and do not support heterogeneity
 
 ### Configuration
 

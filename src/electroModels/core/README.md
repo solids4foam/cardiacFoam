@@ -24,8 +24,7 @@ core/
 │
 ├── advanceSchemes/
 │   ├── electrophysicsAdvanceScheme.H/.C  Abstract time-advance strategy
-│   ├── staggered/                        Single-pass weak coupling
-│   └── pimpleStaggered/                  Iterative PIMPLE strong coupling
+│   └── staggered/                        Single-pass weak coupling
 │
 ├── electrophysiologyModel/
 │   └── electrophysiologyModel.H/.C    Concrete myocardium-centred entry point
@@ -74,8 +73,6 @@ of ionic solve, diffusion solve, and cross-domain coupling exchanges:
 
 - **`staggeredElectrophysicsAdvanceScheme`** — single-pass weak coupling,
   suitable for unidirectional Purkinje-to-myocardium workflows.
-- **`pimpleStaggeredElectrophysicsAdvanceScheme`** — iterative strong coupling
-  using `pimpleControl` for bidirectional Purkinje <-> myocardium exchange.
 
 ### `electrophysiologyModel/`
 

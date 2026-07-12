@@ -175,6 +175,15 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         ),
         aliases=("Land-Niederer GPU", "Land2017 GPU"),
     ),
+    "ManufacturedElectromechanics": ActiveTensionModelEntry(
+        states=("Ta",),
+        algebraic=("AV_Vm", "AV_lambda", "AV_voltageActivation", "AV_lengthFactor"),
+        constants=("AC_Tmax", "AC_V0", "AC_gamma"),
+        rates=("Ta",),
+        recommended_exports=("Ta",),
+        description="Manufactured active-tension model for electromechanics verification.",
+        notes="Verification-only model used by the total-Lagrangian electromechanics MMS.",
+    ),
 }
 
 

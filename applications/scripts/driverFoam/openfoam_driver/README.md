@@ -434,25 +434,3 @@ python3 applications/scripts/driverFoam/scripts/scan-dict-keys.py --strict
 This scanner fails when new uncatalogued C++ dict keys appear, stale catalog
 paths remain, or allowlist entries in
 `openfoam_driver/scripts/dict_key_allowlist.json` become unused.
-
-## Simulation dashboard
-
-Launch a local web app that scans `tutorials/`, shows each case's goal, run
-status, metrics, plots, and 3D model, and lets you save notes/tags/captions:
-
-```bash
-foamctl dashboard --root tutorials
-# then open http://127.0.0.1:8765
-```
-
-Options: `--port`, `--host`, `--store <db>`, `--no-3d`, `--no-open`.
-Requires the dashboard extra: `pip install -e ".[dashboard]"`.
-
-For a publication-quality Blender figure of a 3D case (produces `.blend` + PNG):
-
-```bash
-python -m openfoam_driver.dashboard.render_case \
-    --case tutorials/PATHOS/RBBB --blender "/Applications/Blender.app/Contents/MacOS/Blender"
-```
-
-The app displays any renders it finds under `dashboard/renders/<case>/`.

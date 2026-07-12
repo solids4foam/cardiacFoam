@@ -26,6 +26,27 @@ electroMechanicalModels (full mode only)
 
 ```
 
+`etc/resolveSolids4Foam.sh` selects a built solids4foam installation when one
+is available; otherwise it builds and uses the repository's lightweight
+`physicsModel` compatibility library. Both modes build the electrophysiology
+libraries through `verificationModels`. Only full mode builds
+`electroMechanicalModels`; solid mechanics and coupled electromechanics are
+therefore unavailable in lightweight mode.
+
+## Runtime selection layers
+
+| Layer | Public dictionary surface | Runtime owner |
+|---|---|---|
+| Top-level physics | `constant/physicsProperties`: `type electroModel` | `physicsModel::New()` constructs `electroModel` |
+| Electro workflow | `constant/electroProperties`: `myocardiumSolver` | `electroModel::New()` selects a direct model or spatial wrapper |
+| Spatial assembly | `<myocardiumSolver>Coeffs` | `electrophysiologyModel` and `electrophysicsSystemBuilder` assemble domains and couplers |
+| Myocardium kernel | `monodomainSolver` or `bidomainSolver` | `myocardiumDomain` owns a runtime-selected `myocardiumSolver`; eikonal uses `eikonalMyocardiumDomain` |
+
+The spatial names `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` are
+aliases for `electrophysiologyModel` in the parent `electroModel` table.
+`singleCellSolver` registers directly in that parent table and does not create
+the multi-domain system.
+
 ## Libraries
 
 ### `genericWriter` — `libgenericWriter`
@@ -135,7 +156,7 @@ The main spatial electrophysiology stack. It contains:
 
 - staged inter-domain couplers in `electroCouplers/`
 
-Current top-level electro entry is selected from `myocardiumSolver` in
+The top-level electro entry is selected from `myocardiumSolver` in
 `electroProperties`. That key first dispatches in the parent `electroModel`
 runtime-selection table:
 
@@ -159,6 +180,18 @@ inside `electroModels/myocardiumModels/`.
 
 Full electromechanical wrappers that are built only when the solids4foam
 dependency is available. Lightweight EP-only builds skip this library.
+
+## Maintained and external boundaries
+
+- Hand-maintained project libraries live under `src/`; their source manifests
+  are the adjacent `Make/files` and `Make/options` files.
+- Generated ionic equation headers are outputs of the project-owned
+  `applications/scripts/cellML2foam` pipeline. Change the generator, mapping,
+  or template contract rather than normalizing generated equations by hand.
+- `modules/physicsModel` is a project-owned compatibility layer used by the
+  lightweight build.
+- `modules/solids4foam` is an external submodule. cardiacFoam owns its use of
+  that interface, not the submodule's implementation.
 
 ## Reading guides
 

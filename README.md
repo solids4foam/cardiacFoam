@@ -34,6 +34,27 @@ cardiacFoam/
 
 Each subdirectory carries its own `README.md` (and `ARCHITECTURE.md` where relevant) with component-level detail.
 
+## Runtime architecture
+
+For a spatial electrophysiology case, the selection and ownership flow is:
+
+```text
+cardiacFoam
+  -> physicsModel::New()                 constant/physicsProperties
+  -> electroModel::New()                 constant/electroProperties
+  -> electrophysiologyModel              multi-domain orchestration
+  -> myocardiumDomain
+  -> myocardiumSolver                    PDE kernel
+```
+
+`physicsModel` selects `electroModel` through the `type` entry.
+`electroModel` then reads the public `myocardiumSolver` key. The spatial runtime
+names `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` all enter the
+`electrophysiologyModel` assembly path; `singleCellSolver` is a direct
+`electroModel` implementation and bypasses the multi-domain builder. Domain
+objects own fields and state, solver objects own numerical kernels, and `core/`
+owns orchestration. See [`src/electroModels/ARCHITECTURE.md`](src/electroModels/ARCHITECTURE.md).
+
 ## What the code contains
 
 **Electro solvers** (`src/electroModels/`) — dictionary-driven runtime selection across four domains: myocardium PDE-ODE (monodomain, bidomain), eikonal activation, ECG forward problem, and 1D conduction-system models (Purkinje, restitution-aware eikonal). See [`src/electroModels/README.md`](src/electroModels/README.md).
@@ -48,14 +69,13 @@ Each subdirectory carries its own `README.md` (and `ARCHITECTURE.md` where relev
 
 **Driver** (`applications/scripts/driverFoam/`) — a Python automation engine for running tutorials, parameter sweeps, and post-processing. Produces reproducible run and artifact manifests. See [`applications/scripts/driverFoam/openfoam_driver/README.md`](applications/scripts/driverFoam/openfoam_driver/README.md).
 
-**Tutorials** (`tutorials/`) — organised into four groups:
+**Tutorials** (`tutorials/`) — organised into three groups:
 
 | Group | Contents |
 |---|---|
-| `singleCellprotocols/` | Single-cell ODE runs, restitution curves, heterogeneity probes |
+| `electrophysiologyProtocols/` | Single-cell ODE runs, restitution curves, heterogeneity probes, rotor dynamics |
 | `manufacturedSolutions/` | MMS verification cases for all solver variants incl. electromechanics |
 | `NiedererEtAl2011/` | Benchmark cases: tissue propagation, Purkinje, electromechanics |
-| `electrophysiologyProtocols/rotorInstability/` | Rotor dynamics and re-entry instability cases |
 
 See [`tutorials/README.md`](tutorials/README.md).
 
@@ -68,6 +88,12 @@ See [`tutorials/README.md`](tutorials/README.md).
 Requires an OpenFOAM environment. For GPU-batched ionic models, see [`src/ionicModels/IONIC_MODEL_ARCHITECTURE.md`](src/ionicModels/IONIC_MODEL_ARCHITECTURE.md). For build-mode selection (full vs electro-only), see [`etc/resolveSolids4Foam.sh`](etc/resolveSolids4Foam.sh).
 
 Electromechanical tutorials require a full solids4foam build and will not run in electro-only mode.
+
+The repository owns the code under `src/`, `applications/`, the lightweight
+`modules/physicsModel` fallback, and the CellML generator/templates. Generated
+ionic-model equation headers should be changed through that generation path.
+`modules/solids4foam` is an external submodule and is not maintained as
+cardiacFoam source.
 
 ## Regression
 

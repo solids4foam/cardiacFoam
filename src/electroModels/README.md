@@ -29,6 +29,28 @@ myocardiumSolver  monodomainSolver;  // or: bidomainSolver | eikonalSolver
 
 `singleCellSolver` is compiled in this library but is not part of the multi-domain `electrophysiologyModel` path.
 
+## Selection and ownership
+
+```text
+physicsModel -> electroModel -> electrophysiologyModel
+                                  -> myocardiumDomain -> myocardiumSolver
+                                  -> conduction/ECG/bath domains and couplers
+```
+
+`constant/physicsProperties` selects the top-level `electroModel`.
+`constant/electroProperties` then supplies the canonical `myocardiumSolver`
+runtime name and its matching `<name>Coeffs` dictionary. The spatial names
+`monodomainSolver`, `bidomainSolver`, and `eikonalSolver` select the common
+`electrophysiologyModel`; the builder then creates the corresponding myocardium
+domain and optional `conductionNetworkDomains`, `ecgDomains`,
+`bathPotentialDomain`, and `domainCouplings` entries.
+
+The orchestration layer controls ordering but does not own numerical fields.
+Domains own long-lived state and meshes; solver classes implement domain-local
+numerical kernels; couplers transfer state through typed endpoints. These EP
+layers build in both full and lightweight modes. Electromechanical wrappers are
+in `src/electroMechanicalModels` and require full solids4foam mode.
+
 ## Folder roles
 
 ### `core/`

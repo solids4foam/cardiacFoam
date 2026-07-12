@@ -11,7 +11,7 @@ it into a full coupled run.
 1. Reads `constant/electroProperties` and selects the `conductionNetworkDomains`
    block from the active solver coefficients.
 2. Constructs a `conductionSystemDomain` from the chosen graph dictionary.
-3. Advances the domain for `nSteps` time steps at step size `deltaT`.
+3. Advances the domain using the time controls in `system/controlDict`.
 4. Writes domain output at each `writeControl` interval.
 
 ## Usage
@@ -25,13 +25,13 @@ runPurkinjeGraph [options]
 | Option | Default | Description |
 |---|---|---|
 | `-conductionDomain <name>` | first entry | Name of the `conductionNetworkDomains` sub-dictionary to run |
-| `-nSteps <N>` | 10000 | Number of time steps to advance |
-| `-deltaT <dt>` | from `controlDict` | Override the time-step size (s) |
 
 ## Notes
 
 - Requires a valid mesh in `constant/polyMesh` (used by the domain constructor)
   even though no spatial PDE is solved.
+- `startTime`, `endTime`, `deltaT`, and write scheduling are read from
+  `system/controlDict`.
 - Runs in serial only (`noParallel`).
 - No myocardium coupling currents are injected; terminal PVJ buffers are zero
   throughout.
