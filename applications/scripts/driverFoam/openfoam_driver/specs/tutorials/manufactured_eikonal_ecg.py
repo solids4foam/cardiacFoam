@@ -134,13 +134,12 @@ def _archive_output_dir(case_root: Path) -> Path:
     return case_root / "postProcessing"
 
 
-def _candidate_paths(case_root: Path, source_name: str, run_in_parallel: bool) -> tuple[Path, ...]:
-    if run_in_parallel:
-        return (
-            case_root / "processor0" / "postProcessing" / source_name,
-            case_root / "postProcessing" / source_name,
-        )
-
+def _candidate_paths(case_root: Path, source_name: str) -> tuple[Path, ...]:
+    # The manufactured verifiers write via Time::globalPath(), so their
+    # postProcessing/ output lands in the shared case dir under both serial
+    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
+    # is kept as a fallback only for output from an unrebuilt/older solver
+    # binary that predates that fix.
     return (
         case_root / "postProcessing" / source_name,
         case_root / "processor0" / "postProcessing" / source_name,
@@ -150,8 +149,6 @@ def _candidate_paths(case_root: Path, source_name: str, run_in_parallel: bool) -
 def _stage_case_outputs(
     case_root: Path,
     case: CaseConfig,
-    *,
-    run_in_parallel: bool = False,
 ) -> list[Path]:
     staged_outputs: list[Path] = []
     destination_dir = _archive_output_dir(case_root)
@@ -164,7 +161,7 @@ def _stage_case_outputs(
         "manufacturedEikonalActivationTime.dat",
     ):
         destination = destination_dir / f"{case.case_id}_{source_name}"
-        for candidate in _candidate_paths(case_root, source_name, run_in_parallel):
+        for candidate in _candidate_paths(case_root, source_name):
             if not candidate.exists():
                 continue
             if candidate.parent == destination_dir:
@@ -232,7 +229,7 @@ def _run_case(
         subprocess.run(command, check=True)
     finally:
         _archive_case_logs(case_root, case)
-    _stage_case_outputs(case_root, case, run_in_parallel=case_run_in_parallel)
+    _stage_case_outputs(case_root, case)
 
 
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:

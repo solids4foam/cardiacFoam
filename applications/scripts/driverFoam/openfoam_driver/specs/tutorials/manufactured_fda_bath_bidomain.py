@@ -209,9 +209,9 @@ def _run_case(
         subprocess.run(command, check=True)
     finally:
         _archive_case_logs(case_root, case)
-    _stage_case_output(case_root, case, run_in_parallel=run_in_parallel)
+    _stage_case_output(case_root, case)
     if ecg_enabled:
-        _stage_case_ecg_outputs(case_root, case, run_in_parallel=run_in_parallel)
+        _stage_case_ecg_outputs(case_root, case)
 
 
 def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
@@ -234,23 +234,20 @@ def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
 def _stage_case_output(
     case_root: Path,
     case: CaseConfig,
-    *,
-    run_in_parallel: bool = False,
 ) -> Path:
+    # The manufactured verifiers write via Time::globalPath(), so their
+    # postProcessing/ output lands in the shared case dir under both serial
+    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
+    # is kept as a fallback only for output from an unrebuilt/older solver
+    # binary that predates that fix.
     filename = _case_output_filename(case)
     destination_dir = _archive_output_dir(case_root)
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / filename
-    if run_in_parallel:
-        candidates = (
-            case_root / "processor0" / "postProcessing" / filename,
-            case_root / "postProcessing" / filename,
-        )
-    else:
-        candidates = (
-            case_root / "postProcessing" / filename,
-            case_root / "processor0" / "postProcessing" / filename,
-        )
+    candidates = (
+        case_root / "postProcessing" / filename,
+        case_root / "processor0" / "postProcessing" / filename,
+    )
 
     for candidate in candidates:
         if not candidate.exists():
@@ -269,8 +266,6 @@ def _stage_case_output(
 def _stage_case_ecg_outputs(
     case_root: Path,
     case: CaseConfig,
-    *,
-    run_in_parallel: bool = False,
 ) -> list[Path]:
     staged_outputs: list[Path] = []
     destination_dir = _archive_output_dir(case_root)
@@ -285,16 +280,10 @@ def _stage_case_ecg_outputs(
 
     for prefix, source_name in ecg_outputs:
         destination = destination_dir / f"{prefix}_{case.case_id}_{source_name}"
-        if run_in_parallel:
-            candidates = (
-                case_root / "processor0" / "postProcessing" / source_name,
-                case_root / "postProcessing" / source_name,
-            )
-        else:
-            candidates = (
-                case_root / "postProcessing" / source_name,
-                case_root / "processor0" / "postProcessing" / source_name,
-            )
+        candidates = (
+            case_root / "postProcessing" / source_name,
+            case_root / "processor0" / "postProcessing" / source_name,
+        )
 
         for candidate in candidates:
             if not candidate.exists():

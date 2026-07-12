@@ -221,14 +221,12 @@ def _run_case(
     _stage_case_output(
         case_root,
         case,
-        run_in_parallel=run_in_parallel,
         convergence_axis=convergence_axis,
         archive_tag=archive_tag,
     )
     _stage_case_ecg_outputs(
         case_root,
         case,
-        run_in_parallel=run_in_parallel,
         archive_tag=archive_tag,
     )
 
@@ -254,41 +252,31 @@ def _stage_case_output(
     case_root: Path,
     case: CaseConfig,
     *,
-    run_in_parallel: bool = False,
     convergence_axis: str = "spatial",
     archive_tag: str = "default",
 ) -> Path:
+    # The manufactured verifiers write via Time::globalPath(), so their
+    # postProcessing/ output lands in the shared case dir under both serial
+    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
+    # is kept as a fallback only for output from an unrebuilt/older solver
+    # binary that predates that fix.
     filename = _case_output_filename(case, convergence_axis=convergence_axis)
     legacy_filename = _case_output_filename(case, convergence_axis="spatial")
     destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / filename
-    if run_in_parallel:
-        candidates = [
-            case_root / "processor0" / "postProcessing" / filename,
-            case_root / "postProcessing" / filename,
-        ]
-    else:
-        candidates = [
-            case_root / "postProcessing" / filename,
-            case_root / "processor0" / "postProcessing" / filename,
-        ]
+    candidates = [
+        case_root / "postProcessing" / filename,
+        case_root / "processor0" / "postProcessing" / filename,
+    ]
 
     if convergence_axis != "spatial" and legacy_filename != filename:
-        if run_in_parallel:
-            candidates.extend(
-                [
-                    case_root / "processor0" / "postProcessing" / legacy_filename,
-                    case_root / "postProcessing" / legacy_filename,
-                ]
-            )
-        else:
-            candidates.extend(
-                [
-                    case_root / "postProcessing" / legacy_filename,
-                    case_root / "processor0" / "postProcessing" / legacy_filename,
-                ]
-            )
+        candidates.extend(
+            [
+                case_root / "postProcessing" / legacy_filename,
+                case_root / "processor0" / "postProcessing" / legacy_filename,
+            ]
+        )
 
     for candidate in candidates:
         if not candidate.exists():
@@ -309,7 +297,6 @@ def _stage_case_ecg_outputs(
     case_root: Path,
     case: CaseConfig,
     *,
-    run_in_parallel: bool = False,
     archive_tag: str = "default",
 ) -> list[Path]:
     staged_outputs: list[Path] = []
@@ -322,16 +309,10 @@ def _stage_case_ecg_outputs(
         "manufacturedPseudoECGSummary.dat",
     ):
         destination = destination_dir / f"ECG_{case.case_id}_{source_name}"
-        if run_in_parallel:
-            candidates = (
-                case_root / "processor0" / "postProcessing" / source_name,
-                case_root / "postProcessing" / source_name,
-            )
-        else:
-            candidates = (
-                case_root / "postProcessing" / source_name,
-                case_root / "processor0" / "postProcessing" / source_name,
-            )
+        candidates = (
+            case_root / "postProcessing" / source_name,
+            case_root / "processor0" / "postProcessing" / source_name,
+        )
 
         for candidate in candidates:
             if not candidate.exists():
