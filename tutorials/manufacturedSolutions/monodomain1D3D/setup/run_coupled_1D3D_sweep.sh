@@ -131,3 +131,9 @@ rm -f "$CASE_DIR/system/blockMeshDict.3D.active"
 "$SCRIPT_DIR/post_processing_coupled_1D3D.py" --output-dir "$OUTPUT_DIR"
 
 echo "Coupled 1D-3D sweep outputs written to $OUTPUT_DIR"
+
+# --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
+_PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" coupling \
+    --repo-root "$_PAPERI_ROOT" \
+    || echo "WARN: paperI aggregate (coupling) failed; native output untouched" >&2

@@ -29,3 +29,9 @@ set_grad "leastSquares"; for N in 10 20 40 80; do run_one leastSquares $N; done
 set_grad "leastSquares"   # restore tutorial default
 ./Allclean >/dev/null 2>&1
 echo "=== scheme_study.csv ==="; cat setup/results/scheme_study.csv
+
+# --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
+_PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" tet \
+    --repo-root "$_PAPERI_ROOT" \
+    || echo "WARN: paperI aggregate (tet) failed; native output untouched" >&2
