@@ -172,3 +172,7 @@ tutorials/**/*.foam
 # Quarto build artefacts — only relevant if Quarto is run inside a tutorial dir
 tutorials/**/.quarto/
 tutorials/**/_output/
+
+# Paper I derived results data (archived to Zenodo, never committed)
+**/setup/results/
+paperI_data_bundle/
