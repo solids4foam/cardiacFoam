@@ -52,3 +52,67 @@ def test_eikonal_ecg_max_and_mean(tmp_path):
     rows = adapters.from_eikonal_ecg(p)
     assert any(r["field"] == "Phi_e_max" and r["Linf"] == "1.11883e-05" for r in rows)
     assert any(r["field"] == "Phi_e_mean" and r["Linf"] == "9.28982e-06" for r in rows)
+
+
+def test_monodomain_spatial_archive(tmp_path):
+    (tmp_path / "3D_80_cells_implicit.dat").write_text(
+        "Manufactured-solution error summary (t = 0.199551):\n"
+        "Field     L1-error       L2-error       Linf-error\n"
+        "Vm     5.54093e-05   7.92099e-05   0.00030695\n"
+        "u1     4.7947e-05   6.65211e-05   0.000234554\n"
+        "u2     2.08544e-05   2.87229e-05   8.75773e-05\n"
+        "-------------------------------------------------\n"
+        "\n"
+        "Simulation summary:\n"
+        "-------------------\n"
+        "Number of cells (N)   = 80\n"
+        "Solver type           = Implicit\n"
+        "Grid spacing (dx)     = 0.0125\n"
+        "Time step (dt)        = 0.00224215\n"
+    )
+    rows = adapters.from_monodomain_spatial_archive(tmp_path)
+    vm = [r for r in rows if r["field"] == "Vm"][0]
+    assert vm["dim"] == "3D" and vm["N"] == "80" and vm["h"] == "0.0125"
+    assert vm["L2"] == "7.92099e-05" and vm["Linf"] == "0.00030695"
+    assert {r["field"] for r in rows} == {"Vm", "u1", "u2"}
+
+
+def test_bidomain_archive(tmp_path):
+    (tmp_path / "3D_20_cells_implicit.dat").write_text(
+        "Bidomain manufactured-solution error summary (t = 0.200028):\n"
+        "Field     L1-error       L2-error       Linf-error\n"
+        "Vm        0.00025015   0.00034074   0.000976693\n"
+        "phiE      0.0814577   0.081458   0.0821454\n"
+        "phiE_gauge 0.000176892   0.000240922   0.000687749\n"
+        "phiI      0.0814536   0.0814537   0.0817234\n"
+        "phiI_gauge 7.33107e-05   9.98768e-05   0.000288945\n"
+        "u1        3.09526e-05   4.29283e-05   0.000152202\n"
+        "u2        1.34773e-05   1.84508e-05   5.38718e-05\n"
+        "\n"
+        "Number of cells (N)   = 20\n"
+        "Solver type           = Implicit\n"
+        "Grid spacing (dx)     = 0.05\n"
+    )
+    rows = adapters.from_bidomain_archive(tmp_path)
+    assert {r["field"] for r in rows} == {"Vm", "phiE_gauge", "phiI_gauge", "u1", "u2"}
+    phie = [r for r in rows if r["field"] == "phiE_gauge"][0]
+    assert phie["L2"] == "0.000240922" and phie["h"] == "0.05" and phie["N"] == "20"
+
+
+def test_pseudo_ecg_spatial_archive(tmp_path):
+    (tmp_path / "ECG_3D_80_cells_implicit_manufacturedPseudoECGSummary.dat").write_text(
+        "Manufactured pseudo-ECG summary\n"
+        "samples 89\n"
+        "dimension 3D\n"
+        "qChecks 6\n"
+        "qReference 96\n"
+        "Electrode  L1_err_ref  L2_err_ref  Linf_err_ref  L1_err_q6  L2_err_q6  Linf_err_q6\n"
+        "E1 3.10522e-07 3.80622e-07 7.4854e-07 3.10522e-07 3.80622e-07 7.4854e-07\n"
+        "E2 1.87535e-07 2.39847e-07 5.00594e-07 1.87535e-07 2.39847e-07 5.00594e-07\n"
+    )
+    rows = adapters.from_pseudo_ecg_spatial_archive(tmp_path)
+    maxrow = [r for r in rows if r["field"] == "Phi_e_max"][0]
+    meanrow = [r for r in rows if r["field"] == "Phi_e_mean"][0]
+    assert maxrow["dim"] == "3D" and maxrow["N"] == "80" and maxrow["h"] == "0.0125"
+    assert float(maxrow["L1"]) == 3.10522e-07
+    assert abs(float(meanrow["L1"]) - 2.490285e-07) < 1e-12

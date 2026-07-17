@@ -57,3 +57,9 @@ Driver-managed sweeps:
 ```bash
 applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setup/driver_config.json
 ```
+
+After the sweep completes, persist the canonical Paper I convergence table:
+
+```bash
+python3 applications/scripts/paperI_results/aggregate.py bidomain
+```

@@ -52,12 +52,34 @@ def _eikonal(root: Path):
     return schema.fill_rates(rows)
 
 
-CASES = {"tet": _tet, "coupling": _coupling, "eikonal": _eikonal}
+def _mono_spatial(root: Path):
+    src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
+    return schema.fill_rates(adapters.from_monodomain_spatial_archive(src))
+
+
+def _pseudo_ecg_spatial(root: Path):
+    src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
+    return schema.fill_rates(adapters.from_pseudo_ecg_spatial_archive(src))
+
+
+def _bidomain(root: Path):
+    src = root / _TUT / "bidomain/driverPostProcessingArchive_postProcessing"
+    return schema.fill_rates(adapters.from_bidomain_archive(src))
+
+
+CASES = {
+    "tet": _tet, "coupling": _coupling, "eikonal": _eikonal,
+    "mono_spatial": _mono_spatial, "pseudo_ecg_spatial": _pseudo_ecg_spatial,
+    "bidomain": _bidomain,
+}
 
 _OUT = {
     "tet": "monodomainTetMMS/setup/results/tet_convergence.csv",
     "coupling": "monodomain1D3D/setup/results/coupling_convergence.csv",
     "eikonal": "eikonalECG/setup/results/eikonal_convergence.csv",
+    "mono_spatial": "monodomainPseudoECG/setup/results/mono_spatial_convergence.csv",
+    "pseudo_ecg_spatial": "monodomainPseudoECG/setup/results/pseudo_ecg_spatial_convergence.csv",
+    "bidomain": "bidomain/setup/results/bidomain_convergence.csv",
 }
 
 
