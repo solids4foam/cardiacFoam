@@ -100,7 +100,10 @@ def test_bidomain_archive(tmp_path):
 
 
 def test_pseudo_ecg_spatial_archive(tmp_path):
-    (tmp_path / "ECG_3D_80_cells_implicit_manufacturedPseudoECGSummary.dat").write_text(
+    # driverFoam's _stage_case_ecg_outputs names ECG archives from case_id, which
+    # always carries a _DT... token even for a spatial-axis sweep (confirmed
+    # against a real sweep run 2026-07-17) — the adapter must match that.
+    (tmp_path / "ECG_3D_80_cells_implicit_DT0p00224215_manufacturedPseudoECGSummary.dat").write_text(
         "Manufactured pseudo-ECG summary\n"
         "samples 89\n"
         "dimension 3D\n"
@@ -116,3 +119,15 @@ def test_pseudo_ecg_spatial_archive(tmp_path):
     assert maxrow["dim"] == "3D" and maxrow["N"] == "80" and maxrow["h"] == "0.0125"
     assert float(maxrow["L1"]) == 3.10522e-07
     assert abs(float(meanrow["L1"]) - 2.490285e-07) < 1e-12
+
+
+def test_pseudo_ecg_spatial_archive_excludes_unsupported_1d_2d(tmp_path):
+    header = "Electrode  L1_err_ref  L2_err_ref  Linf_err_ref\n"
+    (tmp_path / "ECG_1D_10_cells_implicit_DT0p00892857_manufacturedPseudoECGSummary.dat").write_text(
+        "dimension 1D\n" + header + "E1 6.9e-01 6.9e-01 7.2e-01\n"
+    )
+    (tmp_path / "ECG_3D_10_cells_implicit_DT0p00892857_manufacturedPseudoECGSummary.dat").write_text(
+        "dimension 3D\n" + header + "E1 3.7e-04 3.7e-04 3.7e-04\n"
+    )
+    rows = adapters.from_pseudo_ecg_spatial_archive(tmp_path)
+    assert {r["dim"] for r in rows} == {"3D"}

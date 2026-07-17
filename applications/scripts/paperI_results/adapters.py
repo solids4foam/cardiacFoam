@@ -133,7 +133,7 @@ def from_bidomain_archive(dir_path, case="bidomain"):
 
 _ECG_SPATIAL_FILENAME_PATTERN = re.compile(
     r"^ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)"
-    r"_manufacturedPseudoECGSummary\.dat$"
+    r"(?:_DT[^_]+)?_manufacturedPseudoECGSummary\.dat$"
 )
 
 
@@ -160,11 +160,19 @@ def _parse_ecg_electrode_table(content):
     return out
 
 
+# driverFoam's own post-processing (post_processing_manufactured.py) discards 1D/2D
+# archived ECG cases as "unsupported": the numerical pseudoECG is accumulated as a 3D
+# cell-volume sum, while the 1D/2D manufactured references are lower-dimensional
+# integrals, so their errors don't converge under refinement (confirmed against a real
+# sweep run 2026-07-17: 1D/2D Phi_e error is flat across N=10..80, not decreasing).
+_ECG_SPATIAL_SUPPORTED_DIMENSIONS = ("3D",)
+
+
 def from_pseudo_ecg_spatial_archive(dir_path, case="pseudo-ecg-spatial"):
     rows = []
     for path in sorted(Path(dir_path).glob("ECG_*_manufacturedPseudoECGSummary.dat")):
         m = _ECG_SPATIAL_FILENAME_PATTERN.match(path.name)
-        if not m:
+        if not m or m.group("dimension") not in _ECG_SPATIAL_SUPPORTED_DIMENSIONS:
             continue
         cols = _parse_ecg_electrode_table(path.read_text(errors="ignore"))
         if not cols:
