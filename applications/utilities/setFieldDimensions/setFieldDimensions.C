@@ -101,6 +101,12 @@ static const FieldDimEntry catalogue[] =
     // Conductivity tensor / scalar  [S/m] = kg^-1 m^-3 s^3 A^2
     { "conductivity",              dimensionSet(-1, -3, 3, 0, 0, 2, 0),
       "conductivity tensor from VTK import (S/m)" },
+    { "Conductivity",              dimensionSet(-1, -3, 3, 0, 0, 2, 0),
+      "canonical monodomain/eikonal conductivity tensor (S/m)" },
+    { "ConductivityIntracellular", dimensionSet(-1, -3, 3, 0, 0, 2, 0),
+      "canonical bidomain intracellular conductivity tensor (S/m)" },
+    { "ConductivityExtracellular", dimensionSet(-1, -3, 3, 0, 0, 2, 0),
+      "canonical bidomain extracellular conductivity tensor (S/m)" },
     { "bodyAndOrgansConductivity", dimensionSet(-1, -3, 3, 0, 0, 2, 0),
       "torso/organ conductivity scalar for ECG bath domain (S/m)" },
 };

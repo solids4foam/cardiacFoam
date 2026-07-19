@@ -39,8 +39,7 @@ Usage
       -output   <path>   Override output file path
                          (default: postProcessing/pseudoECG.dat)
       -vmField  <name>   Name of the voltage field to read (default: Vm)
-      -sigmaField <name> Name of the conductivity tensor field
-                         (default: conductivity)
+      -sigmaField <name> Override the canonical conductivity field name
       -tStart   <scalar> Skip time directories earlier than this value
       -tEnd     <scalar> Skip time directories later than this value
 
@@ -54,6 +53,7 @@ Author
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "mathematicalConstants.H"
+#include "conductivityFieldIO.H"
 
 using namespace Foam;
 
@@ -183,8 +183,7 @@ int main(int argc, char *argv[])
     (
         "sigmaField",
         "word",
-        "name of the conductivity tensor field to read\n"
-        "(default: conductivity)"
+        "override the canonical conductivity field name"
     );
 
     #include "setRootCase.H"
@@ -221,11 +220,18 @@ int main(int argc, char *argv[])
     const dictionary& myocardiumCoeffs =
         activeMyocardiumCoeffs(electroProperties, myocardiumSolverType);
 
+    const word canonicalSigmaFieldName
+    (
+        myocardiumSolverType == "bidomainSolver"
+      ? word("ConductivityIntracellular")
+      : word("Conductivity")
+    );
+
     const word sigmaFieldName =
         args.getOrDefault<word>
         (
             "sigmaField",
-            word("conductivity")
+            canonicalSigmaFieldName
         );
 
     const dictionary& ecgDict = findECGDict(myocardiumCoeffs);
@@ -269,41 +275,25 @@ int main(int argc, char *argv[])
     runTime.setTime(timeDirs[0], 0);
     mesh.readUpdate();
 
-    volTensorField conductivity
+    const bool bidomain = myocardiumSolverType == "bidomainSolver";
+    tmp<volTensorField> conductivityTmp = readConductivityField
     (
-        IOobject
-        (
-            sigmaFieldName,
-            "0",
-            mesh,
-            IOobject::READ_IF_PRESENT,
-            IOobject::NO_WRITE
-        ),
         mesh,
-        dimensionedTensor
-        (
-            "zero",
-            pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-            tensor::zero
-        )
+        mesh,
+        nullptr,
+        myocardiumCoeffs,
+        conductivityFieldSpec
+        {
+            sigmaFieldName,
+            bidomain
+          ? word("conductivityIntracellular")
+          : word("conductivity"),
+            bidomain
+          ? word("conductivityIntracellular")
+          : word("conductivity")
+        }
     );
-
-    if (!conductivity.headerOk())
-    {
-        Info<< "Conductivity tensor field '" << sigmaFieldName
-            << "' not found in 0/, using value from active "
-            << myocardiumSolverType << " coefficients." << nl << endl;
-
-        conductivity = dimensionedTensor
-        (
-            dimensionedSymmTensor
-            (
-                sigmaFieldName,
-                pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-                myocardiumCoeffs
-            ) & tensor(I)
-        );
-    }
+    const volTensorField& conductivity = conductivityTmp();
 
     const tensorField& sigma = conductivity.primitiveField();
     const scalarField& cellVolumes  = mesh.V();

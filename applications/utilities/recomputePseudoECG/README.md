@@ -44,15 +44,14 @@ during a normal `cardiacFoam` run and is compatible with `plot_pseudo_ecg.py`.
 |---|---|---|
 | `-output <path>` | `postProcessing/pseudoECG.dat` | Output file path |
 | `-vmField <name>` | `Vm` | Name of the membrane potential field to read |
-| `-sigmaField <name>` | `conductivity` | Conductivity tensor field name in `0/` |
+| `-sigmaField <name>` | solver canonical name | Override `Conductivity` (mono/eikonal) or `ConductivityIntracellular` (bidomain) |
 | `-time <range>` | all | OpenFOAM time selector, e.g. `'0.1:0.5'` or `'latest'` |
 
 ## Notes
 
-- The conductivity field is read once from `0/conductivity` and assumed
-  constant in time. If the field is not present, the utility constructs the
-  tensor from the same active `<solver>Coeffs` dictionary used by
-  `cardiacFoam`.
+- Conductivity uses the same `conductivitySource` contract as `cardiacFoam`.
+  `field` mode searches the canonical static field and fails if it is absent;
+  `uniform` mode uses the active solver coefficient and does not probe disk.
 - Electrode positions are taken from the first `ecgDomains` sub-dictionary in
   `constant/electroProperties`. Update the positions there and re-run this
   utility to correct any errors without re-running the simulation.

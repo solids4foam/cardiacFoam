@@ -5,11 +5,14 @@ EXE_INC = \
     -I$(LIB_SRC)/dynamicMesh/dynamicMesh/lnInclude \
     -I$(LIB_SRC)/dynamicMesh/dynamicFvMesh/lnInclude \
     -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
-    -I$(LIB_SRC)/ODE/lnInclude
+    -I$(LIB_SRC)/ODE/lnInclude \
+    -I../../../src/electroModels/core
 
 EXE_LIBS = \
+    -L$(FOAM_USER_LIBBIN) \
     -lfiniteVolume \
     -lmeshTools \
     -lODE \
     -ldynamicFvMesh \
-    -ldynamicMesh
+    -ldynamicMesh \
+    -lelectroModels

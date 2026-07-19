@@ -12,7 +12,7 @@ even on very large meshes (millions of cells).
 
 | Field                    | Applied dimensions    | Physical meaning      |
 |--------------------------|-----------------------|-----------------------|
-| `conductivity`           | `[-1 -3 3 0 0 2 0]`  | Conductivity tensor S/m |
+| `conductivity`, `Conductivity`, `ConductivityIntracellular`, `ConductivityExtracellular` | `[-1 -3 3 0 0 2 0]` | Conductivity tensors S/m |
 | `bodyAndOrgansConductivity` | `[-1 -3 3 0 0 2 0]` | Torso conductivity S/m |
 
 Fields that are **not** in the catalogue (`fiber`, `sheet`, `uvc_transmural`,

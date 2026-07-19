@@ -24,6 +24,7 @@ Description
 #include "HashSet.H"
 #include "fvMeshSubset.H"
 #include "extracellularFaceConductivity.H"
+#include "conductivityFieldIO.H"
 
 using namespace Foam;
 
@@ -267,30 +268,48 @@ int main(int argc, char* argv[])
         1.0/Foam::sqrt(2.0)
     );
     const scalar alpha = verification.lookupOrDefault<scalar>("alpha", 0.01);
-    const dimensionSet conductivityDimensions
+    tmp<volTensorField> sigmaEFieldTmp = readConductivityField
     (
-        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume)
-    );
-    const dimensionedTensor sigmaEDimensioned
-    (
-        dimensionedSymmTensor
-        (
+        mesh,
+        mesh,
+        nullptr,
+        coeffs,
+        conductivityFieldSpec
+        {
+            "ConductivityExtracellular",
             "conductivityExtracellular",
-            conductivityDimensions,
-            coeffs
-        ) & tensor::I
+            "conductivityExtracellularDiagnostic"
+        }
     );
-    const tensor sigmaE(sigmaEDimensioned.value());
-    const dimensionedTensor sigmaIDimensioned
+    tmp<volTensorField> sigmaIFieldTmp = readConductivityField
     (
-        dimensionedSymmTensor
-        (
+        mesh,
+        mesh,
+        nullptr,
+        coeffs,
+        conductivityFieldSpec
+        {
+            "ConductivityIntracellular",
             "conductivityIntracellular",
-            conductivityDimensions,
-            coeffs
-        ) & tensor::I
+            "conductivityIntracellularDiagnostic"
+        }
     );
-    const tensor sigmaI(sigmaIDimensioned.value());
+    const tensor sigmaE(sigmaEFieldTmp().primitiveField()[0]);
+    const tensor sigmaI(sigmaIFieldTmp().primitiveField()[0]);
+
+    const scalar sigmaEVariation =
+        gMax(mag(sigmaEFieldTmp().primitiveField() - sigmaE));
+    const scalar sigmaIVariation =
+        gMax(mag(sigmaIFieldTmp().primitiveField() - sigmaI));
+    if (sigmaEVariation > SMALL || sigmaIVariation > SMALL)
+    {
+        FatalErrorInFunction
+            << "bathBidomainInterfaceMetrics is a manufactured-solution "
+            << "diagnostic and requires spatially uniform Gi and Ge. "
+            << "max variations are Gi=" << sigmaIVariation
+            << ", Ge=" << sigmaEVariation << '.'
+            << exit(FatalError);
+    }
     const word method = bath.lookupOrDefault<word>
     (
         "interfaceConductivityInterpolation",
