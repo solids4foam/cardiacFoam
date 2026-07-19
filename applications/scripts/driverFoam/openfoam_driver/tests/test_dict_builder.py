@@ -146,6 +146,48 @@ class TestApplicableEntrySelection(unittest.TestCase):
         self.assertIn("$ELECTRO_MODEL_COEFFS.ionicModel", paths)
         self.assertIn("$ELECTRO_MODEL_COEFFS.tissue", paths)
 
+    def test_field_source_omits_monodomain_uniform_tensor(self) -> None:
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+
+        text = build_electro_properties(
+            selectors={
+                "myocardiumSolver": "monodomainSolver",
+                "ionicModel": "TNNP",
+                "tissue": "epicardialCells",
+                "conductivitySource": "field",
+            },
+        )
+        self.assertIn("conductivitySource field;", text)
+        self.assertNotIn("\n    conductivity ", text)
+
+    def test_field_source_omits_both_bidomain_uniform_tensors(self) -> None:
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+
+        text = build_electro_properties(
+            selectors={
+                "myocardiumSolver": "bidomainSolver",
+                "ionicModel": "TNNP",
+                "tissue": "epicardialCells",
+                "conductivitySource": "field",
+            },
+        )
+        self.assertIn("conductivitySource field;", text)
+        self.assertNotIn("conductivityIntracellular", text)
+        self.assertNotIn("conductivityExtracellular", text)
+
+    def test_spatial_solver_defaults_to_uniform_source(self) -> None:
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+
+        text = build_electro_properties(
+            selectors={
+                "myocardiumSolver": "monodomainSolver",
+                "ionicModel": "TNNP",
+                "tissue": "epicardialCells",
+            },
+        )
+        self.assertIn("conductivitySource uniform;", text)
+        self.assertIn("\n    conductivity ", text)
+
 
 class TestValuePopulation(unittest.TestCase):
     """Precedence: explicit override > typical_value (when fallback enabled)
