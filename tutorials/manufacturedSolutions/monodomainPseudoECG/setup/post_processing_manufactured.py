@@ -41,8 +41,22 @@ from openfoam_driver.postprocessing.style import (
 )
 from openfoam_driver.core.defaults import manufactured_fda as driver_defaults
 
-RATE_FIELDS = ("Dimension", "Solver", "N_lower", "N_higher", "rate_Vm", "rate_u1", "rate_u2")
-FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells_(explicit|implicit)")
+RATE_FIELDS = (
+    "SweepAxis",
+    "Dimension",
+    "Solver",
+    "N_lower",
+    "N_higher",
+    "dt_lower",
+    "dt_higher",
+    "rate_Vm",
+    "rate_u1",
+    "rate_u2",
+)
+FILENAME_PATTERN = re.compile(
+    r"(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)"
+    r"(?:_DT(?P<dt_token>[^_]+))?\.dat$"
+)
 ECG_SUMMARY_PATTERN = re.compile(
     r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
     r"manufacturedPseudoECGSummary\.dat$"
@@ -90,6 +104,8 @@ ECG_SUMMARY_FIELDS = (
 )
 SUMMARY_ERR_Q_PATTERN = re.compile(r"Linf_err_q(?P<q>\d+)$")
 SUMMARY_DELTA_Q_PATTERN = re.compile(r"Linf_delta_q(?P<q>\d+)_ref$")
+TIME_STEP_PATTERN = re.compile(r"Time step \(dt\)\s*=\s*(\S+)")
+GRID_SPACING_PATTERN = re.compile(r"Grid spacing \(dx\)\s*=\s*(\S+)")
 
 
 def _has_matplotlib() -> bool:
@@ -124,6 +140,65 @@ def _safe_rate(e1: float, e2: float, h1: float, h2: float) -> float:
     return math.log(e1 / e2) / math.log(h1 / h2)
 
 
+def _dt_token_to_float(token: str | None) -> float | None:
+    if not token:
+        return None
+    try:
+        return float(token.replace("p", ".").replace("m", "-"))
+    except ValueError:
+        return None
+
+
+def _extract_summary_scalar(pattern: re.Pattern[str], content: str) -> float | None:
+    match = pattern.search(content)
+    if match is None:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _infer_convergence_axis(rows) -> str:
+    grouped_rows = {}
+    for row in rows:
+        key = (row["Dimension"], row["Solver"])
+        grouped_rows.setdefault(key, []).append(row)
+
+    for group_rows in grouped_rows.values():
+        unique_cells = {int(row["N"]) for row in group_rows}
+        unique_dt = {
+            float(row["dt"])
+            for row in group_rows
+            if row.get("dt") is not None and not math.isnan(float(row["dt"]))
+        }
+        if len(unique_cells) == 1 and len(unique_dt) > 1:
+            return "temporal"
+    return "spatial"
+
+
+def _sweep_axis_metadata(convergence_axis: str) -> dict[str, object]:
+    axis = str(convergence_axis).strip().lower()
+    if axis == "temporal":
+        return {
+            "axis": axis,
+            "x_key": "dt",
+            "x_label": "Time step (dt)",
+            "x_title": "dt",
+            "rate_reference": lambda row: float(row["dt"]),
+            "sort_key": lambda row: -float(row["dt"]),
+        }
+
+    return {
+        "axis": "spatial",
+        "x_key": "N",
+        "x_label": "Number of cells (N)",
+        "x_title": "N",
+        "rate_reference": lambda row: 1.0 / float(row["N"]),
+        "sort_key": lambda row: float(row["N"]),
+    }
+
+
 def _write_csv(rows, destination: Path, fieldnames) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("w", newline="") as handle:
@@ -139,7 +214,8 @@ def _load_expected_filenames(output_dir: Path) -> set[str] | None:
         return None
 
     manifest = json.loads(manifest_path.read_text())
-    expected = set()
+    result_rows = []
+    counts_by_base: dict[tuple[str, int, str], int] = {}
     for result in manifest.get("results", []):
         status = result.get("status")
         if status not in {"ok", "planned"}:
@@ -148,9 +224,30 @@ def _load_expected_filenames(output_dir: Path) -> set[str] | None:
         dimension = params.get("dimension")
         cells = params.get("cells")
         solver = params.get("solver")
+        dt_value = params.get("dt")
         if dimension is None or cells is None or solver is None:
             continue
-        expected.add(f"{dimension}_{int(cells)}_cells_{solver}.dat")
+        key = (str(dimension), int(cells), str(solver))
+        counts_by_base[key] = counts_by_base.get(key, 0) + 1
+        result_rows.append(
+            {
+                "dimension": str(dimension),
+                "cells": int(cells),
+                "solver": str(solver),
+                "dt": float(dt_value) if dt_value is not None else None,
+            }
+        )
+
+    expected = set()
+    for row in result_rows:
+        key = (row["dimension"], row["cells"], row["solver"])
+        if counts_by_base.get(key, 0) > 1 and row["dt"] is not None:
+            dt_token = f"{float(row['dt']):.12g}".replace(".", "p").replace("-", "m")
+            expected.add(
+                f"{row['dimension']}_{row['cells']}_cells_{row['solver']}_DT{dt_token}.dat"
+            )
+        else:
+            expected.add(f"{row['dimension']}_{row['cells']}_cells_{row['solver']}.dat")
     return expected or None
 
 
@@ -1030,18 +1127,22 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     data = []
 
     for f in files:
-        # Expected filename format:
+        # Expected filename formats:
         #   1D_320_cells_explicit.dat
+        #   3D_80_cells_implicit_DT0p000560538.dat
         m = FILENAME_PATTERN.match(f.name)
         if not m:
             print("Skipping unrecognized filename:", f.name)
             continue
 
-        dimension = m.group(1)   # "1D"
-        N = int(m.group(2))      # 320
-        solver = m.group(3)      # "explicit" or "implicit"
+        dimension = m.group("dimension")
+        N = int(m.group("cells"))
+        solver = m.group("solver")
+        dt_from_name = _dt_token_to_float(m.group("dt_token"))
 
         content = f.read_text()
+        dt_from_content = _extract_summary_scalar(TIME_STEP_PATTERN, content)
+        dx_from_content = _extract_summary_scalar(GRID_SPACING_PATTERN, content)
 
         # Extract Linf errors
         linf_matches = re.findall(
@@ -1060,12 +1161,22 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
             "Dimension": dimension,
             "N": N,
             "Solver": solver,
+            "dt": dt_from_name if dt_from_name is not None else dt_from_content,
+            "dx": dx_from_content,
             "Linf_V": Linf_V,
             "Linf_u1": Linf_u1,
             "Linf_u2": Linf_u2
         })
 
-    return sorted(data, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(
+        data,
+        key=lambda row: (
+            row["Dimension"],
+            row["Solver"],
+            row["N"],
+            float(row["dt"]) if row.get("dt") is not None else float("inf"),
+        ),
+    )
 
 
 def read_ecg_summary_dat_files(folder_name):
@@ -1307,14 +1418,15 @@ def group_ecg_timeseries_cases(cases):
     return grouped
 
 
-def compute_convergence_rates(rows):
+def compute_convergence_rates(rows, *, convergence_axis: str = "spatial"):
     """
     Compute convergence rates for Linf errors of Vm, u1, u2.
 
     - Groups by Dimension (if present) and Solver.
-    - Sorts by N.
-    - Skips pairs where N_lower == N_higher.
+    - Sorts by the selected sweep axis.
+    - Skips pairs that do not refine along that axis.
     """
+    axis_meta = _sweep_axis_metadata(convergence_axis)
 
     grouped_rows = {}
     for row in rows:
@@ -1323,23 +1435,27 @@ def compute_convergence_rates(rows):
 
     convergence_rows = []
     for (dimension, solver_type), group_rows in sorted(grouped_rows.items()):
-        ordered = sorted(group_rows, key=lambda row: row["N"])
+        ordered = sorted(group_rows, key=axis_meta["sort_key"])
         for lower, higher in zip(ordered, ordered[1:]):
             N1 = int(lower["N"])
             N2 = int(higher["N"])
-            if N1 == N2:
+            ref1 = float(axis_meta["rate_reference"](lower))
+            ref2 = float(axis_meta["rate_reference"](higher))
+            if math.isclose(ref1, ref2, rel_tol=0.0, abs_tol=0.0):
                 continue
 
-            h1, h2 = 1.0 / N1, 1.0 / N2
             convergence_rows.append(
                 {
+                    "SweepAxis": axis_meta["axis"],
                     "Dimension": dimension,
                     "Solver": solver_type,
                     "N_lower": N1,
                     "N_higher": N2,
-                    "rate_Vm": _safe_rate(lower["Linf_V"], higher["Linf_V"], h1, h2),
-                    "rate_u1": _safe_rate(lower["Linf_u1"], higher["Linf_u1"], h1, h2),
-                    "rate_u2": _safe_rate(lower["Linf_u2"], higher["Linf_u2"], h1, h2),
+                    "dt_lower": lower.get("dt", ""),
+                    "dt_higher": higher.get("dt", ""),
+                    "rate_Vm": _safe_rate(lower["Linf_V"], higher["Linf_V"], ref1, ref2),
+                    "rate_u1": _safe_rate(lower["Linf_u1"], higher["Linf_u1"], ref1, ref2),
+                    "rate_u2": _safe_rate(lower["Linf_u2"], higher["Linf_u2"], ref1, ref2),
                 }
             )
 
@@ -1392,7 +1508,8 @@ def _finalize_axis_legend(ax) -> None:
         ax.legend()
 
 
-def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
+def _plot_dimension_errors_on_axis(ax, rows, dimension: str, *, convergence_axis: str = "spatial") -> bool:
+    axis_meta = _sweep_axis_metadata(convergence_axis)
     dimension_rows = _filter_rows(rows, Dimension=dimension)
     if not dimension_rows:
         ax.text(
@@ -1408,7 +1525,7 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
         style_matplotlib_axes(
             ax,
             title=f"Linf Errors per Dimension ({dimension})",
-            xlabel="Number of cells (N)",
+            xlabel=axis_meta["x_label"],
             ylabel="Linf Error",
             legend=False,
             grid_kwargs={"which": "both", "ls": "--", "alpha": 0.6},
@@ -1419,10 +1536,11 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
         solver_rows = _filter_rows(dimension_rows, Solver=solver)
         if not solver_rows:
             continue
+        solver_rows = sorted(solver_rows, key=axis_meta["sort_key"])
 
         for col, color in FIELD_COLORS.items():
             ax.loglog(
-                [row["N"] for row in solver_rows],
+                [row[axis_meta["x_key"]] for row in solver_rows],
                 [row[col] for row in solver_rows],
                 marker=SOLVER_MARKERS.get(solver, "o"),
                 linestyle=SOLVER_LINESTYLES.get(solver, "-"),
@@ -1433,7 +1551,7 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
     style_matplotlib_axes(
         ax,
         title=f"Linf Errors per Dimension ({dimension})",
-        xlabel="Number of cells (N)",
+        xlabel=axis_meta["x_label"],
         ylabel="Linf Error",
         legend=False,
         grid_kwargs={"which": "both", "ls": "--", "alpha": 0.6},
@@ -1442,7 +1560,8 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
     return True
 
 
-def _plot_vm_across_dimensions_on_axis(ax, rows) -> bool:
+def _plot_vm_across_dimensions_on_axis(ax, rows, *, convergence_axis: str = "spatial") -> bool:
+    axis_meta = _sweep_axis_metadata(convergence_axis)
     plotted = False
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
@@ -1451,9 +1570,10 @@ def _plot_vm_across_dimensions_on_axis(ax, rows) -> bool:
             solver_rows = _filter_rows(dimension_rows, Solver=solver)
             if not solver_rows:
                 continue
+            solver_rows = sorted(solver_rows, key=axis_meta["sort_key"])
 
             ax.loglog(
-                [row["N"] for row in solver_rows],
+                [row[axis_meta["x_key"]] for row in solver_rows],
                 [row["Linf_V"] for row in solver_rows],
                 marker=SOLVER_MARKERS.get(solver, "o"),
                 linestyle=SOLVER_LINESTYLES.get(solver, "--"),
@@ -1477,7 +1597,7 @@ def _plot_vm_across_dimensions_on_axis(ax, rows) -> bool:
     style_matplotlib_axes(
         ax,
         title="Linf Error of Vm across dimensions",
-        xlabel="Number of cells (N)",
+        xlabel=axis_meta["x_label"],
         ylabel="Linf Error (Vm)",
         legend=False,
         grid_kwargs={"which": "both", "ls": "--", "alpha": 0.6},
@@ -2367,7 +2487,14 @@ def plot_ecg_electrode_geometry(
     return Path(save_path) if save_path is not None else None
 
 
-def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, show: bool = True):
+def plot_errors(
+    rows,
+    solver_type=None,
+    *,
+    convergence_axis: str = "spatial",
+    save_path: str | Path | None = None,
+    show: bool = True,
+):
     """
     Plot Linf errors for Vm, u1, u2 vs N.
     """
@@ -2377,6 +2504,7 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
 
     configure_matplotlib_defaults()
     fig, ax = plt.subplots(figsize=(8, 5))
+    axis_meta = _sweep_axis_metadata(convergence_axis)
 
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
@@ -2385,21 +2513,22 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
             dimension_rows = _filter_rows(dimension_rows, Solver=solver_type)
         if not dimension_rows:
             continue
+        dimension_rows = sorted(dimension_rows, key=axis_meta["sort_key"])
 
         ax.loglog(
-            [row["N"] for row in dimension_rows],
+            [row[axis_meta["x_key"]] for row in dimension_rows],
             [row["Linf_V"] for row in dimension_rows],
             marker="o",
             label=f"Vm ({dimension})",
         )
         ax.loglog(
-            [row["N"] for row in dimension_rows],
+            [row[axis_meta["x_key"]] for row in dimension_rows],
             [row["Linf_u1"] for row in dimension_rows],
             marker="s",
             label=f"u1 ({dimension})",
         )
         ax.loglog(
-            [row["N"] for row in dimension_rows],
+            [row[axis_meta["x_key"]] for row in dimension_rows],
             [row["Linf_u2"] for row in dimension_rows],
             marker="^",
             label=f"u2 ({dimension})",
@@ -2411,7 +2540,7 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
     style_matplotlib_axes(
         ax,
         title=title,
-        xlabel="Number of cells (N)",
+        xlabel=axis_meta["x_label"],
         ylabel="Linf Error",
         grid_kwargs={"which": "both", "ls": "--"},
     )
@@ -2422,6 +2551,7 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
 def plot_errors_implicit_explicit(
     rows,
     *,
+    convergence_axis: str = "spatial",
     save_dir: str | Path | None = None,
     show: bool = True,
 ):
@@ -2438,7 +2568,12 @@ def plot_errors_implicit_explicit(
     output_paths: list[Path] = []
     for dimension in _unique_values(rows, "Dimension"):
         fig, ax = plt.subplots(figsize=(8, 6))
-        _plot_dimension_errors_on_axis(ax, rows, dimension)
+        _plot_dimension_errors_on_axis(
+            ax,
+            rows,
+            dimension,
+            convergence_axis=convergence_axis,
+        )
         save_path = None
         if save_dir is not None:
             save_path = Path(save_dir) / f"manufactured_errors_{dimension.lower()}_implicit_explicit.png"
@@ -2450,6 +2585,7 @@ def plot_errors_implicit_explicit(
 def plot_Vm_across_dimensions(
     rows,
     *,
+    convergence_axis: str = "spatial",
     save_path: str | Path | None = None,
     show: bool = True,
 ):
@@ -2464,7 +2600,7 @@ def plot_Vm_across_dimensions(
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    _plot_vm_across_dimensions_on_axis(ax, rows)
+    _plot_vm_across_dimensions_on_axis(ax, rows, convergence_axis=convergence_axis)
     finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
     return Path(save_path) if save_path is not None else None
 
@@ -2472,6 +2608,7 @@ def plot_Vm_across_dimensions(
 def plot_summary_dashboard(
     rows,
     *,
+    convergence_axis: str = "spatial",
     save_path: str | Path | None = None,
     show: bool = True,
 ):
@@ -2484,10 +2621,10 @@ def plot_summary_dashboard(
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle("Manufactured-solution convergence summary", fontsize=14)
 
-    _plot_vm_across_dimensions_on_axis(axes[0, 0], rows)
-    _plot_dimension_errors_on_axis(axes[0, 1], rows, "1D")
-    _plot_dimension_errors_on_axis(axes[1, 0], rows, "2D")
-    _plot_dimension_errors_on_axis(axes[1, 1], rows, "3D")
+    _plot_vm_across_dimensions_on_axis(axes[0, 0], rows, convergence_axis=convergence_axis)
+    _plot_dimension_errors_on_axis(axes[0, 1], rows, "1D", convergence_axis=convergence_axis)
+    _plot_dimension_errors_on_axis(axes[1, 0], rows, "2D", convergence_axis=convergence_axis)
+    _plot_dimension_errors_on_axis(axes[1, 1], rows, "3D", convergence_axis=convergence_axis)
 
     finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
     return Path(save_path) if save_path is not None else None
@@ -2766,8 +2903,14 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
         print(f"No .dat files found to post-process in: {output_dir}")
         return []
 
+    convergence_axis = _infer_convergence_axis(error_rows)
+    print(f"\nDetected manufactured convergence axis: {convergence_axis}")
+
     print("\nConvergence rates:")
-    convergence_rates = compute_convergence_rates(error_rows)
+    convergence_rates = compute_convergence_rates(
+        error_rows,
+        convergence_axis=convergence_axis,
+    )
     if convergence_rates:
         for row in convergence_rates:
             print(row)
@@ -2792,16 +2935,19 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
 
     vm_plot = plot_Vm_across_dimensions(
         error_rows,
+        convergence_axis=convergence_axis,
         save_path=output_path / "manufactured_vm_across_dimensions.png",
         show=False,
     )
     summary_plot = plot_summary_dashboard(
         error_rows,
+        convergence_axis=convergence_axis,
         save_path=output_path / "manufactured_summary_dashboard.png",
         show=False,
     )
     error_plots = plot_errors_implicit_explicit(
         error_rows,
+        convergence_axis=convergence_axis,
         save_dir=output_path,
         show=False,
     )

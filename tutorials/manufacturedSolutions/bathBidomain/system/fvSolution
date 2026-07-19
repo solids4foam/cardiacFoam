@@ -36,7 +36,10 @@ solvers
 
 PIMPLE
 {
-    nOuterCorrectors     2;
+    // The global bath phiE is advanced outside this loop. Keep one outer
+    // sweep and express the second Vm assembly as an equation corrector.
+    nOuterCorrectors         1;
+    nNonOrthogonalCorrectors 1;
 
     // residualControl
     // {

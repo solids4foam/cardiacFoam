@@ -255,13 +255,15 @@ matrix; the mapped intracellular submesh flux is zero at the heart boundary.
 
 | Metric | N=10 | N=20 | N=40 | rates |
 | --- | ---: | ---: | ---: | ---: |
-| x=0 matched assembled flux | 4.680e-4 | 2.942e-4 | 3.444e-4 | 0.67, -0.23 |
-| x=1 matched assembled flux | 4.612e-4 | 3.027e-4 | 3.510e-4 | 0.61, -0.21 |
+| x=0 matched assembled flux | 4.680e-4 | 2.942e-4 | 2.264e-4 | 0.67, 0.38 |
+| x=1 matched assembled flux | 4.612e-4 | 3.027e-4 | 2.282e-4 | 0.61, 0.41 |
 
-This is about seven times more accurate than the current split at N=40, but it
-still has a mild N=20 to N=40 reversal. The matched formulation fixes the
-dominant intracellular inconsistency but not all global extracellular
-face-gradient error, consistent with the remaining bath-side flux floor.
+The earlier N=40 row was evaluated with `unweightedHarmonic` while the other
+levels used `distanceWeightedHarmonic`. With a consistent distance-weighted
+diagnostic, assembled-current error decreases through N=40. The matched
+formulation fixes the dominant intracellular inconsistency but not all global
+extracellular face-gradient error, consistent with the remaining bath-side
+flux floor.
 
 Combining `matchedSubmesh` with a fixed 0.5 correction limiter was rejected at
 N=10/N=20: its assembled-flux error increases from `7.43e-4` to `7.90e-4` and
@@ -296,11 +298,12 @@ and numerical/exact diagnostics completed successfully.
 | x=1 reconstructed flux jump L2 | 3.796e-3 | 5.431e-4 | 1.209e-4 | 9.137e-5 | 1.83 |
 | x=0 intracellular leakage L2 | 3.509e-3 | 5.345e-4 | 1.327e-4 | 5.368e-5 | 2.01 |
 | x=1 intracellular leakage L2 | 3.752e-3 | 5.272e-4 | 1.355e-4 | 5.613e-5 | 2.01 |
-| x=0 matched assembled flux L2 | 4.680e-4 | 2.942e-4 | 3.444e-4 | 2.875e-4 | 0.19 |
-| x=1 matched assembled flux L2 | 4.612e-4 | 3.027e-4 | 3.510e-4 | 2.828e-4 | 0.19 |
+| x=0 matched assembled flux L2 | 4.680e-4 | 2.942e-4 | 2.264e-4 | 2.875e-4 | 0.25 |
+| x=1 matched assembled flux L2 | 4.612e-4 | 3.027e-4 | 2.282e-4 | 2.828e-4 | 0.25 |
 
-The assembled flux resumes improvement at N=80 and is approximately 2.8--2.9%
-of the exact current magnitude. Its four-level fitted order is only about 0.19,
+The assembled flux decreases through N=40, rises at N=80, and is approximately
+2.8--2.9% of the exact current magnitude on the finest mesh. Its four-level
+fitted order is only about 0.25,
 so it should be described as bounded and slowly convergent, not high-order.
 The independently reconstructed heart flux is non-monotone from N=40 to N=80,
 although its four-level fitted rate remains 1.6--1.7. Exact-field reconstruction

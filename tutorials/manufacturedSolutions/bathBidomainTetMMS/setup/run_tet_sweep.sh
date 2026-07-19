@@ -4,9 +4,18 @@ set -euo pipefail
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$CASE_DIR"
 
-set +eu
-source /Volumes/OpenFOAM-v2412/etc/bashrc
-set -eu
+if [[ -z "${WM_PROJECT_DIR:-}" ]]
+then
+    if [[ -f /Volumes/OpenFOAM-v2412/etc/bashrc ]]
+    then
+        set +eu
+        source /Volumes/OpenFOAM-v2412/etc/bashrc
+        set -eu
+    else
+        echo "OpenFOAM is not sourced. Source the v2412 etc/bashrc first." >&2
+        exit 2
+    fi
+fi
 
 dt_for_n()
 {

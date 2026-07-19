@@ -27,3 +27,35 @@ Run only selected cases:
 ./Allrun monodomainPseudoECG bidomain
 ./Allrun bathBidomain
 ```
+
+## Paper I reproducibility
+
+Regenerate and check every reported convergence table with one command
+(OpenFOAM sourced; needs only bash + git + stdlib `python3`):
+
+```bash
+./reproduce_paperI.sh                    # all cases (from repo root)
+./reproduce_paperI.sh --skip-run tet     # re-check one case against its reference
+```
+
+Each case emits `setup/results/<key>_convergence.csv` (fresh, gitignored),
+diffed within tolerance against the committed `reference/<key>_convergence.csv`,
+plus a per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes).
+The driver is data-driven by `applications/scripts/paperI_results/paperI_cases.tsv`.
+
+| key | case | paper artefact |
+|---|---|---|
+| tet | monodomainTetMMS | tbl-tet-monodomain, tbl-tet-pseudoecg |
+| eikonal_tet | eikonalTetMMS | §unstructured eikonal-tet |
+| coupling | monodomain1D3D | coupled 1D–3D convergence |
+| eikonal | eikonalECG | tbl-eikonal-*, tbl-eikonal-ecg-integral |
+| mono_spatial | monodomainPseudoECG | tbl-monodomain-vm/-aux |
+| pseudo_ecg_spatial | monodomainPseudoECG | tbl-pseudo-ecg |
+| bidomain | bidomain | tbl-bidomain |
+| bath | bathBidomain | tbl-bath-bidomain |
+| bath_tet | bathBidomainTetMMS | tbl-bath-bidomain-tet |
+| niederer | NiedererEtAl2011verification | fig-slab, tbl-niederer |
+
+Cases whose sweep has not been run yet (`bidomain`, `bath`, and `bath_tet`
+pending an interface-column confirmation) report **SKIP** until their
+`reference/` CSV is frozen.

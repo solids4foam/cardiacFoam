@@ -96,8 +96,8 @@ The fitted orders use all four nominal resolutions.
 | x=1 reconstructed flux jump L2 | 3.796e-3 | 5.431e-4 | 1.209e-4 | 9.137e-5 | 1.83 |
 | x=0 intracellular leakage L2 | 3.509e-3 | 5.345e-4 | 1.327e-4 | 5.368e-5 | 2.01 |
 | x=1 intracellular leakage L2 | 3.752e-3 | 5.272e-4 | 1.355e-4 | 5.613e-5 | 2.01 |
-| x=0 assembled flux L2 | 4.680e-4 | 2.942e-4 | 3.444e-4 | 2.875e-4 | 0.19 |
-| x=1 assembled flux L2 | 4.612e-4 | 3.027e-4 | 3.510e-4 | 2.828e-4 | 0.19 |
+| x=0 assembled flux L2 | 4.680e-4 | 2.942e-4 | 2.264e-4 | 2.875e-4 | 0.25 |
+| x=1 assembled flux L2 | 4.612e-4 | 3.027e-4 | 2.282e-4 | 2.828e-4 | 0.25 |
 
 Net exterior-current residual is approximately `2.5e-9` at N=80. The
 assembled-flux RMS error is approximately 2.8--2.9% of the manufactured current
@@ -114,7 +114,7 @@ The evidence supports the following conclusions:
 4. The algebraic face flux is locally single-valued and global current balance
    is excellent.
 5. Constitutive accuracy of the assembled face flux is bounded below 5% but
-   converges slowly, with fitted order about 0.19.
+   converges slowly, with fitted order about 0.25.
 6. Reconstructed heart flux is non-monotone from N=40 to N=80, although its
    four-level fitted order is 1.6--1.7. Exact-field reconstruction converges at
    approximately third order over that interval, so this is numerical local-

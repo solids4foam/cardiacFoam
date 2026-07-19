@@ -1,7 +1,14 @@
 #!/bin/bash
 set +e
-source /Volumes/OpenFOAM-v2412/etc/bashrc >/dev/null 2>&1
-PY=/Users/simaocastro/noFrontendCardiacFoam_minor_errors/.venv/bin/python3
+if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
+  if [[ -f /Volumes/OpenFOAM-v2412/etc/bashrc ]]; then
+    source /Volumes/OpenFOAM-v2412/etc/bashrc >/dev/null 2>&1
+  else
+    echo "OpenFOAM is not sourced. Source the v2412 etc/bashrc first." >&2
+    exit 2
+  fi
+fi
+PY="${PYTHON:-python3}"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 # gradScheme A/B on the tet mesh: GaussLinear vs leastSquares for

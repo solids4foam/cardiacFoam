@@ -6,6 +6,7 @@
 # Environment overrides:
 #   ENDTIME   final simulation time (default 0.1)
 #   RPVJ      PVJ resistance, overrides rPvj in electroProperties (default: no override)
+#   COUPLING_MODE  overrides couplingMode (unidirectional or bidirectional)
 #   OUTPUT_SUFFIX  appended to the output dir name (default: empty)
 
 set -euo pipefail
@@ -16,6 +17,7 @@ CASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENDTIME="${ENDTIME:-0.1}"
 RPVJ="${RPVJ:-}"
 PVJRADIUS="${PVJRADIUS:-}"
+COUPLING_MODE="${COUPLING_MODE:-}"
 OUTPUT_SUFFIX="${OUTPUT_SUFFIX:-}"
 OUTPUT_DIR="$CASE_DIR/outputs/coupled1D3DConvergence${OUTPUT_SUFFIX}"
 
@@ -65,7 +67,7 @@ do
         fi
     fi
 
-    echo "=== Coupled sweep: ${N_CELLS}^3 mesh / ${GRAPH_ID}  endTime=${ENDTIME}  rPvj=${RPVJ:-default}  pvjRadius=${PVJRADIUS:-default} ==="
+    echo "=== Coupled sweep: ${N_CELLS}^3 mesh / ${GRAPH_ID}  endTime=${ENDTIME}  rPvj=${RPVJ:-default}  pvjRadius=${PVJRADIUS:-default}  couplingMode=${COUPLING_MODE:-default} ==="
 
     # --- 3D mesh ---
     sed "s/(10 10 10)/(${N_CELLS} ${N_CELLS} ${N_CELLS})/g" \
@@ -94,13 +96,14 @@ do
         "$CASE_DIR/system/controlDict.bak" \
         > "$CASE_DIR/system/controlDict"
 
-    # --- optional electroProperties overrides (rPvj and/or pvjRadius) ---
-    if [[ -n "$RPVJ" || -n "$PVJRADIUS" ]]; then
+    # --- optional electroProperties overrides ---
+    if [[ -n "$RPVJ" || -n "$PVJRADIUS" || -n "$COUPLING_MODE" ]]; then
         cp "$CASE_DIR/constant/electroProperties" \
            "$CASE_DIR/constant/electroProperties.bak"
         _ep_sed_args=()
         [[ -n "$RPVJ"      ]] && _ep_sed_args+=(-e "s/rPvj[[:space:]].*[0-9];/rPvj            ${RPVJ};/")
         [[ -n "$PVJRADIUS" ]] && _ep_sed_args+=(-e "s/pvjRadius[[:space:]].*[0-9];/pvjRadius       ${PVJRADIUS};/")
+        [[ -n "$COUPLING_MODE" ]] && _ep_sed_args+=(-e "s/couplingMode[[:space:]].*;/couplingMode    ${COUPLING_MODE};/")
         sed "${_ep_sed_args[@]}" \
             "$CASE_DIR/constant/electroProperties.bak" \
             > "$CASE_DIR/constant/electroProperties"

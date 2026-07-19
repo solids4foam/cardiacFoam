@@ -1,7 +1,14 @@
 #!/bin/bash
 set +e
-source /Volumes/OpenFOAM-v2412/etc/bashrc >/dev/null 2>&1
-PY=/Users/simaocastro/noFrontendCardiacFoam_minor_errors/.venv/bin/python3
+if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
+  if [[ -f /Volumes/OpenFOAM-v2412/etc/bashrc ]]; then
+    source /Volumes/OpenFOAM-v2412/etc/bashrc >/dev/null 2>&1
+  else
+    echo "OpenFOAM is not sourced. Source the v2412 etc/bashrc first." >&2
+    exit 2
+  fi
+fi
+PY="${PYTHON:-python3}"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 dt_for_n(){ case "$1" in 10) echo 0.00892857;;20) echo 0.00224215;;40) echo 0.000560538;;80) echo 0.000140174;;esac; }
 set_grad(){

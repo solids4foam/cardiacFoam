@@ -110,7 +110,7 @@ on `PATH`. Results land in `setup/results/<N>/`, a combined
 | 10 | 0.0588235 | 2.542e-02          | --   | 5.364e-02   | --       | 61.7deg     |
 | 20 | 0.030303  | 9.784e-03          | 1.44 | 9.263e-03   | 2.65     | 66.6deg     |
 | 40 | 0.0151515 | 3.347e-03          | 1.55 | 1.060e-03   | 3.13     | 68.9deg     |
-| 80 | 0.0075758 | 1.416e-03          | 1.24 | 1.850e-04   | 2.52     | 70.0deg     |
+| 80 | 0.0075758 | 1.201e-03          | 1.48 | 1.741e-04   | 2.61     | 70.0deg     |
 
 ### GaussLinear vs leastSquares (`setup/results/scheme_study.csv`)
 
@@ -120,7 +120,7 @@ on `PATH`. Results land in `setup/results/<N>/`, a combined
 | GaussLinear | 20->40 | 0.10 | 2.75 |
 | leastSquares | 10->20 | 1.44 | 2.65 |
 | leastSquares | 20->40 | 1.55 | 3.13 |
-| leastSquares | 40->80 | 1.24 | 2.52 |
+| leastSquares | 40->80 | 1.48 | 2.61 |
 
 ## Interpretation
 
@@ -130,13 +130,18 @@ on `PATH`. Results land in `setup/results/<N>/`, a combined
    (`../monodomainTetMMS`), confirming this is not solver-specific.
 2. **`leastSquares` does not fully recover 2nd order here, unlike
    monodomain.** Monodomain's `Vm` hits a clean, stable ~2.0 with
-   leastSquares across all 4 points. Eikonal's `activationTime` sits at
-   1.2-1.6 and does not climb toward 2 as N increases (it drops at N=80) --
-   the gradient scheme fixes the *stall*, but something else (the
-   advection-diffusion eikonal reformulation itself, the Dirichlet BC
-   reconstruction, or genuinely lower solution regularity near
-   characteristics, typical of eikonal/Hamilton-Jacobi equations) still caps
-   the achievable order below monodomain's clean diffusion-equation result.
+   leastSquares across all 4 points. Eikonal's `activationTime` settles at a
+   stable ~1.5 (1.44, 1.55, 1.48 across the three refinement pairs) and does
+   not climb toward 2. The gradient scheme fixes the *stall*; the operator
+   itself caps the order. The concrete mechanism is the nonlinear
+   gradient-magnitude term `G = sqrt(gradPsi & (M & gradPsi))` and the `phiU`
+   stabilization flux in `eikonalSolver.C`, both built from the reconstructed
+   cell gradient `fvc::grad(psi)` -- only ~1st-order accurate on this
+   sustained-skewness tet family. A 2nd-order Laplacian coupled to a
+   ~1st-order gradient-derived source lands between 1 and 2, exactly as
+   measured; monodomain has no such term (pure divergence-form). Lower
+   solution regularity near eikonal/Hamilton-Jacobi characteristics may
+   contribute secondarily.
 3. **The pseudo-ECG functional is more robust than the field it's built
    from, in both solvers.** Even where `activationTime`'s own order is only
    ~1.2-1.6, the derived pseudo-ECG order is consistently >2 (2.5-3.1) under
