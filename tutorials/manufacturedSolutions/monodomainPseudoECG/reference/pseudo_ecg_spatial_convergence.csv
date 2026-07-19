@@ -1,0 +1,9 @@
+case,variant,dim,N,h,field,L1,L2,Linf,rate_L2,rate_Linf
+pseudo-ecg-spatial,,3D,10,0.1,Phi_e_max,0.000370414,0.000370414,0.000370939,,
+pseudo-ecg-spatial,,3D,20,0.05,Phi_e_max,9.47341e-05,9.47344e-05,9.49507e-05,1.97,1.97
+pseudo-ecg-spatial,,3D,40,0.025,Phi_e_max,2.38217e-05,2.38218e-05,2.38943e-05,1.99,1.99
+pseudo-ecg-spatial,,3D,80,0.0125,Phi_e_max,5.96419e-06,5.96422e-06,5.98392e-06,2.00,2.00
+pseudo-ecg-spatial,,3D,10,0.1,Phi_e_mean,0.000117816,0.000117851,0.000119389,,
+pseudo-ecg-spatial,,3D,20,0.05,Phi_e_mean,2.95295e-05,2.95413e-05,2.99982e-05,2.00,1.99
+pseudo-ecg-spatial,,3D,40,0.025,Phi_e_mean,7.38745e-06,7.39071e-06,7.51303e-06,2.00,2.00
+pseudo-ecg-spatial,,3D,80,0.0125,Phi_e_mean,1.84723e-06,1.84807e-06,1.8792e-06,2.00,2.00

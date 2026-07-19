@@ -1,0 +1,15 @@
+case,variant,dim,N,h,field,L1,L2,Linf,rate_L2,rate_Linf
+eikonal_tet,GaussLinear,3D,10,0.0588235,Phi_e,,0.0717547,0.101698,,
+eikonal_tet,GaussLinear,3D,20,0.030303,Phi_e,,0.00664343,0.00938395,3.59,3.59
+eikonal_tet,GaussLinear,3D,40,0.0151515,Phi_e,,0.000986992,0.001392,2.75,2.75
+eikonal_tet,GaussLinear,3D,10,0.0588235,activationTime,,0.0680641,0.303749,,
+eikonal_tet,GaussLinear,3D,20,0.030303,activationTime,,0.0600327,0.275605,0.19,0.15
+eikonal_tet,GaussLinear,3D,40,0.0151515,activationTime,,0.0561958,0.212937,0.10,0.37
+eikonal_tet,leastSquares,3D,10,0.0588235,Phi_e,,0.053643,0.0759817,,
+eikonal_tet,leastSquares,3D,20,0.030303,Phi_e,,0.00926262,0.0130817,2.65,2.65
+eikonal_tet,leastSquares,3D,40,0.0151515,Phi_e,,0.00105962,0.0015019,3.13,3.12
+eikonal_tet,leastSquares,3D,80,0.00757576,Phi_e,,0.00017406,0.000246695,2.61,2.61
+eikonal_tet,leastSquares,3D,10,0.0588235,activationTime,,0.0254202,0.256502,,
+eikonal_tet,leastSquares,3D,20,0.030303,activationTime,,0.00978402,0.145193,1.44,0.86
+eikonal_tet,leastSquares,3D,40,0.0151515,activationTime,,0.00334673,0.0867153,1.55,0.74
+eikonal_tet,leastSquares,3D,80,0.00757576,activationTime,,0.0012013,0.0478489,1.48,0.86
