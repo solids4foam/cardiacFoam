@@ -22,6 +22,7 @@ License
 #include "DynamicList.H"
 #include "Switch.H"
 #include "fixedValueFvPatchFields.H"
+#include "conductivityFieldIO.H"
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 
@@ -190,70 +191,19 @@ void collectActivationConstraints
 
 tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 {
-    const dimensionedTensor zeroConductivity
+    return readConductivityField
     (
-        "zero",
-        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-        tensor::zero
-    );
-
-    tmp<volTensorField> tresult
-    (
-        new volTensorField
-        (
-            IOobject
-            (
-                "conductivity",
-                mesh().time().timeName(),
-                mesh(),
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh(),
-            zeroConductivity
-        )
-    );
-    volTensorField& result = tresult.ref();
-
-    if (result.headerOk())
-    {
-        if (result.dimensions() != zeroConductivity.dimensions())
+        mesh(),
+        supportMesh_,
+        meshSubsetPtr_.valid() ? &meshSubsetPtr_() : nullptr,
+        electroProperties_,
+        conductivityFieldSpec
         {
-            FatalErrorInFunction
-                << "Field " << mesh().time().timeName() << "/conductivity has "
-                << "dimensions " << result.dimensions()
-                << " but the eikonal solver requires conductivity dimensions "
-                << zeroConductivity.dimensions()
-                << " [-1 -3 3 0 0 2 0].  Fix the 'dimensions' entry in the "
-                << "field header." << exit(FatalError);
+            "Conductivity",
+            "conductivity",
+            "conductivity"
         }
-
-        Info<< "eikonalMyocardiumDomain: conductivity field read from "
-            << mesh().time().timeName() << "/conductivity" << nl << endl;
-
-        return tresult;
-    }
-
-    if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info<< "\nconductivity not found on disk, using "
-            << "conductivity from " << electroProperties_.name()
-            << nl << endl;
-    }
-
-    result =
-        dimensionedTensor
-        (
-            dimensionedSymmTensor
-            (
-                "conductivity",
-                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                electroProperties_
-            )
-          & tensor(I)
-        );
-
-    return tresult;
+    );
 }
 
 

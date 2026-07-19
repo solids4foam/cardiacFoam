@@ -29,6 +29,7 @@ License
 #include "surfaceFields.H"
 #include "fvm.H"
 #include "fvc.H"
+#include "nonOrthogonalCorrectorLoop.H"
 
 namespace Foam
 {
@@ -43,6 +44,49 @@ addToRunTimeSelectionTable
 
 namespace
 {
+
+// Resolve the phiE non-orthogonal corrector count. Default: the same
+// nNonOrthogonalCorrectors Vm uses (system/fvSolution PIMPLE), so forgetting
+// it can never silently drop phiE to zero correction. Optional co-located
+// override: PIMPLE/phiENonOrthogonalCorrectors. Fail loud if the key is left
+// in the retired constant/electroProperties -> bathPotentialDomain location.
+label resolvePhiENonOrthogonalCorrectors
+(
+    const fvMesh& baseMesh,
+    const dictionary& dict
+)
+{
+    if (dict.found("phiENonOrthogonalCorrectors"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "phiENonOrthogonalCorrectors has moved to system/fvSolution"
+            << " (PIMPLE), co-located with nNonOrthogonalCorrectors." << nl
+            << "Remove it from constant/electroProperties -> bathPotentialDomain"
+            << " and, only if you need phiE to differ from Vm, set it under"
+            << " PIMPLE." << exit(FatalIOError);
+    }
+
+    const dictionary& pimpleDict =
+        baseMesh.solutionDict().subOrEmptyDict("PIMPLE");
+    const label defaultNCorr =
+        pimpleDict.lookupOrDefault<label>("nNonOrthogonalCorrectors", 0);
+    const label nCorr =
+        pimpleDict.lookupOrDefault<label>
+        (
+            "phiENonOrthogonalCorrectors",
+            defaultNCorr
+        );
+
+    if (nCorr < 0)
+    {
+        FatalIOErrorInFunction(pimpleDict)
+            << "phiENonOrthogonalCorrectors must be non-negative; found "
+            << nCorr << '.' << exit(FatalIOError);
+    }
+
+    return nCorr;
+}
+
 
 wordList potentialPatchTypes(const fvMesh& mesh, const dictionary& dict)
 {
@@ -89,6 +133,19 @@ wordList potentialPatchTypes(const fvMesh& mesh, const dictionary& dict)
                     << "Cannot find extracellularPotentialDomain surface-current "
                     << "patch '" << patchNames[patchI] << "' on mesh '"
                     << mesh.name() << "'."
+                    << exit(FatalError);
+            }
+
+            if
+            (
+                patchTypes[patchId]
+             == fixedValueFvPatchScalarField::typeName
+            )
+            {
+                FatalErrorInFunction
+                    << "Extracellular-potential patch '" << patchNames[patchI]
+                    << "' cannot be listed in both groundPatches and "
+                    << "surfaceCurrentPatches."
                     << exit(FatalError);
             }
 
@@ -173,7 +230,11 @@ extracellularPotentialDomain::extracellularPotentialDomain
     surfaceCurrentPatchNames_(),
     surfaceCurrentPatchValues_(),
     hasDirichletPatch_(false),
-    reportSetup_(dict.lookupOrDefault<Switch>("reportSetup", false))
+    reportSetup_(dict.lookupOrDefault<Switch>("reportSetup", false)),
+    phiENonOrthogonalCorrectors_
+    (
+        resolvePhiENonOrthogonalCorrectors(baseMesh, dict)
+    )
 {
     if
     (
@@ -223,7 +284,9 @@ extracellularPotentialDomain::extracellularPotentialDomain
             << " bathConductivityField=" << bathConductivityFieldName_
             << " interfaceConductivityInterpolation="
             << interfaceConductivityInterpolation_
-            << " intracellularAssembly=" << intracellularAssembly_;
+            << " intracellularAssembly=" << intracellularAssembly_
+            << " phiENonOrthogonalCorrectors="
+            << phiENonOrthogonalCorrectors_;
 
         if (hasPhiEReferencePoint_)
         {
@@ -337,6 +400,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
 void extracellularPotentialDomain::buildHeartScatterMap()
 {
     const labelUList* heartCellMapPtr = heartDomain_.subsetCellMapPtr();
+    const fvMesh& heartMesh =
+        static_cast<const electroStateProvider&>(heartDomain_).mesh();
 
     if (!heartCellMapPtr)
     {
@@ -347,6 +412,74 @@ void extracellularPotentialDomain::buildHeartScatterMap()
     }
 
     heartCellToBaseCell_ = labelList(*heartCellMapPtr);
+
+    if (heartCellToBaseCell_.size() != heartMesh.nCells())
+    {
+        FatalErrorInFunction
+            << "Heart/base cell map size " << heartCellToBaseCell_.size()
+            << " does not match myocardium cell count "
+            << heartMesh.nCells() << "."
+            << exit(FatalError);
+    }
+
+    labelList mappedHeartCell(baseMesh_.nCells(), -1);
+    forAll(heartCellToBaseCell_, heartCellI)
+    {
+        const label baseCellI = heartCellToBaseCell_[heartCellI];
+
+        if (baseCellI < 0 || baseCellI >= baseMesh_.nCells())
+        {
+            FatalErrorInFunction
+                << "Heart cell " << heartCellI << " maps to invalid base cell "
+                << baseCellI << "."
+                << exit(FatalError);
+        }
+
+        if (mappedHeartCell[baseCellI] >= 0)
+        {
+            FatalErrorInFunction
+                << "Heart cells " << mappedHeartCell[baseCellI] << " and "
+                << heartCellI << " both map to base cell " << baseCellI << "."
+                << exit(FatalError);
+        }
+
+        mappedHeartCell[baseCellI] = heartCellI;
+    }
+
+    if (intracellularAssembly_ == "matchedSubmesh")
+    {
+        const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
+
+        if (!heartFaceMapPtr)
+        {
+            FatalErrorInFunction
+                << "Matched intracellular assembly requires the heart/base "
+                << "face map."
+                << exit(FatalError);
+        }
+
+        const labelUList& heartFaceMap = *heartFaceMapPtr;
+        if (heartFaceMap.size() != heartMesh.nFaces())
+        {
+            FatalErrorInFunction
+                << "Heart/base face map size " << heartFaceMap.size()
+                << " does not match myocardium face count "
+                << heartMesh.nFaces() << "."
+                << exit(FatalError);
+        }
+
+        forAll(heartFaceMap, heartFaceI)
+        {
+            const label baseFaceI = heartFaceMap[heartFaceI];
+            if (baseFaceI < 0 || baseFaceI >= baseMesh_.nFaces())
+            {
+                FatalErrorInFunction
+                    << "Heart face " << heartFaceI
+                    << " maps to invalid base face " << baseFaceI << "."
+                    << exit(FatalError);
+            }
+        }
+    }
 }
 
 void extracellularPotentialDomain::assembleConductivities()
@@ -369,19 +502,37 @@ void extracellularPotentialDomain::assembleConductivities()
     const tensorField& Gi = GiPtr->primitiveField();
     const tensorField& Ge = GePtr->primitiveField();
 
-    if (heartCellToBaseCell_.size() != Gi.size())
+    if
+    (
+        heartCellToBaseCell_.size() != Gi.size()
+     || heartCellToBaseCell_.size() != Ge.size()
+    )
     {
         FatalErrorInFunction
             << "Heart/base cell map size " << heartCellToBaseCell_.size()
-            << " does not match conductivity cell count " << Gi.size() << "."
+            << " does not match intracellular/extracellular conductivity "
+            << "cell counts " << Gi.size() << "/" << Ge.size() << "."
             << exit(FatalError);
     }
+
+    labelList materialRegion(baseMesh_.nCells(), 0);
 
     forAll(heartCellToBaseCell_, heartCellI)
     {
         const label baseCellI = heartCellToBaseCell_[heartCellI];
-        sigmaTotalI[baseCellI] = Gi[heartCellI] + Ge[heartCellI];
+        const tensor heartSigma = Gi[heartCellI] + Ge[heartCellI];
+
+        if (magSqr(heartSigma) <= SMALL)
+        {
+            FatalErrorInFunction
+                << "Myocardium cell " << heartCellI
+                << " has zero total conductivity."
+                << exit(FatalError);
+        }
+
+        sigmaTotalI[baseCellI] = heartSigma;
         sigmaIglobalI[baseCellI] = Gi[heartCellI];
+        materialRegion[baseCellI] = 1;
     }
 
     volScalarField bathSigma
@@ -420,10 +571,53 @@ void extracellularPotentialDomain::assembleConductivities()
         {
             const label cellI = cells[i];
             const scalar sigma = bathSigmaI[cellI];
+
+            if (materialRegion[cellI] != 0)
+            {
+                FatalErrorInFunction
+                    << "Base cell " << cellI << " in bath cellZone '"
+                    << zoneName << "' is already assigned to "
+                    <<
+                    (
+                        materialRegion[cellI] == 1
+                      ? "myocardium"
+                      : "another bath zone"
+                    )
+                    << "."
+                    << exit(FatalError);
+            }
+
+            if (sigma <= SMALL)
+            {
+                FatalErrorInFunction
+                    << "Bath cell " << cellI << " in cellZone '" << zoneName
+                    << "' has non-positive conductivity " << sigma << "."
+                    << exit(FatalError);
+            }
+
             sigmaTotalI[cellI] = sigma*tensor::I;
+            materialRegion[cellI] = 2;
             localMinBath = min(localMinBath, sigma);
             localMaxBath = max(localMaxBath, sigma);
         }
+    }
+
+    label unassignedCellCount = 0;
+    forAll(materialRegion, cellI)
+    {
+        if (materialRegion[cellI] == 0)
+        {
+            ++unassignedCellCount;
+        }
+    }
+    reduce(unassignedCellCount, sumOp<label>());
+
+    if (unassignedCellCount != 0)
+    {
+        FatalErrorInFunction
+            << unassignedCellCount << " base-mesh cells are assigned to "
+            << "neither the myocardium nor a configured bath cellZone."
+            << exit(FatalError);
     }
 
     sigmaTotal.correctBoundaryConditions();
@@ -704,21 +898,17 @@ label extracellularPotentialDomain::referenceCell() const
     }
 
     const label refCell = baseMesh_.findCell(phiEReferencePoint_);
+    const label localOwns = refCell >= 0 ? 1 : 0;
+    label ownerCount = localOwns;
+    reduce(ownerCount, sumOp<label>());
 
-    if (Pstream::parRun())
+    if (ownerCount != 1)
     {
-        const label localOwns = refCell >= 0 ? 1 : 0;
-        label ownerCount = localOwns;
-        reduce(ownerCount, sumOp<label>());
-
-        if (ownerCount != 1)
-        {
-            FatalErrorInFunction
-                << "phiERefPoint " << phiEReferencePoint_
-                << " must be owned by exactly one processor in parallel, but "
-                << ownerCount << " processors reported a containing cell."
-                << exit(FatalError);
-        }
+        FatalErrorInFunction
+            << "phiERefPoint " << phiEReferencePoint_
+            << " must be owned by exactly one mesh partition, but "
+            << ownerCount << " partitions reported a containing cell."
+            << exit(FatalError);
     }
 
     return refCell;
@@ -747,10 +937,8 @@ void extracellularPotentialDomain::scatterHeartVm()
     VmGlobalPtr_().correctBoundaryConditions();
 }
 
-void extracellularPotentialDomain::solvePhiE()
+void extracellularPotentialDomain::solvePhiEOnce()
 {
-    scatterHeartVm();
-
     forAll(surfaceCurrentPatchNames_, patchI)
     {
         const label patchId =
@@ -958,16 +1146,25 @@ void extracellularPotentialDomain::solvePhiE()
     solve(phiEqn);
 }
 
-void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
+
+void extracellularPotentialDomain::solvePhiE()
 {
-    (void)t0; (void)dt;
     scatterHeartVm();
+
+    // Bath/global phiE is a linear elliptic solve with a fixed (scattered-Vm)
+    // RHS: it needs the non-orthogonal corrector, not an outer loop. The
+    // phiE<->Vm coupling iteration is owned by the advance scheme
+    // (bathPdeCouplingMethod), not here.
+    correctNonOrthogonalLoop
+    (
+        phiENonOrthogonalCorrectors_,
+        [&]() { solvePhiEOnce(); }
+    );
 }
 
 void extracellularPotentialDomain::advance(scalar t0, scalar dt)
 {
     (void)t0; (void)dt;
-    scatterHeartVm();
     solvePhiE();
 }
 

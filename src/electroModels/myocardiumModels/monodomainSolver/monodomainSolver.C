@@ -22,7 +22,7 @@ License
 #include "IOmanip.H"
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
-#include "Switch.H"
+#include "conductivityFieldIO.H"
 
 namespace Foam
 {
@@ -39,70 +39,44 @@ addToRunTimeSelectionTable
 monodomainSolver::monodomainSolver
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const dictionary& electroProperties
 )
 :
-    conductivity_(initialiseConductivity(mesh, electroProperties))
+    conductivity_
+    (
+        initialiseConductivity
+        (
+            mesh,
+            supportMesh,
+            meshSubsetPtr,
+            electroProperties
+        )
+    )
 {}
 
 tmp<volTensorField> monodomainSolver::initialiseConductivity
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const dictionary& electroProperties
 ) const
 {
-    const dimensionedTensor zeroConductivity
+    return readConductivityField
     (
-        "zero",
-        pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-        tensor::zero
-    );
-
-    tmp<volTensorField> tresult
-    (
-        new volTensorField
-        (
-            IOobject
-            (
-                "conductivity",
-                mesh.time().timeName(),
-                mesh,
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            zeroConductivity
-        )
-    );
-
-    volTensorField& result = tresult.ref();
-    if (result.headerOk())
-    {
-        Info<< "monodomainSolver: conductivity field read from "
-            << mesh.time().timeName() << "/conductivity" << nl << endl;
-
-        return tresult;
-    }
-
-    if (electroProperties.lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info << nl
-             << "conductivity not found on disk, using value from "
-             << electroProperties.name()
-             << nl << endl;
-    }
-
-    result = dimensionedTensor
-    (
-        dimensionedSymmTensor
-        (
+        mesh,
+        supportMesh,
+        meshSubsetPtr,
+        electroProperties,
+        conductivityFieldSpec
+        {
+            "Conductivity",
             "conductivity",
-            pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-            electroProperties
-        ) & tensor(I)
+            "conductivity"
+        }
     );
-
-    return tresult;
 }
 
 
@@ -139,20 +113,6 @@ void monodomainSolver::solveDiffusionImplicit
        - domain.chi()*domain.Cm()*domain.Iion()
         + domain.sourceField()
     );
-}
-
-
-void monodomainSolver::solveDiffusionImplicit
-(
-    electroVolumeFieldDomain& domain,
-    scalar dt,
-    pimpleControl& pimple
-)
-{
-    while (pimple.loop())
-    {
-        solveDiffusionImplicit(domain, dt);
-    }
 }
 
 } // End namespace Foam

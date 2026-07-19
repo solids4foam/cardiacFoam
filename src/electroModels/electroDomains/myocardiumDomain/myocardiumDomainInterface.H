@@ -114,6 +114,26 @@ public:
             << exit(FatalError);
     }
 
+    //- Solve the implicit diffusion equation once for the opt-in coupled
+    //  bath-PDE predictor/corrector; it must not advance the ionic model or
+    //  physical time.
+    virtual void solveDiffusionStepOnce
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    )
+    {
+        (void)t0;
+        (void)dt;
+        (void)pimplePtr;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support a single diffusion "
+            << "sub-step."
+            << exit(FatalError);
+    }
+
     virtual void finalizeDiffusionStep()
     {}
 

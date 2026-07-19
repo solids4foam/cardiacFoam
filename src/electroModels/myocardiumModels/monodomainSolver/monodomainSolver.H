@@ -45,6 +45,8 @@ class monodomainSolver
     tmp<volTensorField> initialiseConductivity
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     ) const;
 
@@ -55,6 +57,8 @@ public:
     monodomainSolver
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     );
 
@@ -78,13 +82,6 @@ public:
     (
         electroVolumeFieldDomain& domain,
         scalar dt
-    ) override;
-
-    virtual void solveDiffusionImplicit
-    (
-        electroVolumeFieldDomain& domain,
-        scalar dt,
-        pimpleControl& pimple
     ) override;
 };
 

@@ -24,7 +24,6 @@ License
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
-#include "Switch.H"
 
 namespace Foam
 {
@@ -36,6 +35,8 @@ addToRunTimeSelectionTable(myocardiumSolver, bidomainSolver, dictionary);
 bidomainSolver::bidomainSolver
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const dictionary& electroProperties
 )
 :
@@ -70,13 +71,27 @@ bidomainSolver::bidomainSolver
     Gi_(initialiseConductivityTensor
     (
         mesh,
-        word("conductivityIntracellular"),
+        supportMesh,
+        meshSubsetPtr,
+        conductivityFieldSpec
+        {
+            "ConductivityIntracellular",
+            "conductivityIntracellular",
+            "conductivityIntracellular"
+        },
         electroProperties
     )),
     Ge_(initialiseConductivityTensor
     (
         mesh,
-        word("conductivityExtracellular"),
+        supportMesh,
+        meshSubsetPtr,
+        conductivityFieldSpec
+        {
+            "ConductivityExtracellular",
+            "conductivityExtracellular",
+            "conductivityExtracellular"
+        },
         electroProperties
     )),
     GiPlusGe_
@@ -200,56 +215,20 @@ void bidomainSolver::restrictExternalPhiE()
 tmp<volTensorField> bidomainSolver::initialiseConductivityTensor
 (
     const fvMesh& mesh,
-    const word& fieldName,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
+    const conductivityFieldSpec& spec,
     const dictionary& dict
 ) const
 {
-    tmp<volTensorField> tresult
+    return readConductivityField
     (
-        new volTensorField
-        (
-            IOobject
-            (
-                fieldName,
-                mesh.time().timeName(),
-                mesh,
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedTensor
-            (
-                "zero",
-                pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-                tensor::zero
-            )
-        )
+        mesh,
+        supportMesh,
+        meshSubsetPtr,
+        dict,
+        spec
     );
-
-    volTensorField& result = tresult.ref();
-
-    if (!result.headerOk())
-    {
-        if (dict.lookupOrDefault<Switch>("reportSetup", false))
-        {
-            Info << nl
-                 << fieldName << " not found on disk, using value from "
-                 << dict.name()
-                 << nl << endl;
-        }
-
-        result = dimensionedTensor
-        (
-            dimensionedSymmTensor
-            (
-                fieldName,
-                pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-                dict
-            ) & tensor(I)
-        );
-    }
-
-    return tresult;
 }
 
 
@@ -301,6 +280,22 @@ void bidomainSolver::solveDiffusionImplicit
 {
     (void)dt;
 
+    // Heart-only bidomain: phiE and Vm are re-solved together on every outer
+    // PIMPLE corrector, so the phiE<->Vm coupling iteration is owned here by
+    // the inherited outer loop (myocardiumSolver::solveDiffusionImplicit).
+    // Bath/global-phiE owns its coupling in the advance scheme instead
+    // (see .audit/pimple-coupling-design-analysis.md).
+    solvePhiEImplicitOnce(domain);
+    solveVmImplicitOnce(domain);
+    phiI_ = domain.Vm() + phiE_;
+}
+
+
+void bidomainSolver::solvePhiEImplicitOnce
+(
+    electroVolumeFieldDomain& domain
+)
+{
     if (externalPhiEBound())
     {
         restrictExternalPhiE();
@@ -320,7 +315,14 @@ void bidomainSolver::solveDiffusionImplicit
         }
         solve(phiEqn);
     }
+}
 
+
+void bidomainSolver::solveVmImplicitOnce
+(
+    electroVolumeFieldDomain& domain
+)
+{
     solve
     (
         domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
@@ -329,22 +331,6 @@ void bidomainSolver::solveDiffusionImplicit
        - domain.chi()*domain.Cm()*domain.Iion()
         + domain.sourceField()
     );
-
-    phiI_ = domain.Vm() + phiE_;
-}
-
-
-void bidomainSolver::solveDiffusionImplicit
-(
-    electroVolumeFieldDomain& domain,
-    scalar dt,
-    pimpleControl& pimple
-)
-{
-    while (pimple.loop())
-    {
-        solveDiffusionImplicit(domain, dt);
-    }
 }
 
 } // End namespace Foam

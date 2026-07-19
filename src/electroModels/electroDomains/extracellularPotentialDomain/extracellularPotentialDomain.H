@@ -95,6 +95,12 @@ class extracellularPotentialDomain
 
     Switch reportSetup_;
 
+    //- Number of additional corrected-Laplacian assemblies for the global
+    //  phiE equation. Resolved at construction: defaults to the PIMPLE
+    //  nNonOrthogonalCorrectors (same as Vm), optionally overridden by
+    //  PIMPLE/phiENonOrthogonalCorrectors. Zero means one equation solve.
+    label phiENonOrthogonalCorrectors_;
+
     // Build the heart-cell -> base-cell map from the heart subset.
     void buildHeartScatterMap();
 
@@ -107,6 +113,9 @@ class extracellularPotentialDomain
 
     // Locate the reference cell on the base mesh (parallel-safe).
     label referenceCell() const;
+
+    //- Assemble and solve the global phiE equation once.
+    void solvePhiEOnce();
 
 public:
 
@@ -123,7 +132,6 @@ public:
 
     // electroDomainInterface
     virtual const Time& time() const override { return baseMesh_.time(); }
-    virtual void prepareTimeStep(scalar t0, scalar dt) override;
     virtual void advance(scalar t0, scalar dt) override;
     virtual void write() override;
 

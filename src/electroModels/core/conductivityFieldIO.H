@@ -16,47 +16,39 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    staggeredElectrophysicsAdvanceScheme
+    conductivityFieldIO
 
 Description
-    Staggered scheme for advancing the electrophysics system.
+    Strict conductivity source resolution shared by the myocardium solvers.
 
-Author
-    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef staggeredElectrophysicsAdvanceScheme_H
-#define staggeredElectrophysicsAdvanceScheme_H
+#ifndef conductivityFieldIO_H
+#define conductivityFieldIO_H
 
-#include "electrophysicsAdvanceScheme.H"
-#include "overrideTypeName.H"
+#include "dictionary.H"
+#include "fvMeshSubset.H"
+#include "volFields.H"
 
 namespace Foam
 {
 
-class staggeredElectrophysicsAdvanceScheme
-:
-    public electrophysicsAdvanceScheme
+struct conductivityFieldSpec
 {
-    //- Coupling used when a global extracellular-potential domain is present.
-    //  onePass preserves the historical phiE -> Vm advance exactly.
-    word bathPdeCouplingMethod_;
-
-public:
-
-    OverrideTypeName("staggeredElectrophysicsAdvanceScheme");
-
-    explicit staggeredElectrophysicsAdvanceScheme(const dictionary& dict);
-
-    virtual bool advance
-    (
-        scalar t0,
-        scalar dt,
-        electrophysicsSystem& system,
-        pimpleControl* pimplePtr,
-        electrophysicsAdvanceTimings& timings
-    ) override;
+    word fieldName;
+    word dictionaryEntry;
+    word internalName;
 };
+
+
+tmp<volTensorField> readConductivityField
+(
+    const fvMesh& solverMesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
+    const dictionary& coefficients,
+    const conductivityFieldSpec& spec
+);
 
 } // End namespace Foam
 

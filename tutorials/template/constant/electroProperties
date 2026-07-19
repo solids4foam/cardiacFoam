@@ -53,6 +53,9 @@ myocardiumSolver  monodomainSolver;   // 3-D monodomain
 
 monodomainSolverCoeffs
 {
+    // field reads 0/Conductivity.
+    // Bidomain reads 0/ConductivityIntracellular and 0/ConductivityExtracellular.
+    conductivitySource uniform;
     // cellZone              heart;   // Optional: Restricts domain to a specific mesh cellZone
     // --- Tissue conductivity tensor (SI: S/m = kg^-1 m^-3 s^3 A^2) ---
     // Isotropic: (sigma 0 0 0 sigma 0 sigma)  Anisotropic: full 6-component Voigt tensor

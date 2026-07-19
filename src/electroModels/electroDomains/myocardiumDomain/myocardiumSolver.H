@@ -34,6 +34,7 @@ Author
 #include "runTimeSelectionTables.H"
 #include "dictionary.H"
 #include "fvMesh.H"
+#include "fvMeshSubset.H"
 #include "electroVolumeFieldDomain.H"
 
 namespace Foam
@@ -52,9 +53,11 @@ public:
         dictionary,
         (
             const fvMesh& mesh,
+            const fvMesh& supportMesh,
+            const fvMeshSubset* meshSubsetPtr,
             const dictionary& electroProperties
         ),
-        (mesh, electroProperties)
+        (mesh, supportMesh, meshSubsetPtr, electroProperties)
     );
 
     //- Construct from explicit solver type name and its Coeffs subdictionary.
@@ -63,6 +66,8 @@ public:
     static autoPtr<myocardiumSolver> New
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const word& solverType,
         const dictionary& coeffs
     );
@@ -113,12 +118,16 @@ public:
         scalar dt
     ) = 0;
 
+    //- Standard implicit diffusion advance: the outer PIMPLE loop wraps the
+    //  shared non-orthogonal corrector loop over the single-assembly
+    //  solveDiffusionImplicit(domain, dt). Kernels normally inherit this and
+    //  implement only the 2-arg single assembly.
     virtual void solveDiffusionImplicit
     (
         electroVolumeFieldDomain& domain,
         scalar dt,
         pimpleControl& pimple
-    ) = 0;
+    );
 };
 
 } // End namespace Foam

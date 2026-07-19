@@ -142,6 +142,8 @@ autoPtr<myocardiumDomain> myocardiumDomain::New
             myocardiumSolver::New
             (
                 myocardiumMesh,
+                supportMesh,
+                meshSubsetPtr.valid() ? &meshSubsetPtr() : nullptr,
                 solverType,
                 electroProperties
             ),
@@ -560,6 +562,39 @@ void myocardiumDomain::solveDiffusionStep
     {
         FatalErrorInFunction
             << "solveDiffusionStep() requires a pimpleControl instance "
+               "for implicit algorithms."
+            << exit(FatalError);
+    }
+}
+
+
+void myocardiumDomain::solveDiffusionStepOnce
+(
+    scalar t0,
+    scalar dt,
+    pimpleControl* pimplePtr
+)
+{
+    (void)t0;
+
+    if (useExplicitAlgorithm_)
+    {
+        FatalErrorInFunction
+            << "The bath-PDE predictor/corrector requires "
+            << "solutionAlgorithm implicit."
+            << exit(FatalError);
+    }
+    else if (pimplePtr)
+    {
+        while (pimplePtr->correctNonOrthogonal())
+        {
+            diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
+        }
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "solveDiffusionStepOnce() requires a pimpleControl instance "
                "for implicit algorithms."
             << exit(FatalError);
     }

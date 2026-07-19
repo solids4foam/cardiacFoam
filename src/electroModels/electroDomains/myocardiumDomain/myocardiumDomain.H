@@ -263,6 +263,13 @@ public:
         pimpleControl* pimplePtr
     ) override;
 
+    virtual void solveDiffusionStepOnce
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    ) override;
+
     virtual void finalizeDiffusionStep() override;
 
     virtual void bindExternalPhiE

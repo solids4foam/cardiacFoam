@@ -19,6 +19,7 @@ myocardiumSolver  eikonalSolver;
 
 eikonalSolverCoeffs
 {
+    conductivitySource uniform;
     // Conductivity to match monodomain scaling
     conductivity    [-1 -3 3 0 0 2 0] (0.1334 0 0 0.1334 0 0.1334);
 

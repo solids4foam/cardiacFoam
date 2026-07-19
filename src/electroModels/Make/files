@@ -1,6 +1,7 @@
 /* Core */
 core/electroModel.C
 core/electroStateDomain.C
+core/conductivityFieldIO.C
 core/verificationModels/electroVerificationModel.C
 core/verificationModels/couplingVerificationModel.C
 core/verificationModels/graphVerificationModel.C
@@ -29,7 +30,6 @@ electroDomains/myocardiumDomain/myocardiumSolver.C
 /* Myocardium models */
 myocardiumModels/monodomainSolver/monodomainSolver.C
 myocardiumModels/bidomainSolver/bidomainSolver.C
-myocardiumModels/eikonalSolver/eikonalSolver.C
 myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */

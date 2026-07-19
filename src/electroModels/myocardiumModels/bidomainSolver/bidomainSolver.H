@@ -29,6 +29,7 @@ Author
 #define bidomainSolver_H
 
 #include "myocardiumSolver.H"
+#include "conductivityFieldIO.H"
 #include "overrideTypeName.H"
 #include "fvc.H"
 #include "fvm.H"
@@ -54,7 +55,9 @@ class bidomainSolver
     tmp<volTensorField> initialiseConductivityTensor
     (
         const fvMesh& mesh,
-        const word& fieldName,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
+        const conductivityFieldSpec& spec,
         const dictionary& dict
     ) const;
 
@@ -64,6 +67,10 @@ class bidomainSolver
 
     void restrictExternalPhiE();
 
+    void solvePhiEImplicitOnce(electroVolumeFieldDomain& domain);
+
+    void solveVmImplicitOnce(electroVolumeFieldDomain& domain);
+
 public:
 
     OverrideTypeName("bidomainSolver");
@@ -71,6 +78,8 @@ public:
     bidomainSolver
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     );
 
@@ -137,13 +146,6 @@ public:
     (
         electroVolumeFieldDomain& domain,
         scalar dt
-    ) override;
-
-    virtual void solveDiffusionImplicit
-    (
-        electroVolumeFieldDomain& domain,
-        scalar dt,
-        pimpleControl& pimple
     ) override;
 };
 

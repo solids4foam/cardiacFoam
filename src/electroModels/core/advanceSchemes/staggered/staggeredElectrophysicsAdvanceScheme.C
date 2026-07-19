@@ -38,6 +38,29 @@ addToRunTimeSelectionTable
     dictionary
 );
 
+
+staggeredElectrophysicsAdvanceScheme::
+staggeredElectrophysicsAdvanceScheme(const dictionary& dict)
+:
+    bathPdeCouplingMethod_
+    (
+        dict.lookupOrDefault<word>("bathPdeCouplingMethod", "onePass")
+    )
+{
+    if
+    (
+        bathPdeCouplingMethod_ != "onePass"
+     && bathPdeCouplingMethod_ != "predictorCorrector"
+    )
+    {
+        FatalErrorInFunction
+            << "Unknown bathPdeCouplingMethod '"
+            << bathPdeCouplingMethod_ << "'. Valid values are onePass and "
+            << "predictorCorrector."
+            << exit(FatalError);
+    }
+}
+
 bool staggeredElectrophysicsAdvanceScheme::advance
 (
     scalar t0,
@@ -76,8 +99,25 @@ bool staggeredElectrophysicsAdvanceScheme::advance
 
         myocardium.solveReactionStep(t0, dt);
         system.preparePotentialDomain(t0, dt);
-        system.advancePotentialDomain(t0, dt);
-        myocardium.solveDiffusionStep(t0, dt, pimplePtr);
+
+        if (bathPdeCouplingMethod_ == "onePass")
+        {
+            // Historical algorithm: solve phiE once from Vm at the start of
+            // the step, then apply the configured PIMPLE loops only to Vm.
+            system.advancePotentialDomain(t0, dt);
+            myocardium.solveDiffusionStep(t0, dt, pimplePtr);
+        }
+        else if (bathPdeCouplingMethod_ == "predictorCorrector")
+        {
+            // Predict Vm with the retained phiE from the previous step,
+            // update phiE from that predictor, then correct Vm. Both Vm
+            // solves refer to the same old-time field and therefore do not
+            // advance physical time twice.
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+            system.advancePotentialDomain(t0, dt);
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+        }
+
         myocardium.finalizeDiffusionStep();
     }
     else
