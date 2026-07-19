@@ -90,7 +90,6 @@
   ],
   "stale_paths": [
     "$ELECTRO_MODEL_COEFFS.absTol",
-    "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.heartCellZone",
     "$ELECTRO_MODEL_COEFFS.c0",
     "$ELECTRO_MODEL_COEFFS.conductivity",
     "$ELECTRO_MODEL_COEFFS.conductivityExtracellular",

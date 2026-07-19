@@ -5,8 +5,7 @@
   "config": {
     "anatomy": {
       "cellZone": "myocardium",
-      "bathPotentialDomain.bathCellZones": "(bath)",
-      "bathPotentialDomain.heartCellZone": "myocardium"
+      "bathPotentialDomain.bathCellZones": "(bath)"
     },
     "physics": {
       "type": "electroModel",

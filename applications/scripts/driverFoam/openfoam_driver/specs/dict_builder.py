@@ -138,6 +138,10 @@ def resolve_context(
     if overrides:
         for driver_path, value in overrides.items():
             ctx[slot_key(driver_path)] = value
+    if ctx.get("myocardiumSolver") in {
+        "monodomainSolver", "eikonalSolver", "bidomainSolver"
+    }:
+        ctx.setdefault("conductivitySource", "uniform")
     _infer_virtual_presence(ctx)
     return ctx
 
@@ -430,7 +434,9 @@ def build_electro_properties(
 
 
 # Slot keys that map to selectors (top-level discriminators), not overrides.
-_SELECTOR_KEYS: frozenset[str] = frozenset({"myocardiumSolver", "ionicModel", "tissue"})
+_SELECTOR_KEYS: frozenset[str] = frozenset(
+    {"myocardiumSolver", "ionicModel", "tissue", "conductivitySource"}
+)
 SELECTOR_KEYS: frozenset[str] = _SELECTOR_KEYS  # public alias for external consumers (e.g. sweep_routing.py)
 
 import re as _re

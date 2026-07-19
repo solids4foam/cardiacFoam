@@ -509,7 +509,6 @@ build_electro_properties(
                "ionicModel": "bathBidomainFDAManufactured"},
     overrides={
         "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.bathCellZones": "(bath organ)",
-        "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.heartCellZone": "myocardium",
     },
 )
 ```
