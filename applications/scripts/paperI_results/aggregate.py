@@ -23,6 +23,11 @@ def _tet(root: Path):
     return schema.fill_rates(adapters.from_tet_scheme_study(src))
 
 
+def _eikonal_tet(root: Path):
+    src = root / _TUT / "eikonalTetMMS/setup/results/scheme_study.csv"
+    return schema.fill_rates(adapters.from_eikonal_tet_scheme_study(src))
+
+
 def _coupling(root: Path):
     base = root / _TUT / "monodomain1D3D/outputs"
     regimes = {
@@ -67,19 +72,41 @@ def _bidomain(root: Path):
     return schema.fill_rates(adapters.from_bidomain_archive(src))
 
 
+def _bath(root: Path):
+    src = root / _TUT / "bathBidomain/postProcessing/bath_bidomain_errors.csv"
+    return schema.fill_rates(adapters.from_bath_structured(src))
+
+
+def _bath_tet(root: Path):
+    src = root / _TUT / "bathBidomainTetMMS/setup/matchedSubmeshStudy"
+    return schema.fill_rates(adapters.from_bath_interface_metrics(src))
+
+
+def _niederer(root: Path):
+    src = (root / "tutorials/NiedererEtAl2011/NiedererEtAl2011verification"
+                  "/setup/cachedCasePostProcessing")
+    return schema.fill_rates(adapters.from_niederer_points(src))
+
+
 CASES = {
-    "tet": _tet, "coupling": _coupling, "eikonal": _eikonal,
-    "mono_spatial": _mono_spatial, "pseudo_ecg_spatial": _pseudo_ecg_spatial,
-    "bidomain": _bidomain,
+    "tet": _tet, "eikonal_tet": _eikonal_tet, "coupling": _coupling,
+    "eikonal": _eikonal, "mono_spatial": _mono_spatial,
+    "pseudo_ecg_spatial": _pseudo_ecg_spatial, "bidomain": _bidomain,
+    "bath": _bath, "bath_tet": _bath_tet, "niederer": _niederer,
 }
 
 _OUT = {
     "tet": "monodomainTetMMS/setup/results/tet_convergence.csv",
+    "eikonal_tet": "eikonalTetMMS/setup/results/eikonal_tet_convergence.csv",
     "coupling": "monodomain1D3D/setup/results/coupling_convergence.csv",
     "eikonal": "eikonalECG/setup/results/eikonal_convergence.csv",
     "mono_spatial": "monodomainPseudoECG/setup/results/mono_spatial_convergence.csv",
     "pseudo_ecg_spatial": "monodomainPseudoECG/setup/results/pseudo_ecg_spatial_convergence.csv",
     "bidomain": "bidomain/setup/results/bidomain_convergence.csv",
+    "bath": "bathBidomain/setup/results/bath_convergence.csv",
+    "bath_tet": "bathBidomainTetMMS/setup/results/bath_tet_convergence.csv",
+    "niederer": ("../NiedererEtAl2011/NiedererEtAl2011verification"
+                 "/setup/results/niederer_activation.csv"),
 }
 
 

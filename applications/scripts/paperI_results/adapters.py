@@ -24,6 +24,21 @@ def from_tet_scheme_study(path, case="tet"):
     return rows
 
 
+def from_eikonal_tet_scheme_study(path, case="eikonal_tet"):
+    """eikonalTetMMS scheme_study.csv: activationTime + ecg columns per scheme/N.
+    Mirrors from_tet_scheme_study; dx -> h, L1 unavailable (blank)."""
+    rows = []
+    with Path(path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            base = dict(case=case, variant=rec["scheme"], dim="3D",
+                        N=rec["N"], h=rec["dx"])
+            rows.append({**base, "field": "activationTime", "L1": "",
+                         "L2": rec["activationTime_L2"], "Linf": rec["activationTime_Linf"]})
+            rows.append({**base, "field": "Phi_e", "L1": "",
+                         "L2": rec["ecg_L2"], "Linf": rec["ecg_Linf"]})
+    return rows
+
+
 def from_coupling_summary(path, regime, case="coupling"):
     rows = []
     with Path(path).open(newline="") as fh:
@@ -166,6 +181,100 @@ def _parse_ecg_electrode_table(content):
 # integrals, so their errors don't converge under refinement (confirmed against a real
 # sweep run 2026-07-17: 1D/2D Phi_e error is flat across N=10..80, not decreasing).
 _ECG_SPATIAL_SUPPORTED_DIMENSIONS = ("3D",)
+
+
+_BATH_STRUCTURED_FIELDS = ("Vm", "phiE", "phiI")
+
+
+def from_bath_structured(errors_path, case="bath"):
+    """bathBidomain/postProcessing/bath_bidomain_errors.csv -> canonical rows.
+    Columns: N (or h/dx) + L2_<field> (+ optional L1_/Linf_). h falls back to 1/N.
+    NOTE: real header not on disk at plan time; confirm when bathBidomain is run."""
+    rows = []
+    with Path(errors_path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            n = rec.get("N") or rec.get("cells") or ""
+            h = rec.get("h") or rec.get("dx") or (f"{1.0 / int(n):g}" if n else "")
+            for field in _BATH_STRUCTURED_FIELDS:
+                l2 = rec.get(f"L2_{field}", "")
+                if l2 == "":
+                    continue
+                rows.append(dict(case=case, variant="structured", dim="3D",
+                                 N=str(n), h=str(h), field=field,
+                                 L1=rec.get(f"L1_{field}", ""), L2=l2,
+                                 Linf=rec.get(f"Linf_{field}", "")))
+    return rows
+
+
+_BATH_N_DIR = re.compile(r"N(\d+)", re.IGNORECASE)
+# canonical physics identities (confirm names against FINAL_SOLUTION.md):
+_BATH_TET_FIELDS = {
+    "phiE": "heartPhiE",                          # extracellular potential
+    "fluxJump": "x0FluxJump",                     # interface-current continuity
+    "intracellularLeak": "x0IntracellularLeak",   # intracellular insulation
+}
+
+
+def from_bath_interface_metrics(study_dir, case="bath_tet"):
+    """Glob <study_dir>/N*/bathBidomainInterfaceMetrics.csv; N from the parent dir.
+    variant = '<method>/<assembly>'; h = 1/N nominal (tet); L1 unavailable."""
+    rows = []
+    for csv_path in sorted(Path(study_dir).glob("N*/bathBidomainInterfaceMetrics.csv")):
+        m = _BATH_N_DIR.search(csv_path.parent.name)
+        if not m:
+            continue
+        n = int(m.group(1))
+        with csv_path.open(newline="") as fh:
+            rec = next(csv.DictReader(fh), None)
+        if rec is None:
+            continue
+        variant = f"{rec.get('method', '')}/{rec.get('assembly', '')}"
+        base = dict(case=case, variant=variant, dim="3D",
+                    N=str(n), h=f"{1.0 / n:g}")
+        for field, col in _BATH_TET_FIELDS.items():
+            l2 = rec.get(f"{col}_L2", "")
+            if l2 == "":
+                continue
+            rows.append({**base, "field": field, "L1": "",
+                         "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
+    return rows
+
+
+def from_niederer_points(root_dir, case="niederer"):
+    """Map Niederer probe activation times into the canonical schema, carrying the
+    raw activation time in the L2 slot so check_against_reference compares it by
+    relative tolerance. variant=<config dir>, field=<probe label>, h=<DX from dir>.
+    Real cached header: Label,Points:0..2,activationTime (seconds)."""
+    rows = []
+    for csv_path in sorted(Path(root_dir).glob("*/*_points_*.csv")):
+        config = csv_path.parent.name
+        m = re.search(r"DX([0-9.]+)", config)
+        h = m.group(1) if m else ""
+        with csv_path.open(newline="") as fh:
+            for rec in csv.DictReader(fh):
+                probe = rec.get("Label") or rec.get("probe") or rec.get("point") or ""
+                t = rec.get("activationTime")
+                if t is None:
+                    t = rec.get("activationTime_ms") or ""
+                if not probe or t == "":
+                    continue
+                rows.append(dict(case=case, variant=config, dim="3D",
+                                 N=str(probe), h=str(h), field=str(probe),
+                                 L1="", L2=str(t), Linf=""))
+    return rows
+
+
+def from_bath_parallel_equivalence(comparison_path):
+    """Read comparison.csv (metric,serial,parallel,absoluteDifference,tolerance,pass).
+    Return (all_pass, failures)."""
+    failures = []
+    with Path(comparison_path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            if str(rec.get("pass", "")).strip().lower() != "true":
+                failures.append(
+                    f"{rec.get('metric')}: |delta|={rec.get('absoluteDifference')} "
+                    f"tol={rec.get('tolerance')}")
+    return (not failures), failures
 
 
 def from_pseudo_ecg_spatial_archive(dir_path, case="pseudo-ecg-spatial"):
