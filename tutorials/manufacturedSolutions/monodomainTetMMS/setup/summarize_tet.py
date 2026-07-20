@@ -17,14 +17,16 @@ from __future__ import annotations
 
 import argparse
 import csv
-import math
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(
+    0, str(Path(__file__).resolve().parents[4] / "applications/scripts/paperI_results")
+)
 from checkmesh_parse import parse_checkmesh_log  # noqa: E402
+from schema import observed_order  # noqa: E402
 
 _VM_ROW_RE = re.compile(
     r"^Vm\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)", re.MULTILINE
@@ -73,12 +75,6 @@ def collect(results_dir: Path, resolutions: list[int]) -> list[Row]:
     return rows
 
 
-def order(e_coarse: float, e_fine: float, dx_coarse: float, dx_fine: float):
-    if e_fine <= 0 or e_coarse <= 0 or dx_fine <= 0 or dx_coarse <= 0:
-        return None
-    return math.log(e_coarse / e_fine) / math.log(dx_coarse / dx_fine)
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("results_dir", type=Path)
@@ -101,8 +97,8 @@ def main() -> int:
                 p2 = pinf = None
             else:
                 prev = rows[i - 1]
-                p2 = order(prev.l2, r.l2, prev.dx, r.dx)
-                pinf = order(prev.linf, r.linf, prev.dx, r.dx)
+                p2 = observed_order(prev.l2, r.l2, prev.dx, r.dx)
+                pinf = observed_order(prev.linf, r.linf, prev.dx, r.dx)
             cells = [
                 r.n,
                 f"{r.dx:.6g}",
