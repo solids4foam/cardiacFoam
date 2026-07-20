@@ -11,23 +11,21 @@ Exit codes: 0 key sets equal, 1 key sets differ. Stdlib only.
 from __future__ import annotations
 
 import argparse
-import csv
 import sys
-from pathlib import Path
 
 import check_against_reference as _checker
 
-# Group on the same columns check_against_reference.py keys rows by, minus
-# "N": this gate checks which (case, variant, dim, field) combinations exist
-# at all, independent of mesh resolution. Deriving from _checker.KEY (rather
-# than re-listing the column names) keeps the shared columns from drifting
-# out of sync with the numeric checker.
-KEY = tuple(k for k in _checker.KEY if k != "N")
+# Reuse the numeric checker's own row loader so the key is EXACTLY its
+# KEY = ("case","variant","dim","N","field") — including N. References carry
+# multiple N-rows per (case,variant,dim,field) group, so N must stay in the
+# key or an extra/missing resolution row would slip through — the very gap
+# this gate exists to close. Calling _load (not re-listing columns) makes
+# drift from the checker impossible.
+KEY = _checker.KEY
 
 
 def keyset(csv_path) -> set[tuple]:
-    with Path(csv_path).open(newline="") as fh:
-        return {tuple(r[k] for k in KEY) for r in csv.DictReader(fh)}
+    return set(_checker._load(csv_path).keys())
 
 
 def main(argv=None) -> int:
