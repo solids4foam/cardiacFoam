@@ -67,18 +67,16 @@ python3 applications/scripts/paperI_results/aggregate.py mono_spatial
 python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 ```
 
-Temporal-discretization sweep:
+Temporal-discretization sweep (fixed fine mesh, `dt` refinement). The paper reports
+the finest 1D and 2D studies (`N = 640`); the 3D temporal sweeps did not reach a clean
+asymptotic regime and were dropped, and the coarser 2D `N = 320` study was superseded
+by `N = 640`.
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config_temporal_3d.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporal1D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporal2D_N640/config.json
 ```
 
-Recommended temporal MMS settings:
-
-- spatial baseline: `N = 80`, so `dx = 1/80 = 0.0125`
-- temporal sweep: `dt = [2.24215e-3, 1.121075e-3, 5.60538e-4, 2.80269e-4]`
-
-These values keep the existing spatial sweep unchanged while providing a fixed-`dx`
-3D run for temporal-order measurements. The temporal config writes to
-`postProcessingTemporal/` and disables ECG post-processing so the field
-convergence results are isolated from the pseudo-ECG workflow.
+Each temporal config holds a fixed fine mesh (`N = 640`) with a `dt` ladder
+(`[1.121075e-3, 5.60538e-4, 2.80269e-4, 1.401345e-4]`), disables ECG post-processing,
+and isolates the field temporal-order measurement.
