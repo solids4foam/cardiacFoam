@@ -36,7 +36,7 @@ run_variant()
         bash setup/run_parallel_interface_sweep.sh
 
     local source="setup/interfaceStudy/distanceWeightedHarmonic/N$N"
-    local target="setup/gradientSchemeStudy/$name/N$N"
+    local target="setup/studies/gradientScheme/$name/N$N"
     rm -rf "$target"
     mkdir -p "$target"
     cp -R "$source"/. "$target"/
