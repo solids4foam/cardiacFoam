@@ -21,9 +21,13 @@ License
 
 #include "OFstream.H"
 #include "OSspecific.H"
+#include "conductionSystemDomain.H"
 #include "electroDomainCouplingEndpoints.H"
 #include "electroDomainInterface.H"
+#include "electroVolumeFieldDomain.H"
+#include "ionicModel.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
+#include "pvjMapper.H"
 #include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -40,6 +44,227 @@ addToRunTimeSelectionTable
     dictionary
 );
 
+namespace
+{
+
+struct SourceStats
+{
+    scalar minValue = GREAT;
+    scalar maxValue = -GREAT;
+    scalar l1 = 0.0;
+    scalar l2 = 0.0;
+    scalar total = 0.0;
+    scalar totalAbs = 0.0;
+    label nonZero = 0;
+};
+
+
+SourceStats computeSourceStats
+(
+    const fvMesh& mesh,
+    const scalarField& values
+)
+{
+    const scalarField& volumes = mesh.V();
+
+    SourceStats stats;
+    scalar sumAbs = 0.0;
+    scalar sumSq = 0.0;
+
+    forAll(values, i)
+    {
+        const scalar source = values[i];
+        stats.minValue = min(stats.minValue, source);
+        stats.maxValue = max(stats.maxValue, source);
+        sumAbs += mag(source);
+        sumSq += source*source;
+        stats.total += source*volumes[i];
+        stats.totalAbs += mag(source)*volumes[i];
+
+        if (mag(source) > SMALL)
+        {
+            ++stats.nonZero;
+        }
+    }
+
+    reduce(stats.minValue, minOp<scalar>());
+    reduce(stats.maxValue, maxOp<scalar>());
+    reduce(sumAbs, sumOp<scalar>());
+    reduce(sumSq, sumOp<scalar>());
+    reduce(stats.total, sumOp<scalar>());
+    reduce(stats.totalAbs, sumOp<scalar>());
+    reduce(stats.nonZero, sumOp<label>());
+
+    const label totalCells = globalManufacturedCellCount(mesh);
+    const scalar denom = max(scalar(1), scalar(totalCells));
+    stats.l1 = sumAbs/denom;
+    stats.l2 = Foam::sqrt(sumSq/denom);
+
+    return stats;
+}
+
+
+networkCouplingEndpoint& requireNetworkDomain
+(
+    electroDomainInterface& secondaryDomain,
+    const char* context
+)
+{
+    auto* networkDomain =
+        dynamic_cast<networkCouplingEndpoint*>(&secondaryDomain);
+
+    if (!networkDomain)
+    {
+        FatalErrorInFunction
+            << context << " requires a networkCouplingEndpoint "
+            << "secondary domain."
+            << exit(FatalError);
+    }
+
+    return *networkDomain;
+}
+
+
+electroVolumeFieldDomain& requireVolumeDomain
+(
+    tissueCouplingEndpoint& primaryDomain,
+    const char* context
+)
+{
+    auto* volumeDomain =
+        dynamic_cast<electroVolumeFieldDomain*>(&primaryDomain);
+
+    if (!volumeDomain)
+    {
+        FatalErrorInFunction
+            << context << " requires an electroVolumeFieldDomain "
+            << "primary domain."
+            << exit(FatalError);
+    }
+
+    return *volumeDomain;
+}
+
+
+conductionSystemDomain* conductionDomainPtr
+(
+    electroDomainInterface& secondaryDomain
+)
+{
+    return dynamic_cast<conductionSystemDomain*>(&secondaryDomain);
+}
+
+
+scalarField terminalX(const pointField& terminalLocations)
+{
+    scalarField x(terminalLocations.size());
+
+    forAll(terminalLocations, i)
+    {
+        x[i] = terminalLocations[i].x();
+    }
+
+    return x;
+}
+
+
+scalarField terminalResistances
+(
+    const networkCouplingEndpoint& networkDomain,
+    const dictionary& couplingDict
+)
+{
+    if (const scalarField* pRes = networkDomain.terminalResistances())
+    {
+        return *pRes;
+    }
+
+    return scalarField
+    (
+        networkDomain.terminalLocations().size(),
+        couplingDict.get<scalar>("rPvj")
+    );
+}
+
+
+void computeExactVmField
+(
+    const fvMesh& mesh,
+    const scalar timeValue,
+    scalarField& VmExact
+)
+{
+    const vectorField& centres = mesh.C().primitiveField();
+    scalarField X(centres.component(vector::X));
+    scalarField Y(centres.component(vector::Y));
+    scalarField Z(centres.component(vector::Z));
+
+    computeManufacturedV(VmExact, X, Y, Z, timeValue, 3);
+}
+
+
+void computeExactTerminalVm
+(
+    const pointField& terminalLocations,
+    const scalar timeValue,
+    scalarField& VmExact
+)
+{
+    scalarField X(terminalX(terminalLocations));
+    scalarField zeroY(X.size(), 0.0);
+    scalarField zeroZ(X.size(), 0.0);
+
+    computeManufacturedV(VmExact, X, zeroY, zeroZ, timeValue, 1);
+}
+
+
+void computeExactTerminalCurrent
+(
+    const fvMesh& mesh,
+    const pvjMapper& mapper,
+    const pointField& terminalLocations,
+    const scalarField& R_pvj,
+    scalar primaryTime,
+    scalar secondaryTime,
+    scalarField& terminalCurrent
+)
+{
+    scalarField VmExact3D;
+    computeExactVmField(mesh, primaryTime, VmExact3D);
+
+    volScalarField VmExactField
+    (
+        IOobject
+        (
+            "coupled1D3DMonodomainVerifier:VmExactForCurrent",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh,
+        dimensionedScalar("VmExactForCurrent", dimless, 0.0)
+    );
+    VmExactField.primitiveFieldRef() = VmExact3D;
+
+    scalarField VmExact3DAtTerminals;
+    mapper.gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
+
+    scalarField VmExact1D;
+    computeExactTerminalVm(terminalLocations, secondaryTime, VmExact1D);
+
+    terminalCurrent.setSize(VmExact1D.size(), 0.0);
+    forAll(terminalCurrent, i)
+    {
+        terminalCurrent[i] =
+            (VmExact1D[i] - VmExact3DAtTerminals[i])/R_pvj[i];
+    }
+}
+
+
+} // End anonymous namespace
+
 
 coupled1D3DMonodomainVerifier::coupled1D3DMonodomainVerifier
 (
@@ -48,7 +273,8 @@ coupled1D3DMonodomainVerifier::coupled1D3DMonodomainVerifier
 :
     couplingVerificationModel(dict),
     diagnosticsWritten_(false),
-    exactMapperPtr_(nullptr)
+    exactPrimarySource_(),
+    exactSecondaryAppliedCurrent_()
 {}
 
 
@@ -60,6 +286,198 @@ void coupled1D3DMonodomainVerifier::preProcess
 {
     (void)primaryDomain;
     (void)secondaryDomain;
+}
+
+
+void coupled1D3DMonodomainVerifier::updateManufacturedSource
+(
+    tissueCouplingEndpoint& primaryDomain,
+    electroDomainInterface& secondaryDomain,
+    scalar primaryTime,
+    scalar secondaryTime,
+    bool implicitCoupling,
+    bool bidirectionalCoupling,
+    const word& phaseName
+)
+{
+    networkCouplingEndpoint& networkDomain = requireNetworkDomain
+    (
+        secondaryDomain,
+        "coupled1D3DMonodomainVerifier::updateManufacturedSource"
+    );
+
+    const fvMesh& mesh = primaryDomain.mesh();
+    const pointField& terminalLocations = networkDomain.terminalLocations();
+    pvjMapper exactMapper
+    (
+        mesh,
+        terminalLocations,
+        dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
+        false
+    );
+
+    const scalarField R_pvj =
+        terminalResistances(networkDomain, dict().parent());
+
+    if (phaseName == "secondary")
+    {
+        conductionSystemDomain* graphDomain = conductionDomainPtr(secondaryDomain);
+        if (!graphDomain || !graphDomain->ionicModelPtr())
+        {
+            return;
+        }
+
+        exactSecondaryAppliedCurrent_.setSize
+        (
+            graphDomain->membranePotential().size(),
+            0.0
+        );
+        exactSecondaryAppliedCurrent_ = 0.0;
+
+        if (bidirectionalCoupling)
+        {
+            scalarField exactCurrent;
+            computeExactTerminalCurrent
+            (
+                mesh,
+                exactMapper,
+                terminalLocations,
+                R_pvj,
+                primaryTime,
+                secondaryTime,
+                exactCurrent
+            );
+
+            const labelList& terminalNodes = graphDomain->terminalNodes();
+            forAll(terminalNodes, i)
+            {
+                exactSecondaryAppliedCurrent_[terminalNodes[i]] -= exactCurrent[i];
+            }
+        }
+
+        graphDomain->ionicModelPtr()->setManufacturedSourceTerm
+        (
+            exactSecondaryAppliedCurrent_,
+            graphDomain->chi(),
+            graphDomain->Cm(),
+            graphDomain->localStartNode()
+        );
+        return;
+    }
+
+    if (phaseName != "primary")
+    {
+        return;
+    }
+
+    electroVolumeFieldDomain& volumeDomain = requireVolumeDomain
+    (
+        primaryDomain,
+        "coupled1D3DMonodomainVerifier::updateManufacturedSource"
+    );
+
+    ionicModel* model = primaryDomain.ionicModelPtr();
+    if (!model)
+    {
+        return;
+    }
+
+    const volScalarField& sourceField = primaryDomain.sourceField();
+    volScalarField exactSourceField
+    (
+        IOobject
+        (
+            "coupled1D3DMonodomainVerifier:manufacturedSource",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh,
+        dimensionedScalar("manufacturedSource", sourceField.dimensions(), 0.0)
+    );
+
+    if (implicitCoupling)
+    {
+        const volScalarField* implicitSourceCoeff =
+            primaryDomain.implicitSourceCoeffPtr();
+        if (!implicitSourceCoeff)
+        {
+            FatalErrorInFunction
+                << "Implicit manufactured PVJ source requires the primary "
+                << "domain to expose an implicit source coefficient field."
+                << exit(FatalError);
+        }
+
+        volScalarField exactImplicitCoeff
+        (
+            IOobject
+            (
+                "coupled1D3DMonodomainVerifier:manufacturedImplicitCoeff",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            mesh,
+            dimensionedScalar
+            (
+                "manufacturedImplicitCoeff",
+                implicitSourceCoeff->dimensions(),
+                0.0
+            )
+        );
+
+        scalarField VmExact1D;
+        computeExactTerminalVm(terminalLocations, secondaryTime, VmExact1D);
+
+        exactMapper.depositImplicitCoupling
+        (
+            VmExact1D,
+            R_pvj,
+            exactSourceField,
+            exactImplicitCoeff
+        );
+
+        scalarField VmExact3D;
+        computeExactVmField(mesh, secondaryTime, VmExact3D);
+
+        scalarField& exactSource = exactSourceField.primitiveFieldRef();
+        const scalarField& exactCoeff =
+            exactImplicitCoeff.primitiveField();
+
+        forAll(exactSource, cellI)
+        {
+            exactSource[cellI] -= exactCoeff[cellI]*VmExact3D[cellI];
+        }
+    }
+    else
+    {
+        scalarField exactCurrent;
+        computeExactTerminalCurrent
+        (
+            mesh,
+            exactMapper,
+            terminalLocations,
+            R_pvj,
+            primaryTime,
+            secondaryTime,
+            exactCurrent
+        );
+
+        exactMapper.depositCoupling(exactCurrent, exactSourceField);
+    }
+
+    exactPrimarySource_ = exactSourceField.primitiveField();
+    model->setManufacturedSourceTerm
+    (
+        exactPrimarySource_,
+        volumeDomain.chi().value(),
+        volumeDomain.Cm().value()
+    );
 }
 
 
@@ -78,125 +496,43 @@ void coupled1D3DMonodomainVerifier::postProcess
 
     const fvMesh& mesh = primaryDomain.mesh();
     const volScalarField& sourceField = primaryDomain.sourceField();
-    const scalarField& sourceValues = sourceField.primitiveField();
-    const scalarField& volumes = mesh.V();
+    scalarField sourceValues(sourceField.primitiveField());
+    bool implicitCoupling = false;
 
-    scalar sourceMin = GREAT;
-    scalar sourceMax = -GREAT;
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar totalCurrent = 0.0;
-    scalar totalAbsCurrent = 0.0;
-    label nonZeroCells = 0;
-
-    forAll(sourceValues, i)
+    if (const volScalarField* coeff = primaryDomain.implicitSourceCoeffPtr())
     {
-        const scalar source = sourceValues[i];
-        sourceMin = min(sourceMin, source);
-        sourceMax = max(sourceMax, source);
-        sumAbs += mag(source);
-        sumSq += source*source;
-        totalCurrent += source*volumes[i];
-        totalAbsCurrent += mag(source)*volumes[i];
+        const scalarField& coeffValues = coeff->primitiveField();
+        const scalarField& VmValues = primaryDomain.Vm().primitiveField();
+        implicitCoupling = gMax(mag(coeffValues)) > SMALL;
 
-        if (mag(source) > SMALL)
+        forAll(sourceValues, i)
         {
-            ++nonZeroCells;
+            sourceValues[i] -= coeffValues[i]*VmValues[i];
         }
     }
 
-    reduce(sourceMin, minOp<scalar>());
-    reduce(sourceMax, maxOp<scalar>());
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(totalCurrent, sumOp<scalar>());
-    reduce(totalAbsCurrent, sumOp<scalar>());
-    reduce(nonZeroCells, sumOp<label>());
+    SourceStats sourceStats = computeSourceStats(mesh, sourceValues);
 
-    const label totalCells = globalManufacturedCellCount(mesh);
-    const scalar denom = max(scalar(1), scalar(totalCells));
-    const scalar sourceL1 = sumAbs/denom;
-    const scalar sourceL2 = Foam::sqrt(sumSq/denom);
+    scalarField exactSourceValues(sourceValues.size(), 0.0);
 
-    if (Pstream::master())
-    {
-        mkDir(mesh.time().globalPath()/"verification");
-        autoPtr<OFstream> osPtr
-        (
-            new OFstream
-            (
-                mesh.time().globalPath()/"verification"
-              / "coupled1D3DMonodomain_diagnostics.csv"
-            )
-        );
+    networkCouplingEndpoint& networkDomain = requireNetworkDomain
+    (
+        secondaryDomain,
+        "coupled1D3DMonodomainVerifier::postProcess"
+    );
 
-        if (osPtr.valid())
-        {
-            *osPtr
-                << "t,sourceMin,sourceMax,sourceL1,sourceL2,"
-                << "totalCurrent,totalAbsCurrent,nonZeroCells,totalCells" << nl;
-
-            *osPtr
-                << mesh.time().value() << ','
-                << sourceMin << ','
-                << sourceMax << ','
-                << sourceL1 << ','
-                << sourceL2 << ','
-                << totalCurrent << ','
-                << totalAbsCurrent << ','
-                << nonZeroCells << ','
-                << totalCells << nl;
-        }
-    }
-}
-
-
-void coupled1D3DMonodomainVerifier::correctCoupling
-(
-    tissueCouplingEndpoint& primaryDomain,
-    electroDomainInterface& secondaryDomain,
-    scalar primaryTime,
-    scalar secondaryTime,
-    scalarField& terminalCurrent,
-    scalarField& terminalSource
-)
-{
-    auto* networkDomain =
-        dynamic_cast<networkCouplingEndpoint*>(&secondaryDomain);
-
-    if (!networkDomain)
-    {
-        FatalErrorInFunction
-            << "coupled1D3DMonodomainVerifier::correctCoupling requires a "
-            << "networkCouplingEndpoint secondary domain."
-            << exit(FatalError);
-    }
-
-    const fvMesh& mesh = primaryDomain.mesh();
-    const pointField& terminalLocations = networkDomain->terminalLocations();
-
-    if (!exactMapperPtr_)
-    {
-        exactMapperPtr_.reset
-        (
-            new pvjMapper
-            (
-                mesh,
-                terminalLocations,
-                dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-                dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
-                false
-            )
-        );
-    }
-
-    const vectorField& centres = mesh.C().primitiveField();
-    scalarField X(centres.component(vector::X));
-    scalarField Y(centres.component(vector::Y));
-    scalarField Z(centres.component(vector::Z));
+    const pointField& terminalLocations = networkDomain.terminalLocations();
+    pvjMapper exactMapper
+    (
+        mesh,
+        terminalLocations,
+        dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
+        false
+    );
 
     scalarField VmExact3D;
-    computeManufacturedV(VmExact3D, X, Y, Z, primaryTime, 3);
+    computeExactVmField(mesh, mesh.time().value(), VmExact3D);
 
     volScalarField VmExactField
     (
@@ -214,58 +550,129 @@ void coupled1D3DMonodomainVerifier::correctCoupling
     );
     VmExactField.primitiveFieldRef() = VmExact3D;
 
-    scalarField VmExact3DAtTerminals;
-    exactMapperPtr_->gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
-
-    scalarField terminalX(terminalLocations.size());
-    forAll(terminalLocations, i)
-    {
-        terminalX[i] = terminalLocations[i].x();
-    }
-
-    scalarField zeroY(terminalX.size(), 0.0);
-    scalarField zeroZ(terminalX.size(), 0.0);
-
     scalarField VmExact1D;
-    computeManufacturedV
+    computeExactTerminalVm(terminalLocations, mesh.time().value(), VmExact1D);
+
+    const scalarField R_pvj = terminalResistances(networkDomain, dict().parent());
+
+    volScalarField exactSourceField
     (
-        VmExact1D,
-        terminalX,
-        zeroY,
-        zeroZ,
-        secondaryTime,
-        1
+        IOobject
+        (
+            "coupled1D3DMonodomainVerifier:exactSource",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh,
+        dimensionedScalar("exactSource", sourceField.dimensions(), 0.0)
     );
 
-    const scalarField* terminalResistances =
-        networkDomain->terminalResistances();
-
-    scalarField R_pvj;
-    if (terminalResistances)
+    if (implicitCoupling)
     {
-        R_pvj = *terminalResistances;
+        volScalarField exactImplicitCoeff
+        (
+            IOobject
+            (
+                "coupled1D3DMonodomainVerifier:exactImplicitCoeff",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            mesh,
+            dimensionedScalar
+            (
+                "exactImplicitCoeff",
+                primaryDomain.implicitSourceCoeffPtr()->dimensions(),
+                0.0
+            )
+        );
+
+        exactMapper.depositImplicitCoupling
+        (
+            VmExact1D,
+            R_pvj,
+            exactSourceField,
+            exactImplicitCoeff
+        );
+
+        const scalarField& exactCoeff =
+            exactImplicitCoeff.primitiveField();
+        scalarField& exactSource = exactSourceField.primitiveFieldRef();
+
+        forAll(exactSource, i)
+        {
+            exactSource[i] -= exactCoeff[i]*VmExact3D[i];
+        }
     }
     else
     {
-        R_pvj = scalarField
-        (
-            terminalLocations.size(),
-            dict().parent().get<scalar>("rPvj")
-        );
+        scalarField VmExact3DAtTerminals;
+        exactMapper.gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
+
+        scalarField exactCurrent(VmExact1D.size(), 0.0);
+        forAll(exactCurrent, i)
+        {
+            exactCurrent[i] =
+                (VmExact1D[i] - VmExact3DAtTerminals[i])/R_pvj[i];
+        }
+
+        exactMapper.depositCoupling(exactCurrent, exactSourceField);
     }
 
-    scalarField exactCurrent(terminalX.size());
-    forAll(exactCurrent, i)
+    exactSourceValues = exactSourceField.primitiveField();
+    scalarField sourceError(sourceValues);
+    sourceError -= exactSourceValues;
+
+    const SourceStats exactStats = computeSourceStats(mesh, exactSourceValues);
+    const SourceStats errorStats = computeSourceStats(mesh, sourceError);
+    const label totalCells = globalManufacturedCellCount(mesh);
+
+    if (Pstream::master())
     {
-        exactCurrent[i] = (VmExact1D[i] - VmExact3DAtTerminals[i])/R_pvj[i];
+        mkDir(mesh.time().globalPath()/"verification");
+        autoPtr<OFstream> osPtr
+        (
+            new OFstream
+            (
+                mesh.time().globalPath()/"verification"
+              / "coupled1D3DMonodomain_diagnostics.csv"
+            )
+        );
+
+        if (osPtr.valid())
+        {
+            *osPtr
+                << "t,sourceMin,sourceMax,sourceL1,sourceL2,"
+                << "totalCurrent,totalAbsCurrent,nonZeroCells,totalCells,"
+                << "exactSourceL1,exactSourceL2,sourceErrorL1,"
+                << "sourceErrorL2,totalExactAbsCurrent,totalAbsSourceError"
+                << nl;
+
+            *osPtr
+                << mesh.time().value() << ','
+                << sourceStats.minValue << ','
+                << sourceStats.maxValue << ','
+                << sourceStats.l1 << ','
+                << sourceStats.l2 << ','
+                << sourceStats.total << ','
+                << sourceStats.totalAbs << ','
+                << sourceStats.nonZero << ','
+                << totalCells << ','
+                << exactStats.l1 << ','
+                << exactStats.l2 << ','
+                << errorStats.l1 << ','
+                << errorStats.l2 << ','
+                << exactStats.totalAbs << ','
+                << errorStats.totalAbs << nl;
+        }
     }
-
-    scalarField exactSource;
-    exactMapperPtr_->volumetricSource(exactCurrent, exactSource);
-
-    terminalCurrent -= exactCurrent;
-    terminalSource -= exactSource;
 }
+
 
 } // End namespace Foam
 

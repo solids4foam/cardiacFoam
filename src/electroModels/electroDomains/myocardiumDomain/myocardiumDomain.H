@@ -202,6 +202,11 @@ public:
         return sourceField_;
     }
 
+    virtual ionicModel* ionicModelPtr() override
+    {
+        return &ionicModel_;
+    }
+
     virtual volScalarField* implicitSourceCoeffPtr() override
     {
         return &implicitSourceCoeff_;

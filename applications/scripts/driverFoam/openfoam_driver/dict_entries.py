@@ -1516,6 +1516,16 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value='uniform',
         ),
         DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjCouplingScheme',
+            description="PVJ source treatment for reactionDiffusionPvjCoupler: 'explicit' injects the full coupling current as a source, while 'implicit' splits the tissue-voltage part onto the myocardium Vm matrix diagonal. Default: explicit.",
+            source_refs=('src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C',),
+            value_kind='enum',
+            enum_values=('explicit', 'implicit'),
+            dynamic_path=True,
+            typical_value='explicit',
+            constraints=("Only applicable to reactionDiffusionPvjCoupler.",),
+        ),
+        DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.debugCoupling',
             description='Outputs verbose logging about PVJ coupling weights and mappings.',
             source_refs=('src/electroModels/electroCouplers/electroDomainCoupler.C',),

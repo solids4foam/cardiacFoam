@@ -84,8 +84,7 @@ The default `pvjCouplingScheme explicit` preserves the historical behavior:
 the full `I_pvj` is projected into the myocardium `sourceField`. With
 `pvjCouplingScheme implicit`, the network-voltage part is kept as an explicit
 source and the tissue-voltage part is assembled as a diagonal sink in the
-myocardium Vm matrix. The shorter alias `couplingScheme implicit` is also
-accepted.
+myocardium Vm matrix.
 
 The coupler reuses internal buffers for:
 

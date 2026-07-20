@@ -8,11 +8,8 @@ import math
 from pathlib import Path
 
 
-ROOT = (0.50, 0.50, 1/3)
-TERMINALS = (
-    (0.00, 0.50, 1/3),
-    (1.00, 0.50, 1/3),
-)
+DEFAULT_GRAPH_Y = 1.0 / 6.0
+DEFAULT_GRAPH_Z = 1.0 / 3.0
 CONDUCTANCE = 1.0
 
 
@@ -32,20 +29,26 @@ def fmt_point(point: tuple[float, float, float]) -> str:
     return f"({point[0]:.12g} {point[1]:.12g} {point[2]:.12g})"
 
 
-def build_graph(segments_per_branch: int):
+def build_graph(segments_per_branch: int, graph_y: float, graph_z: float):
     if segments_per_branch < 1:
         raise ValueError("segments_per_branch must be positive")
 
-    points = [ROOT]
+    root = (0.50, graph_y, graph_z)
+    terminals = (
+        (0.00, graph_y, graph_z),
+        (1.00, graph_y, graph_z),
+    )
+
+    points = [root]
     edges = []
     pvj_nodes = []
 
-    for terminal in TERMINALS:
+    for terminal in terminals:
         previous = 0
-        edge_length = distance(ROOT, terminal) / segments_per_branch
+        edge_length = distance(root, terminal) / segments_per_branch
 
         for segment_i in range(1, segments_per_branch + 1):
-            points.append(interpolate(ROOT, terminal, segment_i / segments_per_branch))
+            points.append(interpolate(root, terminal, segment_i / segments_per_branch))
             node = len(points) - 1
             edges.append((previous, node, edge_length, CONDUCTANCE))
             previous = node
@@ -141,6 +144,18 @@ def main() -> int:
         default=(1, 5, 10, 20, 40, 80),
         help="Segment counts per branch",
     )
+    parser.add_argument(
+        "--graph-y",
+        type=float,
+        default=DEFAULT_GRAPH_Y,
+        help="Constant y-coordinate for the 1D graph",
+    )
+    parser.add_argument(
+        "--graph-z",
+        type=float,
+        default=DEFAULT_GRAPH_Z,
+        help="Constant z-coordinate for the 1D graph",
+    )
     args = parser.parse_args()
 
     case_dir = args.case.resolve()
@@ -149,7 +164,7 @@ def main() -> int:
     vtk_dir.mkdir(parents=True, exist_ok=True)
 
     for segments in args.segments:
-        points, edges, pvj_nodes = build_graph(segments)
+        points, edges, pvj_nodes = build_graph(segments, args.graph_y, args.graph_z)
         node_count = len(points)
         suffix = f"nodes{node_count:03d}"
         foam_path = constant_dir / f"purkinjeGraph.{suffix}"
@@ -160,7 +175,8 @@ def main() -> int:
 
         print(
             f"{suffix}: segments/branch={segments}, "
-            f"nodes={len(points)}, edges={len(edges)}"
+            f"nodes={len(points)}, edges={len(edges)}, "
+            f"graph_y={args.graph_y:.12g}, graph_z={args.graph_z:.12g}"
         )
 
     return 0

@@ -5,7 +5,8 @@ Reads per-resolution output directories produced by run_coupled_1D3D_sweep.sh
 and writes unified convergence tables (errors + rates) for:
   - 3D myocardium: Vm, u1, u2
   - 1D graph:      Vm1D, u1, u2
-  - Coupling:      sourceL1, sourceL2, totalAbsCurrent
+  - Coupling:      sourceL1, sourceL2, sourceErrorL1, sourceErrorL2,
+                   totalAbsCurrent
 """
 
 from __future__ import annotations
@@ -135,7 +136,17 @@ def collect(output_dir: Path) -> list[dict]:
                 row[f"L2_{tag}"]   = l2
                 row[f"Linf_{tag}"] = linf
 
-        for key in ("sourceL1", "sourceL2", "totalAbsCurrent"):
+        for key in (
+            "sourceL1",
+            "sourceL2",
+            "exactSourceL1",
+            "exactSourceL2",
+            "sourceErrorL1",
+            "sourceErrorL2",
+            "totalAbsCurrent",
+            "totalExactAbsCurrent",
+            "totalAbsSourceError",
+        ):
             if key in coupling:
                 row[f"coupling_{key}"] = coupling[key]
 
@@ -151,7 +162,8 @@ def collect(output_dir: Path) -> list[dict]:
 _RATE_TARGETS = [
     "Linf_3D_Vm", "Linf_3D_u1", "Linf_3D_u2",
     "Linf_1D_Vm", "Linf_1D_u1", "Linf_1D_u2",
-    "coupling_sourceL1", "coupling_totalAbsCurrent",
+    "coupling_sourceL1", "coupling_exactSourceL1", "coupling_sourceErrorL1",
+    "coupling_totalAbsCurrent", "coupling_totalAbsSourceError",
 ]
 
 
@@ -203,6 +215,7 @@ def plot_convergence(rows: list[dict], output_dir: Path) -> list[Path]:
         ("Linf_3D_Vm", r"3D $V_m$ $L_\infty$", "o", "#1f77b4"),
         ("Linf_1D_Vm", r"1D $V_m$ $L_\infty$", "s", "#d62728"),
         ("coupling_sourceL1", r"coupling source $L_1$", "^", "#2ca02c"),
+        ("coupling_sourceErrorL1", r"coupling source error $L_1$", "v", "#9467bd"),
     ]
 
     fig, ax = plt.subplots(figsize=(7.5, 4.8))

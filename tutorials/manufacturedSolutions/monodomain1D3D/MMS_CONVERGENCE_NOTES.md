@@ -14,6 +14,14 @@ monodomain system.
 
 Ionic gates: `u1_exact = u2_exact = V_exact/2`, with corresponding forcing terms.
 
+**Current graph placement.** The checked-in graph family now uses
+`y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`.
+These terminals are still on the `x=0` and `x=1` tissue boundary faces, where
+the manufactured 3D normal flux is zero.  The old placement
+`y=0.5, z=1/3` made `cos(2πy)cos(3πz)=1`, so `F_3D(terminal)=F_1D`.  The new
+placement gives `cos(π/3)cos(π)=-0.5`, so the terminal coupling terms do not
+cancel pointwise.
+
 **Mesh pairing** — `h_1D ≈ h_3D` throughout the sweep:
 
 | N³ mesh | Graph nodes | h_3D | h_1D |
@@ -50,7 +58,7 @@ matching the standalone `monodomainPseudoECG` driver results.
 
 ---
 
-## Coupled sweep — rPvj=1, pvjRadius=0.11
+## Historical coupled sweep — rPvj=1, pvjRadius=0.11
 
 ### Setup
 
@@ -119,31 +127,30 @@ deposit operators converge to well-defined, bounded continuum quantities for the
 chosen radius and kernel. The evidence is the coupling source plateau
 (`coupling_srcL1 ≈ 1.3e-2` by N=80), not growth without bound.
 
-The actual MMS defect was that the manufactured forcing cancelled only the
-standalone monodomain PDE residual. It did not cancel the PVJ coupling operator
-evaluated at the manufactured reference. With coupling active, the solver was
-therefore solving the manufactured PDE plus an extra fixed source term,
-`S_coupling(V_exact_3D, V_exact_1D)`, so the 3D field converged to the response to
-that extra source rather than to `V_exact`.
+The standalone manufactured ionic model cancels the monodomain PDE residual. The
+coupled MMS additionally adds the exact PVJ source to that manufactured ionic
+residual, so the analytical 1D/3D fields satisfy the coupled equations. Active
+coupling itself is left raw: the verifier does not alter terminal currents, 3D
+source fields, or implicit source coefficients. The coupled verifier also
+computes the exact PVJ source after the solve and reports the diagnostic residual
+`S_pvj(V_num) - S_pvj(V_exact)`.
 
-The correction implemented in `coupled1D3DMonodomainVerifier` subtracts that
-manufactured coupling residual from the shared PVJ current/source buffers before
-deposit. Because the staggered algorithm evaluates coupling twice per step, the
-correction uses the actual production time levels:
-
-- secondary phase: 3D primary state at `t0`, 1D secondary state at `t0`
-- primary phase: 3D primary state still at `t0`, 1D secondary state already at
-  `t0 + dt`
-
-This preserves the existing manufactured reference and production coupling math;
-only the verification-layer residual is cancelled.
+For the explicit source path, the diagnostic compares the deposited terminal
+current source against the exact terminal current source. For
+`pvjCouplingScheme implicit`, the production operator is split into a
+network-voltage source and tissue-voltage diagonal sink, so the diagnostic forms
+the effective source `source - coeff*Vm` before comparing against the exact
+split source. The production coupler does not contain FDA-specific formulas; it
+only calls the generic verification hook that supplies the manufactured ionic
+source term.
 
 ---
 
-## Post-fix coupled sweep — unidirectional, rPvj=1, pvjRadius=0.11, t=0.1
+## Historical corrected coupled sweep — unidirectional, rPvj=1, pvjRadius=0.11, t=0.1
 
-Default documented configuration: `couplingMode unidirectional`, `rPvj=1.0`,
-`pvjRadius=0.11`, linear kernel, terminals on the x-boundary faces.
+Configuration: `couplingMode unidirectional`, `rPvj=1.0`, `pvjRadius=0.11`,
+linear kernel, terminals on the x-boundary faces using the older cancelling
+`y=0.5, z=1/3` placement.
 
 | N | h | Linf_3D_Vm | rate_3D | Linf_1D_Vm | rate_1D | coupling_srcL1 | rate_coupling |
 |---|---|---|---|---|---|---|---|
@@ -152,17 +159,13 @@ Default documented configuration: `couplingMode unidirectional`, `rPvj=1.0`,
 | 40 | 0.0250 | 3.4859e-04 | **1.9863** | 2.1956e-05 | **2.0106** | 1.0324e-04 | **1.9962** |
 | 80 | 0.0125 | 8.7734e-05 | **1.9903** | 5.5004e-06 | **1.9970** | 2.5993e-05 | **1.9898** |
 
-The corrected active-coupling case now recovers the same asymptotic O(h²)
-behaviour as the standalone and negligible-coupling runs. The remaining coupling
-diagnostic is not expected to be roundoff at coarse resolution: once the 1D
-network and 3D tissue have advanced numerically, their errors feed the corrected
-coupling term. The key result is that this diagnostic now converges away at O(h²).
-The post-processing script writes this visual summary to
-`outputs/coupled1D3DConvergence/coupled_1D3D_convergence.png` and `.pdf`.
+This table came from an earlier verifier-side manufactured PVJ forcing
+experiment. It is kept as historical context only; it should not be used as raw
+coupling validation.
 
 ---
 
-## Post-fix coupled sweep — bidirectional, rPvj=1, pvjRadius=0.11, t=0.1
+## Historical corrected coupled sweep — bidirectional, rPvj=1, pvjRadius=0.11, t=0.1
 
 Same case, with `couplingMode bidirectional` to exercise the 1D deposit path that
 is cleared in unidirectional mode.
@@ -174,20 +177,15 @@ is cleared in unidirectional mode.
 | 40 | 0.0250 | 3.4859e-04 | **1.9863** | 2.1777e-05 | **1.9990** | 1.0317e-04 | **1.9954** |
 | 80 | 0.0125 | 8.7734e-05 | **1.9903** | 5.4749e-06 | **1.9919** | 2.5984e-05 | **1.9893** |
 
-Both domains converge at O(h²), confirming that the correction is valid for the
-secondary/1D deposit path as well as the primary/3D path.
+This table uses the same historical verifier-side manufactured PVJ forcing and
+exercises the retrograde 1D deposit path as well as the tissue source path.
 
 ### What this test does and doesn't verify
 
-This MMS case, after the coupling-correction fix, validates that the coupled
-solvers integrate the volumetric source produced by `pvjMapper` at the expected
-discretization order. It does **not** independently validate that `pvjMapper`'s
-fixed-radius sphere average is itself a spatially accurate physical PVJ model:
-the correction is computed via a second `pvjMapper` instance built from the same
-geometry inputs (mesh, terminal locations, radius, kernel) as the production
-mapper. A bug living purely inside `pvjMapper`'s geometry construction would be
-computed identically by both instances and cancel out of this test. Spatial
-accuracy of the sphere-average operator itself needs a separate verification case.
+The raw coupled MMS validates the explicit/implicit PVJ schemes as they are
+implemented. The verifier writes the exact PVJ source magnitude and the residual
+source norms so the source behaviour can be checked directly without changing
+the solve.
 
 ---
 
@@ -222,6 +220,51 @@ reference was still uncancelled:
 
 ---
 
+## Coupled MMS scheme matrix — non-cancelling graph, t=0.1
+
+The current coupled MMS uses the non-cancelling graph placement
+`y=1/6, z=1/3` and leaves the production PVJ source assembly raw. The exact PVJ
+source is added only through the manufactured ionic residual.
+
+For `rPvj=1.0`, `pvjRadius=0.11`, and N=10→20→40→80:
+
+| Case | rate_3D_Vm | rate_1D_Vm | rate_sourceError |
+|------|------------|------------|------------------|
+| unidirectional, PVJ explicit | 1.8450, 1.9863, 1.9903 | 1.9556, 2.0106, 1.9970 | 2.0806, 2.0233, 2.0015 |
+| unidirectional, PVJ implicit | 1.8444, 1.9863, 1.9903 | 1.9556, 2.0106, 1.9970 | 1.8104, 1.9328, 1.9897 |
+| bidirectional, PVJ explicit | 1.8450, 1.9863, 1.9903 | 1.9613, 2.0156, 2.0001 | 2.0808, 2.0235, 2.0016 |
+| bidirectional, PVJ implicit | 1.8444, 1.9863, 1.9903 | 1.9557, 2.0162, 2.0005 | 1.8111, 1.9318, 1.9893 |
+
+The source magnitude is not expected to converge to zero; it is the applied PVJ
+source. The relevant coupling metric is `coupling_sourceErrorL1`, which converges
+at approximately second order.
+
+The final 80³ values are:
+
+| Case | Linf_3D_Vm | Linf_1D_Vm | coupling_sourceErrorL1 |
+|------|------------|------------|------------------------|
+| unidirectional, PVJ explicit | 8.77337e-05 | 5.50037e-06 | 4.81068e-05 |
+| unidirectional, PVJ implicit | 8.77337e-05 | 5.50037e-06 | 1.49776e-05 |
+| bidirectional, PVJ explicit | 8.77337e-05 | 5.51280e-06 | 4.81107e-05 |
+| bidirectional, PVJ implicit | 8.77337e-05 | 5.51498e-06 | 1.49728e-05 |
+
+A stronger but still clean stress point is `rPvj=0.3`, which raises the N=40
+exact source magnitude from about 3.03 to about 10.11 while preserving O(h²)
+field convergence:
+
+| Case | rate_3D_Vm | rate_1D_Vm | rate_sourceError |
+|------|------------|------------|------------------|
+| unidirectional, PVJ explicit | 1.8453, 1.9864 | 1.9556, 2.0106 | 2.0593, 2.0167 |
+| unidirectional, PVJ implicit | 1.8443, 1.9863 | 1.9556, 2.0106 | 1.7300, 1.8740 |
+| bidirectional, PVJ explicit | 1.8453, 1.9864 | 1.9657, 2.0169 | 2.0594, 2.0168 |
+| bidirectional, PVJ implicit | 1.8443, 1.9863 | 1.9543, 2.0178 | 1.7308, 1.8730 |
+
+Lowering to `rPvj=0.1` is useful as a stability stress test, but the explicit
+PVJ scheme is too strong on the 10³ mesh and the coarse point is not part of the
+recommended convergence evidence.
+
+---
+
 ## Summary
 
 | Test | 3D rate | 1D rate | Conclusion |
@@ -229,18 +272,21 @@ reference was still uncancelled:
 | 3D standalone | **~2** | — | solver correct |
 | 1D standalone | — | **~2** | solver correct |
 | Coupled, rPvj=1, R=0.11, pre-fix | plateau/diverges | **~2** | standalone MMS forcing missed PVJ residual |
-| Coupled, rPvj=1, R=0.11, post-fix unidirectional | **~2** | **~2** | active-coupling MMS verified |
-| Coupled, rPvj=1, R=0.11, post-fix bidirectional | **~2** | **~2** | both deposit paths verified |
+| Coupled, rPvj=1, R=0.11, MMS-forced unidirectional | **~2** | **~2** | historical forced-source experiment |
+| Coupled, rPvj=1, R=0.11, MMS-forced bidirectional | **~2** | **~2** | historical forced-source experiment |
+| Current coupled scheme matrix, rPvj=1, R=0.11 | **~2** | **~2** | explicit/implicit and uni/bi converge |
+| Current coupled scheme matrix, rPvj=0.3, R=0.11 | **~2** | **~2** | stronger coupling still converges |
 | Coupled, rPvj=1e6, R=0.11 | **~2** | **~2** | coupling negligible → both solvers verified |
 | Coupled, rPvj=1, R=0.055, pre-fix | plateau/diverges (lower amplitude) | **~2** | smaller sphere reduced but did not cancel the missing PVJ forcing |
 
 **Key takeaways**
 
 - The 1D and 3D solvers individually converge at O(h²).
-- Before the correction, active coupling added a non-vanishing PVJ source because
-  the standalone manufactured forcing did not include the coupling operator's
-  residual at the exact reference.
-- After subtracting that residual in the verifier, active-coupling 1D-3D MMS
-  converges at O(h²) in both unidirectional and bidirectional modes.
-- This verifies the solver integration of the mapped coupling source, not the
-  independent spatial accuracy of the `pvjMapper` sphere-average geometry.
+- Active coupling adds a non-vanishing PVJ source for the non-cancelling graph
+  placement.
+- The coupled MMS verifier now supplies the exact PVJ source as a manufactured
+  ionic term and reports the exact PVJ source and residual source; it does not
+  subtract anything from the production coupling source.
+- The exact source is computed in the verification layer using the same PVJ
+  radius and kernel as the production mapper; the production coupler does not
+  depend on the manufactured FDA reference.

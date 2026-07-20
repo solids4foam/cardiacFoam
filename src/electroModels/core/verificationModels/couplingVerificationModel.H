@@ -30,8 +30,6 @@ Author
 
 #include "runTimeSelectionTables.H"
 #include "dictionary.H"
-#include "volFields.H"
-#include "scalarField.H"
 
 namespace Foam
 {
@@ -70,30 +68,31 @@ public:
         electroDomainInterface& secondaryDomain
     ) = 0;
 
-    virtual void postProcess
-    (
-        tissueCouplingEndpoint& primaryDomain,
-        electroDomainInterface& secondaryDomain
-    ) = 0;
-
-    //- Correct coupling buffers before deposit. Default no-op.
-    virtual void correctCoupling
+    virtual void updateManufacturedSource
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,
         scalar primaryTime,
         scalar secondaryTime,
-        scalarField& terminalCurrent,
-        scalarField& terminalSource
+        bool implicitCoupling,
+        bool bidirectionalCoupling,
+        const word& phaseName
     )
     {
         (void)primaryDomain;
         (void)secondaryDomain;
         (void)primaryTime;
         (void)secondaryTime;
-        (void)terminalCurrent;
-        (void)terminalSource;
+        (void)implicitCoupling;
+        (void)bidirectionalCoupling;
+        (void)phaseName;
     }
+
+    virtual void postProcess
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain
+    ) = 0;
 
 protected:
 

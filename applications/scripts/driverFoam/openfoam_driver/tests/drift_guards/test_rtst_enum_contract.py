@@ -115,6 +115,9 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     # pvjKernel selects the PVJ spatial-spreading kernel (uniform / ...) via a
     # plain lookupOrDefault<word> in pvjCoupler.C, not a runtime table.
     "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjKernel",
+    # pvjCouplingScheme selects explicit vs split implicit source assembly by
+    # a plain word in reactionDiffusionPvjCoupler.C, not a runtime table.
+    "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjCouplingScheme",
     # The user-facing `myocardiumSolver` value is a UNION of the
     # `electroModel` RTST and the `myocardiumSolver` RTST, plus the
     # eikonalMyocardiumDomain factory — no single base to check against.

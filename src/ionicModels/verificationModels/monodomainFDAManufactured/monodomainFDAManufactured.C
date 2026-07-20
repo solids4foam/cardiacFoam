@@ -50,7 +50,11 @@ Foam::monodomainFDAManufactured::monodomainFDAManufactured
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
-    RATES_(num)
+    RATES_(num),
+    manufacturedSourceTermPtr_(nullptr),
+    manufacturedSourceChi_(1.0),
+    manufacturedSourceCm_(1.0),
+    manufacturedSourceStart_(0)
 {
     setTissue(ionicSelector::selectDimension(dict, supportedDimensions()));
 
@@ -133,8 +137,63 @@ void Foam::monodomainFDAManufactured::solveODE
             debugPrintFields(integrationPtI, tStart, tEnd, h);
         }
 
-        Im[integrationPtI] = A[Iion] / CONSTANTS_[Cm];
+        scalar manufacturedSourceCorrection = 0.0;
+        if (manufacturedSourceTermPtr_)
+        {
+            const label sourceI = manufacturedSourceStart_ + integrationPtI;
+            if
+            (
+                sourceI < 0
+             || sourceI >= manufacturedSourceTermPtr_->size()
+            )
+            {
+                FatalErrorInFunction
+                    << "Manufactured source index " << sourceI
+                    << " is outside source field size "
+                    << manufacturedSourceTermPtr_->size()
+                    << exit(FatalError);
+            }
+
+            manufacturedSourceCorrection =
+                (*manufacturedSourceTermPtr_)[sourceI]
+              / (manufacturedSourceChi_*manufacturedSourceCm_);
+        }
+
+        Im[integrationPtI] =
+            A[Iion]/CONSTANTS_[Cm]
+          + manufacturedSourceCorrection;
     }
+}
+
+
+void Foam::monodomainFDAManufactured::setManufacturedSourceTerm
+(
+    const scalarField& sourceTerm,
+    scalar chi,
+    scalar Cm,
+    label sourceStart
+)
+{
+    if (mag(chi*Cm) <= VSMALL)
+    {
+        FatalErrorInFunction
+            << "Manufactured source correction requires non-zero chi*Cm."
+            << exit(FatalError);
+    }
+
+    manufacturedSourceTermPtr_ = &sourceTerm;
+    manufacturedSourceChi_ = chi;
+    manufacturedSourceCm_ = Cm;
+    manufacturedSourceStart_ = sourceStart;
+}
+
+
+void Foam::monodomainFDAManufactured::clearManufacturedSourceTerm()
+{
+    manufacturedSourceTermPtr_ = nullptr;
+    manufacturedSourceChi_ = 1.0;
+    manufacturedSourceCm_ = 1.0;
+    manufacturedSourceStart_ = 0;
 }
 
 

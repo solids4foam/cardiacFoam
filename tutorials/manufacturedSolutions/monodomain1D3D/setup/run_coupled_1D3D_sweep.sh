@@ -7,6 +7,11 @@
 #   ENDTIME   final simulation time (default 0.1)
 #   RPVJ      PVJ resistance, overrides rPvj in electroProperties (default: no override)
 #   COUPLING_MODE  overrides couplingMode (unidirectional or bidirectional)
+#   SOLUTION_ALGORITHM  overrides solutionAlgorithm (explicit or implicit)
+#   PVJ_COUPLING_SCHEME overrides pvjCouplingScheme (explicit or implicit)
+#   COUPLED_1D3D_PAIRS  space-separated N:graph pairs
+#                       (default: "10:nodes011 20:nodes021 40:nodes041 80:nodes081")
+#   SKIP_PAPERI_AGGREGATE=1  do not refresh the Paper I canonical CSV
 #   OUTPUT_SUFFIX  appended to the output dir name (default: empty)
 
 set -euo pipefail
@@ -18,6 +23,10 @@ ENDTIME="${ENDTIME:-0.1}"
 RPVJ="${RPVJ:-}"
 PVJRADIUS="${PVJRADIUS:-}"
 COUPLING_MODE="${COUPLING_MODE:-}"
+SOLUTION_ALGORITHM="${SOLUTION_ALGORITHM:-}"
+PVJ_COUPLING_SCHEME="${PVJ_COUPLING_SCHEME:-}"
+COUPLED_1D3D_PAIRS="${COUPLED_1D3D_PAIRS:-}"
+SKIP_PAPERI_AGGREGATE="${SKIP_PAPERI_AGGREGATE:-0}"
 OUTPUT_SUFFIX="${OUTPUT_SUFFIX:-}"
 OUTPUT_DIR="$CASE_DIR/outputs/coupled1D3DConvergence${OUTPUT_SUFFIX}"
 
@@ -34,14 +43,19 @@ if [[ -n "$_OF_BASHRC" ]]; then
 fi
 unset _OF_BASHRC
 
-# Pairs: (N_3D graph_id)
-declare -a PAIRS=(
-    "10 nodes011"
-    "20 nodes021"
-    "40 nodes041"
-    "80 nodes081"
-)
+# Pairs: N_3D:graph_id
+if [[ -n "$COUPLED_1D3D_PAIRS" ]]; then
+    read -r -a PAIRS <<< "$COUPLED_1D3D_PAIRS"
+else
+    declare -a PAIRS=(
+        "10:nodes011"
+        "20:nodes021"
+        "40:nodes041"
+        "80:nodes081"
+    )
+fi
 
+rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 # Restore backups on any exit
@@ -50,12 +64,28 @@ _restore_backups() {
     [[ -f "$bak" ]] && mv "$bak" "$CASE_DIR/system/controlDict"
     local epbak="$CASE_DIR/constant/electroProperties.bak"
     [[ -f "$epbak" ]] && mv "$epbak" "$CASE_DIR/constant/electroProperties"
+    local active_bak="$CASE_DIR/system/blockMeshDict.3D.active.bak"
+    local active_missing="$CASE_DIR/system/blockMeshDict.3D.active.missing"
+    if [[ -f "$active_bak" ]]; then
+        mv "$active_bak" "$CASE_DIR/system/blockMeshDict.3D.active"
+    elif [[ -f "$active_missing" ]]; then
+        rm -f "$CASE_DIR/system/blockMeshDict.3D.active"
+        rm -f "$active_missing"
+    fi
+    return 0
 }
 trap _restore_backups EXIT
 
+if [[ -f "$CASE_DIR/system/blockMeshDict.3D.active" ]]; then
+    cp "$CASE_DIR/system/blockMeshDict.3D.active" \
+       "$CASE_DIR/system/blockMeshDict.3D.active.bak"
+else
+    : > "$CASE_DIR/system/blockMeshDict.3D.active.missing"
+fi
+
 for pair in "${PAIRS[@]}"
 do
-    read -r N_CELLS GRAPH_ID <<< "$pair"
+    IFS=: read -r N_CELLS GRAPH_ID <<< "$pair"
 
     # Skip if pvjRadius < cell size (pvjMapper would abort)
     if [[ -n "$PVJRADIUS" ]]; then
@@ -67,7 +97,7 @@ do
         fi
     fi
 
-    echo "=== Coupled sweep: ${N_CELLS}^3 mesh / ${GRAPH_ID}  endTime=${ENDTIME}  rPvj=${RPVJ:-default}  pvjRadius=${PVJRADIUS:-default}  couplingMode=${COUPLING_MODE:-default} ==="
+    echo "=== Coupled sweep: ${N_CELLS}^3 mesh / ${GRAPH_ID}  endTime=${ENDTIME}  rPvj=${RPVJ:-default}  pvjRadius=${PVJRADIUS:-default}  couplingMode=${COUPLING_MODE:-default}  solutionAlgorithm=${SOLUTION_ALGORITHM:-default}  pvjCouplingScheme=${PVJ_COUPLING_SCHEME:-default} ==="
 
     # --- 3D mesh ---
     sed "s/(10 10 10)/(${N_CELLS} ${N_CELLS} ${N_CELLS})/g" \
@@ -97,13 +127,15 @@ do
         > "$CASE_DIR/system/controlDict"
 
     # --- optional electroProperties overrides ---
-    if [[ -n "$RPVJ" || -n "$PVJRADIUS" || -n "$COUPLING_MODE" ]]; then
+    if [[ -n "$RPVJ" || -n "$PVJRADIUS" || -n "$COUPLING_MODE" || -n "$SOLUTION_ALGORITHM" || -n "$PVJ_COUPLING_SCHEME" ]]; then
         cp "$CASE_DIR/constant/electroProperties" \
            "$CASE_DIR/constant/electroProperties.bak"
         _ep_sed_args=()
         [[ -n "$RPVJ"      ]] && _ep_sed_args+=(-e "s/rPvj[[:space:]].*[0-9];/rPvj            ${RPVJ};/")
         [[ -n "$PVJRADIUS" ]] && _ep_sed_args+=(-e "s/pvjRadius[[:space:]].*[0-9];/pvjRadius       ${PVJRADIUS};/")
         [[ -n "$COUPLING_MODE" ]] && _ep_sed_args+=(-e "s/couplingMode[[:space:]].*;/couplingMode    ${COUPLING_MODE};/")
+        [[ -n "$SOLUTION_ALGORITHM" ]] && _ep_sed_args+=(-e "s/solutionAlgorithm[[:space:]].*;/solutionAlgorithm ${SOLUTION_ALGORITHM};/")
+        [[ -n "$PVJ_COUPLING_SCHEME" ]] && _ep_sed_args+=(-e "s/pvjCouplingScheme[[:space:]].*;/pvjCouplingScheme ${PVJ_COUPLING_SCHEME};/")
         sed "${_ep_sed_args[@]}" \
             "$CASE_DIR/constant/electroProperties.bak" \
             > "$CASE_DIR/constant/electroProperties"
@@ -128,15 +160,14 @@ do
         "$case_output/coupling_diagnostics.csv"          2>/dev/null || true
 done
 
-# clean temp dict
-rm -f "$CASE_DIR/system/blockMeshDict.3D.active"
-
 "$SCRIPT_DIR/post_processing_coupled_1D3D.py" --output-dir "$OUTPUT_DIR"
 
 echo "Coupled 1D-3D sweep outputs written to $OUTPUT_DIR"
 
 # --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
-_PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" coupling \
-    --repo-root "$_PAPERI_ROOT" \
-    || echo "WARN: paperI aggregate (coupling) failed; native output untouched" >&2
+if [[ "$SKIP_PAPERI_AGGREGATE" != "1" ]]; then
+    _PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+    python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" coupling \
+        --repo-root "$_PAPERI_ROOT" \
+        || echo "WARN: paperI aggregate (coupling) failed; native output untouched" >&2
+fi

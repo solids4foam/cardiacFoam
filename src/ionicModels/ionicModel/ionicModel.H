@@ -170,6 +170,23 @@ class ionicModel
             return 0;
         }
 
+        virtual void setManufacturedSourceTerm
+        (
+            const scalarField& sourceTerm,
+            scalar chi,
+            scalar Cm,
+            label sourceStart = 0
+        )
+        {
+            (void)sourceTerm;
+            (void)chi;
+            (void)Cm;
+            (void)sourceStart;
+        }
+
+        virtual void clearManufacturedSourceTerm()
+        {}
+
         virtual ionicModelIO::VmTransform ioVmTransform() const
         {
             return nullptr;

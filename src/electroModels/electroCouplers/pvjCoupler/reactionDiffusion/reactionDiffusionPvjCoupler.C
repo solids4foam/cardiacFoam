@@ -73,19 +73,6 @@ void reactionDiffusionPvjCoupler::evaluateCoupling
     );
     mapper_.volumetricSource(terminalCurrentBuffer_, terminalSourceBuffer_);
 
-    if (verificationModelPtr_)
-    {
-        verificationModelPtr_->correctCoupling
-        (
-            primaryDomain_,
-            secondaryDomain_,
-            primaryTime,
-            secondaryTime,
-            terminalCurrentBuffer_,
-            terminalSourceBuffer_
-        );
-    }
-
     reportCouplingDiagnostics(phaseName);
 }
 
@@ -125,9 +112,7 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
     couplingScheme_
     (
-        dict.found("pvjCouplingScheme")
-      ? dict.get<word>("pvjCouplingScheme")
-      : dict.lookupOrDefault<word>("couplingScheme", "explicit")
+        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
     ),
     tissueVmBuffer_(),
     networkVmBuffer_()
@@ -168,6 +153,20 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
     pvjCoupler::prepareSecondaryCoupling(t0, dt);
 
     evaluateCoupling(t0, t0, "secondary");
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->updateManufacturedSource
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            t0,
+            couplingScheme_ == "implicit",
+            couplingMode_ == bidirectional,
+            "secondary"
+        );
+    }
 
     if (couplingMode_ == unidirectional)
     {
@@ -218,6 +217,20 @@ void reactionDiffusionPvjCoupler::depositPrimaryCoupling() const
 void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
     evaluateCoupling(t0, t0 + dt, "primary");
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->updateManufacturedSource
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            t0 + dt,
+            couplingScheme_ == "implicit",
+            couplingMode_ == bidirectional,
+            "primary"
+        );
+    }
 
     depositPrimaryCoupling();
 

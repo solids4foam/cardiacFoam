@@ -116,6 +116,7 @@ monodomainSolverCoeffs
             rPvj 1.0;
             pvjRadius 0.11;
             pvjKernel linear;
+            pvjCouplingScheme explicit;
             couplingMode unidirectional;
             debugCoupling true;
             reportSetup true;

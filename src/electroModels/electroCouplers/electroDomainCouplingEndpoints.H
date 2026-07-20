@@ -36,6 +36,8 @@ Author
 namespace Foam
 {
 
+class ionicModel;
+
 //- Primary tissue domain interface used by coupling models.
 class tissueCouplingEndpoint
 {
@@ -48,6 +50,11 @@ public:
 
     //- Source term field exposed to coupling models.
     virtual volScalarField& sourceField() = 0;
+
+    virtual ionicModel* ionicModelPtr()
+    {
+        return nullptr;
+    }
 
     //- Optional implicit source coefficient for linearized tissue coupling.
     virtual volScalarField* implicitSourceCoeffPtr()

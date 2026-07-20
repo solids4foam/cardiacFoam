@@ -213,6 +213,11 @@ public:
         return ionicModelPtr_();
     }
 
+    ionicModel* ionicModelPtr()
+    {
+        return ionicModelPtr_.valid() ? &ionicModelPtr_() : nullptr;
+    }
+
     const labelList& edgeStartNodes() const
     {
         return graph_.edgeNodeA;

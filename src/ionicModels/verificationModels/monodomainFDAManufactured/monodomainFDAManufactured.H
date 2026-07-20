@@ -70,6 +70,11 @@ class monodomainFDAManufactured
     //- Rates
     mutable PtrList<scalarField> RATES_;
 
+    const scalarField* manufacturedSourceTermPtr_;
+    scalar manufacturedSourceChi_;
+    scalar manufacturedSourceCm_;
+    label manufacturedSourceStart_;
+
 
     // Private Member Functions
 
@@ -188,6 +193,16 @@ public:
         const scalarField& Vm,
         scalarField& Im
     ) override;
+
+    virtual void setManufacturedSourceTerm
+    (
+        const scalarField& sourceTerm,
+        scalar chi,
+        scalar Cm,
+        label sourceStart = 0
+    ) override;
+
+    virtual void clearManufacturedSourceTerm() override;
 
     //- Number of ODE's to solve
     virtual label nEqns() const override

@@ -248,6 +248,10 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
             self.entries,
         )
         self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjCouplingScheme",
+            self.entries,
+        )
+        self.assertIn(
             "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
             self.entries,
         )
