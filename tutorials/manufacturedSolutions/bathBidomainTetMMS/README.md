@@ -52,3 +52,19 @@ schedule and `endTime=0.02`. Each resolution is generated from scratch and
 archived under `setup/results/N<N>/`. The combined `summary.csv` computes
 observed order from `h_heart=(1/N_myocardium_cells)^(1/3)`, not from nominal
 Gmsh `N` or the verifier's rounded structured-grid filename.
+
+`run_tet_sweep.sh` reproduces the **potential** convergence half of the paper's
+tetrahedral bath-bidomain table (`Vm`, `phiE`, `phiI` errors -> `summary.csv`).
+The **assembled-current / interface-flux** half (the interface-conservation
+result) comes from the `bathBidomainInterfaceMetrics` utility, which
+`run_tet_sweep.sh` does not run. Reproduce that half with:
+
+```bash
+ASSEMBLY=matchedSubmesh METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
+  bash setup/run_parallel_interface_sweep.sh
+```
+
+which writes `setup/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic/N<N>/bathBidomainInterfaceMetrics.csv`
+(the source of record; see `FINAL_SOLUTION.md`). Both halves use the same
+selected formulation (`matchedSubmesh` + `distanceWeightedHarmonic`, baked into
+`constant/electroProperties`) and the committed `snGrad corrected` scheme.
