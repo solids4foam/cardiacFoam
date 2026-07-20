@@ -9,6 +9,9 @@ if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
   fi
 fi
 PY="${PYTHON:-python3}"
+# leastSquares sweep resolutions, overridable for a faster smoke run. Default
+# keeps N=80 so the committed reference (which has N=80 rows) stays reproducible.
+RESOLUTIONS="${RESOLUTIONS:-10 20 40 80}"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 dt_for_n(){ case "$1" in 10) echo 0.00892857;;20) echo 0.00224215;;40) echo 0.000560538;;80) echo 0.000140174;;esac; }
 set_grad(){
@@ -32,7 +35,7 @@ run_one(){ # $1 tag $2 N
 }
 echo "scheme,N,dx,mono_L2,mono_Linf,ecg_L2,ecg_Linf" > setup/results/scheme_study.csv
 set_grad "GaussLinear"; for N in 10 20 40; do run_one GaussLinear $N; done
-set_grad "leastSquares"; for N in 10 20 40 80; do run_one leastSquares $N; done
+set_grad "leastSquares"; for N in $RESOLUTIONS; do run_one leastSquares $N; done
 set_grad "leastSquares"   # restore tutorial default
 ./Allclean >/dev/null 2>&1
 echo "=== scheme_study.csv ==="; cat setup/results/scheme_study.csv
