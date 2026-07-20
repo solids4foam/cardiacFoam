@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CASE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OPENFOAM_BASHRC="${OPENFOAM_BASHRC:-/Volumes/OpenFOAM-v2412/etc/bashrc}"
 PYTHON="${PYTHON:-python3}"
 RESOLUTIONS_STR="${RESOLUTIONS:-10}"
@@ -208,7 +208,7 @@ for n in "${RESOLUTIONS[@]}"; do
     mkdir -p "$run_case"
     rsync -a \
         --exclude 'setup/results/' \
-        --exclude 'setup/correctorStudy/' \
+        --exclude 'setup/studies/corrector/' \
         --exclude 'constant/polyMesh/' \
         --exclude '[0-9]*/' \
         "$CASE_DIR/" "$run_case/"

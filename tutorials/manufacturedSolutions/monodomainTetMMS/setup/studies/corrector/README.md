@@ -56,7 +56,7 @@ not a reference solution of the PDE.
 Quick smoke study (four physical steps on the `N=10` mesh):
 
 ```bash
-bash setup/correctorStudy/run_corrector_study.sh
+bash setup/studies/corrector/run_corrector_study.sh
 ```
 
 Paper study with three timing repeats and the spatial ladder:
@@ -65,7 +65,7 @@ Paper study with three timing repeats and the spatial ladder:
 RESOLUTIONS="10 20 40" \
 ENDTIME=0.2 \
 REPEATS=3 \
-bash setup/correctorStudy/run_corrector_study.sh
+bash setup/studies/corrector/run_corrector_study.sh
 ```
 
 Useful overrides:
@@ -77,7 +77,7 @@ Useful overrides:
 - `RESULTS_DIR=/absolute/output/path`
 - `KEEP_WORK=1`
 
-By default, output is written to `setup/correctorStudy/results/` and temporary
+By default, output is written to `setup/studies/corrector/results/` and temporary
 case state to `/tmp/cardiacfoam-corrector-study-*`. The source tutorial is not
 cleaned or modified.
 
