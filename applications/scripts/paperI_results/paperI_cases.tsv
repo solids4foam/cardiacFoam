@@ -1,6 +1,6 @@
 key	case_dir	run_entry	agg_key	fresh_rel	ref_rel
 tet	tutorials/manufacturedSolutions/monodomainTetMMS	setup/run_scheme_study.sh	tet	setup/results/tet_convergence.csv	reference/tet_convergence.csv
-eikonal_tet	tutorials/manufacturedSolutions/eikonalTetMMS	setup/run_scheme_study.sh	eikonal_tet	setup/results/eikonal_tet_convergence.csv	reference/eikonal_tet_convergence.csv
+eikonal_tet	tutorials/manufacturedSolutions/eikonalECG	setup/mesh/tet/run_scheme_study.sh	eikonal_tet	setup/results/eikonal_tet_convergence.csv	reference/eikonal_tet_convergence.csv
 coupling	tutorials/manufacturedSolutions/monodomain1D3D	setup/run_coupled_1D3D_sweep.sh	coupling	setup/results/coupling_convergence.csv	reference/coupling_convergence.csv
 eikonal	tutorials/manufacturedSolutions/eikonalECG	setup/run_all_dimensions.sh	eikonal	setup/results/eikonal_convergence.csv	reference/eikonal_convergence.csv
 mono_spatial	tutorials/manufacturedSolutions/monodomainPseudoECG	setup/run_reproduce.sh	mono_spatial	setup/results/mono_spatial_convergence.csv	reference/mono_spatial_convergence.csv

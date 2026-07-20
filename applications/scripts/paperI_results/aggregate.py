@@ -24,7 +24,7 @@ def _tet(root: Path):
 
 
 def _eikonal_tet(root: Path):
-    src = root / _TUT / "eikonalTetMMS/setup/results/scheme_study.csv"
+    src = root / _TUT / "eikonalECG/setup/results/scheme_study.csv"
     return schema.fill_rates(adapters.from_eikonal_tet_scheme_study(src))
 
 
@@ -97,7 +97,7 @@ CASES = {
 
 _OUT = {
     "tet": "monodomainTetMMS/setup/results/tet_convergence.csv",
-    "eikonal_tet": "eikonalTetMMS/setup/results/eikonal_tet_convergence.csv",
+    "eikonal_tet": "eikonalECG/setup/results/eikonal_tet_convergence.csv",
     "coupling": "monodomain1D3D/setup/results/coupling_convergence.csv",
     "eikonal": "eikonalECG/setup/results/eikonal_convergence.csv",
     "mono_spatial": "monodomainPseudoECG/setup/results/mono_spatial_convergence.csv",

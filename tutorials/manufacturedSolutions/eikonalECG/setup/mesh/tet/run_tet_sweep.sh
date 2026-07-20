@@ -11,9 +11,14 @@ set -euo pipefail
 # endTime=1, deltaT=1 -- one step), so there is no per-N dt to pick and no
 # temporal-error/spatial-error coupling to worry about.
 
-CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PY=/Users/simaocastro/noFrontendCardiacFoam_minor_errors/.venv/bin/python3
 cd "$CASE_DIR"
+# Merged case (eikonalECG): activate the tet fvSolution overlay (system/fvSolution
+# is the hex default) and restore it on exit.
+_FVSOL_BAK="$(mktemp)"; cp system/fvSolution "$_FVSOL_BAK"
+cp setup/mesh/tet/fvSolution system/fvSolution
+trap 'cp "$_FVSOL_BAK" system/fvSolution; rm -f "$_FVSOL_BAK"' EXIT
 
 set +eu
 source /Volumes/OpenFOAM-v2412/etc/bashrc
@@ -34,10 +39,10 @@ for N in "${RESOLUTIONS[@]}"; do
 
     # 1) build the gmsh geometry at this characteristic length
     LC="$("$PY" -c "print(1.0/$N)")"
-    sed "s/__LC__/$LC/" setup/box.geo.template > setup/box.geo
+    sed "s/__LC__/$LC/" setup/mesh/tet/box.geo.template > setup/mesh/tet/box.geo
 
     # 2) mesh with gmsh (legacy msh2) and import into OpenFOAM
-    gmsh -3 setup/box.geo -o box.msh -format msh2 > log.gmsh 2>&1
+    gmsh -3 setup/mesh/tet/box.geo -o box.msh -format msh2 > log.gmsh 2>&1
     gmshToFoam box.msh > log.gmshToFoam 2>&1
     rm -f box.msh
 

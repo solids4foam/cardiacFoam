@@ -12,7 +12,12 @@ PY="${PYTHON:-python3}"
 # leastSquares sweep resolutions, overridable for a faster smoke run. Default
 # keeps N=80 so the committed reference (which has N=80 rows) stays reproducible.
 RESOLUTIONS="${RESOLUTIONS:-10 20 40 80}"
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
+# Merged case (eikonalECG): system/ holds the shared dicts + the hex fvSolution
+# default; activate the tet fvSolution overlay for this run and restore on exit.
+_FVSOL_BAK="$(mktemp)"; cp system/fvSolution "$_FVSOL_BAK"
+cp setup/mesh/tet/fvSolution system/fvSolution
+trap 'cp "$_FVSOL_BAK" system/fvSolution; rm -f "$_FVSOL_BAK"' EXIT
 
 # gradScheme A/B on the tet mesh: GaussLinear vs leastSquares for
 # gradSchemes.default, which is what fvc::grad(activationTime) in
@@ -33,8 +38,8 @@ activation_metrics(){ awk '/Number of cells/{n=$NF} /^activationTime /{l2=$3;li=
 ecg_metrics(){ awk 'NR>=8{if($3+0>a)a=$3; if($4+0>b)b=$4} END{printf "%s %s",a,b}' postProcessing/manufacturedEikonalECGSummary.dat; }
 run_one(){ # $1 tag $2 N
   ./Allclean >/dev/null 2>&1
-  LC=$($PY -c "print(1.0/$2)"); sed "s|__LC__|$LC|" setup/box.geo.template > setup/box.geo
-  gmsh -3 setup/box.geo -o box.msh -format msh2 >/dev/null 2>&1; gmshToFoam box.msh >/dev/null 2>&1; rm -f box.msh
+  LC=$($PY -c "print(1.0/$2)"); sed "s|__LC__|$LC|" setup/mesh/tet/box.geo.template > setup/mesh/tet/box.geo
+  gmsh -3 setup/mesh/tet/box.geo -o box.msh -format msh2 >/dev/null 2>&1; gmshToFoam box.msh >/dev/null 2>&1; rm -f box.msh
   cardiacFoam > log.cf 2>&1
   RC=$?
   mkdir -p setup/results/logs
