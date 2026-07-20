@@ -37,7 +37,7 @@ wmake libso src/electroModels
 Then run the default two-mesh screen:
 
 ```bash
-bash tutorials/manufacturedSolutions/bathBidomainTetMMS/setup/couplingStudy/run_coupling_study.sh
+bash tutorials/manufacturedSolutions/bathBidomainTetMMS/setup/studies/coupling/run_coupling_study.sh
 ```
 
 Useful overrides are `RESOLUTIONS="10 20 40"`,

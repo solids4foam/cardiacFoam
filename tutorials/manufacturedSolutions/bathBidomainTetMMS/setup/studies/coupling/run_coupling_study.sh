@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CASE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OPENFOAM_BASHRC="${OPENFOAM_BASHRC:-/Volumes/OpenFOAM-v2412/etc/bashrc}"
 PYTHON="${PYTHON:-python3}"
 RESOLUTIONS_STR="${RESOLUTIONS:-10 20}"
@@ -98,7 +98,7 @@ do
         --exclude '/postProcessing/' \
         --exclude '/processor*/' \
         --exclude '/constant/polyMesh/' \
-        --exclude '/setup/couplingStudy/results/' \
+        --exclude '/setup/studies/coupling/results/' \
         --exclude '/setup/interfaceStudy/' \
         --exclude '/setup/interfaceMeshBank/' \
         --exclude '/setup/matchedSubmeshStudy/' \
