@@ -72,6 +72,14 @@ public:
         volScalarField& sourceField
     ) const;
 
+    void depositImplicitCoupling
+    (
+        const scalarField& networkVm,
+        const scalarField& resistance,
+        volScalarField& sourceField,
+        volScalarField& implicitSourceCoeff
+    ) const;
+
     void depositActivationTimes
     (
         const scalarField& terminalActivationTime,

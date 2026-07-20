@@ -260,13 +260,27 @@ void bidomainSolver::solveDiffusionExplicit
         solve(phiEqn);
     }
 
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvc::laplacian(Gi_, domain.Vm() + phiE_)
-       - domain.chi()*domain.Cm()*domain.Iion()
-       + domain.sourceField()
-    );
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(Gi_, domain.Vm() + phiE_)
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+           - (*coeff)*domain.Vm()
+        );
+    }
+    else
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(Gi_, domain.Vm() + phiE_)
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
 
     phiI_ = domain.Vm() + phiE_;
 }
@@ -323,14 +337,29 @@ void bidomainSolver::solveVmImplicitOnce
     electroVolumeFieldDomain& domain
 )
 {
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvm::laplacian(Gi_, domain.Vm())
-       + fvc::laplacian(Gi_, phiE_)
-       - domain.chi()*domain.Cm()*domain.Iion()
-        + domain.sourceField()
-    );
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          + fvm::Sp(*coeff, domain.VmRef())
+          == fvm::laplacian(Gi_, domain.Vm())
+           + fvc::laplacian(Gi_, phiE_)
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
+    else
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvm::laplacian(Gi_, domain.Vm())
+           + fvc::laplacian(Gi_, phiE_)
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
 }
 
 } // End namespace Foam

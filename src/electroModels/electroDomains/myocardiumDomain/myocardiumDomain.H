@@ -54,6 +54,7 @@ protected:
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
     volScalarField sourceField_;
+    volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
     volScalarField activationTime_;
     PtrList<volScalarField>& outFields_;
@@ -199,6 +200,16 @@ public:
     virtual volScalarField& sourceField() override
     {
         return sourceField_;
+    }
+
+    virtual volScalarField* implicitSourceCoeffPtr() override
+    {
+        return &implicitSourceCoeff_;
+    }
+
+    virtual const volScalarField* implicitSourceCoeffPtr() const override
+    {
+        return &implicitSourceCoeff_;
     }
 
     virtual const volScalarField& activationTime() const override

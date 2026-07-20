@@ -49,6 +49,12 @@ public:
     //- Source term field exposed to coupling models.
     virtual volScalarField& sourceField() = 0;
 
+    //- Optional implicit source coefficient for linearized tissue coupling.
+    virtual volScalarField* implicitSourceCoeffPtr()
+    {
+        return nullptr;
+    }
+
     //- Transmembrane voltage at the domain.
     virtual const volScalarField& Vm() const = 0;
 

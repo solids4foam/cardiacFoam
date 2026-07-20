@@ -223,6 +223,25 @@ myocardiumDomain::myocardiumDomain
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
         "zeroGradient"
     ),
+    implicitSourceCoeff_
+    (
+        IOobject
+        (
+            "implicitSourceCoeff",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar
+        (
+            "zero",
+            dimCurrent/(dimVolume*dimVoltage),
+            0.0
+        ),
+        "zeroGradient"
+    ),
     Iion_
     (
         IOobject
@@ -497,6 +516,13 @@ void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
     // current into sourceField_.  Keeping this here ensures that coupling
     // current added by preparePrimaryCoupling survives into the FVM solve.
     updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
+    implicitSourceCoeff_ = dimensionedScalar
+    (
+        "zero",
+        implicitSourceCoeff_.dimensions(),
+        0.0
+    );
+    implicitSourceCoeff_.correctBoundaryConditions();
 }
 
 
@@ -743,6 +769,7 @@ void myocardiumDomain::write()
 
         writeMappedCellField(Vm_, supportMesh_, cellMap);
         writeMappedCellField(sourceField_, supportMesh_, cellMap);
+        writeMappedCellField(implicitSourceCoeff_, supportMesh_, cellMap);
         writeMappedCellField(Iion_, supportMesh_, cellMap);
         writeMappedCellField(activationTime_, supportMesh_, cellMap);
 

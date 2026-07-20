@@ -88,13 +88,27 @@ void monodomainSolver::solveDiffusionExplicit
 {
     (void)dt;
 
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvc::laplacian(conductivity_, domain.Vm())
-       - domain.chi()*domain.Cm()*domain.Iion()
-       + domain.sourceField()
-    );
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+           - (*coeff)*domain.Vm()
+        );
+    }
+    else
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
 }
 
 
@@ -106,13 +120,27 @@ void monodomainSolver::solveDiffusionImplicit
 {
     (void)dt;
 
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvm::laplacian(conductivity_, domain.Vm())
-       - domain.chi()*domain.Cm()*domain.Iion()
-        + domain.sourceField()
-    );
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          + fvm::Sp(*coeff, domain.VmRef())
+          == fvm::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
+    else
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvm::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
 }
 
 } // End namespace Foam

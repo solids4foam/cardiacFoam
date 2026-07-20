@@ -41,6 +41,7 @@ class reactionDiffusionPvjCoupler
 {
     scalarField R_pvj_;
     Switch debugCoupling_;
+    word couplingScheme_;
     mutable scalarField tissueVmBuffer_;
     mutable scalarField networkVmBuffer_;
 
@@ -59,6 +60,8 @@ class reactionDiffusionPvjCoupler
     );
 
     void reportCouplingDiagnostics(const char* phaseName) const;
+
+    void depositPrimaryCoupling() const;
 
 public:
 

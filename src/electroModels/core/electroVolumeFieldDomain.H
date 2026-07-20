@@ -51,6 +51,16 @@ public:
 
     virtual volScalarField& sourceField() = 0;
 
+    virtual volScalarField* implicitSourceCoeffPtr()
+    {
+        return nullptr;
+    }
+
+    virtual const volScalarField* implicitSourceCoeffPtr() const
+    {
+        return nullptr;
+    }
+
     virtual const dimensionedScalar& chi() const = 0;
 
     virtual const dimensionedScalar& Cm() const = 0;

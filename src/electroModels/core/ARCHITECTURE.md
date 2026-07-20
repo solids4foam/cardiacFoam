@@ -283,6 +283,7 @@ domainCouplings
         electroDomainCoupler    reactionDiffusionPvjCoupler;
         conductionNetworkDomain purkinjeNetwork;
         couplingMode            unidirectional;
+        pvjCouplingScheme       implicit; // optional: explicit | implicit
         pvjRadius               6e-4;
         rPvj                    500.0;
     }

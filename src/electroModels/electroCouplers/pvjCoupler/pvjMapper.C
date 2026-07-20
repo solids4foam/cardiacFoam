@@ -280,6 +280,51 @@ void pvjMapper::depositCoupling
 }
 
 
+void pvjMapper::depositImplicitCoupling
+(
+    const scalarField& networkVm,
+    const scalarField& resistance,
+    volScalarField& sourceField,
+    volScalarField& implicitSourceCoeff
+) const
+{
+    if
+    (
+        networkVm.size() != sphereVolumes_.size()
+     || resistance.size() != sphereVolumes_.size()
+    )
+    {
+        FatalErrorInFunction
+            << "Expected " << sphereVolumes_.size()
+            << " PVJ implicit coupling values but received "
+            << networkVm.size() << " voltages and "
+            << resistance.size() << " resistances."
+            << exit(FatalError);
+    }
+
+    scalarField& source = sourceField.primitiveFieldRef();
+    scalarField& coeff = implicitSourceCoeff.primitiveFieldRef();
+
+    forAll(terminalCellSets_, i)
+    {
+        const scalar sourcePerVoltage =
+            1.0/(resistance[i]*sphereVolumes_[i]);
+
+        forAll(terminalCellSets_[i], localI)
+        {
+            const label cellI = terminalCellSets_[i][localI];
+            const scalar weight = terminalCellWeights_[i][localI];
+
+            source[cellI] += networkVm[i]*sourcePerVoltage*weight;
+            coeff[cellI] += sourcePerVoltage*weight;
+        }
+    }
+
+    sourceField.correctBoundaryConditions();
+    implicitSourceCoeff.correctBoundaryConditions();
+}
+
+
 void pvjMapper::depositActivationTimes
 (
     const scalarField& terminalActivationTime,

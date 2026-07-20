@@ -230,7 +230,7 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `electroDomainCoupler.H/C` | Base class for all couplers. Named pair of domain references with `prepareSecondaryCoupling()`, `preparePrimaryCoupling()`, `preparePostPrimaryCoupling()` hooks. |
 | `pvjCoupler/pvjMapper.H/C` | Purkinje–Ventricular Junction topology mapper. Builds the spatial map between conduction-system terminal nodes and the nearest myocardium cells. |
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
-| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it into `myocardiumDomain::sourceField_`. |
+| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it explicitly into `myocardiumDomain::sourceField_` or, with `pvjCouplingScheme implicit`, splits the tissue-voltage term into the myocardium Vm matrix diagonal. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
 
 Bath/extracellular-potential coupling is **not** a coupler class. `extracellularPotentialDomain` (an `electroStateDomain` under `electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve and binds a restricted view of it directly into the bidomain myocardium solver.

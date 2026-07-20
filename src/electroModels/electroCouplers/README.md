@@ -80,12 +80,20 @@ network terminal Vm  ----\
 tissue Vm at PVJ     ----/
 ```
 
+The default `pvjCouplingScheme explicit` preserves the historical behavior:
+the full `I_pvj` is projected into the myocardium `sourceField`. With
+`pvjCouplingScheme implicit`, the network-voltage part is kept as an explicit
+source and the tissue-voltage part is assembled as a diagonal sink in the
+myocardium Vm matrix. The shorter alias `couplingScheme implicit` is also
+accepted.
+
 The coupler reuses internal buffers for:
 
 - tissue PVJ voltages
 - network PVJ voltages
 - terminal coupling currents
 - myocardium-side volumetric source equivalents
+- myocardium-side implicit source coefficient when implicit coupling is enabled
 
 ## Coupling modes
 
@@ -106,6 +114,9 @@ In the default staggered workflow:
 1. The coupler samples the previous tissue and network states.
 2. The conduction-system domain advances.
 3. The coupler recomputes the PVJ exchange using the updated network state.
-4. The myocardium receives the projected volumetric source and advances.
+4. The myocardium receives either the projected volumetric source or the
+   split explicit-source/implicit-coefficient representation and advances.
 
-Bidirectional coupling is not currently exposed as a supported advance scheme.
+Bidirectional coupling remains staged: the network-side source is prepared from
+the currently available tissue state, while the optional implicit scheme only
+linearizes the myocardium-side PVJ term.
