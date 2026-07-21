@@ -188,3 +188,6 @@ tutorials/manufacturedSolutions/*/setup/**/*.vtk
 tutorials/manufacturedSolutions/*/setup/**/*.sha256
 tutorials/manufacturedSolutions/**/__pycache__/
 tutorials/manufacturedSolutions/**/*.geo
+
+# MMS: coupled 1D-3D generated mesh-variant sweep scratch (regenerated per-N)
+tutorials/manufacturedSolutions/**/blockMeshDict.*.active*
