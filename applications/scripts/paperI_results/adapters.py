@@ -24,8 +24,24 @@ def from_tet_scheme_study(path, case="tet"):
     return rows
 
 
+def from_bidomain_tet_scheme_study(path, case="bidomain_tet"):
+    """bidomain's setup/mesh/tet/ scheme_study.csv: Vm + phiE_gauge columns
+    per scheme/N. Mirrors from_tet_scheme_study; dx -> h, L1 unavailable."""
+    rows = []
+    with Path(path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            base = dict(case=case, variant=rec["scheme"], dim="3D",
+                        N=rec["N"], h=rec["dx"])
+            rows.append({**base, "field": "Vm", "L1": "",
+                         "L2": rec["vm_L2"], "Linf": rec["vm_Linf"]})
+            rows.append({**base, "field": "Phi_e", "L1": "",
+                         "L2": rec["phiE_L2"], "Linf": rec["phiE_Linf"]})
+    return rows
+
+
 def from_eikonal_tet_scheme_study(path, case="eikonal_tet"):
-    """eikonalTetMMS scheme_study.csv: activationTime + ecg columns per scheme/N.
+    """eikonalECG's tet overlay (setup/mesh/tet, formerly eikonalTetMMS)
+    scheme_study.csv: activationTime + ecg columns per scheme/N.
     Mirrors from_tet_scheme_study; dx -> h, L1 unavailable (blank)."""
     rows = []
     with Path(path).open(newline="") as fh:
@@ -207,17 +223,24 @@ def from_bath_structured(errors_path, case="bath"):
 
 
 _BATH_N_DIR = re.compile(r"N(\d+)", re.IGNORECASE)
-# canonical physics identities (confirm names against FINAL_SOLUTION.md):
+# The eight diagnostics reported in tbl-bath-bidomain-tet. Each maps a canonical
+# field name to its column prefix in bathBidomainInterfaceMetrics.csv; the _L2 /
+# _Linf error columns are read from that prefix.
 _BATH_TET_FIELDS = {
-    "phiE": "heartPhiE",                          # extracellular potential
-    "fluxJump": "x0FluxJump",                     # interface-current continuity
-    "intracellularLeak": "x0IntracellularLeak",   # intracellular insulation
+    "heartPhiE":            "heartPhiE",            # myocardium extracellular potential
+    "bathPhiE":            "bathPhiE",              # bath potential
+    "x0FluxJump":          "x0FluxJump",            # x=0 interface-current continuity
+    "x1FluxJump":          "x1FluxJump",            # x=1 interface-current continuity
+    "x0IntracellularLeak": "x0IntracellularLeak",   # x=0 intracellular insulation
+    "x1IntracellularLeak": "x1IntracellularLeak",   # x=1 intracellular insulation
+    "x0AssembledFlux":     "x0AssembledFlux",       # x=0 assembled-current constitutive error
+    "x1AssembledFlux":     "x1AssembledFlux",       # x=1 assembled-current constitutive error
 }
 
 
 def from_bath_interface_metrics(study_dir, case="bath_tet"):
     """Glob <study_dir>/N*/bathBidomainInterfaceMetrics.csv; N from the parent dir.
-    variant = '<method>/<assembly>'; h = 1/N nominal (tet); L1 unavailable."""
+    variant = '<method>/<assembly>'; h = 1/N nominal (tet)."""
     rows = []
     for csv_path in sorted(Path(study_dir).glob("N*/bathBidomainInterfaceMetrics.csv")):
         m = _BATH_N_DIR.search(csv_path.parent.name)
@@ -235,7 +258,7 @@ def from_bath_interface_metrics(study_dir, case="bath_tet"):
             l2 = rec.get(f"{col}_L2", "")
             if l2 == "":
                 continue
-            rows.append({**base, "field": field, "L1": "",
+            rows.append({**base, "field": field, "L1": rec.get(f"{col}_L1", ""),
                          "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
     return rows
 

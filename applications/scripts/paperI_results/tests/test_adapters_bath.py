@@ -26,8 +26,13 @@ def test_bath_structured_h_from_N_when_absent(tmp_path):
 def _metrics_row(**over):
     cols = {"method": "distanceWeightedHarmonic", "assembly": "matchedSubmesh",
             "heartPhiE_L2": "5e-3", "heartPhiE_Linf": "7e-3",
+            "bathPhiE_L2": "6e-3", "bathPhiE_Linf": "8e-3",
             "x0FluxJump_L2": "1e-3", "x0FluxJump_Linf": "2e-3",
-            "x0IntracellularLeak_L2": "1e-9", "x0IntracellularLeak_Linf": "3e-9"}
+            "x1FluxJump_L2": "1.1e-3", "x1FluxJump_Linf": "2.1e-3",
+            "x0IntracellularLeak_L2": "1e-9", "x0IntracellularLeak_Linf": "3e-9",
+            "x1IntracellularLeak_L2": "1.1e-9", "x1IntracellularLeak_Linf": "3.1e-9",
+            "x0AssembledFlux_L2": "4e-4", "x0AssembledFlux_Linf": "5e-4",
+            "x1AssembledFlux_L2": "4.1e-4", "x1AssembledFlux_Linf": "5.1e-4"}
     cols.update(over)
     return cols
 
@@ -43,8 +48,11 @@ def test_bath_tet_interface_identities(tmp_path):
         _write_metrics(d / "bathBidomainInterfaceMetrics.csv",
                        _metrics_row(heartPhiE_L2=l2))
     rows = adapters.from_bath_interface_metrics(tmp_path)
-    assert {r["field"] for r in rows} == {"phiE", "fluxJump", "intracellularLeak"}
-    phie20 = next(r for r in rows if r["field"] == "phiE" and r["N"] == "20")
+    assert {r["field"] for r in rows} == {
+        "heartPhiE", "bathPhiE", "x0FluxJump", "x1FluxJump",
+        "x0IntracellularLeak", "x1IntracellularLeak",
+        "x0AssembledFlux", "x1AssembledFlux"}
+    phie20 = next(r for r in rows if r["field"] == "heartPhiE" and r["N"] == "20")
     assert phie20["variant"] == "distanceWeightedHarmonic/matchedSubmesh"
     assert phie20["dim"] == "3D" and phie20["h"] == "0.05" and phie20["L2"] == "1e-3"
 
