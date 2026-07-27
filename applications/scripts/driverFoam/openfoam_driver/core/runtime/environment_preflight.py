@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,10 +82,21 @@ def _required_executables(workflow_dag: dict[str, Any] | None) -> _ExecutableReq
             executables.append(name)
 
     for step in (workflow_dag or {}).get("steps", ()):
-        command = str(step.get("command", "")).strip()
+        raw_command = str(step.get("command", "")).strip()
         args = tuple(str(arg) for arg in step.get("args", ()))
+        if not raw_command:
+            continue
+        # A step may carry its entire invocation in "command", for example
+        # "postProcess -func Niedererpoints -latestTime". Only the leading
+        # token names an executable; the remainder are arguments and must not
+        # be passed to a PATH lookup.
+        try:
+            command, *inline_args = shlex.split(raw_command)
+        except ValueError:
+            command, *inline_args = raw_command.split()
         if not command:
             continue
+        args = tuple(inline_args) + args
         if command in _MPI_LAUNCHERS:
             is_parallel = True
             mpi_launcher_in_dag = True
