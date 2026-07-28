@@ -42,8 +42,6 @@ class eikonalECG
 :
     public ecgSolver
 {
-    scalarField templateTimes_;
-    scalarField templateValues_;
     Switch useManufacturedTemplate_;
 
     scalar startTime_;

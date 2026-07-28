@@ -37,12 +37,6 @@ addToRunTimeSelectionTable
 );
 
 
-// Anonymous namespace for helpers if needed
-namespace
-{
-} // End anonymous namespace
-
-
 eikonalECGManufacturedVerifier::eikonalECGManufacturedVerifier
 (
     const electroStateProvider& stateProvider,

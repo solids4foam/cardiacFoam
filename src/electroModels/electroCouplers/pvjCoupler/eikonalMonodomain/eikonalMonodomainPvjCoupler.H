@@ -42,8 +42,6 @@ class eikonalMonodomainPvjCoupler
     mutable scalarField terminalActivationBuffer_;
     scalarField R_pvj_;
 
-    void ensureSupportedMode() const;
-
 public:
 
     OverrideTypeName("eikonalMonodomainPvjCoupler");

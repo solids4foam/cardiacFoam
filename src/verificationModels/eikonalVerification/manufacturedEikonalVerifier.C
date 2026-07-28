@@ -40,13 +40,6 @@ addToRunTimeSelectionTable
     dictionary
 );
 
-namespace
-{
-
-
-} // End anonymous namespace
-
-
 manufacturedEikonalVerifier::manufacturedEikonalVerifier
 (
     const dictionary& electroProperties,

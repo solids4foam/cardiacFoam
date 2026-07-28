@@ -982,8 +982,7 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
 
             word dataName(is);
             word dataType(is);
-            // DebugInfo
-            Info
+            DebugInfo
                 << "Reading tensor " << dataName
                 << " of type " << dataType << nl;
 
@@ -997,9 +996,6 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                 dataType,
                 9*wantedSize
             );
-
-            Info<< "vtkDataTypeNames[dataType] = " << vtkDataTypeNames[dataType]  << nl
-                << "vtkDataTypeNames[dataType] = " << vtkDataTypeNames[dataType] << endl;
 
             if
             (

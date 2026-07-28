@@ -33,12 +33,6 @@ addToRunTimeSelectionTable
 );
 
 
-void eikonalMonodomainPvjCoupler::ensureSupportedMode() const
-{
-    // Mode checks removed to allow bidirectional eikonal coupling
-}
-
-
 eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
@@ -102,8 +96,6 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
     (void)dt;
-
-    ensureSupportedMode();
 
     networkTerminalDomain_.terminalActivationTime(terminalActivationBuffer_);
 

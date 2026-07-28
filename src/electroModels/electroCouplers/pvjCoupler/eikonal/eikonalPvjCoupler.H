@@ -40,8 +40,6 @@ class eikonalPvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
 
-    void ensureSupportedMode() const;
-
 public:
 
     OverrideTypeName("eikonalPvjCoupler");
