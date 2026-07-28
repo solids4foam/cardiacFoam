@@ -32,12 +32,10 @@ def load_all_point_files(folder):
         df = pd.read_csv(fpath)
 
         activation = df["activationTime"].values * 1000.0  # to ms
-        solver = "implicit" if "implicit" in filename else "explicit"
 
         all_data.append({
             "DX": dx,
             "DT": dt,
-            "solver": solver,
             "activation": activation,
             "df": df
         })
@@ -124,10 +122,10 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
         color_here = point_colors[p]
 
         # scatter
-        for solver in ['explicit', 'implicit']:
+        for solver in ['implicit']:
             mask = (Solver_all == solver)
             if not np.any(mask): continue
-            symbol = 'circle' if solver == 'explicit' else 'square'
+            symbol = 'square'
             fig.add_trace(
                 go.Scatter3d(
                     x=DX_all[mask], y=DT_all[mask], z=Z[mask],
@@ -140,7 +138,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
         # DX lines
         for dx_val in np.unique(DX_all):
-            for solver in ['explicit', 'implicit']:
+            for solver in ['implicit']:
                 mask = (DX_all == dx_val) & (Solver_all == solver)
                 if not np.any(mask): continue
                 idx_sorted = np.argsort(DT_all[mask])
@@ -148,7 +146,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
                     go.Scatter3d(
                         x=DX_all[mask][idx_sorted], y=DT_all[mask][idx_sorted], z=Z[mask][idx_sorted],
                         mode="lines",
-                        line=dict(color=color_here, width=3, dash='solid' if solver == 'explicit' else 'dash'),
+                        line=dict(color=color_here, width=3, dash='dash'),
                         showlegend=False
                     ),
                     row=row, col=col
@@ -156,7 +154,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
         # DT lines
         for dt_val in np.unique(DT_all):
-            for solver in ['explicit', 'implicit']:
+            for solver in ['implicit']:
                 mask = (DT_all == dt_val) & (Solver_all == solver)
                 if not np.any(mask): continue
                 idx_sorted = np.argsort(DX_all[mask])
@@ -164,7 +162,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
                     go.Scatter3d(
                         x=DX_all[mask][idx_sorted], y=DT_all[mask][idx_sorted], z=Z[mask][idx_sorted],
                         mode="lines",
-                        line=dict(color=color_here, width=3, dash='dash' if solver == 'explicit' else 'dot'),
+                        line=dict(color=color_here, width=3, dash='dot'),
                         showlegend=False
                     ),
                     row=row, col=col

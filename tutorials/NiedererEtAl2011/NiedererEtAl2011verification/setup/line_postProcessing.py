@@ -124,8 +124,7 @@ def add_csv_traces(fig, sorted_items, dt_target=None):
     # --- STEP 2: add traces with shading ---
     for filename, df in sorted_items:
         dx, dt = extract_dx_dt(filename)
-        solver = "implicit" if "implicit" in filename else "explicit"
-        full_label = f"ΔX={dx:.1f} mm, ΔT={dt:.3f} ms ({solver})"
+        full_label = f"ΔX={dx:.1f} mm, ΔT={dt:.3f} ms"
 
         cols = df.columns.tolist()
         if len(cols) < 2:
@@ -144,7 +143,7 @@ def add_csv_traces(fig, sorted_items, dt_target=None):
         shade_amount = dt_index / max(count - 1, 1)* 0.4  # 0 → darkest, 1 → lightest
 
         color = lighten_hex_color(base_color, shade_amount)
-        dash_style = 'solid' if solver == 'explicit' else 'dashdot'
+        dash_style = 'dashdot'
 
         fig.add_trace(go.Scatter(
             x=df[x_col] * 1000,
