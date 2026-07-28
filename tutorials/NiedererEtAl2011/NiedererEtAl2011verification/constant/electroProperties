@@ -24,7 +24,7 @@ monodomainSolverCoeffs
     chi   [0 -1 0 0 0 0 0] 140000;
     cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    ionicModel    BuenoOrovio;
+    ionicModel    TNNP;
     tissue    epicardialCells;
 
     outputVariables
@@ -36,7 +36,7 @@ monodomainSolverCoeffs
         }
     }
 
-    solutionAlgorithm    explicit;
+    solutionAlgorithm    implicit;
     solver RKF45;
     initialODEStep 1e-6;
     maxSteps 1000000000;

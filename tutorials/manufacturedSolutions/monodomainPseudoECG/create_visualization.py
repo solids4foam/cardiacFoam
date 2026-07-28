@@ -14,9 +14,9 @@ def create_vtk():
     if time_values:
         print(f"Setting time to {time_values[-1]}")
         reader.set_active_time_value(time_values[-1])
-    
+
     mesh = reader.read()
-    
+
     # Extract internal mesh
     if "internalMesh" in mesh.keys():
         internal_mesh = mesh["internalMesh"]

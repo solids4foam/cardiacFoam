@@ -110,7 +110,7 @@ def _infer_virtual_presence(ctx: dict[str, Any]) -> None:
             if existing_key.startswith(prefix):
                 ctx[virtual_key] = True
                 break
-                
+
     # Support OR logic for ionicHeterogeneity applicability
     from openfoam_driver.dict_entries import HETEROGENEITY_MODELS
     if ctx.get("myocardiumSolver") == "eikonalSolver" or ctx.get("ionicModel") in HETEROGENEITY_MODELS:
@@ -245,7 +245,7 @@ def populate_values(
     """
     import re
     populated: dict[str, str] = {}
-    
+
     dynamic_entries = []
     for entry in entries:
         if getattr(entry, "dynamic_path", False):
@@ -278,7 +278,7 @@ def populate_values(
                         concrete_key = concrete_key.replace("<electrode>", groups[-1])
                     elif "<electrode>" in concrete_key and len(groups) == 1:
                         concrete_key = concrete_key.replace("<electrode>", groups[0])
-                        
+
                     if concrete_key in context and context[concrete_key] not in (None, ""):
                         populated[concrete_key] = str(context[concrete_key])
                     elif typical_value_fallback and entry.typical_value:
@@ -522,7 +522,7 @@ def _serialize(
     import re
     top_level: dict[str, str] = {}
     coeffs: dict = {}
-    
+
     dynamic_patterns = []
     for entry in entries:
         if getattr(entry, "dynamic_path", False):
@@ -539,7 +539,7 @@ def _serialize(
                 if slot_key(entry.driver_path) == concrete_key:
                     matched_entry = entry
                     break
-                    
+
         if not matched_entry:
             for entry, regex in dynamic_patterns:
                 if regex.match(concrete_key):
@@ -773,21 +773,21 @@ def build_and_launch(
     constant_dir.mkdir(parents=True, exist_ok=True)
     electro_path.write_text(electro_text)
     physics_path.write_text(physics_text)
-    
+
     system_dir = case_dir / "system"
     system_dir.mkdir(parents=True, exist_ok=True)
-    
+
     from openfoam_driver.specs.system_templates import get_fv_schemes, get_fv_solution, build_control_dict
     myocardium_solver = electro_selectors.get("myocardiumSolver", "monodomainSolver")
-    
+
     fv_schemes_path = system_dir / "fvSchemes"
     if not fv_schemes_path.exists() or overwrite:
         fv_schemes_path.write_text(get_fv_schemes(myocardium_solver))
-        
+
     fv_solution_path = system_dir / "fvSolution"
     if not fv_solution_path.exists() or overwrite:
         fv_solution_path.write_text(get_fv_solution(myocardium_solver))
-        
+
     control_dict_path = system_dir / "controlDict"
     if not control_dict_path.exists() or overwrite:
         dt = delta_t if delta_t is not None else 1e-4

@@ -79,3 +79,65 @@ Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and
 manufactured error summaries in `postProcessing/`. The global bath-potential
 fields are written at the normal OpenFOAM output times configured in
 `system/controlDict`.
+
+## Tetrahedral (unstructured) mesh variant
+
+`setup/mesh/tet/` is this case's tetrahedral-mesh overlay (formerly the
+standalone `bathBidomainTetMMS` tutorial, merged in here the same way
+`monodomainTetMMS` was merged into `monodomainPseudoECG` and `eikonalTetMMS`
+into `eikonalECG`). Unlike those two cases, the bath geometry itself changes
+under the tet variant -- it is built from a single Gmsh model over
+`[-1,2] x [0,1] x [0,1]` (left bath `-1<=x<=0`, myocardium `0<=x<=1`, right
+bath `1<=x<=2`) with the two heart--bath interfaces as internal conformal
+faces, rather than reusing a shared unit-cube template -- so this overlay
+also needs its own `constant/electroProperties` copy (`dimension "3D"` plus
+the `interfaceConductivityInterpolation`/`intracellularAssembly` entries the
+unstructured interface needs) alongside `fvSchemes` (`leastSquares`
+gradient); `fvSolution`'s `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1`
+already match this case's own hex default, so no overlay is needed there.
+
+For the selected formulation, final four-level results, limitations, and
+paper-ready conclusion, see
+[`setup/mesh/tet/FINAL_SOLUTION.md`](setup/mesh/tet/FINAL_SOLUTION.md). The
+files under `setup/mesh/tet/interfaceStudy/` retain the underlying
+verification audit trail.
+
+### Mesh gate and smoke test
+
+```bash
+cd tutorials/manufacturedSolutions/bathBidomain
+bash setup/mesh/tet/run_mesh_gate.sh 10
+bash setup/mesh/tet/Allrun.smoke
+```
+
+Results land under `setup/mesh/tet/results/N10/` (mesh gate) and
+`setup/mesh/tet/results/N10/smoke/` (smoke test). Review
+`mesh_manifest.txt`/`log.checkMesh`/`log.checkMesh.strict`/`log.gmshToFoam`
+before adding solver dictionaries or starting a convergence sweep.
+
+### Potential-field convergence sweep
+
+```bash
+bash setup/mesh/tet/run_tet_sweep.sh
+```
+
+The default ladder is `N=10 20 40`, with `deltaT ~ h^2` and `endTime=0.02`.
+Each resolution is generated from scratch; the combined `summary.csv`
+computes observed order from `h_heart=(1/N_myocardium_cells)^(1/3)`. This
+reproduces the **potential** convergence half of the paper's tetrahedral
+bath-bidomain table (`Vm`, `phiE`, `phiI` errors).
+
+### Interface-current (assembled-flux) convergence sweep
+
+```bash
+ASSEMBLY=matchedSubmesh METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
+  bash setup/mesh/tet/run_parallel_interface_sweep.sh
+```
+
+Writes
+`setup/mesh/tet/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic/N<N>/bathBidomainInterfaceMetrics.csv`
+(the source of record for `@tbl-bath-bidomain-tet`'s assembled-current rows;
+see `FINAL_SOLUTION.md`). Both sweeps use the same selected formulation
+(`matchedSubmesh` + `distanceWeightedHarmonic`, baked into
+`setup/mesh/tet/electroProperties`) and the committed `snGrad corrected`
+scheme.

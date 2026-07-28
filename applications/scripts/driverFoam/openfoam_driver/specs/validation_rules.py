@@ -102,7 +102,7 @@ def _evaluate_solver_coupling(context: dict[str, Any]) -> list[ValidationError]:
                         ),
                         level="error",
                     ))
-        
+
         break
 
     return errors

@@ -45,15 +45,16 @@ The driver is data-driven by `applications/scripts/paperI_results/paperI_cases.t
 
 | key | case | paper artefact |
 |---|---|---|
-| tet | monodomainTetMMS | tbl-tet-monodomain, tbl-tet-pseudoecg |
-| eikonal_tet | eikonalTetMMS | §unstructured eikonal-tet |
+| tet | monodomainPseudoECG (`setup/mesh/tet`) | tbl-tet-monodomain, tbl-tet-pseudoecg |
+| eikonal_tet | eikonalECG (`setup/mesh/tet`) | §unstructured eikonal-tet |
 | coupling | monodomain1D3D | coupled 1D–3D convergence |
 | eikonal | eikonalECG | tbl-eikonal-*, tbl-eikonal-ecg-integral |
 | mono_spatial | monodomainPseudoECG | tbl-monodomain-vm/-aux |
 | pseudo_ecg_spatial | monodomainPseudoECG | tbl-pseudo-ecg |
 | bidomain | bidomain | tbl-bidomain |
+| bidomain_tet | bidomain (`setup/mesh/tet`) | tbl-tet-bidomain |
 | bath | bathBidomain | tbl-bath-bidomain |
-| bath_tet | bathBidomainTetMMS | tbl-bath-bidomain-tet |
+| bath_tet | bathBidomain (`setup/mesh/tet`) | tbl-bath-bidomain-tet |
 | niederer | NiedererEtAl2011verification | fig-slab, tbl-niederer |
 
 Cases whose sweep has not been run yet (`bidomain`, `bath`, and `bath_tet`

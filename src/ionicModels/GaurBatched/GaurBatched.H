@@ -26,6 +26,9 @@ Description
     Rush-Larsen tau/steady-state dispatch, compact support slots, and a thin
     GaurcompactBatched runtime alias that forces compact support.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     GaurBatched.C
 \*---------------------------------------------------------------------------*/

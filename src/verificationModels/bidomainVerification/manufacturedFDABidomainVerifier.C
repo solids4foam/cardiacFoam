@@ -286,7 +286,7 @@ void manufacturedFDABidomainVerifier::postProcess
     fileName outputFile = outputFileName_;
     if (outputFile.empty())
     {
-        const fileName outputDir(time.path()/"postProcessing");
+        const fileName outputDir(time.globalPath()/"postProcessing");
         mkDir(outputDir);
         outputFile =
             outputDir

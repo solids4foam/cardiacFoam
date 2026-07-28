@@ -1,5 +1,5 @@
 // Unit-cube [0,1]^3 tetrahedral mesh, shared with the monodomain tet MMS
-// (monodomainTetMMS/setup/box.geo.template -- identical geometry/lc ladder,
+// (monodomainPseudoECG/setup/mesh/tet/box.geo.template -- identical geometry/lc ladder,
 // copied here verbatim so both solvers refine on the same mesh sequence).
 //
 // The characteristic length placeholder __LC__ is substituted by

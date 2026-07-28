@@ -8,6 +8,10 @@ if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
     exit 2
   fi
 fi
+# Darwin/SIP strips DYLD_LIBRARY_PATH across a fresh bash exec; RunFunctions
+# restores it from FOAM_LD_LIBRARY_PATH (see its own "Darwin workaround" block).
+# Without this, cardiacFoam aborts with "Library not loaded: @rpath/libOpenFOAM.dylib".
+source "$WM_PROJECT_DIR/bin/tools/RunFunctions" >/dev/null 2>&1
 PY="${PYTHON:-python3}"
 # leastSquares sweep resolutions, overridable for a faster smoke run. Default
 # keeps N=80 so the committed reference (which has N=80 rows) stays reproducible.
@@ -25,7 +29,7 @@ trap 'cp "$_FVSOL_BAK" system/fvSolution; rm -f "$_FVSOL_BAK"' EXIT
 # then built from analytically (gradVm = -dU/ds * gradTau). This isolates
 # whether that one grad(activationTime) call is itself scheme-sensitive on
 # a high-non-orthogonality tet mesh, the same question already answered
-# for the monodomain path in ../../monodomainTetMMS/setup/run_scheme_study.sh.
+# for the monodomain path in ../../../../monodomainPseudoECG/setup/mesh/tet/run_scheme_study.sh.
 
 set_grad(){
   if [ "$1" = "leastSquares" ]; then
@@ -40,8 +44,12 @@ run_one(){ # $1 tag $2 N
   ./Allclean >/dev/null 2>&1
   LC=$($PY -c "print(1.0/$2)"); sed "s|__LC__|$LC|" setup/mesh/tet/box.geo.template > setup/mesh/tet/box.geo
   gmsh -3 setup/mesh/tet/box.geo -o box.msh -format msh2 >/dev/null 2>&1; gmshToFoam box.msh >/dev/null 2>&1; rm -f box.msh
-  cardiacFoam > log.cf 2>&1
+  # Parallel (same solver, verified serial/parallel-equivalent elsewhere in this
+  # repo): decomposePar + mpirun is markedly faster than serial on N=80.
+  decomposePar > log.cf 2>&1
+  mpirun --oversubscribe -np 6 cardiacFoam -parallel >> log.cf 2>&1
   RC=$?
+  reconstructPar >> log.cf 2>&1
   mkdir -p setup/results/logs
   cp log.cf "setup/results/logs/${1}_N${2}.log"
   ITERS="$(grep -c '^PIMPLE: iteration' log.cf || true)"
@@ -57,7 +65,7 @@ run_one(){ # $1 tag $2 N
   echo "done $1 N=$2 : activationTime[$M] ecg[$E] outerIters=$ITERS"
 }
 echo "scheme,N,dx,activationTime_L2,activationTime_Linf,ecg_L2,ecg_Linf,outerIterations" > setup/results/scheme_study.csv
-set_grad "GaussLinear"; for N in 10 20 40; do run_one GaussLinear $N; done
+set_grad "GaussLinear"; for N in $RESOLUTIONS; do run_one GaussLinear $N; done
 set_grad "leastSquares"; for N in $RESOLUTIONS; do run_one leastSquares $N; done
 set_grad "leastSquares"   # restore tutorial default
 ./Allclean >/dev/null 2>&1

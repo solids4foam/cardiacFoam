@@ -480,7 +480,7 @@ def ensure_foam_dict_via_foamDictionary(
     end_idx = block_text.rfind("}")
     if start_idx == -1 or end_idx == -1 or start_idx > end_idx:
         raise ValueError("block_text must contain { and }")
-    
+
     inner_val = block_text[start_idx : end_idx + 1]
 
     cmd_add = [

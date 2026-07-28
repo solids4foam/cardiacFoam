@@ -1,0 +1,101 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | cardiacCore dict_builder synthesis              |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      cardiacCoreDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+setCardiacConductivity
+{
+    df                      0.1143;
+    ds                      0.052;
+    dn                      0.016;
+    fiberField              fiber;
+    sheetField              sheet;
+}
+
+setCardiacTags
+{
+    transmuralField         uvc_transmural;
+    chamberField            uvc_intraventricular;
+    endoMin                 0.0;
+    endoMax                 0.1;
+    epiMin                  1.0;
+    epiMax                  1.0;
+    chamberThreshold        0.5;
+    recoverRVSeptum         true;
+    rvSeptumEpiMin          0.9;
+}
+
+setCardiacAnatomy
+{
+    longitudinalField       uvc_longitudinal;
+    intraventricularField   uvc_intraventricular;
+    zApicalMid              0.3333333;
+    zMidBasal               0.6666667;
+    zApexCap                0.08;
+    chamberThreshold        0.0;
+    anteriorSign            1.0;
+    grooveMode              auto;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+generatePurkinjeTree
+{
+    hisBundleSeed         (-0.6324 81.6759 -205.2822);
+    lvFaceSet             LVEndoFaces;
+    rvFaceSet             RVEndoFaces;
+    growthModel           surfaceFollow;
+    flipRVSeptum          true;
+    lv
+    {
+        seed              (2.9771 84.1175 -206.7610);
+        lineEnd           (3.7670 83.5274 -206.9278);
+        initLength        30;
+        N_it              35;
+        length            6;
+        l_segment         0.3;
+        branchAngle       0.5;
+        repulsivity       0.2;
+        longitudinalMax   0.88;
+        terminalSelectionModel allLeaves;
+        terminalModel     endocardial;
+    }
+    rv
+    {
+        seed              (-4.2419 79.2343 -203.8035);
+        lineEnd           (-3.8338 78.3370 -203.9722);
+        initLength        30;
+        N_it              35;
+        length            6;
+        l_segment         0.3;
+        branchAngle       0.5;
+        repulsivity       0.2;
+        longitudinalMax   0.88;
+        terminalSelectionModel allLeaves;
+        terminalModel     endocardial;
+    }
+}
+
+setPurkinjeSlab
+{
+    transmuralField uvc_transmural;
+}
+
+setPurkinjeMorphometry
+{
+    uvcLongitudinalField uvc_longitudinal;
+    uvcIntraventricularField uvc_intraventricular;
+    grooveMode auto;
+}

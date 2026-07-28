@@ -17,6 +17,8 @@ License
 
 Description
     State-major (SoA) batched evaluator for the Peris-Yague 2022 ionic model.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

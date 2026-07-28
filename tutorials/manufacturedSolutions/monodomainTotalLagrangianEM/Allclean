@@ -15,6 +15,7 @@ rm -rf constant/solid/polyMesh
 rm -rf platforms
 rm -rf processor*
 rm -f log.*
+rm -rf postProcessing
 rm -f constant/electro/electroProperties.withDefaultValues
 rm -f constant/electroMechanicalProperties.withDefaultValues
 rm -f constant/solid/mechanicalProperties.withDefaultValues

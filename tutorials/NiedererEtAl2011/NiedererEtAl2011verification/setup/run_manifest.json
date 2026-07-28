@@ -1,7 +1,7 @@
 {
   "schema_version": "2.3",
-  "run_id": "1780485313-45900c24",
-  "requested_action": "sim",
+  "run_id": "1785180073-b1e0dfe3",
+  "requested_action": "all",
   "entry": "niederer2012",
   "entry_kind": "registered_tutorial",
   "entry_path": "NiedererEtAl2011/NiedererEtAl2011verification",
@@ -9,17 +9,17 @@
   "workflow_family": null,
   "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/NiedererEtAl2011/NiedererEtAl2011verification",
   "setup_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/setup",
-  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/postProcessing",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/postProcessingPaperI_dx02_implicit",
   "dry_run": true,
   "continue_on_error": false,
   "status": "planned",
   "postprocess_status": "skipped",
   "current_case_id": null,
-  "started_at_utc": "2026-06-03T11:15:13.245254+00:00",
-  "updated_at_utc": "2026-06-03T11:15:13.427060+00:00",
-  "finished_at_utc": "2026-06-03T11:15:13.423778+00:00",
-  "total_cases": 9,
-  "planned_cases": 9,
+  "started_at_utc": "2026-07-27T19:21:13.461097+00:00",
+  "updated_at_utc": "2026-07-27T19:21:13.569265+00:00",
+  "finished_at_utc": "2026-07-27T19:21:13.563293+00:00",
+  "total_cases": 3,
+  "planned_cases": 3,
   "completed_cases": 0,
   "failed_cases": 0,
   "error": null,
@@ -58,155 +58,53 @@
   },
   "results": [
     {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.01_DX0.5",
+      "case_id": "implicit_TNNP_epicardialCells_DT0.01_DX0.2",
       "status": "planned",
       "duration_s": 0.0,
       "params": {
         "ionicModel": "TNNP",
         "tissue": "epicardialCells",
         "dt_ms": 0.01,
-        "dx_mm": 0.5,
-        "solver": "explicit"
+        "dx_mm": 0.2,
+        "solver": "implicit"
       },
       "error": null,
       "index": 1,
-      "total_cases": 9,
+      "total_cases": 3,
       "started_at_utc": null,
       "finished_at_utc": null
     },
     {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.01_DX0.2",
+      "case_id": "implicit_TNNP_epicardialCells_DT0.005_DX0.2",
       "status": "planned",
       "duration_s": 0.0,
       "params": {
         "ionicModel": "TNNP",
         "tissue": "epicardialCells",
-        "dt_ms": 0.01,
+        "dt_ms": 0.005,
         "dx_mm": 0.2,
-        "solver": "explicit"
+        "solver": "implicit"
       },
       "error": null,
       "index": 2,
-      "total_cases": 9,
+      "total_cases": 3,
       "started_at_utc": null,
       "finished_at_utc": null
     },
     {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.01_DX0.1",
+      "case_id": "implicit_TNNP_epicardialCells_DT0.001_DX0.2",
       "status": "planned",
       "duration_s": 0.0,
       "params": {
         "ionicModel": "TNNP",
         "tissue": "epicardialCells",
-        "dt_ms": 0.01,
-        "dx_mm": 0.1,
-        "solver": "explicit"
+        "dt_ms": 0.001,
+        "dx_mm": 0.2,
+        "solver": "implicit"
       },
       "error": null,
       "index": 3,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.005_DX0.5",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.005,
-        "dx_mm": 0.5,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 4,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.005_DX0.2",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.005,
-        "dx_mm": 0.2,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 5,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.005_DX0.1",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.005,
-        "dx_mm": 0.1,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 6,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.001_DX0.5",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.001,
-        "dx_mm": 0.5,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 7,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.001_DX0.2",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.001,
-        "dx_mm": 0.2,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 8,
-      "total_cases": 9,
-      "started_at_utc": null,
-      "finished_at_utc": null
-    },
-    {
-      "case_id": "explicit_TNNP_epicardialCells_DT0.001_DX0.1",
-      "status": "planned",
-      "duration_s": 0.0,
-      "params": {
-        "ionicModel": "TNNP",
-        "tissue": "epicardialCells",
-        "dt_ms": 0.001,
-        "dx_mm": 0.1,
-        "solver": "explicit"
-      },
-      "error": null,
-      "index": 9,
-      "total_cases": 9,
+      "total_cases": 3,
       "started_at_utc": null,
       "finished_at_utc": null
     }

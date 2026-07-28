@@ -17,6 +17,8 @@ License
 
 Description
     State-major (SoA) batched evaluator for the ToRORd_dynCl 2023 ionic model.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

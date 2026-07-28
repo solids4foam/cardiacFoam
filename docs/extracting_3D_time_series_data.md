@@ -1,8 +1,8 @@
 # Extracting 3D Time-Series Data (Probes)
 
-When running 3D myocardium simulations, `cardiacFoam` automatically outputs the requested ionic variables (like `Vm`, `Cai`, `CaSR`) as native OpenFOAM `volScalarField`s. 
+When running 3D myocardium simulations, `cardiacFoam` automatically outputs the requested ionic variables (like `Vm`, `Cai`, `CaSR`) as native OpenFOAM `volScalarField`s.
 
-To prevent generating massive amounts of disk data while still getting high-resolution time-series curves (e.g., to plot a smooth Action Potential or Calcium transient), you should use the native OpenFOAM `probes` function. 
+To prevent generating massive amounts of disk data while still getting high-resolution time-series curves (e.g., to plot a smooth Action Potential or Calcium transient), you should use the native OpenFOAM `probes` function.
 
 ## How to use `probes`
 You do not need to write any C++ code. You simply add a `probes` block to your `system/controlDict` (or include it as a separate file, like is done in `tutorials/NiedererEtAl2011/tissueNiedererEtAl2011/system/Niedererpoints`).
@@ -16,18 +16,18 @@ functions
     {
         type            probes;
         libs            ("libsampling.so");
-        
+
         // Write frequency (timeStep 1 = every single time step)
         writeControl    timeStep;
         writeInterval   1;
-        
+
         // The specific fields you want to track over time
         fields
         (
             Vm
             Cai
         );
-        
+
         // The (x y z) coordinates of the cells you want to extract
         probeLocations
         (

@@ -1,5 +1,0 @@
-# Reproducible run products and large local mesh caches
-/setup/results/
-/setup/interfaceMeshBank/*/polyMesh.tar.gz
-/setup/baselineSnapshot/*.tar.gz
-/bathBidomainInterfaceMetrics.numerical.*.csv

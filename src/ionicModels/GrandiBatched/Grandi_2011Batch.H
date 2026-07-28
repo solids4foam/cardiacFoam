@@ -17,6 +17,8 @@ License
 
 Description
     State-major (SoA) batched evaluator for the Grandi 2011 ionic model.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

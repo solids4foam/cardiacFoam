@@ -37,6 +37,8 @@ Description
     on the host (use `Foam::stimulusIO::toPOD()` from stimulusIO.H), then
     pass-by-value into the kernel - no pointer chasing, no virtual calls,
     no Foam types crossing the device boundary.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef StimulusProtocolPOD_H

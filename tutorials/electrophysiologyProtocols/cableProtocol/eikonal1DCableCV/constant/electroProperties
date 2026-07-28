@@ -25,7 +25,7 @@ eikonalSolverCoeffs
 
     chi  [0 -1 0 0 0 0 0]   140000;
     cm   [-1 -4 4 0 0 2 0]  0.01;
-    
+
     // c0 factor defines the CV multiplier: CV = c0 * sqrt(sigma / (chi * cm))
     // With sigma=0.1334, chi=140000, cm=0.01:
     // sqrt(0.1334 / 1400) = ~0.00976

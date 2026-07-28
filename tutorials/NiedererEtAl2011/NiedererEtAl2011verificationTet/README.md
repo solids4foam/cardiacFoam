@@ -47,7 +47,7 @@ solve. On orthogonal hexes the correction is identically zero, so the hex case
 runs `explicit` with 0 correctors and still gets the right answer. On tets that
 combination leaves the correction un-converged and the diffusion drops below
 second order. This case therefore adopts the same numerics validated to reach
-(near) second order on unstructured tets in `monodomainTetMMS`:
+(near) second order on unstructured tets in monodomainPseudoECG's tet overlay (`setup/mesh/tet`, formerly monodomainTetMMS):
 `implicit` + `nNonOrthogonalCorrectors 2` + `leastSquares` + tight linear
 tolerance. Implicit also removes the explicit-diffusion CFL limit that the fine
 tet rungs would otherwise hit at the locked timestep.
@@ -100,5 +100,5 @@ Per-dx activation times land in `setup/results/dx_<dx>mm/`.
 
 ## Requirements
 
-`gmsh` on `PATH` (same dependency as the `monodomainTetMMS` / `eikonalTetMMS`
+`gmsh` on `PATH` (same dependency as the monodomainPseudoECG / eikonalECG
 tet cases).

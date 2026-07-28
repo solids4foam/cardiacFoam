@@ -29,8 +29,6 @@ singleCellSolverCoeffs
     solver          RKF45;
     initialODEStep  1e-6;
     maxSteps        1000000000;
-    absTol          1e-6;
-    relTol          1e-4;
 
 
     // Stimulus protocol

@@ -33,6 +33,9 @@ Description
       in original vtk numbering order so use e.g. faceMap() to go from entry
       in faces() back to vtk numbering.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     vtkUnstructuredReader.C
 \*---------------------------------------------------------------------------*/

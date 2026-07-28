@@ -45,11 +45,15 @@ while IFS=$'\t' read -r key case_dir run_entry agg_key fresh_rel ref_rel; do
     continue
   fi
   PROVENANCE_CMD="reproduce_paperI.sh $key" \
-    bash "$PKG/capture_provenance.sh" "$cdir" > "$cdir/provenance.json" || \
+    bash "$PKG/capture_provenance.sh" "$cdir" < /dev/null > "$cdir/provenance.json" || \
     echo "  (provenance capture warning)"
   # uniform bash: run_entry is a script under the case dir; "-" means no run step
+  # < /dev/null is required: without it, run_entry inherits the same stdin fd
+  # as this while-loop's `read` (fed by the process substitution below), and
+  # if anything the run entry invokes so much as peeks at stdin, registry
+  # lines vanish silently -- cases get skipped with no error at all.
   if [ "$SKIP_RUN" -eq 0 ] && [ "$run_entry" != "-" ]; then
-    ( cd "$cdir" && bash "$run_entry" ) || { echo "  RUN FAILED"; rc=1; continue; }
+    ( cd "$cdir" && bash "$run_entry" ) < /dev/null || { echo "  RUN FAILED"; rc=1; continue; }
   fi
   if ! agg_err=$(python3 "$PKG/aggregate.py" "$agg_key" 2>&1 >/dev/null); then
     if [ ! -f "$ref" ]; then echo "  SKIP (no data + no reference yet)"; continue; fi

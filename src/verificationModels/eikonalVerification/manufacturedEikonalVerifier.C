@@ -65,11 +65,14 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
     Cm_(Cm.value()),
     c0_(c0.value()),
     enabled_(true),
+    writeErrorField_(false),
     dimension_(max(label(1), min(mesh.nGeometricD(), label(3)))),
     errorsReported_(false)
 {
     const dictionary& cfg = electroProperties.subDict("verificationModel");
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
+    writeErrorField_ =
+        cfg.lookupOrDefault<Switch>("writeErrorField", false);
 
     if (!enabled_)
     {
@@ -219,6 +222,44 @@ void manufacturedEikonalVerifier::postProcess
     }
 
     const auto norms = computeNorms(activationTime.primitiveField(), exact);
+
+    if (writeErrorField_)
+    {
+        // Written into the current time directory so it sits alongside the
+        // mesh-quality volFields produced by `checkMesh -writeAllFields`,
+        // letting the local error be correlated against local
+        // non-orthogonality and skewness cell by cell. Signed rather than
+        // absolute, so that cancellation and one-sided bias remain visible.
+        volScalarField activationTimeError
+        (
+            IOobject
+            (
+                "activationTimeError",
+                mesh_.time().timeName(),
+                mesh_,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh_,
+            dimensionedScalar("zero", activationTime.dimensions(), 0.0),
+            "zeroGradient"
+        );
+
+        scalarField& err = activationTimeError.primitiveFieldRef();
+        const scalarField& numeric = activationTime.primitiveField();
+
+        forAll(err, cellI)
+        {
+            err[cellI] = numeric[cellI] - exact[cellI];
+        }
+
+        activationTimeError.correctBoundaryConditions();
+        activationTimeError.write();
+
+        Info<< "Wrote cellwise activation-time error field "
+            << "'activationTimeError' to "
+            << mesh_.time().timeName() << endl;
+    }
 
     const fileName outputDir(mesh_.time().globalPath()/"postProcessing");
     mkDir(outputDir);

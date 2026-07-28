@@ -21,6 +21,9 @@ Class
 Description
     Batched GPU-oriented wrapper for the Grandi 2011 ionic model.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     GrandiBatched.C
 \*---------------------------------------------------------------------------*/

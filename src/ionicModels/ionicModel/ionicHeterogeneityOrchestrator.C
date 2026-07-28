@@ -20,7 +20,6 @@ Description
 
 Author
     Simao Nieto de Castro, UCD.
-
 \*---------------------------------------------------------------------------*/
 
 #include "ionicHeterogeneityOrchestrator.H"

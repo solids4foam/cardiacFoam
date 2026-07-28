@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Tetrahedral-mesh variant of the eikonal manufactured MMS sweep.
 #
-# Mirrors monodomainTetMMS/setup/run_tet_sweep.sh: gmsh builds a
+# Mirrors monodomainPseudoECG/setup/mesh/tet/run_tet_sweep.sh: gmsh builds a
 # near-uniform tetrahedral mesh of the unit cube at characteristic length
 # lc = 1/N (same box.geo.template as the monodomain tet sweep), imported
 # with gmshToFoam. Unlike the monodomain case, the eikonal solve is a
@@ -85,6 +85,6 @@ done
 
 ./Allclean
 echo "Sweep complete. Summarizing..."
-"$PY" setup/summarize_tet.py setup/results \
+"$PY" setup/mesh/tet/summarize_tet.py setup/results \
     --resolutions "${RESOLUTIONS[@]}" \
     --out setup/results/summary.csv

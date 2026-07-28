@@ -21,6 +21,9 @@ Class
 Description
     Batched / GPU-portable wrapper for the TWorld 2024 ionic model.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     TWorldBatched.C
 \*---------------------------------------------------------------------------*/

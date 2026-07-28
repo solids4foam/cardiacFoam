@@ -162,8 +162,8 @@ When this refactor lands:
 ## How to start
 
 1. Read the *current* state of the four files this touches —
-   architecture may have moved since this note was written: 
-   `conductionSystemDomain.C`, `purkinjeModelIO.{H,C}`, 
+   architecture may have moved since this note was written:
+   `conductionSystemDomain.C`, `purkinjeModelIO.{H,C}`,
    `ionicModelIO.C`, `ionicVariableCompatibility.C`.
 2. Sketch the `purkinjeModelIO::filterTokens` signature and the
    `ResolvedTokens` struct. PR-1 lands the helper with unit tests, no

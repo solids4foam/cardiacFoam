@@ -257,7 +257,7 @@ ionicHeterogeneity
     transitionWidth   0.1;                // Smooth transition band width
     transitionMode    blend;              // Transition type: blend or hard
     smoothing         smoothstep;         // Smoothing function: smoothstep
-    
+
     regions
     {
         subendo
@@ -289,7 +289,7 @@ Regions defined by mesh cell zone membership. Each cell is assigned exactly one 
 ionicHeterogeneity
 {
     mode cellZoneRegions;
-    
+
     regions
     {
         infarcted
@@ -317,7 +317,7 @@ ionicHeterogeneity
 {
     mode namedRegions;  // or transmuralBands, or cellZoneRegions
     regions { ... }
-    
+
     apexBaseBands
     {
         beta        3.0;        // Exponential power (default)
@@ -350,9 +350,9 @@ Constant overrides are stored in a top-level `ionicConstantOverrides` block with
 monodomainSolverCoeffs
 {
     ionicModel      BuenoOrovio;
-    
+
     ionicHeterogeneity { ... }
-    
+
     ionicConstantOverrides
     {
         global           // Global scope (applied first)

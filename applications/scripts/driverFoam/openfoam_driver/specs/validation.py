@@ -164,7 +164,7 @@ def _normalise_word(value: Any) -> Any:
 
 def _entry_is_applicable(entry: DictEntry, context: dict[str, Any]) -> bool:
     """Evaluate ``applicable_when`` and ``forbidden_when`` constraints.
-    
+
     Returns False if any ``forbidden_when`` predicate matches. Otherwise,
     returns True if all ``applicable_when`` predicates match (or if
     ``applicable_when`` is empty).

@@ -17,6 +17,8 @@ License
 
 Description
     Hardcoded restitution templates for 1D Purkinje models.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef restitutionTemplates_H

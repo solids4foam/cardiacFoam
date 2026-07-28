@@ -46,6 +46,13 @@ class manufacturedEikonalVerifier : public eikonalVerificationModel
     scalar Cm_;
     scalar c0_;
     Switch enabled_;
+
+    //- Write the cellwise signed error as a volScalarField alongside the
+    //  aggregate norms. Off by default, so existing cases are unchanged.
+    //  Enables correlating the local error against local mesh quality, which
+    //  `checkMesh -writeAllFields` writes onto the same mesh.
+    Switch writeErrorField_;
+
     label dimension_;
     bool errorsReported_;
 

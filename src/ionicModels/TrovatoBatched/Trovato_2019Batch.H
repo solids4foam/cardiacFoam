@@ -17,6 +17,8 @@ License
 
 Description
     State-major (SoA) batched evaluator for the Trovato 2019 ionic model.
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

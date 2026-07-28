@@ -21,6 +21,9 @@ Class
 Description
     Batched GPU-oriented wrapper for the Peris-Yague 2022 ionic model.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     PerisYagueBatched.C
 \*---------------------------------------------------------------------------*/

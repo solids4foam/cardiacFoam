@@ -15,4 +15,7 @@ rm -rf processor*
 
 rm -f log.*
 
-rm -rf constant/polyMesh  
+rm -rf constant/polyMesh
+
+rm -rf postProcessing
+rm -rf logs

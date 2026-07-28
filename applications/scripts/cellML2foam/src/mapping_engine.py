@@ -115,7 +115,7 @@ def load_state_map(fname="state_map.txt"):
     mapping = {}
     if not os.path.exists(fname):
         return None
-        
+
     with open(fname) as f:
         for line in f:
             if line.strip():
@@ -303,7 +303,7 @@ def emit_openfoam_algebraic_tail(discovered=None):
         iion_name = discovered['Iion']
         iion_map = f"\n    // Automatically discovered ionic current mapping\n    ALGEBRAIC[Iion_cm] = ALGEBRAIC[{iion_name}];\n"
     elif discovered and discovered.get('Vm'):
-        # If we have Vm but not an explicit Iion, 
+        # If we have Vm but not an explicit Iion,
         # we can't safely automate the sum, but we can provide a hint.
         iion_map = f"\n    // TODO: Define ALGEBRAIC[Iion_cm] based on {discovered['Vm']} derivative\n"
 

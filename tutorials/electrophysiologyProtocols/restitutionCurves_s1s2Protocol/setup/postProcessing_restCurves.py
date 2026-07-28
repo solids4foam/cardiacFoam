@@ -200,7 +200,7 @@ def detect_beats(time, vm):
             if np.isnan(t_rep50) and seg_v[j-1] > v50 >= seg_v[j]:
                 frac = (v50 - seg_v[j-1]) / (seg_v[j] - seg_v[j-1])
                 t_rep50 = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
-                
+
             if np.isnan(t_rep70) and seg_v[j-1] > v70 >= seg_v[j]:
                 frac = (v70 - seg_v[j-1]) / (seg_v[j] - seg_v[j-1])
                 t_rep70 = seg_t[j-1] + frac * (seg_t[j] - seg_t[j-1])
@@ -248,42 +248,42 @@ def get_s1_s2_beats(beats, filepath=None, config=None):
 
     if filepath is None:
         return beats[-2], beats[-1]
-    
+
     name = filepath.name
     m_s1 = re.search(r"S1_(\d+)", name)
-    
+
     if config:
         s1_val = config.get("s1_interval_ms", 1000)
         n_s1 = config.get("n_s1", 10)
     else:
         s1_val = int(m_s1.group(1)) if m_s1 else 1000
         n_s1 = 10
-    
+
     m_s2 = re.search(r"S2_(\d+)", name)
     s2_val = int(m_s2.group(1)) if m_s2 else 250
-    
+
     # The S1 train ends and the first S2 happens based on the config intervals
     s1_target_time = (n_s1 * s1_val) / 1000.0
-    
+
     s1_beat = None
     s2_beat = None
-    
+
     for b in beats:
         if abs(b["t_up"] - s1_target_time) < 0.1:
             s1_beat = b
             break
-            
+
     if s1_beat is None:
         return None, None
-        
+
     idx = beats.index(s1_beat)
     if idx + 1 < len(beats):
         potential_s2 = beats[idx + 1]
-        
-        # We must ensure this is actually the S2 beat. 
+
+        # We must ensure this is actually the S2 beat.
         # If the true S2 beat failed, this might accidentally be the S3 beat!
         actual_interval_ms = (potential_s2["t_up"] - s1_beat["t_up"]) * 1000.0
-        
+
         if abs(actual_interval_ms - s2_val) < 2.0:
             s2_beat = potential_s2
         else:
@@ -291,7 +291,7 @@ def get_s1_s2_beats(beats, filepath=None, config=None):
             return None, None
     else:
         return None, None
-        
+
     return s1_beat, s2_beat
 
 def compute_apd_di(beats, filepath=None, config=None):
@@ -300,24 +300,24 @@ def compute_apd_di(beats, filepath=None, config=None):
         return None
 
     res = {}
-    
+
     # We don't strictly require valid APD90 for APD70/50 to be valid!
     # But we calculate what we can.
-    
+
     for level in [90, 70, 50]:
         t_rep_s1 = s1.get(f"t_repol{level}", np.nan)
         t_rep_s2 = s2.get(f"t_repol{level}", np.nan)
-        
+
         if np.isfinite(t_rep_s1) and np.isfinite(t_rep_s2) and t_rep_s1 < s2["t_up"]:
             di = s2["t_up"] - t_rep_s1
             apd = t_rep_s2 - s2["t_up"]
             if di > 0 and apd > 0:
                 res[f"DI{level}"] = di
                 res[f"APD{level}"] = apd
-                
+
     if not res:
         return None
-        
+
     return res
 
 
@@ -358,7 +358,7 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
         if best_level is not None:
             t_rep_s1 = s1[f"t_repol{best_level}"]
             t_rep_s2 = s2[f"t_repol{best_level}"]
-            
+
             # ---- DI
             plt.axvspan(
                 t_rep_s1,
@@ -470,7 +470,7 @@ def postprocess_one_ionic_model(
                 continue
 
             row = {"tissue": tissue}
-            
+
             if "DI90" in res:
                 row["DI90_ms"] = res["DI90"] * 1e3
                 row["APD90_ms"] = res["APD90"] * 1e3
@@ -480,7 +480,7 @@ def postprocess_one_ionic_model(
             if "DI50" in res:
                 row["DI50_ms"] = res["DI50"] * 1e3
                 row["APD50_ms"] = res["APD50"] * 1e3
-                
+
             all_restitution_data.append(row)
 
     if not all_restitution_data:
@@ -497,22 +497,22 @@ def postprocess_one_ionic_model(
 
     # Plot combined restitution curves
     plt.figure(figsize=(10, 6))
-    
+
     for tissue in tissues:
         tissue_df = df[df["tissue"] == tissue]
         if tissue_df.empty:
             continue
-            
+
         if "DI90_ms" in tissue_df.columns:
             valid90 = tissue_df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
             if not valid90.empty:
                 plt.plot(valid90["DI90_ms"], valid90["APD90_ms"], marker='o', label=f'{tissue} APD90')
-        
+
         if "DI70_ms" in tissue_df.columns:
             valid70 = tissue_df.dropna(subset=["DI70_ms", "APD70_ms"]).sort_values("DI70_ms")
             if not valid70.empty:
                 plt.plot(valid70["DI70_ms"], valid70["APD70_ms"], marker='s', label=f'{tissue} APD70')
-                
+
         if "DI50_ms" in tissue_df.columns:
             valid50 = tissue_df.dropna(subset=["DI50_ms", "APD50_ms"]).sort_values("DI50_ms")
             if not valid50.empty:
@@ -533,12 +533,12 @@ def postprocess_one_ionic_model(
 
     # Plot APD90 only restitution curves
     plt.figure(figsize=(10, 6))
-    
+
     for tissue in tissues:
         tissue_df = df[df["tissue"] == tissue]
         if tissue_df.empty:
             continue
-            
+
         if "DI90_ms" in tissue_df.columns:
             valid90 = tissue_df.dropna(subset=["DI90_ms", "APD90_ms"]).sort_values("DI90_ms")
             if not valid90.empty:
@@ -614,7 +614,7 @@ def run_postprocessing(
         fig_path = model_dir / f"{model}_restitution.png"
         fig_path_apd90 = model_dir / f"{model}_restitution_APD90.png"
         csv_path = model_dir / f"{model}_restitution.csv"
-        
+
         if fig_path.exists():
             artifacts.append({
                 "path": f"{model}/{fig_path.name}",

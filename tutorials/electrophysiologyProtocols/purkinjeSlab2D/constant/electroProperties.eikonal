@@ -1,0 +1,84 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// NOTE: eikonalSolver overrides deltaT/endTime to a single dimensionless
+// step (see eikonalMyocardiumDomain::applyModelTimeControls) — it solves
+// the whole-domain arrival-time field once and does not advance through
+// real time. Kept here for comparison against the monodomain variant, not
+// as a source of multi-step retrograde timelines.
+
+myocardiumSolver  eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivity [-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
+    chi          [0 -1 0 0 0 0 0]  140000;
+    cm           [-1 -4 4 0 0 2 0] 0.01;
+
+    c0           [0 0 -0.5 0 0 0 0] 1;
+
+    eikonalAdvectionDiffusionApproach true;
+    electrophysicsAdvanceScheme       staggeredElectrophysicsAdvanceScheme;
+    reportSetup                       true;
+
+    stimulusLocationMin (0      0     0);
+    stimulusLocationMax (0.0002 0.005 0.0002);
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver restitutionEikonalSolver1D;
+                graphFile              purkinjeGraph;
+
+                c0       [0 1 -1 0 0 0 0] 2.0;
+                chi      140000;
+                cm       0.01;
+                vm1DRest -0.084;
+
+                apdNominal      0.002;
+                escapeInterval  1.0;
+                reportSetup     true;
+
+                outputVariables
+                {
+                    export (activationTime);
+                    debug  ();
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    eikonalPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            pvjRadius               0.0002;
+            couplingMode            bidirectional;
+            debugCoupling           true;
+            reportSetup             true;
+        }
+    }
+}
+
+// ************************************************************************* //

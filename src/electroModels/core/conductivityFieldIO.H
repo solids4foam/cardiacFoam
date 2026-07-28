@@ -21,6 +21,8 @@ Class
 Description
     Strict conductivity source resolution shared by the myocardium solvers.
 
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductivityFieldIO_H

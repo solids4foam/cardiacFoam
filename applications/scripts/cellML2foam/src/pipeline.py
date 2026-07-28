@@ -139,18 +139,18 @@ def extract_metadata_from_mmt(mmt_path: Path) -> tuple[dict, dict]:
 
     try:
         model = myokit.load_model(str(mmt_path))
-        
+
         # 1. State Mapping
         mapping = {
-            i: s.name().replace('.', '_') 
+            i: s.name().replace('.', '_')
             for i, s in enumerate(model.states())
         }
-        
+
         # 2. Component Discovery (Vm, Iion, Istim)
         discovered = discovery.discover_all(model)
-        
+
         return mapping, discovered
-        
+
     except Exception as e:
         print(f"    [Error] Failed to extract metadata from {mmt_path}: {e}")
         return None, {}
@@ -202,7 +202,7 @@ def run_pipeline(
                 raise ValueError("--model must be ModelName_Year")
 
             name, year = model.rsplit("_", 1)
-            
+
             # 1. Apply Python-based source-to-source rewrites (Replaces Coccinelle)
             if verbose:
                 print("    Applying Python-based source-to-source rewrites (replacing Coccinelle)")
@@ -211,13 +211,13 @@ def run_pipeline(
             # 2. Generate OpenFOAM-ready code
             if verbose:
                 print(f"    Generating OpenFOAM code (discovered: {discovered_vars})")
-            
+
             outdir.mkdir(parents=True, exist_ok=True)
             output_h = outdir / f"{name}_{year}.H"
             run_mapping(
-                str(current), 
-                output_h, 
-                mapping=auto_mapping, 
+                str(current),
+                output_h,
+                mapping=auto_mapping,
                 discovered=discovered_vars, # Pass discovered components
                 verbose=verbose
             )

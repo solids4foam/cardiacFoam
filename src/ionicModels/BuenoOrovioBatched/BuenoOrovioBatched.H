@@ -21,6 +21,9 @@ Class
 Description
     GPU-friendly batched version of the reduced Bueno-Orovio 2008 ionic model.
 
+Author
+    Simao Nieto de Castro, UCD.
+
 SourceFiles
     BuenoOrovioBatched.C
 \*---------------------------------------------------------------------------*/

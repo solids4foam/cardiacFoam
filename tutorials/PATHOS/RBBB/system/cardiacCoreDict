@@ -1,0 +1,116 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      cardiacCoreDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+conductivity
+{
+    df          0.133418;
+    ds          0.0176062;
+    dn          0.0176062;
+    fiberField  "fiber";
+    sheetField  "sheet";
+    outputField "conductivity";
+}
+
+// ----------------------------------------------------------------------------
+// generatePurkinjeTree configuration with pig transmural extension.
+//
+// NOTE: this case does not currently ship with the prerequisites needed to
+// run generatePurkinjeTree:
+//   - uvc_transmural and uvc_longitudinal volScalarFields in 0/
+//   - LVEndoFaces and RVEndoFaces faceSets in constant/polyMesh/sets/
+// Both must be produced before invoking the utility. The block below is
+// authored as the canonical example of how the new transmural terminal
+// extension is configured (see Tasks 1-5 of the implementation plan at
+// docs/superpowers/plans/2026-05-17-pig-transmural-purkinje.md).
+//
+// When the prerequisites exist, run:
+//   generatePurkinjeTree
+// from this case directory. Output: outputs/biv-line-{lv,rv}_{xyz,lines,
+// endnodes}.txt with PMJs distributed transmurally per pig literature.
+// ----------------------------------------------------------------------------
+
+purkinjeTree
+{
+    lvFaceSet               "LVEndoFaces";
+    rvFaceSet               "RVEndoFaces";
+    outputDir               "outputs";
+
+    uvcTransmuralField      "uvc_transmural";
+    uvcLongitudinalField    "uvc_longitudinal";
+
+    lv
+    {
+        filename        "biv-line-lv";
+        seed            (12.691 -165.066 -96.809);
+        initDir         (0.5 -0.866 0.0);
+        initLength      40;
+        N_it            12;
+        length          15;
+        l_segment       1;
+        branchAngle     0.15;
+        repulsivity     0.05;
+        transmuralMin   -1e30;
+        transmuralMax    1e30;
+        longitudinalMin -1e30;
+        longitudinalMax  0.9;
+
+        // Pig transmural terminal extension.
+        terminalModel   transmural;
+        extension
+        {
+            type            straightSegment;
+            dMin            0.0;
+            dMax            0.33;          // pig LV: subendocardial third
+            stepLen         0.5;           // mm (mesh units)
+            maxSteps        50;
+            fallback        surfaceNormal;
+            epiClamp        0.95;
+        }
+    }
+
+    rv
+    {
+        filename        "biv-line-rv";
+        seed            (3.413 -170.381 -96.038);
+        initDir         (0.5 -0.866 0.0);
+        initLength      50;
+        N_it            13;
+        length          12;
+        l_segment       1;
+        branchAngle     0.2;
+        repulsivity     0.1;
+        transmuralMin   -1e30;
+        transmuralMax    1e30;
+        longitudinalMin -1e30;
+        longitudinalMax  0.9;
+
+        // Pig transmural terminal extension (thinner RV wall).
+        terminalModel   transmural;
+        extension
+        {
+            type            straightSegment;
+            dMin            0.0;
+            dMax            0.25;          // pig RV
+            stepLen         0.5;
+            maxSteps        50;
+            fallback        surfaceNormal;
+            epiClamp        0.95;
+        }
+    }
+}
+
+// ************************************************************************* //

@@ -258,7 +258,7 @@ void manufacturedGraphVerifier::postProcess
     auto u1Norms = computeNorms(u1, u1LocalExact);
     auto u2Norms = computeNorms(u2, u2LocalExact);
 
-    const fileName outputDir(runTime.path()/"postProcessing");
+    const fileName outputDir(runTime.globalPath()/"postProcessing");
     mkDir(outputDir);
     const fileName outputFile
     (
