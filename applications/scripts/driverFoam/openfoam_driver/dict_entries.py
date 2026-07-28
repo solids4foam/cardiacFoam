@@ -996,18 +996,18 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.interfaceConductivityInterpolation',
             phases=frozenset({'physics'}),
-            description='Face-interpolation scheme for the conductivity across the heart/bath interface. unweightedHarmonic (default) and distanceWeightedHarmonic are harmonic means (continuous normal current); naiveLinearSigmaTotal is a plain linear blend of the total conductivity.',
+            description='Face-interpolation scheme for the conductivity across the heart/bath interface. Both are harmonic means, which keep the normal current continuous; distanceWeightedHarmonic (default) additionally weights by the face interpolation factor and is the scheme the reported bath results use.',
             value_kind='enum',
-            enum_values=('unweightedHarmonic', 'distanceWeightedHarmonic', 'naiveLinearSigmaTotal'),
-            typical_value='unweightedHarmonic',
+            enum_values=('unweightedHarmonic', 'distanceWeightedHarmonic'),
+            typical_value='distanceWeightedHarmonic',
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.intracellularAssembly',
             phases=frozenset({'physics'}),
-            description='How the intracellular contribution is assembled into the global phiE equation. currentSplit (default) injects the divergence of the intracellular current as a source; matchedSubmesh assembles the myocardium Laplacian on a matched sub-mesh and injects its coefficients conservatively.',
+            description='How the intracellular contribution is assembled into the global phiE equation. matchedSubmesh (default) assembles the myocardium Laplacian on a matched sub-mesh and injects its coefficients conservatively, imposing intracellular insulation once at the heart/bath boundary; currentSplit injects the divergence of the intracellular current as a source and evaluates the two intracellular terms on different meshes.',
             value_kind='enum',
             enum_values=('currentSplit', 'matchedSubmesh'),
-            typical_value='currentSplit',
+            typical_value='matchedSubmesh',
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiENonOrthogonalCorrectors',

@@ -1,0 +1,13 @@
+cells_total=14792
+cells_myocardium=4951
+cells_bath=9841
+internal_interface_faces=492
+patches=sides,xMax,xMin
+zone_partition=PASS
+internal_interface=PASS
+nominal_N=10
+gmsh_lc=0.10000000000000001
+gmsh_version=4.15.2
+openfoam_version=v2412
+git_sha=0edd7d572a35c4380ca45bb0ebf6d3ffc06499c6
+strict_small_determinant_cells=200

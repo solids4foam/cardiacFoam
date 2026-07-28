@@ -200,12 +200,12 @@ extracellularPotentialDomain::extracellularPotentialDomain
         dict.lookupOrDefault<word>
         (
             "interfaceConductivityInterpolation",
-            "unweightedHarmonic"
+            "distanceWeightedHarmonic"
         )
     ),
     intracellularAssembly_
     (
-        dict.lookupOrDefault<word>("intracellularAssembly", "currentSplit")
+        dict.lookupOrDefault<word>("intracellularAssembly", "matchedSubmesh")
     ),
     phiEPtr_(),
     VmGlobalPtr_(),
@@ -240,14 +240,12 @@ extracellularPotentialDomain::extracellularPotentialDomain
     (
         interfaceConductivityInterpolation_ != "unweightedHarmonic"
      && interfaceConductivityInterpolation_ != "distanceWeightedHarmonic"
-     && interfaceConductivityInterpolation_ != "naiveLinearSigmaTotal"
     )
     {
         FatalErrorInFunction
             << "Unknown interfaceConductivityInterpolation '"
             << interfaceConductivityInterpolation_ << "'. Valid values are "
-            << "unweightedHarmonic, distanceWeightedHarmonic, and "
-            << "naiveLinearSigmaTotal."
+            << "unweightedHarmonic and distanceWeightedHarmonic."
             << exit(FatalError);
     }
     if
@@ -726,12 +724,16 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
         }
         else
         {
-            SfI[faceI] = extracellularFaceConductivity::linear
-            (
-                sigmaI[ownCell],
-                sigmaI[neiCell],
-                weights[faceI]
-            );
+            SfI[faceI] =
+                extracellularFaceConductivity::
+                distanceWeightedExtracellularFaceTensor
+                (
+                    sigmaI[ownCell],
+                    sigmaI[neiCell],
+                    sigmaIntracellularI[ownCell],
+                    sigmaIntracellularI[neiCell],
+                    weights[faceI]
+                );
         }
 
         if (ownHeart == neiHeart)
