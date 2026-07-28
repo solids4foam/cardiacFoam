@@ -95,6 +95,8 @@ env/
 .hgignore
 .timeStamp
 .trash/
+scratch/
+scratch_meshes/
 
 # logs and outputs
 *.log
@@ -142,6 +144,12 @@ tutorials/**/[1-9]*/
 # Generated 0 directories and specific untracked cases
 tutorials/manufacturedSolutions/*/0/
 tutorials/**/0/electro/
+
+# Anatomical and derived initial fields under any tutorial 0/ directory.
+# Fibre, sheet, tag, conductivity and UVC fields are mesh-sized (tens to
+# hundreds of MB each) and are regenerated from the mesh, not authored here.
+# Case dictionaries under constant/ and system/ remain tracked.
+tutorials/**/0/
 
 # Large mesh / field exports under tutorials — git cannot handle these
 tutorials/**/*.vtp
@@ -191,3 +199,33 @@ tutorials/manufacturedSolutions/**/*.geo
 
 # MMS: coupled 1D-3D generated mesh-variant sweep scratch (regenerated per-N)
 tutorials/manufacturedSolutions/**/blockMeshDict.*.active*
+
+# Presentation: vendored third-party assets and build output.
+# The slide sources under presentation/src and presentation/slides are small;
+# vendor/ and build/ are regenerated and must never enter history.
+presentation/vendor/
+presentation/build/
+presentation/node_modules/
+
+# Mesh-generation and visualisation artefacts under tutorials. All are
+# regenerable from the case setup and are far too large for git.
+tutorials/**/*.msh
+tutorials/**/*.pos
+tutorials/**/*.blend
+tutorials/**/*.blend1
+tutorials/**/*.ply
+tutorials/**/*.obj
+tutorials/**/*.npz
+tutorials/**/*.html
+
+# Whole-heart Purkinje trees (3-10 MB each). The small verification-scale
+# graphs under manufacturedSolutions/ and NiedererEtAl2011/ (<=30 kB) stay
+# tracked, since the 1D-3D convergence cases depend on them.
+tutorials/PATHOS/**/constant/purkinjeGraph*
+tutorials/heartSim3D-1D/**/constant/purkinjeGraph*
+tutorials/FiberAlignedAnisotropicMesh/**/constant/purkinjeGraph*
+
+# Post-processing output directories carry generated figures; the existing
+# rule only matched the exact name "postProcessing".
+tutorials/**/postProcessing*/
+tutorials/**/blenderViz/
