@@ -44,6 +44,15 @@ class TestValidateWorkflowCommands(unittest.TestCase):
         dag = {"steps": [{"id": "s", "command": "checkMesh"}]}
         self.assertEqual(validate_workflow_commands(dag), ())
 
+    def test_bath_bidomain_interface_metrics_is_allowed(self) -> None:
+        # bath_tet's canonical reported metrics come from this utility (a
+        # post-hoc pass over the reconstructed mesh, since the live verifier
+        # can't do heart/bath mesh-subsetting during a parallel-decomposed
+        # solve) run as its own workflow step after solve -- static allowlist
+        # entry, same reasoning as gmsh/gmshToFoam/checkMesh above.
+        dag = {"steps": [{"id": "s", "command": "bathBidomainInterfaceMetrics"}]}
+        self.assertEqual(validate_workflow_commands(dag), ())
+
     def test_unknown_command_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "rm"}]}
         codes = {d.code for d in validate_workflow_commands(dag)}

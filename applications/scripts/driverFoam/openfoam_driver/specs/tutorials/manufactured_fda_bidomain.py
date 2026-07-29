@@ -67,7 +67,7 @@ def make_spec(
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
-    tet_end_time: float | None = None,
+    end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ):
@@ -103,7 +103,7 @@ def make_spec(
         numerics_profile=numerics_profile,
         grad_scheme=grad_scheme,
         phi_tolerance=phi_tolerance,
-        tet_end_time=tet_end_time,
+        end_time=end_time,
         fv_scheme_overrides=fv_scheme_overrides,
         fv_solution_overrides=fv_solution_overrides,
     )

@@ -22,7 +22,7 @@
 #     Tests mesh_family="tet" support in manufactured_fda.py: workflow_dag
 #     branching, apply_case's render-only materialization (never invokes
 #     gmsh), numerics_profile overlay selection, grad_scheme/phi_tolerance/
-#     tet_end_time application, and strict kwarg validation.
+#     end_time application, and strict kwarg validation.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -397,11 +397,11 @@ def test_tet_mesh_family_works_with_ecg_enabled(tmp_path):
     assert "leastSquares;" in scheme_text
 
 
-# --- tet_end_time -------------------------------------------------------------
+# --- end_time -------------------------------------------------------------
 
-def test_tet_end_time_overrides_control_dict(tmp_path):
+def test_end_time_overrides_control_dict(tmp_path):
     case_root = _write_case(tmp_path)
-    spec = _call_make_spec(tmp_path, mesh_family="tet", numerics_profile="bidomain_tet", tet_end_time=0.2)
+    spec = _call_make_spec(tmp_path, mesh_family="tet", numerics_profile="bidomain_tet", end_time=0.2)
     cases = spec.build_cases()
     spec.apply_case(spec.case_root, cases[0])
     text = (case_root / "system" / "controlDict").read_text()

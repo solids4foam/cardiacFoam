@@ -166,6 +166,19 @@ def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str,
                     "depends_on": ["checkMesh"],
                 },
                 {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
+                # Reads the reconstructed final-time solution -- the live
+                # (potentially parallel-decomposed) verifier can't do the
+                # heart/bath fvMeshSubset + interface-face analysis itself
+                # (applications/utilities/bathBidomainInterfaceMetrics
+                # explicitly operates on "a reconstructed serial mesh",
+                # which only exists once solve has fully exited), so this is
+                # its own step rather than folded into the solve step.
+                {
+                    "id": "interfaceMetrics",
+                    "command": "bathBidomainInterfaceMetrics",
+                    "args": ["-latestTime"],
+                    "depends_on": ["solve"],
+                },
             ]
         }
     return {
@@ -205,7 +218,7 @@ def _apply_case(
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
-    tet_end_time: float | None = None,
+    end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
@@ -263,8 +276,8 @@ def _apply_case(
         )
 
     set_delta_t(control_dict, dt_value)
-    if tet_end_time is not None:
-        update_foam_entry(control_dict, "endTime", tet_end_time)
+    if end_time is not None:
+        update_foam_entry(control_dict, "endTime", end_time)
     if grad_scheme is not None:
         update_foam_entry(
             case_root / "system" / "fvSchemes",
@@ -507,7 +520,7 @@ def make_spec(
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
-    tet_end_time: float | None = None,
+    end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
@@ -576,7 +589,7 @@ def make_spec(
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             phi_tolerance=phi_tolerance,
-            tet_end_time=tet_end_time,
+            end_time=end_time,
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
         ),
@@ -605,7 +618,7 @@ def make_spec(
             "numerics_profile": numerics_profile,
             "grad_scheme": grad_scheme,
             "phi_tolerance": phi_tolerance,
-            "tet_end_time": tet_end_time,
+            "end_time": end_time,
             "control_dict_relpath": str(control_dict_relpath),
             "electro_properties_relpath": str(electro_properties_relpath),
             "physics_properties_relpath": str(physics_properties_relpath),

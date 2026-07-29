@@ -205,7 +205,7 @@ def _apply_case(
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
-    tet_end_time: float | None = None,
+    end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
@@ -261,8 +261,8 @@ def _apply_case(
         _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
 
     set_delta_t(control_dict, dt_value)
-    if tet_end_time is not None:
-        update_foam_entry(control_dict, "endTime", tet_end_time)
+    if end_time is not None:
+        update_foam_entry(control_dict, "endTime", end_time)
     if grad_scheme is not None:
         update_foam_entry(
             case_root / "system" / "fvSchemes",
@@ -535,7 +535,7 @@ def make_spec(
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
-    tet_end_time: float | None = None,
+    end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
@@ -608,7 +608,7 @@ def make_spec(
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             phi_tolerance=phi_tolerance,
-            tet_end_time=tet_end_time,
+            end_time=end_time,
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
             verification_model_type=verification_model_type,

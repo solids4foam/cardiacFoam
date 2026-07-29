@@ -48,6 +48,7 @@ STEP_STATUS_VALUES = ("pending", "running", "completed", "failed", "skipped")
 # Case-local scripts (Allrun-family) live in CASE_SCRIPT_COMMANDS instead.
 OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
     {
+        "bathBidomainInterfaceMetrics",
         "blockMesh",
         "cardiacFoam",
         "checkMesh",

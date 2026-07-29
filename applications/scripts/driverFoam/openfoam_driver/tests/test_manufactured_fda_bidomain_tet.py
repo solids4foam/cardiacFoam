@@ -20,7 +20,7 @@
 #
 # Description
 #     Confirms manufactured_fda_bidomain.make_spec's wrapper threads the new
-#     mesh_family/numerics_profile/grad_scheme/phi_tolerance/tet_end_time/
+#     mesh_family/numerics_profile/grad_scheme/phi_tolerance/end_time/
 #     fv_scheme_overrides/fv_solution_overrides kwargs through to the base
 #     manufactured_fda.make_spec (pass-through only, no new logic here).
 #

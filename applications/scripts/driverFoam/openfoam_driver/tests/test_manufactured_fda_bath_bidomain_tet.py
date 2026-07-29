@@ -188,10 +188,12 @@ def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
     steps = spec.metadata["workflow_dag"]["steps"]
     assert [s["id"] for s in steps] == [
         "clean", "gmsh", "gmshToFoam", "checkMesh", "setConductivity", "solve",
+        "interfaceMetrics",
     ]
     assert [s["command"] for s in steps] == [
         "Allclean", "gmsh", "gmshToFoam", "checkMesh",
         "setTorsoOrganConductivityField", "cardiacFoam",
+        "bathBidomainInterfaceMetrics",
     ]
     by_id = {s["id"]: s for s in steps}
     assert by_id["gmsh"]["args"] == [
@@ -199,6 +201,13 @@ def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
         "three_domain_box.msh", "-format", "msh2",
     ]
     assert by_id["gmshToFoam"]["args"] == ["three_domain_box.msh"]
+    # Reads the reconstructed final-time solution, not something the live
+    # (potentially parallel-decomposed) verifier can compute itself -- see
+    # applications/utilities/bathBidomainInterfaceMetrics: it does
+    # heart/bath fvMeshSubset + interface-face analysis on "a reconstructed
+    # serial mesh", which only exists once the solve step has fully exited.
+    assert by_id["interfaceMetrics"]["args"] == ["-latestTime"]
+    assert by_id["interfaceMetrics"]["depends_on"] == ["solve"]
 
 
 def test_hex_workflow_dag_is_still_blockmesh_toposet_pipeline(tmp_path):
@@ -265,7 +274,7 @@ def test_tet_grad_scheme_phi_tolerance_and_end_time_overrides(tmp_path):
         numerics_profile="bath_bidomain_tet",
         grad_scheme="gauss_linear",
         phi_tolerance=1e-6,
-        tet_end_time=0.02,
+        end_time=0.02,
     )
     case = spec.build_cases()[0]
     spec.apply_case(spec.case_root, case)

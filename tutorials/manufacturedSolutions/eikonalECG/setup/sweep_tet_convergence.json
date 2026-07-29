@@ -16,6 +16,8 @@
         "gauss_linear",
         "gauss_linear",
         "gauss_linear",
+        "gauss_linear",
+        "least_squares",
         "least_squares",
         "least_squares",
         "least_squares"
@@ -24,9 +26,11 @@
         [10],
         [20],
         [40],
+        [80],
         [10],
         [20],
-        [40]
+        [40],
+        [80]
       ]
     },
     "dependent": [
