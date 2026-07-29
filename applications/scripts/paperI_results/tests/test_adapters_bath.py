@@ -21,6 +21,16 @@ def test_bath_structured_h_from_N_when_absent(tmp_path):
     rows = adapters.from_bath_structured(p)
     assert rows[0]["h"] == "0.1"   # 1/10 nominal
 
+def test_bath_structured_preserves_dimension_when_present(tmp_path):
+    p = tmp_path / "bath_bidomain_errors.csv"
+    p.write_text(
+        "Dimension,N,L2_Vm\n"
+        "1D,10,4e-3\n"
+        "3D,10,5e-3\n"
+    )
+    rows = adapters.from_bath_structured(p)
+    assert {r["dim"] for r in rows} == {"1D", "3D"}
+
 # ---- Task 4: tet bath interface metrics -------------------------------------
 
 def _metrics_row(**over):

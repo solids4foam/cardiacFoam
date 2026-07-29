@@ -205,17 +205,18 @@ _BATH_STRUCTURED_FIELDS = ("Vm", "phiE", "phiI")
 def from_bath_structured(errors_path, case="bath"):
     """bathBidomain/postProcessing/bath_bidomain_errors.csv -> canonical rows.
     Columns: N (or h/dx) + L2_<field> (+ optional L1_/Linf_). h falls back to 1/N.
-    NOTE: real header not on disk at plan time; confirm when bathBidomain is run."""
+    Dimension is preserved when present; older fixtures without it default to 3D."""
     rows = []
     with Path(errors_path).open(newline="") as fh:
         for rec in csv.DictReader(fh):
             n = rec.get("N") or rec.get("cells") or ""
             h = rec.get("h") or rec.get("dx") or (f"{1.0 / int(n):g}" if n else "")
+            dim = rec.get("Dimension") or rec.get("dim") or "3D"
             for field in _BATH_STRUCTURED_FIELDS:
                 l2 = rec.get(f"L2_{field}", "")
                 if l2 == "":
                     continue
-                rows.append(dict(case=case, variant="structured", dim="3D",
+                rows.append(dict(case=case, variant="structured", dim=dim,
                                  N=str(n), h=str(h), field=field,
                                  L1=rec.get(f"L1_{field}", ""), L2=l2,
                                  Linf=rec.get(f"Linf_{field}", "")))
