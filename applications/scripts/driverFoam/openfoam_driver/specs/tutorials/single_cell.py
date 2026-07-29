@@ -121,21 +121,20 @@ def _postprocess(
     setup_root: Path,
     output_dir: Path,
     *,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
     strict_artifacts: bool = False,
 ) -> None:
+    # singleCellinteractivePlots.py is a human-facing Plotly viewer (browser
+    # toggle buttons) -- it produces nothing an agent or downstream pipeline
+    # consumes, unlike table_summary.py's APD90/peak/resting-voltage numbers.
+    # driverFOAM no longer invokes it; the script itself is untouched on disk
+    # for anyone who wants to run it manually.
     run_postprocess_tasks(
         setup_root=setup_root,
         output_dir=output_dir,
         tutorial_name=defaults.TUTORIAL_NAME,
         strict_artifacts=strict_artifacts,
         tasks=[
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-            ),
             PostprocessTask(
                 module_relpath=table_summary_relpath,
             ),
@@ -151,6 +150,8 @@ def make_spec(
     output_dir_name: str | None = None,
     ionic_models: Sequence[str] = defaults.IONIC_MODELS,
     ionic_model_tissue_map: Mapping[str, Sequence[str]] = defaults.IONIC_MODEL_TISSUE_MAP,
+    ionic_model: str | None = None,
+    tissue: str | None = None,
     stimulus_map: Mapping[str, float] = defaults.STIMULUS_MAP,
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
@@ -159,11 +160,20 @@ def make_spec(
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     output_glob: str = defaults.OUTPUT_GLOB,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
+    if (ionic_model is None) != (tissue is None):
+        raise ValueError(
+            "ionic_model and tissue must be given together (a single-case "
+            "override, for entry-mode sweeps that need build_cases() to "
+            "collapse to exactly one case) or not at all (the default "
+            "full-catalog ionic_models/ionic_model_tissue_map sweep)"
+        )
+    if ionic_model is not None:
+        ionic_models = [ionic_model]
+        ionic_model_tissue_map = {ionic_model: [tissue]}
+
     ionic_models_list = [str(item) for item in ionic_models]
     if not ionic_models_list:
         raise ValueError("ionic_models cannot be empty")
@@ -178,7 +188,6 @@ def make_spec(
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    postprocess_script_path = Path(postprocess_script_relpath)
     table_summary_path = Path(table_summary_relpath)
 
     default_output_dir_name = defaults.OUTPUT_DIR_NAME
@@ -217,8 +226,6 @@ def make_spec(
         collect_outputs=partial(_collect_outputs, output_glob=output_glob),
         postprocess=partial(
             _postprocess,
-            postprocess_script_relpath=postprocess_script_path,
-            postprocess_function_name=postprocess_function_name,
             table_summary_relpath=table_summary_path,
             strict_artifacts=postprocess_strict_artifacts,
         ),
@@ -236,8 +243,6 @@ def make_spec(
             "electro_properties_scope": electro_properties_scope,
             "run_script_relpath": str(run_script_path),
             "output_glob": output_glob,
-            "postprocess_script_relpath": str(postprocess_script_path),
-            "postprocess_function_name": postprocess_function_name,
             "has_electro_property_overrides": bool(electro_property_overrides),
             "has_physics_property_overrides": bool(physics_property_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
