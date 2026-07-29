@@ -28,10 +28,14 @@ ELECTRO_BACKUP="$(mktemp)"
 CONTROL_BACKUP="$(mktemp)"
 cp constant/electroProperties "$ELECTRO_BACKUP"
 cp system/controlDict "$CONTROL_BACKUP"
+SCHEMES_BACKUP="$(mktemp)"
+cp system/fvSchemes "$SCHEMES_BACKUP"
 restore_inputs()
 {
     cp "$ELECTRO_BACKUP" constant/electroProperties
     cp "$CONTROL_BACKUP" system/controlDict
+    cp "$SCHEMES_BACKUP" system/fvSchemes
+    rm -f "$SCHEMES_BACKUP"
     rm -f "$ELECTRO_BACKUP" "$CONTROL_BACKUP"
 }
 trap restore_inputs EXIT
@@ -41,6 +45,11 @@ trap restore_inputs EXIT
 # Activate this case's own tet overlay (dimension "3D" plus the
 # unstructured-interface settings) before the foamDictionary calls below.
 cp setup/mesh/tet/electroProperties constant/electroProperties
+# The tet overlay must also replace system/fvSchemes. The case-root fvSchemes
+# is the hexahedral one and uses Gauss linear cell gradients, which do not
+# converge on this tetrahedral family; without this the sweep silently solves
+# a non-convergent problem and reports errors flat under refinement.
+cp setup/mesh/tet/fvSchemes system/fvSchemes
 
 bash setup/mesh/tet/run_mesh_gate.sh "$N"
 foamDictionary constant/electroProperties \

@@ -9,5 +9,5 @@ nominal_N=10
 gmsh_lc=0.10000000000000001
 gmsh_version=4.15.2
 openfoam_version=v2412
-git_sha=4fa2231032020eb50bea33e9a6a34f7382338097
+git_sha=d33ed288e1af97d24c21a7d4b6a386acc4f29a1d
 strict_small_determinant_cells=200

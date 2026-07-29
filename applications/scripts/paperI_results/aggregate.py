@@ -85,10 +85,7 @@ def _bath(root: Path):
 def _bath_tet(root: Path):
     # run_parallel_interface_sweep.sh (matchedSubmesh / distanceWeightedHarmonic)
     # writes N10/20/40/80 here, one bathBidomainInterfaceMetrics.csv per N.
-    # The reported tetrahedral ladder was produced in bathBidomainTetMMS, not
-    # bathBidomain: every archived solver log names that case. The two are
-    # separate cases with separate dictionaries.
-    src = (root / _TUT / "bathBidomainTetMMS/setup/mesh/tet"
+    src = (root / _TUT / "bathBidomain/setup/mesh/tet"
                  "/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic")
     return schema.fill_rates(adapters.from_bath_interface_metrics(src))
 
@@ -117,7 +114,7 @@ _OUT = {
     "bidomain": "bidomain/setup/results/bidomain_convergence.csv",
     "bidomain_tet": "bidomain/setup/results/bidomain_tet_convergence.csv",
     "bath": "bathBidomain/setup/results/bath_convergence.csv",
-    "bath_tet": "bathBidomainTetMMS/setup/mesh/tet/results/bath_tet_convergence.csv",
+    "bath_tet": "bathBidomain/setup/mesh/tet/results/bath_tet_convergence.csv",
     "niederer": ("../NiedererEtAl2011/NiedererEtAl2011verification"
                  "/setup/results/niederer_activation.csv"),
 }

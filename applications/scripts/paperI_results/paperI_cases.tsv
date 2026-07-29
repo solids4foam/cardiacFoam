@@ -8,5 +8,5 @@ pseudo_ecg_spatial	tutorials/manufacturedSolutions/monodomainPseudoECG	-	pseudo_
 bidomain	tutorials/manufacturedSolutions/bidomain	setup/run_reproduce.sh	bidomain	setup/results/bidomain_convergence.csv	reference/bidomain_convergence.csv
 bidomain_tet	tutorials/manufacturedSolutions/bidomain	setup/mesh/tet/run_scheme_study.sh	bidomain_tet	setup/results/bidomain_tet_convergence.csv	reference/bidomain_tet_convergence.csv
 bath	tutorials/manufacturedSolutions/bathBidomain	setup/run_all_dimensions.sh	bath	setup/results/bath_convergence.csv	reference/bath_convergence.csv
-bath_tet	tutorials/manufacturedSolutions/bathBidomainTetMMS	setup/mesh/tet/run_bath_tet_reference.sh	bath_tet	setup/mesh/tet/results/bath_tet_convergence.csv	reference/bath_tet_convergence.csv
+bath_tet	tutorials/manufacturedSolutions/bathBidomain	setup/mesh/tet/run_bath_tet_reference.sh	bath_tet	setup/mesh/tet/results/bath_tet_convergence.csv	reference/bath_tet_convergence.csv
 niederer	tutorials/NiedererEtAl2011/NiedererEtAl2011verification	setup/run_paperI_sweep.sh	niederer	setup/results/niederer_activation.csv	reference/niederer_activation.csv
