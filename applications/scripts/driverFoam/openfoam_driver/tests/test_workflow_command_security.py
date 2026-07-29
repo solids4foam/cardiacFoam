@@ -28,6 +28,22 @@ class TestValidateWorkflowCommands(unittest.TestCase):
         dag = {"steps": [{"id": "s", "command": "Allrun"}]}
         self.assertEqual(validate_workflow_commands(dag), ())
 
+    def test_gmsh_is_allowed(self) -> None:
+        # Tet-mesh sweep workflows (mesh_family="tet") run gmsh/gmshToFoam/
+        # checkMesh as explicit workflow steps; the allowlist must be static
+        # (not gated on whether the caller's shell happens to have OpenFOAM
+        # sourced), so these are added directly, same as blockMesh/cardiacFoam.
+        dag = {"steps": [{"id": "s", "command": "gmsh"}]}
+        self.assertEqual(validate_workflow_commands(dag), ())
+
+    def test_gmsh_to_foam_is_allowed(self) -> None:
+        dag = {"steps": [{"id": "s", "command": "gmshToFoam"}]}
+        self.assertEqual(validate_workflow_commands(dag), ())
+
+    def test_check_mesh_is_allowed(self) -> None:
+        dag = {"steps": [{"id": "s", "command": "checkMesh"}]}
+        self.assertEqual(validate_workflow_commands(dag), ())
+
     def test_unknown_command_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "rm"}]}
         codes = {d.code for d in validate_workflow_commands(dag)}

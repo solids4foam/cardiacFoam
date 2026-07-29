@@ -50,7 +50,10 @@ OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
     {
         "blockMesh",
         "cardiacFoam",
+        "checkMesh",
         "decomposePar",
+        "gmsh",
+        "gmshToFoam",
         "postProcess",
         "reconstructPar",
         "setExprFields",
