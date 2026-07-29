@@ -58,6 +58,24 @@ def _entry_name(sweep_spec: dict[str, Any]) -> str | None:
     return sweep_spec.get("base", {}).get("entry")
 
 
+def _relative_or_absolute(path: Path, base: Path) -> str:
+    """Path relative to `base` when possible, else the absolute path.
+
+    `run_document_path` is always written under the sweep's own
+    `--output-dir` (safe to make relative). `workflow_state_path` is not:
+    in entry mode it comes from `launch.outputDir`, which resolves to the
+    target tutorial's own case_root/output_dir_name -- a directory tree
+    entirely unrelated to the sweep's --output-dir (confirmed via a real,
+    non-mocked sweep-run: Path.relative_to raised ValueError there). Record
+    the absolute path in that case rather than crash the whole sweep over a
+    manifest cosmetic.
+    """
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+
+
 def _materialize_entry_case(entry: str, routed: dict[str, Any]) -> None:
     """Materialize one entry-based sweep case via the tutorial's own spec.
 
@@ -291,7 +309,7 @@ def sweep_run(
             "status": status,
             "outcome": outcome,
             "run_document_path": str(run_document_path.relative_to(output_dir)),
-            "workflow_state_path": str(workflow_state_path.relative_to(output_dir)),
+            "workflow_state_path": _relative_or_absolute(workflow_state_path, output_dir),
         }
         if materialization_error is not None:
             case_summary["materialization_error"] = materialization_error
@@ -307,7 +325,7 @@ def sweep_run(
                 resolved_axis_values=case.resolved_axis_values,
                 override_hash=compute_override_hash(routed),
                 run_document_path=str(run_document_path.relative_to(output_dir)),
-                workflow_state_path=str(workflow_state_path.relative_to(output_dir)),
+                workflow_state_path=_relative_or_absolute(workflow_state_path, output_dir),
                 status=status,
                 outcome=outcome,
                 started_at=_now(),

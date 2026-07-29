@@ -150,7 +150,11 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
     fake_report.status = "ok"
 
     def fake_to_json():
-        state_dir = output_dir / f"state_{len(call_order)}"
+        # Realistic entry-mode path: the tutorial's own case_root/output_dir_name
+        # tree, which is NOT a subdirectory of the sweep's own --output-dir --
+        # found via a real (non-mocked) sweep-run: relative_to(output_dir)
+        # raised ValueError because these are two unrelated directory trees.
+        state_dir = fake_spec.case_root / f"state_{len(call_order)}"
         return {"status": "ok", "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}}}
     fake_report.to_json.side_effect = fake_to_json
 

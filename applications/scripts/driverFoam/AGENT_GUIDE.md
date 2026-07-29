@@ -280,6 +280,73 @@ mismatch) — use a fresh `--output-dir` or resolve the mismatch first.
 See `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md`
 for the full design rationale.
 
+### Sweeping an existing registered tutorial (`base.entry`)
+
+The generic mode above always materializes a fresh, from-scratch `case_folder`
+via `build_and_launch`. Some tutorials (`niederer2012`, `manufacturedFDA`, and
+others under `openfoam_driver/specs/tutorials/`) instead expose their own
+`make_spec(**kwargs)` with tutorial-specific parameters (e.g. `niederer2012`'s
+`dx_values`/`dt_values`/`end_time_by_dx`, in millimetres/milliseconds;
+`manufacturedFDA`'s `dimensions`/`number_cells`/`dt_values`). To sweep one of
+these instead of a from-scratch case, set `base.entry` to the tutorial's
+registered name:
+
+```json
+{
+  "base": {
+    "entry": "niederer2012",
+    "solvers": ["implicit"],
+    "end_time_by_dx": {"0.5": 0.2, "0.2": 0.08, "0.1": 0.055}
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dx_values": [[0.5], [0.2], [0.2], [0.2], [0.1], [0.1], [0.1]],
+      "dt_values": [[0.01], [0.01], [0.005], [0.001], [0.01], [0.005], [0.001]]
+    },
+    "dependent": [
+      {"name": "output_dir_name", "derive": "output_dir_name_template", "of": ["dx_values", "dt_values"]}
+    ]
+  }
+}
+```
+
+Every axis value is forwarded verbatim as a keyword argument to that
+tutorial's own `make_spec(**overrides)` — there is no fixed vocabulary the way
+generic mode has (`electro_selectors`/`dx`/etc.); `make_spec` validates its
+own keyword arguments and an unrecognized one is a normal `TypeError`,
+reported as that case's `materialization_error`, same as any other per-case
+failure. Values fixed across every case in the sweep (like `solvers`/
+`end_time_by_dx` above) go in `base`; per-case values come from
+`independent`/`dependent` and win on conflict.
+
+**One case per resolved combination, and why.** Several of these tutorials'
+own `apply_case()` mutate that tutorial's *shared* `case_root` in place
+(confirmed for `niederer2012` and `manufacturedFDA`: they patch
+`system/controlDict`/`system/blockMeshDict*` directly rather than writing an
+isolated per-case directory). So each resolved axis combination must collapse
+to exactly one case — if it doesn't (e.g. a config that still fans out
+internally because a constraining kwarg like `solvers` is missing),
+`sweep-plan`/`sweep-run` reports that case as `failed` with a clear
+`materialization_error` rather than silently applying only the first of
+several. In practice this means giving `dt`/`dx`-style axes their own
+dedicated sweep row (`"zip"` mode with per-case single-element lists, as
+above) instead of relying on the tutorial's own internal multi-value fan-out.
+Because materialization mutates shared state, entry-mode sweeps must never be
+parallelized across cases — `sweep_run`'s plain sequential loop already
+guarantees this.
+
+**`sweep-plan` is not fully non-mutating here.** Unlike generic mode (which
+only ever writes into a fresh directory under `--output-dir`), entry-mode's
+`apply_case()` mutates the tutorial's real, shared `case_root` — including
+during `sweep-plan`. Don't run either action against a tutorial whose
+`case_root` holds results you care about without first checking what's there
+(or testing against a scratch copy with a `tutorials_root` override in `base`
+pointed elsewhere).
+
+Everything else — the manifest, `--retry-failed`, `--case-timeout-s`,
+`--max-cases`, resumability — is identical to generic mode.
+
 ## Polling a long-running legacy run
 
 For legacy engine runs that take minutes, prefer the async-friendly polling
