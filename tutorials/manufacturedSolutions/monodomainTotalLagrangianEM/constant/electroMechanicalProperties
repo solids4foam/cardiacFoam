@@ -34,7 +34,6 @@ sequentialElectroMechanicalCoeffs
         type    manufacturedElectromechanicsVerifier;
         amplitude           (0.02 0.02 0.02);
         initializeFields    true;
-        enforceExactFields  false;
     }
 }
 

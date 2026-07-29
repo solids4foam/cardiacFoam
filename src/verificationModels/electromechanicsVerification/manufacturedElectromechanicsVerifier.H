@@ -49,7 +49,6 @@ class manufacturedElectromechanicsVerifier
     scalar TaScale_;
     label dimension_;
     Switch initializeFields_;
-    Switch enforceExactFields_;
     mutable bool errorsReported_;
 
     void setExactFields(volScalarField& Vm, volVectorField& D) const;

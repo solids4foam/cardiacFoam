@@ -251,6 +251,17 @@ def from_bath_interface_metrics(study_dir, case="bath_tet"):
             rec = next(csv.DictReader(fh), None)
         if rec is None:
             continue
+        # Refuse exact-substituted diagnostics. bathBidomainInterfaceMetrics
+        # -useExactPhiE replaces the solved fields with the manufactured exact
+        # solution as a null test; those rows are tagged exactReference and
+        # report zero error by construction. Aggregating them would turn a
+        # verification into a tautology, so fail loudly rather than skip.
+        source = (rec.get("fieldSource") or "").strip()
+        if source != "numerical":
+            raise ValueError(
+                f"{csv_path}: fieldSource={source!r}, expected 'numerical'. "
+                "Exact-substituted metrics must never be reported as results."
+            )
         variant = f"{rec.get('method', '')}/{rec.get('assembly', '')}"
         base = dict(case=case, variant=variant, dim="3D",
                     N=str(n), h=f"{1.0 / n:g}")

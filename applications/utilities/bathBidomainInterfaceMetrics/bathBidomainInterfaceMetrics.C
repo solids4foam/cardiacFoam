@@ -192,8 +192,11 @@ int main(int argc, char* argv[])
     argList::addBoolOption
     (
         "useExactPhiE",
-        "Replace phiE and Vm samples with the manufactured exact solution before "
-        "evaluating the reconstruction diagnostics."
+        "Null test: replace phiE and Vm with the manufactured exact solution "
+        "before evaluating the diagnostics, so a correct implementation must "
+        "report zero error. Output is written to a distinct .exact.csv and is "
+        "tagged fieldSource=exactReference; it is not a solver result and must "
+        "never be reported as one."
     );
     argList::addNote
     (
@@ -959,7 +962,13 @@ int main(int argc, char* argv[])
 
     const fileName outputDir(runTime.globalPath()/"postProcessing");
     mkDir(outputDir);
-    OFstream output(outputDir/"bathBidomainInterfaceMetrics.csv");
+    const fileName outputName
+    (
+        useExactPhiE
+      ? "bathBidomainInterfaceMetrics.exact.csv"
+      : "bathBidomainInterfaceMetrics.csv"
+    );
+    OFstream output(outputDir/outputName);
     output
         << "method,assembly,fieldSource,time,interfaceFaces"
         << ",heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf"
@@ -1043,7 +1052,7 @@ int main(int argc, char* argv[])
     writeNorms(output, sidesFlux);
     output << ',' << exteriorFluxIntegral << nl;
 
-    Info<< "Wrote " << outputDir/"bathBidomainInterfaceMetrics.csv" << nl
+    Info<< "Wrote " << outputDir/outputName << nl
         << "interfaceFaces=" << interfaceFaces << nl
         << "heartPhiE_L2=" << heartPotential.l2() << nl
         << "bathPhiE_L2=" << bathPotential.l2() << nl

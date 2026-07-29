@@ -90,7 +90,6 @@ manufacturedElectromechanicsVerifier::manufacturedElectromechanicsVerifier
     gamma_(1.0),
     TaScale_(1.0),
     initializeFields_(dict.lookupOrDefault<Switch>("initializeFields", true)),
-    enforceExactFields_(dict.lookupOrDefault<Switch>("enforceExactFields", false)),
     errorsReported_(false)
 {
     const dictionary& parentDict = dict.parent();
@@ -199,14 +198,16 @@ void manufacturedElectromechanicsVerifier::initialize
 
 void manufacturedElectromechanicsVerifier::preSolve
 (
-    volScalarField& Vm,
-    volVectorField& D
+    volScalarField&,
+    volVectorField&
 )
 {
-    if (enforceExactFields_)
-    {
-        setExactFields(Vm, D);
-    }
+    // Deliberately empty. This hook runs once per solve, so writing the
+    // manufactured fields here would overwrite the numerical solution with the
+    // exact one on every step and drive the reported errors to round-off. The
+    // manufactured fields are imposed once, as an initial condition, by
+    // initializeFields; anything beyond that would invalidate the measurement
+    // this class exists to make.
 }
 
 
