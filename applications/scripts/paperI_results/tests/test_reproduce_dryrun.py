@@ -9,7 +9,7 @@ def test_dry_run_lists_all_cases():
                          capture_output=True, text=True)
     assert out.returncode == 0
     for key in ("mono_tet", "eikonal_tet", "coupling1D3D_hex", "eikonal_hex", "mono_hex",
-                "pseudoecg_hex", "bidomain_hex", "bath_hex", "bath_tet", "niederer_hex"):
+                "mono_pseudoecg_hex", "bidomain_hex", "bath_hex", "bath_tet", "niederer_hex"):
         assert f"== {key} ==" in out.stdout
 
 def test_dry_run_selection_filters():

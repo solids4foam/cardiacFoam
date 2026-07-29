@@ -79,6 +79,6 @@ def test_build_pseudo_ecg_spatial_rows_have_rates(tmp_path):
     (archive / "ECG_3D_20_cells_implicit_manufacturedPseudoECGSummary.dat").write_text(
         "dimension 3D\n" + header + "E1 1e-3 1e-3 2e-3\n"
     )
-    rows = aggregate.CASES["pseudoecg_hex"](tmp_path)
+    rows = aggregate.CASES["mono_pseudoecg_hex"](tmp_path)
     fine = [r for r in rows if r["N"] == "20" and r["field"] == "Phi_e_max"][0]
     assert fine["rate_L2"] == "2.00"
