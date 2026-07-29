@@ -28,6 +28,8 @@
 from __future__ import annotations
 
 import os
+import shlex
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -39,6 +41,7 @@ from .core.runtime.environment_preflight import (
     _unwrap_mpi_program,
     shutil,
 )
+from .core.runtime.execution_context import resolve_execution_context
 from .core.runtime.models import DataArtifact
 from .core.runtime.registry import load_entry_spec
 from .core.runtime.run_document_adapter import _run_document_from_case
@@ -52,7 +55,6 @@ from .core.runtime.workflow import (
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .capability_manifest import build_capability_manifest, resolve_case_models
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
-from .launch import describe_launch
 from .planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,
@@ -263,6 +265,39 @@ def _has_error(diagnostics: tuple[StrictDiagnostic, ...]) -> bool:
     return any(diagnostic.level == "error" for diagnostic in diagnostics)
 
 
+def _run_launch_description(
+    entry: str,
+    context,
+    *,
+    entry_kind: str | None,
+    config_path: str | Path | None,
+) -> dict[str, Any]:
+    """Describe the modern `run --strict --entry` invocation for this plan.
+
+    Replaces strict_plan's former reuse of describe_launch("sim", ...):
+    that call re-resolved the entry a second time (strict_plan already has
+    `spec` from load_entry_spec) purely to read these four paths off it, and
+    tied the strict/workflow-DAG path -- which never runs the legacy
+    sim/post/all CLI at all -- to describe_launch's action vocabulary.
+    `run --strict --entry` is the command that actually executes this exact
+    plan today.
+    """
+    command = [sys.executable, "-m", "openfoam_driver", "run", "--strict", "--entry", entry]
+    if entry_kind is not None:
+        command.extend(["--entry-kind", entry_kind])
+    if config_path is not None:
+        command.extend(["--config", str(config_path)])
+    return {
+        "action": "run",
+        "command": command,
+        "command_display": shlex.join(command),
+        "manifest_path": str(context.manifest_path),
+        "case_root": str(context.case_root),
+        "setup_root": str(context.setup_root),
+        "output_dir": str(context.output_dir),
+    }
+
+
 def strict_plan(
     entry: str,
     *,
@@ -273,12 +308,9 @@ def strict_plan(
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
     spec = load_entry_spec(entry, entry_kind=entry_kind, overrides=overrides)
-    launch = describe_launch(
-        "sim",
-        entry,
-        entry_kind=entry_kind,
-        overrides=overrides,
-        config_path=config_path,
+    execution_context = resolve_execution_context(spec)
+    launch = _run_launch_description(
+        entry, execution_context, entry_kind=entry_kind, config_path=config_path,
     )
     artifacts = tuple(predict_data_artifacts(Path(spec.case_root), spec))
     workflow_dag, workflow_diagnostics_raw = normalize_workflow_dag(
