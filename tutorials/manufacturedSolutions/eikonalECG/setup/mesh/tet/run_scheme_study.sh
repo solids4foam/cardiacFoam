@@ -21,7 +21,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
 # default; activate the tet fvSolution overlay for this run and restore on exit.
 _FVSOL_BAK="$(mktemp)"; cp system/fvSolution "$_FVSOL_BAK"
 cp setup/mesh/tet/fvSolution system/fvSolution
-trap 'cp "$_FVSOL_BAK" system/fvSolution; rm -f "$_FVSOL_BAK"' EXIT
+# set_grad below rewrites system/fvSchemes in place. Restore it from the trap
+# rather than only on normal completion: an aborted sweep would otherwise leave
+# the case root on Gauss linear, and the Cartesian eikonal row would then run
+# the wrong gradient scheme without any indication.
+_FVSCH_BAK="$(mktemp)"; cp system/fvSchemes "$_FVSCH_BAK"
+trap 'cp "$_FVSOL_BAK" system/fvSolution; cp "$_FVSCH_BAK" system/fvSchemes; rm -f "$_FVSOL_BAK" "$_FVSCH_BAK"' EXIT
 
 # gradScheme A/B on the tet mesh: GaussLinear vs leastSquares for
 # gradSchemes.default, which is what fvc::grad(activationTime) in

@@ -15,6 +15,18 @@ source "$WM_PROJECT_DIR/bin/tools/RunFunctions" >/dev/null 2>&1
 PY="${PYTHON:-python3}"
 # leastSquares sweep resolutions, overridable for a faster smoke run. Default
 # keeps N=80 so the committed reference (which has N=80 rows) stays reproducible.
+# This study rewrites system/fvSchemes in place rather than installing the
+# setup/mesh/tet/fvSchemes overlay, which studies/corrector uses as its
+# template. The two must therefore agree on the gradient scheme, or the two
+# studies silently run different discretisations. The bath case failed exactly
+# this way: an overlay that existed, was never installed, and drifted.
+_SYS_GRAD="$(awk '/^gradSchemes/{f=1} f&&/default/{print $2; exit}' system/fvSchemes)"
+_TET_GRAD="$(awk '/^gradSchemes/{f=1} f&&/default/{print $2; exit}' setup/mesh/tet/fvSchemes)"
+if [ "$_SYS_GRAD" != "$_TET_GRAD" ]; then
+    echo "ERROR: gradSchemes disagree: system/fvSchemes=$_SYS_GRAD setup/mesh/tet/fvSchemes=$_TET_GRAD" >&2
+    exit 3
+fi
+
 RESOLUTIONS="${RESOLUTIONS:-10 20 40 80}"
 # Gradient schemes to sweep, and the phiE/phiI linear-solver tolerance to use.
 # Both default to the committed study settings, so an unqualified invocation
