@@ -63,6 +63,13 @@ def make_spec(
     postprocess_function_name: str = "run_postprocessing",
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
+    phi_tolerance: float | None = None,
+    tet_end_time: float | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ):
     return make_base_spec(
         tutorials_root=tutorials_root,
@@ -92,4 +99,11 @@ def make_spec(
         postprocess_function_name=postprocess_function_name,
         run_in_parallel=run_in_parallel,
         postprocess_strict_artifacts=postprocess_strict_artifacts,
+        mesh_family=mesh_family,
+        numerics_profile=numerics_profile,
+        grad_scheme=grad_scheme,
+        phi_tolerance=phi_tolerance,
+        tet_end_time=tet_end_time,
+        fv_scheme_overrides=fv_scheme_overrides,
+        fv_solution_overrides=fv_solution_overrides,
     )

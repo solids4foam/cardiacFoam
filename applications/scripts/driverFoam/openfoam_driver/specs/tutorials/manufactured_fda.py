@@ -45,6 +45,27 @@ from ..common import (
     set_delta_t,
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
+from ...core.runtime.mutators import update_foam_entry
+from ..tet_mesh_provisioning import render_tet_geo
+
+# Stable driver-side names mapped to the literal OpenFOAM tokens -- "GaussLinear"
+# (no space) is a CSV/shell label from the original bash sweep scripts, not a
+# valid gradSchemes value; the real tokens are "Gauss linear" (two words) and
+# "leastSquares". Never forward a free-form string into the dict file.
+_GRAD_SCHEME_TOKENS: dict[str, str] = {
+    "gauss_linear": "Gauss linear",
+    "least_squares": "leastSquares",
+}
+
+# Which system/ overlay files mesh_family="tet" installs from setup/mesh/tet/
+# -- not every tet case has the same set. Confirmed: monodomainPseudoECG's
+# tet variant additionally installs an fvSolution overlay that bidomain's
+# does not have. Explicit per case, never inferred from what happens to
+# exist on disk.
+_NUMERICS_PROFILES: dict[str, tuple[str, ...]] = {
+    "bidomain_tet": ("fvSchemes",),
+    "monodomain_tet": ("fvSchemes", "fvSolution"),
+}
 
 
 def _normalize_convergence_axis(convergence_axis: str) -> str:
@@ -118,6 +139,52 @@ def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimens
     )
 
 
+def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str, object]:
+    """Build this spec's workflow_dag, branching on mesh_family.
+
+    mesh_family="hex" (default) is unchanged from before this kwarg existed.
+    mesh_family="tet" must *not* run blockMesh -- it would silently overwrite
+    the tet mesh with a Cartesian block. gmsh/gmshToFoam/checkMesh run as
+    real workflow steps (executed only when run --strict/sweep-run actually
+    runs), never inside apply_case/materialization.
+    """
+    if mesh_family == "tet":
+        return {
+            "steps": [
+                {"id": "clean", "command": "Allclean", "depends_on": []},
+                {
+                    "id": "gmsh",
+                    "command": "gmsh",
+                    # Bare "gmsh" with no args launches its GUI and hangs
+                    # forever instead of meshing anything (found via a real,
+                    # non-mocked sweep-run) -- these are the same args the
+                    # original bash scripts pass.
+                    "args": ["-3", "setup/mesh/tet/box.geo", "-o", "box.msh", "-format", "msh2"],
+                    "depends_on": ["clean"],
+                },
+                {
+                    "id": "gmshToFoam",
+                    "command": "gmshToFoam",
+                    "args": ["box.msh"],
+                    "depends_on": ["gmsh"],
+                },
+                {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
+                {"id": "solve", "command": "cardiacFoam", "depends_on": ["checkMesh"]},
+            ]
+        }
+    return {
+        "steps": [
+            {
+                "id": "mesh",
+                "command": "blockMesh",
+                "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
+                "depends_on": [],
+            },
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+        ]
+    }
+
+
 def _apply_case(
     case_root: Path,
     case: CaseConfig,
@@ -134,6 +201,13 @@ def _apply_case(
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
+    phi_tolerance: float | None = None,
+    tet_end_time: float | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     dimension = str(case.params["dimension"])
     solver = str(case.params["solver"])
@@ -175,8 +249,45 @@ def _apply_case(
                 f"{ecg_scope}.electrodePositions.{electrode_name}"
             ] = electrode_position
 
-    _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+    if mesh_family == "tet":
+        # Render-only: substitutes __LC__ and writes overlay files. gmsh/
+        # gmshToFoam/checkMesh are workflow_dag steps, not run here -- see
+        # _workflow_dag_for's docstring.
+        render_tet_geo(case_root, cells)
+        for overlay_name in _NUMERICS_PROFILES.get(numerics_profile or "", ()):
+            overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
+            shutil.copy(overlay_source, case_root / "system" / overlay_name)
+    else:
+        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+
     set_delta_t(control_dict, dt_value)
+    if tet_end_time is not None:
+        update_foam_entry(control_dict, "endTime", tet_end_time)
+    if grad_scheme is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSchemes",
+            "default",
+            _GRAD_SCHEME_TOKENS[grad_scheme],
+            scope=["gradSchemes"],
+        )
+    if phi_tolerance is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSolution",
+            "tolerance",
+            phi_tolerance,
+            scope=["solvers", '"phiE|phiEFinal|phiI|phiIFinal"'],
+        )
+    for entry in fv_scheme_overrides or ():
+        update_foam_entry(
+            case_root / "system" / "fvSchemes", entry["key"], entry["value"],
+            scope=entry.get("scope"),
+        )
+    for entry in fv_solution_overrides or ():
+        update_foam_entry(
+            case_root / "system" / "fvSolution", entry["key"], entry["value"],
+            scope=entry.get("scope"),
+        )
+
     apply_electro_property_overrides(electro_properties, case_overrides)
     apply_electro_property_overrides(electro_properties, electro_property_overrides)
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
@@ -420,10 +531,33 @@ def make_spec(
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
+    phi_tolerance: float | None = None,
+    tet_end_time: float | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
     if not dimensions_list:
         raise ValueError("dimensions cannot be empty")
+
+    if mesh_family not in {"hex", "tet"}:
+        raise ValueError(f"mesh_family must be 'hex' or 'tet'; got {mesh_family!r}")
+    if mesh_family == "tet" and dimensions_list != ["3D"]:
+        raise ValueError(
+            f"mesh_family='tet' requires dimensions=['3D']; got {dimensions_list!r} "
+            "(the unit-cube tet mesh has no 1D/2D variant)"
+        )
+    if grad_scheme is not None and grad_scheme not in _GRAD_SCHEME_TOKENS:
+        known = ", ".join(sorted(_GRAD_SCHEME_TOKENS))
+        raise ValueError(f"grad_scheme must be one of: {known}; got {grad_scheme!r}")
+    if phi_tolerance is not None and phi_tolerance <= 0:
+        raise ValueError(f"phi_tolerance must be positive; got {phi_tolerance}")
+    if numerics_profile is not None and numerics_profile not in _NUMERICS_PROFILES:
+        known = ", ".join(sorted(_NUMERICS_PROFILES))
+        raise ValueError(f"numerics_profile must be one of: {known}; got {numerics_profile!r}")
 
     cells_list = [int(item) for item in number_cells]
     dt_values_list = [float(item) for item in dt_values]
@@ -470,6 +604,13 @@ def make_spec(
             physics_properties_relpath=physics_properties_path,
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
+            mesh_family=mesh_family,
+            numerics_profile=numerics_profile,
+            grad_scheme=grad_scheme,
+            phi_tolerance=phi_tolerance,
+            tet_end_time=tet_end_time,
+            fv_scheme_overrides=fv_scheme_overrides,
+            fv_solution_overrides=fv_solution_overrides,
             verification_model_type=verification_model_type,
             ecg_enabled=ecg_enabled,
             ecg_reference_quadrature_order=ecg_reference_quadrature_order,
@@ -498,17 +639,7 @@ def make_spec(
         ),
         metadata={
             "notes": "Manufactured-solution convergence benchmark",
-            "workflow_dag": {
-                "steps": [
-                    {
-                        "id": "mesh",
-                        "command": "blockMesh",
-                        "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
-                        "depends_on": [],
-                    },
-                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
-                ]
-            },
+            "workflow_dag": _workflow_dag_for(mesh_family, dimensions_list),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,
