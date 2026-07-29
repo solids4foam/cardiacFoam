@@ -1,19 +1,12 @@
 #!/bin/bash
-
+# Thin wrapper: sets this tutorial's own values, execs the shared
+# run_hex_sweep_common.sh. All logic lives there -- do not add anything
+# tutorial-specific here beyond these three variables.
 set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-for dim in 1D 2D 3D
-do
-    echo
-    echo "Running manufactured eikonal ECG ${dim}"
-    "$SCRIPT_DIR/run_cases.sh" "$CASE_DIR" "$dim"
-done
-
-# --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
-_PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" eikonal_hex \
-    --repo-root "$_PAPERI_ROOT" \
-    || echo "WARN: paperI aggregate (eikonal) failed; native output untouched" >&2
+export TUTORIAL_DIR="$REPO_ROOT/tutorials/manufacturedSolutions/eikonalECG"
+export SWEEP_SPEC="$SCRIPT_DIR/sweep_spatial_convergence.json"
+export AGG_KEY="eikonal_hex"
+exec "$REPO_ROOT/applications/scripts/paperI_results/run_hex_sweep_common.sh"

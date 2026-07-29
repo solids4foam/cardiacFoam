@@ -1,8 +1,12 @@
 #!/bin/bash
-# Full manufactured-FDA bidomain sweep via the driverFoam engine.
+# Thin wrapper: sets this tutorial's own values, execs the shared
+# run_hex_sweep_common.sh. All logic lives there -- do not add anything
+# tutorial-specific here beyond these three variables.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-DRIVER="$REPO_ROOT/applications/scripts/driverFoam/bin/driverFoam"
-"$DRIVER" all --entry manufacturedFDABidomain --config "$SCRIPT_DIR/driver_config.json"
-echo "bidomain manufacturedFDABidomain sweep complete."
+
+export TUTORIAL_DIR="$REPO_ROOT/tutorials/manufacturedSolutions/bidomain"
+export SWEEP_SPEC="$SCRIPT_DIR/config/sweep_spatial_convergence.json"
+export AGG_KEY="bidomain_hex"
+exec "$REPO_ROOT/applications/scripts/paperI_results/run_hex_sweep_common.sh"

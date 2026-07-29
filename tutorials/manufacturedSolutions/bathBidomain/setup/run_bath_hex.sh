@@ -1,31 +1,12 @@
 #!/bin/bash
-
+# Thin wrapper: sets this tutorial's own values, execs the shared
+# run_hex_sweep_common.sh. All logic lives there -- do not add anything
+# tutorial-specific here beyond these three variables.
 set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-CASE_ROOT="$REPO_ROOT/tutorials/manufacturedSolutions/bathBidomain"
-CONFIG="$SCRIPT_DIR/driver_config.json"
-DRIVER="$REPO_ROOT/applications/scripts/driverFoam/bin/driverFoam"
-ACTION="${1:-all}"
 
-if [[ "$ACTION" != "sim" && "$ACTION" != "all" ]]
-then
-    echo "Usage: $0 [sim|all]" >&2
-    exit 1
-fi
-
-if [[ -z "${WM_PROJECT_DIR:-}" ]]
-then
-    echo "OpenFOAM is not sourced. Run: source /Volumes/OpenFOAM-v2412/etc/bashrc" >&2
-    exit 1
-fi
-
-rm -rf \
-    "$CASE_ROOT/archivedPostProcessing" \
-    "$CASE_ROOT/postProcessing" \
-    "$CASE_ROOT/logs"
-
-exec "$DRIVER" "$ACTION" \
-    --entry manufacturedFDABathBidomain \
-    --config "$CONFIG"
+export TUTORIAL_DIR="$REPO_ROOT/tutorials/manufacturedSolutions/bathBidomain"
+export SWEEP_SPEC="$SCRIPT_DIR/sweep_spatial_convergence.json"
+export AGG_KEY="bath_hex"
+exec "$REPO_ROOT/applications/scripts/paperI_results/run_hex_sweep_common.sh"
