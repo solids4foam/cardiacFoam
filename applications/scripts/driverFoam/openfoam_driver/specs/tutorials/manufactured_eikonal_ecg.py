@@ -36,6 +36,7 @@ from pathlib import Path
 
 from ...core.defaults import manufactured_eikonal_ecg as defaults
 from ...core.runtime.models import CaseConfig, TutorialSpec
+from ...core.runtime.mutators import update_foam_entry
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
@@ -44,6 +45,17 @@ from ..common import (
     resolve_run_script_path,
     resolve_spec_paths,
 )
+from ..tet_mesh_provisioning import render_tet_geo
+
+
+_GRAD_SCHEME_TOKENS: dict[str, str] = {
+    "gauss_linear": "Gauss linear",
+    "least_squares": "leastSquares",
+}
+
+_TET_NUMERICS_PROFILES: dict[str, tuple[str, ...]] = {
+    "eikonal_tet": ("fvSolution",),
+}
 
 
 def _build_cases(
@@ -78,6 +90,47 @@ def _replace_blockmesh_resolution(
     )
 
 
+def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str, object]:
+    if mesh_family == "tet":
+        return {
+            "steps": [
+                {"id": "clean", "command": "Allclean", "depends_on": []},
+                {
+                    "id": "gmsh",
+                    "command": "gmsh",
+                    "args": [
+                        "-3",
+                        "setup/mesh/tet/box.geo",
+                        "-o",
+                        "box.msh",
+                        "-format",
+                        "msh2",
+                    ],
+                    "depends_on": ["clean"],
+                },
+                {
+                    "id": "gmshToFoam",
+                    "command": "gmshToFoam",
+                    "args": ["box.msh"],
+                    "depends_on": ["gmsh"],
+                },
+                {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
+                {"id": "solve", "command": "cardiacFoam", "depends_on": ["checkMesh"]},
+            ]
+        }
+    return {
+        "steps": [
+            {
+                "id": "mesh",
+                "command": "blockMesh",
+                "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
+                "depends_on": [],
+            },
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+        ]
+    }
+
+
 def _apply_case(
     case_root: Path,
     case: CaseConfig,
@@ -94,6 +147,9 @@ def _apply_case(
         defaults.ECG_ELECTRODES_BY_DIMENSION
     ),
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
 ) -> None:
     dimension = str(case.params["dimension"])
     cells = int(case.params["cells"])
@@ -124,7 +180,21 @@ def _apply_case(
             electrode_position
         )
 
-    _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+    if mesh_family == "tet":
+        render_tet_geo(case_root, cells)
+        for overlay_name in _TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
+            overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
+            shutil.copy(overlay_source, case_root / "system" / overlay_name)
+    else:
+        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+
+    if grad_scheme is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSchemes",
+            "default",
+            _GRAD_SCHEME_TOKENS[grad_scheme],
+            scope=["gradSchemes"],
+        )
     apply_electro_property_overrides(electro_properties, case_overrides)
     apply_electro_property_overrides(electro_properties, electro_property_overrides)
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
@@ -307,8 +377,27 @@ def make_spec(
     postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
+    if not dimensions_list:
+        raise ValueError("dimensions cannot be empty")
+    if mesh_family not in {"hex", "tet"}:
+        raise ValueError(f"mesh_family must be 'hex' or 'tet'; got {mesh_family!r}")
+    if mesh_family == "tet" and dimensions_list != ["3D"]:
+        raise ValueError(
+            f"mesh_family='tet' requires dimensions=['3D']; got {dimensions_list!r} "
+            "(the unit-cube tet mesh has no 1D/2D variant)"
+        )
+    if numerics_profile is not None and numerics_profile not in _TET_NUMERICS_PROFILES:
+        known = ", ".join(sorted(_TET_NUMERICS_PROFILES))
+        raise ValueError(f"numerics_profile must be one of: {known}; got {numerics_profile!r}")
+    if grad_scheme is not None and grad_scheme not in _GRAD_SCHEME_TOKENS:
+        known = ", ".join(sorted(_GRAD_SCHEME_TOKENS))
+        raise ValueError(f"grad_scheme must be one of: {known}; got {grad_scheme!r}")
+
     cells_list = [int(item) for item in number_cells]
     solver_types_list = [str(item) for item in solver_types]
 
@@ -343,6 +432,9 @@ def make_spec(
             ecg_check_quadrature_orders=ecg_check_quadrature_orders,
             ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
             block_mesh_dict_template=block_mesh_dict_template,
+            mesh_family=mesh_family,
+            numerics_profile=numerics_profile,
+            grad_scheme=grad_scheme,
         ),
         run_case=partial(
             _run_case,
@@ -360,19 +452,12 @@ def make_spec(
         ),
         metadata={
             "notes": "Manufactured eikonal activation and ECG benchmark",
-            "workflow_dag": {
-                "steps": [
-                    {
-                        "id": "mesh",
-                        "command": "blockMesh",
-                        "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
-                        "depends_on": [],
-                    },
-                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
-                ]
-            },
+            "workflow_dag": _workflow_dag_for(mesh_family, dimensions_list),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
+            "mesh_family": mesh_family,
+            "numerics_profile": numerics_profile,
+            "grad_scheme": grad_scheme,
             "electro_properties_scope": electro_properties_scope,
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_relpath),
