@@ -29,12 +29,13 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
 from ...core.defaults import manufactured_fda_bath_bidomain as defaults
 from ...core.runtime.models import CaseConfig, TutorialSpec
+from ...core.runtime.mutators import update_foam_entry
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
@@ -45,7 +46,18 @@ from ..common import (
     resolve_spec_paths,
     set_delta_t,
 )
+from ..tet_mesh_provisioning import render_tet_geo
 from .manufactured_fda import _build_cases
+
+
+_GRAD_SCHEME_TOKENS: dict[str, str] = {
+    "gauss_linear": "Gauss linear",
+    "least_squares": "leastSquares",
+}
+
+_TET_NUMERICS_PROFILES: dict[str, tuple[str, ...]] = {
+    "bath_bidomain_tet": ("fvSchemes",),
+}
 
 
 def _case_output_filename(case: CaseConfig) -> str:
@@ -123,6 +135,58 @@ def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimens
         )
 
 
+def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str, object]:
+    if mesh_family == "tet":
+        return {
+            "steps": [
+                {"id": "clean", "command": "Allclean", "depends_on": []},
+                {
+                    "id": "gmsh",
+                    "command": "gmsh",
+                    "args": [
+                        "-3",
+                        "setup/mesh/tet/three_domain_box.geo",
+                        "-o",
+                        "three_domain_box.msh",
+                        "-format",
+                        "msh2",
+                    ],
+                    "depends_on": ["clean"],
+                },
+                {
+                    "id": "gmshToFoam",
+                    "command": "gmshToFoam",
+                    "args": ["three_domain_box.msh"],
+                    "depends_on": ["gmsh"],
+                },
+                {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
+                {
+                    "id": "setConductivity",
+                    "command": "setTorsoOrganConductivityField",
+                    "depends_on": ["checkMesh"],
+                },
+                {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
+            ]
+        }
+    return {
+        "steps": [
+            {
+                "id": "mesh",
+                "command": "blockMesh",
+                "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
+                "depends_on": [],
+            },
+            {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
+            {
+                "id": "setConductivity",
+                "command": "setTorsoOrganConductivityField",
+                "depends_on": ["topoSet"],
+            },
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
+        ]
+    }
+
+
 def _apply_case(
     case_root: Path,
     case: CaseConfig,
@@ -136,6 +200,14 @@ def _apply_case(
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
     ecg_enabled: bool = False,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
+    bath_predictor_corrector: bool = False,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
+    phi_tolerance: float | None = None,
+    tet_end_time: float | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     dimension = str(case.params["dimension"])
     solver = str(case.params["solver"])
@@ -150,10 +222,29 @@ def _apply_case(
     case_overrides = {
         f"{electro_properties_scope}.dimension": f'"{dimension}"',
         f"{electro_properties_scope}.solutionAlgorithm": solver,
+        f"{electro_properties_scope}.bathPredictorCorrector": bool(
+            bath_predictor_corrector
+        ),
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
         f"{electro_properties_scope}.verificationModel.groundElectrode": True,
         f"{electro_properties_scope}.manufacturedBidomain.groundElectrode": True,
     }
+
+    if mesh_family == "tet":
+        render_tet_geo(
+            case_root,
+            cells,
+            template_relpath=Path("setup/mesh/tet/three_domain_box.geo.template"),
+            geo_relpath=Path("setup/mesh/tet/three_domain_box.geo"),
+        )
+        shutil.copy(case_root / "setup" / "mesh" / "tet" / "electroProperties", electro_properties)
+        for overlay_name in _TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
+            shutil.copy(
+                case_root / "setup" / "mesh" / "tet" / overlay_name,
+                case_root / "system" / overlay_name,
+            )
+    else:
+        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
 
     if ecg_enabled:
         ensure_electro_property_dict(
@@ -171,8 +262,33 @@ def _apply_case(
             }
         )
 
-    _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
     set_delta_t(control_dict, dt_value)
+    if tet_end_time is not None:
+        update_foam_entry(control_dict, "endTime", tet_end_time)
+    if grad_scheme is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSchemes",
+            "default",
+            _GRAD_SCHEME_TOKENS[grad_scheme],
+            scope=["gradSchemes"],
+        )
+    if phi_tolerance is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSolution",
+            "tolerance",
+            phi_tolerance,
+            scope=["solvers", '"phiE|phiEFinal|phiI|phiIFinal"'],
+        )
+    for entry in fv_scheme_overrides or ():
+        update_foam_entry(
+            case_root / "system" / "fvSchemes", entry["key"], entry["value"],
+            scope=entry.get("scope"),
+        )
+    for entry in fv_solution_overrides or ():
+        update_foam_entry(
+            case_root / "system" / "fvSolution", entry["key"], entry["value"],
+            scope=entry.get("scope"),
+        )
     apply_electro_property_overrides(electro_properties, case_overrides)
     if not ecg_enabled:
         remove_electro_property_dict(
@@ -386,7 +502,33 @@ def make_spec(
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     ecg_enabled: bool = False,
     postprocess_strict_artifacts: bool = False,
+    bath_predictor_corrector: bool = False,
+    mesh_family: str = "hex",
+    numerics_profile: str | None = None,
+    grad_scheme: str | None = None,
+    phi_tolerance: float | None = None,
+    tet_end_time: float | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
+    mesh_family = str(mesh_family)
+    if mesh_family not in {"hex", "tet"}:
+        raise ValueError(f"Unsupported mesh_family '{mesh_family}'. Expected 'hex' or 'tet'.")
+    if mesh_family == "tet" and [str(item) for item in dimensions] != ["3D"]:
+        raise ValueError('mesh_family="tet" is only supported for dimensions=["3D"].')
+    if numerics_profile is not None and numerics_profile not in _TET_NUMERICS_PROFILES:
+        raise ValueError(
+            f"Unsupported numerics_profile '{numerics_profile}'. "
+            f"Expected one of {sorted(_TET_NUMERICS_PROFILES)}."
+        )
+    if grad_scheme is not None and grad_scheme not in _GRAD_SCHEME_TOKENS:
+        raise ValueError(
+            f"Unsupported grad_scheme '{grad_scheme}'. "
+            f"Expected one of {sorted(_GRAD_SCHEME_TOKENS)}."
+        )
+    if phi_tolerance is not None and float(phi_tolerance) <= 0.0:
+        raise ValueError("phi_tolerance must be positive.")
+
     dimensions_list = [str(item) for item in dimensions]
     cells_list = [int(item) for item in number_cells]
     dt_values_list = [float(item) for item in dt_values]
@@ -429,6 +571,14 @@ def make_spec(
             verification_model_type=verification_model_type,
             ecg_enabled=ecg_enabled,
             block_mesh_dict_template=block_mesh_dict_template,
+            bath_predictor_corrector=bath_predictor_corrector,
+            mesh_family=mesh_family,
+            numerics_profile=numerics_profile,
+            grad_scheme=grad_scheme,
+            phi_tolerance=phi_tolerance,
+            tet_end_time=tet_end_time,
+            fv_scheme_overrides=fv_scheme_overrides,
+            fv_solution_overrides=fv_solution_overrides,
         ),
         run_case=partial(
             _run_case,
@@ -447,26 +597,15 @@ def make_spec(
         ),
         metadata={
             "notes": "FDA bath-bidomain manufactured-solution convergence benchmark",
-            "workflow_dag": {
-                "steps": [
-                    {
-                        "id": "mesh",
-                        "command": "blockMesh",
-                        "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
-                        "depends_on": [],
-                    },
-                    {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
-                    {
-                        "id": "setConductivity",
-                        "command": "setTorsoOrganConductivityField",
-                        "depends_on": ["topoSet"],
-                    },
-                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
-                ]
-            },
+            "workflow_dag": _workflow_dag_for(mesh_family, dimensions_list),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,
+            "mesh_family": mesh_family,
+            "numerics_profile": numerics_profile,
+            "grad_scheme": grad_scheme,
+            "phi_tolerance": phi_tolerance,
+            "tet_end_time": tet_end_time,
             "control_dict_relpath": str(control_dict_relpath),
             "electro_properties_relpath": str(electro_properties_relpath),
             "physics_properties_relpath": str(physics_properties_relpath),
@@ -475,6 +614,7 @@ def make_spec(
             "run_script_relpath": str(run_script_relpath),
             "run_in_parallel": run_in_parallel,
             "ecg_enabled": ecg_enabled,
+            "bath_predictor_corrector": bool(bath_predictor_corrector),
             "postprocess_script_relpath": str(postprocess_script_relpath),
             "postprocess_function_name": postprocess_function_name,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
