@@ -238,25 +238,12 @@ tmp<volTensorField> readConductivityField
     }
 
     word fieldName(spec.fieldName);
-    word instance = supportMesh.time().findInstance
-    (
-        supportMesh.dbDir(),
-        fieldName,
-        IOobject::READ_IF_PRESENT,
-        word::null,
-        false
-    );
+    word instance = findFieldInstance(supportMesh, fieldName);
 
     if (instance.empty() && spec.internalName != spec.fieldName)
     {
-        const word legacyInstance = supportMesh.time().findInstance
-        (
-            supportMesh.dbDir(),
-            spec.internalName,
-            IOobject::READ_IF_PRESENT,
-            word::null,
-            false
-        );
+        const word legacyInstance =
+            findFieldInstance(supportMesh, spec.internalName);
 
         if (!legacyInstance.empty())
         {
