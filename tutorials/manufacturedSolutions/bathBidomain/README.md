@@ -118,7 +118,7 @@ before adding solver dictionaries or starting a convergence sweep.
 ### Potential-field convergence sweep
 
 ```bash
-bash setup/mesh/tet/run_tet_sweep.sh
+bash setup/mesh/tet/run_bath_tet.sh
 ```
 
 The default ladder is `N=10 20 40`, with `deltaT ~ h^2` and `endTime=0.02`.

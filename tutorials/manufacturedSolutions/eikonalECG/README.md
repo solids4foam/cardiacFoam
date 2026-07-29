@@ -74,7 +74,7 @@ persists the canonical Paper I table:
 python3 applications/scripts/paperI_results/aggregate.py eikonal_tet
 ```
 
-The mesh-quality-only sweep (`setup/mesh/tet/run_tet_sweep.sh`) and its
+The mesh-quality-only sweep (`setup/mesh/tet/run_eikonal_tet.sh`) and its
 resolution/end-time overrides follow the same convention as
 `monodomainPseudoECG`'s tet variant; see that case's README for the full
 description of the mesh-generation and effective-spacing methodology, which

@@ -107,7 +107,7 @@ tetrahedral mesh of the unit cube:
 ### How the mesh is generated
 
 `setup/mesh/tet/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a
-characteristic length placeholder `__LC__`. `setup/mesh/tet/run_tet_sweep.sh`
+characteristic length placeholder `__LC__`. `setup/mesh/tet/run_mono_tet.sh`
 substitutes `lc = 1/N` per resolution, meshes with gmsh (legacy msh2 format),
 and imports via `gmshToFoam`. All six boundary faces lie on the axis-aligned
 planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal
@@ -145,7 +145,7 @@ python3 applications/scripts/paperI_results/aggregate.py tet
 ### Mesh-quality-only sweep
 
 ```bash
-RESOLUTIONS="10 20 40" ENDTIME=0.02 bash setup/mesh/tet/run_tet_sweep.sh
+RESOLUTIONS="10 20 40" ENDTIME=0.02 bash setup/mesh/tet/run_mono_tet.sh
 ```
 
 - `RESOLUTIONS` -- space-separated nominal cells-per-side (default `10 20 40`).

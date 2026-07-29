@@ -55,7 +55,7 @@ runPurkinjeGraph -case .
 For graph-only manufactured convergence rates, run:
 
 ```bash
-setup/run_purkinje_graph_sweep.sh
+setup/run_coupling1D3D_hex.sh
 ```
 
 The sweep selects each `constant/purkinjeGraph.nodes*` input, runs
@@ -67,15 +67,15 @@ The sweep selects each `constant/purkinjeGraph.nodes*` input, runs
 For coupled 1D-3D manufactured convergence rates, run:
 
 ```bash
-setup/run_coupled_1D3D_sweep.sh
+setup/run_coupling1D3D_hex.sh
 ```
 
 The coupled sweep can exercise the explicit and implicit PVJ source split without
 manual dictionary edits:
 
 ```bash
-PVJ_COUPLING_SCHEME=explicit OUTPUT_SUFFIX=_pvjExplicit setup/run_coupled_1D3D_sweep.sh
-PVJ_COUPLING_SCHEME=implicit OUTPUT_SUFFIX=_pvjImplicit setup/run_coupled_1D3D_sweep.sh
+PVJ_COUPLING_SCHEME=explicit OUTPUT_SUFFIX=_pvjExplicit setup/run_coupling1D3D_hex.sh
+PVJ_COUPLING_SCHEME=implicit OUTPUT_SUFFIX=_pvjImplicit setup/run_coupling1D3D_hex.sh
 ```
 
 The tissue diffusion algorithm can also be switched with
@@ -84,7 +84,7 @@ The tissue diffusion algorithm can also be switched with
 To run the canonical coupling-scheme matrix for the new 1D-3D tests, use:
 
 ```bash
-setup/run_coupled_1D3D_scheme_suite.sh
+setup/run_coupling1D3D_hex.sh
 ```
 
 This runs four full convergence sweeps:
@@ -99,7 +99,7 @@ All four canonical runs keep `solutionAlgorithm implicit`, because
 diffusion solve is implicit.  For a quick smoke check of the same matrix, run:
 
 ```bash
-COUPLED_1D3D_PAIRS="10:nodes011" ENDTIME=0.02 setup/run_coupled_1D3D_scheme_suite.sh
+COUPLED_1D3D_PAIRS="10:nodes011" ENDTIME=0.02 setup/run_coupling1D3D_hex.sh
 ```
 
 The suite writes `outputs/coupled1D3DSchemeSuite/manifest.csv`.  Individual
