@@ -5,7 +5,8 @@
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "run_in_parallel": true,
-    "ecg_enabled": false
+    "ecg_enabled": false,
+    "archive_dir_name": "sweepCases"
   },
   "sweep": {
     "mode": "zip",

@@ -4,7 +4,8 @@
     "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
-    "ecg_enabled": true
+    "ecg_enabled": true,
+    "archive_dir_name": "sweepCases"
   },
   "sweep": {
     "mode": "zip",

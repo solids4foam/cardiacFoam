@@ -4,7 +4,8 @@
     "case_dir_name": "manufacturedSolutions/eikonalECG",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
-    "run_in_parallel": false
+    "run_in_parallel": false,
+    "archive_dir_name": "sweepCases"
   },
   "sweep": {
     "mode": "zip",
