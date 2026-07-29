@@ -96,3 +96,16 @@ def test_entry_key_in_base_is_not_forwarded():
     )
     assert "entry" not in routed
     assert routed["solvers"] == ["implicit"]
+
+
+def test_archive_dir_name_key_in_base_is_not_forwarded():
+    # archive_dir_name opts a sweep into output_collection.py's generic
+    # snapshot/diff archiving (sweep_runner's own bookkeeping) -- it is not a
+    # make_spec kwarg for any registered tutorial and must not be forwarded,
+    # same as entry/caseId.
+    routed = route_entry_case_values(
+        base={"entry": "manufacturedFDABidomain", "archive_dir_name": "driverPostProcessingArchive_postProcessing"},
+        resolved_axis_values={"number_cells": [10]},
+    )
+    assert "archive_dir_name" not in routed
+    assert routed["number_cells"] == [10]

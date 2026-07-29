@@ -39,6 +39,7 @@ from ...sweep_derivation_catalog import get_derivation
 from ...sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
 from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values, route_entry_case_values
+from .output_collection import collect_new_outputs, snapshot_postprocessing
 from .registry import load_entry_spec
 from .sweep_manifest import (
     CaseManifestEntry,
@@ -277,6 +278,18 @@ def sweep_run(
                 plan_error = str(exc)
             else:
                 if plan_error is None:
+                    # Entry-mode cases sharing one case_root (needed so a
+                    # shared archive_dir_name accumulates every case's raw
+                    # output, organized one subfolder per case_id, for
+                    # aggregate.py-style readers) all write to the same
+                    # case_root/postProcessing/ -- snapshot it now so
+                    # collect_new_outputs below can tell this case's own
+                    # new/changed output apart from anything left over.
+                    archive_dir_name = base.get("archive_dir_name") if entry is not None else None
+                    pp_before: dict[str, tuple[float, int]] = {}
+                    if archive_dir_name:
+                        case_root_for_archive = Path(run_document["launch"]["caseRoot"])
+                        pp_before = snapshot_postprocessing(case_root_for_archive)
                     try:
                         result = subprocess.run(
                             [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
@@ -299,6 +312,13 @@ def sweep_run(
                             status = "failed"
                         else:
                             status = "pending"
+                        if archive_dir_name:
+                            collect_new_outputs(
+                                case_root_for_archive,
+                                pp_before,
+                                case_root_for_archive / archive_dir_name,
+                                case_id=case.case_id,
+                            )
             if status == "completed":
                 completed_count += 1
             else:

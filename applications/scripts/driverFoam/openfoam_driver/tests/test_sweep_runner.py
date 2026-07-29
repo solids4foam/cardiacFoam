@@ -177,6 +177,69 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
     assert result["failed_count"] == 0
 
 
+def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_path):
+    # base.archive_dir_name opts an entry-mode sweep into the generic
+    # snapshot/diff collection (output_collection.py): real bug this
+    # reproduces -- hex workflow_dags have no "clean" step, so
+    # case_root/postProcessing/ persists and accumulates across sequential
+    # cases sharing one case_root. Each case's own new/changed file must land
+    # under case_root/<archive_dir_name>/<case_id>/, distinctly, without
+    # needing the tutorial's own bespoke staging code.
+    spec_path = tmp_path / "sweep.json"
+    spec = {
+        "base": {"entry": "niederer2012", "archive_dir_name": "sweepCases"},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"dx_values": [[0.5], [0.2]]},
+            "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["dx_values"]}],
+        },
+    }
+    spec_path.write_text(json.dumps(spec))
+    output_dir = tmp_path / "out"
+    case_root = tmp_path / "case_root"
+    (case_root / "postProcessing").mkdir(parents=True)
+
+    call_order = []
+    fake_case_config = mock.Mock(case_id="dx0.5")
+    fake_spec = mock.Mock()
+    fake_spec.case_root = case_root
+    fake_spec.build_cases.return_value = [fake_case_config]
+    fake_spec.apply_case.side_effect = lambda *a, **k: call_order.append("apply_case")
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+
+    def fake_to_json():
+        state_dir = case_root / f"state_{len(call_order)}"
+        return {"status": "ok", "run_document": {"version": "2", "launch": {"caseRoot": str(case_root), "outputDir": str(state_dir)}}}
+    fake_report.to_json.side_effect = fake_to_json
+
+    def fake_subprocess_run(cmd, **kwargs):
+        call_order.append("run")
+        run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
+        run_doc = json.loads(run_doc_path.read_text())
+        workflow_state_path = Path(run_doc["launch"]["outputDir"]) / "workflow_state.json"
+        workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
+        workflow_state_path.write_text(json.dumps({"status": "completed"}))
+        # Simulate the solver writing this case's own deterministically-named
+        # output into the SHARED case_root's postProcessing/ dir.
+        n = len([c for c in call_order if c == "run"])
+        (case_root / "postProcessing" / f"case_{n}.dat").write_text(f"result {n}")
+        return mock.Mock(returncode=0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
+        result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert result["completed_count"] == 2
+    archive_dir = case_root / "sweepCases"
+    assert (archive_dir / "0.5" / "case_1.dat").read_text() == "result 1"
+    assert (archive_dir / "0.2" / "case_2.dat").read_text() == "result 2"
+    # Organized by ran case, not a flat merge.
+    assert sorted(p.name for p in archive_dir.iterdir()) == ["0.2", "0.5"]
+
+
 def test_sweep_plan_materializes_and_audits_each_case_for_real(tmp_path):
     spec_path = tmp_path / "sweep.json"
     _write_spec(spec_path)

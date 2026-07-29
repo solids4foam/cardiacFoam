@@ -99,7 +99,9 @@ def route_case_values(
     }
 
 
-_ENTRY_NON_ROUTABLE_KEYS: frozenset[str] = _NON_ROUTABLE_KEYS | frozenset({"entry"})
+_ENTRY_NON_ROUTABLE_KEYS: frozenset[str] = _NON_ROUTABLE_KEYS | frozenset(
+    {"entry", "archive_dir_name"}
+)
 
 
 def route_entry_case_values(
