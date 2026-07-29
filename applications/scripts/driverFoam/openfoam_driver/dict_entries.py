@@ -1012,7 +1012,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiENonOrthogonalCorrectors',
             phases=frozenset({'solver'}),
-            description='Number of additional corrected-Laplacian assemblies for the global phiE equation; N means N+1 solves. Deliberately independent of the PIMPLE nNonOrthogonalCorrectors (which governs the Vm equation) — use this to add non-orthogonal correction to the extracellular phiE solve on distorted (e.g. tetrahedral) bath meshes.',
+            description='Number of additional corrected-Laplacian assemblies for the global phiE equation; N means N+1 solves. Defaults to the PIMPLE nNonOrthogonalCorrectors (which governs the Vm equation); set it only when phiE must differ — use this to add non-orthogonal correction to the extracellular phiE solve on distorted (e.g. tetrahedral) bath meshes.',
             value_kind='integer',
             typical_value='0',
         ),
