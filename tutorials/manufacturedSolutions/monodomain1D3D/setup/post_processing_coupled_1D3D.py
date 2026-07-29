@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Post-process the joint 1D-3D manufactured solution convergence sweep.
 
-Reads per-resolution output directories produced by run_coupled_1D3D_sweep.sh
+Reads per-resolution output directories produced by run_coupling1D3D_hex.sh
 and writes unified convergence tables (errors + rates) for:
   - 3D myocardium: Vm, u1, u2
   - 1D graph:      Vm1D, u1, u2

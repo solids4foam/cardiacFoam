@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run the canonical coupled 1D-3D MMS scheme matrix.
 #
-# The low-level run_coupled_1D3D_sweep.sh runs one configuration.  This wrapper
+# The low-level run_coupling1D3D_hex.sh runs one configuration.  This wrapper
 # runs the configurations needed to compare PVJ assembly and retrograde coupling:
 #
 #   couplingMode:        unidirectional, bidirectional
@@ -63,7 +63,7 @@ do
          SOLUTION_ALGORITHM="$SOLUTION_ALGORITHM_VALUE" \
          SKIP_PAPERI_AGGREGATE=1 \
          OUTPUT_SUFFIX="$OUTPUT_SUFFIX" \
-         "$SCRIPT_DIR/run_coupled_1D3D_sweep.sh"
+         "$SCRIPT_DIR/run_coupling1D3D_hex.sh"
     then
         status="failed"
     fi

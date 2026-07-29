@@ -55,7 +55,7 @@ blockMesh -dict system/blockMeshDict.1D
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setup/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setup/config/driver_config.json
 ```
 
 After the sweep completes, persist the canonical Paper I convergence table:

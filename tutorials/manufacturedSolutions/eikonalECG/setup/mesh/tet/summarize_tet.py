@@ -66,7 +66,7 @@ def parse_ecg_dat(path: Path) -> tuple[float, float] | None:
     dimension, qChecks, qReference, k, column-name row -- 7 lines) then one
     row per electrode with columns Electrode L1_err_ref L2_err_ref
     Linf_err_ref ... Reports the worst (max) L2/Linf error over electrodes,
-    same convention as run_scheme_study.sh's ecg_metrics().
+    same convention as run_eikonal_tet.sh's ecg_metrics().
     """
     if not path.exists():
         return None

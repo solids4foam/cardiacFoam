@@ -167,7 +167,7 @@ echo "Coupled 1D-3D sweep outputs written to $OUTPUT_DIR"
 # --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
 if [[ "$SKIP_PAPERI_AGGREGATE" != "1" ]]; then
     _PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-    python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" coupling \
+    python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" coupling1D3D_hex \
         --repo-root "$_PAPERI_ROOT" \
         || echo "WARN: paperI aggregate (coupling) failed; native output untouched" >&2
 fi

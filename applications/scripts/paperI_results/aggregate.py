@@ -18,7 +18,7 @@ import schema    # noqa: E402
 _TUT = "tutorials/manufacturedSolutions"
 
 
-def _tet(root: Path):
+def _mono_tet(root: Path):
     src = root / _TUT / "monodomainPseudoECG/setup/results/scheme_study.csv"
     return schema.fill_rates(adapters.from_tet_scheme_study(src))
 
@@ -28,7 +28,7 @@ def _eikonal_tet(root: Path):
     return schema.fill_rates(adapters.from_eikonal_tet_scheme_study(src))
 
 
-def _coupling(root: Path):
+def _coupling1D3D_hex(root: Path):
     base = root / _TUT / "monodomain1D3D/outputs"
     regimes = {
         "decoupled": "coupled1D3DConvergence_rpvj1e6/coupled_convergence_summary.csv",
@@ -43,7 +43,7 @@ def _coupling(root: Path):
     return schema.fill_rates(rows)
 
 
-def _eikonal(root: Path):
+def _eikonal_hex(root: Path):
     pp = root / _TUT / "eikonalECG/postProcessing"
     excl = root / _TUT / "eikonalECG/excluded_from_pureEikonal_report"
     fname = "2D_{n}_cells_eikonal_manufacturedEikonalActivationTime.dat"
@@ -57,17 +57,17 @@ def _eikonal(root: Path):
     return schema.fill_rates(rows)
 
 
-def _mono_spatial(root: Path):
+def _mono_hex(root: Path):
     src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
     return schema.fill_rates(adapters.from_monodomain_spatial_archive(src))
 
 
-def _pseudo_ecg_spatial(root: Path):
+def _pseudoecg_hex(root: Path):
     src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
     return schema.fill_rates(adapters.from_pseudo_ecg_spatial_archive(src))
 
 
-def _bidomain(root: Path):
+def _bidomain_hex(root: Path):
     src = root / _TUT / "bidomain/driverPostProcessingArchive_postProcessing"
     return schema.fill_rates(adapters.from_bidomain_archive(src))
 
@@ -77,7 +77,7 @@ def _bidomain_tet(root: Path):
     return schema.fill_rates(adapters.from_bidomain_tet_scheme_study(src))
 
 
-def _bath(root: Path):
+def _bath_hex(root: Path):
     src = root / _TUT / "bathBidomain/postProcessing/bath_bidomain_errors.csv"
     return schema.fill_rates(adapters.from_bath_structured(src))
 
@@ -90,33 +90,33 @@ def _bath_tet(root: Path):
     return schema.fill_rates(adapters.from_bath_interface_metrics(src))
 
 
-def _niederer(root: Path):
+def _niederer_hex(root: Path):
     src = (root / "tutorials/NiedererEtAl2011/NiedererEtAl2011verification"
                   "/setup/cachedCasePostProcessing")
     return schema.fill_rates(adapters.from_niederer_points(src))
 
 
 CASES = {
-    "tet": _tet, "eikonal_tet": _eikonal_tet, "coupling": _coupling,
-    "eikonal": _eikonal, "mono_spatial": _mono_spatial,
-    "pseudo_ecg_spatial": _pseudo_ecg_spatial, "bidomain": _bidomain,
+    "mono_tet": _mono_tet, "eikonal_tet": _eikonal_tet, "coupling1D3D_hex": _coupling1D3D_hex,
+    "eikonal_hex": _eikonal_hex, "mono_hex": _mono_hex,
+    "pseudoecg_hex": _pseudoecg_hex, "bidomain_hex": _bidomain_hex,
     "bidomain_tet": _bidomain_tet,
-    "bath": _bath, "bath_tet": _bath_tet, "niederer": _niederer,
+    "bath_hex": _bath_hex, "bath_tet": _bath_tet, "niederer_hex": _niederer_hex,
 }
 
 _OUT = {
-    "tet": "monodomainPseudoECG/setup/results/tet_convergence.csv",
+    "mono_tet": "monodomainPseudoECG/setup/results/mono_tet_convergence.csv",
     "eikonal_tet": "eikonalECG/setup/results/eikonal_tet_convergence.csv",
-    "coupling": "monodomain1D3D/setup/results/coupling_convergence.csv",
-    "eikonal": "eikonalECG/setup/results/eikonal_convergence.csv",
-    "mono_spatial": "monodomainPseudoECG/setup/results/mono_spatial_convergence.csv",
-    "pseudo_ecg_spatial": "monodomainPseudoECG/setup/results/pseudo_ecg_spatial_convergence.csv",
-    "bidomain": "bidomain/setup/results/bidomain_convergence.csv",
+    "coupling1D3D_hex": "monodomain1D3D/setup/results/coupling1D3D_hex_convergence.csv",
+    "eikonal_hex": "eikonalECG/setup/results/eikonal_hex_convergence.csv",
+    "mono_hex": "monodomainPseudoECG/setup/results/mono_hex_convergence.csv",
+    "pseudoecg_hex": "monodomainPseudoECG/setup/results/pseudoecg_hex_convergence.csv",
+    "bidomain_hex": "bidomain/setup/results/bidomain_hex_convergence.csv",
     "bidomain_tet": "bidomain/setup/results/bidomain_tet_convergence.csv",
-    "bath": "bathBidomain/setup/results/bath_convergence.csv",
+    "bath_hex": "bathBidomain/setup/results/bath_hex_convergence.csv",
     "bath_tet": "bathBidomain/setup/mesh/tet/results/bath_tet_convergence.csv",
-    "niederer": ("../NiedererEtAl2011/NiedererEtAl2011verification"
-                 "/setup/results/niederer_activation.csv"),
+    "niederer_hex": ("../NiedererEtAl2011/NiedererEtAl2011verification"
+                 "/setup/results/niederer_hex_activation.csv"),
 }
 
 

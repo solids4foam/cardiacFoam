@@ -21,6 +21,6 @@ def test_agg_keys_are_registered_in_aggregate():
 
 def test_expected_case_keys_present():
     keys = {r["key"] for r in _rows()}
-    assert keys == {"tet", "eikonal_tet", "coupling", "eikonal", "mono_spatial",
-                    "pseudo_ecg_spatial", "bidomain", "bidomain_tet", "bath",
-                    "bath_tet", "niederer"}
+    assert keys == {"mono_tet", "eikonal_tet", "coupling1D3D_hex", "eikonal_hex", "mono_hex",
+                    "pseudoecg_hex", "bidomain_hex", "bidomain_tet", "bath_hex",
+                    "bath_tet", "niederer_hex"}

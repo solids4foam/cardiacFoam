@@ -42,7 +42,7 @@ for case_name in "$@"; do
             run_case \
                 "bidomain" \
                 "manufacturedFDABidomain" \
-                "bidomain/setupManufacturedFDA/driver_config.json"
+                "bidomain/setup/config/driver_config.json"
             ;;
         bathBidomain)
             run_case \

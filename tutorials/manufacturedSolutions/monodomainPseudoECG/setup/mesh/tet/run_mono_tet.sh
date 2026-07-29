@@ -65,6 +65,6 @@ echo "=== scheme_study.csv ==="; cat setup/results/scheme_study.csv
 
 # --- Paper I: persist canonical convergence CSV (additive; does not alter the sweep above) ---
 _PAPERI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../../.." && pwd)"
-python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" tet \
+python3 "$_PAPERI_ROOT/applications/scripts/paperI_results/aggregate.py" mono_tet \
     --repo-root "$_PAPERI_ROOT" \
     || echo "WARN: paperI aggregate (tet) failed; native output untouched" >&2
