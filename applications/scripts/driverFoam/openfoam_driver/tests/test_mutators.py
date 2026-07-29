@@ -32,6 +32,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from openfoam_driver.core.runtime.mutators import (
     ensure_foam_dict,
@@ -111,6 +112,44 @@ class TestScopedMutators(unittest.TestCase):
 
             update_foam_entry(path, "target", 2, scope=("outer", "inner"))
             self.assertIn("target    2;", path.read_text())
+
+    def test_quoted_regex_style_scope_name_is_matched(self) -> None:
+        # OpenFOAM's fvSolution commonly names a solver block with a quoted
+        # alternation, e.g. "phiE|phiEFinal|phiI|phiIFinal" { ... } -- the
+        # scope-boundary regex's old trailing \b failed to match here because
+        # both the character before and after the closing quote are
+        # non-word characters, so there is no word boundary at all at that
+        # position (verified: re.match(r'^\s*"foo"\b', '    "foo"\n') is
+        # None). This is the quoted equivalent of test_nested_scope_path.
+        # Forced off foamDictionary (which would mask the regex bug, since
+        # it understands its own dictionary syntax natively) to test the
+        # fallback parser's scope matching specifically.
+        text = "\n".join(
+            [
+                "solvers",
+                "{",
+                '    "phiE|phiEFinal|phiI|phiIFinal"',
+                "    {",
+                "        tolerance 1e-06;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "fvSolution"
+            path.write_text(text)
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ):
+                update_foam_entry(
+                    path, "tolerance", 1e-15,
+                    scope=("solvers", '"phiE|phiEFinal|phiI|phiIFinal"'),
+                )
+            self.assertIn("tolerance    1e-15;", path.read_text())
 
     def test_missing_scope_raises(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -408,6 +447,56 @@ class TestScopedMutators(unittest.TestCase):
 
             apply_physics_property_overrides(path, {"type": "electroMechanicalModel"})
             self.assertIn("type    electroMechanicalModel;", path.read_text())
+
+
+class TestUpdateFoamEntryPrefersFoamDictionary(unittest.TestCase):
+    """update_foam_entry is the one sibling of read_foam_entry/remove_foam_dict/
+    ensure_foam_dict that skipped the shutil.which("foamDictionary")
+    preference -- these tests pin down that it now matches its siblings."""
+
+    def test_prefers_foamdictionary_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value="/usr/bin/foamDictionary",
+            ), mock.patch(
+                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary"
+            ) as mock_via_foamdictionary:
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            mock_via_foamdictionary.assert_called_once_with(path, "deltaT", 0.0001, scope=None)
+
+    def test_falls_back_to_regex_when_foamdictionary_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value="/usr/bin/foamDictionary",
+            ), mock.patch(
+                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary",
+                side_effect=RuntimeError("boom"),
+            ):
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            self.assertIn("deltaT    0.0001;", path.read_text())
+
+    def test_uses_regex_directly_when_foamdictionary_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ):
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            self.assertIn("deltaT    0.0001;", path.read_text())
 
 
 class TestFoamDictionarySilentTruncationGuard(unittest.TestCase):

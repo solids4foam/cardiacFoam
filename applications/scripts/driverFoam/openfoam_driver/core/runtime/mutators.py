@@ -65,7 +65,15 @@ def _find_dict_block_bounds(
     start: int,
     end: int,
 ) -> tuple[int, int]:
-    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}\b")
+    # A trailing \b fails to match a scope name ending in a non-word
+    # character (e.g. a quoted regex-style block name like
+    # "phiE|phiEFinal|phiI|phiIFinal" -- both the closing quote and whatever
+    # follows it, whitespace or newline, are non-word, so there is no word
+    # boundary there at all). Require whitespace, an opening brace, or
+    # end-of-line instead, which also still correctly rejects a longer name
+    # that merely has this one as a prefix (e.g. "singleCellSolverCoeffs"
+    # must not match a line starting "singleCellSolverCoeffsExtra").
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}(?=\s|\{{|$)")
 
     i = start
     while i < end:
@@ -330,6 +338,14 @@ def update_foam_entry(
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
 
+    has_foam_dict = shutil.which("foamDictionary") is not None
+    if has_foam_dict:
+        try:
+            update_foam_entry_via_foamDictionary(file_path, key, value, scope=scope)
+            return
+        except Exception:
+            pass
+
     key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
     lines = file_path.read_text().splitlines(keepends=True)
     search_start, search_end = _resolve_search_region(lines, scope)
@@ -407,7 +423,15 @@ def remove_foam_dict(
 
     lines = file_path.read_text().splitlines(keepends=True)
     search_start, search_end = _resolve_search_region(lines, scope)
-    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}\b")
+    # A trailing \b fails to match a scope name ending in a non-word
+    # character (e.g. a quoted regex-style block name like
+    # "phiE|phiEFinal|phiI|phiIFinal" -- both the closing quote and whatever
+    # follows it, whitespace or newline, are non-word, so there is no word
+    # boundary there at all). Require whitespace, an opening brace, or
+    # end-of-line instead, which also still correctly rejects a longer name
+    # that merely has this one as a prefix (e.g. "singleCellSolverCoeffs"
+    # must not match a line starting "singleCellSolverCoeffsExtra").
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}(?=\s|\{{|$)")
 
     remove_start: int | None = None
     remove_end: int | None = None
@@ -517,7 +541,15 @@ def ensure_foam_dict(
 
     lines = file_path.read_text().splitlines(keepends=True)
     search_start, search_end = _resolve_search_region(lines, scope)
-    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}\b")
+    # A trailing \b fails to match a scope name ending in a non-word
+    # character (e.g. a quoted regex-style block name like
+    # "phiE|phiEFinal|phiI|phiIFinal" -- both the closing quote and whatever
+    # follows it, whitespace or newline, are non-word, so there is no word
+    # boundary there at all). Require whitespace, an opening brace, or
+    # end-of-line instead, which also still correctly rejects a longer name
+    # that merely has this one as a prefix (e.g. "singleCellSolverCoeffs"
+    # must not match a line starting "singleCellSolverCoeffsExtra").
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}(?=\s|\{{|$)")
 
     for idx in range(search_start, search_end):
         candidate = _strip_inline_comment(lines[idx])
