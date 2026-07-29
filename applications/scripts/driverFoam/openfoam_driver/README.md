@@ -94,9 +94,6 @@ applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
 - `plan` : print a non-mutating strict machine-readable launch contract as JSON
 - `step` : execute exactly one normalized strict-plan workflow step
 - `run` : execute normalized strict-plan workflow steps until completion or failure
-- `export-4dpaper`: stage an OpenFOAM case into a 4Dpapers workspace,
-  generate a QMD results fragment, optionally render it through the 4Dpapers
-  Docker app, and register copied render assets for the dashboard
 
 Useful flags:
 
@@ -106,24 +103,6 @@ Useful flags:
 - `--strict` for `plan`, `step`, and `run`
 - `--step <id>` for `step`
 - `--tutorials-root <path>`
-
-4Dpapers bridge example:
-
-```bash
-foamctl export-4dpaper \
-  --case tutorials/heartSim3D-1D/monodomainHeart \
-  --paper /Users/simaocastro/4Dpapers/examples/heart \
-  --fields Vm,activationTime \
-  --render \
-  --compose-dir /Users/simaocastro/4Dpapers
-```
-
-The bridge writes `postProcessing/4dpaper/4dpaper_manifest.json` in the case,
-stages the case under the paper `data/` directory, creates a
-`sections/<case>_results.qmd` fragment with 4Dpapers shortcodes, and copies
-matching rendered PNG/HTML assets back under `postProcessing/4dpaper/` when
-rendering succeeds. Rendering is always performed through the 4Dpapers Docker
-service; do not use host Quarto for 4Dpapers workspaces.
 
 The `describe` action resolves the requested entry and prints:
 

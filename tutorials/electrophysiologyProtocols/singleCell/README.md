@@ -19,7 +19,7 @@ tutorials/coreProtocols/singleCell/
 │   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setup/
+├── studies/
 │   ├── run_cases.sh
 │   └── singleCellinteractivePlots.py
 ├── singleCell.reference

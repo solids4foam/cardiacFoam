@@ -450,7 +450,7 @@ def build_parser() -> argparse.ArgumentParser:
         "action",
         choices=[
             "sim", "post", "all", "describe", "plan", "step", "run",
-            "sweep-plan", "sweep-run", "export-4dpaper",
+            "sweep-plan", "sweep-run",
         ],
         help="Pipeline stage to execute",
     )
@@ -570,31 +570,6 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    parser.add_argument("--case", dest="fourdpaper_case",
-                        help="export-4dpaper: OpenFOAM case directory to stage")
-    parser.add_argument("--paper", dest="fourdpaper_paper",
-                        help="export-4dpaper: 4Dpapers workspace/paper directory")
-    parser.add_argument("--fields", dest="fourdpaper_fields",
-                        default="Vm,activationTime",
-                        help="export-4dpaper: comma-separated fields (default Vm,activationTime)")
-    parser.add_argument("--purkinje-series", dest="fourdpaper_purkinje_series",
-                        help="export-4dpaper: optional Purkinje .vtk.series path")
-    parser.add_argument("--ecg", dest="fourdpaper_ecg", action="append", default=[],
-                        help="export-4dpaper: optional ECG .dat path (repeatable)")
-    parser.add_argument("--plot", dest="fourdpaper_plot", action="append", default=[],
-                        help="export-4dpaper: optional static plot path (repeatable)")
-    parser.add_argument("--render", dest="fourdpaper_render", action="store_true",
-                        help="export-4dpaper: run 4Dpapers Docker HTML render")
-    parser.add_argument("--copy", dest="fourdpaper_copy", action="store_true",
-                        help="export-4dpaper: copy case data instead of symlinking")
-    parser.add_argument("--compose-dir", dest="fourdpaper_compose_dir",
-                        help="export-4dpaper: directory containing docker-compose.yml")
-    parser.add_argument("--render-doc", dest="fourdpaper_render_doc",
-                        default="main.qmd",
-                        help="export-4dpaper: document to render in the container")
-    parser.add_argument("--no-update-main", dest="fourdpaper_no_update_main",
-                        action="store_true",
-                        help="export-4dpaper: do not add the generated include to the render document")
     return parser
 
 
@@ -694,14 +669,7 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--max-cases is only valid with action=sweep-plan or action=sweep-run")
     if args.action not in {"sweep-plan", "sweep-run"} and (args.spec or args.output_dir):
         parser.error("--spec/--output-dir are only valid with action=sweep-plan or action=sweep-run")
-    if args.action == "export-4dpaper":
-        if args.entry:
-            parser.error("--entry is not valid with action=export-4dpaper; use --case")
-        if not args.fourdpaper_case or not args.fourdpaper_paper:
-            parser.error("action=export-4dpaper requires --case and --paper")
-        if args.strict or args.run_document or args.step or args.apply is not None:
-            parser.error("--strict/--run-document/--step/--apply are not valid with action=export-4dpaper")
-    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run", "export-4dpaper"}:
+    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run"}:
         parser.error("--entry is required (or use --run-document with action=run/step)")
 
 
@@ -709,28 +677,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate_args(parser, args)
-
-
-
-    if args.action == "export-4dpaper":
-        from .fourdpaper_bridge import export_4dpaper
-        result = export_4dpaper(
-            case_root=Path(args.fourdpaper_case),
-            paper_root=Path(args.fourdpaper_paper),
-            fields=[f.strip() for f in args.fourdpaper_fields.split(",") if f.strip()],
-            purkinje_series=Path(args.fourdpaper_purkinje_series)
-            if args.fourdpaper_purkinje_series else None,
-            ecg_paths=[Path(p) for p in args.fourdpaper_ecg],
-            static_plot_paths=[Path(p) for p in args.fourdpaper_plot],
-            render=args.fourdpaper_render,
-            copy=args.fourdpaper_copy,
-            compose_dir=Path(args.fourdpaper_compose_dir)
-            if args.fourdpaper_compose_dir else None,
-            render_doc=args.fourdpaper_render_doc,
-            update_main=not args.fourdpaper_no_update_main,
-        )
-        print(json.dumps(result.to_json(), indent=2))
-        return 0 if result.status != "render_failed" else 1
 
     selected_entry = args.entry
 

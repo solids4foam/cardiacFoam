@@ -19,7 +19,7 @@ tutorials/PATHOS/BrugadaSyndrome/singleCell/
 │   ├── controlDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setup/
+├── studies/
 ├── singleCell.reference
 ├── regressionTest.sh
 ├── Allrun

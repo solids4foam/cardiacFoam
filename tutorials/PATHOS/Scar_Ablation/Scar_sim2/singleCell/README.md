@@ -18,7 +18,7 @@ tutorials/PATHOS/Scar_Ablation/Scar_sim2/singleCell/
 │   ├── controlDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── setup/
+├── studies/
 ├── singleCell.reference
 ├── regressionTest.sh
 ├── Allrun

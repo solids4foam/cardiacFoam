@@ -32,7 +32,7 @@ from unittest import mock
 
 import pytest
 
-from openfoam_driver.core.runtime.sweep_runner import sweep_plan
+from openfoam_driver.core.runtime.sweep_runner import sweep_plan, sweep_run
 from openfoam_driver.sweep_expansion import SweepValidationError
 
 
@@ -50,6 +50,127 @@ def _write_spec(path: Path, models=("TNNP", "BuenoOrovio")):
     }
     path.write_text(json.dumps(spec))
     return spec
+
+
+def _write_entry_spec(path, entry="niederer2012", values=(0.5, 0.2)):
+    spec = {
+        "base": {"entry": entry},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"dx_values": [[v] for v in values]},
+            "dependent": [{"name": "caseId", "derive": "output_dir_name_template", "of": ["dx_values"]}],
+        },
+    }
+    path.write_text(json.dumps(spec))
+    return spec
+
+
+def test_sweep_plan_entry_mode_materializes_via_apply_case_and_audits(tmp_path):
+    # Entry-based sweeps target an existing registered tutorial whose
+    # apply_case()/build_cases() mutate its own shared case_root in place
+    # (confirmed empirically for niederer2012 -- it is not a from-scratch
+    # case_folder). sweep_plan must call spec.build_cases() + spec.apply_case()
+    # directly instead of materialize_case()/build_and_launch, then audit via
+    # strict_plan with the same routed overrides.
+    spec_path = tmp_path / "sweep.json"
+    _write_entry_spec(spec_path)
+
+    fake_case_config = mock.Mock(case_id="implicit_TNNP_DX0.5")
+    fake_spec = mock.Mock()
+    fake_spec.case_root = tmp_path / "case_root"
+    fake_spec.build_cases.return_value = [fake_case_config]
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+    fake_report.to_json.return_value = {
+        "status": "ok",
+        "run_document": {"version": "2", "launch": {"outputDir": str(tmp_path / "out")}},
+    }
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec) as mock_load, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report) as mock_strict_plan, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize:
+        result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+
+    mock_materialize.assert_not_called()
+    assert mock_load.call_count == 2
+    for call in mock_load.call_args_list:
+        args, kwargs = call
+        assert args[0] == "niederer2012"
+        assert "dx_values" in kwargs["overrides"]
+        assert "caseId" not in kwargs["overrides"]
+    fake_spec.apply_case.assert_has_calls(
+        [mock.call(fake_spec.case_root, fake_case_config)] * 2
+    )
+    assert mock_strict_plan.call_count == 2
+    assert result["case_count"] == 2
+    for case in result["cases"]:
+        assert case["status"] == "ok"
+
+
+def test_sweep_plan_entry_mode_rejects_axis_combination_resolving_to_multiple_cases(tmp_path):
+    # sweep-run's per-axis-combination model assumes exactly one case per
+    # resolved combination (see route_entry_case_values docstring); a
+    # combination that still fans out inside the tutorial's own build_cases()
+    # (e.g. missing a constraining kwarg like "solvers") must fail loudly as
+    # a per-case error, not silently apply_case() only the first of several.
+    spec_path = tmp_path / "sweep.json"
+    _write_entry_spec(spec_path, values=(0.5,))
+
+    fake_spec = mock.Mock()
+    fake_spec.case_root = tmp_path / "case_root"
+    fake_spec.build_cases.return_value = [mock.Mock(), mock.Mock()]
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec):
+        result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+
+    fake_spec.apply_case.assert_not_called()
+    assert result["cases"][0]["status"] == "failed"
+    assert "2 cases" in result["cases"][0]["materialization_error"]
+
+
+def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
+    # Because apply_case mutates the tutorial's shared case_root in place,
+    # entry-mode sweep-run must process cases strictly one at a time (never
+    # in parallel) -- already guaranteed by sweep_run's plain synchronous
+    # for-loop, verified here by asserting apply_case/subprocess.run calls
+    # happen in resolved-case order.
+    spec_path = tmp_path / "sweep.json"
+    _write_entry_spec(spec_path)
+    output_dir = tmp_path / "out"
+
+    call_order = []
+    fake_case_config = mock.Mock(case_id="implicit_TNNP")
+    fake_spec = mock.Mock()
+    fake_spec.case_root = tmp_path / "case_root"
+    fake_spec.build_cases.return_value = [fake_case_config]
+    fake_spec.apply_case.side_effect = lambda *a, **k: call_order.append("apply_case")
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+
+    def fake_to_json():
+        state_dir = output_dir / f"state_{len(call_order)}"
+        return {"status": "ok", "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}}}
+    fake_report.to_json.side_effect = fake_to_json
+
+    def fake_subprocess_run(cmd, **kwargs):
+        call_order.append("run")
+        run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
+        run_doc = json.loads(run_doc_path.read_text())
+        workflow_state_path = Path(run_doc["launch"]["outputDir"]) / "workflow_state.json"
+        workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
+        workflow_state_path.write_text(json.dumps({"status": "completed"}))
+        return mock.Mock(returncode=0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
+        result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert call_order == ["apply_case", "run", "apply_case", "run"]
+    assert result["completed_count"] == 2
+    assert result["failed_count"] == 0
 
 
 def test_sweep_plan_materializes_and_audits_each_case_for_real(tmp_path):

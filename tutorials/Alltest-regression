@@ -73,13 +73,13 @@ for testCase in "${REGRESSION_TESTS[@]}"; do
 
     cd "${DST_CASE}"
 
-    if [[ ! -x ./regressionTest.sh ]]; then
+    if [[ ! -x ./regression/regressionTest.sh ]]; then
         echo "FAIL: regressionTest.sh not found or not executable in ${testCase}"
         failures=$((failures + 1))
         continue
     fi
 
-    if ./regressionTest.sh; then
+    if ./regression/regressionTest.sh; then
         echo "PASS: regression test passed in ${testCase}"
     else
         rc=$?

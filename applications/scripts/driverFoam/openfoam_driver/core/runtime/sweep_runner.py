@@ -38,7 +38,8 @@ from ...strict_planning import strict_plan
 from ...sweep_derivation_catalog import get_derivation
 from ...sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
 from ...sweep_materialize import materialize_case
-from ...sweep_routing import route_case_values
+from ...sweep_routing import route_case_values, route_entry_case_values
+from .registry import load_entry_spec
 from .sweep_manifest import (
     CaseManifestEntry,
     SweepManifest,
@@ -53,6 +54,32 @@ def _load_spec(spec_path: str | Path) -> dict[str, Any]:
     return json.loads(Path(spec_path).read_text())
 
 
+def _entry_name(sweep_spec: dict[str, Any]) -> str | None:
+    return sweep_spec.get("base", {}).get("entry")
+
+
+def _materialize_entry_case(entry: str, routed: dict[str, Any]) -> None:
+    """Materialize one entry-based sweep case via the tutorial's own spec.
+
+    Entry-based sweeps target an existing registered tutorial whose
+    apply_case()/build_cases() mutate that tutorial's own shared case_root in
+    place (confirmed for niederer_2012.py: it patches system/controlDict and
+    system/blockMeshDict directly rather than writing an isolated per-case
+    directory the way build_and_launch does for generic case_folder sweeps).
+    Raises ValueError if the resolved overrides don't collapse to exactly one
+    case -- the sweep model is one case per resolved axis combination.
+    """
+    spec = load_entry_spec(entry, overrides=routed)
+    cases = spec.build_cases()
+    if len(cases) != 1:
+        raise ValueError(
+            f"entry-based sweep axis combination resolved to {len(cases)} cases "
+            f"for entry '{entry}'; expected exactly 1 -- add enough constraining "
+            "overrides (e.g. 'solvers') to collapse this combination to a single case"
+        )
+    spec.apply_case(spec.case_root, cases[0])
+
+
 def sweep_plan(
     spec_path: str | Path,
     *,
@@ -65,13 +92,17 @@ def sweep_plan(
     output_dir = Path(output_dir)
     resolved_cases = expand_sweep(sweep_spec, get_derivation=get_derivation)
     base = sweep_spec.get("base", {})
+    entry = _entry_name(sweep_spec)
 
     case_reports = []
     for case in resolved_cases:
-        case_dir = output_dir / case.case_id
         try:
-            routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
-            materialize_case(case_dir=case_dir, routed=routed)
+            if entry is not None:
+                routed = route_entry_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+                _materialize_entry_case(entry, routed)
+            else:
+                routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+                materialize_case(case_dir=output_dir / case.case_id, routed=routed)
         except (OSError, ValueError) as exc:
             case_reports.append(
                 {
@@ -83,7 +114,10 @@ def sweep_plan(
             )
             continue
 
-        report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+        if entry is not None:
+            report = strict_plan(entry, overrides=routed)
+        else:
+            report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
         report_payload = report.to_json()
         case_reports.append(
             {
@@ -140,6 +174,7 @@ def sweep_run(
 
     resolved_cases = expand_sweep(sweep_spec, get_derivation=get_derivation)
     base = sweep_spec.get("base", {})
+    entry = _entry_name(sweep_spec)
 
     manifest = SweepManifest(
         schema_version="1.0", sweep_spec_hash=spec_hash,
@@ -165,7 +200,10 @@ def sweep_run(
 
         routing_error: str | None = None
         try:
-            routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+            if entry is not None:
+                routed = route_entry_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+            else:
+                routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
         except (OSError, ValueError) as exc:
             # An unrecognized/unroutable axis (e.g. "dx") is a per-case
             # failure, not a crash of the whole sweep -- same treatment as a
@@ -196,14 +234,24 @@ def sweep_run(
                 outcome = "retried"
             status = "failed"
             try:
-                materialize_case(case_dir=case_dir, routed=routed)
-                report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+                if entry is not None:
+                    _materialize_entry_case(entry, routed)
+                    report = strict_plan(entry, overrides=routed)
+                else:
+                    materialize_case(case_dir=case_dir, routed=routed)
+                    report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
                 payload = report.to_json()
                 if report.status != "ok":
                     plan_error = "strict_plan reported failed status"
                 else:
                     run_document = payload["run_document"]
                     workflow_state_path = _workflow_state_path_from_run_document(run_document)
+                    # In entry mode, case_dir (this sweep's own bookkeeping
+                    # location for run_document.json) is unrelated to the
+                    # tutorial's real case_root and is never created by
+                    # _materialize_entry_case, unlike generic mode's
+                    # materialize_case which creates it as a side effect.
+                    run_document_path.parent.mkdir(parents=True, exist_ok=True)
                     run_document_path.write_text(json.dumps(run_document, indent=2))
             except (OSError, ValueError) as exc:
                 materialization_error = str(exc)

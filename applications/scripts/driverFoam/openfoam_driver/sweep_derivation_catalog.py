@@ -51,13 +51,40 @@ def _path_safe_case_id(value: str) -> str:
     return value
 
 
+def _label_for(value: Any) -> str:
+    """Render one axis value as a label fragment.
+
+    List/tuple values (e.g. niederer_2012.py's dx_values=[0.5]) are flattened
+    element-wise rather than stringified as a Python literal (str([0.5]) ==
+    "[0.5]", which is not path-safe).
+    """
+    if isinstance(value, (list, tuple)):
+        return "-".join(str(v) for v in value)
+    return str(value)
+
+
+def _join_values_path_safe(values: dict[str, Any]) -> str:
+    return _path_safe_case_id("_".join(_label_for(v) for v in values.values()))
+
+
 def _case_id_template(values: dict[str, Any]) -> dict[str, Any]:
     """Join every named value into a single filesystem-safe label, in order."""
-    return {"caseId": _path_safe_case_id("_".join(str(v) for v in values.values()))}
+    return {"caseId": _join_values_path_safe(values)}
+
+
+def _output_dir_name_template(values: dict[str, Any]) -> dict[str, Any]:
+    """Join every named value into a single filesystem-safe output_dir_name.
+
+    For entry-based sweeps (an existing registered tutorial's own make_spec),
+    this plays the same role case_id_template plays for generic case_folder
+    sweeps: naming this case's on-disk output directory.
+    """
+    return {"output_dir_name": _join_values_path_safe(values)}
 
 
 SWEEP_DERIVATION_CATALOG: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "case_id_template": _case_id_template,
+    "output_dir_name_template": _output_dir_name_template,
 }
 
 

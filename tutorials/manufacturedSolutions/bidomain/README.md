@@ -55,7 +55,7 @@ blockMesh -dict system/blockMeshDict.1D
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/setup/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDABidomain --config tutorials/manufacturedSolutions/bidomain/studies/driver_config.json
 ```
 
 After the sweep completes, persist the canonical Paper I convergence table:
@@ -66,7 +66,7 @@ python3 applications/scripts/paperI_results/aggregate.py bidomain
 
 ## Tetrahedral (unstructured) mesh variant
 
-`setup/mesh/tet/` holds this case's own tetrahedral-mesh overlay: a unit-cube
+`studies/mesh/tet/` holds this case's own tetrahedral-mesh overlay: a unit-cube
 Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length
 placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default`
 forced to `leastSquares`. The geometry and gradient-scheme override are
@@ -80,13 +80,13 @@ own case.
 
 ```bash
 cd tutorials/manufacturedSolutions/bidomain
-bash setup/mesh/tet/run_scheme_study.sh
+bash studies/mesh/tet/run_scheme_study.sh
 ```
 
 Runs both `Gauss linear` and `leastSquares` gradient reconstruction across
 `N = 10, 20, 40, 80` (overridable via `RESOLUTIONS`) for the coupled `Vm`/
 `phiE` (gauge-shifted) bidomain system, writes
-`setup/results/scheme_study.csv`, and persists the canonical Paper I table:
+`studies/results/scheme_study.csv`, and persists the canonical Paper I table:
 
 ```bash
 python3 applications/scripts/paperI_results/aggregate.py bidomain_tet
@@ -99,7 +99,7 @@ limited.
 
 ### Corrector study purpose
 
-`setup/mesh/tet/studies/corrector/run_corrector_study.sh` produces
+`studies/mesh/tet/studies/corrector/run_corrector_study.sh` produces
 `@tbl-bidomain-corrector-sensitivity`: a same-mesh sensitivity screen that
 separates two solver-loop controls the segregated bidomain equations expose
 on this tetrahedral family --
@@ -119,7 +119,7 @@ iteration-sensitivity controls, not an additional spatial convergence study.
 
 ```bash
 cd tutorials/manufacturedSolutions/bidomain
-bash setup/mesh/tet/studies/corrector/run_corrector_study.sh
+bash studies/mesh/tet/studies/corrector/run_corrector_study.sh
 ```
 
 Override `RESOLUTIONS`, `VARIANTS`, `RESULTS_DIR`, or `KEEP_WORK` through the

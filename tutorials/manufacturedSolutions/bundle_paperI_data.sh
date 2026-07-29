@@ -7,7 +7,7 @@ OUT="$REPO_ROOT/paperI_data_bundle"
 rm -rf "$OUT"; mkdir -p "$OUT/manufactured" "$OUT/niederer"
 
 find "$REPO_ROOT/tutorials/manufacturedSolutions" \
-     -path "*/reference/*_convergence.csv" -print0 \
+     -path "*/regression/reference/*_convergence.csv" -print0 \
   | while IFS= read -r -d '' f; do
         cp "$f" "$OUT/manufactured/$(basename "$f")"
     done
@@ -20,7 +20,7 @@ find "$REPO_ROOT/tutorials/manufacturedSolutions" \
         cp "$f" "$OUT/provenance/${case}_provenance.json"
     done
 
-NIED="$REPO_ROOT/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/setup/cachedCasePostProcessing"
+NIED="$REPO_ROOT/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/studies/cachedCasePostProcessing"
 find "$NIED" -name "*_points_DT0001_DX*.csv" -exec cp {} "$OUT/niederer/" \; 2>/dev/null || true
 
 echo "Bundle staged at: $OUT"
