@@ -23,4 +23,3 @@ bash tutorials/manufacturedSolutions/bidomain/setup/mesh/tet/studies/corrector/r
 
 Override `RESOLUTIONS`, `VARIANTS`, `RESULTS_DIR`, or `KEEP_WORK` through the
 environment for focused reruns.
-

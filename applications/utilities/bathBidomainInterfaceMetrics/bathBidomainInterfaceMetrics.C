@@ -88,20 +88,6 @@ scalar phiEExact
 }
 
 
-scalar vmExact
-(
-    const scalar x,
-    const scalar t,
-    const scalar alpha,
-    const scalar sigmaE
-)
-{
-    return
-        Foam::sqrt(1.0 + t)*Foam::cos(constant::mathematical::pi*x)
-      - alpha*x/sigmaE;
-}
-
-
 void writeNorms(OFstream& output, const WeightedNorms& norms)
 {
     output << ',' << norms.l1() << ',' << norms.l2() << ',' << norms.maxAbs;
@@ -189,15 +175,6 @@ int main(int argc, char* argv[])
 {
     argList::noParallel();
     timeSelector::addOptions();
-    argList::addBoolOption
-    (
-        "useExactPhiE",
-        "Null test: replace phiE and Vm with the manufactured exact solution "
-        "before evaluating the diagnostics, so a correct implementation must "
-        "report zero error. Output is written to a distinct .exact.csv and is "
-        "tagged fieldSource=exactReference; it is not a solver result and must "
-        "never be reported as one."
-    );
     argList::addNote
     (
         "Report manufactured bath-bidomain region and interface metrics."
@@ -330,57 +307,7 @@ int main(int argc, char* argv[])
         "intracellularAssembly",
         "currentSplit"
     );
-    const bool useExactPhiE = args.found("useExactPhiE");
 
-    if (useExactPhiE)
-    {
-        Info<< "Replacing phiE with manufactured exact samples" << nl;
-        const vectorField& cellCentres = mesh.C();
-        forAll(phiE, cellI)
-        {
-            phiE[cellI] = phiEExact
-            (
-                cellCentres[cellI].x(),
-                runTime.value(),
-                k,
-                alpha,
-                sigmaE.xx()
-            );
-            VmGlobal[cellI] = vmExact
-            (
-                cellCentres[cellI].x(),
-                runTime.value(),
-                alpha,
-                sigmaE.xx()
-            );
-        }
-
-        forAll(mesh.boundary(), patchI)
-        {
-            const vectorField patchCentres
-            (
-                mesh.boundary()[patchI].Cf()
-            );
-            forAll(patchCentres, faceI)
-            {
-                phiE.boundaryFieldRef()[patchI][faceI] = phiEExact
-                (
-                    patchCentres[faceI].x(),
-                    runTime.value(),
-                    k,
-                    alpha,
-                    sigmaE.xx()
-                );
-                VmGlobal.boundaryFieldRef()[patchI][faceI] = vmExact
-                (
-                    patchCentres[faceI].x(),
-                    runTime.value(),
-                    alpha,
-                    sigmaE.xx()
-                );
-            }
-        }
-    }
 
     volScalarField phiIHeart
     (
@@ -540,237 +467,6 @@ int main(int argc, char* argv[])
     const surfaceScalarField& correctionFlux =
         *assembledLaplacian.faceFluxCorrectionPtr();
 
-    WeightedNorms exactHeartInterfaceResidual;
-    WeightedNorms exactHeartBulkResidual;
-    WeightedNorms exactBathInterfaceResidual;
-    WeightedNorms exactBathBulkResidual;
-    WeightedNorms exactHeartInterfaceLhsError;
-    WeightedNorms exactHeartBulkLhsError;
-    WeightedNorms exactHeartInterfaceRhsError;
-    WeightedNorms exactHeartBulkRhsError;
-    WeightedNorms matchedHeartInterfaceResidual;
-    WeightedNorms matchedHeartBulkResidual;
-    WeightedNorms matchedBathInterfaceResidual;
-    WeightedNorms matchedBathBulkResidual;
-    if (useExactPhiE)
-    {
-        Info<< "Computing exact discrete global/submesh residual" << nl;
-        boolList isInterfaceCell(mesh.nCells(), false);
-        forAll(neighbour, faceI)
-        {
-            const label ownCell = owner[faceI];
-            const label neiCell = neighbour[faceI];
-            if (isHeart[ownCell] != isHeart[neiCell])
-            {
-                isInterfaceCell[ownCell] = true;
-                isInterfaceCell[neiCell] = true;
-            }
-        }
-
-        fvMeshSubset heartSubset(mesh);
-        heartSubset.setCellSubset(mesh.cellZones()[heartZone]);
-        const fvMesh& heartMesh = heartSubset.subMesh();
-        volScalarField exactHeartVm
-        (
-            IOobject
-            (
-                "exactHeartVmResidual",
-                runTime.timeName(),
-                heartMesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            heartMesh,
-            dimensionedScalar("zero", phiE.dimensions(), 0.0),
-            "zeroGradient"
-        );
-        forAll(exactHeartVm, cellI)
-        {
-            exactHeartVm[cellI] = vmExact
-            (
-                heartMesh.C()[cellI].x(),
-                runTime.value(),
-                alpha,
-                sigmaE.xx()
-            );
-        }
-        exactHeartVm.correctBoundaryConditions();
-
-        volScalarField exactHeartPhiE
-        (
-            IOobject
-            (
-                "exactHeartPhiEResidual",
-                runTime.timeName(),
-                heartMesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            heartMesh,
-            dimensionedScalar("zero", phiE.dimensions(), 0.0),
-            "zeroGradient"
-        );
-        forAll(exactHeartPhiE, cellI)
-        {
-            exactHeartPhiE[cellI] = phiEExact
-            (
-                heartMesh.C()[cellI].x(),
-                runTime.value(),
-                k,
-                alpha,
-                sigmaE.xx()
-            );
-        }
-        exactHeartPhiE.correctBoundaryConditions();
-        const volScalarField exactHeartPhiI(exactHeartVm + exactHeartPhiE);
-
-        volTensorField exactGi
-        (
-            IOobject
-            (
-                "exactGiResidual",
-                runTime.timeName(),
-                heartMesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            heartMesh,
-            dimensionedTensor("Gi", sigmaTotal.dimensions(), sigmaI),
-            "zeroGradient"
-        );
-        const volScalarField heartRhs(-fvc::laplacian(exactGi, exactHeartVm));
-        const volScalarField globalLhs(fvc::laplacian(sigmaTotalf, phiE));
-        const volScalarField matchedHeartRhs
-        (
-            -fvc::laplacian(exactGi, exactHeartPhiI)
-        );
-
-        surfaceTensorField sigmaExtracellularf
-        (
-            IOobject
-            (
-                "sigmaExtracellularfDiagnostic",
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero)
-        );
-        tensorField& sigmaExtracellularFace =
-            sigmaExtracellularf.primitiveFieldRef();
-        forAll(neighbour, faceI)
-        {
-            const label ownCell = owner[faceI];
-            const label neiCell = neighbour[faceI];
-            const tensor ownSigmaE =
-                isHeart[ownCell] ? sigma[ownCell] - sigmaI : sigma[ownCell];
-            const tensor neiSigmaE =
-                isHeart[neiCell] ? sigma[neiCell] - sigmaI : sigma[neiCell];
-
-            if (isHeart[ownCell] == isHeart[neiCell])
-            {
-                sigmaExtracellularFace[faceI] =
-                    extracellularFaceConductivity::linear
-                    (
-                        ownSigmaE, neiSigmaE, weights[faceI]
-                    );
-            }
-            else if (method == "unweightedHarmonic")
-            {
-                sigmaExtracellularFace[faceI] =
-                    extracellularFaceConductivity::unweightedHarmonic
-                    (
-                        ownSigmaE, neiSigmaE
-                    );
-            }
-            else
-            {
-                sigmaExtracellularFace[faceI] =
-                    extracellularFaceConductivity::distanceWeightedHarmonic
-                    (
-                        ownSigmaE,
-                        neiSigmaE,
-                        1.0 - weights[faceI],
-                        weights[faceI]
-                    );
-            }
-        }
-        forAll(sigmaExtracellularf.boundaryField(), patchI)
-        {
-            sigmaExtracellularf.boundaryFieldRef()[patchI] =
-                sigmaTotal.boundaryField()[patchI].patchInternalField();
-        }
-        const volScalarField matchedGlobalLhs
-        (
-            fvc::laplacian(sigmaExtracellularf, phiE)
-        );
-        scalarField mappedRhs(mesh.nCells(), 0.0);
-        scalarField mappedMatchedRhs(mesh.nCells(), 0.0);
-        const labelUList& heartCellMap = heartSubset.cellMap();
-        forAll(heartCellMap, heartCellI)
-        {
-            mappedRhs[heartCellMap[heartCellI]] = heartRhs[heartCellI];
-            mappedMatchedRhs[heartCellMap[heartCellI]] =
-                matchedHeartRhs[heartCellI];
-        }
-
-        forAll(mappedRhs, cellI)
-        {
-            const scalar residual = globalLhs[cellI] - mappedRhs[cellI];
-            WeightedNorms* norms = nullptr;
-            if (isHeart[cellI])
-            {
-                norms = isInterfaceCell[cellI]
-                  ? &exactHeartInterfaceResidual
-                  : &exactHeartBulkResidual;
-            }
-            else
-            {
-                norms = isInterfaceCell[cellI]
-                  ? &exactBathInterfaceResidual
-                  : &exactBathBulkResidual;
-            }
-            norms->add(residual, mesh.V()[cellI]);
-
-            const scalar matchedResidual =
-                matchedGlobalLhs[cellI] - mappedMatchedRhs[cellI];
-            WeightedNorms* matchedNorms = nullptr;
-            if (isHeart[cellI])
-            {
-                matchedNorms = isInterfaceCell[cellI]
-                  ? &matchedHeartInterfaceResidual
-                  : &matchedHeartBulkResidual;
-            }
-            else
-            {
-                matchedNorms = isInterfaceCell[cellI]
-                  ? &matchedBathInterfaceResidual
-                  : &matchedBathBulkResidual;
-            }
-            matchedNorms->add(matchedResidual, mesh.V()[cellI]);
-
-            if (isHeart[cellI])
-            {
-                const scalar exactTerm =
-                    sigmaI.xx()*Foam::sqrt(1.0 + runTime.value())
-                   *sqr(constant::mathematical::pi)
-                   *Foam::cos
-                    (
-                        constant::mathematical::pi*mesh.C()[cellI].x()
-                    );
-                WeightedNorms& lhsError = isInterfaceCell[cellI]
-                  ? exactHeartInterfaceLhsError
-                  : exactHeartBulkLhsError;
-                WeightedNorms& rhsError = isInterfaceCell[cellI]
-                  ? exactHeartInterfaceRhsError
-                  : exactHeartBulkRhsError;
-                lhsError.add(globalLhs[cellI] - exactTerm, mesh.V()[cellI]);
-                rhsError.add(mappedRhs[cellI] - exactTerm, mesh.V()[cellI]);
-            }
-        }
-    }
 
     Info<< "Computing region norms" << nl;
 
@@ -962,13 +658,7 @@ int main(int argc, char* argv[])
 
     const fileName outputDir(runTime.globalPath()/"postProcessing");
     mkDir(outputDir);
-    const fileName outputName
-    (
-        useExactPhiE
-      ? "bathBidomainInterfaceMetrics.exact.csv"
-      : "bathBidomainInterfaceMetrics.csv"
-    );
-    OFstream output(outputDir/outputName);
+    OFstream output(outputDir/"bathBidomainInterfaceMetrics.csv");
     output
         << "method,assembly,fieldSource,time,interfaceFaces"
         << ",heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf"
@@ -992,25 +682,13 @@ int main(int argc, char* argv[])
         << ",x1CorrectionFlux_L1,x1CorrectionFlux_L2,x1CorrectionFlux_Linf"
         << ",x0OrthogonalFlux_L1,x0OrthogonalFlux_L2,x0OrthogonalFlux_Linf"
         << ",x1OrthogonalFlux_L1,x1OrthogonalFlux_L2,x1OrthogonalFlux_Linf"
-        << ",exactHeartInterfaceResidual_L1,exactHeartInterfaceResidual_L2,exactHeartInterfaceResidual_Linf"
-        << ",exactHeartBulkResidual_L1,exactHeartBulkResidual_L2,exactHeartBulkResidual_Linf"
-        << ",exactBathInterfaceResidual_L1,exactBathInterfaceResidual_L2,exactBathInterfaceResidual_Linf"
-        << ",exactBathBulkResidual_L1,exactBathBulkResidual_L2,exactBathBulkResidual_Linf"
-        << ",exactHeartInterfaceLhsError_L1,exactHeartInterfaceLhsError_L2,exactHeartInterfaceLhsError_Linf"
-        << ",exactHeartBulkLhsError_L1,exactHeartBulkLhsError_L2,exactHeartBulkLhsError_Linf"
-        << ",exactHeartInterfaceRhsError_L1,exactHeartInterfaceRhsError_L2,exactHeartInterfaceRhsError_Linf"
-        << ",exactHeartBulkRhsError_L1,exactHeartBulkRhsError_L2,exactHeartBulkRhsError_Linf"
-        << ",matchedHeartInterfaceResidual_L1,matchedHeartInterfaceResidual_L2,matchedHeartInterfaceResidual_Linf"
-        << ",matchedHeartBulkResidual_L1,matchedHeartBulkResidual_L2,matchedHeartBulkResidual_Linf"
-        << ",matchedBathInterfaceResidual_L1,matchedBathInterfaceResidual_L2,matchedBathInterfaceResidual_Linf"
-        << ",matchedBathBulkResidual_L1,matchedBathBulkResidual_L2,matchedBathBulkResidual_Linf"
         << ",xMinPhiE_L1,xMinPhiE_L2,xMinPhiE_Linf"
         << ",xMaxFlux_L1,xMaxFlux_L2,xMaxFlux_Linf"
         << ",sidesFlux_L1,sidesFlux_L2,sidesFlux_Linf"
         << ",exteriorFluxIntegral\n";
     output
         << method << ',' << assembly << ','
-        << (useExactPhiE ? "exactReference" : "numerical") << ','
+        << "numerical" << ','
         << runTime.value() << ',' << interfaceFaces;
     writeNorms(output, heartPotential);
     writeNorms(output, bathPotential);
@@ -1035,24 +713,12 @@ int main(int argc, char* argv[])
     writeNorms(output, x1CorrectionFlux);
     writeNorms(output, x0OrthogonalFlux);
     writeNorms(output, x1OrthogonalFlux);
-    writeNorms(output, exactHeartInterfaceResidual);
-    writeNorms(output, exactHeartBulkResidual);
-    writeNorms(output, exactBathInterfaceResidual);
-    writeNorms(output, exactBathBulkResidual);
-    writeNorms(output, exactHeartInterfaceLhsError);
-    writeNorms(output, exactHeartBulkLhsError);
-    writeNorms(output, exactHeartInterfaceRhsError);
-    writeNorms(output, exactHeartBulkRhsError);
-    writeNorms(output, matchedHeartInterfaceResidual);
-    writeNorms(output, matchedHeartBulkResidual);
-    writeNorms(output, matchedBathInterfaceResidual);
-    writeNorms(output, matchedBathBulkResidual);
     writeNorms(output, xMinPotential);
     writeNorms(output, xMaxFlux);
     writeNorms(output, sidesFlux);
     output << ',' << exteriorFluxIntegral << nl;
 
-    Info<< "Wrote " << outputDir/outputName << nl
+    Info<< "Wrote " << outputDir/"bathBidomainInterfaceMetrics.csv" << nl
         << "interfaceFaces=" << interfaceFaces << nl
         << "heartPhiE_L2=" << heartPotential.l2() << nl
         << "bathPhiE_L2=" << bathPotential.l2() << nl

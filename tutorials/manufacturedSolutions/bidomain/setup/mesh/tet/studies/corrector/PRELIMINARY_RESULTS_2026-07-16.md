@@ -31,4 +31,3 @@ criterion for accepting a deferred correction: reassembly can remove
 fortuitous cancellation between discretisation terms. The result supports
 keeping the controls distinct in code and discussing them together in the
 paper.
-

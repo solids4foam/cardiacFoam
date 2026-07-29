@@ -132,6 +132,7 @@ Common optional overrides used in the current tree are:
 - `hasSignal(...)`, `signal(...)` when a model wants custom coupling behavior
 
 **Heterogeneity support:**
+
 - Scalar models gain heterogeneity support by inheriting from `configuredIonicModel` rather than overriding `configureIonicHeterogeneity(...)` directly. Exception: `ToRORd_dynCl` overrides this method to apply per-cell initial-state blending via its own `HETEROGENEOUS_INITIAL_STATES_` member.
 - Batched models that need heterogeneity support similarly inherit from `configuredBatchedIonicModel` and return all three anatomical tissue types from `supportedTissueTypes()`.
 

@@ -97,7 +97,7 @@ study below already established that two outer sweeps are within 1% of the
 fully converged block, so the reported spatial order isn't iteration-error
 limited.
 
-### Purpose
+### Corrector study purpose
 
 `setup/mesh/tet/studies/corrector/run_corrector_study.sh` produces
 `@tbl-bidomain-corrector-sensitivity`: a same-mesh sensitivity screen that

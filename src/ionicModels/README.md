@@ -332,6 +332,7 @@ ionicHeterogeneity
 ### Tissue baseline and override scoping
 
 Each region (in any mode) specifies an optional `baseline` tissue keyword:
+
 - Explicit: one of `epicardialCells`, `mCells`, `endocardialCells`, `myocyte`
 - Default rule: if the region name itself is one of those three anatomical names, use it; otherwise `myocyte`
 
@@ -377,6 +378,7 @@ monodomainSolverCoeffs
 ```
 
 Scopes are applied in order:
+
 1. `global` (always applied first)
 2. Tissue scope matching the region's `baseline` (endocardialCells/mCells/epicardialCells/myocyte)
 3. Named region scope (for namedRegions/cellZoneRegions mode only)

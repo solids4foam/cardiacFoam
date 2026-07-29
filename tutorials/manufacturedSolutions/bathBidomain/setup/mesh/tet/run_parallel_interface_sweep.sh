@@ -94,8 +94,6 @@ do
             > "log.interfaceMetrics.$method.N$N" 2>&1
         cp postProcessing/bathBidomainInterfaceMetrics.csv \
             "bathBidomainInterfaceMetrics.numerical.$method.N$N.csv"
-        bathBidomainInterfaceMetrics -latestTime -useExactPhiE \
-            > "log.interfaceMetricsExact.$method.N$N" 2>&1
 
         if [[ "$ASSEMBLY" == "currentSplit" ]]
         then
@@ -107,16 +105,12 @@ do
         mkdir -p "$OUT_DIR"
         cp "log.cardiacFoam.$method.N$N" "$OUT_DIR/log.cardiacFoam"
         cp "log.interfaceMetrics.$method.N$N" "$OUT_DIR/log.interfaceMetrics"
-        cp "log.interfaceMetricsExact.$method.N$N" \
-            "$OUT_DIR/log.interfaceMetricsExact"
         cp "log.reconstructPar.$method.N$N" "$OUT_DIR/log.reconstructPar"
         cp setup/mesh/tet/results/N$N/log.checkMesh "$OUT_DIR/"
         cp postProcessing/bathBidomain_3D_*_cells_implicit.dat \
             "$OUT_DIR/summary.dat"
         cp "bathBidomainInterfaceMetrics.numerical.$method.N$N.csv" \
             "$OUT_DIR/bathBidomainInterfaceMetrics.csv"
-        cp postProcessing/bathBidomainInterfaceMetrics.csv \
-            "$OUT_DIR/bathBidomainInterfaceMetrics.exact.csv"
         cp "$BANK/polyMesh.sha256" "$OUT_DIR/"
     done
 done

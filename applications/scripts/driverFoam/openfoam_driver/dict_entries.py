@@ -886,13 +886,13 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=('manufacturedFDAMonodomainVerifier', 'manufacturedFDABidomainVerifier', 'manufacturedFDABathBidomainVerifier', 'manufacturedEikonalVerifier'),
         ),
         DictEntry(
-            driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.enforceExactFields',
+            driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.writeErrorField',
             phases=frozenset({'solver'}),
-            description='Forces the solver fields to strictly match the exact analytical solution every step.',
-            source_refs=('src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H',),
+            description='Writes the per-cell signed activation-time error field to disk each write interval, for correlating error against local mesh quality.',
+            source_refs=('src/verificationModels/eikonalVerification/manufacturedEikonalVerifier.C',),
             value_kind='boolean',
             typical_value='false',
-            applicable_when={"$ELECTRO_MODEL_COEFFS.verificationModel.type": ("manufacturedFDAMonodomainVerifier", "manufacturedFDABidomainVerifier", "manufacturedFDABathBidomainVerifier")},
+            applicable_when={"$ELECTRO_MODEL_COEFFS.verificationModel.type": ("manufacturedEikonalVerifier",)},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.initializeFields',

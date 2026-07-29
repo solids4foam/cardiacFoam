@@ -88,6 +88,7 @@ initialisation (restored 2nd order through N=40 before the active stall was unde
 - `dt` per N: 0.00892857 / 0.00224215 / 0.000560538 / 0.000140174 (dt < h^2, scales ~ h^2).
 
 ### Parallel-I/O gotcha (fixed)
+
 Reading the top-level `electroMechanicalProperties` IOdictionary at RUN TIME (e.g. in the
 BC `updateCoeffs` every step) is NOT parallel-safe: the file handler looks in the
 region-local `processor*/constant` where the dict does not exist ->
@@ -103,9 +104,11 @@ BC and body force now read inline at construction.)
 ## 5. Convergence results (3D, L2 norm of error)
 
 ### Vm (electrophysiology) — rigorous, 2nd order
+
 L2_Vm: 1.85e-3 (10), 4.90e-4 (20), 1.22e-4 (40), 3.06e-5 (80); rate ~ 1.84 / 1.99 / 1.99.
 
 ### Passive mechanics (TaScale=0) — CLEAN 2nd order to N=80
+
 | N  | L2_D     | rate |
 |----|----------|------|
 | 10 | 6.78e-6  | -    |
@@ -114,6 +117,7 @@ L2_Vm: 1.85e-3 (10), 4.90e-4 (20), 1.22e-4 (40), 3.06e-5 (80); rate ~ 1.84 / 1.9
 | 80 | 8.76e-8  | 1.99 |
 
 ### Full / active (TaScale=1) — 2nd order to N=40, then stalls
+
 | N  | L2_D (aTol=1e-6) | L2_D (aTol=1e-10) | rate (1e-10) |
 |----|------------------|-------------------|--------------|
 | 10 | 8.09e-5          | 8.09e-5           | -    |
@@ -148,10 +152,12 @@ L2_Vm: 1.85e-3 (10), 4.90e-4 (20), 1.22e-4 (40), 3.06e-5 (80); rate ~ 1.84 / 1.9
   over `D` at fine `h`. rate_D degrades 2 -> 1 (observed 2.4/2.0/0.5).
 
 ### UPDATE 2026-06-16: the lambda hypothesis is REFUTED by the gamma=0 test
+
 Running gamma=0 (length-independent active tension, Ta = Tmax Vm^2/(V0^2+Vm^2)) gives
 results that are IDENTICAL to gamma=1: L2_D 8.09e-5/1.66e-5/4.36e-6/2.32e-6, same 40->80
 stall. Reason: the deformation is small (amplitude 0.02, sin t <= 0.1) so lambda ~ 1 and the
 length factor (1+gamma(lambda-1)) ~ 1 regardless of gamma. So:
+
 - The stall is NOT the length dependence / lambda coupling.
 - The stall IS caused by the PRESENCE of the active fibre stress
   `sigma_a = (Ta/J) (F f0) (x) (F f0)` itself (passive: clean rate 2; any active: stall),
@@ -167,16 +173,19 @@ length factor (1+gamma(lambda-1)) ~ 1 regardless of gamma. So:
   ~0.91; either way it is well below 2. (rate column norm differs from L2 table.)
 
 ### gamma = 0 framing
+
 Still a legitimate model variant (length-independent active tension), but as a DIAGNOSTIC it
 is inconclusive here because lambda ~ 1. To actually exercise the length term one would need
 a much larger amplitude.
 
 ### UPDATE 2026-06-24: ROOT CAUSE FOUND AND FIXED — wrong evaluation coordinate in body force
+
 The active stall was caused by a single bug in `src/manufacturedSolidForce/manufacturedSolidForce.C`:
 `addSup` was evaluating `B_expr.H` at `X_eval = mesh_.C()[celli] - D[celli]` instead of
 `X_eval = mesh_.C()[celli]`.
 
 **Why this matters:**
+
 - `B_expr.H` is derived symbolically in **reference** coordinates `(X_ref, Y_ref, Z_ref)`.
 - The `nonLinGeomTotalLagTotalDispSolid` solver is Total Lagrangian: the mesh **never moves**
   (`movePoints` / `setPoints` are nowhere in the TL solver — confirmed). Therefore
@@ -187,6 +196,7 @@ The active stall was caused by a single bug in `src/manufacturedSolidForce/manuf
   a **constant-in-h** body-force residual.
 
 **Why passive survived but active did not:**
+
 - For the passive case: `|∂B_passive/∂X| ~ O(rho * amplitude * omega^2)` is small (no large
   prefactor). The constant floor `||ΔD||_L2 ~ ||D_mfr · ∂B_passive/∂X|| / (3 pi^2 E) ~ 1e-8 m`
   is BELOW the N=80 truncation error (~8e-8), so passive appears to converge at rate 2 cleanly.
@@ -195,9 +205,10 @@ The active stall was caused by a single bug in `src/manufacturedSolidForce/manuf
   error and causes the observed stall (L2_D flat at ~2e-6 from N=40 to N=80).
 
 **The fix** (one block deleted, `src/manufacturedSolidForce/manufacturedSolidForce.C`):
-  - Removed the `mesh_.findObject<volVectorField>("D")` lookup and the `X -= D[celli]`
+
+- Removed the `mesh_.findObject<volVectorField>("D")` lookup and the `X -= D[celli]`
     subtraction block. The body force is now evaluated at `X = C[celli]` = reference coords.
-  - `Dptr` was a local variable only; no header change needed.
+- `Dptr` was a local variable only; no header change needed.
 
 **Consistency note:** the same `B_expr.H` was verified correct at fixed `(X_ref, Y_ref, Z_ref)`
 points (§2); that check implicitly assumed no coordinate shift and remains valid.
@@ -207,6 +218,7 @@ points (§2); that check implicitly assumed no coordinate shift and remains vali
 ## 7. Current standing (verified) and open items
 
 ### Verified (solid, paper-ready as honest claims)
+
 - `B_expr.H` analytically correct (independent sympy, §2).
 - `Vm` (electrophysiology): 2nd order to N=80.
 - Passive nonlinear solid (TaScale=0): clean 2nd order to N=80.
@@ -234,6 +246,7 @@ to the bugged value (2.32e-6), and the rate is now consistent with 2nd-order con
 **Status: VERIFIED. The electromechanics MMS converges at 2nd order through N=80.**
 
 ### Paper checklist (independent of the above)
+
 - Separate spatial vs temporal order: solid `ddtScheme = Euler` (1st order); with `dt~h^2`
   the temporal error is O(h^2) = spatial order, so the demonstrated order is a COMBINED
   space-time 2nd order. Either use `backward` (2nd-order time, error ~h^4) or a fixed-small-dt
@@ -243,5 +256,6 @@ to the bugged value (2.32e-6), and the rate is now consistent with 2nd-order con
   state the manufactured fields, source term, constitutive model and parameters.
 
 ### Reusable artifacts (preserved in the repo)
+
 - `verification/generate_B_expr_sympy.py` (sympy generator; needs sympy, e.g. a venv)
 - `verification/verify_B_expr_harness.cpp` (C++ harness that #includes B_expr.H to check it)

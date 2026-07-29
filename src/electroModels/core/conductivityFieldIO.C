@@ -96,6 +96,48 @@ tmp<volTensorField> widenSymmetricField
 }
 
 
+// Find the time instance holding fieldName under supportMesh, or return an
+// empty word if it genuinely cannot be found anywhere (not even
+// "constant"). OpenFOAM.com added findInstance's constant_fallback argument
+// in 2406; before that it always falls back to "constant" internally, so an
+// empty result never gets returned and the fallback has to be detected by
+// checking whether the field actually exists at the resolved instance.
+word findFieldInstance(const fvMesh& supportMesh, const word& fieldName)
+{
+    word instance = supportMesh.time().findInstance
+    (
+        supportMesh.dbDir(),
+        fieldName,
+        IOobject::READ_IF_PRESENT,
+        word::null
+#if OPENFOAM >= 2406
+        , false
+#endif
+    );
+
+#if OPENFOAM < 2406
+    if (!instance.empty())
+    {
+        IOobject io
+        (
+            fieldName,
+            instance,
+            supportMesh.dbDir(),
+            supportMesh,
+            IOobject::READ_IF_PRESENT
+        );
+
+        if (!io.typeHeaderOk<volTensorField>(false, false, false))
+        {
+            instance = word::null;
+        }
+    }
+#endif
+
+    return instance;
+}
+
+
 void validateLegacySymmetry(const volTensorField& field)
 {
     scalar maxAsymmetry = 0.0;

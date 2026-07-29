@@ -92,7 +92,7 @@ duration of a tet run and restored on exit. It was formerly the standalone
 `monodomainTetMMS` tutorial, merged in here the same way `eikonalTetMMS` was
 merged into `eikonalECG`.
 
-### Purpose
+### Tetrahedral variant purpose
 
 Verifies that OpenFOAM's non-orthogonal `Gauss linear corrected` Laplacian
 scheme sustains its spatial convergence rate on a genuinely unstructured
