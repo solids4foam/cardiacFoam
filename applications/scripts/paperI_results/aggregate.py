@@ -58,13 +58,15 @@ def _eikonal_hex(root: Path):
 
 
 def _mono_hex(root: Path):
+    # One monodomain sweep produces both the Vm/auxiliary fields and the
+    # pseudo-ECG samples, so both are aggregated into a single CSV, matching
+    # how the eikonal rows carry their activation field and ECG functional
+    # together. The two adapters read the same archive and emit disjoint
+    # fields: Vm/u1/u2 in 1D-3D, and Phi_e_max/Phi_e_mean in 3D.
     src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
-    return schema.fill_rates(adapters.from_monodomain_spatial_archive(src))
-
-
-def _mono_pseudoecg_hex(root: Path):
-    src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
-    return schema.fill_rates(adapters.from_pseudo_ecg_spatial_archive(src))
+    rows = adapters.from_monodomain_spatial_archive(src)
+    rows += adapters.from_pseudo_ecg_spatial_archive(src)
+    return schema.fill_rates(rows)
 
 
 def _bidomain_hex(root: Path):
@@ -99,7 +101,7 @@ def _niederer_hex(root: Path):
 CASES = {
     "mono_tet": _mono_tet, "eikonal_tet": _eikonal_tet, "coupling1D3D_hex": _coupling1D3D_hex,
     "eikonal_hex": _eikonal_hex, "mono_hex": _mono_hex,
-    "mono_pseudoecg_hex": _mono_pseudoecg_hex, "bidomain_hex": _bidomain_hex,
+    "bidomain_hex": _bidomain_hex,
     "bidomain_tet": _bidomain_tet,
     "bath_hex": _bath_hex, "bath_tet": _bath_tet, "niederer_hex": _niederer_hex,
 }
@@ -110,7 +112,6 @@ _OUT = {
     "coupling1D3D_hex": "monodomain1D3D/setup/results/coupling1D3D_hex_convergence.csv",
     "eikonal_hex": "eikonalECG/setup/results/eikonal_hex_convergence.csv",
     "mono_hex": "monodomainPseudoECG/setup/results/mono_hex_convergence.csv",
-    "mono_pseudoecg_hex": "monodomainPseudoECG/setup/results/mono_pseudoecg_hex_convergence.csv",
     "bidomain_hex": "bidomain/setup/results/bidomain_hex_convergence.csv",
     "bidomain_tet": "bidomain/setup/results/bidomain_tet_convergence.csv",
     "bath_hex": "bathBidomain/setup/results/bath_hex_convergence.csv",
