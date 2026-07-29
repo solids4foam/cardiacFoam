@@ -16,7 +16,7 @@ blockMesh -dict system/blockMeshDict.3D
 Run the available manufactured dimensions through the setup directory with:
 
 ```sh
-./studies/run_all_dimensions.sh
+./setup/run_all_dimensions.sh
 ```
 
 Expected verification outputs:
@@ -32,7 +32,7 @@ and ECG summary files into CSV tables for manufactured mesh studies.
 After the driver runs, generate the convergence plot with:
 
 ```sh
-python3 studies/plot_convergence.py postProcessing
+python3 setup/plot_convergence.py postProcessing
 ```
 
 This writes `postProcessing/convergence_plot.pdf` and `.png` with three panels:
@@ -48,35 +48,35 @@ It is important to clarify how the errors are evaluated for the different fields
 
 ## Tetrahedral (unstructured) mesh variant
 
-`studies/mesh/tet/` is an activatable overlay of this same case on a genuinely
+`setup/mesh/tet/` is an activatable overlay of this same case on a genuinely
 unstructured mesh: identical `constant/` and `system/` dicts, except the mesh
-generator changes and `studies/mesh/tet/fvSolution` is swapped in for the
+generator changes and `setup/mesh/tet/fvSolution` is swapped in for the
 duration of a tet run and restored on exit. It was formerly the standalone
 `eikonalTetMMS` tutorial, merged in here (the 5 shared dicts were
 byte-identical, so this case stayed the canonical hex case unchanged; only the
 tet-specific `box.geo.template`, `fvSolution`, and run scripts became the
 overlay). The same pattern was later applied to
-`monodomainPseudoECG/studies/mesh/tet/` (formerly `monodomainTetMMS`).
+`monodomainPseudoECG/setup/mesh/tet/` (formerly `monodomainTetMMS`).
 
 Run the gradient-scheme convergence sweep (paper table):
 
 ```bash
 cd tutorials/manufacturedSolutions/eikonalECG
-bash studies/mesh/tet/run_scheme_study.sh
+bash setup/mesh/tet/run_scheme_study.sh
 ```
 
 Runs `Gauss linear` and `leastSquares` gradient reconstruction across
 `N = 10, 20, 40` (Gauss--linear) and `N = 10, 20, 40, 80` (least-squares,
-overridable via `RESOLUTIONS`), writes `studies/results/scheme_study.csv`, and
+overridable via `RESOLUTIONS`), writes `setup/results/scheme_study.csv`, and
 persists the canonical Paper I table:
 
 ```bash
 python3 applications/scripts/paperI_results/aggregate.py eikonal_tet
 ```
 
-The mesh-quality-only sweep (`studies/mesh/tet/run_tet_sweep.sh`) and its
+The mesh-quality-only sweep (`setup/mesh/tet/run_tet_sweep.sh`) and its
 resolution/end-time overrides follow the same convention as
 `monodomainPseudoECG`'s tet variant; see that case's README for the full
 description of the mesh-generation and effective-spacing methodology, which
 this case reuses unchanged (same `box.geo.template`,
-`studies/mesh/tet/summarize_tet.py` convergence-order convention).
+`setup/mesh/tet/summarize_tet.py` convergence-order convention).

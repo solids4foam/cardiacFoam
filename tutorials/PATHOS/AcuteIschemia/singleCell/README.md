@@ -19,7 +19,7 @@ tutorials/PATHOS/AcuteIschemia/singleCell/
 │   ├── controlDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── studies/
+├── setup/
 ├── singleCell.reference
 ├── regressionTest.sh
 ├── Allrun

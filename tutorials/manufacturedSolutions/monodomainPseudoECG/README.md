@@ -55,11 +55,11 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/studies/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config.json
 ```
 
 After the sweep completes, persist the canonical Paper I convergence tables (reads
-`driverPostProcessingArchive_postProcessing/`, writes `studies/results/*.csv`, never
+`driverPostProcessingArchive_postProcessing/`, writes `setup/results/*.csv`, never
 touches the sweep's own output):
 
 ```bash
@@ -73,8 +73,8 @@ asymptotic regime and were dropped, and the coarser 2D `N = 320` study was super
 by `N = 640`.
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/studies/studies/temporal1D_N640/config.json
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/studies/studies/temporal2D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal1D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal2D_N640/config.json
 ```
 
 Each temporal config holds a fixed fine mesh (`N = 640`) with a `dt` ladder
@@ -83,10 +83,10 @@ and isolates the field temporal-order measurement.
 
 ## Tetrahedral (unstructured) mesh variant
 
-`studies/mesh/tet/` is an activatable overlay of this same case on a genuinely
+`setup/mesh/tet/` is an activatable overlay of this same case on a genuinely
 unstructured mesh: identical `constant/` and `system/` dicts (electroProperties,
 physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh
-generator changes and `studies/mesh/tet/fvSolution` (a tighter
+generator changes and `setup/mesh/tet/fvSolution` (a tighter
 `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the
 duration of a tet run and restored on exit. It was formerly the standalone
 `monodomainTetMMS` tutorial, merged in here the same way `eikonalTetMMS` was
@@ -106,8 +106,8 @@ tetrahedral mesh of the unit cube:
 
 ### How the mesh is generated
 
-`studies/mesh/tet/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a
-characteristic length placeholder `__LC__`. `studies/mesh/tet/run_tet_sweep.sh`
+`setup/mesh/tet/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a
+characteristic length placeholder `__LC__`. `setup/mesh/tet/run_tet_sweep.sh`
 substitutes `lc = 1/N` per resolution, meshes with gmsh (legacy msh2 format),
 and imports via `gmshToFoam`. All six boundary faces lie on the axis-aligned
 planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal
@@ -121,7 +121,7 @@ zeroGradient boundary (`READ_IF_PRESENT`), so gmsh patch naming is irrelevant.
 The manufactured verifier assumes a structured mesh and back-computes an
 *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count.
 For an unstructured tet mesh of the unit cube this is the mean cell size, and
-it is the correct convergence abscissa. `studies/mesh/tet/summarize_tet.py`
+it is the correct convergence abscissa. `setup/mesh/tet/summarize_tet.py`
 therefore computes the observed order from consecutive `dx` values,
 `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming a
 factor-of-two refinement, and reports it next to the `checkMesh` max
@@ -131,12 +131,12 @@ non-orthogonality and max skewness so the mesh quality is explicit.
 
 ```bash
 cd tutorials/manufacturedSolutions/monodomainPseudoECG
-bash studies/mesh/tet/run_scheme_study.sh
+bash setup/mesh/tet/run_scheme_study.sh
 ```
 
 Runs both `Gauss linear` and `leastSquares` gradient reconstruction across
 `N = 10, 20, 40, 80` (overridable via `RESOLUTIONS`), writes
-`studies/results/scheme_study.csv`, and persists the canonical Paper I table:
+`setup/results/scheme_study.csv`, and persists the canonical Paper I table:
 
 ```bash
 python3 applications/scripts/paperI_results/aggregate.py tet
@@ -145,7 +145,7 @@ python3 applications/scripts/paperI_results/aggregate.py tet
 ### Mesh-quality-only sweep
 
 ```bash
-RESOLUTIONS="10 20 40" ENDTIME=0.02 bash studies/mesh/tet/run_tet_sweep.sh
+RESOLUTIONS="10 20 40" ENDTIME=0.02 bash setup/mesh/tet/run_tet_sweep.sh
 ```
 
 - `RESOLUTIONS` -- space-separated nominal cells-per-side (default `10 20 40`).
@@ -155,5 +155,5 @@ RESOLUTIONS="10 20 40" ENDTIME=0.02 bash studies/mesh/tet/run_tet_sweep.sh
   table.
 
 Requires OpenFOAM sourced and `gmsh` on `PATH`. Results land in
-`studies/results/<N>/`, and a combined `studies/results/summary.csv` is written at
+`setup/results/<N>/`, and a combined `setup/results/summary.csv` is written at
 the end.

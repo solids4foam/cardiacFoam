@@ -10,7 +10,7 @@ The active 1D graph input is `constant/purkinjeGraph`.  Refined graph inputs and
 matching VTK geometry files can be generated with:
 
 ```bash
-studies/generate_purkinje_graphs.py
+setup/generate_purkinje_graphs.py
 ```
 
 By default the graph lies on `y=1/6, z=1/3`, with PVJ terminals at
@@ -33,7 +33,7 @@ This creates:
 Select one graph as the active input with:
 
 ```bash
-studies/select_purkinje_graph.sh nodes041
+setup/select_purkinje_graph.sh nodes041
 ```
 
 Run the case from this directory:
@@ -55,7 +55,7 @@ runPurkinjeGraph -case .
 For graph-only manufactured convergence rates, run:
 
 ```bash
-studies/run_purkinje_graph_sweep.sh
+setup/run_purkinje_graph_sweep.sh
 ```
 
 The sweep selects each `constant/purkinjeGraph.nodes*` input, runs
@@ -67,15 +67,15 @@ The sweep selects each `constant/purkinjeGraph.nodes*` input, runs
 For coupled 1D-3D manufactured convergence rates, run:
 
 ```bash
-studies/run_coupled_1D3D_sweep.sh
+setup/run_coupled_1D3D_sweep.sh
 ```
 
 The coupled sweep can exercise the explicit and implicit PVJ source split without
 manual dictionary edits:
 
 ```bash
-PVJ_COUPLING_SCHEME=explicit OUTPUT_SUFFIX=_pvjExplicit studies/run_coupled_1D3D_sweep.sh
-PVJ_COUPLING_SCHEME=implicit OUTPUT_SUFFIX=_pvjImplicit studies/run_coupled_1D3D_sweep.sh
+PVJ_COUPLING_SCHEME=explicit OUTPUT_SUFFIX=_pvjExplicit setup/run_coupled_1D3D_sweep.sh
+PVJ_COUPLING_SCHEME=implicit OUTPUT_SUFFIX=_pvjImplicit setup/run_coupled_1D3D_sweep.sh
 ```
 
 The tissue diffusion algorithm can also be switched with
@@ -84,7 +84,7 @@ The tissue diffusion algorithm can also be switched with
 To run the canonical coupling-scheme matrix for the new 1D-3D tests, use:
 
 ```bash
-studies/run_coupled_1D3D_scheme_suite.sh
+setup/run_coupled_1D3D_scheme_suite.sh
 ```
 
 This runs four full convergence sweeps:
@@ -99,7 +99,7 @@ All four canonical runs keep `solutionAlgorithm implicit`, because
 diffusion solve is implicit.  For a quick smoke check of the same matrix, run:
 
 ```bash
-COUPLED_1D3D_PAIRS="10:nodes011" ENDTIME=0.02 studies/run_coupled_1D3D_scheme_suite.sh
+COUPLED_1D3D_PAIRS="10:nodes011" ENDTIME=0.02 setup/run_coupled_1D3D_scheme_suite.sh
 ```
 
 The suite writes `outputs/coupled1D3DSchemeSuite/manifest.csv`.  Individual

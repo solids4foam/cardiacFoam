@@ -19,7 +19,7 @@ tutorials/coreProtocols/restitutionCurves_s1s2Protocol/
 │   ├── controlDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── studies/
+├── setup/
 │   ├── run_cases.sh
 │   ├── setup_multiple_simulations_s1s2.py
 │   ├── postProcessing_restCurves.py

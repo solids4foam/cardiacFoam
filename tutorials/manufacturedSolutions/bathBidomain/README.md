@@ -60,7 +60,7 @@ Driver-managed 1D/2D/3D parallel convergence sweep:
 
 ```bash
 source $WM_PROJECT_DIR/etc/bashrc
-tutorials/manufacturedSolutions/bathBidomain/studies/run_all_dimensions.sh
+tutorials/manufacturedSolutions/bathBidomain/setup/run_all_dimensions.sh
 ```
 
 Use `run_all_dimensions.sh sim` to run simulations only and skip
@@ -72,7 +72,7 @@ Parallel ECG ownership smoke run:
 source $WM_PROJECT_DIR/etc/bashrc
 applications/scripts/driverFoam/bin/driverFoam sim \
     --entry manufacturedFDABathBidomain \
-    --config tutorials/manufacturedSolutions/bathBidomain/studies/driver_config_ecg_smoke.json
+    --config tutorials/manufacturedSolutions/bathBidomain/setup/driver_config_ecg_smoke.json
 ```
 
 Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and
@@ -82,7 +82,7 @@ fields are written at the normal OpenFOAM output times configured in
 
 ## Tetrahedral (unstructured) mesh variant
 
-`studies/mesh/tet/` is this case's tetrahedral-mesh overlay (formerly the
+`setup/mesh/tet/` is this case's tetrahedral-mesh overlay (formerly the
 standalone `bathBidomainTetMMS` tutorial, merged in here the same way
 `monodomainTetMMS` was merged into `monodomainPseudoECG` and `eikonalTetMMS`
 into `eikonalECG`). Unlike those two cases, the bath geometry itself changes
@@ -98,27 +98,27 @@ already match this case's own hex default, so no overlay is needed there.
 
 For the selected formulation, final four-level results, limitations, and
 paper-ready conclusion, see
-[`studies/mesh/tet/FINAL_SOLUTION.md`](studies/mesh/tet/FINAL_SOLUTION.md). The
-files under `studies/mesh/tet/interfaceStudy/` retain the underlying
+[`setup/mesh/tet/FINAL_SOLUTION.md`](setup/mesh/tet/FINAL_SOLUTION.md). The
+files under `setup/mesh/tet/interfaceStudy/` retain the underlying
 verification audit trail.
 
 ### Mesh gate and smoke test
 
 ```bash
 cd tutorials/manufacturedSolutions/bathBidomain
-bash studies/mesh/tet/run_mesh_gate.sh 10
-bash studies/mesh/tet/Allrun.smoke
+bash setup/mesh/tet/run_mesh_gate.sh 10
+bash setup/mesh/tet/Allrun.smoke
 ```
 
-Results land under `studies/mesh/tet/results/N10/` (mesh gate) and
-`studies/mesh/tet/results/N10/smoke/` (smoke test). Review
+Results land under `setup/mesh/tet/results/N10/` (mesh gate) and
+`setup/mesh/tet/results/N10/smoke/` (smoke test). Review
 `mesh_manifest.txt`/`log.checkMesh`/`log.checkMesh.strict`/`log.gmshToFoam`
 before adding solver dictionaries or starting a convergence sweep.
 
 ### Potential-field convergence sweep
 
 ```bash
-bash studies/mesh/tet/run_tet_sweep.sh
+bash setup/mesh/tet/run_tet_sweep.sh
 ```
 
 The default ladder is `N=10 20 40`, with `deltaT ~ h^2` and `endTime=0.02`.
@@ -131,13 +131,13 @@ bath-bidomain table (`Vm`, `phiE`, `phiI` errors).
 
 ```bash
 ASSEMBLY=matchedSubmesh METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
-  bash studies/mesh/tet/run_parallel_interface_sweep.sh
+  bash setup/mesh/tet/run_parallel_interface_sweep.sh
 ```
 
 Writes
-`studies/mesh/tet/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic/N<N>/bathBidomainInterfaceMetrics.csv`
+`setup/mesh/tet/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic/N<N>/bathBidomainInterfaceMetrics.csv`
 (the source of record for `@tbl-bath-bidomain-tet`'s assembled-current rows;
 see `FINAL_SOLUTION.md`). Both sweeps use the same selected formulation
 (`matchedSubmesh` + `distanceWeightedHarmonic`, baked into
-`studies/mesh/tet/electroProperties`) and the committed `snGrad corrected`
+`setup/mesh/tet/electroProperties`) and the committed `snGrad corrected`
 scheme.

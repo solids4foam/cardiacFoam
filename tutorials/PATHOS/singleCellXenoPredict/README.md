@@ -19,7 +19,7 @@ tutorials/electrophysiologyProtocols/singleCell/
 │   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
-├── studies/
+├── setup/
 │   ├── run_cases.sh
 │   └── singleCellinteractivePlots.py
 ├── singleCell.reference

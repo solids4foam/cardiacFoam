@@ -20,7 +20,7 @@ truth), and the diffusion solve numerics that the tet mesh *requires*:
 | | hex case | this case |
 |---|---|---|
 | mesh generator | `blockMesh` (100×15×35 hexes) | `gmsh` → `gmshToFoam` (isotropic tets) |
-| spacing control | cell counts in `blockMeshDict` | characteristic length `lc = dx` in `studies/slab.geo.template` |
+| spacing control | cell counts in `blockMeshDict` | characteristic length `lc = dx` in `setup/slab.geo.template` |
 | `ionicModel` | `BuenoOrovio` (regression default) | `TNNP` (benchmark reference) |
 | `solutionAlgorithm` | `explicit` | `implicit` |
 | `nNonOrthogonalCorrectors` | 0 (absent) | `2` |
@@ -28,7 +28,7 @@ truth), and the diffusion solve numerics that the tet mesh *requires*:
 
 > The hex tutorial ships `ionicModel BuenoOrovio` as a fast regression default;
 > the driver overrides it to `TNNP` per-case at runtime (see
-> `../NiedererEtAl2011verification/studies/run_manifest.json`, cases
+> `../NiedererEtAl2011verification/setup/run_manifest.json`, cases
 > `explicit_TNNP_epicardialCells_*`). This standalone case bakes in the `TNNP`
 > truth so it reproduces the actual Niederer reference, not the regression.
 
@@ -47,7 +47,7 @@ solve. On orthogonal hexes the correction is identically zero, so the hex case
 runs `explicit` with 0 correctors and still gets the right answer. On tets that
 combination leaves the correction un-converged and the diffusion drops below
 second order. This case therefore adopts the same numerics validated to reach
-(near) second order on unstructured tets in monodomainPseudoECG's tet overlay (`studies/mesh/tet`, formerly monodomainTetMMS):
+(near) second order on unstructured tets in monodomainPseudoECG's tet overlay (`setup/mesh/tet`, formerly monodomainTetMMS):
 `implicit` + `nNonOrthogonalCorrectors 2` + `leastSquares` + tight linear
 tolerance. Implicit also removes the explicit-diffusion CFL limit that the fine
 tet rungs would otherwise hit at the locked timestep.
@@ -92,11 +92,11 @@ LC=2e-4 ./Allrun         # dx = 0.2 mm
 Full dx sweep at the locked timestep:
 
 ```bash
-./studies/run_tet_sweep.sh                 # dx = 0.5, 0.2, 0.1 mm
-DX_VALUES="0.5 0.2" ./studies/run_tet_sweep.sh   # quick two-rung pass
+./setup/run_tet_sweep.sh                 # dx = 0.5, 0.2, 0.1 mm
+DX_VALUES="0.5 0.2" ./setup/run_tet_sweep.sh   # quick two-rung pass
 ```
 
-Per-dx activation times land in `studies/results/dx_<dx>mm/`.
+Per-dx activation times land in `setup/results/dx_<dx>mm/`.
 
 ## Requirements
 
