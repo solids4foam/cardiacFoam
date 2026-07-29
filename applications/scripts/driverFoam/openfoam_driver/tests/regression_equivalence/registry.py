@@ -19,7 +19,7 @@ class RegressionCase:
     dicts: tuple[str, ...]
     # Representative reference-comparison file, relative to the case dir.
     reference_file: str
-    regression_script: str = "regressionTest.sh"
+    regression_script: str = "regression/regressionTest.sh"
     # Whether the agent's case discovery can address the case by folder path.
     # False for layouts the agent does not recognize (e.g. electromechanical
     # cases keep electroProperties at constant/electro/, but discovery requires
@@ -44,41 +44,41 @@ _PHYSICS = "constant/physicsProperties"
 REGRESSION_CASES: tuple[RegressionCase, ...] = (
     RegressionCase(
         "electrophysiologyProtocols/singleCell", "singleCell",
-        (_ELECTRO, _PHYSICS), "singleCell.reference",
+        (_ELECTRO, _PHYSICS), "regression/singleCell.reference",
     ),
     RegressionCase(
         "NiedererEtAl2011/NiedererEtAl2011verification", "niederer2012",
-        (_ELECTRO, _PHYSICS), "NiedererEtAl2012.reference",
+        (_ELECTRO, _PHYSICS), "regression/NiedererEtAl2012.reference",
     ),
     RegressionCase(
         "manufacturedSolutions/bidomain", "manufacturedFDABidomain",
-        (_ELECTRO, _PHYSICS), "bidomainManufactured.reference",
+        (_ELECTRO, _PHYSICS), "regression/bidomainManufactured.reference",
     ),
     RegressionCase(
         "manufacturedSolutions/monodomainPseudoECG", "manufacturedFDA",
-        (_ELECTRO, _PHYSICS), "monodomainPseudoECG.reference",
+        (_ELECTRO, _PHYSICS), "regression/monodomainPseudoECG.reference",
     ),
     RegressionCase(
         "manufacturedSolutions/eikonalECG", "manufacturedEikonalECG",
-        (_ELECTRO, _PHYSICS), "eikonalECG.reference",
+        (_ELECTRO, _PHYSICS), "regression/eikonalECG.reference",
     ),
     RegressionCase(
         "manufacturedSolutions/bathBidomain", "manufacturedFDABathBidomain",
-        (_ELECTRO, _PHYSICS), "bathBidomainManufactured.reference",
+        (_ELECTRO, _PHYSICS), "regression/bathBidomainManufactured.reference",
     ),
     RegressionCase(
         "NiedererEtAl2011/electroMechanicalNiedererEtAl2011", None,
-        (), "electroMechHeterogeneity.reference",
+        (), "regression/electroMechHeterogeneity.reference",
         generic_addressable=False,
     ),
     # purkinje ships two reference files (eikonalSlab.reference,
     # purkinjeSlab.reference); reference_file records the representative one.
     RegressionCase(
         "NiedererEtAl2011/purkinjeNiedererEtAl2011", None,
-        (), "purkinjeSlab.reference",
+        (), "regression/purkinjeSlab.reference",
     ),
     RegressionCase(
         "electrophysiologyProtocols/rotorInstability", None,
-        (), "rotorInstability.reference",
+        (), "regression/rotorInstability.reference",
     ),
 )
