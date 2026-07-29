@@ -1,34 +1,72 @@
+import json
+
 import adapters
 
-# ---- Task 3: structured bath ------------------------------------------------
+# ---- Task 3: structured bath (sweepCases archive) ---------------------------
 
-def test_bath_structured_three_fields(tmp_path):
-    p = tmp_path / "bath_bidomain_errors.csv"
-    p.write_text(
-        "N,h,L2_Vm,L2_phiE,L2_phiI\n"
-        "10,0.1,4e-3,5e-3,6e-3\n"
-        "20,0.05,1e-3,1.25e-3,1.5e-3\n"
-    )
-    rows = adapters.from_bath_structured(p)
+
+def _write_manifest(path, cases):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "schema_version": "1.0", "sweep_spec_hash": "x",
+        "created_at": "x", "updated_at": "x",
+        "cases": [
+            {
+                "case_id": case_id, "resolved_axis_values": values,
+                "override_hash": "x", "run_document_path": "x",
+                "workflow_state_path": "x", "status": "completed",
+                "outcome": "fresh", "started_at": "x", "updated_at": "x",
+            }
+            for case_id, values in cases.items()
+        ],
+    }))
+
+
+def test_bath_hex_archive_three_fields(tmp_path):
+    # manufacturedFDABathBidomainVerifier.C writes
+    # bathBidomain_<dim>_<N>_cells_<algo>.dat directly (confirmed in src/) --
+    # N/dimension still come from the sweep's own manifest, matching every
+    # other hex reader's pattern, not from this filename's own embedded values.
+    sweep_cases = tmp_path / "sweepCases"
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    _write_manifest(manifest, {
+        "10_3D": {"dimensions": ["3D"], "number_cells": [10]},
+        "20_3D": {"dimensions": ["3D"], "number_cells": [20]},
+    })
+    for case_id, l2 in (("10_3D", "4e-3"), ("20_3D", "1e-3")):
+        case_dir = sweep_cases / case_id
+        case_dir.mkdir(parents=True)
+        (case_dir / f"bathBidomain_3D_{case_id.split('_')[0]}_cells_implicit.dat").write_text(
+            "# Bath-bidomain manufactured solution error summary\n"
+            "# dimension 3D\n"
+            f"Vm {l2} {l2} {l2}\n"
+            f"phiE {l2} {l2} {l2}\n"
+            f"phiI {l2} {l2} {l2}\n"
+            "u1 9e-9 9e-9 9e-9\n"
+            "u2 9e-9 9e-9 9e-9\n"
+            "u3 9e-9 9e-9 9e-9\n"
+        )
+    rows = adapters.from_bath_hex_archive(sweep_cases, manifest)
     assert {r["field"] for r in rows} == {"Vm", "phiE", "phiI"}
     vm20 = next(r for r in rows if r["field"] == "Vm" and r["N"] == "20")
-    assert vm20["variant"] == "structured" and vm20["dim"] == "3D"
-    assert vm20["L2"] == "1e-3" and vm20["h"] == "0.05"
+    assert vm20["variant"] == "structured"
+    assert vm20["dim"] == "3D" and vm20["L2"] == "1e-3" and vm20["h"] == f"{1.0 / 20:g}"
 
-def test_bath_structured_h_from_N_when_absent(tmp_path):
-    p = tmp_path / "e.csv"
-    p.write_text("N,L2_Vm\n10,4e-3\n")
-    rows = adapters.from_bath_structured(p)
-    assert rows[0]["h"] == "0.1"   # 1/10 nominal
 
-def test_bath_structured_preserves_dimension_when_present(tmp_path):
-    p = tmp_path / "bath_bidomain_errors.csv"
-    p.write_text(
-        "Dimension,N,L2_Vm\n"
-        "1D,10,4e-3\n"
-        "3D,10,5e-3\n"
-    )
-    rows = adapters.from_bath_structured(p)
+def test_bath_hex_archive_preserves_dimension_when_present(tmp_path):
+    sweep_cases = tmp_path / "sweepCases"
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    _write_manifest(manifest, {
+        "10_1D": {"dimensions": ["1D"], "number_cells": [10]},
+        "10_3D": {"dimensions": ["3D"], "number_cells": [10]},
+    })
+    for case_id, dim in (("10_1D", "1D"), ("10_3D", "3D")):
+        case_dir = sweep_cases / case_id
+        case_dir.mkdir(parents=True)
+        (case_dir / f"bathBidomain_{dim}_10_cells_implicit.dat").write_text(
+            f"# dimension {dim}\nVm 4e-3 4e-3 4e-3\nphiE 5e-3 5e-3 5e-3\nphiI 6e-3 6e-3 6e-3\n"
+        )
+    rows = adapters.from_bath_hex_archive(sweep_cases, manifest)
     assert {r["dim"] for r in rows} == {"1D", "3D"}
 
 # ---- Task 4: tet bath interface metrics -------------------------------------

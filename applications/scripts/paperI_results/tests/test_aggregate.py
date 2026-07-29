@@ -1,4 +1,23 @@
+import json
+
 import aggregate
+
+
+def _write_manifest(path, cases):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "schema_version": "1.0", "sweep_spec_hash": "x",
+        "created_at": "x", "updated_at": "x",
+        "cases": [
+            {
+                "case_id": case_id, "resolved_axis_values": values,
+                "override_hash": "x", "run_document_path": "x",
+                "workflow_state_path": "x", "status": "completed",
+                "outcome": "fresh", "started_at": "x", "updated_at": "x",
+            }
+            for case_id, values in cases.items()
+        ],
+    }))
 
 
 def test_build_tet_rows_have_rates(tmp_path):
@@ -28,20 +47,23 @@ def test_build_bidomain_tet_rows_have_rates(tmp_path):
 
 
 def test_build_mono_spatial_rows_have_rates(tmp_path):
-    archive = (
-        tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        / "driverPostProcessingArchive_postProcessing"
+    sweep_cases = (
+        tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG/sweepCases"
     )
-    archive.mkdir(parents=True)
-    (archive / "3D_10_cells_implicit.dat").write_text(
-        "Field     L1-error       L2-error       Linf-error\n"
-        "Vm     4e-3   4e-3   8e-3\n"
-        "\nGrid spacing (dx)     = 0.1\n"
+    manifest = (
+        tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG/sweepRun/sweep_manifest.json"
     )
-    (archive / "3D_20_cells_implicit.dat").write_text(
-        "Field     L1-error       L2-error       Linf-error\n"
-        "Vm     1e-3   1e-3   2e-3\n"
-        "\nGrid spacing (dx)     = 0.05\n"
+    _write_manifest(manifest, {
+        "10_3D": {"dimensions": ["3D"], "number_cells": [10]},
+        "20_3D": {"dimensions": ["3D"], "number_cells": [20]},
+    })
+    (sweep_cases / "10_3D").mkdir(parents=True)
+    (sweep_cases / "10_3D" / "3D_10_cells_implicit.dat").write_text(
+        "Field     L1-error       L2-error       Linf-error\nVm     4e-3   4e-3   8e-3\n"
+    )
+    (sweep_cases / "20_3D").mkdir(parents=True)
+    (sweep_cases / "20_3D" / "3D_20_cells_implicit.dat").write_text(
+        "Field     L1-error       L2-error       Linf-error\nVm     1e-3   1e-3   2e-3\n"
     )
     rows = aggregate.CASES["mono_hex"](tmp_path)
     fine = [r for r in rows if r["N"] == "20"][0]
@@ -49,17 +71,19 @@ def test_build_mono_spatial_rows_have_rates(tmp_path):
 
 
 def test_build_bidomain_rows_have_rates(tmp_path):
-    archive = tmp_path / "tutorials/manufacturedSolutions/bidomain/driverPostProcessingArchive_postProcessing"
-    archive.mkdir(parents=True)
-    (archive / "3D_10_cells_implicit.dat").write_text(
-        "Field     L1-error       L2-error       Linf-error\n"
-        "Vm     4e-3   4e-3   8e-3\n"
-        "\nGrid spacing (dx)     = 0.1\n"
+    sweep_cases = tmp_path / "tutorials/manufacturedSolutions/bidomain/sweepCases"
+    manifest = tmp_path / "tutorials/manufacturedSolutions/bidomain/sweepRun/sweep_manifest.json"
+    _write_manifest(manifest, {
+        "10_3D": {"dimensions": ["3D"], "number_cells": [10]},
+        "20_3D": {"dimensions": ["3D"], "number_cells": [20]},
+    })
+    (sweep_cases / "10_3D").mkdir(parents=True)
+    (sweep_cases / "10_3D" / "3D_10_cells_implicit.dat").write_text(
+        "Field     L1-error       L2-error       Linf-error\nVm     4e-3   4e-3   8e-3\n"
     )
-    (archive / "3D_20_cells_implicit.dat").write_text(
-        "Field     L1-error       L2-error       Linf-error\n"
-        "Vm     1e-3   1e-3   2e-3\n"
-        "\nGrid spacing (dx)     = 0.05\n"
+    (sweep_cases / "20_3D").mkdir(parents=True)
+    (sweep_cases / "20_3D" / "3D_20_cells_implicit.dat").write_text(
+        "Field     L1-error       L2-error       Linf-error\nVm     1e-3   1e-3   2e-3\n"
     )
     rows = aggregate.CASES["bidomain_hex"](tmp_path)
     fine = [r for r in rows if r["N"] == "20"][0]

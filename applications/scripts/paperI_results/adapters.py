@@ -3,10 +3,24 @@
 Each function returns a list of dicts carrying the non-rate canonical keys
 (case, variant, dim, N, h, field, L1, L2, Linf); rates are applied later by
 schema.fill_rates. Native files are only read, never rewritten.
+
+The hex-sweep readers (bidomain/monodomain/bath/eikonal) share one pattern:
+read raw per-case output directly from a sweep-run's sweepCases/<case_id>/
+archive (openfoam_driver's generic snapshot/diff collector -- see
+core/runtime/output_collection.py), with N/dimension sourced from that same
+sweep's sweep_manifest.json (resolved_axis_values), never from filename or
+file content. Not every verifier's raw output name is case-parameter-
+qualified -- eikonal's activation-time and ECG summaries use a fixed name
+regardless of N/dimension (confirmed directly in
+src/verificationModels/eikonalVerification/manufacturedEikonalVerifier.C and
+src/verificationModels/ecgVerification/eikonalECGManufacturedVerifier.C) --
+so the per-case subfolder plus the manifest are the only source that works
+uniformly across all four.
 """
 from __future__ import annotations
 
 import csv
+import json
 import re
 from pathlib import Path
 
@@ -79,51 +93,14 @@ def _parse_activation_dat(path):
     raise ValueError(f"no activationTime line in {path}")
 
 
-def from_eikonal_activation(summary_path, extra_2d_dats=None, case="eikonal"):
-    rows = []
-    with Path(summary_path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            n = int(rec["N"])
-            rows.append(dict(case=case, variant="", dim=rec["Dimension"],
-                             N=rec["N"], h=f"{1.0 / n:g}", field="psi",
-                             L1=rec["activation_L1"], L2=rec["activation_L2"],
-                             Linf=rec["activation_Linf"]))
-    for n, dat in (extra_2d_dats or []):
-        l1, l2, li = _parse_activation_dat(dat)
-        rows.append(dict(case=case, variant="", dim="2D", N=str(n),
-                         h=f"{1.0 / int(n):g}", field="psi",
-                         L1=l1, L2=l2, Linf=li))
-    return rows
-
-
-def from_eikonal_ecg(aggregate_path, case="eikonal"):
-    rows = []
-    with Path(aggregate_path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            n = int(rec["N"])
-            common = dict(case=case, variant="", dim=rec["Dimension"],
-                          N=rec["N"], h=f"{1.0 / n:g}")
-            rows.append({**common, "field": "Phi_e_max",
-                         "L1": rec.get("max_L1_err_ref", ""),
-                         "L2": rec.get("max_L2_err_ref", ""),
-                         "Linf": rec.get("max_Linf_err_ref", "")})
-            rows.append({**common, "field": "Phi_e_mean",
-                         "L1": rec.get("mean_L1_err_ref", ""),
-                         "L2": rec.get("mean_L2_err_ref", ""),
-                         "Linf": rec.get("mean_Linf_err_ref", "")})
-    return rows
-
-
-_SPATIAL_FILENAME_PATTERN = re.compile(
-    r"^(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)\.dat$"
-)
 _FIELD_LINE_PATTERN = re.compile(
     r"^(?P<field>\w+)\s+(?P<L1>[-+0-9.eE]+)\s+(?P<L2>[-+0-9.eE]+)\s+(?P<Linf>[-+0-9.eE]+)\s*$"
 )
-_DX_PATTERN = re.compile(r"Grid spacing \(dx\)\s*=\s*(\S+)")
 
 MONODOMAIN_SPATIAL_FIELDS = ("Vm", "u1", "u2")
 BIDOMAIN_FIELDS = ("Vm", "phiE_gauge", "phiI_gauge", "u1", "u2")
+BATH_HEX_FIELDS = ("Vm", "phiE", "phiI")
+EIKONAL_ACTIVATION_FIELDS = ("activationTime",)
 
 
 def _parse_field_triples(content, allowed_fields):
@@ -137,35 +114,99 @@ def _parse_field_triples(content, allowed_fields):
     return out
 
 
-def _from_spatial_archive(dir_path, allowed_fields, case):
+def _load_case_axis_values(manifest_path):
+    """case_id -> resolved_axis_values, straight from a sweep-run's own
+    sweep_manifest.json (core/runtime/sweep_manifest.py's CaseManifestEntry)."""
+    manifest = json.loads(Path(manifest_path).read_text())
+    return {entry["case_id"]: entry["resolved_axis_values"] for entry in manifest["cases"]}
+
+
+def _scalar(value):
+    """Unwrap a possibly-singleton-list axis value (zip-mode sweep convention,
+    e.g. number_cells=[10]) to a plain scalar."""
+    if isinstance(value, list) and len(value) == 1:
+        return value[0]
+    return value
+
+
+def _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
+    """Yield (case_dir, dim, N) for every case in the manifest whose
+    sweepCases/<case_id>/ subfolder actually exists on disk."""
+    for case_id, values in _load_case_axis_values(manifest_path).items():
+        case_dir = Path(sweep_cases_dir) / case_id
+        if not case_dir.is_dir():
+            continue
+        dim = _scalar(values.get(dim_axis))
+        n = _scalar(values.get(n_axis))
+        if dim is None or n is None:
+            continue
+        yield case_dir, str(dim), int(n)
+
+
+def from_sweep_cases_field_triples(
+    sweep_cases_dir, manifest_path, *, filename_glob, allowed_fields, case,
+    dim_axis="dimensions", n_axis="number_cells", variant="",
+):
+    """Generic reader for the '<field> L1 L2 Linf' .dat format shared by the
+    manufactured verifiers (bidomain/monodomain/bath/eikonal-activation).
+    N/dimension come from that case's own sweep_manifest.json
+    resolved_axis_values -- never from filename or file content, since not
+    every verifier's raw output name is case-parameter-qualified (eikonal's
+    activation/ECG summaries use a fixed name; only the per-case
+    sweepCases/<case_id>/ subfolder disambiguates them)."""
     rows = []
-    for path in sorted(Path(dir_path).glob("*.dat")):
-        m = _SPATIAL_FILENAME_PATTERN.match(path.name)
-        if not m:
-            continue
-        content = path.read_text(errors="ignore")
-        dx_match = _DX_PATTERN.search(content)
-        if not dx_match:
-            continue
-        base = dict(case=case, variant="", dim=m.group("dimension"),
-                    N=m.group("cells"), h=dx_match.group(1))
-        for field, (l1, l2, linf) in _parse_field_triples(content, allowed_fields).items():
-            rows.append({**base, "field": field, "L1": l1, "L2": l2, "Linf": linf})
+    for case_dir, dim, n in _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
+        base = dict(case=case, variant=variant, dim=dim, N=str(n), h=f"{1.0 / n:g}")
+        for path in sorted(case_dir.glob(filename_glob)):
+            content = path.read_text(errors="ignore")
+            for field, (l1, l2, linf) in _parse_field_triples(content, allowed_fields).items():
+                rows.append({**base, "field": field, "L1": l1, "L2": l2, "Linf": linf})
     return rows
 
 
-def from_monodomain_spatial_archive(dir_path, case="monodomain-spatial"):
-    return _from_spatial_archive(dir_path, MONODOMAIN_SPATIAL_FIELDS, case)
+def from_eikonal_activation(sweep_cases_dir, manifest_path, extra_2d_dats=None, case="eikonal"):
+    rows = from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedEikonalActivationTime.dat",
+        allowed_fields=EIKONAL_ACTIVATION_FIELDS, case=case,
+    )
+    for row in rows:
+        row["field"] = "psi"  # canonical schema name; raw file says "activationTime"
+    for n, dat in (extra_2d_dats or []):
+        l1, l2, li = _parse_activation_dat(dat)
+        rows.append(dict(case=case, variant="", dim="2D", N=str(n),
+                         h=f"{1.0 / int(n):g}", field="psi",
+                         L1=l1, L2=l2, Linf=li))
+    return rows
 
 
-def from_bidomain_archive(dir_path, case="bidomain"):
-    return _from_spatial_archive(dir_path, BIDOMAIN_FIELDS, case)
+def from_eikonal_ecg(sweep_cases_dir, manifest_path, case="eikonal"):
+    return from_sweep_cases_electrode_table(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedEikonalECGSummary.dat", case=case,
+    )
 
 
-_ECG_SPATIAL_FILENAME_PATTERN = re.compile(
-    r"^ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)"
-    r"(?:_DT[^_]+)?_manufacturedPseudoECGSummary\.dat$"
-)
+def from_monodomain_spatial_archive(sweep_cases_dir, manifest_path, case="monodomain-spatial"):
+    return from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="*_cells_*.dat", allowed_fields=MONODOMAIN_SPATIAL_FIELDS, case=case,
+    )
+
+
+def from_bidomain_archive(sweep_cases_dir, manifest_path, case="bidomain"):
+    return from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="*_cells_*.dat", allowed_fields=BIDOMAIN_FIELDS, case=case,
+    )
+
+
+def from_bath_hex_archive(sweep_cases_dir, manifest_path, case="bath"):
+    return from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="bathBidomain_*_cells_*.dat", allowed_fields=BATH_HEX_FIELDS, case=case,
+        variant="structured",
+    )
 
 
 def _parse_ecg_electrode_table(content):
@@ -191,36 +232,41 @@ def _parse_ecg_electrode_table(content):
     return out
 
 
+def from_sweep_cases_electrode_table(
+    sweep_cases_dir, manifest_path, *, filename_glob, case,
+    dim_axis="dimensions", n_axis="number_cells", allowed_dims=None,
+):
+    """Generic reader for the electrode-table ECG summary format (pseudo-ECG,
+    eikonal ECG) shared with from_sweep_cases_field_triples: N/dimension come
+    from that case's own sweep_manifest.json resolved_axis_values, never from
+    filename or file content. allowed_dims restricts which dimensions get
+    reported at all (pseudo-ECG only supports 3D -- see its caller)."""
+    rows = []
+    for case_dir, dim, n in _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
+        if allowed_dims is not None and dim not in allowed_dims:
+            continue
+        base = dict(case=case, variant="", dim=dim, N=str(n), h=f"{1.0 / n:g}")
+        for path in sorted(case_dir.glob(filename_glob)):
+            cols = _parse_ecg_electrode_table(path.read_text(errors="ignore"))
+            if not cols:
+                continue
+            max_row = {**base, "field": "Phi_e_max"}
+            mean_row = {**base, "field": "Phi_e_mean"}
+            for out_key, col_key in (("L1", "L1_err_ref"), ("L2", "L2_err_ref"), ("Linf", "Linf_err_ref")):
+                values = cols.get(col_key, [])
+                max_row[out_key] = f"{max(values):g}" if values else ""
+                mean_row[out_key] = f"{sum(values) / len(values):g}" if values else ""
+            rows.append(max_row)
+            rows.append(mean_row)
+    return rows
+
+
 # driverFoam's own post-processing (post_processing_manufactured.py) discards 1D/2D
 # archived ECG cases as "unsupported": the numerical pseudoECG is accumulated as a 3D
 # cell-volume sum, while the 1D/2D manufactured references are lower-dimensional
 # integrals, so their errors don't converge under refinement (confirmed against a real
 # sweep run 2026-07-17: 1D/2D Phi_e error is flat across N=10..80, not decreasing).
 _ECG_SPATIAL_SUPPORTED_DIMENSIONS = ("3D",)
-
-
-_BATH_STRUCTURED_FIELDS = ("Vm", "phiE", "phiI")
-
-
-def from_bath_structured(errors_path, case="bath"):
-    """bathBidomain/postProcessing/bath_bidomain_errors.csv -> canonical rows.
-    Columns: N (or h/dx) + L2_<field> (+ optional L1_/Linf_). h falls back to 1/N.
-    Dimension is preserved when present; older fixtures without it default to 3D."""
-    rows = []
-    with Path(errors_path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            n = rec.get("N") or rec.get("cells") or ""
-            h = rec.get("h") or rec.get("dx") or (f"{1.0 / int(n):g}" if n else "")
-            dim = rec.get("Dimension") or rec.get("dim") or "3D"
-            for field in _BATH_STRUCTURED_FIELDS:
-                l2 = rec.get(f"L2_{field}", "")
-                if l2 == "":
-                    continue
-                rows.append(dict(case=case, variant="structured", dim=dim,
-                                 N=str(n), h=str(h), field=field,
-                                 L1=rec.get(f"L1_{field}", ""), L2=l2,
-                                 Linf=rec.get(f"Linf_{field}", "")))
-    return rows
 
 
 _BATH_N_DIR = re.compile(r"N(\d+)", re.IGNORECASE)
@@ -301,24 +347,9 @@ def from_bath_parallel_equivalence(comparison_path):
     return (not failures), failures
 
 
-def from_pseudo_ecg_spatial_archive(dir_path, case="pseudo-ecg-spatial"):
-    rows = []
-    for path in sorted(Path(dir_path).glob("ECG_*_manufacturedPseudoECGSummary.dat")):
-        m = _ECG_SPATIAL_FILENAME_PATTERN.match(path.name)
-        if not m or m.group("dimension") not in _ECG_SPATIAL_SUPPORTED_DIMENSIONS:
-            continue
-        cols = _parse_ecg_electrode_table(path.read_text(errors="ignore"))
-        if not cols:
-            continue
-        n = int(m.group("cells"))
-        base = dict(case=case, variant="", dim=m.group("dimension"),
-                    N=str(n), h=f"{1.0 / n:g}")
-        max_row = {**base, "field": "Phi_e_max"}
-        mean_row = {**base, "field": "Phi_e_mean"}
-        for out_key, col_key in (("L1", "L1_err_ref"), ("L2", "L2_err_ref"), ("Linf", "Linf_err_ref")):
-            values = cols.get(col_key, [])
-            max_row[out_key] = f"{max(values):g}" if values else ""
-            mean_row[out_key] = f"{sum(values) / len(values):g}" if values else ""
-        rows.append(max_row)
-        rows.append(mean_row)
-    return rows
+def from_pseudo_ecg_spatial_archive(sweep_cases_dir, manifest_path, case="pseudo-ecg-spatial"):
+    return from_sweep_cases_electrode_table(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedPseudoECGSummary.dat", case=case,
+        allowed_dims=_ECG_SPATIAL_SUPPORTED_DIMENSIONS,
+    )

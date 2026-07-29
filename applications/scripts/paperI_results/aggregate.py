@@ -43,17 +43,23 @@ def _coupling1D3D_hex(root: Path):
     return schema.fill_rates(rows)
 
 
+def _sweep_cases_and_manifest(root: Path, tutorial: str):
+    """Every hex sweep archives to <tutorial>/sweepCases/ (openfoam_driver's
+    generic snapshot/diff collector) with the driving sweep-run's own
+    --output-dir (sweep_manifest.json) at <tutorial>/sweepRun/ -- one shared
+    convention for every tutorial, not a bespoke path per case."""
+    case_dir = root / _TUT / tutorial
+    return case_dir / "sweepCases", case_dir / "sweepRun" / "sweep_manifest.json"
+
+
 def _eikonal_hex(root: Path):
-    pp = root / _TUT / "eikonalECG/postProcessing"
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "eikonalECG")
     excl = root / _TUT / "eikonalECG/excluded_from_pureEikonal_report"
     fname = "2D_{n}_cells_eikonal_manufacturedEikonalActivationTime.dat"
     extra_2d = [(n, excl / fname.format(n=n)) for n in (10, 20, 40, 80)
                 if (excl / fname.format(n=n)).exists()]
-    rows = adapters.from_eikonal_activation(
-        pp / "manufacturedEikonalActivationSummary.csv", extra_2d_dats=extra_2d)
-    ecg = pp / "manufacturedEikonalECGAggregateSummary.csv"
-    if ecg.exists():
-        rows += adapters.from_eikonal_ecg(ecg)
+    rows = adapters.from_eikonal_activation(sweep_cases, manifest, extra_2d_dats=extra_2d)
+    rows += adapters.from_eikonal_ecg(sweep_cases, manifest)
     return schema.fill_rates(rows)
 
 
@@ -61,17 +67,17 @@ def _mono_hex(root: Path):
     # One monodomain sweep produces both the Vm/auxiliary fields and the
     # pseudo-ECG samples, so both are aggregated into a single CSV, matching
     # how the eikonal rows carry their activation field and ECG functional
-    # together. The two adapters read the same archive and emit disjoint
-    # fields: Vm/u1/u2 in 1D-3D, and Phi_e_max/Phi_e_mean in 3D.
-    src = root / _TUT / "monodomainPseudoECG/driverPostProcessingArchive_postProcessing"
-    rows = adapters.from_monodomain_spatial_archive(src)
-    rows += adapters.from_pseudo_ecg_spatial_archive(src)
+    # together. The two adapters read the same sweepCases archive and emit
+    # disjoint fields: Vm/u1/u2 in 1D-3D, and Phi_e_max/Phi_e_mean in 3D.
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "monodomainPseudoECG")
+    rows = adapters.from_monodomain_spatial_archive(sweep_cases, manifest)
+    rows += adapters.from_pseudo_ecg_spatial_archive(sweep_cases, manifest)
     return schema.fill_rates(rows)
 
 
 def _bidomain_hex(root: Path):
-    src = root / _TUT / "bidomain/driverPostProcessingArchive_postProcessing"
-    return schema.fill_rates(adapters.from_bidomain_archive(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bidomain")
+    return schema.fill_rates(adapters.from_bidomain_archive(sweep_cases, manifest))
 
 
 def _bidomain_tet(root: Path):
@@ -80,8 +86,8 @@ def _bidomain_tet(root: Path):
 
 
 def _bath_hex(root: Path):
-    src = root / _TUT / "bathBidomain/postProcessing/bath_bidomain_errors.csv"
-    return schema.fill_rates(adapters.from_bath_structured(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bathBidomain")
+    return schema.fill_rates(adapters.from_bath_hex_archive(sweep_cases, manifest))
 
 
 def _bath_tet(root: Path):
