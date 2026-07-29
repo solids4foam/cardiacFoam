@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarise bath PDE-coupling and non-orthogonal-correction controls."""
+"""Summarise the bath predictor-corrector control."""
 
 from __future__ import annotations
 
@@ -57,8 +57,8 @@ def main() -> None:
     lines = [
         "# Bath coupling-control summary",
         "",
-        "Percent changes are relative to `onePass` with no additional global "
-        "non-orthogonal assemblies on the same mesh.",
+        "Percent changes are relative to `bathPredictorCorrector false` on "
+        "the same mesh and with the same shared non-orthogonal count.",
         "",
         "| N | variant | heart phiE L2 | change | bath phiE L2 | change | "
         "assembled current L2 | change |",

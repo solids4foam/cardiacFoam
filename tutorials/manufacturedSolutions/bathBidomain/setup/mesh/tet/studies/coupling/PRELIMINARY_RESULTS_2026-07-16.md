@@ -1,9 +1,10 @@
 # Preliminary bath coupling-control results
 
 The lightweight build was run serially on the exact meshes and time controls
-of the reported tetrahedral bath study. The historical `onePass` path
-reproduced the stored potential, reconstructed-current-jump, and intracellular
-leakage metrics at `N=10,20,40`.
+of the reported tetrahedral bath study. With
+`bathPredictorCorrector false`, the stored potential,
+reconstructed-current-jump, and intracellular leakage metrics were reproduced
+at `N=10,20,40`.
 
 | N | variant | heart $L_2(\phi_e)$ | bath $L_2(\phi_b)$ | $x=0$ assembled-current $L_2$ |
 |---:|---|---:|---:|---:|
@@ -21,12 +22,9 @@ error by +3.75% and +0.27% at `N=10,20`.
 
 These controls reject the hypothesis that incomplete temporal PDE coupling or
 an unconverged deferred non-orthogonal source is the dominant cause of the
-nearly stationary assembled-current error. The one-pass split is nevertheless
-measurably less accurate for the cell-centred potentials, so the manuscript
-must report it explicitly rather than describe the bath system as fully
-coupled. A more expensive repeated-pass experiment added no distinct
-verification value beyond the predictor--corrector and was therefore not
-retained in the production interface.
+nearly stationary assembled-current error. Disabling the predictor--corrector
+is nevertheless measurably less accurate for the cell-centred potentials, so
+`bathPredictorCorrector` defaults to `true`.
 
 The original `matchedSubmeshStudy/N40` CSV reported the diagnostic method as
 `unweightedHarmonic`, whereas the `N=10,20,80` rows and the paper formulation

@@ -42,24 +42,11 @@ addToRunTimeSelectionTable
 staggeredElectrophysicsAdvanceScheme::
 staggeredElectrophysicsAdvanceScheme(const dictionary& dict)
 :
-    bathPdeCouplingMethod_
+    bathPredictorCorrector_
     (
-        dict.lookupOrDefault<word>("bathPdeCouplingMethod", "onePass")
+        dict.lookupOrDefault<Switch>("bathPredictorCorrector", true)
     )
-{
-    if
-    (
-        bathPdeCouplingMethod_ != "onePass"
-     && bathPdeCouplingMethod_ != "predictorCorrector"
-    )
-    {
-        FatalErrorInFunction
-            << "Unknown bathPdeCouplingMethod '"
-            << bathPdeCouplingMethod_ << "'. Valid values are onePass and "
-            << "predictorCorrector."
-            << exit(FatalError);
-    }
-}
+{}
 
 bool staggeredElectrophysicsAdvanceScheme::advance
 (
@@ -100,22 +87,18 @@ bool staggeredElectrophysicsAdvanceScheme::advance
         myocardium.solveReactionStep(t0, dt);
         system.preparePotentialDomain(t0, dt);
 
-        if (bathPdeCouplingMethod_ == "onePass")
+        if (bathPredictorCorrector_)
         {
-            // Historical algorithm: solve phiE once from Vm at the start of
-            // the step, then apply the configured PIMPLE loops only to Vm.
+            // Predict Vm, update phiE, then correct Vm.
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+            system.advancePotentialDomain(t0, dt);
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+        }
+        else
+        {
+            // Update phiE, then solve Vm with the updated phiE held fixed.
             system.advancePotentialDomain(t0, dt);
             myocardium.solveDiffusionStep(t0, dt, pimplePtr);
-        }
-        else if (bathPdeCouplingMethod_ == "predictorCorrector")
-        {
-            // Predict Vm with the retained phiE from the previous step,
-            // update phiE from that predictor, then correct Vm. Both Vm
-            // solves refer to the same old-time field and therefore do not
-            // advance physical time twice.
-            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
-            system.advancePotentialDomain(t0, dt);
-            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
         }
 
         myocardium.finalizeDiffusionStep();

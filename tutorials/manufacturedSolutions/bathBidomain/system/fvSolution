@@ -36,17 +36,11 @@ solvers
 
 PIMPLE
 {
-    // The global bath phiE is advanced outside this loop. Keep one outer
-    // sweep and express the second Vm assembly as an equation corrector.
+    // The global bath phiE is advanced outside the PIMPLE outer loop.
+    // This shared count applies the same corrected-Laplacian reassembly
+    // policy to phiE and Vm.
     nOuterCorrectors         1;
     nNonOrthogonalCorrectors 1;
-
-    // phiE defaults to nNonOrthogonalCorrectors above. The reported bath
-    // results were produced before that fallback existed, i.e. with no
-    // non-orthogonal correction on the elliptic phiE solve, so it is pinned
-    // explicitly here. Raising it changes the interface errors materially on
-    // tetrahedra; it is a study parameter, not a free tuning knob.
-    phiENonOrthogonalCorrectors 0;
 
     // residualControl
     // {

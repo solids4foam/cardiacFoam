@@ -45,42 +45,19 @@ addToRunTimeSelectionTable
 namespace
 {
 
-// Resolve the phiE non-orthogonal corrector count. Default: the same
-// nNonOrthogonalCorrectors Vm uses (system/fvSolution PIMPLE), so forgetting
-// it can never silently drop phiE to zero correction. Optional co-located
-// override: PIMPLE/phiENonOrthogonalCorrectors. Fail loud if the key is left
-// in the retired constant/electroProperties -> bathPotentialDomain location.
-label resolvePhiENonOrthogonalCorrectors
-(
-    const fvMesh& baseMesh,
-    const dictionary& dict
-)
+// Resolve the non-orthogonal corrector count from the PIMPLE dictionary.
+label resolveNonOrthogonalCorrectors(const fvMesh& baseMesh)
 {
-    if (dict.found("phiENonOrthogonalCorrectors"))
-    {
-        FatalIOErrorInFunction(dict)
-            << "phiENonOrthogonalCorrectors has moved to system/fvSolution"
-            << " (PIMPLE), co-located with nNonOrthogonalCorrectors." << nl
-            << "Remove it from constant/electroProperties -> bathPotentialDomain"
-            << " and, only if you need phiE to differ from Vm, set it under"
-            << " PIMPLE." << exit(FatalIOError);
-    }
-
     const dictionary& pimpleDict =
         baseMesh.solutionDict().subOrEmptyDict("PIMPLE");
-    const label defaultNCorr =
-        pimpleDict.lookupOrDefault<label>("nNonOrthogonalCorrectors", 0);
+
     const label nCorr =
-        pimpleDict.lookupOrDefault<label>
-        (
-            "phiENonOrthogonalCorrectors",
-            defaultNCorr
-        );
+        pimpleDict.lookupOrDefault<label>("nNonOrthogonalCorrectors", 0);
 
     if (nCorr < 0)
     {
         FatalIOErrorInFunction(pimpleDict)
-            << "phiENonOrthogonalCorrectors must be non-negative; found "
+            << "nNonOrthogonalCorrectors must be non-negative; found "
             << nCorr << '.' << exit(FatalIOError);
     }
 
@@ -231,9 +208,9 @@ extracellularPotentialDomain::extracellularPotentialDomain
     surfaceCurrentPatchValues_(),
     hasDirichletPatch_(false),
     reportSetup_(dict.lookupOrDefault<Switch>("reportSetup", false)),
-    phiENonOrthogonalCorrectors_
+    nNonOrthogonalCorrectors_
     (
-        resolvePhiENonOrthogonalCorrectors(baseMesh, dict)
+        resolveNonOrthogonalCorrectors(baseMesh)
     )
 {
     if
@@ -283,8 +260,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
             << " interfaceConductivityInterpolation="
             << interfaceConductivityInterpolation_
             << " intracellularAssembly=" << intracellularAssembly_
-            << " phiENonOrthogonalCorrectors="
-            << phiENonOrthogonalCorrectors_;
+            << " nNonOrthogonalCorrectors="
+            << nNonOrthogonalCorrectors_;
 
         if (hasPhiEReferencePoint_)
         {
@@ -1153,13 +1130,10 @@ void extracellularPotentialDomain::solvePhiE()
 {
     scatterHeartVm();
 
-    // Bath/global phiE is a linear elliptic solve with a fixed (scattered-Vm)
-    // RHS: it needs the non-orthogonal corrector, not an outer loop. The
-    // phiE<->Vm coupling iteration is owned by the advance scheme
-    // (bathPdeCouplingMethod), not here.
+    // Reassemble and solve global phiE with the configured correction count.
     correctNonOrthogonalLoop
     (
-        phiENonOrthogonalCorrectors_,
+        nNonOrthogonalCorrectors_,
         [&]() { solvePhiEOnce(); }
     );
 }

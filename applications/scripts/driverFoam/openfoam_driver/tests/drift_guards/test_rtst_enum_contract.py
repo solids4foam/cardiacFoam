@@ -135,10 +135,6 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.mode",            # transmuralBands
     "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.transitionMode",  # blend/hard
     "$ELECTRO_MODEL_COEFFS.ionicHeterogeneity.smoothing",       # smoothstep
-    # bathPdeCouplingMethod selects the Vm/phiE coupling within the staggered
-    # advance scheme (onePass / predictorCorrector) via a plain
-    # lookupOrDefault<word>, not a runtime table.
-    "$ELECTRO_MODEL_COEFFS.bathPdeCouplingMethod",
     # extracellular bath-assembly enums parsed directly by
     # extracellularPotentialDomain.C (lookupOrDefault<word>), not RTST types.
     "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.interfaceConductivityInterpolation",

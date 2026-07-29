@@ -6,7 +6,7 @@ CASE_DIR="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 OPENFOAM_BASHRC="${OPENFOAM_BASHRC:-/Volumes/OpenFOAM-v2412/etc/bashrc}"
 PYTHON="${PYTHON:-python3}"
 RESOLUTIONS_STR="${RESOLUTIONS:-10 20}"
-VARIANTS_STR="${VARIANTS:-baseline predictor phi8}"
+VARIANTS_STR="${VARIANTS:-baseline predictor}"
 RESULTS_DIR="${RESULTS_DIR:-$SCRIPT_DIR/results}"
 WORK_ROOT="${WORK_ROOT:-$(mktemp -d /tmp/cardiacfoam-bath-coupling-study-XXXXXX)}"
 KEEP_WORK="${KEEP_WORK:-0}"
@@ -77,9 +77,8 @@ steps_for_n()
 variant_controls()
 {
     case "$1" in
-        baseline)  echo "onePass 0" ;;
-        predictor) echo "predictorCorrector 0" ;;
-        phi8)      echo "onePass 8" ;;
+        baseline)  echo "false" ;;
+        predictor) echo "true" ;;
         *) echo "Unknown variant '$1'" >&2; exit 2 ;;
     esac
 }
@@ -154,32 +153,19 @@ do
 
     for variant in "${VARIANTS[@]}"
     do
-        read -r method phi_nonorth <<< "$(variant_controls "$variant")"
+        predictor_corrector="$(variant_controls "$variant")"
         run_id="N${n}_${variant}"
         out_dir="$RESULTS_DIR/$run_id"
         mkdir -p "$out_dir"
         clean_time_state "$run_case"
 
         foamDictionary "$run_case/constant/electroProperties" \
-            -entry bidomainSolverCoeffs.bathPdeCouplingMethod \
-            -set "$method" >/dev/null
-        # phiENonOrthogonalCorrectors moved from constant/electroProperties'
-        # bathPotentialDomain block to system/fvSolution's PIMPLE block
-        # (co-located with nNonOrthogonalCorrectors) in a solver update after
-        # this script was last written; add it if the committed fvSolution
-        # doesn't already carry the key.
-        if foamDictionary "$run_case/system/fvSolution" \
-            -entry PIMPLE.phiENonOrthogonalCorrectors >/dev/null 2>&1; then
-            foamDictionary "$run_case/system/fvSolution" \
-                -entry PIMPLE.phiENonOrthogonalCorrectors -set "$phi_nonorth" >/dev/null
-        else
-            foamDictionary "$run_case/system/fvSolution" \
-                -entry PIMPLE.phiENonOrthogonalCorrectors -add "$phi_nonorth" >/dev/null
-        fi
+            -entry bidomainSolverCoeffs.bathPredictorCorrector \
+            -set "$predictor_corrector" >/dev/null
 
-        printf 'run_id=%s\nresolution=%s\nvariant=%s\nmethod=%s\nphi_nonorth=%s\ndelta_t=%s\n' \
-            "$run_id" "$n" "$variant" "$method" \
-            "$phi_nonorth" "$dt" > "$out_dir/metadata.env"
+        printf 'run_id=%s\nresolution=%s\nvariant=%s\nbath_predictor_corrector=%s\nn_nonorthogonal_correctors=1\ndelta_t=%s\n' \
+            "$run_id" "$n" "$variant" "$predictor_corrector" \
+            "$dt" > "$out_dir/metadata.env"
 
         echo "=== $run_id (nprocs=$NPROCS) ==="
         (

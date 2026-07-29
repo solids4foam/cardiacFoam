@@ -30,6 +30,7 @@ Author
 
 #include "electrophysicsAdvanceScheme.H"
 #include "overrideTypeName.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -38,9 +39,8 @@ class staggeredElectrophysicsAdvanceScheme
 :
     public electrophysicsAdvanceScheme
 {
-    //- Coupling used when a global extracellular-potential domain is present.
-    //  onePass preserves the historical phiE -> Vm advance exactly.
-    word bathPdeCouplingMethod_;
+    //- Correct the bath-coupled Vm solve after updating global phiE.
+    Switch bathPredictorCorrector_;
 
 public:
 

@@ -95,11 +95,10 @@ class extracellularPotentialDomain
 
     Switch reportSetup_;
 
-    //- Number of additional corrected-Laplacian assemblies for the global
-    //  phiE equation. Resolved at construction: defaults to the PIMPLE
-    //  nNonOrthogonalCorrectors (same as Vm), optionally overridden by
-    //  PIMPLE/phiENonOrthogonalCorrectors. Zero means one equation solve.
-    label phiENonOrthogonalCorrectors_;
+    //- Shared number of additional corrected-Laplacian assemblies, read from
+    //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.
+    //  Zero means one equation solve.
+    label nNonOrthogonalCorrectors_;
 
     // Build the heart-cell -> base-cell map from the heart subset.
     void buildHeartScatterMap();
