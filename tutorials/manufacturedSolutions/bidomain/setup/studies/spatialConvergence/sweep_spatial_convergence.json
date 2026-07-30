@@ -4,7 +4,7 @@
     "case_dir_name": "manufacturedSolutions/bidomain",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
-    "archive_dir_name": "sweepCases"
+    "archive_dir_name": "setup/studies/spatialConvergence/sweepCases"
   },
   "sweep": {
     "mode": "zip",

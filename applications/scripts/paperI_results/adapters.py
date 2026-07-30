@@ -25,50 +25,6 @@ import re
 from pathlib import Path
 
 
-def from_tet_scheme_study(path, case="tet"):
-    rows = []
-    with Path(path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            base = dict(case=case, variant=rec["scheme"], dim="3D",
-                        N=rec["N"], h=rec["dx"])
-            rows.append({**base, "field": "Vm", "L1": "",
-                         "L2": rec["mono_L2"], "Linf": rec["mono_Linf"]})
-            rows.append({**base, "field": "Phi_e", "L1": "",
-                         "L2": rec["ecg_L2"], "Linf": rec["ecg_Linf"]})
-    return rows
-
-
-def from_bidomain_tet_scheme_study(path, case="bidomain_tet"):
-    """bidomain's setup/mesh/tet/ scheme_study.csv: Vm + phiE_gauge columns
-    per scheme/N. Mirrors from_tet_scheme_study; dx -> h, L1 unavailable."""
-    rows = []
-    with Path(path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            base = dict(case=case, variant=rec["scheme"], dim="3D",
-                        N=rec["N"], h=rec["dx"])
-            rows.append({**base, "field": "Vm", "L1": "",
-                         "L2": rec["vm_L2"], "Linf": rec["vm_Linf"]})
-            rows.append({**base, "field": "Phi_e", "L1": "",
-                         "L2": rec["phiE_L2"], "Linf": rec["phiE_Linf"]})
-    return rows
-
-
-def from_eikonal_tet_scheme_study(path, case="eikonal_tet"):
-    """eikonalECG's tet overlay (setup/mesh/tet, formerly eikonalTetMMS)
-    scheme_study.csv: activationTime + ecg columns per scheme/N.
-    Mirrors from_tet_scheme_study; dx -> h, L1 unavailable (blank)."""
-    rows = []
-    with Path(path).open(newline="") as fh:
-        for rec in csv.DictReader(fh):
-            base = dict(case=case, variant=rec["scheme"], dim="3D",
-                        N=rec["N"], h=rec["dx"])
-            rows.append({**base, "field": "activationTime", "L1": "",
-                         "L2": rec["activationTime_L2"], "Linf": rec["activationTime_Linf"]})
-            rows.append({**base, "field": "Phi_e", "L1": "",
-                         "L2": rec["ecg_L2"], "Linf": rec["ecg_Linf"]})
-    return rows
-
-
 def from_coupling_summary(path, regime, case="coupling"):
     rows = []
     with Path(path).open(newline="") as fh:
@@ -102,6 +58,20 @@ BIDOMAIN_FIELDS = ("Vm", "phiE_gauge", "phiI_gauge", "u1", "u2")
 BATH_HEX_FIELDS = ("Vm", "phiE", "phiI")
 EIKONAL_ACTIVATION_FIELDS = ("activationTime",)
 
+# The eight diagnostics reported in tbl-bath-bidomain-tet. Each maps a canonical
+# field name to its column prefix in bathBidomainInterfaceMetrics.csv; the _L2 /
+# _Linf error columns are read from that prefix.
+_BATH_TET_FIELDS = {
+    "heartPhiE":            "heartPhiE",            # myocardium extracellular potential
+    "bathPhiE":            "bathPhiE",              # bath potential
+    "x0FluxJump":          "x0FluxJump",            # x=0 interface-current continuity
+    "x1FluxJump":          "x1FluxJump",            # x=1 interface-current continuity
+    "x0IntracellularLeak": "x0IntracellularLeak",   # x=0 intracellular insulation
+    "x1IntracellularLeak": "x1IntracellularLeak",   # x=1 intracellular insulation
+    "x0AssembledFlux":     "x0AssembledFlux",       # x=0 assembled-current constitutive error
+    "x1AssembledFlux":     "x1AssembledFlux",       # x=1 assembled-current constitutive error
+}
+
 
 def _parse_field_triples(content, allowed_fields):
     """Return {field: (L1,L2,Linf) strings} for lines matching '<field> <L1> <L2> <Linf>'."""
@@ -129,23 +99,73 @@ def _scalar(value):
     return value
 
 
-def _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
-    """Yield (case_dir, dim, N) for every case in the manifest whose
-    sweepCases/<case_id>/ subfolder actually exists on disk."""
+def _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis, *, fixed_dim=None):
+    """Yield (case_dir, dim, N, resolved_axis_values) for every case in the
+    manifest whose sweepCases/<case_id>/ subfolder actually exists on disk.
+
+    fixed_dim overrides dim_axis lookup entirely -- some studies (every tet
+    convergence study so far) fix dimensions=["3D"] in the sweep.json's base
+    rather than sweeping it as an independent axis, so it is simply absent
+    from resolved_axis_values (which only ever carries independent+dependent
+    axis values, never base). Pass fixed_dim explicitly rather than silently
+    falling back within this function, so a genuinely missing dim elsewhere
+    still means 'skip', not 'assume 3D'."""
     for case_id, values in _load_case_axis_values(manifest_path).items():
         case_dir = Path(sweep_cases_dir) / case_id
         if not case_dir.is_dir():
             continue
-        dim = _scalar(values.get(dim_axis))
+        dim = fixed_dim if fixed_dim is not None else _scalar(values.get(dim_axis))
         n = _scalar(values.get(n_axis))
         if dim is None or n is None:
             continue
-        yield case_dir, str(dim), int(n)
+        yield case_dir, str(dim), int(n), values
+
+
+_GRID_SPACING_PATTERN = re.compile(r"Grid spacing \(dx\)\s*=\s*([0-9.eE+-]+)")
+_NUMBER_OF_CELLS_PATTERN = re.compile(r"Number of cells\s*=\s*(\d+)")
+
+
+def _measured_h_from_grid_spacing(content):
+    """bidomain/monodomain tet verifiers print their own measured
+    'Grid spacing (dx) = <value>' line (src/verificationModels/
+    verificationUtils.H's structuredManufacturedDx), computed from the
+    ACTUAL tet cell count -- not 1/N. A tet mesh's real cell count at a
+    given gmsh characteristic length is not exactly N^3, so nominal 1/N
+    (correct for hex block meshes by construction) is simply wrong here."""
+    m = _GRID_SPACING_PATTERN.search(content)
+    return f"{float(m.group(1)):g}" if m else None
+
+
+def _measured_h_from_cell_count(content):
+    """eikonal's activation-time verifier prints only 'Number of cells',
+    not a derived Grid spacing -- replicate verificationUtils.H's
+    structuredCellsPerDirection/structuredManufacturedDx formula exactly
+    (max(1, int(totalCells**(1/3) + 0.5)), then 1/that) rather than reading
+    a value the file never writes. Confirmed byte-for-byte against the
+    original run_eikonal_tet.sh's own awk: dx=1.0/int((n)^(1/3)+0.5)."""
+    m = _NUMBER_OF_CELLS_PATTERN.search(content)
+    if not m:
+        return None
+    n_per_direction = max(1, int(float(m.group(1)) ** (1.0 / 3.0) + 0.5))
+    return f"{1.0 / n_per_direction:g}"
+
+
+_GRAD_SCHEME_VARIANT_LABELS = {"gauss_linear": "GaussLinear", "least_squares": "leastSquares"}
+
+
+def _grad_scheme_variant(values):
+    """Map a tet case's own grad_scheme axis value to the display variant
+    label used throughout the committed tet references (a data label
+    carried over from the original bash studies' own CSV column, distinct
+    from the literal OpenFOAM dict token -- see _GRAD_SCHEME_TOKENS in
+    manufactured_fda.py)."""
+    return _GRAD_SCHEME_VARIANT_LABELS[_scalar(values["grad_scheme"])]
 
 
 def from_sweep_cases_field_triples(
     sweep_cases_dir, manifest_path, *, filename_glob, allowed_fields, case,
     dim_axis="dimensions", n_axis="number_cells", variant="",
+    fixed_dim=None, measured_h=None, variant_of=None,
 ):
     """Generic reader for the '<field> L1 L2 Linf' .dat format shared by the
     manufactured verifiers (bidomain/monodomain/bath/eikonal-activation).
@@ -153,12 +173,30 @@ def from_sweep_cases_field_triples(
     resolved_axis_values -- never from filename or file content, since not
     every verifier's raw output name is case-parameter-qualified (eikonal's
     activation/ECG summaries use a fixed name; only the per-case
-    sweepCases/<case_id>/ subfolder disambiguates them)."""
+    sweepCases/<case_id>/ subfolder disambiguates them).
+
+    measured_h, when given, parses the real per-case h out of each file's
+    own content (tet studies) instead of using the nominal 1/N (correct
+    for hex block meshes only). variant_of, when given, derives the
+    variant label per-case from resolved_axis_values (tet's grad_scheme)
+    instead of the single fixed `variant` string (hex's convention).
+
+    L1 is always kept, for every caller -- the raw verifier always computes
+    it. An earlier version of this reader discarded it for tet studies to
+    match the original bash pipeline's incomplete aggregation (which never
+    extracted an L1 column), but the statistic set a reader reports must be
+    uniform across hex/tet regardless of what the old pipeline happened to
+    capture; only the underlying field variables are allowed to differ."""
     rows = []
-    for case_dir, dim, n in _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
-        base = dict(case=case, variant=variant, dim=dim, N=str(n), h=f"{1.0 / n:g}")
+    for case_dir, dim, n, values in _iter_sweep_case_dirs(
+        sweep_cases_dir, manifest_path, dim_axis, n_axis, fixed_dim=fixed_dim
+    ):
+        case_variant = variant_of(values) if variant_of is not None else variant
+        nominal_h = f"{1.0 / n:g}"
         for path in sorted(case_dir.glob(filename_glob)):
             content = path.read_text(errors="ignore")
+            h = (measured_h(content) if measured_h is not None else None) or nominal_h
+            base = dict(case=case, variant=case_variant, dim=dim, N=str(n), h=h)
             for field, (l1, l2, linf) in _parse_field_triples(content, allowed_fields).items():
                 rows.append({**base, "field": field, "L1": l1, "L2": l2, "Linf": linf})
     return rows
@@ -235,29 +273,153 @@ def _parse_ecg_electrode_table(content):
 def from_sweep_cases_electrode_table(
     sweep_cases_dir, manifest_path, *, filename_glob, case,
     dim_axis="dimensions", n_axis="number_cells", allowed_dims=None,
+    fixed_dim=None, variant_of=None, h_source_glob=None, h_parser=None,
+    field_name="Phi_e",
 ):
     """Generic reader for the electrode-table ECG summary format (pseudo-ECG,
-    eikonal ECG) shared with from_sweep_cases_field_triples: N/dimension come
-    from that case's own sweep_manifest.json resolved_axis_values, never from
-    filename or file content. allowed_dims restricts which dimensions get
-    reported at all (pseudo-ECG only supports 3D -- see its caller)."""
+    eikonal ECG, tet ECG summaries) shared with from_sweep_cases_field_triples:
+    N/dimension come from that case's own sweep_manifest.json
+    resolved_axis_values, never from filename or file content. allowed_dims
+    restricts which dimensions get reported at all (pseudo-ECG only supports
+    3D -- see its caller).
+
+    Reports max/mean/min across electrodes uniformly for every caller --
+    hex and tet studies alike -- even though the underlying field variable
+    differs by solver; the statistic set must not (see this reader's own
+    history: tet originally only tracked a running max, matching its
+    original bash script's awk, but that was an incompleteness inherited
+    from the old pipeline, not a real convention worth preserving).
+
+    variant_of/h_source_glob/h_parser mirror from_sweep_cases_field_triples'
+    tet support: variant_of derives the variant label per-case (tet's
+    grad_scheme) instead of the fixed empty string hex uses; h_source_glob/
+    h_parser read the real measured h from a companion file in the same
+    case_dir when the ECG summary itself doesn't report one (neither tet
+    ECG summary file prints its own cell count or grid spacing)."""
     rows = []
-    for case_dir, dim, n in _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis):
+    for case_dir, dim, n, values in _iter_sweep_case_dirs(
+        sweep_cases_dir, manifest_path, dim_axis, n_axis, fixed_dim=fixed_dim
+    ):
         if allowed_dims is not None and dim not in allowed_dims:
             continue
-        base = dict(case=case, variant="", dim=dim, N=str(n), h=f"{1.0 / n:g}")
+        variant = variant_of(values) if variant_of is not None else ""
+        h = None
+        if h_source_glob is not None:
+            for h_path in sorted(case_dir.glob(h_source_glob)):
+                h = h_parser(h_path.read_text(errors="ignore"))
+                if h is not None:
+                    break
+        h = h or f"{1.0 / n:g}"
+        base = dict(case=case, variant=variant, dim=dim, N=str(n), h=h)
         for path in sorted(case_dir.glob(filename_glob)):
             cols = _parse_ecg_electrode_table(path.read_text(errors="ignore"))
             if not cols:
                 continue
-            max_row = {**base, "field": "Phi_e_max"}
-            mean_row = {**base, "field": "Phi_e_mean"}
+            max_row = {**base, "field": f"{field_name}_max"}
+            mean_row = {**base, "field": f"{field_name}_mean"}
+            min_row = {**base, "field": f"{field_name}_min"}
             for out_key, col_key in (("L1", "L1_err_ref"), ("L2", "L2_err_ref"), ("Linf", "Linf_err_ref")):
-                values = cols.get(col_key, [])
-                max_row[out_key] = f"{max(values):g}" if values else ""
-                mean_row[out_key] = f"{sum(values) / len(values):g}" if values else ""
+                col_values = cols.get(col_key, [])
+                max_row[out_key] = f"{max(col_values):g}" if col_values else ""
+                mean_row[out_key] = f"{sum(col_values) / len(col_values):g}" if col_values else ""
+                min_row[out_key] = f"{min(col_values):g}" if col_values else ""
             rows.append(max_row)
             rows.append(mean_row)
+            rows.append(min_row)
+    return rows
+
+
+def from_eikonal_tet_ecg(sweep_cases_dir, manifest_path, case="eikonal_tet"):
+    return from_sweep_cases_electrode_table(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedEikonalECGSummary.dat", case=case,
+        fixed_dim="3D", variant_of=_grad_scheme_variant,
+        h_source_glob="manufacturedEikonalActivationTime.dat",
+        h_parser=_measured_h_from_cell_count,
+    )
+
+
+def from_eikonal_tet_activation(sweep_cases_dir, manifest_path, case="eikonal_tet"):
+    # Unlike hex's from_eikonal_activation, the tet reference keeps the raw
+    # field name "activationTime" -- no "psi" rename here (confirmed against
+    # the committed reference CSV).
+    return from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedEikonalActivationTime.dat",
+        allowed_fields=EIKONAL_ACTIVATION_FIELDS, case=case,
+        fixed_dim="3D", measured_h=_measured_h_from_cell_count, variant_of=_grad_scheme_variant,
+    )
+
+
+def from_monodomain_tet_ecg(sweep_cases_dir, manifest_path, case="tet"):
+    return from_sweep_cases_electrode_table(
+        sweep_cases_dir, manifest_path,
+        filename_glob="manufacturedPseudoECGSummary.dat", case=case,
+        fixed_dim="3D", variant_of=_grad_scheme_variant,
+        h_source_glob="*_cells_*.dat",
+        h_parser=_measured_h_from_grid_spacing,
+    )
+
+
+def from_monodomain_tet_vm(sweep_cases_dir, manifest_path, case="tet"):
+    # case="tet" (not "mono_tet") -- confirmed against the committed
+    # reference CSV's own "case" column, a naming artifact carried over
+    # from the original bash-era scheme_study.csv this replaces.
+    return from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="*_cells_*.dat", allowed_fields=("Vm",), case=case,
+        fixed_dim="3D", measured_h=_measured_h_from_grid_spacing, variant_of=_grad_scheme_variant,
+    )
+
+
+def from_bidomain_tet_archive(sweep_cases_dir, manifest_path, case="bidomain_tet"):
+    # Only Vm + phiE_gauge (renamed Phi_e) are reported for tet -- the raw
+    # verifier also emits phiI_gauge/u1/u2, but the original bash-era
+    # scheme_study.csv this replaces only ever extracted these two columns
+    # (confirmed via its own awk), and the committed reference has no rows
+    # for the others.
+    rows = from_sweep_cases_field_triples(
+        sweep_cases_dir, manifest_path,
+        filename_glob="*_cells_*.dat", allowed_fields=("Vm", "phiE_gauge"), case=case,
+        fixed_dim="3D", measured_h=_measured_h_from_grid_spacing, variant_of=_grad_scheme_variant,
+    )
+    for row in rows:
+        if row["field"] == "phiE_gauge":
+            row["field"] = "Phi_e"
+    return rows
+
+
+def from_bath_interface_metrics(sweep_cases_dir, manifest_path, case="bath_tet"):
+    """bath_tet's own CSV-row format (method,assembly,fieldSource,time,
+    interfaceFaces,<field>_L1,<field>_L2,<field>_Linf,...) is written by
+    applications/utilities/bathBidomainInterfaceMetrics (a post-hoc pass over
+    the reconstructed mesh, run as its own workflow_dag step -- see
+    manufactured_fda_bath_bidomain.py's interfaceMetrics step), structurally
+    different from the '<field> L1 L2 Linf' text format every other tet
+    verifier uses, so it needs its own reader rather than
+    from_sweep_cases_field_triples.
+
+    Unlike bidomain/monodomain/eikonal tet, this utility does not report a
+    measured Grid spacing -- h is nominal 1/N here (confirmed against the
+    committed reference: h=0.1 at N=10, not 0.0588235 like the others)."""
+    rows = []
+    for case_dir, dim, n, _values in _iter_sweep_case_dirs(
+        sweep_cases_dir, manifest_path, "dimensions", "number_cells", fixed_dim="3D"
+    ):
+        base = dict(case=case, dim=dim, N=str(n), h=f"{1.0 / n:g}")
+        for path in sorted(case_dir.glob("bathBidomainInterfaceMetrics.csv")):
+            with path.open(newline="") as fh:
+                rec = next(csv.DictReader(fh), None)
+            if rec is None:
+                continue
+            variant = f"{rec.get('method', '')}/{rec.get('assembly', '')}"
+            for field, col in _BATH_TET_FIELDS.items():
+                l2 = rec.get(f"{col}_L2", "")
+                if l2 == "":
+                    continue
+                rows.append({**base, "variant": variant, "field": field,
+                             "L1": rec.get(f"{col}_L1", ""),
+                             "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
     return rows
 
 
@@ -267,47 +429,6 @@ def from_sweep_cases_electrode_table(
 # integrals, so their errors don't converge under refinement (confirmed against a real
 # sweep run 2026-07-17: 1D/2D Phi_e error is flat across N=10..80, not decreasing).
 _ECG_SPATIAL_SUPPORTED_DIMENSIONS = ("3D",)
-
-
-_BATH_N_DIR = re.compile(r"N(\d+)", re.IGNORECASE)
-# The eight diagnostics reported in tbl-bath-bidomain-tet. Each maps a canonical
-# field name to its column prefix in bathBidomainInterfaceMetrics.csv; the _L2 /
-# _Linf error columns are read from that prefix.
-_BATH_TET_FIELDS = {
-    "heartPhiE":            "heartPhiE",            # myocardium extracellular potential
-    "bathPhiE":            "bathPhiE",              # bath potential
-    "x0FluxJump":          "x0FluxJump",            # x=0 interface-current continuity
-    "x1FluxJump":          "x1FluxJump",            # x=1 interface-current continuity
-    "x0IntracellularLeak": "x0IntracellularLeak",   # x=0 intracellular insulation
-    "x1IntracellularLeak": "x1IntracellularLeak",   # x=1 intracellular insulation
-    "x0AssembledFlux":     "x0AssembledFlux",       # x=0 assembled-current constitutive error
-    "x1AssembledFlux":     "x1AssembledFlux",       # x=1 assembled-current constitutive error
-}
-
-
-def from_bath_interface_metrics(study_dir, case="bath_tet"):
-    """Glob <study_dir>/N*/bathBidomainInterfaceMetrics.csv; N from the parent dir.
-    variant = '<method>/<assembly>'; h = 1/N nominal (tet)."""
-    rows = []
-    for csv_path in sorted(Path(study_dir).glob("N*/bathBidomainInterfaceMetrics.csv")):
-        m = _BATH_N_DIR.search(csv_path.parent.name)
-        if not m:
-            continue
-        n = int(m.group(1))
-        with csv_path.open(newline="") as fh:
-            rec = next(csv.DictReader(fh), None)
-        if rec is None:
-            continue
-        variant = f"{rec.get('method', '')}/{rec.get('assembly', '')}"
-        base = dict(case=case, variant=variant, dim="3D",
-                    N=str(n), h=f"{1.0 / n:g}")
-        for field, col in _BATH_TET_FIELDS.items():
-            l2 = rec.get(f"{col}_L2", "")
-            if l2 == "":
-                continue
-            rows.append({**base, "field": field, "L1": rec.get(f"{col}_L1", ""),
-                         "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
-    return rows
 
 
 def from_niederer_points(root_dir, case="niederer"):

@@ -19,13 +19,17 @@ _TUT = "tutorials/manufacturedSolutions"
 
 
 def _mono_tet(root: Path):
-    src = root / _TUT / "monodomainPseudoECG/setup/results/scheme_study.csv"
-    return schema.fill_rates(adapters.from_tet_scheme_study(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "monodomainPseudoECG", "tetConvergence")
+    rows = adapters.from_monodomain_tet_vm(sweep_cases, manifest)
+    rows += adapters.from_monodomain_tet_ecg(sweep_cases, manifest)
+    return schema.fill_rates(rows)
 
 
 def _eikonal_tet(root: Path):
-    src = root / _TUT / "eikonalECG/setup/results/scheme_study.csv"
-    return schema.fill_rates(adapters.from_eikonal_tet_scheme_study(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "eikonalECG", "tetConvergence")
+    rows = adapters.from_eikonal_tet_activation(sweep_cases, manifest)
+    rows += adapters.from_eikonal_tet_ecg(sweep_cases, manifest)
+    return schema.fill_rates(rows)
 
 
 def _coupling1D3D_hex(root: Path):
@@ -43,17 +47,20 @@ def _coupling1D3D_hex(root: Path):
     return schema.fill_rates(rows)
 
 
-def _sweep_cases_and_manifest(root: Path, tutorial: str):
-    """Every hex sweep archives to <tutorial>/sweepCases/ (openfoam_driver's
-    generic snapshot/diff collector) with the driving sweep-run's own
-    --output-dir (sweep_manifest.json) at <tutorial>/sweepRun/ -- one shared
-    convention for every tutorial, not a bespoke path per case."""
-    case_dir = root / _TUT / tutorial
-    return case_dir / "sweepCases", case_dir / "sweepRun" / "sweep_manifest.json"
+def _sweep_cases_and_manifest(root: Path, tutorial: str, study: str):
+    """Every sweep (hex or tet, any tutorial) archives to its own
+    setup/studies/<study>/sweepCases/ (openfoam_driver's generic snapshot/
+    diff collector) with the driving sweep-run's own --output-dir
+    (sweep_manifest.json) at setup/studies/<study>/sweepRun/ -- one shared
+    convention regardless of tutorial or mesh family, since a tutorial
+    folder can hold more than just hex/tet (see run_study_sweep_common.sh,
+    which derives this same path from the sweep.json's own location)."""
+    study_dir = root / _TUT / tutorial / "setup" / "studies" / study
+    return study_dir / "sweepCases", study_dir / "sweepRun" / "sweep_manifest.json"
 
 
 def _eikonal_hex(root: Path):
-    sweep_cases, manifest = _sweep_cases_and_manifest(root, "eikonalECG")
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "eikonalECG", "spatialConvergence")
     excl = root / _TUT / "eikonalECG/excluded_from_pureEikonal_report"
     fname = "2D_{n}_cells_eikonal_manufacturedEikonalActivationTime.dat"
     extra_2d = [(n, excl / fname.format(n=n)) for n in (10, 20, 40, 80)
@@ -69,33 +76,30 @@ def _mono_hex(root: Path):
     # how the eikonal rows carry their activation field and ECG functional
     # together. The two adapters read the same sweepCases archive and emit
     # disjoint fields: Vm/u1/u2 in 1D-3D, and Phi_e_max/Phi_e_mean in 3D.
-    sweep_cases, manifest = _sweep_cases_and_manifest(root, "monodomainPseudoECG")
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "monodomainPseudoECG", "spatialConvergence")
     rows = adapters.from_monodomain_spatial_archive(sweep_cases, manifest)
     rows += adapters.from_pseudo_ecg_spatial_archive(sweep_cases, manifest)
     return schema.fill_rates(rows)
 
 
 def _bidomain_hex(root: Path):
-    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bidomain")
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bidomain", "spatialConvergence")
     return schema.fill_rates(adapters.from_bidomain_archive(sweep_cases, manifest))
 
 
 def _bidomain_tet(root: Path):
-    src = root / _TUT / "bidomain/setup/results/scheme_study.csv"
-    return schema.fill_rates(adapters.from_bidomain_tet_scheme_study(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bidomain", "tetConvergence")
+    return schema.fill_rates(adapters.from_bidomain_tet_archive(sweep_cases, manifest))
 
 
 def _bath_hex(root: Path):
-    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bathBidomain")
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bathBidomain", "spatialConvergence")
     return schema.fill_rates(adapters.from_bath_hex_archive(sweep_cases, manifest))
 
 
 def _bath_tet(root: Path):
-    # run_parallel_interface_sweep.sh (matchedSubmesh / distanceWeightedHarmonic)
-    # writes N10/20/40/80 here, one bathBidomainInterfaceMetrics.csv per N.
-    src = (root / _TUT / "bathBidomain/setup/mesh/tet"
-                 "/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic")
-    return schema.fill_rates(adapters.from_bath_interface_metrics(src))
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bathBidomain", "tetConvergence")
+    return schema.fill_rates(adapters.from_bath_interface_metrics(sweep_cases, manifest))
 
 
 def _niederer_hex(root: Path):

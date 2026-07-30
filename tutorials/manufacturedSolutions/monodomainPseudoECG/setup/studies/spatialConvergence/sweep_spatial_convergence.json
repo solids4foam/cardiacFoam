@@ -5,7 +5,7 @@
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "ecg_enabled": true,
-    "archive_dir_name": "sweepCases"
+    "archive_dir_name": "setup/studies/spatialConvergence/sweepCases"
   },
   "sweep": {
     "mode": "zip",

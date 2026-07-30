@@ -6,7 +6,7 @@
     "postprocess_strict_artifacts": false,
     "run_in_parallel": true,
     "ecg_enabled": false,
-    "archive_dir_name": "sweepCases"
+    "archive_dir_name": "setup/studies/spatialConvergence/sweepCases"
   },
   "sweep": {
     "mode": "zip",

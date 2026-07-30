@@ -23,17 +23,129 @@ def _write_manifest(path, cases):
     }))
 
 
-def test_tet_scheme_study(tmp_path):
-    p = tmp_path / "scheme_study.csv"
-    p.write_text(
-        "scheme,N,dx,mono_L2,mono_Linf,ecg_L2,ecg_Linf\n"
-        "GaussLinear,10,0.0588235,0.0224588,0.152636,0.0038452,0.00426517\n"
-        "leastSquares,80,0.00757576,0.000170952,0.00191104,6.95364e-06,8.29839e-06\n"
+def test_bidomain_tet_archive_renames_phie_gauge_and_reads_measured_h(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "gauss_linear_10": {"grad_scheme": "gauss_linear", "number_cells": [10]},
+        "least_squares_80": {"grad_scheme": "least_squares", "number_cells": [80]},
+    })
+    (sweep_cases / "gauss_linear_10").mkdir(parents=True)
+    (sweep_cases / "gauss_linear_10" / "3D_10_cells_implicit.dat").write_text(
+        "Field     L1-error       L2-error       Linf-error\n"
+        "Vm     1.2e-05   2.3e-05   3.4e-05\n"
+        "phiE_gauge     4.5e-05   0.010246   0.055506\n"
+        "\nGrid spacing (dx)     = 0.0588235\n"
     )
-    rows = adapters.from_tet_scheme_study(p)
-    gl_vm = [r for r in rows if r["variant"] == "GaussLinear" and r["field"] == "Vm"][0]
-    assert gl_vm["L2"] == "0.0224588" and gl_vm["dim"] == "3D" and gl_vm["h"] == "0.0588235"
-    assert any(r["field"] == "Phi_e" and r["variant"] == "leastSquares" for r in rows)
+    (sweep_cases / "least_squares_80").mkdir(parents=True)
+    (sweep_cases / "least_squares_80" / "3D_80_cells_implicit.dat").write_text(
+        "Vm     1e-06   2e-06   3e-06\n"
+        "phiE_gauge     4e-06   0.00269257   0.0191601\n"
+        "Grid spacing (dx)     = 0.00757576\n"
+    )
+    rows = adapters.from_bidomain_tet_archive(sweep_cases, manifest)
+    phi = [r for r in rows if r["field"] == "Phi_e" and r["N"] == "10"][0]
+    assert phi["variant"] == "GaussLinear" and phi["dim"] == "3D"
+    assert phi["h"] == "0.0588235" and phi["L2"] == "0.010246" and phi["Linf"] == "0.055506"
+    assert not any(r["field"] == "phiE_gauge" for r in rows)
+    phi80 = [r for r in rows if r["field"] == "Phi_e" and r["N"] == "80"][0]
+    assert phi80["variant"] == "leastSquares" and phi80["h"] == "0.00757576"
+
+
+def test_monodomain_tet_vm_and_ecg_share_measured_h_from_grid_spacing(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "gauss_linear_10": {"grad_scheme": "gauss_linear", "number_cells": [10]},
+    })
+    case_dir = sweep_cases / "gauss_linear_10"
+    case_dir.mkdir(parents=True)
+    (case_dir / "3D_10_cells_implicit.dat").write_text(
+        "Vm     1e-05   0.0224588   0.152636\n"
+        "Grid spacing (dx)     = 0.0588235\n"
+    )
+    (case_dir / "manufacturedPseudoECGSummary.dat").write_text(
+        "header line 1\nheader line 2\nheader line 3\nheader line 4\nheader line 5\n"
+        "Electrode L1_err_ref L2_err_ref Linf_err_ref\n"
+        "E1 0.001 0.0038452 0.00426517\n"
+        "E2 0.0005 0.002 0.003\n"
+    )
+    vm_rows = adapters.from_monodomain_tet_vm(sweep_cases, manifest)
+    assert vm_rows == [{"case": "tet", "variant": "GaussLinear", "dim": "3D",
+                        "N": "10", "h": "0.0588235", "field": "Vm",
+                        "L1": "1e-05", "L2": "0.0224588", "Linf": "0.152636"}]
+    ecg_rows = adapters.from_monodomain_tet_ecg(sweep_cases, manifest)
+    by_field = {r["field"]: r for r in ecg_rows}
+    assert set(by_field) == {"Phi_e_max", "Phi_e_mean", "Phi_e_min"}
+    assert by_field["Phi_e_max"]["L2"] == "0.0038452" and by_field["Phi_e_max"]["Linf"] == "0.00426517"
+    assert by_field["Phi_e_min"]["L2"] == "0.002" and by_field["Phi_e_min"]["Linf"] == "0.003"
+    assert by_field["Phi_e_mean"]["L2"] == f"{(0.0038452 + 0.002) / 2:g}"
+    assert all(r["h"] == "0.0588235" and r["variant"] == "GaussLinear" for r in ecg_rows)
+
+
+def test_eikonal_tet_activation_keeps_raw_field_name_and_derives_h_from_cell_count(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "least_squares_10": {"grad_scheme": "least_squares", "number_cells": [10]},
+    })
+    case_dir = sweep_cases / "least_squares_10"
+    case_dir.mkdir(parents=True)
+    (case_dir / "manufacturedEikonalActivationTime.dat").write_text(
+        "# Eikonal manufactured activation-time summary\n"
+        "Number of cells = 4913\n"
+        "# field L1 L2 Linf\n"
+        "activationTime 0.02 0.068 0.30\n"
+    )
+    rows = adapters.from_eikonal_tet_activation(sweep_cases, manifest)
+    assert rows == [{"case": "eikonal_tet", "variant": "leastSquares", "dim": "3D",
+                     "N": "10", "h": "0.0588235", "field": "activationTime",
+                     "L1": "0.02", "L2": "0.068", "Linf": "0.30"}]
+
+
+def test_eikonal_tet_ecg_reads_h_from_companion_activation_file(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "gauss_linear_10": {"grad_scheme": "gauss_linear", "number_cells": [10]},
+    })
+    case_dir = sweep_cases / "gauss_linear_10"
+    case_dir.mkdir(parents=True)
+    (case_dir / "manufacturedEikonalActivationTime.dat").write_text(
+        "Number of cells = 4913\nactivationTime 0.02 0.068 0.30\n"
+    )
+    (case_dir / "manufacturedEikonalECGSummary.dat").write_text(
+        "header 1\nheader 2\nheader 3\nheader 4\nheader 5\nheader 6\n"
+        "Electrode L1_err_ref L2_err_ref Linf_err_ref\n"
+        "E1 0.01 0.0446989 0.0632351\n"
+        "E2 0.005 0.02 0.03\n"
+    )
+    rows = adapters.from_eikonal_tet_ecg(sweep_cases, manifest)
+    by_field = {r["field"]: r for r in rows}
+    assert set(by_field) == {"Phi_e_max", "Phi_e_mean", "Phi_e_min"}
+    assert by_field["Phi_e_max"]["L2"] == "0.0446989" and by_field["Phi_e_max"]["Linf"] == "0.0632351"
+    assert by_field["Phi_e_max"]["L1"] == "0.01"
+    assert by_field["Phi_e_min"]["L2"] == "0.02" and by_field["Phi_e_min"]["Linf"] == "0.03"
+    assert all(r["h"] == "0.0588235" for r in rows)
+
+
+def test_bath_interface_metrics_reads_from_sweep_cases_with_nominal_h(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {"10_0.00892857": {"number_cells": [10], "dt_values": [0.00892857]}})
+    case_dir = sweep_cases / "10_0.00892857"
+    case_dir.mkdir(parents=True)
+    header = ("method,assembly,fieldSource,time,interfaceFaces,"
+              "heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf,bathPhiE_L1,bathPhiE_L2,bathPhiE_Linf")
+    row = "distanceWeightedHarmonic,matchedSubmesh,numerical,0.196429,120,0.00575671,0.00606607,0.00912926,0.00585127,0.00821426,0.0141732"
+    (case_dir / "bathBidomainInterfaceMetrics.csv").write_text(header + "\n" + row + "\n")
+    rows = adapters.from_bath_interface_metrics(sweep_cases, manifest)
+    heart = [r for r in rows if r["field"] == "heartPhiE"][0]
+    assert heart["variant"] == "distanceWeightedHarmonic/matchedSubmesh"
+    assert heart["dim"] == "3D" and heart["N"] == "10" and heart["h"] == "0.1"
+    assert heart["L2"] == "0.00606607" and heart["Linf"] == "0.00912926"
+    bath = [r for r in rows if r["field"] == "bathPhiE"][0]
+    assert bath["L2"] == "0.00821426"
 
 
 def test_coupling_summary(tmp_path):
@@ -97,6 +209,7 @@ def test_eikonal_ecg_max_and_mean_reads_sweep_cases_archive(tmp_path):
     rows = adapters.from_eikonal_ecg(sweep_cases, manifest)
     assert any(r["field"] == "Phi_e_max" and r["Linf"] == "1.11883e-05" for r in rows)
     assert any(r["field"] == "Phi_e_mean" and r["Linf"] == "8.91955e-06" for r in rows)
+    assert any(r["field"] == "Phi_e_min" and r["Linf"] == "6.65081e-06" for r in rows)
 
 
 def test_monodomain_spatial_archive_reads_sweep_cases_archive(tmp_path):
@@ -175,9 +288,11 @@ def test_pseudo_ecg_spatial_archive_reads_sweep_cases_archive(tmp_path):
     rows = adapters.from_pseudo_ecg_spatial_archive(sweep_cases, manifest)
     maxrow = [r for r in rows if r["field"] == "Phi_e_max"][0]
     meanrow = [r for r in rows if r["field"] == "Phi_e_mean"][0]
+    minrow = [r for r in rows if r["field"] == "Phi_e_min"][0]
     assert maxrow["dim"] == "3D" and maxrow["N"] == "80" and maxrow["h"] == f"{1.0 / 80:g}"
     assert float(maxrow["L1"]) == 3.10522e-07
     assert abs(float(meanrow["L1"]) - 2.490285e-07) < 1e-12
+    assert float(minrow["L1"]) == 1.87535e-07
 
 
 def test_pseudo_ecg_spatial_archive_excludes_unsupported_1d_2d(tmp_path):

@@ -91,11 +91,23 @@ def _write_metrics(path, row):
         w.writeheader(); w.writerow(row)
 
 def test_bath_tet_interface_identities(tmp_path):
+    # bath_tet is fixed at dimensions=["3D"] in the sweep.json's base (never
+    # swept as an independent axis), so it is absent from resolved_axis_values
+    # entirely -- fixed_dim="3D" inside from_bath_interface_metrics handles
+    # this, same as every other tet reader.
+    sweep_cases = tmp_path / "sweepCases"
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    _write_manifest(manifest, {
+        "10_0.00892857": {"number_cells": [10], "dt_values": [0.00892857]},
+        "20_0.00224215": {"number_cells": [20], "dt_values": [0.00224215]},
+    })
     for n, l2 in (("10", "4e-3"), ("20", "1e-3")):
-        d = tmp_path / f"N{n}"; d.mkdir()
+        case_id = {"10": "10_0.00892857", "20": "20_0.00224215"}[n]
+        d = sweep_cases / case_id
+        d.mkdir(parents=True)
         _write_metrics(d / "bathBidomainInterfaceMetrics.csv",
                        _metrics_row(heartPhiE_L2=l2))
-    rows = adapters.from_bath_interface_metrics(tmp_path)
+    rows = adapters.from_bath_interface_metrics(sweep_cases, manifest)
     assert {r["field"] for r in rows} == {
         "heartPhiE", "bathPhiE", "x0FluxJump", "x1FluxJump",
         "x0IntracellularLeak", "x1IntracellularLeak",

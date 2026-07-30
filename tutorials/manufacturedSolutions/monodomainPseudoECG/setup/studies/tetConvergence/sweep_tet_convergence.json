@@ -10,7 +10,8 @@
     "numerics_profile": "monodomain_tet",
     "end_time": 0.2,
     "ecg_enabled": true,
-    "postprocess_strict_artifacts": false
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/tetConvergence/sweepCases"
   },
   "sweep": {
     "mode": "zip",
