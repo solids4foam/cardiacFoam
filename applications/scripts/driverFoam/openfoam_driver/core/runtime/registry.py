@@ -50,6 +50,9 @@ from ...specs.tutorials.manufactured_monodomain_total_lagrangian_em import (
 from ...specs.tutorials.manufactured_purkinje_graph import (
     make_spec as make_manufactured_purkinje_graph_spec,
 )
+from ...specs.tutorials.heart_solver_comparison import (
+    make_spec as make_heart_solver_comparison_spec,
+)
 from ...specs.tutorials.generic_case import make_spec as make_generic_case_spec
 from ...specs.tutorials.monodomain_and_eikonal_1d_cable_cv_convergence import (
     make_spec as make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
@@ -78,6 +81,8 @@ SPEC_FACTORIES = {
     "manufacturedelectromechanicsbc": make_manufactured_monodomain_total_lagrangian_em_spec,
     "manufacturedPurkinjeGraph": make_manufactured_purkinje_graph_spec,
     "manufacturedpurkinjegraph": make_manufactured_purkinje_graph_spec,
+    "heartSolverComparison": make_heart_solver_comparison_spec,
+    "heartsolvercomparison": make_heart_solver_comparison_spec,
     "restitutionCurves": make_restitution_curves_spec,
     "restitutioncurves": make_restitution_curves_spec,
 }
@@ -94,6 +99,7 @@ REGISTERED_TUTORIALS = (
     "manufacturedEikonalECG",
     "manufacturedMonodomainTotalLagrangianEM",
     "manufacturedPurkinjeGraph",
+    "heartSolverComparison",
     "restitutionCurves",
 )
 

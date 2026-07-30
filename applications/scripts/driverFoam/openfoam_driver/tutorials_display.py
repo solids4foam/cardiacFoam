@@ -185,6 +185,23 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
+        id="heartSolverComparison",
+        title="Heart solver comparison (eikonal / monodomain / bidomain)",
+        summary=(
+            "Compares whole solver stacks -- eikonal, monodomain, bidomain, "
+            "and a mixed monodomain-tissue/eikonal-Purkinje variant -- over "
+            "one shared real heart anatomy (mesh + Purkinje graph)."
+        ),
+        thumbnail="/tutorials/heart-solver-comparison.png",
+        tags=("real-anatomy", "purkinje", "eikonal", "monodomain", "bidomain", "solver-comparison"),
+        preset={
+            "anatomy.mesh": "heart-purkinje-graph",
+            # No single physics.ionic_model: eikonalSolver has no ionic
+            # model at all (pure activation-time PDE); only the monodomain,
+            # monodomain-eikonal, and bidomain variants use BuenoOrovio.
+        },
+    ),
+    TutorialDisplay(
         id="restitutionCurves",
         title="Restitution curves (S1–S2 protocol)",
         summary=(
