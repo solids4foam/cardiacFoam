@@ -173,14 +173,19 @@ def _write_case(tutorials_root: Path) -> Path:
 
 def _make_spec(tmp_path, **overrides):
     _write_case(tmp_path)
-    return make_spec(
-        tutorials_root=tmp_path,
-        case_dir_name="manufacturedSolutions/bathBidomain",
-        dimensions=["3D"],
-        number_cells=[10],
-        dt_values=[0.00892857],
+    kwargs = {
+        "tutorials_root": tmp_path,
+        "case_dir_name": "manufacturedSolutions/bathBidomain",
+        "dimensions": ["3D"],
+        "number_cells": [10],
+        "dt_values": [0.00892857],
+        # These tests are about mesh_family/gmsh-pipeline branching and dict
+        # overrides, not parallel execution -- keep them decoupled from
+        # run_in_parallel's decomposeParDict requirement (parallel_execution.py).
+        "run_in_parallel": False,
         **overrides,
-    )
+    }
+    return make_spec(**kwargs)
 
 
 def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
@@ -227,6 +232,7 @@ def test_tet_apply_case_installs_overlay_and_reference_predictor_corrector(tmp_p
         dt_values=[0.00892857],
         mesh_family="tet",
         numerics_profile="bath_bidomain_tet",
+        run_in_parallel=False,
     )
     case = spec.build_cases()[0]
     spec.apply_case(spec.case_root, case)
@@ -252,6 +258,7 @@ def test_tet_predictor_corrector_can_be_enabled_explicitly(tmp_path):
         mesh_family="tet",
         numerics_profile="bath_bidomain_tet",
         bath_predictor_corrector=True,
+        run_in_parallel=False,
     )
     case = spec.build_cases()[0]
     spec.apply_case(spec.case_root, case)
@@ -275,6 +282,7 @@ def test_tet_grad_scheme_phi_tolerance_and_end_time_overrides(tmp_path):
         grad_scheme="gauss_linear",
         phi_tolerance=1e-6,
         end_time=0.02,
+        run_in_parallel=False,
     )
     case = spec.build_cases()[0]
     spec.apply_case(spec.case_root, case)

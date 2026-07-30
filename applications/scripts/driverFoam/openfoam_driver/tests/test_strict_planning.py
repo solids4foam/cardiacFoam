@@ -183,10 +183,13 @@ def test_strict_plan_succeeds_for_manufactured_tutorial() -> None:
     assert payload["status"] == "ok"
     assert payload["workflow_dag"]["steps"]
     assert payload["workflow_state"]["current_step_id"] == "mesh"
-    assert [step["status"] for step in payload["workflow_state"]["steps"]] == [
-        "pending",
-        "pending",
-    ]
+    # Step count is not asserted here -- run_in_parallel defaults to True and
+    # wraps solve with decomposePar/reconstructPar (see parallel_execution.py),
+    # so the exact count is an implementation detail of the real committed
+    # decomposeParDict, not something this test should hardcode.
+    assert [step["status"] for step in payload["workflow_state"]["steps"]] == (
+        ["pending"] * len(payload["workflow_dag"]["steps"])
+    )
     assert {
         step["step_id"] for step in payload["workflow_state"]["steps"]
     } == {

@@ -171,7 +171,25 @@ def _registered_tutorial_entry(
     tutorials_root: Path,
 ) -> dict[str, object]:
     factory = _normalized_registry()[tutorial.casefold()]
-    spec = factory(tutorials_root=tutorials_root)
+    try:
+        spec = factory(tutorials_root=tutorials_root)
+    except Exception:
+        # Cataloging is best-effort: describe_entry() derives tutorials_root
+        # from the *queried* entry's own case_root parent (see introspection.
+        # describe_entry), which does not necessarily hold every other
+        # registered tutorial's case directory -- e.g. singleCell nests one
+        # level deeper than the manufactured-solution tutorials. A factory
+        # that can't build its spec under this particular root (missing
+        # case files, wrong nesting, ...) is simply not runnable from here;
+        # that must not crash the listing for every other tutorial.
+        return {
+            "entry_name": tutorial,
+            "entry_kind": "registered_tutorial",
+            "entry_path": tutorial,
+            "is_runnable": False,
+            "source_type": "spec_factory",
+            "workflow_family": None,
+        }
     case_root = Path(spec.case_root)
     try:
         entry_path = str(case_root.relative_to(tutorials_root))

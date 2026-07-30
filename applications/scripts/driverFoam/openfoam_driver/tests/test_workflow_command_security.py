@@ -53,6 +53,14 @@ class TestValidateWorkflowCommands(unittest.TestCase):
         dag = {"steps": [{"id": "s", "command": "bathBidomainInterfaceMetrics"}]}
         self.assertEqual(validate_workflow_commands(dag), ())
 
+    def test_mpirun_is_allowed(self) -> None:
+        # run_in_parallel=True wraps the solve step as
+        # `mpirun -np <N> cardiacFoam -parallel`; only the bare command is
+        # allowlist-checked (args are not re-validated as commands), same
+        # reasoning as the other explicit workflow-step entries above.
+        dag = {"steps": [{"id": "s", "command": "mpirun", "args": ["-np", "6", "cardiacFoam", "-parallel"]}]}
+        self.assertEqual(validate_workflow_commands(dag), ())
+
     def test_unknown_command_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "rm"}]}
         codes = {d.code for d in validate_workflow_commands(dag)}

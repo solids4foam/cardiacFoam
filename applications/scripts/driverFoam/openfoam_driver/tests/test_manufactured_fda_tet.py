@@ -182,6 +182,17 @@ type electroModel;
 
 _GEO_TEMPLATE = "lc = __LC__;\nBox(1) = {0, 0, 0, 1, 1, 1};\n"
 
+_DECOMPOSE_PAR_DICT = """FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    object decomposeParDict;
+}
+numberOfSubdomains 6;
+method scotch;
+"""
+
 
 def _write_case(tutorials_root: Path, *, case_dir_name: str = "manufacturedSolutions/bidomain") -> Path:
     case_root = tutorials_root / case_dir_name
@@ -195,6 +206,7 @@ def _write_case(tutorials_root: Path, *, case_dir_name: str = "manufacturedSolut
     (case_root / "system" / "blockMeshDict.3D").write_text(_BLOCK_MESH_DICT)
     (case_root / "system" / "fvSchemes").write_text(_HEX_FV_SCHEMES)
     (case_root / "system" / "fvSolution").write_text(_HEX_FV_SOLUTION)
+    (case_root / "system" / "decomposeParDict").write_text(_DECOMPOSE_PAR_DICT)
     (case_root / "setup" / "mesh" / "tet" / "box.geo.template").write_text(_GEO_TEMPLATE)
     (case_root / "setup" / "mesh" / "tet" / "fvSchemes").write_text(_TET_FV_SCHEMES)
     (case_root / "setup" / "mesh" / "tet" / "fvSolution").write_text(_TET_FV_SOLUTION)
@@ -209,6 +221,10 @@ def _call_make_spec(tmp_path, **overrides):
         "number_cells": [10],
         "dt_values": [0.00892857],
         "ecg_enabled": False,
+        # Defaults to False here so mesh_family-branching tests aren't also
+        # coupled to run_in_parallel behavior; the run_in_parallel tests
+        # override this explicitly.
+        "run_in_parallel": False,
         **overrides,
     }
     return make_spec(**kwargs)
@@ -273,6 +289,45 @@ def test_tet_workflow_dag_step_dependencies_are_sequential(tmp_path):
     assert by_id["gmshToFoam"]["depends_on"] == ["gmsh"]
     assert by_id["checkMesh"]["depends_on"] == ["gmshToFoam"]
     assert by_id["solve"]["depends_on"] == ["checkMesh"]
+
+
+# --- run_in_parallel: decomposePar/mpirun/reconstructPar wrapping -----------
+
+def test_hex_run_in_parallel_wraps_solve_with_decompose_reconstruct(tmp_path):
+    spec = _make_case(tmp_path, run_in_parallel=True)
+    steps = spec.metadata["workflow_dag"]["steps"]
+    ids = [s["id"] for s in steps]
+    assert ids == ["mesh", "decomposePar", "solve", "reconstructPar"]
+    by_id = {s["id"]: s for s in steps}
+    assert by_id["decomposePar"]["command"] == "decomposePar"
+    assert by_id["decomposePar"]["depends_on"] == ["mesh"]
+    assert by_id["solve"]["command"] == "mpirun"
+    assert by_id["solve"]["args"] == ["-np", "6", "cardiacFoam", "-parallel"]
+    assert by_id["solve"]["depends_on"] == ["decomposePar"]
+    assert by_id["reconstructPar"]["command"] == "reconstructPar"
+    assert by_id["reconstructPar"]["depends_on"] == ["solve"]
+
+
+def test_hex_run_in_parallel_false_is_unaffected(tmp_path):
+    spec = _make_case(tmp_path, run_in_parallel=False)
+    steps = spec.metadata["workflow_dag"]["steps"]
+    assert [s["id"] for s in steps] == ["mesh", "solve"]
+    by_id = {s["id"]: s for s in steps}
+    assert by_id["solve"]["command"] == "cardiacFoam"
+
+
+def test_tet_run_in_parallel_wraps_solve_after_check_mesh(tmp_path):
+    spec = _make_case(tmp_path, mesh_family="tet", run_in_parallel=True)
+    steps = spec.metadata["workflow_dag"]["steps"]
+    ids = [s["id"] for s in steps]
+    assert ids == [
+        "clean", "gmsh", "gmshToFoam", "checkMesh",
+        "decomposePar", "solve", "reconstructPar",
+    ]
+    by_id = {s["id"]: s for s in steps}
+    assert by_id["decomposePar"]["depends_on"] == ["checkMesh"]
+    assert by_id["solve"]["command"] == "mpirun"
+    assert by_id["solve"]["args"] == ["-np", "6", "cardiacFoam", "-parallel"]
 
 
 # --- apply_case: render-only, never executes gmsh ---------------------------

@@ -45,6 +45,7 @@ def test_mesh_family_tet_reaches_workflow_dag(tmp_path):
         number_cells=[10],
         dt_values=[0.00892857],
         mesh_family="tet",
+        run_in_parallel=False,
     )
     commands = [s["command"] for s in spec.metadata["workflow_dag"]["steps"]]
     assert commands == ["Allclean", "gmsh", "gmshToFoam", "checkMesh", "cardiacFoam"]
@@ -60,6 +61,7 @@ def test_hex_is_still_the_default(tmp_path):
         dimensions=["3D"],
         number_cells=[10],
         dt_values=[0.00892857],
+        run_in_parallel=False,
     )
     commands = [s["command"] for s in spec.metadata["workflow_dag"]["steps"]]
     assert commands == ["blockMesh", "cardiacFoam"]

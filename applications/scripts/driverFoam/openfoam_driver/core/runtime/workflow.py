@@ -55,10 +55,12 @@ OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
         "decomposePar",
         "gmsh",
         "gmshToFoam",
+        "mpirun",
         "postProcess",
         "reconstructPar",
         "setExprFields",
         "topoSet",
+        "vtkUnstructuredToFoam",
     }
 )
 

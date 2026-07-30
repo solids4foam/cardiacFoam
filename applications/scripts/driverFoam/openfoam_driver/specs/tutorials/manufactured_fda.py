@@ -46,6 +46,7 @@ from ..common import (
 )
 from ...core.runtime.models import CaseConfig, TutorialSpec
 from ...core.runtime.mutators import update_foam_entry
+from ...core.runtime.parallel_execution import solve_steps
 from ..tet_mesh_provisioning import render_tet_geo
 
 # Stable driver-side names mapped to the literal OpenFOAM tokens -- "GaussLinear"
@@ -139,7 +140,13 @@ def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimens
     )
 
 
-def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str, object]:
+def _workflow_dag_for(
+    mesh_family: str,
+    dimensions_list: list[str],
+    *,
+    case_root: Path,
+    run_in_parallel: bool = False,
+) -> dict[str, object]:
     """Build this spec's workflow_dag, branching on mesh_family.
 
     mesh_family="hex" (default) is unchanged from before this kwarg existed.
@@ -147,42 +154,52 @@ def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str,
     the tet mesh with a Cartesian block. gmsh/gmshToFoam/checkMesh run as
     real workflow steps (executed only when run --strict/sweep-run actually
     runs), never inside apply_case/materialization.
+
+    run_in_parallel=True wraps the solve step with decomposePar/reconstructPar
+    via solve_steps() -- identical mechanism regardless of mesh_family, so
+    the mesh-generation steps above are unaffected either way.
     """
     if mesh_family == "tet":
-        return {
-            "steps": [
-                {"id": "clean", "command": "Allclean", "depends_on": []},
-                {
-                    "id": "gmsh",
-                    "command": "gmsh",
-                    # Bare "gmsh" with no args launches its GUI and hangs
-                    # forever instead of meshing anything (found via a real,
-                    # non-mocked sweep-run) -- these are the same args the
-                    # original bash scripts pass.
-                    "args": ["-3", "setup/mesh/tet/box.geo", "-o", "box.msh", "-format", "msh2"],
-                    "depends_on": ["clean"],
-                },
-                {
-                    "id": "gmshToFoam",
-                    "command": "gmshToFoam",
-                    "args": ["box.msh"],
-                    "depends_on": ["gmsh"],
-                },
-                {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
-                {"id": "solve", "command": "cardiacFoam", "depends_on": ["checkMesh"]},
-            ]
-        }
-    return {
-        "steps": [
+        mesh_steps = [
+            {"id": "clean", "command": "Allclean", "depends_on": []},
+            {
+                "id": "gmsh",
+                "command": "gmsh",
+                # Bare "gmsh" with no args launches its GUI and hangs
+                # forever instead of meshing anything (found via a real,
+                # non-mocked sweep-run) -- these are the same args the
+                # original bash scripts pass.
+                "args": ["-3", "setup/mesh/tet/box.geo", "-o", "box.msh", "-format", "msh2"],
+                "depends_on": ["clean"],
+            },
+            {
+                "id": "gmshToFoam",
+                "command": "gmshToFoam",
+                "args": ["box.msh"],
+                "depends_on": ["gmsh"],
+            },
+            {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
+        ]
+        solve_depends_on = ["checkMesh"]
+    else:
+        mesh_steps = [
             {
                 "id": "mesh",
                 "command": "blockMesh",
                 "args": ["-dict", f"system/blockMeshDict.{dimensions_list[-1]}"],
                 "depends_on": [],
             },
-            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
         ]
-    }
+        solve_depends_on = ["mesh"]
+
+    steps, _final_id = solve_steps(
+        solve_id="solve",
+        solve_command="cardiacFoam",
+        depends_on=solve_depends_on,
+        run_in_parallel=run_in_parallel,
+        case_root=case_root,
+    )
+    return {"steps": mesh_steps + steps}
 
 
 def _apply_case(
@@ -639,7 +656,10 @@ def make_spec(
         ),
         metadata={
             "notes": "Manufactured-solution convergence benchmark",
-            "workflow_dag": _workflow_dag_for(mesh_family, dimensions_list),
+            "workflow_dag": _workflow_dag_for(
+                mesh_family, dimensions_list,
+                case_root=case_root, run_in_parallel=run_in_parallel,
+            ),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,

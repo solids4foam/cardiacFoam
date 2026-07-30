@@ -107,6 +107,10 @@ def _make_spec(tmp_path, **overrides):
         "case_dir_name": "manufacturedSolutions/eikonalECG",
         "dimensions": ["3D"],
         "number_cells": [10],
+        # These tests are about mesh_family/gmsh-pipeline branching, not
+        # parallel execution -- keep them decoupled from run_in_parallel's
+        # decomposeParDict requirement (see parallel_execution.py).
+        "run_in_parallel": False,
         **overrides,
     }
     return make_spec(**kwargs)
@@ -149,6 +153,7 @@ def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
         mesh_family="tet",
         numerics_profile="eikonal_tet",
         grad_scheme="least_squares",
+        run_in_parallel=False,
     )
 
     with mock.patch("openfoam_driver.specs.tutorials.manufactured_eikonal_ecg.subprocess") as mock_subprocess:

@@ -36,6 +36,7 @@ from pathlib import Path
 from ...core.defaults import manufactured_fda_bath_bidomain as defaults
 from ...core.runtime.models import CaseConfig, TutorialSpec
 from ...core.runtime.mutators import update_foam_entry
+from ...core.runtime.parallel_execution import solve_steps
 from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
@@ -135,69 +136,90 @@ def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimens
         )
 
 
-def _workflow_dag_for(mesh_family: str, dimensions_list: list[str]) -> dict[str, object]:
+def _workflow_dag_for(
+    mesh_family: str,
+    dimensions_list: list[str],
+    *,
+    case_root: Path,
+    run_in_parallel: bool = False,
+) -> dict[str, object]:
     if mesh_family == "tet":
-        return {
-            "steps": [
-                {"id": "clean", "command": "Allclean", "depends_on": []},
-                {
-                    "id": "gmsh",
-                    "command": "gmsh",
-                    "args": [
-                        "-3",
-                        "setup/mesh/tet/three_domain_box.geo",
-                        "-o",
-                        "three_domain_box.msh",
-                        "-format",
-                        "msh2",
-                    ],
-                    "depends_on": ["clean"],
-                },
-                {
-                    "id": "gmshToFoam",
-                    "command": "gmshToFoam",
-                    "args": ["three_domain_box.msh"],
-                    "depends_on": ["gmsh"],
-                },
-                {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
-                {
-                    "id": "setConductivity",
-                    "command": "setTorsoOrganConductivityField",
-                    "depends_on": ["checkMesh"],
-                },
-                {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
-                # Reads the reconstructed final-time solution -- the live
-                # (potentially parallel-decomposed) verifier can't do the
-                # heart/bath fvMeshSubset + interface-face analysis itself
-                # (applications/utilities/bathBidomainInterfaceMetrics
-                # explicitly operates on "a reconstructed serial mesh",
-                # which only exists once solve has fully exited), so this is
-                # its own step rather than folded into the solve step.
-                {
-                    "id": "interfaceMetrics",
-                    "command": "bathBidomainInterfaceMetrics",
-                    "args": ["-latestTime"],
-                    "depends_on": ["solve"],
-                },
-            ]
-        }
-    return {
-        "steps": [
+        mesh_steps = [
+            {"id": "clean", "command": "Allclean", "depends_on": []},
             {
-                "id": "mesh",
-                "command": "blockMesh",
-                "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
-                "depends_on": [],
+                "id": "gmsh",
+                "command": "gmsh",
+                "args": [
+                    "-3",
+                    "setup/mesh/tet/three_domain_box.geo",
+                    "-o",
+                    "three_domain_box.msh",
+                    "-format",
+                    "msh2",
+                ],
+                "depends_on": ["clean"],
             },
-            {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
+            {
+                "id": "gmshToFoam",
+                "command": "gmshToFoam",
+                "args": ["three_domain_box.msh"],
+                "depends_on": ["gmsh"],
+            },
+            {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
             {
                 "id": "setConductivity",
                 "command": "setTorsoOrganConductivityField",
-                "depends_on": ["topoSet"],
+                "depends_on": ["checkMesh"],
             },
-            {"id": "solve", "command": "cardiacFoam", "depends_on": ["setConductivity"]},
         ]
-    }
+        solve_depends_on = ["setConductivity"]
+        steps, final_id = solve_steps(
+            solve_id="solve",
+            solve_command="cardiacFoam",
+            depends_on=solve_depends_on,
+            run_in_parallel=run_in_parallel,
+            case_root=case_root,
+        )
+        # Reads the reconstructed final-time solution -- the live
+        # (potentially parallel-decomposed) verifier can't do the
+        # heart/bath fvMeshSubset + interface-face analysis itself
+        # (applications/utilities/bathBidomainInterfaceMetrics
+        # explicitly operates on "a reconstructed serial mesh",
+        # which only exists once the solve step(s) have fully exited), so
+        # this is its own step rather than folded into the solve step.
+        # depends_on final_id (reconstructPar when parallel, solve
+        # otherwise), not the literal "solve" id, since the reconstructed
+        # mesh only exists after reconstructPar when parallel is enabled.
+        interface_metrics_step = {
+            "id": "interfaceMetrics",
+            "command": "bathBidomainInterfaceMetrics",
+            "args": ["-latestTime"],
+            "depends_on": [final_id],
+        }
+        return {"steps": mesh_steps + steps + [interface_metrics_step]}
+
+    mesh_steps = [
+        {
+            "id": "mesh",
+            "command": "blockMesh",
+            "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
+            "depends_on": [],
+        },
+        {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
+        {
+            "id": "setConductivity",
+            "command": "setTorsoOrganConductivityField",
+            "depends_on": ["topoSet"],
+        },
+    ]
+    steps, _final_id = solve_steps(
+        solve_id="solve",
+        solve_command="cardiacFoam",
+        depends_on=["setConductivity"],
+        run_in_parallel=run_in_parallel,
+        case_root=case_root,
+    )
+    return {"steps": mesh_steps + steps}
 
 
 def _apply_case(
@@ -610,7 +632,10 @@ def make_spec(
         ),
         metadata={
             "notes": "FDA bath-bidomain manufactured-solution convergence benchmark",
-            "workflow_dag": _workflow_dag_for(mesh_family, dimensions_list),
+            "workflow_dag": _workflow_dag_for(
+                mesh_family, dimensions_list,
+                case_root=case_root, run_in_parallel=run_in_parallel,
+            ),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "piecewise_sweep": piecewise_sweep,
