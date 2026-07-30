@@ -29,6 +29,8 @@ Author
 #define pseudoECGSolver_H
 
 #include "ecgSolver.H"
+#include "OFstream.H"
+#include "autoPtr.H"
 #include "overrideTypeName.H"
 
 namespace Foam
@@ -45,18 +47,27 @@ class pseudoECGSolver
     bool leadVectorsCalculated_;
     List<List<vector>> leadVectors_;
 
+    //- True when a 'sampling' sub-dict is present: the solver then owns its
+    //  own time-series file, written at deltaT_ independently of writeInterval.
+    bool hasOwnSampling_;
+    scalar startTime_;
+    scalar endTime_;
+    scalar deltaT_;
+    scalar nextSampleTime_;
+    autoPtr<OFstream> outputPtr_;
+
     void calculateLeadVectors(const ecgDomain& domain);
 
 public:
 
     OverrideTypeName("pseudoECG");
 
-    explicit pseudoECGSolver(const dictionary& dict)
-    :
-        sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
-        reportedConductivitySource_(false),
-        leadVectorsCalculated_(false)
-    {}
+    explicit pseudoECGSolver(const dictionary& dict);
+
+    virtual bool writesOwnTimeSeries() const override
+    {
+        return hasOwnSampling_;
+    }
 
     virtual void solve
     (

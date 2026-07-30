@@ -20,6 +20,7 @@ License
 #include "pseudoECGSolver.H"
 
 #include "ecgDomain.H"
+#include "ecgModelIO.H"
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
@@ -31,6 +32,39 @@ namespace Foam
 defineTypeNameWithName(pseudoECGSolver, "pseudoECG");
 defineDebugSwitch(pseudoECGSolver, 0);
 addToRunTimeSelectionTable(ecgSolver, pseudoECGSolver, dictionary);
+
+
+pseudoECGSolver::pseudoECGSolver(const dictionary& dict)
+:
+    sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
+    reportedConductivitySource_(false),
+    leadVectorsCalculated_(false),
+    hasOwnSampling_(false),
+    startTime_(0.0),
+    endTime_(0.0),
+    deltaT_(0.0),
+    nextSampleTime_(0.0),
+    outputPtr_()
+{
+    if (const dictionary* samplingDictPtr = dict.findDict("sampling"))
+    {
+        hasOwnSampling_ = true;
+
+        const dictionary& samplingDict = *samplingDictPtr;
+        startTime_ = samplingDict.get<scalar>("start");
+        endTime_ = samplingDict.get<scalar>("end");
+        deltaT_ = samplingDict.get<scalar>("deltaT");
+
+        if (deltaT_ <= 0.0)
+        {
+            FatalErrorInFunction
+                << "pseudoECG sampling.deltaT must be positive."
+                << exit(FatalError);
+        }
+
+        nextSampleTime_ = startTime_;
+    }
+}
 
 
 void pseudoECGSolver::calculateLeadVectors(const ecgDomain& domain)
@@ -135,6 +169,39 @@ void pseudoECGSolver::solve
             values[eI] *= norm;
         }
     }
+
+    if (!hasOwnSampling_)
+    {
+        return;
+    }
+
+    const scalar currentTime = mesh.time().value();
+
+    domain.recordVerification(currentTime, values);
+
+    if (currentTime + SMALL < startTime_ || currentTime > endTime_ + SMALL)
+    {
+        return;
+    }
+
+    if (currentTime + SMALL < nextSampleTime_)
+    {
+        return;
+    }
+
+    if (!outputPtr_.valid())
+    {
+        outputPtr_ =
+            ecgModelIO::openTimeSeries
+            (
+                mesh.time().globalPath()/"postProcessing",
+                "pseudoECG.dat",
+                domain.electrodeNames()
+            );
+    }
+
+    ecgModelIO::writeRow(outputPtr_.ref(), currentTime, values);
+    nextSampleTime_ += deltaT_;
 }
 
 } // End namespace Foam
