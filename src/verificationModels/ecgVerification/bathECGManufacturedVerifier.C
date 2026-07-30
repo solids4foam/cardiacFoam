@@ -293,7 +293,7 @@ void bathECGManufacturedVerifier::record(const List<scalar>& numericValues)
 
     const scalarField phiEValues =
         phiEOnVerifierMesh(phiE, stateProvider_, mesh_);
-    const auto fieldNorms = computeNorms(phiEValues, phiEExact);
+    const auto fieldNorms = computeNorms(mesh_, phiEValues, phiEExact);
 
     ++sampleCount_;
     fieldErrorL1Sum_ += fieldNorms.first().first();

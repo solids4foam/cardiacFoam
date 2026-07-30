@@ -176,9 +176,11 @@ void manufacturedFDAMonodomainVerifier::postProcess
     computeManufacturedV(VmExact, X, Y, Z, t, dimension);
     computeManufacturedU(u1Exact, u2Exact, u3Exact, X, Y, Z, t, dimension);
 
-    const auto VmNorms = computeNorms(Vm.primitiveField(), VmExact);
-    const auto u1Norms = computeNorms(fields[u1Idx].primitiveField(), u1Exact);
-    const auto u2Norms = computeNorms(fields[u2Idx].primitiveField(), u2Exact);
+    const auto VmNorms = computeNorms(mesh, Vm.primitiveField(), VmExact);
+    const auto u1Norms =
+        computeNorms(mesh, fields[u1Idx].primitiveField(), u1Exact);
+    const auto u2Norms =
+        computeNorms(mesh, fields[u2Idx].primitiveField(), u2Exact);
 
     const fileName outputDir(mesh.time().globalPath()/"postProcessing");
     mkDir(outputDir);

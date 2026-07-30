@@ -93,6 +93,20 @@ public:
         (void)sourceField;
     }
 
+    //- Add a continuous manufactured PDE source after the ordinary external
+    //  stimulus has been reset and before domain coupling deposits current.
+    virtual void addManufacturedPdeSource
+    (
+        volScalarField& sourceField,
+        const volTensorField& conductivity,
+        const scalar evaluationTime
+    ) const
+    {
+        (void)sourceField;
+        (void)conductivity;
+        (void)evaluationTime;
+    }
+
     virtual void bindBidomainField
     (
         volScalarField& phiE,

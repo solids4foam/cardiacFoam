@@ -323,7 +323,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const scalarField& u2Values = fields[u2Field].primitiveField();
     const scalarField& u3Values = fields[u3Field].primitiveField();
 
-    const auto VmNorms = computeNorms(VmValues, VmExact);
+    const auto VmNorms = computeNorms(mesh, VmValues, VmExact);
 
     const fvMesh& phiEMesh = phiEPtr_->mesh();
     const vectorField& phiECentres = phiEMesh.C().primitiveField();
@@ -331,7 +331,8 @@ void manufacturedFDABathBidomainVerifier::postProcess
     scalarField phiEExact;
     computeManufacturedFDABathPhiE(phiEExact, phiEX, t, k_, alpha_, se);
 
-    const auto phiENorms = computeNorms(phiEValues, phiEExact);
+    const auto phiENorms =
+        computeNorms(phiEMesh, phiEValues, phiEExact);
 
     auto phiINorms = nanNorms();
     if (phiEValues.size() == VmValues.size() && &phiEMesh == &mesh)
@@ -342,7 +343,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
             phiIValues[i] = VmValues[i] + phiEValues[i];
         }
 
-        phiINorms = computeNorms(phiIValues, phiIExact);
+        phiINorms = computeNorms(mesh, phiIValues, phiIExact);
     }
     else if (phiEHeartCellMapPtr_)
     {
@@ -374,11 +375,11 @@ void manufacturedFDABathBidomainVerifier::postProcess
             phiIValues[i] = VmValues[i] + phiEValues[baseCellI];
         }
 
-        phiINorms = computeNorms(phiIValues, phiIExact);
+        phiINorms = computeNorms(mesh, phiIValues, phiIExact);
     }
-    const auto u1Norms = computeNorms(u1Values, u1Exact);
-    const auto u2Norms = computeNorms(u2Values, u2Exact);
-    const auto u3Norms = computeNorms(u3Values, u3Exact);
+    const auto u1Norms = computeNorms(mesh, u1Values, u1Exact);
+    const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
+    const auto u3Norms = computeNorms(mesh, u3Values, u3Exact);
 
     const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);

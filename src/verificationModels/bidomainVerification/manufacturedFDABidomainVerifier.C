@@ -269,13 +269,15 @@ void manufacturedFDABidomainVerifier::postProcess
     phiEExactGauge += phiEGaugeOffset;
     phiIExactGauge += phiEGaugeOffset;
 
-    const auto VmNorms = computeNorms(VmValues, VmExact);
-    const auto phiENorms = computeNorms(phiEValues, phiEExact);
-    const auto phiEGaugeNorms = computeNorms(phiEValues, phiEExactGauge);
-    const auto phiINorms = computeNorms(phiIValues, phiIExact);
-    const auto phiIGaugeNorms = computeNorms(phiIValues, phiIExactGauge);
-    const auto u1Norms = computeNorms(u1Values, u1Exact);
-    const auto u2Norms = computeNorms(u2Values, u2Exact);
+    const auto VmNorms = computeNorms(mesh, VmValues, VmExact);
+    const auto phiENorms = computeNorms(mesh, phiEValues, phiEExact);
+    const auto phiEGaugeNorms =
+        computeNorms(mesh, phiEValues, phiEExactGauge);
+    const auto phiINorms = computeNorms(mesh, phiIValues, phiIExact);
+    const auto phiIGaugeNorms =
+        computeNorms(mesh, phiIValues, phiIExactGauge);
+    const auto u1Norms = computeNorms(mesh, u1Values, u1Exact);
+    const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
 
     const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);

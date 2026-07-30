@@ -214,7 +214,8 @@ void manufacturedEikonalVerifier::postProcess
         exact[cellI] = manufacturedEikonalTau(centres[cellI], k);
     }
 
-    const auto norms = computeNorms(activationTime.primitiveField(), exact);
+    const auto norms =
+        computeNorms(mesh_, activationTime.primitiveField(), exact);
 
     if (writeErrorField_)
     {

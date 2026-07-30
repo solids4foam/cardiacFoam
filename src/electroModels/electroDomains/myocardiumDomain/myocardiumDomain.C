@@ -510,12 +510,28 @@ void myocardiumDomain::advance(scalar t0, scalar dt)
 
 void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
 {
-    (void)dt;
     // Reset the source field and apply the 3D external box stimulus.
     // Called by the advance scheme BEFORE any domain coupling deposits
     // current into sourceField_.  Keeping this here ensures that coupling
     // current added by preparePrimaryCoupling survives into the FVM solve.
     updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
+
+    if (verificationModelPtr_)
+    {
+        const volTensorField* conductivityPtr =
+            diffusionSolverPtr_->conductivityPtr();
+
+        if (conductivityPtr)
+        {
+            verificationModelPtr_->addManufacturedPdeSource
+            (
+                sourceField_,
+                *conductivityPtr,
+                t0 + dt
+            );
+        }
+    }
+
     implicitSourceCoeff_ = dimensionedScalar
     (
         "zero",

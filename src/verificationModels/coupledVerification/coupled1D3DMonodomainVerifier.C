@@ -68,16 +68,18 @@ SourceStats computeSourceStats
     const scalarField& volumes = mesh.V();
 
     SourceStats stats;
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
+    scalar weightedAbs = 0.0;
+    scalar weightedSq = 0.0;
+    scalar totalVolume = 0.0;
 
     forAll(values, i)
     {
         const scalar source = values[i];
         stats.minValue = min(stats.minValue, source);
         stats.maxValue = max(stats.maxValue, source);
-        sumAbs += mag(source);
-        sumSq += source*source;
+        weightedAbs += volumes[i]*mag(source);
+        weightedSq += volumes[i]*source*source;
+        totalVolume += volumes[i];
         stats.total += source*volumes[i];
         stats.totalAbs += mag(source)*volumes[i];
 
@@ -89,16 +91,18 @@ SourceStats computeSourceStats
 
     reduce(stats.minValue, minOp<scalar>());
     reduce(stats.maxValue, maxOp<scalar>());
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
+    reduce(weightedAbs, sumOp<scalar>());
+    reduce(weightedSq, sumOp<scalar>());
+    reduce(totalVolume, sumOp<scalar>());
     reduce(stats.total, sumOp<scalar>());
     reduce(stats.totalAbs, sumOp<scalar>());
     reduce(stats.nonZero, sumOp<label>());
 
-    const label totalCells = globalManufacturedCellCount(mesh);
-    const scalar denom = max(scalar(1), scalar(totalCells));
-    stats.l1 = sumAbs/denom;
-    stats.l2 = Foam::sqrt(sumSq/denom);
+    if (totalVolume > VSMALL)
+    {
+        stats.l1 = weightedAbs/totalVolume;
+        stats.l2 = Foam::sqrt(weightedSq/totalVolume);
+    }
 
     return stats;
 }

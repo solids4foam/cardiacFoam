@@ -279,10 +279,14 @@ void manufacturedElectromechanicsVerifier::postProcess
 
     computeNumericalLambda(lambdaNum, D);
 
-    const auto VmNorms = computeNorms(Vm.primitiveField(), VmExact);
-    const auto DNorms = computeNorms(D.primitiveField(), DExact);
-    const auto lambdaNorms = computeNorms(lambdaNum, lambdaExact);
-    const auto TaNorms = computeNorms(Ta.primitiveField(), TaExact);
+    const auto VmNorms =
+        computeNorms(Vm.mesh(), Vm.primitiveField(), VmExact);
+    const auto DNorms =
+        computeNorms(D.mesh(), D.primitiveField(), DExact);
+    const auto lambdaNorms =
+        computeNorms(D.mesh(), lambdaNum, lambdaExact);
+    const auto TaNorms =
+        computeNorms(Ta.mesh(), Ta.primitiveField(), TaExact);
 
     if (Pstream::master())
     {

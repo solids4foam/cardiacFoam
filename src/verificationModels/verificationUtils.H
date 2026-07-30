@@ -174,6 +174,78 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
 }
 
 
+//- Compute parallel, volume-weighted L1 and L2 error norms, together with
+//  the (unweighted) Linf norm, for cell-centred finite-volume fields.
+//
+//  L1 = integral(|e| dV)/integral(dV)
+//  L2 = sqrt(integral(e^2 dV)/integral(dV))
+//
+//  This normalization makes the result an RMS-type field error and leaves
+//  the values unchanged on equal-volume meshes.  The mesh-free overload
+//  above remains available for graph/node data without control volumes.
+template<class FieldType1, class FieldType2>
+inline Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
+(
+    const fvMesh& mesh,
+    const FieldType1& numeric,
+    const FieldType2& exact
+)
+{
+    if
+    (
+        numeric.size() != exact.size()
+     || numeric.size() != mesh.nCells()
+    )
+    {
+        FatalErrorInFunction
+            << "Cannot compute volume-weighted manufactured norms: size "
+            << "mismatch (numeric=" << numeric.size()
+            << ", exact=" << exact.size()
+            << ", mesh cells=" << mesh.nCells() << ")."
+            << exit(FatalError);
+    }
+
+    const scalarField& volumes = mesh.V();
+    scalar weightedAbs = 0.0;
+    scalar weightedSq = 0.0;
+    scalar totalVolume = 0.0;
+    scalar maxAbs = 0.0;
+
+    forAll(numeric, i)
+    {
+        const scalar diff = Foam::mag(numeric[i] - exact[i]);
+        weightedAbs += volumes[i]*diff;
+        weightedSq += volumes[i]*diff*diff;
+        totalVolume += volumes[i];
+        maxAbs = max(maxAbs, diff);
+    }
+
+    reduce(weightedAbs, sumOp<scalar>());
+    reduce(weightedSq, sumOp<scalar>());
+    reduce(totalVolume, sumOp<scalar>());
+    reduce(maxAbs, maxOp<scalar>());
+
+    if (totalVolume <= VSMALL)
+    {
+        return Tuple2<Tuple2<scalar, scalar>, scalar>
+        (
+            Tuple2<scalar, scalar>(0.0, 0.0),
+            maxAbs
+        );
+    }
+
+    return Tuple2<Tuple2<scalar, scalar>, scalar>
+    (
+        Tuple2<scalar, scalar>
+        (
+            weightedAbs/totalVolume,
+            Foam::sqrt(weightedSq/totalVolume)
+        ),
+        maxAbs
+    );
+}
+
+
 //- Human-readable dimension tag ("1D", "2D", "3D", or "unknown").
 inline word dimensionName(const label dimension)
 {
