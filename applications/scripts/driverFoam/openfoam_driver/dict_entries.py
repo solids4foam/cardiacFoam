@@ -881,9 +881,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.type',
             phases=frozenset({'solver'}),
             description='Optional myocardium-side verification hook selector.',
-            source_refs=('src/electroModels/core/verificationModels/electroVerificationModel.C', 'src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H', 'src/verificationModels/bidomainVerification/manufacturedFDABidomainVerifier.H', 'src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.H', 'src/verificationModels/eikonalVerification/manufacturedEikonalVerifier.H'),
+            source_refs=('src/electroModels/core/verificationModels/electroVerificationModel.C', 'src/verificationModels/monodomainVerification/manufacturedFDAMonodomainVerifier.H', 'src/verificationModels/bidomainVerification/manufacturedFDABidomainVerifier.H', 'src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.H', 'src/verificationModels/eikonalVerification/manufacturedEikonalVerifier.H', 'src/verificationModels/monodomainVerification/manufacturedAnisotropicMonodomainVerifier.H'),
             value_kind='enum',
-            enum_values=('manufacturedFDAMonodomainVerifier', 'manufacturedFDABidomainVerifier', 'manufacturedFDABathBidomainVerifier', 'manufacturedEikonalVerifier'),
+            enum_values=('manufacturedFDAMonodomainVerifier', 'manufacturedFDABidomainVerifier', 'manufacturedFDABathBidomainVerifier', 'manufacturedEikonalVerifier', 'manufacturedAnisotropicMonodomainVerifier'),
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.writeErrorField',
