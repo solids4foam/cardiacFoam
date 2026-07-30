@@ -38,6 +38,9 @@ from ...specs.common import tutorials_root_default
 from ...specs.tutorials.manufactured_fda_bidomain import (
     make_spec as make_manufactured_fda_bidomain_spec,
 )
+from ...specs.tutorials.manufactured_fda_rotated_anisotropy import (
+    make_spec as make_manufactured_fda_rotated_anisotropy_spec,
+)
 from ...specs.tutorials.manufactured_fda_bath_bidomain import (
     make_spec as make_manufactured_fda_bath_bidomain_spec,
 )
@@ -73,6 +76,8 @@ SPEC_FACTORIES = {
     "manufacturedfda": make_manufactured_fda_spec,
     "manufacturedFDABidomain": make_manufactured_fda_bidomain_spec,
     "manufacturedfdabidomain": make_manufactured_fda_bidomain_spec,
+    "manufacturedRotatedAnisotropy": make_manufactured_fda_rotated_anisotropy_spec,
+    "manufacturedrotatedanisotropy": make_manufactured_fda_rotated_anisotropy_spec,
     "manufacturedFDABathBidomain": make_manufactured_fda_bath_bidomain_spec,
     "manufacturedfdabathbidomain": make_manufactured_fda_bath_bidomain_spec,
     "manufacturedEikonalECG": make_manufactured_eikonal_ecg_spec,
@@ -95,6 +100,7 @@ REGISTERED_TUTORIALS = (
     "niederer2012",
     "manufacturedFDA",
     "manufacturedFDABidomain",
+    "manufacturedRotatedAnisotropy",
     "manufacturedFDABathBidomain",
     "manufacturedEikonalECG",
     "manufacturedMonodomainTotalLagrangianEM",
