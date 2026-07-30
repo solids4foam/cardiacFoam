@@ -181,6 +181,40 @@ def _run_direct(
     )
 
 
+def _split_command(command: str | Sequence[str]) -> list[str]:
+    return command.split() if isinstance(command, str) else list(command)
+
+
+def _workflow_dag_for(
+    *,
+    solver_command: str | Sequence[str] | None,
+    pre_solve_commands: Sequence[str | Sequence[str]],
+) -> dict[str, Any]:
+    """Build the workflow_dag that the strict executor actually runs.
+
+    solver_command=None means run_case uses the run-script/Allrun
+    convention (_run_case) -- this is the registry's generic case-folder
+    fallback for an arbitrary discovered directory with its own Allrun
+    script, unrelated to build_and_launch. Otherwise run_case uses
+    _run_direct (pre_solve_commands then solver_command as literal
+    subprocess argv), so the dag must mirror that exactly -- this is what
+    build_and_launch's non-dry path executes."""
+    if solver_command is None:
+        return {"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]}
+
+    steps: list[dict[str, Any]] = []
+    depends_on: list[str] = []
+    for index, raw_cmd in enumerate(pre_solve_commands):
+        cmd = _split_command(raw_cmd)
+        step_id = f"pre_{index}"
+        steps.append({"id": step_id, "command": cmd[0], "args": cmd[1:], "depends_on": depends_on})
+        depends_on = [step_id]
+
+    solve_cmd = _split_command(solver_command)
+    steps.append({"id": "solve", "command": solve_cmd[0], "args": solve_cmd[1:], "depends_on": depends_on})
+    return {"steps": steps}
+
+
 def _collect_outputs(case_root: Path, output_dir: Path, *, patterns: Sequence[str]) -> None:
     for pattern in patterns:
         collect_outputs_by_pattern(case_root, output_dir, pattern=pattern)
@@ -312,11 +346,10 @@ def make_spec(
         ),
         metadata={
             "notes": "Generic case runner for arbitrary tutorial folders.",
-            "workflow_dag": {
-                "steps": [
-                    {"id": "run", "command": "Allrun", "depends_on": []},
-                ]
-            },
+            "workflow_dag": _workflow_dag_for(
+                solver_command=solver_command,
+                pre_solve_commands=tuple(pre_solve_commands or ()),
+            ),
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),
             "run_script_relpath": str(run_script_path),

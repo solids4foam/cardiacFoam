@@ -815,7 +815,11 @@ def build_and_launch(
         }
 
     from openfoam_driver.specs.tutorials.generic_case import make_spec
-    from openfoam_driver.core.runtime.engine import DriverEngine
+    from openfoam_driver.core.runtime.execution_context import resolve_execution_context
+    from openfoam_driver.core.runtime.openfoam_environment import load_openfoam_environment
+    from openfoam_driver.core.runtime.workflow import normalize_workflow_dag, validate_workflow_commands
+    from openfoam_driver.core.runtime.workflow_orchestrator import run_workflow
+    from openfoam_driver.core.runtime.workflow_state import initial_workflow_state
 
     spec = make_spec(
         tutorials_root=case_dir.parent,
@@ -824,13 +828,25 @@ def build_and_launch(
         pre_solve_commands=list(pre_solve_commands or ()),
         openfoam_bashrc=openfoam_bashrc,
     )
-    engine = DriverEngine(spec=spec, requested_action="sim")
-    results = engine.run_simulations()
+    execution_context = resolve_execution_context(spec)
+    workflow_dag, _dag_diagnostics = normalize_workflow_dag(spec.metadata.get("workflow_dag"))
+    command_diagnostics = validate_workflow_commands(workflow_dag)
+    if command_diagnostics:
+        raise ValueError(
+            "build_and_launch's workflow_dag failed command validation: "
+            + "; ".join(d.message for d in command_diagnostics)
+        )
+
+    env = load_openfoam_environment(explicit_bashrc=openfoam_bashrc).env
+    outcome = run_workflow(
+        workflow_dag,
+        initial_workflow_state(workflow_dag),
+        case_root=execution_context.case_root,
+        output_dir=execution_context.output_dir,
+        env=env,
+    )
     return {
         "case_dir": str(case_dir),
-        "status": "complete",
-        "results": [
-            {"case_id": r.case_id, "status": r.status, "duration_s": r.duration_s}
-            for r in results
-        ],
+        "status": "complete" if outcome.state.status == "completed" else "failed",
+        "workflow_state": outcome.state.to_json(),
     }

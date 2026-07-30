@@ -106,9 +106,13 @@ class TestIntrospection(unittest.TestCase):
         self.assertIn("Allrun", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("README.md", payload["tutorial_contract"]["conditional_files"])
         self.assertIn("ionicModel", payload["tutorial_contract"]["case_parameters"])
-        self.assertIn("launch", payload)
-        self.assertEqual(payload["launch"]["sim"]["action"], "sim")
-        self.assertTrue(payload["launch"]["all"]["manifest_path"].endswith("run_manifest.json"))
+        # strict_launch is the canonical way to actually execute this entry.
+        self.assertIn("strict_launch", payload)
+        self.assertEqual(payload["strict_launch"]["action"], "run")
+        self.assertIn("--strict", payload["strict_launch"]["command"])
+        self.assertIn("singleCell", payload["strict_launch"]["command"])
+        self.assertTrue(payload["strict_launch"]["case_root"])
+        self.assertTrue(payload["strict_launch"]["output_dir"])
 
     def test_describe_tutorial_ionic_model_catalog_present_and_complete(self) -> None:
         payload = describe_tutorial(
@@ -202,7 +206,7 @@ class TestIntrospection(unittest.TestCase):
         payload = json.loads(stream.getvalue())
         self.assertEqual(payload["resolved_name"], "singleCell")
         self.assertIn("common_override_keys", payload)
-        self.assertIn("launch", payload)
+        self.assertIn("strict_launch", payload)
         self.assertEqual(payload["entry_kind"], "registered_tutorial")
 
     def test_cli_describe_requires_entry_name(self) -> None:

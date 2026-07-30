@@ -8,7 +8,7 @@ before driving the orchestrator.
 
 | Action | Function | Module |
 |---|---|---|
-| Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)`, `describe_launch_matrix()` | `openfoam_driver.introspection` |
+| Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)` | `openfoam_driver.introspection` |
 | Build a non-mutating strict launch contract | `strict_plan(...)` | `openfoam_driver.strict_planning` |
 | Execute an agent-authored RunDocument | `foamctl run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
@@ -17,11 +17,9 @@ before driving the orchestrator.
 | Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.specs.validation` |
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.specs.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.specs.dict_builder` |
-| Build + launch a legacy one-shot run | `build_and_launch(...)` | `openfoam_driver.specs.dict_builder` |
-| Run a registered tutorial through the legacy engine | `DriverEngine(spec=..., requested_action=...).run_simulations()` | `openfoam_driver.core.runtime.engine` |
-| Poll legacy engine progress | Read `run_manifest.json` (atomic), tail `action_events.jsonl` (one JSON per line) | `<output_dir>/` |
-| Locate legacy predicted outputs | Read `artifacts_manifest.json` (sidecar, atomic) | `<output_dir>/` |
-| Verify legacy outputs vs predictions | Read `artifacts_realized.json` (written at terminal status) | `<output_dir>/` |
+| Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.specs.dict_builder` |
+| Locate predicted outputs | Read `artifacts_manifest.json` (sidecar, atomic) | `<output_dir>/` |
+| Verify outputs vs predictions | Read `artifacts_realized.json` (written at terminal status) | `<output_dir>/` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
 | Plan/run a parameter sweep | `foamctl sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
 
@@ -167,7 +165,7 @@ result = build_and_launch(
     physics_selectors={"type": "electroModel"},
     case_dir="/tmp/my_run/case",
 )
-print(result)  # {"case_dir": ..., "status": "complete", "results": [...]}
+print(result)  # {"case_dir": ..., "status": "complete", "workflow_state": {...}}
 ```
 
 That single call:
@@ -175,9 +173,12 @@ That single call:
 1. Calls `build_electro_properties(...)` and `build_physics_properties(...)`.
 2. Runs the validator on both — raises `ValueError` if your selectors break a structured constraint.
 3. Writes `case/constant/electroProperties` and `case/constant/physicsProperties`.
-4. Constructs a `generic_case` spec pointing at the case directory.
-5. Launches `DriverEngine.run_simulations()`.
-6. Returns the per-case results.
+4. Constructs a `generic_case` spec pointing at the case directory, whose
+   `workflow_dag` mirrors `pre_solve_commands`/`solver_command` exactly.
+5. Runs that workflow_dag to completion through the same strict executor
+   `run --strict` uses (`run_workflow`), validating every command against
+   the allowlist first.
+6. Returns the final `workflow_state` (per-step status, logs, exit codes).
 
 ## Sweeping a parameter grid
 

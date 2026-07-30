@@ -676,11 +676,14 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
                     pre_solve_commands=["vtkUnstructuredToFoam"],
                 )
             calls = mock_run.call_args_list
-            self.assertGreaterEqual(len(calls), 2)
-            first_args = calls[0].args[0]
-            solver_args = calls[-1].args[0]
-            self.assertIn("vtkUnstructuredToFoam", first_args)
-            self.assertIn("cardiacFoam", solver_args)
+            # calls[0] is now the strict path's own environment load (sources
+            # the OpenFOAM bashrc to capture env vars, same as every other
+            # run --strict invocation does) -- find the actual step calls by
+            # content rather than a fixed index.
+            self.assertGreaterEqual(len(calls), 3)
+            pre_solve_index = next(i for i, c in enumerate(calls) if "vtkUnstructuredToFoam" in c.args[0])
+            solver_index = next(i for i, c in enumerate(calls) if "cardiacFoam" in c.args[0])
+            self.assertLess(pre_solve_index, solver_index)
 
     def test_no_pre_solve_calls_only_solver(self) -> None:
         import subprocess
@@ -699,8 +702,10 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
                     case_dir=case_dir,
                 )
             calls = mock_run.call_args_list
-            self.assertEqual(len(calls), 1)
-            self.assertIn("cardiacFoam", calls[0].args[0])
+            # calls[0] is the strict path's own environment load (sources the
+            # OpenFOAM bashrc), calls[1] is the solve step itself.
+            self.assertEqual(len(calls), 2)
+            self.assertIn("cardiacFoam", calls[-1].args[0])
 
 
 class TestParseElectroProperties(unittest.TestCase):

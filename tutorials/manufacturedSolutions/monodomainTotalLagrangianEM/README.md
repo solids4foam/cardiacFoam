@@ -94,7 +94,7 @@ This case also supports the same driverFoam-style refinement workflow used by
 the other manufactured tutorials:
 
 ```bash
-python3 -m applications.scripts.driverFoam.openfoam_driver all --entry manufacturedMonodomainTotalLagrangianEM
+python3 -m applications.scripts.driverFoam.openfoam_driver run --strict --entry manufacturedMonodomainTotalLagrangianEM
 ```
 
 The refinement sweep keeps the monodomain manufactured pattern:

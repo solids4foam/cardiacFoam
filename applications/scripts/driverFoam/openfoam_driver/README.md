@@ -7,7 +7,7 @@ workflow-case execution, and post-processing.
 
 ```text
 openfoam_driver/
-├── cli.py                          # CLI entrypoint (plan/step/run/describe/sim/post/all)
+├── cli.py                          # CLI entrypoint (plan/step/run/describe/sweep-plan/sweep-run)
 ├── strict_planning.py              # strict preflight contract report
 ├── core/
 │   ├── runtime/
@@ -15,9 +15,9 @@ openfoam_driver/
 │   │   ├── workflow.py            # workflow DAG normalization/validation
 │   │   ├── workflow_state.py      # persisted step state model
 │   │   ├── workflow_runner.py     # one-step strict subprocess runner
+│   │   ├── workflow_orchestrator.py # runs a workflow_dag to completion
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
-│   │   ├── registry.py            # tutorial name -> make_spec factory
-│   │   └── engine.py              # shared simulation/postprocess engine
+│   │   └── registry.py            # tutorial name -> make_spec factory
 │   └── defaults/                  # per-tutorial default parameters
 ├── specs/
 │   ├── common.py                  # mutators/path helpers
@@ -55,7 +55,7 @@ This keeps all tutorial workflows on one engine while allowing per-tutorial swee
 In addition to these curated specs, the driver can also run:
 
 - `genericCase` / `randomCase` with `case_dir_name` supplied in config
-- any existing case folder directly, for example `foamctl sim --entry ECG`
+- any existing case folder directly, for example `foamctl run --strict --entry ECG`
 
 ## Install and run
 
@@ -69,31 +69,27 @@ Run examples:
 
 ```bash
 # installed entrypoints
-foamctl all --entry niederer2012
-foamctl sim --entry manufacturedFDA --dry-run
-foamctl sim --entry manufacturedFDABidomain --dry-run
 foamctl plan --strict --entry singleCell
 foamctl run --strict --entry singleCell
 foamctl step --strict --entry singleCell --step solve
-driverFoam sim --entry singleCell
+foamctl run --strict --entry niederer2012
 
 # module invocation
-python3 -m openfoam_driver all --entry singleCell
+python3 -m openfoam_driver run --strict --entry singleCell
 python3 -m openfoam_driver describe --entry singleCell
 
 # repo-local wrapper
-applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
+applications/scripts/driverFoam/bin/driverFoam run --strict --entry ECG
 ```
 
 ## CLI actions
 
-- `sim` : apply and run all resolved cases
-- `post`: run only post-processing hook
-- `all` : `sim` then `post`
-- `describe` : print machine-readable entry/spec metadata as JSON
 - `plan` : print a non-mutating strict machine-readable launch contract as JSON
 - `step` : execute exactly one normalized strict-plan workflow step
 - `run` : execute normalized strict-plan workflow steps until completion or failure
+- `describe` : print machine-readable entry/spec metadata as JSON
+- `sweep-plan` : dry-run every case in a `sweep.json` and report readiness
+- `sweep-run` : materialize and run every case in a `sweep.json`
 
 Useful flags:
 
@@ -110,8 +106,8 @@ The `describe` action resolves the requested entry and prints:
 - resolved case/setup/output paths
 - the resolved cases for the current configuration
 - the grouped dict-entry catalog for `physicsProperties` and `electroProperties`
-- the launch plan for `sim`, `post`, and `all`, including the exact driver
-  command and expected manifest path
+- `strict_launch`: the `run --strict --entry ...` command for this entry,
+  including its case/output paths
 
 ## Strict autonomous contract
 

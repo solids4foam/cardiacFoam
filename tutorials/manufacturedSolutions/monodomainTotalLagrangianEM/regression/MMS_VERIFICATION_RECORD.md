@@ -80,7 +80,7 @@ initialisation (restored 2nd order through N=40 before the active stall was unde
   `export SOLIDS4FOAM_INST_DIR=$PWD/modules/solids4foam; export FORCE_LIGHTWEIGHT_PHYSICSMODEL=0`.
 - Build: `source /Volumes/OpenFOAM-v2412/etc/bashrc`; build modules s4f via its
   `./Allwmake` (`S4F_NO_FILE_FIXES=1`); then cardiacFoam `./Allwmake` (full mode).
-- Run sweep: `PYTHONPATH=$PWD/applications/scripts/driverFoam python3 -m openfoam_driver all
+- Run sweep: `PYTHONPATH=$PWD/applications/scripts/driverFoam python3 -m openfoam_driver run --strict
   --entry manufacturedMonodomainTotalLagrangianEM [--config cfg.json]`. Spec defaults are
   3D x {10,20,40}; the case `driver_config.json` and a `--config` with
   `number_cells/dt_values/dimensions` add 80.

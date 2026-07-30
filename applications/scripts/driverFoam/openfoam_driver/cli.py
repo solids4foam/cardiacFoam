@@ -32,7 +32,6 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .core.runtime.engine import DriverEngine
 from .core.runtime.failure_context import build_failure_context
 from .core.runtime.openfoam_environment import load_openfoam_environment
 from .core.runtime.remediation import build_candidate_remediations
@@ -40,7 +39,7 @@ from .core.runtime.remediation_audit import append_remediation_record
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
-from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials, load_entry_spec
+from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials
 from .core.runtime.sweep_runner import sweep_plan, sweep_run
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
@@ -448,10 +447,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=[
-            "sim", "post", "all", "describe", "plan", "step", "run",
-            "sweep-plan", "sweep-run",
-        ],
+        choices=["describe", "plan", "step", "run", "sweep-plan", "sweep-run"],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -612,7 +608,6 @@ def _normalize_spec_overrides(overrides: dict) -> dict:
 
 
 _FLAG_ERRORS_BY_ACTION = {
-    "post": (("dry_run", "--dry-run is not valid with action=post"),),
     "describe": (
         ("dry_run", "--dry-run is not valid with action=describe"),
         ("continue_on_error", "--continue-on-error is not valid with action=describe"),
@@ -764,31 +759,4 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2))
         return 1 if result["failed_count"] > 0 else 0
 
-    spec = load_entry_spec(selected_entry, entry_kind=args.entry_kind, overrides=overrides)
-    _legacy_workflow_dag = spec.metadata.get("workflow_dag")
-    _env_diags = _environment_diagnostics(_legacy_workflow_dag)
-    _env_errors = [d for d in _env_diags if d.level == "error"]
-    if _env_errors:
-        print(json.dumps({
-            "status": "failed",
-            "entry": selected_entry,
-            "action": args.action,
-            "error": "Execution environment preflight failed.",
-            "environment_diagnostics": [asdict(d) for d in _env_diags],
-        }, indent=2))
-        return 1
-    engine = DriverEngine(
-        spec=spec,
-        dry_run=args.dry_run,
-        continue_on_error=args.continue_on_error,
-        requested_action=args.action,
-    )
-
-    if args.action == "sim":
-        engine.run_simulations()
-    elif args.action == "post":
-        engine.run_postprocess()
-    else:
-        engine.run_all()
-
-    return 0
+    raise AssertionError(f"unreachable: unhandled action {args.action!r}")

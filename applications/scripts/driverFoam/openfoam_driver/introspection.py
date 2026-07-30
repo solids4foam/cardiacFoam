@@ -42,10 +42,11 @@ from .core.runtime.registry import (
 )
 from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .capability_manifest import build_capability_manifest, resolve_case_models
+from .core.runtime.execution_context import resolve_execution_context
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
 from .ionic_model_catalog import IONIC_MODEL_CATALOG
 from .solver_coupling import SOLVER_COMPATIBILITY_RULES
-from .launch import describe_launch_matrix
+from .strict_planning import _run_launch_description
 from .tutorial_contracts import describe_tutorial_contract
 
 COMMON_OVERRIDE_KEYS = (
@@ -335,7 +336,13 @@ def _describe_config_schema(
 
 
 def _manifest_schema() -> dict[str, Any]:
-    """Static schema description for run_manifest.json."""
+    """Static schema description for run_manifest.json.
+
+    This describes the legacy sim/post/all CLI's own manifest -- see
+    payload["strict_launch"] for the canonical way to actually execute an
+    entry today (run --strict), whose own state lives in
+    output_dir/workflow_state.json instead, written by every workflow step
+    as it runs."""
     return {
         "description": (
             "run_manifest.json is the run-state source of truth. "
@@ -507,7 +514,6 @@ def describe_entry(
     entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    python_executable: str | None = None,
 ) -> dict[str, Any]:
     resolution = resolve_entry(entry, entry_kind=entry_kind, overrides=overrides)
     spec = resolution["factory"](**resolution["factory_overrides"])
@@ -555,13 +561,11 @@ def describe_entry(
         "dict_entries": _dict_entry_catalog(),
         "ionic_model_catalog": _ionic_model_catalog(),
         "active_tension_catalog": _active_tension_catalog(),
-        "launch": describe_launch_matrix(
-            entry,
+        "strict_launch": _run_launch_description(
+            resolution["resolved_name"],
+            resolve_execution_context(spec),
             entry_kind=resolution["entry_kind"],
-            overrides=resolution["factory_overrides"],
             config_path=config_path,
-            tutorials_root=tutorials_root,
-            python_executable=python_executable,
         ),
         "config_schema": _describe_config_schema(
             resolution["resolved_name"],
@@ -581,11 +585,9 @@ def describe_tutorial(
     *,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    python_executable: str | None = None,
 ) -> dict[str, Any]:
     return describe_entry(
         tutorial,
         overrides=overrides,
         config_path=config_path,
-        python_executable=python_executable,
     )
