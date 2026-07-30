@@ -58,7 +58,7 @@ FILENAME_PATTERN = re.compile(
     r"(?:_DT(?P<dt_token>[^_]+))?\.dat$"
 )
 ECG_SUMMARY_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
+    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT(?P<dt_token>[^_]+)_"
     r"manufacturedPseudoECGSummary\.dat$"
 )
 ECG_TIMESERIES_PATTERN = re.compile(
@@ -1258,6 +1258,7 @@ def read_ecg_summary_dat_files(folder_name):
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
                 "Solver": match.group("solver"),
+                "dt": _dt_token_to_float(match.group("dt_token")),
                 "samples": int(metadata.get("samples", "0")),
                 "electrodes": len(electrode_rows),
                 "qCheck": q_check,
@@ -1462,7 +1463,9 @@ def compute_convergence_rates(rows, *, convergence_axis: str = "spatial"):
     return convergence_rows
 
 
-def compute_ecg_convergence_rates(rows):
+def compute_ecg_convergence_rates(rows, *, convergence_axis: str = "spatial"):
+    axis_meta = _sweep_axis_metadata(convergence_axis)
+
     grouped_rows = {}
     for row in rows:
         key = (row["Dimension"], row["Solver"])
@@ -1470,31 +1473,35 @@ def compute_ecg_convergence_rates(rows):
 
     convergence_rows = []
     for (dimension, solver_type), group_rows in sorted(grouped_rows.items()):
-        ordered = sorted(group_rows, key=lambda row: row["N"])
+        ordered = sorted(group_rows, key=axis_meta["sort_key"])
         for lower, higher in zip(ordered, ordered[1:]):
             N1 = int(lower["N"])
             N2 = int(higher["N"])
-            if N1 == N2:
+            ref1 = float(axis_meta["rate_reference"](lower))
+            ref2 = float(axis_meta["rate_reference"](higher))
+            if math.isclose(ref1, ref2, rel_tol=0.0, abs_tol=0.0):
                 continue
 
-            h1, h2 = 1.0 / N1, 1.0 / N2
             convergence_rows.append(
                 {
+                    "SweepAxis": axis_meta["axis"],
                     "Dimension": dimension,
                     "Solver": solver_type,
                     "N_lower": N1,
                     "N_higher": N2,
+                    "dt_lower": lower.get("dt", ""),
+                    "dt_higher": higher.get("dt", ""),
                     "rate_max_Linf_err_ref": _safe_rate(
-                        lower["max_Linf_err_ref"], higher["max_Linf_err_ref"], h1, h2
+                        lower["max_Linf_err_ref"], higher["max_Linf_err_ref"], ref1, ref2
                     ),
                     "rate_mean_Linf_err_ref": _safe_rate(
-                        lower["mean_Linf_err_ref"], higher["mean_Linf_err_ref"], h1, h2
+                        lower["mean_Linf_err_ref"], higher["mean_Linf_err_ref"], ref1, ref2
                     ),
                     "rate_max_Linf_delta_ref": _safe_rate(
-                        lower["max_Linf_delta_ref"], higher["max_Linf_delta_ref"], h1, h2
+                        lower["max_Linf_delta_ref"], higher["max_Linf_delta_ref"], ref1, ref2
                     ),
                     "rate_mean_Linf_delta_ref": _safe_rate(
-                        lower["mean_Linf_delta_ref"], higher["mean_Linf_delta_ref"], h1, h2
+                        lower["mean_Linf_delta_ref"], higher["mean_Linf_delta_ref"], ref1, ref2
                     ),
                 }
             )
@@ -2988,7 +2995,10 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
         return artifacts
 
     print("\nECG convergence rates:")
-    ecg_convergence_rates = compute_ecg_convergence_rates(ecg_rows)
+    ecg_convergence_rates = compute_ecg_convergence_rates(
+        ecg_rows,
+        convergence_axis=convergence_axis,
+    )
     if ecg_convergence_rates:
         for row in ecg_convergence_rates:
             print(row)
