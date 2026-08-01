@@ -136,33 +136,97 @@ int main(int argc, char *argv[])
 
     // Cell-RMS and maximum norms of the vector error magnitude, matching the
     // norm definitions the verification models use.
-    const scalarField e(mag(gradNumeric.primitiveField() - gradExact.primitiveField()));
 
-    scalar sumSq = 0.0;
-    forAll(e, cellI)
+    // We need to identify boundary cells
+    const polyBoundaryMesh& bMesh = mesh.boundaryMesh();
+    boolList isBoundaryCell(mesh.nCells(), false);
+    forAll(bMesh, patchI)
     {
-        sumSq += e[cellI]*e[cellI];
+        const polyPatch& pp = bMesh[patchI];
+        if (!pp.empty() && pp.type() != "empty")
+        {
+            const labelUList& faceCells = pp.faceCells();
+            forAll(faceCells, i)
+            {
+                isBoundaryCell[faceCells[i]] = true;
+            }
+        }
     }
-    label nCells = e.size();
 
-    reduce(sumSq, sumOp<scalar>());
+    const scalarField errMag(mag(gradNumeric.primitiveField() - gradExact.primitiveField()));
+    const volScalarField::Internal& V = mesh.V();
+
+    scalar errL2Vol = 0.0;
+    scalar refL2Vol = 0.0;
+    scalar errL2VolBulk = 0.0;
+    scalar refL2VolBulk = 0.0;
+    scalar errL2VolBound = 0.0;
+    scalar refL2VolBound = 0.0;
+    scalar errInf = 0.0;
+    scalar errL1Vol = 0.0;
+    scalar volTotal = 0.0;
+    label cellsAbove = 0;
+
+    forAll(errMag, cellI)
+    {
+        const scalar ev = errMag[cellI];
+        const scalar rv = mag(gradExact[cellI]);
+        const scalar v = V[cellI];
+
+        if (ev > errInf) errInf = ev;
+        if (ev > 0.05) cellsAbove++;
+
+        errL1Vol += ev * v;
+        const scalar ev2v = ev * ev * v;
+        const scalar rv2v = rv * rv * v;
+
+        errL2Vol += ev2v;
+        refL2Vol += rv2v;
+        volTotal += v;
+
+        if (isBoundaryCell[cellI])
+        {
+            errL2VolBound += ev2v;
+            refL2VolBound += rv2v;
+        }
+        else
+        {
+            errL2VolBulk += ev2v;
+            refL2VolBulk += rv2v;
+        }
+    }
+
+    reduce(errL2Vol, sumOp<scalar>());
+    reduce(refL2Vol, sumOp<scalar>());
+    reduce(errL2VolBulk, sumOp<scalar>());
+    reduce(refL2VolBulk, sumOp<scalar>());
+    reduce(errL2VolBound, sumOp<scalar>());
+    reduce(refL2VolBound, sumOp<scalar>());
+    reduce(errInf, maxOp<scalar>());
+    reduce(errL1Vol, sumOp<scalar>());
+    reduce(volTotal, sumOp<scalar>());
+    reduce(cellsAbove, sumOp<label>());
+
+    label nCells = errMag.size();
     reduce(nCells, sumOp<label>());
 
-    const scalar rms = nCells > 0 ? Foam::sqrt(sumSq/nCells) : 0.0;
-    const scalar linf = gMax(e);
-
-    // Reference magnitude, so the reported error can be read as relative.
-    const scalar refRms =
-        Foam::sqrt(gSum(magSqr(gradExact.primitiveField()))/max(nCells, 1));
+    const scalar rmsVol = volTotal > SMALL ? Foam::sqrt(errL2Vol/volTotal) : 0.0;
+    const scalar rmsVolBulk = volTotal > SMALL ? Foam::sqrt(errL2VolBulk/volTotal) : 0.0;
+    const scalar rmsVolBound = volTotal > SMALL ? Foam::sqrt(errL2VolBound/volTotal) : 0.0;
+    const scalar meanE = volTotal > SMALL ? errL1Vol/volTotal : 0.0;
+    const scalar refRmsVol = volTotal > SMALL ? Foam::sqrt(refL2Vol/volTotal) : 0.0;
 
     Info<< "gradient error against k*exp(k.x)" << nl
-        << "  E_RMS,cell : " << rms << nl
-        << "  E_inf      : " << linf << nl
-        << "  |grad|_RMS : " << refRms << nl
-        << "  relative   : " << (refRms > SMALL ? rms/refRms : 0.0) << nl
+        << "  nCells = " << nCells << nl
+        << "  E_inf = " << errInf << nl
+        << "  Mean E = " << meanE << nl
+        << "  Cells with error > 0.05 = " << cellsAbove << nl
+        << "  L2 Bulk = " << rmsVolBulk << nl
+        << "  L2 Bound = " << rmsVolBound << nl
+        << "  L2 Total = " << rmsVol << nl
+        << "  |grad|_RMS = " << refRmsVol << nl
+        << "  relative = " << (refRmsVol > SMALL ? rmsVol/refRmsVol : 0.0) << nl
         << endl;
-
-    Info<< "CSV," << nCells << "," << rms << "," << linf << "," << refRms << endl;
 
     Info<< "End" << nl << endl;
     return 0;
