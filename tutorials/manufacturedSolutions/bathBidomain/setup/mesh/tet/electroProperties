@@ -68,7 +68,6 @@ bidomainSolverCoeffs
         bathCellZones (bath);
         bathConductivityField bodyAndOrgansConductivity;
         interfaceConductivityInterpolation distanceWeightedHarmonic;
-        intracellularAssembly matchedSubmesh;
         reportSetup yes;
 
         groundPatches
