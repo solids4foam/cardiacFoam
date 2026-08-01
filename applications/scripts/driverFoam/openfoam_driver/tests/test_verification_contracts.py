@@ -1,0 +1,75 @@
+import json
+
+import pytest
+
+from openfoam_driver.cli import main
+from openfoam_driver.verification_contracts import load_contracts, plan, tsv_rows
+
+
+def test_contract_catalog_is_unique_and_complete():
+    contracts = load_contracts()
+    identifiers = [item["experiment_id"] for item in contracts]
+    assert len(identifiers) == 13
+    assert len(identifiers) == len(set(identifiers))
+
+
+def test_every_registered_path_is_ready():
+    planned = plan()
+    failures = {
+        item["experiment_id"]: item["checks"]
+        for item in planned["experiments"] if not item["ready"]
+    }
+    assert failures == {}
+
+
+def test_frontal_monodomain_is_one_full_sweep_in_contract_and_bash():
+    experiment = next(
+        item for item in load_contracts()
+        if item["experiment_id"] == "monodomain_tet_frontal"
+    )
+    assert experiment["matrix"]["N"] == [10, 20, 40, 80]
+    assert experiment["execution"]["driver_specs"] == [
+        "setup/studies/tetConvergence/sweep_tet_convergence_optimised.json"
+    ]
+
+    runner = (
+        plan("monodomain_tet_frontal")["experiments"][0]["case_dir"]
+    )
+    # Resolve through the same repository root used by the contract module.
+    from openfoam_driver.verification_contracts import REPO_ROOT
+    public_runner = REPO_ROOT / runner / experiment["execution"]["runner"]
+    assert "run_mono_tet_frontal.sh" in public_runner.read_text()
+    script = (public_runner.parent / "run_mono_tet_frontal.sh").read_text()
+    assert script.count("sweep-run") == 1
+    assert "OptimisedN80" not in script
+    assert "optimised_N80" not in script
+
+
+def test_tsv_adapter_has_one_six_column_row_per_contract():
+    rows = tsv_rows().splitlines()
+    assert len(rows) == len(load_contracts())
+    assert all(len(row.split("\t")) == 6 for row in rows)
+
+
+def test_cli_can_describe_one_experiment(capsys):
+    assert main(["experiment-plan", "--experiment", "eikonal_tet_generic"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert [item["experiment_id"] for item in payload["experiments"]] == [
+        "eikonal_tet_generic"
+    ]
+    assert payload["experiments"][0]["ready"] is True
+
+
+def test_cli_tsv_format_honours_experiment_selection(capsys):
+    assert main([
+        "experiment-plan", "--format", "tsv",
+        "--experiment", "eikonal_tet_generic",
+    ]) == 0
+    rows = capsys.readouterr().out.splitlines()
+    assert len(rows) == 1
+    assert rows[0].split("\t", 1)[0] == "eikonal_tet_generic"
+
+
+def test_cli_rejects_unknown_experiment():
+    with pytest.raises(SystemExit):
+        main(["experiment-plan", "--experiment", "not_a_real_experiment"])

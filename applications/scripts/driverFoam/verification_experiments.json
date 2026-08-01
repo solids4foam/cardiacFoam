@@ -1,0 +1,122 @@
+{
+  "schema_version": "1",
+  "experiments": [
+    {
+      "experiment_id": "monodomain_cartesian",
+      "description": "Cartesian monodomain fields and pseudo-ECG convergence",
+      "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_monodomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "u1", "u2", "Phi_e"],
+      "aggregation": {"key": "monodomain_cartesian", "result": "setup/results/monodomain_cartesian.csv", "reference": "reference/monodomain_cartesian.csv"}
+    },
+    {
+      "experiment_id": "monodomain_tet_generic",
+      "description": "Generic tetrahedral monodomain and pseudo-ECG gradient-scheme comparison",
+      "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
+      "execution": {"kind": "legacy_bash", "runner": "setup/mesh/tet/run_monodomain_tet_generic.sh"},
+      "matrix": {"mesh_family": ["tet_generic"], "gradient_scheme": ["GaussLinear", "leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "Phi_e"],
+      "aggregation": {"key": "monodomain_tet_generic", "result": "setup/results/monodomain_tet_generic.csv", "reference": "reference/monodomain_tet_generic.csv"}
+    },
+    {
+      "experiment_id": "monodomain_tet_frontal",
+      "description": "Frontal tetrahedral monodomain diagonal and rotated-anisotropy comparison",
+      "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
+      "execution": {"kind": "driver_sweep", "runner": "setup/mesh/tet/run_monodomain_tet_frontal.sh", "driver_specs": ["setup/studies/tetConvergence/sweep_tet_convergence_optimised.json"]},
+      "matrix": {"mesh_family": ["tet_frontal"], "conductivity": ["diagonal", "rotated"], "gradient_scheme": ["GaussLinear", "leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm"],
+      "aggregation": {"key": "monodomain_tet_frontal", "result": "setup/results/monodomain_tet_frontal.csv", "reference": "reference/monodomain_tet_frontal.csv"}
+    },
+    {
+      "experiment_id": "eikonal_cartesian",
+      "description": "Cartesian eikonal activation and pseudo-ECG convergence",
+      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_eikonal_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
+      "observables": ["activationTime", "Phi_e"],
+      "aggregation": {"key": "eikonal_cartesian", "result": "setup/results/eikonal_cartesian.csv", "reference": "reference/eikonal_cartesian.csv"}
+    },
+    {
+      "experiment_id": "eikonal_tet_generic",
+      "description": "Generic tetrahedral eikonal activation and pseudo-ECG gradient-scheme comparison",
+      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
+      "execution": {"kind": "legacy_bash", "runner": "setup/mesh/tet/run_eikonal_tet_generic.sh"},
+      "matrix": {"mesh_family": ["tet_generic"], "conductivity": ["axis_aligned"], "advection_diffusion": [false], "gradient_scheme": ["GaussLinear", "leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["activationTime", "Phi_e"],
+      "aggregation": {"key": "eikonal_tet_generic", "result": "setup/results/eikonal_tet_generic.csv", "reference": "reference/eikonal_tet_generic.csv"}
+    },
+    {
+      "experiment_id": "eikonal_tet_frontal",
+      "description": "Frontal tetrahedral least-squares eikonal control",
+      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
+      "execution": {"kind": "legacy_bash", "runner": "setup/mesh/tet/run_eikonal_tet_frontal.sh"},
+      "matrix": {"mesh_family": ["tet_frontal"], "gradient_scheme": ["leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["activationTime", "Phi_e"],
+      "aggregation": {"key": null, "result": "setup/results/eikonal_tet_frontal.csv", "reference": null}
+    },
+    {
+      "experiment_id": "eikonal_gradient_tet",
+      "description": "Isolated least-squares gradient reconstruction on generic and Frontal tetrahedral meshes",
+      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
+      "execution": {"kind": "legacy_bash", "runner": "setup/studies/gradient_reconstruction/run.sh"},
+      "matrix": {"mesh_family": ["tet_generic", "tet_frontal"], "gradient_scheme": ["leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["Linf_max", "Linf_mean", "L2_bulk", "L2_boundary", "L2_total"],
+      "aggregation": {"key": null, "result": "setup/results/eikonal_gradient_tet.csv", "reference": null}
+    },
+    {
+      "experiment_id": "bidomain_cartesian",
+      "description": "Cartesian bidomain field convergence",
+      "case_dir": "tutorials/manufacturedSolutions/bidomain",
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_bidomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "phiE_gauge", "phiI_gauge", "u1", "u2"],
+      "aggregation": {"key": "bidomain_cartesian", "result": "setup/results/bidomain_cartesian.csv", "reference": "reference/bidomain_cartesian.csv"}
+    },
+    {
+      "experiment_id": "bidomain_tet_generic",
+      "description": "Generic tetrahedral bidomain gradient-scheme comparison",
+      "case_dir": "tutorials/manufacturedSolutions/bidomain",
+      "execution": {"kind": "legacy_bash", "runner": "setup/mesh/tet/run_bidomain_tet_generic.sh"},
+      "matrix": {"mesh_family": ["tet_generic"], "gradient_scheme": ["GaussLinear", "leastSquares"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "Phi_e"],
+      "aggregation": {"key": "bidomain_tet_generic", "result": "setup/results/bidomain_tet_generic.csv", "reference": "reference/bidomain_tet_generic.csv"}
+    },
+    {
+      "experiment_id": "bath_bidomain_cartesian",
+      "description": "Cartesian bath-bidomain field convergence",
+      "case_dir": "tutorials/manufacturedSolutions/bathBidomain",
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_bath_bidomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["3D"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "phiE", "phiI"],
+      "aggregation": {"key": "bath_bidomain_cartesian", "result": "setup/results/bath_bidomain_cartesian.csv", "reference": "reference/bath_bidomain_cartesian.csv"}
+    },
+    {
+      "experiment_id": "bath_bidomain_tet_conformal",
+      "description": "Conformal tetrahedral bath-interface predictor-corrector verification",
+      "case_dir": "tutorials/manufacturedSolutions/bathBidomain",
+      "execution": {"kind": "legacy_bash", "runner": "setup/mesh/tet/run_bath_bidomain_tet_conformal.sh"},
+      "matrix": {"mesh_family": ["tet_conformal"], "coupling": ["predictor_corrector"], "N": [10, 20, 40]},
+      "observables": ["heartPhiE", "bathPhiE", "fluxJump", "intracellularLeak", "assembledFlux"],
+      "aggregation": {"key": "bath_bidomain_tet_conformal", "result": "setup/results/bath_bidomain_tet_conformal.csv", "reference": "reference/bath_bidomain_tet_conformal.csv"}
+    },
+    {
+      "experiment_id": "purkinje_monodomain_coupled",
+      "description": "Purkinje graph and coupled 1D-3D monodomain convergence",
+      "case_dir": "tutorials/manufacturedSolutions/monodomain1D3D",
+      "execution": {"kind": "legacy_bash", "runner": "setup/run_purkinje_monodomain_coupled.sh"},
+      "matrix": {"coupling_regime": ["decoupled", "active", "bidirectional"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm_1D", "Vm_3D"],
+      "aggregation": {"key": "purkinje_monodomain_coupled", "result": "setup/results/purkinje_monodomain_coupled.csv", "reference": "reference/purkinje_monodomain_coupled.csv"}
+    },
+    {
+      "experiment_id": "niederer_cartesian",
+      "description": "Niederer anisotropic slab spatial and temporal benchmark",
+      "case_dir": "tutorials/NiedererEtAl2011/NiedererEtAl2011verification",
+      "execution": {"kind": "legacy_bash", "runner": "setup/run_niederer_cartesian.sh"},
+      "matrix": {"dx_mm": [0.5, 0.2, 0.1], "dt_ms": [0.05, 0.01, 0.005]},
+      "observables": ["activationTime"],
+      "aggregation": {"key": "niederer_cartesian", "result": "setup/results/niederer_cartesian.csv", "reference": "reference/niederer_cartesian.csv"}
+    }
+  ]
+}

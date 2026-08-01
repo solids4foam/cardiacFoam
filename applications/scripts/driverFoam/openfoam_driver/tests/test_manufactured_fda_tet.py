@@ -33,7 +33,11 @@ from unittest import mock
 
 import pytest
 
-from openfoam_driver.specs.tutorials.manufactured_fda import make_spec
+from openfoam_driver.core.runtime.models import CaseConfig
+from openfoam_driver.specs.tutorials.manufactured_fda import (
+    _stage_case_output,
+    make_spec,
+)
 
 _CONTROL_DICT = """FoamFile
 {
@@ -139,6 +143,7 @@ myocardiumSolver monodomainSolver;
 monodomainSolverCoeffs
 {
     ionicModel monodomainFDAManufactured;
+    conductivity [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355);
     dimension "3D";
     solutionAlgorithm implicit;
     verificationModel
@@ -347,6 +352,59 @@ def test_apply_case_renders_geo_but_never_calls_gmsh(tmp_path):
     assert "lc = 0.1;" in geo_text
 
 
+def test_apply_case_can_select_an_optimised_geo_template(tmp_path):
+    case_root = _write_case(tmp_path)
+    optimised_template = case_root / "setup" / "mesh" / "tet" / "box.geo.template.optimised"
+    optimised_template.write_text(
+        _GEO_TEMPLATE + "Mesh.Algorithm3D = 4;\nMesh.OptimizeNetgen = 1;\n"
+    )
+    spec = _call_make_spec(
+        tmp_path,
+        mesh_family="tet",
+        numerics_profile="bidomain_tet",
+        tet_geo_template_relpath="setup/mesh/tet/box.geo.template.optimised",
+    )
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    geo_text = (case_root / "setup" / "mesh" / "tet" / "box.geo").read_text()
+    assert "lc = 0.1;" in geo_text
+    assert "Mesh.Algorithm3D = 4;" in geo_text
+    assert spec.metadata["tet_geo_template_relpath"].endswith("box.geo.template.optimised")
+
+
+def test_rotated_anisotropy_output_is_staged_under_canonical_name(tmp_path):
+    case = CaseConfig(
+        case_id="3D_10_cells_implicit_DT0p00892857",
+        params={"dimension": "3D", "cells": 10, "solver": "implicit", "dt": 0.00892857},
+    )
+    source_dir = tmp_path / "postProcessing"
+    source_dir.mkdir()
+    source = source_dir / "rotatedAnisotropy_3D_10_cells_implicit.dat"
+    source.write_text("rotated result\n")
+
+    staged = _stage_case_output(
+        tmp_path,
+        case,
+        archive_tag="rotated",
+        verification_model_type="manufacturedAnisotropicMonodomainVerifier",
+    )
+
+    assert staged.name == "3D_10_cells_implicit.dat"
+    assert staged.read_text() == "rotated result\n"
+
+
+def test_conductivity_shorthand_updates_monodomain_tensor(tmp_path):
+    case_root = _write_case(tmp_path)
+    tensor = "[-1 -3 3 0 0 2 0] (0.1 -0.01 -0.02 0.12 -0.013 0.04)"
+    spec = _call_make_spec(tmp_path, conductivity=tensor)
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    electro_text = (case_root / "constant" / "electroProperties").read_text()
+    assert "conductivity    " + tensor + ";" in electro_text
+
+
 def test_apply_case_hex_does_not_render_geo(tmp_path):
     case_root = _write_case(tmp_path)
     spec = _call_make_spec(tmp_path)
@@ -450,6 +508,19 @@ def test_tet_mesh_family_works_with_ecg_enabled(tmp_path):
     assert "E3    (1.2 0.23 0.61);" in electro_text
     scheme_text = (case_root / "system" / "fvSchemes").read_text()
     assert "leastSquares;" in scheme_text
+
+
+def test_ecg_disabled_removes_block_from_a_reused_entry_case(tmp_path):
+    case_root = _write_case(tmp_path)
+    enabled = _call_make_spec(tmp_path, ecg_enabled=True)
+    enabled.apply_case(enabled.case_root, enabled.build_cases()[0])
+
+    disabled = _call_make_spec(tmp_path, ecg_enabled=False)
+    disabled.apply_case(disabled.case_root, disabled.build_cases()[0])
+
+    electro_text = (case_root / "constant" / "electroProperties").read_text()
+    assert "ecgDomains" not in electro_text
+    assert "ecgSolver" not in electro_text
 
 
 # --- end_time -------------------------------------------------------------

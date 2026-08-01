@@ -39,6 +39,7 @@ from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from ..common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+    remove_electro_property_dict,
     replace_single_block_mesh_resolution,
     resolve_run_script_path,
     resolve_spec_paths,
@@ -213,12 +214,14 @@ def _apply_case(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    conductivity: str | None = None,
     ecg_enabled: bool = defaults.ECG_ENABLED,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     mesh_family: str = "hex",
+    tet_geo_template_relpath: Path = Path("setup/mesh/tet/box.geo.template"),
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
@@ -240,9 +243,11 @@ def _apply_case(
         f"{electro_properties_scope}.solutionAlgorithm": solver,
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
     }
+    if conductivity is not None:
+        case_overrides[f"{electro_properties_scope}.conductivity"] = conductivity
 
+    ecg_scope = f"{electro_properties_scope}.ecgDomains.ECG"
     if ecg_enabled:
-        ecg_scope = f"{electro_properties_scope}.ecgDomains.ECG"
         try:
             electrodes = ecg_electrodes_by_dimension[dimension]
         except KeyError as exc:
@@ -270,7 +275,7 @@ def _apply_case(
         # Render-only: substitutes __LC__ and writes overlay files. gmsh/
         # gmshToFoam/checkMesh are workflow_dag steps, not run here -- see
         # _workflow_dag_for's docstring.
-        render_tet_geo(case_root, cells)
+        render_tet_geo(case_root, cells, template_relpath=tet_geo_template_relpath)
         for overlay_name in _NUMERICS_PROFILES.get(numerics_profile or "", ()):
             overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
             shutil.copy(overlay_source, case_root / "system" / overlay_name)
@@ -306,6 +311,16 @@ def _apply_case(
         )
 
     apply_electro_property_overrides(electro_properties, case_overrides)
+    if not ecg_enabled:
+        # Entry sweeps reuse one physical tutorial directory. Remove an ECG
+        # block left by a preceding ECG-enabled case: the system builder does
+        # not route an explicit ecgSolver=none provider.
+        remove_electro_property_dict(
+            electro_properties,
+            "ecgDomains",
+            scope=electro_properties_scope,
+            missing_ok=True,
+        )
     apply_electro_property_overrides(electro_properties, electro_property_overrides)
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
@@ -320,6 +335,7 @@ def _run_case(
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     convergence_axis: str = "spatial",
     archive_tag: str = "default",
+    verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
 ) -> None:
     del setup_root
     dimension = str(case.params["dimension"])
@@ -351,6 +367,7 @@ def _run_case(
         case,
         convergence_axis=convergence_axis,
         archive_tag=archive_tag,
+        verification_model_type=verification_model_type,
     )
     _stage_case_ecg_outputs(
         case_root,
@@ -382,6 +399,7 @@ def _stage_case_output(
     *,
     convergence_axis: str = "spatial",
     archive_tag: str = "default",
+    verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
 ) -> Path:
     # The manufactured verifiers write via Time::globalPath(), so their
     # postProcessing/ output lands in the shared case dir under both serial
@@ -397,6 +415,18 @@ def _stage_case_output(
         case_root / "postProcessing" / filename,
         case_root / "processor0" / "postProcessing" / filename,
     ]
+
+    if verification_model_type == "manufacturedAnisotropicMonodomainVerifier":
+        rotated_filename = (
+            f"rotatedAnisotropy_3D_{int(case.params['cells'])}_cells_"
+            f"{case.params['solver']}.dat"
+        )
+        candidates.extend(
+            [
+                case_root / "postProcessing" / rotated_filename,
+                case_root / "processor0" / "postProcessing" / rotated_filename,
+            ]
+        )
 
     if convergence_axis != "spatial" and legacy_filename != filename:
         candidates.extend(
@@ -538,6 +568,7 @@ def make_spec(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    conductivity: str | None = None,
     ecg_enabled: bool = defaults.ECG_ENABLED,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
@@ -549,6 +580,7 @@ def make_spec(
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
     mesh_family: str = "hex",
+    tet_geo_template_relpath: str | Path = "setup/mesh/tet/box.geo.template",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
@@ -582,6 +614,7 @@ def make_spec(
     control_dict_path = Path(control_dict_relpath)
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
+    tet_geo_template_path = Path(tet_geo_template_relpath)
     run_script_path = Path(run_script_relpath)
     postprocess_script_path = Path(postprocess_script_relpath)
     convergence_axis_normalized = _normalize_convergence_axis(convergence_axis)
@@ -622,6 +655,7 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
             mesh_family=mesh_family,
+            tet_geo_template_relpath=tet_geo_template_path,
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             phi_tolerance=phi_tolerance,
@@ -629,6 +663,7 @@ def make_spec(
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
             verification_model_type=verification_model_type,
+            conductivity=conductivity,
             ecg_enabled=ecg_enabled,
             ecg_reference_quadrature_order=ecg_reference_quadrature_order,
             ecg_check_quadrature_orders=ecg_check_quadrature_orders,
@@ -642,6 +677,7 @@ def make_spec(
             run_in_parallel=run_in_parallel,
             convergence_axis=convergence_axis_normalized,
             archive_tag=archive_tag,
+            verification_model_type=verification_model_type,
         ),
         collect_outputs=partial(
             _collect_outputs,
@@ -669,11 +705,13 @@ def make_spec(
             "physics_properties_relpath": str(physics_properties_path),
             "electro_properties_scope": electro_properties_scope,
             "block_mesh_dict_template": block_mesh_dict_template,
+            "tet_geo_template_relpath": str(tet_geo_template_path),
             "run_script_relpath": str(run_script_path),
             "run_in_parallel": run_in_parallel,
             "postprocess_script_relpath": str(postprocess_script_path),
             "postprocess_function_name": postprocess_function_name,
             "has_electro_property_overrides": bool(electro_property_overrides),
+            "conductivity_override": conductivity,
             "has_physics_property_overrides": bool(physics_property_overrides),
             "ecg_enabled": ecg_enabled,
             "ecg_reference_quadrature_order": ecg_reference_quadrature_order,

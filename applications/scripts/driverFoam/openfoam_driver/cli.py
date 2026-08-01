@@ -51,6 +51,9 @@ from .strict_planning import (
     strict_plan,
 )
 from .core.runtime.run_document_exec import build_execution_inputs, load_run_document
+from .verification_contracts import plan as verification_plan
+from .verification_contracts import run as verification_run
+from .verification_contracts import tsv_rows as verification_tsv_rows
 
 
 @dataclass(frozen=True)
@@ -447,7 +450,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
-        choices=["describe", "plan", "step", "run", "sweep-plan", "sweep-run"],
+        choices=[
+            "describe", "plan", "step", "run", "sweep-plan", "sweep-run",
+            "experiment-plan", "experiment-run",
+        ],
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -457,6 +463,16 @@ def build_parser() -> argparse.ArgumentParser:
             "Entry name or relative workflow/case path to run "
             f"({', '.join(list_tutorials())}, genericCase)"
         ),
+    )
+    parser.add_argument(
+        "--experiment",
+        help="Normalized verification experiment identifier.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["json", "tsv"],
+        default="json",
+        help="Output format for experiment-plan.",
     )
     parser.add_argument(
         "--entry-kind",
@@ -664,7 +680,18 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--max-cases is only valid with action=sweep-plan or action=sweep-run")
     if args.action not in {"sweep-plan", "sweep-run"} and (args.spec or args.output_dir):
         parser.error("--spec/--output-dir are only valid with action=sweep-plan or action=sweep-run")
-    if not args.run_document and not args.entry and args.action not in {"sweep-plan", "sweep-run"}:
+    if args.action in {"experiment-plan", "experiment-run"}:
+        if args.entry or args.run_document or args.config or args.entry_kind or args.tutorials_root:
+            parser.error(f"entry/run-document/config flags are not valid with action={args.action}")
+        if args.action == "experiment-run" and not args.experiment:
+            parser.error("action=experiment-run requires --experiment")
+        if args.action == "experiment-run" and args.format != "json":
+            parser.error("--format is only valid with action=experiment-plan")
+    elif args.experiment or args.format != "json":
+        parser.error("--experiment/--format are only valid with experiment actions")
+    if not args.run_document and not args.entry and args.action not in {
+        "sweep-plan", "sweep-run", "experiment-plan", "experiment-run"
+    }:
         parser.error("--entry is required (or use --run-document with action=run/step)")
 
 
@@ -672,6 +699,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate_args(parser, args)
+
+    if args.action == "experiment-plan":
+        try:
+            if args.format == "tsv":
+                print(verification_tsv_rows(args.experiment))
+            else:
+                print(json.dumps(verification_plan(args.experiment), indent=2))
+        except (KeyError, ValueError) as exc:
+            parser.error(str(exc))
+        return 0
+
+    if args.action == "experiment-run":
+        try:
+            return verification_run(args.experiment)
+        except (KeyError, ValueError) as exc:
+            parser.error(str(exc))
 
     selected_entry = args.entry
 

@@ -163,15 +163,26 @@ def _argv_for_execution(
     no further exec boundary is crossed before `cardiacFoam` itself forks.
     This is a no-op wrapper (falls through to plain argv) whenever the
     command isn't a case script or there are no DYLD_* values to preserve.
+
+    Dot-sourcing on its own breaks the Allrun/Allclean-family idiom
+    `cd "${0%/*}"` (self-locate via one's own path): dot-sourcing does not
+    update `$0`, which would otherwise remain `/bin/sh`'s own `$0` --
+    `${0%/*}` on that resolves to `/bin`, so the script silently `cd`s away
+    from the case directory before its real body (e.g. `rm -rf processor*`)
+    runs, no-op'ing case-script cleanup with no error. `sh -c cmd name arg...`
+    binds `name` to `$0` for the duration of `cmd`, so passing the resolved
+    script path as that extra argv element (and the rest of `args` after it,
+    read back via "$@") restores `$0` to the script's real path before it is
+    dot-sourced, fixing the self-location idiom without reintroducing the
+    exec-boundary SIP-stripping problem the dot-source was chosen to avoid.
     """
     if command not in CASE_SCRIPT_COMMANDS or not env:
         return (executable, *args)
     exports = [f"export {name}={shlex.quote(env[name])}" for name in _DYLD_VAR_NAMES if env.get(name)]
     if not exports:
         return (executable, *args)
-    dot_source = ". " + " ".join(shlex.quote(part) for part in (executable, *args))
-    preamble = "; ".join(exports) + "; " + dot_source
-    return ("/bin/sh", "-c", preamble)
+    preamble = "; ".join(exports) + '; . "$0" "$@"'
+    return ("/bin/sh", "-c", preamble, executable, *args)
 
 
 def _resolve_case_cwd(case_root: Path, cwd: str) -> Path:
