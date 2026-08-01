@@ -116,6 +116,23 @@ def test_bath_tet_interface_identities(tmp_path):
     assert phie20["variant"] == "distanceWeightedHarmonic/matchedSubmesh"
     assert phie20["dim"] == "3D" and phie20["h"] == "0.05" and phie20["L2"] == "1e-3"
 
+
+def test_bath_reported_metric_files_preserve_paper_ladder(tmp_path):
+    files = {}
+    for n, heart_l2 in ((10, "3e-3"), (20, "1e-3"), (40, "3e-4")):
+        path = tmp_path / f"N{n}_predictor.csv"
+        _write_metrics(path, _metrics_row(heartPhiE_L2=heart_l2))
+        files[n] = path
+
+    rows = adapters.from_bath_interface_metric_files(files)
+    heart = [r for r in rows if r["field"] == "heartPhiE"]
+    assert [r["N"] for r in heart] == ["10", "20", "40"]
+    assert [r["L2"] for r in heart] == ["3e-3", "1e-3", "3e-4"]
+    assert all(
+        r["variant"] == "predictor/distanceWeightedHarmonic/matchedSubmesh"
+        for r in rows
+    )
+
 # ---- Task 5: tet bath parallel equivalence ----------------------------------
 
 def test_parallel_equivalence_all_pass(tmp_path):

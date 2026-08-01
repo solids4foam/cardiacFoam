@@ -84,11 +84,25 @@ def _parse_field_triples(content, allowed_fields):
     return out
 
 
-def _load_case_axis_values(manifest_path):
-    """case_id -> resolved_axis_values, straight from a sweep-run's own
-    sweep_manifest.json (core/runtime/sweep_manifest.py's CaseManifestEntry)."""
+def _load_manifest_entries(manifest_path):
+    """Load complete case entries from one sweep manifest."""
     manifest = json.loads(Path(manifest_path).read_text())
-    return {entry["case_id"]: entry["resolved_axis_values"] for entry in manifest["cases"]}
+    return manifest["cases"]
+
+
+def _sweep_sources(sweep_cases_dir, manifest_path):
+    """Return paired archive/manifest sources for one or several run batches."""
+    dirs = ([Path(sweep_cases_dir)] if isinstance(sweep_cases_dir, (str, Path))
+            else [Path(p) for p in sweep_cases_dir])
+    manifests = ([Path(manifest_path)] if isinstance(manifest_path, (str, Path))
+                 else [Path(p) for p in manifest_path])
+    if len(dirs) == 1 and len(manifests) > 1:
+        dirs *= len(manifests)
+    if len(dirs) != len(manifests):
+        raise ValueError(
+            f"sweep archive/manifest count mismatch: {len(dirs)} != {len(manifests)}"
+        )
+    return list(zip(dirs, manifests))
 
 
 def _scalar(value):
@@ -99,7 +113,10 @@ def _scalar(value):
     return value
 
 
-def _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis, *, fixed_dim=None):
+def _iter_sweep_case_dirs(
+    sweep_cases_dir, manifest_path, dim_axis, n_axis, *, fixed_dim=None,
+    require_completed=False, require_case_dirs=False,
+):
     """Yield (case_dir, dim, N, resolved_axis_values) for every case in the
     manifest whose sweepCases/<case_id>/ subfolder actually exists on disk.
 
@@ -110,15 +127,29 @@ def _iter_sweep_case_dirs(sweep_cases_dir, manifest_path, dim_axis, n_axis, *, f
     axis values, never base). Pass fixed_dim explicitly rather than silently
     falling back within this function, so a genuinely missing dim elsewhere
     still means 'skip', not 'assume 3D'."""
-    for case_id, values in _load_case_axis_values(manifest_path).items():
-        case_dir = Path(sweep_cases_dir) / case_id
-        if not case_dir.is_dir():
-            continue
-        dim = fixed_dim if fixed_dim is not None else _scalar(values.get(dim_axis))
-        n = _scalar(values.get(n_axis))
-        if dim is None or n is None:
-            continue
-        yield case_dir, str(dim), int(n), values
+    seen = set()
+    for archive_dir, source_manifest in _sweep_sources(sweep_cases_dir, manifest_path):
+        for entry in _load_manifest_entries(source_manifest):
+            case_id = entry["case_id"]
+            if case_id in seen:
+                raise ValueError(f"duplicate case_id across sweep manifests: {case_id}")
+            seen.add(case_id)
+            if require_completed and entry.get("status") != "completed":
+                raise ValueError(
+                    f"paper sweep case is not completed: {case_id} "
+                    f"({entry.get('status', 'missing status')})"
+                )
+            values = entry["resolved_axis_values"]
+            case_dir = archive_dir / case_id
+            if not case_dir.is_dir():
+                if require_case_dirs:
+                    raise FileNotFoundError(f"missing archived sweep case: {case_dir}")
+                continue
+            dim = fixed_dim if fixed_dim is not None else _scalar(values.get(dim_axis))
+            n = _scalar(values.get(n_axis))
+            if dim is None or n is None:
+                continue
+            yield case_dir, str(dim), int(n), values
 
 
 _GRID_SPACING_PATTERN = re.compile(r"Grid spacing \(dx\)\s*=\s*([0-9.eE+-]+)")
@@ -162,10 +193,36 @@ def _grad_scheme_variant(values):
     return _GRAD_SCHEME_VARIANT_LABELS[_scalar(values["grad_scheme"])]
 
 
+def _generic_eikonal_variant(values):
+    """Select the axis-aligned, non-advection generic eikonal experiment."""
+    if values.get("conductivity_label", "axis") != "axis":
+        return "__exclude__"
+    if str(values.get("eikonal_advection_diffusion_approach", "false")).lower() != "false":
+        return "__exclude__"
+    return _grad_scheme_variant(values)
+
+
+_MONODOMAIN_TENSOR_LABELS = {
+    "manufacturedFDAMonodomainVerifier": "diagonal",
+    "manufacturedAnisotropicMonodomainVerifier": "rotated",
+}
+
+
+def frontal_monodomain_variant(values):
+    """Canonical ``tensor/gradient`` label for the Frontal MMS matrix."""
+    model = _scalar(values["verification_model_type"])
+    try:
+        tensor = _MONODOMAIN_TENSOR_LABELS[model]
+    except KeyError as exc:
+        raise ValueError(f"unsupported Frontal monodomain verifier: {model}") from exc
+    return f"{tensor}/{_grad_scheme_variant(values)}"
+
+
 def from_sweep_cases_field_triples(
     sweep_cases_dir, manifest_path, *, filename_glob, allowed_fields, case,
     dim_axis="dimensions", n_axis="number_cells", variant="",
-    fixed_dim=None, measured_h=None, variant_of=None,
+    fixed_dim=None, measured_h=None, variant_of=None, h_by_n=None,
+    require_completed=False, require_case_dirs=False,
 ):
     """Generic reader for the '<field> L1 L2 Linf' .dat format shared by the
     manufactured verifiers (bidomain/monodomain/bath/eikonal-activation).
@@ -189,13 +246,15 @@ def from_sweep_cases_field_triples(
     capture; only the underlying field variables are allowed to differ."""
     rows = []
     for case_dir, dim, n, values in _iter_sweep_case_dirs(
-        sweep_cases_dir, manifest_path, dim_axis, n_axis, fixed_dim=fixed_dim
+        sweep_cases_dir, manifest_path, dim_axis, n_axis, fixed_dim=fixed_dim,
+        require_completed=require_completed, require_case_dirs=require_case_dirs,
     ):
         case_variant = variant_of(values) if variant_of is not None else variant
         nominal_h = f"{1.0 / n:g}"
         for path in sorted(case_dir.glob(filename_glob)):
             content = path.read_text(errors="ignore")
-            h = (measured_h(content) if measured_h is not None else None) or nominal_h
+            h = None if h_by_n is None else h_by_n.get(n)
+            h = h or (measured_h(content) if measured_h is not None else None) or nominal_h
             base = dict(case=case, variant=case_variant, dim=dim, N=str(n), h=h)
             for field, (l1, l2, linf) in _parse_field_triples(content, allowed_fields).items():
                 rows.append({**base, "field": field, "L1": l1, "L2": l2, "Linf": linf})
@@ -330,25 +389,34 @@ def from_sweep_cases_electrode_table(
 
 
 def from_eikonal_tet_ecg(sweep_cases_dir, manifest_path, case="eikonal_tet"):
-    return from_sweep_cases_electrode_table(
+    rows = from_sweep_cases_electrode_table(
         sweep_cases_dir, manifest_path,
         filename_glob="manufacturedEikonalECGSummary.dat", case=case,
-        fixed_dim="3D", variant_of=_grad_scheme_variant,
+        fixed_dim="3D", variant_of=_generic_eikonal_variant,
         h_source_glob="manufacturedEikonalActivationTime.dat",
         h_parser=_measured_h_from_cell_count,
     )
+    # The tetrahedral convergence observable is the worst electrode, matching
+    # the original study definition. Keep one stable Phi_e row per case; the
+    # max/mean/min expansion is useful for exploratory electrode analysis but
+    # is not the convergence experiment represented by this adapter.
+    return [{**row, "field": "Phi_e", "L1": ""} for row in rows
+            if row["field"] == "Phi_e_max" and row["variant"] != "__exclude__"]
 
 
 def from_eikonal_tet_activation(sweep_cases_dir, manifest_path, case="eikonal_tet"):
     # Unlike hex's from_eikonal_activation, the tet reference keeps the raw
     # field name "activationTime" -- no "psi" rename here (confirmed against
     # the committed reference CSV).
-    return from_sweep_cases_field_triples(
+    rows = from_sweep_cases_field_triples(
         sweep_cases_dir, manifest_path,
         filename_glob="manufacturedEikonalActivationTime.dat",
         allowed_fields=EIKONAL_ACTIVATION_FIELDS, case=case,
-        fixed_dim="3D", measured_h=_measured_h_from_cell_count, variant_of=_grad_scheme_variant,
+        fixed_dim="3D", measured_h=_measured_h_from_cell_count,
+        variant_of=_generic_eikonal_variant,
     )
+    return [{**row, "L1": ""} for row in rows
+            if row["variant"] != "__exclude__"]
 
 
 def from_monodomain_tet_ecg(sweep_cases_dir, manifest_path, case="tet"):
@@ -361,14 +429,19 @@ def from_monodomain_tet_ecg(sweep_cases_dir, manifest_path, case="tet"):
     )
 
 
-def from_monodomain_tet_vm(sweep_cases_dir, manifest_path, case="tet"):
+def from_monodomain_tet_vm(
+    sweep_cases_dir, manifest_path, case="tet", *, variant_of=_grad_scheme_variant,
+    h_by_n=None, require_completed=False, require_case_dirs=False,
+):
     # case="tet" (not "mono_tet") -- confirmed against the committed
     # reference CSV's own "case" column, a naming artifact carried over
     # from the original bash-era scheme_study.csv this replaces.
     return from_sweep_cases_field_triples(
         sweep_cases_dir, manifest_path,
         filename_glob="*_cells_*.dat", allowed_fields=("Vm",), case=case,
-        fixed_dim="3D", measured_h=_measured_h_from_grid_spacing, variant_of=_grad_scheme_variant,
+        fixed_dim="3D", measured_h=_measured_h_from_grid_spacing, variant_of=variant_of,
+        h_by_n=h_by_n, require_completed=require_completed,
+        require_case_dirs=require_case_dirs,
     )
 
 
@@ -420,6 +493,63 @@ def from_bath_interface_metrics(sweep_cases_dir, manifest_path, case="bath_tet")
                 rows.append({**base, "variant": variant, "field": field,
                              "L1": rec.get(f"{col}_L1", ""),
                              "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
+    return rows
+
+
+def from_bath_interface_metric_files(files_by_n, case="bath_tet_reported"):
+    """Read the reported predictor-corrector interface metrics directly.
+
+    The same-mesh coupling study predates the sweep archive convention but
+    writes the identical utility CSV.  Keeping this small adapter makes the
+    paper's accepted N=10,20,40 ladder reproducible without inventing a second
+    numerical result or copying values from the manuscript table.
+    """
+    rows = []
+    for n, path in sorted(files_by_n.items()):
+        with Path(path).open(newline="") as fh:
+            rec = next(csv.DictReader(fh), None)
+        if rec is None:
+            raise ValueError(f"empty bath interface metrics file: {path}")
+        base = dict(
+            case=case, variant="predictor/distanceWeightedHarmonic/matchedSubmesh",
+            dim="3D", N=str(n), h=f"{1.0 / int(n):g}",
+        )
+        for field, col in _BATH_TET_FIELDS.items():
+            l2 = rec.get(f"{col}_L2", "")
+            if l2 == "":
+                continue
+            rows.append({**base, "field": field,
+                         "L1": rec.get(f"{col}_L1", ""),
+                         "L2": l2, "Linf": rec.get(f"{col}_Linf", "")})
+    return rows
+
+
+def from_tet_scheme_study(path, case, field_columns):
+    """Map the native hand-run tetrahedral scheme table to canonical rows.
+
+    ``field_columns`` maps the canonical field name to its native
+    ``(<L2 column>, <Linf column>)`` pair.  These tables are what the legacy
+    tet runners actually regenerate, so reading them directly avoids a false
+    dependency on an obsolete driverFoam sweep archive.
+    """
+    rows = []
+    with Path(path).open(newline="") as fh:
+        for rec in csv.DictReader(fh):
+            for field, (l2_col, linf_col) in field_columns.items():
+                l2 = rec.get(l2_col, "")
+                if l2 == "":
+                    continue
+                rows.append({
+                    "case": case,
+                    "variant": rec["scheme"],
+                    "dim": "3D",
+                    "N": rec["N"],
+                    "h": rec["dx"],
+                    "field": field,
+                    "L1": "",
+                    "L2": l2,
+                    "Linf": rec.get(linf_col, ""),
+                })
     return rows
 
 

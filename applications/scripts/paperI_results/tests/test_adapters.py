@@ -1,6 +1,7 @@
 import json
 
 import adapters
+import pytest
 
 
 def _write_manifest(path, cases):
@@ -83,6 +84,85 @@ def test_monodomain_tet_vm_and_ecg_share_measured_h_from_grid_spacing(tmp_path):
     assert all(r["h"] == "0.0588235" and r["variant"] == "GaussLinear" for r in ecg_rows)
 
 
+def test_monodomain_tet_vm_merges_completed_manifest_batches(tmp_path):
+    archive = tmp_path / "sweepCasesOptimised"
+    manifest_a = tmp_path / "sweepRunA" / "sweep_manifest.json"
+    manifest_b = tmp_path / "sweepRunB" / "sweep_manifest.json"
+    _write_manifest(manifest_a, {
+        "least_squares_40_manufacturedFDAMonodomainVerifier": {
+            "grad_scheme": "least_squares", "number_cells": [40],
+            "verification_model_type": "manufacturedFDAMonodomainVerifier",
+        },
+    })
+    _write_manifest(manifest_b, {
+        "least_squares_80_manufacturedAnisotropicMonodomainVerifier": {
+            "grad_scheme": "least_squares", "number_cells": [80],
+            "verification_model_type": "manufacturedAnisotropicMonodomainVerifier",
+        },
+    })
+    for case_id, name, l2 in (
+        ("least_squares_40_manufacturedFDAMonodomainVerifier",
+         "3D_70_cells_implicit.dat", "0.00051079"),
+        ("least_squares_80_manufacturedAnisotropicMonodomainVerifier",
+         "rotatedAnisotropy_3D_139_cells_implicit.dat", "0.0000349113"),
+    ):
+        case_dir = archive / case_id
+        case_dir.mkdir(parents=True)
+        (case_dir / name).write_text(f"Vm 1e-4 {l2} 1e-3\n")
+
+    rows = adapters.from_monodomain_tet_vm(
+        archive, [manifest_a, manifest_b], case="mono_tet_frontal",
+        variant_of=adapters.frontal_monodomain_variant,
+        h_by_n={40: 0.0142, 80: 0.0072},
+        require_completed=True, require_case_dirs=True,
+    )
+    assert {(r["N"], r["variant"]) for r in rows} == {
+        ("40", "diagonal/leastSquares"),
+        ("80", "rotated/leastSquares"),
+    }
+    assert {r["h"] for r in rows} == {0.0142, 0.0072}
+
+
+def test_multi_manifest_reader_rejects_duplicate_case_ids(tmp_path):
+    archive = tmp_path / "sweepCases"
+    case_id = "least_squares_40_manufacturedFDAMonodomainVerifier"
+    values = {
+        "grad_scheme": "least_squares", "number_cells": [40],
+        "verification_model_type": "manufacturedFDAMonodomainVerifier",
+    }
+    manifests = [tmp_path / "a.json", tmp_path / "b.json"]
+    for manifest in manifests:
+        _write_manifest(manifest, {case_id: values})
+    (archive / case_id).mkdir(parents=True)
+    (archive / case_id / "3D_70_cells_implicit.dat").write_text("Vm 1 1 1\n")
+
+    with pytest.raises(ValueError, match="duplicate case_id"):
+        adapters.from_monodomain_tet_vm(
+            archive, manifests, variant_of=adapters.frontal_monodomain_variant,
+            require_completed=True, require_case_dirs=True,
+        )
+
+
+def test_strict_manifest_reader_rejects_unfinished_case(tmp_path):
+    archive = tmp_path / "sweepCases"
+    manifest = tmp_path / "sweep_manifest.json"
+    _write_manifest(manifest, {
+        "least_squares_80_manufacturedFDAMonodomainVerifier": {
+            "grad_scheme": "least_squares", "number_cells": [80],
+            "verification_model_type": "manufacturedFDAMonodomainVerifier",
+        },
+    })
+    payload = json.loads(manifest.read_text())
+    payload["cases"][0]["status"] = "running"
+    manifest.write_text(json.dumps(payload))
+
+    with pytest.raises(ValueError, match="not completed"):
+        adapters.from_monodomain_tet_vm(
+            archive, manifest, variant_of=adapters.frontal_monodomain_variant,
+            require_completed=True, require_case_dirs=True,
+        )
+
+
 def test_eikonal_tet_activation_keeps_raw_field_name_and_derives_h_from_cell_count(tmp_path):
     manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
     sweep_cases = tmp_path / "sweepCases"
@@ -100,7 +180,7 @@ def test_eikonal_tet_activation_keeps_raw_field_name_and_derives_h_from_cell_cou
     rows = adapters.from_eikonal_tet_activation(sweep_cases, manifest)
     assert rows == [{"case": "eikonal_tet", "variant": "leastSquares", "dim": "3D",
                      "N": "10", "h": "0.0588235", "field": "activationTime",
-                     "L1": "0.02", "L2": "0.068", "Linf": "0.30"}]
+                     "L1": "", "L2": "0.068", "Linf": "0.30"}]
 
 
 def test_eikonal_tet_ecg_reads_h_from_companion_activation_file(tmp_path):
@@ -121,11 +201,10 @@ def test_eikonal_tet_ecg_reads_h_from_companion_activation_file(tmp_path):
         "E2 0.005 0.02 0.03\n"
     )
     rows = adapters.from_eikonal_tet_ecg(sweep_cases, manifest)
-    by_field = {r["field"]: r for r in rows}
-    assert set(by_field) == {"Phi_e_max", "Phi_e_mean", "Phi_e_min"}
-    assert by_field["Phi_e_max"]["L2"] == "0.0446989" and by_field["Phi_e_max"]["Linf"] == "0.0632351"
-    assert by_field["Phi_e_max"]["L1"] == "0.01"
-    assert by_field["Phi_e_min"]["L2"] == "0.02" and by_field["Phi_e_min"]["Linf"] == "0.03"
+    assert len(rows) == 1
+    assert rows[0]["field"] == "Phi_e"
+    assert rows[0]["L2"] == "0.0446989" and rows[0]["Linf"] == "0.0632351"
+    assert rows[0]["L1"] == ""
     assert all(r["h"] == "0.0588235" for r in rows)
 
 
