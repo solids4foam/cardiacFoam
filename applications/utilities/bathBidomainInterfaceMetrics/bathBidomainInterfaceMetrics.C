@@ -302,11 +302,7 @@ int main(int argc, char* argv[])
         "interfaceConductivityInterpolation",
         "unweightedHarmonic"
     );
-    const word assembly = bath.lookupOrDefault<word>
-    (
-        "intracellularAssembly",
-        "currentSplit"
-    );
+    const word assembly("matchedSubmesh");
 
 
     volScalarField phiIHeart
@@ -339,19 +335,6 @@ int main(int argc, char* argv[])
         isHeart[cellI] = true;
     }
 
-    surfaceTensorField sigmaTotalf
-    (
-        IOobject
-        (
-            "sigmaTotalfDiagnostic",
-            runTime.timeName(),
-            mesh,
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
-        mesh,
-        dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero)
-    );
     surfaceTensorField sigmaExtracellularf
     (
         IOobject
@@ -369,7 +352,6 @@ int main(int argc, char* argv[])
     const labelUList& neighbour = mesh.neighbour();
     const scalarField& weights = mesh.weights().primitiveField();
     const tensorField& sigma = sigmaTotal.primitiveField();
-    tensorField& sigmaFace = sigmaTotalf.primitiveFieldRef();
     tensorField& sigmaExtracellularFace =
         sigmaExtracellularf.primitiveFieldRef();
     forAll(neighbour, faceI)
@@ -380,35 +362,6 @@ int main(int argc, char* argv[])
         const tensor sigmaINei = isHeart[neiCell] ? sigmaI : tensor::zero;
         const tensor ownSigmaE = sigma[ownCell] - sigmaIOwn;
         const tensor neiSigmaE = sigma[neiCell] - sigmaINei;
-
-        if (method == "unweightedHarmonic")
-        {
-            sigmaFace[faceI] = extracellularFaceConductivity::
-                unweightedExtracellularFaceTensor
-                (
-                    sigma[ownCell], sigma[neiCell], sigmaIOwn, sigmaINei
-                );
-        }
-
-        else if (method == "distanceWeightedHarmonic")
-        {
-            sigmaFace[faceI] = extracellularFaceConductivity::
-                distanceWeightedExtracellularFaceTensor
-                (
-                    sigma[ownCell],
-                    sigma[neiCell],
-                    sigmaIOwn,
-                    sigmaINei,
-                    weights[faceI]
-                );
-        }
-        else
-        {
-            sigmaFace[faceI] = extracellularFaceConductivity::linear
-            (
-                sigma[ownCell], sigma[neiCell], weights[faceI]
-            );
-        }
 
         if (isHeart[ownCell] == isHeart[neiCell])
         {
@@ -438,23 +391,15 @@ int main(int argc, char* argv[])
                 );
         }
     }
-    forAll(sigmaTotalf.boundaryField(), patchI)
+    forAll(sigmaExtracellularf.boundaryField(), patchI)
     {
-        sigmaTotalf.boundaryFieldRef()[patchI] =
-            sigmaTotal.boundaryField()[patchI].patchInternalField();
         sigmaExtracellularf.boundaryFieldRef()[patchI] =
             sigmaTotal.boundaryField()[patchI].patchInternalField();
     }
 
     fvScalarMatrix assembledLaplacian
     (
-        fvm::laplacian
-        (
-            assembly == "matchedSubmesh"
-              ? sigmaExtracellularf
-              : sigmaTotalf,
-            phiE
-        )
+        fvm::laplacian(sigmaExtracellularf, phiE)
     );
     if (!assembledLaplacian.hasFaceFluxCorrection())
     {

@@ -100,8 +100,7 @@ _TET_ELECTRO_PROPERTIES = _HEX_ELECTRO_PROPERTIES.replace(
 ).replace(
     "bathConductivityField bodyAndOrgansConductivity;",
     """bathConductivityField bodyAndOrgansConductivity;
-        interfaceConductivityInterpolation distanceWeightedHarmonic;
-        intracellularAssembly matchedSubmesh;""",
+        interfaceConductivityInterpolation distanceWeightedHarmonic;""",
 )
 
 _HEX_FV_SCHEMES = """FoamFile
@@ -243,7 +242,7 @@ def test_tet_apply_case_installs_overlay_and_reference_predictor_corrector(tmp_p
     assert "bathPredictorCorrector    no;" in electro_text
     assert 'dimension    "3D";' in electro_text
     assert "interfaceConductivityInterpolation distanceWeightedHarmonic;" in electro_text
-    assert "intracellularAssembly matchedSubmesh;" in electro_text
+    assert "intracellularAssembly" not in electro_text
     assert "leastSquares" in (case_root / "system" / "fvSchemes").read_text()
 
 

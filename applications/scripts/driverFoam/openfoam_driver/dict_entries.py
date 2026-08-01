@@ -1002,14 +1002,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value='distanceWeightedHarmonic',
         ),
         DictEntry(
-            driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.intracellularAssembly',
-            phases=frozenset({'physics'}),
-            description='How the intracellular contribution is assembled into the global phiE equation. matchedSubmesh (default) assembles the myocardium Laplacian on a matched sub-mesh and injects its coefficients conservatively, imposing intracellular insulation once at the heart/bath boundary; currentSplit injects the divergence of the intracellular current as a source and evaluates the two intracellular terms on different meshes.',
-            value_kind='enum',
-            enum_values=('currentSplit', 'matchedSubmesh'),
-            typical_value='matchedSubmesh',
-        ),
-        DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPredictorCorrector',
             source_refs=('src/electroModels/core/advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.C',),
             phases=frozenset({'solver'}),

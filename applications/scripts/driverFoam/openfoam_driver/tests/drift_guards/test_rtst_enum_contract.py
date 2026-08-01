@@ -138,7 +138,6 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     # extracellular bath-assembly enums parsed directly by
     # extracellularPotentialDomain.C (lookupOrDefault<word>), not RTST types.
     "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.interfaceConductivityInterpolation",
-    "$ELECTRO_MODEL_COEFFS.bathPotentialDomain.intracellularAssembly",
     # conductivitySource selects how the myocardial conductivity tensor is
     # obtained (uniform dict literal / field read from disk). It is parsed as
     # a plain word by conductivityFieldIO.C (lookup + manual branch), not an

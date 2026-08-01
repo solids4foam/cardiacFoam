@@ -58,14 +58,14 @@ class extracellularPotentialDomain
     autoPtr<volTensorField> sigmaTotalPtr_;     // sigma_i+sigma_e in heart, sigma_b in bath
     autoPtr<volTensorField> sigmaIglobalPtr_;   // sigma_i in heart, 0 in bath
 
-    // Precomputed face coefficient for the global phiE operator.
-    autoPtr<surfaceTensorField> sigmaTotalfPtr_;
+    // Precomputed extracellular/bath face coefficient for the global phiE
+    // operator. The intracellular operator is assembled on the matched heart
+    // submesh and injected separately.
     autoPtr<surfaceTensorField> sigmaExtracellularfPtr_;
 
     // Face interpolation selected by bathPotentialDomain. The legacy
     // unweighted harmonic behavior remains the default.
     word interfaceConductivityInterpolation_;
-    word intracellularAssembly_;
 
     // Global potential and the V_m field projected to the base mesh.
     autoPtr<volScalarField> phiEPtr_;
@@ -107,8 +107,8 @@ class extracellularPotentialDomain
     // the bath cellZone scalar conductivities.
     void assembleConductivities();
 
-    // Build sigmaTotalf on internal and coupled faces.
-    void buildSigmaTotalSurface();
+    // Build the extracellular/bath face conductivity on all faces.
+    void buildSigmaExtracellularSurface();
 
     // Locate the reference cell on the base mesh (parallel-safe).
     label referenceCell() const;

@@ -170,7 +170,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
     heartDomain_(heartDomain),
     sigmaTotalPtr_(),
     sigmaIglobalPtr_(),
-    sigmaTotalfPtr_(),
     sigmaExtracellularfPtr_(),
     interfaceConductivityInterpolation_
     (
@@ -179,10 +178,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
             "interfaceConductivityInterpolation",
             "distanceWeightedHarmonic"
         )
-    ),
-    intracellularAssembly_
-    (
-        dict.lookupOrDefault<word>("intracellularAssembly", "matchedSubmesh")
     ),
     phiEPtr_(),
     VmGlobalPtr_(),
@@ -225,18 +220,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
             << "unweightedHarmonic and distanceWeightedHarmonic."
             << exit(FatalError);
     }
-    if
-    (
-        intracellularAssembly_ != "currentSplit"
-     && intracellularAssembly_ != "matchedSubmesh"
-    )
-    {
-        FatalErrorInFunction
-            << "Unknown intracellularAssembly '" << intracellularAssembly_
-            << "'. Valid values are currentSplit and matchedSubmesh."
-            << exit(FatalError);
-    }
-
     if (const dictionary* currentDict = dict.findDict("surfaceCurrentPatches"))
     {
         surfaceCurrentPatchNames_ = currentDict->toc();
@@ -259,7 +242,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
             << " bathConductivityField=" << bathConductivityFieldName_
             << " interfaceConductivityInterpolation="
             << interfaceConductivityInterpolation_
-            << " intracellularAssembly=" << intracellularAssembly_
+            << " heartAssembly=matchedSubmesh"
             << " nNonOrthogonalCorrectors="
             << nNonOrthogonalCorrectors_;
 
@@ -368,7 +351,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     buildHeartScatterMap();
     assembleConductivities();
-    buildSigmaTotalSurface();
+    buildSigmaExtracellularSurface();
     heartDomain_.bindExternalPhiE(phiEPtr_(), heartCellToBaseCell_);
 }
 
@@ -421,7 +404,6 @@ void extracellularPotentialDomain::buildHeartScatterMap()
         mappedHeartCell[baseCellI] = heartCellI;
     }
 
-    if (intracellularAssembly_ == "matchedSubmesh")
     {
         const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
 
@@ -607,28 +589,12 @@ void extracellularPotentialDomain::assembleConductivities()
     }
 }
 
-void extracellularPotentialDomain::buildSigmaTotalSurface()
+void extracellularPotentialDomain::buildSigmaExtracellularSurface()
 {
     const volTensorField& sigma = sigmaTotalPtr_();
     const volTensorField& sigmaIglobal = sigmaIglobalPtr_();
     const fvMesh& m = baseMesh_;
 
-    sigmaTotalfPtr_.reset
-    (
-        new surfaceTensorField
-        (
-            IOobject
-            (
-                "sigmaTotalf",
-                m.time().timeName(),
-                m,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            m,
-            dimensionedTensor("zero", sigma.dimensions(), tensor::zero)
-        )
-    );
     sigmaExtracellularfPtr_.reset
     (
         new surfaceTensorField
@@ -646,14 +612,12 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
         )
     );
 
-    surfaceTensorField& Sf = sigmaTotalfPtr_();
     surfaceTensorField& Sef = sigmaExtracellularfPtr_();
     const labelUList& own = m.owner();
     const labelUList& nei = m.neighbour();
     const tensorField& sigmaI = sigma.primitiveField();
     const tensorField& sigmaIntracellularI = sigmaIglobal.primitiveField();
     const scalarField& weights = m.weights().primitiveField();
-    tensorField& SfI = Sf.primitiveFieldRef();
     tensorField& SefI = Sef.primitiveFieldRef();
 
     forAll(own, faceI)
@@ -670,48 +634,6 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
             neiHeart
           ? sigmaI[neiCell] - sigmaIntracellularI[neiCell]
           : sigmaI[neiCell];
-
-        if (interfaceConductivityInterpolation_ == "unweightedHarmonic")
-        {
-            SfI[faceI] =
-                extracellularFaceConductivity::unweightedExtracellularFaceTensor
-                (
-                    sigmaI[ownCell],
-                    sigmaI[neiCell],
-                    sigmaIntracellularI[ownCell],
-                    sigmaIntracellularI[neiCell]
-                );
-        }
-        else if
-        (
-            interfaceConductivityInterpolation_
-         == "distanceWeightedHarmonic"
-        )
-        {
-            SfI[faceI] =
-                extracellularFaceConductivity::
-                distanceWeightedExtracellularFaceTensor
-                (
-                    sigmaI[ownCell],
-                    sigmaI[neiCell],
-                    sigmaIntracellularI[ownCell],
-                    sigmaIntracellularI[neiCell],
-                    weights[faceI]
-                );
-        }
-        else
-        {
-            SfI[faceI] =
-                extracellularFaceConductivity::
-                distanceWeightedExtracellularFaceTensor
-                (
-                    sigmaI[ownCell],
-                    sigmaI[neiCell],
-                    sigmaIntracellularI[ownCell],
-                    sigmaIntracellularI[neiCell],
-                    weights[faceI]
-                );
-        }
 
         if (ownHeart == neiHeart)
         {
@@ -740,7 +662,7 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
         }
     }
 
-    forAll(Sf.boundaryField(), patchI)
+    forAll(Sef.boundaryField(), patchI)
     {
         if (sigma.boundaryField()[patchI].coupled())
         {
@@ -761,56 +683,12 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
                 sigmaIglobal.boundaryField()[patchI].patchNeighbourField()
             );
 
-            Field<tensor>& Sfp = Sf.boundaryFieldRef()[patchI];
             Field<tensor>& Sefp = Sef.boundaryFieldRef()[patchI];
             const scalarField& patchWeights =
                 m.weights().boundaryField()[patchI];
 
-            forAll(Sfp, faceI)
+            forAll(Sefp, faceI)
             {
-                if
-                (
-                    interfaceConductivityInterpolation_
-                 == "unweightedHarmonic"
-                )
-                {
-                    Sfp[faceI] =
-                        extracellularFaceConductivity::
-                        unweightedExtracellularFaceTensor
-                        (
-                            sigmaP[faceI],
-                            sigmaN[faceI],
-                            sigmaIP[faceI],
-                            sigmaIN[faceI]
-                        );
-                }
-                else if
-                (
-                    interfaceConductivityInterpolation_
-                 == "distanceWeightedHarmonic"
-                )
-                {
-                    Sfp[faceI] =
-                        extracellularFaceConductivity::
-                        distanceWeightedExtracellularFaceTensor
-                        (
-                            sigmaP[faceI],
-                            sigmaN[faceI],
-                            sigmaIP[faceI],
-                            sigmaIN[faceI],
-                            patchWeights[faceI]
-                        );
-                }
-                else
-                {
-                    Sfp[faceI] = extracellularFaceConductivity::linear
-                    (
-                        sigmaP[faceI],
-                        sigmaN[faceI],
-                        patchWeights[faceI]
-                    );
-                }
-
                 const bool pHeart = magSqr(sigmaIP[faceI]) > SMALL;
                 const bool nHeart = magSqr(sigmaIN[faceI]) > SMALL;
                 const tensor pSigmaE = pHeart
@@ -853,10 +731,7 @@ void extracellularPotentialDomain::buildSigmaTotalSurface()
         }
         else
         {
-            // Physical boundaries use the cell-internal value. The sigmaTotal
-            // fields use zeroGradient BCs, so patchInternalField is consistent.
-            Sf.boundaryFieldRef()[patchI] =
-                sigma.boundaryField()[patchI].patchInternalField();
+            // Physical boundaries use the cell-internal extracellular value.
             Sef.boundaryFieldRef()[patchI] =
                 sigma.boundaryField()[patchI].patchInternalField()
               - sigmaIglobal.boundaryField()[patchI].patchInternalField();
@@ -1027,17 +902,10 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     fvScalarMatrix phiEqn
     (
-        fvm::laplacian
-        (
-            intracellularAssembly_ == "matchedSubmesh"
-              ? sigmaExtracellularfPtr_()
-              : sigmaTotalfPtr_(),
-            phiEPtr_()
-        )
+        fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
      == rhsGlobal
     );
 
-    if (intracellularAssembly_ == "matchedSubmesh")
     {
         fvScalarMatrix heartPhiEqn
         (
