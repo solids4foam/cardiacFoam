@@ -1,8 +1,0 @@
-#!/bin/bash
-
-cd "${0%/*}" || exit 1
-
-rm -rf constant/polyMesh postProcessing processor*
-rm -rf 0.[0-9]* [1-9]*
-rm -f log.* system/blockMeshDict.active
-rm -f constant/electroProperties.withDefaultValues
