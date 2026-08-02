@@ -22,7 +22,8 @@ if [ -f constant/polyMesh/points ] \
    && [ -f constant/polyMesh/neighbour ]; then
     echo "Using existing heart polyMesh in constant/polyMesh."
 else
-    runApplication blockMesh
+    echo "Fatal Error: Missing heart polyMesh in constant/polyMesh! Please provide the mesh." >&2
+    exit 1
 fi
 
 if $parallelRun; then
