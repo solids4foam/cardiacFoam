@@ -1,0 +1,8 @@
+{
+  "base": {
+    "entry": "manufacturedMonodomain1D3D",
+    "case_dir_name": "manufacturedSolutions/monodomain1D3D",
+    "setup_dir_name": "setup",
+    "output_dir_name": "outputs/coupled1D3DConvergence"
+  }
+}

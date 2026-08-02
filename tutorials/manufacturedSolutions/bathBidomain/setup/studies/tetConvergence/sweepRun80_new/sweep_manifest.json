@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "sweep_spec_hash": "sha256:8bbc54867a42e1c4708478248d878118bd8f1260fe85c524ec938f92d516af58",
+  "created_at": "2026-07-31T14:20:12.614983+00:00",
+  "updated_at": "2026-07-31T14:20:28.675827+00:00",
+  "cases": [
+    {
+      "case_id": "80_0.000140135",
+      "resolved_axis_values": {
+        "number_cells": [
+          80
+        ],
+        "dt_values": [
+          0.000140135
+        ],
+        "caseId": "80_0.000140135",
+        "output_dir_name": "80_0.000140135"
+      },
+      "override_hash": "sha256:0c133a11714a116473cc1ba69d9d45264143a84eb4811738b1472c7015b91a3b",
+      "run_document_path": "80_0.000140135/run_document.json",
+      "workflow_state_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/bathBidomain/80_0.000140135/workflow_state.json",
+      "status": "running",
+      "outcome": "fresh",
+      "started_at": "2026-07-31T14:20:28.675808+00:00",
+      "updated_at": "2026-07-31T14:20:28.675818+00:00"
+    }
+  ]
+}

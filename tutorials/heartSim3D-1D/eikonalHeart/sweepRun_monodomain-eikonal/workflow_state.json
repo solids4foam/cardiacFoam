@@ -1,0 +1,60 @@
+{
+  "status": "failed",
+  "current_step_id": "solve",
+  "completed_steps": [
+    "decomposePar"
+  ],
+  "failed_step_id": "solve",
+  "steps": [
+    {
+      "step_id": "decomposePar",
+      "status": "completed",
+      "attempt": 1,
+      "command": "decomposePar",
+      "args": [],
+      "cwd": ".",
+      "started_at": "2026-07-30T15:57:56.069451+00:00",
+      "finished_at": "2026-07-30T15:58:18.699007+00:00",
+      "exit_code": 0,
+      "stdout_log": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/heartSim3D-1D/eikonalHeart/sweepRun_monodomain-eikonal/workflow_logs/decomposePar.attempt1.stdout.log",
+      "stderr_log": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/heartSim3D-1D/eikonalHeart/sweepRun_monodomain-eikonal/workflow_logs/decomposePar.attempt1.stderr.log",
+      "produced_artifacts": [],
+      "diagnostics": []
+    },
+    {
+      "step_id": "solve",
+      "status": "failed",
+      "attempt": 1,
+      "command": "mpirun",
+      "args": [
+        "-np",
+        "6",
+        "cardiacFoam",
+        "-parallel"
+      ],
+      "cwd": ".",
+      "started_at": "2026-07-30T15:58:18.706305+00:00",
+      "finished_at": "2026-07-30T16:39:45.424750+00:00",
+      "exit_code": 132,
+      "stdout_log": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/heartSim3D-1D/eikonalHeart/sweepRun_monodomain-eikonal/workflow_logs/solve.attempt1.stdout.log",
+      "stderr_log": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/heartSim3D-1D/eikonalHeart/sweepRun_monodomain-eikonal/workflow_logs/solve.attempt1.stderr.log",
+      "produced_artifacts": [],
+      "diagnostics": []
+    },
+    {
+      "step_id": "reconstructPar",
+      "status": "pending",
+      "attempt": 0,
+      "command": "reconstructPar",
+      "args": [],
+      "cwd": ".",
+      "started_at": null,
+      "finished_at": null,
+      "exit_code": null,
+      "stdout_log": null,
+      "stderr_log": null,
+      "produced_artifacts": [],
+      "diagnostics": []
+    }
+  ]
+}

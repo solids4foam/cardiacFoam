@@ -1,0 +1,35 @@
+// Unit-cube [0,1]^3 tetrahedral mesh, shared with the monodomain tet MMS
+// (monodomainPseudoECG/setup/mesh/tet/box.geo.template -- identical geometry/lc ladder,
+// copied here verbatim so both solvers refine on the same mesh sequence).
+//
+// The characteristic length placeholder __LC__ is substituted by
+// run_tet_sweep.sh (lc = 1/N) to build a refinement ladder.
+//
+// Unlike the monodomain case, the eikonal manufactured verifier does NOT
+// rely on a zero-flux boundary: eikonalMyocardiumDomain.C's
+// activationTimePatchTypes() switches every non-empty boundary patch to
+// fixedValue when manufactured verification is enabled, and
+// manufacturedEikonalVerifier::applyConstraints() pokes the exact tau(x)
+// value directly into every boundary face each solve. That switch is keyed
+// off patch *type* (empty vs. not), not patch name, so the single lumped
+// "boundary" physical surface below (all six faces, one group) is fine --
+// gmsh patch naming is irrelevant here for the same reason it is in the
+// monodomain case, just via a different mechanism (Dirichlet-everywhere
+// instead of uniform zeroGradient).
+
+SetFactory("OpenCASCADE");
+
+lc = __LC__;
+
+Box(1) = {0, 0, 0, 1, 1, 1};
+
+Physical Volume("internal") = {1};
+Physical Surface("boundary") = {1, 2, 3, 4, 5, 6};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm3D = 4;  // Frontal: anatomically-matched quality
+Mesh.Optimize = 1;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format
+Mesh.OptimizeNetgen = 1;
+Mesh.Smoothing = 100;

@@ -1,0 +1,64 @@
+{
+  "base": {
+    "entry": "manufacturedFDABidomain",
+    "case_dir_name": "manufacturedSolutions/bidomain",
+    "setup_dir_name": "setup",
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": false,
+    "mesh_family": "hex",
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/temporalConvergence/results/sweepCases",
+    "convergence_axis": "temporal"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dimensions": [
+        "1D",
+        "2D"
+      ],
+      "number_cells": [
+        [
+          640
+        ],
+        [
+          640
+        ]
+      ],
+      "dt_values": [
+        [
+          0.001121075,
+          0.000560538,
+          0.000280269,
+          0.0001401345
+        ],
+        [
+          0.001121075,
+          0.000560538,
+          0.000280269,
+          0.0001401345
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "dimensions",
+          "number_cells"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "dimensions",
+          "number_cells"
+        ]
+      }
+    ]
+  }
+}
