@@ -229,3 +229,33 @@ tutorials/FiberAlignedAnisotropicMesh/**/constant/purkinjeGraph*
 # rule only matched the exact name "postProcessing".
 tutorials/**/postProcessing*/
 tutorials/**/blenderViz/
+
+# ---------------------------------------------------------
+# New AI Decoupling Rules (2026-08)
+# ---------------------------------------------------------
+
+# OpenFOAM generated mesh quality and properties fields
+tutorials/**/constant/aspectRatio
+tutorials/**/constant/cell*
+tutorials/**/constant/face*
+tutorials/**/constant/min*
+tutorials/**/constant/nonOrthoAngle
+
+# Sweep/Runner temporary folders and PIDs
+tutorials/**/*_temp/
+tutorials/**/run.pid
+
+# Simulation output plots, artifacts, and nested results
+tutorials/**/*.png
+tutorials/**/results/
+tutorials/**/interfaceStudy/
+
+# Benchmarks and scripts output
+meluxinaScripts_GPU/benchmarkGPU_results_summary.*
+
+# Reference outputs (keep these untracked if generated)
+tutorials/**/reference/*.csv
+
+# Presentations
+presentation/
+tutorials/manufacturedSolutions/eikonalECG/gradient_full_sweep.csv
