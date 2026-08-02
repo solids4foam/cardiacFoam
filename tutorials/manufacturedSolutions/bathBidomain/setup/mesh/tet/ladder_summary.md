@@ -1,3 +1,5 @@
+# Bath Bidomain Mesh Ladder Summary
+
 | Resolution (N) | Mean NO | Max NO | Max Skew |
 |----------------|---------|--------|----------|
 |             10 |   15.83° |  47.82° |    0.419 |

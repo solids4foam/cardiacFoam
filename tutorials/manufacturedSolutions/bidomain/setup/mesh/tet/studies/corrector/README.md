@@ -1,25 +1,10 @@
-# Standalone bidomain corrector study
+# corrector - bidomain
 
-This study separates two operations that were previously both expressed through
-PIMPLE iteration counts on tetrahedral meshes:
+## Purpose
+This study validates the predictor-corrector inner loop convergence and stability for the bidomain solver.
 
-- an outer bidomain sweep, which repeats the coupled `phiE -> Vm` block; and
-- an equation-level non-orthogonal reassembly, which updates the deferred
-  corrected-Laplacian contribution within each equation.
+## Execution
+Run `./run_corrector_study.sh` and parse metrics with `./summarize_corrector_study.py`.
 
-The four variants cross `nOuterCorrectors = 1,2` with
-`nNonOrthogonalCorrectors = 0,1`. They use this case's own `setup/mesh/tet/`
-overlay -- the same unit-cube Delaunay mesh geometry, least-squares gradient,
-corrected Laplacian, and `dt ~ h^2` controls as the monodomain and eikonal tet
-overlays, copied locally rather than referenced across cases. The short
-fixed-step window is a same-mesh iteration-sensitivity test, not a replacement
-for the four-level Cartesian bidomain convergence study.
-
-Run from the repository root:
-
-```bash
-bash tutorials/manufacturedSolutions/bidomain/setup/mesh/tet/setup/corrector/run_corrector_study.sh
-```
-
-Override `RESOLUTIONS`, `VARIANTS`, `RESULTS_DIR`, or `KEEP_WORK` through the
-environment for focused reruns.
+## Tracking & Outputs
+All generated outputs, mesh files, and metric archives are saved to the local `results/` folder, which is explicitly ignored by git. Do not commit generated OpenFOAM data.

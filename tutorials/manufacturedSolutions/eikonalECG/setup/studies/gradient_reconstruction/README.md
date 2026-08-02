@@ -1,4 +1,4 @@
-# gradientVerification - eikonalECG
+# gradient_reconstruction - eikonalECG
 
 ## Purpose
 This study evaluates different numerical gradient schemes (e.g., Gauss linear, leastSquares) and their impact on eikonalECG simulation metrics.
