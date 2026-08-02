@@ -33,10 +33,10 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from ...core.defaults.shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults.shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     collect_outputs_by_pattern,

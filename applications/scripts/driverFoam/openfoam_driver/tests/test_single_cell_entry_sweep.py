@@ -33,7 +33,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from openfoam_driver.specs.tutorials.single_cell import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.single_cell import make_spec
 
 
 def _repo_root() -> Path:

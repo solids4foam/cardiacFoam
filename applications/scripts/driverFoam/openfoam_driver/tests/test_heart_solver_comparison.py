@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.specs.tutorials.heart_solver_comparison import (
+from openfoam_driver.plugins.cardiacfoam.tutorials.heart_solver_comparison import (
     HEART_SOLVER_VARIANTS,
     make_spec,
 )

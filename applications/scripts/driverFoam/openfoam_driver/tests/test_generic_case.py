@@ -31,7 +31,7 @@
 
 from pathlib import Path
 
-from openfoam_driver.specs.tutorials.generic_case import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
 
 
 def _make_spec(tmp_path, **overrides):

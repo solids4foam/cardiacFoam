@@ -30,7 +30,7 @@
 
 from pathlib import Path
 
-from openfoam_driver.specs.tutorials.manufactured_fda_bidomain import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bidomain import make_spec
 
 
 def test_mesh_family_tet_reaches_workflow_dag(tmp_path):

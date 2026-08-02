@@ -33,10 +33,10 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from ...core.defaults import monodomain_and_eikonal_1d_cable_cv_convergence as defaults
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import monodomain_and_eikonal_1d_cable_cv_convergence as defaults
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     load_python_module,
@@ -45,7 +45,7 @@ from ..common import (
     set_delta_t,
     set_end_time,
 )
-from ..mesh_provisioning import cell_counts_from_dx
+from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
 
 
 def _replace_blockmesh_resolution(

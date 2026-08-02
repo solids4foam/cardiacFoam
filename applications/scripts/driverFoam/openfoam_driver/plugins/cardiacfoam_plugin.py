@@ -43,6 +43,7 @@ from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
 if TYPE_CHECKING:
     from openfoam_driver.dict_entries import DictEntry
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig
+    from openfoam_driver.tutorials_display import TutorialDisplay
 
 
 class CardiacFoamPlugin:
@@ -83,24 +84,57 @@ class CardiacFoamPlugin:
         manifest["solver_compatibility_rules"] = SOLVER_COMPATIBILITY_RULES
         return manifest
 
-    def get_tutorials(self) -> tuple[TutorialSpec, ...]:
-        """
-        Return the list of tutorials provided by cardiacFoam.
-        """
-        return tuple(list_tutorials())
+    def get_tutorial_catalog(self) -> dict:
+        from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec as make_generic_case_spec
+        return {
+            "spec_factories": SPEC_FACTORIES,
+            "registered_tutorials": REGISTERED_TUTORIALS,
+            "make_generic_case_spec": make_generic_case_spec
+        }
 
-    def validate_configuration(self, config: CaseConfig) -> tuple[StrictDiagnostic, ...]:
-        """
-        Perform any cardiacFoam-specific validation (e.g., solver coupling rules).
-        """
+    def get_tutorial_displays(self) -> tuple[TutorialDisplay, ...]:
+        from openfoam_driver.plugins.cardiacfoam.tutorials.display import TUTORIALS
+        return TUTORIALS
+
+    def validate_configuration(self, spec: TutorialSpec) -> tuple[StrictDiagnostic, ...]:
+        from pathlib import Path
+        from openfoam_driver.specs.common import detect_myocardium_solver_name, detect_ionic_model_name
+        from openfoam_driver.planning_types import diagnostic as _diagnostic
+
         diagnostics = []
-        
-        # Example validation: Check if a selected ionic model is compatible with the solver
-        params = config.params
-        
-        # This is a stub for where complex, domain-specific validation logic goes.
-        # e.g. checking SOLVER_COMPATIBILITY_RULES from solver_coupling.py
-        
+        case_root = Path(spec.case_root)
+        electro_path = case_root / "constant" / "electroProperties"
+
+        if electro_path.exists():
+            try:
+                solver = detect_myocardium_solver_name(electro_path)
+                if solver not in {"singleCellSolver", "monodomainSolver", "bidomainSolver", "eikonalSolver"}:
+                    diagnostics.append(_diagnostic(
+                        "error",
+                        "unknown_solver",
+                        f"No strict artifact handler is registered for myocardiumSolver {solver!r}.",
+                        source=str(electro_path),
+                        field="myocardiumSolver",
+                    ))
+            except KeyError as exc:
+                diagnostics.append(_diagnostic("error", "missing_solver", str(exc), source=str(electro_path)))
+
+            try:
+                ionic_model = detect_ionic_model_name(electro_path)
+            except KeyError:
+                ionic_model = None
+            
+            capabilities = self.get_capabilities()
+            if ionic_model is not None and ionic_model not in capabilities.get("ionic_models", {}):
+                diagnostics.append(_diagnostic(
+                    "error",
+                    "unknown_ionic_model",
+                    f"Ionic model {ionic_model!r} is not supported by the active plugin..",
+                    source=str(electro_path),
+                    field="ionicModel",
+                ))
+
         return tuple(diagnostics)
 
 

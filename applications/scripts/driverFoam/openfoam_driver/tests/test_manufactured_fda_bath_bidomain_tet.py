@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.specs.tutorials.manufactured_fda_bath_bidomain import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bath_bidomain import make_spec
 
 
 _CONTROL_DICT = """FoamFile

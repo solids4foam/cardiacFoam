@@ -157,10 +157,10 @@ def _artifact_diagnostics(
     workflow_dag: dict[str, Any] | None,
 ) -> tuple[StrictDiagnostic, ...]:
     from .core.runtime.workflow import validate_workflow_commands
+    from openfoam_driver.core.plugin_interface import get_active_plugin
 
     diagnostics: list[StrictDiagnostic] = []
     case_root = Path(spec.case_root)
-    electro_path = case_root / "constant" / "electroProperties"
 
     if not artifacts:
         diagnostics.append(_diagnostic(
@@ -170,32 +170,8 @@ def _artifact_diagnostics(
             source=str(case_root),
         ))
 
-    if electro_path.exists():
-        try:
-            solver = detect_myocardium_solver_name(electro_path)
-            if solver not in {"singleCellSolver", "monodomainSolver", "bidomainSolver", "eikonalSolver"}:
-                diagnostics.append(_diagnostic(
-                    "error",
-                    "unknown_solver",
-                    f"No strict artifact handler is registered for myocardiumSolver {solver!r}.",
-                    source=str(electro_path),
-                    field="myocardiumSolver",
-                ))
-        except KeyError as exc:
-            diagnostics.append(_diagnostic("error", "missing_solver", str(exc), source=str(electro_path)))
-
-        try:
-            ionic_model = detect_ionic_model_name(electro_path)
-        except KeyError:
-            ionic_model = None
-        if ionic_model is not None and ionic_model not in __get_capabilities().get("ionic_models", {}):
-            diagnostics.append(_diagnostic(
-                "error",
-                "unknown_ionic_model",
-                f"Ionic model {ionic_model!r} is not supported by the active plugin..",
-                source=str(electro_path),
-                field="ionicModel",
-            ))
+    # Defer domain-specific validation to the active plugin
+    diagnostics.extend(get_active_plugin().validate_configuration(spec))
 
     for diagnostic in validate_workflow_commands(workflow_dag):
         diagnostics.append(_diagnostic(

@@ -249,7 +249,7 @@ class TestMakeSpecDirectRun(unittest.TestCase):
 
     def test_spec_accepts_solver_command(self) -> None:
         import tempfile
-        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "mycase"
             case_dir.mkdir()
@@ -262,7 +262,7 @@ class TestMakeSpecDirectRun(unittest.TestCase):
 
     def test_spec_accepts_pre_solve_commands(self) -> None:
         import tempfile
-        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "mycase"
             case_dir.mkdir()
@@ -278,7 +278,7 @@ class TestMakeSpecDirectRun(unittest.TestCase):
         import subprocess
         import tempfile
         from unittest.mock import patch
-        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "mycase"
             case_dir.mkdir()
@@ -303,7 +303,7 @@ class TestMakeSpecDirectRun(unittest.TestCase):
         import subprocess
         import tempfile
         from unittest.mock import patch
-        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "mycase"
             case_dir.mkdir()
@@ -322,7 +322,7 @@ class TestMakeSpecDirectRun(unittest.TestCase):
 
     def test_metadata_records_solver_command(self) -> None:
         import tempfile
-        from openfoam_driver.specs.tutorials.generic_case import make_spec
+        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "mycase"
             case_dir.mkdir()

@@ -35,73 +35,24 @@ from typing import Callable
 
 from .models import TutorialSpec
 from ...specs.common import tutorials_root_default
-from ...specs.tutorials.manufactured_fda_bidomain import (
-    make_spec as make_manufactured_fda_bidomain_spec,
-)
-from ...specs.tutorials.manufactured_fda_bath_bidomain import (
-    make_spec as make_manufactured_fda_bath_bidomain_spec,
-)
-from ...specs.tutorials.manufactured_eikonal_ecg import (
-    make_spec as make_manufactured_eikonal_ecg_spec,
-)
-from ...specs.tutorials.manufactured_monodomain_total_lagrangian_em import (
-    make_spec as make_manufactured_monodomain_total_lagrangian_em_spec,
-)
-from ...specs.tutorials.manufactured_purkinje_graph import (
-    make_spec as make_manufactured_purkinje_graph_spec,
-)
-from ...specs.tutorials.heart_solver_comparison import (
-    make_spec as make_heart_solver_comparison_spec,
-)
-from ...specs.tutorials.generic_case import make_spec as make_generic_case_spec
-from ...specs.tutorials.monodomain_and_eikonal_1d_cable_cv_convergence import (
-    make_spec as make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
-)
-from ...specs.tutorials.manufactured_fda import make_spec as make_manufactured_fda_spec
-from ...specs.tutorials.niederer_2012 import make_spec as make_niederer_2012_spec
-from ...specs.tutorials.restitution_curves import make_spec as make_restitution_curves_spec
-from ...specs.tutorials.single_cell import make_spec as make_single_cell_spec
 
-SPEC_FACTORIES = {
-    "singleCell": make_single_cell_spec,
-    "singlecell": make_single_cell_spec,
-    "monodomainAndEikonal1DCableCVConvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
-    "monodomainandeikonal1dcablecvconvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
-    "niederer2012": make_niederer_2012_spec,
-    "niedereretal2012": make_niederer_2012_spec,
-    "manufacturedFDA": make_manufactured_fda_spec,
-    "manufacturedfda": make_manufactured_fda_spec,
-    "manufacturedFDABidomain": make_manufactured_fda_bidomain_spec,
-    "manufacturedfdabidomain": make_manufactured_fda_bidomain_spec,
-    "manufacturedFDABathBidomain": make_manufactured_fda_bath_bidomain_spec,
-    "manufacturedfdabathbidomain": make_manufactured_fda_bath_bidomain_spec,
-    "manufacturedEikonalECG": make_manufactured_eikonal_ecg_spec,
-    "manufacturedeikonalecg": make_manufactured_eikonal_ecg_spec,
-    "manufacturedMonodomainTotalLagrangianEM": make_manufactured_monodomain_total_lagrangian_em_spec,
-    "manufacturedelectromechanicsbc": make_manufactured_monodomain_total_lagrangian_em_spec,
-    "manufacturedPurkinjeGraph": make_manufactured_purkinje_graph_spec,
-    "manufacturedpurkinjegraph": make_manufactured_purkinje_graph_spec,
-    "heartSolverComparison": make_heart_solver_comparison_spec,
-    "heartsolvercomparison": make_heart_solver_comparison_spec,
-    "restitutionCurves": make_restitution_curves_spec,
-    "restitutioncurves": make_restitution_curves_spec,
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 SpecFactory = Callable[..., TutorialSpec]
 
-REGISTERED_TUTORIALS = (
-    "singleCell",
-    "monodomainAndEikonal1DCableCVConvergence",
-    "niederer2012",
-    "manufacturedFDA",
-    "manufacturedFDABidomain",
-    "manufacturedFDABathBidomain",
-    "manufacturedEikonalECG",
-    "manufacturedMonodomainTotalLagrangianEM",
-    "manufacturedPurkinjeGraph",
-    "heartSolverComparison",
-    "restitutionCurves",
-)
+
 
 ENTRY_KIND_VALUES = (
     "registered_tutorial",
@@ -268,9 +219,9 @@ def _classify_case_entry(case_root: Path, tutorials_root: Path) -> dict[str, obj
 def _entry_catalog_for_root(tutorials_root: Path) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = [
         _registered_tutorial_entry(tutorial, tutorials_root)
-        for tutorial in REGISTERED_TUTORIALS
+        for tutorial in list_tutorials()
     ]
-    known_registered = {tutorial.casefold() for tutorial in REGISTERED_TUTORIALS}
+    known_registered = {tutorial.casefold() for tutorial in list_tutorials()}
     for case_root in _iter_case_directories_recursive(tutorials_root):
         classified = _classify_case_entry(case_root, tutorials_root)
         if classified["entry_name"].casefold() in known_registered:
@@ -287,8 +238,7 @@ def _entry_catalog_for_root(tutorials_root: Path) -> list[dict[str, object]]:
     )
 
 
-def list_tutorials() -> list[str]:
-    return list(REGISTERED_TUTORIALS)
+
 
 
 def list_case_directories(tutorials_root: Path | None = None) -> list[str]:
@@ -314,8 +264,7 @@ def list_entries(tutorials_root: Path | None = None) -> list[dict[str, object]]:
     return _entry_catalog_for_root(resolved_root)
 
 
-def _normalized_registry() -> dict[str, object]:
-    return {name.casefold(): factory for name, factory in SPEC_FACTORIES.items()}
+
 
 
 
@@ -448,7 +397,7 @@ def resolve_entry(
             "requested_name": key,
             "requested_entry_kind": entry_kind,
             "resolved_name": str(matched_entry["entry_name"]),
-            "factory": make_generic_case_spec,
+            "factory": _get_plugin_tutorials().get("make_generic_case_spec"),
             "factory_overrides": generic_overrides,
             **matched_entry,
         }
@@ -464,7 +413,7 @@ def resolve_entry(
             "requested_name": key,
             "requested_entry_kind": entry_kind,
             "resolved_name": matched_case_dir,
-            "factory": make_generic_case_spec,
+            "factory": _get_plugin_tutorials().get("make_generic_case_spec"),
             "factory_overrides": incoming_overrides,
             "entry_name": Path(matched_case_dir).name,
             "entry_kind": "case_folder",
@@ -483,3 +432,16 @@ def resolve_entry(
 
 def resolve_tutorial(name: str, overrides: dict | None = None) -> dict[str, object]:
     return resolve_entry(name, overrides=overrides)
+
+
+def _get_plugin_tutorials():
+    from openfoam_driver.core.plugin_interface import get_active_plugin
+    return get_active_plugin().get_tutorial_catalog()
+
+def _normalized_registry() -> dict[str, object]:
+    spec_factories = _get_plugin_tutorials().get("spec_factories", {})
+    return {name.casefold(): factory for name, factory in spec_factories.items()}
+
+def list_tutorials() -> list[str]:
+    registered = _get_plugin_tutorials().get("registered_tutorials", ())
+    return list(registered)

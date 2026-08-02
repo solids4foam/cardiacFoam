@@ -34,10 +34,10 @@ from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
-from ...core.defaults import manufactured_monodomain_total_lagrangian_em as defaults
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import manufactured_monodomain_total_lagrangian_em as defaults
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_entry_overrides,
     apply_physics_property_overrides,

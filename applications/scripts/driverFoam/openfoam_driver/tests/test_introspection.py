@@ -178,7 +178,7 @@ class TestIntrospection(unittest.TestCase):
             self.assertIn("randomCase", payload["available_tutorials"])
             self.assertEqual(
                 payload["make_spec"]["callable"],
-                "openfoam_driver.specs.tutorials.generic_case.make_spec",
+                "openfoam_driver.plugins.cardiacfoam.tutorials.generic_case.make_spec",
             )
             self.assertEqual(payload["spec"]["cases"]["count"], 1)
             self.assertEqual(payload["tutorial_contract"]["name"], "randomCase")

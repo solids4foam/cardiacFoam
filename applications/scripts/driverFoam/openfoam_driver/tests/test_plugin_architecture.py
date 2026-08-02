@@ -46,18 +46,26 @@ def test_cardiacfoam_plugin_satisfies_protocol():
     assert len(entries) > 0, "Plugin must expose dictionary entries"
     assert hasattr(entries[0], "driver_path"), "Entries must be DictEntry objects"
     
+    # 3. Test Tutorials Contract
+    catalog = plugin.get_tutorial_catalog()
+    assert isinstance(catalog, dict), "get_tutorial_catalog must return a dict"
+    displays = plugin.get_tutorial_displays()
+    assert isinstance(displays, tuple), "get_tutorial_displays must return a tuple"
+    assert "registered_tutorials" in catalog, "Catalog must contain registered_tutorials"
+    assert "spec_factories" in catalog, "Catalog must contain spec_factories"
+    
+    
     # 2. Test Capabilities Contract
     capabilities = plugin.get_capabilities()
     assert capabilities is not None
     
-    # 3. Test Tutorials Contract
-    tutorials = plugin.get_tutorials()
-    assert isinstance(tutorials, tuple), "get_tutorials must return a tuple"
     
     # 4. Test Validation Contract
-    dummy_config = CaseConfig(case_id="dummy", params={})
-    diagnostics = plugin.validate_configuration(dummy_config)
-    assert isinstance(diagnostics, tuple), "validate_configuration must return a tuple of StrictDiagnostic"
+    from unittest.mock import MagicMock
+    from openfoam_driver.core.runtime.models import TutorialSpec
+    dummy_spec = MagicMock(spec=TutorialSpec)
+    dummy_spec.case_root = "/tmp/dummy"
+    diagnostics = plugin.validate_configuration(dummy_spec)
 
 
 def test_mock_solver_plugin():

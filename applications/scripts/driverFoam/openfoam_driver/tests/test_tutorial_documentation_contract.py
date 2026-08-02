@@ -29,7 +29,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from openfoam_driver.core.runtime.registry import REGISTERED_TUTORIALS, SPEC_FACTORIES
+from openfoam_driver.core.runtime.registry import list_tutorials, _normalized_registry
 
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
@@ -68,8 +68,8 @@ def _runner_cases() -> set[str]:
 
 def _registered_case_paths() -> dict[str, str]:
     paths = {}
-    for entry in REGISTERED_TUTORIALS:
-        spec = SPEC_FACTORIES[entry](tutorials_root=TUTORIALS_ROOT)
+    for entry in list_tutorials():
+        spec = _normalized_registry()[entry.casefold()](tutorials_root=TUTORIALS_ROOT)
         paths[entry] = str(Path(spec.case_root).relative_to(TUTORIALS_ROOT))
     return paths
 

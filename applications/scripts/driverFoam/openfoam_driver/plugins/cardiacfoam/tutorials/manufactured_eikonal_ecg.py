@@ -34,19 +34,19 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from ...core.defaults import manufactured_eikonal_ecg as defaults
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...core.runtime.mutators import update_foam_entry
-from ...core.runtime.parallel_execution import solve_steps
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import manufactured_eikonal_ecg as defaults
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.core.runtime.mutators import update_foam_entry
+from openfoam_driver.core.runtime.parallel_execution import solve_steps
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     replace_single_block_mesh_resolution,
     resolve_run_script_path,
     resolve_spec_paths,
 )
-from ..tet_mesh_provisioning import render_tet_geo
+from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
 
 
 _GRAD_SCHEME_TOKENS: dict[str, str] = {

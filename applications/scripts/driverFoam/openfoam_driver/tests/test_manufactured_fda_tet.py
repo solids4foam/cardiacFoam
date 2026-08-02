@@ -34,7 +34,7 @@ from unittest import mock
 import pytest
 
 from openfoam_driver.core.runtime.models import CaseConfig
-from openfoam_driver.specs.tutorials.manufactured_fda import (
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda import (
     _stage_case_output,
     make_spec,
 )
@@ -343,7 +343,7 @@ def test_apply_case_renders_geo_but_never_calls_gmsh(tmp_path):
     cases = spec.build_cases()
     assert len(cases) == 1
 
-    with mock.patch("openfoam_driver.specs.tutorials.manufactured_fda.subprocess") as mock_subprocess:
+    with mock.patch("openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda.subprocess") as mock_subprocess:
         spec.apply_case(spec.case_root, cases[0])
 
     mock_subprocess.run.assert_not_called()

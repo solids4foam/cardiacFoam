@@ -33,12 +33,12 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from ...core.defaults import manufactured_fda_bath_bidomain as defaults
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...core.runtime.mutators import update_foam_entry
-from ...core.runtime.parallel_execution import solve_steps
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import manufactured_fda_bath_bidomain as defaults
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.core.runtime.mutators import update_foam_entry
+from openfoam_driver.core.runtime.parallel_execution import solve_steps
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     ensure_electro_property_dict,
@@ -47,7 +47,7 @@ from ..common import (
     resolve_spec_paths,
     set_delta_t,
 )
-from ..tet_mesh_provisioning import render_tet_geo
+from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
 from .manufactured_fda import _build_cases
 
 

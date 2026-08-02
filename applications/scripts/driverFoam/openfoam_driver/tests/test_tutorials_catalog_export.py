@@ -31,7 +31,7 @@ The user confirmed tutorials live as hardcoded Python in the backend
 ("the tutorials are currently running based on hardcoded scripts in
 the backend. that is okay. We can pass them to json if that is not
 done yet"). The hardcoded list is
-``openfoam_driver.core.runtime.registry.REGISTERED_TUTORIALS``; this
+``openfoam_driver.core.runtime.registry.list_tutorials()``; this
 exporter serializes it (plus a thin display-metadata layer) to
 JSON for external consumers.
 
@@ -79,11 +79,11 @@ def test_every_registered_tutorial_is_exported(tmp_path):
     """The display catalog cannot ship a tutorial card whose backend
     factory does not exist, and cannot omit a registered tutorial.
     Either drift makes the catalog lie about what the backend can run."""
-    from openfoam_driver.core.runtime.registry import REGISTERED_TUTORIALS
+    from openfoam_driver.core.runtime.registry import list_tutorials, _normalized_registry
 
     data = _run(tmp_path / "t.json")
     exported = {t["id"] for t in data["tutorials"]}
-    registered = set(REGISTERED_TUTORIALS)
+    registered = set(list_tutorials())
     assert exported == registered, (
         f"exported vs registered mismatch — only-in-exported: "
         f"{exported - registered}, only-in-registered: "

@@ -37,17 +37,17 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from ...core.defaults import niederer_2012 as defaults
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import niederer_2012 as defaults
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
 )
-from ..mesh_provisioning import cell_counts_from_dx
-from ...core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 
 DEFAULT_POINTS_FUNCTION_OBJECT = getattr(
     defaults, "NIEDERER_POINTS_FUNCTION_OBJECT", "Niedererpoints"

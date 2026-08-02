@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from openfoam_driver.dict_entries import DictEntry
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig
     from openfoam_driver.planning_types import StrictDiagnostic
+    from openfoam_driver.tutorials_display import TutorialDisplay
 
 
 class CapabilityManifest(Protocol):
@@ -75,13 +76,19 @@ class SolverPlugin(Protocol):
         """
         ...
 
-    def get_tutorials(self) -> tuple[TutorialSpec, ...]:
+    def get_tutorial_catalog(self) -> dict:
         """
-        Return the list of tutorials/base-cases provided by this solver.
+        Return the tutorial specs provided by this solver.
         """
         ...
 
-    def validate_configuration(self, config: CaseConfig) -> tuple[StrictDiagnostic, ...]:
+    def get_tutorial_displays(self) -> tuple[TutorialDisplay, ...]:
+        """
+        Return the UI display cards for the registered tutorials.
+        """
+        ...
+
+    def validate_configuration(self, spec: TutorialSpec) -> tuple[StrictDiagnostic, ...]:
         """
         Solver-specific validation logic that goes beyond simple DictEntry constraints.
         Returns a tuple of diagnostics (errors/warnings).

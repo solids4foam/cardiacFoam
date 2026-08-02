@@ -33,16 +33,16 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from ...core.defaults import single_cell as defaults
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.defaults import single_cell as defaults
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
     collect_outputs_by_pattern,
     resolve_run_script_path,
     resolve_spec_paths,
 )
-from ...core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 
 
 def _build_cases(

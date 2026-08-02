@@ -34,14 +34,14 @@ from functools import partial
 from pathlib import Path
 from itertools import product
 
-from ...core.runtime.models import CaseConfig, TutorialSpec
-from ...postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from ..common import (
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
+from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
+from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     resolve_spec_paths,
     set_delta_t,
 )
-from ...core.runtime.mutators import update_foam_entry
+from openfoam_driver.core.runtime.mutators import update_foam_entry
 
 
 def _build_cases(

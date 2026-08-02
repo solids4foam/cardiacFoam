@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from openfoam_driver.specs.tutorials.manufactured_eikonal_ecg import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_eikonal_ecg import make_spec
 
 
 _ELECTRO_PROPERTIES = """FoamFile
@@ -156,7 +156,7 @@ def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
         run_in_parallel=False,
     )
 
-    with mock.patch("openfoam_driver.specs.tutorials.manufactured_eikonal_ecg.subprocess") as mock_subprocess:
+    with mock.patch("openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_eikonal_ecg.subprocess") as mock_subprocess:
         spec.apply_case(spec.case_root, spec.build_cases()[0])
 
     mock_subprocess.run.assert_not_called()
