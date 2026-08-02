@@ -41,9 +41,9 @@ from openfoam_driver.core.runtime.registry import list_tutorials
 from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
 
 if TYPE_CHECKING:
-    from openfoam_driver.dict_entries import DictEntry
-    from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig
+    from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
     from openfoam_driver.tutorials_display import TutorialDisplay
+    from pathlib import Path
 
 
 class CardiacFoamPlugin:
@@ -136,6 +136,10 @@ class CardiacFoamPlugin:
                 ))
 
         return tuple(diagnostics)
+
+    def predict_data_artifacts(self, case_root: Path, spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+        from openfoam_driver.plugins.cardiacfoam.artifacts_predictor import predict_cardiac_artifacts
+        return predict_cardiac_artifacts(case_root, spec)
 
 
 # Ensure CardiacFoamPlugin satisfies the SolverPlugin protocol

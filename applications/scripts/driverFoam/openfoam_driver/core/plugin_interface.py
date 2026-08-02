@@ -31,9 +31,10 @@ from typing import Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from openfoam_driver.dict_entries import DictEntry
-    from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig
+    from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
     from openfoam_driver.planning_types import StrictDiagnostic
     from openfoam_driver.tutorials_display import TutorialDisplay
+    from pathlib import Path
 
 
 class CapabilityManifest(Protocol):
@@ -92,6 +93,13 @@ class SolverPlugin(Protocol):
         """
         Solver-specific validation logic that goes beyond simple DictEntry constraints.
         Returns a tuple of diagnostics (errors/warnings).
+        """
+        ...
+
+    def predict_data_artifacts(self, case_root: Path, spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+        """
+        Predict the domain-specific artifacts (like ECGs or Purkinje VTK files) 
+        that this solver expects to produce.
         """
         ...
 
