@@ -30,10 +30,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from openfoam_driver.core.plugin_interface import SolverPlugin, CapabilityManifest
 
-# In a fully separated architecture, these would be local to the plugin package.
-# For now, we import them from their current locations to prove the contract.
-from openfoam_driver.dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
+# Note: now imported from the local plugin catalog instead of dict_entries
+from openfoam_driver.plugins.cardiacfoam.dict_entries_catalog import ELECTRO_PROPERTY_ENTRY_GROUPS, HETEROGENEITY_MODELS
+from openfoam_driver.dict_entries import PHYSICS_PROPERTY_ENTRIES
+from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from openfoam_driver.capability_manifest import build_capability_manifest
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 from openfoam_driver.core.runtime.registry import list_tutorials
 from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
 
@@ -53,12 +56,18 @@ class CardiacFoamPlugin:
     def plugin_name(self) -> str:
         return "cardiacFoam"
         
+    def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
+        """
+        Return the dictionary entries organized by logical group.
+        """
+        return ELECTRO_PROPERTY_ENTRY_GROUPS
+
     def get_dict_entries(self) -> tuple[DictEntry, ...]:
         """
         Aggregate and return all dictionary entries specific to cardiacFoam.
         """
         entries: list[DictEntry] = list(PHYSICS_PROPERTY_ENTRIES)
-        for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+        for group in self.get_dict_groups().values():
             entries.extend(group)
         # Note: A complete implementation would also aggregate other cardiac-specific dicts
         return tuple(entries)
@@ -67,7 +76,12 @@ class CardiacFoamPlugin:
         """
         Return the cardiacFoam capabilities (models, solvers, etc.).
         """
-        return build_capability_manifest()
+        manifest = build_capability_manifest(ionic_model_catalog=IONIC_MODEL_CATALOG, active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG)
+        manifest["heterogeneity_models"] = HETEROGENEITY_MODELS
+        manifest["ionic_models"] = IONIC_MODEL_CATALOG
+        manifest["active_tension_models"] = ACTIVE_TENSION_MODEL_CATALOG
+        manifest["solver_compatibility_rules"] = SOLVER_COMPATIBILITY_RULES
+        return manifest
 
     def get_tutorials(self) -> tuple[TutorialSpec, ...]:
         """

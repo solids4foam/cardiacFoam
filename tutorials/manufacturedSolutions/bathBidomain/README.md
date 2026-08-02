@@ -91,8 +91,8 @@ under the tet variant -- it is built from a single Gmsh model over
 bath `1<=x<=2`) with the two heart--bath interfaces as internal conformal
 faces, rather than reusing a shared unit-cube template -- so this overlay
 also needs its own `constant/electroProperties` copy (`dimension "3D"` plus
-the `interfaceConductivityInterpolation`/`intracellularAssembly` entries the
-unstructured interface needs) alongside `fvSchemes` (`leastSquares`
+the `interfaceConductivityInterpolation` entry the unstructured interface
+needs) alongside `fvSchemes` (`leastSquares`
 gradient); `fvSolution`'s `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1`
 already match this case's own hex default, so no overlay is needed there.
 
@@ -130,7 +130,7 @@ bath-bidomain table (`Vm`, `phiE`, `phiI` errors).
 ### Interface-current (assembled-flux) convergence sweep
 
 ```bash
-ASSEMBLY=matchedSubmesh METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
+METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
   bash setup/mesh/tet/run_parallel_interface_sweep.sh
 ```
 
@@ -138,6 +138,6 @@ Writes
 `setup/mesh/tet/interfaceStudy/matchedSubmesh/distanceWeightedHarmonic/N<N>/bathBidomainInterfaceMetrics.csv`
 (the source of record for `@tbl-bath-bidomain-tet`'s assembled-current rows;
 see `FINAL_SOLUTION.md`). Both sweeps use the same selected formulation
-(`matchedSubmesh` + `distanceWeightedHarmonic`, baked into
+(`matchedSubmesh` assembly with `distanceWeightedHarmonic`, baked into
 `setup/mesh/tet/electroProperties`) and the committed `snGrad corrected`
 scheme.

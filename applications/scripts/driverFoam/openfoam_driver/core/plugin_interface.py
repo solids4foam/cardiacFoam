@@ -62,6 +62,12 @@ class SolverPlugin(Protocol):
         """
         ...
 
+    def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
+        """
+        Return the dictionary entries organized by logical group.
+        """
+        ...
+
     def get_capabilities(self) -> CapabilityManifest:
         """
         Return the capabilities of the solver (e.g., supported physics, 
@@ -81,3 +87,21 @@ class SolverPlugin(Protocol):
         Returns a tuple of diagnostics (errors/warnings).
         """
         ...
+
+_ACTIVE_PLUGIN: SolverPlugin | None = None
+
+def set_active_plugin(plugin: SolverPlugin) -> None:
+    """Inject the active solver plugin for this session."""
+    global _ACTIVE_PLUGIN
+    _ACTIVE_PLUGIN = plugin
+
+def get_active_plugin() -> SolverPlugin:
+    """
+    Retrieve the globally active solver plugin. 
+    Falls back to CardiacFoamPlugin if none is set to maintain backward compatibility.
+    """
+    global _ACTIVE_PLUGIN
+    if _ACTIVE_PLUGIN is None:
+        from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
+        _ACTIVE_PLUGIN = CardiacFoamPlugin()
+    return _ACTIVE_PLUGIN

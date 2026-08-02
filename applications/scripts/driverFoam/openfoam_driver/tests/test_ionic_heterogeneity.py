@@ -141,8 +141,8 @@ def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
 # --------------------------------------------------------------------------
 
 def _het_entries():
-    from openfoam_driver.dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS
-    return ELECTRO_PROPERTY_ENTRY_GROUPS["ionic_heterogeneity"]
+    from openfoam_driver.dict_entries import get_electro_property_entry_groups
+    return get_electro_property_entry_groups()["ionic_heterogeneity"]
 
 
 def _transmural_entries():

@@ -13,35 +13,26 @@ FoamFile
     location    "system";
     object      fvSchemes;
 }
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 ddtSchemes
 {
-    //default         CrankNicolson 1.0;
-    //default         backward; // 2nd order
-    // default         Euler; // 1st order
-    default none;
-    ddt(Vm) backward;
+    default         none;
+    ddt(Vm)         backward;
 }
 
 gradSchemes
 {
-    default         Gauss linear; //leastSquares;
+    default         leastSquares;
 }
 
 divSchemes
 {
     default         none;
-    div((conductivityIntracellular&grad(Vm))) Gauss linear;
-    div((conductivityIntracellular&grad(phiE))) Gauss linear;
 }
 
 laplacianSchemes
 {
-    default                                       Gauss linear corrected;
-    laplacian(conductivityIntracellular,Vm)       Gauss linear corrected;
-    laplacian(GiPlusGe,phiE)                      Gauss linear corrected;
-    laplacian(sigmaTotalf,phiE)                   Gauss linear corrected;
+    default         Gauss linear corrected;
 }
 
 interpolationSchemes
@@ -59,6 +50,5 @@ fluxRequired
     default         no;
     phiE;
 }
-
 
 // ************************************************************************* //

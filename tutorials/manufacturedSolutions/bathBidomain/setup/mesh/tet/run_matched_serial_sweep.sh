@@ -56,9 +56,6 @@ cp setup/mesh/tet/electroProperties constant/electroProperties
 foamDictionary constant/electroProperties \
     -entry bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation \
     -set distanceWeightedHarmonic
-foamDictionary constant/electroProperties \
-    -entry bidomainSolverCoeffs.bathPotentialDomain.intracellularAssembly \
-    -set matchedSubmesh
 
 # Merged case (bathBidomain): system/fvSchemes is the hex default (Gauss
 # linear); activate this case's own tet overlay (leastSquares) as the

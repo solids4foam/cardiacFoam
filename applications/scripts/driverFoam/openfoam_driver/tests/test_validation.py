@@ -43,7 +43,7 @@ from __future__ import annotations
 
 from openfoam_driver.dict_entries import (
     DictEntry,
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
@@ -54,7 +54,7 @@ _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         yield from group
 
 
@@ -548,7 +548,7 @@ Fixture-to-solver mapping (derived from each spec's defaults.ELECTRO_PROPERTIES_
 import pytest
 
 from openfoam_driver.dict_entries import (
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
@@ -559,7 +559,7 @@ _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         yield from group
 
 

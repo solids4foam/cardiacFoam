@@ -5,6 +5,7 @@ Summary: Reusable Python-spec driver for OpenFOAM tutorial automation.
 Author: cardiacFoam contributors
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
+Requires-Dist: gmsh>=4.15.2
 Requires-Dist: jsonschema>=4.0
 Provides-Extra: post
 Requires-Dist: matplotlib>=3.7; extra == "post"
@@ -13,16 +14,6 @@ Requires-Dist: pandas>=2.0; extra == "post"
 Requires-Dist: plotly>=5.0; extra == "post"
 Requires-Dist: prompt-toolkit>=3.0; extra == "post"
 Requires-Dist: openpyxl>=3.1; extra == "post"
-Provides-Extra: dashboard
-Requires-Dist: fastapi>=0.110; extra == "dashboard"
-Requires-Dist: uvicorn>=0.29; extra == "dashboard"
-Requires-Dist: jinja2>=3.1; extra == "dashboard"
-Requires-Dist: python-multipart>=0.0.9; extra == "dashboard"
-Requires-Dist: httpx2>=2.0; extra == "dashboard"
-Requires-Dist: pyvista>=0.44; extra == "dashboard"
-Requires-Dist: trimesh>=4.4; extra == "dashboard"
-Requires-Dist: numpy>=1.26; extra == "dashboard"
-Requires-Dist: matplotlib>=3.8; extra == "dashboard"
 
 # OpenFOAM tutorial driver architecture
 
@@ -33,7 +24,7 @@ workflow-case execution, and post-processing.
 
 ```text
 openfoam_driver/
-├── cli.py                          # CLI entrypoint (plan/step/run/describe/sim/post/all)
+├── cli.py                          # CLI entrypoint (plan/step/run/describe/sweep-plan/sweep-run)
 ├── strict_planning.py              # strict preflight contract report
 ├── core/
 │   ├── runtime/
@@ -41,9 +32,9 @@ openfoam_driver/
 │   │   ├── workflow.py            # workflow DAG normalization/validation
 │   │   ├── workflow_state.py      # persisted step state model
 │   │   ├── workflow_runner.py     # one-step strict subprocess runner
+│   │   ├── workflow_orchestrator.py # runs a workflow_dag to completion
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
-│   │   ├── registry.py            # tutorial name -> make_spec factory
-│   │   └── engine.py              # shared simulation/postprocess engine
+│   │   └── registry.py            # tutorial name -> make_spec factory
 │   └── defaults/                  # per-tutorial default parameters
 ├── specs/
 │   ├── common.py                  # mutators/path helpers
@@ -81,7 +72,7 @@ This keeps all tutorial workflows on one engine while allowing per-tutorial swee
 In addition to these curated specs, the driver can also run:
 
 - `genericCase` / `randomCase` with `case_dir_name` supplied in config
-- any existing case folder directly, for example `foamctl sim --entry ECG`
+- any existing case folder directly, for example `foamctl run --strict --entry ECG`
 
 ## Install and run
 
@@ -95,31 +86,27 @@ Run examples:
 
 ```bash
 # installed entrypoints
-foamctl all --entry niederer2012
-foamctl sim --entry manufacturedFDA --dry-run
-foamctl sim --entry manufacturedFDABidomain --dry-run
 foamctl plan --strict --entry singleCell
 foamctl run --strict --entry singleCell
 foamctl step --strict --entry singleCell --step solve
-driverFoam sim --entry singleCell
+foamctl run --strict --entry niederer2012
 
 # module invocation
-python3 -m openfoam_driver all --entry singleCell
+python3 -m openfoam_driver run --strict --entry singleCell
 python3 -m openfoam_driver describe --entry singleCell
 
 # repo-local wrapper
-applications/scripts/driverFoam/bin/driverFoam sim --entry ECG --dry-run
+applications/scripts/driverFoam/bin/driverFoam run --strict --entry ECG
 ```
 
 ## CLI actions
 
-- `sim` : apply and run all resolved cases
-- `post`: run only post-processing hook
-- `all` : `sim` then `post`
-- `describe` : print machine-readable entry/spec metadata as JSON
 - `plan` : print a non-mutating strict machine-readable launch contract as JSON
 - `step` : execute exactly one normalized strict-plan workflow step
 - `run` : execute normalized strict-plan workflow steps until completion or failure
+- `describe` : print machine-readable entry/spec metadata as JSON
+- `sweep-plan` : dry-run every case in a `sweep.json` and report readiness
+- `sweep-run` : materialize and run every case in a `sweep.json`
 
 Useful flags:
 
@@ -136,8 +123,8 @@ The `describe` action resolves the requested entry and prints:
 - resolved case/setup/output paths
 - the resolved cases for the current configuration
 - the grouped dict-entry catalog for `physicsProperties` and `electroProperties`
-- the launch plan for `sim`, `post`, and `all`, including the exact driver
-  command and expected manifest path
+- `strict_launch`: the `run --strict --entry ...` command for this entry,
+  including its case/output paths
 
 ## Strict autonomous contract
 
@@ -439,25 +426,3 @@ python3 applications/scripts/driverFoam/scripts/scan-dict-keys.py --strict
 This scanner fails when new uncatalogued C++ dict keys appear, stale catalog
 paths remain, or allowlist entries in
 `openfoam_driver/scripts/dict_key_allowlist.json` become unused.
-
-## Simulation dashboard
-
-Launch a local web app that scans `tutorials/`, shows each case's goal, run
-status, metrics, plots, and 3D model, and lets you save notes/tags/captions:
-
-```bash
-foamctl dashboard --root tutorials
-# then open http://127.0.0.1:8765
-```
-
-Options: `--port`, `--host`, `--store <db>`, `--no-3d`, `--no-open`.
-Requires the dashboard extra: `pip install -e ".[dashboard]"`.
-
-For a publication-quality Blender figure of a 3D case (produces `.blend` + PNG):
-
-```bash
-python -m openfoam_driver.dashboard.render_case \
-    --case tutorials/PATHOS/RBBB --blender "/Applications/Blender.app/Contents/MacOS/Blender"
-```
-
-The app displays any renders it finds under `dashboard/renders/<case>/`.

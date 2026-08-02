@@ -32,7 +32,7 @@ import unittest
 from pathlib import Path
 
 from openfoam_driver.dict_entries import (
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
     all_documented_driver_paths,
 )
@@ -83,7 +83,7 @@ class TestDictEntryCatalog(unittest.TestCase):
             for source_ref in entry.source_refs:
                 self.assertTrue((repo_root / source_ref).exists(), source_ref)
 
-        for entries in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+        for entries in get_electro_property_entry_groups().values():
             for entry in entries:
                 for source_ref in entry.source_refs:
                     self.assertTrue((repo_root / source_ref).exists(), source_ref)
@@ -94,7 +94,7 @@ class TestDictEntryCatalog(unittest.TestCase):
         self.assertIn("electroMechanicalModel", type_entry.enum_values)
 
         monodomain_entries = {
-            entry.driver_path: entry for entry in ELECTRO_PROPERTY_ENTRY_GROUPS["monodomain"]
+            entry.driver_path: entry for entry in get_electro_property_entry_groups()["monodomain"]
         }
         self.assertEqual(
             monodomain_entries["$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusLocationMin"].value_kind,
@@ -105,7 +105,7 @@ class TestDictEntryCatalog(unittest.TestCase):
             "dimensioned_scalar_literal",
         )
 
-        ecg_entries = {entry.driver_path: entry for entry in ELECTRO_PROPERTY_ENTRY_GROUPS["ecg"]}
+        ecg_entries = {entry.driver_path: entry for entry in get_electro_property_entry_groups()["ecg"]}
         self.assertTrue(
             ecg_entries[
                 "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.electrodePositions.<electrode>"
@@ -173,7 +173,7 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
     def setUp(self):
         self.entries = {
             e.driver_path: e
-            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["conduction_system"]
+            for e in get_electro_property_entry_groups()["conduction_system"]
         }
 
     def test_conduction_domain_selector_key_is_conductionSystemDomain(self):
@@ -225,7 +225,7 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
     def setUp(self):
         self.entries = {
             e.driver_path: e
-            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["domain_couplings"]
+            for e in get_electro_property_entry_groups()["domain_couplings"]
         }
 
     def test_coupler_selector_key_is_electroDomainCoupler(self):
@@ -259,7 +259,7 @@ class TestDomainCouplingSchemaContract(unittest.TestCase):
     def test_common_model_coeffs_owns_electrophysics_advance_scheme(self):
         common_entries = {
             e.driver_path: e
-            for e in ELECTRO_PROPERTY_ENTRY_GROUPS["common_model_coeffs"]
+            for e in get_electro_property_entry_groups()["common_model_coeffs"]
         }
         self.assertIn(
             "$ELECTRO_MODEL_COEFFS.electrophysicsAdvanceScheme",
@@ -360,11 +360,11 @@ class TestDictEntryStructuredConstraints(unittest.TestCase):
         with empty structured-constraint fields — migration is opt-in
         per-entry, not a forced rewrite."""
         from openfoam_driver.dict_entries import (
-            ELECTRO_PROPERTY_ENTRY_GROUPS,
+            get_electro_property_entry_groups,
             PHYSICS_PROPERTY_ENTRIES,
         )
         all_entries = list(PHYSICS_PROPERTY_ENTRIES)
-        for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+        for group in get_electro_property_entry_groups().values():
             all_entries.extend(group)
         self.assertGreater(len(all_entries), 80)  # sanity: we have 87+ today
         for entry in all_entries:
@@ -705,7 +705,7 @@ that every declared value is a valid ``Phase`` literal.
 import typing
 
 from openfoam_driver.dict_entries import (
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
     Phase,
 )
@@ -715,7 +715,7 @@ VALID_PHASES = set(typing.get_args(Phase))
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         yield from group
 
 

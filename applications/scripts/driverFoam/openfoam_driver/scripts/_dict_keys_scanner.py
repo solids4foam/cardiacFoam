@@ -49,7 +49,7 @@ Returns a flat list of `DictRead` records.  Sub-dict opens are flagged with
 Comments are stripped before scanning so commented-out code is never matched.
 
 Catalogue-side helpers (`CataloguePath`, `iter_catalogue_paths`) parse every
-`driver_path` in `PHYSICS_PROPERTY_ENTRIES` and `ELECTRO_PROPERTY_ENTRY_GROUPS`
+`driver_path` in `PHYSICS_PROPERTY_ENTRIES` and `get_electro_property_entry_groups()`
 into a structured form for comparison against the scanner output.
 
 Accuracy is ~80%; false positives/negatives are expected.  The output is for
@@ -66,7 +66,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openfoam_driver.dict_entries import (
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
 
@@ -287,7 +287,7 @@ def iter_catalogue_paths() -> Iterable[CataloguePath]:
     """Yield a `CataloguePath` for every entry in the two catalogues."""
     for entry in PHYSICS_PROPERTY_ENTRIES:
         yield _parse_path(entry.driver_path, entry.dynamic_path)
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         for entry in group:
             yield _parse_path(entry.driver_path, entry.dynamic_path)
 

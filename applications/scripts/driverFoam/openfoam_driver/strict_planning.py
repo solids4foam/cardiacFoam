@@ -34,6 +34,11 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+def __get_capabilities():
+    from openfoam_driver.core.plugin_interface import get_active_plugin
+    return get_active_plugin().get_capabilities()
+
+
 from .core.runtime.artifacts import predict_data_artifacts
 from .core.runtime.environment_preflight import (
     _environment_diagnostics,
@@ -54,7 +59,6 @@ from .core.runtime.workflow import (
 )
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .capability_manifest import build_capability_manifest, resolve_case_models
-from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from .planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,
@@ -184,11 +188,11 @@ def _artifact_diagnostics(
             ionic_model = detect_ionic_model_name(electro_path)
         except KeyError:
             ionic_model = None
-        if ionic_model is not None and ionic_model not in IONIC_MODEL_CATALOG:
+        if ionic_model is not None and ionic_model not in __get_capabilities().get("ionic_models", {}):
             diagnostics.append(_diagnostic(
                 "error",
                 "unknown_ionic_model",
-                f"Ionic model {ionic_model!r} is not in IONIC_MODEL_CATALOG.",
+                f"Ionic model {ionic_model!r} is not supported by the active plugin..",
                 source=str(electro_path),
                 field="ionicModel",
             ))

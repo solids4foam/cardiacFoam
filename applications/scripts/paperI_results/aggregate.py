@@ -46,8 +46,8 @@ def _mesh_h_by_nominal_n(path: Path):
 
 def _mono_tet_frontal(root: Path):
     study = root / _TUT / "monodomainPseudoECG/setup/studies/tetConvergence"
-    archive = study / "sweepCasesOptimised"
-    manifest = study / "sweepRunOptimised/sweep_manifest.json"
+    archive = study / "results" / "sweepCasesFrontal"
+    manifest = study / "results" / "sweepRunFrontal/sweep_manifest.json"
     h_by_n = _mesh_h_by_nominal_n(study / "mesh_metadata_optimised.json")
     rows = adapters.from_monodomain_tet_vm(
         archive, manifest, case="mono_tet_frontal",
@@ -79,7 +79,7 @@ def _eikonal_tet(root: Path):
 
 
 def _coupling1D3D_hex(root: Path):
-    base = root / _TUT / "monodomain1D3D/outputs"
+    base = root / _TUT / "monodomain1D3D/setup/studies/coupledConvergence/results"
     regimes = {
         "decoupled": "coupled1D3DConvergence_rpvj1e6/coupled_convergence_summary.csv",
         "active": "coupled1D3DConvergence/coupled_convergence_summary.csv",
@@ -102,12 +102,12 @@ def _sweep_cases_and_manifest(root: Path, tutorial: str, study: str):
     folder can hold more than just hex/tet (see run_study_sweep_common.sh,
     which derives this same path from the sweep.json's own location)."""
     study_dir = root / _TUT / tutorial / "setup" / "studies" / study
-    return study_dir / "sweepCases", study_dir / "sweepRun" / "sweep_manifest.json"
+    return study_dir / "results" / "sweepCases", study_dir / "results" / "sweepRun" / "sweep_manifest.json"
 
 
 def _hex_sweep_cases_and_manifest(root: Path, tutorial: str):
     """Use the current hexConvergence name, retaining test/legacy fallback."""
-    current = _sweep_cases_and_manifest(root, tutorial, "hexConvergence")
+    current = _sweep_cases_and_manifest(root, tutorial, "cartesianConvergence")
     if current[1].exists():
         return current
     return _sweep_cases_and_manifest(root, tutorial, "spatialConvergence")
@@ -136,8 +136,20 @@ def _mono_hex(root: Path):
     return schema.fill_rates(rows)
 
 
+def _mono_temporal(root: Path):
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "monodomainPseudoECG", "temporalConvergence")
+    rows = adapters.from_monodomain_spatial_archive(sweep_cases, manifest)
+    rows += adapters.from_pseudo_ecg_spatial_archive(sweep_cases, manifest)
+    return schema.fill_rates(rows)
+
+
 def _bidomain_hex(root: Path):
     sweep_cases, manifest = _hex_sweep_cases_and_manifest(root, "bidomain")
+    return schema.fill_rates(adapters.from_bidomain_archive(sweep_cases, manifest))
+
+
+def _bidomain_temporal(root: Path):
+    sweep_cases, manifest = _sweep_cases_and_manifest(root, "bidomain", "temporalConvergence")
     return schema.fill_rates(adapters.from_bidomain_archive(sweep_cases, manifest))
 
 
@@ -184,11 +196,12 @@ def _normalized(builder, experiment_id):
 CASES = {
     "mono_tet": _mono_tet, "mono_tet_frontal": _mono_tet_frontal,
     "eikonal_tet": _eikonal_tet, "coupling1D3D_hex": _coupling1D3D_hex,
-    "eikonal_hex": _eikonal_hex, "mono_hex": _mono_hex,
-    "bidomain_hex": _bidomain_hex,
+    "eikonal_hex": _eikonal_hex, "mono_hex": _mono_hex, "mono_temporal": _mono_temporal,
+    "bidomain_hex": _bidomain_hex, "bidomain_temporal": _bidomain_temporal,
     "bidomain_tet": _bidomain_tet,
     "bath_hex": _bath_hex, "bath_tet": _bath_tet, "niederer_hex": _niederer_hex,
     "monodomain_cartesian": _normalized(_mono_hex, "monodomain_cartesian"),
+    "monodomain_temporal": _normalized(_mono_temporal, "monodomain_temporal"),
     "monodomain_tet_generic": _normalized(_mono_tet, "monodomain_tet_generic"),
     "monodomain_tet_frontal": _normalized(_mono_tet_frontal, "monodomain_tet_frontal"),
     "eikonal_cartesian": _normalized(_eikonal_hex, "eikonal_cartesian"),
@@ -208,13 +221,16 @@ _OUT = {
     "coupling1D3D_hex": "monodomain1D3D/setup/results/coupling1D3D_hex_convergence.csv",
     "eikonal_hex": "eikonalECG/setup/results/eikonal_hex_convergence.csv",
     "mono_hex": "monodomainPseudoECG/setup/results/mono_hex_convergence.csv",
+    "mono_temporal": "monodomainPseudoECG/setup/results/mono_temporal_convergence.csv",
     "bidomain_hex": "bidomain/setup/results/bidomain_hex_convergence.csv",
+    "bidomain_temporal": "bidomain/setup/results/bidomain_temporal_convergence.csv",
     "bidomain_tet": "bidomain/setup/results/bidomain_tet_convergence.csv",
     "bath_hex": "bathBidomain/setup/results/bath_hex_convergence.csv",
     "bath_tet": "bathBidomain/setup/mesh/tet/results/bath_tet_reported_convergence.csv",
     "niederer_hex": ("../NiedererEtAl2011/NiedererEtAl2011verification"
                  "/setup/results/niederer_hex_activation.csv"),
     "monodomain_cartesian": "monodomainPseudoECG/setup/results/monodomain_cartesian.csv",
+    "monodomain_temporal": "monodomainPseudoECG/setup/results/monodomain_temporal_convergence.csv",
     "monodomain_tet_generic": "monodomainPseudoECG/setup/results/monodomain_tet_generic.csv",
     "monodomain_tet_frontal": "monodomainPseudoECG/setup/results/monodomain_tet_frontal.csv",
     "eikonal_cartesian": "eikonalECG/setup/results/eikonal_cartesian.csv",

@@ -60,6 +60,7 @@ dt_for_n()
         10) echo 0.00892857 ;;
         20) echo 0.00224215 ;;
         40) echo 0.000560538 ;;
+        80) echo 0.000140135 ;;
         *) echo "No timestep configured for N=$1" >&2; exit 2 ;;
     esac
 }
@@ -70,6 +71,7 @@ steps_for_n()
         10) echo 2 ;;
         20) echo 9 ;;
         40) echo 36 ;;
+        80) echo 143 ;;
         *) echo "No step count configured for N=$1" >&2; exit 2 ;;
     esac
 }
@@ -143,9 +145,6 @@ do
     foamDictionary "$run_case/constant/electroProperties" \
         -entry bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation \
         -set distanceWeightedHarmonic >/dev/null
-    foamDictionary "$run_case/constant/electroProperties" \
-        -entry bidomainSolverCoeffs.bathPotentialDomain.intracellularAssembly \
-        -set matchedSubmesh >/dev/null
     if [[ "$NPROCS" -gt 1 ]]; then
         foamDictionary "$run_case/system/decomposeParDict" \
             -entry numberOfSubdomains -set "$NPROCS" >/dev/null

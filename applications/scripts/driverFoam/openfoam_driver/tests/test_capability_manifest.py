@@ -2,6 +2,17 @@
 driver will accept (allowed commands + samplable field names)."""
 
 from openfoam_driver.capability_manifest import build_capability_manifest
+
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+import functools
+
+build_capability_manifest = functools.partial(
+    build_capability_manifest, 
+    ionic_model_catalog=IONIC_MODEL_CATALOG, 
+    active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG
+)
+
 from openfoam_driver.core.runtime.workflow import (
     OPENFOAM_OR_DRIVER_COMMANDS,
     CASE_SCRIPT_COMMANDS,

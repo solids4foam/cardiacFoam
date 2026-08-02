@@ -42,7 +42,7 @@ from typing import Any, Iterable
 from .common import detect_myocardium_solver_name
 from .dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
-from ..dict_entries import CONTROL_DICT_ENTRIES, ELECTRO_PROPERTY_ENTRY_GROUPS
+from ..dict_entries import CONTROL_DICT_ENTRIES, get_electro_property_entry_groups
 
 _PREFIX = "$ELECTRO_MODEL_COEFFS."
 _CONTROL_DICT_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in CONTROL_DICT_ENTRIES)
@@ -63,7 +63,7 @@ class OverrideError(ValueError):
 def _electro_by_path() -> dict[str, Any]:
     """Map every electro entry's full driver_path ($ELECTRO_MODEL_COEFFS.<...>) -> entry."""
     out: dict[str, Any] = {}
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         for entry in group:
             out[entry.driver_path] = entry
     return out

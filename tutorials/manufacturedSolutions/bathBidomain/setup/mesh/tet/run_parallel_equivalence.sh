@@ -15,7 +15,6 @@ set -eu
 N="${N:-10}"
 NPROCS="${NPROCS:-6}"
 METHOD="${METHOD:-distanceWeightedHarmonic}"
-ASSEMBLY="${ASSEMBLY:-currentSplit}"
 
 case "$N" in
     10) DELTA_T=0.00892857; STEPS=2 ;;
@@ -55,15 +54,12 @@ bash setup/mesh/tet/run_mesh_gate.sh "$N"
 foamDictionary constant/electroProperties \
     -entry bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation \
     -set "$METHOD"
-foamDictionary constant/electroProperties \
-    -entry bidomainSolverCoeffs.bathPotentialDomain.intracellularAssembly \
-    -set "$ASSEMBLY"
 foamDictionary system/controlDict -entry deltaT -set "$DELTA_T"
 foamDictionary system/controlDict -entry endTime -set 0.02
 foamDictionary system/controlDict -entry writeControl -set timeStep
 foamDictionary system/controlDict -entry writeInterval -set "$STEPS"
 
-OUT_DIR="setup/mesh/tet/parallelEquivalence/$ASSEMBLY/$METHOD/N$N"
+OUT_DIR="setup/mesh/tet/parallelEquivalence/matchedSubmesh/$METHOD/N$N"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 

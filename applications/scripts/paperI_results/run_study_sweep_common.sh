@@ -31,8 +31,9 @@ STUDY_DIR="$(cd "$(dirname "$SWEEP_SPEC")" && pwd)"
 # tutorial's shared case_root. Each case's raw output is archived into its
 # own sweepCases/<case_id>/ subfolder (a sibling of the sweep.json, under
 # STUDY_DIR) for aggregate.py to read afterwards.
-rm -rf "$STUDY_DIR/sweepCases" "$STUDY_DIR/sweepRun"
-"$DRIVER" sweep-run --spec "$SWEEP_SPEC" --output-dir "$STUDY_DIR/sweepRun"
+rm -rf "$STUDY_DIR/results/sweepCases" "$STUDY_DIR/results/sweepRun"
+mkdir -p "$STUDY_DIR/results"
+"$DRIVER" sweep-run --spec "$SWEEP_SPEC" --output-dir "$STUDY_DIR/results/sweepRun"
 
 python3 "$SCRIPT_DIR/aggregate.py" "$AGG_KEY" --repo-root "$REPO_ROOT" \
     || echo "WARN: paperI aggregate ($AGG_KEY) failed; native sweepCases output untouched" >&2

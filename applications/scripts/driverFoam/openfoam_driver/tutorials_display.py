@@ -201,21 +201,7 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
             # monodomain-eikonal, and bidomain variants use BuenoOrovio.
         },
     ),
-    TutorialDisplay(
-        id="manufacturedRotatedAnisotropy",
-        title="Manufactured solution (rotated anisotropy)",
-        summary=(
-            "Monodomain MMS verification with a constant, fully populated "
-            "anisotropic conductivity tensor whose principal directions are "
-            "rotated relative to the mesh axes."
-        ),
-        thumbnail="/tutorials/manufactured-rotated-anisotropy.png",
-        tags=("manufactured-solution", "verification", "monodomain", "anisotropy"),
-        preset={
-            "anatomy.mesh": "unit-domain",
-            "physics.ionic_model": "monodomainFDAManufactured",
-        },
-    ),
+
     TutorialDisplay(
         id="restitutionCurves",
         title="Restitution curves (S1–S2 protocol)",

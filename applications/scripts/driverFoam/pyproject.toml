@@ -12,6 +12,7 @@ authors = [
   { name = "cardiacFoam contributors" }
 ]
 dependencies = [
+  "gmsh>=4.15.2",
   "jsonschema>=4.0",
 ]
 

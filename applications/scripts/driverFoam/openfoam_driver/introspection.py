@@ -32,6 +32,11 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
+def __get_capabilities():
+    from openfoam_driver.core.plugin_interface import get_active_plugin
+    return get_active_plugin().get_capabilities()
+
+
 from .core.runtime.models import CaseConfig, TutorialSpec
 from .core.runtime.registry import (
     list_entries,
@@ -40,12 +45,9 @@ from .core.runtime.registry import (
     list_tutorials,
     resolve_entry,
 )
-from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .capability_manifest import build_capability_manifest, resolve_case_models
 from .core.runtime.execution_context import resolve_execution_context
-from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
-from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
-from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
+from .dict_entries import get_electro_property_entry_groups, PHYSICS_PROPERTY_ENTRIES
 from .strict_planning import _run_launch_description
 from .tutorial_contracts import describe_tutorial_contract
 
@@ -142,7 +144,7 @@ def _dict_entry_catalog() -> dict[str, Any]:
         "physicsProperties": [_serialize(asdict(entry)) for entry in PHYSICS_PROPERTY_ENTRIES],
         "electroProperties": {
             group_name: [_serialize(asdict(entry)) for entry in entries]
-            for group_name, entries in ELECTRO_PROPERTY_ENTRY_GROUPS.items()
+            for group_name, entries in get_electro_property_entry_groups().items()
         },
     }
 
@@ -152,10 +154,10 @@ def _ionic_model_catalog() -> dict[str, Any]:
         "schema_version": "1.0",
         "ionic_models": {
             name: _serialize(asdict(entry))
-            for name, entry in IONIC_MODEL_CATALOG.items()
+            for name, entry in __get_capabilities().get("ionic_models", {}).items()
         },
         "solver_compatibility": [
-            _serialize(rule) for rule in SOLVER_COMPATIBILITY_RULES
+            _serialize(rule) for rule in __get_capabilities().get("solver_compatibility_rules", [])
         ],
     }
 
@@ -165,7 +167,7 @@ def _active_tension_catalog() -> dict[str, Any]:
         "schema_version": "1.0",
         "active_tension_models": {
             name: _serialize(asdict(entry))
-            for name, entry in ACTIVE_TENSION_MODEL_CATALOG.items()
+            for name, entry in __get_capabilities().get("active_tension_models", {}).items()
         },
     }
 

@@ -29,6 +29,8 @@ solvers
 PIMPLE
 {
     nOuterCorrectors         1;
+    // One additional deferred-correction assembly is bitwise equivalent to
+    // the two historical outer sweeps, but assigns the iteration correctly.
     nNonOrthogonalCorrectors 1;
 
     // residualControl

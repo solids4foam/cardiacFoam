@@ -457,6 +457,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pipeline stage to execute",
     )
     parser.add_argument(
+        "--plugin",
+        help="Fully qualified path to a SolverPlugin class (e.g. module.path:PluginClass). Defaults to cardiacFoam.",
+    )
+    parser.add_argument(
         "--entry",
         required=False,
         help=(
@@ -699,6 +703,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate_args(parser, args)
+
+    from .core.plugin_interface import set_active_plugin
+    if args.plugin:
+        # Expected format: module.path:ClassName
+        import importlib
+        try:
+            module_path, class_name = args.plugin.split(":")
+            module = importlib.import_module(module_path)
+            plugin_class = getattr(module, class_name)
+            set_active_plugin(plugin_class())
+        except Exception as exc:
+            parser.error(f"Failed to load plugin {args.plugin!r}: {exc}")
+    else:
+        # We rely on the lazy default in get_active_plugin()
+        pass
+
 
     if args.action == "experiment-plan":
         try:

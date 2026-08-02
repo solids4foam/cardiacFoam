@@ -43,7 +43,7 @@ from typing import Any
 
 from openfoam_driver.dict_entries import (
     DictEntry,
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
@@ -76,9 +76,9 @@ def _all_electro_entries() -> list[DictEntry]:
     ]
     out: list[DictEntry] = []
     for k in ordered_keys:
-        if k in ELECTRO_PROPERTY_ENTRY_GROUPS:
-            out.extend(ELECTRO_PROPERTY_ENTRY_GROUPS[k])
-    for k, group in ELECTRO_PROPERTY_ENTRY_GROUPS.items():
+        if k in get_electro_property_entry_groups():
+            out.extend(get_electro_property_entry_groups()[k])
+    for k, group in get_electro_property_entry_groups().items():
         if k not in ordered_keys:
             out.extend(group)
     return out
@@ -112,8 +112,8 @@ def _infer_virtual_presence(ctx: dict[str, Any]) -> None:
                 break
 
     # Support OR logic for ionicHeterogeneity applicability
-    from openfoam_driver.dict_entries import HETEROGENEITY_MODELS
-    if ctx.get("myocardiumSolver") == "eikonalSolver" or ctx.get("ionicModel") in HETEROGENEITY_MODELS:
+    from openfoam_driver.dict_entries import get_heterogeneity_models
+    if ctx.get("myocardiumSolver") == "eikonalSolver" or ctx.get("ionicModel") in get_heterogeneity_models():
         ctx["$ionicHeterogeneity_supported"] = True
 
 
@@ -591,7 +591,7 @@ def parse_electro_properties(
 ) -> dict[str, dict[str, str]]:
     """Parse an existing ``electroProperties`` file into selectors + overrides.
 
-    Reads the file using the same ``ELECTRO_PROPERTY_ENTRY_GROUPS`` catalog
+    Reads the file using the same ``get_electro_property_entry_groups()`` catalog
     that :func:`build_electro_properties` writes from. Returns a dict that
     round-trips through :func:`build_electro_properties`.
 

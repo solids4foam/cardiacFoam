@@ -22,6 +22,8 @@ monodomainSolverCoeffs
     chi         [0 -1 0 0 0 0 0] 140000;
     cm          [-1 -4 4 0 0 2 0] 0.01;
 
+    conductivitySource field;
+
     ionicModel  BuenoOrovio;
     tissue      epicardialCells;
 

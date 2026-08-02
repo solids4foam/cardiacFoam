@@ -54,7 +54,7 @@ from typing import Any, Iterable
 
 from openfoam_driver.dict_entries import (
     DictEntry,
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
     Phase,
 )
@@ -76,7 +76,7 @@ from .validation_rules import (
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         yield from group
 
 

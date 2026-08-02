@@ -48,10 +48,10 @@ sys.path.insert(0, str(REPO))
 
 from openfoam_driver.dict_entries import (  # noqa: E402
     PHYSICS_PROPERTY_ENTRIES,
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
 )
-from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG  # noqa: E402
-from openfoam_driver.active_tension_catalog import (  # noqa: E402
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG  # noqa: E402
+from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import (  # noqa: E402
     ACTIVE_TENSION_MODEL_CATALOG,
 )
 
@@ -60,9 +60,10 @@ PHASES = ("anatomy", "physics", "stimulus", "solver")
 
 def _all_entries():
     """Yield every ``DictEntry`` known to the backend, regardless of group."""
-    yield from PHYSICS_PROPERTY_ENTRIES
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
-        yield from group
+    entries: list[DictEntry] = list(PHYSICS_PROPERTY_ENTRIES)
+    for group in get_electro_property_entry_groups().values():
+        entries.extend(group)
+    yield from entries
 
 
 def _entry_to_record(e) -> dict:

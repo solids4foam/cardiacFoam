@@ -44,7 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openfoam_driver.dict_entries import (
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
     DictEntry,
 )
@@ -181,7 +181,7 @@ def iter_catalogue_enums() -> Iterable[CatalogueEnum]:
         c = from_entry(e)
         if c is not None:
             yield c
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         for e in group:
             c = from_entry(e)
             if c is not None:

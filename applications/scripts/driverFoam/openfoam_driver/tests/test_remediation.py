@@ -111,7 +111,7 @@ from openfoam_driver.core.runtime.remediation import (
 )
 from openfoam_driver.dict_entries import (
     CONTROL_DICT_ENTRIES,
-    ELECTRO_PROPERTY_ENTRY_GROUPS,
+    get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
 
@@ -124,7 +124,7 @@ def _addressable_leaves() -> set[str]:
         leaves.add(e.driver_path)                       # e.g. "deltaT"
     for e in PHYSICS_PROPERTY_ENTRIES:
         leaves.add(e.driver_path)
-    for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+    for group in get_electro_property_entry_groups().values():
         for e in group:
             dp = e.driver_path
             leaves.add(dp[len(_PREFIX):] if dp.startswith(_PREFIX) else dp)

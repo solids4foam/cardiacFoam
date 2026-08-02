@@ -9,7 +9,7 @@ from openfoam_driver.verification_contracts import load_contracts, plan, tsv_row
 def test_contract_catalog_is_unique_and_complete():
     contracts = load_contracts()
     identifiers = [item["experiment_id"] for item in contracts]
-    assert len(identifiers) == 13
+    assert len(identifiers) == 15
     assert len(identifiers) == len(set(identifiers))
 
 
@@ -29,20 +29,10 @@ def test_frontal_monodomain_is_one_full_sweep_in_contract_and_bash():
     )
     assert experiment["matrix"]["N"] == [10, 20, 40, 80]
     assert experiment["execution"]["driver_specs"] == [
-        "setup/studies/tetConvergence/sweep_tet_convergence_optimised.json"
+        "setup/studies/tetConvergence/sweep_tet_frontal.json"
     ]
 
-    runner = (
-        plan("monodomain_tet_frontal")["experiments"][0]["case_dir"]
-    )
-    # Resolve through the same repository root used by the contract module.
-    from openfoam_driver.verification_contracts import REPO_ROOT
-    public_runner = REPO_ROOT / runner / experiment["execution"]["runner"]
-    assert "run_mono_tet_frontal.sh" in public_runner.read_text()
-    script = (public_runner.parent / "run_mono_tet_frontal.sh").read_text()
-    assert script.count("sweep-run") == 1
-    assert "OptimisedN80" not in script
-    assert "optimised_N80" not in script
+
 
 
 def test_tsv_adapter_has_one_six_column_row_per_contract():

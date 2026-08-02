@@ -1,15 +1,5 @@
+gmsh>=4.15.2
 jsonschema>=4.0
-
-[dashboard]
-fastapi>=0.110
-uvicorn>=0.29
-jinja2>=3.1
-python-multipart>=0.0.9
-httpx2>=2.0
-pyvista>=0.44
-trimesh>=4.4
-numpy>=1.26
-matplotlib>=3.8
 
 [post]
 matplotlib>=3.7

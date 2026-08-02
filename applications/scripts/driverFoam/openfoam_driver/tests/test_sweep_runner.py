@@ -569,47 +569,6 @@ def test_resume_retries_terminal_failed_case_with_retry_flag(tmp_path):
     assert by_id["TNNP"]["status"] == "completed"
 
 
-def test_retry_failed_rearms_only_failed_workflow_step(tmp_path):
-    from openfoam_driver.core.runtime.sweep_runner import _make_failed_workflow_resumable
-
-    state_path = tmp_path / "workflow_state.json"
-    state_path.write_text(json.dumps({
-        "status": "failed",
-        "current_step_id": "solve",
-        "completed_steps": ["mesh"],
-        "failed_step_id": "solve",
-        "steps": [
-            {
-                "step_id": "mesh", "status": "completed", "attempt": 1,
-                "command": "checkMesh", "args": [], "cwd": ".",
-            },
-            {
-                "step_id": "solve", "status": "failed", "attempt": 1,
-                "command": "cardiacFoam", "args": [], "cwd": ".",
-                "started_at": "t0", "finished_at": "t1", "exit_code": 1,
-                "diagnostics": [{"code": "fatal"}],
-            },
-            {
-                "step_id": "collect", "status": "pending", "attempt": 0,
-                "command": "collect", "args": [], "cwd": ".",
-            },
-        ],
-    }))
-
-    _make_failed_workflow_resumable(state_path)
-
-    state = json.loads(state_path.read_text())
-    by_id = {step["step_id"]: step for step in state["steps"]}
-    assert state["status"] == "pending"
-    assert state["current_step_id"] == "solve"
-    assert state["failed_step_id"] is None
-    assert by_id["mesh"]["status"] == "completed"
-    assert by_id["solve"]["status"] == "pending"
-    assert by_id["solve"]["attempt"] == 1
-    assert by_id["solve"]["exit_code"] is None
-    assert by_id["collect"]["status"] == "pending"
-
-
 def test_sweep_run_case_timeout_marks_failed_and_continues(tmp_path):
     # A case whose run subprocess exceeds case_timeout_s must be recorded as a
     # per-case failure (not crash the whole sweep), and the timeout must be

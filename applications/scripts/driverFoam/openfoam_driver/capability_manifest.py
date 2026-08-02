@@ -97,6 +97,8 @@ def build_capability_manifest(
     resolved_solver: str | None = None,
     resolved_ionic_model: str | None = None,
     resolved_active_tension: str | None = None,
+    ionic_model_catalog: dict | None = None,
+    active_tension_model_catalog: dict | None = None,
 ) -> dict[str, Any]:
     """Return the driver's accept-surface as a plain JSON-able dict.
 
@@ -106,12 +108,10 @@ def build_capability_manifest(
     manifest degrades to the fixed solver fields) rather than raising, so this
     is always safe to call during discovery.
     """
-    from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
-    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 
     electro = set(_ELECTRO_SOLVER_FIELDS)
     ionic_entry = (
-        IONIC_MODEL_CATALOG.get(resolved_ionic_model) if resolved_ionic_model else None
+        (ionic_model_catalog or {}).get(resolved_ionic_model) if resolved_ionic_model else None
     )
     if ionic_entry is not None:
         electro.update(ionic_entry.states)
@@ -129,7 +129,7 @@ def build_capability_manifest(
     if has_solid_region:
         solid.update(_SOLID_SOLVER_FIELDS)
     at_entry = (
-        ACTIVE_TENSION_MODEL_CATALOG.get(resolved_active_tension)
+        (active_tension_model_catalog or {}).get(resolved_active_tension)
         if resolved_active_tension
         else None
     )

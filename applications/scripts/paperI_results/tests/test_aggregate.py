@@ -23,11 +23,11 @@ def _write_manifest(path, cases):
 def test_build_tet_rows_have_rates(tmp_path):
     sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        "/setup/studies/tetConvergence/sweepCases"
+        "/setup/studies/tetConvergence/results/sweepCases"
     )
     manifest = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        "/setup/studies/tetConvergence/sweepRun/sweep_manifest.json"
+        "/setup/studies/tetConvergence/results/sweepRun/sweep_manifest.json"
     )
     _write_manifest(manifest, {
         "least_squares_20": {"grad_scheme": "least_squares", "number_cells": [20]},
@@ -51,12 +51,12 @@ def test_build_frontal_monodomain_uses_one_sweep_and_cell_count_h(tmp_path):
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
         "/setup/studies/tetConvergence"
     )
-    archive = study / "sweepCasesOptimised"
+    archive = study / "results/sweepCasesFrontal"
     cases = [
         ("least_squares_40_manufacturedFDAMonodomainVerifier", 40, "0.00051079"),
         ("least_squares_80_manufacturedFDAMonodomainVerifier", 80, "0.000141195"),
     ]
-    _write_manifest(study / "sweepRunOptimised/sweep_manifest.json", {
+    _write_manifest(study / "results/sweepRunFrontal/sweep_manifest.json", {
         case_id: {
             "grad_scheme": "least_squares", "number_cells": [n],
             "verification_model_type": "manufacturedFDAMonodomainVerifier",
@@ -88,11 +88,11 @@ def test_build_frontal_monodomain_uses_one_sweep_and_cell_count_h(tmp_path):
 def test_build_bidomain_tet_rows_have_rates(tmp_path):
     sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/bidomain"
-        "/setup/studies/tetConvergence/sweepCases"
+        "/setup/studies/tetConvergence/results/sweepCases"
     )
     manifest = (
         tmp_path / "tutorials/manufacturedSolutions/bidomain"
-        "/setup/studies/tetConvergence/sweepRun/sweep_manifest.json"
+        "/setup/studies/tetConvergence/results/sweepRun/sweep_manifest.json"
     )
     _write_manifest(manifest, {
         "least_squares_20": {"grad_scheme": "least_squares", "number_cells": [20]},
@@ -118,11 +118,11 @@ def test_build_bidomain_tet_rows_have_rates(tmp_path):
 def test_build_mono_spatial_rows_have_rates(tmp_path):
     sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        "/setup/studies/spatialConvergence/sweepCases"
+        "/setup/studies/spatialConvergence/results/sweepCases"
     )
     manifest = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        "/setup/studies/spatialConvergence/sweepRun/sweep_manifest.json"
+        "/setup/studies/spatialConvergence/results/sweepRun/sweep_manifest.json"
     )
     _write_manifest(manifest, {
         "10_3D": {"dimensions": ["3D"], "number_cells": [10]},
@@ -144,11 +144,11 @@ def test_build_mono_spatial_rows_have_rates(tmp_path):
 def test_build_bidomain_rows_have_rates(tmp_path):
     sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/bidomain"
-        "/setup/studies/spatialConvergence/sweepCases"
+        "/setup/studies/spatialConvergence/results/sweepCases"
     )
     manifest = (
         tmp_path / "tutorials/manufacturedSolutions/bidomain"
-        "/setup/studies/spatialConvergence/sweepRun/sweep_manifest.json"
+        "/setup/studies/spatialConvergence/results/sweepRun/sweep_manifest.json"
     )
     _write_manifest(manifest, {
         "10_3D": {"dimensions": ["3D"], "number_cells": [10]},

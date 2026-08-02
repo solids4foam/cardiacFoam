@@ -49,7 +49,6 @@ trap restore_inputs EXIT
 RESOLUTIONS_STR="${RESOLUTIONS:-10 20 40}"
 read -r -a RESOLUTIONS <<< "$RESOLUTIONS_STR"
 NPROCS="${NPROCS:-6}"
-ASSEMBLY="${ASSEMBLY:-currentSplit}"
 METHODS_STR="${METHODS:-unweightedHarmonic distanceWeightedHarmonic}"
 read -r -a METHODS <<< "$METHODS_STR"
 
@@ -63,10 +62,6 @@ cp setup/mesh/tet/electroProperties constant/electroProperties
 # converge on this tetrahedral family; without this the sweep silently solves
 # a non-convergent problem and reports errors flat under refinement.
 cp setup/mesh/tet/fvSchemes system/fvSchemes
-
-foamDictionary constant/electroProperties \
-    -entry bidomainSolverCoeffs.bathPotentialDomain.intracellularAssembly \
-    -set "$ASSEMBLY"
 
 for N in "${RESOLUTIONS[@]}"
 do
@@ -104,12 +99,7 @@ do
         cp postProcessing/bathBidomainInterfaceMetrics.csv \
             "bathBidomainInterfaceMetrics.numerical.$method.N$N.csv"
 
-        if [[ "$ASSEMBLY" == "currentSplit" ]]
-        then
-            OUT_DIR="setup/mesh/tet/interfaceStudy/$method/N$N"
-        else
-            OUT_DIR="setup/mesh/tet/interfaceStudy/$ASSEMBLY/$method/N$N"
-        fi
+        OUT_DIR="setup/mesh/tet/interfaceStudy/matchedSubmesh/$method/N$N"
         rm -rf "$OUT_DIR"
         mkdir -p "$OUT_DIR"
         cp "log.cardiacFoam.$method.N$N" "$OUT_DIR/log.cardiacFoam"

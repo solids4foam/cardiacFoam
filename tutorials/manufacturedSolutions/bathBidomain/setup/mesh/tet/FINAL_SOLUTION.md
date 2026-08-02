@@ -25,7 +25,6 @@ coefficient is `Ge`, never `Gi + Ge`.
 The selected runtime configuration is
 
 ```text
-intracellularAssembly               matchedSubmesh;
 interfaceConductivityInterpolation  distanceWeightedHarmonic;
 ```
 
@@ -55,8 +54,7 @@ and imposes intracellular zero flux once on the artificial heart-submesh
 boundary. Internal and processor-coupled matrix coefficients are mapped, so
 the formulation is both implicit and parallel-safe.
 
-The library retains `currentSplit` as its backward-compatible default. This
-paper tutorial selects `matchedSubmesh` explicitly.
+The matched-submesh assembly is the only supported intracellular assembly.
 
 ## Why harmonic interpolation remains necessary
 
@@ -148,7 +146,6 @@ RESOLUTIONS="10 20 40" bash setup/run_matched_serial_sweep.sh
 Parallel N=80:
 
 ```bash
-ASSEMBLY=matchedSubmesh \
 METHODS=distanceWeightedHarmonic \
 RESOLUTIONS=80 \
 NPROCS=6 \
@@ -160,7 +157,6 @@ Same-mesh parallel equivalence:
 ```bash
 N=40 NPROCS=6 \
 METHOD=distanceWeightedHarmonic \
-ASSEMBLY=matchedSubmesh \
 bash setup/run_parallel_equivalence.sh
 ```
 
@@ -173,7 +169,6 @@ mesh caches are generated locally and excluded from version control.
 
 The following are intentionally retained:
 
-- `currentSplit`: backward compatibility and negative control;
 - `unweightedHarmonic`: equal-distance/control comparison;
 - `naiveLinearSigmaTotal`: deliberately incorrect physics control;
 - limited/orthogonal/Gauss scheme scripts: rejected-method evidence;
