@@ -62,7 +62,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Iterable
 
-from ...ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from ...utility_catalog import UTILITY_CATALOG, ProducesEntry
 from .models import DataArtifact, TutorialSpec
 
@@ -342,7 +342,7 @@ def _predict_active_tension(case_root: Path) -> tuple[DataArtifact, ...]:
     ``recommended_exports`` for the named model.
     """
     from ...specs.common import detect_active_tension_model_name, detect_active_tension_export_list
-    from ...active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 
     properties = case_root / "constant" / "electroProperties"
     if not properties.exists():

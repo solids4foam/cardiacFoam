@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from openfoam_driver.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 
 
 REPO_ROOT = Path(__file__).resolve().parents[5]

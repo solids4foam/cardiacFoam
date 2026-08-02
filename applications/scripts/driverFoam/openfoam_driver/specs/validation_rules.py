@@ -1,6 +1,6 @@
 from typing import Any
 
-from openfoam_driver.solver_coupling import SOLVER_COMPATIBILITY_RULES
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 from .validation_types import ValidationError
 
 
@@ -157,7 +157,7 @@ def _evaluate_heterogeneity(context: dict[str, Any]) -> list[ValidationError]:
     if not het_keys:
         return errors
 
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 
     transmural_keys = [k for k in het_keys if not k.startswith(_APEX_BASE_PREFIX)]
     ab_keys = [k for k in het_keys if k.startswith(_APEX_BASE_PREFIX)]
@@ -315,7 +315,7 @@ def _evaluate_tissue_compatibility(context: dict[str, Any]) -> list[ValidationEr
     if model is None or tissue is None:
         return errors
 
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 
     entry = IONIC_MODEL_CATALOG.get(model)
     if entry is None or not entry.compatible_tissues:

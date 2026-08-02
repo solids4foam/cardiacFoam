@@ -54,7 +54,7 @@ from .core.runtime.workflow import (
 )
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .capability_manifest import build_capability_manifest, resolve_case_models
-from .ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from .planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,

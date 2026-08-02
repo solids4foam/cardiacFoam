@@ -55,13 +55,13 @@ _OVERRIDE_ONLY_TISSUE_MODELS = (
 # --------------------------------------------------------------------------
 
 def test_supports_heterogeneity_flag_for_capable_scalar_models():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl"):
         assert IONIC_MODEL_CATALOG[name].supports_heterogeneity is True, name
 
 
 def test_supports_heterogeneity_inherited_by_batched_variants():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in (
         "BuenoOroviocompactBatched", "TNNPcompactBatched",
         "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
@@ -70,7 +70,7 @@ def test_supports_heterogeneity_inherited_by_batched_variants():
 
 
 def test_single_tissue_models_do_not_support_heterogeneity():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in (
         "monodomainFDAManufactured", "bidomainFDAManufactured",
         "bathBidomainFDAManufactured",
@@ -79,13 +79,13 @@ def test_single_tissue_models_do_not_support_heterogeneity():
 
 
 def test_supports_apex_base_heterogeneity_for_capable_scalar_models():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl"):
         assert IONIC_MODEL_CATALOG[name].supports_apex_base_heterogeneity is True, name
 
 
 def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in (
         "BuenoOroviocompactBatched", "TNNPcompactBatched",
         "TWorldcompactBatched", "ToRORd_dynClcompactBatched",
@@ -94,7 +94,7 @@ def test_supports_apex_base_heterogeneity_inherited_by_batched_variants():
 
 
 def test_native_tissue_labels_mark_models_with_intrinsic_tissue_variants():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     expected = ("epicardialCells", "mCells", "endocardialCells")
     for name in _NATIVE_TISSUE_MODELS:
         assert IONIC_MODEL_CATALOG[name].native_tissue_labels == expected, name
@@ -102,7 +102,7 @@ def test_native_tissue_labels_mark_models_with_intrinsic_tissue_variants():
 
 
 def test_override_only_models_advertise_approximate_tissue_labels_explicitly():
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     expected = ("epicardialCells", "mCells", "endocardialCells")
     for name in _OVERRIDE_ONLY_TISSUE_MODELS:
         assert IONIC_MODEL_CATALOG[name].native_tissue_labels == ("myocyte",), name
@@ -128,7 +128,7 @@ def test_default_restitution_tissue_map_uses_native_tissues_only():
 def test_transmural_only_models_do_not_support_apex_base_heterogeneity():
     # These models support neither transmural/named-region nor apex-base
     # heterogeneity at all — the manufactured verification models.
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     for name in (
         "monodomainFDAManufactured", "bidomainFDAManufactured",
         "bathBidomainFDAManufactured",

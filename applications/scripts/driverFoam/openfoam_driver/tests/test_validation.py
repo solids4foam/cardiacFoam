@@ -101,7 +101,7 @@ def _filled_run(**overrides) -> RunDocument:
     # so the helper yields a genuinely valid run (the generic enum_values[0]
     # fill can otherwise pair, e.g., AlievPanfilov with epicardialCells, which
     # the tissue-compatibility rule now rejects). Unknown models are left as-is.
-    from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
     phys = config.get("physics", {})
     model = phys.get("ionicModel")
     if model and "tissue" in phys:

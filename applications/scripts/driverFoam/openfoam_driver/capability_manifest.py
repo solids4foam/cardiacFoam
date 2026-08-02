@@ -106,8 +106,8 @@ def build_capability_manifest(
     manifest degrades to the fixed solver fields) rather than raising, so this
     is always safe to call during discovery.
     """
-    from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
-    from .ionic_model_catalog import IONIC_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+    from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 
     electro = set(_ELECTRO_SOLVER_FIELDS)
     ionic_entry = (

@@ -34,7 +34,7 @@ from .shared import (
     OUTPUT_DIR_NAME,
     RUN_CASE_SCRIPT_RELPATH,
 )
-from ...ionic_model_catalog import IONIC_MODEL_CATALOG, planning_tissues
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG, planning_tissues
 
 
 TUTORIAL_NAME = "singleCell"

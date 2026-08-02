@@ -53,7 +53,7 @@ import re
 import unittest
 from pathlib import Path
 
-from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from openfoam_driver.scripts._names_parser import EXCLUDED_FROM_HEADER_SYNC
 
 # ---------------------------------------------------------------------------

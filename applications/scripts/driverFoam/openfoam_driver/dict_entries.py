@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Final, Literal
-from .ionic_model_catalog import BATCHED_MODELS
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import BATCHED_MODELS
 
 # Ionic models that implement transmural tissue heterogeneity
 # (configureIonicHeterogeneity, endo/M/epi blend and/or namedRegions) on

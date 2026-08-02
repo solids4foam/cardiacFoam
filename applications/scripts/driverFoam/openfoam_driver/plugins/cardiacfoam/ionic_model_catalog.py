@@ -119,7 +119,7 @@ class IonicModelEntry:
 # SOLVER_COMPATIBILITY_RULES moved to openfoam_driver/solver_coupling.py;
 # re-exported here for backward compatibility with consumers that imported
 # it from this module. Prefer the new home for new imports.
-from .solver_coupling import SOLVER_COMPATIBILITY_RULES  # noqa: E402, F401
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES  # noqa: E402, F401
 
 
 IONIC_MODEL_CATALOG: Final[dict[str, IonicModelEntry]] = {

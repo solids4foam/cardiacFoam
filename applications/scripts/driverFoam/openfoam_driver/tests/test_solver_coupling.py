@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import unittest
 
-from openfoam_driver.solver_coupling import SOLVER_COMPATIBILITY_RULES
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 
 
 class TestSolverCompatibilityRules(unittest.TestCase):
@@ -75,7 +75,7 @@ class TestSolverCompatibilityRules(unittest.TestCase):
         """ionic_model_catalog.py still re-exports the rules for any consumer
         that imported them from there before the extraction. Removing the
         re-export is a breaking change."""
-        from openfoam_driver.ionic_model_catalog import (
+        from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import (
             SOLVER_COMPATIBILITY_RULES as catalog_rules,
         )
         self.assertIs(catalog_rules, SOLVER_COMPATIBILITY_RULES)

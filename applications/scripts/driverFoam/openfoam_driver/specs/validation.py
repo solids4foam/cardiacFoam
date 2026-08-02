@@ -58,7 +58,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
     Phase,
 )
-from openfoam_driver.solver_coupling import SOLVER_COMPATIBILITY_RULES
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 
 _PHASE_ORDER: tuple[Phase, ...] = (
     "anatomy", "physics", "stimulus", "solver",

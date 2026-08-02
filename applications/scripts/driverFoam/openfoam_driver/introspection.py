@@ -40,12 +40,12 @@ from .core.runtime.registry import (
     list_tutorials,
     resolve_entry,
 )
-from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from .capability_manifest import build_capability_manifest, resolve_case_models
 from .core.runtime.execution_context import resolve_execution_context
 from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
-from .ionic_model_catalog import IONIC_MODEL_CATALOG
-from .solver_coupling import SOLVER_COMPATIBILITY_RULES
+from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 from .strict_planning import _run_launch_description
 from .tutorial_contracts import describe_tutorial_contract
 
