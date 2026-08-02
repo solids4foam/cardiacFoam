@@ -175,10 +175,52 @@ def _build_cases(
     return cases
 
 
+def _workflow_dag_for(mesh_family: str) -> dict[str, object]:
+    if mesh_family == "tet":
+        steps = [
+            {"id": "clean", "command": "Allclean", "depends_on": []},
+            {
+                "id": "gmsh",
+                "command": "gmsh",
+                "args": ["-3", "setup/slab.geo", "-o", "slab.msh", "-format", "msh2"],
+                "depends_on": ["clean"],
+            },
+            {
+                "id": "gmshToFoam",
+                "command": "gmshToFoam",
+                "args": ["slab.msh"],
+                "depends_on": ["gmsh"],
+            },
+            {"id": "checkMesh", "command": "checkMesh", "depends_on": ["gmshToFoam"]},
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["checkMesh"]},
+        ]
+    else:
+        steps = [
+            {"id": "mesh", "command": "blockMesh", "depends_on": []},
+            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
+        ]
+
+    steps.extend([
+        {
+            "id": "samplePoints",
+            "command": "postProcess -func Niedererpoints -latestTime",
+            "depends_on": ["solve"],
+        },
+        {
+            "id": "sampleLines",
+            "command": "postProcess -func Niedererlines -latestTime",
+            "depends_on": ["solve"],
+        },
+    ])
+    return {"steps": steps}
+
+
 def _apply_case(
     case_root: Path,
     case: CaseConfig,
     *,
+    mesh_family: str = "hex",
+    tet_geo_template_relpath: Path = Path("setup/mesh/tet/slab.geo.template"),
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     control_dict_relpath: Path = defaults.CONTROL_DICT_RELPATH,
     block_mesh_dict_relpath: Path = defaults.BLOCK_MESH_DICT_RELPATH,
@@ -205,7 +247,16 @@ def _apply_case(
         f"{electro_properties_scope}.solutionAlgorithm": solver,
     }
 
-    _replace_blockmesh_resolution(block_mesh_dict, dx_mm, slab_size_mm=slab_size_mm)
+    if mesh_family == "tet":
+        template_file = case_root / tet_geo_template_relpath
+        if not template_file.exists():
+            raise FileNotFoundError(f"Missing tet geo template: {template_file}")
+        lc_m = dx_mm * 1e-3
+        rendered = template_file.read_text().replace("__LC__", str(lc_m))
+        target_file = case_root / "setup" / "slab.geo"
+        target_file.write_text(rendered)
+    else:
+        _replace_blockmesh_resolution(block_mesh_dict, dx_mm, slab_size_mm=slab_size_mm)
     # Input dt is provided in milliseconds in the JSON/spec settings.
     set_delta_t(control_dict, dt_ms * 1.0e-3)
     _update_end_time(control_dict, dx_mm, end_time_by_dx=end_time_by_dx)
@@ -502,6 +553,8 @@ def make_spec(
     dt_values: Sequence[float] = defaults.DT_VALUES,
     dx_values: Sequence[float] = defaults.DX_VALUES,
     solvers: Sequence[str] = defaults.SOLVERS,
+    mesh_family: str = "hex",
+    tet_geo_template_relpath: str | Path = "setup/mesh/tet/slab.geo.template",
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
     end_time_by_dx: Mapping[float, float] = defaults.END_TIME_BY_DX,
@@ -563,6 +616,7 @@ def make_spec(
     block_mesh_dict_path = Path(block_mesh_dict_relpath)
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
+    tet_geo_template_path = Path(tet_geo_template_relpath)
     run_script_path = Path(run_script_relpath)
     line_postprocess_path = Path(line_postprocess_relpath)
     points_postprocess_path = Path(points_postprocess_relpath)
@@ -593,6 +647,8 @@ def make_spec(
         ),
         apply_case=partial(
             _apply_case,
+            mesh_family=mesh_family,
+            tet_geo_template_relpath=tet_geo_template_path,
             electro_properties_scope=electro_properties_scope,
             control_dict_relpath=control_dict_path,
             block_mesh_dict_relpath=block_mesh_dict_path,
@@ -635,22 +691,9 @@ def make_spec(
                 "Niederer Et Al. 2012 slab benchmark sweep "
                 "with OpenFOAM functionObject sampling."
             ),
-            "workflow_dag": {
-                "steps": [
-                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
-                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
-                    {
-                        "id": "samplePoints",
-                        "command": "postProcess -func Niedererpoints -latestTime",
-                        "depends_on": ["solve"],
-                    },
-                    {
-                        "id": "sampleLines",
-                        "command": "postProcess -func Niedererlines -latestTime",
-                        "depends_on": ["solve"],
-                    },
-                ]
-            },
+            "workflow_dag": _workflow_dag_for(mesh_family),
+            "mesh_family": mesh_family,
+            "tet_geo_template_relpath": str(tet_geo_template_path),
             "dx_values": dx_values_list,
             "dt_values": dt_values_list,
             "slab_size_mm": slab_size_mm_list,

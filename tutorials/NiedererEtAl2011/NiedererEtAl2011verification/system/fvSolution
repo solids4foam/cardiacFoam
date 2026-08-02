@@ -21,7 +21,7 @@ solvers
     {
         solver          PCG;
         preconditioner  DIC;
-        tolerance       1e-11;
+        tolerance       1e-15;
         relTol          0.0;
     }
 
@@ -38,6 +38,8 @@ solvers
 PIMPLE
 {
     nOuterCorrectors    1000;
+
+    nNonOrthogonalCorrectors 2;
 
     residualControl
     {
