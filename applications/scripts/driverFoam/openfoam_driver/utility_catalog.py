@@ -509,7 +509,7 @@ def load_utility_manifests(utilities_root: Path) -> dict[str, UtilityManifest]:
     catalog: dict[str, UtilityManifest] = {}
 
     if not utilities_root.is_dir():
-        raise ValueError(f"utilities_root is not a directory: {utilities_root}")
+        return catalog
 
     for child in sorted(utilities_root.iterdir()):
         if not child.is_dir():

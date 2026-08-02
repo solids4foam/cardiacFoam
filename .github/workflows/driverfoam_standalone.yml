@@ -1,0 +1,45 @@
+name: driverFoam Standalone CI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'applications/scripts/driverFoam/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'applications/scripts/driverFoam/**'
+
+jobs:
+  standalone_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout monorepo (full depth)
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      run: pip install uv
+
+    - name: Extract driverFoam for Standalone Test
+      run: |
+        # Simulate a fresh clone containing ONLY driverFoam
+        mkdir -p /tmp/driverFoam-standalone
+        rsync -a applications/scripts/driverFoam/ /tmp/driverFoam-standalone/
+        
+        # Verify src/ and tutorials/ do not exist in parent directory
+        ls -la /tmp/driverFoam-standalone/..
+        test ! -d /tmp/src
+        test ! -d /tmp/tutorials
+
+    - name: Run Pytest (Standalone Mode)
+      working-directory: /tmp/driverFoam-standalone
+      run: |
+        uv run pytest openfoam_driver/tests/ -m "not integration" --tb=short

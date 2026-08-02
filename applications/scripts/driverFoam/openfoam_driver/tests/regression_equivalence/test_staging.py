@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import pytest
+from openfoam_driver.tests.conftest import skip_without_monorepo
+pytestmark = skip_without_monorepo
 
 from openfoam_driver.tests.regression_equivalence.registry import REGRESSION_CASES
 from openfoam_driver.tests.regression_equivalence.staging import (

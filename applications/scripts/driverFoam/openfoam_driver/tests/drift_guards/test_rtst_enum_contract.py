@@ -43,6 +43,8 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+import pytest
+from openfoam_driver.tests.conftest import skip_without_monorepo
 
 from openfoam_driver.scripts._rtst_scanner import (
     iter_catalogue_enums,
@@ -179,6 +181,7 @@ INTERNAL_RTST_ALLOWLIST: frozenset[str] = frozenset({
 })
 
 
+@skip_without_monorepo
 class TestRtstEnumContract(unittest.TestCase):
     """All bases discovered by the scanner must be addressed by either
     a `RTST_BY_DRIVER_PATH` mapping or an `INTERNAL_RTST_ALLOWLIST`

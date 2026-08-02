@@ -26,4 +26,36 @@
 #----------------------------------------------------------------------------#
 
 import os
+import pytest
+from pathlib import Path
+
 os.environ["SKIP_ENV_DIAGNOSTICS"] = "1"
+
+
+def _find_monorepo_root() -> Path | None:
+    """Walk parent directories looking for the cardiacFoam monorepo root.
+
+    Returns the first ancestor that has both ``tutorials/`` and
+    ``applications/`` siblings, or ``None`` when running in a standalone
+    (temp-folder / CI) checkout that does not include the full monorepo tree.
+    """
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "tutorials").exists() and (parent / "applications").exists():
+            return parent
+    return None
+
+
+#: The monorepo root resolved once at collection time.  ``None`` in standalone.
+monorepo_root: Path | None = _find_monorepo_root()
+
+#: Apply this decorator to any test class/function that reads real tutorial
+#: case directories from the monorepo ``tutorials/`` tree.  The test is
+#: automatically skipped in standalone clones and CI environments.
+skip_without_monorepo = pytest.mark.skipif(
+    monorepo_root is None,
+    reason=(
+        "Requires the full cardiacFoam monorepo tree (tutorials/ + applications/). "
+        "Clone the full repository or run with --tutorials-root to enable this test."
+    ),
+)

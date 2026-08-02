@@ -36,6 +36,8 @@ import re
 from pathlib import Path
 
 import pytest
+from openfoam_driver.tests.conftest import skip_without_monorepo
+pytestmark = skip_without_monorepo
 
 from openfoam_driver.specs import mesh_geometry
 

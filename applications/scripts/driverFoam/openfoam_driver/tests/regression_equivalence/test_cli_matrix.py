@@ -1,6 +1,10 @@
 """Matrix builder tests (solver-free: phase 2 not run)."""
 from __future__ import annotations
 
+import pytest
+from openfoam_driver.tests.conftest import skip_without_monorepo
+pytestmark = skip_without_monorepo
+
 from openfoam_driver.tests.regression_equivalence.__main__ import build_matrix
 
 

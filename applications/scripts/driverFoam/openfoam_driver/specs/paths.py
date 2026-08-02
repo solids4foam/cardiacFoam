@@ -2,11 +2,35 @@ from pathlib import Path
 
 
 def repo_root_default() -> Path:
+    """Locate the repository / package root using a three-tier fallback.
+
+    Tier 1 (monorepo): ancestor directory that has both ``tutorials/`` and
+        ``src/`` siblings — the full cardiacFoam checkout.
+    Tier 2 (standalone-with-tutorials): ancestor directory that has a
+        ``tutorials/`` sibling but no ``src/`` — driverFOAM cloned with a
+        companion tutorials tree.
+    Tier 3 (fully standalone): the ``driverFoam/`` directory that contains
+        ``openfoam_driver/`` — i.e. the package root itself.  This is the
+        fallback when neither a monorepo nor an external tutorials tree is
+        present, e.g. in a temp-folder clone or CI.
+    """
     current = Path(__file__).resolve()
+    tier2_candidate: Path | None = None
     for parent in current.parents:
-        if (parent / "tutorials").exists() and (parent / "src").exists():
+        has_tutorials = (parent / "tutorials").exists()
+        has_src = (parent / "src").exists()
+        # Tier 1: full monorepo layout
+        if has_tutorials and has_src:
             return parent
-    return current.parents[2]
+        # Remember first ancestor with tutorials/ only (Tier 2)
+        if has_tutorials and tier2_candidate is None:
+            tier2_candidate = parent
+    if tier2_candidate is not None:
+        return tier2_candidate
+    # Tier 3: the directory containing openfoam_driver/ (driverFoam/ package root)
+    # current = …/openfoam_driver/specs/paths.py → parents[2] = openfoam_driver/
+    # parents[3] = driverFoam/ (the package root with pyproject.toml)
+    return current.parents[3]
 
 
 def tutorials_root_default() -> Path:

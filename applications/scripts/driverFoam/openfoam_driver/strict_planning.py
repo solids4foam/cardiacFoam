@@ -123,12 +123,23 @@ class StrictPlanReport:
         }
 
 
-def _repo_root_from_here() -> Path:
+def _repo_root_from_here() -> Path | None:
+    """Return the monorepo root, or None when running in a standalone install.
+
+    Mirrors the three-tier logic in ``specs/paths.py:repo_root_default()``.
+    Returns ``None`` instead of raising so that callers can gracefully skip
+    operations that require the full source tree (e.g. dict-key scanning).
+    """
     current = Path(__file__).resolve()
+    tier2_candidate: Path | None = None
     for parent in current.parents:
-        if (parent / "src").exists() and (parent / "tutorials").exists():
+        has_src = (parent / "src").exists()
+        has_tutorials = (parent / "tutorials").exists()
+        if has_src and has_tutorials:   # Tier 1: full monorepo
             return parent
-    raise RuntimeError("Could not locate repository root from strict_planning.py")
+        if has_tutorials and tier2_candidate is None:  # Tier 2: tutorials-only
+            tier2_candidate = parent
+    return tier2_candidate  # Tier 3: fully standalone → None
 
 
 def _workflow_diagnostic_to_strict(diagnostic: WorkflowDiagnostic) -> StrictDiagnostic:
@@ -184,7 +195,11 @@ def _artifact_diagnostics(
     return tuple(diagnostics)
 
 
-def _catalog_diagnostics(repo_root: Path) -> tuple[StrictDiagnostic, ...]:
+def _catalog_diagnostics(repo_root: Path | None) -> tuple[StrictDiagnostic, ...]:
+    if repo_root is None or not (repo_root / "src").exists():
+        # Running in a standalone install without the C++ source tree.
+        # Skip the dict-key scanner rather than raising.
+        return ()
     report = strict_dict_key_report(repo_root / "src")
     diagnostics: list[StrictDiagnostic] = []
     payload = report.to_json()
@@ -311,7 +326,7 @@ def strict_plan(
         workflow_state=workflow_state,
         expected_artifacts=artifacts,
     )
-    repo_root = _repo_root_from_here()
+    repo_root = _repo_root_from_here()  # None in standalone installs
     catalog_diagnostics = _catalog_diagnostics(repo_root)
     artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
     env_diagnostics = _environment_diagnostics(

@@ -30,6 +30,18 @@ openfoam_driver/
 └── tests/                         # contract and regression tests for architecture
 ```
 
+## Standalone Usage
+
+`driverFOAM` can be used completely independently of the `cardiacFoam` C++ repository (e.g. cloned into a `/tmp` directory or installed as a standalone `pip` package).
+
+This mode is designed for CI pipelines or users wanting to drive their own existing OpenFOAM simulations without keeping the entire `cardiacFoam` source tree around.
+
+When run standalone (where `src/` and `tutorials/` siblings do not exist):
+- `driverFOAM` automatically falls back to bundled template fixtures (like `electroProperties`) for schema parsing and planning.
+- The C++ drift guards (tests that assert Python configurations match C++ `Names.H` headers) are gracefully skipped.
+- Regression equivalence and verification tests (which expect physical tutorials on disk) are skipped.
+- `strict` and `generic` planning work out of the box using your local simulation paths.
+
 ## TutorialSpec contract
 
 Each tutorial module in `specs/tutorials/` builds a `TutorialSpec` with:
