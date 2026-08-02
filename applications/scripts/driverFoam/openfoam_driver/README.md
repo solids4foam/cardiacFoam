@@ -37,6 +37,7 @@ openfoam_driver/
 This mode is designed for CI pipelines or users wanting to drive their own existing OpenFOAM simulations without keeping the entire `cardiacFoam` source tree around.
 
 When run standalone (where `src/` and `tutorials/` siblings do not exist):
+
 - `driverFOAM` automatically falls back to bundled template fixtures (like `electroProperties`) for schema parsing and planning.
 - The C++ drift guards (tests that assert Python configurations match C++ `Names.H` headers) are gracefully skipped.
 - Regression equivalence and verification tests (which expect physical tutorials on disk) are skipped.
