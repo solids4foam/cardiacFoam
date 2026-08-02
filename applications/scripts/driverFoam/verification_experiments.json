@@ -5,10 +5,19 @@
       "experiment_id": "monodomain_cartesian",
       "description": "Cartesian monodomain fields and pseudo-ECG convergence",
       "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
-      "execution": {"kind": "driver_sweep", "runner": "setup/run_monodomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_monodomain_cartesian.sh", "driver_specs": ["setup/studies/cartesianConvergence/sweep_hex_convergence.json"]},
       "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
       "observables": ["Vm", "u1", "u2", "Phi_e"],
       "aggregation": {"key": "monodomain_cartesian", "result": "setup/results/monodomain_cartesian.csv", "reference": "reference/monodomain_cartesian.csv"}
+    },
+    {
+      "experiment_id": "monodomain_temporal",
+      "description": "Cartesian monodomain fields and pseudo-ECG temporal convergence",
+      "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
+      "execution": {"kind": "legacy_bash", "runner": "setup/studies/temporalConvergence/run_temporal_convergence.sh"},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "u1", "u2", "Phi_e"],
+      "aggregation": {"key": "monodomain_temporal", "result": "setup/results/monodomain_temporal.csv", "reference": "reference/monodomain_temporal.csv"}
     },
     {
       "experiment_id": "monodomain_tet_generic",
@@ -23,7 +32,7 @@
       "experiment_id": "monodomain_tet_frontal",
       "description": "Frontal tetrahedral monodomain diagonal and rotated-anisotropy comparison",
       "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
-      "execution": {"kind": "driver_sweep", "runner": "setup/mesh/tet/run_monodomain_tet_frontal.sh", "driver_specs": ["setup/studies/tetConvergence/sweep_tet_convergence_optimised.json"]},
+      "execution": {"kind": "driver_sweep", "runner": "setup/mesh/tet/run_monodomain_tet_frontal.sh", "driver_specs": ["setup/studies/tetConvergence/sweep_tet_frontal.json"]},
       "matrix": {"mesh_family": ["tet_frontal"], "conductivity": ["diagonal", "rotated"], "gradient_scheme": ["GaussLinear", "leastSquares"], "N": [10, 20, 40, 80]},
       "observables": ["Vm"],
       "aggregation": {"key": "monodomain_tet_frontal", "result": "setup/results/monodomain_tet_frontal.csv", "reference": "reference/monodomain_tet_frontal.csv"}
@@ -32,7 +41,7 @@
       "experiment_id": "eikonal_cartesian",
       "description": "Cartesian eikonal activation and pseudo-ECG convergence",
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
-      "execution": {"kind": "driver_sweep", "runner": "setup/run_eikonal_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_eikonal_cartesian.sh", "driver_specs": ["setup/studies/cartesianConvergence/sweep_hex_convergence.json"]},
       "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
       "observables": ["activationTime", "Phi_e"],
       "aggregation": {"key": "eikonal_cartesian", "result": "setup/results/eikonal_cartesian.csv", "reference": "reference/eikonal_cartesian.csv"}
@@ -68,10 +77,19 @@
       "experiment_id": "bidomain_cartesian",
       "description": "Cartesian bidomain field convergence",
       "case_dir": "tutorials/manufacturedSolutions/bidomain",
-      "execution": {"kind": "driver_sweep", "runner": "setup/run_bidomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_bidomain_cartesian.sh", "driver_specs": ["setup/studies/cartesianConvergence/sweep_hex_convergence.json"]},
       "matrix": {"mesh_family": ["cartesian"], "dimensions": ["1D", "2D", "3D"], "N": [10, 20, 40, 80]},
       "observables": ["Vm", "phiE_gauge", "phiI_gauge", "u1", "u2"],
       "aggregation": {"key": "bidomain_cartesian", "result": "setup/results/bidomain_cartesian.csv", "reference": "reference/bidomain_cartesian.csv"}
+    },
+    {
+      "experiment_id": "bidomain_temporal",
+      "description": "Bidomain temporal convergence",
+      "case_dir": "tutorials/manufacturedSolutions/bidomain",
+      "execution": {"kind": "legacy_bash", "runner": "setup/studies/temporalConvergence/run_temporal_convergence.sh"},
+      "matrix": {"mesh_family": ["cartesian"], "dimensions": ["3D"], "N": [10, 20, 40, 80]},
+      "observables": ["Vm", "phiE_gauge", "phiI_gauge", "u1", "u2"],
+      "aggregation": {"key": "bidomain_temporal", "result": "setup/results/bidomain_temporal.csv", "reference": "reference/bidomain_temporal.csv"}
     },
     {
       "experiment_id": "bidomain_tet_generic",
@@ -86,7 +104,7 @@
       "experiment_id": "bath_bidomain_cartesian",
       "description": "Cartesian bath-bidomain field convergence",
       "case_dir": "tutorials/manufacturedSolutions/bathBidomain",
-      "execution": {"kind": "driver_sweep", "runner": "setup/run_bath_bidomain_cartesian.sh", "driver_specs": ["setup/studies/hexConvergence/sweep_hex_convergence.json"]},
+      "execution": {"kind": "driver_sweep", "runner": "setup/run_bath_bidomain_cartesian.sh", "driver_specs": ["setup/studies/cartesianConvergence/sweep_hex_convergence.json"]},
       "matrix": {"mesh_family": ["cartesian"], "dimensions": ["3D"], "N": [10, 20, 40, 80]},
       "observables": ["Vm", "phiE", "phiI"],
       "aggregation": {"key": "bath_bidomain_cartesian", "result": "setup/results/bath_bidomain_cartesian.csv", "reference": "reference/bath_bidomain_cartesian.csv"}
@@ -104,7 +122,7 @@
       "experiment_id": "purkinje_monodomain_coupled",
       "description": "Purkinje graph and coupled 1D-3D monodomain convergence",
       "case_dir": "tutorials/manufacturedSolutions/monodomain1D3D",
-      "execution": {"kind": "legacy_bash", "runner": "setup/run_purkinje_monodomain_coupled.sh"},
+      "execution": {"kind": "legacy_bash", "runner": "setup/studies/coupledConvergence/run_coupled_convergence.sh"},
       "matrix": {"coupling_regime": ["decoupled", "active", "bidirectional"], "N": [10, 20, 40, 80]},
       "observables": ["Vm_1D", "Vm_3D"],
       "aggregation": {"key": "purkinje_monodomain_coupled", "result": "setup/results/purkinje_monodomain_coupled.csv", "reference": "reference/purkinje_monodomain_coupled.csv"}
