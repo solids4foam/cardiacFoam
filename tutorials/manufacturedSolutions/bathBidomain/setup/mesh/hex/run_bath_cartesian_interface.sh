@@ -106,6 +106,11 @@ for N in $RESOLUTIONS; do
 
     set +e
     if [[ "$NPROCS" -gt 1 ]]; then
+        # decomposeParDict is committed with 6 subdomains; without this the
+        # solver aborts with "specifies N processors but job was started with
+        # M ranks" whenever NPROCS differs from it.
+        foamDictionary system/decomposeParDict \
+            -entry numberOfSubdomains -set "$NPROCS" > /dev/null 2>&1 || true
         decomposePar -force > "$OUT_DIR/log.decomposePar" 2>&1
         mpirun --oversubscribe -np "$NPROCS" cardiacFoam -parallel \
             > "$OUT_DIR/log.cardiacFoam" 2>&1
@@ -130,15 +135,24 @@ for N in $RESOLUTIONS; do
         exit 1
     fi
 
-    bathBidomainInterfaceMetrics -latestTime \
+    # FACE_ERRORS=1 adds the signed per-face dump. It is what distinguishes a
+    # spread error, which a manufactured-solution or parameter inconsistency
+    # would give, from an error concentrated in a handful of faces.
+    FACE_FLAG=""
+    if [[ "${FACE_ERRORS:-0}" == "1" ]]; then FACE_FLAG="-writeFaceErrors"; fi
+
+    bathBidomainInterfaceMetrics -latestTime $FACE_FLAG \
         > "$OUT_DIR/log.interfaceMetrics" 2>&1
     cp postProcessing/bathBidomainInterfaceMetrics.csv "$OUT_DIR/" 2>/dev/null || {
         echo "FAILED N=$N: no interface metrics written" >&2; exit 1; }
 
-    bathBidomainInterfaceMetrics -latestTime -exactFields \
+    bathBidomainInterfaceMetrics -latestTime -exactFields $FACE_FLAG \
         > "$OUT_DIR/log.interfaceMetricsExactField" 2>&1
     cp postProcessing/bathBidomainInterfaceMetricsExactField.csv "$OUT_DIR/" 2>/dev/null || {
         echo "FAILED N=$N: no exact-field metrics written" >&2; exit 1; }
+    if [[ -n "$FACE_FLAG" ]]; then
+        cp postProcessing/bathBidomainFaceErrors*.csv "$OUT_DIR/" 2>/dev/null || true
+    fi
 
     echo "  N=$N done -> $OUT_DIR"
 done

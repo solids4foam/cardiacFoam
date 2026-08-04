@@ -23,9 +23,9 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.0200392;
+endTime         0.02;
 
-deltaT          0.000140134;
+deltaT          0.000140135;
 
 writeControl    timeStep;
 

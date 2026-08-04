@@ -115,6 +115,14 @@ used as a control for that quantity.
 | Algebraic / tolerance | phiE reaches the 1e-15 absolute criterion in ~1200 iterations at every step; Vm in 4–5; no solver diagnostic raised anywhere in the log | **refuted** |
 | Interface discretisation | exact-field probe clean and symmetric at N = 80 (table above) | **refuted** |
 | Static assembly error | 2-step run at N = 80 is clean: x0 assembled 2.464e-4, x1 2.514e-4, leak Linf/L2 = 4.4. Artefacts in `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_2step/` | **refuted** |
+| Ill-posed manufactured solution | sigma_i is configured as 0.111453302, which is 1.1/pi^2 to nine decimal places, so there is no parameter drift. The Cartesian bath at N = 80 gives a uniform 1.24e-6 at x = 0 and 2.09e-5 at x = 1 -- identical on all 6400 faces, four orders below the physical scale alpha = 1e-2. An inconsistent manufactured description would show a large error there, not a negligible one. Artefacts in `setup/mesh/hex/results/interfaceCartesian/N80/` | **refuted** |
+
+One caveat on the Cartesian control: the manufactured phiE depends on x alone,
+so every face of a Cartesian interface is geometrically equivalent and that run
+*could not* have shown localisation. It bounds the magnitude, not the spatial
+structure. It also settles a smaller question -- the Cartesian solved value's
+rise at N = 80 is 1.2434e-6 and uniform, i.e. the tolerance floor, not a
+miniature of the tetrahedral effect.
 
 The decomposition test is worth keeping; the script is in the git history of this
 investigation and re-derivable from `processorN/constant/polyMesh/faceProcAddressing`
