@@ -186,6 +186,34 @@ def main():
     print(f"  Spearman d_wall (all cells)      : {sw:+.4f}")
     print(f"  Spearman d_seed (interior only)  : {si:+.4f}   <-- controlled")
     print()
+
+    # Optional machine-readable row, so a ladder over N can be archived rather
+    # than living only in this script's stdout. Appends, writing the header
+    # only when the file does not yet exist.
+    csv_path = os.environ.get("LOCALISATION_CSV")
+    if csv_path:
+        new = not os.path.exists(csv_path)
+        with open(csv_path, "a") as fh:
+            if new:
+                fh.write(
+                    "N,scheme,n_cells,interior_cut,"
+                    "spearman_d_seed_all,spearman_d_wall_all,"
+                    "spearman_d_seed_interior,mean_abs_err,max_abs_err\n"
+                )
+            fh.write(
+                "{},{},{},{:.6g},{:+.4f},{:+.4f},{:+.4f},{:.6e},{:.6e}\n".format(
+                    os.environ.get("LOCALISATION_N", ""),
+                    os.environ.get("LOCALISATION_SCHEME", ""),
+                    len(err),
+                    interior_cut,
+                    ss,
+                    sw,
+                    si,
+                    sum(abs(e) for e in err) / len(err),
+                    max(abs(e) for e in err),
+                )
+            )
+        print(f"  appended a row to {csv_path}")
     if abs(si) > 0.2:
         print("  A propagation ramp survives with wall proximity held out.")
         print("  -> supports H1: error accumulates along the sweep.")
