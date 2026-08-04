@@ -110,12 +110,21 @@ used as a control for that quantity.
 
 | hypothesis | test | verdict |
 |---|---|---|
-| Mesh quality / slivers | `checkMesh`: Mesh OK, max non-orth 70.40 (only 3 faces > 70), max skewness 0.918. Bad faces are 1.09–1.20x median area | **refuted** |
+| Mesh quality / slivers | `checkMesh`: Mesh OK, max non-orth 70.40 (only 3 faces > 70), max skewness 0.918. Bad faces are 1.09–1.20x median area | **partially refuted -- see caveat** |
 | Domain decomposition, processor-patch coefficient injection | Mapped all 22 faces through `faceProcAddressing` for all 6 processors: **0 of 22** lie on a processor patch; only 3 of 14,760 interface faces touch one at all | **refuted** |
 | Algebraic / tolerance | phiE reaches the 1e-15 absolute criterion in ~1200 iterations at every step; Vm in 4–5; no solver diagnostic raised anywhere in the log | **refuted** |
 | Interface discretisation | exact-field probe clean and symmetric at N = 80 (table above) | **refuted** |
 | Static assembly error | 2-step run at N = 80 is clean: x0 assembled 2.464e-4, x1 2.514e-4, leak Linf/L2 = 4.4. Artefacts in `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_2step/` | **refuted** |
+| Predictor-corrector diverging | Reran N = 80 with `bath_predictor_corrector: false` through driverFOAM. It is **8.8x worse**, not better: x0 assembled 1.330e-1 against 1.514e-2, x0 leak L2 4.151e-2 against 3.556e-3. Meanwhile x1 is unchanged to four figures (0.9996 and 1.02). The corrector was suppressing the defect, not causing it. Artefacts in `setup/studies/tetConvergence/results/sweepCasesCorrectorOff/` | **refuted** |
 | Ill-posed manufactured solution | sigma_i is configured as 0.111453302, which is 1.1/pi^2 to nine decimal places, so there is no parameter drift. The Cartesian bath at N = 80 gives a uniform 1.24e-6 at x = 0 and 2.09e-5 at x = 1 -- identical on all 6400 faces, four orders below the physical scale alpha = 1e-2. An inconsistent manufactured description would show a large error there, not a negligible one. Artefacts in `setup/mesh/hex/results/interfaceCartesian/N80/` | **refuted** |
+
+**Caveat on the mesh-quality row.** That refutation rests on global `checkMesh`
+statistics and on the *areas* of the 22 faces. Neither is strong. Face area is a
+weak proxy for stencil quality, and a global maximum says nothing about 22 faces
+out of 14,760. The per-face non-orthogonality, skewness and cell-centre-to-face
+geometry at those specific faces have **not** been computed. Until they are,
+local mesh pathology remains open, and it is the cheapest outstanding test
+because it needs no solve.
 
 One caveat on the Cartesian control: the manufactured phiE depends on x alone,
 so every face of a Cartesian interface is geometrically equivalent and that run
@@ -131,6 +140,22 @@ plus the `procBoundary*` entries in each `boundary` file.
 ---
 
 ## Leading hypothesis
+
+**The x = 0 interface amplifies residual coupling error, and at N = 80 that
+error outgrows what the corrector can suppress.**
+
+The corrector-off run is what points here. One corrector pass buys a factor of
+about nine at x = 0 and changes x = 1 by 0.04%, so the defect scales with how
+much coupling error survives in the solution, and it is confined to one
+interface. That also reconciles the growth curve: forty steps of decay while
+the corrector keeps up, then divergence once it cannot.
+
+What is still unexplained is the asymmetry itself. The manufactured field is
+C0 at both interfaces and the cosine term reaches +1 at x = 0 and -1 at x = 1,
+so the two differ in the sign of the curvature but not its magnitude. Nothing
+identified so far explains why one interface amplifies and the other does not.
+
+The earlier framing was:
 
 **Something in the coupled bath advance crosses a threshold between step 40 and
 step 143 and then fails locally.** The predictor–corrector is the first suspect
