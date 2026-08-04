@@ -110,7 +110,7 @@ used as a control for that quantity.
 
 | hypothesis | test | verdict |
 |---|---|---|
-| Mesh quality / slivers | `checkMesh`: Mesh OK, max non-orth 70.40 (only 3 faces > 70), max skewness 0.918. Bad faces are 1.09–1.20x median area | **partially refuted -- see caveat** |
+| Mesh quality / slivers | Per-cell `nonOrthoAngle` and `skewness` written by `checkMesh -writeFields` and sampled at the 22 offending faces: mean non-orthogonality 28.48 deg against 28.58 for all 58,814 cells at that interface, maximum 55.19 against 66.20, skewness mean 0.226 against 0.223 and maximum 0.577 against 0.766. The offending cells are statistically identical in the mean and *better* in their maxima than the interface population | **refuted** |
 | Domain decomposition, processor-patch coefficient injection | Mapped all 22 faces through `faceProcAddressing` for all 6 processors: **0 of 22** lie on a processor patch; only 3 of 14,760 interface faces touch one at all | **refuted** |
 | Algebraic / tolerance | phiE reaches the 1e-15 absolute criterion in ~1200 iterations at every step; Vm in 4–5; no solver diagnostic raised anywhere in the log | **refuted** |
 | Interface discretisation | exact-field probe clean and symmetric at N = 80 (table above) | **refuted** |
@@ -118,13 +118,16 @@ used as a control for that quantity.
 | Predictor-corrector diverging | Reran N = 80 with `bath_predictor_corrector: false` through driverFOAM. It is **8.8x worse**, not better: x0 assembled 1.330e-1 against 1.514e-2, x0 leak L2 4.151e-2 against 3.556e-3. Meanwhile x1 is unchanged to four figures (0.9996 and 1.02). The corrector was suppressing the defect, not causing it. Artefacts in `setup/studies/tetConvergence/results/sweepCasesCorrectorOff/` | **refuted** |
 | Ill-posed manufactured solution | sigma_i is configured as 0.111453302, which is 1.1/pi^2 to nine decimal places, so there is no parameter drift. The Cartesian bath at N = 80 gives a uniform 1.24e-6 at x = 0 and 2.09e-5 at x = 1 -- identical on all 6400 faces, four orders below the physical scale alpha = 1e-2. An inconsistent manufactured description would show a large error there, not a negligible one. Artefacts in `setup/mesh/hex/results/interfaceCartesian/N80/` | **refuted** |
 
-**Caveat on the mesh-quality row.** That refutation rests on global `checkMesh`
-statistics and on the *areas* of the 22 faces. Neither is strong. Face area is a
-weak proxy for stencil quality, and a global maximum says nothing about 22 faces
-out of 14,760. The per-face non-orthogonality, skewness and cell-centre-to-face
-geometry at those specific faces have **not** been computed. Until they are,
-local mesh pathology remains open, and it is the cheapest outstanding test
-because it needs no solve.
+To reproduce the mesh-quality check without a solve:
+
+```bash
+checkMesh -writeFields '(nonOrthoAngle skewness)' -constant
+postProcess -func writeCellCentres -constant
+```
+
+then sample `constant/nonOrthoAngle` and `constant/skewness` at cells within one
+cell width of x = 0 and compare the subset near the offending face coordinates
+against the whole interface population.
 
 One caveat on the Cartesian control: the manufactured phiE depends on x alone,
 so every face of a Cartesian interface is geometrically equivalent and that run
