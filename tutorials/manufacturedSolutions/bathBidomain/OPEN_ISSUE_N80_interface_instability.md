@@ -151,12 +151,6 @@ level (`dt_for_n` in `run_bath_tet_predictor.sh`: 8.92857e-3, 2.24215e-3,
 marginally *more* conservative than N = 40, not less. A naive diffusive stability
 limit does not explain it, and the diffusion is implicit in any case.
 
-Against a pure step-size explanation: dt shrinks by exactly 4.0 per refinement
-level (`dt_for_n` in `run_bath_tet_predictor.sh`: 8.92857e-3, 2.24215e-3,
-5.60538e-4, 1.401345e-4) while the true h² shrinks by 3.96, so N = 80 is
-marginally *more* conservative than N = 40, not less. A naive diffusive stability
-limit does not explain it, and the diffusion is implicit in any case.
-
 ---
 
 ## Next tests, in order
