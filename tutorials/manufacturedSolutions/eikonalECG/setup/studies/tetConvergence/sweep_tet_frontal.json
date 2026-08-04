@@ -1,0 +1,38 @@
+{
+  "base": {
+    "entry": "manufacturedEikonalECG",
+    "case_dir_name": "manufacturedSolutions/eikonalECG",
+    "setup_dir_name": "setup",
+    "dimensions": ["3D"],
+    "solver_types": ["eikonal"],
+    "mesh_family": "tet",
+    "numerics_profile": "eikonal_tet",
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCasesFrontal"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "electro_property_overrides": [
+        {"eikonalSolverCoeffs.conductivity": "[-1 -3 3 0 0 2 0] (0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782)"},
+        {"eikonalSolverCoeffs.conductivity": "[-1 -3 3 0 0 2 0] (0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782)"},
+        {"eikonalSolverCoeffs.conductivity": "[-1 -3 3 0 0 2 0] (0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782)"}
+      ],
+      "grad_scheme": [
+        "least_squares",
+        "least_squares",
+        "least_squares"
+      ],
+      "number_cells": [
+        [10],
+        [20],
+        [40]
+      ],
+      "output_dir_name": [
+        "least_squares_rotated_10",
+        "least_squares_rotated_20",
+        "least_squares_rotated_40"
+      ]
+    }
+  }
+}

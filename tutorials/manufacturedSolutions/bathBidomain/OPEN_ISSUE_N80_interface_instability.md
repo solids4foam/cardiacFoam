@@ -175,12 +175,15 @@ limit does not explain it, and the diffusion is implicit in any case.
 
    Artefacts: `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_40step/`.
 
-2. **Corrector off — RUNNING at time of writing.** The diagnostic script now
-   takes a `PREDICTOR` variable:
+2. **Corrector off — RUNNING at time of writing.** `bath_predictor_corrector`
+   is a first-class driverFOAM config key, so this is a sweep spec, not a script:
    ```bash
-   N=80 STEPS=143 NPROCS=6 PREDICTOR=false ./setup/mesh/tet/run_bath_tet_solve_diagnostic.sh
+   driverFoam sweep-run \
+     --spec setup/studies/tetConvergence/sweep_tet_generic_correctorOff.json \
+     --output-dir setup/studies/tetConvergence/results/sweepRunCorrectorOff
    ```
-   ~3.3 h, into `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_143step_predictorfalse/`.
+   ~3.3 h. The spec is a copy of `sweep_tet_generic.json` differing only in
+   `bath_predictor_corrector: false` and the archive directory.
    If the baseline one-pass coupling is stable at N = 80, the corrector is the
    mechanism. If it blows up too, the corrector is exonerated and the cause lies
    in the shared bath assembly, which would redirect the search entirely.
@@ -200,7 +203,10 @@ limit does not explain it, and the diffusion is implicit in any case.
 
 - Case: `tutorials/manufacturedSolutions/bathBidomain/`
 - Ladder runner: `setup/mesh/tet/run_bath_tet_predictor.sh` (`FACE_ERRORS=1` for the per-face dump)
-- Truncated-run probe: `setup/mesh/tet/run_bath_tet_solve_diagnostic.sh` (`N`, `STEPS`, `MAXITER` env vars)
+- Sweep specs: `setup/studies/tetConvergence/sweep_tet_generic.json` (production)
+  and `sweep_tet_generic_correctorOff.json` (corrector disabled). Run either with
+  `driverFoam sweep-run --spec <json> --output-dir <dir>`. Truncate a run by
+  lowering `end_time` in a copy of the spec rather than writing a shell wrapper.
 - Mesh gate: `setup/mesh/tet/run_mesh_gate.sh <N>`
 - Metrics utility: `applications/utilities/bathBidomainInterfaceMetrics/bathBidomainInterfaceMetrics.C`
   (`-exactFields`, `-writeFaceErrors`)
