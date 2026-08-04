@@ -217,6 +217,19 @@ void manufacturedEikonalVerifier::postProcess
     const auto norms =
         computeNorms(mesh_, activationTime.primitiveField(), exact);
 
+    // Same bulk/boundary split the standalone gradientReconstructionOrder
+    // utility reports, so the solved activation error and the
+    // reconstruction-only error can be compared level by level on one mesh
+    // ladder. Both parts are normalised by the total mesh volume, so
+    // total^2 = bulk^2 + boundary^2.
+    const auto splitNorms =
+        computeBoundaryBulkNorms
+        (
+            mesh_,
+            activationTime.primitiveField(),
+            exact
+        );
+
     if (writeErrorField_)
     {
         // Written into the current time directory so it sits alongside the
@@ -270,6 +283,10 @@ void manufacturedEikonalVerifier::postProcess
             << "Field           L1-error       L2-error       Linf-error" << nl
             << "activationTime  " << norms.first().first() << "   "
             << norms.first().second() << "   " << norms.second() << nl
+            << "-------------------------------------------------" << nl
+            << "L2 bulk        " << splitNorms.first().first() << nl
+            << "L2 boundary    " << splitNorms.first().second() << nl
+            << "L2 total       " << splitNorms.second() << nl
             << "-------------------------------------------------" << endl;
 
         OFstream os(outputFile);
@@ -282,7 +299,13 @@ void manufacturedEikonalVerifier::postProcess
             << "# k " << k << "\n"
             << "# field L1 L2 Linf\n"
             << "activationTime " << norms.first().first() << " "
-            << norms.first().second() << " " << norms.second() << "\n";
+            << norms.first().second() << " " << norms.second() << "\n"
+            << "# bulk/boundary split of the volume-weighted L2, both parts\n"
+            << "# normalised by total mesh volume: total^2 = bulk^2 + bound^2\n"
+            << "# field L2bulk L2boundary L2total\n"
+            << "activationTimeSplit " << splitNorms.first().first() << " "
+            << splitNorms.first().second() << " " << splitNorms.second()
+            << "\n";
     }
 
     errorsReported_ = true;

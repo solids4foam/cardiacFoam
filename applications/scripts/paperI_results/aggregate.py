@@ -44,6 +44,25 @@ def _mesh_h_by_nominal_n(path: Path):
     }
 
 
+def _mono_tet_per_electrode(root: Path):
+    """Per-electrode breakdown of the axis-aligned FDA tet pseudo-ECG study.
+
+    Reads a DEDICATED sweep archive (sweepCasesPerElectrode/, produced by
+    sweep_tet_per_electrode.json), not the main tetConvergence sweepCases/
+    that mono_tet_convergence.csv's committed reference is keyed against --
+    per_electrode=True adds Phi_e_E1..E5 rows, and keyset_gate.py requires
+    the fresh/reference key sets to match exactly, so those rows must never
+    land in the gated mono_tet_convergence.csv (see
+    adapters.from_monodomain_tet_ecg's own docstring)."""
+    study = root / _TUT / "monodomainPseudoECG/setup/studies/tetConvergence"
+    archive = study / "results" / "sweepCasesPerElectrode"
+    manifest = study / "results" / "sweepRunPerElectrode/sweep_manifest.json"
+    rows = adapters.from_monodomain_tet_ecg(
+        archive, manifest, case="tet_per_electrode", per_electrode=True,
+    )
+    return schema.fill_rates(rows)
+
+
 def _mono_tet_frontal(root: Path):
     study = root / _TUT / "monodomainPseudoECG/setup/studies/tetConvergence"
     archive = study / "results" / "sweepCasesFrontal"
@@ -195,6 +214,7 @@ def _normalized(builder, experiment_id):
 
 CASES = {
     "mono_tet": _mono_tet, "mono_tet_frontal": _mono_tet_frontal,
+    "mono_tet_per_electrode": _mono_tet_per_electrode,
     "eikonal_tet": _eikonal_tet, "coupling1D3D_hex": _coupling1D3D_hex,
     "eikonal_hex": _eikonal_hex, "mono_hex": _mono_hex, "mono_temporal": _mono_temporal,
     "bidomain_hex": _bidomain_hex, "bidomain_temporal": _bidomain_temporal,
@@ -217,6 +237,7 @@ CASES = {
 _OUT = {
     "mono_tet": "monodomainPseudoECG/setup/results/mono_tet_convergence.csv",
     "mono_tet_frontal": "monodomainPseudoECG/setup/results/monodomain_tet_optimised_convergence.csv",
+    "mono_tet_per_electrode": "monodomainPseudoECG/setup/results/mono_per_electrode_tet.csv",
     "eikonal_tet": "eikonalECG/setup/results/eikonal_tet_convergence.csv",
     "coupling1D3D_hex": "monodomain1D3D/setup/results/coupling1D3D_hex_convergence.csv",
     "eikonal_hex": "eikonalECG/setup/results/eikonal_hex_convergence.csv",

@@ -246,6 +246,113 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
 }
 
 
+//- Split the volume-weighted L2 error into bulk and boundary-adjacent
+//  contributions.
+//
+//  A cell is boundary-adjacent if it owns at least one face on a non-empty
+//  boundary patch.  Both contributions are normalised by the *total* mesh
+//  volume rather than by their own sub-volume, so they are parts of one norm
+//  and satisfy
+//
+//      L2_total^2 = L2_bulk^2 + L2_boundary^2
+//
+//  This is deliberately the same convention as the standalone
+//  gradientReconstructionOrder utility, so that a solved-field decomposition
+//  and a reconstruction-only decomposition can be compared level by level on
+//  the same mesh ladder.
+//
+//  Returns Tuple2< Tuple2<L2_bulk, L2_boundary>, L2_total >.
+template<class FieldType1, class FieldType2>
+inline Tuple2<Tuple2<scalar, scalar>, scalar> computeBoundaryBulkNorms
+(
+    const fvMesh& mesh,
+    const FieldType1& numeric,
+    const FieldType2& exact
+)
+{
+    if
+    (
+        numeric.size() != exact.size()
+     || numeric.size() != mesh.nCells()
+    )
+    {
+        FatalErrorInFunction
+            << "Cannot compute bulk/boundary manufactured norms: size "
+            << "mismatch (numeric=" << numeric.size()
+            << ", exact=" << exact.size()
+            << ", mesh cells=" << mesh.nCells() << ")."
+            << exit(FatalError);
+    }
+
+    // Mark cells owning at least one real (non-empty) boundary face.
+    const polyBoundaryMesh& bMesh = mesh.boundaryMesh();
+    boolList isBoundaryCell(mesh.nCells(), false);
+
+    forAll(bMesh, patchI)
+    {
+        const polyPatch& pp = bMesh[patchI];
+
+        if (pp.empty() || pp.type() == "empty")
+        {
+            continue;
+        }
+
+        const labelUList& faceCells = pp.faceCells();
+        forAll(faceCells, i)
+        {
+            isBoundaryCell[faceCells[i]] = true;
+        }
+    }
+
+    const scalarField& volumes = mesh.V();
+
+    scalar weightedSqBulk = 0.0;
+    scalar weightedSqBound = 0.0;
+    scalar totalVolume = 0.0;
+
+    forAll(numeric, i)
+    {
+        const scalar diff = Foam::mag(numeric[i] - exact[i]);
+        const scalar contrib = volumes[i]*diff*diff;
+
+        if (isBoundaryCell[i])
+        {
+            weightedSqBound += contrib;
+        }
+        else
+        {
+            weightedSqBulk += contrib;
+        }
+
+        totalVolume += volumes[i];
+    }
+
+    reduce(weightedSqBulk, sumOp<scalar>());
+    reduce(weightedSqBound, sumOp<scalar>());
+    reduce(totalVolume, sumOp<scalar>());
+
+    if (totalVolume <= VSMALL)
+    {
+        return Tuple2<Tuple2<scalar, scalar>, scalar>
+        (
+            Tuple2<scalar, scalar>(0.0, 0.0),
+            0.0
+        );
+    }
+
+    const scalar bulkL2 = Foam::sqrt(weightedSqBulk/totalVolume);
+    const scalar boundL2 = Foam::sqrt(weightedSqBound/totalVolume);
+    const scalar totalL2 =
+        Foam::sqrt((weightedSqBulk + weightedSqBound)/totalVolume);
+
+    return Tuple2<Tuple2<scalar, scalar>, scalar>
+    (
+        Tuple2<scalar, scalar>(bulkL2, boundL2),
+        totalL2
+    );
+}
+
+
 //- Human-readable dimension tag ("1D", "2D", "3D", or "unknown").
 inline word dimensionName(const label dimension)
 {

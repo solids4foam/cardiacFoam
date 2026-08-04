@@ -83,6 +83,61 @@ def test_monodomain_tet_vm_and_ecg_share_measured_h_from_grid_spacing(tmp_path):
     assert by_field["Phi_e_mean"]["L2"] == f"{(0.0038452 + 0.002) / 2:g}"
     assert all(r["h"] == "0.0588235" and r["variant"] == "GaussLinear" for r in ecg_rows)
 
+    # Opt-in per-electrode rows. These must NOT appear by default: keyset_gate
+    # requires the fresh and committed reference key sets to match exactly, so
+    # extra Phi_e_E* rows in the canonical CSV would fail reproduction.
+    per_rows = adapters.from_monodomain_tet_ecg(
+        sweep_cases, manifest, per_electrode=True
+    )
+    per_by_field = {r["field"]: r for r in per_rows}
+    assert set(per_by_field) == {
+        "Phi_e_max", "Phi_e_mean", "Phi_e_min", "Phi_e_E1", "Phi_e_E2",
+    }
+    assert per_by_field["Phi_e_E1"]["L2"] == "0.0038452"
+    assert per_by_field["Phi_e_E1"]["Linf"] == "0.00426517"
+    assert per_by_field["Phi_e_E2"]["L2"] == "0.002"
+    assert per_by_field["Phi_e_E2"]["Linf"] == "0.003"
+    # the aggregate rows must be unchanged by the opt-in
+    assert per_by_field["Phi_e_max"] == by_field["Phi_e_max"]
+    assert per_by_field["Phi_e_min"] == by_field["Phi_e_min"]
+
+
+def test_eikonal_bulk_boundary_reads_activation_time_split(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "least_squares_10": {"grad_scheme": "least_squares", "number_cells": [10]},
+        "gauss_linear_10": {"grad_scheme": "gauss_linear", "number_cells": [10]},
+    })
+    (sweep_cases / "least_squares_10").mkdir(parents=True)
+    (sweep_cases / "least_squares_10" / "manufacturedEikonalActivationTime.dat").write_text(
+        "# k 0\n"
+        "# field L1 L2 Linf\n"
+        "activationTime 0.001 0.022572 0.05\n"
+        "# bulk/boundary split of the volume-weighted L2, both parts\n"
+        "# normalised by total mesh volume: total^2 = bulk^2 + bound^2\n"
+        "# field L2bulk L2boundary L2total\n"
+        "activationTimeSplit 0.0121307 0.0190353 0.022572\n"
+        "Number of cells = 4913\n"
+    )
+    # A case with writeErrorField off (no activationTimeSplit line) must be
+    # skipped, not raise -- the standard tetConvergence sweep never sets it.
+    (sweep_cases / "gauss_linear_10").mkdir(parents=True)
+    (sweep_cases / "gauss_linear_10" / "manufacturedEikonalActivationTime.dat").write_text(
+        "activationTime 0.001 0.05 0.09\nNumber of cells = 4913\n"
+    )
+
+    rows = adapters.from_eikonal_bulk_boundary(sweep_cases, manifest)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["case"] == "eikonal_tet_split"
+    assert row["variant"] == "leastSquares" and row["dim"] == "3D" and row["N"] == "10"
+    assert row["h"] == "0.0588235"          # 1/int(4913**(1/3)+0.5) == 1/17
+    assert row["L2_bulk"] == "0.0121307"
+    assert row["L2_boundary"] == "0.0190353"
+    assert row["L2_total"] == "0.022572"
+    assert row["boundary_energy_fraction"] == f"{(0.0190353 / 0.022572) ** 2:g}"
+
 
 def test_monodomain_tet_vm_merges_completed_manifest_batches(tmp_path):
     archive = tmp_path / "sweepCasesOptimised"

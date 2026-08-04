@@ -85,6 +85,39 @@ def test_build_frontal_monodomain_uses_one_sweep_and_cell_count_h(tmp_path):
     assert fine["rate_L2"] == "1.90"
 
 
+def test_build_mono_tet_per_electrode_reads_dedicated_archive(tmp_path):
+    # mono_tet_per_electrode must read sweepCasesPerElectrode/, NOT the main
+    # tetConvergence sweepCases/ that mono_tet_convergence.csv's committed
+    # reference is keyed against -- see aggregate._mono_tet_per_electrode's
+    # own docstring for why (per_electrode=True rows would break keyset_gate
+    # if they ever leaked into that gated CSV).
+    study = (
+        tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
+        "/setup/studies/tetConvergence"
+    )
+    sweep_cases = study / "results/sweepCasesPerElectrode"
+    manifest = study / "results/sweepRunPerElectrode/sweep_manifest.json"
+    _write_manifest(manifest, {
+        "least_squares_10": {"grad_scheme": "least_squares", "number_cells": [10]},
+    })
+    case_dir = sweep_cases / "least_squares_10"
+    case_dir.mkdir(parents=True)
+    (case_dir / "3D_10_cells_implicit.dat").write_text(
+        "Vm     1e-05   0.0224588   0.152636\nGrid spacing (dx)     = 0.0588235\n"
+    )
+    (case_dir / "manufacturedPseudoECGSummary.dat").write_text(
+        "header line 1\nheader line 2\nheader line 3\nheader line 4\nheader line 5\n"
+        "Electrode L1_err_ref L2_err_ref Linf_err_ref\n"
+        "E1 0.001 0.0038452 0.00426517\n"
+        "E2 0.0005 0.002 0.003\n"
+    )
+    rows = aggregate.CASES["mono_tet_per_electrode"](tmp_path)
+    by_field = {r["field"]: r for r in rows if r["field"].startswith("Phi_e")}
+    assert set(by_field) == {"Phi_e_max", "Phi_e_mean", "Phi_e_min", "Phi_e_E1", "Phi_e_E2"}
+    assert all(r["case"] == "tet_per_electrode" for r in by_field.values())
+    assert by_field["Phi_e_E1"]["L2"] == "0.0038452"
+
+
 def test_build_bidomain_tet_rows_have_rates(tmp_path):
     sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/bidomain"

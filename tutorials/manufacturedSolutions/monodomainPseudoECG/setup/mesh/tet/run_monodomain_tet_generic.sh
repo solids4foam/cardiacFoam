@@ -42,7 +42,21 @@ set_grad(){
   fi
 }
 mono_metrics(){ D=$(ls postProcessing/3D_*_cells_implicit.dat 2>/dev/null|head -1); awk '/Grid spacing/{dx=$NF} /^Vm /{l2=$3;li=$4} END{printf "%s %s %s",dx,l2,li}' "$D"; }
-ecg_metrics(){ awk 'NR>=7{if($3+0>a)a=$3; if($4+0>b)b=$4} END{printf "%s %s",a,b}' postProcessing/manufacturedPseudoECGSummary.dat; }
+# Fail loudly rather than emitting empty ECG columns. This script runs the
+# committed case directory, whose constant/electroProperties must therefore
+# configure ecgDomains; driverFOAM runs are unaffected because the driver
+# generates its own configuration from the manufacturedFDA entry defaults.
+ecg_metrics(){
+  local f=postProcessing/manufacturedPseudoECGSummary.dat
+  if [[ ! -f "$f" ]]; then
+    echo "ERROR: $f not written. The case's constant/electroProperties has no" >&2
+    echo "       ecgDomains block, so no pseudo-ECG was computed. Either add it" >&2
+    echo "       or drive this study through driverFOAM (entry manufacturedFDA)," >&2
+    echo "       whose defaults already carry the five electrodes." >&2
+    exit 1
+  fi
+  awk 'NR>=7{if($3+0>a)a=$3; if($4+0>b)b=$4} END{printf "%s %s",a,b}' "$f"
+}
 run_one(){ # $1 tag $2 N
   ./Allclean >/dev/null 2>&1
   LC=$($PY -c "print(1.0/$2)"); sed "s|__LC__|$LC|" setup/mesh/tet/box.geo.template > setup/mesh/tet/box.geo

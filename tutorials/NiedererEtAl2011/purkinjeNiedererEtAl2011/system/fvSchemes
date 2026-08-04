@@ -22,8 +22,6 @@ ddtSchemes
 
 gradSchemes
 {
-    // Gauss linear is more stable than leastSquares with anisotropic
-    // conductivity tensors; leastSquares can amplify high-frequency noise.
     default         Gauss linear;
 }
 

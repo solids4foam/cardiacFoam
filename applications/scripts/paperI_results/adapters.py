@@ -329,11 +329,38 @@ def _parse_ecg_electrode_table(content):
     return out
 
 
+def _parse_ecg_electrode_table_by_name(content):
+    """Return {electrode: {'L1_err_ref': v, 'L2_err_ref': v, 'Linf_err_ref': v}}.
+
+    The aggregate columns collapse the electrodes to max/mean/min, which hides
+    the fact that the reported maximum is set by whichever electrode sits
+    closest to the source region and therefore carries the sharpest lead-field
+    kernel.  Keeping the names lets that be checked rather than assumed.
+    """
+    header = None
+    out = {}
+    for line in content.splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        if parts[0] == "Electrode":
+            header = parts
+            continue
+        if header is not None and len(parts) == len(header) and parts[0][:1] == "E":
+            idx = {name: i for i, name in enumerate(header)}
+            out[parts[0]] = {
+                key: float(parts[idx[key]])
+                for key in ("L1_err_ref", "L2_err_ref", "Linf_err_ref")
+                if key in idx
+            }
+    return out
+
+
 def from_sweep_cases_electrode_table(
     sweep_cases_dir, manifest_path, *, filename_glob, case,
     dim_axis="dimensions", n_axis="number_cells", allowed_dims=None,
     fixed_dim=None, variant_of=None, h_source_glob=None, h_parser=None,
-    field_name="Phi_e",
+    field_name="Phi_e", per_electrode=False,
 ):
     """Generic reader for the electrode-table ECG summary format (pseudo-ECG,
     eikonal ECG, tet ECG summaries) shared with from_sweep_cases_field_triples:
@@ -385,6 +412,23 @@ def from_sweep_cases_electrode_table(
             rows.append(max_row)
             rows.append(mean_row)
             rows.append(min_row)
+
+            if per_electrode:
+                by_name = _parse_ecg_electrode_table_by_name(
+                    path.read_text(errors="ignore")
+                )
+                for electrode in sorted(by_name):
+                    vals = by_name[electrode]
+                    row = {**base, "field": f"{field_name}_{electrode}"}
+                    for out_key, col_key in (
+                        ("L1", "L1_err_ref"),
+                        ("L2", "L2_err_ref"),
+                        ("Linf", "Linf_err_ref"),
+                    ):
+                        row[out_key] = (
+                            f"{vals[col_key]:g}" if col_key in vals else ""
+                        )
+                    rows.append(row)
     return rows
 
 
@@ -419,13 +463,80 @@ def from_eikonal_tet_activation(sweep_cases_dir, manifest_path, case="eikonal_te
             if row["variant"] != "__exclude__"]
 
 
-def from_monodomain_tet_ecg(sweep_cases_dir, manifest_path, case="tet"):
+_ACTIVATION_SPLIT_PATTERN = re.compile(
+    r"^activationTimeSplit\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s*$"
+)
+
+
+def _parse_activation_split(content):
+    """Return (L2_bulk, L2_boundary, L2_total) strings from the verifier's
+    'activationTimeSplit <bulk> <boundary> <total>' line. Only written when
+    eikonalSolverCoeffs.verificationModel.writeErrorField is enabled -- see
+    manufacturedEikonalVerifier.C's computeBoundaryBulkNorms call, added
+    alongside the standalone gradientReconstructionOrder utility's own
+    bulk/boundary split so the solved-field decomposition and the
+    reconstruction-only decomposition can be compared level by level on the
+    same mesh ladder. Returns None if the case's .dat file predates that
+    verifier change or writeErrorField was off."""
+    for line in content.splitlines():
+        m = _ACTIVATION_SPLIT_PATTERN.match(line.strip())
+        if m:
+            return m.group(1), m.group(2), m.group(3)
+    return None
+
+
+def from_eikonal_bulk_boundary(sweep_cases_dir, manifest_path, case="eikonal_tet_split"):
+    """Bulk/boundary L2 decomposition of the SOLVED activation-time error
+    (as opposed to eikonal_gradient_tet.csv, which decomposes the GRADIENT
+    OPERATOR's own reconstruction error against an exact analytic field, no
+    solve involved). Requires the driving sweep to enable
+    eikonalSolverCoeffs.verificationModel.writeErrorField -- see
+    setup/studies/errorLocalisation/sweep_tet_error_localisation.json.
+
+    Column set (case,variant,dim,N,h,L2_bulk,L2_boundary,L2_total,
+    boundary_energy_fraction) does not match schema.CANONICAL_FIELDS --
+    this is a diagnostic without a committed numerical reference, not a
+    keyset-gated convergence table -- so callers write it directly (see
+    aggregate_bulk_boundary.py) rather than through schema.write_canonical."""
+    rows = []
+    for case_dir, dim, n, values in _iter_sweep_case_dirs(
+        sweep_cases_dir, manifest_path, "dimensions", "number_cells", fixed_dim="3D",
+    ):
+        variant = _grad_scheme_variant(values)
+        for path in sorted(case_dir.glob("manufacturedEikonalActivationTime.dat")):
+            content = path.read_text(errors="ignore")
+            split = _parse_activation_split(content)
+            if split is None:
+                continue
+            l2_bulk, l2_boundary, l2_total = (float(v) for v in split)
+            h = _measured_h_from_cell_count(content) or f"{1.0 / n:g}"
+            fraction = (l2_boundary / l2_total) ** 2 if l2_total else 0.0
+            rows.append({
+                "case": case, "variant": variant, "dim": dim, "N": str(n), "h": h,
+                "L2_bulk": f"{l2_bulk:g}", "L2_boundary": f"{l2_boundary:g}",
+                "L2_total": f"{l2_total:g}",
+                "boundary_energy_fraction": f"{fraction:g}",
+            })
+    return rows
+
+
+def from_monodomain_tet_ecg(
+    sweep_cases_dir, manifest_path, case="tet", per_electrode=False
+):
+    # per_electrode is opt-in, not the default. The reported tetrahedral
+    # pseudo-ECG diagnostic is a maximum over the five electrodes, and knowing
+    # which electrode sets it is useful -- but keyset_gate.py requires the
+    # fresh and committed reference key sets to be exactly equal, so emitting
+    # Phi_e_E1..E5 into the canonical CSV would fail reproduction against the
+    # existing reference. Callers that want the breakdown request it and write
+    # it to a separate artifact.
     return from_sweep_cases_electrode_table(
         sweep_cases_dir, manifest_path,
         filename_glob="manufacturedPseudoECGSummary.dat", case=case,
         fixed_dim="3D", variant_of=_grad_scheme_variant,
         h_source_glob="*_cells_*.dat",
         h_parser=_measured_h_from_grid_spacing,
+        per_electrode=per_electrode,
     )
 
 

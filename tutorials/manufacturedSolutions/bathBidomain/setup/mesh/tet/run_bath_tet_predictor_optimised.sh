@@ -109,6 +109,16 @@ for N in "${RESOLUTIONS[@]}"; do
 
     cp postProcessing/bathBidomainInterfaceMetrics.csv \
         "$OUT_DIR/bathBidomainInterfaceMetrics.csv"
+
+    # Exact-field isolation on the same converged case: the manufactured phiE
+    # replaces the solved one, so the identical interface-flux construction is
+    # evaluated with no solve, coupling-loop or algebraic error in its input.
+    # Comparing the two files attributes the assembled-current-density stall to
+    # either the interface discretisation or the solve.
+    bathBidomainInterfaceMetrics -latestTime -exactFields \
+        > "$OUT_DIR/log.interfaceMetricsExactField" 2>&1
+    cp postProcessing/bathBidomainInterfaceMetricsExactField.csv \
+        "$OUT_DIR/bathBidomainInterfaceMetricsExactField.csv"
     cp postProcessing/bathBidomain_3D_*_cells_implicit.dat \
         "$OUT_DIR/summary.dat"
     cp "$BANK/polyMesh.sha256"  "$OUT_DIR/" 2>/dev/null || true

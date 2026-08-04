@@ -179,6 +179,17 @@ int main(int argc, char* argv[])
     (
         "Report manufactured bath-bidomain region and interface metrics."
     );
+    argList::addBoolOption
+    (
+        "exactFields",
+        "overwrite phiE with the manufactured exact solution before computing "
+        "the interface diagnostics, isolating the extracellular interface flux "
+        "construction from solve and coupling-loop error. NOTE: only phiE is "
+        "substituted -- no closed-form exact Vm exists in "
+        "manufacturedFDABathBidomainReference.H -- so diagnostics built from "
+        "phiI = phiE + VmGlobal (the intracellular leakage) remain hybrid and "
+        "must not be read as exact-field results"
+    );
 
     #include "setRootCase.H"
     #include "createTime.H"
@@ -283,6 +294,59 @@ int main(int argc, char* argv[])
     );
     const tensor sigmaE(sigmaEFieldTmp().primitiveField()[0]);
     const tensor sigmaI(sigmaIFieldTmp().primitiveField()[0]);
+
+    // Exact-field isolation. With -exactFields the solved potential is replaced
+    // by the manufactured solution in cells and on boundary faces before any
+    // diagnostic runs, so the interface flux construction is evaluated on data
+    // that carries no solve, coupling-loop or algebraic error. Every downstream
+    // computation -- cellZone/fvMeshSubset resolution, the matchedSubmesh
+    // assembly, the one-sided reconstructions and the assembled-face flux -- is
+    // the identical code path used for the solved-field metrics, so the two
+    // runs differ only in their input. If the assembled-current-density stall
+    // survives this substitution it is a property of the interface
+    // discretisation; if it disappears the residual is solve or coupling error.
+    // SCOPE: only phiE is substituted. There is no closed-form exact Vm in
+    // manufacturedFDABathBidomainReference.H (it provides phiE only), so the
+    // reconstructed intracellular potential phiI = phiE + VmGlobal built below
+    // mixes an exact extracellular field with a solved transmembrane one. The
+    // extracellular diagnostics -- assembled face current, one-sided flux jump,
+    // regional potentials -- are genuine exact-field results; the intracellular
+    // leakage is NOT and must not be interpreted as one.
+    const bool exactFields = args.found("exactFields");
+    if (exactFields)
+    {
+        Info<< "-exactFields: overwriting phiE with the manufactured solution"
+            << nl
+            << "  NOTE: Vm is not substituted (no exact form available), so the"
+            << nl
+            << "  intracellular leakage columns are hybrid, not exact-field."
+            << nl;
+
+        const volVectorField& C = mesh.C();
+        scalarField& phiEcells = phiE.primitiveFieldRef();
+        forAll(phiEcells, cellI)
+        {
+            phiEcells[cellI] =
+                phiEExact(C[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+        }
+
+        volScalarField::Boundary& phiEbf = phiE.boundaryFieldRef();
+        forAll(phiEbf, patchI)
+        {
+            fvPatchScalarField& pf = phiEbf[patchI];
+            if (pf.empty() || pf.type() == "empty")
+            {
+                continue;
+            }
+            const vectorField& Cf = pf.patch().Cf();
+            forAll(pf, faceI)
+            {
+                pf[faceI] =
+                    phiEExact(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
+            }
+        }
+        phiE.correctBoundaryConditions();
+    }
 
     const scalar sigmaEVariation =
         gMax(mag(sigmaEFieldTmp().primitiveField() - sigmaE));
@@ -603,7 +667,15 @@ int main(int argc, char* argv[])
 
     const fileName outputDir(runTime.globalPath()/"postProcessing");
     mkDir(outputDir);
-    OFstream output(outputDir/"bathBidomainInterfaceMetrics.csv");
+    // Exact-field runs go to their own file so a solved-field result is never
+    // silently overwritten by an isolation run on the same case.
+    const word outputName
+    (
+        exactFields
+      ? "bathBidomainInterfaceMetricsExactField.csv"
+      : "bathBidomainInterfaceMetrics.csv"
+    );
+    OFstream output(outputDir/outputName);
     output
         << "method,assembly,fieldSource,time,interfaceFaces"
         << ",heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf"
@@ -633,7 +705,7 @@ int main(int argc, char* argv[])
         << ",exteriorFluxIntegral\n";
     output
         << method << ',' << assembly << ','
-        << "numerical" << ','
+        << (exactFields ? "exact" : "numerical") << ','
         << runTime.value() << ',' << interfaceFaces;
     writeNorms(output, heartPotential);
     writeNorms(output, bathPotential);
@@ -663,7 +735,7 @@ int main(int argc, char* argv[])
     writeNorms(output, sidesFlux);
     output << ',' << exteriorFluxIntegral << nl;
 
-    Info<< "Wrote " << outputDir/"bathBidomainInterfaceMetrics.csv" << nl
+    Info<< "Wrote " << outputDir/outputName << nl
         << "interfaceFaces=" << interfaceFaces << nl
         << "heartPhiE_L2=" << heartPotential.l2() << nl
         << "bathPhiE_L2=" << bathPotential.l2() << nl

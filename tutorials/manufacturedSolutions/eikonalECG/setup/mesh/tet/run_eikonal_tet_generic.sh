@@ -59,8 +59,8 @@ run_one(){ # $1 tag $2 N
   mkdir -p setup/results/logs
   cp log.cf "setup/results/logs/${1}_N${2}.log"
   ITERS="$(grep -c '^PIMPLE: iteration' log.cf || true)"
-  if [[ "$ITERS" -ge 2500 ]]; then
-    echo "WARNING: $1 N=$2 hit the nOuterCorrectors cap (2500) -- outer loop may not have converged, see setup/results/logs/${1}_N${2}.log" >&2
+  if [[ "$ITERS" -ge 8000 ]]; then
+    echo "WARNING: $1 N=$2 hit the nOuterCorrectors cap (8000) -- outer loop may not have converged, see setup/results/logs/${1}_N${2}.log" >&2
   fi
   if [[ $RC -ne 0 || ! -f postProcessing/manufacturedEikonalActivationTime.dat ]]; then
     echo "SKIPPING $1 N=$2: cardiacFoam exit=$RC or no verifier output (see setup/results/logs/${1}_N${2}.log)" >&2
