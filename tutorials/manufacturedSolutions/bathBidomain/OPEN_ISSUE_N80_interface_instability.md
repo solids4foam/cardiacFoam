@@ -124,18 +124,32 @@ plus the `procBoundary*` entries in each `boundary` file.
 
 ## Leading hypothesis
 
-**The bath predictor–corrector fixed-point iteration is only conditionally
-convergent, and at N = 80 it diverges locally.**
+**Something in the coupled bath advance crosses a threshold between step 40 and
+step 143 and then fails locally.** The predictor–corrector is the first suspect
+because it is the only outer iteration in the advance, but note that the growth
+curve below argues against the simplest version of that story.
 
-Supporting reasoning:
+What the evidence supports:
 
-- The defect is absent at step 2 and present at step 143, so it compounds.
-- A fixed-point iteration between Vm and phiE has a convergence factor that
-  depends on the discretisation; local divergence would grow step by step and stay
-  spatially confined, which is what is observed.
-- The failing quantity is the intracellular insulation, i.e. the coupled side.
-- The linear solves themselves are converged, so this is the outer coupling, not
+- The failing quantity is intracellular insulation, i.e. the coupled side, not
+  the extracellular operator.
+- The linear solves are converged throughout, so this is the outer coupling, not
   the inner solve.
+- The failure is spatially confined, which fits a local rather than a global
+  mechanism.
+
+What it argues against:
+
+- A conditionally convergent fixed-point iteration should degrade monotonically
+  from early on. It does not: the error *decays* over the first 40 steps and the
+  two interfaces stay symmetric there. Any mechanism has to explain 40 steps of
+  improvement followed by a blow-up, not just the endpoint.
+
+Against a pure step-size explanation: dt shrinks by exactly 4.0 per refinement
+level (`dt_for_n` in `run_bath_tet_predictor.sh`: 8.92857e-3, 2.24215e-3,
+5.60538e-4, 1.401345e-4) while the true h² shrinks by 3.96, so N = 80 is
+marginally *more* conservative than N = 40, not less. A naive diffusive stability
+limit does not explain it, and the diffusion is implicit in any case.
 
 Against a pure step-size explanation: dt shrinks by exactly 4.0 per refinement
 level (`dt_for_n` in `run_bath_tet_predictor.sh`: 8.92857e-3, 2.24215e-3,
