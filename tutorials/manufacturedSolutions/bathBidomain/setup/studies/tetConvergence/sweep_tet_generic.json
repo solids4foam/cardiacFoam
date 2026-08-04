@@ -12,7 +12,7 @@
     "piecewise_sweep": true,
     "mesh_family": "tet",
     "numerics_profile": "bath_bidomain_tet",
-    "end_time": 0.2,
+    "end_time": 0.02,
     "run_in_parallel": true,
     "ecg_enabled": false,
     "bath_predictor_corrector": true,
