@@ -147,23 +147,35 @@ limit does not explain it, and the diffusion is implicit in any case.
 
 ## Next tests, in order
 
-1. **Growth curve — running at time of writing.** N = 80 truncated to 40 steps:
-   ```bash
-   N=80 STEPS=40 NPROCS=6 ./setup/mesh/tet/run_bath_tet_solve_diagnostic.sh
-   ```
-   ~55 min. Lands in `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_40step/`.
-   Compare `x0IntracellularLeak_Linf` against 5.509e-4 (step 2) and 0.136 (step
-   143). If already elevated at 40, bisect downward; if not, bisect upward. This
-   gives the onset step, which any mechanism has to explain.
+1. **Growth curve — DONE. Onset lies between step 40 and step 143.**
 
-2. **Corrector off.** Rerun N = 80 with `bathPredictorCorrector false`:
+   | steps | x0 leak L2 | x0 leak Linf | x1 leak L2 | x0 assembled flux |
+   |---|---|---|---|---|
+   | 2 | 1.245e-4 | 5.509e-4 | 1.236e-4 | 2.464e-4 |
+   | **40** | **8.127e-5** | **3.146e-4** | **8.109e-5** | **2.739e-4** |
+   | 143 | 3.556e-3 | 1.359e-1 | 5.361e-5 | 1.514e-2 |
+
+   At step 40 the case is not merely healthy, it is *improving* — the leak falls
+   from 1.245e-4 to 8.127e-5 — and the two interfaces are symmetric to three
+   significant figures (8.127e-5 against 8.109e-5). There is no slow drift from
+   the start.
+
+   This matters for the mechanism. A conditionally convergent fixed-point
+   iteration would degrade from early on. Decay for 40 steps followed by a
+   blow-up by step 143 looks instead like a threshold being crossed. Whatever is
+   proposed has to reproduce that shape, not just the endpoint.
+
+   Artefacts: `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_40step/`.
+
+2. **Corrector off — RUNNING at time of writing.** The diagnostic script now
+   takes a `PREDICTOR` variable:
    ```bash
-   foamDictionary constant/electroProperties \
-       -entry bidomainSolverCoeffs.bathPredictorCorrector -set false
+   N=80 STEPS=143 NPROCS=6 PREDICTOR=false ./setup/mesh/tet/run_bath_tet_solve_diagnostic.sh
    ```
-   If the baseline is stable at N = 80, the corrector is the mechanism. This is
-   the single most informative test and it is directly relevant to the paper's
-   existing predictor–corrector sensitivity claim.
+   ~3.3 h, into `setup/mesh/tet/interfaceStudy/solveDiagnostic/N80_143step_predictorfalse/`.
+   If the baseline one-pass coupling is stable at N = 80, the corrector is the
+   mechanism. If it blows up too, the corrector is exonerated and the cause lies
+   in the shared bath assembly, which would redirect the search entirely.
 
 3. **Halved timestep.** N = 80 at dt = 7.0e-5 to the same endTime (286 steps,
    ~6.6 h). If the instability disappears at the same physical time, it is a

@@ -60,7 +60,7 @@ esac; }
 DT="$(dt_for_n "$N")"
 END="$(awk -v d="$DT" -v s="$STEPS" 'BEGIN { printf "%.17g", d*s }')"
 
-TAG="N${N}_${STEPS}step${MAXITER:+_maxIter$MAXITER}"
+TAG="N${N}_${STEPS}step${MAXITER:+_maxIter$MAXITER}${PREDICTOR:+_predictor$PREDICTOR}"
 OUT_DIR="$SCRIPT_DIR/interfaceStudy/solveDiagnostic/$TAG"
 rm -rf "$OUT_DIR"; mkdir -p "$OUT_DIR"
 
@@ -79,8 +79,12 @@ trap 'cp "$ELECTRO_BACKUP" constant/electroProperties; \
 # being diagnosed is the one the paper reports.
 cp "$SCRIPT_DIR/electroProperties" constant/electroProperties
 cp "$SCRIPT_DIR/fvSchemes"         system/fvSchemes
+# PREDICTOR=false runs the baseline one-pass phi_e -> V_m coupling instead of
+# the production predictor-corrector, which is how the corrector is tested as a
+# candidate mechanism for the N=80 x=0 instability.
 foamDictionary constant/electroProperties \
-    -entry bidomainSolverCoeffs.bathPredictorCorrector -set true > /dev/null
+    -entry bidomainSolverCoeffs.bathPredictorCorrector \
+    -set "${PREDICTOR:-true}" > /dev/null
 foamDictionary constant/electroProperties \
     -entry bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation \
     -set distanceWeightedHarmonic > /dev/null
@@ -107,6 +111,7 @@ foamDictionary system/controlDict -entry writeInterval -set "$STEPS" > /dev/null
 
 echo "=== solve diagnostic: N=$N, $STEPS steps, dt=$DT, endTime=$END ==="
 echo "maxIter: ${MAXITER:-as configured (5000)}"
+echo "bathPredictorCorrector: ${PREDICTOR:-true}"
 
 rm -rf 0 postProcessing [0-9]* processor*
 setTorsoOrganConductivityField > "$OUT_DIR/log.setConductivity" 2>&1
