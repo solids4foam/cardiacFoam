@@ -143,7 +143,12 @@ for N in "${RESOLUTIONS[@]}"; do
         cardiacFoam > "$OUT_DIR/log.cardiacFoam" 2>&1
     fi
 
-    bathBidomainInterfaceMetrics -latestTime \
+    # Opt-in signed per-face dump (FACE_ERRORS=1). Off by default: the files are
+    # one row per interface face, which is fine at N<=40 but large at N=80.
+    FACE_FLAG=""
+    if [[ "${FACE_ERRORS:-0}" == "1" ]]; then FACE_FLAG="-writeFaceErrors"; fi
+
+    bathBidomainInterfaceMetrics -latestTime $FACE_FLAG \
         > "$OUT_DIR/log.interfaceMetrics" 2>&1
 
     cp postProcessing/bathBidomainInterfaceMetrics.csv \
@@ -154,10 +159,13 @@ for N in "${RESOLUTIONS[@]}"; do
     # evaluated with no solve, coupling-loop or algebraic error in its input.
     # Comparing the two files attributes the assembled-current-density stall to
     # either the interface discretisation or the solve.
-    bathBidomainInterfaceMetrics -latestTime -exactFields \
+    bathBidomainInterfaceMetrics -latestTime -exactFields $FACE_FLAG \
         > "$OUT_DIR/log.interfaceMetricsExactField" 2>&1
     cp postProcessing/bathBidomainInterfaceMetricsExactField.csv \
         "$OUT_DIR/bathBidomainInterfaceMetricsExactField.csv"
+    if [[ -n "$FACE_FLAG" ]]; then
+        cp postProcessing/bathBidomainFaceErrors*.csv "$OUT_DIR/" 2>/dev/null || true
+    fi
     cp postProcessing/bathBidomain_3D_*_cells_implicit.dat \
         "$OUT_DIR/summary.dat"
     cp "$BANK/polyMesh.sha256"  "$OUT_DIR/" 2>/dev/null || true

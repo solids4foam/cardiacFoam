@@ -181,14 +181,24 @@ int main(int argc, char* argv[])
     );
     argList::addBoolOption
     (
+        "writeFaceErrors",
+        "additionally write the SIGNED per-face assembled-flux error to "
+        "postProcessing/bathBidomainFaceErrors[ExactField].csv. The aggregate "
+        "norms apply mag() before summing, so they cannot distinguish an error "
+        "that is small because two contributions oppose each other face by "
+        "face from one that is simply small; this dump keeps the signs so that "
+        "question can be answered directly."
+    );
+    argList::addBoolOption
+    (
         "exactFields",
         "overwrite phiE with the manufactured exact solution before computing "
         "the interface diagnostics, isolating the extracellular interface flux "
-        "construction from solve and coupling-loop error. NOTE: only phiE is "
-        "substituted -- no closed-form exact Vm exists in "
-        "manufacturedFDABathBidomainReference.H -- so diagnostics built from "
-        "phiI = phiE + VmGlobal (the intracellular leakage) remain hybrid and "
-        "must not be read as exact-field results"
+        "construction from solve and coupling-loop error. NOTE: this substitutes "
+        "phiE only. A closed-form exact Vm does exist "
+        "(computeManufacturedFDABathV) but is not applied here, so diagnostics "
+        "built from phiI = phiE + VmGlobal (the intracellular leakage columns) "
+        "remain hybrid and must not be read as exact-field results"
     );
 
     #include "setRootCase.H"
@@ -305,19 +315,28 @@ int main(int argc, char* argv[])
     // runs differ only in their input. If the assembled-current-density stall
     // survives this substitution it is a property of the interface
     // discretisation; if it disappears the residual is solve or coupling error.
-    // SCOPE: only phiE is substituted. There is no closed-form exact Vm in
-    // manufacturedFDABathBidomainReference.H (it provides phiE only), so the
-    // reconstructed intracellular potential phiI = phiE + VmGlobal built below
-    // mixes an exact extracellular field with a solved transmembrane one. The
-    // extracellular diagnostics -- assembled face current, one-sided flux jump,
-    // regional potentials -- are genuine exact-field results; the intracellular
-    // leakage is NOT and must not be interpreted as one.
+    // SCOPE: this substitutes phiE only, so phiI = phiE + VmGlobal built below
+    // mixes an exact extracellular field with a solved transmembrane one.
+    //
+    // A closed-form exact Vm DOES exist -- computeManufacturedFDABathV in
+    // src/verificationModels/bathBidomainVerification/
+    // manufacturedFDABathBidomainReference.H -- and the verifier already uses it
+    // in preProcess to build the reaction source. It is simply not applied here.
+    // Note that the verifier's use would not help even if it were: it forces Vm
+    // only to construct the source term, and the VmGlobal written to disk still
+    // carries the PDE and time-stepping error of the solve.
+    //
+    // Consequence: the extracellular diagnostics -- assembled face current,
+    // one-sided flux jump, regional potentials -- are genuine exact-field
+    // results. The intracellular leakage columns are NOT. Substituting Vm from
+    // computeManufacturedFDABathV would make them so, and is the obvious
+    // extension if an exact-field insulation check is wanted.
     const bool exactFields = args.found("exactFields");
     if (exactFields)
     {
         Info<< "-exactFields: overwriting phiE with the manufactured solution"
             << nl
-            << "  NOTE: Vm is not substituted (no exact form available), so the"
+            << "  NOTE: Vm is not substituted (exact form exists but unused), so"
             << nl
             << "  intracellular leakage columns are hybrid, not exact-field."
             << nl;
@@ -345,7 +364,16 @@ int main(int argc, char* argv[])
                     phiEExact(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
             }
         }
-        phiE.correctBoundaryConditions();
+        // Deliberately NOT calling correctBoundaryConditions() here. evaluate()
+        // recomputes the stored patch value from the internal field or an
+        // imposed gradient for anything other than fixedValue, so on this case
+        // it would discard the substitution just made on the fixedGradient
+        // (xMax) and zeroGradient (sides) patches and leave those patches
+        // holding solved-field data. The interior interface diagnostics are
+        // unaffected either way -- oneSidedFaceFit and the assembled face flux
+        // read cell values only -- but the domain-boundary columns
+        // (xMinPhiE, xMaxFlux, sidesFlux, exteriorFluxIntegral) would silently
+        // not be exact-field results.
     }
 
     const scalar sigmaEVariation =
@@ -520,6 +548,30 @@ int main(int argc, char* argv[])
     scalar x1IntracellularLeakIntegral = 0.0;
     label interfaceFaces = 0;
 
+    // Optional signed per-face dump. Opened before the interface loop so the
+    // stream outlives it; null unless -writeFaceErrors was given.
+    autoPtr<OFstream> faceErrorsPtr;
+    if (args.found("writeFaceErrors"))
+    {
+        const fileName faceDir(runTime.globalPath()/"postProcessing");
+        mkDir(faceDir);
+        faceErrorsPtr.reset
+        (
+            new OFstream
+            (
+                faceDir
+              / (
+                    exactFields
+                  ? "bathBidomainFaceErrorsExactField.csv"
+                  : "bathBidomainFaceErrors.csv"
+                )
+            )
+        );
+        faceErrorsPtr()
+            << "faceI,x,y,z,area,interface,signedAssembledFluxError,"
+            << "qAssembled,exactHeartFlux" << nl;
+    }
+
     Info<< "Computing interface metrics" << nl;
 
     forAll(neighbour, faceI)
@@ -580,6 +632,17 @@ int main(int argc, char* argv[])
         const scalar qCorrection =
             heartOrientation*correctionFlux[faceI]/area;
         const scalar qOrthogonal = qAssembled - qCorrection;
+
+        if (faceErrorsPtr)
+        {
+            // Signed, not magnitude: the whole point of this dump.
+            faceErrorsPtr()
+                << faceI << ',' << faceCentres[faceI].x() << ','
+                << faceCentres[faceI].y() << ',' << faceCentres[faceI].z()
+                << ',' << area << ',' << (leftInterface ? 0 : 1) << ','
+                << (qAssembled - exactHeartFlux) << ','
+                << qAssembled << ',' << exactHeartFlux << nl;
+        }
         const scalar facePotential =
             weights[faceI]*phiE[ownCell]
           + (1.0 - weights[faceI])*phiE[neiCell];
