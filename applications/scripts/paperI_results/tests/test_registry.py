@@ -32,9 +32,11 @@ def test_agg_keys_are_registered_in_aggregate():
 def test_expected_case_keys_present():
     keys = {r["experiment_id"] for r in _rows()}
     assert keys == {
-        "monodomain_cartesian", "monodomain_tet_generic", "monodomain_tet_frontal",
+        "monodomain_cartesian", "monodomain_temporal",
+        "monodomain_tet_generic", "monodomain_tet_frontal",
         "eikonal_cartesian", "eikonal_tet_generic", "eikonal_tet_frontal",
-        "eikonal_gradient_tet", "bidomain_cartesian", "bidomain_tet_generic",
+        "eikonal_gradient_tet", "eikonal_bulk_boundary_tet",
+        "bidomain_cartesian", "bidomain_temporal", "bidomain_tet_generic",
         "bath_bidomain_cartesian", "bath_bidomain_tet_conformal",
         "purkinje_monodomain_coupled", "niederer_cartesian",
     }

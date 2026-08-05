@@ -523,13 +523,12 @@ def from_eikonal_bulk_boundary(sweep_cases_dir, manifest_path, case="eikonal_tet
 def from_monodomain_tet_ecg(
     sweep_cases_dir, manifest_path, case="tet", per_electrode=False
 ):
-    # per_electrode is opt-in, not the default. The reported tetrahedral
-    # pseudo-ECG diagnostic is a maximum over the five electrodes, and knowing
-    # which electrode sets it is useful -- but keyset_gate.py requires the
-    # fresh and committed reference key sets to be exactly equal, so emitting
-    # Phi_e_E1..E5 into the canonical CSV would fail reproduction against the
-    # existing reference. Callers that want the breakdown request it and write
-    # it to a separate artifact.
+    # per_electrode defaults False so callers that only want the max/mean/min
+    # collapse (e.g. checking against an older reference that predates the
+    # per-electrode breakdown) don't get the extra Phi_e_E1..E5 rows. The
+    # canonical mono_tet/mono_hex/mono_temporal aggregators all pass
+    # per_electrode=True -- there is one convention across studies now, not a
+    # separate side artifact for the breakdown; see aggregate._mono_tet et al.
     return from_sweep_cases_electrode_table(
         sweep_cases_dir, manifest_path,
         filename_glob="manufacturedPseudoECGSummary.dat", case=case,
@@ -709,9 +708,12 @@ def from_bath_parallel_equivalence(comparison_path):
     return (not failures), failures
 
 
-def from_pseudo_ecg_spatial_archive(sweep_cases_dir, manifest_path, case="pseudo-ecg-spatial"):
+def from_pseudo_ecg_spatial_archive(
+    sweep_cases_dir, manifest_path, case="pseudo-ecg-spatial", per_electrode=False,
+):
     return from_sweep_cases_electrode_table(
         sweep_cases_dir, manifest_path,
         filename_glob="manufacturedPseudoECGSummary.dat", case=case,
         allowed_dims=_ECG_SPATIAL_SUPPORTED_DIMENSIONS,
+        per_electrode=per_electrode,
     )

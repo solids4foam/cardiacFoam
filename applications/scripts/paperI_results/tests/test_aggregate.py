@@ -85,18 +85,16 @@ def test_build_frontal_monodomain_uses_one_sweep_and_cell_count_h(tmp_path):
     assert fine["rate_L2"] == "1.90"
 
 
-def test_build_mono_tet_per_electrode_reads_dedicated_archive(tmp_path):
-    # mono_tet_per_electrode must read sweepCasesPerElectrode/, NOT the main
-    # tetConvergence sweepCases/ that mono_tet_convergence.csv's committed
-    # reference is keyed against -- see aggregate._mono_tet_per_electrode's
-    # own docstring for why (per_electrode=True rows would break keyset_gate
-    # if they ever leaked into that gated CSV).
+def test_build_mono_tet_includes_per_electrode_rows(tmp_path):
+    # mono_tet folds the per-electrode breakdown straight into the canonical
+    # CSV now (same convention as mono_hex/mono_temporal) -- there is no
+    # separate mono_tet_per_electrode case or side artifact any more.
     study = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
         "/setup/studies/tetConvergence"
     )
-    sweep_cases = study / "results/sweepCasesPerElectrode"
-    manifest = study / "results/sweepRunPerElectrode/sweep_manifest.json"
+    sweep_cases = study / "results/sweepCases"
+    manifest = study / "results/sweepRun/sweep_manifest.json"
     _write_manifest(manifest, {
         "least_squares_10": {"grad_scheme": "least_squares", "number_cells": [10]},
     })
@@ -111,10 +109,10 @@ def test_build_mono_tet_per_electrode_reads_dedicated_archive(tmp_path):
         "E1 0.001 0.0038452 0.00426517\n"
         "E2 0.0005 0.002 0.003\n"
     )
-    rows = aggregate.CASES["mono_tet_per_electrode"](tmp_path)
+    rows = aggregate.CASES["mono_tet"](tmp_path)
     by_field = {r["field"]: r for r in rows if r["field"].startswith("Phi_e")}
     assert set(by_field) == {"Phi_e_max", "Phi_e_mean", "Phi_e_min", "Phi_e_E1", "Phi_e_E2"}
-    assert all(r["case"] == "tet_per_electrode" for r in by_field.values())
+    assert all(r["case"] == "tet" for r in by_field.values())
     assert by_field["Phi_e_E1"]["L2"] == "0.0038452"
 
 
