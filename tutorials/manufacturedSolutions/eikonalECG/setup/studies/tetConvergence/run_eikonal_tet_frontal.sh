@@ -28,4 +28,4 @@ mkdir -p "$STUDY/results"
   --spec "$STUDY/sweep_tet_frontal.json" \
   --output-dir "$STUDY/results/sweepRunFrontal"
 
-python3 "$AGGREGATE" eikonal_tet --repo-root "$REPO_ROOT"
+python3 "$AGGREGATE" eikonal_tet_frontal --repo-root "$REPO_ROOT"

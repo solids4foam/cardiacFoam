@@ -11,8 +11,6 @@
 # L2_total trend the paper reports, using the same bulk/boundary split
 # convention (manufacturedEikonalVerifier.C's computeBoundaryBulkNorms) as
 # the standalone gradientReconstructionOrder utility's own decomposition.
-set -euo pipefail
-
 if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
   if [[ -f /Volumes/OpenFOAM-v2412/etc/bashrc ]]; then
     source /Volumes/OpenFOAM-v2412/etc/bashrc >/dev/null 2>&1
@@ -21,6 +19,8 @@ if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
     exit 2
   fi
 fi
+
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"

@@ -229,8 +229,11 @@
       "description": "Frontal tetrahedral least-squares eikonal control",
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/mesh/tet/run_eikonal_tet_frontal.sh"
+        "kind": "driver_sweep",
+        "runner": "setup/studies/tetConvergence/run_eikonal_tet_frontal.sh",
+        "driver_specs": [
+          "setup/studies/tetConvergence/sweep_tet_frontal.json"
+        ]
       },
       "matrix": {
         "mesh_family": [
@@ -251,7 +254,7 @@
         "Phi_e"
       ],
       "aggregation": {
-        "key": null,
+        "key": "eikonal_tet_frontal",
         "result": "setup/results/eikonal_tet_frontal.csv",
         "reference": null
       }
@@ -289,6 +292,44 @@
       "aggregation": {
         "key": null,
         "result": "setup/results/eikonal_gradient_tet.csv",
+        "reference": null
+      }
+    },
+    {
+      "experiment_id": "eikonal_bulk_boundary_tet",
+      "description": "Solved-field bulk/boundary error decomposition on generic Delaunay tetrahedral meshes",
+      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
+      "execution": {
+        "kind": "driver_sweep",
+        "runner": "setup/studies/errorLocalisation/run_bulk_boundary_tet.sh",
+        "driver_specs": [
+          "setup/studies/errorLocalisation/sweep_tet_error_localisation.json"
+        ]
+      },
+      "matrix": {
+        "mesh_family": [
+          "tet_generic"
+        ],
+        "gradient_scheme": [
+          "GaussLinear",
+          "leastSquares"
+        ],
+        "N": [
+          10,
+          20,
+          40,
+          80
+        ]
+      },
+      "observables": [
+        "L2_bulk",
+        "L2_boundary",
+        "L2_total",
+        "boundary_energy_fraction"
+      ],
+      "aggregation": {
+        "key": null,
+        "result": "setup/results/eikonal_bulk_boundary_tet.csv",
         "reference": null
       }
     },
