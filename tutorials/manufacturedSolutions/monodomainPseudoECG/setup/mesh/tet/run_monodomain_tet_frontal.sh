@@ -1,6 +1,5 @@
 #!/bin/bash
 # Reproduce the Frontal-family diagonal/rotated monodomain MMS matrix.
-set -euo pipefail
 
 if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
   if [[ -f /Volumes/OpenFOAM-v2412/etc/bashrc ]]; then
@@ -10,6 +9,8 @@ if [[ -z "${WM_PROJECT_DIR:-}" ]]; then
     exit 2
   fi
 fi
+
+set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 REPO_ROOT="$(cd "$CASE_DIR/../../.." && pwd)"
