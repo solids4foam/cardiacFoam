@@ -10,6 +10,9 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_eikonal_ecg impo
 from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_monodomain_total_lagrangian_em import (
     make_spec as make_manufactured_monodomain_total_lagrangian_em_spec,
 )
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_monodomain_1d3d import (
+    make_spec as make_manufactured_monodomain_1d3d_spec,
+)
 from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_purkinje_graph import (
     make_spec as make_manufactured_purkinje_graph_spec,
 )
@@ -42,6 +45,8 @@ SPEC_FACTORIES = {
     "manufacturedeikonalecg": make_manufactured_eikonal_ecg_spec,
     "manufacturedMonodomainTotalLagrangianEM": make_manufactured_monodomain_total_lagrangian_em_spec,
     "manufacturedelectromechanicsbc": make_manufactured_monodomain_total_lagrangian_em_spec,
+    "manufacturedMonodomain1D3D": make_manufactured_monodomain_1d3d_spec,
+    "manufacturedmonodomain1d3d": make_manufactured_monodomain_1d3d_spec,
     "manufacturedPurkinjeGraph": make_manufactured_purkinje_graph_spec,
     "manufacturedpurkinjegraph": make_manufactured_purkinje_graph_spec,
     "heartSolverComparison": make_heart_solver_comparison_spec,
@@ -59,6 +64,7 @@ REGISTERED_TUTORIALS = (
     "manufacturedFDABathBidomain",
     "manufacturedEikonalECG",
     "manufacturedMonodomainTotalLagrangianEM",
+    "manufacturedMonodomain1D3D",
     "manufacturedPurkinjeGraph",
     "heartSolverComparison",
     "restitutionCurves",

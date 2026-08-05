@@ -11,7 +11,7 @@ from openfoam_driver.verification_contracts import load_contracts, plan, tsv_row
 def test_contract_catalog_is_unique_and_complete():
     contracts = load_contracts()
     identifiers = [item["experiment_id"] for item in contracts]
-    assert len(identifiers) == 15
+    assert len(identifiers) == 16
     assert len(identifiers) == len(set(identifiers))
 
 

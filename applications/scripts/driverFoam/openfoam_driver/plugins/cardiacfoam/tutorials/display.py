@@ -100,6 +100,21 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
+        id="manufacturedMonodomain1D3D",
+        title="Manufactured Purkinje-myocardium coupling (MMS)",
+        summary=(
+            "Coupled 1D Purkinje graph / 3D monodomain manufactured-solution "
+            "convergence, across decoupled, unidirectional, and bidirectional "
+            "PVJ transfer regimes."
+        ),
+        thumbnail="/tutorials/manufactured-monodomain-1d3d.png",
+        tags=("manufactured-solution", "verification", "purkinje", "coupling"),
+        preset={
+            "anatomy.mesh": "unit-domain",
+            "physics.ionic_model": "monodomainFDAManufactured",
+        },
+    ),
+    TutorialDisplay(
         id="manufacturedPurkinjeGraph",
         title="Manufactured solution (Purkinje graph)",
         summary=(

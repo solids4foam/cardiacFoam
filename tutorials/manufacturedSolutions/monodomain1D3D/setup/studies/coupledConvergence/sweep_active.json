@@ -3,6 +3,29 @@
     "entry": "manufacturedMonodomain1D3D",
     "case_dir_name": "manufacturedSolutions/monodomain1D3D",
     "setup_dir_name": "setup",
-    "output_dir_name": "outputs/coupled1D3DConvergence"
+    "output_dir_name": "setup/studies/coupledConvergence/results/coupled1D3DConvergence"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "graph_ids": [
+        ["nodes011"],
+        ["nodes021"],
+        ["nodes041"],
+        ["nodes081"]
+      ],
+      "number_cells": [
+        [10],
+        [20],
+        [40],
+        [80]
+      ],
+      "dt_values": [
+        [0.008971136],
+        [0.002242784],
+        [0.000560696],
+        [0.000140174]
+      ]
+    }
   }
 }
