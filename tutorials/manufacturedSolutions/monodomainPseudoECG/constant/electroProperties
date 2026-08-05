@@ -26,6 +26,8 @@ monodomainSolverCoeffs
 
     ionicModel monodomainFDAManufactured;
 
+    timeCouplingScheme godunov;
+
     outputVariables
     {
         ionic
