@@ -588,6 +588,22 @@ def make_spec(
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
+    # Entry-based sweep-run routes a zip axis's per-case resolved value
+    # straight through as a scalar (e.g. dimensions="1D"), not wrapped in a
+    # list. Sequence[str] params silently iterate a bare str character-by-
+    # character instead of raising, so guard both str-typed sequence kwargs
+    # here rather than let that corrupt the case matrix (confirmed via a
+    # real, non-mocked sweep-run: dimensions="1D" produced cases for
+    # dimension "1" and dimension "D").
+    if isinstance(dimensions, str):
+        dimensions = [dimensions]
+    if isinstance(solver_types, str):
+        solver_types = [solver_types]
+    if isinstance(number_cells, (int, float)):
+        number_cells = [number_cells]
+    if isinstance(dt_values, (int, float)):
+        dt_values = [dt_values]
+
     dimensions_list = [str(item) for item in dimensions]
     if not dimensions_list:
         raise ValueError("dimensions cannot be empty")
