@@ -1,0 +1,50 @@
+{
+  "base": {
+    "entry": "manufacturedFDABathBidomain",
+    "case_dir_name": "manufacturedSolutions/bathBidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bath_bidomain_tet",
+    "run_in_parallel": true,
+    "ecg_enabled": false,
+    "bath_predictor_corrector": true,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCasesGroundN40GrowthCurve"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "number_cells": [
+        [
+          40
+        ],
+        [
+          40
+        ]
+      ],
+      "dt_values": [
+        [
+          0.000560538
+        ],
+        [
+          0.000560538
+        ]
+      ],
+      "end_time": [
+        0.04484304,
+        0.08015693
+      ],
+      "output_dir_name": [
+        "40_step80",
+        "40_step143"
+      ]
+    }
+  }
+}

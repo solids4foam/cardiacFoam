@@ -30,6 +30,7 @@ Author
 
 #include "electroVerificationModel.H"
 #include "overrideTypeName.H"
+#include "Enum.H"
 
 namespace Foam
 {
@@ -45,8 +46,32 @@ class manufacturedFDABathBidomainVerifier
     mutable bool errorsReported_;
     scalar k_;
     scalar alpha_;
-    Switch groundElectrode_;
+
+public:
+
+    //- Which of the two FDA bidomain-with-bath boundary variants this case
+    //  runs. The choice drives both the boundary conditions and the error
+    //  metric, which is why it lives here rather than being set by hand in
+    //  0/phiE: with an electrode pair the exact phiE is only defined up to an
+    //  arbitrary C(t), so its error must be taken after a gauge shift, and a
+    //  case configured one way but measured the other would report silently
+    //  wrong norms.
+    enum class bathVariant
+    {
+        groundElectrode,   //!< Dirichlet phiE = 0 at x = -1, I_E = +alpha at x = 2
+        electrodePair      //!< I_E = -alpha at x = -1, I_E = +alpha at x = 2
+    };
+
+    static const Enum<bathVariant> bathVariantNames;
+
+private:
+
+    bathVariant variant_;
     fileName outputFileName_;
+
+    //- Mean of a field over the mesh, volume weighted. Used to remove the
+    //  arbitrary constant before comparing phiE in the electrodePair variant.
+    static scalar volumeMean(const fvMesh& m, const scalarField& f);
 
     const dictionary& verificationDict() const;
 

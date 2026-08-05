@@ -56,6 +56,60 @@ _GRAD_SCHEME_TOKENS: dict[str, str] = {
     "least_squares": "leastSquares",
 }
 
+# Surface stimulus magnitude of the FDA bidomain-with-bath problems (A/m^2).
+# Section 3.3 of the FDA document: I_E = -alpha at x = -1 and +alpha at x = 2.
+_FDA_ALPHA = 0.01
+
+# y/z domain extent per dimension, read off each blockMeshDict.<dim>'s own
+# vertices block (x always spans -1..2 for all three; only the y/z slab
+# thickness differs -- 1D and 2D are thin slivers, not full 1x1 cross
+# sections). Paired with which of y/z BLOCK_MESH_RESOLUTION_BY_DIMENSION
+# actually subdivides by `cells` (1D: neither: both fixed at 1 cell; 2D:
+# y only, z fixed at 1; 3D: both) -- a fixed-at-1-cell direction is always
+# safe at its exact center regardless of resolution.
+_DOMAIN_YZ_EXTENT_BY_DIMENSION: dict[str, tuple[float, float]] = {
+    "1D": (0.1, 0.1),
+    "2D": (1.0, 0.05),
+    "3D": (1.0, 1.0),
+}
+_YZ_SUBDIVIDED_BY_DIMENSION: dict[str, tuple[bool, bool]] = {
+    "1D": (False, False),
+    "2D": (True, False),
+    "3D": (True, True),
+}
+
+
+def _phi_e_ref_point_yz(dimension: str, cells: int) -> tuple[float, float]:
+    """y/z point for electrodePair's floating-reference cell.
+
+    electrodePair has no ground Dirichlet patch, so phiE floats and
+    extracellularPotentialDomain::referenceCell() pins it via whichever
+    single mesh cell contains phiERefPoint -- that cell must be owned by
+    exactly one processor partition (fatal error otherwise). The exact
+    domain midpoint sits exactly on a cell FACE whenever the corresponding
+    direction is subdivided by `cells` (every cells value this tutorial
+    sweeps is even), which can straddle a processor-decomposition boundary
+    for some resolutions (confirmed failing for 2D/40, 3D/20, 3D/40:
+    "2 partitions reported a containing cell") while working for others,
+    since which decomposition boundaries land where is resolution- and
+    method-dependent. Shifting by half a cell width off the midpoint lands
+    inside one specific cell's interior instead, which by construction
+    belongs to exactly one partition under any decomposition -- robust for
+    every resolution, not just the ones tested so far.
+    """
+    try:
+        y_extent, z_extent = _DOMAIN_YZ_EXTENT_BY_DIMENSION[dimension]
+        y_subdivided, z_subdivided = _YZ_SUBDIVIDED_BY_DIMENSION[dimension]
+    except KeyError as exc:
+        raise ValueError(
+            f"No phiERefPoint geometry known for dimension {dimension!r}; "
+            f"expected one of {sorted(_DOMAIN_YZ_EXTENT_BY_DIMENSION)}."
+        ) from exc
+    ref_y = y_extent / 2 + (y_extent / (2 * cells) if y_subdivided else 0.0)
+    ref_z = z_extent / 2 + (z_extent / (2 * cells) if z_subdivided else 0.0)
+    return ref_y, ref_z
+
+
 _TET_NUMERICS_PROFILES: dict[str, tuple[str, ...]] = {
     "bath_bidomain_tet": ("fvSchemes",),
 }
@@ -199,11 +253,12 @@ def _workflow_dag_for(
         return {"steps": mesh_steps + steps + [interface_metrics_step]}
 
     mesh_steps = [
+        {"id": "clean", "command": "Allclean", "depends_on": []},
         {
             "id": "mesh",
             "command": "blockMesh",
             "args": ["-dict", f"system/blockMeshDict.{dimensions_list[0]}"],
-            "depends_on": [],
+            "depends_on": ["clean"],
         },
         {"id": "topoSet", "command": "topoSet", "depends_on": ["mesh"]},
         {
@@ -236,6 +291,7 @@ def _apply_case(
     ecg_enabled: bool = False,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     bath_predictor_corrector: bool = False,
+    fda_bath_variant: str = "groundElectrode",
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
@@ -243,6 +299,7 @@ def _apply_case(
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
+    tet_geo_template_relpath: Path = Path("setup/mesh/tet/three_domain_box.geo.template"),
 ) -> None:
     dimension = str(case.params["dimension"])
     solver = str(case.params["solver"])
@@ -261,17 +318,28 @@ def _apply_case(
             bath_predictor_corrector
         ),
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
-        f"{electro_properties_scope}.verificationModel.groundElectrode": True,
-        f"{electro_properties_scope}.manufacturedBidomain.groundElectrode": True,
+        f"{electro_properties_scope}.verificationModel.fdaBathVariant": fda_bath_variant,
+        f"{electro_properties_scope}.manufacturedBidomain.fdaBathVariant": fda_bath_variant,
     }
+
+    if fda_bath_variant not in ("groundElectrode", "electrodePair"):
+        raise ValueError(
+            "fda_bath_variant must be 'groundElectrode' or 'electrodePair', "
+            f"got {fda_bath_variant!r}"
+        )
 
     if mesh_family == "tet":
         render_tet_geo(
             case_root,
             cells,
-            template_relpath=Path("setup/mesh/tet/three_domain_box.geo.template"),
+            template_relpath=tet_geo_template_relpath,
             geo_relpath=Path("setup/mesh/tet/three_domain_box.geo"),
         )
+        # Must happen before the variant branch below: this copy resets
+        # electro_properties to the tet template's own groundElectrode
+        # defaults (its own groundPatches.xMin), which the electrodePair
+        # branch then needs to remove. Doing it the other way around lets
+        # this copy silently reintroduce the key the removal just cleared.
         shutil.copy(case_root / "setup" / "mesh" / "tet" / "electroProperties", electro_properties)
         for overlay_name in _TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
             shutil.copy(
@@ -280,6 +348,53 @@ def _apply_case(
             )
     else:
         _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+
+    # The two FDA bidomain-with-bath variants differ in their outer bath
+    # boundary conditions, and the dictionary has to follow the verifier or the
+    # reported norms describe a different problem than the one solved.
+    #   groundElectrode: Dirichlet phiE = 0 at x = -1, I_E = +alpha at x = 2.
+    #   electrodePair:   I_E = -alpha at x = -1 and +alpha at x = 2, no ground.
+    #                    The integral of I_E over the boundary is zero so the
+    #                    problem is solvable, but phiE floats and needs a
+    #                    reference point to pin the constant.
+    bath_scope = f"{electro_properties_scope}.bathPotentialDomain"
+    if fda_bath_variant == "electrodePair":
+        # groundPatches and surfaceCurrentPatches are mutually exclusive per
+        # patch (extracellularPotentialDomain.C rejects a patch listed in
+        # both). The checked-in electroProperties defaults to groundElectrode
+        # and so carries groundPatches.xMin; switching variants must remove
+        # it, not just add the electrodePair surfaceCurrentPatches.xMin.
+        remove_electro_property_dict(
+            electro_properties,
+            "xMin",
+            scope=[electro_properties_scope, "bathPotentialDomain", "groundPatches"],
+            missing_ok=True,
+        )
+        ref_y, ref_z = _phi_e_ref_point_yz(dimension, cells)
+        case_overrides.update(
+            {
+                f"{bath_scope}.surfaceCurrentPatches.xMin": -_FDA_ALPHA,
+                f"{bath_scope}.surfaceCurrentPatches.xMax": _FDA_ALPHA,
+                f"{bath_scope}.phiERefPoint": f"(-0.9 {ref_y} {ref_z})",
+                f"{bath_scope}.phiEReferenceValue": 0.0,
+            }
+        )
+    else:
+        # Symmetric cleanup: a prior electrodePair case sharing this
+        # case_root may have left surfaceCurrentPatches.xMin behind, which
+        # would collide with groundPatches.xMin below the same way.
+        remove_electro_property_dict(
+            electro_properties,
+            "xMin",
+            scope=[electro_properties_scope, "bathPotentialDomain", "surfaceCurrentPatches"],
+            missing_ok=True,
+        )
+        case_overrides.update(
+            {
+                f"{bath_scope}.groundPatches.xMin": 0.0,
+                f"{bath_scope}.surfaceCurrentPatches.xMax": _FDA_ALPHA,
+            }
+        )
 
     if ecg_enabled:
         ensure_electro_property_dict(
@@ -300,6 +415,12 @@ def _apply_case(
     set_delta_t(control_dict, dt_value)
     if end_time is not None:
         update_foam_entry(control_dict, "endTime", end_time)
+        # writeControl is adjustableRunTime (time-based, not step-count-based)
+        # so every case in a temporal-convergence sweep writes a
+        # reconstructable time regardless of how few steps its deltaT takes
+        # to reach endTime; writeInterval must track an overridden endTime
+        # or it stays pinned to the checked-in default and stops matching.
+        update_foam_entry(control_dict, "writeInterval", end_time)
     if grad_scheme is not None:
         update_foam_entry(
             case_root / "system" / "fvSchemes",
@@ -538,6 +659,7 @@ def make_spec(
     ecg_enabled: bool = False,
     postprocess_strict_artifacts: bool = False,
     bath_predictor_corrector: bool = False,
+    fda_bath_variant: str = "groundElectrode",
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
@@ -545,6 +667,7 @@ def make_spec(
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
+    tet_geo_template_relpath: str | Path = "setup/mesh/tet/three_domain_box.geo.template",
 ) -> TutorialSpec:
     mesh_family = str(mesh_family)
     if mesh_family not in {"hex", "tet"}:
@@ -573,6 +696,8 @@ def make_spec(
         raise ValueError(
             "piecewise_sweep requires number_cells and dt_values to have the same length"
         )
+
+    tet_geo_template_path = Path(tet_geo_template_relpath)
 
     case_root, setup_root, output_dir = resolve_spec_paths(
         tutorials_root=tutorials_root,
@@ -607,6 +732,7 @@ def make_spec(
             ecg_enabled=ecg_enabled,
             block_mesh_dict_template=block_mesh_dict_template,
             bath_predictor_corrector=bath_predictor_corrector,
+            fda_bath_variant=fda_bath_variant,
             mesh_family=mesh_family,
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
@@ -614,6 +740,7 @@ def make_spec(
             end_time=end_time,
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
+            tet_geo_template_relpath=tet_geo_template_path,
         ),
         run_case=partial(
             _run_case,
@@ -653,8 +780,10 @@ def make_spec(
             "run_in_parallel": run_in_parallel,
             "ecg_enabled": ecg_enabled,
             "bath_predictor_corrector": bool(bath_predictor_corrector),
+            "fda_bath_variant": str(fda_bath_variant),
             "postprocess_script_relpath": str(postprocess_script_relpath),
             "postprocess_function_name": postprocess_function_name,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
+            "tet_geo_template_relpath": str(tet_geo_template_path),
         },
     )

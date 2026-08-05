@@ -641,6 +641,27 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=('manufacturedFDAMonodomainVerifier', 'manufacturedFDABidomainVerifier', 'manufacturedFDABathBidomainVerifier', 'manufacturedEikonalVerifier', 'manufacturedAnisotropicMonodomainVerifier'),
         ),
         DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.fdaBathVariant',
+            source_refs=('src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.C',),
+            phases=frozenset({'physics'}),
+            description=(
+                'Which of the two FDA bidomain-with-bath boundary variants of section 3.3 '
+                'is being verified. groundElectrode applies a Dirichlet phiE = 0 at x = -1 '
+                'with a surface current +alpha at x = 2. electrodePair applies -alpha at '
+                'x = -1 and +alpha at x = 2 with no ground, whose integral over the boundary '
+                'vanishes so the problem stays solvable while phiE floats. The key also '
+                'selects the error metric: with an electrode pair the exact phiE carries an '
+                'arbitrary C(t), so phiE and phiI are compared after removing their '
+                'volume-weighted means. Configuring the boundary conditions and the metric '
+                'from one key prevents a case being solved as one variant and measured as '
+                'the other.'
+            ),
+            value_kind='enum',
+            enum_values=('groundElectrode', 'electrodePair'),
+            typical_value='groundElectrode',
+            applicable_when={"$ELECTRO_MODEL_COEFFS.verificationModel.type": ("manufacturedFDABathBidomainVerifier",)},
+        ),
+        DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.writeErrorField',
             phases=frozenset({'solver'}),
             description='Writes the per-cell signed activation-time error field to disk each write interval, for correlating error against local mesh quality.',
@@ -740,6 +761,15 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Dirichlet ground-patch value map for extracellular potential.',
             value_kind='scalar',
             dynamic_path=True,
+            constraints=(
+                'A given <patch> key is mutually exclusive with the same '
+                '<patch> key under surfaceCurrentPatches -- '
+                'extracellularPotentialDomain.C rejects a patch listed in '
+                'both. Switching a variant/override that moves a patch '
+                'between the two maps must remove it from the old map, not '
+                'just add it to the new one (see fdaBathVariant callers).',
+            ),
+            mutually_exclusive_with=('$ELECTRO_MODEL_COEFFS.bathPotentialDomain.surfaceCurrentPatches.<patch>',),
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.surfaceCurrentPatches.<patch>',
@@ -747,6 +777,15 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Neumann surface-current patch map; values are scalar surface-current values.',
             value_kind='scalar',
             dynamic_path=True,
+            constraints=(
+                'A given <patch> key is mutually exclusive with the same '
+                '<patch> key under groundPatches -- '
+                'extracellularPotentialDomain.C rejects a patch listed in '
+                'both. Switching a variant/override that moves a patch '
+                'between the two maps must remove it from the old map, not '
+                'just add it to the new one (see fdaBathVariant callers).',
+            ),
+            mutually_exclusive_with=('$ELECTRO_MODEL_COEFFS.bathPotentialDomain.groundPatches.<patch>',),
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.bathPotentialDomain.interfaceConductivityInterpolation',

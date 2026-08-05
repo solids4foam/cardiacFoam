@@ -1,0 +1,38 @@
+{
+  "base": {
+    "entry": "manufacturedFDABathBidomain",
+    "case_dir_name": "manufacturedSolutions/bathBidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bath_bidomain_tet",
+    "tet_geo_template_relpath": "setup/mesh/tet/three_domain_box.geo.template.frontal_seed2",
+    "number_cells": [
+      40
+    ],
+    "dt_values": [
+      0.000560538
+    ],
+    "end_time": 0.02,
+    "run_in_parallel": true,
+    "ecg_enabled": false,
+    "bath_predictor_corrector": true,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCasesElectrodePairFrontalSeed2",
+    "fda_bath_variant": "electrodePair"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "output_dir_name": [
+        "40"
+      ]
+    }
+  }
+}

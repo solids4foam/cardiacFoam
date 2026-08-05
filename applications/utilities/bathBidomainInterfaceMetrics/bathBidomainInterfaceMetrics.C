@@ -94,6 +94,12 @@ void writeNorms(OFstream& output, const WeightedNorms& norms)
 }
 
 
+scalar volumeWeightedMean(const scalarField& values, const scalarField& volumes)
+{
+    return gSum(volumes*values)/max(gSum(volumes), VSMALL);
+}
+
+
 struct FaceFit
 {
     scalar value;
@@ -276,6 +282,22 @@ int main(int argc, char* argv[])
         1.0/Foam::sqrt(2.0)
     );
     const scalar alpha = verification.lookupOrDefault<scalar>("alpha", 0.01);
+    // electrodePair has no Dirichlet ground patch, so phiE floats: the
+    // manufactured phiEExact() below carries a fixed additive constant that
+    // pins the groundElectrode variant's phiE(x=-1)=0, and the numerical
+    // field is instead pinned by an unrelated reference cell
+    // (bathPotentialDomain.phiERefPoint). Comparing the two directly would
+    // measure that arbitrary gauge difference, not discretisation error, so
+    // both are shifted to zero volume-weighted mean first -- the same
+    // treatment manufacturedFDABathBidomainVerifier.C applies to its own
+    // phiE/phiI norms. groundElectrode's Dirichlet patch fixes the constant
+    // physically, so it is compared as-is (means below are then both zero).
+    const word fdaBathVariant = verification.lookupOrDefault<word>
+    (
+        "fdaBathVariant",
+        "groundElectrode"
+    );
+    const bool electrodePair = (fdaBathVariant == "electrodePair");
     tmp<volTensorField> sigmaEFieldTmp = readConductivityField
     (
         mesh,
@@ -511,11 +533,30 @@ int main(int argc, char* argv[])
     WeightedNorms bathPotential;
     const scalarField& volumes = mesh.V();
     const vectorField& centres = mesh.C();
+
+    // Zero for groundElectrode (Dirichlet patch fixes the constant, no gauge
+    // freedom to remove); non-zero for electrodePair, applied everywhere
+    // phiE is compared to phiEExact below (region norms, interface trace,
+    // -- see comment at the fdaBathVariant read above).
+    scalar phiEComputedMean = 0.0;
+    scalar phiEExactMean = 0.0;
+    if (electrodePair)
+    {
+        scalarField phiEExactCells(mesh.nCells());
+        forAll(phiEExactCells, cellI)
+        {
+            phiEExactCells[cellI] =
+                phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+        }
+        phiEComputedMean = volumeWeightedMean(phiE.primitiveField(), volumes);
+        phiEExactMean = volumeWeightedMean(phiEExactCells, volumes);
+    }
+
     forAll(phiE, cellI)
     {
         const scalar error =
-            phiE[cellI]
-          - phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+            (phiE[cellI] - phiEComputedMean)
+          - (phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx()) - phiEExactMean);
         (isHeart[cellI] ? heartPotential : bathPotential).add
         (
             error,
@@ -671,7 +712,10 @@ int main(int argc, char* argv[])
         WeightedNorms& orthogonalFluxError =
             leftInterface ? x0OrthogonalFlux : x1OrthogonalFlux;
 
-        potential.add(facePotential - exactPotential, area);
+        potential.add(
+            (facePotential - phiEComputedMean) - (exactPotential - phiEExactMean),
+            area
+        );
         traceJump.add(heartTrace - bathTrace, area);
         heartFlux.add(qHeart - exactHeartFlux, area);
         bathFlux.add(qBath + exactHeartFlux, area);
@@ -765,7 +809,7 @@ int main(int argc, char* argv[])
         << ",xMinPhiE_L1,xMinPhiE_L2,xMinPhiE_Linf"
         << ",xMaxFlux_L1,xMaxFlux_L2,xMaxFlux_Linf"
         << ",sidesFlux_L1,sidesFlux_L2,sidesFlux_Linf"
-        << ",exteriorFluxIntegral\n";
+        << ",exteriorFluxIntegral,fdaBathVariant\n";
     output
         << method << ',' << assembly << ','
         << (exactFields ? "exact" : "numerical") << ','
@@ -796,7 +840,7 @@ int main(int argc, char* argv[])
     writeNorms(output, xMinPotential);
     writeNorms(output, xMaxFlux);
     writeNorms(output, sidesFlux);
-    output << ',' << exteriorFluxIntegral << nl;
+    output << ',' << exteriorFluxIntegral << ',' << fdaBathVariant << nl;
 
     Info<< "Wrote " << outputDir/outputName << nl
         << "interfaceFaces=" << interfaceFaces << nl

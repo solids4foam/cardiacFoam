@@ -56,8 +56,29 @@ Tuple2<Tuple2<scalar, scalar>, scalar> nanNorms()
 } // End anonymous namespace
 
 
+const Foam::Enum<Foam::manufacturedFDABathBidomainVerifier::bathVariant>
+Foam::manufacturedFDABathBidomainVerifier::bathVariantNames
+({
+    { bathVariant::groundElectrode, "groundElectrode" },
+    { bathVariant::electrodePair,   "electrodePair"   }
+});
+
+
+Foam::scalar Foam::manufacturedFDABathBidomainVerifier::volumeMean
+(
+    const fvMesh& m,
+    const scalarField& f
+)
+{
+    const scalarField& V = m.V();
+    const scalar sumFV = gSum(f*V);
+    const scalar sumV = gSum(V);
+    return sumV > SMALL ? sumFV/sumV : 0.0;
+}
+
+
 // Return the verificationModel sub-dictionary, which holds all
-// bath-bidomain verifier parameters (k, alpha, groundElectrode,
+// bath-bidomain verifier parameters (k, alpha, fdaBathVariant,
 // enabled, outputFile).
 const dictionary&
 manufacturedFDABathBidomainVerifier::verificationDict() const
@@ -79,7 +100,7 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     errorsReported_(false),
     k_(1.0/Foam::sqrt(2.0)),
     alpha_(0.01),
-    groundElectrode_(true),
+    variant_(bathVariant::groundElectrode),
     outputFileName_()
 {
     const dictionary& cfg = verificationDict();
@@ -92,17 +113,24 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
      == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
-    groundElectrode_ = cfg.lookupOrDefault<Switch>("groundElectrode", true);
-    outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
-
-    if (!groundElectrode_)
+    // Preferred key: selects which FDA bidomain-with-bath boundary variant is
+    // being verified, and with it the error metric.
+    if (cfg.found("fdaBathVariant"))
     {
-        FatalErrorInFunction
-            << type()
-            << " currently implements the FDA ground-electrode variant only. "
-            << "Set verificationModel { groundElectrode yes; }."
-            << exit(FatalError);
+        variant_ = bathVariantNames.get("fdaBathVariant", cfg);
     }
+    else if (cfg.found("groundElectrode"))
+    {
+        // Legacy key, retained so archived cases keep running unchanged:
+        // groundElectrode yes -> groundElectrode, no -> electrodePair.
+        const Switch grounded(cfg.get<Switch>("groundElectrode"));
+        variant_ =
+            grounded
+          ? bathVariant::groundElectrode
+          : bathVariant::electrodePair;
+    }
+
+    outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
 }
 
 
@@ -331,8 +359,21 @@ void manufacturedFDABathBidomainVerifier::postProcess
     scalarField phiEExact;
     computeManufacturedFDABathPhiE(phiEExact, phiEX, t, k_, alpha_, se);
 
+    // With an electrode pair every boundary condition on phiE is a flux, so
+    // the exact solution carries an arbitrary C(t) and the computed field is
+    // pinned by an unrelated reference cell. Comparing them directly would
+    // measure that gauge difference rather than the discretisation error, so
+    // both fields are shifted to zero volume-weighted mean first. The ground
+    // variant has a Dirichlet patch fixing the constant and is compared as is.
+    scalarField phiEComputed(phiEValues);
+    if (variant_ == bathVariant::electrodePair)
+    {
+        phiEComputed -= volumeMean(phiEMesh, phiEComputed);
+        phiEExact -= volumeMean(phiEMesh, phiEExact);
+    }
+
     const auto phiENorms =
-        computeNorms(phiEMesh, phiEValues, phiEExact);
+        computeNorms(phiEMesh, phiEComputed, phiEExact);
 
     auto phiINorms = nanNorms();
     if (phiEValues.size() == VmValues.size() && &phiEMesh == &mesh)
@@ -341,6 +382,14 @@ void manufacturedFDABathBidomainVerifier::postProcess
         forAll(phiIValues, i)
         {
             phiIValues[i] = VmValues[i] + phiEValues[i];
+        }
+
+        // phiI = Vm + phiE inherits phiE's arbitrary constant, so it needs
+        // the same gauge removal as phiE in the electrodePair variant.
+        if (variant_ == bathVariant::electrodePair)
+        {
+            phiIValues -= volumeMean(mesh, phiIValues);
+            phiIExact -= volumeMean(mesh, phiIExact);
         }
 
         phiINorms = computeNorms(mesh, phiIValues, phiIExact);
@@ -373,6 +422,12 @@ void manufacturedFDABathBidomainVerifier::postProcess
             }
 
             phiIValues[i] = VmValues[i] + phiEValues[baseCellI];
+        }
+
+        if (variant_ == bathVariant::electrodePair)
+        {
+            phiIValues -= volumeMean(mesh, phiIValues);
+            phiIExact -= volumeMean(mesh, phiIExact);
         }
 
         phiINorms = computeNorms(mesh, phiIValues, phiIExact);
@@ -436,7 +491,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
             << "# alpha " << alpha_ << "\n"
             << "# se " << se << "\n"
             << "# sigmaB " << manufacturedFDABathSigmaB(se) << "\n"
-            << "# groundElectrode " << groundElectrode_ << "\n"
+            << "# fdaBathVariant " << bathVariantNames[variant_] << "\n"
             << "# phiEMesh " << phiEMesh.name() << "\n"
             << "# field L1 L2 Linf\n"
             << "Vm " << VmNorms.first().first() << " "
