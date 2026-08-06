@@ -30,7 +30,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from openfoam_driver.core.defaults import manufactured_fda_bidomain as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_fda_bidomain as defaults
 from .manufactured_fda import make_spec as make_base_spec
 
 

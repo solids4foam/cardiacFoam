@@ -297,7 +297,7 @@ Generic-case sweeps can also use a `cases` array. Each case may override
 `electro_property_overrides`, `physics_property_overrides`, `dimension`,
 `parallel`, `touch_case_foam`, and `openfoam_bashrc` on top of the spec defaults.
 
-Defaults live in `core/defaults/*.py`.
+Defaults live in `plugins/cardiacfoam/defaults/*.py`.
 
 ## Runtime artifacts
 

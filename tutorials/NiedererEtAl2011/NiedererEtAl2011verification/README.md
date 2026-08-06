@@ -79,7 +79,7 @@ foamctl all --entry niederer2012
 ```
 
 Driver sweeps are controlled by
-`applications/scripts/driverFoam/openfoam_driver/core/defaults/niederer_2012.py`.
+`applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/defaults/niederer_2012.py`.
 
 ## Regression behavior
 

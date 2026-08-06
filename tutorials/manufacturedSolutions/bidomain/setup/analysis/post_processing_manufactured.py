@@ -42,7 +42,7 @@ from openfoam_driver.postprocessing.style import (
     finalize_matplotlib_figure,
     style_matplotlib_axes,
 )
-from openfoam_driver.core.defaults import manufactured_fda as driver_defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_fda as driver_defaults
 
 RATE_FIELDS = (
     "Dimension",

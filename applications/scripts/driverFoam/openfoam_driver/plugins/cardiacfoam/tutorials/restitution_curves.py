@@ -34,7 +34,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from openfoam_driver.core.defaults import restitution_curves as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import restitution_curves as defaults
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
