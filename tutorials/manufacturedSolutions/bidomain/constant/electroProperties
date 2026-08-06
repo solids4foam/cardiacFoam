@@ -35,14 +35,14 @@ bidomainSolverCoeffs
     }
     verificationModel
     {
-        type    manufacturedFDABidomainVerifier;
+        type            manufacturedFDABidomainVerifier;
     }
     manufacturedBidomain
     {
         k               0.707107;
     }
-    dimension    "3D";
-    solutionAlgorithm    implicit;
+    dimension       "2D";
+    solutionAlgorithm implicit;
     CFL             0.1;
     solver          RKF45;
     initialODEStep  1e-05;
@@ -57,6 +57,7 @@ bidomainSolverCoeffs
         stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
         stimulusStartTime 0;
     }
+    timeCouplingScheme sbdf2;
 }
 
 

@@ -15,6 +15,17 @@ FoamFile
     object          controlDict;
 }
 
+// Eikonal solver: steady-state activation-time solver
+// Runs 1D Purkinje eikonal (Dijkstra) + 3D tissue eikonal with activation-time coupling
+//
+// NOTE: The eikonal solver uses applyModelTimeControls() which overrides the
+// controlDict settings below. The solver internally sets:
+//   startTime = 0
+//   endTime = deltaT = 1.0
+// Results are written to timeStep=1/ directory.
+//
+// These settings are provided for reference/clarity but are not used by the solver.
+
 application     cardiacFoam;
 
 startFrom       startTime;
@@ -23,15 +34,15 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.02;
+endTime         1.0;
 
-deltaT          5e-05;
+deltaT          1.0;
 
 maxCo           0.1;
 
 writeControl    runTime;
 
-writeInterval   0.005;
+writeInterval   1.0;
 
 purgeWrite      0;
 

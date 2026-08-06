@@ -38,15 +38,9 @@ findManufacturedErrorFile()
 {
     local candidate
 
-    candidate="$(findFirstMatch 'postProcessing/*.dat')" || true
-    if [[ -n "${candidate}" ]] && grep -q 'Manufactured-solution error summary' "${candidate}"; then
-        echo "${candidate}"
-        return 0
-    fi
-
     for candidate in postProcessing/*.dat processor*/postProcessing/*.dat
     do
-        if [[ -s "${candidate}" ]] && grep -q 'Manufactured-solution error summary' "${candidate}"; then
+        if [[ -s "${candidate}" ]] && grep -iq 'manufactured-solution error summary' "${candidate}"; then
             echo "${candidate}"
             return 0
         fi

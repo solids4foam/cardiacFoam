@@ -50,7 +50,7 @@ bidomainSolverCoeffs
         groundElectrode yes;
         fdaBathVariant  electrodePair;
     }
-    dimension       "3D";
+    dimension       "1D";
     solutionAlgorithm implicit;
     CFL             0.1;
     solver          RKF45;
@@ -70,7 +70,7 @@ bidomainSolverCoeffs
             xMax            0.01;
             xMin            -0.01;
         }
-        phiERefPoint    ( -0.9 0.5125 0.5125 );
+        phiERefPoint    ( -0.9 0.05 0.05 );
         phiEReferenceValue 0;
     }
 }
