@@ -240,6 +240,11 @@ tutorials/**/constant/cell*
 tutorials/**/constant/face*
 tutorials/**/constant/min*
 tutorials/**/constant/nonOrthoAngle
+tutorials/**/constant/skewness
+tutorials/**/constant/C
+tutorials/**/constant/Cx
+tutorials/**/constant/Cy
+tutorials/**/constant/Cz
 
 # Sweep/Runner temporary folders and PIDs
 tutorials/**/*_temp/
