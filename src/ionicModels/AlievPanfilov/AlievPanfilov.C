@@ -202,6 +202,7 @@ void Foam::AlievPanfilov::solveODE
 
         step = min(step, deltaT * 1000.0/12.9);
         activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI, 1000.0/100.0, 1000.0);
         if (integrationPtI == sampleCell)
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
@@ -224,6 +225,44 @@ void Foam::AlievPanfilov::solveODE
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] * 100;
+    }
+
+    clearVmRate();
+}
+
+
+void Foam::AlievPanfilov::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[0] = (Vm[integrationPtI] * 1000.0 + 80)/100;
+        A = 0.0;
+        R = 0.0;
+
+        ::AlievPanfilovcomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm] * 100;
     }
 }
 
@@ -249,6 +288,11 @@ void Foam::AlievPanfilov::derivatives
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[0] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //

@@ -199,6 +199,7 @@ void Foam::Grandi::solveODE
 
         step = min(step, deltaT * 1000.0);
         activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         ::GrandicomputeVariables
@@ -217,7 +218,44 @@ void Foam::Grandi::solveODE
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+    }
 
+    clearVmRate();
+}
+
+
+void Foam::Grandi::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[membrane_V] = Vm[integrationPtI]*1000.0;
+        A = 0.0;
+        R = 0.0;
+
+        ::GrandicomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm];
     }
 }
 
@@ -242,6 +280,11 @@ void Foam::Grandi::derivatives
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[membrane_V] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //

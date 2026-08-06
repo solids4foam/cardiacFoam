@@ -211,6 +211,7 @@ void Foam::BuenoOrovio::solveODE
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI, 1000.0/85.7, 1000.0);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         ::BuenoOroviocomputeVariables
@@ -230,7 +231,44 @@ void Foam::BuenoOrovio::solveODE
             {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         Im[integrationPtI] = ALGEBRAICI[Jion] * 85.7;
+    }
 
+    clearVmRate();
+}
+
+
+void Foam::BuenoOrovio::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[0] = (Vm[integrationPtI] * 1000.0 + 84)/85.7;
+        A = 0.0;
+        R = 0.0;
+
+        ::BuenoOroviocomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Jion] * 85.7;
     }
 }
 
@@ -256,6 +294,11 @@ void Foam::BuenoOrovio::derivatives
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[0] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //

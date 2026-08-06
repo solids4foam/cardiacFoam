@@ -189,7 +189,26 @@ protected:
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const override
+            //- Vm is advanced linearly across the step from the supplied rate
+    virtual bool supportsVmRateCoupling() const override
+    {
+        return true;
+    }
+
+    //- Iion can be recomputed at any Vm from the stored state
+    virtual bool supportsIonicCurrentEvaluation() const override
+    {
+        return true;
+    }
+
+    virtual void evaluateIonicCurrent
+    (
+        const scalar t,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
+
+    virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
