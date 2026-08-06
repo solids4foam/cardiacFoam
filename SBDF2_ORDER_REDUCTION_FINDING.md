@@ -312,7 +312,50 @@ orders of magnitude below where the clean region begins, and the Python
 replica — which has no spatial error, no ODE-solver tolerance and no linear
 solve — converges to p = 2.000 at every refinement.
 
-## 8. Scope
+## 8. Stiff ionic model: SBDF2 has a timestep limit
+
+All the convergence work above uses the manufactured models, whose dynamics are
+smooth and non-stiff. SBDF2 treats `Iion` **explicitly**, so it carries a
+stability restriction that a smooth MMS cannot expose. Ethier & Bourgault
+derive exactly this (their SS3.2.2, a condition of the form `dt < 1/C`).
+
+Tested on the Niederer benchmark (`NiedererEtAl2011verification`, coarse mesh,
+52,500 cells) with `TNNPcompactBatched`, Rush-Larsen, ODE substep held fixed at
+0.005 ms so the only variable is the PDE coupling step. `Vm` max at t = 0.03 s
+(TNNP peaks near +40 mV; anything far above that is non-physical):
+
+| dt (ms) | godunov max | sbdf2 max | mean abs diff | cells > 45 mV | verdict |
+|---|---|---|---|---|---|
+| 0.15 | 40.56 | **90.86** | 5.175 | **236** | unstable |
+| 0.05 | 29.06 | 27.88 | 1.290 | 0 | ok |
+| 0.03 | 26.64 | 24.64 | 0.535 | 0 | ok |
+| 0.015 | 25.21 | 24.25 | 0.242 | 0 | ok |
+
+At dt = 0.15 ms `sbdf2` overshoots to 90.9 mV, with the bad-cell count growing
+along the wavefront (63 -> 92 -> 155 -> 202 -> 236 over the run). Refining dt
+removes it completely.
+
+**This is a stability limit, not an implementation bug.** A sign or unit-scale
+error in the Vm-rate path would give a wrong-but-stable answer at *every* dt.
+Instead the discrepancy vanishes under refinement and the two schemes converge
+on each other: mean abs diff falls 1.29 -> 0.54 -> 0.24, roughly first order in
+dt, which is what the gap between a first-order (godunov) and second-order
+(sbdf2) scheme should do. This run is also the first execution of the batched
+Vm-extrapolation kernel path, and its convergence towards godunov is the
+evidence that path is wired correctly.
+
+`max abs diff` stays large (84 / 64 / 34 mV) even when stable, because at a
+steep upstroke a small shift in wavefront timing is a large pointwise `Vm`
+difference. It shrinks with dt as expected.
+
+**Practical guidance.** For TNNP on this mesh, `sbdf2` needs dt <~ 0.05 ms;
+godunov tolerates 0.15 ms. Stiffer models or finer meshes will tighten the
+bound further. Choose `sbdf2` for accuracy at moderate dt, `godunov` for
+robustness at large dt. The threshold has not been characterised beyond this
+one bracketing, and no automatic guard exists -- an unstable `sbdf2` run fails
+by producing non-physical voltages, not by erroring out.
+
+## 9. Scope
 
 - Godunov is unchanged and remains the first-order control: with no rate
   supplied `activeVmRate()` is zero, reproducing the frozen $V_m$ exactly, and
@@ -326,7 +369,7 @@ solve — converges to p = 2.000 at every refinement.
   under `sbdf2`; their batched twins work but have not been run through a
   convergence sweep.
 
-## 9. Run note — sweeps silently resume stale results
+## 10. Run note — sweeps silently resume stale results
 
 `driverFoam sweep-run` resumes from an existing `workflow_state.json`. If a
 case directory left over from an earlier session reports `completed`, the
@@ -343,7 +386,7 @@ execution, not agreement.
 first**, otherwise it reports the old code's results as if they were new. This
 applies to every before/after verification in this repo, not just SBDF2.
 
-## 10. Build note
+## 11. Build note
 
 Adding the capability virtuals changes vtable layouts across library
 boundaries. A plain `Allwmake` is **not sufficient** — it reported "no build

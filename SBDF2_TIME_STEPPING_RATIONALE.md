@@ -298,7 +298,28 @@ See [SBDF2_ORDER_REDUCTION_FINDING.md](SBDF2_ORDER_REDUCTION_FINDING.md) for
 the investigation that established connection 1 was missing, including the
 independent evidence chain.
 
-## 8. References
+## 8. Stability limit with stiff ionic models
+
+`Iion` is treated **explicitly**, so SBDF2 carries a timestep restriction that
+the smooth manufactured models cannot expose (Ethier & Bourgault SS3.2.2).
+
+Measured on the Niederer benchmark with `TNNPcompactBatched` (coarse mesh,
+Rush-Larsen, ODE substep fixed at 0.005 ms), `Vm` max at t = 0.03 s -- TNNP
+peaks near +40 mV:
+
+| dt (ms) | godunov max | sbdf2 max | cells > 45 mV |
+|---|---|---|---|
+| 0.15 | 40.6 | **90.9** | **236** |
+| 0.05 | 29.1 | 27.9 | 0 |
+| 0.03 | 26.6 | 24.6 | 0 |
+| 0.015 | 25.2 | 24.2 | 0 |
+
+For TNNP on this mesh use dt <~ 0.05 ms with `sbdf2`; godunov tolerates
+0.15 ms. There is **no automatic guard** -- an over-large dt fails by producing
+non-physical voltages, not by erroring out. Prefer `sbdf2` for accuracy at
+moderate dt and `godunov` for robustness at large dt.
+
+## 9. References
 
 1. **Ethier, M., & Bourgault, Y. (2008).** *Semi-implicit time-discretization
    schemes for the bidomain model.* SIAM Journal on Numerical Analysis,
