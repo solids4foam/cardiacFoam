@@ -264,3 +264,6 @@ tutorials/**/reference/*.csv
 # Presentations
 presentation/
 tutorials/manufacturedSolutions/eikonalECG/gradient_full_sweep.csv
+
+# Local-only open-issue working notes (kept on disk, never tracked)
+docs/issues/
