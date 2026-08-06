@@ -172,7 +172,7 @@ supplied and both paths see the same $V_m$, `maxAbsDiff = 0` against
 
 ## 7. Results
 
-Real solver, 1-D, N=1280, endTime 0.2:
+### Monodomain 1-D (N=1280, endTime 0.2)
 
 | dt | L1 | L2 | L∞ | p (L2) |
 |---|---|---|---|---|
@@ -191,7 +191,7 @@ Two cross-checks on these numbers:
 - They are uniformly ~30% **below** the first-fix-only N=1280 results
   (4.7316e-4, 1.2150e-4, 3.0194e-5, 7.2248e-6) at every dt.
 
-### 2-D (N=640, 409,600 cells)
+### Monodomain 2-D (N=640, 409,600 cells)
 
 | dt | L1 | L2 | L∞ | p (L2) | L2 (first-fix only) | gain |
 |---|---|---|---|---|---|---|
@@ -233,7 +233,39 @@ error, which is why N=1280 looks *worse* at dt = 0.003125 and 0.0015625. The
 clean-region orders (p = 1.973, 2.023 at coarse dt, where temporal error
 dominates) are unaffected by this.
 
-### The 1-D tail: a characterised but unexplained floor
+### Bidomain
+
+Once `bidomainFDAManufactured` gained the two capabilities, the same ladder on
+the bidomain MMS:
+
+**1-D, N=1280** — the cleanest convergence measured anywhere in this work:
+
+| dt | Vm L1 | Vm L2 | p (Vm) | phiE_gauge L2 | p (gauge) |
+|---|---|---|---|---|---|
+| 0.025 | 2.4101e-04 | 2.8761e-04 | — | 2.0540e-04 | — |
+| 0.0125 | 6.2348e-05 | 7.4530e-05 | 1.948 | 5.3572e-05 | 1.939 |
+| 0.00625 | 1.5855e-05 | 1.8969e-05 | 1.974 | 1.4131e-05 | 1.923 |
+| 0.003125 | 3.9972e-06 | 4.7846e-06 | 1.987 | 4.0822e-06 | 1.791 |
+| 0.0015625 | 1.0031e-06 | 1.2011e-06 | 1.994 | 1.5505e-06 | 1.397 |
+
+**2-D, N=640:**
+
+| dt | Vm L1 | Vm L2 | p (Vm) | phiE_gauge L2 | p (gauge) |
+|---|---|---|---|---|---|
+| 0.025 | 2.2050e-04 | 2.8632e-04 | — | 2.4281e-04 | — |
+| 0.0125 | 5.6553e-05 | 7.3621e-05 | 1.959 | 6.2509e-05 | 1.958 |
+| 0.00625 | 1.4197e-05 | 1.8519e-05 | 1.991 | 1.6043e-05 | 1.962 |
+| 0.003125 | 3.4329e-06 | 4.4987e-06 | 2.041 | 4.2499e-06 | 1.916 |
+| 0.0015625 | 7.1999e-07 | 9.6458e-07 | 2.222 | 1.2803e-06 | 1.731 |
+
+Read the order off `Vm`. `phiE` is determined by an elliptic equation solved
+at each step, so it carries no temporal error of its own -- it inherits Vm's
+on top of a spatial floor it reaches sooner, which is why `phiE_gauge` falls
+away from 2 at fine dt while `Vm` does not. Raw `phiE` is useless for this
+purpose: it is dominated by the arbitrary gauge constant (L2 ~ 8e-2 against
+~2e-4 for `phiE_gauge`), so always use the gauged field.
+
+### The monodomain 1-D tail: a characterised but unexplained floor
 
 The clean second-order region is **dt = 0.025 → 0.0015625** — four
 comparisons, p = 1.954, 1.981, 2.005, 2.064, spanning more than two decades of
@@ -286,10 +318,13 @@ solve — converges to p = 2.000 at every refinement.
   supplied `activeVmRate()` is zero, reproducing the frozen $V_m$ exactly, and
   the refresh is skipped.
 - No prior `godunov`-based MMS result is affected.
-- Bidomain shares `myocardiumDomain::advance()` and so inherits both
-  connections, but has not been exercised by a convergence sweep here.
-- The 11 non-batched CellML models do not yet implement the two capabilities
-  and will hard-error under `sbdf2`; their batched twins work.
+- Bidomain is now verified as well (see above): `bidomainFDAManufactured` and
+  `bathBidomainFDAManufactured` implement both capabilities, and the bidomain
+  MMS reaches p = 1.994 (1-D) / 1.991 (2-D) on Vm.
+- All three manufactured verification models now implement the capabilities.
+  The 12 non-batched CellML production models do not, and will hard-error
+  under `sbdf2`; their batched twins work but have not been run through a
+  convergence sweep.
 
 ## 9. Run note — sweeps silently resume stale results
 

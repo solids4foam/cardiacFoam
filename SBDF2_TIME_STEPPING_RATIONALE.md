@@ -178,14 +178,16 @@ labelled SBDF2 is what caused this whole investigation.
 
 Currently implemented in:
 
-- `monodomainFDAManufactured` — the MMS verification model.
+- All three manufactured verification models —
+  `monodomainFDAManufactured`, `bidomainFDAManufactured` and
+  `bathBidomainFDAManufactured`.
 - `batchedIonicModel` — written once in the shared base, so all 12 batched
   models (`TNNPBatched`, `ToRORd_dynClBatched`, `BuenoOrovioBatched`, …) get
   both connections with no per-model changes.
 
-The 11 non-batched CellML models still return `false` and will error under
-`sbdf2`; use `godunov`, or their batched twins. Extending them is one file at a
-time and needs no new machinery — each already calls
+The 12 non-batched CellML production models still return `false` and will
+error under `sbdf2`; use `godunov`, or their batched twins. Extending them is
+one file at a time and needs no new machinery — each already calls
 `<Model>computeVariables(...)` internally, which is exactly the non-advancing
 evaluate, and already pins `RATES[V] = 0.0`, which is exactly the row the rate
 goes into.
@@ -254,6 +256,27 @@ hex mesh, $N = 1280$, endTime $0.2$:
 Second order is confirmed independently in both dimensions, with errors a
 uniform 1.5× (2-D) and 1.3× (1-D) below the pre-fix scheme at every dt in the
 clean region.
+
+Bidomain MMS, same ladder, reading the order off $V_m$:
+
+| $\Delta t$ | Vm L2 (1-D, N=1280) | $p$ | Vm L2 (2-D, N=640) | $p$ |
+|---|---|---|---|---|
+| 0.025 | 2.8761e-04 | — | 2.8632e-04 | — |
+| 0.0125 | 7.4530e-05 | 1.948 | 7.3621e-05 | 1.959 |
+| 0.00625 | 1.8969e-05 | 1.974 | 1.8519e-05 | 1.991 |
+| 0.003125 | 4.7846e-06 | 1.987 | 4.4987e-06 | 2.041 |
+| 0.0015625 | 1.2011e-06 | 1.994 | 9.6458e-07 | 2.222 |
+
+The bidomain 1-D column is the cleanest convergence in this work: monotone
+1.948 → 1.994, approaching 2 from below with no drift above it.
+
+Read bidomain order off $V_m$, not $\phi_e$. $\phi_e$ is determined by an
+elliptic equation at each step, so it carries no temporal error of its own --
+it inherits $V_m$'s on top of a spatial floor it reaches sooner, and its
+gauged order falls away from 2 at fine $\Delta t$ (1.79, 1.40 in 1-D) while
+$V_m$ does not. Raw `phiE` is dominated by the arbitrary gauge constant
+(L2 ~ 8e-2 vs ~2e-4 gauged) and is meaningless here -- always use
+`phiE_gauge`.
 
 Both ladders meet a floor at fine $\Delta t$, but of different origin:
 
