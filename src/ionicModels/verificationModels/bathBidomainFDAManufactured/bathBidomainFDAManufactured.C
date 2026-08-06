@@ -148,11 +148,49 @@ void Foam::bathBidomainFDAManufactured::solveODE
         S[BathBidomainV] = Vm[integrationPtI];
         h = min(h, deltaT);
 
+        setActiveVmRate(integrationPtI);
+
         odeSolver().solve(tStart, tEnd, S, h);
 
         ::bathBidomainFDAManufacturedComputeVariables
         (
             tEnd,
+            CONSTANTS_.data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
+
+        Im[integrationPtI] = A[BathBidomainIion] / CONSTANTS_[BathBidomainCm];
+    }
+
+    clearVmRate();
+}
+
+
+void Foam::bathBidomainFDAManufactured::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(BATH_BIDOMAIN_NUM_STATES, 0.0);
+    scalarField A(BATH_BIDOMAIN_NUM_ALGEBRAIC, 0.0);
+    scalarField R(BATH_BIDOMAIN_NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[BathBidomainV] = Vm[integrationPtI];
+        A = 0.0;
+        R = 0.0;
+
+        ::bathBidomainFDAManufacturedComputeVariables
+        (
+            t,
             CONSTANTS_.data(),
             R.data(),
             S.data(),
@@ -195,6 +233,11 @@ void Foam::bathBidomainFDAManufactured::derivatives
         tissue(),
         solveVmWithinODESolver()
     );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[BathBidomainV] = activeVmRate();
+    }
 }
 
 // ************************************************************************* //

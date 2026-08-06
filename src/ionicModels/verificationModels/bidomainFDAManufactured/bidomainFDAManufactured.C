@@ -121,6 +121,8 @@ void Foam::bidomainFDAManufactured::solveODE
         S[BidomainV] = Vm[integrationPtI];
         h = min(h, deltaT);
 
+        setActiveVmRate(integrationPtI);
+
         if (integrationPtI == monitorCell)
         {
             debugPrintFields(integrationPtI, tStart, tEnd, h);
@@ -146,6 +148,42 @@ void Foam::bidomainFDAManufactured::solveODE
 
         Im[integrationPtI] = A[BidomainIion] / CONSTANTS_[BidomainCm];
     }
+
+    clearVmRate();
+}
+
+
+void Foam::bidomainFDAManufactured::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(BIDOMAIN_NUM_STATES, 0.0);
+    scalarField A(BIDOMAIN_NUM_ALGEBRAIC, 0.0);
+    scalarField R(BIDOMAIN_NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[BidomainV] = Vm[integrationPtI];
+        A = 0.0;
+        R = 0.0;
+
+        ::bidomainFDAManufacturedComputeVariables
+        (
+            t,
+            CONSTANTS_.data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
+
+        Im[integrationPtI] = A[BidomainIion] / CONSTANTS_[BidomainCm];
+    }
 }
 
 
@@ -168,6 +206,11 @@ void Foam::bidomainFDAManufactured::derivatives
         tissue(),
         solveVmWithinODESolver()
     );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[BidomainV] = activeVmRate();
+    }
 }
 
 // ************************************************************************* //
