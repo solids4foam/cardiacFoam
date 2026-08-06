@@ -187,6 +187,7 @@ void Foam::Gaur::solveODE
 
         step = min(step, deltaT * 1000.0);
         activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
         ::GaurcomputeVariables
@@ -204,7 +205,43 @@ void Foam::Gaur::solveODE
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+    }
 
+    clearVmRate();
+}
+
+
+void Foam::Gaur::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[cell_v] = Vm[integrationPtI]*1000.0;
+        A = 0.0;
+        R = 0.0;
+
+        ::GaurcomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm];
     }
 }
 
@@ -228,6 +265,11 @@ void Foam::Gaur::derivatives
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[cell_v] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //
