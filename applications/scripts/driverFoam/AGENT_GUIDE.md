@@ -72,6 +72,30 @@ failed step automatically. Use `step --strict` for an explicit manual rerun:
 foamctl step --strict --entry singleCell --step solve
 ```
 
+**Resuming can silently replay stale results.** If `workflow_state.json`
+already says `completed` — e.g. a leftover case directory from a previous
+session, code change, or experiment — `run --strict`/`step --strict` report
+success and exit 0 without invoking the solver at all; there is no warning.
+This was hit in practice: a sweep re-run after a solver code change reported
+the previous day's numbers as fresh, caught only because the "new" errors
+matched the old ones to six significant figures — two different code
+versions cannot agree that precisely, so identical numbers meant identical
+(non-)execution, not agreement. Any re-run intended as a genuine before/after
+comparison after a code or config change MUST pass `--fresh`, which deletes
+the resolved output directory before running so the workflow executes
+exactly as it would on a first run:
+
+```bash
+foamctl run --strict --entry singleCell --fresh
+```
+
+`--fresh` refuses to delete anything that doesn't look like driverFOAM's own
+output (no `workflow_state.json`/`sweep_manifest.json`/`run_document.json`
+found), the filesystem root, your home directory, or a path outside
+`DRIVERFOAM_ALLOWED_RUNS_ROOT` when that's set — but it does not prompt for
+confirmation, so treat any `--output-dir`/case directory you point it at as
+fully disposable and copy out anything you want to keep first.
+
 `--max-total-attempts <N>` caps the total number of step executions across the
 whole run (a retry-storm guard on top of each step's per-step `max_attempts`).
 It defaults to unbounded, preserving prior behavior.
@@ -277,6 +301,14 @@ as `completed` in `sweep_manifest.json`, leaves `failed` cases alone unless
 `--retry-failed` is passed, and refuses to proceed at all if `sweep.json` has
 changed since that output directory's manifest was created (a spec-hash
 mismatch) — use a fresh `--output-dir` or resolve the mismatch first.
+
+`--fresh` applies here too, and matters more: a solver/code change
+invalidates every case in the sweep equally, so `sweep-run --fresh` deletes
+the *entire* `--output-dir` (not just individual cases) before re-running
+everything from scratch — this also sidesteps the spec-hash-mismatch refusal
+above, since there's no old manifest left to compare against. Mutually
+exclusive with `--retry-failed` (resume-only-failures vs. wipe-everything are
+contradictory intents).
 
 See `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md`
 for the full design rationale.
