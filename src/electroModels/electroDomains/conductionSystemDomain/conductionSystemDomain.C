@@ -22,11 +22,12 @@ License
 #include "DynamicList.H"
 #include "IOdictionary.H"
 #include "PstreamReduceOps.H"
+#include "ionicVariableCompatibility.H"
 
 namespace Foam
 {
 
-defineTypeNameAndDebug(ConductionSystemDomain, 0);
+defineTypeNameAndDebug(conductionSystemDomain, 0);
 
 namespace
 {
@@ -42,15 +43,84 @@ bool selectedSolverRequiresIonicModel(const dictionary& dict)
         )
     );
 
-    return solverType != "eikonalSolver1D" && solverType != "eikonalSolver";
+    return solverType != "eikonalSolver1D"
+        && solverType != "eikonalSolver"
+        && solverType != "restitutionEikonalSolver1D";
+}
+
+
+void initialiseGraphStateField
+(
+    scalarGlobalIOField& field,
+    const scalarField& defaultValues
+)
+{
+    if (field.filePath().empty())
+    {
+        field = defaultValues;
+        return;
+    }
+
+    if (field.size() != defaultValues.size())
+    {
+        FatalErrorInFunction
+            << field.name() << " size " << field.size()
+            << " does not match graph size " << defaultValues.size()
+            << exit(FatalError);
+    }
+}
+
+
+void writeGraphStateField(scalarGlobalIOField& field)
+{
+    bool writeGood = true;
+    const Time& runTime = field.time();
+
+    field.instance() = runTime.timeName();
+
+    if (Pstream::master())
+    {
+        const fileName outputPath
+        (
+            runTime.globalPath()/field.instance()/field.name()
+        );
+
+        mkDir(outputPath.path());
+        OFstream os
+        (
+            outputPath,
+            IOstreamOption
+            (
+                runTime.writeFormat(),
+                runTime.writeCompression()
+            )
+        );
+
+        writeGood = os.good() && field.writeHeader(os) && field.writeData(os);
+
+        if (writeGood)
+        {
+            IOobject::writeEndDivider(os);
+        }
+    }
+
+    reduce(writeGood, andOp<bool>());
+
+    if (!writeGood)
+    {
+        FatalErrorInFunction
+            << "Failed writing " << field.name()
+            << exit(FatalError);
+    }
 }
 
 } // End anonymous namespace
 
 
-autoPtr<ConductionSystemDomain> ConductionSystemDomain::New
+autoPtr<conductionSystemDomain> conductionSystemDomain::New
 (
     const fvMesh& mesh,
+    const word& domainName,
     const dictionary& dict,
     scalar initialDeltaT
 )
@@ -64,29 +134,23 @@ autoPtr<ConductionSystemDomain> ConductionSystemDomain::New
         )
     );
 
-    if
-    (
-        domainType != "purkinjeGraphModel"
-     && domainType != "conductionSystemDomain"
-    )
+    if (domainType != "purkinjeGraphModel")
     {
         FatalErrorInFunction
             << "Unsupported conductionSystemDomain type '" << domainType
-            << "'. Supported graph domain types are 'purkinjeGraphModel' and "
-            << "'conductionSystemDomain'."
+            << "'. Only 'purkinjeGraphModel' is supported."
             << exit(FatalError);
     }
 
-    return autoPtr<ConductionSystemDomain>
+    return autoPtr<conductionSystemDomain>
     (
-        new ConductionSystemDomain(mesh, dict, initialDeltaT)
+        new conductionSystemDomain(mesh, domainName, dict, initialDeltaT)
     );
 }
 
 
-void ConductionSystemDomain::readGraphFile(const dictionary& dict)
+void conductionSystemDomain::readGraphFile(const dictionary& dict)
 {
-    // graphFile is optional; if not present, skip graph reading (no Purkinje network)
     if (!dict.found("graphFile"))
     {
         return;
@@ -108,6 +172,14 @@ void ConductionSystemDomain::readGraphFile(const dictionary& dict)
     );
 
     graph_.readFromDict(graphDict, reportSetup_);
+
+    const scalar purkinjeConductivity =
+        dict.lookupOrDefault<scalar>("purkinjeConductivity", 1.0);
+
+    graph_.edgeConductances *= purkinjeConductivity;
+
+    Info<< "Purkinje edge conductance multiplier: "
+        << purkinjeConductivity << nl << endl;
 
     rootNode_ = graphDict.lookupOrDefault<label>("rootNode", 0);
     terminalNodes_ = labelList(graphDict.lookup("pvjNodes"));
@@ -169,7 +241,7 @@ void ConductionSystemDomain::readGraphFile(const dictionary& dict)
 }
 
 
-void ConductionSystemDomain::readRootStimulus(const dictionary& dict)
+void conductionSystemDomain::readRootStimulus(const dictionary& dict)
 {
     if (!dict.found("rootStimulus"))
     {
@@ -197,14 +269,20 @@ void ConductionSystemDomain::readRootStimulus(const dictionary& dict)
 }
 
 
-void ConductionSystemDomain::initialiseState(const scalar initialDeltaT)
+void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 {
+    label N = graph_.nNodes;
+    label nodesPerProc = N / Pstream::nProcs();
+    localStartNode_ = Pstream::myProcNo() * nodesPerProc;
+    label endNode = (Pstream::myProcNo() == Pstream::nProcs() - 1) ? N : localStartNode_ + nodesPerProc;
+    nLocalNodes_ = endNode - localStartNode_;
+
     if (selectedSolverRequiresIonicModel(coeffsDict_))
     {
         ionicModelPtr_ = ionicModel::New
         (
             coeffsDict_,
-            graph_.nNodes,
+            nLocalNodes_,
             initialDeltaT,
             false
         );
@@ -217,45 +295,122 @@ void ConductionSystemDomain::initialiseState(const scalar initialDeltaT)
       : coeffsDict_.lookupOrDefault<scalar>("vm1DRest", -0.084)
     );
 
-    Vm1D_.setSize(graph_.nNodes, vmRest);
+    initialiseGraphStateField
+    (
+        Vm1D_,
+        scalarField(graph_.nNodes, vmRest)
+    );
+
     Iion1D_.setSize(graph_.nNodes, 0.0);
-    activationTime_.setSize(graph_.nNodes, -1.0);
+
+    scalarField initialActivationTime(graph_.nNodes, -1.0);
 
     if (rootStartTime_ < GREAT && rootStartTime_ <= SMALL)
     {
-        activationTime_[rootNode_] = rootStartTime_;
+        initialActivationTime[rootNode_] = rootStartTime_;
     }
+
+    initialiseGraphStateField(activationTime_, initialActivationTime);
 
     terminalCurrent_.setSize(terminalNodes_.size(), 0.0);
     terminalSource_.setSize(terminalNodes_.size(), 0.0);
 
     if (ionicModelPtr_.valid())
     {
-        Info<< "ConductionSystemDomain ionic model: "
+        Info<< "conductionSystemDomain ionic model: "
             << ionicModelPtr_->type() << nl << endl;
     }
 }
 
 
-void ConductionSystemDomain::initialiseOutputControls()
+void conductionSystemDomain::initialiseOutputControls()
 {
     const dictionary& ovDict = coeffsDict_.subOrEmptyDict("outputVariables");
 
-    exportVars_ = ovDict.getOrDefault<wordList>
+    wordList userExport = ovDict.getOrDefault<wordList>
     (
         "export",
-        wordList{"Vm", "Icoupling"}
+        wordList{"Vm", "IcouplingSource"}
     );
+
+    if (ionicModelPtr_.valid())
+    {
+        purkinjeModelIO::ResolvedTokens resolved = purkinjeModelIO::filterTokens
+        (
+            userExport,
+            ionicModelPtr_->ioStateNames(),
+            ionicModelPtr_->ioNumStates(),
+            ionicModelPtr_->ioAlgebraicNames(),
+            ionicModelPtr_->ioNumAlgebraic()
+        );
+
+        exportVars_ = resolved.networkTokens;
+        ionicExport_ = resolved.ionicTokens;
+
+        if (resolved.unknownTokens.size() > 0)
+        {
+            WarningInFunction
+                << "The following export variables are unknown and will be ignored: "
+                << resolved.unknownTokens << endl;
+        }
+
+        ionicExportStateIndices_.setSize(ionicExport_.size(), -1);
+        ionicExportAlgebraicIndices_.setSize(ionicExport_.size(), -1);
+
+        forAll(ionicExport_, i)
+        {
+            const word& var = ionicExport_[i];
+            bool isVmDummy = false;
+            label sIdx = -1;
+            label aIdx = -1;
+            label rIdx = -1;
+
+            ionicVariableCompatibility::resolveVariable
+            (
+                var,
+                ionicModelPtr_->ioStateNames(),
+                ionicModelPtr_->ioNumStates(),
+                ionicModelPtr_->ioAlgebraicNames(),
+                ionicModelPtr_->ioNumAlgebraic(),
+                isVmDummy,
+                sIdx,
+                aIdx,
+                rIdx
+            );
+
+            if (sIdx >= 0)
+            {
+                ionicExportStateIndices_[i] = sIdx;
+            }
+            else if (aIdx >= 0)
+            {
+                ionicExportAlgebraicIndices_[i] = aIdx;
+            }
+        }
+    }
+    else
+    {
+        exportVars_ = userExport;
+    }
 
     debugVars_ = ovDict.getOrDefault<wordList>
     (
         "debug",
         wordList()
     );
+
+    if (ovDict.found("probeNodes"))
+    {
+        probeNodes_ = ovDict.lookup("probeNodes");
+    }
+    else
+    {
+        probeNodes_ = identity(graph_.nNodes);
+    }
 }
 
 
-void ConductionSystemDomain::openOutputFile()
+void conductionSystemDomain::openOutputFile()
 {
     if (!Pstream::master())
     {
@@ -287,7 +442,7 @@ void ConductionSystemDomain::openOutputFile()
                 colNames.append("node" + Foam::name(nodeI) + "_activationTime");
             }
         }
-        else if (var == "Icoupling" || var == "IcouplingSource")
+        else if (var == "IcouplingSource")
         {
             forAll(terminalNodes_, i)
             {
@@ -313,28 +468,44 @@ void ConductionSystemDomain::openOutputFile()
 
     if (reportSetup_)
     {
-        Info<< "ConductionSystemDomain: writing to "
+        Info<< "conductionSystemDomain: writing to "
             << outDir/"purkinjeNetwork.dat" << nl << endl;
+    }
+
+    ionicOutputPtrs_.setSize(ionicExport_.size());
+    forAll(ionicExport_, i)
+    {
+        const word& var = ionicExport_[i];
+        DynamicList<word> ionicColNames(probeNodes_.size());
+        forAll(probeNodes_, pI)
+        {
+            ionicColNames.append("node" + Foam::name(probeNodes_[pI]) + "_" + var);
+        }
+
+        ionicOutputPtrs_.set
+        (
+            i,
+            purkinjeModelIO::openTimeSeries
+            (
+                outDir,
+                "purkinjeNetwork_" + var + ".dat",
+                ionicColNames
+            ).ptr()
+        );
     }
 }
 
 
-ConductionSystemDomain::ConductionSystemDomain
+conductionSystemDomain::conductionSystemDomain
 (
     const fvMesh& mesh,
+    const word& domainName,
     const dictionary& dict,
     const scalar initialDeltaT
 )
 :
     supportMesh_(mesh),
-    coeffsDict_
-    (
-        dict.found("purkinjeGraphModelCoeffs")
-      ? dict.subDict("purkinjeGraphModelCoeffs")
-      : dict.found("purkinjeNetworkModelCoeffs")
-      ? dict.subDict("purkinjeNetworkModelCoeffs")
-      : dict
-    ),
+    coeffsDict_(dict.subDict("purkinjeGraphModelCoeffs")),
     graph_(),
     solverPtr_(conductionSystemSolver::New(mesh, coeffsDict_)),
     rootNode_(0),
@@ -346,10 +517,46 @@ ConductionSystemDomain::ConductionSystemDomain
     rootIntensity_(0.0),
     chi_(coeffsDict_.get<scalar>("chi")),
     Cm_(coeffsDict_.get<scalar>("cm")),
-    Vm1D_(),
-    Iion1D_(),
-    activationTime_(),
-    ionicModelPtr_(),
+    Vm1D_
+    (
+        IOobject
+        (
+            IOobject::groupName("Vm", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
+    Iion1D_
+    (
+        IOobject
+        (
+            IOobject::groupName("ionicCurrent", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
+    activationTime_
+    (
+        IOobject
+        (
+            IOobject::groupName("activationTime", domainName),
+            supportMesh_.time().timeName(),
+            supportMesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        0
+    ),
+    ionicModelPtr_(nullptr),
+    verificationModelPtr_(nullptr),
+    localStartNode_(-1),
+    nLocalNodes_(0),
     terminalCurrent_(),
     terminalSource_(),
     outputPtr_(),
@@ -363,28 +570,50 @@ ConductionSystemDomain::ConductionSystemDomain
     readRootStimulus(coeffsDict_);
     initialiseState(initialDeltaT);
     initialiseOutputControls();
+
+    if (coeffsDict_.found("verificationModel"))
+    {
+        verificationModelPtr_ = graphVerificationModel::New
+        (
+            coeffsDict_.subDict("verificationModel")
+        );
+    }
+
+    preProcess();
     openOutputFile();
 
     if (reportSetup_)
     {
-        Info<< "ConductionSystemDomain constructed as graph Purkinje model with "
+        Info<< "conductionSystemDomain constructed as graph Purkinje model with "
             << graph_.nNodes << " nodes and " << graph_.nEdges << " edges."
             << nl << endl;
     }
 }
 
 
-void ConductionSystemDomain::advance
-(
-    scalar t0,
-    scalar dt
-)
+void conductionSystemDomain::preProcess()
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->preProcess
+        (
+            time(),
+            ionicModelPtr_.valid() ? &ionicModelPtr_() : nullptr,
+            Vm1D_,
+            nodeLocations_,
+            localStartNode_
+        );
+    }
+}
+
+
+void conductionSystemDomain::advance(scalar t0, scalar dt)
 {
     solverPtr_->advance(*this, t0, dt);
 }
 
 
-void ConductionSystemDomain::assembleAppliedCurrent
+void conductionSystemDomain::assembleAppliedCurrent
 (
     scalar t0,
     scalarField& appliedCurrent
@@ -404,7 +633,7 @@ void ConductionSystemDomain::assembleAppliedCurrent
 }
 
 
-void ConductionSystemDomain::reportAdvanceDiagnostics
+void conductionSystemDomain::reportAdvanceDiagnostics
 (
     scalar t0,
     scalar dt
@@ -433,7 +662,7 @@ void ConductionSystemDomain::reportAdvanceDiagnostics
 }
 
 
-void ConductionSystemDomain::terminalVm(scalarField& values) const
+void conductionSystemDomain::terminalVm(scalarField& values) const
 {
     values.setSize(terminalNodes_.size());
     values = 0.0;
@@ -445,7 +674,7 @@ void ConductionSystemDomain::terminalVm(scalarField& values) const
 }
 
 
-void ConductionSystemDomain::terminalActivationTime(scalarField& values) const
+void conductionSystemDomain::terminalActivationTime(scalarField& values) const
 {
     values.setSize(terminalNodes_.size());
     values = -1.0;
@@ -457,7 +686,7 @@ void ConductionSystemDomain::terminalActivationTime(scalarField& values) const
 }
 
 
-void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values)
+void conductionSystemDomain::setTerminalActivationTime(const scalarField& values)
 {
     if (values.size() != terminalNodes_.size())
     {
@@ -468,12 +697,21 @@ void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values
             << exit(FatalError);
     }
 
+    const bool acceptsRepeated =
+        solverPtr_->acceptsRepeatedTerminalActivationTimes();
+
     forAll(terminalNodes_, i)
     {
         if (values[i] >= 0.0)
         {
             const label nodeI = terminalNodes_[i];
-            if (activationTime_[nodeI] < 0.0 || values[i] < activationTime_[nodeI])
+
+            if
+            (
+                activationTime_[nodeI] < 0.0
+             || values[i] < activationTime_[nodeI]
+             || (acceptsRepeated && values[i] > activationTime_[nodeI] + SMALL)
+            )
             {
                 activationTime_[nodeI] = values[i];
             }
@@ -482,7 +720,7 @@ void ConductionSystemDomain::setTerminalActivationTime(const scalarField& values
 }
 
 
-void ConductionSystemDomain::setTerminalCoupling
+void conductionSystemDomain::setTerminalCoupling
 (
     const scalarField& terminalCurrent,
     const scalarField& terminalSource
@@ -511,12 +749,32 @@ void ConductionSystemDomain::setTerminalCoupling
 }
 
 
-void ConductionSystemDomain::write()
+void conductionSystemDomain::end()
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->postProcess
+        (
+            time(),
+            ionicModelPtr_.valid() ? &ionicModelPtr_() : nullptr,
+            Vm1D_,
+            nodeLocations_,
+            localStartNode_
+        );
+    }
+}
+
+
+void conductionSystemDomain::write()
 {
     if (!time().outputTime())
     {
         return;
     }
+
+    writeGraphStateField(Vm1D_);
+    writeGraphStateField(Iion1D_);
+    writeGraphStateField(activationTime_);
 
     DynamicList<scalar> values;
     for (const word& var : exportVars_)
@@ -542,7 +800,7 @@ void ConductionSystemDomain::write()
                 values.append(activationTime_[i]);
             }
         }
-        else if (var == "Icoupling" || var == "IcouplingSource")
+        else if (var == "IcouplingSource")
         {
             forAll(terminalSource_, i)
             {
@@ -563,6 +821,48 @@ void ConductionSystemDomain::write()
         purkinjeModelIO::writeRow(outputPtr_.ref(), time().value(), values);
     }
 
+    PtrList<scalarField> ionicFields(ionicExport_.size());
+
+    if (ionicModelPtr_.valid() && ionicExport_.size() > 0)
+    {
+        const auto* statesPtr = ionicModelPtr_->ioStatesPtr();
+        const auto* algebraicPtr = ionicModelPtr_->ioAlgebraicPtr();
+
+        forAll(ionicExport_, i)
+        {
+            scalarField varField(graph_.nNodes, 0.0);
+            label sIdx = ionicExportStateIndices_[i];
+            label aIdx = ionicExportAlgebraicIndices_[i];
+
+            if (sIdx >= 0 && statesPtr)
+            {
+                forAll(varField, nodeI)
+                {
+                    varField[nodeI] = (*statesPtr)[nodeI][sIdx];
+                }
+            }
+            else if (aIdx >= 0 && algebraicPtr)
+            {
+                forAll(varField, nodeI)
+                {
+                    varField[nodeI] = (*algebraicPtr)[nodeI][aIdx];
+                }
+            }
+
+            ionicFields.set(i, new scalarField(varField));
+
+            if (Pstream::master() && ionicOutputPtrs_.set(i))
+            {
+                DynamicList<scalar> ionicValues(probeNodes_.size());
+                forAll(probeNodes_, pI)
+                {
+                    ionicValues.append(varField[probeNodes_[pI]]);
+                }
+                purkinjeModelIO::writeRow(ionicOutputPtrs_[i], time().value(), ionicValues);
+            }
+        }
+    }
+
     if (Pstream::master())
     {
         const fileName vtkDir
@@ -573,6 +873,34 @@ void ConductionSystemDomain::write()
         char buf[32];
         snprintf(buf, sizeof(buf), "purkinjeNetwork_%06d.vtk", int(time().timeIndex()));
         const word vtkFilename(buf);
+
+        wordList diagNames;
+        PtrList<scalarField> diagFields;
+        if (solverPtr_.valid())
+        {
+            solverPtr_->diagnosticFields(diagNames, diagFields);
+        }
+
+        const label nIonic = ionicExport_.size();
+        const label nDiag = diagNames.size();
+
+        wordList vtkNames(1 + nIonic + nDiag);
+        PtrList<scalarField> vtkFields(1 + nIonic + nDiag);
+
+        vtkNames[0] = "activationTime";
+        vtkFields.set(0, new scalarField(activationTime_));
+
+        forAll(ionicExport_, i)
+        {
+            vtkNames[1 + i] = ionicExport_[i];
+            vtkFields.set(1 + i, new scalarField(ionicFields[i]));
+        }
+
+        forAll(diagNames, i)
+        {
+            vtkNames[1 + nIonic + i] = diagNames[i];
+            vtkFields.set(1 + nIonic + i, new scalarField(diagFields[i]));
+        }
 
         purkinjeModelIO::writeVTK
         (
@@ -585,7 +913,9 @@ void ConductionSystemDomain::write()
             Vm1D_,
             Iion1D_,
             terminalNodes_,
-            terminalSource_
+            terminalSource_,
+            vtkFields,
+            vtkNames
         );
 
         pvdTimes_.append(time().value());

@@ -16,37 +16,20 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::EikonalSolver1D
+    eikonalSolver1D
 
 Description
-    Eikonal-equation activation-time solver for the 1D conduction system
-    graph (Purkinje network).
-
-    Computes nodal activation times by propagating a wavefront at a
-    prescribed conduction velocity c0 through the graph adjacency list.
-    No ionic model is required — the single parameter c0 [m/s] is read
-    from the solver coefficients sub-dictionary.
-
-    This solver is the 1D counterpart of EikonalSolver (3D myocardium)
-    and is registered in the conductionSystemSolver runtime table
-    under the key "eikonalSolver".
-
-Usage
-    In electroProperties:
-    \verbatim
-    conductionSystemSolver  eikonalSolver;
-    eikonalSolverCoeffs
-    {
-        c0  [0 1 -1 0 0 0 0] 0.8;  // conduction velocity [m/s]
-    }
-    \endverbatim
+    Eikonal-equation activation-time solver for the 1D conduction system graph.
 
 SourceFiles
     eikonalSolver1D.C
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef EikonalSolver1D_H
-#define EikonalSolver1D_H
+#ifndef eikonalSolver1D_H
+#define eikonalSolver1D_H
 
 #include "dimensionedScalar.H"
 #include "conductionSystemSolver.H"
@@ -57,7 +40,7 @@ SourceFiles
 namespace Foam
 {
 
-class EikonalSolver1D
+class eikonalSolver1D
 :
     public conductionSystemSolver
 {
@@ -67,11 +50,11 @@ public:
 
     OverrideTypeName("eikonalSolver1D");
 
-    EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs);
+    eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs);
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) override;

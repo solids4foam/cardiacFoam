@@ -1,0 +1,67 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+myocardiumSolver singleCellSolver;
+singleCellSolverCoeffs
+{
+
+    // Cell model selection
+
+    ionicModel    TNNP;
+    tissue        epicardialCells;
+
+    ionicConstantOverrides
+    {
+        global
+        {
+            set   { K_o 8.0; }
+            scale { g_Na 0.6; g_CaL 0.6; g_K1 2.0; P_NaK 0.5; }
+        }
+    }
+
+    // Time integration settings
+
+    solver          RKF45;
+    initialODEStep  1e-5;
+    maxSteps        1000000000;
+    absTol          1e-6;
+    relTol          1e-4;
+
+
+    // Stimulus protocol
+    singleCellStimulus
+    {
+        stim_start      20;
+        stim_duration   0.5;
+        stim_amplitude  60;
+        stim_period_S1  1000;
+        nstim1          3;
+        stim_period_S2  0;
+        nstim2          0;
+    }
+
+    writeAfterTime  0;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm i_Na i_CaL i_K1 i_NaK);
+            debug  (Vm);
+        }
+    }
+
+}

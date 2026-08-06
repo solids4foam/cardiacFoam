@@ -34,6 +34,8 @@ SourceFiles
 #define sequentialElectroMechanical_H
 
 #include "electroMechanicalModel.H"
+#include "activeTensionModel.H"
+#include "electromechanicalVerificationModel.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -55,22 +57,38 @@ class sequentialElectroMechanical
     // Private data
 
         //- Active tension field registered on the solid mesh.
-        //  Populated each time step from the electro model's Cai field
+        //  Populated each time step by activeTensionModel::calculateTension()
         //  and picked up by electroMechanicalLaw via objectRegistry lookup.
         volScalarField Ta_;
 
-        //- Scaling factor: Ta = kTa * max(Cai - CaiThreshold, 0)
-        //  Units: [Pa / Cai-unit]. The ionic model returns Cai in its
-        //  native units (e.g. mM for TNNP). This factor converts to stress.
-        //  This simple linear model is a placeholder; it will be replaced by
-        //  a dedicated runtime-selectable active tension model in the future.
-        const dimensionedScalar kTa_;
+        //- Scaling factor applied to activeTensionModel output before writing
+        //  into Ta_.  Active tension models return kPa; Ta_ is in Pa.
+        //  Default: 1e3 (kPa -> Pa).  Set to 1.0 for dimensionless models.
+        scalar TaScale_;
 
-        //- Threshold Cai below which no active tension is generated
-        const dimensionedScalar CaiThreshold_;
+        //- Per-cell fibre stretch passed to calculateTension().
+        //  lambda = sqrt(f0.C.f0) computed from the solid deformation
+        //  gradient by updateLambda(); 1.0 in the undeformed reference state.
+        scalarField lambdaField_;
+
+        //- Runtime-selectable active tension model
+        autoPtr<activeTensionModel> activeTensionModel_;
+
+        //- Optional coupled electromechanics verification model
+        autoPtr<electromechanicalVerificationModel> verificationModelPtr_;
+
+        //- Cached requirements declared by the active tension model at construction
+        activeTensionModel::Requirements activeTensionRequirements_;
 
 
     // Private Member Functions
+
+        //- Update lambdaField_ (fibre stretch) from the solid deformation.
+        //  lambda = sqrt(f0 & C & f0) = mag(F & f0), with F = I + grad(D)^T.
+        //  Uses the displacement from the previous converged step (explicit
+        //  coupling), consistent with the sequential scheme. Falls back to
+        //  1.0 if D or f0 are not available on the solid mesh.
+        void updateLambda();
 
         //- Disallow default bitwise copy construct
         sequentialElectroMechanical(const sequentialElectroMechanical&);

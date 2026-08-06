@@ -71,16 +71,32 @@ jobs:
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
-      - name: Tutorial smoke regression
-        if: matrix.mode == 'lightweight'
+      - name: Tutorial regression
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
 
-          unset SOLIDS4FOAM_INST_DIR
-          export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
+            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
+          else
+            unset SOLIDS4FOAM_INST_DIR
+            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          fi
 
-          ./tutorials/Alltest-regression smoke
+          CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.mode }}" ./tutorials/Alltest-regression
+
+      - name: Real foamDictionary mutation tests
+        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2512' && matrix.mode == 'lightweight'
+        shell: bash -l {0}
+        run: |
+          source ${{ matrix.container-image.source }}
+          python3 -m pip install -e applications/scripts/driverFoam pytest
+          cd applications/scripts/driverFoam
+          REQUIRE_FOAMDICTIONARY=1 python3 -m pytest \
+            openfoam_driver/tests/test_apply_overrides.py::test_apply_fvSolution_edits_file \
+            openfoam_driver/tests/test_apply_overrides.py::test_apply_region_fvSolution_edits_file \
+            -q -rs
 
       - name: PETSc sanity check
         shell: bash -l {0}

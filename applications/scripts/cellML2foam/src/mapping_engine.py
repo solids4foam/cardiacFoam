@@ -2,6 +2,7 @@ import os
 import re
 import sys
 from collections import OrderedDict
+from pathlib import Path
 
 DEBUG = False
 
@@ -114,7 +115,7 @@ def load_state_map(fname="state_map.txt"):
     mapping = {}
     if not os.path.exists(fname):
         return None
-        
+
     with open(fname) as f:
         for line in f:
             if line.strip():
@@ -302,7 +303,7 @@ def emit_openfoam_algebraic_tail(discovered=None):
         iion_name = discovered['Iion']
         iion_map = f"\n    // Automatically discovered ionic current mapping\n    ALGEBRAIC[Iion_cm] = ALGEBRAIC[{iion_name}];\n"
     elif discovered and discovered.get('Vm'):
-        # If we have Vm but not an explicit Iion, 
+        # If we have Vm but not an explicit Iion,
         # we can't safely automate the sum, but we can provide a hint.
         iion_map = f"\n    // TODO: Define ALGEBRAIC[Iion_cm] based on {discovered['Vm']} derivative\n"
 
@@ -376,9 +377,10 @@ def build_final_c(init_block, computeVariables_block, init_values_block, discove
 def run_mapping(input_c, output_c, mapping=None, discovered=None, verbose: bool = False):
     global DEBUG
     DEBUG = verbose
+    output_c = Path(output_c)
     model_name, year = parse_model_from_output(output_c)
     model_id = f"{model_name}_{year}"
-    output_h = f"{model_id}Names.H"
+    output_h = output_c.with_name(f"{model_id}Names.H")
 
     with open(input_c) as f:
         src = f.read()
@@ -415,7 +417,7 @@ def run_mapping(input_c, output_c, mapping=None, discovered=None, verbose: bool 
 
     with open(output_c, "w") as f:
         f.write(LICENSE_HEADER)
-        f.write(f'#include "{output_h}"\n')
+        f.write(f'#include "{output_h.name}"\n')
         f.write('#include "stimulusIO.H"\n\n')
         emit_names_array(f, f"{model_name}STATES_NAMES", "STATES", states)
         emit_names_array(f, f"{model_name}ALGEBRAIC_NAMES", "ALGEBRAIC", algebraic)

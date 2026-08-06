@@ -23,7 +23,7 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.2;
+endTime    0.2;
 
 deltaT    0.000140174;
 
@@ -47,3 +47,5 @@ runTimeModifiable false;
 
 
 // ************************************************************************* //
+
+libs            ("libverificationModels.so");

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        parallel)
+            parallelRun=true
+            ;;
+    esac
+done
+
+if [ -f constant/polyMesh/points ] \
+   && [ -f constant/polyMesh/faces ] \
+   && [ -f constant/polyMesh/owner ] \
+   && [ -f constant/polyMesh/neighbour ]; then
+    echo "Using existing converted polyMesh in constant/polyMesh."
+else
+    echo "Fatal Error: Missing heart polyMesh in constant/polyMesh! Please provide the mesh." >&2
+    exit 1
+fi
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+
+if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
+    echo "Skipping pseudoECG plot generation (CF_SKIP_PLOTS=1)."
+else
+    python3 plot_pseudo_ecg.py --case-dir .
+fi

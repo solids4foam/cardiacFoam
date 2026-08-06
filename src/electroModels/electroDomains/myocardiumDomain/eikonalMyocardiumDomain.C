@@ -21,6 +21,10 @@ License
 #include "error.H"
 #include "DynamicList.H"
 #include "Switch.H"
+#include "fixedValueFvPatchFields.H"
+#include "conductivityFieldIO.H"
+#include "eikonalVerificationModel.H"
+#include "zeroGradientFvPatchFields.H"
 
 namespace Foam
 {
@@ -68,6 +72,58 @@ const fvMesh& resolveMyocardiumMesh
       ? subsetPtr->subMesh()
       : supportMesh
     );
+}
+
+
+bool manufacturedEikonalVerificationEnabled(const dictionary& electroProperties)
+{
+    const dictionary* verificationDictPtr =
+        electroProperties.findDict("verificationModel");
+
+    if (!verificationDictPtr)
+    {
+        return false;
+    }
+
+    const word modelType =
+        verificationDictPtr->lookupOrDefault<word>("type", "none");
+
+    return
+        modelType != "none"
+     && verificationDictPtr->lookupOrDefault<Switch>("enabled", true);
+}
+
+
+wordList activationTimePatchTypes
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties
+)
+{
+    wordList patchTypes
+    (
+        mesh.boundary().size(),
+        zeroGradientFvPatchScalarField::typeName
+    );
+
+    if (!manufacturedEikonalVerificationEnabled(electroProperties))
+    {
+        return patchTypes;
+    }
+
+    forAll(patchTypes, patchI)
+    {
+        if (mesh.boundaryMesh()[patchI].type() == "empty")
+        {
+            patchTypes[patchI] = "empty";
+        }
+        else
+        {
+            patchTypes[patchI] = fixedValueFvPatchScalarField::typeName;
+        }
+    }
+
+    return patchTypes;
 }
 
 
@@ -133,58 +189,25 @@ void collectActivationConstraints
 } // End anonymous namespace
 
 
-tmp<volTensorField> EikonalMyocardiumDomain::initialiseConductivity() const
+tmp<volTensorField> eikonalMyocardiumDomain::initialiseConductivity() const
 {
-    tmp<volTensorField> tresult
+    return readConductivityField
     (
-        new volTensorField
-        (
-            IOobject
-            (
-                "conductivity",
-                mesh().time().timeName(),
-                mesh(),
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh(),
-            dimensionedTensor
-            (
-                "zero",
-                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                tensor::zero
-            )
-        )
-    );
-    volTensorField& result = tresult.ref();
-
-    if (!result.headerOk())
-    {
-        if (electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+        mesh(),
+        supportMesh_,
+        meshSubsetPtr_.valid() ? &meshSubsetPtr_() : nullptr,
+        electroProperties_,
+        conductivityFieldSpec
         {
-            Info<< "\nconductivity not found on disk, using conductivity from "
-                << electroProperties_.name()
-                << nl << endl;
+            "Conductivity",
+            "conductivity",
+            "conductivity"
         }
-
-        result =
-            dimensionedTensor
-            (
-                dimensionedSymmTensor
-                (
-                    "conductivity",
-                    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                    electroProperties_
-                )
-              & tensor(I)
-            );
-    }
-
-    return tresult;
+    );
 }
 
 
-EikonalMyocardiumDomain::EikonalMyocardiumDomain
+eikonalMyocardiumDomain::eikonalMyocardiumDomain
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties
@@ -196,15 +219,19 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
     (
         IOobject
         (
-            "psi",
+            "activationTime",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedScalar("psi", dimTime, -1.0),
-        "zeroGradient"
+        dimensionedScalar("activationTime", dimTime, -1.0),
+        activationTimePatchTypes
+        (
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            electroProperties
+        )
     ),
     Vm_
     (
@@ -213,8 +240,8 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
             "Vm",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -80.0),
@@ -227,8 +254,8 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
             "externalStimulusCurrent",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
@@ -247,7 +274,11 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
         "G",
         sqrt
         (
-            (gradActivationTime_ & w_)
+            max
+            (
+                gradActivationTime_ & w_,
+                dimensionedScalar("zero", dimTime, 0.0)
+            )
           + dimensionedScalar("smallG", dimTime, SMALL)
         )
     ),
@@ -259,7 +290,8 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
     eikonalAdvectionDiffusionApproach_
     (
         electroProperties.lookup("eikonalAdvectionDiffusionApproach")
-    )
+    ),
+    verificationModelPtr_()
 {
     const boundBox bb
     (
@@ -286,15 +318,114 @@ EikonalMyocardiumDomain::EikonalMyocardiumDomain
      && meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
     )
     {
-        Info<< "Constructed EikonalMyocardiumDomain on submesh '"
+        Info<< "Constructed eikonalMyocardiumDomain on submesh '"
             << mesh().name() << "' from cellZone '"
             << electroProperties.lookupOrDefault<word>("cellZone", word::null)
             << "'." << nl << endl;
     }
+
+    verificationModelPtr_ =
+        eikonalVerificationModel::New
+        (
+            electroProperties_,
+            mesh(),
+            conductivity_,
+            chi_,
+            Cm_,
+            c0_,
+            eikonalAdvectionDiffusionApproach_
+        );
 }
 
 
-void EikonalMyocardiumDomain::advance
+eikonalMyocardiumDomain::~eikonalMyocardiumDomain() = default;
+
+
+void eikonalMyocardiumDomain::preInitialiseFromSeeds
+(
+    const labelList& constrainedCells,
+    const scalarField& constrainedValues
+)
+{
+    scalarField& T = activationTime_.primitiveFieldRef();
+
+    // Upper-bound CV from the fastest propagation direction of M
+    scalar maxMdiag = 0;
+    forAll(M_, cellI)
+    {
+        maxMdiag = max(maxMdiag, max(M_[cellI].xx(), max(M_[cellI].yy(), M_[cellI].zz())));
+    }
+    reduce(maxMdiag, maxOp<scalar>());
+    const scalar CV_est = c0_.value() * Foam::sqrt(maxMdiag + SMALL);
+
+    // Seed cells keep their constrained values; all others go to GREAT
+    forAll(T, cellI) { if (T[cellI] < 0) T[cellI] = GREAT; }
+    activationTime_.correctBoundaryConditions();
+
+    // Bellman-Ford relay: propagate minimum arrival time across face connectivity.
+    // Each pass reduces T for cells reachable from seeds; parallel-safe because
+    // correctBoundaryConditions syncs processor patches after every pass.
+    const vectorField& cc = mesh().cellCentres();
+    const label nIntFaces  = mesh().nInternalFaces();
+    const labelList& own   = mesh().faceOwner();
+    const labelList& nei   = mesh().faceNeighbour();
+
+    bool changed = true;
+    while (changed)
+    {
+        changed = false;
+        for (label faceI = 0; faceI < nIntFaces; ++faceI)
+        {
+            const label o = own[faceI];
+            const label n = nei[faceI];
+            const scalar dt = mag(cc[o] - cc[n]) / CV_est;
+
+            if (T[o] < GREAT/2 && T[o] + dt < T[n]) { T[n] = T[o] + dt; changed = true; }
+            if (T[n] < GREAT/2 && T[n] + dt < T[o]) { T[o] = T[n] + dt; changed = true; }
+        }
+
+        forAll(activationTime_.boundaryField(), patchI)
+        {
+            const fvPatchScalarField& pT = activationTime_.boundaryField()[patchI];
+            if (pT.coupled())
+            {
+                const coupledFvPatchScalarField& cpT = refCast<const coupledFvPatchScalarField>(pT);
+                tmp<scalarField> tneiT = cpT.patchNeighbourField();
+                const scalarField& nT = tneiT();
+
+                const labelUList& faceCells = pT.patch().faceCells();
+                tmp<vectorField> tdelta = pT.patch().delta();
+                const vectorField& delta = tdelta();
+
+                forAll(faceCells, faceI)
+                {
+                    const label cellI = faceCells[faceI];
+                    const scalar dt = mag(delta[faceI]) / CV_est;
+
+                    if (nT[faceI] < GREAT/2 && nT[faceI] + dt < T[cellI])
+                    {
+                        T[cellI] = nT[faceI] + dt;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        activationTime_.correctBoundaryConditions();
+        reduce(changed, orOp<bool>());
+    }
+
+    // Re-enforce exact seed values (BF may have relaxed them from a closer seed)
+    forAll(constrainedCells, i) { T[constrainedCells[i]] = constrainedValues[i]; }
+
+    // Cells with no path to any seed (disconnected regions) → restore sentinel
+    forAll(T, cellI) { if (T[cellI] >= GREAT/2) T[cellI] = -1; }
+
+    activationTime_.correctBoundaryConditions();
+}
+
+
+void eikonalMyocardiumDomain::advance
 (
     scalar t0,
     scalar dt
@@ -304,7 +435,7 @@ void EikonalMyocardiumDomain::advance
 }
 
 
-void EikonalMyocardiumDomain::advance
+void eikonalMyocardiumDomain::advance
 (
     scalar t0,
     scalar dt,
@@ -313,7 +444,6 @@ void EikonalMyocardiumDomain::advance
 {
     (void)t0;
     (void)dt;
-    (void)pimplePtr;
 
     scalarField& activationValues = activationTime_.primitiveFieldRef();
     forAll(stimulusCellIDs_, i)
@@ -321,6 +451,11 @@ void EikonalMyocardiumDomain::advance
         activationValues[stimulusCellIDs_[i]] = 0.0;
     }
     activationTime_.correctBoundaryConditions();
+
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->applyConstraints(activationTime_);
+    }
 
     labelList constrainedCells;
     scalarField constrainedValues;
@@ -331,58 +466,112 @@ void EikonalMyocardiumDomain::advance
         constrainedValues
     );
 
+    preInitialiseFromSeeds(constrainedCells, constrainedValues);
+
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
-    gradActivationTime_ = fvc::grad(activationTime_);
-    w_ = M_ & gradActivationTime_;
-    G_ = sqrt((gradActivationTime_ & w_) + smallG);
-
-    if (eikonalAdvectionDiffusionApproach_)
+    tmp<volScalarField> tSmms;
+    if (verificationModelPtr_.valid() && verificationModelPtr_->enabled())
     {
-        a_ = w_/G_;
-        u_ = c0_*a_;
-        phiU_ = (fvc::interpolate(u_) & mesh().Sf());
-        divPhiU_ = fvc::div(phiU_);
-
-        fvScalarMatrix activationEqn
-        (
-           -fvm::laplacian(M_, activationTime_)
-          + fvm::div(phiU_, activationTime_)
-          + fvm::SuSp(-divPhiU_, activationTime_)
-         == one
-          + fvc::div(phiU_, activationTime_)
-          - divPhiU_*activationTime_
-          - c0_*G_
-        );
-
-        activationEqn.setValues(constrainedCells, constrainedValues);
-        activationEqn.solve("asymmetric_" + activationTime_.name());
+        tSmms = verificationModelPtr_->sourceTerm();
     }
     else
     {
-        fvScalarMatrix activationEqn
+        tSmms.reset
         (
-           -fvm::laplacian(M_, activationTime_)
-          + c0_*G_
-         == one
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Smms",
+                    mesh().time().timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh(),
+                dimensionedScalar("Smms", dimless, 0.0)
+            )
         );
+    }
+    const volScalarField& Smms = tSmms();
 
-        activationEqn.relax();
-        activationEqn.setValues(constrainedCells, constrainedValues);
-        activationEqn.solve();
+    auto solveActivationEqn = [&]()
+    {
+        gradActivationTime_ = fvc::grad(activationTime_);
+        w_ = M_ & gradActivationTime_;
+        // Guard against negative dot product: M is positive-definite so
+        // dot(grad, M*grad) >= 0 analytically, but NaN/Inf from a stalled
+        // inner solve or degenerate mesh cells can violate this numerically.
+        G_ = sqrt(max(gradActivationTime_ & w_, dimensionedScalar("zero", dimTime, 0.0)) + smallG);
+
+        if (eikonalAdvectionDiffusionApproach_)
+        {
+            a_ = w_/G_;
+            u_ = c0_*a_;
+            phiU_ = (fvc::interpolate(u_) & mesh().Sf());
+            divPhiU_ = fvc::div(phiU_);
+
+            fvScalarMatrix activationEqn
+            (
+               -fvm::laplacian(M_, activationTime_)
+              + fvm::div(phiU_, activationTime_)
+              + fvm::SuSp(-divPhiU_, activationTime_)
+             == one
+              + fvc::div(phiU_, activationTime_)
+              - divPhiU_*activationTime_
+              - c0_*G_
+              + Smms
+            );
+
+            // Under-relax the nonlinear outer loop: G, phiU and divPhiU are
+            // lagged (recomputed from psi each outer iteration), so without
+            // relaxation the deferred-correction fixed point is not contractive
+            // and the outer residual drifts upwards.  relax() also boosts
+            // diagonal dominance, which stabilises the unpreconditioned solve.
+            activationEqn.relax();
+            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.solve("asymmetric_" + activationTime_.name());
+        }
+        else
+        {
+            fvScalarMatrix activationEqn
+            (
+               -fvm::laplacian(M_, activationTime_)
+              + c0_*G_
+             == one
+              + Smms
+            );
+
+            activationEqn.relax();
+            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.solve();
+        }
+    };
+
+    if (pimplePtr)
+    {
+        while (pimplePtr->loop())
+        {
+            solveActivationEqn();
+        }
+    }
+    else
+    {
+        solveActivationEqn();
     }
 }
 
 
-scalar EikonalMyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
+scalar eikonalMyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 {
     (void)maxCo;
     return 1.0;
 }
 
 
-bool EikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
+bool eikonalMyocardiumDomain::applyModelTimeControls(Time& runTime)
 {
     InfoInFunction << "Setting deltaT and endTime to 1.0" << endl;
     runTime.setDeltaT(1.0);
@@ -391,21 +580,33 @@ bool EikonalMyocardiumDomain::applyModelTimeControls(Time& runTime) const
 }
 
 
-void EikonalMyocardiumDomain::write()
+bool eikonalMyocardiumDomain::shouldPostProcess() const
+{
+    return
+        verificationModelPtr_.valid()
+     && verificationModelPtr_->shouldPostProcess();
+}
+
+
+void eikonalMyocardiumDomain::postProcess()
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->postProcess(activationTime_);
+    }
+}
+
+
+void eikonalMyocardiumDomain::write()
 {
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
-
         writeMappedCellField(activationTime_, supportMesh_, cellMap);
-        writeMappedCellField(Vm_, supportMesh_, cellMap);
-        writeMappedCellField(sourceField_, supportMesh_, cellMap);
         return;
     }
 
     activationTime_.write();
-    Vm_.write();
-    sourceField_.write();
 }
 
 } // End namespace Foam

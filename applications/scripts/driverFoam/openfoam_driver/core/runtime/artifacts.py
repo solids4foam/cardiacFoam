@@ -1,0 +1,153 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     artifacts
+#
+# Description
+#     Predicts generated data artifacts based on workflow specifications.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
+"""Predict the data artifacts a tutorial run will (or did) produce.
+
+The predictor is the single agent-facing answer to "what raw data does this
+case produce?". It is consumed by the engine (to write
+``artifacts_manifest.json`` alongside ``run_manifest.json``) and by agents
+exploring a case ahead of a real run.
+
+Design discipline (plan v2 section 3):
+
+* **Compose, do not branch.** Solver-aware logic SHOULD live in existing
+  catalogs; the predictor reads them rather than reimplementing branching.
+  Today the predictor actively consumes
+  ``ionic_model_catalog.IONIC_MODEL_CATALOG`` (state + algebraic variables),
+  ``specs.common.detect_ionic_export_list`` (user-declared exports),
+  ``active_tension_catalog.ACTIVE_TENSION_MODEL_CATALOG`` (AT state variables,
+  fired when ``activeTensionModel`` block is present), and
+  ``utility_catalog.UTILITY_CATALOG.produces`` (pre/post-solve utility outputs
+  declared in ``workflow_dag`` steps).
+
+* **Never raise on shape divergence.** Agents may call the predictor before
+  ``apply_case`` has run, or against a partly-mutated case. Missing files,
+  unknown solver names, and unknown ionic models all degrade to "return
+  what we know" rather than throwing.
+* **Static override wins.** A tutorial that knows it produces something the
+  predictor cannot derive (e.g. analytic error norms for a manufactured
+  solution) declares it via ``spec.metadata['expected_artifacts']``; on
+  ``artifact_id`` collision the static entry replaces the derived one.
+
+Adding a new solver means: write a ``_predict_<solver>`` handler and register
+it in :data:`_SOLVER_HANDLERS`. Nothing else in this module branches on the
+solver name.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Callable, Iterable
+
+from ...utility_catalog import UTILITY_CATALOG, ProducesEntry
+from .models import DataArtifact, TutorialSpec
+
+
+
+
+def _produces_entry_to_artifact(
+    entry: "ProducesEntry",
+    utility_name: str,
+) -> DataArtifact:
+    """Translate a utility manifest's ProducesEntry into a DataArtifact.
+
+    `produced_by` defaults to the utility name when the manifest leaves
+    it blank — agents need to attribute the artifact regardless.
+    """
+    return DataArtifact(
+        artifact_id=entry.artifact_id,
+        path_pattern=entry.path_pattern,
+        format=entry.format,
+        variables=entry.variables,
+        description=entry.description,
+        produced_by=entry.produced_by or utility_name,
+        optional=entry.optional,
+        time_indexed=entry.time_indexed,
+    )
+
+
+def _predict_from_workflow_utilities(spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+    """Walk spec.metadata['workflow_dag'].steps; for each step whose
+    `command` matches a utility in UTILITY_CATALOG, emit its `produces`
+    entries as DataArtifacts.
+
+    Returns ``()`` when the spec has no workflow_dag, no steps, or no
+    matching utility commands. Unknown command names (e.g. OpenFOAM
+    built-ins like ``blockMesh``) are silently skipped.
+    """
+    dag = spec.metadata.get("workflow_dag") if spec.metadata else None
+    if not dag:
+        return ()
+    steps = dag.get("steps", ())
+    if not steps:
+        return ()
+    derived: list[DataArtifact] = []
+    for step in steps:
+        command = step.get("command")
+        if not command or command not in UTILITY_CATALOG:
+            continue
+        manifest = UTILITY_CATALOG[command]
+        for produce in manifest.produces:
+            derived.append(_produces_entry_to_artifact(produce, command))
+    return tuple(derived)
+
+
+def _merge_static_override(
+    derived: tuple[DataArtifact, ...],
+    static: Iterable[DataArtifact],
+) -> tuple[DataArtifact, ...]:
+    by_id: dict[str, DataArtifact] = {a.artifact_id: a for a in derived}
+    for override in static:
+        by_id[override.artifact_id] = override
+    return tuple(by_id.values())
+
+
+def predict_data_artifacts(
+    case_root: Path,
+    spec: TutorialSpec,
+) -> tuple[DataArtifact, ...]:
+    """Return the artifacts ``case_root`` will (or does) produce.
+
+    Composes:
+
+    * the static ``spec.metadata['expected_artifacts']`` override (if any),
+    * solver-specific derivations driven by ``constant/electroProperties``,
+      sourced from the ionic-model and active-tension catalogs.
+
+    Never raises. Returns ``()`` when nothing can be derived and no static
+    override is supplied.
+    """
+    from openfoam_driver.core.plugin_interface import get_active_plugin
+    
+    static_override = spec.metadata.get("expected_artifacts", ()) if spec.metadata else ()
+    static_tuple = tuple(static_override)
+
+    plugin_derived = get_active_plugin().predict_data_artifacts(case_root, spec)
+    utility_derived = _predict_from_workflow_utilities(spec)
+    
+    derived = plugin_derived + utility_derived
+    
+    return _merge_static_override(derived, static_tuple)

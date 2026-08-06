@@ -16,15 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::conductionGraph
+    conductionGraph
 
 Description
-    Value type holding 1D graph topology for a conduction network:
-    nodes, edges, lengths, and conductances. Loaded from a dictionary
-    containing a 'conductionEdges' list of (nodeA nodeB length conductance) tuples.
+    Value type holding 1D graph topology for a conduction network.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductionGraph_H
@@ -48,12 +46,15 @@ struct conductionGraph
     labelList   edgeNodeB;
     scalarField edgeLengths;
     scalarField edgeConductances;
+    scalarField pvjResistances;
 
-    // Tree topology rooted at node 0 (built during readFromDict).
-    // Required by Monodomain1DSolver (Hines algorithm).
-    labelList   parentList;    // parent[i] = parent node (-1 for root)
-    labelList   orderList;     // BFS order root→leaves (back-substitution pass)
-    labelList   reverseOrder;  // BFS order leaves→root (forward-elimination pass)
+    labelList   parentList;
+    labelList   orderList;
+    labelList   reverseOrder;
+
+    labelList   adjOffsets;
+    labelList   adjNeighbours;
+    labelList   adjEdges;
 
     conductionGraph()
     :
@@ -101,19 +102,62 @@ struct conductionGraph
                 << nEdges << " edges." << endl;
         }
 
+        if (dict.found("pvjResistances"))
+        {
+            pvjResistances = scalarField(dict.lookup("pvjResistances"));
+            if (reportSetup)
+            {
+                Info<< "Conduction graph: Read " << pvjResistances.size()
+                    << " pvjResistances." << endl;
+            }
+        }
+
+        buildAdjacency();
+
         buildTreeTopology(reportSetup);
     }
 
 private:
 
-    // BFS from node 0 to establish parent–child relationships and the
-    // two traversal orderings needed by the Hines two-pass algorithm.
-    // Aborts with a fatal error if the graph is disconnected or not a tree.
+    void buildAdjacency()
+    {
+        adjOffsets.setSize(nNodes + 1, 0);
+
+        forAll(edgeNodeA, eI)
+        {
+            ++adjOffsets[edgeNodeA[eI] + 1];
+            ++adjOffsets[edgeNodeB[eI] + 1];
+        }
+
+        for (label i = 0; i < nNodes; ++i)
+        {
+            adjOffsets[i + 1] += adjOffsets[i];
+        }
+
+        adjNeighbours.setSize(2*nEdges);
+        adjEdges.setSize(2*nEdges);
+
+        labelList cursor(adjOffsets);
+
+        forAll(edgeNodeA, eI)
+        {
+            const label a = edgeNodeA[eI];
+            const label b = edgeNodeB[eI];
+
+            adjNeighbours[cursor[a]] = b;
+            adjEdges[cursor[a]] = eI;
+            ++cursor[a];
+
+            adjNeighbours[cursor[b]] = a;
+            adjEdges[cursor[b]] = eI;
+            ++cursor[b];
+        }
+    }
+
     void buildTreeTopology(const bool reportSetup)
     {
         if (nNodes == 0) return;
 
-        // Validate: a tree on N nodes has exactly N-1 edges.
         if (nEdges != nNodes - 1)
         {
             FatalErrorInFunction
@@ -124,7 +168,6 @@ private:
                 << exit(FatalError);
         }
 
-        // Build undirected adjacency list.
         List<DynamicList<label>> adj(nNodes);
         forAll(edgeNodeA, eI)
         {
@@ -166,7 +209,6 @@ private:
                 << exit(FatalError);
         }
 
-        // reverseOrder: reverse of BFS (leaves→root for forward elimination).
         reverseOrder.setSize(nNodes);
         forAll(orderList, i)
         {

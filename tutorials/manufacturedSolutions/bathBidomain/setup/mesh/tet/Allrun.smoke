@@ -1,0 +1,55 @@
+#!/bin/bash
+set -euo pipefail
+
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+cd "$CASE_DIR"
+
+set +eu
+source /Volumes/OpenFOAM-v2412/etc/bashrc
+set -eu
+
+# Merged case (bathBidomain): system/controlDict, constant/electroProperties,
+# and system/fvSchemes are the hex defaults (dimension "1D", no
+# bathPotentialDomain interface-assembly entries, Gauss linear gradient) --
+# activate this case's own tet overlay for all three and restore byte-for-byte
+# on exit.
+CONTROL_BACKUP="$(mktemp)"; cp system/controlDict "$CONTROL_BACKUP"
+ELECTRO_BACKUP="$(mktemp)"; cp constant/electroProperties "$ELECTRO_BACKUP"
+cp setup/mesh/tet/electroProperties constant/electroProperties
+SCHEMES_BACKUP="$(mktemp)"; cp system/fvSchemes "$SCHEMES_BACKUP"
+cp setup/mesh/tet/fvSchemes system/fvSchemes
+trap 'cp "$CONTROL_BACKUP" system/controlDict; rm -f "$CONTROL_BACKUP";
+      cp "$ELECTRO_BACKUP" constant/electroProperties; rm -f "$ELECTRO_BACKUP";
+      cp "$SCHEMES_BACKUP" system/fvSchemes; rm -f "$SCHEMES_BACKUP"' EXIT
+
+bash setup/mesh/tet/run_mesh_gate.sh 10
+rm -rf 0 postProcessing [0-9]*
+
+# Shortened N=10 integration window, matching the structured-case dt~h^2
+# schedule (same values used across the other tet sweeps in this overlay).
+foamDictionary system/controlDict -entry deltaT -set 0.00892857
+foamDictionary system/controlDict -entry endTime -set 0.02
+
+setTorsoOrganConductivityField > log.setTorsoOrganConductivityField 2>&1
+cardiacFoam > log.cardiacFoam 2>&1
+
+OUT_DIR="setup/mesh/tet/results/N10/smoke"
+rm -rf "$OUT_DIR"
+mkdir -p "$OUT_DIR"
+cp log.setTorsoOrganConductivityField log.cardiacFoam "$OUT_DIR/"
+
+if [[ -d postProcessing ]]
+then
+    cp -R postProcessing "$OUT_DIR/"
+fi
+
+mkdir -p "$OUT_DIR/fields"
+for time_dir in [0-9]*
+do
+    if [[ -d "$time_dir" ]]
+    then
+        cp -R "$time_dir" "$OUT_DIR/fields/"
+    fi
+done
+
+echo "N=10 bath-bidomain tetrahedral smoke run complete."

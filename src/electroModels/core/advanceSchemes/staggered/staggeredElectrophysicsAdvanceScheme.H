@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    staggeredElectrophysicsAdvanceScheme
+
+Description
+    Staggered scheme for advancing the electrophysics system.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef staggeredElectrophysicsAdvanceScheme_H
@@ -22,6 +30,7 @@ License
 
 #include "electrophysicsAdvanceScheme.H"
 #include "overrideTypeName.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -30,12 +39,14 @@ class staggeredElectrophysicsAdvanceScheme
 :
     public electrophysicsAdvanceScheme
 {
+    //- Correct the bath-coupled Vm solve after updating global phiE.
+    Switch bathPredictorCorrector_;
+
 public:
 
     OverrideTypeName("staggeredElectrophysicsAdvanceScheme");
 
-    explicit staggeredElectrophysicsAdvanceScheme(const dictionary&)
-    {}
+    explicit staggeredElectrophysicsAdvanceScheme(const dictionary& dict);
 
     virtual bool advance
     (

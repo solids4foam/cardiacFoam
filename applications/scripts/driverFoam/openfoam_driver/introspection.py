@@ -1,9 +1,41 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     introspection
+#
+# Description
+#     Provides reflection tools to query runtime configurations.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 from __future__ import annotations
 
 import inspect
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
+
+def __get_capabilities():
+    from openfoam_driver.core.plugin_interface import get_active_plugin
+    return get_active_plugin().get_capabilities()
+
 
 from .core.runtime.models import CaseConfig, TutorialSpec
 from .core.runtime.registry import (
@@ -12,16 +44,11 @@ from .core.runtime.registry import (
     list_case_directories,
     list_tutorials,
     resolve_entry,
-    resolve_tutorial,
 )
-from .active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
-from .dict_entries import ELECTRO_PROPERTY_ENTRY_GROUPS, PHYSICS_PROPERTY_ENTRIES
-from .gui_schema import describe_gui_schema
-from .ionic_model_catalog import (
-    IONIC_MODEL_CATALOG,
-    SOLVER_COMPATIBILITY_RULES,
-)
-from .launch import describe_launch_matrix
+from .capability_manifest import build_capability_manifest, resolve_case_models
+from .core.runtime.execution_context import resolve_execution_context
+from .dict_entries import get_electro_property_entry_groups, PHYSICS_PROPERTY_ENTRIES
+from .strict_planning import _run_launch_description
 from .tutorial_contracts import describe_tutorial_contract
 
 COMMON_OVERRIDE_KEYS = (
@@ -117,7 +144,7 @@ def _dict_entry_catalog() -> dict[str, Any]:
         "physicsProperties": [_serialize(asdict(entry)) for entry in PHYSICS_PROPERTY_ENTRIES],
         "electroProperties": {
             group_name: [_serialize(asdict(entry)) for entry in entries]
-            for group_name, entries in ELECTRO_PROPERTY_ENTRY_GROUPS.items()
+            for group_name, entries in get_electro_property_entry_groups().items()
         },
     }
 
@@ -127,10 +154,10 @@ def _ionic_model_catalog() -> dict[str, Any]:
         "schema_version": "1.0",
         "ionic_models": {
             name: _serialize(asdict(entry))
-            for name, entry in IONIC_MODEL_CATALOG.items()
+            for name, entry in __get_capabilities().get("ionic_models", {}).items()
         },
         "solver_compatibility": [
-            _serialize(rule) for rule in SOLVER_COMPATIBILITY_RULES
+            _serialize(rule) for rule in __get_capabilities().get("solver_compatibility_rules", [])
         ],
     }
 
@@ -140,7 +167,7 @@ def _active_tension_catalog() -> dict[str, Any]:
         "schema_version": "1.0",
         "active_tension_models": {
             name: _serialize(asdict(entry))
-            for name, entry in ACTIVE_TENSION_MODEL_CATALOG.items()
+            for name, entry in __get_capabilities().get("active_tension_models", {}).items()
         },
     }
 
@@ -311,14 +338,20 @@ def _describe_config_schema(
 
 
 def _manifest_schema() -> dict[str, Any]:
-    """Static schema description for run_manifest.json."""
+    """Static schema description for run_manifest.json.
+
+    This describes the legacy sim/post/all CLI's own manifest -- see
+    payload["strict_launch"] for the canonical way to actually execute an
+    entry today (run --strict), whose own state lives in
+    output_dir/workflow_state.json instead, written by every workflow step
+    as it runs."""
     return {
         "description": (
             "run_manifest.json is the run-state source of truth. "
             "It is written to output_dir/run_manifest.json and updated after every "
             "case completes. Poll this file to track run progress."
         ),
-        "schema_version": "2.1",
+        "schema_version": "2.3",
         "file_location": "output_dir/run_manifest.json  (see launch.<action>.manifest_path)",
         "companion_file": (
             "output_dir/action_events.jsonl — append-only JSONL log with one "
@@ -330,7 +363,7 @@ def _manifest_schema() -> dict[str, Any]:
             "Reading the file is safe at any time — it is written atomically."
         ),
         "top_level_fields": {
-            "schema_version": "string — manifest format version (currently '2.1')",
+            "schema_version": "string — manifest format version (currently '2.3'; v2.x is additive-only)",
             "run_id": "string — unique ID for this run (timestamp + random suffix)",
             "requested_action": "string — 'sim', 'post', or 'all'",
             "entry": "string — selected entry name",
@@ -355,6 +388,8 @@ def _manifest_schema() -> dict[str, Any]:
             "failed_cases": "integer — cases with status 'failed'",
             "error": "string | null — top-level error message if run failed early",
             "plots_manifest_path": "string | null — path to plots.json if postprocess produced plots",
+            "artifacts_manifest_path": "string | null — path to artifacts_manifest.json (predicted DataArtifacts for the current case state; v2.2+)",
+            "artifacts_realized_path": "string | null — path to artifacts_realized.json (v1.1: cases[] array, one entry per sweep case; predicted-vs-actual reconciliation; written only at terminal status on non-dry runs; v2.3+)",
             "human_report_path": "string — path to run_report.md",
             "results": "array of CaseResult objects — see case_result_fields",
         },
@@ -481,7 +516,6 @@ def describe_entry(
     entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    python_executable: str | None = None,
 ) -> dict[str, Any]:
     resolution = resolve_entry(entry, entry_kind=entry_kind, overrides=overrides)
     spec = resolution["factory"](**resolution["factory_overrides"])
@@ -492,9 +526,9 @@ def describe_entry(
     workflow_catalog = _workflow_catalog(tutorials_root, entry_catalog)
 
     make_spec_info = _describe_factory(resolution["factory"])
+    _solver, _ionic, _active_tension = resolve_case_models(spec.case_root)
     return {
         "requested_entry": entry,
-        "requested_tutorial": entry,
         "resolution": resolution["resolution"],
         "resolved_name": resolution["resolved_name"],
         "entry": {
@@ -529,20 +563,22 @@ def describe_entry(
         "dict_entries": _dict_entry_catalog(),
         "ionic_model_catalog": _ionic_model_catalog(),
         "active_tension_catalog": _active_tension_catalog(),
-        "gui_schema": describe_gui_schema(),
-        "launch": describe_launch_matrix(
-            entry,
+        "strict_launch": _run_launch_description(
+            resolution["resolved_name"],
+            resolve_execution_context(spec),
             entry_kind=resolution["entry_kind"],
-            overrides=resolution["factory_overrides"],
             config_path=config_path,
-            tutorials_root=tutorials_root,
-            python_executable=python_executable,
         ),
         "config_schema": _describe_config_schema(
             resolution["resolved_name"],
             make_spec_info,
         ),
         "manifest_schema": _manifest_schema(),
+        "capability_manifest": build_capability_manifest(
+            resolved_solver=_solver,
+            resolved_ionic_model=_ionic,
+            resolved_active_tension=_active_tension,
+        ),
     }
 
 
@@ -551,11 +587,9 @@ def describe_tutorial(
     *,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    python_executable: str | None = None,
 ) -> dict[str, Any]:
     return describe_entry(
         tutorial,
         overrides=overrides,
         config_path=config_path,
-        python_executable=python_executable,
     )

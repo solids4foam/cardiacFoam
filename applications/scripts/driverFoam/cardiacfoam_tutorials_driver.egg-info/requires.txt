@@ -1,3 +1,5 @@
+gmsh>=4.15.2
+jsonschema>=4.0
 
 [post]
 matplotlib>=3.7

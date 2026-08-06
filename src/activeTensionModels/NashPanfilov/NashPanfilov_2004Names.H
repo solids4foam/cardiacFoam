@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the Nash-Panfilov 2004
+    active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -39,15 +45,18 @@ enum CONSTANTS_INDEX {
     AC_Vth,
     AC_e0,
     AC_kTa,
-    AC_a,
     NUM_CONSTANTS
 };
 
 
-void
+inline void
 NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES);
 
-void
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void
 NashPanfilovcomputeVariables
 (
     double VOI,

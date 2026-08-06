@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        parallel)
+            parallelRun=true
+            ;;
+        *)
+            echo "Unknown option '$arg'. Valid option: parallel"
+            exit 1
+            ;;
+    esac
+done
+
+if [ -f constant/polyMesh/points ] \
+   && [ -f constant/polyMesh/faces ] \
+   && [ -f constant/polyMesh/owner ] \
+   && [ -f constant/polyMesh/neighbour ]; then
+    echo "Using existing heart polyMesh in constant/polyMesh."
+else
+    echo "Fatal Error: Missing heart polyMesh in constant/polyMesh! Please provide the mesh." >&2
+    exit 1
+fi
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi

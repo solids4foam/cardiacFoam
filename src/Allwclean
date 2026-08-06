@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ${0%/*} || exit 1    # run from this directory
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Stop at first error
+set -e
 
 wclean couplingModels
 wclean genericWriter
@@ -8,4 +11,3 @@ wclean verificationModels
 wclean activeTensionModels
 wclean electroModels
 wclean electroMechanicalModels
-

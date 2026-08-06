@@ -1,0 +1,21 @@
+# kind           key               metric  expected          tolerance
+summary          cellsPerDirection value   80                0
+summary          finalTime         value   0.200112          1e-06
+error            Vm                L1      1.5292e-05        1e-08
+error            Vm                L2      1.99547e-05       1e-08
+error            Vm                Linf    3.99209e-05       1e-07
+error            phiE              L1      0.000114436       1e-07
+error            phiE              L2      0.000135097       1e-07
+error            phiE              Linf    0.000167827       1e-07
+error            phiI              L1      4.09842e-06       1e-07
+error            phiI              L2      4.56894e-06       1e-07
+error            phiI              Linf    8.07195e-06       1e-07
+error            u1                L1      2.81317e-05       1e-08
+error            u1                L2      3.17467e-05       1e-08
+error            u1                Linf    5.34962e-05       1e-07
+error            u2                L1      7.39916e-06       1e-08
+error            u2                L2      8.81596e-06       1e-08
+error            u2                Linf    1.86162e-05       1e-08
+error            u3                L1      0                 1e-12
+error            u3                L2      0                 1e-12
+error            u3                Linf    0                 1e-12

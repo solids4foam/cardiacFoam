@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    pvjCoupler
+
+Description
+    Base class for PVJ couplers.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef pvjCoupler_H
@@ -27,9 +35,9 @@ License
 namespace Foam
 {
 
-class PVJCoupler
+class pvjCoupler
 :
-    public ElectroDomainCoupler
+    public electroDomainCoupler
 {
 public:
 
@@ -42,7 +50,7 @@ public:
 protected:
 
     networkCouplingEndpoint& networkTerminalDomain_;
-    PVJMapper mapper_;
+    pvjMapper mapper_;
     scalar pvjRadius_;
     CouplingMode couplingMode_;
     Switch reportSetup_;
@@ -58,7 +66,7 @@ protected:
 
     static word couplingModeName(CouplingMode mode);
 
-    PVJCoupler
+    pvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

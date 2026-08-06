@@ -33,7 +33,7 @@ Author
 #ifndef BuenoOrovio_H
 #define BuenoOrovio_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "BuenoOrovio_2008Names.H"
 #include "OFstream.H"
 #include "volFields.H"
@@ -49,7 +49,7 @@ namespace Foam
 
 class BuenoOrovio
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -58,6 +58,9 @@ class BuenoOrovio
 
         //- Constants
         mutable scalarField CONSTANTS_;
+
+        //- Active point used by ODESystem::derivatives callback
+        mutable label activeIntegrationPoint_;
 
         //- Algebraic
         mutable PtrList<scalarField> ALGEBRAIC_;
@@ -73,6 +76,8 @@ class BuenoOrovio
 
         //- No copy assignment
         void operator=(const BuenoOrovio&) = delete;
+
+        scalarField& constants(const label integrationPtI) const;
 
 protected:
         static scalar transformedVm(const scalarField& S)
@@ -101,6 +106,11 @@ protected:
         }
 
         virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual scalarField* ioMutableConstantsPtr() const override
         {
             return &CONSTANTS_;
         }
@@ -145,7 +155,6 @@ protected:
         // Constructors
 
             //- Construct given a dictionary, the number of integration points and a
-            //  initial time step for the ODE solver
             BuenoOrovio
             (
                 const dictionary& dict,
@@ -171,6 +180,15 @@ protected:
                 scalarField& Im
             ) override;
 
+            virtual scalarField constantsForTissue
+            (
+                const label tissueFlag
+            ) const override;
+
+            virtual scalarField initialStatesForTissue
+            (
+                const label tissueFlag
+            ) const override;
 
             //- Number of ODE's to solve
             virtual label nEqns() const override
@@ -179,7 +197,6 @@ protected:
             }
 
             //- Derivatives of each ODE with respect to the primary unknown in that
-            //  equation
             virtual void derivatives
             (
                 const scalar t,
@@ -187,7 +204,6 @@ protected:
                 scalarField& dydt
             ) const override;
 
-            // CouplingSignalProvider
             virtual bool hasSignal(const CouplingSignal s) const override;
             virtual scalar signal
             (const label i, const CouplingSignal s) const override;

@@ -6,9 +6,17 @@ activeTensionModel/activeTensionModel.C
 
 NashPanfilov/NashPanfilov.C
 GoktepeKuhl/GoktepeKuhl.C
+verificationModels/ManufacturedElectromechanics/ManufacturedElectromechanics.C
 /*NiedererHunterSmith/NiedererHunterSmith.C*/
+LandNiederer/LandNiederer.C
+activeTensionModel/batchedActiveTensionModel.C
+GoktepeKuhlBatched/GoktepeKuhlBatched.C
+NashPanfilovBatched/NashPanfilovBatched.C
+LandNiedererBatched/LandNiedererBatched.C
 
 
 
+/* CUDA kernel sources: contents of Make/files-gpu inlined here when CARDIAC_ENABLE_CUDA is set. */
+$(if $(CARDIAC_ENABLE_CUDA),$(shell cat $(PWD)/Make/files-gpu))
 
 LIB = $(FOAM_USER_LIBBIN)/libactiveTensionModels

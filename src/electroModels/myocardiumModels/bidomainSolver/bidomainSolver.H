@@ -15,12 +15,21 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    bidomainSolver
+
+Description
+    Bidomain FVM reaction-diffusion kernel.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef BidomainSolver_H
-#define BidomainSolver_H
+#ifndef bidomainSolver_H
+#define bidomainSolver_H
 
 #include "myocardiumSolver.H"
+#include "conductivityFieldIO.H"
 #include "overrideTypeName.H"
 #include "fvc.H"
 #include "fvm.H"
@@ -28,11 +37,7 @@ License
 namespace Foam
 {
 
-//- Bidomain FVM reaction-diffusion kernel.
-//  Registered in the myocardiumSolver runtime table under
-//  the key "bidomainSolver". Owns the extracellular potential
-//  field phiE, which it allocates during construction.
-class BidomainSolver
+class bidomainSolver
 :
     public myocardiumSolver
 {
@@ -43,23 +48,38 @@ class BidomainSolver
     volTensorField GiPlusGe_;
     scalar phiEReferenceValue_;
     point phiEReferencePoint_;
+    bool hasPhiEReferencePoint_;
+    const volScalarField* externalPhiEBasePtr_;
+    const labelUList* externalPhiECellMapPtr_;
 
     tmp<volTensorField> initialiseConductivityTensor
     (
         const fvMesh& mesh,
-        const word& fieldName,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
+        const conductivityFieldSpec& spec,
         const dictionary& dict
     ) const;
 
     label referenceCell() const;
 
+    bool externalPhiEBound() const;
+
+    void restrictExternalPhiE();
+
+    void solvePhiEImplicitOnce(electroVolumeFieldDomain& domain);
+
+    void solveVmImplicitOnce(electroVolumeFieldDomain& domain);
+
 public:
 
     OverrideTypeName("bidomainSolver");
 
-    BidomainSolver
+    bidomainSolver
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     );
 
@@ -93,6 +113,29 @@ public:
         return Gi_;
     }
 
+    const volTensorField& intracellularConductivity() const
+    {
+        return Gi_;
+    }
+
+    const volTensorField& extracellularConductivity() const
+    {
+        return Ge_;
+    }
+
+    const volTensorField& totalConductivity() const
+    {
+        return GiPlusGe_;
+    }
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    ) override;
+
+    virtual void unbindExternalPhiE() override;
+
     virtual void solveDiffusionExplicit
     (
         electroVolumeFieldDomain& domain,
@@ -103,13 +146,6 @@ public:
     (
         electroVolumeFieldDomain& domain,
         scalar dt
-    ) override;
-
-    virtual void solveDiffusionImplicit
-    (
-        electroVolumeFieldDomain& domain,
-        scalar dt,
-        pimpleControl& pimple
     ) override;
 };
 

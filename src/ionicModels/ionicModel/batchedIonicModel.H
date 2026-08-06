@@ -21,6 +21,9 @@ Class
 Description
     Reusable base for GPU-friendly ionic models that execute as batched,
     explicit cell updates while preserving the existing ionicModel API.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef batchedIonicModel_H
@@ -66,6 +69,9 @@ class batchedIonicModel
         mutable PtrList<scalarField> ioStates_;
         mutable PtrList<scalarField> ioRates_;
         mutable PtrList<scalarField> ioAlgebraics_;
+        mutable scalarField diagStateValues_;
+        mutable scalarField diagRateValues_;
+        mutable scalarField diagAlgebraicValues_;
         mutable bool ioSynchronized_;
         mutable bool transientAlgebraicsSynchronized_;
         mutable scalar ioEvaluationModelTime_;
@@ -98,8 +104,36 @@ class batchedIonicModel
         mutable label solveScratchThreads_;
         mutable label solveScratchSupportSize_;
         mutable bool solveScratchPredictorState_;
-        mutable bool solveScratchPredictorEvaluation_;
-        mutable bool solveScratchSupportOnlyHotPath_;
+
+        //- Per-cell linear Vm extrapolant, in model state/time units
+        mutable scalarField vmStateStart_;
+        mutable scalarField vmStateRate_;
+
+        //- Build the Vm extrapolant for the step in model state/time units
+        void buildVmExtrapolant
+        (
+            const scalar deltaT,
+            const scalar dtModel,
+            const scalarField& Vm,
+            const label vmStateI
+        ) const
+        {
+            (void)vmStateI;
+
+            vmStateStart_.setSize(nCells_);
+            vmStateRate_.setSize(nCells_);
+
+            for (label cellI = 0; cellI < nCells_; ++cellI)
+            {
+                const scalar vmStart = vmToState(Vm[cellI]);
+                const scalar vmEnd =
+                    vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+
+                vmStateStart_[cellI] = vmStart;
+                vmStateRate_[cellI] =
+                    (mag(dtModel) > VSMALL) ? (vmEnd - vmStart)/dtModel : 0.0;
+            }
+        }
 
         static label maxCellLoopThreads()
         {
@@ -163,7 +197,7 @@ protected:
             nSubsteps_(dict.lookupOrDefault<label>("batchedSubsteps", 1)),
             integratorName_
             (
-                dict.lookupOrDefault<word>("batchedIntegrator", "rushLarsenHeun")
+                dict.lookupOrDefault<word>("batchedIntegrator", "euler")
             ),
             profileBatchedModel_
             (
@@ -197,9 +231,7 @@ protected:
             solveScratch_(),
             solveScratchThreads_(-1),
             solveScratchSupportSize_(-1),
-            solveScratchPredictorState_(false),
-            solveScratchPredictorEvaluation_(false),
-            solveScratchSupportOnlyHotPath_(false)
+            solveScratchPredictorState_(false)
         {
             if (nSubsteps_ < 1)
             {
@@ -275,9 +307,7 @@ protected:
         (
             const label nThreads,
             const label supportSize,
-            const bool usePredictorState,
-            const bool usePredictorEvaluation,
-            const bool useSupportOnlyHotPath
+            const bool usePredictorState
         ) const
         {
             if
@@ -285,8 +315,6 @@ protected:
                 solveScratchThreads_ == nThreads
              && solveScratchSupportSize_ == supportSize
              && solveScratchPredictorState_ == usePredictorState
-             && solveScratchPredictorEvaluation_ == usePredictorEvaluation
-             && solveScratchSupportOnlyHotPath_ == useSupportOnlyHotPath
              && solveScratch_.size() == nThreads
             )
             {
@@ -306,9 +334,7 @@ protected:
                         nStates_,
                         nAlgebraics_,
                         supportSize,
-                        usePredictorState,
-                        usePredictorEvaluation,
-                        useSupportOnlyHotPath
+                        usePredictorState
                     )
                 );
             }
@@ -316,8 +342,6 @@ protected:
             solveScratchThreads_ = nThreads;
             solveScratchSupportSize_ = supportSize;
             solveScratchPredictorState_ = usePredictorState;
-            solveScratchPredictorEvaluation_ = usePredictorEvaluation;
-            solveScratchSupportOnlyHotPath_ = useSupportOnlyHotPath;
         }
 
         inline scalar& state(const label cellI, const label stateI) const
@@ -338,6 +362,26 @@ protected:
         inline scalar& support(const label cellI, const label supportI) const
         {
             return core_.supportRef(cellI, supportI);
+        }
+
+        inline scalar* statesSoAData() const
+        {
+            return core_.statesSoAData();
+        }
+
+        inline scalar* ratesSoAData() const
+        {
+            return core_.ratesSoAData();
+        }
+
+        inline scalar* supportSoAData() const
+        {
+            return core_.supportSoAData();
+        }
+
+        inline scalar* algebraicsSoAData() const
+        {
+            return core_.algebraicsSoAData();
         }
 
         inline label nCells() const
@@ -478,25 +522,33 @@ protected:
                 }
             }
 
-            scalarField stateValues(nStates_, 0.0);
-            scalarField rateValues(nStates_, 0.0);
-            scalarField algebraicValues(nAlgebraics_, 0.0);
+            if (diagStateValues_.size() != nStates_)
+            {
+                diagStateValues_.setSize(nStates_);
+                diagRateValues_.setSize(nStates_);
+            }
+
+            if (diagAlgebraicValues_.size() != nAlgebraics_)
+            {
+                diagAlgebraicValues_.setSize(nAlgebraics_);
+            }
 
             for (label cellI = 0; cellI < nCells_; ++cellI)
             {
-                gatherCellState(cellI, stateValues);
-                rateValues = 0.0;
-                algebraicValues = 0.0;
+                gatherCellState(cellI, diagStateValues_);
+                diagRateValues_ = 0.0;
+                diagAlgebraicValues_ = 0.0;
 
                 evaluateState
                 (
+                    cellI,
                     ioEvaluationModelTime_,
-                    stateValues,
-                    rateValues,
-                    algebraicValues
+                    diagStateValues_,
+                    diagRateValues_,
+                    diagAlgebraicValues_
                 );
 
-                ioAlgebraics_[cellI] = algebraicValues;
+                ioAlgebraics_[cellI] = diagAlgebraicValues_;
             }
 
             transientAlgebraicsSynchronized_ = true;
@@ -564,64 +616,17 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                evaluateHotPathState
-                (
-                    modelTime,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.supportValues
-                );
-            }
-            else
-            {
-                evaluateState
-                (
-                    modelTime,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.algebraicValues
-                );
-            }
+            evaluateHotPathState
+            (
+                modelTime,
+                scratch.stateValues,
+                scratch.rateValues,
+                scratch.supportValues
+            );
 
             if (!kernel.solveVm)
             {
                 scratch.rateValues[kernel.vmStateI] = 0.0;
-            }
-        }
-
-        void evaluatePredictorScratchAtTime
-        (
-            const scalar modelTime,
-            CellScratch& scratch,
-            const SolveKernelConfig& kernel
-        ) const
-        {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                evaluateHotPathState
-                (
-                    modelTime,
-                    scratch.predictorStateValues,
-                    scratch.predictorRateValues,
-                    scratch.predictorSupportValues
-                );
-            }
-            else
-            {
-                evaluateState
-                (
-                    modelTime,
-                    scratch.predictorStateValues,
-                    scratch.predictorRateValues,
-                    scratch.predictorAlgebraicValues
-                );
-            }
-
-            if (!kernel.solveVm)
-            {
-                scratch.predictorRateValues[kernel.vmStateI] = 0.0;
             }
         }
 
@@ -640,22 +645,12 @@ protected:
             }
 
             const bool hasParameters =
-                kernel.useSupportOnlyHotPath
-              ? rushLarsenParametersFromHotPathSupport
+                rushLarsenParametersFromHotPathSupport
                 (
                     stateI,
                     scratch.stateValues,
                     scratch.rateValues,
                     scratch.supportValues,
-                    steadyState,
-                    tau
-                )
-              : rushLarsenParameters
-                (
-                    stateI,
-                    scratch.stateValues,
-                    scratch.rateValues,
-                    scratch.algebraicValues,
                     steadyState,
                     tau
                 );
@@ -739,16 +734,6 @@ protected:
                     scratch.stateValues[stateI] =
                         scratch.predictorStateValues[stateI];
                 }
-                else if (kernel.useHeun)
-                {
-                    scratch.stateValues[stateI] +=
-                        0.5*kernel.dtSubstep
-                       *
-                        (
-                            scratch.rateValues[stateI]
-                          + scratch.predictorRateValues[stateI]
-                        );
-                }
                 else
                 {
                     scratch.stateValues[stateI] =
@@ -764,20 +749,8 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                scatterCellRates(cellI, scratch.rateValues);
-                scatterCellSupport(cellI, scratch.supportValues);
-            }
-            else
-            {
-                scatterCellRatesAndAlgebraics
-                (
-                    cellI,
-                    scratch.rateValues,
-                    scratch.algebraicValues
-                );
-            }
+            scatterCellRates(cellI, scratch.rateValues);
+            scatterCellSupport(cellI, scratch.supportValues);
         }
 
         scalar ionicCurrentFromScratch
@@ -786,12 +759,7 @@ protected:
             const SolveKernelConfig& kernel
         ) const
         {
-            if (kernel.useSupportOnlyHotPath)
-            {
-                return ionicCurrentFromHotPathSupport(scratch.supportValues);
-            }
-
-            return ionicCurrentFromEvaluation(scratch.algebraicValues);
+            return ionicCurrentFromHotPathSupport(scratch.supportValues);
         }
 
         bool persistentAlgebraicsEnabled() const
@@ -823,6 +791,25 @@ protected:
             return ionicCurrentFromEvaluation(supportValues);
         }
 
+        virtual scalar ionicCurrentFromHotPathSupport
+        (
+            const label cellI,
+            const scalarUList& supportValues
+        ) const
+        {
+            (void)cellI;
+            return ionicCurrentFromHotPathSupport(supportValues);
+        }
+
+        scalar ionicCurrentFromHotPathSupportForCell
+        (
+            const label cellI,
+            const scalarUList& supportValues
+        ) const
+        {
+            return ionicCurrentFromHotPathSupport(cellI, supportValues);
+        }
+
         virtual bool usesCompactSupport() const
         {
             return false;
@@ -845,6 +832,57 @@ protected:
         ) const
         {
             evaluateState(modelTime, stateValues, rateValues, supportValues);
+        }
+
+        virtual void evaluateState
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& algebraicValues
+        ) const
+        {
+            (void)cellI;
+            evaluateState(modelTime, stateValues, rateValues, algebraicValues);
+        }
+
+        virtual void evaluateHotPathState
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& supportValues
+        ) const
+        {
+            evaluateState
+            (
+                cellI,
+                modelTime,
+                stateValues,
+                rateValues,
+                supportValues
+            );
+        }
+
+        void evaluateHotPathStateForCell
+        (
+            const label cellI,
+            const scalar modelTime,
+            const scalarUList& stateValues,
+            scalarUList& rateValues,
+            scalarUList& supportValues
+        ) const
+        {
+            evaluateHotPathState
+            (
+                cellI,
+                modelTime,
+                stateValues,
+                rateValues,
+                supportValues
+            );
         }
 
         virtual bool rushLarsenParameters
@@ -872,6 +910,52 @@ protected:
         {
             return rushLarsenParameters
             (
+                stateI,
+                stateValues,
+                rateValues,
+                supportValues,
+                steadyState,
+                tau
+            );
+        }
+
+        virtual bool rushLarsenParametersFromHotPathSupport
+        (
+            const label cellI,
+            const label stateI,
+            const scalarUList& stateValues,
+            const scalarUList& rateValues,
+            const scalarUList& supportValues,
+            scalar& steadyState,
+            scalar& tau
+        ) const
+        {
+            (void)cellI;
+            return rushLarsenParametersFromHotPathSupport
+            (
+                stateI,
+                stateValues,
+                rateValues,
+                supportValues,
+                steadyState,
+                tau
+            );
+        }
+
+        bool rushLarsenParametersFromHotPathSupportForCell
+        (
+            const label cellI,
+            const label stateI,
+            const scalarUList& stateValues,
+            const scalarUList& rateValues,
+            const scalarUList& supportValues,
+            scalar& steadyState,
+            scalar& tau
+        ) const
+        {
+            return rushLarsenParametersFromHotPathSupport
+            (
+                cellI,
                 stateI,
                 stateValues,
                 rateValues,
@@ -992,23 +1076,33 @@ protected:
             kernel.dtSubstep = dtSubstep;
             kernel.vmStateI = vmStateI;
             kernel.solveVm = solveVmWithinODESolver();
-            kernel.useHeun = integratorName_ == "heun"
-                || integratorName_ == "rushLarsenHeun"
-                || integratorName_ == "mixed";
-            kernel.useRushLarsen = integratorName_ == "rushLarsenHeun"
-                || integratorName_ == "mixed";
-            kernel.useExplicitEuler =
-                !kernel.useHeun && !kernel.useRushLarsen;
+            kernel.useExplicitEuler = integratorName_ == "euler";
+            kernel.useRushLarsen = integratorName_ == "rushLarsen";
+
+            if (hasVmRate() && !kernel.solveVm)
+            {
+                buildVmExtrapolant(deltaT, dtModel, Vm, vmStateI);
+                kernel.vmStateStart = vmStateStart_.cdata();
+                kernel.vmStateRate = vmStateRate_.cdata();
+                kernel.tStartModel = tStart;
+            }
+
+            if
+            (
+               !kernel.useExplicitEuler
+            && !kernel.useRushLarsen
+            )
+            {
+                FatalIOErrorInFunction(dict())
+                    << "Unknown batchedIntegrator '" << integratorName_
+                    << "' for ionic model " << type() << ". "
+                    << "Valid values are: euler, rushLarsen."
+                    << exit(FatalIOError);
+            }
             const label sampleCell =
                 emitDebugSample ? sampleIntegrationPoint(nCells_) : -1;
-            kernel.useSupportOnlyHotPath =
-                usesCompactSupport()
-             && nHotPathSupport_ > 0
-             && !utilitiesMode();
             const label hotPathSupportSize =
-                kernel.useSupportOnlyHotPath
-              ? activeHotPathSupportSize(kernel.useExplicitEuler)
-              : nHotPathSupport_;
+                activeHotPathSupportSize(kernel.useExplicitEuler);
             const bool parallelCellLoops = useParallelCellLoops();
             const label nCellLoopThreads =
                 parallelCellLoops ? maxCellLoopThreads() : 1;
@@ -1018,9 +1112,7 @@ protected:
             (
                 nCellLoopThreads,
                 hotPathSupportSize,
-                !kernel.useExplicitEuler,
-                kernel.useHeun,
-                kernel.useSupportOnlyHotPath
+                !kernel.useExplicitEuler
             );
 
             SolveStorageBackend storageBackend
@@ -1093,9 +1185,67 @@ protected:
                     std::chrono::duration<scalar>(clock::now() - solveStart).count();
                 ++totalSolveODECalls_;
             }
+
+            clearVmRate();
         }
 
 public:
+
+        //- Vm follows its linear extrapolant when a rate is supplied
+        virtual bool supportsVmRateCoupling() const override
+        {
+            return true;
+        }
+
+        //- Iion is a pure function of the batched state
+        virtual bool supportsIonicCurrentEvaluation() const override
+        {
+            return true;
+        }
+
+        //- Recompute Im from the stored state paired with the supplied Vm
+        virtual void evaluateIonicCurrent
+        (
+            const scalar t,
+            const scalarField& Vm,
+            scalarField& Im
+        ) override
+        {
+            const scalar modelTime = t*timeScaleFactor();
+            const label vmStateI = voltageStateIndex();
+            const bool useExplicitEuler = integratorName_ == "euler";
+            const label supportSize =
+                activeHotPathSupportSize(useExplicitEuler);
+
+            scalarField stateValues(nStates_, 0.0);
+            scalarField rateValues(nStates_, 0.0);
+            scalarField supportValues(max(supportSize, label(1)), 0.0);
+
+            for (label cellI = 0; cellI < nCells_; ++cellI)
+            {
+                gatherCellState(cellI, stateValues);
+
+                if (!solveVmWithinODESolver())
+                {
+                    stateValues[vmStateI] = vmToState(Vm[cellI]);
+                }
+
+                rateValues = 0.0;
+                supportValues = 0.0;
+
+                evaluateHotPathStateForCell
+                (
+                    cellI,
+                    modelTime,
+                    stateValues,
+                    rateValues,
+                    supportValues
+                );
+
+                Im[cellI] =
+                    ionicCurrentFromHotPathSupportForCell(cellI, supportValues);
+            }
+        }
 
         virtual void writeProfilingSummary() const override
         {

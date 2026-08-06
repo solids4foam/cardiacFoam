@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     niederer_2012
+#
+# Description
+#     Defines configuration template for Niederer 2012 benchmarks.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,9 +38,24 @@ from .shared import (
 )
 
 
+# Published Niederer et al. (2011) benchmark physics constants
+# Source: doi:10.1098/rsif.2011.0139 and matching tutorial electroProperties
+CONDUCTIVITY = "[-1 -3 3 0 0 2 0] (0.1334177215 0 0 0.01760617761 0 0.01760617761)"
+CHI = "[0 -1 0 0 0 0 0] 140000"
+CM = "[-1 -4 4 0 0 2 0] 0.01"
+ODE_SOLVER = "RKF45"
+INITIAL_ODE_STEP = "1e-6"
+MAX_STEPS = 1000000000
+STIMULUS_LOCATION_MIN = "(0 0 5.5e-3)"
+STIMULUS_LOCATION_MAX = "(1.5e-3 1.5e-3 7e-3)"
+STIMULUS_DURATION = "[0 0 1 0 0 0 0] 2e-3"
+STIMULUS_INTENSITY = "[0 -3 0 0 0 1 0] 50000"
+STIMULUS_START_TIME = 0.0
+WRITE_INTERVAL = "5e-3"
+
 TUTORIAL_NAME = "niederer2012"
-CASE_DIR_NAME = "Niederer/NiedererEtAl2012verification"
-SETUP_DIR_NAME = "setupNiedererEtAl2012"
+CASE_DIR_NAME = "NiedererEtAl2011/NiedererEtAl2011verification"
+SETUP_DIR_NAME = "setup"
 DX_VALUES = (0.5, 0.2, 0.1)  # in mm
 DT_VALUES = (0.01, 0.005, 0.001)  # in ms
 IONIC_MODELS = ("TNNP",)
@@ -27,7 +69,7 @@ SLAB_SIZE_MM = (20.0, 3.0, 7.0)
 END_TIME_BY_DX = {
     0.5: 0.2,
     0.2: 0.08,
-    0.1: 0.045,
+    0.1: 0.055,
 }
 BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
@@ -48,20 +90,32 @@ NIEDERER_POINTS = (
 NIEDERER_LINE_START = (0.0, 0.0, 0.007)
 NIEDERER_LINE_END = (0.02, 0.003, 0.0)
 NIEDERER_LINE_NUM_POINTS = 101
-LINE_POSTPROCESS_RELPATH = Path("postProcessing/line_postProcessing.py")
-POINTS_POSTPROCESS_RELPATH = Path("postProcessing/points_postProcessing.py")
-CACHE_POSTPROCESS_RELPATH = Path("postProcessing/cache_postProcessing.py")
+LINE_POSTPROCESS_RELPATH = Path("line_postProcessing.py")
+POINTS_POSTPROCESS_RELPATH = Path("points_postProcessing.py")
+CACHE_POSTPROCESS_RELPATH = Path("cache_postProcessing.py")
 LINE_POSTPROCESS_FUNCTION = "run_postprocessing"
 POINTS_POSTPROCESS_FUNCTION = "run_postprocessing"
 CACHE_POSTPROCESS_FUNCTION = "run_postprocessing"
 CASE_POSTPROCESS_CACHE_DIRNAME = "cachedCasePostProcessing"
-TABLE_SUMMARY_RELPATH = Path("postProcessing/table_summary.py")
+TABLE_SUMMARY_RELPATH = Path("table_summary.py")
 EXCEL_REFERENCE_RELPATH = Path(
     "postProcessing/Niederer_graphs_webplotdigitilizer_points_slab/WebPlotDigitilizerdata.xlsx"
 )
 
 # Explicit exports used by the Niederer tutorial spec.
 __all__ = [
+    "CONDUCTIVITY",
+    "CHI",
+    "CM",
+    "ODE_SOLVER",
+    "INITIAL_ODE_STEP",
+    "MAX_STEPS",
+    "STIMULUS_LOCATION_MIN",
+    "STIMULUS_LOCATION_MAX",
+    "STIMULUS_DURATION",
+    "STIMULUS_INTENSITY",
+    "STIMULUS_START_TIME",
+    "WRITE_INTERVAL",
     "TUTORIAL_NAME",
     "CASE_DIR_NAME",
     "SETUP_DIR_NAME",

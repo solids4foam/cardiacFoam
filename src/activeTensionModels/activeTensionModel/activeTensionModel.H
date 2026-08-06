@@ -15,6 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::activeTensionModel
+
+Description
+    Virtual base class for active tension models that couple
+    electrophysiology to mechanical contraction.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    activeTensionModel.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef activeTensionModel_H
@@ -50,7 +62,7 @@ protected:
 
     //- Drive signal value for the current integration point.
     //  Set by the base calculateTension() loop before each solveAtPoint() call
-    //  so th at derivatives() can read it during ODE sub-steps.
+    //  so that derivatives() can read it during ODE sub-steps.
     scalar currentDriveSignal_;
 
     //- Time at start of current timestep (set by base before loop)
@@ -194,8 +206,9 @@ public:
     // Requirements declared by derived models
     struct Requirements
     {
-        bool needVm  = false;
-        bool needCai = false;
+        bool needVm      = false;
+        bool needCai     = false;
+        bool needsLambda = false;
     };
 
     // Derived models declare their required inputs
@@ -443,6 +456,13 @@ public:
     //- Return the CouplingSignal this model reads as its drive input.
     //  Active-tension feedback accepts Vm or Cai.
     virtual CouplingSignal driveSignal() const = 0;
+
+    //- Pre-condition the model to its resting steady state.
+    //  Called by the coupling harness after the signal provider is wired,
+    //  passing the ionic model's initial (resting) Ca_i in mM.
+    //  Base implementation is a no-op; derived classes that need Ca_i
+    //  preconditioning (e.g. LandNiederer) should override.
+    virtual void preconditionToRestingState(const scalar /*restingCai*/) {}
 
     //- Advance ODE and write active tension for a single integration point.
     //  Called by the base calculateTension() loop.

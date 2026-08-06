@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    myocardiumDomainInterface
+
+Description
+    Interface for myocardium domains.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef myocardiumDomainInterface_H
@@ -73,6 +81,85 @@ public:
         pimpleControl* pimplePtr
     ) = 0;
 
+    virtual bool supportsSplitReactionDiffusion() const
+    {
+        return false;
+    }
+
+    virtual void solveReactionStep(scalar t0, scalar dt)
+    {
+        (void)t0;
+        (void)dt;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support split "
+            << "reaction/diffusion advance."
+            << exit(FatalError);
+    }
+
+    virtual void solveDiffusionStep
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    )
+    {
+        (void)t0;
+        (void)dt;
+        (void)pimplePtr;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support split "
+            << "reaction/diffusion advance."
+            << exit(FatalError);
+    }
+
+    //- Solve the implicit diffusion equation once for the opt-in coupled
+    //  bath-PDE predictor/corrector; it must not advance the ionic model or
+    //  physical time.
+    virtual void solveDiffusionStepOnce
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    )
+    {
+        (void)t0;
+        (void)dt;
+        (void)pimplePtr;
+
+        FatalErrorInFunction
+            << "This myocardium domain does not support a single diffusion "
+            << "sub-step."
+            << exit(FatalError);
+    }
+
+    virtual void finalizeDiffusionStep()
+    {}
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    )
+    {
+        (void)phiE;
+        (void)heartCellMap;
+
+        FatalErrorInFunction
+            << "The selected myocardium domain cannot bind an external phiE "
+            << "field. Unified phiE requires a bidomain myocardium domain."
+            << exit(FatalError);
+    }
+
+    virtual void unbindExternalPhiE()
+    {
+        FatalErrorInFunction
+            << "The selected myocardium domain cannot unbind an external phiE "
+            << "field. Unified phiE requires a bidomain myocardium domain."
+            << exit(FatalError);
+    }
+
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const = 0;
 
     virtual bool shouldPostProcess() const = 0;
@@ -81,7 +168,7 @@ public:
 
     virtual void postProcess() = 0;
 
-    virtual bool applyModelTimeControls(Time& runTime) const
+    virtual bool applyModelTimeControls(Time& runTime)
     {
         (void)runTime;
         return false;

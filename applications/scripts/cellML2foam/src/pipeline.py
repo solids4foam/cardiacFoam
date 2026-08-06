@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     pipeline
+#
+# Description
+#     Coordinates execution pipeline for CellML to OpenFOAM conversion.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 from pathlib import Path
 import subprocess
 import sys
@@ -112,18 +139,18 @@ def extract_metadata_from_mmt(mmt_path: Path) -> tuple[dict, dict]:
 
     try:
         model = myokit.load_model(str(mmt_path))
-        
+
         # 1. State Mapping
         mapping = {
-            i: s.name().replace('.', '_') 
+            i: s.name().replace('.', '_')
             for i, s in enumerate(model.states())
         }
-        
+
         # 2. Component Discovery (Vm, Iion, Istim)
         discovered = discovery.discover_all(model)
-        
+
         return mapping, discovered
-        
+
     except Exception as e:
         print(f"    [Error] Failed to extract metadata from {mmt_path}: {e}")
         return None, {}
@@ -136,6 +163,7 @@ def run_pipeline(
     start: str,
     end: str,
     model: "Optional[str]" = None,
+    outdir: Path = Path("."),
     verbose: bool = False,
 ):
     validate_pipeline(start, end)
@@ -174,7 +202,7 @@ def run_pipeline(
                 raise ValueError("--model must be ModelName_Year")
 
             name, year = model.rsplit("_", 1)
-            
+
             # 1. Apply Python-based source-to-source rewrites (Replaces Coccinelle)
             if verbose:
                 print("    Applying Python-based source-to-source rewrites (replacing Coccinelle)")
@@ -183,19 +211,20 @@ def run_pipeline(
             # 2. Generate OpenFOAM-ready code
             if verbose:
                 print(f"    Generating OpenFOAM code (discovered: {discovered_vars})")
-            
-            output_h = f"{name}_{year}.H"
+
+            outdir.mkdir(parents=True, exist_ok=True)
+            output_h = outdir / f"{name}_{year}.H"
             run_mapping(
-                str(current), 
-                output_h, 
-                mapping=auto_mapping, 
+                str(current),
+                output_h,
+                mapping=auto_mapping,
                 discovered=discovered_vars, # Pass discovered components
                 verbose=verbose
             )
             return {
                 "model": name,
                 "year": year,
-                "header": f"{name}_{year}Names.H",
+                "header": outdir / f"{name}_{year}Names.H",
                 "source": output_h
             }
 

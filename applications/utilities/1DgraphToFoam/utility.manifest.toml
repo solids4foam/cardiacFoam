@@ -1,0 +1,49 @@
+# applications/utilities/1DgraphToFoam/utility.manifest.toml
+
+name = "1DgraphToFoam"
+description = "Convert a legacy ASCII VTK 1D graph into a cardiacFoam Purkinje graph dictionary."
+category = "io-conversion"
+
+purpose = """
+Reads an ASCII VTK file that contains UNSTRUCTURED_GRID or POLYDATA line elements
+and writes a constant/<name> OpenFOAM dictionary in the format expected by the
+conductionSystemDomain Purkinje solver. Point and cell data fields (including
+conductance, nodeRole) are preserved. Edges longer than graphStep are automatically
+subdivided into equal sub-segments, and PVJ (Purkinje–ventricular junction) nodes
+are identified from the nodeRole field or from free endpoints.
+"""
+
+inputs = [
+  "<vtk-file>",
+]
+
+outputs = [
+  "constant/purkinjeGraph",
+]
+
+positional_args = [
+  {name = "vtk_file", argument_kind = "path", description = "Input ASCII VTK file containing 1D line elements (UNSTRUCTURED_GRID or POLYDATA)."},
+]
+
+requires_mesh = false
+example = "1DgraphToFoam myGraph.vtk -case ./purkinje_run -name purkinjeGraph"
+
+[[flags]]
+name = "-name"
+description = "Name of the graph object written under constant/ (default: purkinjeGraph)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-graphStep"
+description = "Maximum edge length after subdivision in metres (default: 3e-4). Set to 0 to disable."
+takes_value = true
+argument_kind = "scalar"
+default = "3e-4"
+
+[[produces]]
+artifact_id = "purkinje_graph_dict"
+path_pattern = "constant/purkinjeGraph"
+format = "openfoam_log"
+description = "OpenFOAM dictionary encoding the subdivided Purkinje graph (nodes, edges, conductance, nodeRole)."
+produced_by = "1DgraphToFoam"

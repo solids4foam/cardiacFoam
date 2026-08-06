@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    myocardiumSolver
+
+Description
+    Abstract base class for myocardium solvers.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef myocardiumSolver_H
@@ -26,6 +34,7 @@ License
 #include "runTimeSelectionTables.H"
 #include "dictionary.H"
 #include "fvMesh.H"
+#include "fvMeshSubset.H"
 #include "electroVolumeFieldDomain.H"
 
 namespace Foam
@@ -44,9 +53,11 @@ public:
         dictionary,
         (
             const fvMesh& mesh,
+            const fvMesh& supportMesh,
+            const fvMeshSubset* meshSubsetPtr,
             const dictionary& electroProperties
         ),
-        (mesh, electroProperties)
+        (mesh, supportMesh, meshSubsetPtr, electroProperties)
     );
 
     //- Construct from explicit solver type name and its Coeffs subdictionary.
@@ -55,6 +66,8 @@ public:
     static autoPtr<myocardiumSolver> New
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const word& solverType,
         const dictionary& coeffs
     );
@@ -85,6 +98,14 @@ public:
 
     virtual const volTensorField& explicitConductivityField() const = 0;
 
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    );
+
+    virtual void unbindExternalPhiE();
+
     virtual void solveDiffusionExplicit
     (
         electroVolumeFieldDomain& domain,
@@ -97,12 +118,16 @@ public:
         scalar dt
     ) = 0;
 
+    //- Standard implicit diffusion advance: the outer PIMPLE loop wraps the
+    //  shared non-orthogonal corrector loop over the single-assembly
+    //  solveDiffusionImplicit(domain, dt). Kernels normally inherit this and
+    //  implement only the 2-arg single assembly.
     virtual void solveDiffusionImplicit
     (
         electroVolumeFieldDomain& domain,
         scalar dt,
         pimpleControl& pimple
-    ) = 0;
+    );
 };
 
 } // End namespace Foam

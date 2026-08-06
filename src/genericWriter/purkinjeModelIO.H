@@ -16,20 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::purkinjeModelIO
+    purkinjeModelIO
 
 Description
     Static utility class for Purkinje network model I/O operations.
 
-    Provides file-writing helpers used by purkinjeNetworkModel:
-
-      - openTimeSeries : create a column-header .dat file
-      - writeRow       : append one timestep row
-
-    The class has no member data; all methods are static.
-
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
     Philip Cardiff, UCD.
 
 SourceFiles
@@ -47,7 +40,7 @@ SourceFiles
 #include "pointField.H"
 #include "labelList.H"
 #include "scalarField.H"
-#include "scalarList.H"
+#include "PtrList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -62,6 +55,13 @@ class purkinjeModelIO
 {
 public:
 
+    struct ResolvedTokens
+    {
+        wordList networkTokens;
+        wordList ionicTokens;
+        wordList unknownTokens;
+    };
+
     // Constructors
 
         //- Not instantiable – all methods are static
@@ -69,6 +69,15 @@ public:
 
 
     // Static Member Functions
+
+        static ResolvedTokens filterTokens
+        (
+            const wordList& userExport,
+            const char* const stateNames[],
+            int nStates,
+            const char* const algNames[],
+            int nAlg
+        );
 
         //- Open/create a time-series output file and write the column header.
         //  Creates outDir if it does not exist.
@@ -88,6 +97,16 @@ public:
             const List<scalar>& values
         );
 
+        //- (Re)write a .vtk.series JSON sidecar so that ParaView (≥5.6)
+        //  displays correct physical time values for legacy VTK files.
+        //  Pass all accumulated (time, filename) pairs each call.
+        static void writeVTKSeries
+        (
+            const fileName&   seriesPath,
+            const scalarList& times,
+            const wordList&   filenames
+        );
+
         //- Write one VTK legacy PolyData file for the Purkinje graph at a
         //  given simulation time.  Each call produces an independent
         //  purkinjeNetwork_<timeStepIndex>.vtk file in outDir that ParaView
@@ -101,16 +120,6 @@ public:
         //  Iion1D        : ionic current at every node.
         //  pvjNodes      : node indices of the PVJ terminals.
         //  terminalSource: volumetric source at each PVJ (size = pvjNodes.size()).
-        //- (Re)write a .vtk.series JSON sidecar so that ParaView (≥5.6)
-        //  displays correct physical time values for legacy VTK files.
-        //  Pass all accumulated (time, filename) pairs each call.
-        static void writeVTKSeries
-        (
-            const fileName&   seriesPath,
-            const scalarList& times,
-            const wordList&   filenames
-        );
-
         static void writeVTK
         (
             const fileName&     outDir,
@@ -122,7 +131,9 @@ public:
             const scalarField&  Vm1D,
             const scalarField&  Iion1D,
             const labelList&    pvjNodes,
-            const scalarField&  terminalSource
+            const scalarField&  terminalSource,
+            const PtrList<scalarField>& ionicFields = PtrList<scalarField>(),
+            const wordList&             ionicFieldNames = wordList()
         );
 };
 

@@ -16,30 +16,21 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ECGDomain
+    ecgDomain
 
 Description
     Concrete ECG domain class.
 
-    Owns the electrode configuration, output I/O, and an ECGSolver kernel
-    selected at runtime from the 'ecgSolver' dictionary key.  This mirrors
-    the pattern used by MyocardiumDomain: the domain is a single concrete
-    class that holds state and delegates the numerical algorithm to a
-    runtime-selectable ECGSolver.
-
-    To add a new ECG algorithm (e.g. TorsoECGSolver), register a new
-    ECGSolver subclass — no changes to ECGDomain are needed.
-
 Author
-    Simão Nieto de Castro, UCD.
-    Philip Cardiff, UCD.
+    Simao Nieto de Castro. All rights reserved.
+    Philip Cardiff, UCD. All rights reserved.
 
 SourceFiles
     ecgDomain.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef ECGDomain_H
-#define ECGDomain_H
+#ifndef ecgDomain_H
+#define ecgDomain_H
 
 #include "volFields.H"
 #include "autoPtr.H"
@@ -56,35 +47,37 @@ namespace Foam
 class ecgVerificationModel;
 
 /*---------------------------------------------------------------------------*\
-                       Class ECGDomain Declaration
+                       Class ecgDomain Declaration
 \*---------------------------------------------------------------------------*/
 
-class ECGDomain
+class ecgDomain
 :
-    public electroDomainInterface
+    public electroDomainInterface,
+    public electroStateProvider
 {
-    //- Output stream for pseudoECG.dat
+    const electroStateProvider& stateProvider_;
+    const fvMesh& mesh_;
+
+    word solverType_;
+
+    //- Output stream for pseudoECG.dat or bathECG.dat
     autoPtr<OFstream> outputPtr_;
-
     //- Runtime-selected ECG evaluation kernel
-    autoPtr<ECGSolver> solverPtr_;
-
+    autoPtr<ecgSolver> solverPtr_;
     //- Optional ECG verification extension
     autoPtr<ecgVerificationModel> verificationModelPtr_;
-
     //- Reused output values buffer
     scalarField numericValues_;
 
+    const dictionary* inheritedElectrodePositionsPtr_;
+    const dictionary* inheritedManufacturedBidomainPtr_;
+    const dictionary* inheritedPotentialDomainPtr_;
+
     //- Disallow copy construct
-    ECGDomain(const ECGDomain&) = delete;
+    ecgDomain(const ecgDomain&) = delete;
 
     //- Disallow assignment
-    void operator=(const ECGDomain&) = delete;
-
-protected:
-
-    const electroStateProvider& stateProvider_;
-    const fvMesh& mesh_;
+    void operator=(const ecgDomain&) = delete;
 
     //- Electrode labels (empty when electrodes not configured)
     wordList electrodeNames_;
@@ -97,35 +90,104 @@ protected:
 
 public:
 
-    TypeName("ECGDomain");
+    TypeName("ecgDomain");
 
     // Constructors
 
-        ECGDomain
+        ecgDomain
         (
             const electroStateProvider& stateProvider,
             const dictionary& dict,
-            const word& domainName = "ECG"
+            const word& domainName = "ECG",
+            const dictionary* inheritedElectrodePositionsPtr = nullptr,
+            const dictionary* inheritedManufacturedBidomainPtr = nullptr,
+            const dictionary* inheritedPotentialDomainPtr = nullptr
         );
 
     // Destructor
-    virtual ~ECGDomain();
+    virtual ~ecgDomain();
 
     // Access
 
-        const fvMesh& mesh() const
+        virtual const fvMesh& mesh() const override
         {
             return mesh_;
         }
 
+        virtual const fvMesh& baseMesh() const override
+        {
+            return stateProvider_.baseMesh();
+        }
+
+        virtual const labelUList* subsetFaceMapPtr() const override
+        {
+            return stateProvider_.subsetFaceMapPtr();
+        }
+
+        virtual const labelUList* subsetCellMapPtr() const override
+        {
+            return stateProvider_.subsetCellMapPtr();
+        }
+
         const volScalarField& Vm() const;
 
+        const volScalarField& activationTime() const;
+
         const volTensorField& conductivity() const;
+
+        const volScalarField& phiE() const;
 
         const wordList& electrodeNames() const { return electrodeNames_; }
         const List<vector>& electrodePositions() const
         {
             return electrodePositions_;
+        }
+
+        virtual const volScalarField* VmPtr() const override
+        {
+            return stateProvider_.VmPtr();
+        }
+
+        virtual const volScalarField* activationTimePtr() const override
+        {
+            return stateProvider_.activationTimePtr();
+        }
+
+        virtual const volScalarField* phiEPtr() const override
+        {
+            return stateProvider_.phiEPtr();
+        }
+
+        virtual const volTensorField* conductivityPtr() const override
+        {
+            return stateProvider_.conductivityPtr();
+        }
+
+        virtual const dimensionedScalar* chiPtr() const override
+        {
+            return stateProvider_.chiPtr();
+        }
+
+        virtual const dimensionedScalar* CmPtr() const override
+        {
+            return stateProvider_.CmPtr();
+        }
+
+        virtual const dimensionedScalar* c0Ptr() const override
+        {
+            return stateProvider_.c0Ptr();
+        }
+
+        virtual const volTensorField* intracellularConductivityPtr()
+            const override
+        {
+            return stateProvider_.intracellularConductivityPtr();
+        }
+
+        virtual const volTensorField* extracellularConductivityPtr()
+            const override
+        {
+            return stateProvider_.extracellularConductivityPtr();
         }
 
     // Member Functions
@@ -153,6 +215,14 @@ public:
 
         //- Refresh model coefficients from the ECG sub-dictionary.
         virtual bool read(const dictionary& dict);
+
+        void recordVerification
+        (
+            scalar sampleTime,
+            const scalarField& values
+        );
+
+        virtual void write() override {}
 
         //- Finalize any model-specific reporting at the end of the run
         virtual void end() override;

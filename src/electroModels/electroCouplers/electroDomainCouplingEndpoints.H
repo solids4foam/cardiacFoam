@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electroDomainCouplingEndpoints
+
+Description
+    Coupling endpoints for electro domains.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroDomainCouplingEndpoints_H
@@ -28,6 +36,8 @@ License
 namespace Foam
 {
 
+class ionicModel;
+
 //- Primary tissue domain interface used by coupling models.
 class tissueCouplingEndpoint
 {
@@ -40,6 +50,17 @@ public:
 
     //- Source term field exposed to coupling models.
     virtual volScalarField& sourceField() = 0;
+
+    virtual ionicModel* ionicModelPtr()
+    {
+        return nullptr;
+    }
+
+    //- Optional implicit source coefficient for linearized tissue coupling.
+    virtual volScalarField* implicitSourceCoeffPtr()
+    {
+        return nullptr;
+    }
 
     //- Transmembrane voltage at the domain.
     virtual const volScalarField& Vm() const = 0;
@@ -77,6 +98,13 @@ public:
         const scalarField& terminalCurrent,
         const scalarField& terminalSource
     ) = 0;
+
+    //- Terminal-specific PVJ resistances (optional).
+    //  If provided, this overrides the coupler's uniform resistance.
+    virtual const scalarField* terminalResistances() const
+    {
+        return nullptr;
+    }
 };
 
 

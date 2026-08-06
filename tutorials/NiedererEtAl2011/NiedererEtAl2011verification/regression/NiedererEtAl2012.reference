@@ -1,0 +1,14 @@
+# file                                time    col  expected      tolerance
+# col = awk column index ($2 = probe 0, $3 = probe 1, ...)
+# Probe 0 (0 0 0.007)          - near stimulus, activated
+# Probe 2 (0.019999 0 0.007)   - far in x, near z, not activated at t=0.03
+# Probe 4 (0 0.003 0.007)      - lateral, activated
+# Probe 8 (0.01 0.0015 0.0035) - centre of domain, activated
+# Probe 3 (0.019999 0 0)       - far corner, not activated
+# Probe 7 (0.019999 0.003 0)   - far corner, not activated
+Niedererpoints/0/activationTime      0.03    2    0.00119338    1e-4
+Niedererpoints/0/activationTime      0.03    4    -1            1e-4
+Niedererpoints/0/activationTime      0.03    6    0.0112286     1e-4
+Niedererpoints/0/activationTime      0.03    10   0.02396       1e-4
+Niedererpoints/0/activationTime      0.03    5    -1            1e-4
+Niedererpoints/0/activationTime      0.03    9    -1            1e-4

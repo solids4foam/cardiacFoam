@@ -9,16 +9,16 @@ to a runtime-selectable solver where appropriate.
 
 ```text
 src/electroModels/electroDomains/
-├── myocardiumDomain/         # Primary 3D tissue domain
-├── conductionSystemDomain/   # Upstream 1D/graph conduction domain
-├── ecgDomain/                # Downstream ECG evaluation domain
-├── bathDomain/               # Bath-side domain code still present in tree
+├── myocardiumDomain/                # Primary 3D tissue domain
+├── conductionSystemDomain/          # Upstream 1D/graph conduction domain
+├── ecgDomain/                       # Downstream ECG evaluation domain
+├── extracellularPotentialDomain/    # Unified global phiE (heart+bath)
 └── README.md
 ```
 
 ## Domain roles
 
-### `MyocardiumDomain`
+### `myocardiumDomain`
 
 Defined under `myocardiumDomain/`.
 
@@ -30,7 +30,7 @@ Defined under `myocardiumDomain/`.
   consumers.
 - Delegates the diffusion kernel to a runtime-selectable `myocardiumSolver`.
 
-### `ConductionSystemDomain`
+### `conductionSystemDomain`
 
 Defined under `conductionSystemDomain/`.
 
@@ -41,22 +41,32 @@ Defined under `conductionSystemDomain/`.
 - Implements `networkCouplingEndpoint`, exposing terminal-node voltages and
   accepting terminal coupling currents prepared by electro couplers.
 - Keeps graph-specific utilities such as `conductionGraph` close to the domain
-  because they are part of its state model.
+  as part of its state model.
 
-### `ECGDomain`
+### `ecgDomain`
 
 Defined under `ecgDomain/`.
 
 - Optional downstream domain advanced after the myocardium.
 - Holds electrode configuration, ECG output, and a runtime-selectable
-  `ECGSolver`.
+  `ecgSolver`.
 - Consumes read-only myocardium state through `electroStateProvider`; it does
   not couple current back into the tissue.
 
-### `bathDomain`
+### `extracellularPotentialDomain`
 
-Bath-side domain code is still present in this folder and still compiled, but
-it is not currently assembled by the active `core` orchestration path.
+Defined under `extracellularPotentialDomain/`.
+
+- Implements `electroStateDomain` — both advances in time and exposes
+  read-only state (phiE, conductivities).
+- Owns the global extracellular potential `phiE` solved on the union mesh of
+  heart + bath cell zones via an elliptic FVM laplacian.
+- Scatters heart `Vm` from the bidomain solver to the base mesh and binds a
+  restricted local view of `phiE` back into the myocardium via
+  `bindExternalPhiE`. With this binding the bidomain solver no longer solves
+  its own local phiE.
+- Provides the `electroStateProvider` accessed by `torsoECG`-class ECG
+  domains for electrode sampling on the full union mesh.
 
 ## Relationship to sibling directories
 

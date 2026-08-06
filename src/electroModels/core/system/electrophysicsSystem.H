@@ -15,6 +15,15 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electrophysicsSystem
+
+Description
+    Orchestrates the execution of a multi-domain electrophysiology system
+    using a domain separation architecture.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electrophysicsSystem_H
@@ -23,6 +32,7 @@ License
 #include "autoPtr.H"
 #include "PtrList.H"
 #include "electroDomainInterface.H"
+#include "electroStateDomain.H"
 #include "electroDomainCoupler.H"
 #include "myocardiumDomainInterface.H"
 #include "electrophysicsAdvanceScheme.H"
@@ -30,36 +40,15 @@ License
 namespace Foam
 {
 
-/*---------------------------------------------------------------------------*\
-                    Class electrophysicsSystem
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Description
-    Orchestrates the execution of a multi-domain electrophysiology system
-    using a domain separation architecture.
-
-    Terminology used by this container:
-    - primary domain        = myocardium
-    - conduction domains    = pre-myocardium graph / Purkinje domains
-    - ECG domains           = post-myocardium ECG domains advanced after myocardium
-
-Architecture
-    See ARCHITECTURE.md for detailed explanation of:
-    - Domain separation philosophy
-    - electroStateProvider interface and one-way coupling pattern
-    - Dependency inversion between solvers and domains
-    - Why this design improves extensibility and testability
-
-\*---------------------------------------------------------------------------*/
-
 class electrophysicsSystem
 {
     autoPtr<myocardiumDomainInterface> myocardium_;
+    autoPtr<electroStateDomain> potentialDomain_;
     autoPtr<electrophysicsAdvanceScheme> advanceScheme_;
     PtrList<electroDomainInterface> conductionDomains_;
-    PtrList<ElectroDomainCoupler> conductionCouplingModels_;
+    PtrList<electroDomainCoupler> conductionCouplingModels_;
     PtrList<electroDomainInterface> ecgDomains_;
-    PtrList<ElectroDomainCoupler> ecgCouplingModels_;
+    PtrList<electroDomainCoupler> ecgCouplingModels_;
 
 public:
 
@@ -68,6 +57,20 @@ public:
     void setMyocardium(myocardiumDomainInterface* myocardium)
     {
         myocardium_.reset(myocardium);
+    }
+
+    void setPotentialDomain(electroStateDomain* domain)
+    {
+        potentialDomain_.reset(domain);
+    }
+
+    void clearPotentialDomain()
+    {
+        if (potentialDomain_.valid() && myocardium_.valid())
+        {
+            myocardium_().unbindExternalPhiE();
+        }
+        potentialDomain_.clear();
     }
 
     void setAdvanceScheme(electrophysicsAdvanceScheme* advanceScheme)
@@ -92,7 +95,7 @@ public:
         conductionDomains_.clear();
     }
 
-    void appendConductionCoupling(ElectroDomainCoupler* couplingModel)
+    void appendConductionCoupling(electroDomainCoupler* couplingModel)
     {
         if (!couplingModel)
         {
@@ -126,7 +129,7 @@ public:
         ecgDomains_.clear();
     }
 
-    void appendECGCoupling(ElectroDomainCoupler* couplingModel)
+    void appendECGCoupling(electroDomainCoupler* couplingModel)
     {
         if (!couplingModel)
         {
@@ -178,12 +181,22 @@ public:
         return myocardium_.valid();
     }
 
+    bool hasPotentialDomain() const
+    {
+        return potentialDomain_.valid();
+    }
+
+    const electroStateProvider& potentialStateProvider() const
+    {
+        return potentialDomain_();
+    }
+
     const PtrList<electroDomainInterface>& conductionDomains() const
     {
         return conductionDomains_;
     }
 
-    const PtrList<ElectroDomainCoupler>& conductionCouplings() const
+    const PtrList<electroDomainCoupler>& conductionCouplings() const
     {
         return conductionCouplingModels_;
     }
@@ -193,7 +206,7 @@ public:
         return ecgDomains_;
     }
 
-    const PtrList<ElectroDomainCoupler>& ecgCouplings() const
+    const PtrList<electroDomainCoupler>& ecgCouplings() const
     {
         return ecgCouplingModels_;
     }
@@ -224,11 +237,17 @@ public:
 
     void prepareECGCouplings(scalar t0, scalar dt);
 
+    void preparePotentialDomain(scalar t0, scalar dt);
+
+    void advancePotentialDomain(scalar t0, scalar dt);
+
     void advanceECGDomains(scalar t0, scalar dt);
 
     void writeConductionDomains();
 
     void writeConductionCouplings();
+
+    void writePotentialDomain();
 
     void endConductionDomains();
 

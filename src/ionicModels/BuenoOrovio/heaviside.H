@@ -36,7 +36,7 @@ namespace Foam
 {
 
     //- Return the Heaviside function value for x
-    int heaviside(const scalar x)
+    inline int heaviside(const scalar x)
     {
         if (x > 0)
         {

@@ -44,20 +44,22 @@ EXE_INC = \
     -IelectroDomains \
     -IelectroDomains/conductionSystemDomain \
     -IelectroDomains/ecgDomain \
+    -IelectroDomains/extracellularPotentialDomain \
     -IelectroDomains/myocardiumDomain \
     -IconductionSystemModels \
     -ImyocardiumModels \
     -IecgModels \
+    -IecgModels/eikonalECG \
+    -IecgModels/torsoECG \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
     -IelectroCouplers/pvjCoupler/eikonal \
     -IelectroCouplers/pvjCoupler/reactionDiffusion \
     -Icore \
+    -Icore/verificationModels \
     -IadvanceSchemes \
     -IadvanceSchemes/staggered \
-    -IadvanceSchemes/pimpleStaggered \
     -I../ionicModels/lnInclude \
-    -I../verificationModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
     -I../couplingModels/lnInclude \
@@ -73,7 +75,6 @@ EXE_INC = \
 LIB_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
-    -lverificationModels \
     -lionicModels \
     -lgenericWriter \
     -lactiveTensionModels \

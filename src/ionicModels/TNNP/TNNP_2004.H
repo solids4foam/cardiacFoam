@@ -15,10 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the ten Tusscher-Noble-Noble-
+    Panfilov 2004 ventricular model. Converted from CellML.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "dictionary.H"
 #include "scalar.H"
+#pragma once
+
 #include "TNNP_2004Names.H"
 #include "stimulusIO.H"
 
@@ -158,6 +166,16 @@ static const char* TNNP_CONSTANTS_NAMES[NUM_CONSTANTS] = {
     "K_buf_sr",
     "V_sr",
     "tau_fCa",
+    "sInfPrefactor",
+    "sInfShift",
+    "sInfScale",
+    "tauSGaussAmp",
+    "tauSGaussShift",
+    "tauSGaussWidth",
+    "tauSSigmoidAmp",
+    "tauSSigmoidShift",
+    "tauSSigmoidScale",
+    "tauSOffset",
 };
 
 
@@ -177,7 +195,6 @@ TNNPDependencyMap()
     static const Foam::HashTable<Foam::wordList> dep
     (
         {
-            // Fast sodium current
             { "INa",
               Foam::wordList
               ({
@@ -194,14 +211,12 @@ TNNPDependencyMap()
               }) },
 
 
-            // L-type calcium current
             { "ICaL",
               Foam::wordList
               ({
                   "i_CaL",
                   "d_inf","f_inf","fCa_inf",
                   "tau_d","tau_f"
-                  // tau_fCa is CONSTANT
               }) },
             { "I_CaL",
               Foam::wordList
@@ -211,7 +226,6 @@ TNNPDependencyMap()
                   "tau_d","tau_f"
               }) },
 
-            // Transient outward potassium current
             { "Ito",
               Foam::wordList
               ({
@@ -228,7 +242,6 @@ TNNPDependencyMap()
               }) },
 
 
-            // Rapid delayed rectifier potassium current
             { "IKr",
               Foam::wordList
               ({
@@ -244,41 +257,33 @@ TNNPDependencyMap()
                   "tau_xr1","tau_xr2"
                 }) },
 
-            // Slow delayed rectifier potassium current
             { "IKs",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
             { "I_Ks",Foam::wordList ({"i_Ks","xs_inf","tau_xs"}) },
 
-            // Inward rectifier potassium current
             { "IK1",Foam::wordList({"i_K1","xK1_inf"}) },
             { "I_K1",Foam::wordList({"i_K1","xK1_inf"}) },
 
-            // Sodium–potassium pump
             { "INaK",Foam::wordList({"i_NaK"}) },
             { "I_NaK",Foam::wordList({"i_NaK"}) },
 
 
-            // Sodium–calcium exchanger
             { "INaCa",Foam::wordList({"i_NaCa"}) },
             { "I_NaCa",Foam::wordList({"i_NaCa"}) },
 
 
-            // Background currents
             { "IbNa",Foam::wordList({ "i_b_Na" }) },
             { "IbCa",Foam::wordList({ "i_b_Ca" }) },
             { "I_bNa",Foam::wordList({ "i_b_Na" }) },
             { "I_bCa",Foam::wordList({ "i_b_Ca" }) },
 
-            // Plateau / pump currents
             { "IpCa",Foam::wordList({ "i_p_Ca" }) },
             { "IpK", Foam::wordList({ "i_p_K" }) },
             { "I_pCa",Foam::wordList({ "i_p_Ca" }) },
             { "I_pK", Foam::wordList({ "i_p_K" }) },
 
-            // SR release gate (Ca-driven, not Vm sweep)
             { "RyR_g",Foam::wordList({"g_inf"}) },
 
             // ------------------------------------------------------------
-            // Total ionic current
             // ------------------------------------------------------------
             { "Iion",
               Foam::wordList
@@ -306,7 +311,7 @@ TNNPDependencyMap()
 
 
 
-void
+inline void
 TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 
 {
@@ -350,6 +355,29 @@ CONSTANTS[g_to] = (tissueFlag == 3)
           ? 0.073
           : 0.294;
 
+// Tissue-dependent algebraic parameters (promoted from hot-path branches
+// in TNNPcomputeRates / TNNPcomputeVariables — see spec
+// docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1).
+// Original branch: only tissueFlag == 1 (epi) selects the first set;
+// M-cells and endo share the second set.
+{
+    const bool isEpi = (tissueFlag == 1);
+
+    CONSTANTS[sInfPrefactor]    = isEpi ?    1.00000 :    1.10000;
+    CONSTANTS[sInfShift]        = isEpi ?   20.00000 :   28.00000;
+    CONSTANTS[sInfScale]        = isEpi ?    5.00000 :    6.00000;
+
+    CONSTANTS[tauSGaussAmp]     = isEpi ?   85.00000 : 1000.00000;
+    CONSTANTS[tauSGaussShift]   = isEpi ?   45.00000 :   67.00000;
+    CONSTANTS[tauSGaussWidth]   = isEpi ?  320.00000 : 1000.00000;
+
+    CONSTANTS[tauSSigmoidAmp]   = isEpi ?    5.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidShift] = isEpi ?  -20.00000 :    0.00000;
+    CONSTANTS[tauSSigmoidScale] = isEpi ?    5.00000 :    1.00000;
+
+    CONSTANTS[tauSOffset]       = isEpi ?    3.00000 :    8.00000;
+}
+
 STATES[s] = 1;
 STATES[r] = 0;
 CONSTANTS[P_NaK] = 1.362;
@@ -382,8 +410,8 @@ CONSTANTS[tau_fCa] = 2.00000;
 
 }
 
-void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+inline void
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 //INa
@@ -422,13 +450,18 @@ ALGEBRAIC[d_fCa] = (ALGEBRAIC[fCa_inf] - STATES[fCa])/CONSTANTS[tau_fCa];
 RATES[fCa] = (ALGEBRAIC[fCa_inf]>STATES[fCa]&&STATES[V]>- 60.0000 ? 0.00000 : ALGEBRAIC[d_fCa]);
 
 //Ito
-//Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1)
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
-    : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
-ALGEBRAIC[tau_s] = (tissueFlag == 1)
-     ? 85.0000*exp(- pow(STATES[V]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[V] - 20.0000)/5.00000))+3.00000
-     : 1000.0000*exp(- pow(STATES[V]+67.0000, 2.00000)/1000.000)+8.00000;
+// Ito (tissue dependence now lives in CONSTANTS[sInf*] and CONSTANTS[tauS*],
+// set per tissue in TNNPinitConsts — see spec §3.1).
+ALGEBRAIC[s_inf] = CONSTANTS[sInfPrefactor]
+    / (1.00000 + exp((STATES[V] + CONSTANTS[sInfShift]) / CONSTANTS[sInfScale]));
+ALGEBRAIC[tau_s] =
+      CONSTANTS[tauSGaussAmp]
+      * exp(- pow(STATES[V] + CONSTANTS[tauSGaussShift], 2.00000)
+            / CONSTANTS[tauSGaussWidth])
+    + CONSTANTS[tauSSigmoidAmp]
+      / (1.00000 + exp((STATES[V] + CONSTANTS[tauSSigmoidShift])
+                       / CONSTANTS[tauSSigmoidScale]))
+    + CONSTANTS[tauSOffset];
 RATES[s] = (ALGEBRAIC[s_inf] - STATES[s])/ALGEBRAIC[tau_s];
 ALGEBRAIC[r_inf] = 1.00000/(1.00000+exp((20.0000 - STATES[V])/6.00000));
 ALGEBRAIC[tau_r] =  9.50000*exp(- pow(STATES[V]+40.0000, 2.00000)/1800.00)+0.800000;
@@ -512,21 +545,25 @@ RATES[Ca_SR] =  ALGEBRAIC[ddt_Ca_sr_total]*ALGEBRAIC[f_JCa_sr_free];
 
 
 
-void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+inline void
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
 
 ALGEBRAIC[f_inf] = 1.00000/(1.00000+exp((STATES[V]+20.0000)/7.00000));
 ALGEBRAIC[tau_f] =  1125.00*exp(- pow(STATES[V]+27.0000, 2.00000)/240.000)+80.0000+165.000/(1.00000+exp((25.0000 - STATES[V])/10.0000));
 
-//Conditional tissue flag for the Ito current
-ALGEBRAIC[s_inf] = (tissueFlag == 1)
-    ? 1.00000 / (1.00000 + exp((STATES[V] + 20.0000) / 5.00000))
-    : 1.10000 / (1.00000 + exp((STATES[V] + 28.0000) / 6.00000));
-
-ALGEBRAIC[tau_s] = (tissueFlag == 1)
-     ? 85.0000*exp(- pow(STATES[V]+45.0000, 2.00000)/320.000)+5.00000/(1.00000+exp((STATES[V] - 20.0000)/5.00000))+3.00000
-     : 1000.0000*exp(- pow(STATES[V]+67.0000, 2.00000)/1000.000)+8.00000;
+// Ito (tissue dependence now lives in CONSTANTS[sInf*] and CONSTANTS[tauS*],
+// set per tissue in TNNPinitConsts — see spec §3.1).
+ALGEBRAIC[s_inf] = CONSTANTS[sInfPrefactor]
+    / (1.00000 + exp((STATES[V] + CONSTANTS[sInfShift]) / CONSTANTS[sInfScale]));
+ALGEBRAIC[tau_s] =
+      CONSTANTS[tauSGaussAmp]
+      * exp(- pow(STATES[V] + CONSTANTS[tauSGaussShift], 2.00000)
+            / CONSTANTS[tauSGaussWidth])
+    + CONSTANTS[tauSSigmoidAmp]
+      / (1.00000 + exp((STATES[V] + CONSTANTS[tauSSigmoidShift])
+                       / CONSTANTS[tauSSigmoidScale]))
+    + CONSTANTS[tauSOffset];
 
 ALGEBRAIC[r_inf] = 1.00000/(1.00000+exp((20.0000 - STATES[V])/6.00000));
 ALGEBRAIC[tau_r] =  9.50000*exp(- pow(STATES[V]+40.0000, 2.00000)/1800.00)+0.800000;

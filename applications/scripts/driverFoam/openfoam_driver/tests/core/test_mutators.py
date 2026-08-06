@@ -1,0 +1,548 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     test_mutators
+#
+# Description
+#     Tests mutators logic and specification contracts.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
+from __future__ import annotations
+
+import re
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from openfoam_driver.core.runtime.mutators import (
+    ensure_foam_dict,
+    remove_foam_dict,
+    update_foam_entry,
+    update_foam_entry_via_foamDictionary,
+)
+from openfoam_driver.specs.common import (
+    apply_electro_property_overrides,
+    apply_physics_property_overrides,
+    detect_electro_coeffs_scope,
+    ensure_electro_property_dict,
+    normalize_entry_overrides,
+    remove_electro_property_dict,
+)
+
+
+def assert_entry_present(testcase: unittest.TestCase, text: str, key: str, value: str) -> None:
+    """Assert `key <value>;` appears in `text`, tolerant of the column
+    alignment foamDictionary applies when it re-serializes a whole file
+    (e.g. `keep 1;` becomes `keep            1;`)."""
+    pattern = rf"{re.escape(key)}\s+{re.escape(value)};"
+    testcase.assertRegex(text, pattern)
+
+
+class TestScopedMutators(unittest.TestCase):
+    def test_updates_only_within_scope(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver monodomainSolver;",
+                "",
+                "monodomainSolverCoeffs",
+                "{",
+                "    ionicModel TNNP;",
+                "}",
+                "",
+                "singleCellSolverCoeffs",
+                "{",
+                "    ionicModel BuenoOrovio;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            update_foam_entry(
+                path,
+                "ionicModel",
+                "Gaur",
+                scope="singleCellSolverCoeffs",
+            )
+
+            updated = path.read_text()
+            self.assertIn("ionicModel TNNP;", updated)
+            self.assertIn("ionicModel    Gaur;", updated)
+
+    def test_nested_scope_path(self) -> None:
+        text = "\n".join(
+            [
+                "outer",
+                "{",
+                "    inner",
+                "    {",
+                "        target 1;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            update_foam_entry(path, "target", 2, scope=("outer", "inner"))
+            self.assertIn("target    2;", path.read_text())
+
+    def test_quoted_regex_style_scope_name_is_matched(self) -> None:
+        # OpenFOAM's fvSolution commonly names a solver block with a quoted
+        # alternation, e.g. "phiE|phiEFinal|phiI|phiIFinal" { ... } -- the
+        # scope-boundary regex's old trailing \b failed to match here because
+        # both the character before and after the closing quote are
+        # non-word characters, so there is no word boundary at all at that
+        # position (verified: re.match(r'^\s*"foo"\b', '    "foo"\n') is
+        # None). This is the quoted equivalent of test_nested_scope_path.
+        # Forced off foamDictionary (which would mask the regex bug, since
+        # it understands its own dictionary syntax natively) to test the
+        # fallback parser's scope matching specifically.
+        text = "\n".join(
+            [
+                "solvers",
+                "{",
+                '    "phiE|phiEFinal|phiI|phiIFinal"',
+                "    {",
+                "        tolerance 1e-06;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "fvSolution"
+            path.write_text(text)
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ):
+                update_foam_entry(
+                    path, "tolerance", 1e-15,
+                    scope=("solvers", '"phiE|phiEFinal|phiI|phiIFinal"'),
+                )
+            self.assertIn("tolerance    1e-15;", path.read_text())
+
+    def test_missing_scope_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text("a { b 1; }\n")
+
+            with self.assertRaises(KeyError):
+                update_foam_entry(path, "b", 2, scope="missing")
+
+    def test_python_parser_fails_on_c_style_comments(self) -> None:
+        text = "\n".join(
+            [
+                "someDict",
+                "{",
+                "    /* This is a block comment with a brace { inside it */",
+                "    value 1;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            # The current update_foam_entry uses brace counting, so the extra {
+            # inside the block comment throws off the parser, causing it to
+            # incorrectly raise a KeyError for unbalanced braces.
+            with self.assertRaises(KeyError):
+                update_foam_entry(path, "value", 2, scope="someDict")
+
+    def test_remove_foam_dict_removes_nested_dictionary(self) -> None:
+        text = "\n".join(
+            [
+                "outer",
+                "{",
+                "    keep 1;",
+                "    removeMe",
+                "    {",
+                "        nested",
+                "        {",
+                "            value 1;",
+                "        }",
+                "    }",
+                "    after 2;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            remove_foam_dict(path, "removeMe", scope="outer")
+
+            updated = path.read_text()
+            assert_entry_present(self, updated, "keep", "1")
+            assert_entry_present(self, updated, "after", "2")
+            self.assertNotIn("removeMe", updated)
+            self.assertNotIn("value 1;", updated)
+
+    def test_single_cell_stimulus_updates_use_nested_scope(self) -> None:
+        text = "\n".join(
+            [
+                "singleCellSolverCoeffs",
+                "{",
+                "    singleCellStimulus",
+                "    {",
+                "        stim_amplitude 0.4;",
+                "        stim_period_S1 1000;",
+                "        stim_period_S2 250;",
+                "        nstim1 10;",
+                "        nstim2 2;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            apply_electro_property_overrides(
+                path,
+                {
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_amplitude": 0.8,
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_period_S1": 1200,
+                    "singleCellSolverCoeffs.singleCellStimulus.stim_period_S2": 300,
+                    "singleCellSolverCoeffs.singleCellStimulus.nstim1": 12,
+                    "singleCellSolverCoeffs.singleCellStimulus.nstim2": 3,
+                },
+            )
+
+            updated = path.read_text()
+            self.assertIn("stim_amplitude    0.8;", updated)
+            self.assertIn("stim_period_S1    1200;", updated)
+            self.assertIn("stim_period_S2    300;", updated)
+            self.assertIn("nstim1    12;", updated)
+            self.assertIn("nstim2    3;", updated)
+
+    def test_detect_electro_coeffs_scope(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver monodomainSolver;",
+                "",
+                "monodomainSolverCoeffs",
+                "{",
+                "    ionicModel TNNP;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+            self.assertEqual(detect_electro_coeffs_scope(path), "monodomainSolverCoeffs")
+
+    def test_normalize_entry_overrides_supports_electro_scope_token(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver singleCellSolver;",
+                "",
+                "singleCellSolverCoeffs",
+                "{",
+                "    ionicModel BuenoOrovio;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            normalized = normalize_entry_overrides(
+                {"$ELECTRO_MODEL_COEFFS.ionicModel": "Gaur"},
+                electro_properties_path=path,
+            )
+
+            self.assertEqual(
+                normalized,
+                [{"key": "ionicModel", "value": "Gaur", "scope": ("singleCellSolverCoeffs",)}],
+            )
+
+    def test_apply_electro_property_overrides_handles_nested_paths(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver singleCellSolver;",
+                "",
+                "singleCellSolverCoeffs",
+                "{",
+                "    ionicModel BuenoOrovio;",
+                "    singleCellStimulus",
+                "    {",
+                "        stim_period_S1 1000;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            apply_electro_property_overrides(
+                path,
+                {
+                    "$ELECTRO_MODEL_COEFFS.ionicModel": "Gaur",
+                    "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S1": 750,
+                },
+            )
+
+            updated = path.read_text()
+            self.assertIn("ionicModel    Gaur;", updated)
+            self.assertIn("stim_period_S1    750;", updated)
+
+    def test_remove_electro_property_dict_supports_electro_scope_token(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver bidomainSolver;",
+                "",
+                "bidomainSolverCoeffs",
+                "{",
+                "    ecgDomains",
+                "    {",
+                "        ECG",
+                "        {",
+                "            ecgSolver torsoECG;",
+                "        }",
+                "    }",
+                "    bathPotentialDomain",
+                "    {",
+                "        bathCellZones (bath);",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            remove_electro_property_dict(
+                path,
+                "ecgDomains",
+                scope="$ELECTRO_MODEL_COEFFS",
+            )
+
+            updated = path.read_text()
+            self.assertNotIn("ecgDomains", updated)
+            self.assertIn("bathPotentialDomain", updated)
+
+    def test_ensure_foam_dict_inserts_missing_dict_in_scope(self) -> None:
+        text = "\n".join(
+            [
+                "root",
+                "{",
+                "    existing yes;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            inserted = ensure_foam_dict(
+                path,
+                "newBlock",
+                "    newBlock\n    {\n        value 1;\n    }\n",
+                scope="root",
+            )
+            inserted_again = ensure_foam_dict(
+                path,
+                "newBlock",
+                "    newBlock\n    {\n        value 2;\n    }\n",
+                scope="root",
+            )
+
+            updated = path.read_text()
+            self.assertTrue(inserted)
+            self.assertFalse(inserted_again)
+            self.assertEqual(updated.count("newBlock"), 1)
+            assert_entry_present(self, updated, "value", "1")
+
+    def test_ensure_electro_property_dict_supports_electro_scope_token(self) -> None:
+        text = "\n".join(
+            [
+                "myocardiumSolver bidomainSolver;",
+                "",
+                "bidomainSolverCoeffs",
+                "{",
+                "    bathPotentialDomain",
+                "    {",
+                "        bathCellZones (bath);",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            inserted = ensure_electro_property_dict(
+                path,
+                "ecgDomains",
+                "    ecgDomains\n    {\n        ECG {}\n    }\n",
+                scope="$ELECTRO_MODEL_COEFFS",
+            )
+
+            updated = path.read_text()
+            self.assertTrue(inserted)
+            self.assertIn("ecgDomains", updated)
+            self.assertIn("bathPotentialDomain", updated)
+
+    def test_apply_physics_property_overrides_updates_root_dictionary(self) -> None:
+        text = "\n".join(
+            [
+                "type electroModel;",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "physicsProperties"
+            path.write_text(text)
+
+            apply_physics_property_overrides(path, {"type": "electroMechanicalModel"})
+            self.assertIn("type    electroMechanicalModel;", path.read_text())
+
+
+class TestUpdateFoamEntryPrefersFoamDictionary(unittest.TestCase):
+    """update_foam_entry is the one sibling of read_foam_entry/remove_foam_dict/
+    ensure_foam_dict that skipped the shutil.which("foamDictionary")
+    preference -- these tests pin down that it now matches its siblings."""
+
+    def test_prefers_foamdictionary_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value="/usr/bin/foamDictionary",
+            ), mock.patch(
+                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary"
+            ) as mock_via_foamdictionary:
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            mock_via_foamdictionary.assert_called_once_with(path, "deltaT", 0.0001, scope=None)
+
+    def test_falls_back_to_regex_when_foamdictionary_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value="/usr/bin/foamDictionary",
+            ), mock.patch(
+                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary",
+                side_effect=RuntimeError("boom"),
+            ):
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            self.assertIn("deltaT    0.0001;", path.read_text())
+
+    def test_uses_regex_directly_when_foamdictionary_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text("deltaT 1e-06;\n")
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ):
+                update_foam_entry(path, "deltaT", 0.0001)
+
+            self.assertIn("deltaT    0.0001;", path.read_text())
+
+
+class TestFoamDictionarySilentTruncationGuard(unittest.TestCase):
+    """A malformed OpenFOAM header comment (missing the closing ``\\*---*/``
+    line) makes ``foamDictionary`` treat the whole file as an empty dict; it
+    then exits 0 after silently rewriting the file with only the newly-set
+    key. update_foam_entry_via_foamDictionary must detect that and refuse to
+    leave the file gutted."""
+
+    @unittest.skipUnless(shutil.which("foamDictionary"), "foamDictionary not available")
+    def test_detects_and_reverts_silent_truncation(self) -> None:
+        text = "\n".join(
+            [
+                "/*--------------------------------*- C++ -*----------------------------------*\\",
+                "FoamFile",
+                "{",
+                "    version     2.0;",
+                "    format      ascii;",
+                "    class       dictionary;",
+                "    object      controlDict;",
+                "}",
+                "",
+                "application     cardiacFoam;",
+                "startFrom       startTime;",
+                "startTime       0;",
+                "stopAt          endTime;",
+                "endTime         1.0;",
+                "deltaT          1e-06;",
+                "writeControl    adjustableRunTime;",
+                "writeInterval   0.01;",
+                "purgeWrite      0;",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "controlDict"
+            path.write_text(text)
+
+            with self.assertRaises(RuntimeError):
+                update_foam_entry_via_foamDictionary(path, "deltaT", 0.0001)
+
+            reverted = path.read_text()
+            self.assertIn("application", reverted)
+            self.assertIn("writeInterval", reverted)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -34,19 +34,26 @@ namespace electroModels
 
 // OverrideTypeName("eikonalSolver") in the header declares typeName_() == "eikonalSolver".
 // defineTypeNameWithName registers the static member accordingly; the plain
-// defineTypeNameAndDebug(EikonalSolver, 0) would use #EikonalSolver and overwrite it.
-defineTypeNameWithName(EikonalSolver, "eikonalSolver");
-defineDebugSwitch(EikonalSolver, 0);
+// defineTypeNameAndDebug(eikonalSolver, 0) would use #eikonalSolver and overwrite it.
+defineTypeNameWithName(eikonalSolver, "eikonalSolver");
+defineDebugSwitch(eikonalSolver, 0);
 // Do not register this legacy top-level implementation in the electroModel
 // table.  The canonical eikonal workflow is selected through
-// electrophysiologyModel and assembled as EikonalMyocardiumDomain; registering
+// electrophysiologyModel and assembled as eikonalMyocardiumDomain; registering
 // both under "eikonalSolver" creates a duplicate runtime-selection entry.
 
 
 // * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
 
-tmp<volTensorField> EikonalSolver::initialiseConductivity() const
+tmp<volTensorField> eikonalSolver::initialiseConductivity() const
 {
+    const dimensionedTensor zeroConductivity
+    (
+        "zero",
+        pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+        tensor::zero
+    );
+
     tmp<volTensorField> tresult
     (
         new volTensorField
@@ -60,49 +67,45 @@ tmp<volTensorField> EikonalSolver::initialiseConductivity() const
                 IOobject::NO_WRITE
             ),
             mesh(),
-            dimensionedTensor
-            (
-                "zero",
-                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                tensor::zero
-            )
+            zeroConductivity
         )
     );
     volTensorField& result = tresult.ref();
 
-    if (!result.headerOk())
+    if (result.headerOk())
     {
-        if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
-        {
-            Info<< "\nconductivity not found on disk, using conductivity from "
-                << electroProperties().name() << nl << endl;
-        }
+        Info<< "eikonalSolver: conductivity field read from "
+            << runTime().timeName() << "/conductivity" << nl << endl;
 
-        result =
-            dimensionedTensor
-            (
-                dimensionedSymmTensor
-                (
-                    "conductivity",
-                    pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
-                    electroProperties()
-                )
-              & tensor(I)
-            );
-
-        if
-        (
-            electroProperties().lookupOrDefault<Switch>("reportSetup", false)
-         && result.size() > 0
-        )
-        {
-            Info<< "Conductivity tensor (cell 0): " << result[0] << nl;
-        }
+        return tresult;
     }
-    else if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
+
+    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
     {
-        Info<< "conductivity field read from " << runTime().timeName() << nl
-            << endl;
+        Info<< "\nconductivity not found on disk, using "
+            << "conductivity from " << electroProperties().name()
+            << nl << endl;
+    }
+
+    result =
+        dimensionedTensor
+        (
+            dimensionedSymmTensor
+            (
+                "conductivity",
+                pow3(dimTime)*sqr(dimCurrent)/(dimMass*dimVolume),
+                electroProperties()
+            )
+          & tensor(I)
+        );
+
+    if
+    (
+        electroProperties().lookupOrDefault<Switch>("reportSetup", false)
+     && result.size() > 0
+    )
+    {
+        Info<< "Conductivity tensor (cell 0): " << result[0] << nl;
     }
 
     return tresult;
@@ -111,7 +114,7 @@ tmp<volTensorField> EikonalSolver::initialiseConductivity() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-EikonalSolver::EikonalSolver(Time& runTime, const word& region)
+eikonalSolver::eikonalSolver(Time& runTime, const word& region)
 :
     electroModel(typeName, runTime, region),
     psi_
@@ -197,7 +200,7 @@ EikonalSolver::EikonalSolver(Time& runTime, const word& region)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool EikonalSolver::evolve()
+bool eikonalSolver::evolve()
 {
     if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
     {

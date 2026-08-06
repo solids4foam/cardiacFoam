@@ -10,7 +10,7 @@
   },
   "manufacturedFDABidomain": {
     "case_dir_name": "manufacturedSolutions/bidomain",
-    "setup_dir_name": "setupManufacturedFDA",
+    "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "dimensions": ["1D"],
     "solver_types": ["implicit"],
@@ -19,7 +19,7 @@
     "piecewise_sweep": true
   },
   "singleCell": {
-    "case_dir_name": "singleCell",
+    "case_dir_name": "electrophysiologyProtocols/singleCell",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP", "Gaur"],
     "ionic_model_tissue_map": {
@@ -36,7 +36,8 @@
     "output_glob": "*.txt"
   },
   "niederer2012": {
-    "case_dir_name": "NiedererEtAl2012",
+    "case_dir_name": "NiedererEtAl2011/NiedererEtAl2011verification",
+    "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["TNNP"],
     "ionic_model_tissue_map": {
@@ -51,7 +52,7 @@
     }
   },
   "restitutionCurves": {
-    "case_dir_name": "restitutionCurves_s1s2Protocol",
+    "case_dir_name": "electrophysiologyProtocols/restitutionCurves_s1s2Protocol",
     "postprocess_strict_artifacts": false,
     "ionic_models": ["BuenoOrovio"],
     "ionic_model_tissue_map": {
@@ -67,7 +68,7 @@
     "electro_property_overrides": {
       "$ELECTRO_MODEL_COEFFS.ionicModel": "AlievPanfilov",
       "$ELECTRO_MODEL_COEFFS.tissue": "myocyte",
-      "$ELECTRO_MODEL_COEFFS.activeTensionModel.activeTensionModel": "GoktepeKuhl"
+      "$ELECTRO_MODEL_COEFFS.activeTensionModel": "GoktepeKuhl"
     }
   }
 }

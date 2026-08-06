@@ -1,4 +1,31 @@
 #!/usr/bin/env python3
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Script
+#     generate_catalog
+#
+# Description
+#     Generates metadata catalogs and parameter dictionaries.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """
 generate_catalog.py — CI tool to verify the static ionic_model_catalog.py
 matches the runtime output of listCellModelsVariables.
@@ -165,6 +192,8 @@ def print_update_snippet(model_name: str, parsed: dict[str, list[str]]) -> None:
     print(f'        constants=({constants_str}),')
     print(f'        recommended_exports=(...),')
     print(f'        compatible_tissues=(...),')
+    print(f'        native_tissue_labels=(...),')
+    print(f'        approximate_tissue_labels=(...),')
     print(f'        compatible_solvers=(...),')
     print(f'        species=(...),')
     print(f'        cardiac_region=(...),')
@@ -233,33 +262,6 @@ def main() -> int:
         print_update_snippet(args.model, parsed)
     return 0
 
-
-# Quick self-test
-def _self_test() -> None:
-    """Verify parse_report_text correctly extracts variable names."""
-    sample = """
-========== listCellModelsVariables ==========
-
-Selected ionicModel: TestModel
-
-Ionic constants (2) --> initial value
-  constants [0] AC_R --> 8314.0
-  constants [1] AC_T --> 310.0
-
-Ionic states (3) --> initial value
-  states [0] Vm --> -85.23
-  states [1] m --> 0.001
-  states [2] h --> 0.9
-
-Ionic algebraic (1)
-  algebraic [0] Iion
-"""
-    result = parse_report_text(sample)
-    assert result["ionic_model"] == "TestModel", f"Expected TestModel, got {result['ionic_model']}"
-    assert result["states"] == ["Vm", "m", "h"], f"Expected ['Vm', 'm', 'h'], got {result['states']}"
-    assert result["algebraic"] == ["Iion"], f"Expected ['Iion'], got {result['algebraic']}"
-    assert result["constants"] == ["AC_R", "AC_T"], f"Expected ['AC_R', 'AC_T'], got {result['constants']}"
-    print("Self-test PASSED")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     plot_builder
+#
+# Description
+#     Constructs visual traces and comparative charts.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """
 plot_builder — declarative Plotly figure construction for post-processing scripts.
 
@@ -83,7 +110,7 @@ Typical script pattern
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -196,55 +223,10 @@ class GroupShadedColors:
 
         return lighten_hex_color(base_color, amount)
 
-    def base_color_for(self, group: Any) -> str:
-        """Return the unmodified base color for a group (shade position 0)."""
-        if group in self._group_order:
-            group_index = self._group_order.index(group)
-        else:
-            group_index = 0
-        return self._palette[group_index % len(self._palette)]
 
     # ------------------------------------------------------------------
     # Factory
     # ------------------------------------------------------------------
-
-    @classmethod
-    def from_groups_and_traces(
-        cls,
-        filenames: Iterable[str],
-        group_fn: Callable[[str], Any],
-        shade_fn: Callable[[str], Any],
-        palette: list[str] | None = None,
-        max_shade_amount: float = 0.4,
-    ) -> "GroupShadedColors":
-        """Build and fully register a :class:`GroupShadedColors` from filenames.
-
-        Parameters
-        ----------
-        filenames:
-            Iterable of filename strings (basenames or full paths — only the
-            filename part is passed to the key functions).
-        group_fn:
-            Callable ``filename -> group_key`` (e.g. returns the DX float).
-        shade_fn:
-            Callable ``filename -> shade_key`` (e.g. returns the DT float).
-        palette:
-            Optional explicit palette; defaults to :data:`DEFAULT_PALETTE`.
-        max_shade_amount:
-            Forwarded to the constructor.
-
-        Returns
-        -------
-        Fully populated :class:`GroupShadedColors` ready for :meth:`color_for`.
-        """
-        colors = cls(palette=palette, max_shade_amount=max_shade_amount)
-        names = list(filenames)
-        groups = [group_fn(f) for f in names]
-        colors.register_groups(groups)
-        for g in ordered_unique(groups):
-            shades = [shade_fn(f) for f, gg in zip(names, groups) if gg == g]
-            colors.register_shades(g, shades)
-        return colors
 
 
 # ---------------------------------------------------------------------------

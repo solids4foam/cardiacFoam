@@ -38,6 +38,16 @@ addToRunTimeSelectionTable
     dictionary
 );
 
+
+staggeredElectrophysicsAdvanceScheme::
+staggeredElectrophysicsAdvanceScheme(const dictionary& dict)
+:
+    bathPredictorCorrector_
+    (
+        dict.lookupOrDefault<Switch>("bathPredictorCorrector", true)
+    )
+{}
+
 bool staggeredElectrophysicsAdvanceScheme::advance
 (
     scalar t0,
@@ -64,7 +74,39 @@ bool staggeredElectrophysicsAdvanceScheme::advance
     system.prepareMyocardiumCouplings(t0, dt);
     timings.couplingTime += timer.timeIncrement();
 
-    myocardium.advance(t0, dt, pimplePtr);
+    if (system.hasPotentialDomain())
+    {
+        if (!myocardium.supportsSplitReactionDiffusion())
+        {
+            FatalErrorInFunction
+                << "Unified phiE requires a split reaction/diffusion "
+                << "myocardium domain."
+                << exit(FatalError);
+        }
+
+        myocardium.solveReactionStep(t0, dt);
+        system.preparePotentialDomain(t0, dt);
+
+        if (bathPredictorCorrector_)
+        {
+            // Predict Vm, update phiE, then correct Vm.
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+            system.advancePotentialDomain(t0, dt);
+            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+        }
+        else
+        {
+            // Update phiE, then solve Vm with the updated phiE held fixed.
+            system.advancePotentialDomain(t0, dt);
+            myocardium.solveDiffusionStep(t0, dt, pimplePtr);
+        }
+
+        myocardium.finalizeDiffusionStep();
+    }
+    else
+    {
+        myocardium.advance(t0, dt, pimplePtr);
+    }
     timings.primaryDomainTime = timer.timeIncrement();
 
     system.prepareECGCouplings(t0, dt);

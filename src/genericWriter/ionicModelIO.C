@@ -19,12 +19,359 @@ License
 
 #include "ionicModelIO.H"
 #include "ionicVariableCompatibility.H"
+#include "DynamicList.H"
+
+#include <string>
 
 namespace Foam
 {
 
     namespace
     {
+        inline char toLowerAscii(const char c)
+        {
+            return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+        }
+
+        word suffixScalar(const scalar value)
+        {
+            const std::string raw(Foam::name(value).c_str());
+            std::string out;
+            out.reserve(raw.size());
+
+            for (const char c : raw)
+            {
+                if (c == '.')
+                {
+                    out.push_back('p');
+                }
+                else if (c == '-')
+                {
+                    out.push_back('m');
+                }
+                else if (c == '+')
+                {
+                    out.push_back('p');
+                }
+                else
+                {
+                    out.push_back(c);
+                }
+            }
+
+            return word(out);
+        }
+
+        std::string canonicalName(const char* raw)
+        {
+            std::string out;
+
+            for (const char* p = raw; *p; ++p)
+            {
+                const char c = toLowerAscii(*p);
+
+                if (c == '_' || c == '-' || c == ' ')
+                {
+                    continue;
+                }
+
+                out.push_back(c);
+            }
+
+            if (out.size() > 2 && out[0] == 'a' && out[1] == 'v')
+            {
+                return out.substr(2);
+            }
+
+            return out;
+        }
+
+        label findConstantIndex
+        (
+            const word& requestedName,
+            const char* const constantNames[],
+            const label nConstants
+        )
+        {
+            if (!constantNames || nConstants <= 0)
+            {
+                return -1;
+            }
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (requestedName == constantNames[i])
+                {
+                    return i;
+                }
+            }
+
+            const std::string canonicalRequested =
+                canonicalName(requestedName.c_str());
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (canonicalRequested == canonicalName(constantNames[i]))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        wordList constantNamesList
+        (
+            const char* const constantNames[],
+            const label nConstants
+        )
+        {
+            wordList names(max(nConstants, label(0)));
+            for (label i = 0; i < nConstants; ++i)
+            {
+                names[i] = word(constantNames[i]);
+            }
+            return names;
+        }
+
+        void validateConstantMetadata
+        (
+            const char* const constantNames[],
+            const label nConstants,
+            const word& modelName
+        )
+        {
+            if (!constantNames || nConstants <= 0)
+            {
+                FatalErrorInFunction
+                    << "Constant metadata is not available for ionic model "
+                    << modelName << "." << exit(FatalError);
+            }
+
+            for (label i = 0; i < nConstants; ++i)
+            {
+                if (!constantNames[i] || constantNames[i][0] == '\0')
+                {
+                    FatalErrorInFunction
+                        << "Invalid constant metadata for ionic model "
+                        << modelName << ": constant index " << i
+                        << " has no name. Fix the model's CONSTANTS_NAMES "
+                        << "array so every NUM_CONSTANTS entry has a real "
+                        << "semantic name."
+                        << exit(FatalError);
+                }
+            }
+        }
+
+        struct ConstantOverrideOp
+        {
+            DynamicList<label> indices;
+            DynamicList<scalar> values;
+            DynamicList<word> requestedNames;
+        };
+
+        word tissueOverrideScopeName(const label tissueFlag)
+        {
+            return tissueFlag == 1 ? word("epicardialCells")
+                 : tissueFlag == 2 ? word("mCells")
+                 : tissueFlag == 3 ? word("endocardialCells")
+                 : tissueFlag == 4 ? word("myocyte")
+                                   : word();
+        }
+
+        bool isConstantOverrideScopeName(const word& name)
+        {
+            return name == "global"
+                || name == "epicardialCells"
+                || name == "mCells"
+                || name == "endocardialCells"
+                || name == "myocyte";
+        }
+
+        bool isKnownOverrideScopeName
+        (
+            const word& name,
+            const wordList& knownScopeNames
+        )
+        {
+            if (isConstantOverrideScopeName(name))
+            {
+                return true;
+            }
+
+            forAll(knownScopeNames, i)
+            {
+                if (knownScopeNames[i] == name)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void collectConstantOverrideOp
+        (
+            const dictionary& opDict,
+            const word& scopeName,
+            const word& opName,
+            const char* const constantNames[],
+            const label nConstants,
+            const word& modelName,
+            List<label>& seen,
+            const List<label>& otherSeen,
+            ConstantOverrideOp& op
+        )
+        {
+            forAllConstIter(dictionary, opDict, iter)
+            {
+                const entry& e = iter();
+                const word requestedName(e.keyword());
+
+                if (e.isDict())
+                {
+                    FatalErrorInFunction
+                        << "ionicConstantOverrides." << scopeName
+                        << "." << opName
+                        << " entry '" << requestedName
+                        << "' for ionic model " << modelName
+                        << " must be a scalar value, not a dictionary."
+                        << exit(FatalError);
+                }
+
+                const label constantI =
+                    findConstantIndex(requestedName, constantNames, nConstants);
+
+                if (constantI < 0)
+                {
+                    FatalErrorInFunction
+                        << "Unknown ionic constant '" << requestedName
+                        << "' in ionicConstantOverrides." << scopeName
+                        << "." << opName
+                        << " for ionic model " << modelName << "." << nl
+                        << "Available constants: "
+                        << constantNamesList(constantNames, nConstants)
+                        << exit(FatalError);
+                }
+
+                if (seen[constantI])
+                {
+                    FatalErrorInFunction
+                        << "Duplicate ionic constant override for '"
+                        << constantNames[constantI]
+                        << "' in ionicConstantOverrides." << scopeName
+                        << "." << opName
+                        << " for ionic model " << modelName << "."
+                        << exit(FatalError);
+                }
+
+                if (otherSeen[constantI])
+                {
+                    FatalErrorInFunction
+                        << "Ambiguous ionic constant override for '"
+                        << constantNames[constantI]
+                        << "' in ionic model " << modelName
+                        << ": the same constant appears in both scale and set."
+                        << exit(FatalError);
+                }
+
+                seen[constantI] = 1;
+                op.indices.append(constantI);
+                op.values.append(readScalar(opDict.lookup(requestedName)));
+                op.requestedNames.append(requestedName);
+            }
+        }
+
+        void applyConstantOverrideScope
+        (
+            scalarField& constants,
+            const char* const constantNames[],
+            const label nConstants,
+            const word& modelName,
+            const dictionary& scopeDict,
+            const word& scopeName
+        )
+        {
+            forAllConstIter(dictionary, scopeDict, iter)
+            {
+                const word entryName(iter().keyword());
+                if (entryName != "scale" && entryName != "set")
+                {
+                    FatalErrorInFunction
+                        << "Unsupported ionicConstantOverrides."
+                        << scopeName << " entry '" << entryName
+                        << "' for ionic model " << modelName << "."
+                        << nl
+                        << "Supported entries are 'scale' and 'set'."
+                        << exit(FatalError);
+                }
+            }
+
+            List<label> scaleSeen(nConstants, 0);
+            List<label> setSeen(nConstants, 0);
+            ConstantOverrideOp scaleOp;
+            ConstantOverrideOp setOp;
+
+            if (scopeDict.found("scale"))
+            {
+                collectConstantOverrideOp
+                (
+                    scopeDict.subDict("scale"),
+                    scopeName,
+                    "scale",
+                    constantNames,
+                    nConstants,
+                    modelName,
+                    scaleSeen,
+                    setSeen,
+                    scaleOp
+                );
+            }
+
+            if (scopeDict.found("set"))
+            {
+                collectConstantOverrideOp
+                (
+                    scopeDict.subDict("set"),
+                    scopeName,
+                    "set",
+                    constantNames,
+                    nConstants,
+                    modelName,
+                    setSeen,
+                    scaleSeen,
+                    setOp
+                );
+            }
+
+            forAll(scaleOp.indices, opI)
+            {
+                const label constantI = scaleOp.indices[opI];
+                const scalar oldValue = constants[constantI];
+                constants[constantI] *= scaleOp.values[opI];
+
+                Info<< "ionicConstantOverrides." << scopeName << ": "
+                    << modelName << " scaled " << constantNames[constantI]
+                    << " (" << scaleOp.requestedNames[opI] << ")"
+                    << " by " << scaleOp.values[opI]
+                    << ": " << oldValue << " -> " << constants[constantI]
+                    << nl;
+            }
+
+            forAll(setOp.indices, opI)
+            {
+                const label constantI = setOp.indices[opI];
+                const scalar oldValue = constants[constantI];
+                constants[constantI] = setOp.values[opI];
+
+                Info<< "ionicConstantOverrides." << scopeName << ": "
+                    << modelName << " set " << constantNames[constantI]
+                    << " (" << setOp.requestedNames[opI] << ")"
+                    << ": " << oldValue << " -> " << constants[constantI]
+                    << nl;
+            }
+        }
+
         void emitHeader
         (
             OFstream& os,
@@ -266,33 +613,30 @@ namespace Foam
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
         VmTransform transformVm
     )
     {
+        const SelectionPlan& plan =
+            fullPlan
+            (
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                fullPlanCache
+            );
+
         const scalarField& S = STATES[0];
         const scalarField& A = ALGEBRAIC[0];
         const scalarField& R = RATES[0];
 
-        // Keep full-row emission tight; selected/export paths share one plan engine.
-        os << t << " " << (transformVm ? transformVm(S) : S[0]);
-
-        for (label i = 1; i < S.size(); ++i)
-        {
-            os << " " << S[i];
-        }
-
-        forAll(A, i)
-        {
-            os << " " << A[i];
-        }
-
-        forAll(R, i)
-        {
-            os << " " << R[i];
-        }
-
-        os << nl;
+        emitRow(t, os, S, A, R, plan, transformVm);
     }
 
     void Foam::ionicModelIO::writeSelected
@@ -353,7 +697,320 @@ namespace Foam
         }
 
         // Start writing once we pass that time
-        return (tEnd >= writeAfterTime);
+        if (tEnd < writeAfterTime)
+        {
+            return false;
+        }
+
+        scalar writeFrequency = 0.0;
+        if (dict.found("writeFrequency"))
+        {
+            writeFrequency = readScalar(dict.lookup("writeFrequency"));
+        }
+
+        if (writeFrequency > 0.0)
+        {
+            // Write only if we cross a frequency boundary between tBegin and tEnd
+            label stepBegin = std::floor(tBegin / writeFrequency);
+            label stepEnd = std::floor(tEnd / writeFrequency);
+            return (stepEnd > stepBegin);
+        }
+
+        return true;
+    }
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName
+    )
+    {
+        applyConstantOverrides
+        (
+            constants,
+            constantNames,
+            nConstants,
+            dict,
+            modelName,
+            label(-1)
+        );
+    }
+
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const label tissueFlag
+    )
+    {
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return;
+        }
+
+        if (constants.empty())
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides was requested for ionic model "
+                << modelName
+                << ", but constant storage is not available."
+                << exit(FatalError);
+        }
+
+        validateConstantMetadata(constantNames, nConstants, modelName);
+
+        if (constants.size() != nConstants)
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " found " << nConstants << " constant names but "
+                << constants.size() << " stored constant values."
+                << exit(FatalError);
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+
+        const bool heterogeneityConfigured = dict.found("ionicHeterogeneity");
+
+        forAllConstIter(dictionary, overrides, iter)
+        {
+            const word entryName(iter().keyword());
+            if (!isConstantOverrideScopeName(entryName))
+            {
+                if (!heterogeneityConfigured)
+                {
+                    // No ionicHeterogeneity block at all: the only valid
+                    // top-level scopes are 'global' and this model's own
+                    // tissue name, so any other key is unambiguously a
+                    // typo, not a legitimate region name.
+                    FatalErrorInFunction
+                        << "Unsupported ionicConstantOverrides entry '"
+                        << entryName << "' for ionic model " << modelName
+                        << " (no ionicHeterogeneity block is configured, so "
+                        << "the only valid scopes are 'global' and this "
+                        << "model's tissue name)." << nl
+                        << "Supported scopes: global, epicardialCells, "
+                        << "mCells, endocardialCells, myocyte."
+                        << exit(FatalError);
+                }
+
+                // A namedRegions/cellZoneRegions-only scope (e.g. a
+                // scar/disease region name), validated and applied
+                // separately by the word-scoped applyConstantOverrides
+                // overload used by ionicModel::constantsForRegion(). Skip
+                // it here rather than fatal, since this overload has no
+                // visibility into which named regions are legitimately
+                // declared elsewhere in the dictionary.
+                continue;
+            }
+
+            if (!iter().isDict())
+            {
+                FatalErrorInFunction
+                    << "ionicConstantOverrides entry '" << entryName
+                    << "' for ionic model " << modelName
+                    << " must be a dictionary."
+                    << exit(FatalError);
+            }
+        }
+
+        if (overrides.found("global"))
+        {
+            applyConstantOverrideScope
+            (
+                constants,
+                constantNames,
+                nConstants,
+                modelName,
+                overrides.subDict("global"),
+                "global"
+            );
+        }
+
+        const word tissueScopeName = tissueOverrideScopeName(tissueFlag);
+        if (!tissueScopeName.empty() && overrides.found(tissueScopeName))
+        {
+            applyConstantOverrideScope
+            (
+                constants,
+                constantNames,
+                nConstants,
+                modelName,
+                overrides.subDict(tissueScopeName),
+                tissueScopeName
+            );
+        }
+    }
+
+
+    void Foam::ionicModelIO::applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        const label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const word& baselineScopeName,
+        const wordList& knownScopeNames
+    )
+    {
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return;
+        }
+
+        if (constants.empty())
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides was requested for ionic model "
+                << modelName
+                << ", but constant storage is not available."
+                << exit(FatalError);
+        }
+
+        validateConstantMetadata(constantNames, nConstants, modelName);
+
+        if (constants.size() != nConstants)
+        {
+            FatalErrorInFunction
+                << "ionicConstantOverrides for ionic model " << modelName
+                << " found " << nConstants << " constant names but "
+                << constants.size() << " stored constant values."
+                << exit(FatalError);
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+
+        forAllConstIter(dictionary, overrides, iter)
+        {
+            const word entryName(iter().keyword());
+            if (!isKnownOverrideScopeName(entryName, knownScopeNames))
+            {
+                FatalErrorInFunction
+                    << "Unsupported ionicConstantOverrides entry '"
+                    << entryName << "' for ionic model " << modelName << "."
+                    << nl
+                    << "Declared regions: " << knownScopeNames
+                    << " (plus global/anatomical/myocyte scopes)."
+                    << exit(FatalError);
+            }
+
+            if (!iter().isDict())
+            {
+                FatalErrorInFunction
+                    << "ionicConstantOverrides entry '" << entryName
+                    << "' for ionic model " << modelName
+                    << " must be a dictionary."
+                    << exit(FatalError);
+            }
+        }
+
+        // constantsForRegion() starts from constantsForTissue(), which has
+        // already applied global and the explicit baseline scope. Layer the
+        // region's own scope only when it names a distinct scope; validation
+        // above still catches typos in either fixed or declared scopes.
+        if
+        (
+            !scopeName.empty()
+         && scopeName != baselineScopeName
+         && overrides.found(scopeName)
+        )
+        {
+            applyConstantOverrideScope
+            (
+                constants, constantNames, nConstants, modelName,
+                overrides.subDict(scopeName), scopeName
+            );
+        }
+    }
+
+
+    Foam::word Foam::ionicModelIO::constantOverrideOutputSuffix
+    (
+        const dictionary& dict
+    )
+    {
+        if (dict.found("outputSuffix"))
+        {
+            return dict.lookupOrDefault<word>("outputSuffix", word());
+        }
+
+        if (!dict.found("ionicConstantOverrides"))
+        {
+            return word();
+        }
+
+        const dictionary& overrides = dict.subDict("ionicConstantOverrides");
+        word suffix;
+        wordList scopeNames(5);
+        scopeNames[0] = "global";
+        scopeNames[1] = "endocardialCells";
+        scopeNames[2] = "mCells";
+        scopeNames[3] = "epicardialCells";
+        scopeNames[4] = "myocyte";
+
+        wordList opNames(2);
+        opNames[0] = "scale";
+        opNames[1] = "set";
+
+        forAll(scopeNames, scopeI)
+        {
+            const word& scopeName = scopeNames[scopeI];
+            if (!overrides.found(scopeName))
+            {
+                continue;
+            }
+
+            const dictionary& scopeDict = overrides.subDict(scopeName);
+            forAll(opNames, opI)
+            {
+                const word& opName = opNames[opI];
+
+                if (!scopeDict.found(opName))
+                {
+                    continue;
+                }
+
+                const dictionary& opDict = scopeDict.subDict(opName);
+
+                forAllConstIter(dictionary, opDict, iter)
+                {
+                    const entry& e = iter();
+                    if (e.isDict())
+                    {
+                        continue;
+                    }
+
+                    if (!suffix.empty())
+                    {
+                        suffix += "_";
+                    }
+
+                    const word constantName(e.keyword());
+                    if (scopeName != "global")
+                    {
+                        suffix += scopeName;
+                        suffix += "_";
+                    }
+                    suffix += opName;
+                    suffix += "_";
+                    suffix += constantName;
+                    suffix += "_";
+                    suffix +=
+                        suffixScalar(readScalar(opDict.lookup(constantName)));
+                }
+            }
+        }
+
+        return suffix;
     }
 
 
@@ -759,9 +1416,3 @@ namespace Foam
 
 
 } // End namespace Foam
-
-
-
-
-
-

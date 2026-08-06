@@ -1,0 +1,7 @@
+# file                                              time       variable  expected      tolerance
+postProcessing/TWorld_endocardialCells_S1_1000.txt  1.0000000  Vm        -87.0639985   5e-3
+postProcessing/TWorld_endocardialCells_S1_1000.txt  1.5000000  Vm        -86.9210695   5e-3
+postProcessing/TWorld_endocardialCells_S1_1000.txt  1.0000000  cai         0.0000966   5e-5
+postProcessing/TWorld_endocardialCells_S1_1000.txt  1.5000000  cai         0.0001139   5e-5
+postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt 1.0000000  AV_Ta       0.6133320   5e-3
+postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt 1.5000000  AV_Ta       1.7613833   5e-3

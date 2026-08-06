@@ -21,6 +21,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "dimVoltage.H"
 #include "stimulusIO.H"
+#include "ionicModelIO.H"
 #include "OSspecific.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -34,15 +35,15 @@ namespace electroModels
 
 // OverrideTypeName("singleCellSolver") in the header sets typeName_() = "singleCellSolver".
 // defineTypeNameWithName registers the static member with that string; the plain
-// defineTypeNameAndDebug(SingleCellSolver, 0) would use #SingleCellSolver and overwrite it.
-defineTypeNameWithName(SingleCellSolver, "singleCellSolver");
-defineDebugSwitch(SingleCellSolver, 0);
-addToRunTimeSelectionTable(electroModel, SingleCellSolver, dictionary);
+// defineTypeNameAndDebug(singleCellSolver, 0) would use #singleCellSolver and overwrite it.
+defineTypeNameWithName(singleCellSolver, "singleCellSolver");
+defineDebugSwitch(singleCellSolver, 0);
+addToRunTimeSelectionTable(electroModel, singleCellSolver, dictionary);
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
+singleCellSolver::singleCellSolver(Time& runTime, const word& region)
 :
     electroModel(typeName, runTime, region),
     ionicModelPtr_
@@ -62,6 +63,10 @@ SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
             electroProperties()
         )
     ),
+    activeTensionModelPtr_(),
+    outputTaPtr_(),
+    lambdaField_(1, 1.0),
+    TaField_(1, 0.0),
     preProcessFieldNames_
     (
         verificationModelPtr_
@@ -98,17 +103,26 @@ SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
     const fileName outputDir(runTime.path() / "postProcessing");
     mkDir(outputDir);
 
+    const word outputSuffix =
+        ionicModelIO::constantOverrideOutputSuffix(electroProperties());
+
+    word outputName =
+        ionicModelPtr_->type()
+      + "_"
+      + ionicModelPtr_->tissueName()
+      + "_"
+      + stimulusIO::protocolSuffix(electroProperties());
+
+    if (!outputSuffix.empty())
+    {
+        outputName += "_";
+        outputName += outputSuffix;
+    }
+
     const fileName outFile
     (
         outputDir
-      / (
-            ionicModelPtr_->type()
-          + "_"
-          + ionicModelPtr_->tissueName()
-          + "_"
-          + stimulusIO::protocolSuffix(electroProperties())
-          + ".txt"
-        )
+      / (outputName + ".txt")
     );
 
     outputPtr_.reset(new OFstream(outFile));
@@ -171,12 +185,34 @@ SingleCellSolver::SingleCellSolver(Time& runTime, const word& region)
         );
     }
     ionicModelPtr_->writeHeader(output);
+
+    if (electroProperties().found("activeTensionModel"))
+    {
+        activeTensionModelPtr_ = activeTensionModel::New
+        (
+            electroProperties(),
+            1
+        );
+        activeTensionModelPtr_->setElectromechanicalSignalProvider(*ionicModelPtr_);
+        activeTensionModelPtr_->validateProvider();
+
+        const fileName outFileTa
+        (
+            outputDir
+          / (outputName + "_Ta.txt")
+        );
+        outputTaPtr_.reset(new OFstream(outFileTa));
+        outputTaPtr_->setf(std::ios::fixed);
+        outputTaPtr_->precision(7);
+
+        activeTensionModelPtr_->writeHeader(outputTaPtr_.ref());
+    }
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool SingleCellSolver::evolve()
+bool singleCellSolver::evolve()
 {
     const scalar t0 = runTime().value() - runTime().deltaTValue();
     const scalar dt = runTime().deltaTValue();
@@ -190,6 +226,11 @@ bool SingleCellSolver::evolve()
         Vm_.internalField(),
         dummyIonicCurrentField_
     );
+
+    if (activeTensionModelPtr_)
+    {
+        activeTensionModelPtr_->calculateTension(runTime().value(), dt, lambdaField_, TaField_);
+    }
 
     const bool shouldPostProcess =
         verificationModelPtr_
@@ -223,18 +264,27 @@ bool SingleCellSolver::evolve()
     if (ionicModelIO::shouldWriteStep(t0, t1, electroProperties(), false))
     {
         ionicModelPtr_->write(runTime().value(), outputPtr_.ref());
+        if (activeTensionModelPtr_)
+        {
+            activeTensionModelPtr_->write(runTime().value(), outputTaPtr_.ref());
+        }
     }
 
     return true;
 }
 
 
-void SingleCellSolver::end()
+void singleCellSolver::end()
 {
     runTime().printExecutionTime(Info);
 
     Info<< "Results written to: " << outputPtr_->name() << nl
         << "Format: [Time STATES ALGEBRAIC RATES]" << endl;
+
+    if (activeTensionModelPtr_)
+    {
+        Info<< "Active tension results written to: " << outputTaPtr_->name() << endl;
+    }
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

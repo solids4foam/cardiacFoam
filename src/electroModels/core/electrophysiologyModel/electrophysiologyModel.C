@@ -126,6 +126,13 @@ Foam::electrophysiologyModel::electrophysiologyModel
         electroProperties()
     );
 
+    electrophysicsSystemBuilder::configureBathPotentialDomain
+    (
+        domainSystem_,
+        mesh(),
+        electroProperties()
+    );
+
     electrophysicsSystemBuilder::configureConductionDomains
     (
         domainSystem_,
@@ -135,6 +142,8 @@ Foam::electrophysiologyModel::electrophysiologyModel
     );
 
     configureECGDomains();
+
+#   include "printElectrophysiologySummary.H"
 }
 
 

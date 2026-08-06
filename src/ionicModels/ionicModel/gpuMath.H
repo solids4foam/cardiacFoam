@@ -22,6 +22,9 @@ Description
     Small branch-free helpers that are friendlier to batched CPU/GPU ionic
     kernels. These are intentionally local utilities and do not replace the
     exact OpenFOAM-style `heaviside` helper used elsewhere in the code base.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef gpuMath_H

@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     table_writer
+#
+# Description
+#     Generates formatted summary tables from dataset outputs.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """table_writer.py — Standard tabular output with metadata envelope."""
 from __future__ import annotations
 
@@ -8,14 +35,14 @@ from pathlib import Path
 from typing import Any
 
 
-@dataclass
+@dataclass(init=False)
 class TableMetadata:
-    """Metadata envelope attached to every tutorial table output.
+    """Metadata envelope attached to every entry table output.
 
     Attributes
     ----------
-    tutorial:
-        Human-readable tutorial name, e.g. ``"NiedererEtAl2012"``.
+    entry:
+        Human-readable entry name, e.g. ``"NiedererEtAl2012"``.
     units:
         Mapping of column name → unit string, e.g.
         ``{"activationTime": "ms", "DX": "mm"}``.
@@ -23,9 +50,25 @@ class TableMetadata:
         UTC ISO-8601 timestamp string.  Auto-filled on construction if empty.
     """
 
-    tutorial: str
+    entry: str
     units: dict[str, str] = field(default_factory=dict)
     generated_at: str = ""
+
+    def __init__(
+        self,
+        entry: str | None = None,
+        units: dict[str, str] | None = None,
+        generated_at: str = "",
+        *,
+        tutorial: str | None = None,
+    ) -> None:
+        resolved_entry = entry if entry is not None else tutorial
+        if resolved_entry is None:
+            raise TypeError("TableMetadata requires 'entry' or legacy 'tutorial'")
+        self.entry = resolved_entry
+        self.units = dict(units or {})
+        self.generated_at = generated_at
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         if not self.generated_at:
@@ -33,7 +76,7 @@ class TableMetadata:
 
 
 class TableWriter:
-    """Write tutorial summary tables as CSV (with comment envelope) and HTML."""
+    """Write entry summary tables as CSV (with comment envelope) and HTML."""
 
     @staticmethod
     def write(
@@ -48,7 +91,7 @@ class TableWriter:
         Parameters
         ----------
         rows:
-            List of dicts where every dict has the same keys (tutorial-defined
+            List of dicts where every dict has the same keys (entry-defined
             columns).  An empty list is allowed — only the envelope is written.
         output_dir:
             Directory into which the files are written.
@@ -57,7 +100,7 @@ class TableWriter:
         label:
             Human-readable description used in the artifact entry.
         metadata:
-            :class:`TableMetadata` providing tutorial name, units, and timestamp.
+            :class:`TableMetadata` providing entry name, units, and timestamp.
 
         Returns
         -------
@@ -76,7 +119,7 @@ class TableWriter:
         # CSV: comment-line envelope then data
         # ------------------------------------------------------------------
         lines: list[str] = [
-            f"# tutorial: {metadata.tutorial}",
+            f"# entry: {metadata.entry}",
             f"# generated_at: {metadata.generated_at}",
             f"# units: {json.dumps(metadata.units)}",
         ]
@@ -99,7 +142,7 @@ class TableWriter:
             ".meta{color:#555;margin-bottom:14px;font-size:13px;line-height:1.6}",
             "</style></head><body>",
             "<div class='meta'>",
-            f"<strong>tutorial:</strong> {metadata.tutorial}&nbsp;&nbsp;",
+            f"<strong>entry:</strong> {metadata.entry}&nbsp;&nbsp;",
             f"<strong>generated_at:</strong> {metadata.generated_at}<br>",
             f"<strong>units:</strong> {json.dumps(metadata.units)}",
             "</div>",

@@ -1,0 +1,68 @@
+{
+  "base": {
+    "entry": "manufacturedFDABathBidomain",
+    "case_dir_name": "manufacturedSolutions/bathBidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bath_bidomain_tet",
+    "end_time": 0.02,
+    "run_in_parallel": true,
+    "ecg_enabled": false,
+    "bath_predictor_corrector": true,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCasesElectrodePair",
+    "fda_bath_variant": "electrodePair"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "number_cells": [
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ]
+      ],
+      "dt_values": [
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "number_cells",
+          "dt_values"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "number_cells",
+          "dt_values"
+        ]
+      }
+    ]
+  }
+}

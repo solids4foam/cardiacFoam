@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ionicModel.H"
+#include "ionicHeterogeneityOrchestrator.H"
 #include "ionicSelector.H"
 #include "ionicVariableCompatibility.H"
 
@@ -35,18 +36,10 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
                              const label num, const scalar initialDeltaT,
                              const Switch solveVmWithinODESolver)
     : ODESystem(), odeSolver_(), dict_(dict),
-      step_(num, initialDeltaT), tissue_(-1),
-      solveVmWithinODESolver_(solveVmWithinODESolver)
+      step_(num, initialDeltaT), tissue_(-1), sex_(0),
+      solveVmWithinODESolver_(solveVmWithinODESolver),
+      VmRatePtr_(nullptr), activeVmRate_(0.0)
 {
-    // Required schema:
-    // outputVariables
-    // {
-    //   ionic
-    //   {
-    //     export (...);
-    //     debug  (...);
-    //   }
-    // }
     if (dict_.found("outputVariables"))
     {
         const dictionary& outDict = dict_.subDict("outputVariables");
@@ -69,6 +62,45 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
 void ::Foam::ionicModel::setTissueFromDict()
 {
     tissue_ = ionicSelector::selectTissue(dict_, supportedTissueTypes());
+}
+
+void ::Foam::ionicModel::setSexFromDict()
+{
+    const List<word> supported = supportedSexTypes();
+    if (supported.empty())
+    {
+        sex_ = 0;
+        return;
+    }
+    sex_ = ionicSelector::selectSex(dict_, supported);
+}
+
+void ::Foam::ionicModel::applyIonicConstantOverrides() const
+{
+    if (!dict_.found("ionicConstantOverrides"))
+    {
+        return;
+    }
+
+    scalarField* constantsPtr = ioMutableConstantsPtr();
+    if (!constantsPtr)
+    {
+        FatalErrorInFunction
+            << "ionicConstantOverrides was requested for ionic model "
+            << type()
+            << ", but this model does not expose mutable constants."
+            << exit(FatalError);
+    }
+
+    ionicModelIO::applyConstantOverrides
+    (
+        *constantsPtr,
+        ioConstantNames(),
+        ioNumConstants(),
+        dict_,
+        type(),
+        tissue_
+    );
 }
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
@@ -99,6 +131,7 @@ Foam::ionicModel::~ionicModel()
 {}
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
 
 bool Foam::ionicModel::utilitiesMode() const
 {
@@ -271,5 +304,86 @@ void Foam::ionicModel::importFields(const volScalarField& Vm,
         ioAlgebraicNames(),
         ioNumAlgebraic(),
         importTransferSelectedPlanCache_
+    );
+}
+
+
+// * * * * * * * * * * * Heterogeneity Functions * * * * * * * * * * * * * * //
+
+void Foam::ionicModel::configureIonicHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict
+)
+{
+    (void)transmuralDistance;
+    (void)heterogeneityDict;
+
+    FatalErrorInFunction
+        << "ionicHeterogeneity was requested for ionic model " << type()
+        << ", but this model does not support spatial ionic heterogeneity."
+        << exit(FatalError);
+}
+
+
+void Foam::ionicModel::configureApexBaseBandsHeterogeneity
+(
+    const scalarField& apexDist,
+    const dictionary& dict
+)
+{
+    (void)apexDist;
+    (void)dict;
+
+    FatalErrorInFunction
+        << "apexBaseBands heterogeneity was requested for ionic model " << type()
+        << ", but this model does not support apex-to-base heterogeneity."
+        << exit(FatalError);
+}
+
+
+Foam::scalarField Foam::ionicModel::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    return scalarField();
+}
+
+
+Foam::scalarField Foam::ionicModel::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    return scalarField();
+}
+
+void Foam::ionicModel::configureApexBaseBandsHeterogeneityImpl
+(
+    const scalarField& apexDist,
+    const dictionary& dict,
+    PtrList<scalarField>& heterogeneousConstants
+) const
+{
+    ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
+    (
+        *this, apexDist, dict, heterogeneousConstants
+    );
+}
+
+
+void Foam::ionicModel::configureTransmuralBandHeterogeneity
+(
+    const scalarField& transmuralDistance,
+    const dictionary& heterogeneityDict,
+    PtrList<scalarField>& heterogeneousConstants,
+    PtrList<scalarField>* heterogeneousInitialStates
+) const
+{
+    ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+    (
+        *this, transmuralDistance, heterogeneityDict, heterogeneousConstants,
+        heterogeneousInitialStates
     );
 }

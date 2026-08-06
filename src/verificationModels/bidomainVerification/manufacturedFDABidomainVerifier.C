@@ -21,14 +21,14 @@ License
 
 #include "OFstream.H"
 #include "OSspecific.H"
-#include "fvc.H"
-#include "dimVoltage.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
 #include "ionicModel.H"
+#include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
 {
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedFDABidomainVerifier, 0);
 addToRunTimeSelectionTable
@@ -38,155 +38,6 @@ addToRunTimeSelectionTable
     dictionary
 );
 
-namespace
-{
-
-label requireFieldIndex(const wordList& names, const word& name, const char* phase)
-{
-    forAll(names, i)
-    {
-        if (names[i] == name)
-        {
-            return i;
-        }
-    }
-
-    FatalErrorInFunction
-        << "Required " << phase << " field '" << name
-        << "' is missing from configured hook fields " << names
-        << exit(FatalError);
-
-    return -1;
-}
-
-
-bool shouldReportManufacturedErrors(const volScalarField& Vm)
-{
-    const Time& time = Vm.mesh().time();
-    const scalar t = time.value();
-    const scalar dt = time.deltaTValue();
-    const scalar endTime = time.endTime().value();
-
-    return t + 0.5*dt >= endTime;
-}
-
-
-label globalManufacturedCellCount(const fvMesh& mesh)
-{
-    label totalCells = mesh.nCells();
-    reduce(totalCells, sumOp<label>());
-    return totalCells;
-}
-
-
-label structuredCellsPerDirection(const label totalCells, const label dimension)
-{
-    if (totalCells <= 0 || dimension <= 0)
-    {
-        return 0;
-    }
-
-    if (dimension == 1)
-    {
-        return totalCells;
-    }
-
-    return max
-    (
-        label(1),
-        label(Foam::pow(scalar(totalCells), 1.0/scalar(dimension)) + 0.5)
-    );
-}
-
-
-scalar structuredManufacturedDx(const label nPerDirection)
-{
-    if (nPerDirection <= 0)
-    {
-        return 0.0;
-    }
-
-    return 1.0/scalar(nPerDirection);
-}
-
-
-Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
-(
-    const scalarField& numeric,
-    const scalarField& exact
-)
-{
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(numeric, i)
-    {
-        const scalar diff = Foam::mag(numeric[i] - exact[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = numeric.size();
-    reduce(n, sumOp<label>());
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/scalar(n), Foam::sqrt(sumSq/scalar(n))),
-        maxAbs
-    );
-}
-
-
-Tuple2<Tuple2<scalar, scalar>, scalar> computeZeroNorms
-(
-    const scalarField& values
-)
-{
-    scalar sumAbs = 0.0;
-    scalar sumSq = 0.0;
-    scalar maxAbs = 0.0;
-
-    forAll(values, i)
-    {
-        const scalar diff = Foam::mag(values[i]);
-        sumAbs += diff;
-        sumSq += diff*diff;
-        maxAbs = max(maxAbs, diff);
-    }
-
-    reduce(sumAbs, sumOp<scalar>());
-    reduce(sumSq, sumOp<scalar>());
-    reduce(maxAbs, maxOp<scalar>());
-
-    label n = values.size();
-    reduce(n, sumOp<label>());
-
-    return Tuple2<Tuple2<scalar, scalar>, scalar>
-    (
-        Tuple2<scalar, scalar>(sumAbs/scalar(n), Foam::sqrt(sumSq/scalar(n))),
-        maxAbs
-    );
-}
-
-
-word dimensionName(const label dimension)
-{
-    return
-        dimension == 1 ? "1D"
-      : dimension == 2 ? "2D"
-      : dimension == 3 ? "3D"
-                       : "unknown";
-}
-
-} // End anonymous namespace
-
-
 manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 (
     const dictionary& dict
@@ -195,7 +46,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
     enabled_(true),
-    reportPDEResiduals_(true),
     useExplicitAlgorithm_(false),
     errorsReported_(false),
     k_(0.5),
@@ -207,11 +57,12 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     const dictionary& cfg = verificationDict();
 
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
-    reportPDEResiduals_ =
-        cfg.lookupOrDefault<Switch>("reportPDEResiduals", true);
+    // solutionAlgorithm is a solver-level key; read it from the parent dict.
     useExplicitAlgorithm_ =
-        cfg.lookupOrDefault<word>("solutionAlgorithm", "implicit") == "explicit";
+        coeffDict.lookupOrDefault<word>("solutionAlgorithm", "implicit") == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 0.5);
+    // phiEReferenceValue and phiERefPoint are physics parameters that belong
+    // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
     phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
     phiEReferencePoint_ = coeffDict.get<point>("phiERefPoint");
     outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
@@ -220,17 +71,7 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 
 const dictionary& manufacturedFDABidomainVerifier::verificationDict() const
 {
-    if (dict().found("manufacturedBidomain"))
-    {
-        return dict().subDict("manufacturedBidomain");
-    }
-
-    if (dict().found("manufacturedFDABidomainVerifierCoeffs"))
-    {
-        return dict().subDict("manufacturedFDABidomainVerifierCoeffs");
-    }
-
-    return dict();
+    return dict().subDict("manufacturedBidomain");
 }
 
 void manufacturedFDABidomainVerifier::bindBidomainField(volScalarField& phiE)
@@ -420,158 +261,23 @@ void manufacturedFDABidomainVerifier::postProcess
         phiIValues[i] = VmValues[i] + phiEValues[i];
     }
 
-    const auto VmNorms = computeNorms(VmValues, VmExact);
-    const auto phiENorms = computeNorms(phiEValues, phiEExact);
-    const auto phiINorms = computeNorms(phiIValues, phiIExact);
-    const auto u1Norms = computeNorms(u1Values, u1Exact);
-    const auto u2Norms = computeNorms(u2Values, u2Exact);
+    const scalar phiEGaugeOffset =
+        computeVolumeMeanError(mesh, phiEValues, phiEExact);
 
-    Tuple2<Tuple2<scalar, scalar>, scalar> VmResidualNorms;
-    Tuple2<Tuple2<scalar, scalar>, scalar> phiEResidualNorms;
-    bool haveResiduals = false;
+    scalarField phiEExactGauge(phiEExact);
+    scalarField phiIExactGauge(phiIExact);
+    phiEExactGauge += phiEGaugeOffset;
+    phiIExactGauge += phiEGaugeOffset;
 
-    if (reportPDEResiduals_)
-    {
-        const dimensionedScalar chi
-        (
-            "chi",
-            dimArea/dimVolume,
-            dict()
-        );
-        const dimensionedScalar Cm
-        (
-            "cm",
-            dimCurrent*dimTime/(dimVoltage*dimArea),
-            dict()
-        );
-
-        const volTensorField& Gi =
-            mesh.lookupObject<volTensorField>("conductivityIntracellular");
-        const volTensorField& Ge =
-            mesh.lookupObject<volTensorField>("conductivityExtracellular");
-
-        volScalarField VmExactField
-        (
-            IOobject
-            (
-                "manufacturedVmExact",
-                time.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zero", dimVoltage, 0.0),
-            "zeroGradient"
-        );
-        VmExactField.primitiveFieldRef() = VmExact;
-        VmExactField.correctBoundaryConditions();
-
-        volScalarField phiEExactField
-        (
-            IOobject
-            (
-                "manufacturedPhiEExact",
-                time.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zero", dimVoltage, 0.0),
-            "zeroGradient"
-        );
-        phiEExactField.primitiveFieldRef() = phiEExact;
-        phiEExactField.correctBoundaryConditions();
-
-        scalarField IionExact;
-        scalar betaBase = 0.0;
-        if (dimension == 1)
-        {
-            betaBase = -1.1;
-        }
-        else if (dimension == 2)
-        {
-            betaBase = -5.9;
-        }
-        else
-        {
-            betaBase = -8.6;
-        }
-
-        computeIion
-        (
-            IionExact,
-            u1Exact,
-            u2Exact,
-            u3Exact,
-            VmExact,
-            Cm.value(),
-            betaBase*(1.0 - k_),
-            chi.value()
-        );
-
-        forAll(IionExact, i)
-        {
-            IionExact[i] /= Cm.value();
-        }
-
-        volScalarField IionExactField
-        (
-            IOobject
-            (
-                "manufacturedIionExact",
-                time.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
-            "zeroGradient"
-        );
-        IionExactField.primitiveFieldRef() = IionExact;
-        IionExactField.correctBoundaryConditions();
-
-        volScalarField dVdtExactField
-        (
-            IOobject
-            (
-                "manufactureddVdtExact",
-                time.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
-            "zeroGradient"
-        );
-
-        scalarField& dVdtExact = dVdtExactField.primitiveFieldRef();
-        const scalar invFactor = 0.5/(1.0 + t);
-        forAll(dVdtExact, i)
-        {
-            dVdtExact[i] = VmExact[i]*invFactor;
-        }
-        dVdtExactField.correctBoundaryConditions();
-
-        const tmp<volScalarField> tVmResidual
-        (
-            chi*Cm*dVdtExactField
-          - fvc::laplacian(Gi, VmExactField + phiEExactField)
-          + chi*Cm*IionExactField
-        );
-        const tmp<volScalarField> tPhiEResidual
-        (
-            fvc::laplacian(Gi + Ge, phiEExactField)
-          + fvc::laplacian(Gi, VmExactField)
-        );
-
-        VmResidualNorms = computeZeroNorms(tVmResidual().primitiveField());
-        phiEResidualNorms = computeZeroNorms(tPhiEResidual().primitiveField());
-        haveResiduals = true;
-    }
+    const auto VmNorms = computeNorms(mesh, VmValues, VmExact);
+    const auto phiENorms = computeNorms(mesh, phiEValues, phiEExact);
+    const auto phiEGaugeNorms =
+        computeNorms(mesh, phiEValues, phiEExactGauge);
+    const auto phiINorms = computeNorms(mesh, phiIValues, phiIExact);
+    const auto phiIGaugeNorms =
+        computeNorms(mesh, phiIValues, phiIExactGauge);
+    const auto u1Norms = computeNorms(mesh, u1Values, u1Exact);
+    const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
 
     const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);
@@ -582,7 +288,7 @@ void manufacturedFDABidomainVerifier::postProcess
     fileName outputFile = outputFileName_;
     if (outputFile.empty())
     {
-        const fileName outputDir(time.path()/"postProcessing");
+        const fileName outputDir(time.globalPath()/"postProcessing");
         mkDir(outputDir);
         outputFile =
             outputDir
@@ -607,27 +313,19 @@ void manufacturedFDABidomainVerifier::postProcess
             << VmNorms.first().second() << "   " << VmNorms.second() << nl
             << "phiE      " << phiENorms.first().first() << "   "
             << phiENorms.first().second() << "   " << phiENorms.second() << nl
+            << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
+            << phiEGaugeNorms.first().second() << "   "
+            << phiEGaugeNorms.second() << nl
             << "phiI      " << phiINorms.first().first() << "   "
             << phiINorms.first().second() << "   " << phiINorms.second() << nl
+            << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
+            << phiIGaugeNorms.first().second() << "   "
+            << phiIGaugeNorms.second() << nl
             << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << nl
             << "u2        " << u2Norms.first().first() << "   "
             << u2Norms.first().second() << "   " << u2Norms.second() << nl
             << "-------------------------------------------------" << endl;
-
-        if (haveResiduals)
-        {
-            Info<< "Bidomain manufactured PDE residuals evaluated on exact fields:" << nl
-                << "-------------------------------------------------" << nl
-                << "Equation  L1-residual    L2-residual    Linf-residual" << nl
-                << "Vm        " << VmResidualNorms.first().first() << "   "
-                << VmResidualNorms.first().second() << "   "
-                << VmResidualNorms.second() << nl
-                << "phiE      " << phiEResidualNorms.first().first() << "   "
-                << phiEResidualNorms.first().second() << "   "
-                << phiEResidualNorms.second() << nl
-                << "-------------------------------------------------" << endl;
-        }
 
         OFstream out(outputFile);
         out << "Bidomain manufactured-solution error summary (t = "
@@ -637,24 +335,18 @@ void manufacturedFDABidomainVerifier::postProcess
             << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
         out << "phiE      " << phiENorms.first().first() << "   "
             << phiENorms.first().second() << "   " << phiENorms.second() << "\n";
+        out << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
+            << phiEGaugeNorms.first().second() << "   "
+            << phiEGaugeNorms.second() << "\n";
         out << "phiI      " << phiINorms.first().first() << "   "
             << phiINorms.first().second() << "   " << phiINorms.second() << "\n";
+        out << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
+            << phiIGaugeNorms.first().second() << "   "
+            << phiIGaugeNorms.second() << "\n";
         out << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
         out << "u2        " << u2Norms.first().first() << "   "
             << u2Norms.first().second() << "   " << u2Norms.second() << "\n\n";
-
-        if (haveResiduals)
-        {
-            out << "Bidomain manufactured PDE residuals evaluated on exact fields:\n";
-            out << "Equation  L1-residual    L2-residual    Linf-residual\n";
-            out << "Vm        " << VmResidualNorms.first().first() << "   "
-                << VmResidualNorms.first().second() << "   "
-                << VmResidualNorms.second() << "\n";
-            out << "phiE      " << phiEResidualNorms.first().first() << "   "
-                << phiEResidualNorms.first().second() << "   "
-                << phiEResidualNorms.second() << "\n\n";
-        }
 
         out << "Number of cells (N)   = " << nPerDirection << "\n";
         out << "Solver type           = "
@@ -666,6 +358,7 @@ void manufacturedFDABidomainVerifier::postProcess
         out << "k                     = " << k_ << "\n";
         out << "phiE reference point  = " << phiEReferencePoint_ << "\n";
         out << "phiE reference value  = " << phiEReferenceValue_ << "\n";
+        out << "phiE gauge offset     = " << phiEGaugeOffset << "\n";
     }
 
     errorsReported_ = true;

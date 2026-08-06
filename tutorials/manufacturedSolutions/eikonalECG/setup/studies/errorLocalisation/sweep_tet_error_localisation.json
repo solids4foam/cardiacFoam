@@ -1,0 +1,79 @@
+{
+  "base": {
+    "entry": "manufacturedEikonalECG",
+    "case_dir_name": "manufacturedSolutions/eikonalECG",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "eikonal"
+    ],
+    "mesh_family": "tet",
+    "numerics_profile": "eikonal_tet",
+    "postprocess_strict_artifacts": false,
+    "electro_property_overrides": {
+      "eikonalSolverCoeffs.verificationModel.writeErrorField": true
+    },
+    "archive_dir_name": "setup/studies/errorLocalisation/results/sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "grad_scheme": [
+        "gauss_linear",
+        "gauss_linear",
+        "gauss_linear",
+        "gauss_linear",
+        "least_squares",
+        "least_squares",
+        "least_squares",
+        "least_squares"
+      ],
+      "number_cells": [
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "grad_scheme",
+          "number_cells"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "grad_scheme",
+          "number_cells"
+        ]
+      }
+    ]
+  }
+}

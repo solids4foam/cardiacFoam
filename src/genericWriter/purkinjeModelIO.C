@@ -1,4 +1,10 @@
 /*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
 License
     This file is part of cardiacFoam.
 
@@ -20,6 +26,7 @@ License
 #include "purkinjeModelIO.H"
 #include "OSspecific.H"
 #include <fstream>
+#include "ionicVariableCompatibility.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -27,6 +34,64 @@ namespace Foam
 {
 
 // * * * * * * * * * * * * * * * Static Functions  * * * * * * * * * * * * * //
+
+purkinjeModelIO::ResolvedTokens purkinjeModelIO::filterTokens
+(
+    const wordList& userExport,
+    const char* const stateNames[],
+    int nStates,
+    const char* const algNames[],
+    int nAlg
+)
+{
+    ResolvedTokens res;
+    DynamicList<word> networkTokens(userExport.size());
+    DynamicList<word> ionicTokens(userExport.size());
+    DynamicList<word> unknownTokens;
+
+    for (const word& var : userExport)
+    {
+        if (var == "Vm" || var == "Iion" || var == "activationTime" ||
+            var == "IcouplingSource" || var == "IcouplingCurrent")
+        {
+            networkTokens.append(var);
+        }
+        else
+        {
+            bool isVmDummy = false;
+            label stateIdx = -1;
+            label algIdx = -1;
+            label rateIdx = -1;
+
+            bool resolved = ionicVariableCompatibility::resolveVariable
+            (
+                var,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                isVmDummy,
+                stateIdx,
+                algIdx,
+                rateIdx
+            );
+
+            if (resolved && (stateIdx >= 0 || algIdx >= 0))
+            {
+                ionicTokens.append(var);
+            }
+            else
+            {
+                unknownTokens.append(var);
+            }
+        }
+    }
+
+    res.networkTokens = networkTokens;
+    res.ionicTokens = ionicTokens;
+    res.unknownTokens = unknownTokens;
+    return res;
+}
 
 autoPtr<OFstream> purkinjeModelIO::openTimeSeries
 (
@@ -105,11 +170,13 @@ void purkinjeModelIO::writeVTK
     const pointField&  nodeLocations,
     const labelList&   edgeNodeA,
     const labelList&   edgeNodeB,
-    const scalarField& Vm1D,
-    const scalarField& Iion1D,
-    const labelList&   pvjNodes,
-    const scalarField& terminalSource
-)
+            const scalarField& Vm1D,
+            const scalarField& Iion1D,
+            const labelList&   pvjNodes,
+            const scalarField& terminalSource,
+            const PtrList<scalarField>& ionicFields,
+            const wordList&             ionicFieldNames
+        )
 {
     if (nodeLocations.empty())
     {
@@ -200,6 +267,18 @@ void purkinjeModelIO::writeVTK
         forAll(pvjMarker, i)
         {
             os  << pvjMarker[i] << "\n";
+        }
+    }
+
+    // ---- Dynamic Ionic Fields ----
+    forAll(ionicFields, fI)
+    {
+        os  << "SCALARS " << ionicFieldNames[fI] << " float 1\n"
+            << "LOOKUP_TABLE default\n";
+        const scalarField& field = ionicFields[fI];
+        forAll(field, i)
+        {
+            os << field[i] << "\n";
         }
     }
 }

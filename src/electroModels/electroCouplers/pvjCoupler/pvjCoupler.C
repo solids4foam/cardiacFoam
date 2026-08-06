@@ -23,7 +23,7 @@ License
 namespace Foam
 {
 
-networkCouplingEndpoint& PVJCoupler::requireTerminalNetworkDomain
+networkCouplingEndpoint& pvjCoupler::requireTerminalNetworkDomain
 (
     electroDomainInterface& secondaryDomain
 )
@@ -43,7 +43,7 @@ networkCouplingEndpoint& PVJCoupler::requireTerminalNetworkDomain
 }
 
 
-PVJCoupler::CouplingMode PVJCoupler::parseCouplingMode(const word& modeName)
+pvjCoupler::CouplingMode pvjCoupler::parseCouplingMode(const word& modeName)
 {
     if (modeName == "unidirectional")
     {
@@ -64,26 +64,27 @@ PVJCoupler::CouplingMode PVJCoupler::parseCouplingMode(const word& modeName)
 }
 
 
-word PVJCoupler::couplingModeName(CouplingMode mode)
+word pvjCoupler::couplingModeName(CouplingMode mode)
 {
     return mode == bidirectional ? "bidirectional" : "unidirectional";
 }
 
 
-PVJCoupler::PVJCoupler
+pvjCoupler::pvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
     electroDomainInterface& secondaryDomain,
     const dictionary& dict
 )
 :
-    ElectroDomainCoupler(primaryDomain, secondaryDomain),
+    electroDomainCoupler(primaryDomain, secondaryDomain),
     networkTerminalDomain_(requireTerminalNetworkDomain(secondaryDomain)),
     mapper_
     (
         primaryDomain.mesh(),
         networkTerminalDomain_.terminalLocations(),
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+        dict.lookupOrDefault<word>("pvjKernel", "uniform"),
         dict.lookupOrDefault<Switch>("reportSetup", false)
     ),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
@@ -102,7 +103,7 @@ PVJCoupler::PVJCoupler
 {}
 
 
-void PVJCoupler::clearTerminalCouplingBuffers() const
+void pvjCoupler::clearTerminalCouplingBuffers() const
 {
     terminalCurrentBuffer_ = 0.0;
     terminalSourceBuffer_ = 0.0;

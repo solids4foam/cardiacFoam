@@ -15,6 +15,11 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the Grandi 2011 model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -88,6 +93,12 @@ enum ALGEBRAIC_INDEX {
     AV_inal_hl_inf,
     AV_inal_ml_a,
     AV_inal_ml_b,
+    AV_inal_ml_tau,          // tau for Inal_ml: 1/(alpha+beta)
+    AV_inal_ml_inf,          // gInf for Inal_ml: alpha/(alpha+beta)
+    AV_ical_fCaB_jn_tau,     // tau for fCaB_jn: 1/(1.7*Ca_jn+0.0119)
+    AV_ical_fCaB_jn_inf,     // gInf for fCaB_jn: 1.7*Ca_jn*tau
+    AV_ical_fCaB_sl_tau,     // tau for fCaB_sl: 1/(1.7*Ca_sl+0.0119)
+    AV_ical_fCaB_sl_inf,     // gInf for fCaB_sl: 1.7*Ca_sl*tau
     AV_ito_x_inf,
     AV_ito_x_tau,
     AV_ito_y_inf,

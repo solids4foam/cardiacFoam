@@ -19,34 +19,37 @@ src/electroModels/
 
 ```
 
-## Top-level runtime selection
-
-The current top-level electro workflow is selected from:
+The top-level electro workflow is selected via `myocardiumSolver` in `constant/electroProperties`:
 
 ```cpp
-myocardiumSolver  monodomainSolver;
-
+myocardiumSolver  monodomainSolver;  // or: bidomainSolver | eikonalSolver
 ```
 
-or:
+`electroModel::New(...)` reads that key and dispatches to `electrophysiologyModel`.
 
-```cpp
-myocardiumSolver  bidomainSolver;
+`singleCellSolver` is compiled in this library but is not part of the multi-domain `electrophysiologyModel` path.
 
+## Selection and ownership
+
+```text
+physicsModel -> electroModel -> electrophysiologyModel
+                                  -> myocardiumDomain -> myocardiumSolver
+                                  -> conduction/ECG/bath domains and couplers
 ```
 
-or:
+`constant/physicsProperties` selects the top-level `electroModel`.
+`constant/electroProperties` then supplies the canonical `myocardiumSolver`
+runtime name and its matching `<name>Coeffs` dictionary. The spatial names
+`monodomainSolver`, `bidomainSolver`, and `eikonalSolver` select the common
+`electrophysiologyModel`; the builder then creates the corresponding myocardium
+domain and optional `conductionNetworkDomains`, `ecgDomains`,
+`bathPotentialDomain`, and `domainCouplings` entries.
 
-```cpp
-myocardiumSolver  eikonalSolver;
-
-```
-
-`electroModel::New(...)` reads that key and dispatches to the assembled
-orchestration wrapper `electrophysiologyModel`.
-
-`singleCellSolver` is also compiled in this library, but it is not part of the
-multi-domain `electrophysiologyModel` path.
+The orchestration layer controls ordering but does not own numerical fields.
+Domains own long-lived state and meshes; solver classes implement domain-local
+numerical kernels; couplers transfer state through typed endpoints. These EP
+layers build in both full and lightweight modes. Electromechanical wrappers are
+in `src/electroMechanicalModels` and require full solids4foam mode.
 
 ## Folder roles
 
@@ -72,9 +75,8 @@ Owns the long-lived state of each physical domain:
 
 - ECG
 
-- bath code is still present in the tree, but not part of the active core
-
-  orchestration path at the moment
+- extracellular potential / bath ECG through `extracellularPotentialDomain`
+  and `torsoECG`
 
 ### `myocardiumModels/`
 
@@ -91,7 +93,7 @@ Contains myocardium-side solver kernels and related electro models:
 ### `conductionSystemModels/`
 
 Contains Purkinje/conduction solver kernels used by
-`ConductionSystemDomain`:
+`conductionSystemDomain`:
 
 - `monodomain1DSolver`
 
@@ -99,25 +101,26 @@ Contains Purkinje/conduction solver kernels used by
 
 ### `ecgModels/`
 
-Contains downstream ECG and bath-related kernels:
+Contains downstream ECG kernels:
 
-- `pseudoECGSolver`
+- `pseudoECG` (implemented by class `pseudoECGSolver`)
 
-- `bathECGSolver`
-
-- `bidomainBathECGSolver`
+- `torsoECG` — electrode sampler on the global phiE from
+  `extracellularPotentialDomain`
 
 ### `electroCouplers/`
 
 Contains staged electro-domain coupling contracts and implementations:
 
-- `ElectroDomainCoupler`
+- `electroDomainCoupler`
 
 - endpoint interfaces
 
 - PVJ coupling family
 
-- `heartBathInterfaceCoupler` code remains present in the tree
+Bath coupling is handled directly by `extracellularPotentialDomain`, which owns
+the global `phiE` solve and binds a restricted phiE view into the bidomain
+myocardium solver. No dedicated coupler class is needed.
 
 ## Read next
 

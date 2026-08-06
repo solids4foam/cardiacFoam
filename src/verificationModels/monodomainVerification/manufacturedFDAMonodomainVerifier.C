@@ -21,15 +21,15 @@ License
 
 #include "OFstream.H"
 #include "OSspecific.H"
-#include "PstreamReduceOps.H"
 #include "ionicModel.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
+#include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
-
-#include <tuple>
 
 namespace Foam
 {
+
+using namespace verificationUtils;
 
 defineTypeNameAndDebug(manufacturedFDAMonodomainVerifier, 0);
 addToRunTimeSelectionTable
@@ -38,185 +38,6 @@ addToRunTimeSelectionTable
     manufacturedFDAMonodomainVerifier,
     dictionary
 );
-
-namespace
-{
-
-label requireFieldIndex(const wordList& names, const word& name, const char* phase)
-{
-    forAll(names, i)
-    {
-        if (names[i] == name)
-        {
-            return i;
-        }
-    }
-
-    FatalErrorInFunction
-        << "Required " << phase << " field '" << name
-        << "' is missing from configured hook fields " << names
-        << exit(FatalError);
-
-    return -1;
-}
-
-
-bool shouldReportManufacturedErrors(const volScalarField& Vm)
-{
-    const Time& time = Vm.mesh().time();
-    const scalar t = time.value();
-    const scalar dt = time.deltaTValue();
-    const scalar endTime = time.endTime().value();
-
-    return t + 0.5*dt >= endTime;
-}
-
-
-label globalManufacturedCellCount(const fvMesh& mesh)
-{
-    label totalCells = mesh.nCells();
-    reduce(totalCells, sumOp<label>());
-    return totalCells;
-}
-
-
-label structuredCellsPerDirection(const label totalCells, const label dimension)
-{
-    if (totalCells <= 0 || dimension <= 0)
-    {
-        return 0;
-    }
-
-    if (dimension == 1)
-    {
-        return totalCells;
-    }
-
-    return max
-    (
-        label(1),
-        label(Foam::pow(scalar(totalCells), 1.0/scalar(dimension)) + 0.5)
-    );
-}
-
-
-scalar structuredManufacturedDx(const label nPerDirection)
-{
-    if (nPerDirection <= 0)
-    {
-        return 0.0;
-    }
-
-    return 1.0/scalar(nPerDirection);
-}
-
-
-void computeAndWriteManufacturedErrors
-(
-    const scalarField& Vm,
-    const scalarField& u1m,
-    const scalarField& u2m,
-    const scalarField& x,
-    const scalarField& y,
-    const scalarField& z,
-    const scalar t,
-    const scalar dimension,
-    const int N,
-    const scalar dx,
-    const scalar dt,
-    const int nsteps,
-    const bool useExplicitAlgorithm,
-    const fileName& outFilename
-)
-{
-    scalarField Vex;
-    scalarField u1ex;
-    scalarField u2ex;
-    scalarField u3ex;
-    computeManufacturedV(Vex, x, y, z, t, dimension);
-    computeManufacturedU(u1ex, u2ex, u3ex, x, y, z, t, dimension);
-
-    auto computeNorms = [&](const scalarField& num, const scalarField& exact)
-    {
-        scalar sumAbs = 0.0;
-        scalar sumSq = 0.0;
-        scalar maxAbs = 0.0;
-
-        forAll(num, i)
-        {
-            const scalar diff = Foam::mag(num[i] - exact[i]);
-            sumAbs += diff;
-            sumSq += diff*diff;
-            if (diff > maxAbs)
-            {
-                maxAbs = diff;
-            }
-        }
-
-        reduce(maxAbs, maxOp<scalar>());
-        reduce(sumAbs, sumOp<scalar>());
-        reduce(sumSq, sumOp<scalar>());
-
-        label n = num.size();
-        reduce(n, sumOp<label>());
-
-        return std::tuple<scalar, scalar, scalar>
-        (
-            sumAbs/scalar(n),
-            Foam::sqrt(sumSq/scalar(n)),
-            maxAbs
-        );
-    };
-
-    const auto [L1_V, L2_V, Linf_V] = computeNorms(Vm, Vex);
-    const auto [L1_u1, L2_u1, Linf_u1] = computeNorms(u1m, u1ex);
-    const auto [L1_u2, L2_u2, Linf_u2] = computeNorms(u2m, u2ex);
-
-    if (!Pstream::master())
-    {
-        return;
-    }
-
-    Info << "\nSimulation summary:\n";
-    Info << "-------------------\n";
-    Info << "Number of cells (N)   = " << N << nl;
-    Info << "Solver type           = "
-         << (useExplicitAlgorithm ? "Explicit" : "Implicit") << nl;
-    Info << "Grid spacing (dx)     = " << dx << nl;
-    Info << "Time step (dt)        = " << dt << nl;
-    Info << "Number of steps       = " << nsteps << nl;
-    Info << "Final simulation time = " << t << nl;
-    Info << "-------------------\n";
-    Info << "\nManufactured-solution error summary (t = " << t << "):" << nl
-         << "-------------------------------------------------\n"
-         << "Field     L1-error       L2-error       Linf-error\n"
-         << "Vm     " << L1_V << "   " << L2_V << "   " << Linf_V << nl
-         << "u1     " << L1_u1 << "   " << L2_u1 << "   " << Linf_u1 << nl
-         << "u2     " << L1_u2 << "   " << L2_u2 << "   " << Linf_u2 << nl
-         << "-------------------------------------------------\n" << endl;
-
-    OFstream out(outFilename);
-    out << "Manufactured-solution error summary (t = " << t << "):\n";
-    out << "Field     L1-error       L2-error       Linf-error\n";
-    out << "Vm     " << L1_V << "   " << L2_V << "   " << Linf_V << "\n";
-    out << "u1     " << L1_u1 << "   " << L2_u1 << "   " << Linf_u1 << "\n";
-    out << "u2     " << L1_u2 << "   " << L2_u2 << "   " << Linf_u2 << "\n";
-    out << "-------------------------------------------------\n\n";
-
-    out << "\nSimulation summary:\n";
-    out << "-------------------\n";
-    out << "Number of cells (N)   = " << N << "\n";
-    out << "Solver type           = "
-        << (useExplicitAlgorithm ? "Explicit" : "Implicit") << "\n";
-    out << "Grid spacing (dx)     = " << dx << "\n";
-    out << "Time step (dt)        = " << dt << "\n";
-    out << "Number of steps       = " << nsteps << "\n";
-    out << "Final simulation time = " << t << "\n";
-    out << "-------------------\n\n";
-}
-
-} // End anonymous namespace
-
 
 manufacturedFDAMonodomainVerifier::manufacturedFDAMonodomainVerifier
 (
@@ -334,10 +155,8 @@ void manufacturedFDAMonodomainVerifier::postProcess
             << exit(FatalError);
     }
 
-    const label u1Field =
-        requireFieldIndex(requiredNames, "u1", "postProcess requirement");
-    const label u2Field =
-        requireFieldIndex(requiredNames, "u2", "postProcess requirement");
+    const label u1Idx = requireFieldIndex(requiredNames, "u1", "postProcess");
+    const label u2Idx = requireFieldIndex(requiredNames, "u2", "postProcess");
 
     const fvMesh& mesh = Vm.mesh();
     const vectorField& centres = mesh.C().primitiveField();
@@ -345,29 +164,31 @@ void manufacturedFDAMonodomainVerifier::postProcess
     scalarField Y(centres.component(vector::Y));
     scalarField Z(centres.component(vector::Z));
 
-    const scalarField& VmValues = Vm.primitiveField();
-    const scalarField& u1Values = fields[u1Field].primitiveField();
-    const scalarField& u2Values = fields[u2Field].primitiveField();
     const scalar t = mesh.time().value();
     const scalar dt = mesh.time().deltaTValue();
     const label dimension = model.geometricDimension();
     const label totalCells = globalManufacturedCellCount(mesh);
-    const label nPerDirection =
-        structuredCellsPerDirection(totalCells, dimension);
+    const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);
     const scalar dx = structuredManufacturedDx(nPerDirection);
     const label nSteps = max(label(0), mesh.time().timeIndex());
-    const fileName outputDir(mesh.time().path()/"postProcessing");
+
+    scalarField VmExact, u1Exact, u2Exact, u3Exact;
+    computeManufacturedV(VmExact, X, Y, Z, t, dimension);
+    computeManufacturedU(u1Exact, u2Exact, u3Exact, X, Y, Z, t, dimension);
+
+    const auto VmNorms = computeNorms(mesh, Vm.primitiveField(), VmExact);
+    const auto u1Norms =
+        computeNorms(mesh, fields[u1Idx].primitiveField(), u1Exact);
+    const auto u2Norms =
+        computeNorms(mesh, fields[u2Idx].primitiveField(), u2Exact);
+
+    const fileName outputDir(mesh.time().globalPath()/"postProcessing");
     mkDir(outputDir);
-    const word dimName =
-        dimension == 1 ? "1D"
-      : dimension == 2 ? "2D"
-      : dimension == 3 ? "3D"
-                       : "unknown";
     const fileName outputFile
     (
         outputDir
       / (
-            dimName
+            dimensionName(dimension)
           + "_"
           + Foam::name(nPerDirection)
           + "_cells_"
@@ -376,23 +197,52 @@ void manufacturedFDAMonodomainVerifier::postProcess
         )
     );
 
-    computeAndWriteManufacturedErrors
-    (
-        VmValues,
-        u1Values,
-        u2Values,
-        X,
-        Y,
-        Z,
-        t,
-        dimension,
-        nPerDirection,
-        dx,
-        dt,
-        nSteps,
-        useExplicitAlgorithm_,
-        outputFile
-    );
+    if (Pstream::master())
+    {
+        Info << "\nSimulation summary:\n"
+             << "-------------------\n"
+             << "Number of cells (N)   = " << nPerDirection << nl
+             << "Solver type           = "
+             << (useExplicitAlgorithm_ ? "Explicit" : "Implicit") << nl
+             << "Grid spacing (dx)     = " << dx << nl
+             << "Time step (dt)        = " << dt << nl
+             << "Number of steps       = " << nSteps << nl
+             << "Final simulation time = " << t << nl
+             << "-------------------\n";
+
+        Info << "\nManufactured-solution error summary (t = " << t << "):" << nl
+             << "-------------------------------------------------" << nl
+             << "Field     L1-error       L2-error       Linf-error" << nl
+             << "Vm     " << VmNorms.first().first() << "   "
+             << VmNorms.first().second() << "   " << VmNorms.second() << nl
+             << "u1     " << u1Norms.first().first() << "   "
+             << u1Norms.first().second() << "   " << u1Norms.second() << nl
+             << "u2     " << u2Norms.first().first() << "   "
+             << u2Norms.first().second() << "   " << u2Norms.second() << nl
+             << "-------------------------------------------------" << endl;
+
+        OFstream out(outputFile);
+        out << "Manufactured-solution error summary (t = " << t << "):\n";
+        out << "Field     L1-error       L2-error       Linf-error\n";
+        out << "Vm     " << VmNorms.first().first() << "   "
+            << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
+        out << "u1     " << u1Norms.first().first() << "   "
+            << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
+        out << "u2     " << u2Norms.first().first() << "   "
+            << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
+        out << "-------------------------------------------------\n\n";
+
+        out << "Simulation summary:\n";
+        out << "-------------------\n";
+        out << "Number of cells (N)   = " << nPerDirection << "\n";
+        out << "Solver type           = "
+            << (useExplicitAlgorithm_ ? "Explicit" : "Implicit") << "\n";
+        out << "Grid spacing (dx)     = " << dx << "\n";
+        out << "Time step (dt)        = " << dt << "\n";
+        out << "Number of steps       = " << nSteps << "\n";
+        out << "Final simulation time = " << t << "\n";
+        out << "-------------------\n\n";
+    }
 
     errorsReported_ = true;
 }

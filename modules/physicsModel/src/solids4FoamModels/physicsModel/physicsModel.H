@@ -58,11 +58,14 @@ class physicsModel
         //- Reference to the master time object
         Time& runTime_;
 
-        //- Fluid mesh pointer
-        autoPtr<dynamicFvMesh> fluidMeshPtr_;
-
-        //- Solid mesh pointer
-        autoPtr<dynamicFvMesh> solidMeshPtr_;
+        // Note: `fluidMeshPtr_` and `solidMeshPtr_` were previously added here
+        // to support FSI simulations. However, adding them directly to this
+        // base class causes a severe One Definition Rule (ODR) violation and
+        // memory misalignment (Bus error) because `solids4foam` is compiled
+        // against the original, smaller `physicsModel.H` header.
+        // For FSI support, these pointers should instead be added to a derived
+        // class (e.g., `fsiPhysicsModel`). For now, the solid mesh is assumed
+        // to be the same as the electroMesh.
 
         //- Flag to indicate whether info statements should be printed to
         //  std out or not. Defaults to true but can be modified by the

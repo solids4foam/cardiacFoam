@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+myocardiumSolver singleCellSolver;
+singleCellSolverCoeffs
+{
+    // Cell model selection
+    ionicModel    Gaur;
+    tissue        myocyte;
+
+    ionicConstantOverrides
+    {
+        myocyte
+        {
+            scale
+            {
+AC_PCa 0.80;
+                AC_grelbarjsrol 0.65;
+                AC_Pnak 0.80;
+                AC_Gncx 1.20;
+                AC_GKr 0.85;
+                AC_GK1 0.90;
+            }
+        }
+    }
+
+    // Time integration settings
+    solver          RKF45;
+    initialODEStep  1e-5;
+    maxSteps        1000000000;
+    absTol          1e-6;
+    relTol          1e-4;
+
+    // Stimulus protocol
+    singleCellStimulus
+    {
+        stim_start      20;
+        stim_duration   1;
+        stim_amplitude  60;
+        stim_period_S1  1000;
+        nstim1          10;
+        stim_period_S2  0;
+        nstim2          0;
+    }
+
+    // optional I/O control
+    writeAfterTime  8;
+    writeFrequency  0.001;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm cai cansr cajsr AV_ICaL_ICaL AV_INaCa AV_Jrel AV_Jup AV_Jleak);
+            debug (Vm);
+        }
+        activeTension
+        {
+            export (AV_Ta Ca_TRPN TmBlocked XW XS);
+        }
+    }
+
+    activeTensionModel LandNiederer;
+}

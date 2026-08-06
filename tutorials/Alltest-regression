@@ -1,4 +1,114 @@
-#!/bin/bash
-# Backward compatibility shim for Alltest-regression
-cd "${0%/*}" || exit 1
-exec ./regressionTests/Alltest-regression "$@"
+#!/usr/bin/env bash
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+# -------------------------------------------------------------------------
+# cardiacFoam regression test driver
+#
+# Copies regression test cases to a separate directory and
+# runs them there to avoid polluting the original tutorials.
+# -------------------------------------------------------------------------
+
+echo "============================================================"
+echo "cardiacFoam regression tests"
+echo "============================================================"
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
+
+# Create regression root directory
+rm -rf "${REG_ROOT}"
+mkdir -p "${REG_ROOT}"
+
+# List of regression test directories (relative to tutorials/)
+REGRESSION_TESTS=(
+    "electrophysiologyProtocols/singleCell"
+    "NiedererEtAl2011/NiedererEtAl2011verification"
+    "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
+    "NiedererEtAl2011/purkinjeNiedererEtAl2011"
+    "manufacturedSolutions/bidomain"
+    "manufacturedSolutions/monodomainPseudoECG"
+    "manufacturedSolutions/eikonalECG"
+    "manufacturedSolutions/bathBidomain"
+    "electrophysiologyProtocols/rotorInstability"
+)
+
+failures=0
+skips=0
+unexpected_skips=0
+build_mode="${CARDIAC_REGRESSION_BUILD_MODE:-}"
+
+case "${build_mode}" in
+    with-solids4foam)
+        ;;
+    lightweight)
+        ;;
+    *)
+        echo "FAIL: CARDIAC_REGRESSION_BUILD_MODE must be 'with-solids4foam' or 'lightweight'."
+        exit 2
+        ;;
+esac
+
+isExpectedSkip()
+{
+    local skipped_case="$1"
+
+    [[ "${build_mode}" == "lightweight" \
+        && "${skipped_case}" == "NiedererEtAl2011/electroMechanicalNiedererEtAl2011" ]]
+}
+
+for testCase in "${REGRESSION_TESTS[@]}"; do
+    echo
+    echo "------------------------------------------------------------"
+    echo "Running regression test: ${testCase}"
+    echo "------------------------------------------------------------"
+
+    SRC_CASE="${ROOT_DIR}/${testCase}"
+    DST_CASE="${REG_ROOT}/${testCase}"
+
+    # Copy test case (fresh copy each time)
+    rm -rf "${DST_CASE}"
+    mkdir -p "$(dirname "${DST_CASE}")"
+    cp -a "${SRC_CASE}" "${DST_CASE}"
+
+    cd "${DST_CASE}"
+
+    if [[ ! -x ./regression/regressionTest.sh ]]; then
+        echo "FAIL: regressionTest.sh not found or not executable in ${testCase}"
+        failures=$((failures + 1))
+        continue
+    fi
+
+    if ./regression/regressionTest.sh; then
+        echo "PASS: regression test passed in ${testCase}"
+    else
+        rc=$?
+        if (( rc == 77 )); then
+            skips=$((skips + 1))
+            if isExpectedSkip "${testCase}"; then
+                echo "EXPECTED SKIP: regression test skipped in ${testCase}"
+            else
+                echo "FAIL: unexpected regression-test skip in ${testCase}"
+                unexpected_skips=$((unexpected_skips + 1))
+            fi
+            continue
+        fi
+
+        echo "FAIL: regression test failed in ${testCase}"
+        failures=$((failures + 1))
+    fi
+done
+
+echo
+echo "============================================================"
+
+if (( failures > 0 || unexpected_skips > 0 )); then
+    echo "Regression tests FAILED (${failures} failing case(s), ${unexpected_skips} unexpected skip(s), ${skips} total skip(s))"
+    exit 1
+elif (( skips > 0 )); then
+    echo "Regression tests PASSED WITH EXPECTED SKIPS (${skips} expected skip(s))"
+    exit 0
+else
+    echo "All regression tests PASSED (no skips)"
+    exit 0
+fi

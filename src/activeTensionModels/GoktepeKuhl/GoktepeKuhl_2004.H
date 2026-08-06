@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Goktepe-Kuhl 2004
+    active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "GoktepeKuhl_2004Names.H"
@@ -39,37 +45,30 @@ static const char* GoktepeKuhlALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 };
 
 
-static inline const Foam::HashTable<Foam::wordList>&
-GoktepeKuhlDependencyMap()
-{
-   static const Foam::HashTable<Foam::wordList> dep
-    (
-        {
-        }
-    );
-
-    return dep;
-}
-void
+inline void
 GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 {
 
     CONSTANTS[AC_Vr] = -80.0;
 
     // Smooth damping tension parameters
-    CONSTANTS[AC_eInfty] = 10.0;     // mV-1
-    CONSTANTS[AC_e0] = 1.0;         // mV-1
-    CONSTANTS[AC_eXi] = 1.0;        // mV-1
+    CONSTANTS[AC_eInfty] = 10.0;     // s-1
+    CONSTANTS[AC_e0] = 1.0;          // s-1
+    CONSTANTS[AC_eXi] = 1.0;         // dimensionless
     CONSTANTS[AC_Vshift] = 0.0;
 
-    CONSTANTS[AC_kTa] = 47.9;      // Kpa mV−1
+    CONSTANTS[AC_kTa] = 47.9;        // kPa
 
     /* initial conditions */
     STATES[Ta] = 0.0;
 }
 
 
-void
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void
 GoktepeKuhlcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
     /* membrane_potential */

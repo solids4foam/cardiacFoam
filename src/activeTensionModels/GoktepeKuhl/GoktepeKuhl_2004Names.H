@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the Goktepe-Kuhl 2004
+    active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -42,10 +48,14 @@ enum CONSTANTS_INDEX {
 };
 
 
-void
+inline void
 GoktepeKuhlinitConsts(double* CONSTANTS, double* RATES, double* STATES);
 
-void
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
+
+CARDIAC_HOST_DEVICE inline void
 GoktepeKuhlcomputeVariables
 (
     double VOI,

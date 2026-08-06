@@ -1,0 +1,32 @@
+// Unit-cube [0,1]^3 tetrahedral mesh, shared with the monodomain/eikonal tet
+// MMS (monodomainPseudoECG/setup/mesh/tet/box.geo.template -- identical
+// geometry/lc ladder, copied here verbatim so all three solvers refine on
+// the same mesh sequence).
+//
+// The characteristic length placeholder __LC__ is substituted by
+// run_corrector_study.sh (lc = 1/N) to build a refinement ladder. The domain
+// is the same unit cube used by the orthogonal hex MMS case (bidomain), so
+// the manufactured exact solution, conductivity, and forcing are reused
+// unchanged.
+//
+// All six boundary faces lie on the axis-aligned planes x,y,z in {0,1},
+// where the manufactured cosine field F_d has zero normal derivative, so the
+// solver's default zeroGradient (no-flux) boundary stays compatible with the
+// exact solution exactly as on the hex meshes. A single physical surface is
+// enough because cardiacFoam creates Vm/phiE with a uniform zeroGradient
+// boundary (READ_IF_PRESENT, no 0/ dir), so patch naming is irrelevant.
+
+SetFactory("OpenCASCADE");
+
+lc = __LC__;
+
+Box(1) = {0, 0, 0, 1, 1, 1};
+
+Physical Volume("internal") = {1};
+Physical Surface("boundary") = {1, 2, 3, 4, 5, 6};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
+Mesh.Optimize = 1;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format

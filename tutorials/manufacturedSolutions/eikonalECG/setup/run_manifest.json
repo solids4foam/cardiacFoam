@@ -1,0 +1,112 @@
+{
+  "schema_version": "2.3",
+  "run_id": "1783861587-d4c31837",
+  "requested_action": "sim",
+  "entry": "manufacturedEikonalECG",
+  "entry_kind": "registered_tutorial",
+  "entry_path": "manufacturedSolutions/eikonalECG",
+  "source_type": "spec_factory",
+  "workflow_family": null,
+  "case_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG",
+  "setup_root": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG/setup",
+  "output_dir": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG/postProcessing",
+  "dry_run": true,
+  "continue_on_error": false,
+  "status": "planned",
+  "postprocess_status": "skipped",
+  "current_case_id": null,
+  "started_at_utc": "2026-07-12T13:06:27.398745+00:00",
+  "updated_at_utc": "2026-07-12T13:06:27.528463+00:00",
+  "finished_at_utc": "2026-07-12T13:06:27.523938+00:00",
+  "total_cases": 4,
+  "planned_cases": 4,
+  "completed_cases": 0,
+  "failed_cases": 0,
+  "error": null,
+  "plots_manifest_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG/postProcessing/plots.json",
+  "artifacts_manifest_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG/setup/artifacts_manifest.json",
+  "artifacts_realized_path": null,
+  "workflow_dag": {
+    "steps": [
+      {
+        "id": "mesh",
+        "command": "blockMesh",
+        "args": [
+          "-dict",
+          "system/blockMeshDict.1D"
+        ],
+        "depends_on": []
+      },
+      {
+        "id": "solve",
+        "command": "cardiacFoam",
+        "depends_on": [
+          "mesh"
+        ]
+      }
+    ]
+  },
+  "results": [
+    {
+      "case_id": "1D_10_cells_eikonal",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "dimension": "1D",
+        "solver": "eikonal",
+        "cells": 10
+      },
+      "error": null,
+      "index": 1,
+      "total_cases": 4,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "1D_20_cells_eikonal",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "dimension": "1D",
+        "solver": "eikonal",
+        "cells": 20
+      },
+      "error": null,
+      "index": 2,
+      "total_cases": 4,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "1D_40_cells_eikonal",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "dimension": "1D",
+        "solver": "eikonal",
+        "cells": 40
+      },
+      "error": null,
+      "index": 3,
+      "total_cases": 4,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    },
+    {
+      "case_id": "1D_80_cells_eikonal",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "dimension": "1D",
+        "solver": "eikonal",
+        "cells": 80
+      },
+      "error": null,
+      "index": 4,
+      "total_cases": 4,
+      "started_at_utc": null,
+      "finished_at_utc": null
+    }
+  ],
+  "human_report_path": "/Users/simaocastro/noFrontendCardiacFoam_minor_errors/tutorials/manufacturedSolutions/eikonalECG/setup/run_report.md"
+}

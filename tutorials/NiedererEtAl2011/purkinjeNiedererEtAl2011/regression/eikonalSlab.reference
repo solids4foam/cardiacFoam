@@ -1,0 +1,14 @@
+# Eikonal Purkinje slab reference values
+#
+# kind               key     metric          expected            tolerance
+#
+# Purkinje 1-D eikonal (Dijkstra) activation times at key nodes.
+# node0 is the root stimulus (seeded at 0.0 s).
+# node8 and node15 are PVJ terminal nodes; their times set the Dirichlet
+# constraints that seed the 3-D myocardial eikonal solve.
+# These values come from the deterministic Dijkstra solver and should be
+# bitwise reproducible across runs.
+#
+eikonalPurkinjeAT   node0   activationTime   0.0              1e-10
+eikonalPurkinjeAT   node8   activationTime   6.82346100e-03   1e-8
+eikonalPurkinjeAT   node15  activationTime   8.32345950e-03   1e-8

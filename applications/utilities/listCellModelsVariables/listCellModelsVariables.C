@@ -25,7 +25,7 @@ Description
     written to a file in postProcessing/.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
@@ -43,6 +43,34 @@ namespace
 
 dictionary electroModelDict(const IOdictionary& electroDict)
 {
+    if (electroDict.found("myocardiumSolver"))
+    {
+        word myocardiumSolverName;
+        electroDict.lookup("myocardiumSolver") >> myocardiumSolverName;
+
+        const word coeffsName(myocardiumSolverName + "Coeffs");
+
+        if (!electroDict.found(coeffsName))
+        {
+            FatalErrorInFunction
+                << "Expected sub-dictionary '" << coeffsName
+                << "' in electroProperties for myocardiumSolver '"
+                << myocardiumSolverName << "'." << nl
+                << "For example:" << nl
+                << "  myocardiumSolver " << myocardiumSolverName << ";" << nl
+                << "  " << coeffsName << nl
+                << "  {" << nl
+                << "      ionicModel TNNP;" << nl
+                << "      tissue endocardialCells;" << nl
+                << "      ..." << nl
+                << "  }" << nl
+                << exit(FatalError);
+        }
+
+        return electroDict.subDict(coeffsName);
+    }
+
+    // Retain the legacy selector after the canonical myocardiumSolver path.
     if (electroDict.found("electroModel"))
     {
         word electroModelName;
@@ -70,8 +98,17 @@ dictionary electroModelDict(const IOdictionary& electroDict)
         return electroDict.subDict(coeffsName);
     }
 
-    // Backward-compatible path: allow a flat dictionary if no electroModel
-    // key is present.
+    FatalErrorInFunction
+        << "Expected 'myocardiumSolver' in electroProperties." << nl
+        << "For example:" << nl
+        << "  myocardiumSolver monodomainSolver;" << nl
+        << "  monodomainSolverCoeffs" << nl
+        << "  {" << nl
+        << "      ionicModel TNNP;" << nl
+        << "      ..." << nl
+        << "  }" << nl
+        << exit(FatalError);
+
     return dictionary(electroDict);
 }
 
@@ -103,14 +140,15 @@ void writeHeader
     os  << "\n========== listCellModelsVariables ==========\n\n"
         << "Selected physicsModel: " << physicsType << nl;
 
-    if (electroDict.found("electroModel"))
+    if (electroDict.found("myocardiumSolver"))
     {
-        os << "Selected electroModel: "
-           << word(electroDict.lookup("electroModel")) << nl;
+        os << "Selected myocardiumSolver: "
+           << word(electroDict.lookup("myocardiumSolver")) << nl;
     }
-    else
+    else if (electroDict.found("electroModel"))
     {
-        os << "Selected electroModel: flat electroProperties dictionary" << nl;
+        os << "Selected legacy electroModel: "
+           << word(electroDict.lookup("electroModel")) << nl;
     }
 
     os << "Selected ionicModel: "

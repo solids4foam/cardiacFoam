@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::EikonalSolver1D
+    Foam::eikonalSolver1D
 
 Description
     Fast-marching eikonal activation-time solver on the 1-D conduction graph.
@@ -41,30 +41,30 @@ SourceFiles
 namespace Foam
 {
 
-defineTypeNameAndDebug(EikonalSolver1D, 0);
+defineTypeNameAndDebug(eikonalSolver1D, 0);
 addToRunTimeSelectionTable
 (
     conductionSystemSolver,
-    EikonalSolver1D,
+    eikonalSolver1D,
     dictionary
 );
 
 
-EikonalSolver1D::EikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
+eikonalSolver1D::eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
     c0_("c0", solverCoeffs)
 {
     if (solverCoeffs.lookupOrDefault<Switch>("reportSetup", false))
     {
-        Info<< "EikonalSolver1D: conduction velocity c0 = " << c0_.value()
+        Info<< "eikonalSolver1D: conduction velocity c0 = " << c0_.value()
             << " m/s" << endl;
     }
 }
 
 
-void EikonalSolver1D::advance
+void eikonalSolver1D::advance
 (
-    ConductionSystemDomain& domain,
+    conductionSystemDomain& domain,
     scalar t0,
     scalar dt
 )

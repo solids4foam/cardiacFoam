@@ -19,6 +19,7 @@ License
 
 #include "sequentialElectroMechanical.H"
 #include "addToRunTimeSelectionTable.H"
+#include "fvcGrad.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -60,57 +61,206 @@ sequentialElectroMechanical::sequentialElectroMechanical
         dimensionedScalar("zero", dimPressure, 0.0),
         "zeroGradient"
     ),
-    kTa_
+    TaScale_
     (
-        "kTa",
-        dimPressure,
-        electroMechanicalProperties()
+        electroMechanicalProperties().lookupOrDefault<scalar>("TaScale", 1e3)
     ),
-    CaiThreshold_
+    lambdaField_(electro().mesh().nCells(), 1.0),
+    activeTensionModel_
     (
-        "CaiThreshold",
-        dimless,
-        electroMechanicalProperties()
-    )
+        activeTensionModel::New
+        (
+            electroMechanicalProperties(),
+            electro().mesh().nCells()
+        )
+    ),
+    verificationModelPtr_(),
+    activeTensionRequirements_(activeTensionModel_->requirements())
 {
-    Info<< "    Active tension coupling parameters:" << nl
-        << "        kTa = " << kTa_.value() << " Pa/(Cai unit)" << nl
-        << "        CaiThreshold = " << CaiThreshold_.value() << nl
+    const ElectromechanicalSignalProvider* prov = electro().provider();
+
+    if (prov)
+    {
+        activeTensionModel_->setElectromechanicalSignalProvider(*prov);
+    }
+
+    activeTensionModel_->validateProvider();
+
+    // Pre-condition the active tension model to the ionic model's resting state.
+    // We query Ca_i at cell 0 from the provider — at t=0 all cells share the
+    // same initial Ca_i, so cell 0 is representative of the whole field.
+    // This call is a no-op for models that don't override preconditionToRestingState().
+    if (prov && activeTensionRequirements_.needCai)
+    {
+        const scalar restingCai = prov->signal(0, CouplingSignal::CAI);
+        activeTensionModel_->preconditionToRestingState(restingCai);
+    }
+
+    if (solid().mesh().nCells() != electro().mesh().nCells())
+    {
+        FatalErrorInFunction
+            << "sequentialElectroMechanical requires conforming meshes "
+            << "(same cell count). Solid has "
+            << solid().mesh().nCells() << " cells, electro has "
+            << electro().mesh().nCells() << " cells."
+            << abort(FatalError);
+    }
+
+    if (!solid().mesh().foundObject<volVectorField>("f0"))
+    {
+        new volVectorField
+        (
+            IOobject
+            (
+                "f0",
+                runTime.timeName(),
+                solid().mesh(),
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            solid().mesh()
+        );
+
+        Info<< "    Registered f0 in solid objectRegistry." << nl << endl;
+    }
+
+    if (activeTensionRequirements_.needsLambda)
+    {
+        if (!solid().mesh().foundObject<volVectorField>("D"))
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field D "
+                << "is not in the solid objectRegistry."
+                << abort(FatalError);
+        }
+        if (!solid().mesh().foundObject<volVectorField>("f0"))
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field f0 "
+                << "is not in the solid objectRegistry."
+                << abort(FatalError);
+        }
+    }
+
+    if
+    (
+        electromechanicalVerificationModel::configured
+        (
+            electroMechanicalProperties()
+        )
+    )
+    {
+        verificationModelPtr_ =
+            electromechanicalVerificationModel::New
+            (
+                electroMechanicalProperties()
+            );
+    }
+
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->initialize
+        (
+            const_cast<volScalarField&>(electro().Vm()),
+            solid().D()
+        );
+    }
+
+    Info<< "    Active tension model: "
+        << activeTensionModel_->type() << nl
+        << "    TaScale (model units -> Pa): " << TaScale_ << nl
+        << "    Integration points: " << electro().mesh().nCells() << nl
         << endl;
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+void sequentialElectroMechanical::updateLambda()
+{
+    const fvMesh& solidMesh = solid().mesh();
+
+    const bool hasD  = solidMesh.foundObject<volVectorField>("D");
+    const bool hasF0 = solidMesh.foundObject<volVectorField>("f0");
+
+    if (!hasD || !hasF0)
+    {
+        if (activeTensionRequirements_.needsLambda)
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << activeTensionModel_->type()
+                << "' requires fibre stretch (lambda) but field "
+                << (!hasD ? "D" : "f0")
+                << " disappeared from the solid objectRegistry at t="
+                << runTime().value() << "."
+                << abort(FatalError);
+        }
+        lambdaField_ = 1.0;
+        return;
+    }
+
+    const volVectorField& D  = solidMesh.lookupObject<volVectorField>("D");
+    const volVectorField& f0 = solidMesh.lookupObject<volVectorField>("f0");
+
+    // Deformation gradient F = I + grad(D)^T (total Lagrangian convention,
+    // matching solids4foam mechanicalLaw). The fibre stretch follows from
+    // lambda^2 = f0 & C & f0 = (F & f0) & (F & f0), i.e. lambda = mag(F & f0).
+    const volTensorField gradD(fvc::grad(D));
+
+    forAll(lambdaField_, cellI)
+    {
+        const tensor F(I + gradD[cellI].T());
+        lambdaField_[cellI] = mag(F & f0[cellI]);
+    }
+}
+
+
 bool sequentialElectroMechanical::evolve()
 {
     Info<< "Evolving " << type() << endl;
 
-    // Evolve the electro model
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->preSolve
+        (
+            const_cast<volScalarField&>(electro().Vm()),
+            solid().D()
+        );
+    }
+
     electro().evolve();
 
-    // Extract intracellular calcium from the electro model
-    const tmp<volScalarField> tCai = electro().couplingField("Cai");
-    const scalarField& Cai = tCai().primitiveField();
+    // Update the fibre stretch from the (lagged) solid deformation before
+    // evaluating the active tension.
+    updateLambda();
 
-    // Compute active tension using a simple linear model:
-    //   Ta = kTa * max(Cai - CaiThreshold, 0)
-    // This is a placeholder that will be replaced by a dedicated
-    // runtime-selectable active tension model in the future.
+    const scalar t  = runTime().value();
+    const scalar dt = runTime().deltaT().value();
+
     scalarField& TaI = Ta_.primitiveFieldRef();
-    forAll(TaI, cellI)
+
+    activeTensionModel_->calculateTension(t, dt, lambdaField_, TaI);
+
+    if (TaScale_ != 1.0)  // skip no-op multiply; 1.0 is exactly representable
     {
-        TaI[cellI] =
-            kTa_.value()
-           *max(Cai[cellI] - CaiThreshold_.value(), scalar(0));
+        TaI *= TaScale_;
     }
+
     Ta_.correctBoundaryConditions();
 
-    // Evolve the solid model
     solid().evolve();
-
-    // Update total fields at the end of the time-step
     solid().updateTotalFields();
+
+    if
+    (
+        verificationModelPtr_.valid()
+     && verificationModelPtr_->shouldPostProcess(electro().Vm(), solid().D())
+    )
+    {
+        verificationModelPtr_->postProcess(electro().Vm(), solid().D(), Ta_);
+    }
 
     return true;
 }

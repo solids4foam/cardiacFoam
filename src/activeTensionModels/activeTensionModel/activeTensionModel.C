@@ -33,7 +33,6 @@ autoPtr<activeTensionModel> activeTensionModel::New
 {
     const word modelType(dict.lookup("activeTensionModel"));
 
-    Info<< "Selecting activeTensionModel: " << modelType << nl << endl;
 
     auto cstrIter = dictionaryConstructorTablePtr_->find(modelType);
 
