@@ -422,7 +422,12 @@ def remove_foam_dict(
             pass
 
     lines = file_path.read_text().splitlines(keepends=True)
-    search_start, search_end = _resolve_search_region(lines, scope)
+    try:
+        search_start, search_end = _resolve_search_region(lines, scope)
+    except KeyError:
+        if missing_ok:
+            return
+        raise
     # A trailing \b fails to match a scope name ending in a non-word
     # character (e.g. a quoted regex-style block name like
     # "phiE|phiEFinal|phiI|phiIFinal" -- both the closing quote and whatever

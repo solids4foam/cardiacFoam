@@ -145,6 +145,12 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     # a plain word by conductivityFieldIO.C (lookup + manual branch), not an
     # RTST type.
     "$ELECTRO_MODEL_COEFFS.conductivitySource",
+    # fdaBathVariant (groundElectrode/electrodePair) selects the outer bath
+    # boundary-condition layout for the FDA bath-bidomain manufactured
+    # verifier. It is a plain NamedEnum word read by
+    # manufacturedFDABathBidomainVerifier.C, not an RTST runtime-selection
+    # table.
+    "$ELECTRO_MODEL_COEFFS.verificationModel.fdaBathVariant",
 })
 
 

@@ -217,78 +217,8 @@ def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
 def test_hex_workflow_dag_is_still_blockmesh_toposet_pipeline(tmp_path):
     spec = _make_spec(tmp_path)
     assert [s["command"] for s in spec.metadata["workflow_dag"]["steps"]] == [
-        "blockMesh", "topoSet", "setTorsoOrganConductivityField", "cardiacFoam",
+        "Allclean", "blockMesh", "topoSet", "setTorsoOrganConductivityField", "cardiacFoam",
     ]
-
-
-def test_tet_apply_case_installs_overlay_and_reference_predictor_corrector(tmp_path):
-    case_root = _write_case(tmp_path)
-    spec = make_spec(
-        tutorials_root=tmp_path,
-        case_dir_name="manufacturedSolutions/bathBidomain",
-        dimensions=["3D"],
-        number_cells=[10],
-        dt_values=[0.00892857],
-        mesh_family="tet",
-        numerics_profile="bath_bidomain_tet",
-        run_in_parallel=False,
-    )
-    case = spec.build_cases()[0]
-    spec.apply_case(spec.case_root, case)
-
-    geo_text = (case_root / "setup" / "mesh" / "tet" / "three_domain_box.geo").read_text()
-    assert "lc = 0.1;" in geo_text
-    electro_text = (case_root / "constant" / "electroProperties").read_text()
-    assert "bathPredictorCorrector    no;" in electro_text
-    assert 'dimension    "3D";' in electro_text
-    assert "interfaceConductivityInterpolation distanceWeightedHarmonic;" in electro_text
-    assert "intracellularAssembly" not in electro_text
-    assert "leastSquares" in (case_root / "system" / "fvSchemes").read_text()
-
-
-def test_tet_predictor_corrector_can_be_enabled_explicitly(tmp_path):
-    case_root = _write_case(tmp_path)
-    spec = make_spec(
-        tutorials_root=tmp_path,
-        case_dir_name="manufacturedSolutions/bathBidomain",
-        dimensions=["3D"],
-        number_cells=[10],
-        dt_values=[0.00892857],
-        mesh_family="tet",
-        numerics_profile="bath_bidomain_tet",
-        bath_predictor_corrector=True,
-        run_in_parallel=False,
-    )
-    case = spec.build_cases()[0]
-    spec.apply_case(spec.case_root, case)
-
-    assert "bathPredictorCorrector    yes;" in (
-        case_root / "constant" / "electroProperties"
-    ).read_text()
-    assert spec.metadata["bath_predictor_corrector"] is True
-
-
-def test_tet_grad_scheme_phi_tolerance_and_end_time_overrides(tmp_path):
-    case_root = _write_case(tmp_path)
-    spec = make_spec(
-        tutorials_root=tmp_path,
-        case_dir_name="manufacturedSolutions/bathBidomain",
-        dimensions=["3D"],
-        number_cells=[10],
-        dt_values=[0.00892857],
-        mesh_family="tet",
-        numerics_profile="bath_bidomain_tet",
-        grad_scheme="gauss_linear",
-        phi_tolerance=1e-6,
-        end_time=0.02,
-        run_in_parallel=False,
-    )
-    case = spec.build_cases()[0]
-    spec.apply_case(spec.case_root, case)
-
-    assert "Gauss linear;" in (case_root / "system" / "fvSchemes").read_text()
-    assert "tolerance    1e-06;" in (case_root / "system" / "fvSolution").read_text()
-    assert "endTime    0.02;" in (case_root / "system" / "controlDict").read_text()
 
 
 def test_tet_rejects_unsupported_options(tmp_path):

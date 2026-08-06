@@ -212,6 +212,49 @@ class TestScopedMutators(unittest.TestCase):
             self.assertNotIn("removeMe", updated)
             self.assertNotIn("value 1;", updated)
 
+    def test_remove_foam_dict_missing_ok_tolerates_absent_scope_without_foamDictionary(
+        self,
+    ) -> None:
+        # The foamDictionary-backed path already returns cleanly on a missing
+        # scope when missing_ok=True (remove_foam_dict_via_foamDictionary's
+        # subprocess-failure branch checks it). The pure-Python fallback used
+        # when foamDictionary isn't on PATH previously called
+        # _resolve_search_region(lines, scope) unguarded, so it raised
+        # KeyError("Scope '<name>' not found") before missing_ok was ever
+        # consulted -- missing_ok only guarded the "dict_name not found
+        # inside an existing scope" case, not "scope itself absent".
+        text = "\n".join(
+            [
+                "outer",
+                "{",
+                "    keep 1;",
+                "}",
+                "",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "dict"
+            path.write_text(text)
+
+            with mock.patch.object(shutil, "which", return_value=None):
+                remove_foam_dict(
+                    path,
+                    "xMin",
+                    scope=["outer", "neverExisted"],
+                    missing_ok=True,
+                )
+
+                self.assertEqual(path.read_text(), text)
+
+                with self.assertRaises(KeyError):
+                    remove_foam_dict(
+                        path,
+                        "xMin",
+                        scope=["outer", "neverExisted"],
+                        missing_ok=False,
+                    )
+
     def test_single_cell_stimulus_updates_use_nested_scope(self) -> None:
         text = "\n".join(
             [
