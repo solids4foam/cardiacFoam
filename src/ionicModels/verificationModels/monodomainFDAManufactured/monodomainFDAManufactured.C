@@ -91,6 +91,33 @@ Foam::List<Foam::word> Foam::monodomainFDAManufactured::supportedDimensions() co
 }
 
 
+Foam::scalar Foam::monodomainFDAManufactured::manufacturedSourceCorrection
+(
+    const label integrationPtI
+) const
+{
+    if (!manufacturedSourceTermPtr_)
+    {
+        return 0.0;
+    }
+
+    const label sourceI = manufacturedSourceStart_ + integrationPtI;
+
+    if (sourceI < 0 || sourceI >= manufacturedSourceTermPtr_->size())
+    {
+        FatalErrorInFunction
+            << "Manufactured source index " << sourceI
+            << " is outside source field size "
+            << manufacturedSourceTermPtr_->size()
+            << exit(FatalError);
+    }
+
+    return
+        (*manufacturedSourceTermPtr_)[sourceI]
+      / (manufacturedSourceChi_*manufacturedSourceCm_);
+}
+
+
 void Foam::monodomainFDAManufactured::solveODE
 (
     const scalar stepStartTime,
@@ -113,6 +140,8 @@ void Foam::monodomainFDAManufactured::solveODE
 
         S[V] = Vm[integrationPtI];
         h = min(h, deltaT);
+
+        setActiveVmRate(integrationPtI);
 
         if (integrationPtI == monitorCell)
         {
@@ -137,31 +166,47 @@ void Foam::monodomainFDAManufactured::solveODE
             debugPrintFields(integrationPtI, tStart, tEnd, h);
         }
 
-        scalar manufacturedSourceCorrection = 0.0;
-        if (manufacturedSourceTermPtr_)
-        {
-            const label sourceI = manufacturedSourceStart_ + integrationPtI;
-            if
-            (
-                sourceI < 0
-             || sourceI >= manufacturedSourceTermPtr_->size()
-            )
-            {
-                FatalErrorInFunction
-                    << "Manufactured source index " << sourceI
-                    << " is outside source field size "
-                    << manufacturedSourceTermPtr_->size()
-                    << exit(FatalError);
-            }
+        Im[integrationPtI] =
+            A[Iion]/CONSTANTS_[Cm]
+          + manufacturedSourceCorrection(integrationPtI);
+    }
 
-            manufacturedSourceCorrection =
-                (*manufacturedSourceTermPtr_)[sourceI]
-              / (manufacturedSourceChi_*manufacturedSourceCm_);
-        }
+    clearVmRate();
+}
+
+
+void Foam::monodomainFDAManufactured::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[V] = Vm[integrationPtI];
+        A = 0.0;
+        R = 0.0;
+
+        ::monodomainFDAManufacturedComputeVariables
+        (
+            t,
+            CONSTANTS_.data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        );
 
         Im[integrationPtI] =
             A[Iion]/CONSTANTS_[Cm]
-          + manufacturedSourceCorrection;
+          + manufacturedSourceCorrection(integrationPtI);
     }
 }
 
@@ -216,6 +261,12 @@ void Foam::monodomainFDAManufactured::derivatives
         tissue(),
         solveVmWithinODESolver()
     );
+
+    if (!solveVmWithinODESolver())
+    {
+        // ComputeVariables pins RATES[V] to zero; use the supplied dVm/dt
+        dydt[V] = activeVmRate();
+    }
 }
 
 // ************************************************************************* //

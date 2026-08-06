@@ -69,13 +69,21 @@ struct BatchedKernelConfig
     bool useExplicitEuler;
     bool useRushLarsen;
 
+    //- Linear Vm extrapolant across the step; null holds Vm frozen
+    const scalar* vmStateStart;
+    const scalar* vmStateRate;
+    scalar tStartModel;
+
     BatchedKernelConfig()
     :
         dtSubstep(0.0),
         vmStateI(-1),
         solveVm(false),
         useExplicitEuler(false),
-        useRushLarsen(false)
+        useRushLarsen(false),
+        vmStateStart(nullptr),
+        vmStateRate(nullptr),
+        tStartModel(0.0)
     {}
 };
 
@@ -382,6 +390,13 @@ public:
         const KernelConfig& kernel
     ) const
     {
+        if (!kernel.solveVm && kernel.vmStateRate)
+        {
+            scratch.stateValues[kernel.vmStateI] =
+                kernel.vmStateStart[cellI]
+              + kernel.vmStateRate[cellI]*(modelTime - kernel.tStartModel);
+        }
+
         hooks_.evaluateHotPathState
         (
             cellI,

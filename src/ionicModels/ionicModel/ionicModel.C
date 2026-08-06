@@ -37,7 +37,8 @@ Foam::ionicModel::ionicModel(const dictionary& dict,
                              const Switch solveVmWithinODESolver)
     : ODESystem(), odeSolver_(), dict_(dict),
       step_(num, initialDeltaT), tissue_(-1), sex_(0),
-      solveVmWithinODESolver_(solveVmWithinODESolver)
+      solveVmWithinODESolver_(solveVmWithinODESolver),
+      VmRatePtr_(nullptr), activeVmRate_(0.0)
 {
     if (dict_.found("outputVariables"))
     {

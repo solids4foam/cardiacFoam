@@ -256,6 +256,60 @@ myocardiumDomain::myocardiumDomain
         dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
         "zeroGradient"
     ),
+    IionOld_
+    (
+        IOobject
+        (
+            "ionicCurrentOld",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
+    IionOldOld_
+    (
+        IOobject
+        (
+            "ionicCurrentOldOld",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
+    VmPrev_
+    (
+        IOobject
+        (
+            "VmPrevious",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Vm_
+    ),
+    VmRate_
+    (
+        IOobject
+        (
+            "VmRate",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
     activationTime_
     (
         IOobject
@@ -292,12 +346,45 @@ myocardiumDomain::myocardiumDomain
         ) == "explicit"
     ),
     reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false)),
+    timeCouplingScheme_
+    (
+        electroProperties_.lookupOrDefault<word>("timeCouplingScheme", "godunov")
+    ),
     activationThreshold_
     (
         electroProperties_.lookupOrDefault<scalar>("activationThreshold", 0.0)
     ),
     setDeltaT_(true)
 {
+    if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
+    {
+        FatalErrorInFunction
+            << "timeCouplingScheme must be 'godunov' or 'sbdf2'; got "
+            << timeCouplingScheme_
+            << exit(FatalError);
+    }
+
+    if
+    (
+        usesSbdf2Scheme()
+     && (
+            !ionicModel_.supportsVmRateCoupling()
+         || !ionicModel_.supportsIonicCurrentEvaluation()
+        )
+    )
+    {
+        FatalErrorInFunction
+            << "timeCouplingScheme 'sbdf2' requires an ionic model that "
+            << "supports both second-order couplings, but "
+            << ionicModel_.type()
+            << " reports supportsVmRateCoupling="
+            << Switch(ionicModel_.supportsVmRateCoupling())
+            << " supportsIonicCurrentEvaluation="
+            << Switch(ionicModel_.supportsIonicCurrentEvaluation())
+            << ". Use timeCouplingScheme 'godunov' with this model."
+            << exit(FatalError);
+    }
+
     if (reportSetup_)
     {
         Info<< "myocardiumDomain initial Vm[min,max]=["
@@ -516,6 +603,28 @@ void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
     // current added by preparePrimaryCoupling survives into the FVM solve.
     updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
 
+    IionOldOld_ = IionOld_;
+    IionOld_ = Iion_;
+
+    if (usesSbdf2Scheme())
+    {
+        const scalar deltaT0 = mesh().time().deltaT0Value();
+
+        if (usesSbdf2VmRate() && deltaT0 > VSMALL)
+        {
+            VmRate_ =
+                (Vm_ - VmPrev_)
+              / dimensionedScalar("deltaT0", dimTime, deltaT0);
+        }
+        else
+        {
+            VmRate_ =
+                dimensionedScalar("zero", VmRate_.dimensions(), 0.0);
+        }
+
+        VmPrev_ = Vm_;
+    }
+
     if (verificationModelPtr_)
     {
         const volTensorField* conductivityPtr =
@@ -542,6 +651,21 @@ void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
 }
 
 
+void myocardiumDomain::solveIonicCurrent(scalar t0, scalar dt)
+{
+    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
+
+    Iion_.correctBoundaryConditions();
+}
+
+
+void myocardiumDomain::refreshIonicCurrent(scalar t)
+{
+    ionicModel_.evaluateIonicCurrent(t, Vm_, Iion_);
+    Iion_.correctBoundaryConditions();
+}
+
+
 void myocardiumDomain::advance
 (
     scalar t0,
@@ -553,8 +677,13 @@ void myocardiumDomain::advance
     // and then augmented by the PVJ coupler (preparePrimaryCoupling).
     // Do NOT reset it here.
 
-    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
-    Iion_.correctBoundaryConditions();
+    if (usesSbdf2VmRate() && ionicModel_.supportsVmRateCoupling())
+    {
+        ionicModel_.setVmRate(VmRate_);
+    }
+
+    solveIonicCurrent(t0, dt);
+    ionicModel_.clearVmRate();
 
     if (useExplicitAlgorithm_)
     {
@@ -572,14 +701,19 @@ void myocardiumDomain::advance
             << exit(FatalError);
     }
 
+    // Move Iion onto its own time level now that Vm(t0+dt) is known
+    if (usesSbdf2Scheme())
+    {
+        refreshIonicCurrent(t0 + dt);
+    }
+
     updateActivationTime();
 }
 
 
 void myocardiumDomain::solveReactionStep(scalar t0, scalar dt)
 {
-    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
-    Iion_.correctBoundaryConditions();
+    solveIonicCurrent(t0, dt);
 }
 
 

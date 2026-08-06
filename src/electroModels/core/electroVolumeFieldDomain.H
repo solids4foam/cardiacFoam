@@ -49,6 +49,16 @@ public:
 
     virtual const volScalarField& Iion() const = 0;
 
+    virtual const volScalarField* IionOldPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const volScalarField* IionOldOldPtr() const
+    {
+        return nullptr;
+    }
+
     virtual volScalarField& sourceField() = 0;
 
     virtual volScalarField* implicitSourceCoeffPtr()

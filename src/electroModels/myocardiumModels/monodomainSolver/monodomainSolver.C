@@ -120,6 +120,21 @@ void monodomainSolver::solveDiffusionImplicit
 {
     (void)dt;
 
+    tmp<volScalarField> tIionExtrap;
+    const volScalarField* IionOldPtr = domain.IionOldPtr();
+    const volScalarField* IionOldOldPtr = domain.IionOldOldPtr();
+    if (IionOldPtr && IionOldOldPtr)
+    {
+        const scalar deltaT = domain.mesh().time().deltaTValue();
+        const scalar deltaT0 = domain.mesh().time().deltaT0Value();
+        const scalar r = (deltaT0 > VSMALL) ? (deltaT / deltaT0) : 1.0;
+        tIionExtrap = *IionOldPtr + r*(*IionOldPtr - *IionOldOldPtr);
+    }
+    else
+    {
+        tIionExtrap = domain.Iion();
+    }
+
     if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
     {
         solve
@@ -127,7 +142,7 @@ void monodomainSolver::solveDiffusionImplicit
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           + fvm::Sp(*coeff, domain.VmRef())
           == fvm::laplacian(conductivity_, domain.Vm())
-           - domain.chi()*domain.Cm()*domain.Iion()
+           - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
     }
@@ -137,7 +152,7 @@ void monodomainSolver::solveDiffusionImplicit
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           == fvm::laplacian(conductivity_, domain.Vm())
-           - domain.chi()*domain.Cm()*domain.Iion()
+           - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
     }

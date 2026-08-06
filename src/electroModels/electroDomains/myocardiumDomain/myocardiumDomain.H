@@ -56,6 +56,10 @@ protected:
     volScalarField sourceField_;
     volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
+    volScalarField IionOld_;
+    volScalarField IionOldOld_;
+    volScalarField VmPrev_;
+    volScalarField VmRate_;
     volScalarField activationTime_;
     PtrList<volScalarField>& outFields_;
     wordList preProcessFieldNames_;
@@ -70,6 +74,7 @@ protected:
     ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
     Switch reportSetup_;
+    word timeCouplingScheme_;
     scalar activationThreshold_;
     bool setDeltaT_;
 
@@ -82,11 +87,35 @@ protected:
 
     void updateActivationTime();
 
+    //- Advance the ionic ODE over [t0, t0+dt] and update Iion_.
+    void solveIonicCurrent(scalar t0, scalar dt);
+
+    //- Recompute Iion_ at the freshly solved Vm_ without advancing the state
+    void refreshIonicCurrent(scalar t);
+
     void validateNoIonicStimulusInMonodomain() const;
 
     void bindBidomainField(volScalarField& phiE);
 
     void initialiseProcessing();
+
+    //- Is the semi-implicit (SBDF2) coupling selected?
+    bool usesSbdf2Scheme() const
+    {
+        return timeCouplingScheme_ == "sbdf2";
+    }
+
+    //- Is there enough Iion history for the second-order source extrapolation?
+    bool usesSbdf2Coupling() const
+    {
+        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 3;
+    }
+
+    //- Is there enough Vm history to build the linear Vm extrapolant?
+    bool usesSbdf2VmRate() const
+    {
+        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 2;
+    }
 
 public:
 
@@ -240,6 +269,16 @@ public:
     virtual const volScalarField& Iion() const override
     {
         return Iion_;
+    }
+
+    virtual const volScalarField* IionOldPtr() const override
+    {
+        return usesSbdf2Coupling() ? &IionOld_ : nullptr;
+    }
+
+    virtual const volScalarField* IionOldOldPtr() const override
+    {
+        return usesSbdf2Coupling() ? &IionOldOld_ : nullptr;
     }
 
     virtual const dimensionedScalar& chi() const override

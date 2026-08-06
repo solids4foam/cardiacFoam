@@ -82,6 +82,12 @@ class ionicModel
         //- External stimulus protocol (separate from model constants)
         StimulusProtocol stimulus_;
 
+        //- dVm/dt (V/s) for the current step, or null to hold Vm frozen
+        const scalarField* VmRatePtr_;
+
+        //- dVm/dt of the active integration point, in model state/time units
+        scalar activeVmRate_;
+
 
     // Private Member Functions
 
@@ -284,6 +290,81 @@ public:
             const scalarField& Vm,
             scalarField& Im
         ) = 0;
+
+
+    // Semi-implicit (SBDF2) reaction-diffusion coupling
+
+        //- Does solveODE honour a supplied Vm rate?
+        virtual bool supportsVmRateCoupling() const
+        {
+            return false;
+        }
+
+        //- Can Iion be recomputed at a given Vm without advancing the state?
+        virtual bool supportsIonicCurrentEvaluation() const
+        {
+            return false;
+        }
+
+        //- Recompute Im from the current ODE state at the supplied Vm
+        virtual void evaluateIonicCurrent
+        (
+            const scalar t,
+            const scalarField& Vm,
+            scalarField& Im
+        )
+        {
+            (void)t;
+            (void)Vm;
+            (void)Im;
+
+            NotImplemented;
+        }
+
+        //- Supply dVm/dt (V/s) for the step about to be integrated
+        void setVmRate(const scalarField& dVmdt)
+        {
+            VmRatePtr_ = &dVmdt;
+        }
+
+        //- Drop the supplied rate; Vm reverts to being held frozen
+        void clearVmRate()
+        {
+            VmRatePtr_ = nullptr;
+            activeVmRate_ = 0.0;
+        }
+
+        bool hasVmRate() const
+        {
+            return VmRatePtr_ != nullptr;
+        }
+
+        //- dVm/dt at integration point i in V/s, zero if none supplied
+        scalar VmRateSI(const label i) const
+        {
+            return VmRatePtr_ ? (*VmRatePtr_)[i] : 0.0;
+        }
+
+        //- dVm/dt of the active point, in this model's state and time units
+        scalar activeVmRate() const
+        {
+            return activeVmRate_;
+        }
+
+    protected:
+
+        //- Latch the Vm rate for integration point i under the given scalings
+        void setActiveVmRate
+        (
+            const label i,
+            const scalar stateScale = 1.0,
+            const scalar timeScale = 1.0
+        )
+        {
+            activeVmRate_ = VmRateSI(i)*stateScale/timeScale;
+        }
+
+    public:
 
         virtual void configureIonicHeterogeneity
         (

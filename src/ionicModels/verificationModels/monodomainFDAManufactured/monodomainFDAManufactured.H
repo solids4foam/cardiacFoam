@@ -78,6 +78,9 @@ class monodomainFDAManufactured
 
     // Private Member Functions
 
+    //- Manufactured PDE source folded into Im at integration point i
+    scalar manufacturedSourceCorrection(const label integrationPtI) const;
+
     //- No copy construct
     monodomainFDAManufactured(const monodomainFDAManufactured&) = delete;
 
@@ -203,6 +206,25 @@ public:
     ) override;
 
     virtual void clearManufacturedSourceTerm() override;
+
+    //- Vm is advanced linearly across the step from the supplied rate
+    virtual bool supportsVmRateCoupling() const override
+    {
+        return true;
+    }
+
+    //- Iion can be recomputed algebraically at any Vm from the stored state
+    virtual bool supportsIonicCurrentEvaluation() const override
+    {
+        return true;
+    }
+
+    virtual void evaluateIonicCurrent
+    (
+        const scalar t,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
 
     //- Number of ODE's to solve
     virtual label nEqns() const override
