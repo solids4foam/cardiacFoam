@@ -113,7 +113,9 @@ def test_ensure_fresh_output_dir_deletes_when_allowed(tmp_path, capsys):
 
     assert error is None
     assert not target.exists()
-    assert "deleting" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "deleting" in captured.err
+    assert captured.out == ""
 
 
 def test_ensure_fresh_output_dir_noop_when_fresh_false(tmp_path):

@@ -79,6 +79,37 @@ class TestCliSweepActions(unittest.TestCase):
         assert kwargs["max_cases"] == 500
         assert kwargs["retry_failed"] is True
 
+    def test_sweep_run_passes_fresh_flag(self):
+        captured = []
+
+        def fake_print(*args, **kwargs):
+            captured.append(" ".join(str(a) for a in args))
+
+        with mock.patch(
+            "openfoam_driver.cli.sweep_run",
+            return_value={"case_count": 1, "completed_count": 1, "failed_count": 0, "skipped_count": 0},
+        ) as mock_fn, mock.patch("builtins.print", side_effect=fake_print):
+            code = main([
+                "sweep-run", "--spec", "sweep.json", "--output-dir", "/tmp/out", "--fresh",
+            ])
+
+        assert code == 0
+        mock_fn.assert_called_once()
+        assert mock_fn.call_args.kwargs["fresh"] is True
+
+    def test_fresh_and_retry_failed_are_mutually_exclusive(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main([
+                    "sweep-run", "--spec", "sweep.json", "--output-dir", "/tmp/out",
+                    "--fresh", "--retry-failed",
+                ])
+
+    def test_fresh_rejected_for_describe_action(self):
+        with mock.patch("builtins.print"):
+            with self.assertRaises(SystemExit):
+                main(["describe", "--entry", "singleCell", "--fresh"])
+
     def test_sweep_plan_exits_nonzero_when_a_case_failed(self):
         with mock.patch(
             "openfoam_driver.cli.sweep_plan",

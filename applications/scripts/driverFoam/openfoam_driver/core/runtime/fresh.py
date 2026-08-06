@@ -32,6 +32,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 _DRIVERFOAM_MARKER_NAMES = ("workflow_state.json", "sweep_manifest.json", "run_document.json")
@@ -96,8 +97,9 @@ def ensure_fresh_output_dir(
 
     Returns an error message (leaving output_dir untouched) if a guard
     refuses; returns None on success, including the fresh=False no-op and the
-    "didn't exist" no-op. Prints the resolved path before deleting it -- the
-    only audit trail, since there is no interactive prompt.
+    "didn't exist" no-op. Prints the resolved path to stderr before deleting
+    it -- the only audit trail, since there is no interactive prompt. Stderr
+    (not stdout) so the CLI's stdout stays pure JSON.
     """
     if not fresh:
         return None
@@ -106,6 +108,6 @@ def ensure_fresh_output_dir(
         return error
     resolved = output_dir.resolve()
     if resolved.exists():
-        print(f"--fresh: deleting {resolved}")
+        print(f"--fresh: deleting {resolved}", file=sys.stderr)
         shutil.rmtree(resolved)
     return None

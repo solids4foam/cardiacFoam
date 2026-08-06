@@ -327,6 +327,61 @@ def test_cli_run_does_not_retry_failed_saved_state() -> None:
         assert payload["workflow_state"]["steps"][0]["attempt"] == 1
 
 
+def test_cli_run_fresh_forces_real_rerun_and_wipes_output_dir() -> None:
+    # Reproduces the 2026-08-05 incident at the single-case run level: a
+    # workflow_state.json reporting "completed" is normally resumed and the
+    # solver step (Allrun) is never invoked again -- verified below as the
+    # unchanged default. --fresh must force Allrun to actually run again and
+    # must wipe the whole output_dir (postProcessing/), not just the state
+    # file, proven with a stray marker file that only a whole-dir wipe removes.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        case_root = _write_case(
+            tutorials_root,
+            allrun=(
+                "#!/bin/sh\n"
+                "mkdir -p postProcessing 0.001\n"
+                "touch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\n"
+                "count=0\n"
+                "if [ -f run_invocations.count ]; then count=$(cat run_invocations.count); fi\n"
+                "count=$((count+1))\n"
+                "echo $count > run_invocations.count\n"
+            ),
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
+        )
+        invocation_count_path = case_root / "run_invocations.count"
+
+        def run_once(extra_args):
+            out = StringIO()
+            with redirect_stdout(out):
+                code = main([
+                    "run", "--strict", "--entry", "cliStepCase",
+                    "--tutorials-root", str(tutorials_root),
+                    *extra_args,
+                ])
+            return code, json.loads(out.getvalue())
+
+        first_code, first_payload = run_once([])
+        assert first_code == 0
+        assert first_payload["workflow_state"]["status"] == "completed"
+        assert invocation_count_path.read_text().strip() == "1"
+
+        stray_path = case_root / "postProcessing" / "stale_marker.txt"
+        stray_path.write_text("leftover from a previous, different run")
+
+        second_code, second_payload = run_once([])
+        assert second_code == 0
+        assert second_payload["workflow_state"]["status"] == "completed"
+        assert invocation_count_path.read_text().strip() == "1"
+        assert stray_path.exists()
+
+        third_code, third_payload = run_once(["--fresh"])
+        assert third_code == 0
+        assert third_payload["workflow_state"]["status"] == "completed"
+        assert invocation_count_path.read_text().strip() == "2"
+        assert not stray_path.exists()
+
+
 def _failed_exit0_runner(
     workflow_dag,
     workflow_state,

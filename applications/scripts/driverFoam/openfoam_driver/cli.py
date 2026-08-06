@@ -50,7 +50,8 @@ from .strict_planning import (
     _utility_produces_by_command,
     strict_plan,
 )
-from .core.runtime.run_document_exec import build_execution_inputs, load_run_document
+from .core.runtime.run_document_exec import build_execution_inputs, load_run_document, _allowed_runs_root
+from .core.runtime.fresh import ensure_fresh_output_dir
 from .verification_contracts import plan as verification_plan
 from .verification_contracts import run as verification_run
 from .verification_contracts import tsv_rows as verification_tsv_rows
@@ -412,6 +413,18 @@ def _dispatch_context(args, context: _ExecutionContext) -> int:
     blocked = _refuse_environment_errors(context, action=args.action)
     if blocked is not None:
         return blocked
+    if args.fresh:
+        fresh_error = ensure_fresh_output_dir(
+            context.output_dir, fresh=True, allowed_root=_allowed_runs_root(),
+        )
+        if fresh_error is not None:
+            print(json.dumps({
+                "status": "failed",
+                "entry": context.entry_label,
+                "action": args.action,
+                "error": fresh_error,
+            }, indent=2))
+            return 1
     if args.action == "step":
         return _execute_step(
             entry_label=context.entry_label,
@@ -568,6 +581,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="For action=sweep-run: rerun cases whose last recorded status was failed.",
     )
     parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help=(
+            "For action=step/run/sweep-run: delete the resolved output "
+            "directory before running, so the workflow executes as if no "
+            "prior run existed. Use after a code/config change to guarantee "
+            "a real rerun instead of silently resuming a stale "
+            "workflow_state.json/sweep_manifest.json as 'completed'. "
+            "Refuses to delete the filesystem root, your home directory, a "
+            "too-shallow path, anything outside DRIVERFOAM_ALLOWED_RUNS_ROOT "
+            "when set, or a directory with no recognizable driverFOAM "
+            "artifact. No confirmation prompt -- treat --output-dir as fully "
+            "disposable when passing this flag. Mutually exclusive with "
+            "--retry-failed."
+        ),
+    )
+    parser.add_argument(
         "--max-total-attempts",
         type=int,
         default=None,
@@ -680,6 +710,10 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error(f"action={args.action} requires --output-dir")
     if args.retry_failed and args.action != "sweep-run":
         parser.error("--retry-failed is only valid with action=sweep-run")
+    if args.fresh and args.action not in {"step", "run", "sweep-run"}:
+        parser.error("--fresh is only valid with action=step, action=run, or action=sweep-run")
+    if args.fresh and args.retry_failed:
+        parser.error("--fresh and --retry-failed are mutually exclusive")
     if args.max_cases != 200 and args.action not in {"sweep-plan", "sweep-run"}:
         parser.error("--max-cases is only valid with action=sweep-plan or action=sweep-run")
     if args.action not in {"sweep-plan", "sweep-run"} and (args.spec or args.output_dir):
@@ -818,6 +852,7 @@ def main(argv: list[str] | None = None) -> int:
             max_cases=args.max_cases,
             retry_failed=args.retry_failed,
             case_timeout_s=args.case_timeout_s,
+            fresh=args.fresh,
         )
         print(json.dumps(result, indent=2))
         return 1 if result["failed_count"] > 0 else 0
