@@ -68,7 +68,7 @@ foamctl all --entry restitutionCurves
 ```
 
 Driver defaults live in
-`applications/scripts/driverFoam/openfoam_driver/core/defaults/restitution_curves.py`.
+`applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/defaults/restitution_curves.py`.
 
 The driver mutates ionic model/tissue/stimulus values per case, updates end time,
 collects `.txt` outputs, and can generate per-case animations before post-processing.
