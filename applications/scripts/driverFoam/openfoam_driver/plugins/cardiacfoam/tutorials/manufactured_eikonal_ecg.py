@@ -34,7 +34,7 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from openfoam_driver.core.defaults import manufactured_eikonal_ecg as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_eikonal_ecg as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps

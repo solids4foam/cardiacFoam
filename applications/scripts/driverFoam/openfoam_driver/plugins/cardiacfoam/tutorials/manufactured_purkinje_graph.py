@@ -33,7 +33,7 @@ from functools import partial
 from pathlib import Path
 from typing import Sequence
 
-from openfoam_driver.core.defaults import manufactured_purkinje_graph as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_purkinje_graph as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.specs.common import resolve_spec_paths

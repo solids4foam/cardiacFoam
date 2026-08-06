@@ -110,7 +110,7 @@ def test_override_only_models_advertise_approximate_tissue_labels_explicitly():
 
 
 def test_default_single_cell_tissue_map_uses_native_tissues_only():
-    from openfoam_driver.core.defaults.single_cell import IONIC_MODEL_TISSUE_MAP
+    from openfoam_driver.plugins.cardiacfoam.defaults.single_cell import IONIC_MODEL_TISSUE_MAP
     assert IONIC_MODEL_TISSUE_MAP["BuenoOrovio"] == (
         "epicardialCells", "mCells", "endocardialCells",
     )
@@ -118,7 +118,7 @@ def test_default_single_cell_tissue_map_uses_native_tissues_only():
 
 
 def test_default_restitution_tissue_map_uses_native_tissues_only():
-    from openfoam_driver.core.defaults.restitution_curves import IONIC_MODEL_TISSUE_MAP
+    from openfoam_driver.plugins.cardiacfoam.defaults.restitution_curves import IONIC_MODEL_TISSUE_MAP
     assert IONIC_MODEL_TISSUE_MAP["TNNP"] == (
         "epicardialCells", "mCells", "endocardialCells",
     )

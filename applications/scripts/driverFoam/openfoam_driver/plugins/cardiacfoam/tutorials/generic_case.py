@@ -33,7 +33,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from openfoam_driver.core.defaults.shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
+from openfoam_driver.plugins.cardiacfoam.defaults.shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.specs.common import (
