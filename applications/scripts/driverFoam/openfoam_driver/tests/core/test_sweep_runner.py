@@ -480,6 +480,105 @@ def test_resume_skips_terminal_completed_case(tmp_path):
     assert result["skipped_count"] == 1
 
 
+def test_fresh_reruns_case_reported_as_completed_and_wipes_stray_files(tmp_path):
+    # Mirrors test_resume_skips_terminal_completed_case, but with fresh=True:
+    # this reproduces the 2026-08-05 incident (a case directory whose
+    # workflow_state.json says "completed" from a previous session was
+    # silently reported as fresh) and asserts --fresh actually reruns it and
+    # wipes the whole output_dir, not just the state file.
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    spec = json.loads(spec_path.read_text())
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    from openfoam_driver.core.runtime.sweep_manifest import (
+        CaseManifestEntry, SweepManifest, compute_spec_hash, write_manifest,
+    )
+    case_dir = output_dir / "TNNP"
+    state_dir = case_dir / "postProcessing"
+    state_dir.mkdir(parents=True)
+    (state_dir / "workflow_state.json").write_text('{"status": "completed"}')
+    stray_path = output_dir / "stray_from_previous_run.txt"
+    stray_path.write_text("should be wiped by --fresh")
+    manifest = SweepManifest(
+        schema_version="1.0", sweep_spec_hash=compute_spec_hash(spec),
+        created_at="t0", updated_at="t0",
+        cases=[CaseManifestEntry(
+            case_id="TNNP", resolved_axis_values={"ionicModel": "TNNP"},
+            override_hash="sha256:x", run_document_path="TNNP/run_document.json",
+            workflow_state_path="TNNP/postProcessing/workflow_state.json",
+            status="completed", outcome="fresh", started_at="t0", updated_at="t0",
+        )],
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+    fake_report.to_json.return_value = {
+        "status": "ok",
+        "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}},
+    }
+
+    def fake_subprocess_run(cmd, **kwargs):
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "workflow_state.json").write_text('{"status": "completed"}')
+        return mock.Mock(returncode=0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run) as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, fresh=True)
+
+    mock_materialize.assert_called_once()
+    mock_run.assert_called_once()
+    assert result["completed_count"] == 1
+    assert not stray_path.exists()
+    by_id = {case["case_id"]: case for case in result["cases"]}
+    assert by_id["TNNP"]["outcome"] != "skipped"
+
+
+def test_fresh_defaults_to_false_and_preserves_resume_behavior(tmp_path):
+    # Regression guard: omitting fresh (or passing fresh=False) must keep the
+    # existing skip-if-completed behavior exactly as test_resume_skips_
+    # terminal_completed_case already verifies -- this just re-asserts it
+    # with fresh explicitly passed as False, at the new call signature.
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path, models=("TNNP",))
+    spec = json.loads(spec_path.read_text())
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    from openfoam_driver.core.runtime.sweep_manifest import (
+        CaseManifestEntry, SweepManifest, compute_spec_hash, write_manifest,
+    )
+    case_dir = output_dir / "TNNP"
+    state_dir = case_dir / "postProcessing"
+    state_dir.mkdir(parents=True)
+    (state_dir / "workflow_state.json").write_text('{"status": "completed"}')
+    manifest = SweepManifest(
+        schema_version="1.0", sweep_spec_hash=compute_spec_hash(spec),
+        created_at="t0", updated_at="t0",
+        cases=[CaseManifestEntry(
+            case_id="TNNP", resolved_axis_values={"ionicModel": "TNNP"},
+            override_hash="sha256:x", run_document_path="TNNP/run_document.json",
+            workflow_state_path="TNNP/postProcessing/workflow_state.json",
+            status="completed", outcome="fresh", started_at="t0", updated_at="t0",
+        )],
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
+        from openfoam_driver.core.runtime.sweep_runner import sweep_run
+        result = sweep_run(spec_path, output_dir=output_dir, fresh=False)
+
+    mock_materialize.assert_not_called()
+    mock_run.assert_not_called()
+    assert result["skipped_count"] == 1
+
+
 def test_resume_leaves_terminal_failed_alone_without_retry_flag(tmp_path):
     spec_path = tmp_path / "sweep.json"
     _write_spec(spec_path, models=("TNNP",))

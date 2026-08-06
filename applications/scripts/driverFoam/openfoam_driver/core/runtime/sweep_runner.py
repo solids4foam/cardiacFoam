@@ -39,8 +39,10 @@ from ...sweep_derivation_catalog import get_derivation
 from ...sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
 from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values, route_entry_case_values
+from .fresh import ensure_fresh_output_dir
 from .output_collection import collect_new_outputs, snapshot_postprocessing
 from .registry import load_entry_spec
+from .run_document_exec import _allowed_runs_root
 from .sweep_manifest import (
     CaseManifestEntry,
     SweepManifest,
@@ -169,11 +171,17 @@ def sweep_run(
     max_cases: int = 200,
     retry_failed: bool = False,
     case_timeout_s: float | None = None,
+    fresh: bool = False,
 ) -> dict[str, Any]:
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
     output_dir = Path(output_dir)
+    fresh_error = ensure_fresh_output_dir(
+        output_dir, fresh=fresh, allowed_root=_allowed_runs_root(),
+    )
+    if fresh_error is not None:
+        raise SweepValidationError(fresh_error)
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / "sweep_manifest.json"
 
