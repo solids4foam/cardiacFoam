@@ -1,6 +1,6 @@
 # tutorials architecture
 
-This folder contains maintained reference, protocol, and verification cases for
+This folder contains maintained reference, cardiac protocols, and verification cases for
 `cardiacFoam`. The table below is the canonical index of committed runnable
 cases; local research cases and generated sweep directories are not part of
 this documented contract.
