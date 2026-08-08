@@ -41,7 +41,7 @@ bidomainSolverCoeffs
     {
         k               0.707107;
     }
-    dimension       "2D";
+    dimension       "3D";
     solutionAlgorithm implicit;
     CFL             0.1;
     solver          RKF45;

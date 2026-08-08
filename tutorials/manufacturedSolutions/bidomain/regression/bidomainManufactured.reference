@@ -6,7 +6,7 @@ error     Vm         L2          0.000273949    1e-6
 error     Vm         Linf        0.00081882     1e-6
 error     phiE       L1          0.0813653      1e-6
 error     phiE       L2          0.0813655      1e-6
-error     phiE       Linf        0.0818722      1e-6
+error     phiE       Linf        0.0818735      1e-6
 error     phiE_gauge L1          0.000141894    1e-6
 error     phiE_gauge L2          0.000193237    1e-6
 error     phiE_gauge Linf        0.000572044    1e-6

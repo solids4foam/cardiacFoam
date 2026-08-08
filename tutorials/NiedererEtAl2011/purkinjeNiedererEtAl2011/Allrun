@@ -6,6 +6,7 @@
 # Options
 #   solver=monodomain  (default) — monodomain 1-D Purkinje + 3-D reaction-diffusion
 #   solver=eikonal     — eikonal  1-D Purkinje + 3-D steady-state eikonal
+#   solver=hybrid      — eikonal  1-D Purkinje + 3-D reaction-diffusion (monodomain)
 #   parallel           — run in parallel using decomposeParDict
 
 solver="monodomain"
@@ -18,8 +19,8 @@ for arg in "$@"; do
 done
 
 case "$solver" in
-    monodomain|eikonal) ;;
-    *) echo "Unknown solver '$solver'. Use solver=monodomain or solver=eikonal." ; exit 1 ;;
+    monodomain|eikonal|hybrid) ;;
+    *) echo "Unknown solver '$solver'. Use solver=monodomain, solver=eikonal, or solver=hybrid." ; exit 1 ;;
 esac
 
 echo "Using solver: $solver"
@@ -36,8 +37,8 @@ else
     runApplication cardiacFoam
 fi
 
-# Niederer benchmark postprocessing (monodomain only — activates Vm probes)
-if [ "$solver" = "monodomain" ]; then
+# Niederer benchmark postprocessing (monodomain and hybrid only — activates Vm probes)
+if [ "$solver" = "monodomain" ] || [ "$solver" = "hybrid" ]; then
     runApplication -o postProcess -func Niedererpoints -latestTime
     runApplication -o postProcess -func Niedererlines  -latestTime
 fi
