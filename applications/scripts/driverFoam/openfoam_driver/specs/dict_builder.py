@@ -444,7 +444,11 @@ import re as _re
 _PLACEHOLDER_RE = _re.compile(r"<[a-zA-Z_]+>")
 
 
-def is_known_override_driver_path(key: str) -> bool:
+def is_known_override_driver_path(
+    key: str,
+    *,
+    driver_context=None,
+) -> bool:
     """True if `key` matches a real electro or physics dict-entry driver_path.
 
     Matching is prefix-agnostic (via `slot_key`) and honours `dynamic_path`
@@ -458,8 +462,11 @@ def is_known_override_driver_path(key: str) -> bool:
     rather than silently accepting an override that has no matching entry
     anywhere and therefore no effect.
     """
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
     normalized = slot_key(key)
-    for entry in list(_all_electro_entries()) + list(PHYSICS_PROPERTY_ENTRIES):
+    for entry in driver_context.plugin.get_dictionary_catalog().entries:
         entry_key = slot_key(entry.driver_path)
         if getattr(entry, "dynamic_path", False):
             # re.escape leaves `<`, `>`, letters and `_` untouched, so

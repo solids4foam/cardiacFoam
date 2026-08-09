@@ -29,21 +29,32 @@ from __future__ import annotations
 
 from typing import Any
 
-from .dict_entries import CONTROL_DICT_ENTRIES, PHYSICS_PROPERTY_ENTRIES
 from .sweep_expansion import SweepValidationError
 from .specs.dict_builder import SELECTOR_KEYS, is_known_override_driver_path
 
-_CONTROL_DICT_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in CONTROL_DICT_ENTRIES)
 _SUPPORTED_CONTROL_DICT_KEYS: frozenset[str] = frozenset({"deltaT", "endTime"})
-_UNSUPPORTED_CONTROL_DICT_KEYS: frozenset[str] = _CONTROL_DICT_KEYS - _SUPPORTED_CONTROL_DICT_KEYS
-_PHYSICS_SELECTOR_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in PHYSICS_PROPERTY_ENTRIES)
 
 # Bookkeeping keys the expander may add that are never real dict values.
 _NON_ROUTABLE_KEYS: frozenset[str] = frozenset({"caseId"})
 
 
+def _routing_document_keys(driver_context) -> tuple[frozenset[str], frozenset[str]]:
+    """Return control and physics keys from the selected plugin catalog."""
+    if driver_context is None:
+        from .core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    catalog = driver_context.plugin.get_dictionary_catalog()
+    control_keys = frozenset(
+        entry.driver_path for entry in catalog.entries_for("controlDict")
+    )
+    physics_keys = frozenset(
+        entry.driver_path for entry in catalog.entries_for("physicsProperties")
+    )
+    return control_keys, physics_keys
+
+
 def route_case_values(
-    *, base: dict[str, Any], resolved_axis_values: dict[str, Any],
+    *, base: dict[str, Any], resolved_axis_values: dict[str, Any], driver_context=None,
 ) -> dict[str, Any]:
     """Classify a resolved case's values into build_and_launch's parameters.
 
@@ -58,13 +69,15 @@ def route_case_values(
     delta_t: Any = base.get("delta_t")
     end_time: Any = base.get("end_time")
     dx: Any = base.get("dx")
+    control_dict_keys, physics_selector_keys = _routing_document_keys(driver_context)
+    unsupported_control_dict_keys = control_dict_keys - _SUPPORTED_CONTROL_DICT_KEYS
 
     for key, value in resolved_axis_values.items():
         if key in _NON_ROUTABLE_KEYS:
             continue
         if key in SELECTOR_KEYS:
             electro_selectors[key] = value
-        elif key in _PHYSICS_SELECTOR_KEYS:
+        elif key in physics_selector_keys:
             physics_selectors[key] = value
         elif key == "deltaT":
             delta_t = value
@@ -72,13 +85,13 @@ def route_case_values(
             end_time = value
         elif key == "dx":
             dx = value
-        elif key in _UNSUPPORTED_CONTROL_DICT_KEYS:
+        elif key in unsupported_control_dict_keys:
             known = ", ".join(sorted(_SUPPORTED_CONTROL_DICT_KEYS))
             raise SweepValidationError(
                 f"controlDict sweep axis '{key}' is not supported by this plan; "
                 f"supported controlDict axes are: {known}"
             )
-        elif is_known_override_driver_path(key):
+        elif is_known_override_driver_path(key, driver_context=driver_context):
             electro_overrides[key] = value
         else:
             raise SweepValidationError(

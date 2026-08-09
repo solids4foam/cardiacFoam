@@ -872,7 +872,12 @@ def main(argv: list[str] | None = None) -> int:
         return _dispatch_context(args, context)
 
     if args.action == "sweep-plan":
-        result = sweep_plan(args.spec, output_dir=args.output_dir, max_cases=args.max_cases)
+        result = sweep_plan(
+            args.spec,
+            output_dir=args.output_dir,
+            max_cases=args.max_cases,
+            driver_context=driver_context,
+        )
         print(json.dumps(result, indent=2))
         any_failed = any(case["status"] != "ok" for case in result["cases"])
         return 1 if any_failed else 0
@@ -885,6 +890,7 @@ def main(argv: list[str] | None = None) -> int:
             retry_failed=args.retry_failed,
             case_timeout_s=args.case_timeout_s,
             fresh=args.fresh,
+            driver_context=driver_context,
         )
         print(json.dumps(result, indent=2))
         return 1 if result["failed_count"] > 0 else 0

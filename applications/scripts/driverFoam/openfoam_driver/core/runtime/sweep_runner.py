@@ -79,7 +79,12 @@ def _relative_or_absolute(path: Path, base: Path) -> str:
         return str(path)
 
 
-def _materialize_entry_case(entry: str, routed: dict[str, Any]) -> None:
+def _materialize_entry_case(
+    entry: str,
+    routed: dict[str, Any],
+    *,
+    driver_context=None,
+) -> None:
     """Materialize one entry-based sweep case via the tutorial's own spec.
 
     Entry-based sweeps target an existing registered tutorial whose
@@ -90,7 +95,7 @@ def _materialize_entry_case(entry: str, routed: dict[str, Any]) -> None:
     Raises ValueError if the resolved overrides don't collapse to exactly one
     case -- the sweep model is one case per resolved axis combination.
     """
-    spec = load_entry_spec(entry, overrides=routed)
+    spec = load_entry_spec(entry, overrides=routed, driver_context=driver_context)
     cases = spec.build_cases()
     if len(cases) != 1:
         raise ValueError(
@@ -106,7 +111,11 @@ def sweep_plan(
     *,
     output_dir: str | Path,
     max_cases: int = 200,
+    driver_context=None,
 ) -> dict[str, Any]:
+    if driver_context is None:
+        from ..plugin_interface import default_driver_context
+        driver_context = default_driver_context()
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
@@ -120,9 +129,13 @@ def sweep_plan(
         try:
             if entry is not None:
                 routed = route_entry_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
-                _materialize_entry_case(entry, routed)
+                _materialize_entry_case(entry, routed, driver_context=driver_context)
             else:
-                routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+                routed = route_case_values(
+                    base=base,
+                    resolved_axis_values=case.resolved_axis_values,
+                    driver_context=driver_context,
+                )
                 materialize_case(case_dir=output_dir / case.case_id, routed=routed)
         except (OSError, ValueError) as exc:
             case_reports.append(
@@ -136,9 +149,14 @@ def sweep_plan(
             continue
 
         if entry is not None:
-            report = strict_plan(entry, overrides=routed)
+            report = strict_plan(entry, overrides=routed, driver_context=driver_context)
         else:
-            report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+            report = strict_plan(
+                case.case_id,
+                entry_kind="case_folder",
+                overrides={"tutorials_root": str(output_dir)},
+                driver_context=driver_context,
+            )
         report_payload = report.to_json()
         case_reports.append(
             {
@@ -172,7 +190,11 @@ def sweep_run(
     retry_failed: bool = False,
     case_timeout_s: float | None = None,
     fresh: bool = False,
+    driver_context=None,
 ) -> dict[str, Any]:
+    if driver_context is None:
+        from ..plugin_interface import default_driver_context
+        driver_context = default_driver_context()
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
@@ -230,7 +252,11 @@ def sweep_run(
             if entry is not None:
                 routed = route_entry_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
             else:
-                routed = route_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
+                routed = route_case_values(
+                    base=base,
+                    resolved_axis_values=case.resolved_axis_values,
+                    driver_context=driver_context,
+                )
         except (OSError, ValueError) as exc:
             # An unrecognized/unroutable axis (e.g. "dx") is a per-case
             # failure, not a crash of the whole sweep -- same treatment as a
@@ -262,11 +288,16 @@ def sweep_run(
             status = "failed"
             try:
                 if entry is not None:
-                    _materialize_entry_case(entry, routed)
-                    report = strict_plan(entry, overrides=routed)
+                    _materialize_entry_case(entry, routed, driver_context=driver_context)
+                    report = strict_plan(entry, overrides=routed, driver_context=driver_context)
                 else:
                     materialize_case(case_dir=case_dir, routed=routed)
-                    report = strict_plan(case.case_id, entry_kind="case_folder", overrides={"tutorials_root": str(output_dir)})
+                    report = strict_plan(
+                        case.case_id,
+                        entry_kind="case_folder",
+                        overrides={"tutorials_root": str(output_dir)},
+                        driver_context=driver_context,
+                    )
                 payload = report.to_json()
                 if report.status != "ok":
                     plan_error = "strict_plan reported failed status"

@@ -29,6 +29,7 @@ import pytest
 
 from openfoam_driver.sweep_expansion import SweepValidationError
 from openfoam_driver.sweep_routing import route_case_values
+from openfoam_driver.core.plugin_interface import generic_openfoam_context
 
 
 def test_selector_keys_route_to_electro_selectors():
@@ -89,6 +90,15 @@ def test_unrecognized_axis_is_rejected_instead_of_silently_ignored():
     # memory item #2: this used to be a silent no-op).
     with pytest.raises(SweepValidationError, match="bogusAxis"):
         route_case_values(base={}, resolved_axis_values={"bogusAxis": 0.5})
+
+
+def test_routing_uses_the_selected_plugin_catalog():
+    with pytest.raises(SweepValidationError, match="not a recognized selector"):
+        route_case_values(
+            base={},
+            resolved_axis_values={"type": "electroModel"},
+            driver_context=generic_openfoam_context(),
+        )
 
 
 def test_dx_routes_to_its_own_dedicated_kwarg():
