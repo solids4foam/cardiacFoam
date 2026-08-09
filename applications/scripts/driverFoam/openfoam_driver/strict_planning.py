@@ -377,6 +377,11 @@ def strict_plan(
         artifact_diagnostics=artifact_diagnostics,
         environment_diagnostics=env_diagnostics,
         mesh_geometry_diagnostics=mesh_diagnostics,
+        required_case_files=tuple(
+            rule.path
+            for rule in driver_context.plugin.get_profile().case_files
+            if rule.required == "always"
+        ),
     )
     plan_diagnostics = (
         generation_diagnostics

@@ -41,13 +41,6 @@ from ...planning_types import (
 from .models import DataArtifact
 
 
-_CASE_PREPARATION_FILES = (
-    "constant/physicsProperties",
-    "constant/electroProperties",
-    "system/controlDict",
-    "system/fvSchemes",
-    "system/fvSolution",
-)
 _READINESS_WEIGHTS = {
     "simulation_generation": 15,
     "case_preparation_files": 15,
@@ -162,6 +155,7 @@ def _case_preparation_files_audit(
     case_root: Path,
     *,
     generic_case: bool = False,
+    required_files: tuple[str, ...] = (),
 ) -> SimulationAuditItem:
     max_points = _READINESS_WEIGHTS["case_preparation_files"]
     if generic_case:
@@ -176,19 +170,15 @@ def _case_preparation_files_audit(
             ),
             evidence={"case_root": str(case_root), "required": [], "generic_case": True},
         )
-    existing = [
-        relpath for relpath in _CASE_PREPARATION_FILES if (case_root / relpath).exists()
-    ]
-    missing = [
-        relpath for relpath in _CASE_PREPARATION_FILES if not (case_root / relpath).exists()
-    ]
+    existing = [relpath for relpath in required_files if (case_root / relpath).exists()]
+    missing = [relpath for relpath in required_files if not (case_root / relpath).exists()]
     if not missing:
         status = "passed"
         points = max_points
         summary = "The case root already contains the required OpenFOAM dictionaries."
     elif existing:
         status = "warning"
-        points = int(max_points * len(existing) / len(_CASE_PREPARATION_FILES))
+        points = int(max_points * len(existing) / len(required_files))
         summary = "Some required OpenFOAM dictionaries are missing before execution."
     else:
         status = "blocked"
@@ -202,7 +192,7 @@ def _case_preparation_files_audit(
         summary=summary,
         evidence={
             "case_root": str(case_root),
-            "required": list(_CASE_PREPARATION_FILES),
+            "required": list(required_files),
             "existing": existing,
             "missing": missing,
         },
@@ -219,11 +209,14 @@ def _build_simulation_audit(
     artifact_diagnostics: tuple[StrictDiagnostic, ...],
     environment_diagnostics: tuple[StrictDiagnostic, ...],
     mesh_geometry_diagnostics: tuple[StrictDiagnostic, ...],
+    required_case_files: tuple[str, ...] = (),
 ) -> tuple[tuple[SimulationAuditItem, ...], tuple[StrictDiagnostic, ...], dict[str, Any]]:
     generation_item, generation_diagnostics = _simulation_generation_audit(spec)
     generic_case = bool(spec.metadata.get("generic_case")) if spec.metadata else False
     case_files_item = _case_preparation_files_audit(
-        Path(spec.case_root), generic_case=generic_case,
+        Path(spec.case_root),
+        generic_case=generic_case,
+        required_files=required_case_files,
     )
     items = [
         generation_item,

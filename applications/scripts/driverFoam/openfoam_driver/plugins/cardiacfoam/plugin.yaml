@@ -8,6 +8,14 @@ case_profile:
       kind: openfoam_dictionary
       role: openfoam.control_dict
       required: always
+    - path: system/fvSchemes
+      kind: openfoam_dictionary
+      role: openfoam.discretisation
+      required: always
+    - path: system/fvSolution
+      kind: openfoam_dictionary
+      role: openfoam.solver_settings
+      required: always
     - path: constant/physicsProperties
       kind: openfoam_dictionary
       role: plugin.configuration
