@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from openfoam_driver.core.generic_plugin import GenericOpenFOAMPlugin
-from openfoam_driver.core.plugin_profile import load_plugin_profile
+from openfoam_driver.core.plugin_profile import PluginProfile, load_plugin_profile
 from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 
 
@@ -48,3 +48,24 @@ case_profile:
 
     with pytest.raises(ValueError, match="escapes the case"):
         load_plugin_profile(path)
+
+
+def test_profile_digest_is_stable_after_payload_mutation() -> None:
+    payload = {
+        "schema_version": 1,
+        "plugin": {"id": "example.profile", "api_version": "1"},
+        "case_profile": {"dictionaries": []},
+    }
+    profile = PluginProfile(
+        path=Path("example-plugin.yaml"),
+        plugin_id="example.profile",
+        api_version="1",
+        case_files=(),
+        cxx_mapping=None,
+        payload=payload,
+    )
+
+    digest = profile.digest
+    payload["plugin"]["id"] = "example.mutated"
+
+    assert profile.digest == digest

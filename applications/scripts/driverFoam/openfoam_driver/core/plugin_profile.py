@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -38,13 +38,24 @@ class PluginProfile:
     case_files: tuple[CaseFileRule, ...]
     cxx_mapping: CxxMapping | None
     payload: dict[str, Any]
+    _digest: str = field(init=False, repr=False)
 
-    @property
-    def digest(self) -> str:
+    def __post_init__(self) -> None:
+        """Snapshot the planning digest before callers can mutate payload data.
+
+        ``payload`` remains available for reporting and compatibility, but it
+        is nested YAML/JSON data and therefore cannot be made meaningfully
+        immutable without changing its public shape. The context identity must
+        nevertheless stay stable for the lifetime of a plan.
+        """
         canonical = json.dumps(
             self.payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
         ).encode("utf-8")
-        return "sha256:" + hashlib.sha256(canonical).hexdigest()
+        object.__setattr__(self, "_digest", "sha256:" + hashlib.sha256(canonical).hexdigest())
+
+    @property
+    def digest(self) -> str:
+        return self._digest
 
 
 def _mapping_error(path: Path, message: str) -> ValueError:
