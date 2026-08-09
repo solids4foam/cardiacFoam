@@ -30,7 +30,7 @@ from __future__ import annotations
 import os
 import shlex
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -57,7 +57,6 @@ from .core.runtime.workflow import (
     validate_workflow_commands,
 )
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
-from .capability_manifest import build_capability_manifest, resolve_case_models
 from .planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,
@@ -122,6 +121,19 @@ class StrictPlanReport:
             ],
             "plugin": self.plugin,
         }
+
+
+def _jsonable(value: Any) -> Any:
+    """Convert plugin capability metadata into a report-safe value."""
+    if is_dataclass(value):
+        return _jsonable(asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, set):
+        return sorted(_jsonable(item) for item in value)
+    return value
 
 
 def _repo_root_from_here() -> Path | None:
@@ -391,16 +403,17 @@ def strict_plan(
         + artifact_diagnostics
         + mesh_diagnostics
     )
-    resolved_solver, resolved_ionic, resolved_active_tension = resolve_case_models(
-        spec.case_root
-    )
-    capability_manifest = build_capability_manifest(
-        resolved_solver=resolved_solver,
-        resolved_ionic_model=resolved_ionic,
-        resolved_active_tension=resolved_active_tension,
-    )
+    # The plugin owns solver capabilities and model-specific field exposure.
+    # Keep the established payload shape for cardiacFoam compatibility while
+    # attaching the immutable identity that supplied it.
+    raw_capability_manifest = dict(driver_context.plugin.get_capabilities())
+    raw_capability_manifest["plugin_identity"] = driver_context.identity.to_json()
+    capability_manifest = _jsonable(raw_capability_manifest)
     function_object_diagnostics = function_object_field_diagnostics(
-        spec.case_root, samplable=capability_manifest["samplable_fields"]
+        spec.case_root,
+        samplable=raw_capability_manifest.get(
+            "samplable_fields", {"electro": [], "solid": []},
+        ),
     )
     # Field diagnostics are warn-only: reported (in all_diagnostics) but never
     # part of plan_diagnostics, so a sampled-field warning cannot fail a plan.

@@ -51,7 +51,6 @@ from .core.runtime.registry import (
     list_tutorials,
     resolve_entry,
 )
-from .capability_manifest import build_capability_manifest, resolve_case_models
 from .core.runtime.execution_context import resolve_execution_context
 from .dict_entries import get_electro_property_entry_groups, PHYSICS_PROPERTY_ENTRIES
 from .strict_planning import _run_launch_description
@@ -542,7 +541,6 @@ def describe_entry(
     workflow_catalog = _workflow_catalog(tutorials_root, entry_catalog)
 
     make_spec_info = _describe_factory(resolution["factory"])
-    _solver, _ionic, _active_tension = resolve_case_models(spec.case_root)
     return {
         "requested_entry": entry,
         "resolution": resolution["resolution"],
@@ -592,11 +590,10 @@ def describe_entry(
             make_spec_info,
         ),
         "manifest_schema": _manifest_schema(),
-        "capability_manifest": build_capability_manifest(
-            resolved_solver=_solver,
-            resolved_ionic_model=_ionic,
-            resolved_active_tension=_active_tension,
-        ),
+        "capability_manifest": _serialize({
+            **dict(driver_context.plugin.get_capabilities()),
+            "plugin_identity": driver_context.identity.to_json(),
+        }),
     }
 
 

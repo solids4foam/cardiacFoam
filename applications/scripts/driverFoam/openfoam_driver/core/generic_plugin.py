@@ -39,7 +39,7 @@ class GenericOpenFOAMPlugin:
         return {}
 
     def get_capabilities(self):
-        return {}
+        return {"samplable_fields": {"electro": [], "solid": []}}
 
     def get_tutorial_catalog(self):
         return {"registered_tutorials": (), "spec_factories": {}}
