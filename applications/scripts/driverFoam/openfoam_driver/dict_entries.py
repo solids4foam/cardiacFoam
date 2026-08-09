@@ -29,8 +29,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final, Literal
-from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import BATCHED_MODELS
-
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
 
