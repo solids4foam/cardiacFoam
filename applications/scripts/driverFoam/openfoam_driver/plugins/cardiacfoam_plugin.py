@@ -158,6 +158,22 @@ class CardiacFoamPlugin:
 
         return tuple(diagnostics)
 
+    def validate_run_semantics(self, context):
+        """Apply cardiacFoam's cross-field rules after core validation."""
+        from openfoam_driver.specs.validation_rules import (
+            _evaluate_block_references,
+            _evaluate_heterogeneity,
+            _evaluate_solver_coupling,
+            _evaluate_tissue_compatibility,
+        )
+
+        return tuple(
+            _evaluate_solver_coupling(context)
+            + _evaluate_block_references(context)
+            + _evaluate_heterogeneity(context)
+            + _evaluate_tissue_compatibility(context)
+        )
+
     def predict_data_artifacts(self, case_root: Path, spec: TutorialSpec) -> tuple[DataArtifact, ...]:
         from openfoam_driver.plugins.cardiacfoam.artifacts_predictor import predict_cardiac_artifacts
         return predict_cardiac_artifacts(case_root, spec)

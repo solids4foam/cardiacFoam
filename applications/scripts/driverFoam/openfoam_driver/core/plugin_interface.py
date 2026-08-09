@@ -118,6 +118,10 @@ class SolverPlugin(Protocol):
         """
         ...
 
+    def validate_run_semantics(self, context: dict[str, Any]) -> tuple[Any, ...]:
+        """Return solver-specific validation errors for a flattened config."""
+        ...
+
     def predict_data_artifacts(self, case_root: Path, spec: TutorialSpec) -> tuple[DataArtifact, ...]:
         """
         Predict the domain-specific artifacts (like ECGs or Purkinje VTK files) 
@@ -171,6 +175,7 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "get_tutorial_catalog",
     "get_tutorial_displays",
     "validate_configuration",
+    "validate_run_semantics",
     "predict_data_artifacts",
 )
 
@@ -199,6 +204,7 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
         "get_tutorial_catalog",
         "get_tutorial_displays",
         "validate_configuration",
+        "validate_run_semantics",
         "predict_data_artifacts",
         "get_profile",
     ):

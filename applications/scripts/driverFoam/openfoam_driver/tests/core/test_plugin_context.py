@@ -61,6 +61,9 @@ class _Plugin:
     def validate_configuration(self, spec):
         return ()
 
+    def validate_run_semantics(self, context):
+        return ()
+
     def predict_data_artifacts(self, case_root, spec):
         return ()
 

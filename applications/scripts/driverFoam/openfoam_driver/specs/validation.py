@@ -50,7 +50,7 @@ validation errors.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable
 
 from openfoam_driver.dict_entries import (
     DictEntry,
@@ -58,7 +58,9 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
     Phase,
 )
-from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
+
+if TYPE_CHECKING:
+    from openfoam_driver.core.plugin_interface import DriverContext
 
 _PHASE_ORDER: tuple[Phase, ...] = (
     "anatomy", "physics", "stimulus", "solver",
@@ -66,17 +68,9 @@ _PHASE_ORDER: tuple[Phase, ...] = (
 
 
 from .validation_types import ValidationError
-from .validation_rules import (
-    _evaluate_solver_coupling,
-    _evaluate_block_references,
-    _evaluate_heterogeneity,
-    _evaluate_tissue_compatibility,
-)
-
-
-def _all_entries():
+def _all_entries(driver_context: "DriverContext | None" = None):
     yield from PHYSICS_PROPERTY_ENTRIES
-    for group in get_electro_property_entry_groups().values():
+    for group in get_electro_property_entry_groups(driver_context).values():
         yield from group
 
 
@@ -218,14 +212,15 @@ def _format_predicate(predicate: dict[str, Any]) -> str:
     return " and ".join(parts)
 
 
-def _all_entries_list():
-    return list(_all_entries())
+def _all_entries_list(driver_context: "DriverContext | None" = None):
+    return list(_all_entries(driver_context))
 
 
 def validate_run(
     run,
     *,
     entries: Iterable[DictEntry] | None = None,
+    driver_context: "DriverContext | None" = None,
 ) -> list[ValidationError]:
     """Validate ``run`` against the dict-entry catalog.
 
@@ -233,8 +228,11 @@ def validate_run(
     that want to validate against a curated subset (e.g., dict_builder).
     When omitted, the full live catalog is used.
     """
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
     entry_list: list[DictEntry] = (
-        list(entries) if entries is not None else _all_entries_list()
+        list(entries) if entries is not None else _all_entries_list(driver_context)
     )
     context = _flatten_context(run)
     errors: list[ValidationError] = []
@@ -293,22 +291,9 @@ def validate_run(
     # which the section below evaluates programmatically.)
     errors.extend(_evaluate_structured(entry_list, context))
 
-    # 4) Solver-coupling consistency. Validates the
-    # conductionSystemSolver / electroDomainCoupler pairing (cross-domain).
-    errors.extend(_evaluate_solver_coupling(context))
-
-    # 5) Block-reference integrity. Validates the
-    # domainCouplings.<name>.conductionNetworkDomain gap (referential
-    # integrity to a sibling block).
-    errors.extend(_evaluate_block_references(context))
-
-    # 6) Tissue heterogeneity (Phase 2). Cross-field rules the four predicate
-    # families cannot express: model-capability gate + interface ordering.
-    errors.extend(_evaluate_heterogeneity(context))
-
-    # 7) Tissue / ionic-model compatibility (warning-level). The tissue
-    # selector should be one of the chosen model's compatible_tissues.
-    errors.extend(_evaluate_tissue_compatibility(context))
+    # 4) Domain semantics are a plugin concern.  Core owns only generic
+    # catalog constraints and receives solver-specific diagnostics as data.
+    errors.extend(driver_context.plugin.validate_run_semantics(context))
 
     return errors
 
@@ -370,6 +355,5 @@ def _evaluate_structured(
                     ))
 
     return errors
-
 
 
