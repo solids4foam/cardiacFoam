@@ -52,12 +52,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable
 
-from openfoam_driver.dict_entries import (
-    DictEntry,
-    get_electro_property_entry_groups,
-    PHYSICS_PROPERTY_ENTRIES,
-    Phase,
-)
+from openfoam_driver.core.contracts.dictionary import DictEntry, Phase
 
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
@@ -69,9 +64,10 @@ _PHASE_ORDER: tuple[Phase, ...] = (
 
 from .validation_types import ValidationError
 def _all_entries(driver_context: "DriverContext | None" = None):
-    yield from PHYSICS_PROPERTY_ENTRIES
-    for group in get_electro_property_entry_groups(driver_context).values():
-        yield from group
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    yield from driver_context.plugin.get_dict_entries()
 
 
 def primary_phase(entry) -> Phase | None:
@@ -355,5 +351,4 @@ def _evaluate_structured(
                     ))
 
     return errors
-
 

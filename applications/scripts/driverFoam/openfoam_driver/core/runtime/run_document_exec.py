@@ -46,7 +46,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .models import DataArtifact, data_artifact_from_json
 # _case_is_runnable is a private helper reused as-is: the plan treats this as
@@ -61,6 +61,9 @@ from .workflow_state import (
     workflow_state_from_json,
 )
 from ...specs.validation import validate_run
+
+if TYPE_CHECKING:
+    from ..plugin_interface import DriverContext
 
 
 @dataclass(frozen=True)
@@ -112,6 +115,7 @@ def build_execution_inputs(
     run_doc: RunDocument,
     *,
     utility_produces: dict[str, tuple[str, ...]] | None = None,
+    driver_context: "DriverContext | None" = None,
 ) -> tuple[RunDocumentExecutionInputs | None, tuple[dict[str, Any], ...]]:
     """Adapt ``run_doc`` into executor inputs.
 
@@ -123,8 +127,26 @@ def build_execution_inputs(
     """
     diagnostics: list[dict[str, Any]] = []
 
-    # 1) Config validity against the live dict-entry catalog.
-    for err in validate_run(run_doc):
+    if driver_context is not None and run_doc.plugin is not None:
+        planned = run_doc.plugin
+        selected = driver_context.identity.to_json()
+        mismatched = [
+            key for key in ("id", "version", "api_version", "capability_digest")
+            if planned.get(key) != selected.get(key)
+        ]
+        if mismatched:
+            diagnostics.append(_diag(
+                "error",
+                "plugin_identity_mismatch",
+                "RunDocument plugin does not match the supplied driver context: "
+                + ", ".join(mismatched),
+                "plugin",
+            ))
+
+    # 1) Config validity against the selected plugin's live dictionary
+    # catalog and semantic validators. This must use the same immutable
+    # context whose identity was checked by the CLI before execution.
+    for err in validate_run(run_doc, driver_context=driver_context):
         message = f"[{err.phase}] {err.message}" if err.phase else err.message
         diagnostics.append(_diag(err.level, "run_validation", message, err.field))
 

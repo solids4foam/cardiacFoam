@@ -171,9 +171,12 @@ def _run_document_from_case(
         expectedArtifacts=[artifact_to_json(artifact) for artifact in expected_artifacts],
         validation={"status": "not_run", "diagnostics": []},
     )
-    # The phase-sliced validator is the current cardiacFoam configuration
-    # contract.  A core generic case has no solver-specific config to validate.
-    validator_errors = [] if generic_case else validate_run(run_doc)
+    # A core generic case has no solver-specific config to validate. Every
+    # other case uses the explicit planning context rather than an ambient
+    # cardiac compatibility default.
+    validator_errors = [] if generic_case else validate_run(
+        run_doc, driver_context=driver_context,
+    )
     for error in validator_errors:
         diagnostics.append(diagnostic(
             error.level,

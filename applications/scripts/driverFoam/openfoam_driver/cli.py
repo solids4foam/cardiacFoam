@@ -358,7 +358,9 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
             }, indent=2))
             return None
     inputs, diagnostics = build_execution_inputs(
-        run_doc, utility_produces=_utility_produces_by_command(),
+        run_doc,
+        utility_produces=_utility_produces_by_command(),
+        driver_context=driver_context,
     )
     if inputs is None:
         print(json.dumps({
