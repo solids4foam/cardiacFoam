@@ -1,0 +1,22 @@
+schema_version: 1
+plugin:
+  id: org.cardiacfoam
+  api_version: "1"
+case_profile:
+  dictionaries:
+    - path: system/controlDict
+      kind: openfoam_dictionary
+      role: openfoam.control_dict
+      required: always
+    - path: constant/physicsProperties
+      kind: openfoam_dictionary
+      role: plugin.configuration
+      required: always
+    - path: constant/electroProperties
+      kind: openfoam_dictionary
+      role: plugin.configuration
+      required: always
+cxx_mapping:
+  source_roots:
+    - ../../../../../../src
+  reviewed_allowlist: ../../scripts/dict_key_allowlist.json

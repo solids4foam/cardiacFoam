@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+
+from .plugin_profile import load_plugin_profile
+
 
 class GenericOpenFOAMPlugin:
     """Provides no solver semantics beyond the core OpenFOAM execution model."""
@@ -21,6 +26,11 @@ class GenericOpenFOAMPlugin:
     @property
     def plugin_api_version(self) -> str:
         return "1"
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def get_profile():
+        return load_plugin_profile(Path(__file__).with_name("generic-plugin.yaml"))
 
     def get_dict_entries(self):
         return ()

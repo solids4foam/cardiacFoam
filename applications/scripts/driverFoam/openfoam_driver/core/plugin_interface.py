@@ -74,6 +74,10 @@ class SolverPlugin(Protocol):
     def plugin_api_version(self) -> str:
         """Version of the driverFOAM plugin contract implemented by this plugin."""
         ...
+
+    def get_profile(self):
+        """Return declarative case/C++ provenance metadata for this plugin."""
+        ...
         
     def get_dict_entries(self) -> tuple[DictEntry, ...]:
         """
@@ -129,6 +133,7 @@ class PluginIdentity:
     version: str
     api_version: str
     source: str
+    capability_digest: str
 
     def to_json(self) -> dict[str, str]:
         return {
@@ -136,6 +141,7 @@ class PluginIdentity:
             "version": self.version,
             "api_version": self.api_version,
             "source": self.source,
+            "capability_digest": self.capability_digest,
         }
 
 
@@ -158,6 +164,7 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "plugin_id",
     "plugin_version",
     "plugin_api_version",
+    "get_profile",
     "get_dict_entries",
     "get_dict_groups",
     "get_capabilities",
@@ -193,6 +200,7 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
         "get_tutorial_displays",
         "validate_configuration",
         "predict_data_artifacts",
+        "get_profile",
     ):
         if not callable(getattr(plugin, name)):
             raise TypeError(f"SolverPlugin.{name} must be callable")
@@ -203,6 +211,11 @@ def driver_context(plugin: SolverPlugin, *, source: str) -> DriverContext:
     """Create a validated immutable context for one public operation."""
 
     checked = validate_plugin(plugin)
+    profile = checked.get_profile()
+    if profile.plugin_id != checked.plugin_id:
+        raise TypeError("SolverPlugin profile id does not match plugin_id")
+    if profile.api_version != checked.plugin_api_version:
+        raise TypeError("SolverPlugin profile API version does not match plugin_api_version")
     return DriverContext(
         plugin=checked,
         identity=PluginIdentity(
@@ -210,6 +223,7 @@ def driver_context(plugin: SolverPlugin, *, source: str) -> DriverContext:
             version=checked.plugin_version,
             api_version=checked.plugin_api_version,
             source=source,
+            capability_digest=profile.digest,
         ),
     )
 

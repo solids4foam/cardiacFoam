@@ -342,7 +342,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
         planned = run_doc.plugin
         selected = driver_context.identity.to_json()
         mismatched = [
-            key for key in ("id", "version", "api_version")
+            key for key in ("id", "version", "api_version", "capability_digest")
             if planned.get(key) != selected.get(key)
         ]
         if mismatched:

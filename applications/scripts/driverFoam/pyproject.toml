@@ -14,6 +14,7 @@ authors = [
 dependencies = [
   "gmsh>=4.15.2",
   "jsonschema>=4.0",
+  "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +41,8 @@ include-package-data = false
 [tool.setuptools.package-data]
 "openfoam_driver.scripts" = ["dict_key_allowlist.json"]
 "openfoam_driver.schemas" = ["run-document.json"]
+"openfoam_driver.plugins.cardiacfoam" = ["plugin.yaml"]
+"openfoam_driver.core" = ["generic-plugin.yaml"]
 "openfoam_driver.specs" = [
     "fixtures/single_cell_polymesh/*",
     "fixtures/template/constant/*",

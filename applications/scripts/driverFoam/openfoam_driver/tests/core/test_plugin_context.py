@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import driver_context, validate_plugin
+from openfoam_driver.core.plugin_profile import PluginProfile
 from openfoam_driver.core.runtime.registry import list_tutorials
 
 
@@ -26,6 +28,20 @@ class _Plugin:
     @property
     def plugin_api_version(self) -> str:
         return "1"
+
+    def get_profile(self):
+        return PluginProfile(
+            path=Path("test-plugin.yaml"),
+            plugin_id=self._plugin_id,
+            api_version="1",
+            case_files=(),
+            cxx_mapping=None,
+            payload={
+                "schema_version": 1,
+                "plugin": {"id": self._plugin_id, "api_version": "1"},
+                "case_profile": {"dictionaries": []},
+            },
+        )
 
     def get_dict_entries(self):
         return ()

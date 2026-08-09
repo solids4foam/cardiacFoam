@@ -196,22 +196,34 @@ def _artifact_diagnostics(
     return tuple(diagnostics)
 
 
-def _catalog_diagnostics(repo_root: Path | None) -> tuple[StrictDiagnostic, ...]:
-    if repo_root is None or not (repo_root / "src").exists():
-        # Running in a standalone install without the C++ source tree.
-        # Skip the dict-key scanner rather than raising.
+def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnostic, ...]:
+    """Run only the active plugin's reviewed C++↔Python mapping checks."""
+
+    mapping = driver_context.plugin.get_profile().cxx_mapping
+    if mapping is None:
         return ()
-    report = strict_dict_key_report(repo_root / "src")
     diagnostics: list[StrictDiagnostic] = []
-    payload = report.to_json()
-    for key in ("absent_keys", "stale_paths", "unmatched_subdicts", "unused_allowlist"):
-        for item in payload[key]:
+    for source_root in mapping.source_roots:
+        if not source_root.is_dir():
             diagnostics.append(_diagnostic(
-                "error",
-                f"dict_key_{key}",
-                f"Strict dict-key scanner reported {key}: {item}",
-                source="scan-dict-keys --strict",
+                "warning",
+                "plugin_cxx_source_unavailable",
+                f"Plugin C++ source root is unavailable: {source_root}",
+                source=driver_context.identity.id,
             ))
+            continue
+        report = strict_dict_key_report(
+            source_root, allowlist_path=mapping.allowlist_path,
+        )
+        payload = report.to_json()
+        for key in ("absent_keys", "stale_paths", "unmatched_subdicts", "unused_allowlist"):
+            for item in payload[key]:
+                diagnostics.append(_diagnostic(
+                    "error",
+                    f"plugin_dict_key_{key}",
+                    f"Plugin C++/catalog scanner reported {key}: {item}",
+                    source=f"{driver_context.identity.id}:{source_root}",
+                ))
     return tuple(diagnostics)
 
 
@@ -341,8 +353,7 @@ def strict_plan(
         expected_artifacts=artifacts,
         driver_context=driver_context,
     )
-    repo_root = _repo_root_from_here()  # None in standalone installs
-    catalog_diagnostics = _catalog_diagnostics(repo_root)
+    catalog_diagnostics = _catalog_diagnostics(driver_context)
     artifact_diagnostics = _artifact_diagnostics(
         spec, artifacts, workflow_dag, driver_context,
     )

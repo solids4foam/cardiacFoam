@@ -28,6 +28,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from functools import lru_cache
+from pathlib import Path
 from openfoam_driver.core.plugin_interface import SolverPlugin, CapabilityManifest
 
 # Note: now imported from the local plugin catalog instead of dict_entries
@@ -68,6 +70,13 @@ class CardiacFoamPlugin:
     @property
     def plugin_api_version(self) -> str:
         return "1"
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def get_profile():
+        from openfoam_driver.core.plugin_profile import load_plugin_profile
+
+        return load_plugin_profile(Path(__file__).parent / "cardiacfoam" / "plugin.yaml")
         
     def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
         """
