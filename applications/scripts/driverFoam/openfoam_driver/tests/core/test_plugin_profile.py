@@ -24,6 +24,14 @@ def test_cardiac_profile_declares_case_files_and_cxx_provenance() -> None:
     assert profile.digest.startswith("sha256:")
 
 
+def test_cardiac_catalog_partitions_entries_by_document() -> None:
+    catalog = CardiacFoamPlugin().get_dictionary_catalog()
+
+    assert {"electroProperties", "physicsProperties", "controlDict"} <= set(catalog.documents)
+    assert {entry.driver_path for entry in catalog.entries_for("physicsProperties")} == {"type"}
+    assert {entry.driver_path for entry in catalog.entries_for("controlDict")} >= {"deltaT", "endTime"}
+
+
 def test_generic_profile_declares_no_solver_specific_files() -> None:
     profile = GenericOpenFOAMPlugin().get_profile()
 

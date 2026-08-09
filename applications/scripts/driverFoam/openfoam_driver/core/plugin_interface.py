@@ -87,6 +87,10 @@ class SolverPlugin(Protocol):
         """
         ...
 
+    def get_dictionary_catalog(self):
+        """Return dictionary entries partitioned by plugin-owned document name."""
+        ...
+
     def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
         """
         Return the dictionary entries organized by logical group.
@@ -171,6 +175,7 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "plugin_api_version",
     "get_profile",
     "get_dict_entries",
+    "get_dictionary_catalog",
     "get_dict_groups",
     "get_capabilities",
     "get_tutorial_catalog",
@@ -207,6 +212,7 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
         )
     for name in (
         "get_dict_entries",
+        "get_dictionary_catalog",
         "get_dict_groups",
         "get_capabilities",
         "get_tutorial_catalog",

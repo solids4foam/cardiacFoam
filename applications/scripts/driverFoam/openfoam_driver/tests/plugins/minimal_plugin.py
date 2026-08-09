@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openfoam_driver.core.plugin_profile import PluginProfile
+from openfoam_driver.core.contracts.dictionary_catalog import DictionaryCatalog
 
 
 class MinimalOpenFOAMPlugin:
@@ -45,6 +46,9 @@ class MinimalOpenFOAMPlugin:
 
     def get_dict_entries(self):
         return ()
+
+    def get_dictionary_catalog(self):
+        return DictionaryCatalog({})
 
     def get_dict_groups(self):
         return {}

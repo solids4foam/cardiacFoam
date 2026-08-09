@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from .plugin_profile import load_plugin_profile
+from .contracts.dictionary_catalog import DictionaryCatalog
 
 
 class GenericOpenFOAMPlugin:
@@ -34,6 +35,9 @@ class GenericOpenFOAMPlugin:
 
     def get_dict_entries(self):
         return ()
+
+    def get_dictionary_catalog(self):
+        return DictionaryCatalog({})
 
     def get_dict_groups(self):
         return {}

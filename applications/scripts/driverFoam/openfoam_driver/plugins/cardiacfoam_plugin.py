@@ -34,7 +34,8 @@ from openfoam_driver.core.plugin_interface import SolverPlugin, CapabilityManife
 
 # Note: now imported from the local plugin catalog instead of dict_entries
 from openfoam_driver.plugins.cardiacfoam.dict_entries_catalog import ELECTRO_PROPERTY_ENTRY_GROUPS, HETEROGENEITY_MODELS
-from openfoam_driver.dict_entries import PHYSICS_PROPERTY_ENTRIES
+from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES, PHYSICS_PROPERTY_ENTRIES
+from openfoam_driver.core.contracts.dictionary_catalog import DictionaryCatalog
 from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from openfoam_driver.capability_manifest import build_capability_manifest
@@ -93,6 +94,18 @@ class CardiacFoamPlugin:
             entries.extend(group)
         # Note: A complete implementation would also aggregate other cardiac-specific dicts
         return tuple(entries)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def get_dictionary_catalog() -> DictionaryCatalog:
+        electro_entries: list[DictEntry] = []
+        for group in ELECTRO_PROPERTY_ENTRY_GROUPS.values():
+            electro_entries.extend(group)
+        return DictionaryCatalog({
+            "electroProperties": tuple(electro_entries),
+            "physicsProperties": PHYSICS_PROPERTY_ENTRIES,
+            "controlDict": CONTROL_DICT_ENTRIES,
+        })
 
     def get_capabilities(self) -> CapabilityManifest:
         """
