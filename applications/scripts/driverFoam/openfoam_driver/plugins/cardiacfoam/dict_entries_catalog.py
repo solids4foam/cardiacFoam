@@ -1,5 +1,5 @@
 from typing import Final, Any
-from openfoam_driver.dict_entries import DictEntry, build_group
+from openfoam_driver.core.contracts.dictionary import DictEntry, build_group
 
 HETEROGENEITY_MODELS: tuple[str, ...] = (
     "BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl",

@@ -27,8 +27,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Final
+from .core.contracts.dictionary import DictEntry, Phase, build_group
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
 
@@ -51,75 +51,6 @@ def get_electro_property_entry_groups(
         from openfoam_driver.core.plugin_interface import default_driver_context
         driver_context = default_driver_context()
     return driver_context.plugin.get_dict_groups()
-
-# Workflow phases used by run documents and catalog exports, in strict order.
-# Every ``DictEntry`` may declare one or more of these in ``phases``; the
-# catalog exporter fans it out to each phase bucket so multi-phase entries
-# appear in every consumer that needs to see them. The *primary* phase is
-# resolved at validation time as the first phase in this order that the
-# entry claims.
-#
-# Post-completion analysis (formerly the "review" phase) lives in the
-# Reports section of the workspace, not in the phase walk. See spec
-# section 5a and the report_catalog manifest.
-Phase = Literal["anatomy", "physics", "stimulus", "solver"]
-
-
-@dataclass(frozen=True)
-class DictEntry:
-    driver_path: str
-    description: str
-    source_refs: tuple[str, ...] = ()
-    notes: str = ""
-    value_kind: str = "openfoam_literal"
-    enum_values: tuple[str, ...] = ()
-    examples: tuple[str, ...] = ()
-    dynamic_path: bool = False
-    required: bool = False
-    constraints: tuple[str, ...] = ()
-    unit: str = ""
-    typical_value: str = ""
-    # Workflow phases this entry belongs to. Empty is allowed transiently
-    # during migration (Task A2 classifies every entry); a coverage test
-    # enforces non-empty once classification lands. Values are drawn from
-    # the ``Phase`` literal.
-    phases: frozenset[str] = frozenset()
-    # Plan §5 — Structured constraints (P5a, foundation; migration in P5b).
-    # Until each entry's prose ``constraints`` is migrated to one or more
-    # of the structured fields below, the validator falls back to the
-    # English form. All four fields default to empty, so adding an entry
-    # without filling them is the additive backward-compatible case.
-    #
-    # Each ``{key: value}`` pair encodes a value predicate: the entry's
-    # applicability/forbiddenness/requiredness is gated on ``context[key]``
-    # equalling ``value`` (or appearing in the tuple when ``value`` is a
-    # tuple). Block-presence predicates use virtual keys starting with
-    # ``"$"`` (e.g. ``"$ecgDomains_present"``).
-    applicable_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
-    forbidden_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
-    required_when: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
-    # Sibling-key mutual exclusion. Either side may declare the relation;
-    # the validator treats it as symmetric.
-    mutually_exclusive_with: tuple[str, ...] = ()
-
-
-from dataclasses import replace
-
-def build_group(defaults: dict[str, Any], entries: tuple[DictEntry, ...]) -> tuple[DictEntry, ...]:
-    out = []
-    for e in entries:
-        changes = {}
-        for k, v in defaults.items():
-            current = getattr(e, k)
-            if not current:
-                changes[k] = v
-            elif isinstance(current, dict) and isinstance(v, dict):
-                changes[k] = {**v, **current}
-        if changes:
-            out.append(replace(e, **changes))
-        else:
-            out.append(e)
-    return tuple(out)
 
 PHYSICS_PROPERTY_ENTRIES: Final[tuple[DictEntry, ...]] = (
     DictEntry(

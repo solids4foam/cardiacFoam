@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from openfoam_driver.dict_entries import Phase
+from openfoam_driver.core.contracts.dictionary import Phase
 
 
 @dataclass(frozen=True)

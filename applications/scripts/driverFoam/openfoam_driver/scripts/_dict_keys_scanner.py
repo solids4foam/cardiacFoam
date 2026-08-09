@@ -68,7 +68,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from openfoam_driver.dict_entries import DictEntry
+    from openfoam_driver.core.contracts.dictionary import DictEntry
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ from importlib import import_module
 from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
 
 if TYPE_CHECKING:
-    from openfoam_driver.dict_entries import DictEntry
+    from openfoam_driver.core.contracts.dictionary import DictEntry
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
     from openfoam_driver.planning_types import StrictDiagnostic
     from openfoam_driver.tutorials_display import TutorialDisplay
