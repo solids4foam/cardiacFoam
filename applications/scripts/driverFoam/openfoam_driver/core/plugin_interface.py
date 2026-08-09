@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from importlib import import_module
 from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
@@ -179,6 +180,8 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "predict_data_artifacts",
 )
 
+_PLUGIN_ID_RE = re.compile(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?")
+
 
 def validate_plugin(plugin: Any) -> SolverPlugin:
     """Reject malformed plugin objects before they enter a driver context.
@@ -197,6 +200,11 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
         value = getattr(plugin, name)
         if not isinstance(value, str) or not value.strip():
             raise TypeError(f"SolverPlugin.{name} must be a non-empty string")
+    if not _PLUGIN_ID_RE.fullmatch(plugin.plugin_id):
+        raise TypeError(
+            "SolverPlugin.plugin_id must use lowercase letters, digits, dots, "
+            "or hyphens and cannot start or end with punctuation"
+        )
     for name in (
         "get_dict_entries",
         "get_dict_groups",
@@ -222,6 +230,22 @@ def driver_context(plugin: SolverPlugin, *, source: str) -> DriverContext:
         raise TypeError("SolverPlugin profile id does not match plugin_id")
     if profile.api_version != checked.plugin_api_version:
         raise TypeError("SolverPlugin profile API version does not match plugin_api_version")
+    from .contracts.dictionary import DictEntry
+
+    entries = tuple(checked.get_dict_entries())
+    invalid_entries = [
+        entry for entry in entries
+        if not isinstance(entry, DictEntry) or not entry.driver_path.strip()
+    ]
+    if invalid_entries:
+        raise TypeError("SolverPlugin.get_dict_entries() must return DictEntry values with paths")
+    paths = [entry.driver_path for entry in entries]
+    duplicates = sorted({path for path in paths if paths.count(path) > 1})
+    if duplicates:
+        raise TypeError(
+            "SolverPlugin dictionary catalog has duplicate paths: "
+            + ", ".join(duplicates)
+        )
     return DriverContext(
         plugin=checked,
         identity=PluginIdentity(

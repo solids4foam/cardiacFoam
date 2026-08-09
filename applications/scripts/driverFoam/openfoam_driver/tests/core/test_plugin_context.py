@@ -6,6 +6,7 @@ from pathlib import Path
 from openfoam_driver.core.plugin_interface import driver_context, validate_plugin
 from openfoam_driver.core.plugin_profile import PluginProfile
 from openfoam_driver.core.runtime.registry import list_tutorials
+from openfoam_driver.core.contracts.dictionary import DictEntry
 
 
 class _Plugin:
@@ -81,3 +82,19 @@ def test_contexts_do_not_share_plugin_selection() -> None:
 def test_plugin_contract_rejects_missing_members() -> None:
     with pytest.raises(TypeError, match="missing required members"):
         validate_plugin(object())
+
+
+def test_plugin_contract_rejects_an_invalid_stable_id() -> None:
+    with pytest.raises(TypeError, match="plugin_id must use lowercase"):
+        validate_plugin(_Plugin("Example Plugin", "example"))
+
+
+def test_driver_context_rejects_duplicate_catalog_paths() -> None:
+    plugin = _Plugin("example.duplicates", "duplicates")
+    plugin.get_dict_entries = lambda: (
+        DictEntry(driver_path="shared", description="first"),
+        DictEntry(driver_path="shared", description="second"),
+    )
+
+    with pytest.raises(TypeError, match="duplicate paths: shared"):
+        driver_context(plugin, source="test")
