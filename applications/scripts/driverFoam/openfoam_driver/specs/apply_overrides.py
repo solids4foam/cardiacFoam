@@ -42,10 +42,8 @@ from typing import Any, Iterable
 from .common import detect_myocardium_solver_name
 from .dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
-from ..dict_entries import CONTROL_DICT_ENTRIES, get_electro_property_entry_groups
 
 _PREFIX = "$ELECTRO_MODEL_COEFFS."
-_CONTROL_DICT_KEYS: frozenset[str] = frozenset(entry.driver_path for entry in CONTROL_DICT_ENTRIES)
 
 
 def _is_safe_system_path(path_str: str) -> bool:
@@ -60,12 +58,22 @@ class OverrideError(ValueError):
     """An override is malformed, non-applyable, out-of-enum, or failed to apply."""
 
 
-def _electro_by_path() -> dict[str, Any]:
+def _catalog_entries(driver_context=None) -> tuple[set[str], tuple[Any, ...]]:
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    catalog = driver_context.plugin.get_dictionary_catalog()
+    return (
+        {entry.driver_path for entry in catalog.entries_for("controlDict")},
+        catalog.entries_for("electroProperties"),
+    )
+
+
+def _electro_by_path(entries: Iterable[Any]) -> dict[str, Any]:
     """Map every electro entry's full driver_path ($ELECTRO_MODEL_COEFFS.<...>) -> entry."""
     out: dict[str, Any] = {}
-    for group in get_electro_property_entry_groups().values():
-        for entry in group:
-            out[entry.driver_path] = entry
+    for entry in entries:
+        out[entry.driver_path] = entry
     return out
 
 
@@ -89,13 +97,14 @@ def _match_dynamic_entry(dp: str, all_entries: Iterable[Any]) -> Any | None:
     return None
 
 
-def validate_overrides(overrides: Any) -> None:
+def validate_overrides(overrides: Any, *, driver_context=None) -> None:
     """Reject anything not safely applyable, *before* any write. Raises OverrideError."""
     if not isinstance(overrides, list):
         raise OverrideError(
             "overrides payload must be a JSON list of {driver_path, value} objects"
         )
-    electro = _electro_by_path()
+    control_dict_keys, electro_entries = _catalog_entries(driver_context)
+    electro = _electro_by_path(electro_entries)
     for ov in overrides:
         if not isinstance(ov, dict) or "driver_path" not in ov or "value" not in ov:
             raise OverrideError(
@@ -115,8 +124,8 @@ def validate_overrides(overrides: Any) -> None:
             # validation and, at apply time, either raises a raw KeyError (no
             # foamDictionary) or silently writes a brand-new bogus key into
             # controlDict (foamDictionary auto-creates missing keys on `-set`).
-            if dp not in _CONTROL_DICT_KEYS:
-                known = ", ".join(sorted(_CONTROL_DICT_KEYS))
+            if dp not in control_dict_keys:
+                known = ", ".join(sorted(control_dict_keys))
                 raise OverrideError(
                     f"override driver_path {dp!r} is not a known controlDict entry. "
                     f"Known controlDict entries: {known}"
