@@ -56,6 +56,18 @@ class CardiacFoamPlugin:
     @property
     def plugin_name(self) -> str:
         return "cardiacFoam"
+
+    @property
+    def plugin_id(self) -> str:
+        return "org.cardiacfoam"
+
+    @property
+    def plugin_version(self) -> str:
+        return "0.1.0"
+
+    @property
+    def plugin_api_version(self) -> str:
+        return "1"
         
     def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
         """

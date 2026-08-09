@@ -60,10 +60,13 @@ solver name.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import TYPE_CHECKING, Callable, Iterable
 
 from ...utility_catalog import UTILITY_CATALOG, ProducesEntry
 from .models import DataArtifact, TutorialSpec
+
+if TYPE_CHECKING:
+    from ..plugin_interface import DriverContext
 
 
 
@@ -125,9 +128,35 @@ def _merge_static_override(
     return tuple(by_id.values())
 
 
+def _core_generic_artifacts(spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+    """Artifacts guaranteed by the driver for a generic case-folder run."""
+
+    if not (spec.metadata or {}).get("generic_case"):
+        return ()
+    return (
+        DataArtifact(
+            artifact_id="core.workflow_state",
+            path_pattern="workflow_state.json",
+            format="json_summary",
+            description="Persistent state of the normalized driverFOAM workflow.",
+            produced_by="driverFOAM",
+        ),
+        DataArtifact(
+            artifact_id="core.workflow_logs",
+            path_pattern="workflow_logs",
+            format="openfoam_log",
+            description="Per-step stdout and stderr logs written by driverFOAM.",
+            produced_by="driverFOAM",
+            optional=True,
+        ),
+    )
+
+
 def predict_data_artifacts(
     case_root: Path,
     spec: TutorialSpec,
+    *,
+    driver_context: "DriverContext | None" = None,
 ) -> tuple[DataArtifact, ...]:
     """Return the artifacts ``case_root`` will (or does) produce.
 
@@ -140,14 +169,16 @@ def predict_data_artifacts(
     Never raises. Returns ``()`` when nothing can be derived and no static
     override is supplied.
     """
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+
     static_override = spec.metadata.get("expected_artifacts", ()) if spec.metadata else ()
     static_tuple = tuple(static_override)
 
-    plugin_derived = get_active_plugin().predict_data_artifacts(case_root, spec)
+    plugin_derived = driver_context.plugin.predict_data_artifacts(case_root, spec)
     utility_derived = _predict_from_workflow_utilities(spec)
     
-    derived = plugin_derived + utility_derived
+    derived = _core_generic_artifacts(spec) + plugin_derived + utility_derived
     
     return _merge_static_override(derived, static_tuple)

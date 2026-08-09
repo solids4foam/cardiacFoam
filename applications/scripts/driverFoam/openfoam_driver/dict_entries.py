@@ -28,20 +28,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import BATCHED_MODELS
+
+if TYPE_CHECKING:
+    from openfoam_driver.core.plugin_interface import DriverContext
 
 # Ionic models that implement transmural tissue heterogeneity
 # (configureIonicHeterogeneity, endo/M/epi blend and/or namedRegions) on
 # CPU and/or GPU.
 
-def get_heterogeneity_models() -> tuple[str, ...]:
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    return get_active_plugin().get_capabilities().get("heterogeneity_models", ())
+def get_heterogeneity_models(
+    driver_context: "DriverContext | None" = None,
+) -> tuple[str, ...]:
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    return driver_context.plugin.get_capabilities().get("heterogeneity_models", ())
 
-def get_electro_property_entry_groups() -> dict[str, tuple[DictEntry, ...]]:
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    return get_active_plugin().get_dict_groups()
+def get_electro_property_entry_groups(
+    driver_context: "DriverContext | None" = None,
+) -> dict[str, tuple[DictEntry, ...]]:
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    return driver_context.plugin.get_dict_groups()
 
 # Workflow phases used by run documents and catalog exports, in strict order.
 # Every ``DictEntry`` may declare one or more of these in ``phases``; the

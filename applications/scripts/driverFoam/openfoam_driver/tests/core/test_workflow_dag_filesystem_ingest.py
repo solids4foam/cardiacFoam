@@ -27,8 +27,9 @@
 
 """Tests for workflow_dag ingest from on-disk workflow_contract.json.
 
-Filesystem cases (loaded via registry.py) must have their workflow_dag populated
-from the on-disk workflow_contract.json when that file contains a 'steps' array.
+Filesystem cases (loaded via registry.py) must prefer an on-disk contract when
+it provides steps, but retain the generic Allrun fallback when no contract is
+present at all.
 """
 from __future__ import annotations
 
@@ -37,7 +38,7 @@ import unittest
 from pathlib import Path
 import tempfile
 
-from openfoam_driver.core.runtime.registry import load_tutorial_spec
+from openfoam_driver.core.runtime.registry import load_tutorial_spec, resolve_entry
 
 
 class TestWorkflowDagFilesystemIngest(unittest.TestCase):
@@ -81,7 +82,7 @@ class TestWorkflowDagFilesystemIngest(unittest.TestCase):
             self.assertEqual(dag["steps"], steps)
 
     def test_filesystem_case_without_contract_has_no_workflow_dag(self) -> None:
-        """Filesystem case with no workflow_contract.json → workflow_dag absent or None."""
+        """Filesystem case with no workflow_contract.json keeps Allrun fallback."""
         with tempfile.TemporaryDirectory() as temp_dir:
             tutorials_root = Path(temp_dir)
             case_root = tutorials_root / "bareCase"
@@ -93,9 +94,11 @@ class TestWorkflowDagFilesystemIngest(unittest.TestCase):
                 overrides={"tutorials_root": tutorials_root},
             )
 
-            # Either missing or None — both are acceptable for the None path
             dag = spec.metadata.get("workflow_dag")
-            self.assertIsNone(dag, "workflow_dag must be None when workflow_contract.json is absent")
+            self.assertEqual(
+                dag,
+                {"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]},
+            )
 
     def test_filesystem_case_contract_without_steps_has_no_workflow_dag(self) -> None:
         """workflow_contract.json without a 'steps' key → workflow_dag is None."""
@@ -117,6 +120,27 @@ class TestWorkflowDagFilesystemIngest(unittest.TestCase):
 
             dag = spec.metadata.get("workflow_dag")
             self.assertIsNone(dag, "workflow_dag must be None when contract has no 'steps' key")
+
+    def test_variant_electro_properties_case_is_discoverable_and_runnable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tutorials_root = Path(temp_dir)
+            case_root = tutorials_root / "variantCase"
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "system").mkdir(parents=True, exist_ok=True)
+            (case_root / "constant" / "electroProperties.monodomain").write_text(
+                "myocardiumSolver monodomainSolver;\n"
+            )
+            (case_root / "constant" / "physicsProperties").write_text("type electroModel;\n")
+            for relpath in ("controlDict", "fvSchemes", "fvSolution"):
+                (case_root / "system" / relpath).write_text("\n")
+
+            resolution = resolve_entry(
+                "variantCase",
+                overrides={"tutorials_root": tutorials_root},
+            )
+
+            self.assertEqual(resolution["resolution"], "case_folder")
+            self.assertTrue(resolution["is_runnable"])
 
 
 if __name__ == "__main__":

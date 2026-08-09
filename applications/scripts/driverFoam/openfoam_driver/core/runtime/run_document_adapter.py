@@ -67,6 +67,7 @@ def _run_document_from_case(
     workflow_dag: dict[str, Any] | None,
     workflow_state: WorkflowRunState | None,
     expected_artifacts: tuple[DataArtifact, ...],
+    driver_context,
 ) -> tuple[RunDocument, tuple[StrictDiagnostic, ...]]:
     diagnostics: list[StrictDiagnostic] = []
     config: dict[str, dict[str, Any]] = {
@@ -76,10 +77,11 @@ def _run_document_from_case(
         "solver": {},
     }
     case_root = Path(spec.case_root)
+    generic_case = bool(spec.metadata.get("generic_case")) if spec.metadata else False
     electro_path = case_root / "constant" / "electroProperties"
     physics_path = case_root / "constant" / "physicsProperties"
     physics_type = _read_physics_type(physics_path)
-    if physics_type is None:
+    if not generic_case and physics_type is None:
         diagnostics.append(diagnostic(
             "error",
             "missing_physics_properties",
@@ -87,7 +89,7 @@ def _run_document_from_case(
             source=str(physics_path),
             field="type",
         ))
-    else:
+    elif not generic_case:
         config["physics"]["type"] = physics_type
         try:
             build_physics_properties({"type": physics_type})
@@ -99,14 +101,14 @@ def _run_document_from_case(
                 source=str(physics_path),
             ))
 
-    if not electro_path.exists():
+    if not generic_case and not electro_path.exists():
         diagnostics.append(diagnostic(
             "error",
             "missing_electro_properties",
             f"Missing electroProperties at {electro_path}",
             source=str(electro_path),
         ))
-    else:
+    elif not generic_case:
         try:
             parsed = parse_electro_properties(electro_path)
             selectors = parsed["selectors"]
@@ -144,6 +146,7 @@ def _run_document_from_case(
         name=entry,
         status="planned" if not diagnostics else "failed",
         intent={"source": "strict_plan"},
+        plugin=driver_context.identity.to_json(),
         config=config,
         resolvedEntry={
             "entry": entry,
@@ -168,7 +171,9 @@ def _run_document_from_case(
         expectedArtifacts=[artifact_to_json(artifact) for artifact in expected_artifacts],
         validation={"status": "not_run", "diagnostics": []},
     )
-    validator_errors = validate_run(run_doc)
+    # The phase-sliced validator is the current cardiacFoam configuration
+    # contract.  A core generic case has no solver-specific config to validate.
+    validator_errors = [] if generic_case else validate_run(run_doc)
     for error in validator_errors:
         diagnostics.append(diagnostic(
             error.level,
@@ -183,4 +188,3 @@ def _run_document_from_case(
     }
     run_doc.status = "planned" if not any(d.level == "error" for d in diagnostics) else "failed"
     return run_doc, tuple(diagnostics)
-

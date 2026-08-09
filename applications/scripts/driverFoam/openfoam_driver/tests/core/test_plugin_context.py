@@ -1,0 +1,64 @@
+from __future__ import annotations
+
+import pytest
+
+from openfoam_driver.core.plugin_interface import driver_context, validate_plugin
+from openfoam_driver.core.runtime.registry import list_tutorials
+
+
+class _Plugin:
+    def __init__(self, plugin_id: str, tutorial_name: str) -> None:
+        self._plugin_id = plugin_id
+        self._tutorial_name = tutorial_name
+
+    @property
+    def plugin_name(self) -> str:
+        return self._plugin_id
+
+    @property
+    def plugin_id(self) -> str:
+        return self._plugin_id
+
+    @property
+    def plugin_version(self) -> str:
+        return "1.0.0"
+
+    @property
+    def plugin_api_version(self) -> str:
+        return "1"
+
+    def get_dict_entries(self):
+        return ()
+
+    def get_dict_groups(self):
+        return {}
+
+    def get_capabilities(self):
+        return {}
+
+    def get_tutorial_catalog(self):
+        return {"registered_tutorials": (self._tutorial_name,), "spec_factories": {}}
+
+    def get_tutorial_displays(self):
+        return ()
+
+    def validate_configuration(self, spec):
+        return ()
+
+    def predict_data_artifacts(self, case_root, spec):
+        return ()
+
+
+def test_contexts_do_not_share_plugin_selection() -> None:
+    alpha = driver_context(_Plugin("example.alpha", "alpha"), source="test")
+    beta = driver_context(_Plugin("example.beta", "beta"), source="test")
+
+    assert list_tutorials(alpha) == ["alpha"]
+    assert list_tutorials(beta) == ["beta"]
+    assert alpha.identity.to_json()["id"] == "example.alpha"
+    assert beta.identity.to_json()["id"] == "example.beta"
+
+
+def test_plugin_contract_rejects_missing_members() -> None:
+    with pytest.raises(TypeError, match="missing required members"):
+        validate_plugin(object())

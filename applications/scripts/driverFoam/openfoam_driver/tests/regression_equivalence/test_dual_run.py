@@ -5,7 +5,7 @@ import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver.tests.regression_equivalence.registry import REGRESSION_CASES
+from openfoam_driver.tests.regression_equivalence.registry import REGRESSION_CASES, RegressionCase
 from openfoam_driver.tests.regression_equivalence import dual_run
 from openfoam_driver.tests.regression_equivalence.dual_run import (
     parse_columnar_reference,
@@ -82,7 +82,15 @@ def test_verify_reproduction_skips_without_solver(monkeypatch):
 
 def test_verify_reproduction_skips_non_addressable_generic(monkeypatch):
     monkeypatch.setattr(dual_run, "solver_available", lambda: True)
-    em = next(c for c in REGRESSION_CASES if not c.generic_addressable)
-    result = verify_reproduction(em, driver="generic")
+    result = verify_reproduction(
+        RegressionCase(
+            "synthetic/nonAddressableCase",
+            None,
+            (),
+            "regression/reference.txt",
+            generic_addressable=False,
+        ),
+        driver="generic",
+    )
     assert result.status == "skipped"
     assert "not addressable" in result.detail

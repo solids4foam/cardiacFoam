@@ -24,10 +24,10 @@ def test_strict_rows_resolve_and_are_idempotent():
     assert all(r["idempotent"] == "ok" for r in strict)
 
 
-def test_non_addressable_generic_row_is_unaddressable():
+def test_electromechanical_generic_row_is_addressable():
     rows = build_matrix(run_phase2=False)
     em = [r for r in rows
           if r["case"] == "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"]
     assert len(em) == 1
     assert em[0]["driver"] == "generic"
-    assert em[0]["resolves"] == "unaddressable"
+    assert em[0]["resolves"] == "ok"

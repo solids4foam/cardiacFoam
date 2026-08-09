@@ -158,8 +158,24 @@ def _simulation_generation_audit(spec) -> tuple[SimulationAuditItem, tuple[Stric
     )
 
 
-def _case_preparation_files_audit(case_root: Path) -> SimulationAuditItem:
+def _case_preparation_files_audit(
+    case_root: Path,
+    *,
+    generic_case: bool = False,
+) -> SimulationAuditItem:
     max_points = _READINESS_WEIGHTS["case_preparation_files"]
+    if generic_case:
+        return SimulationAuditItem(
+            stage="case_preparation_files",
+            status="passed",
+            points=max_points,
+            max_points=max_points,
+            summary=(
+                "Generic case-folder execution relies on its declared workflow "
+                "rather than cardiacFoam dictionary requirements."
+            ),
+            evidence={"case_root": str(case_root), "required": [], "generic_case": True},
+        )
     existing = [
         relpath for relpath in _CASE_PREPARATION_FILES if (case_root / relpath).exists()
     ]
@@ -205,16 +221,31 @@ def _build_simulation_audit(
     mesh_geometry_diagnostics: tuple[StrictDiagnostic, ...],
 ) -> tuple[tuple[SimulationAuditItem, ...], tuple[StrictDiagnostic, ...], dict[str, Any]]:
     generation_item, generation_diagnostics = _simulation_generation_audit(spec)
-    case_files_item = _case_preparation_files_audit(Path(spec.case_root))
+    generic_case = bool(spec.metadata.get("generic_case")) if spec.metadata else False
+    case_files_item = _case_preparation_files_audit(
+        Path(spec.case_root), generic_case=generic_case,
+    )
     items = [
         generation_item,
         case_files_item,
         _score_from_diagnostics(
             stage="dictionary_resolution",
             diagnostics=validation_diagnostics,
-            success_summary="physicsProperties and electroProperties resolve into a valid RunDocument config.",
-            warning_summary="The dictionaries resolve, but validation emitted warnings.",
-            error_summary="The dictionaries could not be resolved into a valid run config.",
+            success_summary=(
+                "The generic case needs no plugin configuration parsing."
+                if generic_case else
+                "physicsProperties and electroProperties resolve into a valid RunDocument config."
+            ),
+            warning_summary=(
+                "Generic case validation emitted warnings."
+                if generic_case else
+                "The dictionaries resolve, but validation emitted warnings."
+            ),
+            error_summary=(
+                "The generic case contract could not be resolved."
+                if generic_case else
+                "The dictionaries could not be resolved into a valid run config."
+            ),
             evidence={"diagnostic_count": len(validation_diagnostics)},
         ),
         _score_from_diagnostics(
@@ -277,4 +308,3 @@ def _build_simulation_audit(
         "warning_stages": warnings,
     }
     return tuple(items), generation_diagnostics, readiness
-

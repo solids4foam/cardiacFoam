@@ -32,11 +32,10 @@ import shlex
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-def __get_capabilities():
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    return get_active_plugin().get_capabilities()
+if TYPE_CHECKING:
+    from .core.plugin_interface import DriverContext
 
 
 from .core.runtime.artifacts import predict_data_artifacts
@@ -95,6 +94,7 @@ class StrictPlanReport:
     run_document: RunDocument | None = None
     capability_manifest: dict[str, Any] = field(default_factory=dict)
     function_object_diagnostics: tuple[StrictDiagnostic, ...] = ()
+    plugin: dict[str, str] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -120,6 +120,7 @@ class StrictPlanReport:
             "function_object_diagnostics": [
                 asdict(d) for d in self.function_object_diagnostics
             ],
+            "plugin": self.plugin,
         }
 
 
@@ -166,9 +167,9 @@ def _artifact_diagnostics(
     spec,
     artifacts: tuple[DataArtifact, ...],
     workflow_dag: dict[str, Any] | None,
+    driver_context: "DriverContext",
 ) -> tuple[StrictDiagnostic, ...]:
     from .core.runtime.workflow import validate_workflow_commands
-    from openfoam_driver.core.plugin_interface import get_active_plugin
 
     diagnostics: list[StrictDiagnostic] = []
     case_root = Path(spec.case_root)
@@ -182,7 +183,7 @@ def _artifact_diagnostics(
         ))
 
     # Defer domain-specific validation to the active plugin
-    diagnostics.extend(get_active_plugin().validate_configuration(spec))
+    diagnostics.extend(driver_context.plugin.validate_configuration(spec))
 
     for diagnostic in validate_workflow_commands(workflow_dag):
         diagnostics.append(_diagnostic(
@@ -300,14 +301,27 @@ def strict_plan(
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     openfoam_bashrc: str | Path | None = None,
+    driver_context: "DriverContext | None" = None,
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
-    spec = load_entry_spec(entry, entry_kind=entry_kind, overrides=overrides)
+    if driver_context is None:
+        from .core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    spec = load_entry_spec(
+        entry,
+        entry_kind=entry_kind,
+        overrides=overrides,
+        driver_context=driver_context,
+    )
     execution_context = resolve_execution_context(spec)
     launch = _run_launch_description(
         entry, execution_context, entry_kind=entry_kind, config_path=config_path,
     )
-    artifacts = tuple(predict_data_artifacts(Path(spec.case_root), spec))
+    artifacts = tuple(
+        predict_data_artifacts(
+            Path(spec.case_root), spec, driver_context=driver_context,
+        )
+    )
     workflow_dag, workflow_diagnostics_raw = normalize_workflow_dag(
         spec.metadata.get("workflow_dag") if spec.metadata else None,
         expected_artifacts=artifacts,
@@ -325,16 +339,23 @@ def strict_plan(
         workflow_dag=workflow_dag,
         workflow_state=workflow_state,
         expected_artifacts=artifacts,
+        driver_context=driver_context,
     )
     repo_root = _repo_root_from_here()  # None in standalone installs
     catalog_diagnostics = _catalog_diagnostics(repo_root)
-    artifact_diagnostics = _artifact_diagnostics(spec, artifacts, workflow_dag)
+    artifact_diagnostics = _artifact_diagnostics(
+        spec, artifacts, workflow_dag, driver_context,
+    )
     env_diagnostics = _environment_diagnostics(
         workflow_dag,
         openfoam_bashrc=str(openfoam_bashrc) if openfoam_bashrc is not None else None,
     )
     mesh_diagnostics = _mesh_geometry_diagnostics(
-        spec.case_root, exempt=_is_nondimensional_entry(spec)
+        spec.case_root,
+        exempt=(
+            _is_nondimensional_entry(spec)
+            or bool(spec.metadata.get("generic_case"))
+        ),
     )
     simulation_audit, generation_diagnostics, readiness_score = _build_simulation_audit(
         spec=spec,
@@ -401,4 +422,5 @@ def strict_plan(
         run_document=run_document,
         capability_manifest=capability_manifest,
         function_object_diagnostics=function_object_diagnostics,
+        plugin=driver_context.identity.to_json(),
     )

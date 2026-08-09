@@ -18,6 +18,18 @@
       "description": "Agent- or user-authored objective, constraints, and notes for this run.",
       "additionalProperties": true
     },
+    "plugin": {
+      "type": ["object", "null"],
+      "description": "Solver-plugin semantics selected while the run document was planned.",
+      "required": ["id", "version", "api_version", "source"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "api_version": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
     "config": {
       "type": "object",
       "required": ["anatomy", "physics", "stimulus", "solver"],

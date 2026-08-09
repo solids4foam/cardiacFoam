@@ -30,11 +30,17 @@ from __future__ import annotations
 import inspect
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-def __get_capabilities():
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    return get_active_plugin().get_capabilities()
+if TYPE_CHECKING:
+    from .core.plugin_interface import DriverContext
+
+
+def __get_capabilities(driver_context: "DriverContext | None" = None):
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    return driver_context.plugin.get_capabilities()
 
 
 from .core.runtime.models import CaseConfig, TutorialSpec
@@ -139,35 +145,36 @@ def _describe_spec(spec: TutorialSpec) -> dict[str, Any]:
     }
 
 
-def _dict_entry_catalog() -> dict[str, Any]:
+def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
     return {
         "physicsProperties": [_serialize(asdict(entry)) for entry in PHYSICS_PROPERTY_ENTRIES],
         "electroProperties": {
             group_name: [_serialize(asdict(entry)) for entry in entries]
-            for group_name, entries in get_electro_property_entry_groups().items()
+            for group_name, entries in get_electro_property_entry_groups(driver_context).items()
         },
     }
 
 
-def _ionic_model_catalog() -> dict[str, Any]:
+def _ionic_model_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
         "ionic_models": {
             name: _serialize(asdict(entry))
-            for name, entry in __get_capabilities().get("ionic_models", {}).items()
+            for name, entry in __get_capabilities(driver_context).get("ionic_models", {}).items()
         },
         "solver_compatibility": [
-            _serialize(rule) for rule in __get_capabilities().get("solver_compatibility_rules", [])
+            _serialize(rule)
+            for rule in __get_capabilities(driver_context).get("solver_compatibility_rules", [])
         ],
     }
 
 
-def _active_tension_catalog() -> dict[str, Any]:
+def _active_tension_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
         "active_tension_models": {
             name: _serialize(asdict(entry))
-            for name, entry in __get_capabilities().get("active_tension_models", {}).items()
+            for name, entry in __get_capabilities(driver_context).get("active_tension_models", {}).items()
         },
     }
 
@@ -516,13 +523,22 @@ def describe_entry(
     entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
+    driver_context: "DriverContext | None" = None,
 ) -> dict[str, Any]:
-    resolution = resolve_entry(entry, entry_kind=entry_kind, overrides=overrides)
+    if driver_context is None:
+        from .core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    resolution = resolve_entry(
+        entry,
+        entry_kind=entry_kind,
+        overrides=overrides,
+        driver_context=driver_context,
+    )
     spec = resolution["factory"](**resolution["factory_overrides"])
     tutorials_root = Path(
         resolution["factory_overrides"].get("tutorials_root", spec.case_root.parent)
     )
-    entry_catalog = list_entries(tutorials_root)
+    entry_catalog = list_entries(tutorials_root, driver_context=driver_context)
     workflow_catalog = _workflow_catalog(tutorials_root, entry_catalog)
 
     make_spec_info = _describe_factory(resolution["factory"])
@@ -546,9 +562,11 @@ def describe_entry(
         ),
         "workflow_catalog": _serialize(workflow_catalog),
         "is_runnable": resolution["is_runnable"],
-        "registered_tutorials": list_tutorials(),
+        "registered_tutorials": list_tutorials(driver_context),
         "special_tutorial_aliases": list(SPECIAL_TUTORIAL_ALIASES),
-        "available_tutorials": list_available_tutorials(tutorials_root),
+        "available_tutorials": list_available_tutorials(
+            tutorials_root, driver_context=driver_context,
+        ),
         "case_directories": list_case_directories(tutorials_root),
         "common_override_keys": list(COMMON_OVERRIDE_KEYS),
         "make_spec": make_spec_info,
@@ -560,9 +578,9 @@ def describe_entry(
                 resolution=resolution["resolution"],
             )
         ),
-        "dict_entries": _dict_entry_catalog(),
-        "ionic_model_catalog": _ionic_model_catalog(),
-        "active_tension_catalog": _active_tension_catalog(),
+        "dict_entries": _dict_entry_catalog(driver_context),
+        "ionic_model_catalog": _ionic_model_catalog(driver_context),
+        "active_tension_catalog": _active_tension_catalog(driver_context),
         "strict_launch": _run_launch_description(
             resolution["resolved_name"],
             resolve_execution_context(spec),
@@ -587,9 +605,11 @@ def describe_tutorial(
     *,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
+    driver_context: "DriverContext | None" = None,
 ) -> dict[str, Any]:
     return describe_entry(
         tutorial,
         overrides=overrides,
         config_path=config_path,
+        driver_context=driver_context,
     )

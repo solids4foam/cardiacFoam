@@ -67,6 +67,7 @@ class RunDocument:
     createdAt: str = ""
     lastModified: str = ""
     intent: dict[str, Any] = field(default_factory=dict)
+    plugin: dict[str, str] | None = None
     resolvedEntry: dict[str, Any] | None = None
     workflowDag: dict[str, Any] | None = None
     workflowState: dict[str, Any] | None = None
@@ -88,6 +89,8 @@ class RunDocument:
             )
         if data.get("reports") is None:
             data.pop("reports", None)
+        if data.get("plugin") is None:
+            data.pop("plugin", None)
         jsonschema.validate(data, _SCHEMA)
         return data
 
@@ -108,6 +111,7 @@ class RunDocument:
             createdAt=data.get("createdAt", ""),
             lastModified=data.get("lastModified", ""),
             intent=data.get("intent", {}),
+            plugin=data.get("plugin"),
             resolvedEntry=data.get("resolvedEntry"),
             workflowDag=data.get("workflowDag"),
             workflowState=data.get("workflowState"),
@@ -140,6 +144,7 @@ class RunDocument:
             "lastModified": data.get("lastModified", ""),
             "status": data.get("status", "draft"),
             "intent": {},
+            "plugin": None,
             "config": data["config"],
             "resolvedEntry": None,
             "workflowDag": None,

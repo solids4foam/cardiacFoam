@@ -327,7 +327,7 @@ def _execute_run(
     return 0 if status == "ok" else 1
 
 
-def _context_from_run_document(args) -> _ExecutionContext | None:
+def _context_from_run_document(args, driver_context) -> _ExecutionContext | None:
     """Load + validate an agent-authored RunDocument into executor inputs."""
     try:
         run_doc = load_run_document(args.run_document)
@@ -338,6 +338,25 @@ def _context_from_run_document(args) -> _ExecutionContext | None:
             "run_document": args.run_document,
         }, indent=2))
         return None
+    if run_doc.plugin is not None:
+        planned = run_doc.plugin
+        selected = driver_context.identity.to_json()
+        mismatched = [
+            key for key in ("id", "version", "api_version")
+            if planned.get(key) != selected.get(key)
+        ]
+        if mismatched:
+            print(json.dumps({
+                "status": "failed",
+                "run_document": args.run_document,
+                "error": (
+                    "RunDocument plugin does not match the selected plugin: "
+                    + ", ".join(mismatched)
+                ),
+                "planned_plugin": planned,
+                "selected_plugin": selected,
+            }, indent=2))
+            return None
     inputs, diagnostics = build_execution_inputs(
         run_doc, utility_produces=_utility_produces_by_command(),
     )
@@ -374,6 +393,7 @@ def _context_from_entry(
     overrides: dict | None,
     config_path: str | None,
     openfoam_bashrc: str | None,
+    driver_context,
 ) -> tuple[_ExecutionContext | None, int]:
     report = strict_plan(
         selected_entry,
@@ -381,6 +401,7 @@ def _context_from_entry(
         overrides=overrides,
         config_path=config_path,
         openfoam_bashrc=openfoam_bashrc,
+        driver_context=driver_context,
     )
     if report.status != "ok":
         print(json.dumps(report.to_json(), indent=2))
@@ -451,9 +472,9 @@ def _dispatch_context(args, context: _ExecutionContext) -> int:
     )
 
 
-def _run_document_dispatch(args) -> int:
+def _run_document_dispatch(args, driver_context) -> int:
     """Execute a validated RunDocument through the shared strict executor."""
-    context = _context_from_run_document(args)
+    context = _context_from_run_document(args, driver_context)
     if context is None:
         return 1
     return _dispatch_context(args, context)
@@ -471,7 +492,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--plugin",
-        help="Fully qualified path to a SolverPlugin class (e.g. module.path:PluginClass). Defaults to cardiacFoam.",
+        help=(
+            "Trusted local-development SolverPlugin import target "
+            "(module.path:PluginClass), or 'none' for generic OpenFOAM. "
+            "Defaults to built-in cardiacFoam; "
+            "loading a plugin executes its Python code."
+        ),
     )
     parser.add_argument(
         "--entry",
@@ -738,20 +764,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     _validate_args(parser, args)
 
-    from .core.plugin_interface import set_active_plugin
-    if args.plugin:
-        # Expected format: module.path:ClassName
-        import importlib
-        try:
-            module_path, class_name = args.plugin.split(":")
-            module = importlib.import_module(module_path)
-            plugin_class = getattr(module, class_name)
-            set_active_plugin(plugin_class())
-        except Exception as exc:
-            parser.error(f"Failed to load plugin {args.plugin!r}: {exc}")
-    else:
-        # We rely on the lazy default in get_active_plugin()
-        pass
+    from .core.plugin_interface import (
+        default_driver_context,
+        generic_openfoam_context,
+        load_plugin_context,
+    )
+    try:
+        if args.plugin == "none":
+            driver_context = generic_openfoam_context()
+        elif args.plugin:
+            driver_context = load_plugin_context(args.plugin)
+        else:
+            driver_context = default_driver_context()
+    except Exception as exc:
+        parser.error(f"Failed to load plugin {args.plugin!r}: {exc}")
 
 
     if args.action == "experiment-plan":
@@ -786,6 +812,7 @@ def main(argv: list[str] | None = None) -> int:
                     entry_kind=args.entry_kind,
                     overrides=overrides,
                     config_path=args.config,
+                    driver_context=driver_context,
                 ),
                 indent=2,
             )
@@ -801,6 +828,7 @@ def main(argv: list[str] | None = None) -> int:
             overrides=overrides,
             config_path=args.config,
             openfoam_bashrc=args.openfoam_bashrc,
+            driver_context=driver_context,
         )
         print(json.dumps(report.to_json(), indent=2))
         return 0 if report.status == "ok" else 1
@@ -811,13 +839,14 @@ def main(argv: list[str] | None = None) -> int:
         if not args.step:
             parser.error("action=step requires --step <id>")
         if args.run_document:
-            return _run_document_dispatch(args)
+            return _run_document_dispatch(args, driver_context)
         context, failure_code = _context_from_entry(
             selected_entry=selected_entry,
             entry_kind=args.entry_kind,
             overrides=overrides,
             config_path=args.config,
             openfoam_bashrc=args.openfoam_bashrc,
+            driver_context=driver_context,
         )
         if context is None:
             return failure_code
@@ -827,13 +856,14 @@ def main(argv: list[str] | None = None) -> int:
         if not (args.strict or args.run_document):
             parser.error("action=run requires --strict or --run-document")
         if args.run_document:
-            return _run_document_dispatch(args)
+            return _run_document_dispatch(args, driver_context)
         context, failure_code = _context_from_entry(
             selected_entry=selected_entry,
             entry_kind=args.entry_kind,
             overrides=overrides,
             config_path=args.config,
             openfoam_bashrc=args.openfoam_bashrc,
+            driver_context=driver_context,
         )
         if context is None:
             return failure_code

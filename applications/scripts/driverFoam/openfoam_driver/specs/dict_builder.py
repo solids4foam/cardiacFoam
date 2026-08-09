@@ -710,6 +710,7 @@ def build_and_launch(
     delta_t: "float | str | None" = None,
     end_time: "float | str | None" = None,
     dx: "float | None" = None,
+    driver_context: "Any | None" = None,
 ) -> dict:
     """Build both dicts, write them to ``case_dir/constant/``, and (if
     not dry_run) launch the engine on the resulting case.
@@ -814,8 +815,10 @@ def build_and_launch(
             "needs_block_mesh": needs_block_mesh,
         }
 
-    from openfoam_driver.core.plugin_interface import get_active_plugin
-    make_spec = get_active_plugin().get_tutorial_catalog()["make_generic_case_spec"]
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    make_spec = driver_context.plugin.get_tutorial_catalog()["make_generic_case_spec"]
     from openfoam_driver.core.runtime.execution_context import resolve_execution_context
     from openfoam_driver.core.runtime.openfoam_environment import load_openfoam_environment
     from openfoam_driver.core.runtime.workflow import normalize_workflow_dag, validate_workflow_commands
