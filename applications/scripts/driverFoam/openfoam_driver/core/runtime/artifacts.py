@@ -136,14 +136,14 @@ def _core_generic_artifacts(spec: TutorialSpec) -> tuple[DataArtifact, ...]:
     return (
         DataArtifact(
             artifact_id="core.workflow_state",
-            path_pattern="workflow_state.json",
+            path_pattern="postProcessing/workflow_state.json",
             format="json_summary",
             description="Persistent state of the normalized driverFOAM workflow.",
             produced_by="driverFOAM",
         ),
         DataArtifact(
             artifact_id="core.workflow_logs",
-            path_pattern="workflow_logs",
+            path_pattern="postProcessing/workflow_logs",
             format="openfoam_log",
             description="Per-step stdout and stderr logs written by driverFOAM.",
             produced_by="driverFOAM",

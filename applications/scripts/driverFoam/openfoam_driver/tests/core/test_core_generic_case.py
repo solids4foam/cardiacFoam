@@ -24,6 +24,14 @@ def test_plain_allrun_case_plans_without_cardiac_dictionaries(tmp_path: Path) ->
         "core.workflow_state",
         "core.workflow_logs",
     }
+    assert {
+        artifact.artifact_id: artifact.path_pattern
+        for artifact in report.expected_artifacts
+    } == {
+        "core.workflow_state": "postProcessing/workflow_state.json",
+        "core.workflow_logs": "postProcessing/workflow_logs",
+    }
+    assert report.workflow_dag["steps"][0]["produces"] == []
 
 
 def test_plain_allrun_case_works_with_the_no_domain_context(tmp_path: Path) -> None:

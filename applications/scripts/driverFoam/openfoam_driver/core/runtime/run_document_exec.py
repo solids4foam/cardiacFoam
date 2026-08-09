@@ -54,7 +54,7 @@ from .models import DataArtifact, data_artifact_from_json
 # (out of scope here).
 from .registry import _case_is_runnable
 from .run_model import RunDocument
-from .workflow import normalize_workflow_dag, validate_workflow_commands
+from .workflow import normalize_workflow_dag, validate_workflow_commands, workflow_output_artifacts
 from .workflow_state import (
     WorkflowRunState,
     initial_workflow_state,
@@ -150,7 +150,7 @@ def build_execution_inputs(
     #    same shape guarantees and diagnostics as a strict-planned one.
     dag, wf_diagnostics = normalize_workflow_dag(
         run_doc.workflowDag,
-        expected_artifacts=tuple(expected_artifacts),
+        expected_artifacts=workflow_output_artifacts(expected_artifacts),
         utility_produces=utility_produces,
     )
     for d in wf_diagnostics:

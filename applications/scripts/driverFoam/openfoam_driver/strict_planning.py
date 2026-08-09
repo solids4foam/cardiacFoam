@@ -55,6 +55,7 @@ from .core.runtime.workflow import (
     WorkflowDiagnostic,
     normalize_workflow_dag,
     validate_workflow_commands,
+    workflow_output_artifacts,
 )
 from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
 from .planning_types import (
@@ -350,7 +351,7 @@ def strict_plan(
     )
     workflow_dag, workflow_diagnostics_raw = normalize_workflow_dag(
         spec.metadata.get("workflow_dag") if spec.metadata else None,
-        expected_artifacts=artifacts,
+        expected_artifacts=workflow_output_artifacts(artifacts),
         utility_produces=_utility_produces_by_command(),
     )
     workflow_diagnostics = tuple(

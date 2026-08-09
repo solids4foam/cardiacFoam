@@ -414,6 +414,19 @@ def normalize_workflow_dag(
     }, tuple(diagnostics)
 
 
+def workflow_output_artifacts(
+    artifacts: Iterable[DataArtifact],
+) -> tuple[DataArtifact, ...]:
+    """Return artifacts whose existence is a responsibility of a workflow step.
+
+    ``expectedArtifacts`` also records driverFOAM's own state and log files.
+    Those files are created by the executor around a step transition, rather
+    than by the solver command itself, so assigning them to a normalized step
+    would make the solver incorrectly responsible for driver bookkeeping.
+    """
+    return tuple(artifact for artifact in artifacts if artifact.produced_by != "driverFOAM")
+
+
 def _is_installed_openfoam_app(command: str) -> bool:
     """True when ``command`` resolves to an executable installed under
     ``$FOAM_APPBIN`` or ``$FOAM_USER_APPBIN`` — i.e. a real OpenFOAM
