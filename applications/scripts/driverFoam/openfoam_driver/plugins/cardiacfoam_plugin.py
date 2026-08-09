@@ -160,7 +160,7 @@ class CardiacFoamPlugin:
 
     def validate_run_semantics(self, context):
         """Apply cardiacFoam's cross-field rules after core validation."""
-        from openfoam_driver.specs.validation_rules import (
+        from openfoam_driver.plugins.cardiacfoam.validation import (
             _evaluate_block_references,
             _evaluate_heterogeneity,
             _evaluate_solver_coupling,

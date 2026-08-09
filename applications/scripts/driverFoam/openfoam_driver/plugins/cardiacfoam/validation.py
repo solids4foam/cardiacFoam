@@ -1,7 +1,7 @@
 from typing import Any
 
 from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
-from .validation_types import ValidationError
+from openfoam_driver.specs.validation_types import ValidationError
 
 
 _CONDUCTION_SOLVER_SUFFIX = ".purkinjeGraphModelCoeffs.conductionSystemSolver"
