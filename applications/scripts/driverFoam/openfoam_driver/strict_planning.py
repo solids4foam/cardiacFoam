@@ -225,7 +225,9 @@ def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnos
             ))
             continue
         report = strict_dict_key_report(
-            source_root, allowlist_path=mapping.allowlist_path,
+            source_root,
+            allowlist_path=mapping.allowlist_path,
+            entries=driver_context.plugin.get_dict_entries(),
         )
         payload = report.to_json()
         for key in ("absent_keys", "stale_paths", "unmatched_subdicts", "unused_allowlist"):

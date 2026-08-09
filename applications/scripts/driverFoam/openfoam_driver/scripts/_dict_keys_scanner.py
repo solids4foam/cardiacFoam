@@ -283,8 +283,14 @@ def _parse_path(driver_path: str, is_dynamic: bool) -> CataloguePath:
     )
 
 
-def iter_catalogue_paths() -> Iterable[CataloguePath]:
-    """Yield a `CataloguePath` for every entry in the two catalogues."""
+def iter_catalogue_paths(
+    entries: Iterable["DictEntry"] | None = None,
+) -> Iterable[CataloguePath]:
+    """Yield paths from an explicit plugin catalog or the legacy default."""
+    if entries is not None:
+        for entry in entries:
+            yield _parse_path(entry.driver_path, entry.dynamic_path)
+        return
     for entry in PHYSICS_PROPERTY_ENTRIES:
         yield _parse_path(entry.driver_path, entry.dynamic_path)
     for group in get_electro_property_entry_groups().values():
@@ -332,10 +338,14 @@ def load_dict_key_allowlist(path: Path | None = None) -> dict[str, set[str]]:
     }
 
 
-def compute_dict_key_drift(src_root: Path) -> dict[str, set[str]]:
+def compute_dict_key_drift(
+    src_root: Path,
+    *,
+    entries: Iterable["DictEntry"] | None = None,
+) -> dict[str, set[str]]:
     """Compute approximate C++ dictionary-reader drift against dict_entries."""
     reads = scan_dict_reads(src_root)
-    cat_paths = list(iter_catalogue_paths())
+    cat_paths = list(iter_catalogue_paths(entries))
 
     key_reads: dict[str, list[DictRead]] = defaultdict(list)
     subdict_reads: dict[str, list[DictRead]] = defaultdict(list)
@@ -383,9 +393,10 @@ def strict_dict_key_report(
     src_root: Path,
     *,
     allowlist_path: Path | None = None,
+    entries: Iterable["DictEntry"] | None = None,
 ) -> DictKeyStrictReport:
     """Return the allowlist-backed strict scanner result."""
-    drift = compute_dict_key_drift(src_root)
+    drift = compute_dict_key_drift(src_root, entries=entries)
     allowlist = load_dict_key_allowlist(allowlist_path)
 
     unexpected: dict[str, set[str]] = {}
