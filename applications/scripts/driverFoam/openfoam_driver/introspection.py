@@ -52,7 +52,6 @@ from .core.runtime.registry import (
     resolve_entry,
 )
 from .core.runtime.execution_context import resolve_execution_context
-from .dict_entries import get_electro_property_entry_groups, PHYSICS_PROPERTY_ENTRIES
 from .strict_planning import _run_launch_description
 from .tutorial_contracts import describe_tutorial_contract
 
@@ -145,11 +144,18 @@ def _describe_spec(spec: TutorialSpec) -> dict[str, Any]:
 
 
 def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
+    if driver_context is None:
+        from openfoam_driver.core.plugin_interface import default_driver_context
+        driver_context = default_driver_context()
+    catalog = driver_context.plugin.get_dictionary_catalog()
     return {
-        "physicsProperties": [_serialize(asdict(entry)) for entry in PHYSICS_PROPERTY_ENTRIES],
+        "physicsProperties": [
+            _serialize(asdict(entry))
+            for entry in catalog.entries_for("physicsProperties")
+        ],
         "electroProperties": {
             group_name: [_serialize(asdict(entry)) for entry in entries]
-            for group_name, entries in get_electro_property_entry_groups(driver_context).items()
+            for group_name, entries in driver_context.plugin.get_dict_groups().items()
         },
     }
 
