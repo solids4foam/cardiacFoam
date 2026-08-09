@@ -43,6 +43,7 @@ from openfoam_driver.scripts._dict_keys_scanner import (
     compute_dict_key_drift,
     strict_dict_key_report,
 )
+from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 from types import SimpleNamespace
 
 from openfoam_driver.strict_planning import (
@@ -54,6 +55,8 @@ from openfoam_driver.strict_planning import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
+CARDIAC_PLUGIN = CardiacFoamPlugin()
+CARDIAC_MAPPING = CARDIAC_PLUGIN.get_profile().cxx_mapping
 
 
 _FOAM_HEADER = (
@@ -385,7 +388,12 @@ def test_strict_plan_fails_when_artifact_prediction_is_empty() -> None:
 
 
 def test_strict_dict_key_scanner_allowlist_is_current() -> None:
-    report = strict_dict_key_report(REPO_ROOT / "src")
+    assert CARDIAC_MAPPING is not None
+    report = strict_dict_key_report(
+        REPO_ROOT / "src",
+        allowlist_path=CARDIAC_MAPPING.allowlist_path,
+        entries=CARDIAC_PLUGIN.get_dict_entries(),
+    )
     assert report.status == "ok"
     assert report.to_json()["unused_allowlist"] == []
 
@@ -397,7 +405,10 @@ def test_strict_dict_key_scanner_fails_on_unallowlisted_key() -> None:
         (src_root / "reader.C").write_text(
             'void read(const Foam::dictionary& dict) { dict.lookup("unlistedStrictKey"); }\n'
         )
-        drift = compute_dict_key_drift(src_root)
+        drift = compute_dict_key_drift(
+            src_root,
+            entries=CARDIAC_PLUGIN.get_dict_entries(),
+        )
         allowlist_path = Path(temp_dir) / "allowlist.json"
         allowlist_path.write_text(json.dumps({
             "absent_keys": sorted(drift["absent_keys"] - {"unlistedStrictKey"}),
@@ -405,7 +416,11 @@ def test_strict_dict_key_scanner_fails_on_unallowlisted_key() -> None:
             "unmatched_subdicts": sorted(drift["unmatched_subdicts"]),
         }))
 
-        report = strict_dict_key_report(src_root, allowlist_path=allowlist_path)
+        report = strict_dict_key_report(
+            src_root,
+            allowlist_path=allowlist_path,
+            entries=CARDIAC_PLUGIN.get_dict_entries(),
+        )
 
     payload = report.to_json()
     assert payload["status"] == "failed"

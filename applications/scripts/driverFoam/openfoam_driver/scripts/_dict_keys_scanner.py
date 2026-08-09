@@ -48,9 +48,10 @@ Returns a flat list of `DictRead` records.  Sub-dict opens are flagged with
 
 Comments are stripped before scanning so commented-out code is never matched.
 
-Catalogue-side helpers (`CataloguePath`, `iter_catalogue_paths`) parse every
-`driver_path` in `PHYSICS_PROPERTY_ENTRIES` and `get_electro_property_entry_groups()`
-into a structured form for comparison against the scanner output.
+Catalogue-side helpers receive an explicit plugin catalogue and parse each
+entry's `driver_path` into a structured form for comparison against the
+scanner output. This module deliberately has no default solver catalogue or
+allowlist: both are plugin-owned provenance inputs.
 
 Accuracy is ~80%; false positives/negatives are expected.  The output is for
 human review only.
@@ -64,11 +65,10 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from openfoam_driver.dict_entries import (
-    get_electro_property_entry_groups,
-    PHYSICS_PROPERTY_ENTRIES,
-)
+if TYPE_CHECKING:
+    from openfoam_driver.dict_entries import DictEntry
 
 
 # ---------------------------------------------------------------------------
@@ -284,18 +284,11 @@ def _parse_path(driver_path: str, is_dynamic: bool) -> CataloguePath:
 
 
 def iter_catalogue_paths(
-    entries: Iterable["DictEntry"] | None = None,
+    entries: Iterable["DictEntry"],
 ) -> Iterable[CataloguePath]:
-    """Yield paths from an explicit plugin catalog or the legacy default."""
-    if entries is not None:
-        for entry in entries:
-            yield _parse_path(entry.driver_path, entry.dynamic_path)
-        return
-    for entry in PHYSICS_PROPERTY_ENTRIES:
+    """Yield paths from the active plugin's explicit dictionary catalogue."""
+    for entry in entries:
         yield _parse_path(entry.driver_path, entry.dynamic_path)
-    for group in get_electro_property_entry_groups().values():
-        for entry in group:
-            yield _parse_path(entry.driver_path, entry.dynamic_path)
 
 
 IGNORED_FOAMFILE_KEYS: frozenset[str] = frozenset(
@@ -319,18 +312,13 @@ IGNORED_FOAMFILE_KEYS: frozenset[str] = frozenset(
 )
 
 
-def _default_allowlist_path() -> Path:
-    return Path(__file__).with_name("dict_key_allowlist.json")
-
-
-def load_dict_key_allowlist(path: Path | None = None) -> dict[str, set[str]]:
+def load_dict_key_allowlist(path: Path) -> dict[str, set[str]]:
     """Load the reviewed strict-scanner allowlist.
 
-    The file is intentionally JSON so the strict scanner can be used from both
-    tests and the CLI without importing project-specific test fixtures.
+    The file is intentionally JSON so a plugin can review and distribute its
+    own scanner exceptions without coupling this core utility to that plugin.
     """
-    allowlist_path = path or _default_allowlist_path()
-    payload = json.loads(allowlist_path.read_text())
+    payload = json.loads(path.read_text())
     return {
         "absent_keys": set(payload.get("absent_keys", [])),
         "stale_paths": set(payload.get("stale_paths", [])),
@@ -341,9 +329,9 @@ def load_dict_key_allowlist(path: Path | None = None) -> dict[str, set[str]]:
 def compute_dict_key_drift(
     src_root: Path,
     *,
-    entries: Iterable["DictEntry"] | None = None,
+    entries: Iterable["DictEntry"],
 ) -> dict[str, set[str]]:
-    """Compute approximate C++ dictionary-reader drift against dict_entries."""
+    """Compute approximate C++ reader drift against an explicit plugin catalogue."""
     reads = scan_dict_reads(src_root)
     cat_paths = list(iter_catalogue_paths(entries))
 
@@ -392,8 +380,8 @@ def compute_dict_key_drift(
 def strict_dict_key_report(
     src_root: Path,
     *,
-    allowlist_path: Path | None = None,
-    entries: Iterable["DictEntry"] | None = None,
+    allowlist_path: Path,
+    entries: Iterable["DictEntry"],
 ) -> DictKeyStrictReport:
     """Return the allowlist-backed strict scanner result."""
     drift = compute_dict_key_drift(src_root, entries=entries)

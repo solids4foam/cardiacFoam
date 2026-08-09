@@ -1,0 +1,12 @@
+{
+  "description": "Reviewed cardiacFoam allowlist for the approximate C++ dictionary-key scanner. Entries remain until the scanner or catalogue is refined enough to remove them.",
+  "absent_keys": [
+    "Iion", "ODESolver", "Tmax", "V0", "Vm", "activationVmThreshold", "activeTension", "amplitude", "apdNominal", "apexBaseBands", "baseline", "bathPotentialDomain", "checkQuadratureOrders", "conductionNetworkDomain", "conductionNetworkDomains", "conductionSystemDomain", "conductionSystemSolver", "constants", "coupling", "couplingMode", "debugCoupling", "deltaT", "duration", "ecgDomains", "ecgSolver", "ecgVerificationModel", "electroDomainCoupler", "electroMechanicalModel", "electrodePositions", "electromechanicalVerificationModel", "enabled", "end", "endocardialCells", "epicardialCells", "escapeInterval", "externalStimulus", "global", "graphFile", "groundPatches", "initialStates", "intensity", "ionic", "ionicConstantOverrides", "ionicHeterogeneity", "mCells", "manufactured", "manufacturedBidomain", "manufacturedEikonalECG", "node", "nNonOrthogonalCorrectors", "outputFile", "outputSuffix", "outputVariables", "points", "preconditioningTime", "probeNodes", "profileBatchedModel", "purkinjeConductivity", "pvjCouplingScheme", "pvjKernel", "pvjLocations", "pvjNodes", "pvjRadius", "pvjResistances", "rPvj", "range", "referenceConductance", "referenceQuadratureOrder", "regions", "report", "reportElectrodeLookup", "rootNode", "rootStimulus", "scale", "set", "sigmaExtracellular", "singleCellStimulus", "sites", "start", "startTime", "stimulus", "surfaceCurrentPatches", "timeCouplingScheme", "torsoSurface", "useEdgeConductance", "verificationModel", "vm1DRest", "xMax", "xMin"
+  ],
+  "stale_paths": [
+    "$ELECTRO_MODEL_COEFFS.absTol", "$ELECTRO_MODEL_COEFFS.c0", "$ELECTRO_MODEL_COEFFS.conductivity", "$ELECTRO_MODEL_COEFFS.conductivityExtracellular", "$ELECTRO_MODEL_COEFFS.conductivityIntracellular", "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusDuration", "$ELECTRO_MODEL_COEFFS.externalStimulus.stimulusIntensity", "$ELECTRO_MODEL_COEFFS.infoFrequency", "$ELECTRO_MODEL_COEFFS.initialODEStep", "$ELECTRO_MODEL_COEFFS.maxSteps", "$ELECTRO_MODEL_COEFFS.relTol", "$ELECTRO_MODEL_COEFFS.solver"
+  ],
+  "unmatched_subdicts": [
+    "ODESolver", "constants", "domainCouplings", "electromechanicalVerificationModel", "initialStates", "manufacturedBidomain", "manufacturedEikonalECG", "stimulus"
+  ]
+}

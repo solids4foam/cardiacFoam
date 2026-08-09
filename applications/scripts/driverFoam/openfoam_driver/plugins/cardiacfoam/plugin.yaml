@@ -27,4 +27,4 @@ case_profile:
 cxx_mapping:
   source_roots:
     - ../../../../../../src
-  reviewed_allowlist: ../../scripts/dict_key_allowlist.json
+  reviewed_allowlist: dict_key_allowlist.json
