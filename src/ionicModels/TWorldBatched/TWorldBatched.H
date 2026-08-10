@@ -21,9 +21,6 @@ Class
 Description
     Batched / GPU-portable wrapper for the TWorld 2024 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     TWorldBatched.C
 \*---------------------------------------------------------------------------*/
@@ -79,9 +76,6 @@ protected:
     ) const override final;
 
     virtual scalarField constantsForTissue(const label tissueFlag) const
-        override final;
-
-    virtual scalarField initialStatesForTissue(const label tissueFlag) const
         override final;
 
     virtual bool usesCompactSupport() const override final
@@ -149,7 +143,6 @@ public:
     OverrideTypeName("TWorldBatched");
 
     virtual List<word> supportedTissueTypes() const override final;
-    virtual List<word> supportedSexTypes() const override final;
     virtual List<word> supportedDimensions() const override final
     {
         return {};

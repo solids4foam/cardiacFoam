@@ -47,7 +47,9 @@ namespace Foam
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "Pstream.H"
+#include "clockTime.H"
 #include <array>
+#include <cstdlib>
 
 #ifdef HAS_CUDA
 #include <cuda_runtime.h>
@@ -168,6 +170,9 @@ Foam::TNNPBatched::TNNPBatched
     {
         int nDevices = 0;
         cudaError_t err = cudaGetDeviceCount(&nDevices);
+        Info<< "TNNPBatched: cudaGetDeviceCount err="
+            << cudaGetErrorString(err)
+            << " nDevices=" << nDevices << nl;
         if (err == cudaSuccess && nDevices > 0)
         {
             const int rank = Pstream::myProcNo();
@@ -269,6 +274,7 @@ void Foam::TNNPcompactBatched::solveOnDevice
     scalarField& Im
 )
 {
+    const bool reportGpuTimings = std::getenv("CARDIAC_REPORT_GPU_TIMINGS");
     const label N = nCells();
     const label nSub = nSubsteps();
     const scalar dtModel = deltaT*timeScaleFactor();
@@ -276,19 +282,25 @@ void Foam::TNNPcompactBatched::solveOnDevice
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
     const int tFlag = static_cast<int>(tissue());
+    scalarField vmStateSlice;
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
     {
+        vmStateSlice.setSize(N);
         for (label cellI = 0; cellI < N; ++cellI)
         {
-            state(cellI, V) = vmToState(Vm[cellI]);
+            const scalar vmState = vmToState(Vm[cellI]);
+            state(cellI, V) = vmState;
+            vmStateSlice[cellI] = vmState;
         }
     }
 
     markIODirty();
     setIOEvaluationModelTime(tStart);
+
+    clockTime stageTimer;
 
     cuda_.allocate
     (
@@ -297,6 +309,8 @@ void Foam::TNNPcompactBatched::solveOnDevice
         static_cast<std::size_t>(nHotPathSupport()),
         static_cast<std::size_t>(CONSTANTS_.size())
     );
+    const scalar allocateWallTime = stageTimer.timeIncrement();
+
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
     scalarField flattenedCellConstants;
     if (hasHeterogeneousConstants())
@@ -309,6 +323,7 @@ void Foam::TNNPcompactBatched::solveOnDevice
             static_cast<std::size_t>(CONSTANTS_.size())
         );
     }
+    const scalar constantsUploadWallTime = stageTimer.timeIncrement();
 
     if (cuda_.hostDirty)
     {
@@ -319,6 +334,16 @@ void Foam::TNNPcompactBatched::solveOnDevice
             static_cast<std::size_t>(N)
         );
     }
+    else if (!solveVm)
+    {
+        cuda_.syncStateSliceHostToDevice
+        (
+            vmStateSlice.cdata(),
+            static_cast<std::size_t>(V),
+            static_cast<std::size_t>(N)
+        );
+    }
+    const scalar stateUploadWallTime = stageTimer.timeIncrement();
 
     for (label sub = 0; sub < nSub; ++sub)
     {
@@ -343,6 +368,8 @@ void Foam::TNNPcompactBatched::solveOnDevice
             static_cast<int>(V)
         );
     }
+    CARDIAC_CUDA_CHECK(cudaDeviceSynchronize());
+    const scalar substepKernelWallTime = stageTimer.timeIncrement();
 
     launchTnnpBatchKernel
     (
@@ -360,7 +387,81 @@ void Foam::TNNPcompactBatched::solveOnDevice
         static_cast<int>(N),
         static_cast<int>(TNNP_BATCH_SUPPORT_Iion_cm)
     );
+    CARDIAC_CUDA_CHECK(cudaDeviceSynchronize());
+    const scalar finalKernelWallTime = stageTimer.timeIncrement();
+
     cuda_.downloadIm(Im.data(), static_cast<std::size_t>(N));
+    const scalar imDownloadWallTime = stageTimer.timeIncrement();
+
+    const bool debugGpuIm = std::getenv("CARDIAC_DEBUG_GPU_IM");
+
+    if (debugGpuIm)
+    {
+        cuda_.syncSupportDeviceToHost
+        (
+            supportSoAData(),
+            static_cast<std::size_t>(nHotPathSupport()),
+            static_cast<std::size_t>(nCells())
+        );
+
+        const label nReport = (N < 5 ? N : 5);
+        scalar minIm = GREAT;
+        scalar maxIm = -GREAT;
+        scalar sumIm = 0.0;
+        scalar minSupportIm = GREAT;
+        scalar maxSupportIm = -GREAT;
+        scalar sumSupportIm = 0.0;
+
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar downloadedIm = Im[cellI];
+            const scalar supportIm =
+                support(cellI, TNNP_BATCH_SUPPORT_Iion_cm);
+
+            minIm = Foam::min(minIm, downloadedIm);
+            maxIm = Foam::max(maxIm, downloadedIm);
+            sumIm += downloadedIm;
+
+            minSupportIm = Foam::min(minSupportIm, supportIm);
+            maxSupportIm = Foam::max(maxSupportIm, supportIm);
+            sumSupportIm += supportIm;
+        }
+
+        for (label cellI = 0; cellI < nReport; ++cellI)
+        {
+            Info<< "DEBUG_GPU_IM cell=" << cellI
+                << " downloadedIm=" << Im[cellI]
+                << " supportIion=" << support(cellI, TNNP_BATCH_SUPPORT_Iion_cm)
+                << nl;
+        }
+
+        Info<< "DEBUG_GPU_IM stats downloadedIm[min,max,mean]=["
+            << minIm << ", " << maxIm << ", " << (sumIm/scalar(N))
+            << "] supportIion[min,max,mean]=["
+            << minSupportIm << ", " << maxSupportIm << ", "
+            << (sumSupportIm/scalar(N)) << "]" << nl;
+    }
+    const scalar debugSyncWallTime = stageTimer.timeIncrement();
+
+    if (reportGpuTimings)
+    {
+        Info<< "TNNPBatched GPU timings: cells=" << N
+            << " substeps=" << nSub
+            << " allocate=" << allocateWallTime << " s"
+            << " constantsUpload=" << constantsUploadWallTime << " s"
+            << " stateUpload=" << stateUploadWallTime << " s"
+            << " substepKernels=" << substepKernelWallTime << " s"
+            << " finalKernel=" << finalKernelWallTime << " s"
+            << " imDownload=" << imDownloadWallTime << " s";
+
+        if (debugGpuIm)
+        {
+            Info<< " debugSync=" << debugSyncWallTime << " s";
+        }
+
+        Info<< nl;
+    }
+
     cuda_.deviceDirty = true;
     setIOEvaluationModelTime(tStart + dtModel);
 }
@@ -446,27 +547,6 @@ Foam::scalarField Foam::TNNPBatched::constantsForTissue
     );
 
     return constants;
-}
-
-Foam::scalarField Foam::TNNPBatched::initialStatesForTissue
-(
-    const label tissueFlag
-) const
-{
-    scalarField constants(NUM_CONSTANTS, 0.0);
-    scalarField rates(NUM_STATES, 0.0);
-    scalarField states(NUM_STATES, 0.0);
-
-    TNNPinitConsts
-    (
-        constants.data(),
-        rates.data(),
-        states.data(),
-        tissueFlag,
-        dict()
-    );
-
-    return states;
 }
 
 void Foam::TNNPBatched::solveODE

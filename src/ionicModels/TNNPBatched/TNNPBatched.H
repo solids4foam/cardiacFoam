@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented path for the TNNP 2004 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     TNNPBatched.C
 \*---------------------------------------------------------------------------*/
@@ -84,9 +81,6 @@ protected:
     ) const override final;
 
     virtual scalarField constantsForTissue(const label tissueFlag) const
-        override final;
-
-    virtual scalarField initialStatesForTissue(const label tissueFlag) const
         override final;
 
     virtual void evaluateState

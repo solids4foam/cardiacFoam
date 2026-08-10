@@ -215,7 +215,6 @@ Foam::TWorldBatched::TWorldBatched
 #endif
 {
     ionicModel::setTissueFromDict();
-    ionicModel::setSexFromDict();
 
     setHotPathSupportSize(NUM_TWORLD_BATCH_SUPPORT);
 
@@ -384,14 +383,18 @@ void Foam::TWorldcompactBatched::solveOnDevice
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
     const int tFlag = static_cast<int>(tissue());
+    scalarField vmStateSlice;
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
     {
+        vmStateSlice.setSize(N);
         for (label cellI = 0; cellI < N; ++cellI)
         {
-            state(cellI, v) = vmToState(Vm[cellI]);
+            const scalar vmState = vmToState(Vm[cellI]);
+            state(cellI, v) = vmState;
+            vmStateSlice[cellI] = vmState;
         }
     }
 
@@ -424,6 +427,15 @@ void Foam::TWorldcompactBatched::solveOnDevice
         (
             statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+    else if (!solveVm)
+    {
+        cuda_.syncStateSliceHostToDevice
+        (
+            vmStateSlice.cdata(),
+            static_cast<std::size_t>(v),
             static_cast<std::size_t>(N)
         );
     }
@@ -480,11 +492,6 @@ Foam::List<Foam::word> Foam::TWorldBatched::supportedTissueTypes() const
     return {"epicardialCells", "mCells", "endocardialCells"};
 }
 
-Foam::List<Foam::word> Foam::TWorldBatched::supportedSexTypes() const
-{
-    return {"neutral", "male", "female"};
-}
-
 
 Foam::scalarField Foam::TWorldBatched::constantsForTissue
 (
@@ -516,28 +523,6 @@ Foam::scalarField Foam::TWorldBatched::constantsForTissue
     );
 
     return constants;
-}
-
-Foam::scalarField Foam::TWorldBatched::initialStatesForTissue
-(
-    const label tissueFlag
-) const
-{
-    scalarField constants(NUM_CONSTANTS, 0.0);
-    scalarField rates(NUM_STATES, 0.0);
-    scalarField states(NUM_STATES, 0.0);
-
-    TWorldinitConsts
-    (
-        constants.data(),
-        rates.data(),
-        states.data(),
-        tissueFlag,
-        sex(),
-        dict()
-    );
-
-    return states;
 }
 
 

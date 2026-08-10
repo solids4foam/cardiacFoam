@@ -5,6 +5,7 @@ License
 
 #include <cuda_runtime.h>
 #include <cstdio>
+#include <cstdlib>
 
 #include "BuenoOrovio_2008Batch.H"
 
@@ -20,7 +21,7 @@ License
                 "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
                 __FILE__, __LINE__, cudaGetErrorString(_err)                   \
             );                                                                 \
-            abort();                                                           \
+            std::abort();                                                           \
         }                                                                      \
     } while (0)
 // ---------------------------------------------------------------------------
@@ -207,7 +208,7 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);       \
+            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
         }
 
         BUENO_RL(v, BO_BATCH_SUPPORT_tau_v, BO_BATCH_SUPPORT_gInf_v)

@@ -17,8 +17,6 @@ License
 
 Description
     State-major (SoA) batched evaluator for the TNNP 2004 ionic model.
-Author
-    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

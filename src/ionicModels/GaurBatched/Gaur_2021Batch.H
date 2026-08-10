@@ -17,8 +17,6 @@ License
 
 Description
     State-major (SoA) batched evaluator for the Gaur 2021 ionic model.
-Author
-    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -413,7 +411,7 @@ CARDIAC_HOST_DEVICE inline void GaurComputeVariablesBatch
         const double JnakNa = 3.0 * (E12 * a3_var - E22 * b3_var);
         const double INaK_val = c_Pnak * (c_zna * JnakNa + c_zk * JnakK);
 
-        const double xkb = 1.0 / (1.0 + exp(-(s_cell_v - 14.48) / 18.34));
+        const double xkb = 1.0 / (1.0 + ::exp(-(s_cell_v - 14.48) / 18.34));
         const double IKb_val = c_GKb * xkb * (s_cell_v - EK);
 
         const double INab_val = c_PNab * c_F * (s_nai * std::exp(vfrt) - c_nao) * ((s_cell_v == 0.0) ? 1.0 : vfrt / (std::exp(vfrt) - 1.0));

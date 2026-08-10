@@ -21,9 +21,6 @@ Class
 Description
     GPU-friendly batched version of the reduced Bueno-Orovio 2008 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     BuenoOrovioBatched.C
 \*---------------------------------------------------------------------------*/
@@ -80,9 +77,6 @@ protected:
         ) const override final;
 
         virtual scalarField constantsForTissue(const label tissueFlag) const
-            override final;
-
-        virtual scalarField initialStatesForTissue(const label tissueFlag) const
             override final;
 
         virtual bool usesCompactSupport() const override final

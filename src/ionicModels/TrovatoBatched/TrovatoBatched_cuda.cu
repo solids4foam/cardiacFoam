@@ -5,6 +5,7 @@ License
 
 #include <cuda_runtime.h>
 #include <cstdio>
+#include <cstdlib>
 
 #include "Trovato_2019Batch.H"
 
@@ -20,7 +21,7 @@ License
                 "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
                 __FILE__, __LINE__, cudaGetErrorString(_err)                   \
             );                                                                 \
-            abort();                                                           \
+            std::abort();                                                           \
         }                                                                      \
     } while (0)
 // ---------------------------------------------------------------------------
@@ -195,7 +196,7 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);       \
+            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
         }
 
         TROVATO_RL(ICaT_b,      TROVATO_BATCH_SUPPORT_tau_ICaT_b,     TROVATO_BATCH_SUPPORT_gInf_ICaT_b)

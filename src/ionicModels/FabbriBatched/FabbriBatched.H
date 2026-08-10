@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented wrapper for the Fabbri 2017 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     FabbriBatched.C
 \*---------------------------------------------------------------------------*/

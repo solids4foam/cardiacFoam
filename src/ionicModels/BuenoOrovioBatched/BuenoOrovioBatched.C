@@ -22,6 +22,7 @@ License
 #include "gpuMath.H"
 #include "batchedRushLarsenEntry.H"
 #include <array>
+#include <cstdlib>
 
 namespace
 {
@@ -253,6 +254,64 @@ void Foam::BuenoOroviocompactBatched::solveODE
     }
 #endif
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
+
+    if (std::getenv("CARDIAC_DEBUG_BUENO_SUPPORT"))
+    {
+        const scalar modelTime = (stepStartTime + deltaT)*timeScaleFactor();
+        scalarField stateValues(NUM_STATES, 0.0);
+        scalarField rateValues(NUM_STATES, 0.0);
+        scalarField algebraicValues(NUM_ALGEBRAIC, 0.0);
+        scalar minSupportCurrent = GREAT;
+        scalar maxSupportCurrent = -GREAT;
+        scalar minFullCurrent = GREAT;
+        scalar maxFullCurrent = -GREAT;
+        scalar maxAbsDiff = 0.0;
+        label maxAbsDiffCell = -1;
+
+        for (label cellI = 0; cellI < nCells(); ++cellI)
+        {
+            gatherCellState(cellI, stateValues);
+            rateValues = 0.0;
+            algebraicValues = 0.0;
+            evaluateState
+            (
+                cellI,
+                modelTime,
+                stateValues,
+                rateValues,
+                algebraicValues
+            );
+
+            const scalar supportCurrent = 85.7*support(cellI, BO_BATCH_SUPPORT_Iion);
+            const scalar fullCurrent = 85.7*algebraicValues[Jion];
+            const scalar absDiff = mag(supportCurrent - fullCurrent);
+
+            minSupportCurrent = min(minSupportCurrent, supportCurrent);
+            maxSupportCurrent = max(maxSupportCurrent, supportCurrent);
+            minFullCurrent = min(minFullCurrent, fullCurrent);
+            maxFullCurrent = max(maxFullCurrent, fullCurrent);
+
+            if (absDiff > maxAbsDiff)
+            {
+                maxAbsDiff = absDiff;
+                maxAbsDiffCell = cellI;
+            }
+
+            if (cellI < 5)
+            {
+                Info<< "DEBUG_BUENO_SUPPORT cell=" << cellI
+                    << " supportIion=" << supportCurrent
+                    << " fullEvalIion=" << fullCurrent
+                    << " diff=" << supportCurrent - fullCurrent << nl;
+            }
+        }
+
+        Info<< "DEBUG_BUENO_SUPPORT stats support[min,max]=["
+            << minSupportCurrent << ", " << maxSupportCurrent
+            << "] full[min,max]=[" << minFullCurrent << ", "
+            << maxFullCurrent << "] maxAbsDiff=" << maxAbsDiff
+            << " at cell=" << maxAbsDiffCell << nl;
+    }
 }
 
 #ifdef HAS_CUDA
@@ -271,14 +330,18 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
     const int tFlag = static_cast<int>(tissue());
+    scalarField vmStateSlice;
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
     {
+        vmStateSlice.setSize(N);
         for (label cellI = 0; cellI < N; ++cellI)
         {
-            state(cellI, u) = vmToState(Vm[cellI]);
+            const scalar vmState = vmToState(Vm[cellI]);
+            state(cellI, u) = vmState;
+            vmStateSlice[cellI] = vmState;
         }
     }
 
@@ -311,6 +374,15 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
         (
             statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+    else if (!solveVm)
+    {
+        cuda_.syncStateSliceHostToDevice
+        (
+            vmStateSlice.cdata(),
+            static_cast<std::size_t>(u),
             static_cast<std::size_t>(N)
         );
     }
@@ -467,27 +539,6 @@ Foam::scalarField Foam::BuenoOrovioBatched::constantsForTissue
     return constants;
 }
 
-Foam::scalarField Foam::BuenoOrovioBatched::initialStatesForTissue
-(
-    const label tissueFlag
-) const
-{
-    scalarField constants(NUM_CONSTANTS, 0.0);
-    scalarField rates(NUM_STATES, 0.0);
-    scalarField states(NUM_STATES, 0.0);
-
-    BuenoOrovioinitConsts
-    (
-        constants.data(),
-        rates.data(),
-        states.data(),
-        tissueFlag,
-        dict()
-    );
-
-    return states;
-}
-
 void Foam::BuenoOrovioBatched::evaluateState
 (
     const scalar modelTime,
@@ -540,7 +591,7 @@ Foam::scalar Foam::BuenoOrovioBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return supportValues[BO_BATCH_SUPPORT_Iion];
+    return 85.7*supportValues[BO_BATCH_SUPPORT_Iion];
 }
 
 void Foam::BuenoOrovioBatched::evaluateHotPathState

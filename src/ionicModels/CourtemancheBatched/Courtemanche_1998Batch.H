@@ -17,8 +17,6 @@ License
 
 Description
     State-major SoA batched evaluator for the Courtemanche 1998 ionic model.
-Author
-    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once

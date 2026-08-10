@@ -18,6 +18,6 @@ LIB_LIBS = \
     -lODE \
     $(if $(CARDIAC_ENABLE_CUDA),-L$(CUDA_HOME)/lib64 -lcudart)
 
-# Load wmake CUDA compilation rules (.cu -> .o via nvcc) when GPU build is on.
-# General/cuda adds: SUFFIXES += .cu  and  $(OBJECTS_DIR)/%.o : %.cu  recipe.
 $(if $(CARDIAC_ENABLE_CUDA),$(eval sinclude $(WM_DIR)/rules/General/cuda))
+
+$(if $(CARDIAC_ENABLE_CUDA),$(eval cuFLAGS = $$(if $$(CUDA_HOST_CXX),-ccbin $$(CUDA_HOST_CXX)) $$(GFLAGS) -DNoRepository $$(cuARCH) $$(cuOPT) $$(cuDBUG) $$(patsubst -iquote%,-I%,$$(LIB_HEADER_DIRS))))

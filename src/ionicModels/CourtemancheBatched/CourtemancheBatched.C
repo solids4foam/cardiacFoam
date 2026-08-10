@@ -428,14 +428,18 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+    scalarField vmStateSlice;
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
     {
+        vmStateSlice.setSize(N);
         for (label cellI = 0; cellI < N; ++cellI)
         {
-            state(cellI, membrane_V) = vmToState(Vm[cellI]);
+            const scalar vmState = vmToState(Vm[cellI]);
+            state(cellI, membrane_V) = vmState;
+            vmStateSlice[cellI] = vmState;
         }
     }
 
@@ -457,6 +461,15 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
         (
             statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+    else if (!solveVm)
+    {
+        cuda_.syncStateSliceHostToDevice
+        (
+            vmStateSlice.cdata(),
+            static_cast<std::size_t>(membrane_V),
             static_cast<std::size_t>(N)
         );
     }
