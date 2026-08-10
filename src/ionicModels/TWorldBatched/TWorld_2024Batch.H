@@ -17,8 +17,6 @@ License
 
 Description
     State-major (SoA) batched evaluator for the TWorld 2024 ionic model.
-Author
-    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -266,12 +264,12 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double r_camk_f_RyR       = (a_CaMK_Phos_ss_RyR  - s_camk_f_RyR)  / CONSTANTS[AC_tau_ryr];
 
         /* INaCa */
-        const double a_allo_i   = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / s_casl, 2.0));
-        const double a_allo_ss  = 1.0 / (1.0 + pow(CONSTANTS[AC_KmCaAct] / s_caj,  2.0));
+        const double a_allo_i   = 1.0 / (1.0 + ::pow(CONSTANTS[AC_KmCaAct] / s_casl, 2.0));
+        const double a_allo_ss  = 1.0 / (1.0 + ::pow(CONSTANTS[AC_KmCaAct] / s_caj,  2.0));
         const double a_h4_i     = 1.0 + s_nai  / CONSTANTS[AC_kna1] * (1.0 + s_nai  / CONSTANTS[AC_kna2]);
         const double a_h4_ss    = 1.0 + s_nasl / CONSTANTS[AC_kna1] * (1.0 + s_nasl / CONSTANTS[AC_kna2]);
-        const double a_hca      = exp(CONSTANTS[AC_qca] * (s_v - 8.3117) * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]));
-        const double a_hna      = exp(CONSTANTS[AC_qna] * (s_v - 8.3117) * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]));
+        const double a_hca      = ::exp(CONSTANTS[AC_qca] * (s_v - 8.3117) * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]));
+        const double a_hna      = ::exp(CONSTANTS[AC_qna] * (s_v - 8.3117) * CONSTANTS[AC_F] / (CONSTANTS[AC_R] * CONSTANTS[AC_T]));
         const double a_h1_i     = 1.0 + s_nai  / CONSTANTS[AC_kna3] * (1.0 + a_hna);
         const double a_h1_ss    = 1.0 + s_nasl / CONSTANTS[AC_kna3] * (1.0 + a_hna);
         const double a_h5_i     = s_nai  * s_nai  / (a_h4_i  * CONSTANTS[AC_kna1] * CONSTANTS[AC_kna2]);
@@ -333,23 +331,23 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
 
         /* SERCA */
         const double a_phosphorylationTotal = s_camk_f_PLB + CONSTANTS[AC_fPLB_PKA] - s_camk_f_PLB * CONSTANTS[AC_fPLB_PKA];
-        const double a_Vmax_mult   = 1.0 + CONSTANTS[AC_Max_Vmax_SERCA_Ca] / (1.0 + pow(CONSTANTS[AC_Km_SERCA_Ca] / a_casig_SERCA_act, 2.0));
-        const double a_Jserca_np   = pow(CONSTANTS[AC_Q10SRCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_Vmax_SRCaP] * a_Vmax_mult * (pow(s_cai / CONSTANTS[AC_Kmf],   CONSTANTS[AC_hillSRCaP]) - pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP])) / (1.0 + pow(s_cai / CONSTANTS[AC_Kmf],   CONSTANTS[AC_hillSRCaP]) + pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP]));
-        const double a_Jserca_p    = pow(CONSTANTS[AC_Q10SRCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_Vmax_SRCaP] * a_Vmax_mult * (pow(s_cai / CONSTANTS[AC_Kmf_p], CONSTANTS[AC_hillSRCaP]) - pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP])) / (1.0 + pow(s_cai / CONSTANTS[AC_Kmf_p], CONSTANTS[AC_hillSRCaP]) + pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP]));
+        const double a_Vmax_mult   = 1.0 + CONSTANTS[AC_Max_Vmax_SERCA_Ca] / (1.0 + ::pow(CONSTANTS[AC_Km_SERCA_Ca] / a_casig_SERCA_act, 2.0));
+        const double a_Jserca_np   = ::pow(CONSTANTS[AC_Q10SRCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_Vmax_SRCaP] * a_Vmax_mult * (::pow(s_cai / CONSTANTS[AC_Kmf],   CONSTANTS[AC_hillSRCaP]) - ::pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP])) / (1.0 + ::pow(s_cai / CONSTANTS[AC_Kmf],   CONSTANTS[AC_hillSRCaP]) + ::pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP]));
+        const double a_Jserca_p    = ::pow(CONSTANTS[AC_Q10SRCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_Vmax_SRCaP] * a_Vmax_mult * (::pow(s_cai / CONSTANTS[AC_Kmf_p], CONSTANTS[AC_hillSRCaP]) - ::pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP])) / (1.0 + ::pow(s_cai / CONSTANTS[AC_Kmf_p], CONSTANTS[AC_hillSRCaP]) + ::pow(s_casr / CONSTANTS[AC_Kmr], CONSTANTS[AC_hillSRCaP]));
         const double a_Jserca      = a_Jserca_np * (1.0 - a_phosphorylationTotal) + a_Jserca_p * a_phosphorylationTotal;
 
         /* contraction */
         const double a_XU              = 1.0 - s_contraction_TmBlocked - s_contraction_XW - s_contraction_XS;
         const double a_gamma_rate      = ((s_contraction_ZETAS > 0.0) ? CONSTANTS[AC_contraction_gamma] * s_contraction_ZETAS : ((s_contraction_ZETAS < -1.0) ? CONSTANTS[AC_contraction_gamma] * (-s_contraction_ZETAS - 1.0) : 0.0));
-        const double a_gamma_rate_w    = CONSTANTS[AC_gamma_wu] * fabs(s_contraction_ZETAW);
+        const double a_gamma_rate_w    = CONSTANTS[AC_gamma_wu] * ::fabs(s_contraction_ZETAW);
         const double a_xb_su_gamma     = a_gamma_rate * s_contraction_XS;
         const double a_xb_uw           = CONSTANTS[AC_k_uw] * a_XU * (1.0 + CONSTANTS[AC_fMyBPC_PKA] / 2.0);
         const double a_xb_ws           = CONSTANTS[AC_k_ws] * s_contraction_XW;
         const double a_xb_wu_gamma     = a_gamma_rate_w * s_contraction_XW;
-        const double a_d_contraction_Ca_TRPN = CONSTANTS[AC_koff] * (pow(s_cai * 1000.0 / CONSTANTS[AC_ca50], CONSTANTS[AC_TRPN_n]) * (1.0 - s_contraction_Ca_TRPN) - s_contraction_Ca_TRPN);
+        const double a_d_contraction_Ca_TRPN = CONSTANTS[AC_koff] * (::pow(s_cai * 1000.0 / CONSTANTS[AC_ca50], CONSTANTS[AC_TRPN_n]) * (1.0 - s_contraction_Ca_TRPN) - s_contraction_Ca_TRPN);
         const double a_xb_su           = CONSTANTS[AC_k_su] * s_contraction_XS;
         const double a_xb_wu           = CONSTANTS[AC_k_wu] * s_contraction_XW;
-        const double r_contraction_TmBlocked = CONSTANTS[AC_ktm_block] * ((100.0 <= pow(s_contraction_Ca_TRPN, -CONSTANTS[AC_nperm] / 2.0)) ? 100.0 : pow(s_contraction_Ca_TRPN, -CONSTANTS[AC_nperm] / 2.0)) * a_XU - CONSTANTS[AC_ktm_unblock] * pow(s_contraction_Ca_TRPN, CONSTANTS[AC_nperm] / 2.0) * s_contraction_TmBlocked;
+        const double r_contraction_TmBlocked = CONSTANTS[AC_ktm_block] * ((100.0 <= ::pow(s_contraction_Ca_TRPN, -CONSTANTS[AC_nperm] / 2.0)) ? 100.0 : ::pow(s_contraction_Ca_TRPN, -CONSTANTS[AC_nperm] / 2.0)) * a_XU - CONSTANTS[AC_ktm_unblock] * ::pow(s_contraction_Ca_TRPN, CONSTANTS[AC_nperm] / 2.0) * s_contraction_TmBlocked;
         const double r_contraction_ZETAS     = CONSTANTS[AC_A] * CONSTANTS[AC_lambda_rate] - CONSTANTS[AC_cds] * s_contraction_ZETAS;
         const double r_contraction_ZETAW     = CONSTANTS[AC_A] * CONSTANTS[AC_lambda_rate] - CONSTANTS[AC_cdw] * s_contraction_ZETAW;
         const double r_contraction_Ca_TRPN   = a_d_contraction_Ca_TRPN;
@@ -357,13 +355,13 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double r_contraction_XW        = a_xb_uw - a_xb_wu - a_xb_ws - a_xb_wu_gamma;
 
         /* reversal potentials */
-        const double a_ECaj   = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zca] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_cao] / s_caj);
-        const double a_ECasl  = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zca] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_cao] / s_casl);
-        const double a_ECl    = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zcl] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_clo]  / s_cli);
-        const double a_EK     = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk]  * CONSTANTS[AC_F]) * log(CONSTANTS[AC_ko]   / s_ki);
-        const double a_ENaj   = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zna] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_nao]  / s_naj);
-        const double a_ENasl  = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zna] * CONSTANTS[AC_F]) * log(CONSTANTS[AC_nao]  / s_nasl);
-        const double a_EKs    = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk]  * CONSTANTS[AC_F]) * log((CONSTANTS[AC_ko] + CONSTANTS[AC_PNaK] * CONSTANTS[AC_nao]) / (s_ki + CONSTANTS[AC_PNaK] * s_nai));
+        const double a_ECaj   = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zca] * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_cao] / s_caj);
+        const double a_ECasl  = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zca] * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_cao] / s_casl);
+        const double a_ECl    = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zcl] * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_clo]  / s_cli);
+        const double a_EK     = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk]  * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_ko]   / s_ki);
+        const double a_ENaj   = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zna] * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_nao]  / s_naj);
+        const double a_ENasl  = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zna] * CONSTANTS[AC_F]) * ::log(CONSTANTS[AC_nao]  / s_nasl);
+        const double a_EKs    = CONSTANTS[AC_R] * CONSTANTS[AC_T] / (CONSTANTS[AC_zk]  * CONSTANTS[AC_F]) * ::log((CONSTANTS[AC_ko] + CONSTANTS[AC_PNaK] * CONSTANTS[AC_nao]) / (s_ki + CONSTANTS[AC_PNaK] * s_nai));
 
         /* ICl */
         const double a_IClCa_junc = 0.5 * CONSTANTS[AC_GClCa] / (1.0 + CONSTANTS[AC_KdClCa] / s_caj)  * (s_v - a_ECl);
@@ -372,26 +370,26 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_IClCa      = a_IClCa_junc + a_IClCa_sl;
 
         /* IK1 */
-        const double a_aK1   = 4.094 / (1.0 + exp(0.1217 * (s_v - a_EK - 49.934)));
-        const double a_bK1   = (15.72 * exp(0.0674 * (s_v - a_EK - 3.257)) + exp(0.0618 * (s_v - a_EK - 594.31))) / (1.0 + exp(-0.1629 * (s_v - a_EK + 14.207)));
+        const double a_aK1   = 4.094 / (1.0 + ::exp(0.1217 * (s_v - a_EK - 49.934)));
+        const double a_bK1   = (15.72 * ::exp(0.0674 * (s_v - a_EK - 3.257)) + ::exp(0.0618 * (s_v - a_EK - 594.31))) / (1.0 + ::exp(-0.1629 * (s_v - a_EK + 14.207)));
         const double a_K1ss  = a_aK1 / (a_aK1 + a_bK1);
-        const double a_IK1_IK1 = CONSTANTS[AC_GK1] * sqrt(CONSTANTS[AC_ko] / 5.0) * a_K1ss * (s_v - a_EK);
+        const double a_IK1_IK1 = CONSTANTS[AC_GK1] * ::sqrt(CONSTANTS[AC_ko] / 5.0) * a_K1ss * (s_v - a_EK);
 
         /* IKb */
-        const double a_xkb     = 1.0 / (1.0 + exp(-(s_v - 10.8968) / 23.9871));
+        const double a_xkb     = 1.0 / (1.0 + ::exp(-(s_v - 10.8968) / 23.9871));
         const double a_IKb_IKb = CONSTANTS[AC_GKb] * a_xkb * (s_v - a_EK);
 
         /* Ito */
-        const double a_dti_develop  = 1.354 + 0.0001 / (exp((s_v - 167.4) / 15.89) + exp(-(s_v - 12.23) / 0.2154));
-        const double a_dti_recover  = 1.0 - 0.5 / (1.0 + exp((s_v + 70.0) / 20.0));
+        const double a_dti_develop  = 1.354 + 0.0001 / (::exp((s_v - 167.4) / 15.89) + ::exp(-(s_v - 12.23) / 0.2154));
+        const double a_dti_recover  = 1.0 - 0.5 / (1.0 + ::exp((s_v + 70.0) / 20.0));
         const double a_fItop        = s_camk_f_RyR;
-        const double a_tauxtof      = 8.5 * exp(-pow((s_v + 45.0) / 50.0, 2.0)) + 0.5;
-        const double a_tauxtos      = 9.0 / (1.0 + exp((s_v + 3.0) / 15.0)) + 0.5;
-        const double a_tauytof      = 85.0 * exp(-pow(s_v + 40.0, 2.0) / 220.0) + 7.0;
-        const double a_tauytos      = 800.0 / (1.0 + exp((s_v + 60.0) / 10.0)) + 30.0;
-        const double a_xtoss        = 1.0 / (1.0 + exp(-(s_v - 19.0) / 13.0));
-        const double a_xtoss_p      = 1.0 / (1.0 + exp(-(s_v - 29.0) / 13.0));
-        const double a_ytoss        = 1.0 / (1.0 + exp((s_v + 19.5) / 5.0));
+        const double a_tauxtof      = 8.5 * ::exp(-::pow((s_v + 45.0) / 50.0, 2.0)) + 0.5;
+        const double a_tauxtos      = 9.0 / (1.0 + ::exp((s_v + 3.0) / 15.0)) + 0.5;
+        const double a_tauytof      = 85.0 * ::exp(-::pow(s_v + 40.0, 2.0) / 220.0) + 7.0;
+        const double a_tauytos      = 800.0 / (1.0 + ::exp((s_v + 60.0) / 10.0)) + 30.0;
+        const double a_xtoss        = 1.0 / (1.0 + ::exp(-(s_v - 19.0) / 13.0));
+        const double a_xtoss_p      = 1.0 / (1.0 + ::exp(-(s_v - 29.0) / 13.0));
+        const double a_ytoss        = 1.0 / (1.0 + ::exp((s_v + 19.5) / 5.0));
         const double a_tauytof_p    = a_tauytof  * a_dti_develop * a_dti_recover;
         const double a_tauytos_p    = a_tauytos * a_dti_develop * a_dti_recover;
         const double a_Itof  = CONSTANTS[AC_Gto_fast] * (s_v - a_EK) * ((1.0 - a_fItop) * s_xtof * s_ytof + a_fItop * s_xtof_p * s_ytof_p);
@@ -407,26 +405,26 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double r_ytos_p = (a_ytoss   - s_ytos_p) / a_tauytos_p;
 
         /* ICaL */
-        const double a_Afcaf     = 0.3 + 0.6 / (1.0 + exp((s_v - 9.24247) / 27.96201));
+        const double a_Afcaf     = 0.3 + 0.6 / (1.0 + ::exp((s_v - 9.24247) / 27.96201));
         const double a_Ii        = 0.5 * (s_nai  + s_ki + s_cli + 4.0 * s_cai)  / 1000.0;
         const double a_Iss       = 0.5 * (s_nasl + s_ki + s_cli + 4.0 * s_casl) / 1000.0;
-        const double a_dPss      = ((1.0323 * exp(-1.0553 * exp(-0.081 * (s_v + 12.62483))) <= 1.0) ? 1.0323 * exp(-1.0553 * exp(-0.081 * (s_v + 12.62483))) : 1.0);
-        const double a_dss       = ((1.0763 * exp(-1.007  * exp(-0.0829 * (s_v + 3.62483)))  <= 1.0) ? 1.0763 * exp(-1.007  * exp(-0.0829 * (s_v + 3.62483)))  : 1.0);
+        const double a_dPss      = ((1.0323 * ::exp(-1.0553 * ::exp(-0.081 * (s_v + 12.62483))) <= 1.0) ? 1.0323 * ::exp(-1.0553 * ::exp(-0.081 * (s_v + 12.62483))) : 1.0);
+        const double a_dss       = ((1.0763 * ::exp(-1.007  * ::exp(-0.0829 * (s_v + 3.62483)))  <= 1.0) ? 1.0763 * ::exp(-1.007  * ::exp(-0.0829 * (s_v + 3.62483)))  : 1.0);
         const double a_fICaLp    = s_camk_f_ICaL;
-        const double a_fss       = 1.0 / (1.0 + exp((s_v + 19.58) / 3.696));
-        const double a_fss_P     = 1.0 / (1.0 + exp((s_v + 25.58) / 3.696));
-        const double a_jcass     = 1.0 / (1.0 + exp((s_v + 17.66945) / 3.21501));
+        const double a_fss       = 1.0 / (1.0 + ::exp((s_v + 19.58) / 3.696));
+        const double a_fss_P     = 1.0 / (1.0 + ::exp((s_v + 25.58) / 3.696));
+        const double a_jcass     = 1.0 / (1.0 + ::exp((s_v + 17.66945) / 3.21501));
         const double a_km2n      = s_jca * 0.84191;
         const double a_sigmoidTransition  = 1.0 - 1.0 / (1.0 + 1.86532 * s_caj  / 0.032);
         const double a_sigmoidTransition2 = 1.0 - 1.0 / (1.0 + 1.86532 * s_casl / 0.032);
-        const double a_td        = 1.5 + 1.0 / (exp(-0.05 * (s_v + 6.0)) + exp(0.09 * (s_v + 14.0)));
-        const double a_tfcaf     = 13.50673 + 1.0 / (0.1542 * exp(-(s_v - 1.31611) / 11.3396) + 0.1542 * exp((s_v - 1.31611) / 11.3396));
-        const double a_tfcas     = 177.95813 + 1.0 / (4.73955000000000025e-04 * exp(-(s_v - 0.79049) / 0.81777) + 4.73955000000000025e-04 * exp((s_v + 2.40474) / 1.90812));
-        const double a_tff       = 6.17111 + 1.0 / (0.00126 * exp(-(s_v + 26.63596) / 9.69961) + 0.00126 * exp((s_v + 26.63596) / 9.69961));
-        const double a_tfs       = 2.71922488999999996e+03 + 1.0 / (7.19411000000000014e-05 * exp(-(s_v + 5.74631) / 10.8769) + 7.19411000000000014e-05 * exp((s_v + 5.74631) / 16.31535));
+        const double a_td        = 1.5 + 1.0 / (::exp(-0.05 * (s_v + 6.0)) + ::exp(0.09 * (s_v + 14.0)));
+        const double a_tfcaf     = 13.50673 + 1.0 / (0.1542 * ::exp(-(s_v - 1.31611) / 11.3396) + 0.1542 * ::exp((s_v - 1.31611) / 11.3396));
+        const double a_tfcas     = 177.95813 + 1.0 / (4.73955000000000025e-04 * ::exp(-(s_v - 0.79049) / 0.81777) + 4.73955000000000025e-04 * ::exp((s_v + 2.40474) / 1.90812));
+        const double a_tff       = 6.17111 + 1.0 / (0.00126 * ::exp(-(s_v + 26.63596) / 9.69961) + 0.00126 * ::exp((s_v + 26.63596) / 9.69961));
+        const double a_tfs       = 2.71922488999999996e+03 + 1.0 / (7.19411000000000014e-05 * ::exp(-(s_v + 5.74631) / 10.8769) + 7.19411000000000014e-05 * ::exp((s_v + 5.74631) / 16.31535));
         const double a_Afcas     = 1.0 - a_Afcaf;
-        const double a_anca      = 1.0 / (CONSTANTS[AC_k2n] / a_km2n + pow(1.0 + CONSTANTS[AC_Kmn] / s_caj,  3.80763));
-        const double a_anca_i    = 1.0 / (CONSTANTS[AC_k2n] / a_km2n + pow(1.0 + CONSTANTS[AC_Kmn] / s_casl, 3.80763));
+        const double a_anca      = 1.0 / (CONSTANTS[AC_k2n] / a_km2n + ::pow(1.0 + CONSTANTS[AC_Kmn] / s_caj,  3.80763));
+        const double a_anca_i    = 1.0 / (CONSTANTS[AC_k2n] / a_km2n + ::pow(1.0 + CONSTANTS[AC_Kmn] / s_casl, 3.80763));
         const double a_fBPss     = a_fss_P;
         const double a_fcass     = a_fss;
         const double a_fcass_P   = a_fss_P;
@@ -451,10 +449,10 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_fcap      = a_Afcaf  * s_fcafp  + a_Afcas * s_fcas;
         const double a_fcap_P    = a_Afcaf  * s_fcaf_P + a_Afcas * s_fcas_P;
         const double a_fp        = CONSTANTS[AC_Aff] * s_ffp   + CONSTANTS[AC_Afs] * s_fs;
-        const double a_gamma_cai  = pow(10.0, -CONSTANTS[AC_constA] * 4.0 * (sqrt(a_Ii)  / (1.0 + sqrt(a_Ii))  - 0.3 * a_Ii));
-        const double a_gamma_cass = pow(10.0, -CONSTANTS[AC_constA] * 4.0 * (sqrt(a_Iss) / (1.0 + sqrt(a_Iss)) - 0.3 * a_Iss));
-        const double a_gamma_ki   = pow(10.0, -CONSTANTS[AC_constA] * 1.0 * (sqrt(a_Ii)  / (1.0 + sqrt(a_Ii))  - 0.3 * a_Ii));
-        const double a_gamma_kss  = pow(10.0, -CONSTANTS[AC_constA] * 1.0 * (sqrt(a_Iss) / (1.0 + sqrt(a_Iss)) - 0.3 * a_Iss));
+        const double a_gamma_cai  = ::pow(10.0, -CONSTANTS[AC_constA] * 4.0 * (::sqrt(a_Ii)  / (1.0 + ::sqrt(a_Ii))  - 0.3 * a_Ii));
+        const double a_gamma_cass = ::pow(10.0, -CONSTANTS[AC_constA] * 4.0 * (::sqrt(a_Iss) / (1.0 + ::sqrt(a_Iss)) - 0.3 * a_Iss));
+        const double a_gamma_ki   = ::pow(10.0, -CONSTANTS[AC_constA] * 1.0 * (::sqrt(a_Ii)  / (1.0 + ::sqrt(a_Ii))  - 0.3 * a_Ii));
+        const double a_gamma_kss  = ::pow(10.0, -CONSTANTS[AC_constA] * 1.0 * (::sqrt(a_Iss) / (1.0 + ::sqrt(a_Iss)) - 0.3 * a_Iss));
         const double a_gamma_nai  = a_gamma_ki;
         const double a_gamma_nass = a_gamma_kss;
         const double r_fBPf       = (a_fBPss   - s_fBPf)   / a_tffp;
@@ -473,38 +471,38 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double r_fcaBPf = (a_fcaBPss - s_fcaBPf) / a_tfcafp;
 
         /* IKr (Markov — Euler) */
-        const double a_IKr_IKr = CONSTANTS[AC_GKr] * sqrt(CONSTANTS[AC_ko] / 5.0) * s_O * (s_v - a_EK);
+        const double a_IKr_IKr = CONSTANTS[AC_GKr] * ::sqrt(CONSTANTS[AC_ko] / 5.0) * s_O * (s_v - a_EK);
 
         /* IKs */
-        const double a_VsTs_Ca_junc  = CONSTANTS[AC_P_tau_0] + (CONSTANTS[AC_P_tau_max] - CONSTANTS[AC_P_tau_0]) / (1.0 + pow(0.00015 / s_caj,  3.0));
-        const double a_VsTs_Ca_sl    = CONSTANTS[AC_P_tau_0] + (CONSTANTS[AC_P_tau_max] - CONSTANTS[AC_P_tau_0]) / (1.0 + pow(0.00015 / s_casl, 3.0));
-        const double a_VsXs_Ca_junc  = CONSTANTS[AC_P_vh_0]  + (CONSTANTS[AC_P_vh_max]  - CONSTANTS[AC_P_vh_0])  / (1.0 + pow(0.00035 / s_caj,  4.0));
-        const double a_VsXs_Ca_sl    = CONSTANTS[AC_P_vh_0]  + (CONSTANTS[AC_P_vh_max]  - CONSTANTS[AC_P_vh_0])  / (1.0 + pow(0.00035 / s_casl, 4.0));
-        const double a_gks_junc      = CONSTANTS[AC_P_g_0]   + (CONSTANTS[AC_P_g_max]   - CONSTANTS[AC_P_g_0])   / (1.0 + pow(0.00015 / s_caj,  1.3));
-        const double a_gks_sl        = CONSTANTS[AC_P_g_0]   + (CONSTANTS[AC_P_g_max]   - CONSTANTS[AC_P_g_0])   / (1.0 + pow(0.00015 / s_casl, 1.3));
-        const double a_tauxs_junc    = 2.0 * (50.0 + (50.0 + 350.0 * exp(-pow(s_v + 30.0, 2.0) / 4000.0)) / (1.0 + exp(-(s_v + a_VsTs_Ca_junc) / 10.0)));
-        const double a_tauxs_sl      = 2.0 * (50.0 + (50.0 + 350.0 * exp(-pow(s_v + 30.0, 2.0) / 4000.0)) / (1.0 + exp(-(s_v + a_VsTs_Ca_sl)  / 10.0)));
-        const double a_xsss_junc     = 1.0 / (1.0 + exp(-(s_v - a_VsXs_Ca_junc) / 25.0));
-        const double a_xsss_sl       = 1.0 / (1.0 + exp(-(s_v - a_VsXs_Ca_sl)   / 25.0));
+        const double a_VsTs_Ca_junc  = CONSTANTS[AC_P_tau_0] + (CONSTANTS[AC_P_tau_max] - CONSTANTS[AC_P_tau_0]) / (1.0 + ::pow(0.00015 / s_caj,  3.0));
+        const double a_VsTs_Ca_sl    = CONSTANTS[AC_P_tau_0] + (CONSTANTS[AC_P_tau_max] - CONSTANTS[AC_P_tau_0]) / (1.0 + ::pow(0.00015 / s_casl, 3.0));
+        const double a_VsXs_Ca_junc  = CONSTANTS[AC_P_vh_0]  + (CONSTANTS[AC_P_vh_max]  - CONSTANTS[AC_P_vh_0])  / (1.0 + ::pow(0.00035 / s_caj,  4.0));
+        const double a_VsXs_Ca_sl    = CONSTANTS[AC_P_vh_0]  + (CONSTANTS[AC_P_vh_max]  - CONSTANTS[AC_P_vh_0])  / (1.0 + ::pow(0.00035 / s_casl, 4.0));
+        const double a_gks_junc      = CONSTANTS[AC_P_g_0]   + (CONSTANTS[AC_P_g_max]   - CONSTANTS[AC_P_g_0])   / (1.0 + ::pow(0.00015 / s_caj,  1.3));
+        const double a_gks_sl        = CONSTANTS[AC_P_g_0]   + (CONSTANTS[AC_P_g_max]   - CONSTANTS[AC_P_g_0])   / (1.0 + ::pow(0.00015 / s_casl, 1.3));
+        const double a_tauxs_junc    = 2.0 * (50.0 + (50.0 + 350.0 * ::exp(-::pow(s_v + 30.0, 2.0) / 4000.0)) / (1.0 + ::exp(-(s_v + a_VsTs_Ca_junc) / 10.0)));
+        const double a_tauxs_sl      = 2.0 * (50.0 + (50.0 + 350.0 * ::exp(-::pow(s_v + 30.0, 2.0) / 4000.0)) / (1.0 + ::exp(-(s_v + a_VsTs_Ca_sl)  / 10.0)));
+        const double a_xsss_junc     = 1.0 / (1.0 + ::exp(-(s_v - a_VsXs_Ca_junc) / 25.0));
+        const double a_xsss_sl       = 1.0 / (1.0 + ::exp(-(s_v - a_VsXs_Ca_sl)   / 25.0));
         const double r_xs_junc       = (a_xsss_junc - s_xs_junc) / a_tauxs_junc;
         const double r_xs_sl         = (a_xsss_sl   - s_xs_sl)   / a_tauxs_sl;
-        const double a_IKs_junc      = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_GKs] * a_gks_junc * pow(s_xs_junc, 2.0) * (s_v - a_EKs);
-        const double a_IKs_sl        = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_GKs] * a_gks_sl   * pow(s_xs_sl,   2.0) * (s_v - a_EKs);
+        const double a_IKs_junc      = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_GKs] * a_gks_junc * ::pow(s_xs_junc, 2.0) * (s_v - a_EKs);
+        const double a_IKs_sl        = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_GKs] * a_gks_sl   * ::pow(s_xs_sl,   2.0) * (s_v - a_EKs);
         const double a_IKs_IKs       = a_IKs_junc + a_IKs_sl;
 
         /* INa */
-        const double a_ah    = ((s_v >= -40.0) ? 0.0 : 0.057 * exp(-(s_v + 80.0) / 6.8));
-        const double a_aj    = ((s_v >= -40.0) ? 0.0 : (-25428.0 * exp(0.2444 * s_v) - 6.948e-06 * exp(-0.04391 * s_v)) * (s_v + 37.78) / (1.0 + exp(0.311 * (s_v + 79.23))));
-        const double a_bh    = ((s_v >= -40.0) ? 0.77 / (0.13 * (1.0 + exp(-(s_v + 10.66) / 11.1))) : 2.7 * exp(0.079 * s_v) + 310000.0 * exp(0.3485 * s_v));
-        const double a_bj    = ((s_v >= -40.0) ? 0.6 * exp(0.057 * s_v) / (1.0 + exp(-0.1 * (s_v + 32.0))) : 0.02424 * exp(-0.01052 * s_v) / (1.0 + exp(-0.1378 * (s_v + 40.14))));
+        const double a_ah    = ((s_v >= -40.0) ? 0.0 : 0.057 * ::exp(-(s_v + 80.0) / 6.8));
+        const double a_aj    = ((s_v >= -40.0) ? 0.0 : (-25428.0 * ::exp(0.2444 * s_v) - 6.948e-06 * ::exp(-0.04391 * s_v)) * (s_v + 37.78) / (1.0 + ::exp(0.311 * (s_v + 79.23))));
+        const double a_bh    = ((s_v >= -40.0) ? 0.77 / (0.13 * (1.0 + ::exp(-(s_v + 10.66) / 11.1))) : 2.7 * ::exp(0.079 * s_v) + 310000.0 * ::exp(0.3485 * s_v));
+        const double a_bj    = ((s_v >= -40.0) ? 0.6 * ::exp(0.057 * s_v) / (1.0 + ::exp(-0.1 * (s_v + 32.0))) : 0.02424 * ::exp(-0.01052 * s_v) / (1.0 + ::exp(-0.1378 * (s_v + 40.14))));
         const double a_fINap = s_camk_f_RyR;
-        const double a_hss   = 1.0 / pow(1.0 + exp((s_v + 71.55) / 7.43), 2.0);
-        const double a_hss_P = 1.0 / pow(1.0 + exp((s_v + 76.55) / 7.43), 2.0);
-        const double a_hssp  = 1.0 / pow(1.0 + exp((s_v + 77.55) / 7.43), 2.0);
-        const double a_hssp_P = 1.0 / pow(1.0 + exp((s_v + 82.55) / 7.43), 2.0);
-        const double a_mss   = 1.0 / pow(1.0 + exp(-(s_v + 56.86) / 9.03), 2.0);
-        const double a_mss_P = 1.0 / pow(1.0 + exp(-(s_v + 61.86) / 9.03), 2.0);
-        const double a_tm    = 0.1292 * exp(-pow((s_v + 45.79) / 15.54, 2.0)) + 0.06487 * exp(-pow((s_v - 4.823) / 51.12, 2.0));
+        const double a_hss   = 1.0 / ::pow(1.0 + ::exp((s_v + 71.55) / 7.43), 2.0);
+        const double a_hss_P = 1.0 / ::pow(1.0 + ::exp((s_v + 76.55) / 7.43), 2.0);
+        const double a_hssp  = 1.0 / ::pow(1.0 + ::exp((s_v + 77.55) / 7.43), 2.0);
+        const double a_hssp_P = 1.0 / ::pow(1.0 + ::exp((s_v + 82.55) / 7.43), 2.0);
+        const double a_mss   = 1.0 / ::pow(1.0 + ::exp(-(s_v + 56.86) / 9.03), 2.0);
+        const double a_mss_P = 1.0 / ::pow(1.0 + ::exp(-(s_v + 61.86) / 9.03), 2.0);
+        const double a_tm    = 0.1292 * ::exp(-::pow((s_v + 45.79) / 15.54, 2.0)) + 0.06487 * ::exp(-::pow((s_v - 4.823) / 51.12, 2.0));
         const double a_fINa_BP  = a_fINap * CONSTANTS[AC_fINa_P];
         const double a_jss      = a_hss;
         const double a_jss_P    = a_hss_P;
@@ -513,8 +511,8 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_tj    = 1.0 / (a_aj + a_bj);
         const double r_m     = (a_mss   - s_m)    / a_tm;
         const double r_m_P   = (a_mss_P - s_m_P)  / a_tm;
-        const double a_INaBase_CaMK = CONSTANTS[AC_GNa] * pow(s_m,   3.0) * s_hp    * s_jp;
-        const double a_INaBase_NP   = CONSTANTS[AC_GNa] * pow(s_m,   3.0) * s_h     * s_j;
+        const double a_INaBase_CaMK = CONSTANTS[AC_GNa] * ::pow(s_m,   3.0) * s_hp    * s_jp;
+        const double a_INaBase_NP   = CONSTANTS[AC_GNa] * ::pow(s_m,   3.0) * s_h     * s_j;
         const double a_fINa_CaMKonly = a_fINap - a_fINa_BP;
         const double a_fINa_PKAonly  = CONSTANTS[AC_fINa_P] - a_fINa_BP;
         const double a_tjp   = 1.46 * a_tj;
@@ -524,8 +522,8 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double r_hp_P  = (a_hssp_P - s_hp_P) / a_th;
         const double r_j     = (a_jss   - s_j)    / a_tj;
         const double r_j_P   = (a_jss_P - s_j_P)  / a_tj;
-        const double a_INaBase_BP  = CONSTANTS[AC_GNa_P] * pow(s_m_P, 3.0) * s_hp_P * s_jp_P;
-        const double a_INaBase_PKA = CONSTANTS[AC_GNa_P] * pow(s_m_P, 3.0) * s_h_P  * s_j_P;
+        const double a_INaBase_BP  = CONSTANTS[AC_GNa_P] * ::pow(s_m_P, 3.0) * s_hp_P * s_jp_P;
+        const double a_INaBase_PKA = CONSTANTS[AC_GNa_P] * ::pow(s_m_P, 3.0) * s_h_P  * s_j_P;
         const double r_jp    = (a_jss   - s_jp)   / a_tjp;
         const double r_jp_P  = (a_jssp_P - s_jp_P) / a_tjp;
         const double a_INaBase = (1.0 - a_fINa_CaMKonly - a_fINa_PKAonly - a_fINa_BP) * a_INaBase_NP + a_fINa_CaMKonly * a_INaBase_CaMK + a_fINa_PKAonly * a_INaBase_PKA + a_fINa_BP * a_INaBase_BP;
@@ -535,10 +533,10 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
 
         /* INaL */
         const double a_fINaLp  = s_camk_f_RyR;
-        const double a_hLss    = 1.0 / (1.0 + exp((s_v + 87.61) / 7.488));
-        const double a_hLssp   = 1.0 / (1.0 + exp((s_v + 93.81) / 7.488));
-        const double a_mLss    = 1.0 / (1.0 + exp(-(s_v + 42.85) / 5.264));
-        const double a_tmL     = 0.1292 * exp(-pow((s_v + 45.79) / 15.54, 2.0)) + 0.06487 * exp(-pow((s_v - 4.823) / 51.12, 2.0));
+        const double a_hLss    = 1.0 / (1.0 + ::exp((s_v + 87.61) / 7.488));
+        const double a_hLssp   = 1.0 / (1.0 + ::exp((s_v + 93.81) / 7.488));
+        const double a_mLss    = 1.0 / (1.0 + ::exp(-(s_v + 42.85) / 5.264));
+        const double a_tmL     = 0.1292 * ::exp(-::pow((s_v + 45.79) / 15.54, 2.0)) + 0.06487 * ::exp(-::pow((s_v - 4.823) / 51.12, 2.0));
         const double a_GNaL    = CONSTANTS[AC_GNaL_b] * CONSTANTS[AC_INaL_multiplier] * (1.0 + a_fINaLp) * CONSTANTS[gnalTissueScale];
         const double r_hL      = (a_hLss  - s_hL)  / CONSTANTS[AC_thL];
         const double r_mL      = (a_mLss  - s_mL)  / a_tmL;
@@ -575,12 +573,12 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_Jrel_ICaLdep  = 0.00174 * s_jrel_icaldep_act * s_jrel_icaldep_f1 * s_jrel_icaldep_f2;
         const double a_RIcleft       = 1.0 - s_ryr_R   - s_ryr_O   - s_ryr_I   - s_ryr_CaRI;
         const double a_RIcleft_p     = 1.0 - s_ryr_R_p - s_ryr_O_p - s_ryr_I_p - s_ryr_CaRI_p;
-        const double a_nonlinearModifier  = 0.2144 * exp(1.83 * s_casr);
+        const double a_nonlinearModifier  = 0.2144 * ::exp(1.83 * s_casr);
         const double a_J_SRCarel_np  = CONSTANTS[AC_ks] * s_ryr_O   * (s_casr - s_caj) + a_Jrel_ICaLdep;
         const double a_J_SRCarel_p   = CONSTANTS[AC_ks] * s_ryr_O_p * (s_casr - s_caj) + a_Jrel_ICaLdep;
         const double a_J_SRleak      = 1.59306000000000000e-06 * (s_casr - s_caj) * a_nonlinearModifier * a_CaMKIILeakMultiplier;
-        const double a_kCaSR         = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + pow(CONSTANTS[AC_ec50SR] / s_casr, CONSTANTS[AC_steepnessCaSR]));
-        const double a_sigmoidBaseCaI = CONSTANTS[AC_minCaI] + (CONSTANTS[AC_maxCaI] - CONSTANTS[AC_minCaI]) / (1.0 + pow(CONSTANTS[AC_ecCaI] / s_caj, CONSTANTS[AC_steepnessCaI]));
+        const double a_kCaSR         = CONSTANTS[AC_MaxSR] - (CONSTANTS[AC_MaxSR] - CONSTANTS[AC_MinSR]) / (1.0 + ::pow(CONSTANTS[AC_ec50SR] / s_casr, CONSTANTS[AC_steepnessCaSR]));
+        const double a_sigmoidBaseCaI = CONSTANTS[AC_minCaI] + (CONSTANTS[AC_maxCaI] - CONSTANTS[AC_minCaI]) / (1.0 + ::pow(CONSTANTS[AC_ecCaI] / s_caj, CONSTANTS[AC_steepnessCaI]));
         const double a_tau_rel       = ((CONSTANTS[AC_bt] / (1.0 + 0.0123 / s_casr) >= 0.001) ? CONSTANTS[AC_bt] / (1.0 + 0.0123 / s_casr) : 0.001);
         const double a_J_SRCarel     = a_J_SRCarel_p * s_camk_f_RyR + a_J_SRCarel_np * (1.0 - s_camk_f_RyR);
         const double a_RI_to_CI      = CONSTANTS[AC_baseRateCaI] * a_sigmoidBaseCaI;
@@ -588,41 +586,41 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_koSRCa        = CONSTANTS[AC_koCa] / a_kCaSR;
         const double r_ryr_CaRI      = a_RI_to_CI * a_RIcleft   - CONSTANTS[AC_CI_to_RI] * s_ryr_CaRI;
         const double r_ryr_CaRI_p    = a_RI_to_CI * a_RIcleft_p - CONSTANTS[AC_CI_to_RI] * s_ryr_CaRI_p;
-        const double r_ryr_I         = a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O   - CONSTANTS[AC_kim] * s_ryr_I   - (CONSTANTS[AC_kom] * s_ryr_I   - CONSTANTS[AC_caTransFactor2]  * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * a_RIcleft);
-        const double r_ryr_I_p       = a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O_p - CONSTANTS[AC_kim] * s_ryr_I_p - (CONSTANTS[AC_kom] * s_ryr_I_p - CONSTANTS[AC_caTransFactor2p] * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * a_RIcleft_p);
-        const double r_ryr_O         = CONSTANTS[AC_caTransFactor2]  * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R   - CONSTANTS[AC_kom] * s_ryr_O   - (a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O   - CONSTANTS[AC_kim] * s_ryr_I);
-        const double r_ryr_O_p       = CONSTANTS[AC_caTransFactor2p] * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R_p - CONSTANTS[AC_kom] * s_ryr_O_p - (a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O_p - CONSTANTS[AC_kim] * s_ryr_I_p);
-        const double r_ryr_R         = CONSTANTS[AC_kim] * a_RIcleft   - a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_R   - (CONSTANTS[AC_caTransFactor2]  * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R   - CONSTANTS[AC_kom] * s_ryr_O);
-        const double r_ryr_R_p       = CONSTANTS[AC_kim] * a_RIcleft_p - a_kiSRCa * CONSTANTS[AC_caTransFactor] * pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_R_p - (CONSTANTS[AC_caTransFactor2p] * a_koSRCa * pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R_p - CONSTANTS[AC_kom] * s_ryr_O_p);
+        const double r_ryr_I         = a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O   - CONSTANTS[AC_kim] * s_ryr_I   - (CONSTANTS[AC_kom] * s_ryr_I   - CONSTANTS[AC_caTransFactor2]  * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * a_RIcleft);
+        const double r_ryr_I_p       = a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O_p - CONSTANTS[AC_kim] * s_ryr_I_p - (CONSTANTS[AC_kom] * s_ryr_I_p - CONSTANTS[AC_caTransFactor2p] * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * a_RIcleft_p);
+        const double r_ryr_O         = CONSTANTS[AC_caTransFactor2]  * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R   - CONSTANTS[AC_kom] * s_ryr_O   - (a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O   - CONSTANTS[AC_kim] * s_ryr_I);
+        const double r_ryr_O_p       = CONSTANTS[AC_caTransFactor2p] * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R_p - CONSTANTS[AC_kom] * s_ryr_O_p - (a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_O_p - CONSTANTS[AC_kim] * s_ryr_I_p);
+        const double r_ryr_R         = CONSTANTS[AC_kim] * a_RIcleft   - a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_R   - (CONSTANTS[AC_caTransFactor2]  * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R   - CONSTANTS[AC_kom] * s_ryr_O);
+        const double r_ryr_R_p       = CONSTANTS[AC_kim] * a_RIcleft_p - a_kiSRCa * CONSTANTS[AC_caTransFactor] * ::pow(s_caj, CONSTANTS[AC_caExpFactor]) * s_ryr_R_p - (CONSTANTS[AC_caTransFactor2p] * a_koSRCa * ::pow(s_caj, CONSTANTS[AC_caExpFactor2]) * s_ryr_R_p - CONSTANTS[AC_kom] * s_ryr_O_p);
 
         /* remaining currents */
-        const double a_PhiCaK_i  = 1.0 * a_vffrt * (a_gamma_ki  * s_ki  * exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (exp(1.0 * a_vfrt) - 1.0);
-        const double a_PhiCaK_ss = 1.0 * a_vffrt * (a_gamma_kss * s_ki  * exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (exp(1.0 * a_vfrt) - 1.0);
-        const double a_PhiCaL_i  = 4.0 * a_vffrt * (a_gamma_cai  * s_cai  * exp(2.0 * a_vfrt) - CONSTANTS[AC_gamma_cao] * CONSTANTS[AC_cao]) / (exp(2.0 * a_vfrt) - 1.0);
-        const double a_PhiCaL_ss = 4.0 * a_vffrt * (a_gamma_cass * s_casl * exp(2.0 * a_vfrt) - CONSTANTS[AC_gamma_cao] * CONSTANTS[AC_cao]) / (exp(2.0 * a_vfrt) - 1.0);
-        const double a_PhiCaNa_i = 1.0 * a_vffrt * (a_gamma_nai  * s_nai  * exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_nao] * CONSTANTS[AC_nao]) / (exp(1.0 * a_vfrt) - 1.0);
-        const double a_PhiCaNa_ss= 1.0 * a_vffrt * (a_gamma_nass * s_nasl * exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_nao] * CONSTANTS[AC_nao]) / (exp(1.0 * a_vfrt) - 1.0);
+        const double a_PhiCaK_i  = 1.0 * a_vffrt * (a_gamma_ki  * s_ki  * ::exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (::exp(1.0 * a_vfrt) - 1.0);
+        const double a_PhiCaK_ss = 1.0 * a_vffrt * (a_gamma_kss * s_ki  * ::exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_ko] * CONSTANTS[AC_ko]) / (::exp(1.0 * a_vfrt) - 1.0);
+        const double a_PhiCaL_i  = 4.0 * a_vffrt * (a_gamma_cai  * s_cai  * ::exp(2.0 * a_vfrt) - CONSTANTS[AC_gamma_cao] * CONSTANTS[AC_cao]) / (::exp(2.0 * a_vfrt) - 1.0);
+        const double a_PhiCaL_ss = 4.0 * a_vffrt * (a_gamma_cass * s_casl * ::exp(2.0 * a_vfrt) - CONSTANTS[AC_gamma_cao] * CONSTANTS[AC_cao]) / (::exp(2.0 * a_vfrt) - 1.0);
+        const double a_PhiCaNa_i = 1.0 * a_vffrt * (a_gamma_nai  * s_nai  * ::exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_nao] * CONSTANTS[AC_nao]) / (::exp(1.0 * a_vfrt) - 1.0);
+        const double a_PhiCaNa_ss= 1.0 * a_vffrt * (a_gamma_nass * s_nasl * ::exp(1.0 * a_vfrt) - CONSTANTS[AC_gamma_nao] * CONSTANTS[AC_nao]) / (::exp(1.0 * a_vfrt) - 1.0);
         const double a_ICab_junc = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_GCab] * (s_v - a_ECaj);
         const double a_ICab_sl   = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_GCab] * (s_v - a_ECasl);
-        const double a_IKr_alpha = 0.1161 * exp(0.299  * a_vfrt);
-        const double a_alpha_2   = 0.0578 * exp(0.971  * a_vfrt);
-        const double a_alpha_C2ToI = 5.2e-05 * exp(1.525 * a_vfrt);
-        const double a_alpha_i   = 0.2533 * exp(0.5953 * a_vfrt);
-        const double a_IKr_beta  = 0.2442 * exp(-1.604 * a_vfrt);
-        const double a_beta_2    = 0.000349 * exp(-1.062 * a_vfrt);
-        const double a_beta_i    = 0.04568  * exp(-0.8209 * a_vfrt);
+        const double a_IKr_alpha = 0.1161 * ::exp(0.299  * a_vfrt);
+        const double a_alpha_2   = 0.0578 * ::exp(0.971  * a_vfrt);
+        const double a_alpha_C2ToI = 5.2e-05 * ::exp(1.525 * a_vfrt);
+        const double a_alpha_i   = 0.2533 * ::exp(0.5953 * a_vfrt);
+        const double a_IKr_beta  = 0.2442 * ::exp(-1.604 * a_vfrt);
+        const double a_beta_2    = 0.000349 * ::exp(-1.062 * a_vfrt);
+        const double a_beta_i    = 0.04568  * ::exp(-0.8209 * a_vfrt);
         const double a_INaj      = CONSTANTS[AC_Fjunc] * a_INaBase * (s_v - a_ENaj);
         const double a_INasl     = CONSTANTS[AC_Fsl]   * a_INaBase * (s_v - a_ENasl);
-        const double a_INaK_junc_PKA   = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + pow(CONSTANTS[AC_KmNaip_PKA] / s_naj, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
-        const double a_INaK_junc_noPKA = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + pow(CONSTANTS[AC_KmNaip]     / s_naj, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
-        const double a_INaK_sl_PKA     = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + pow(CONSTANTS[AC_KmNaip_PKA] / s_nasl, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
-        const double a_INaK_sl_noPKA   = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + pow(CONSTANTS[AC_KmNaip]     / s_nasl, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
+        const double a_INaK_junc_PKA   = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + ::pow(CONSTANTS[AC_KmNaip_PKA] / s_naj, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
+        const double a_INaK_junc_noPKA = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + ::pow(CONSTANTS[AC_KmNaip]     / s_naj, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
+        const double a_INaK_sl_PKA     = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + ::pow(CONSTANTS[AC_KmNaip_PKA] / s_nasl, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
+        const double a_INaK_sl_noPKA   = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_IbarNaK] * a_fnak / (1.0 + ::pow(CONSTANTS[AC_KmNaip]     / s_nasl, 4.0)) * CONSTANTS[AC_ko] / (CONSTANTS[AC_ko] + CONSTANTS[AC_KmKo]);
         const double a_INaLj  = CONSTANTS[AC_Fjunc] * a_GNaL * (s_v - a_ENaj)  * s_mL * ((1.0 - a_fINaLp) * s_hL + a_fINaLp * s_hLp);
         const double a_INaLsl = CONSTANTS[AC_Fsl]   * a_GNaL * (s_v - a_ENasl) * s_mL * ((1.0 - a_fINaLp) * s_hL + a_fINaLp * s_hLp);
         const double a_INabj  = CONSTANTS[AC_Fjunc] * CONSTANTS[AC_GNab] * (s_v - a_ENaj);
         const double a_INabsl = CONSTANTS[AC_Fsl]   * CONSTANTS[AC_GNab] * (s_v - a_ENasl);
-        const double a_IpCa_junc = CONSTANTS[AC_Fjunc] * pow(CONSTANTS[AC_Q10SLCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_IbarSLCaP] * pow(s_caj,  1.6) / (pow(CONSTANTS[AC_KmPCa], 1.6) + pow(s_caj,  1.6));
-        const double a_IpCa_sl   = CONSTANTS[AC_Fsl]   * pow(CONSTANTS[AC_Q10SLCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_IbarSLCaP] * pow(s_casl, 1.6) / (pow(CONSTANTS[AC_KmPCa], 1.6) + pow(s_casl, 1.6));
+        const double a_IpCa_junc = CONSTANTS[AC_Fjunc] * ::pow(CONSTANTS[AC_Q10SLCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_IbarSLCaP] * ::pow(s_caj,  1.6) / (::pow(CONSTANTS[AC_KmPCa], 1.6) + ::pow(s_caj,  1.6));
+        const double a_IpCa_sl   = CONSTANTS[AC_Fsl]   * ::pow(CONSTANTS[AC_Q10SLCaP], CONSTANTS[AC_Qpow]) * CONSTANTS[AC_IbarSLCaP] * ::pow(s_casl, 1.6) / (::pow(CONSTANTS[AC_KmPCa], 1.6) + ::pow(s_casl, 1.6));
         const double r_casr = a_Jserca - (a_J_SRleak * CONSTANTS[AC_vmyo] / CONSTANTS[AC_vsr] + a_J_SRCarel) - a_d_buffers_Csqn;
         const double r_cli  = a_ICl_tot * CONSTANTS[AC_Cmem] / (CONSTANTS[AC_vmyo] * CONSTANTS[AC_F]);
 
@@ -671,14 +669,14 @@ CARDIAC_HOST_DEVICE inline void TWorldComputeVariablesBatch
         const double a_ICa_tot_sl   = a_ICaL_sl   + a_ICab_sl   + a_IpCa_sl   - 2.0 * a_INaCa_i;
         const double a_INa_tot_junc = a_INaj + a_INaLj + a_INabj + 3.0 * a_INaCa_ss + 3.0 * a_INaKj  + a_ICaNa_junc;
         const double a_INa_tot_sl   = a_INasl + a_INaLsl + a_INabsl + 3.0 * a_INaCa_i + 3.0 * a_INaKsl + a_ICaNa_sl;
-        const double a_ICaL_junc_positive = fabs(a_ICaL_junc);
+        const double a_ICaL_junc_positive = ::fabs(a_ICaL_junc);
         const double a_IK_tot       = a_Ito_Ito + a_IKr_IKr + a_IKs_IKs + a_IK1_IK1 - 2.0 * a_INaK_INaK + a_ICaK + a_IKb_IKb;
-        const double a_ICaL_junc_sigmoided = 1.0 - 1.0 / (1.0 + pow(a_ICaL_junc_positive / 0.45, 4.5));
+        const double a_ICaL_junc_sigmoided = 1.0 - 1.0 / (1.0 + ::pow(a_ICaL_junc_positive / 0.45, 4.5));
         const double r_ki   = -a_IK_tot * CONSTANTS[AC_Cmem] / (CONSTANTS[AC_vmyo] * CONSTANTS[AC_F]);
         const double a_Iion_cm = a_INa_tot_junc + a_INa_tot_sl + a_ICa_tot_junc + a_ICa_tot_sl + a_IK_tot + a_ICl_tot;
         const double a_Jrel_inact_inf  = 1.0 / (1.0 + a_ICaL_junc_sigmoided / 0.001);
         const double a_Jrel_inact_inf2 = 1.0 / (1.0 + a_ICaL_junc_sigmoided / 0.0006);
-        const double a_Jrel_inf        = CONSTANTS[AC_a_rel] * a_ICaL_junc_sigmoided / (1.0 + pow(CONSTANTS[AC_directRelMidpoint] / s_casr, 7.72672));
+        const double a_Jrel_inf        = CONSTANTS[AC_a_rel] * a_ICaL_junc_sigmoided / (1.0 + ::pow(CONSTANTS[AC_directRelMidpoint] / s_casr, 7.72672));
         const double r_v    = solveVmWithinODESolver ? (-a_Iion_cm - Istim) : 0.0;
         const double r_jrel_icaldep_act = (a_Jrel_inf        - s_jrel_icaldep_act) / a_tau_rel;
         const double r_jrel_icaldep_f1  = (a_Jrel_inact_inf  - s_jrel_icaldep_f1)  / CONSTANTS[AC_tauInact];

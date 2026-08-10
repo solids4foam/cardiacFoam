@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented wrapper for the Aliev-Panfilov 1996 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     AlievPanfilovBatched.C
 \*---------------------------------------------------------------------------*/

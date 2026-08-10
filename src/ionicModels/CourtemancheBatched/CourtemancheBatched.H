@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented wrapper for the Courtemanche 1998 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     CourtemancheBatched.C
 \*---------------------------------------------------------------------------*/

@@ -105,36 +105,6 @@ class batchedIonicModel
         mutable label solveScratchSupportSize_;
         mutable bool solveScratchPredictorState_;
 
-        //- Per-cell linear Vm extrapolant, in model state/time units
-        mutable scalarField vmStateStart_;
-        mutable scalarField vmStateRate_;
-
-        //- Build the Vm extrapolant for the step in model state/time units
-        void buildVmExtrapolant
-        (
-            const scalar deltaT,
-            const scalar dtModel,
-            const scalarField& Vm,
-            const label vmStateI
-        ) const
-        {
-            (void)vmStateI;
-
-            vmStateStart_.setSize(nCells_);
-            vmStateRate_.setSize(nCells_);
-
-            for (label cellI = 0; cellI < nCells_; ++cellI)
-            {
-                const scalar vmStart = vmToState(Vm[cellI]);
-                const scalar vmEnd =
-                    vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
-
-                vmStateStart_[cellI] = vmStart;
-                vmStateRate_[cellI] =
-                    (mag(dtModel) > VSMALL) ? (vmEnd - vmStart)/dtModel : 0.0;
-            }
-        }
-
         static label maxCellLoopThreads()
         {
 #ifdef _OPENMP
@@ -1079,14 +1049,6 @@ protected:
             kernel.useExplicitEuler = integratorName_ == "euler";
             kernel.useRushLarsen = integratorName_ == "rushLarsen";
 
-            if (hasVmRate() && !kernel.solveVm)
-            {
-                buildVmExtrapolant(deltaT, dtModel, Vm, vmStateI);
-                kernel.vmStateStart = vmStateStart_.cdata();
-                kernel.vmStateRate = vmStateRate_.cdata();
-                kernel.tStartModel = tStart;
-            }
-
             if
             (
                !kernel.useExplicitEuler
@@ -1185,67 +1147,9 @@ protected:
                     std::chrono::duration<scalar>(clock::now() - solveStart).count();
                 ++totalSolveODECalls_;
             }
-
-            clearVmRate();
         }
 
 public:
-
-        //- Vm follows its linear extrapolant when a rate is supplied
-        virtual bool supportsVmRateCoupling() const override
-        {
-            return true;
-        }
-
-        //- Iion is a pure function of the batched state
-        virtual bool supportsIonicCurrentEvaluation() const override
-        {
-            return true;
-        }
-
-        //- Recompute Im from the stored state paired with the supplied Vm
-        virtual void evaluateIonicCurrent
-        (
-            const scalar t,
-            const scalarField& Vm,
-            scalarField& Im
-        ) override
-        {
-            const scalar modelTime = t*timeScaleFactor();
-            const label vmStateI = voltageStateIndex();
-            const bool useExplicitEuler = integratorName_ == "euler";
-            const label supportSize =
-                activeHotPathSupportSize(useExplicitEuler);
-
-            scalarField stateValues(nStates_, 0.0);
-            scalarField rateValues(nStates_, 0.0);
-            scalarField supportValues(max(supportSize, label(1)), 0.0);
-
-            for (label cellI = 0; cellI < nCells_; ++cellI)
-            {
-                gatherCellState(cellI, stateValues);
-
-                if (!solveVmWithinODESolver())
-                {
-                    stateValues[vmStateI] = vmToState(Vm[cellI]);
-                }
-
-                rateValues = 0.0;
-                supportValues = 0.0;
-
-                evaluateHotPathStateForCell
-                (
-                    cellI,
-                    modelTime,
-                    stateValues,
-                    rateValues,
-                    supportValues
-                );
-
-                Im[cellI] =
-                    ionicCurrentFromHotPathSupportForCell(cellI, supportValues);
-            }
-        }
 
         virtual void writeProfilingSummary() const override
         {

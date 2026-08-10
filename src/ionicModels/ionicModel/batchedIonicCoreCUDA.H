@@ -134,6 +134,22 @@ public:
         hostDirty = false;
     }
 
+    void syncStateSliceHostToDevice
+    (
+        const double* h_stateSlice,
+        const std::size_t stateI,
+        const std::size_t nCells
+    )
+    {
+        CARDIAC_CUDA_CHECK(cudaMemcpy
+        (
+            d_states + stateI*nCells,
+            h_stateSlice,
+            sizeof(double)*nCells,
+            cudaMemcpyHostToDevice
+        ));
+    }
+
     void syncStatesDeviceToHost(double* h_states, const std::size_t nStates, const std::size_t nCells)
     {
         CARDIAC_CUDA_CHECK(cudaMemcpy

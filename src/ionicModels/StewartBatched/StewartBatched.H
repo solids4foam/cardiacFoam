@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented wrapper for the Stewart 2009 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     StewartBatched.C
 \*---------------------------------------------------------------------------*/

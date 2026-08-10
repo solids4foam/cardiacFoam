@@ -27,9 +27,6 @@ Description
     Rush-Larsen tau/steady-state dispatch, and a thin
     ToRORd_dynClcompactBatched runtime alias that forces compact support.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     ToRORd_dynClBatched.C
 \*---------------------------------------------------------------------------*/

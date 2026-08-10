@@ -322,14 +322,18 @@ void Foam::GaurcompactBatched::solveOnDevice
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
     const int tFlag = static_cast<int>(tissue());
+    scalarField vmStateSlice;
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
     if (!solveVm)
     {
+        vmStateSlice.setSize(N);
         for (label cellI = 0; cellI < N; ++cellI)
         {
-            state(cellI, cell_v) = vmToState(Vm[cellI]);
+            const scalar vmState = vmToState(Vm[cellI]);
+            state(cellI, cell_v) = vmState;
+            vmStateSlice[cellI] = vmState;
         }
     }
 
@@ -351,6 +355,15 @@ void Foam::GaurcompactBatched::solveOnDevice
         (
             statesSoAData(),
             static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(N)
+        );
+    }
+    else if (!solveVm)
+    {
+        cuda_.syncStateSliceHostToDevice
+        (
+            vmStateSlice.cdata(),
+            static_cast<std::size_t>(cell_v),
             static_cast<std::size_t>(N)
         );
     }

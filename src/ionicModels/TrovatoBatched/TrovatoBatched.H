@@ -21,9 +21,6 @@ Class
 Description
     Batched GPU-oriented wrapper for the Trovato 2019 ionic model.
 
-Author
-    Simao Nieto de Castro, UCD.
-
 SourceFiles
     TrovatoBatched.C
 \*---------------------------------------------------------------------------*/

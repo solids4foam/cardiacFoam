@@ -19,8 +19,6 @@ Description
     State-major SoA batched evaluator for the Stewart 2009 ionic model.
     Generated mechanically from the scalar equation body; no Foam runtime
     objects are used inside the hot path.
-Author
-    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
