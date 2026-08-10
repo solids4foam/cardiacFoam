@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import cached_property
 from importlib import import_module
 from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
 
 if TYPE_CHECKING:
+    from openfoam_driver.core.plugin_capabilities import PluginCapabilities
     from openfoam_driver.core.contracts.dictionary import DictEntry
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
     from openfoam_driver.planning_types import StrictDiagnostic
@@ -167,6 +169,13 @@ class DriverContext:
     plugin: SolverPlugin
     identity: PluginIdentity
 
+    @cached_property
+    def capabilities(self) -> "PluginCapabilities":
+        """Return the focused internal view without changing dataclass fields."""
+        from .plugin_capabilities import adapt_plugin_capabilities
+
+        return adapt_plugin_capabilities(self.plugin)
+
 
 _REQUIRED_PLUGIN_MEMBERS = (
     "plugin_name",
@@ -291,9 +300,9 @@ def default_driver_context() -> DriverContext:
     retain it in module state.
     """
 
-    return load_plugin_context(
-        "openfoam_driver.plugins.cardiacfoam_plugin:CardiacFoamPlugin"
-    )
+    from .compatibility import legacy_default_driver_context
+
+    return legacy_default_driver_context()
 
 
 def generic_openfoam_context() -> DriverContext:

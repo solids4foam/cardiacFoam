@@ -18,7 +18,10 @@ openfoam_driver/
 │   │   ├── workflow_orchestrator.py # runs a workflow_dag to completion
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
 │   │   └── registry.py            # tutorial name -> make_spec factory
-│   └── defaults/                  # per-tutorial default parameters
+│   ├── defaults/                  # per-tutorial default parameters
+│   ├── plugin_capabilities.py     # focused internal solver capability adapters
+│   ├── compatibility.py           # behavior-preserving legacy boundary
+│   └── COMPATIBILITY.md           # fallback reasons, activation, and tests
 ├── specs/
 │   ├── common.py                  # mutators/path helpers
 │   ├── mesh_geometry.py           # mesh geometry checks for 1D 3D
@@ -54,6 +57,19 @@ Each tutorial module in `specs/tutorials/` builds a `TutorialSpec` with:
 - optional `postprocess(setup, output_dir)`
 
 This keeps all tutorial workflows on one engine while allowing per-tutorial sweep logic.
+
+## Solver injection boundary
+
+The public `SolverPlugin` interface remains backward compatible. Internally, a
+per-operation `DriverContext` adapts it into focused tutorial, dictionary,
+validation, artifact, case-compatibility, C++ mapping, mesh-policy, RunDocument,
+and sweep capabilities. Core code consumes those capabilities and does not
+reach through the plugin object directly.
+
+Omitting a context still selects cardiacFoam exactly as before. Legacy case,
+sweep, mutation, and planning decisions are named in
+[`core/COMPATIBILITY.md`](core/COMPATIBILITY.md); Plan 1 moves their ownership
+without changing their activation or output.
 
 ## Registered tutorials
 

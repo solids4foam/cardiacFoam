@@ -28,10 +28,10 @@
 
 """Export the tutorial catalog.
 
-Cross-checks ``tutorials_display.get_active_plugin().get_tutorial_displays()`` against
-``core.runtime.registry.list_tutorials()`` so we cannot ship a
-tutorial catalog entry without a backend factory, or omit a registered
-tutorial. Writes a stable JSON shape to the requested output path.
+Cross-checks the default plugin's ``get_tutorial_displays()`` against
+``core.runtime.registry.list_tutorials()`` so we cannot ship a tutorial
+catalog entry without a backend factory, or omit a registered tutorial.
+Writes a stable JSON shape to the requested output path.
 
 Source-of-truth stays in Python (the user confirmed: "the tutorials are
 currently running based on hardcoded scripts in the backend. that is okay").
@@ -48,19 +48,20 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from openfoam_driver.core.runtime.registry import list_tutorials  # noqa: E402
-from openfoam_driver.core.plugin_interface import get_active_plugin
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.tutorials_display import to_record  # noqa: E402
 
 
 def build_catalog() -> dict:
-    display_ids = {t.id for t in get_active_plugin().get_tutorial_displays()}
+    plugin = default_driver_context().plugin
+    display_ids = {t.id for t in plugin.get_tutorial_displays()}
     registry_ids = set(list_tutorials())
 
     only_in_display = display_ids - registry_ids
     only_in_registry = registry_ids - display_ids
     if only_in_display or only_in_registry:
         raise SystemExit(
-            "tutorials_display.get_active_plugin().get_tutorial_displays() is out of sync with "
+            "default plugin get_tutorial_displays() is out of sync with "
             "list_tutorials(). "
             f"only-in-display={sorted(only_in_display)} "
             f"only-in-registry={sorted(only_in_registry)}. "
@@ -69,8 +70,8 @@ def build_catalog() -> dict:
         )
 
     # Stable order: keep list_tutorials()' declared order so the
-    # JSON is reproducible regardless of get_active_plugin().get_tutorial_displays() tuple order.
-    by_id = {t.id: t for t in get_active_plugin().get_tutorial_displays()}
+    # JSON is reproducible regardless of get_tutorial_displays() tuple order.
+    by_id = {t.id: t for t in plugin.get_tutorial_displays()}
     return {
         "version": "1",
         "tutorials": [to_record(by_id[name]) for name in list_tutorials()],

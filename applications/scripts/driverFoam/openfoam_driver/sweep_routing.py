@@ -29,87 +29,38 @@ from __future__ import annotations
 
 from typing import Any
 
-from .sweep_expansion import SweepValidationError
-from .specs.dict_builder import SELECTOR_KEYS, is_known_override_driver_path
-
-_SUPPORTED_CONTROL_DICT_KEYS: frozenset[str] = frozenset({"deltaT", "endTime"})
-
-# Bookkeeping keys the expander may add that are never real dict values.
 _NON_ROUTABLE_KEYS: frozenset[str] = frozenset({"caseId"})
 
 
-def _routing_document_keys(driver_context) -> tuple[frozenset[str], frozenset[str]]:
-    """Return control and physics keys from the selected plugin catalog."""
-    if driver_context is None:
-        from .core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    catalog = driver_context.plugin.get_dictionary_catalog()
-    control_keys = frozenset(
-        entry.driver_path for entry in catalog.entries_for("controlDict")
+def _route_case_values_legacy(
+    *, base: dict[str, Any], resolved_axis_values: dict[str, Any], driver_context=None,
+) -> dict[str, Any]:
+    """Legacy public route, implemented by the cardiacFoam plugin."""
+    from .plugins.cardiacfoam.sweep import route_case_values
+
+    return route_case_values(
+        base=base,
+        resolved_axis_values=resolved_axis_values,
+        driver_context=driver_context,
     )
-    physics_keys = frozenset(
-        entry.driver_path for entry in catalog.entries_for("physicsProperties")
-    )
-    return control_keys, physics_keys
 
 
 def route_case_values(
     *, base: dict[str, Any], resolved_axis_values: dict[str, Any], driver_context=None,
 ) -> dict[str, Any]:
-    """Classify a resolved case's values into build_and_launch's parameters.
+    """Route through the selected plugin while preserving the public API."""
 
-    `base` may carry pre-set "electro_selectors"/"physics_selectors"/
-    "electro_overrides"/"physics_overrides" dicts (fixed across the whole
-    sweep); resolved_axis_values are merged on top per the routing rules.
-    """
-    electro_selectors: dict[str, Any] = dict(base.get("electro_selectors", {}))
-    physics_selectors: dict[str, Any] = dict(base.get("physics_selectors", {}))
-    electro_overrides: dict[str, Any] = dict(base.get("electro_overrides", {}))
-    physics_overrides: dict[str, Any] = dict(base.get("physics_overrides", {}))
-    delta_t: Any = base.get("delta_t")
-    end_time: Any = base.get("end_time")
-    dx: Any = base.get("dx")
-    control_dict_keys, physics_selector_keys = _routing_document_keys(driver_context)
-    unsupported_control_dict_keys = control_dict_keys - _SUPPORTED_CONTROL_DICT_KEYS
+    from .core.compatibility import resolve_public_driver_context
+    from .core.plugin_capabilities import SweepRoutingRequest
 
-    for key, value in resolved_axis_values.items():
-        if key in _NON_ROUTABLE_KEYS:
-            continue
-        if key in SELECTOR_KEYS:
-            electro_selectors[key] = value
-        elif key in physics_selector_keys:
-            physics_selectors[key] = value
-        elif key == "deltaT":
-            delta_t = value
-        elif key == "endTime":
-            end_time = value
-        elif key == "dx":
-            dx = value
-        elif key in unsupported_control_dict_keys:
-            known = ", ".join(sorted(_SUPPORTED_CONTROL_DICT_KEYS))
-            raise SweepValidationError(
-                f"controlDict sweep axis '{key}' is not supported by this plan; "
-                f"supported controlDict axes are: {known}"
-            )
-        elif is_known_override_driver_path(key, driver_context=driver_context):
-            electro_overrides[key] = value
-        else:
-            raise SweepValidationError(
-                f"sweep axis '{key}' is not a recognized selector, controlDict "
-                "key, electroProperties/physicsProperties driver_path, or "
-                "'dx' (mesh resolution for the generic default blockMeshDict); "
-                "it would have no effect on the generated case."
-            )
-
-    return {
-        "electro_selectors": electro_selectors,
-        "physics_selectors": physics_selectors,
-        "electro_overrides": electro_overrides,
-        "physics_overrides": physics_overrides,
-        "delta_t": delta_t,
-        "end_time": end_time,
-        "dx": dx,
-    }
+    driver_context = resolve_public_driver_context(driver_context)
+    return driver_context.capabilities.sweep_materializer.route(
+        SweepRoutingRequest(
+            base=base,
+            resolved_axis_values=resolved_axis_values,
+        ),
+        driver_context=driver_context,
+    )
 
 
 _ENTRY_NON_ROUTABLE_KEYS: frozenset[str] = _NON_ROUTABLE_KEYS | frozenset(

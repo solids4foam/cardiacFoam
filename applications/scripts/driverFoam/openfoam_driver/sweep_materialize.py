@@ -27,38 +27,31 @@
 
 from __future__ import annotations
 
-import json
-import stat
 from pathlib import Path
 from typing import Any
 
-from .specs.dict_builder import build_and_launch
 
-
-def materialize_case(*, case_dir: Path, routed: dict[str, Any]) -> None:
+def _materialize_case_legacy(*, case_dir: Path, routed: dict[str, Any]) -> None:
     """Write a resolved+routed case's dict files, Allrun script, and
     workflow_contract.json. Raises ValueError (propagated from
     build_and_launch/build_electro_properties) if the routed selectors are
     structurally invalid — the caller treats that as this case's failure,
     not a crash of the whole sweep.
     """
-    result = build_and_launch(
-        electro_selectors=routed["electro_selectors"],
-        physics_selectors=routed["physics_selectors"],
-        case_dir=case_dir,
-        electro_overrides=routed["electro_overrides"] or None,
-        physics_overrides=routed["physics_overrides"] or None,
-        delta_t=routed["delta_t"],
-        end_time=routed["end_time"],
-        dx=routed.get("dx"),
-        dry_run=True,
-        overwrite=True,
+    from .plugins.cardiacfoam.sweep import materialize_case
+
+    materialize_case(case_dir=case_dir, routed=routed)
+
+
+def materialize_case(
+    *, case_dir: Path, routed: dict[str, Any], driver_context=None,
+) -> None:
+    """Materialize via the selected plugin while preserving the public API."""
+
+    from .core.compatibility import resolve_public_driver_context
+    from .core.plugin_capabilities import SweepMaterializationRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
+    driver_context.capabilities.sweep_materializer.materialize(
+        SweepMaterializationRequest(case_dir=case_dir, routed=routed),
     )
-
-    allrun_body = "blockMesh\ncardiacFoam\n" if result.get("needs_block_mesh") else "cardiacFoam\n"
-    allrun_path = case_dir / "Allrun"
-    allrun_path.write_text("#!/bin/sh\n" + allrun_body)
-    allrun_path.chmod(allrun_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
-
-    contract_path = case_dir / "workflow_contract.json"
-    contract_path.write_text(json.dumps({"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]}))

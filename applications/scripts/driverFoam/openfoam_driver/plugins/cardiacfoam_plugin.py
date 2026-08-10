@@ -34,7 +34,10 @@ from openfoam_driver.core.plugin_interface import SolverPlugin, CapabilityManife
 
 # Note: now imported from the local plugin catalog instead of dict_entries
 from openfoam_driver.plugins.cardiacfoam.dict_entries_catalog import ELECTRO_PROPERTY_ENTRY_GROUPS, HETEROGENEITY_MODELS
-from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES, PHYSICS_PROPERTY_ENTRIES
+from openfoam_driver.plugins.cardiacfoam.common_dict_entries import (
+    CONTROL_DICT_ENTRIES,
+    PHYSICS_PROPERTY_ENTRIES,
+)
 from openfoam_driver.core.contracts.dictionary_catalog import DictionaryCatalog
 from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
@@ -92,7 +95,6 @@ class CardiacFoamPlugin:
         entries: list[DictEntry] = list(PHYSICS_PROPERTY_ENTRIES)
         for group in self.get_dict_groups().values():
             entries.extend(group)
-        # Note: A complete implementation would also aggregate other cardiac-specific dicts
         return tuple(entries)
 
     @staticmethod
@@ -120,7 +122,7 @@ class CardiacFoamPlugin:
 
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
-        from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec as make_generic_case_spec
+        from openfoam_driver.core.runtime.generic_case import make_spec as make_generic_case_spec
         return {
             "spec_factories": SPEC_FACTORIES,
             "registered_tutorials": REGISTERED_TUTORIALS,
@@ -190,6 +192,52 @@ class CardiacFoamPlugin:
     def predict_data_artifacts(self, case_root: Path, spec: TutorialSpec) -> tuple[DataArtifact, ...]:
         from openfoam_driver.plugins.cardiacfoam.artifacts_predictor import predict_cardiac_artifacts
         return predict_cardiac_artifacts(case_root, spec)
+
+    def build_run_document_config(self, spec):
+        from openfoam_driver.plugins.cardiacfoam.run_document_config import build_config
+
+        return build_config(spec)
+
+    def has_case_marker(self, case_root: Path) -> bool:
+        """Return the historical cardiac case-folder discovery evidence."""
+        from openfoam_driver.plugins.cardiacfoam.case_compatibility import has_case_marker
+
+        return has_case_marker(case_root)
+
+    def is_case_runnable_without_workflow(self, case_root: Path) -> bool:
+        """Preserve legacy runnability for uncontracted cardiac cases."""
+        from openfoam_driver.plugins.cardiacfoam.case_compatibility import (
+            is_runnable_without_workflow,
+        )
+
+        return is_runnable_without_workflow(case_root)
+
+    def route_sweep_case_values(
+        self,
+        *,
+        base,
+        resolved_axis_values,
+        driver_context,
+    ):
+        from openfoam_driver.plugins.cardiacfoam.sweep import route_case_values
+
+        return route_case_values(
+            base=base,
+            resolved_axis_values=resolved_axis_values,
+            driver_context=driver_context,
+        )
+
+    def materialize_sweep_case(self, *, case_dir: Path, routed) -> None:
+        from openfoam_driver.plugins.cardiacfoam.sweep import materialize_case
+
+        materialize_case(case_dir=case_dir, routed=routed)
+
+    def is_nondimensional_case(self, spec) -> bool:
+        from openfoam_driver.plugins.cardiacfoam.planning_policy import (
+            is_nondimensional_case,
+        )
+
+        return is_nondimensional_case(spec)
 
 
 # Ensure CardiacFoamPlugin satisfies the SolverPlugin protocol

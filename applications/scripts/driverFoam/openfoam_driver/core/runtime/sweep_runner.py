@@ -113,9 +113,9 @@ def sweep_plan(
     max_cases: int = 200,
     driver_context=None,
 ) -> dict[str, Any]:
-    if driver_context is None:
-        from ..plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from ..compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
@@ -192,9 +192,9 @@ def sweep_run(
     fresh: bool = False,
     driver_context=None,
 ) -> dict[str, Any]:
-    if driver_context is None:
-        from ..plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from ..compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 

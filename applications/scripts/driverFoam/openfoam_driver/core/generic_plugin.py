@@ -59,3 +59,12 @@ class GenericOpenFOAMPlugin:
 
     def predict_data_artifacts(self, case_root, spec):
         return ()
+
+    def build_run_document_config(self, spec):
+        del spec
+        return {
+            "anatomy": {},
+            "physics": {},
+            "stimulus": {},
+            "solver": {},
+        }, ()

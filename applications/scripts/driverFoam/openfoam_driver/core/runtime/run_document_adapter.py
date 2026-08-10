@@ -28,35 +28,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
 from ...planning_types import StrictDiagnostic, artifact_to_json, diagnostic
-from ...specs.dict_builder import (
-    build_electro_properties,
-    build_physics_properties,
-    parse_electro_properties,
-    populate_values,
-    resolve_context,
-    select_applicable_entries,
-)
-from ...specs.validation import primary_phase, slot_key, validate_run
+from ...specs.validation import validate_run
+from ..plugin_capabilities import RunDocumentConfigurationRequest
 from .models import DataArtifact
 from .run_model import RunDocument
 from .workflow_state import WorkflowRunState
-
-
-def _read_physics_type(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    for line in path.read_text().splitlines():
-        stripped = line.split("//", 1)[0].strip()
-        if not stripped.startswith("type"):
-            continue
-        tokens = stripped.rstrip(";").split()
-        if len(tokens) >= 2:
-            return tokens[1]
-    return None
 
 
 def _run_document_from_case(
@@ -69,77 +48,13 @@ def _run_document_from_case(
     expected_artifacts: tuple[DataArtifact, ...],
     driver_context,
 ) -> tuple[RunDocument, tuple[StrictDiagnostic, ...]]:
-    diagnostics: list[StrictDiagnostic] = []
-    config: dict[str, dict[str, Any]] = {
-        "anatomy": {},
-        "physics": {},
-        "stimulus": {},
-        "solver": {},
-    }
-    case_root = Path(spec.case_root)
+    config, configuration_diagnostics = (
+        driver_context.capabilities.run_document_configuration.build(
+            RunDocumentConfigurationRequest(spec),
+        )
+    )
+    diagnostics: list[StrictDiagnostic] = list(configuration_diagnostics)
     generic_case = bool(spec.metadata.get("generic_case")) if spec.metadata else False
-    electro_path = case_root / "constant" / "electroProperties"
-    physics_path = case_root / "constant" / "physicsProperties"
-    physics_type = _read_physics_type(physics_path)
-    if not generic_case and physics_type is None:
-        diagnostics.append(diagnostic(
-            "error",
-            "missing_physics_properties",
-            f"Could not read physicsProperties type from {physics_path}",
-            source=str(physics_path),
-            field="type",
-        ))
-    elif not generic_case:
-        config["physics"]["type"] = physics_type
-        try:
-            build_physics_properties({"type": physics_type})
-        except Exception as exc:
-            diagnostics.append(diagnostic(
-                "error",
-                "invalid_physics_properties",
-                str(exc),
-                source=str(physics_path),
-            ))
-
-    if not generic_case and not electro_path.exists():
-        diagnostics.append(diagnostic(
-            "error",
-            "missing_electro_properties",
-            f"Missing electroProperties at {electro_path}",
-            source=str(electro_path),
-        ))
-    elif not generic_case:
-        try:
-            parsed = parse_electro_properties(electro_path)
-            selectors = parsed["selectors"]
-            overrides = parsed.get("overrides", {})
-            try:
-                build_electro_properties(selectors, overrides=overrides or None)
-            except Exception as exc:
-                diagnostics.append(diagnostic(
-                    "error",
-                    "invalid_electro_properties",
-                    str(exc),
-                    source=str(electro_path),
-                ))
-            context = resolve_context(selectors, overrides=overrides or None)
-            applicable_entries = select_applicable_entries(context)
-            populated = populate_values(applicable_entries, context)
-            for entry_obj in applicable_entries:
-                key = slot_key(entry_obj.driver_path)
-                if entry_obj.dynamic_path and key not in context:
-                    continue
-                if key not in populated:
-                    continue
-                phase = primary_phase(entry_obj) or "physics"
-                config[phase][key] = populated[key]
-        except Exception as exc:
-            diagnostics.append(diagnostic(
-                "error",
-                "unparseable_electro_properties",
-                str(exc),
-                source=str(electro_path),
-            ))
 
     run_doc = RunDocument(
         id=f"plan-{entry}",

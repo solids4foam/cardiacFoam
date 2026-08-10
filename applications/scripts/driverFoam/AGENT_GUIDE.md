@@ -25,6 +25,12 @@ before driving the orchestrator.
 
 ## Preferred strict agent loop
 
+The solver-injection refactor does not change this public loop. A single
+per-operation driver context now supplies focused solver capabilities
+internally, while omitted contexts, RunDocument v2, legacy fallbacks, commands,
+diagnostics, and artifacts retain their established behavior. The fallback
+inventory is documented in `openfoam_driver/core/COMPATIBILITY.md`.
+
 Use strict planning before launching. It is the only path that tells an agent
 whether the run is machine-readable, validated, catalog-covered, artifact
 predictable, and workflow-addressable before execution starts.

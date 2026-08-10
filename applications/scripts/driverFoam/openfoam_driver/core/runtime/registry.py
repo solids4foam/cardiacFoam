@@ -67,33 +67,22 @@ ENTRY_KIND_VALUES = (
 
 _ENTRY_HINTS: dict[str, dict[str, object]] = {}
 
-_CORE_REQUIRED_FILES = ("constant/physicsProperties",)
-
-_SOLVER_REQUIRED_FILES = (
-    "system/controlDict",
-    "system/fvSchemes",
-    "system/fvSolution",
-)
-
-
-def _is_case_directory(path: Path) -> bool:
+def _is_case_directory(
+    path: Path,
+    driver_context: "DriverContext | None" = None,
+) -> bool:
     if not path.is_dir() or path.name.startswith(".") or path.name == "__pycache__":
         return False
+    from ..compatibility import resolve_public_driver_context
+    from ..plugin_capabilities import CaseCompatibilityRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
     return (
-        _has_electro_properties_file(path)
+        driver_context.capabilities.case_compatibility.has_case_marker(
+            CaseCompatibilityRequest(path),
+        )
         or (path / "workflow_contract.json").is_file()
         or (path / "Allrun").is_file()
-    )
-
-
-def _has_electro_properties_file(case_root: Path) -> bool:
-    constant_root = case_root / "constant"
-    if not constant_root.is_dir():
-        return False
-    return any(
-        candidate.is_file()
-        and candidate.name.startswith("electroProperties")
-        for candidate in constant_root.rglob("electroProperties*")
     )
 
 
@@ -106,6 +95,8 @@ def _read_json_if_exists(path: Path) -> dict[str, object] | None:
 def _case_is_runnable(
     case_root: Path,
     authoring_contract: dict[str, object] | None = None,
+    *,
+    driver_context: "DriverContext | None" = None,
 ) -> bool:
     if authoring_contract is not None:
         status = authoring_contract.get("status")
@@ -121,15 +112,19 @@ def _case_is_runnable(
     if (case_root / "Allrun").is_file():
         return True
 
-    # Preserve the legacy cardiacFoam evidence rule for uncontracted folders
-    # while allowing a generic OpenFOAM case to declare its own workflow.
-    required_paths = (*_CORE_REQUIRED_FILES, *_SOLVER_REQUIRED_FILES)
-    return _has_electro_properties_file(case_root) and all(
-        (case_root / relpath).exists() for relpath in required_paths
+    from ..compatibility import resolve_public_driver_context
+    from ..plugin_capabilities import CaseCompatibilityRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
+    return driver_context.capabilities.case_compatibility.is_runnable_without_workflow(
+        CaseCompatibilityRequest(case_root),
     )
 
 
-def _iter_case_directories_recursive(tutorials_root: Path) -> list[Path]:
+def _iter_case_directories_recursive(
+    tutorials_root: Path,
+    driver_context: "DriverContext | None" = None,
+) -> list[Path]:
     if not tutorials_root.exists():
         return []
 
@@ -144,7 +139,7 @@ def _iter_case_directories_recursive(tutorials_root: Path) -> list[Path]:
             and not dirname.startswith("processor")
             and dirname not in {"postProcessing", "logs"}
         ]
-        if _is_case_directory(path):
+        if _is_case_directory(path, driver_context):
             discovered.append(path)
             dirnames[:] = []
     return discovered
@@ -190,7 +185,11 @@ def _registered_tutorial_entry(
     }
 
 
-def _classify_case_entry(case_root: Path, tutorials_root: Path) -> dict[str, object]:
+def _classify_case_entry(
+    case_root: Path,
+    tutorials_root: Path,
+    driver_context: "DriverContext | None" = None,
+) -> dict[str, object]:
     relative_path = str(case_root.relative_to(tutorials_root))
     normalized_relative_path = relative_path.casefold()
     authoring_contract = _read_json_if_exists(case_root / "workflow_contract.json")
@@ -219,12 +218,16 @@ def _classify_case_entry(case_root: Path, tutorials_root: Path) -> dict[str, obj
             entry_kind = "case_folder"
             source_type = "filesystem_case"
             workflow_family = authoring_contract.get("tutorial_family")
-            is_runnable = _case_is_runnable(case_root, authoring_contract)
+            is_runnable = _case_is_runnable(
+                case_root,
+                authoring_contract,
+                driver_context=driver_context,
+            )
     else:
         entry_kind = "case_folder"
         source_type = "filesystem_case"
         workflow_family = None
-        is_runnable = _case_is_runnable(case_root)
+        is_runnable = _case_is_runnable(case_root, driver_context=driver_context)
 
     # Extract workflow_dag from the on-disk contract if a steps array is present.
     workflow_dag: dict[str, object] | None = None
@@ -250,13 +253,16 @@ def _entry_catalog_for_root(
     tutorials_root: Path,
     driver_context: "DriverContext | None" = None,
 ) -> list[dict[str, object]]:
+    from ..compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     entries: list[dict[str, object]] = [
         _registered_tutorial_entry(tutorial, tutorials_root, driver_context)
         for tutorial in list_tutorials(driver_context)
     ]
     known_registered = {tutorial.casefold() for tutorial in list_tutorials(driver_context)}
-    for case_root in _iter_case_directories_recursive(tutorials_root):
-        classified = _classify_case_entry(case_root, tutorials_root)
+    for case_root in _iter_case_directories_recursive(tutorials_root, driver_context):
+        classified = _classify_case_entry(case_root, tutorials_root, driver_context)
         if classified["entry_name"].casefold() in known_registered:
             continue
         entries.append(classified)
@@ -274,11 +280,19 @@ def _entry_catalog_for_root(
 
 
 
-def list_case_directories(tutorials_root: Path | None = None) -> list[str]:
+def list_case_directories(
+    tutorials_root: Path | None = None,
+    *,
+    driver_context: "DriverContext | None" = None,
+) -> list[str]:
     resolved_root = Path(tutorials_root) if tutorials_root is not None else tutorials_root_default()
     if not resolved_root.exists():
         return []
-    return sorted(child.name for child in resolved_root.iterdir() if _is_case_directory(child))
+    return sorted(
+        child.name
+        for child in resolved_root.iterdir()
+        if _is_case_directory(child, driver_context)
+    )
 
 
 def list_available_tutorials(
@@ -288,7 +302,9 @@ def list_available_tutorials(
 ) -> list[str]:
     available = list_tutorials(driver_context)
     known = {name.casefold() for name in available}
-    for case_dir in list_case_directories(tutorials_root):
+    for case_dir in list_case_directories(
+        tutorials_root, driver_context=driver_context,
+    ):
         if case_dir.casefold() in known:
             continue
         available.append(case_dir)
@@ -416,6 +432,10 @@ def resolve_entry(
     overrides: dict | None = None,
     driver_context: "DriverContext | None" = None,
 ) -> dict[str, object]:
+    from ..compatibility import resolve_public_driver_context
+    from ..plugin_capabilities import CaseCompatibilityRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
     key = name.strip()
     normalized_key = key.casefold()
     normalized_registry = _normalized_registry(driver_context)
@@ -454,7 +474,9 @@ def resolve_entry(
         # cardiac plugin; its absence must not prevent generic OpenFOAM use.
         generic_factory = (
             _get_plugin_tutorials(driver_context).get("make_generic_case_spec")
-            if _has_electro_properties_file(matched_case_root)
+            if driver_context.capabilities.case_compatibility.has_case_marker(
+                CaseCompatibilityRequest(matched_case_root),
+            )
             else make_generic_case_spec
         )
         return {
@@ -505,10 +527,10 @@ def resolve_tutorial(
 
 
 def _get_plugin_tutorials(driver_context: "DriverContext | None" = None):
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    return driver_context.plugin.get_tutorial_catalog()
+    from ..compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    return driver_context.capabilities.tutorials.catalog()
 
 def _normalized_registry(driver_context: "DriverContext | None" = None) -> dict[str, object]:
     spec_factories = _get_plugin_tutorials(driver_context).get("spec_factories", {})

@@ -231,7 +231,9 @@ def build_execution_inputs(
                 "launch.caseRoot",
             ))
             resolved_case_root = None
-        elif not _case_is_runnable(resolved_case_root):
+        elif not _case_is_runnable(
+            resolved_case_root, driver_context=driver_context,
+        ):
             diagnostics.append(_diag(
                 "error", "case_root_not_a_runnable_case",
                 f"Run document launch.caseRoot is not a runnable OpenFOAM case "

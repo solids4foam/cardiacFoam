@@ -169,14 +169,17 @@ def predict_data_artifacts(
     Never raises. Returns ``()`` when nothing can be derived and no static
     override is supplied.
     """
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+    from openfoam_driver.core.plugin_capabilities import ArtifactPredictionRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
 
     static_override = spec.metadata.get("expected_artifacts", ()) if spec.metadata else ()
     static_tuple = tuple(static_override)
 
-    plugin_derived = driver_context.plugin.predict_data_artifacts(case_root, spec)
+    plugin_derived = driver_context.capabilities.artifacts.predict(
+        ArtifactPredictionRequest(case_root=case_root, spec=spec),
+    )
     utility_derived = _predict_from_workflow_utilities(spec)
     
     derived = _core_generic_artifacts(spec) + plugin_derived + utility_derived

@@ -462,11 +462,11 @@ def is_known_override_driver_path(
     rather than silently accepting an override that has no matching entry
     anywhere and therefore no effect.
     """
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     normalized = slot_key(key)
-    for entry in driver_context.plugin.get_dictionary_catalog().entries:
+    for entry in driver_context.capabilities.dictionaries.catalog().entries:
         entry_key = slot_key(entry.driver_path)
         if getattr(entry, "dynamic_path", False):
             # re.escape leaves `<`, `>`, letters and `_` untouched, so
@@ -822,10 +822,10 @@ def build_and_launch(
             "needs_block_mesh": needs_block_mesh,
         }
 
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    make_spec = driver_context.plugin.get_tutorial_catalog()["make_generic_case_spec"]
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    make_spec = driver_context.capabilities.tutorials.catalog()["make_generic_case_spec"]
     from openfoam_driver.core.runtime.execution_context import resolve_execution_context
     from openfoam_driver.core.runtime.openfoam_environment import load_openfoam_environment
     from openfoam_driver.core.runtime.workflow import normalize_workflow_dag, validate_workflow_commands

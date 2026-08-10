@@ -42,6 +42,7 @@ the test focused on validator behaviour rather than field enumeration.
 from __future__ import annotations
 
 from openfoam_driver.dict_entries import (
+    CONTROL_DICT_ENTRIES,
     DictEntry,
     get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
@@ -54,6 +55,7 @@ _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
+    yield from CONTROL_DICT_ENTRIES
     for group in get_electro_property_entry_groups().values():
         yield from group
 
@@ -548,6 +550,7 @@ Fixture-to-solver mapping (derived from each spec's defaults.ELECTRO_PROPERTIES_
 import pytest
 
 from openfoam_driver.dict_entries import (
+    CONTROL_DICT_ENTRIES,
     get_electro_property_entry_groups,
     PHYSICS_PROPERTY_ENTRIES,
 )
@@ -559,6 +562,7 @@ _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
 def _all_entries():
     yield from PHYSICS_PROPERTY_ENTRIES
+    yield from CONTROL_DICT_ENTRIES
     for group in get_electro_property_entry_groups().values():
         yield from group
 

@@ -65,11 +65,6 @@ from .planning_types import (
     diagnostic as _diagnostic,
 )
 from .scripts._dict_keys_scanner import strict_dict_key_report
-from .specs.common import (
-    detect_ionic_model_name,
-    detect_myocardium_solver_name,
-    detect_verification_model_type,
-)
 from .specs.function_object_fields import function_object_field_diagnostics
 from .specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 
@@ -195,8 +190,15 @@ def _artifact_diagnostics(
             source=str(case_root),
         ))
 
-    # Defer domain-specific validation to the active plugin
-    diagnostics.extend(driver_context.plugin.validate_configuration(spec))
+    # Defer domain-specific validation to the selected capability while
+    # preserving the public plugin call and diagnostic order.
+    from .core.plugin_capabilities import ConfigurationValidationRequest
+
+    diagnostics.extend(
+        driver_context.capabilities.configuration_validator.validate(
+            ConfigurationValidationRequest(spec),
+        )
+    )
 
     for diagnostic in validate_workflow_commands(workflow_dag):
         diagnostics.append(_diagnostic(
@@ -212,7 +214,7 @@ def _artifact_diagnostics(
 def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnostic, ...]:
     """Run only the active plugin's reviewed C++↔Python mapping checks."""
 
-    mapping = driver_context.plugin.get_profile().cxx_mapping
+    mapping = driver_context.capabilities.cxx_mapping.profile().cxx_mapping
     if mapping is None:
         return ()
     diagnostics: list[StrictDiagnostic] = []
@@ -228,7 +230,7 @@ def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnos
         report = strict_dict_key_report(
             source_root,
             allowlist_path=mapping.allowlist_path,
-            entries=driver_context.plugin.get_dict_entries(),
+            entries=driver_context.capabilities.dictionaries.entries(),
         )
         payload = report.to_json()
         for key in ("absent_keys", "stale_paths", "unmatched_subdicts", "unused_allowlist"):
@@ -242,7 +244,7 @@ def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnos
     return tuple(diagnostics)
 
 
-def _is_nondimensional_entry(spec) -> bool:
+def _is_nondimensional_entry(spec, driver_context=None) -> bool:
     """Return True when the SI mesh-scale gate is not meaningful."""
     entry_name = ""
     family = ""
@@ -252,16 +254,10 @@ def _is_nondimensional_entry(spec) -> bool:
     haystack = f"{entry_name} {family}".lower()
     if "manufactured" in haystack or "verification" in haystack:
         return True
-    electro_path = Path(spec.case_root) / "constant" / "electroProperties"
-    if electro_path.exists():
-        try:
-            if detect_myocardium_solver_name(electro_path) == "singleCellSolver":
-                return True
-            if detect_verification_model_type(electro_path) is not None:
-                return True
-        except Exception:
-            pass
-    return False
+    from .core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    return driver_context.capabilities.mesh_diagnostic_policy.is_nondimensional(spec)
 
 
 def _mesh_geometry_diagnostics(
@@ -331,9 +327,9 @@ def strict_plan(
     driver_context: "DriverContext | None" = None,
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
-    if driver_context is None:
-        from .core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from .core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     spec = load_entry_spec(
         entry,
         entry_kind=entry_kind,
@@ -379,7 +375,7 @@ def strict_plan(
     mesh_diagnostics = _mesh_geometry_diagnostics(
         spec.case_root,
         exempt=(
-            _is_nondimensional_entry(spec)
+            _is_nondimensional_entry(spec, driver_context)
             or bool(spec.metadata.get("generic_case"))
         ),
     )
@@ -394,7 +390,7 @@ def strict_plan(
         mesh_geometry_diagnostics=mesh_diagnostics,
         required_case_files=tuple(
             rule.path
-            for rule in driver_context.plugin.get_profile().case_files
+            for rule in driver_context.capabilities.cxx_mapping.profile().case_files
             if rule.required == "always"
         ),
     )
@@ -409,7 +405,7 @@ def strict_plan(
     # The plugin owns solver capabilities and model-specific field exposure.
     # Keep the established payload shape for cardiacFoam compatibility while
     # attaching the immutable identity that supplied it.
-    raw_capability_manifest = dict(driver_context.plugin.get_capabilities())
+    raw_capability_manifest = dict(driver_context.capabilities.manifest.manifest())
     raw_capability_manifest["plugin_identity"] = driver_context.identity.to_json()
     capability_manifest = _jsonable(raw_capability_manifest)
     function_object_diagnostics = function_object_field_diagnostics(

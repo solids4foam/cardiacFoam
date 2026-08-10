@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
 from pathlib import Path
 
-from openfoam_driver.core.plugin_interface import driver_context, validate_plugin
+from openfoam_driver.core.generic_plugin import GenericOpenFOAMPlugin
+from openfoam_driver.core.plugin_interface import (
+    default_driver_context,
+    driver_context,
+    validate_plugin,
+)
 from openfoam_driver.core.plugin_profile import PluginProfile
 from openfoam_driver.core.runtime.registry import list_tutorials
 from openfoam_driver.core.contracts.dictionary import DictEntry
@@ -81,6 +88,26 @@ def test_contexts_do_not_share_plugin_selection() -> None:
     assert list_tutorials(beta) == ["beta"]
     assert alpha.identity.to_json()["id"] == "example.alpha"
     assert beta.identity.to_json()["id"] == "example.beta"
+
+
+def test_plugin_contexts_remain_isolated_sequentially_and_concurrently() -> None:
+    contexts = (
+        driver_context(_Plugin("example.alpha", "alpha"), source="test"),
+        driver_context(_Plugin("example.beta", "beta"), source="test"),
+        driver_context(GenericOpenFOAMPlugin(), source="test"),
+        default_driver_context(),
+    )
+    expected = (
+        ["alpha"],
+        ["beta"],
+        [],
+        list(contexts[-1].capabilities.tutorials.catalog()["registered_tutorials"]),
+    )
+
+    assert tuple(list_tutorials(context) for context in contexts) == expected
+    with ThreadPoolExecutor(max_workers=len(contexts)) as executor:
+        futures = [executor.submit(list_tutorials, context) for context in contexts]
+    assert tuple(future.result() for future in futures) == expected
 
 
 def test_plugin_contract_rejects_missing_members() -> None:

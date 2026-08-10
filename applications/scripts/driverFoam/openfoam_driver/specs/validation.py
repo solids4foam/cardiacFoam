@@ -64,10 +64,10 @@ _PHASE_ORDER: tuple[Phase, ...] = (
 
 from .validation_types import ValidationError
 def _all_entries(driver_context: "DriverContext | None" = None):
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    yield from driver_context.plugin.get_dict_entries()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    yield from driver_context.capabilities.dictionaries.entries()
 
 
 def primary_phase(entry) -> Phase | None:
@@ -224,9 +224,10 @@ def validate_run(
     that want to validate against a curated subset (e.g., dict_builder).
     When omitted, the full live catalog is used.
     """
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+    from openfoam_driver.core.plugin_capabilities import RunSemanticValidationRequest
+
+    driver_context = resolve_public_driver_context(driver_context)
     entry_list: list[DictEntry] = (
         list(entries) if entries is not None else _all_entries_list(driver_context)
     )
@@ -289,7 +290,11 @@ def validate_run(
 
     # 4) Domain semantics are a plugin concern.  Core owns only generic
     # catalog constraints and receives solver-specific diagnostics as data.
-    errors.extend(driver_context.plugin.validate_run_semantics(context))
+    errors.extend(
+        driver_context.capabilities.run_semantic_validator.validate(
+            RunSemanticValidationRequest(context),
+        )
+    )
 
     return errors
 
@@ -351,4 +356,3 @@ def _evaluate_structured(
                     ))
 
     return errors
-

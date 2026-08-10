@@ -59,10 +59,10 @@ class OverrideError(ValueError):
 
 
 def _catalog_entries(driver_context=None) -> tuple[set[str], tuple[Any, ...]]:
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    catalog = driver_context.plugin.get_dictionary_catalog()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    catalog = driver_context.capabilities.dictionaries.catalog()
     return (
         {entry.driver_path for entry in catalog.entries_for("controlDict")},
         catalog.entries_for("electroProperties"),

@@ -37,10 +37,10 @@ if TYPE_CHECKING:
 
 
 def __get_capabilities(driver_context: "DriverContext | None" = None):
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    return driver_context.plugin.get_capabilities()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    return driver_context.capabilities.manifest.manifest()
 
 
 from .core.runtime.models import CaseConfig, TutorialSpec
@@ -144,10 +144,10 @@ def _describe_spec(spec: TutorialSpec) -> dict[str, Any]:
 
 
 def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
-    if driver_context is None:
-        from openfoam_driver.core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
-    catalog = driver_context.plugin.get_dictionary_catalog()
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    catalog = driver_context.capabilities.dictionaries.catalog()
     return {
         "physicsProperties": [
             _serialize(asdict(entry))
@@ -155,7 +155,7 @@ def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[s
         ],
         "electroProperties": {
             group_name: [_serialize(asdict(entry)) for entry in entries]
-            for group_name, entries in driver_context.plugin.get_dict_groups().items()
+            for group_name, entries in driver_context.capabilities.dictionaries.groups().items()
         },
     }
 
@@ -530,9 +530,9 @@ def describe_entry(
     config_path: str | Path | None = None,
     driver_context: "DriverContext | None" = None,
 ) -> dict[str, Any]:
-    if driver_context is None:
-        from .core.plugin_interface import default_driver_context
-        driver_context = default_driver_context()
+    from .core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
     resolution = resolve_entry(
         entry,
         entry_kind=entry_kind,
@@ -571,7 +571,9 @@ def describe_entry(
         "available_tutorials": list_available_tutorials(
             tutorials_root, driver_context=driver_context,
         ),
-        "case_directories": list_case_directories(tutorials_root),
+        "case_directories": list_case_directories(
+            tutorials_root, driver_context=driver_context,
+        ),
         "common_override_keys": list(COMMON_OVERRIDE_KEYS),
         "make_spec": make_spec_info,
         "factory_overrides": _serialize(resolution["factory_overrides"]),
@@ -597,7 +599,7 @@ def describe_entry(
         ),
         "manifest_schema": _manifest_schema(),
         "capability_manifest": _serialize({
-            **dict(driver_context.plugin.get_capabilities()),
+            **dict(driver_context.capabilities.manifest.manifest()),
             "plugin_identity": driver_context.identity.to_json(),
         }),
     }
