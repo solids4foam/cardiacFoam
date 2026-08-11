@@ -582,6 +582,7 @@ def describe_entry(
             describe_tutorial_contract(
                 spec,
                 resolution=resolution["resolution"],
+                driver_context=driver_context,
             )
         ),
         "dict_entries": _dict_entry_catalog(driver_context),

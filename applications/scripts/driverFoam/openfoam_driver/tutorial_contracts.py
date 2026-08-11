@@ -37,22 +37,34 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .core.runtime.models import TutorialSpec
 
+if TYPE_CHECKING:
+    from .core.plugin_interface import DriverContext
 
+
+# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
+# source is the active plugin profile via
+# driver_context.capabilities.case_files. Remove once no consumer imports them.
 CORE_REQUIRED_FILES = (
     "constant/electroProperties",
     "constant/physicsProperties",
 )
 
+# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
+# source is the active plugin profile via
+# driver_context.capabilities.case_files. Remove once no consumer imports them.
 SOLVER_REQUIRED_FILES = (
     "system/controlDict",
     "system/fvSchemes",
     "system/fvSolution",
 )
 
+# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
+# source is the active plugin profile via
+# driver_context.capabilities.case_files. Remove once no consumer imports them.
 CONDITIONAL_FILES = (
     "system/decomposeParDict",
     "system/blockMeshDict",
@@ -125,6 +137,7 @@ def describe_tutorial_contract(
     spec: TutorialSpec,
     *,
     resolution: str,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
     case_root = spec.case_root
     tutorials_root = _find_tutorials_root(case_root)
@@ -139,15 +152,26 @@ def describe_tutorial_contract(
             str(regression_root.relative_to(tutorials_root))
         )
 
+    required_files = driver_context.capabilities.case_files.required_files()
+    core_required_files = tuple(sorted(
+        path for path in required_files if not path.startswith("system/")
+    ))
+    solver_required_files = tuple(sorted(
+        path for path in required_files if path.startswith("system/")
+    ))
+    conditional_files = tuple(sorted(
+        driver_context.capabilities.case_files.conditional_files()
+    ))
+
     return {
         "name": spec.name,
         "resolution": resolution,
         "case_root": str(case_root),
         "setup_root": str(spec.setup_root),
         "output_dir": str(spec.output_dir),
-        "core_required_files": _existing_relpaths(case_root, CORE_REQUIRED_FILES),
-        "solver_required_files": _existing_relpaths(case_root, SOLVER_REQUIRED_FILES),
-        "conditional_files": _existing_relpaths(case_root, CONDITIONAL_FILES),
+        "core_required_files": _existing_relpaths(case_root, core_required_files),
+        "solver_required_files": _existing_relpaths(case_root, solver_required_files),
+        "conditional_files": _existing_relpaths(case_root, conditional_files),
         "mesh_files": block_mesh_variants,
         "constant_files": _glob_relpaths(case_root / "constant", "*"),
         "system_files": _glob_relpaths(case_root / "system", "*"),

@@ -142,6 +142,20 @@ class CaseIntrospectionCapability(Protocol):
     def samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]: ...
 
 
+class CaseFileContractCapability(Protocol):
+    """Which case files the active plugin's profile declares, and how strictly.
+
+    Sourced directly from ``PluginProfile.case_files``: ``required_files``
+    lists every rule whose ``required`` is ``"always"``; ``conditional_files``
+    lists the rest. ``get_profile()`` is a required v1 plugin member and
+    ``case_files`` is already part of ``PluginProfile``, so every plugin
+    already carries this data -- no compatibility fallback is needed.
+    """
+
+    def required_files(self) -> tuple[str, ...]: ...
+    def conditional_files(self) -> tuple[str, ...]: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -351,6 +365,20 @@ class _CaseIntrospectionAdapter:
 
 
 @dataclass(frozen=True)
+class _CaseFileContractAdapter:
+    plugin: "SolverPlugin"
+
+    def _rules(self) -> tuple[Any, ...]:
+        return tuple(self.plugin.get_profile().case_files)
+
+    def required_files(self) -> tuple[str, ...]:
+        return tuple(rule.path for rule in self._rules() if rule.required == "always")
+
+    def conditional_files(self) -> tuple[str, ...]:
+        return tuple(rule.path for rule in self._rules() if rule.required != "always")
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -367,6 +395,7 @@ class PluginCapabilities:
     sweep_materializer: SweepMaterializerCapability
     command_authorization: CommandAuthorizationCapability
     case_introspection: CaseIntrospectionCapability
+    case_files: CaseFileContractCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -386,4 +415,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         sweep_materializer=_SweepMaterializerAdapter(plugin),
         command_authorization=_CommandAuthorizationAdapter(plugin),
         case_introspection=_CaseIntrospectionAdapter(plugin),
+        case_files=_CaseFileContractAdapter(plugin),
     )

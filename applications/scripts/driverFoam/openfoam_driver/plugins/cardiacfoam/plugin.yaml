@@ -24,6 +24,30 @@ case_profile:
       kind: openfoam_dictionary
       role: plugin.configuration
       required: always
+    - path: system/decomposeParDict
+      kind: openfoam_dictionary
+      role: openfoam.decomposition
+      required: conditional
+    - path: system/blockMeshDict
+      kind: openfoam_dictionary
+      role: openfoam.mesh_generation
+      required: conditional
+    - path: Allrun
+      kind: case_script
+      role: openfoam.entrypoint
+      required: conditional
+    - path: Allclean
+      kind: case_script
+      role: openfoam.cleanup
+      required: conditional
+    - path: README.md
+      kind: documentation
+      role: case.documentation
+      required: conditional
+    - path: runRegressionTest.sh
+      kind: case_script
+      role: case.regression_test
+      required: conditional
 cxx_mapping:
   source_roots:
     - ../../../../../../src

@@ -106,8 +106,11 @@ def load_plugin_profile(path: str | Path) -> PluginProfile:
             )
         if Path(values["path"]).is_absolute() or ".." in Path(values["path"]).parts:
             raise _mapping_error(profile_path, f"case file path escapes the case: {values['path']!r}")
-        if values["required"] not in {"always", "never"}:
-            raise _mapping_error(profile_path, "required currently supports only 'always' or 'never'")
+        if values["required"] not in {"always", "never", "conditional"}:
+            raise _mapping_error(
+                profile_path,
+                "required currently supports only 'always', 'never', or 'conditional'",
+            )
         rules.append(CaseFileRule(**values))
 
     raw_mapping = raw.get("cxx_mapping")
