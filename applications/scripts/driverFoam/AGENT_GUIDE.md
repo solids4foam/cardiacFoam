@@ -744,3 +744,12 @@ If your agent depends on any of these, expect failure and consider a workaround 
 - `applications/scripts/driverFoam/schemas/run-document.json` — canonical RunDocument v2 JSON Schema
 - `docs/superpowers/plans/2026-05-19-driverfoam-agentic-integration.md` — historical architecture rationale
 - `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md` — sweep orchestration design and rationale
+
+## Plugin selection (Phase 1)
+
+`--plugin` accepts an installed plugin id from the `driverfoam.plugins`
+entry-point group, a trusted `module.path:PluginClass` local-development
+import (a colon always selects this form), or `none` for generic OpenFOAM.
+The `capability_manifest` accept-surface is plugin-dependent:
+`allowed_commands.core` lists solver-neutral OpenFOAM commands plus the
+active plugin's own, so it changes with `--plugin`.

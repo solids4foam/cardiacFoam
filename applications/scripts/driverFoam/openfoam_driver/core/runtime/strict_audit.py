@@ -166,7 +166,7 @@ def _case_preparation_files_audit(
             max_points=max_points,
             summary=(
                 "Generic case-folder execution relies on its declared workflow "
-                "rather than cardiacFoam dictionary requirements."
+                "rather than the plugin's dictionary requirements."
             ),
             evidence={"case_root": str(case_root), "required": [], "generic_case": True},
         )

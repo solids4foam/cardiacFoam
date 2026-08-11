@@ -43,7 +43,21 @@ class GenericOpenFOAMPlugin:
         return {}
 
     def get_capabilities(self):
-        return {"samplable_fields": {"electro": [], "solid": []}}
+        """Advertise a real, if empty, accept-surface.
+
+        Built through the same assembler the cardiac plugin uses, so a generic
+        plan carries an ``allowed_commands`` block naming the solver-neutral
+        OpenFOAM commands it may actually run. Returning a hand-written stub
+        here previously omitted that block entirely and hardcoded cardiac
+        region names (``electro``/``solid``) for a plugin that has neither.
+        """
+        from openfoam_driver.capability_manifest import build_capability_manifest
+
+        return build_capability_manifest(
+            plugin_commands=self.get_solver_commands() | self.get_auxiliary_commands(),
+            utility_manifests=self.get_utility_manifests(),
+            samplable_fields=self.get_samplable_fields({}),
+        )
 
     def get_tutorial_catalog(self):
         return {"registered_tutorials": (), "spec_factories": {}}
