@@ -321,12 +321,18 @@ def driver_context(plugin: SolverPlugin, *, source: str) -> DriverContext:
 
 
 def load_plugin_context(target: str) -> DriverContext:
-    """Load a trusted development plugin specified as ``module:Class``.
+    """Load a plugin by discovered id, or by trusted ``module:Class`` import.
 
-    This compatibility loader intentionally does not pretend to sandbox the
-    import.  The CLI labels this form as an unsafe local-development option;
-    installed plugin discovery can replace it in a later migration.
+    A colon always means the trusted local-development import form, which the
+    CLI labels unsafe. Without a colon the argument names an installed plugin
+    from the ``driverfoam.plugins`` entry-point group. Neither form is
+    sandboxed: loading a plugin executes its Python code.
     """
+
+    if ":" not in target:
+        from .plugin_discovery import load_discovered_plugin
+
+        return load_discovered_plugin(target)
 
     try:
         module_path, class_name = target.split(":", maxsplit=1)

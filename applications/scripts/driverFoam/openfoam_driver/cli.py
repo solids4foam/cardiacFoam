@@ -501,10 +501,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--plugin",
         help=(
-            "Trusted local-development SolverPlugin import target "
-            "(module.path:PluginClass), or 'none' for generic OpenFOAM. "
-            "Defaults to built-in cardiacFoam; "
-            "loading a plugin executes its Python code."
+            "Plugin to drive: an installed plugin id from the "
+            "'driverfoam.plugins' entry-point group, a trusted "
+            "local-development import target (module.path:PluginClass), or "
+            "'none' for generic OpenFOAM. Defaults to built-in cardiacFoam. "
+            "A colon always selects the import form. Either form executes "
+            "the plugin's Python code."
         ),
     )
     parser.add_argument(
