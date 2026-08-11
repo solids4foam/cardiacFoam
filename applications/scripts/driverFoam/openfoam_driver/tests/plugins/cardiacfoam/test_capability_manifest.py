@@ -5,16 +5,23 @@ from openfoam_driver.capability_manifest import build_capability_manifest
 
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.command_authorization import (
+    CARDIAC_SOLVER_COMMANDS,
+    utility_manifests,
+)
 import functools
 
 build_capability_manifest = functools.partial(
-    build_capability_manifest, 
-    ionic_model_catalog=IONIC_MODEL_CATALOG, 
-    active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG
+    build_capability_manifest,
+    ionic_model_catalog=IONIC_MODEL_CATALOG,
+    active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG,
+    plugin_commands=CARDIAC_SOLVER_COMMANDS,
+    utility_manifests=utility_manifests(),
 )
 
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.workflow import (
-    OPENFOAM_OR_DRIVER_COMMANDS,
+    CORE_NEUTRAL_COMMANDS,
     CASE_SCRIPT_COMMANDS,
     validate_workflow_commands,
 )
@@ -22,15 +29,23 @@ from openfoam_driver.core.runtime.workflow import (
 
 def test_core_commands_match_enforcer():
     manifest = build_capability_manifest()
-    assert set(manifest["allowed_commands"]["core"]) == set(OPENFOAM_OR_DRIVER_COMMANDS)
+    # The enforcer accepts the core-neutral set plus whatever the active
+    # plugin authorizes; the manifest must advertise exactly that union.
+    assert set(manifest["allowed_commands"]["core"]) == (
+        set(CORE_NEUTRAL_COMMANDS) | set(CARDIAC_SOLVER_COMMANDS)
+    )
     assert set(manifest["allowed_commands"]["case_scripts"]) == set(CASE_SCRIPT_COMMANDS)
 
 
 def test_manifest_utilities_are_accepted_by_validator():
     manifest = build_capability_manifest()
+    context = default_driver_context()
     for cmd in manifest["allowed_commands"]["utilities"]:
         dag = {"steps": [{"id": "s", "command": cmd}]}
-        errors = [d for d in validate_workflow_commands(dag) if d.level == "error"]
+        errors = [
+            d for d in validate_workflow_commands(dag, driver_context=context)
+            if d.level == "error"
+        ]
         assert errors == [], f"utility {cmd!r} in manifest but rejected by validator: {errors}"
 
 

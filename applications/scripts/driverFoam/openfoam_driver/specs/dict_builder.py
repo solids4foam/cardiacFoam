@@ -840,8 +840,12 @@ def build_and_launch(
         openfoam_bashrc=openfoam_bashrc,
     )
     execution_context = resolve_execution_context(spec)
-    workflow_dag, _dag_diagnostics = normalize_workflow_dag(spec.metadata.get("workflow_dag"))
-    command_diagnostics = validate_workflow_commands(workflow_dag)
+    workflow_dag, _dag_diagnostics = normalize_workflow_dag(
+        spec.metadata.get("workflow_dag"), driver_context=driver_context,
+    )
+    command_diagnostics = validate_workflow_commands(
+        workflow_dag, driver_context=driver_context,
+    )
     if command_diagnostics:
         raise ValueError(
             "build_and_launch's workflow_dag failed command validation: "

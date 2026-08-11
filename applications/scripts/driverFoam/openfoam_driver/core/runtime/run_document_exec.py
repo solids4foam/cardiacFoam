@@ -174,12 +174,13 @@ def build_execution_inputs(
         run_doc.workflowDag,
         expected_artifacts=workflow_output_artifacts(expected_artifacts),
         utility_produces=utility_produces,
+        driver_context=driver_context,
     )
     for d in wf_diagnostics:
         diagnostics.append(_diag(d.level, d.code, d.message, d.field))
 
     # 4) Command allowlist — same gate as the --entry path.
-    for d in validate_workflow_commands(dag):
+    for d in validate_workflow_commands(dag, driver_context=driver_context):
         diagnostics.append(_diag(d.level, d.code, d.message, d.field))
 
     # 5) Launch paths are mandatory for execution.

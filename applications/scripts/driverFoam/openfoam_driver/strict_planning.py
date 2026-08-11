@@ -161,12 +161,15 @@ def _workflow_diagnostic_to_strict(diagnostic: WorkflowDiagnostic) -> StrictDiag
     )
 
 
-def _utility_produces_by_command() -> dict[str, tuple[str, ...]]:
-    from .utility_catalog import UTILITY_CATALOG
+def _utility_produces_by_command(
+    driver_context: "DriverContext",
+) -> dict[str, tuple[str, ...]]:
+    """The active plugin's utilities, keyed to the artifacts they declare."""
 
+    manifests = driver_context.capabilities.command_authorization.utility_manifests()
     return {
         command: tuple(produce.artifact_id for produce in manifest.produces)
-        for command, manifest in UTILITY_CATALOG.items()
+        for command, manifest in manifests.items()
         if manifest.produces
     }
 
@@ -200,7 +203,9 @@ def _artifact_diagnostics(
         )
     )
 
-    for diagnostic in validate_workflow_commands(workflow_dag):
+    for diagnostic in validate_workflow_commands(
+        workflow_dag, driver_context=driver_context,
+    ):
         diagnostics.append(_diagnostic(
             diagnostic.level,
             diagnostic.code,
@@ -348,7 +353,8 @@ def strict_plan(
     workflow_dag, workflow_diagnostics_raw = normalize_workflow_dag(
         spec.metadata.get("workflow_dag") if spec.metadata else None,
         expected_artifacts=workflow_output_artifacts(artifacts),
-        utility_produces=_utility_produces_by_command(),
+        utility_produces=_utility_produces_by_command(driver_context),
+        driver_context=driver_context,
     )
     workflow_diagnostics = tuple(
         _workflow_diagnostic_to_strict(diagnostic)

@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.workflow import validate_workflow_commands
 from openfoam_driver.core.runtime.workflow_runner import (
     _resolve_case_cwd,
@@ -20,38 +21,43 @@ def _make_executable(path: Path) -> None:
 
 
 class TestValidateWorkflowCommands(unittest.TestCase):
+    def setUp(self) -> None:
+        # The allowlist is now sourced from the active plugin context; the
+        # cardiac context is what these cases have always exercised.
+        self.context = default_driver_context()
+
     def test_known_openfoam_command_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "cardiacFoam"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_case_script_command_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "Allrun"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_gmsh_is_allowed(self) -> None:
         # Tet-mesh sweep workflows (mesh_family="tet") run gmsh/gmshToFoam/
         # checkMesh as explicit workflow steps; the allowlist must be static
         # (not gated on whether the caller's shell happens to have OpenFOAM
-        # sourced), so these are added directly, same as blockMesh/cardiacFoam.
+        # sourced), so these are named directly, same as blockMesh.
         dag = {"steps": [{"id": "s", "command": "gmsh"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_gmsh_to_foam_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "gmshToFoam"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_check_mesh_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "checkMesh"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_bath_bidomain_interface_metrics_is_allowed(self) -> None:
         # bath_tet's canonical reported metrics come from this utility (a
         # post-hoc pass over the reconstructed mesh, since the live verifier
         # can't do heart/bath mesh-subsetting during a parallel-decomposed
-        # solve) run as its own workflow step after solve -- static allowlist
-        # entry, same reasoning as gmsh/gmshToFoam/checkMesh above.
+        # solve) run as its own workflow step after solve -- authorized by the
+        # cardiac plugin (it ships no utility.manifest.toml), not by core.
         dag = {"steps": [{"id": "s", "command": "bathBidomainInterfaceMetrics"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_mpirun_is_allowed(self) -> None:
         # run_in_parallel=True wraps the solve step as
@@ -59,49 +65,52 @@ class TestValidateWorkflowCommands(unittest.TestCase):
         # allowlist-checked (args are not re-validated as commands), same
         # reasoning as the other explicit workflow-step entries above.
         dag = {"steps": [{"id": "s", "command": "mpirun", "args": ["-np", "6", "cardiacFoam", "-parallel"]}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_unknown_command_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "rm"}]}
-        codes = {d.code for d in validate_workflow_commands(dag)}
+        codes = {d.code for d in validate_workflow_commands(dag, driver_context=self.context)}
         self.assertIn("unknown_workflow_command", codes)
 
     def test_empty_command_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": ""}]}
-        codes = {d.code for d in validate_workflow_commands(dag)}
+        codes = {d.code for d in validate_workflow_commands(dag, driver_context=self.context)}
         self.assertIn("workflow_step_without_command", codes)
 
     def test_case_script_allclean_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "Allclean"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_explicit_relative_case_script_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "./Allrun"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_dotted_case_script_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "Allrun.pre"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_explicit_relative_dotted_case_script_is_allowed(self) -> None:
         dag = {"steps": [{"id": "s", "command": "./Allrun.post"}]}
-        self.assertEqual(validate_workflow_commands(dag), ())
+        self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
 
     def test_explicit_relative_non_case_script_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "./notAllrun"}]}
-        codes = {d.code for d in validate_workflow_commands(dag)}
+        codes = {d.code for d in validate_workflow_commands(dag, driver_context=self.context)}
         self.assertIn("unknown_workflow_command", codes)
 
     def test_absolute_path_is_rejected(self) -> None:
         dag = {"steps": [{"id": "s", "command": "/usr/bin/checkMesh"}]}
-        codes = {d.code for d in validate_workflow_commands(dag)}
+        codes = {d.code for d in validate_workflow_commands(dag, driver_context=self.context)}
         self.assertIn("unknown_workflow_command", codes)
 
     def test_none_dag_is_empty(self) -> None:
-        self.assertEqual(validate_workflow_commands(None), ())
+        self.assertEqual(validate_workflow_commands(None, driver_context=self.context), ())
 
 
 class TestValidateWorkflowCommandsFoamApp(unittest.TestCase):
+    def setUp(self) -> None:
+        self.context = default_driver_context()
+
     def test_installed_openfoam_app_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             appbin = Path(temp) / "bin"
@@ -113,7 +122,7 @@ class TestValidateWorkflowCommandsFoamApp(unittest.TestCase):
             os.environ["FOAM_APPBIN"] = str(appbin)
             try:
                 dag = {"steps": [{"id": "s", "command": "checkMeshFake"}]}
-                self.assertEqual(validate_workflow_commands(dag), ())
+                self.assertEqual(validate_workflow_commands(dag, driver_context=self.context), ())
             finally:
                 os.environ["PATH"] = old_path
                 if old_appbin is None:
@@ -126,7 +135,7 @@ class TestValidateWorkflowCommandsFoamApp(unittest.TestCase):
         old_userbin = os.environ.pop("FOAM_USER_APPBIN", None)
         try:
             dag = {"steps": [{"id": "s", "command": "definitelyNotAFoamApp"}]}
-            codes = {d.code for d in validate_workflow_commands(dag)}
+            codes = {d.code for d in validate_workflow_commands(dag, driver_context=self.context)}
             self.assertIn("unknown_workflow_command", codes)
         finally:
             if old_appbin is not None:

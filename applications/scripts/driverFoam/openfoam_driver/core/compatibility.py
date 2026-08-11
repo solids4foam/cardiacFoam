@@ -107,3 +107,35 @@ def legacy_materialize_sweep_case(*, case_dir, routed) -> None:
     from ..plugins.cardiacfoam.sweep import materialize_case
 
     materialize_case(case_dir=case_dir, routed=routed)
+
+
+def legacy_solver_commands(plugin) -> frozenset[str]:
+    """v1 plugins predate get_solver_commands(). Only the built-in cardiac
+    plugin can be given a solver name; a third-party v1 plugin gets none and
+    must declare its commands by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.command_authorization import solver_commands
+
+        return solver_commands()
+    return frozenset()
+
+
+def legacy_utility_manifests(plugin) -> dict:
+    """Preserve the cardiac utility catalog for plugins without the new hook."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.command_authorization import utility_manifests
+
+        return utility_manifests()
+    return {}
+
+
+def legacy_utility_roots(plugin) -> tuple:
+    """Preserve the cardiac utilities root for plugins without the new hook."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.command_authorization import utility_roots
+
+        return utility_roots()
+    return ()

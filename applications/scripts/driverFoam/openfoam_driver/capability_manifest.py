@@ -21,9 +21,10 @@
 # Description
 #     Assembles the machine-readable surface of what the driver will accept:
 #     the allowed workflow-command set and the field names each solver can
-#     sample. Sourced only from the single owners (the workflow allowlist,
-#     UTILITY_CATALOG, and the ionic / active-tension catalogs) so the manifest
-#     cannot drift from the enforcers that actually gate execution.
+#     sample. Sourced only from the single owners (the core-neutral workflow
+#     allowlist plus the calling plugin's commands, utility manifests, and
+#     ionic / active-tension catalogs) so the manifest cannot drift from the
+#     enforcers that actually gate execution.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -32,11 +33,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from .core.runtime.workflow import (
     CASE_SCRIPT_COMMANDS,
-    OPENFOAM_OR_DRIVER_COMMANDS,
+    CORE_NEUTRAL_COMMANDS,
 )
 
 # Fixed fields the solvers expose regardless of the ionic / active-tension model
@@ -79,15 +80,14 @@ def resolve_case_models(
     return solver, ionic, active_tension
 
 
-def _utility_commands() -> dict[str, list[str]]:
-    """The UTILITY_CATALOG commands the allowlist accepts, keyed to what they
+def _utility_commands(utility_manifests: dict[str, Any]) -> dict[str, list[str]]:
+    """The plugin utility commands the allowlist accepts, keyed to what they
     produce. Mirrors the acceptance rule in ``validate_workflow_commands``
     (only utilities that declare ``produces`` are accepted)."""
-    from .utility_catalog import UTILITY_CATALOG
 
     return {
         command: [produce.artifact_id for produce in manifest.produces]
-        for command, manifest in UTILITY_CATALOG.items()
+        for command, manifest in utility_manifests.items()
         if manifest.produces
     }
 
@@ -99,8 +99,15 @@ def build_capability_manifest(
     resolved_active_tension: str | None = None,
     ionic_model_catalog: dict | None = None,
     active_tension_model_catalog: dict | None = None,
+    plugin_commands: Iterable[str] = (),
+    utility_manifests: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the driver's accept-surface as a plain JSON-able dict.
+
+    ``plugin_commands`` and ``utility_manifests`` are supplied by the calling
+    plugin (the same injection style as the model catalogs) so that core names
+    no solver here; together with :data:`CORE_NEUTRAL_COMMANDS` they reproduce
+    exactly what ``validate_workflow_commands`` accepts for that plugin.
 
     ``allowed_commands`` names exactly what a workflow DAG step may invoke;
     ``samplable_fields`` names the fields a function object may sample for the
@@ -139,9 +146,9 @@ def build_capability_manifest(
 
     return {
         "allowed_commands": {
-            "core": sorted(OPENFOAM_OR_DRIVER_COMMANDS),
+            "core": sorted(set(CORE_NEUTRAL_COMMANDS) | set(plugin_commands)),
             "case_scripts": sorted(CASE_SCRIPT_COMMANDS),
-            "utilities": _utility_commands(),
+            "utilities": _utility_commands(utility_manifests or {}),
             "installed_openfoam_apps_note": (
                 "When OpenFOAM is sourced, any executable under $FOAM_APPBIN or "
                 "$FOAM_USER_APPBIN is also accepted (core apps + your compiled "

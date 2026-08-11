@@ -44,13 +44,13 @@ STEP_STATUS_VALUES = ("pending", "running", "completed", "failed", "skipped")
 
 # Single owner of the command allowlist, shared by strict_planning and the
 # run-document adapter (see threat model in the RunDocument execution plan).
-# These OpenFOAM/driver binaries are always allowed and resolve via PATH.
+# Solver-NEUTRAL OpenFOAM and driver binaries, always allowed, resolved via
+# PATH. Solver binaries (e.g. cardiacFoam) are plugin-owned and arrive through
+# the CommandAuthorizationCapability; core must not name any solver here.
 # Case-local scripts (Allrun-family) live in CASE_SCRIPT_COMMANDS instead.
-OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
+CORE_NEUTRAL_COMMANDS = frozenset(
     {
-        "bathBidomainInterfaceMetrics",
         "blockMesh",
-        "cardiacFoam",
         "checkMesh",
         "decomposePar",
         "gmsh",
@@ -63,6 +63,10 @@ OPENFOAM_OR_DRIVER_COMMANDS = frozenset(
         "vtkUnstructuredToFoam",
     }
 )
+
+# Compatibility alias for pre-Phase-1 importers. Prefer CORE_NEUTRAL_COMMANDS
+# plus the active context's plugin commands.
+OPENFOAM_OR_DRIVER_COMMANDS = CORE_NEUTRAL_COMMANDS
 
 # Bare command names that may resolve to a case-LOCAL executable. Every other
 # bare name resolves via PATH only, so a case dir cannot shadow a trusted
@@ -164,6 +168,7 @@ def normalize_workflow_dag(
     *,
     expected_artifacts: Iterable[DataArtifact] = (),
     utility_produces: dict[str, tuple[str, ...]] | None = None,
+    driver_context: Any = None,
 ) -> tuple[dict[str, Any] | None, tuple[WorkflowDiagnostic, ...]]:
     """Return an executable-shaped workflow DAG without executing it.
 
@@ -383,8 +388,17 @@ def normalize_workflow_dag(
 
     unclaimed_artifacts = tuple(artifact_id for artifact_id in artifact_ids if artifact_id not in claimed_artifacts)
     if unclaimed_artifacts:
+        # Only run-style steps may be credited with producing artifacts: the
+        # case run script plus whatever solver binaries the context authorizes.
+        # The rest of CASE_SCRIPT_COMMANDS is deliberately excluded -- Allclean
+        # deletes output rather than producing it.
+        producer_commands = {"Allrun"}
+        if driver_context is not None:
+            producer_commands |= (
+                driver_context.capabilities.command_authorization.solver_commands()
+            )
         artifact_producer_steps = [
-            step for step in steps if step.command in {"cardiacFoam", "Allrun"}
+            step for step in steps if step.command in producer_commands
         ]
         if artifact_producer_steps:
             target_id = artifact_producer_steps[-1].id
@@ -450,22 +464,34 @@ def _is_installed_openfoam_app(command: str) -> bool:
 
 def validate_workflow_commands(
     workflow_dag: dict[str, Any] | None,
+    *,
+    driver_context: Any = None,
 ) -> tuple[WorkflowDiagnostic, ...]:
     """Reject DAG steps whose command is not on the allowlist.
 
-    A command is allowed when it is in :data:`OPENFOAM_OR_DRIVER_COMMANDS`,
-    in :data:`CASE_SCRIPT_COMMANDS`, a ``UTILITY_CATALOG`` entry that declares
-    ``produces``, or an executable installed under ``$FOAM_APPBIN`` /
-    ``$FOAM_USER_APPBIN`` (see :func:`_is_installed_openfoam_app`). An explicit
-    path form (``command`` containing ``/``) is allowed only as ``./<name>``
-    where ``<name>`` is a case script — this keeps the gate in parity with
+    The allowlist is the union of :data:`CORE_NEUTRAL_COMMANDS`, the commands
+    ``driver_context`` authorizes through its
+    ``CommandAuthorizationCapability``, :data:`CASE_SCRIPT_COMMANDS`, that
+    context's utility manifests that declare ``produces``, and executables
+    installed under ``$FOAM_APPBIN`` / ``$FOAM_USER_APPBIN`` (see
+    :func:`_is_installed_openfoam_app`). Without a ``driver_context`` no plugin
+    command and no utility is authorized, leaving only the core-neutral
+    commands, case scripts, and installed OpenFOAM apps. An explicit path form
+    (``command`` containing ``/``) is allowed only as ``./<name>`` where
+    ``<name>`` is a case script — this keeps the gate in parity with
     ``_resolve_command`` (which lets ``./Allrun`` through) while still refusing
     arbitrary ``./script`` and absolute paths. This is the one owner of the
     command allowlist; both ``strict_plan`` and the run-document adapter call
     it so neither can drift. Runs on the *normalized* DAG, where ``command``
     is the bare executable (args already split out).
     """
-    from ...utility_catalog import UTILITY_CATALOG  # deferred: keep workflow.py import-light (utility_catalog parses manifests at import)
+    if driver_context is not None:
+        authorization = driver_context.capabilities.command_authorization
+        plugin_commands = authorization.solver_commands()
+        utilities = authorization.utility_manifests()
+    else:
+        plugin_commands = frozenset()
+        utilities = {}
 
     diagnostics: list[WorkflowDiagnostic] = []
     for step in (workflow_dag or {}).get("steps", ()):
@@ -495,9 +521,13 @@ def validate_workflow_commands(
                 field=step_id,
             ))
             continue
-        if command in OPENFOAM_OR_DRIVER_COMMANDS or command in CASE_SCRIPT_COMMANDS:
+        if (
+            command in CORE_NEUTRAL_COMMANDS
+            or command in plugin_commands
+            or command in CASE_SCRIPT_COMMANDS
+        ):
             continue
-        manifest = UTILITY_CATALOG.get(command)
+        manifest = utilities.get(command)
         if manifest is not None:
             if manifest.produces:
                 continue

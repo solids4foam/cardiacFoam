@@ -60,6 +60,16 @@ class GenericOpenFOAMPlugin:
     def predict_data_artifacts(self, case_root, spec):
         return ()
 
+    def get_solver_commands(self) -> frozenset[str]:
+        """No solver semantics means no solver binary to authorize."""
+        return frozenset()
+
+    def get_utility_manifests(self) -> dict:
+        return {}
+
+    def get_utility_roots(self) -> tuple[Path, ...]:
+        return ()
+
     def build_run_document_config(self, spec):
         del spec
         return {

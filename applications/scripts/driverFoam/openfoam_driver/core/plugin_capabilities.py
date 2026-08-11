@@ -114,6 +114,12 @@ class SweepMaterializerCapability(Protocol):
     def materialize(self, request: SweepMaterializationRequest) -> None: ...
 
 
+class CommandAuthorizationCapability(Protocol):
+    def solver_commands(self) -> frozenset[str]: ...
+    def utility_manifests(self) -> dict[str, Any]: ...
+    def utility_roots(self) -> tuple[Path, ...]: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -265,6 +271,35 @@ class _SweepMaterializerAdapter:
 
 
 @dataclass(frozen=True)
+class _CommandAuthorizationAdapter:
+    plugin: "SolverPlugin"
+
+    def solver_commands(self) -> frozenset[str]:
+        hook = getattr(self.plugin, "get_solver_commands", None)
+        if callable(hook):
+            return frozenset(hook())
+        from .compatibility import legacy_solver_commands
+
+        return legacy_solver_commands(self.plugin)
+
+    def utility_manifests(self) -> dict[str, Any]:
+        hook = getattr(self.plugin, "get_utility_manifests", None)
+        if callable(hook):
+            return dict(hook())
+        from .compatibility import legacy_utility_manifests
+
+        return legacy_utility_manifests(self.plugin)
+
+    def utility_roots(self) -> tuple[Path, ...]:
+        hook = getattr(self.plugin, "get_utility_roots", None)
+        if callable(hook):
+            return tuple(hook())
+        from .compatibility import legacy_utility_roots
+
+        return legacy_utility_roots(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -279,6 +314,7 @@ class PluginCapabilities:
     mesh_diagnostic_policy: MeshDiagnosticPolicyCapability
     case_compatibility: CaseCompatibilityCapability
     sweep_materializer: SweepMaterializerCapability
+    command_authorization: CommandAuthorizationCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -296,4 +332,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         mesh_diagnostic_policy=_MeshDiagnosticPolicyAdapter(plugin),
         case_compatibility=_CaseCompatibilityAdapter(plugin),
         sweep_materializer=_SweepMaterializerAdapter(plugin),
+        command_authorization=_CommandAuthorizationAdapter(plugin),
     )

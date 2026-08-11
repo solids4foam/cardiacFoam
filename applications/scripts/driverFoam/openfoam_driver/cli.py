@@ -365,7 +365,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
             return None
     inputs, diagnostics = build_execution_inputs(
         run_doc,
-        utility_produces=_utility_produces_by_command(),
+        utility_produces=_utility_produces_by_command(driver_context),
         driver_context=driver_context,
     )
     if inputs is None:

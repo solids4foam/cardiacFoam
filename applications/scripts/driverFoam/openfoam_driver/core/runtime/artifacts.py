@@ -41,8 +41,9 @@ Design discipline (plan v2 section 3):
   ``specs.common.detect_ionic_export_list`` (user-declared exports),
   ``active_tension_catalog.ACTIVE_TENSION_MODEL_CATALOG`` (AT state variables,
   fired when ``activeTensionModel`` block is present), and
-  ``utility_catalog.UTILITY_CATALOG.produces`` (pre/post-solve utility outputs
-  declared in ``workflow_dag`` steps).
+  the active plugin's utility manifests via the command-authorization
+  capability (``produces`` of pre/post-solve utilities declared in
+  ``workflow_dag`` steps).
 
 * **Never raise on shape divergence.** Agents may call the predictor before
   ``apply_case`` has run, or against a partly-mutated case. Missing files,
@@ -62,7 +63,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from ...utility_catalog import UTILITY_CATALOG, ProducesEntry
+from ...utility_catalog import ProducesEntry
 from .models import DataArtifact, TutorialSpec
 
 if TYPE_CHECKING:
@@ -92,10 +93,13 @@ def _produces_entry_to_artifact(
     )
 
 
-def _predict_from_workflow_utilities(spec: TutorialSpec) -> tuple[DataArtifact, ...]:
+def _predict_from_workflow_utilities(
+    spec: TutorialSpec,
+    driver_context: "DriverContext",
+) -> tuple[DataArtifact, ...]:
     """Walk spec.metadata['workflow_dag'].steps; for each step whose
-    `command` matches a utility in UTILITY_CATALOG, emit its `produces`
-    entries as DataArtifacts.
+    `command` matches one of the active plugin's utility manifests, emit its
+    `produces` entries as DataArtifacts.
 
     Returns ``()`` when the spec has no workflow_dag, no steps, or no
     matching utility commands. Unknown command names (e.g. OpenFOAM
@@ -107,12 +111,13 @@ def _predict_from_workflow_utilities(spec: TutorialSpec) -> tuple[DataArtifact, 
     steps = dag.get("steps", ())
     if not steps:
         return ()
+    utilities = driver_context.capabilities.command_authorization.utility_manifests()
     derived: list[DataArtifact] = []
     for step in steps:
         command = step.get("command")
-        if not command or command not in UTILITY_CATALOG:
+        if not command or command not in utilities:
             continue
-        manifest = UTILITY_CATALOG[command]
+        manifest = utilities[command]
         for produce in manifest.produces:
             derived.append(_produces_entry_to_artifact(produce, command))
     return tuple(derived)
@@ -180,7 +185,7 @@ def predict_data_artifacts(
     plugin_derived = driver_context.capabilities.artifacts.predict(
         ArtifactPredictionRequest(case_root=case_root, spec=spec),
     )
-    utility_derived = _predict_from_workflow_utilities(spec)
+    utility_derived = _predict_from_workflow_utilities(spec, driver_context)
     
     derived = _core_generic_artifacts(spec) + plugin_derived + utility_derived
     

@@ -113,7 +113,12 @@ class CardiacFoamPlugin:
         """
         Return the cardiacFoam capabilities (models, solvers, etc.).
         """
-        manifest = build_capability_manifest(ionic_model_catalog=IONIC_MODEL_CATALOG, active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG)
+        manifest = build_capability_manifest(
+            ionic_model_catalog=IONIC_MODEL_CATALOG,
+            active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG,
+            plugin_commands=self.get_solver_commands(),
+            utility_manifests=self.get_utility_manifests(),
+        )
         manifest["heterogeneity_models"] = HETEROGENEITY_MODELS
         manifest["ionic_models"] = IONIC_MODEL_CATALOG
         manifest["active_tension_models"] = ACTIVE_TENSION_MODEL_CATALOG
@@ -231,6 +236,30 @@ class CardiacFoamPlugin:
         from openfoam_driver.plugins.cardiacfoam.sweep import materialize_case
 
         materialize_case(case_dir=case_dir, routed=routed)
+
+    def get_solver_commands(self) -> frozenset[str]:
+        """Workflow commands this plugin authorizes beyond the core-neutral set."""
+        from openfoam_driver.plugins.cardiacfoam.command_authorization import (
+            solver_commands,
+        )
+
+        return solver_commands()
+
+    def get_utility_manifests(self) -> dict:
+        """This plugin's ``utility.manifest.toml`` sidecars, by command name."""
+        from openfoam_driver.plugins.cardiacfoam.command_authorization import (
+            utility_manifests,
+        )
+
+        return utility_manifests()
+
+    def get_utility_roots(self) -> tuple[Path, ...]:
+        """Roots searched for this plugin's utility manifests."""
+        from openfoam_driver.plugins.cardiacfoam.command_authorization import (
+            utility_roots,
+        )
+
+        return utility_roots()
 
     def is_nondimensional_case(self, spec) -> bool:
         from openfoam_driver.plugins.cardiacfoam.planning_policy import (
