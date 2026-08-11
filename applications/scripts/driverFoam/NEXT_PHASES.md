@@ -129,6 +129,30 @@ Move these remaining consumers behind the bundle:
 - Cardiac and generic plugins exercise every v2 capability; a v1 fixture still
   loads through compatibility; an unsupported version is rejected.
 
+## Carried into Phase 2 from Phase 1
+
+Known agnosticity residual, deliberately not closed in Phase 1: `TutorialSpec`
+carries `electro_properties_relpath` / `physics_properties_relpath`, and core's
+generic-case factory populates them even under `--plugin none`. It predates
+Phase 1 and closing it renames fields that flow into `spec.metadata` ->
+`resolved_entry` -> the RunDocument, moving the `entry_resolution` and
+`run_document_v2` digests for all twelve tutorials for reasons unrelated to
+versioned capability fields — which would have destroyed Phase 1's ability to
+demonstrate its whole delta was `api_version` + `capability_digest`. It belongs
+in its own commit with its own before/after evidence.
+
+It is pinned by
+`tests/core/test_generic_plan_has_no_cardiac_semantics.py::test_known_residual_tutorialspec_carries_cardiac_field_names`,
+which asserts the leak as a *known* fact. Closing it will fail that test
+loudly; delete the test as part of the fix.
+
+Also carried forward, from the Phase 1 whole-branch review: `resume_guard.py`
+style/unused-parameter items (moot once Phase 2 deletes the module), the
+missing integration test for `cli.py`'s failed-status resume payload,
+`specs/function_object_fields.py` hardcoding cardiac regions, and
+`utility_catalog.UTILITY_CATALOG` now having zero production consumers while
+still being eagerly built from a hardcoded path.
+
 ## Phase 2 — Checkpointed input provenance
 
 ### Model

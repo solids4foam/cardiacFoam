@@ -148,7 +148,16 @@ class CaseFileContractCapability(Protocol):
 
     Sourced directly from ``PluginProfile.case_files``: ``required_files``
     lists every rule whose ``required`` is ``"always"``; ``conditional_files``
-    lists the rest. ``get_profile()`` is a required v1 plugin member and
+    lists the rest. ``required_rules`` returns the same required rules with
+    their ``role`` intact.
+
+    **Roles are namespaced and the prefix is load-bearing.** ``openfoam.*``
+    marks a file the OpenFOAM runtime itself requires (``openfoam.control_dict``,
+    ``openfoam.discretisation``, ...); ``plugin.*`` marks one the solver plugin
+    requires (``plugin.configuration``). Consumers split on that prefix -- a
+    rule written as ``control_dict`` rather than ``openfoam.control_dict`` will
+    be silently classified as plugin-owned. The profile loader does not yet
+    validate the namespace. ``get_profile()`` is a required v1 plugin member and
     ``case_files`` is already part of ``PluginProfile``, so every plugin
     already carries this data -- no compatibility fallback is needed.
     """
