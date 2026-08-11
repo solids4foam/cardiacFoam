@@ -3,8 +3,9 @@ driver will accept (allowed commands + samplable field names)."""
 
 from openfoam_driver.capability_manifest import build_capability_manifest
 
-from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
-from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
+from openfoam_driver.plugins.cardiacfoam.case_introspection import (
+    samplable_fields as _samplable_fields,
+)
 from openfoam_driver.plugins.cardiacfoam.command_authorization import (
     CARDIAC_AUXILIARY_COMMANDS,
     CARDIAC_SOLVER_COMMANDS,
@@ -18,11 +19,25 @@ CARDIAC_AUTHORIZED_COMMANDS = CARDIAC_SOLVER_COMMANDS | CARDIAC_AUXILIARY_COMMAN
 
 build_capability_manifest = functools.partial(
     build_capability_manifest,
-    ionic_model_catalog=IONIC_MODEL_CATALOG,
-    active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG,
     plugin_commands=CARDIAC_AUTHORIZED_COMMANDS,
     utility_manifests=dict(utility_manifests()),
 )
+
+
+def _resolved(
+    *,
+    solver: str | None = None,
+    ionic_model: str | None = None,
+    active_tension: str | None = None,
+):
+    """Field names the cardiac plugin's own case_introspection module names
+    for a resolved model -- what CardiacFoamPlugin.get_samplable_fields would
+    produce, without going through the filesystem."""
+
+    return _samplable_fields(
+        {"solver": solver, "ionic_model": ionic_model, "active_tension": active_tension}
+    )
+
 
 from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.workflow import (
@@ -56,7 +71,7 @@ def test_manifest_utilities_are_accepted_by_validator():
 
 def test_samplable_fields_for_tnnp_single_cell():
     manifest = build_capability_manifest(
-        resolved_solver="singleCellSolver", resolved_ionic_model="TNNP"
+        samplable_fields=_resolved(solver="singleCellSolver", ionic_model="TNNP")
     )
     electro = manifest["samplable_fields"]["electro"]
     assert "membrane_V" in electro
@@ -68,7 +83,7 @@ def test_samplable_fields_for_tnnp_single_cell():
 
 def test_species_labels_are_not_samplable_fields():
     manifest = build_capability_manifest(
-        resolved_solver="monodomainSolver", resolved_ionic_model="TNNP"
+        samplable_fields=_resolved(solver="monodomainSolver", ionic_model="TNNP")
     )
     electro = manifest["samplable_fields"]["electro"]
     assert "human" not in electro
@@ -78,22 +93,26 @@ def test_species_labels_are_not_samplable_fields():
 
 def test_plain_spatial_ep_has_no_solid_region():
     for solver in ("monodomainSolver", "bidomainSolver", "eikonalSolver"):
-        manifest = build_capability_manifest(resolved_solver=solver)
+        manifest = build_capability_manifest(samplable_fields=_resolved(solver=solver))
         assert manifest["samplable_fields"]["solid"] == []
 
 
 def test_single_cell_active_tension_does_not_imply_solid_region():
     manifest = build_capability_manifest(
-        resolved_solver="singleCellSolver", resolved_active_tension="LandNiederer"
+        samplable_fields=_resolved(
+            solver="singleCellSolver", active_tension="LandNiederer"
+        )
     )
     assert manifest["samplable_fields"]["solid"] == []
 
 
 def test_samplable_fields_multi_region_tags_solid():
     manifest = build_capability_manifest(
-        resolved_solver="monodomainSolver",
-        resolved_ionic_model="TNNP",
-        resolved_active_tension="LandNiederer",
+        samplable_fields=_resolved(
+            solver="monodomainSolver",
+            ionic_model="TNNP",
+            active_tension="LandNiederer",
+        )
     )
     solid = manifest["samplable_fields"]["solid"]
     assert "Ta" in solid
@@ -104,7 +123,9 @@ def test_samplable_fields_multi_region_tags_solid():
 
 def test_unknown_model_is_not_an_error():
     # An unresolved / unknown model just yields the fixed solver fields, no crash.
-    manifest = build_capability_manifest(resolved_ionic_model="NotARealModel")
+    manifest = build_capability_manifest(
+        samplable_fields=_resolved(ionic_model="NotARealModel")
+    )
     assert "Vm" in manifest["samplable_fields"]["electro"]
 
 

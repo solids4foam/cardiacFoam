@@ -152,3 +152,27 @@ def legacy_utility_roots(plugin) -> tuple:
 
         return utility_roots()
     return ()
+
+
+def legacy_resolve_case_models(plugin, case_root) -> dict:
+    """v1 plugins predate resolve_case_models(). Only the built-in cardiac
+    plugin can resolve a case's models; other v1 plugins get nothing and must
+    declare their own resolution by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.case_introspection import resolve_case_models
+
+        return resolve_case_models(case_root)
+    return {"solver": None, "ionic_model": None, "active_tension": None}
+
+
+def legacy_samplable_fields(plugin, resolved) -> dict:
+    """v1 plugins predate get_samplable_fields(). Same rule as
+    :func:`legacy_resolve_case_models`: only the built-in cardiac plugin
+    names any fields."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.case_introspection import samplable_fields
+
+        return samplable_fields(resolved)
+    return {"electro": (), "solid": ()}

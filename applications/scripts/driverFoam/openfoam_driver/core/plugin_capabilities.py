@@ -128,6 +128,20 @@ class CommandAuthorizationCapability(Protocol):
     def utility_roots(self) -> tuple[Path, ...]: ...
 
 
+class CaseIntrospectionCapability(Protocol):
+    """Solver-specific case-model resolution and the fields it exposes.
+
+    ``resolve_case_models`` is a best-effort, never-raising read of a case's
+    on-disk configuration; ``samplable_fields`` names the fields the resolved
+    model exposes for sampling by function objects, split by region. A
+    plugin with no solver semantics (the generic plugin) resolves nothing and
+    exposes no fields.
+    """
+
+    def resolve_case_models(self, case_root: Path) -> dict[str, Any]: ...
+    def samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -316,6 +330,27 @@ class _CommandAuthorizationAdapter:
 
 
 @dataclass(frozen=True)
+class _CaseIntrospectionAdapter:
+    plugin: "SolverPlugin"
+
+    def resolve_case_models(self, case_root: Path) -> dict[str, Any]:
+        hook = getattr(self.plugin, "resolve_case_models", None)
+        if callable(hook):
+            return dict(hook(case_root))
+        from .compatibility import legacy_resolve_case_models
+
+        return legacy_resolve_case_models(self.plugin, case_root)
+
+    def samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+        hook = getattr(self.plugin, "get_samplable_fields", None)
+        if callable(hook):
+            return {k: tuple(v) for k, v in hook(resolved).items()}
+        from .compatibility import legacy_samplable_fields
+
+        return legacy_samplable_fields(self.plugin, resolved)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -331,6 +366,7 @@ class PluginCapabilities:
     case_compatibility: CaseCompatibilityCapability
     sweep_materializer: SweepMaterializerCapability
     command_authorization: CommandAuthorizationCapability
+    case_introspection: CaseIntrospectionCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -349,4 +385,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         case_compatibility=_CaseCompatibilityAdapter(plugin),
         sweep_materializer=_SweepMaterializerAdapter(plugin),
         command_authorization=_CommandAuthorizationAdapter(plugin),
+        case_introspection=_CaseIntrospectionAdapter(plugin),
     )

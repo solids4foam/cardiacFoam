@@ -21,10 +21,11 @@
 # Description
 #     Assembles the machine-readable surface of what the driver will accept:
 #     the allowed workflow-command set and the field names each solver can
-#     sample. Sourced only from the single owners (the core-neutral workflow
-#     allowlist plus the calling plugin's commands, utility manifests, and
-#     ionic / active-tension catalogs) so the manifest cannot drift from the
-#     enforcers that actually gate execution.
+#     sample. Pure assembly from explicit inputs supplied by the calling
+#     plugin (commands, utility manifests, samplable fields) plus the
+#     core-neutral workflow allowlist, so the manifest cannot drift from the
+#     enforcers that actually gate execution and this module holds no solver
+#     knowledge of its own.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -40,44 +41,21 @@ from .core.runtime.workflow import (
     CORE_NEUTRAL_COMMANDS,
 )
 
-# Fixed fields the solvers expose regardless of the ionic / active-tension model
-# (documented under "Function objects" in AGENT_GUIDE.md). Model-specific field
-# names come from the catalogs below.
-_ELECTRO_SOLVER_FIELDS = ("Vm", "activationTime", "Iion", "phiE", "phiI")
-_SOLID_SOLVER_FIELDS = ("Ta", "lambda")
-
 
 def resolve_case_models(
     case_root: str | Path,
 ) -> tuple[str | None, str | None, str | None]:
-    """Best-effort ``(solver, ionic_model, active_tension)`` from a case's
-    ``constant/electroProperties``. Any of the three may be ``None`` when the
-    file is absent or the entry is not declared; never raises. Used by the
-    discovery paths (``describe_entry``, ``strict_plan``) so the capability
-    manifest can name the resolved model's fields."""
-    from .specs.common import (
-        detect_active_tension_model_name,
-        detect_ionic_model_name,
-        detect_myocardium_solver_name,
-    )
+    """Deprecated 3-tuple shim over the cardiac plugin's
+    ``CaseIntrospectionCapability.resolve_case_models``. ``(solver,
+    ionic_model, active_tension)``, any of which may be ``None``; never
+    raises. Kept for callers that imported this function directly before it
+    became plugin-owned; new code should go through
+    ``driver_context.capabilities.case_introspection`` instead."""
+    from .core.plugin_interface import default_driver_context
 
-    electro_path = Path(case_root) / "constant" / "electroProperties"
-    if not electro_path.exists():
-        return None, None, None
-    solver = ionic = active_tension = None
-    try:
-        solver = detect_myocardium_solver_name(electro_path)
-    except (OSError, KeyError):
-        solver = None
-    try:
-        ionic = detect_ionic_model_name(electro_path)
-    except (OSError, KeyError):
-        ionic = None
-    try:
-        active_tension = detect_active_tension_model_name(electro_path)
-    except (OSError, KeyError):
-        active_tension = None
-    return solver, ionic, active_tension
+    introspection = default_driver_context().capabilities.case_introspection
+    resolved = introspection.resolve_case_models(Path(case_root))
+    return resolved.get("solver"), resolved.get("ionic_model"), resolved.get("active_tension")
 
 
 def _utility_commands(utility_manifests: dict[str, Any]) -> dict[str, list[str]]:
@@ -94,55 +72,26 @@ def _utility_commands(utility_manifests: dict[str, Any]) -> dict[str, list[str]]
 
 def build_capability_manifest(
     *,
-    resolved_solver: str | None = None,
-    resolved_ionic_model: str | None = None,
-    resolved_active_tension: str | None = None,
-    ionic_model_catalog: dict | None = None,
-    active_tension_model_catalog: dict | None = None,
     plugin_commands: Iterable[str] = (),
     utility_manifests: dict[str, Any] | None = None,
+    samplable_fields: dict[str, tuple[str, ...]] | None = None,
 ) -> dict[str, Any]:
     """Return the driver's accept-surface as a plain JSON-able dict.
 
-    ``plugin_commands`` and ``utility_manifests`` are supplied by the calling
-    plugin (the same injection style as the model catalogs) so that core names
-    no solver here; together with :data:`CORE_NEUTRAL_COMMANDS` they reproduce
+    ``plugin_commands``, ``utility_manifests``, and ``samplable_fields`` are
+    all supplied by the calling plugin so that core names no solver here;
+    together with :data:`CORE_NEUTRAL_COMMANDS` the commands reproduce
     exactly what ``validate_workflow_commands`` accepts for that plugin.
 
     ``allowed_commands`` names exactly what a workflow DAG step may invoke;
     ``samplable_fields`` names the fields a function object may sample for the
-    resolved model, split by region. Unknown model names are ignored (the
-    manifest degrades to the fixed solver fields) rather than raising, so this
-    is always safe to call during discovery.
+    resolved model, split by region -- resolving the model and naming its
+    fields is entirely the plugin's ``CaseIntrospectionCapability``, not this
+    module's concern. A caller with nothing resolved passes ``None`` and gets
+    an empty field set rather than this function raising.
     """
 
-    electro = set(_ELECTRO_SOLVER_FIELDS)
-    ionic_entry = (
-        (ionic_model_catalog or {}).get(resolved_ionic_model) if resolved_ionic_model else None
-    )
-    if ionic_entry is not None:
-        electro.update(ionic_entry.states)
-        electro.update(ionic_entry.algebraic)
-        electro.update(ionic_entry.recommended_exports)
-
-    solid: set[str] = set()
-    # A spatial active-tension model is positive evidence of electromechanical
-    # coupling. A spatial EP solver alone does not imply a mechanics region.
-    has_solid_region = (
-        resolved_active_tension is not None
-        and resolved_solver is not None
-        and resolved_solver != "singleCellSolver"
-    )
-    if has_solid_region:
-        solid.update(_SOLID_SOLVER_FIELDS)
-    at_entry = (
-        (active_tension_model_catalog or {}).get(resolved_active_tension)
-        if resolved_active_tension
-        else None
-    )
-    if has_solid_region and at_entry is not None:
-        solid.update(at_entry.states)
-        solid.update(at_entry.algebraic)
+    fields = samplable_fields or {}
 
     return {
         "allowed_commands": {
@@ -156,8 +105,7 @@ def build_capability_manifest(
             ),
         },
         "samplable_fields": {
-            "electro": sorted(electro),
-            "solid": sorted(solid),
+            **{region: sorted(names) for region, names in fields.items()},
             "note": (
                 "Function objects are OpenFOAM's; these are the field NAMES this "
                 "solver exposes. Sampling a name not listed here is silently "

@@ -113,20 +113,40 @@ class CardiacFoamPlugin:
         """
         Return the cardiacFoam capabilities (models, solvers, etc.).
         """
+        # No case_root is available at this call site, so this resolves to
+        # the fixed solver fields only (matches historical behaviour: no
+        # resolved model, no ionic/active-tension-specific field names).
+        resolved: dict = {}
         manifest = build_capability_manifest(
-            ionic_model_catalog=IONIC_MODEL_CATALOG,
-            active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG,
             # The manifest advertises the accept-surface, so it lists both
             # kinds of authorized plugin command -- the solver/auxiliary split
             # only governs who may be credited with a run's artifacts.
             plugin_commands=self.get_solver_commands() | self.get_auxiliary_commands(),
             utility_manifests=self.get_utility_manifests(),
+            samplable_fields=self.get_samplable_fields(resolved),
         )
         manifest["heterogeneity_models"] = HETEROGENEITY_MODELS
         manifest["ionic_models"] = IONIC_MODEL_CATALOG
         manifest["active_tension_models"] = ACTIVE_TENSION_MODEL_CATALOG
         manifest["solver_compatibility_rules"] = SOLVER_COMPATIBILITY_RULES
         return manifest
+
+    def resolve_case_models(self, case_root: Path) -> dict:
+        """Best-effort ``{"solver", "ionic_model", "active_tension"}`` from a
+        case's ``constant/electroProperties``. Never raises."""
+        from openfoam_driver.plugins.cardiacfoam.case_introspection import (
+            resolve_case_models,
+        )
+
+        return resolve_case_models(case_root)
+
+    def get_samplable_fields(self, resolved: dict) -> dict:
+        """Field names the resolved cardiac model exposes, by region."""
+        from openfoam_driver.plugins.cardiacfoam.case_introspection import (
+            samplable_fields,
+        )
+
+        return samplable_fields(resolved)
 
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS

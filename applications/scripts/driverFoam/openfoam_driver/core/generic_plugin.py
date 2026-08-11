@@ -74,6 +74,14 @@ class GenericOpenFOAMPlugin:
     def get_utility_roots(self) -> tuple[Path, ...]:
         return ()
 
+    def resolve_case_models(self, case_root):
+        del case_root
+        return {}
+
+    def get_samplable_fields(self, resolved):
+        del resolved
+        return {}
+
     def build_run_document_config(self, spec):
         del spec
         return {
