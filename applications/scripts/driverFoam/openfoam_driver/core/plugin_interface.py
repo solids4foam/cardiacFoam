@@ -232,6 +232,24 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "predict_data_artifacts",
 )
 
+# The v2 contract's members, required of any plugin declaring api_version "2".
+# Deliberately separate from _REQUIRED_PLUGIN_MEMBERS, which gates v1 plugins
+# too -- adding these there would break v1 loading.
+_REQUIRED_V2_MEMBERS = (
+    "get_solver_commands",
+    "get_auxiliary_commands",
+    "get_utility_manifests",
+    "get_utility_roots",
+    "resolve_case_models",
+    "get_samplable_fields",
+    "get_override_schema",
+    "get_dict_entry_catalog",
+    "get_solve_step_commands",
+    "get_telemetry_source_globs",
+    "get_extra_provenance_paths",
+    "get_artifact_value_reader",
+)
+
 _PLUGIN_ID_RE = re.compile(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?")
 
 
@@ -261,6 +279,20 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
             "not supported; this driverFOAM core drives "
             f"{sorted(SUPPORTED_PLUGIN_API_VERSIONS)}"
         )
+    # A declared version must be honoured, not merely well-formed. Without
+    # this, a plugin claiming "2" while missing v2 members silently falls back
+    # to the v1 compatibility path -- and for a cardiac-id plugin those
+    # fallbacks are cardiac-shaped, so a partial migration would be invisible.
+    if plugin.plugin_api_version == "2":
+        missing_v2 = [
+            name for name in _REQUIRED_V2_MEMBERS if not callable(getattr(plugin, name, None))
+        ]
+        if missing_v2:
+            raise TypeError(
+                "SolverPlugin declares plugin_api_version '2' but does not "
+                "implement the v2 contract; missing: "
+                + ", ".join(sorted(missing_v2))
+            )
     if not _PLUGIN_ID_RE.fullmatch(plugin.plugin_id):
         raise TypeError(
             "SolverPlugin.plugin_id must use lowercase letters, digits, dots, "

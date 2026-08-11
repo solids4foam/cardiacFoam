@@ -58,15 +58,31 @@ def resolve_case_models(
     return resolved.get("solver"), resolved.get("ionic_model"), resolved.get("active_tension")
 
 
-def _utility_commands(utility_manifests: dict[str, Any]) -> dict[str, list[str]]:
+def utility_produces(
+    utility_manifests: dict[str, Any],
+) -> dict[str, tuple[str, ...]]:
     """The plugin utility commands the allowlist accepts, keyed to what they
     produce. Mirrors the acceptance rule in ``validate_workflow_commands``
-    (only utilities that declare ``produces`` are accepted)."""
+    (only utilities that declare ``produces`` are accepted).
+
+    Single owner: the advertised accept-surface (this module's manifest) and
+    the enforced one (strict planning's artifact coverage) must not drift, so
+    both derive from this one function rather than each keeping a copy.
+    """
 
     return {
-        command: [produce.artifact_id for produce in manifest.produces]
+        command: tuple(produce.artifact_id for produce in manifest.produces)
         for command, manifest in utility_manifests.items()
         if manifest.produces
+    }
+
+
+def _utility_commands(utility_manifests: dict[str, Any]) -> dict[str, list[str]]:
+    """JSON-shaped view of :func:`utility_produces` (lists, not tuples)."""
+
+    return {
+        command: list(artifacts)
+        for command, artifacts in utility_produces(utility_manifests).items()
     }
 
 

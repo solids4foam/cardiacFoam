@@ -100,8 +100,28 @@ class GenericOpenFOAMPlugin:
         del tutorial_name, make_spec_info
         return {}
 
+    def get_solve_step_commands(self) -> frozenset:
+        """No solver semantics means no step is a solve step."""
+        return frozenset()
+
+    def get_telemetry_source_globs(self, command: str) -> tuple:
+        """No declared solver log locations."""
+        del command
+        return ()
+
+    def get_extra_provenance_paths(self, case_root) -> tuple:
+        """No plugin-owned inputs beyond the case itself."""
+        del case_root
+        return ()
+
+    def get_artifact_value_reader(self, artifact_format: str):
+        """No solver-specific artifact formats to read."""
+        del artifact_format
+        return None
+
     def get_dict_entry_catalog(self):
-        return {"physicsProperties": [], "electroProperties": {}}
+        """No plugin documents, so no document names."""
+        return {}
 
     def build_run_document_config(self, spec):
         del spec

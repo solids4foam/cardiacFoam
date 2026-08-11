@@ -90,3 +90,40 @@ def test_a_v1_plugin_still_loads_through_compatibility() -> None:
     # invent a cardiac-shaped default for it.
     assert context.capabilities.command_authorization.solver_commands() == frozenset()
     assert context.capabilities.override_schema.config_schema("x", {}) == {}
+
+
+def test_declaring_v2_without_implementing_it_is_rejected() -> None:
+    """A version string is not a contract unless the shape is checked. Without
+    this, a partial migration silently falls back to the v1 path -- and for a
+    cardiac-id plugin those fallbacks are cardiac-shaped, so the gap would be
+    invisible rather than loud."""
+
+    class HalfMigratedPlugin(GenericOpenFOAMPlugin):
+        # Declares v2 (matching its profile) but drops one required member.
+        get_artifact_value_reader = None
+
+    with pytest.raises(TypeError, match="does not implement the v2 contract"):
+        driver_context(HalfMigratedPlugin(), source="test")
+
+
+def test_the_v2_shape_check_names_what_is_missing() -> None:
+    class MissingTwo(GenericOpenFOAMPlugin):
+        get_solve_step_commands = None
+        get_utility_roots = None
+
+    with pytest.raises(TypeError) as excinfo:
+        driver_context(MissingTwo(), source="test")
+    message = str(excinfo.value)
+    assert "get_solve_step_commands" in message
+    assert "get_utility_roots" in message
+
+
+def test_both_builtin_plugins_satisfy_the_v2_protocol() -> None:
+    """The spec's exit criterion: cardiac AND generic exercise every v2
+    capability. The generic plugin previously declared v2 while implementing
+    8 of 12, riding the adapter's degrade-to-empty fallback."""
+    from openfoam_driver.core.plugin_interface import SolverPluginV2
+    from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
+
+    for plugin in (CardiacFoamPlugin(), GenericOpenFOAMPlugin()):
+        assert isinstance(plugin, SolverPluginV2), type(plugin).__name__

@@ -155,6 +155,7 @@ class CaseFileContractCapability(Protocol):
 
     def required_files(self) -> tuple[str, ...]: ...
     def conditional_files(self) -> tuple[str, ...]: ...
+    def required_rules(self) -> tuple["CaseFileRule", ...]: ...
 
 
 class OverrideSchemaCapability(Protocol):
@@ -409,8 +410,13 @@ class _CaseFileContractAdapter:
     def _rules(self) -> tuple["CaseFileRule", ...]:
         return tuple(self.plugin.get_profile().case_files)
 
+    def required_rules(self) -> tuple["CaseFileRule", ...]:
+        """Required rules with their ``role`` intact, so a consumer need not
+        re-derive plugin semantics from a path prefix."""
+        return tuple(rule for rule in self._rules() if rule.required == "always")
+
     def required_files(self) -> tuple[str, ...]:
-        return tuple(rule.path for rule in self._rules() if rule.required == "always")
+        return tuple(rule.path for rule in self.required_rules())
 
     def conditional_files(self) -> tuple[str, ...]:
         return tuple(rule.path for rule in self._rules() if rule.required != "always")

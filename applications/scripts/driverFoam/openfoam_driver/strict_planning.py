@@ -166,12 +166,11 @@ def _utility_produces_by_command(
 ) -> dict[str, tuple[str, ...]]:
     """The active plugin's utilities, keyed to the artifacts they declare."""
 
-    manifests = driver_context.capabilities.command_authorization.utility_manifests()
-    return {
-        command: tuple(produce.artifact_id for produce in manifest.produces)
-        for command, manifest in manifests.items()
-        if manifest.produces
-    }
+    from .capability_manifest import utility_produces
+
+    return utility_produces(
+        driver_context.capabilities.command_authorization.utility_manifests()
+    )
 
 
 def _artifact_diagnostics(

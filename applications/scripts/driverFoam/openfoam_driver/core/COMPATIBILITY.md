@@ -30,16 +30,16 @@ fallback below. **Every one returns cardiac values only when
 core must never invent a solver shape for a third party. All are removable once
 v1 is no longer supported.
 
-| Fallback | Empty value for a non-cardiac v1 plugin |
+| Fallback | Value returned for a non-cardiac v1 plugin |
 |---|---|
 | `legacy_solver_commands` | `frozenset()` |
 | `legacy_auxiliary_commands` | `frozenset()` |
 | `legacy_utility_manifests` | `{}` |
 | `legacy_utility_roots` | `()` |
 | `legacy_resolve_case_models` | `{"solver": None, "ionic_model": None, "active_tension": None}` |
-| `legacy_samplable_fields` | `{"electro": (), "solid": ()}` |
+| `legacy_samplable_fields` | `{"electro": (), "solid": ()}` (empty values under cardiac region keys -- a documented quarantine, not a neutral shape) |
 | `legacy_override_schema` | `{}` |
-| `legacy_dict_entry_catalog` | `{"physicsProperties": [], "electroProperties": {}}` |
+| `legacy_dict_entry_catalog` | `{}` |
 
 `RuntimeEvidenceCapability` has no fallback: its adapter already degrades to
 empty for a plugin that declares nothing, which is the honest answer.

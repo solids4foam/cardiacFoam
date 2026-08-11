@@ -201,4 +201,4 @@ def legacy_dict_entry_catalog(plugin) -> dict:
         return dict_entry_catalog(
             plugin.get_dictionary_catalog(), plugin.get_dict_groups(),
         )
-    return {"physicsProperties": [], "electroProperties": {}}
+    return {}

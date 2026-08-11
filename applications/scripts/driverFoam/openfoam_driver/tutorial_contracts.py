@@ -152,12 +152,18 @@ def describe_tutorial_contract(
             str(regression_root.relative_to(tutorials_root))
         )
 
-    required_files = driver_context.capabilities.case_files.required_files()
+    # Split on the profile's own ``role``, not on a path prefix: the prefix
+    # would make core re-derive plugin semantics from a string, and would
+    # misfile a plugin-owned dictionary that happens to live under system/
+    # (or a required initial-condition file that does not).
+    required_rules = driver_context.capabilities.case_files.required_rules()
     core_required_files = tuple(
-        path for path in required_files if not path.startswith("system/")
+        rule.path for rule in required_rules
+        if not rule.role.startswith("openfoam.")
     )
     solver_required_files = tuple(
-        path for path in required_files if path.startswith("system/")
+        rule.path for rule in required_rules
+        if rule.role.startswith("openfoam.")
     )
     conditional_files = tuple(
         driver_context.capabilities.case_files.conditional_files()

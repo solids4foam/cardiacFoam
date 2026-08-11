@@ -75,8 +75,14 @@ def test_cardiac_config_schema_keeps_its_documented_tokens() -> None:
     assert "singleCell" in schema["worked_example"]["json"]
 
 
-def test_generic_dict_entry_catalog_is_empty() -> None:
+def test_generic_dict_entry_catalog_names_no_cardiac_document() -> None:
+    """The previous version of this test asserted only on ``.values()``, so a
+    cardiac leak in the *keys* (``physicsProperties``/``electroProperties``)
+    was invisible to it. Scan the whole structure."""
     catalog = generic_openfoam_context().capabilities.override_schema.dict_entry_catalog()
+    blob = json.dumps(catalog)
+    leaked = [token for token in _CARDIAC_TOKENS if token in blob]
+    assert leaked == [], f"generic dict entry catalog leaked: {leaked}"
     assert all(not value for value in catalog.values()), catalog
 
 
