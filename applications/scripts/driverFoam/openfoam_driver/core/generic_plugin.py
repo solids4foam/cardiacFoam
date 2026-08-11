@@ -64,6 +64,10 @@ class GenericOpenFOAMPlugin:
         """No solver semantics means no solver binary to authorize."""
         return frozenset()
 
+    def get_auxiliary_commands(self) -> frozenset[str]:
+        """No solver semantics means no plugin-specific helpers either."""
+        return frozenset()
+
     def get_utility_manifests(self) -> dict:
         return {}
 

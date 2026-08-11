@@ -115,7 +115,15 @@ class SweepMaterializerCapability(Protocol):
 
 
 class CommandAuthorizationCapability(Protocol):
+    """What the active plugin authorizes a workflow step to invoke.
+
+    ``solver_commands`` and ``auxiliary_commands`` are both authorized, but
+    only ``solver_commands`` names binaries that produce a run's artifacts;
+    core's artifact-producer heuristic must consult that one alone.
+    """
+
     def solver_commands(self) -> frozenset[str]: ...
+    def auxiliary_commands(self) -> frozenset[str]: ...
     def utility_manifests(self) -> dict[str, Any]: ...
     def utility_roots(self) -> tuple[Path, ...]: ...
 
@@ -281,6 +289,14 @@ class _CommandAuthorizationAdapter:
         from .compatibility import legacy_solver_commands
 
         return legacy_solver_commands(self.plugin)
+
+    def auxiliary_commands(self) -> frozenset[str]:
+        hook = getattr(self.plugin, "get_auxiliary_commands", None)
+        if callable(hook):
+            return frozenset(hook())
+        from .compatibility import legacy_auxiliary_commands
+
+        return legacy_auxiliary_commands(self.plugin)
 
     def utility_manifests(self) -> dict[str, Any]:
         hook = getattr(self.plugin, "get_utility_manifests", None)

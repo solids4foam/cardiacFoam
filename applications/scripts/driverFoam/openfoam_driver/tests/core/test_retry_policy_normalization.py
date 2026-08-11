@@ -36,7 +36,9 @@ def _normalize(retry_policy_marker, **step_extra):
     if retry_policy_marker is not _ABSENT:
         step["retry_policy"] = retry_policy_marker
     step.update(step_extra)
-    dag, diagnostics = normalize_workflow_dag({"steps": [step]})
+    # No expected_artifacts here, so the context only has to be passed, not to
+    # authorize anything -- these tests are about retry_policy normalization.
+    dag, diagnostics = normalize_workflow_dag({"steps": [step]}, driver_context=None)
     return dag, diagnostics
 
 
@@ -89,7 +91,7 @@ def test_zero_backoff_seconds_accepted():
 
 
 def test_missing_dag_message_names_contract_files():
-    _, diagnostics = normalize_workflow_dag(None)
+    _, diagnostics = normalize_workflow_dag(None, driver_context=None)
     missing = [d for d in diagnostics if d.code == "missing_workflow_dag"]
     assert len(missing) == 1
     assert "workflow_contract.json" in missing[0].message

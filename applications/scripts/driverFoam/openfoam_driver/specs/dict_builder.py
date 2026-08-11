@@ -832,6 +832,12 @@ def build_and_launch(
     from openfoam_driver.core.runtime.workflow_orchestrator import run_workflow
     from openfoam_driver.core.runtime.workflow_state import initial_workflow_state
 
+    # NOTE: this path hardcodes the cardiacFoam solver but validates it against
+    # the caller-supplied ``driver_context``. Passing an explicitly generic
+    # context therefore raises ValueError below (that context authorizes no
+    # solver binary) where it previously passed. That combination is
+    # nonsensical either way -- a generic context cannot build cardiac dicts --
+    # but the failure is now loud and at command validation rather than later.
     spec = make_spec(
         tutorials_root=case_dir.parent,
         case_dir_name=case_dir.name,

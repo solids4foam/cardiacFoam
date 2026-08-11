@@ -116,7 +116,10 @@ class CardiacFoamPlugin:
         manifest = build_capability_manifest(
             ionic_model_catalog=IONIC_MODEL_CATALOG,
             active_tension_model_catalog=ACTIVE_TENSION_MODEL_CATALOG,
-            plugin_commands=self.get_solver_commands(),
+            # The manifest advertises the accept-surface, so it lists both
+            # kinds of authorized plugin command -- the solver/auxiliary split
+            # only governs who may be credited with a run's artifacts.
+            plugin_commands=self.get_solver_commands() | self.get_auxiliary_commands(),
             utility_manifests=self.get_utility_manifests(),
         )
         manifest["heterogeneity_models"] = HETEROGENEITY_MODELS
@@ -238,12 +241,20 @@ class CardiacFoamPlugin:
         materialize_case(case_dir=case_dir, routed=routed)
 
     def get_solver_commands(self) -> frozenset[str]:
-        """Workflow commands this plugin authorizes beyond the core-neutral set."""
+        """This plugin's artifact-producing solver commands."""
         from openfoam_driver.plugins.cardiacfoam.command_authorization import (
             solver_commands,
         )
 
         return solver_commands()
+
+    def get_auxiliary_commands(self) -> frozenset[str]:
+        """Authorized plugin commands that do not produce the run's artifacts."""
+        from openfoam_driver.plugins.cardiacfoam.command_authorization import (
+            auxiliary_commands,
+        )
+
+        return auxiliary_commands()
 
     def get_utility_manifests(self) -> dict:
         """This plugin's ``utility.manifest.toml`` sidecars, by command name."""
@@ -251,7 +262,9 @@ class CardiacFoamPlugin:
             utility_manifests,
         )
 
-        return utility_manifests()
+        # utility_manifests() is cached and returns a read-only view; copy so a
+        # caller mutating what it gets back cannot reach the shared cache.
+        return dict(utility_manifests())
 
     def get_utility_roots(self) -> tuple[Path, ...]:
         """Roots searched for this plugin's utility manifests."""

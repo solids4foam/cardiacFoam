@@ -214,6 +214,37 @@ def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
     assert by_id["interfaceMetrics"]["depends_on"] == ["solve"]
 
 
+def test_tet_unclaimed_artifacts_are_credited_to_the_solve_step(tmp_path):
+    """The last *artifact-producing solver* step owns unclaimed artifacts.
+
+    ``bathBidomainInterfaceMetrics`` is authorized to run but is a
+    post-processing utility, not a solver, so it must not be credited with the
+    run's outputs -- ``produces`` is enforced post-step
+    (``workflow_runner._run_step``'s ``missing_artifacts`` check), so crediting
+    the metrics utility would make a silent solver blame ``interfaceMetrics``.
+    """
+    from openfoam_driver.core.plugin_interface import default_driver_context
+    from openfoam_driver.core.runtime.models import DataArtifact
+    from openfoam_driver.core.runtime.workflow import normalize_workflow_dag
+
+    spec = _make_spec(tmp_path, mesh_family="tet")
+    artifact = DataArtifact(
+        artifact_id="vm_field",
+        path_pattern="{time}/Vm",
+        format="openfoam_field",
+    )
+    dag, diagnostics = normalize_workflow_dag(
+        spec.metadata["workflow_dag"],
+        expected_artifacts=(artifact,),
+        driver_context=default_driver_context(),
+    )
+    assert [d for d in diagnostics if d.level == "error"] == []
+    producers = {
+        step["id"] for step in dag["steps"] if "vm_field" in step.get("produces", ())
+    }
+    assert producers == {"solve"}
+
+
 def test_hex_workflow_dag_is_still_blockmesh_toposet_pipeline(tmp_path):
     spec = _make_spec(tmp_path)
     assert [s["command"] for s in spec.metadata["workflow_dag"]["steps"]] == [

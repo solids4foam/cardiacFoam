@@ -121,13 +121,26 @@ def legacy_solver_commands(plugin) -> frozenset[str]:
     return frozenset()
 
 
+def legacy_auxiliary_commands(plugin) -> frozenset[str]:
+    """v1 plugins predate get_auxiliary_commands(). Same rule as
+    :func:`legacy_solver_commands`: only the built-in cardiac plugin gets its
+    non-solver commands authorized."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.command_authorization import auxiliary_commands
+
+        return auxiliary_commands()
+    return frozenset()
+
+
 def legacy_utility_manifests(plugin) -> dict:
     """Preserve the cardiac utility catalog for plugins without the new hook."""
 
     if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
         from ..plugins.cardiacfoam.command_authorization import utility_manifests
 
-        return utility_manifests()
+        # Cached read-only view; copy so a caller cannot reach the shared cache.
+        return dict(utility_manifests())
     return {}
 
 

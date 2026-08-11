@@ -168,13 +168,19 @@ def normalize_workflow_dag(
     *,
     expected_artifacts: Iterable[DataArtifact] = (),
     utility_produces: dict[str, tuple[str, ...]] | None = None,
-    driver_context: Any = None,
+    driver_context: Any,
 ) -> tuple[dict[str, Any] | None, tuple[WorkflowDiagnostic, ...]]:
     """Return an executable-shaped workflow DAG without executing it.
 
     Existing specs still author the compact form, for example
     ``{"command": "postProcess -func points"}``. Strict planning uses this
     normalizer to expose a stable argv-like contract for a future step runner.
+
+    ``driver_context`` is required, not defaulted: it selects which steps may
+    be credited with unclaimed expected artifacts. A forgotten kwarg would
+    silently change the returned document (artifacts attached to a different
+    step, or to none) with no diagnostic, so the caller must pass it — ``None``
+    is still accepted, and means "no plugin solver is authorized".
     """
     if raw_dag is None:
         return None, (
@@ -391,7 +397,11 @@ def normalize_workflow_dag(
         # Only run-style steps may be credited with producing artifacts: the
         # case run script plus whatever solver binaries the context authorizes.
         # The rest of CASE_SCRIPT_COMMANDS is deliberately excluded -- Allclean
-        # deletes output rather than producing it.
+        # deletes output rather than producing it. Note solver_commands() only,
+        # NOT the full authorized set: auxiliary_commands() are authorized to
+        # run but are post-processing, and ``produces`` is enforced per-step
+        # (workflow_runner's missing_artifacts check), so crediting one would
+        # make a silent solver fail the wrong step.
         producer_commands = {"Allrun"}
         if driver_context is not None:
             producer_commands |= (
@@ -487,7 +497,11 @@ def validate_workflow_commands(
     """
     if driver_context is not None:
         authorization = driver_context.capabilities.command_authorization
-        plugin_commands = authorization.solver_commands()
+        # Authorization is the union: both kinds of plugin command may run.
+        # The split matters only to the artifact-producer heuristic above.
+        plugin_commands = (
+            authorization.solver_commands() | authorization.auxiliary_commands()
+        )
         utilities = authorization.utility_manifests()
     else:
         plugin_commands = frozenset()

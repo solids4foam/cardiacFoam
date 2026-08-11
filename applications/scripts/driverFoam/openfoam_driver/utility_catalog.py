@@ -532,10 +532,13 @@ def load_utility_manifests(utilities_root: Path) -> dict[str, UtilityManifest]:
     return catalog
 
 
-_UTILITIES_ROOT: Final[Path] = (
+#: Repo root holding the ``utility.manifest.toml`` sidecars. Public so that a
+#: plugin declaring the same root derives it from here rather than recomputing
+#: its own ``Path(__file__).parents[N]`` arithmetic, which can silently drift.
+UTILITIES_ROOT: Final[Path] = (
     Path(__file__).resolve().parents[3] / "utilities"
 )
 
 UTILITY_CATALOG: Final[dict[str, UtilityManifest]] = load_utility_manifests(
-    _UTILITIES_ROOT
+    UTILITIES_ROOT
 )
