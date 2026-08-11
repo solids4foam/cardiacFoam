@@ -157,6 +157,22 @@ class CaseFileContractCapability(Protocol):
     def conditional_files(self) -> tuple[str, ...]: ...
 
 
+class OverrideSchemaCapability(Protocol):
+    """The plugin's authored configuration vocabulary.
+
+    ``config_schema`` is the machine-readable description of the ``--config``
+    JSON an agent writes, including a worked example for the named tutorial.
+    ``dict_entry_catalog`` returns the plugin's dictionary entries arranged by
+    its own document names, **unserialized** -- core owns serialization, the
+    plugin owns the vocabulary and the document shape.
+    """
+
+    def config_schema(
+        self, tutorial_name: str, make_spec_info: dict[str, Any],
+    ) -> dict[str, Any]: ...
+    def dict_entry_catalog(self) -> dict[str, Any]: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -380,6 +396,29 @@ class _CaseFileContractAdapter:
 
 
 @dataclass(frozen=True)
+class _OverrideSchemaAdapter:
+    plugin: "SolverPlugin"
+
+    def config_schema(
+        self, tutorial_name: str, make_spec_info: dict[str, Any],
+    ) -> dict[str, Any]:
+        hook = getattr(self.plugin, "get_override_schema", None)
+        if callable(hook):
+            return dict(hook(tutorial_name, make_spec_info))
+        from .compatibility import legacy_override_schema
+
+        return legacy_override_schema(self.plugin, tutorial_name, make_spec_info)
+
+    def dict_entry_catalog(self) -> dict[str, Any]:
+        hook = getattr(self.plugin, "get_dict_entry_catalog", None)
+        if callable(hook):
+            return dict(hook())
+        from .compatibility import legacy_dict_entry_catalog
+
+        return legacy_dict_entry_catalog(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -397,6 +436,7 @@ class PluginCapabilities:
     command_authorization: CommandAuthorizationCapability
     case_introspection: CaseIntrospectionCapability
     case_files: CaseFileContractCapability
+    override_schema: OverrideSchemaCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -417,4 +457,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         command_authorization=_CommandAuthorizationAdapter(plugin),
         case_introspection=_CaseIntrospectionAdapter(plugin),
         case_files=_CaseFileContractAdapter(plugin),
+        override_schema=_OverrideSchemaAdapter(plugin),
     )

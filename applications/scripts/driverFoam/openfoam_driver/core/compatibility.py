@@ -176,3 +176,29 @@ def legacy_samplable_fields(plugin, resolved) -> dict:
 
         return samplable_fields(resolved)
     return {"electro": (), "solid": ()}
+
+
+def legacy_override_schema(plugin, tutorial_name: str, make_spec_info: dict) -> dict:
+    """v1 plugins predate get_override_schema(). Only the built-in cardiac
+    plugin has an authored configuration vocabulary; other v1 plugins get an
+    empty schema and must declare their own by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.override_schema import config_schema
+
+        return config_schema(tutorial_name, make_spec_info)
+    return {}
+
+
+def legacy_dict_entry_catalog(plugin) -> dict:
+    """v1 plugins predate get_dict_entry_catalog(). Same rule as
+    :func:`legacy_override_schema`: only the built-in cardiac plugin knows the
+    electro/physics document shape."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.override_schema import dict_entry_catalog
+
+        return dict_entry_catalog(
+            plugin.get_dictionary_catalog(), plugin.get_dict_groups(),
+        )
+    return {"physicsProperties": [], "electroProperties": {}}

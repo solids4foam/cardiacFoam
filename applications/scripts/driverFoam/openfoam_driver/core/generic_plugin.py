@@ -82,6 +82,13 @@ class GenericOpenFOAMPlugin:
         del resolved
         return {}
 
+    def get_override_schema(self, tutorial_name, make_spec_info):
+        del tutorial_name, make_spec_info
+        return {}
+
+    def get_dict_entry_catalog(self):
+        return {"physicsProperties": [], "electroProperties": {}}
+
     def build_run_document_config(self, spec):
         del spec
         return {

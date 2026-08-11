@@ -148,6 +148,22 @@ class CardiacFoamPlugin:
 
         return samplable_fields(resolved)
 
+    def get_override_schema(self, tutorial_name: str, make_spec_info: dict) -> dict:
+        """cardiacFoam's authored --config schema, including a worked example."""
+        from openfoam_driver.plugins.cardiacfoam.override_schema import config_schema
+
+        return config_schema(tutorial_name, make_spec_info)
+
+    def get_dict_entry_catalog(self) -> dict:
+        """Dictionary entries arranged by cardiacFoam's own document names."""
+        from openfoam_driver.plugins.cardiacfoam.override_schema import (
+            dict_entry_catalog,
+        )
+
+        return dict_entry_catalog(
+            self.get_dictionary_catalog(), self.get_dict_groups(),
+        )
+
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
         from openfoam_driver.core.runtime.generic_case import make_spec as make_generic_case_spec
