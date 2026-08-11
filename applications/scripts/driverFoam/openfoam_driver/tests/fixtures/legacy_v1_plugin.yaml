@@ -1,6 +1,6 @@
 schema_version: 1
 plugin:
-  id: org.driverfoam.generic-openfoam
-  api_version: "2"
+  id: org.example.legacy
+  api_version: "1"
 case_profile:
   dictionaries: []

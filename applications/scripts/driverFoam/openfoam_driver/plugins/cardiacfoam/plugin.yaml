@@ -1,7 +1,7 @@
 schema_version: 1
 plugin:
   id: org.cardiacfoam
-  api_version: "1"
+  api_version: "2"
 case_profile:
   dictionaries:
     - path: system/controlDict

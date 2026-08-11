@@ -73,7 +73,7 @@ class CardiacFoamPlugin:
 
     @property
     def plugin_api_version(self) -> str:
-        return "1"
+        return "2"
 
     @staticmethod
     @lru_cache(maxsize=1)

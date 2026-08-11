@@ -177,6 +177,44 @@ class DriverContext:
         return adapt_plugin_capabilities(self.plugin)
 
 
+@runtime_checkable
+class SolverPluginV2(SolverPlugin, Protocol):
+    """The v2 plugin contract.
+
+    Extends v1 with the members core needs to stay solver-agnostic: command
+    authorization, case introspection, the configuration vocabulary, and the
+    runtime-evidence declarations later phases consume.
+
+    v1 plugins remain loadable. Their missing members are filled by
+    :mod:`openfoam_driver.core.compatibility` fallbacks, which are
+    cardiac-shaped only for the built-in cardiac plugin and empty for anyone
+    else. None of these members appear in ``_REQUIRED_PLUGIN_MEMBERS`` -- that
+    list gates v1 plugins too, and adding them there would break v1 loading.
+    """
+
+    def get_solver_commands(self) -> frozenset[str]: ...
+    def get_auxiliary_commands(self) -> frozenset[str]: ...
+    def get_utility_manifests(self) -> dict[str, Any]: ...
+    def get_utility_roots(self) -> tuple["Path", ...]: ...
+    def resolve_case_models(self, case_root: "Path") -> dict[str, Any]: ...
+    def get_samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]: ...
+    def get_override_schema(
+        self, tutorial_name: str, make_spec_info: dict[str, Any],
+    ) -> dict[str, Any]: ...
+    def get_dict_entry_catalog(self) -> dict[str, Any]: ...
+    def get_solve_step_commands(self) -> frozenset[str]: ...
+    def get_telemetry_source_globs(self, command: str) -> tuple[str, ...]: ...
+    def get_extra_provenance_paths(self, case_root: "Path") -> tuple["Path", ...]: ...
+    def get_artifact_value_reader(self, artifact_format: str) -> Any | None: ...
+
+
+# Plugin contract versions this core can drive. "1" is the original contract,
+# loaded through core.compatibility fallbacks; "2" adds the command
+# authorization, case introspection, override schema, and runtime evidence
+# members. Anything else is refused before any plugin catalog code runs.
+SUPPORTED_PLUGIN_API_VERSIONS: frozenset[str] = frozenset({"1", "2"})
+
+
 _REQUIRED_PLUGIN_MEMBERS = (
     "plugin_name",
     "plugin_id",
@@ -214,6 +252,15 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
         value = getattr(plugin, name)
         if not isinstance(value, str) or not value.strip():
             raise TypeError(f"SolverPlugin.{name} must be a non-empty string")
+    # Refused here -- before the callable checks, before get_profile(), and
+    # before get_dict_entries() -- so an unsupported plugin's catalog code
+    # never executes.
+    if plugin.plugin_api_version not in SUPPORTED_PLUGIN_API_VERSIONS:
+        raise TypeError(
+            f"SolverPlugin.plugin_api_version {plugin.plugin_api_version!r} is "
+            "not supported; this driverFOAM core drives "
+            f"{sorted(SUPPORTED_PLUGIN_API_VERSIONS)}"
+        )
     if not _PLUGIN_ID_RE.fullmatch(plugin.plugin_id):
         raise TypeError(
             "SolverPlugin.plugin_id must use lowercase letters, digits, dots, "

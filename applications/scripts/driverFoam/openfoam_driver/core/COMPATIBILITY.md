@@ -21,5 +21,33 @@ rediscovering the historical reason.
 | Historical cardiac artifact layout | Canonical output is absent; tutorial artifact locator checks processor/legacy filenames. | cardiac artifact and manufactured-tutorial tests | Minimum supported solver version |
 | Verification `legacy_bash` | Experiment declares `legacy_bash`; execute the repository reproduction script. | verification-contract tests | Canonical workflow-DAG migration |
 
+## v1 plugin fallbacks (Phase 1)
+
+The v2 contract (`SolverPluginV2`) adds twelve members that let core stay
+solver-agnostic. A v1 plugin declares none of them, so each is filled by a
+fallback below. **Every one returns cardiac values only when
+`plugin_id == "org.cardiacfoam"`, and empty values for any other v1 plugin** --
+core must never invent a solver shape for a third party. All are removable once
+v1 is no longer supported.
+
+| Fallback | Empty value for a non-cardiac v1 plugin |
+|---|---|
+| `legacy_solver_commands` | `frozenset()` |
+| `legacy_auxiliary_commands` | `frozenset()` |
+| `legacy_utility_manifests` | `{}` |
+| `legacy_utility_roots` | `()` |
+| `legacy_resolve_case_models` | `{"solver": None, "ionic_model": None, "active_tension": None}` |
+| `legacy_samplable_fields` | `{"electro": (), "solid": ()}` |
+| `legacy_override_schema` | `{}` |
+| `legacy_dict_entry_catalog` | `{"physicsProperties": [], "electroProperties": {}}` |
+
+`RuntimeEvidenceCapability` has no fallback: its adapter already degrades to
+empty for a plugin that declares nothing, which is the honest answer.
+
+`SUPPORTED_PLUGIN_API_VERSIONS` (`core/plugin_interface.py`) gates loading to
+`{"1", "2"}`. The check runs inside `validate_plugin` **before** the callable
+checks, `get_profile()`, and `get_dict_entries()`, so an unsupported plugin's
+catalog code never executes.
+
 Only `openfoam_driver.core.compatibility` may import cardiac implementation
 modules from core. Other core consumers use `DriverContext.capabilities`.
