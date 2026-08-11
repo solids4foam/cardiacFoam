@@ -36,6 +36,7 @@ from .core.runtime.failure_context import build_failure_context
 from .core.runtime.openfoam_environment import load_openfoam_environment
 from .core.runtime.remediation import build_candidate_remediations
 from .core.runtime.remediation_audit import append_remediation_record
+from .core.runtime.resume_guard import stale_resume_warnings
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
@@ -276,6 +277,9 @@ def _execute_run(
                 "workflow_state_path": str(state_path),
             }, indent=2))
             return 1
+    resume_warnings: tuple[dict[str, str], ...] = ()
+    if state_path.exists():
+        resume_warnings = stale_resume_warnings(workflow_state, case_root=case_root)
     if workflow_state.status == "failed":
         print(json.dumps({
             "status": "failed",
@@ -283,6 +287,7 @@ def _execute_run(
             "error": "workflow_state is failed; use action=step to rerun a failed step explicitly",
             "workflow_state_path": str(state_path),
             "workflow_state": workflow_state.to_json(),
+            **({"resume_warnings": list(resume_warnings)} if resume_warnings else {}),
         }, indent=2))
         return 1
     try:
@@ -319,6 +324,7 @@ def _execute_run(
         "steps": results,
         "workflow_state_path": str(state_path),
         "workflow_state": workflow_state.to_json(),
+        **({"resume_warnings": list(resume_warnings)} if resume_warnings else {}),
     }
     if workflow_state.status == "pending" and workflow_state.current_step_id is None:
         payload["error"] = "workflow_state is pending but has no current_step_id"
