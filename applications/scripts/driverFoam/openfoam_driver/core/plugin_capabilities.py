@@ -173,6 +173,27 @@ class OverrideSchemaCapability(Protocol):
     def dict_entry_catalog(self) -> dict[str, Any]: ...
 
 
+class RuntimeEvidenceCapability(Protocol):
+    """Where the plugin's runtime evidence lives.
+
+    Declaration surface only in Phase 1 -- nothing in core reads it yet.
+    Phase 2 (provenance) consumes ``extra_provenance_paths``, Phase 4
+    (telemetry) consumes ``solve_step_commands`` and
+    ``telemetry_source_globs``, and Phase 5 (observables) consumes
+    ``artifact_value_reader``. Declaring them together now means those phases
+    need not reopen the plugin contract.
+
+    Every member degrades to empty for a plugin that declares nothing, which
+    is the honest answer rather than a solver-shaped guess -- so this
+    capability needs no compatibility fallback.
+    """
+
+    def solve_step_commands(self) -> frozenset[str]: ...
+    def telemetry_source_globs(self, command: str) -> tuple[str, ...]: ...
+    def extra_provenance_paths(self, case_root: Path) -> tuple[Path, ...]: ...
+    def artifact_value_reader(self, artifact_format: str) -> Any | None: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -419,6 +440,27 @@ class _OverrideSchemaAdapter:
 
 
 @dataclass(frozen=True)
+class _RuntimeEvidenceAdapter:
+    plugin: "SolverPlugin"
+
+    def solve_step_commands(self) -> frozenset[str]:
+        hook = getattr(self.plugin, "get_solve_step_commands", None)
+        return frozenset(hook()) if callable(hook) else frozenset()
+
+    def telemetry_source_globs(self, command: str) -> tuple[str, ...]:
+        hook = getattr(self.plugin, "get_telemetry_source_globs", None)
+        return tuple(hook(command)) if callable(hook) else ()
+
+    def extra_provenance_paths(self, case_root: Path) -> tuple[Path, ...]:
+        hook = getattr(self.plugin, "get_extra_provenance_paths", None)
+        return tuple(hook(case_root)) if callable(hook) else ()
+
+    def artifact_value_reader(self, artifact_format: str):
+        hook = getattr(self.plugin, "get_artifact_value_reader", None)
+        return hook(artifact_format) if callable(hook) else None
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -437,6 +479,7 @@ class PluginCapabilities:
     case_introspection: CaseIntrospectionCapability
     case_files: CaseFileContractCapability
     override_schema: OverrideSchemaCapability
+    runtime_evidence: RuntimeEvidenceCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -458,4 +501,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         case_introspection=_CaseIntrospectionAdapter(plugin),
         case_files=_CaseFileContractAdapter(plugin),
         override_schema=_OverrideSchemaAdapter(plugin),
+        runtime_evidence=_RuntimeEvidenceAdapter(plugin),
     )

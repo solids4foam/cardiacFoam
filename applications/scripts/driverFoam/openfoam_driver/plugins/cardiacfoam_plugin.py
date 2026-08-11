@@ -154,6 +154,38 @@ class CardiacFoamPlugin:
 
         return config_schema(tutorial_name, make_spec_info)
 
+    def get_solve_step_commands(self) -> frozenset:
+        """Commands that actually run the solver (Phase 4 telemetry)."""
+        from openfoam_driver.plugins.cardiacfoam.runtime_evidence import (
+            solve_step_commands,
+        )
+
+        return solve_step_commands()
+
+    def get_telemetry_source_globs(self, command: str) -> tuple:
+        """Where this command's solver log lands beyond captured stdout."""
+        from openfoam_driver.plugins.cardiacfoam.runtime_evidence import (
+            telemetry_source_globs,
+        )
+
+        return telemetry_source_globs(command)
+
+    def get_extra_provenance_paths(self, case_root) -> tuple:
+        """Extra inputs Phase 2 must digest beyond system/ and constant/."""
+        from openfoam_driver.plugins.cardiacfoam.runtime_evidence import (
+            extra_provenance_paths,
+        )
+
+        return extra_provenance_paths(case_root)
+
+    def get_artifact_value_reader(self, artifact_format: str):
+        """Reader for a cardiac artifact format, or None (Phase 5)."""
+        from openfoam_driver.plugins.cardiacfoam.runtime_evidence import (
+            artifact_value_reader,
+        )
+
+        return artifact_value_reader(artifact_format)
+
     def get_dict_entry_catalog(self) -> dict:
         """Dictionary entries arranged by cardiacFoam's own document names."""
         from openfoam_driver.plugins.cardiacfoam.override_schema import (
