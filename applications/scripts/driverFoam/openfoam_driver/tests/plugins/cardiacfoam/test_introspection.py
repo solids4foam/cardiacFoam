@@ -184,6 +184,79 @@ class TestIntrospection(unittest.TestCase):
             self.assertEqual(payload["tutorial_contract"]["solver_required_files"], [])
             self.assertEqual(payload["tutorial_contract"]["reference_cases"], [])
 
+    def test_describe_tutorial_contract_file_lists_preserve_profile_order(self) -> None:
+        # Regression test: describe_tutorial_contract's three public file
+        # lists (core_required_files, solver_required_files,
+        # conditional_files) must preserve the active plugin profile's
+        # declaration order verbatim, not an alphabetically sorted order.
+        # A prior fix wrapped these in sorted() to make an unrelated,
+        # order-sensitive assertion pass; that silently reordered
+        # conditional_files in the public payload. Every file referenced
+        # below exists on disk so _existing_relpaths does not filter
+        # anything out, and the assertions use assertEqual (not assertIn)
+        # so a reordering fails this test.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tutorials_root = Path(temp_dir)
+            case_root = tutorials_root / "orderedCase"
+            (case_root / "constant").mkdir(parents=True, exist_ok=True)
+            (case_root / "system").mkdir(parents=True, exist_ok=True)
+
+            (case_root / "constant" / "electroProperties").write_text(
+                "\n".join(
+                    [
+                        "myocardiumSolver singleCellSolver;",
+                        "",
+                        "singleCellSolverCoeffs",
+                        "{",
+                        "    ionicModel BuenoOrovio;",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+            (case_root / "constant" / "physicsProperties").write_text(
+                "type electroModel;\n"
+            )
+            for relpath in (
+                "system/controlDict",
+                "system/fvSchemes",
+                "system/fvSolution",
+                "system/decomposeParDict",
+                "system/blockMeshDict",
+            ):
+                (case_root / relpath).write_text("// placeholder\n")
+            for relpath in ("Allrun", "Allclean", "runRegressionTest.sh"):
+                path = case_root / relpath
+                path.write_text("#!/bin/sh\n")
+                path.chmod(0o755)
+            (case_root / "README.md").write_text("# orderedCase\n")
+
+            payload = describe_tutorial(
+                "orderedCase",
+                overrides={"tutorials_root": tutorials_root},
+            )
+
+            contract = payload["tutorial_contract"]
+            self.assertEqual(
+                contract["core_required_files"],
+                ["constant/electroProperties", "constant/physicsProperties"],
+            )
+            self.assertEqual(
+                contract["solver_required_files"],
+                ["system/controlDict", "system/fvSchemes", "system/fvSolution"],
+            )
+            self.assertEqual(
+                contract["conditional_files"],
+                [
+                    "system/decomposeParDict",
+                    "system/blockMeshDict",
+                    "Allrun",
+                    "Allclean",
+                    "README.md",
+                    "runRegressionTest.sh",
+                ],
+            )
+
     def test_cli_describe_prints_json_payload(self) -> None:
         stream = io.StringIO()
         with redirect_stdout(stream):

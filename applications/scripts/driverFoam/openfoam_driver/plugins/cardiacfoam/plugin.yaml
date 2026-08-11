@@ -16,11 +16,11 @@ case_profile:
       kind: openfoam_dictionary
       role: openfoam.solver_settings
       required: always
-    - path: constant/physicsProperties
+    - path: constant/electroProperties
       kind: openfoam_dictionary
       role: plugin.configuration
       required: always
-    - path: constant/electroProperties
+    - path: constant/physicsProperties
       kind: openfoam_dictionary
       role: plugin.configuration
       required: always

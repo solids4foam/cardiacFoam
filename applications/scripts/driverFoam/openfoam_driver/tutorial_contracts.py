@@ -153,15 +153,15 @@ def describe_tutorial_contract(
         )
 
     required_files = driver_context.capabilities.case_files.required_files()
-    core_required_files = tuple(sorted(
+    core_required_files = tuple(
         path for path in required_files if not path.startswith("system/")
-    ))
-    solver_required_files = tuple(sorted(
+    )
+    solver_required_files = tuple(
         path for path in required_files if path.startswith("system/")
-    ))
-    conditional_files = tuple(sorted(
+    )
+    conditional_files = tuple(
         driver_context.capabilities.case_files.conditional_files()
-    ))
+    )
 
     return {
         "name": spec.name,

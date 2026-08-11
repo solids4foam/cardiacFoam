@@ -19,6 +19,7 @@ from typing import Any, Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .plugin_interface import SolverPlugin
+    from .plugin_profile import CaseFileRule
     from .runtime.models import DataArtifact, TutorialSpec
     from ..planning_types import StrictDiagnostic
 
@@ -368,7 +369,7 @@ class _CaseIntrospectionAdapter:
 class _CaseFileContractAdapter:
     plugin: "SolverPlugin"
 
-    def _rules(self) -> tuple[Any, ...]:
+    def _rules(self) -> tuple["CaseFileRule", ...]:
         return tuple(self.plugin.get_profile().case_files)
 
     def required_files(self) -> tuple[str, ...]:
