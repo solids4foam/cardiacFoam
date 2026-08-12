@@ -1,7 +1,7 @@
 # driverFOAM: revised next phases
 
-Date: 2026-08-10  
-Status: Phase 1 IMPLEMENTED (565b25de..HEAD); Phases 2-6 not started  
+Date: 2026-08-10
+Status: Phase 1 IMPLEMENTED (565b25de..HEAD); Phases 2-6 not started
 Plan 1 baseline: `ebeaf868`
 
 ## Decision

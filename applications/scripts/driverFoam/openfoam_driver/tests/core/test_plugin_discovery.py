@@ -82,3 +82,35 @@ def test_a_discovered_id_wins_only_when_there_is_no_colon(monkeypatch) -> None:
 def test_discovery_is_empty_by_default_and_does_not_raise() -> None:
     # No third-party plugin is installed in this repository's environment.
     assert isinstance(plugin_discovery.discover_plugins(), dict)
+
+
+class _RivalEntryPoint(_FakeEntryPoint):
+    """A second distribution claiming the same entry-point name."""
+
+    dist = type("D", (), {"name": "rival-dist", "version": "0.1"})()
+
+
+def test_a_name_claimed_by_two_distributions_is_reported_not_resolved(
+    monkeypatch,
+) -> None:
+    """Insertion order must not silently decide which plugin wins -- that
+    would depend on installation order and be invisible in the plan."""
+    monkeypatch.setattr(
+        plugin_discovery,
+        "_entry_points",
+        lambda: (_FakeEntryPoint(), _RivalEntryPoint()),
+    )
+    ambiguous = plugin_discovery.ambiguous_plugin_names()
+    assert ambiguous == {"fakeplugin": ("fake-dist=9.9", "rival-dist=0.1")}
+    # The ambiguous name is withheld from discovery rather than resolved.
+    assert "fakeplugin" not in plugin_discovery.discover_plugins()
+
+
+def test_loading_an_ambiguous_name_fails_loudly(monkeypatch) -> None:
+    monkeypatch.setattr(
+        plugin_discovery,
+        "_entry_points",
+        lambda: (_FakeEntryPoint(), _RivalEntryPoint()),
+    )
+    with pytest.raises(KeyError, match="claimed by more than one"):
+        plugin_discovery.load_discovered_plugin("fakeplugin")

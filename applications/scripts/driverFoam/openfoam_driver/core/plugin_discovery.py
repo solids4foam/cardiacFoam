@@ -40,13 +40,40 @@ def _entry_points() -> tuple[Any, ...]:
     return tuple(entry_points(group=ENTRY_POINT_GROUP))
 
 
+def ambiguous_plugin_names() -> dict[str, tuple[str, ...]]:
+    """Entry-point names claimed by more than one installed distribution.
+
+    Two distributions exporting the same name is a packaging conflict, not
+    something to resolve by dictionary insertion order -- which distribution
+    won would depend on installation order and be invisible in the plan.
+    """
+    seen: dict[str, list[str]] = {}
+    for entry_point in _entry_points():
+        dist = getattr(entry_point, "dist", None)
+        origin = f"{dist.name}={dist.version}" if dist is not None else "<unknown>"
+        seen.setdefault(entry_point.name, []).append(origin)
+    return {
+        name: tuple(sorted(origins))
+        for name, origins in seen.items()
+        if len(origins) > 1
+    }
+
+
 def discover_plugins() -> dict[str, Any]:
-    """Return installed plugin entry points keyed by name.
+    """Return unambiguously installed plugin entry points keyed by name.
 
     Never raises: a broken third-party distribution must not make the CLI
-    unusable for everyone else.
+    unusable for everyone else. A name claimed by several distributions is
+    omitted here and reported by :func:`ambiguous_plugin_names`, so it fails
+    loudly at load time rather than silently resolving to whichever
+    distribution happened to be enumerated last.
     """
-    return {entry_point.name: entry_point for entry_point in _entry_points()}
+    ambiguous = set(ambiguous_plugin_names())
+    return {
+        entry_point.name: entry_point
+        for entry_point in _entry_points()
+        if entry_point.name not in ambiguous
+    }
 
 
 def load_discovered_plugin(name: str):
@@ -58,6 +85,13 @@ def load_discovered_plugin(name: str):
     """
     from .plugin_interface import driver_context
 
+    ambiguous = ambiguous_plugin_names().get(name)
+    if ambiguous is not None:
+        raise KeyError(
+            f"driverFOAM plugin name {name!r} is claimed by more than one "
+            f"installed distribution ({', '.join(ambiguous)}); uninstall one "
+            "or select it with the module:Class form"
+        )
     entry_point = discover_plugins().get(name)
     if entry_point is None:
         raise KeyError(
