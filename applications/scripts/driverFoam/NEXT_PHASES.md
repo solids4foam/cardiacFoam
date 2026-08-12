@@ -129,6 +129,19 @@ Move these remaining consumers behind the bundle:
 - Cardiac and generic plugins exercise every v2 capability; a v1 fixture still
   loads through compatibility; an unsupported version is rejected.
 
+## Phase 1 follow-ups
+
+- **Ambiguous plugin entry-point names** — CLOSED (`db58eb75`). Two
+  distributions claiming one name are now withheld from discovery and fail
+  loudly at load, naming both claimants, instead of being resolved by
+  dictionary insertion order.
+- **Cardiac `extra_provenance_paths` returns nothing** — OPEN, and it is
+  Phase 2 Task 2a. Until it is implemented, an `Allrun`-driven workflow
+  fingerprints the `Allrun` script but NOT the `cardiacFoam` binary it
+  invokes or its shared libraries. **Phase 2 cannot claim to prevent the
+  original stale-solver incident until this lands** — that incident is
+  precisely a rebuilt solver behind an unchanged script.
+
 ## Carried into Phase 2 from Phase 1
 
 Known agnosticity residual, deliberately not closed in Phase 1: `TutorialSpec`
