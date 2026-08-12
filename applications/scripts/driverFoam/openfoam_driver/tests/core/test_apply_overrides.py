@@ -64,7 +64,10 @@ def test_validate_accepts_control_and_electro():
     # flat controlDict, flat electro, nested electro — none should raise.
     validate_overrides([
         {"driver_path": "deltaT", "value": "0.0005"},
-        {"driver_path": "$ELECTRO_MODEL_COEFFS.initialODEStep", "value": "2e-5"},
+        # initialODEStep was removed from the catalog: it is dead (zero reads in
+        # this repo or in OpenFOAM). maxSteps is the live ODESolver analogue,
+        # read flat from the coeffs dict at ODESolver.C:70.
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.maxSteps", "value": "20000"},
         {"driver_path": "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude", "value": "80"},
     ])
 

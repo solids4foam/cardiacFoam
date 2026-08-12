@@ -115,10 +115,55 @@ def test_dx_base_value_is_preserved_when_not_swept():
     assert routed["dx"] == 0.5
 
 
-def test_recognized_unprefixed_catalog_path_still_routes_to_electro_overrides():
-    # cellZone is one of the few catalog driver_paths with no
-    # $ELECTRO_MODEL_COEFFS. prefix. It must keep routing to electro_overrides.
+def test_cellzone_routes_under_the_solver_coeffs_prefix():
+    """cellZone is read from the resolved <solver>Coeffs block, not the
+    electroProperties root (myocardiumDomain.C:35-52). It was previously
+    catalogued bare, which emitted it at the root where nothing reads it --
+    the run then silently used the whole mesh, bath included, instead of the
+    requested zone. This pins the corrected path."""
+    routed = route_case_values(
+        base={},
+        resolved_axis_values={"$ELECTRO_MODEL_COEFFS.cellZone": "epicardium"},
+    )
+    assert routed["electro_overrides"] == {
+        "$ELECTRO_MODEL_COEFFS.cellZone": "epicardium"
+    }
+
+
+def test_bare_cellzone_axis_still_routes_as_a_backward_compatible_alias():
+    """Catalog matching is prefix-agnostic, so the bare spelling keeps working.
+    What changed is where the value LANDS -- see
+    test_cellzone_override_lands_inside_the_solver_coeffs_block."""
     routed = route_case_values(
         base={}, resolved_axis_values={"cellZone": "epicardium"},
     )
     assert routed["electro_overrides"] == {"cellZone": "epicardium"}
+
+
+def test_cellzone_override_lands_inside_the_solver_coeffs_block():
+    """The regression this catalog fix exists for.
+
+    cellZone is read from the resolved <solver>Coeffs block
+    (myocardiumDomain.C:35-52; electroModel.C:109 builds it as
+    subDict(type + "Coeffs")). It was catalogued with a bare driver_path,
+    and dict_builder emits bare paths at the electroProperties ROOT -- where
+    nothing reads them. found("cellZone") then returned false, no mesh subset
+    was created, and the run silently used the whole mesh, bath included,
+    instead of the requested zone. No error, plausible-looking results.
+    """
+    from openfoam_driver.specs.dict_builder import build_electro_properties
+
+    text = build_electro_properties(
+        selectors={
+            "myocardiumSolver": "monodomainSolver",
+            "ionicModel": "TNNP",
+            "tissue": "epicardialCells",
+        },
+        overrides={"$ELECTRO_MODEL_COEFFS.cellZone": "myocardium"},
+    )
+    coeffs_at = text.index("monodomainSolverCoeffs")
+    zone_at = text.index("cellZone")
+    assert zone_at > coeffs_at, (
+        "cellZone was emitted before the coeffs block -- i.e. at the "
+        "electroProperties root, where the solver never reads it:\n" + text[:400]
+    )
