@@ -567,8 +567,12 @@ def _serialize(
     for entry in entries:
         if getattr(entry, "dynamic_path", False):
             template = slot_key(entry.driver_path)
-            pattern = re.escape(template).replace("<name>", r"([^\.]+)")
-            pattern = pattern.replace("<electrode>", r"([^\.]+)")
+            # Same generic placeholder rule as the population pass. Hardcoding
+            # <name>/<electrode> here meant an entry with any other placeholder
+            # failed to match its own catalog entry, so the ROUTING fell
+            # through to top_level -- emitting a $ELECTRO_MODEL_COEFFS.* key at
+            # the electroProperties root, where the solver never reads it.
+            pattern = _PLACEHOLDER_RE.sub(r"([^.]+)", re.escape(template))
             dynamic_patterns.append((entry, re.compile(f"^{pattern}$")))
 
     for concrete_key, value in populated.items():
