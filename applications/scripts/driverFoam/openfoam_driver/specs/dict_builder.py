@@ -250,8 +250,13 @@ def populate_values(
     for entry in entries:
         if getattr(entry, "dynamic_path", False):
             template = slot_key(entry.driver_path)
-            pattern = re.escape(template).replace("<name>", r"([^\.]+)")
-            pattern = pattern.replace("<electrode>", r"([^\.]+)")
+            # ANY <placeholder> is a wildcard, not just <name>/<electrode>.
+            # Hardcoding those two silently dropped every override whose
+            # template used a different placeholder -- including the ionic
+            # constant overrides, whose <AC_name> segment never matched, so a
+            # driver-written drug/channelopathy override emitted nothing at
+            # all while validation reported success.
+            pattern = _PLACEHOLDER_RE.sub(r"([^.]+)", re.escape(template))
             dynamic_entries.append((entry, template, re.compile(f"^{pattern}$")))
 
     active_instances: dict[str, set[tuple[str, ...]]] = {}
@@ -271,13 +276,11 @@ def populate_values(
             prefix = template.split(".<")[0]
             if prefix in active_instances:
                 for groups in active_instances[prefix]:
+                    # Substitute captured groups positionally, so a template
+                    # with any number of placeholders reconstructs correctly.
                     concrete_key = template
-                    if "<name>" in concrete_key and len(groups) > 0:
-                        concrete_key = concrete_key.replace("<name>", groups[0])
-                    if "<electrode>" in concrete_key and len(groups) > 1:
-                        concrete_key = concrete_key.replace("<electrode>", groups[-1])
-                    elif "<electrode>" in concrete_key and len(groups) == 1:
-                        concrete_key = concrete_key.replace("<electrode>", groups[0])
+                    for captured in groups:
+                        concrete_key = _PLACEHOLDER_RE.sub(captured, concrete_key, count=1)
 
                     if concrete_key in context and context[concrete_key] not in (None, ""):
                         populated[concrete_key] = str(context[concrete_key])
@@ -497,6 +500,9 @@ def _set_nested(node: dict, path: list[str], value: Any) -> None:
                 f"value exists where a sub-block is needed."
             )
     cursor[path[-1]] = value
+
+
+_PLACEHOLDER_RE = __import__("re").compile(r"<[A-Za-z_][A-Za-z0-9_]*>")
 
 
 def _openfoam_value_token(value: str) -> str:
