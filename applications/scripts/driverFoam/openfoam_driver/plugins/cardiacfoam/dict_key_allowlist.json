@@ -32,7 +32,6 @@
     "electroMechanicalModel",
     "electrodePositions",
     "electromechanicalVerificationModel",
-    "enabled",
     "end",
     "endocardialCells",
     "epicardialCells",
@@ -86,7 +85,6 @@
     "startTime",
     "stimulus",
     "surfaceCurrentPatches",
-    "timeCouplingScheme",
     "torsoSurface",
     "useEdgeConductance",
     "verificationModel",
@@ -112,9 +110,6 @@
     "domainCouplings",
     "electromechanicalVerificationModel",
     "global",
-    "initialStates",
-    "manufacturedBidomain",
-    "manufacturedEikonalECG",
-    "stimulus"
+    "initialStates"
   ]
 }

@@ -78,6 +78,13 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
         "ecgSolver",
         "strict",
     ),
+    # ecgVerificationModel.H:73 declares a runtime selection table; the enum
+    # values are registered verifier type names. Polymorphic because the
+    # bath/pseudo/eikonal verifiers register against the same base.
+    "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgVerificationModel": (
+        "ecgVerificationModel",
+        "polymorphic",
+    ),
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.coupling.electroDomainCoupler": (
         "electroDomainCoupler",
         "strict",
@@ -110,6 +117,10 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.dimension",               # 1D/2D/3D
     "$ELECTRO_MODEL_COEFFS.solver",                  # OpenFOAM ODESolver
     "$ELECTRO_MODEL_COEFFS.couplingSignal",
+    # timeCouplingScheme is a plain lookupOrDefault<word> compared against two
+    # literals in myocardiumDomain.C:359-365, with a FatalError otherwise --
+    # no runtime table, no registered classes.
+    "$ELECTRO_MODEL_COEFFS.timeCouplingScheme",
     "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
