@@ -171,3 +171,47 @@ def test_the_schema_version_encodes_the_hashing_policy() -> None:
 def test_a_snapshot_round_trips_through_json(tmp_path: Path) -> None:
     original = _snapshot(tmp_path, "deltaT 0.001;\n")
     assert ProvenanceSnapshot.from_json(original.to_json()) == original
+
+
+def test_a_nondeterministic_payload_type_is_refused_not_stringified():
+    """The digest is only meaningful if it reproduces byte-for-byte.
+
+    A permissive ``default=str`` would silently accept an object whose repr
+    embeds a memory address, reintroducing the non-determinism that sorting and
+    key-canonicalisation exist to remove -- and it would surface as a spurious
+    stale_inputs refusal rather than as an error. Fail at the source instead.
+    """
+    import pytest
+
+    class Opaque:
+        pass
+
+    with pytest.raises(TypeError, match="deterministic"):
+        snapshot_from_components(
+            (),
+            workflow_digest="sha256:wf",
+            plugin_identity={"id": Opaque()},
+        )
+
+
+def test_the_three_component_outcomes_share_one_construction_site(tmp_path, monkeypatch):
+    """All three branches must carry every field, so a later addition cannot
+    reach two of three."""
+    monkeypatch.setattr(
+        "openfoam_driver.core.runtime.provenance.CONTENT_HASH_MAX_BYTES", 4
+    )
+    small = tmp_path / "small"; small.write_text("x")
+    big = tmp_path / "big"; big.write_bytes(b"0123456789")
+    missing = tmp_path / "gone"
+
+    built = [
+        component_for_path(p, kind="case_file", relative_to=tmp_path)
+        for p in (small, big, missing)
+    ]
+    assert [c.method for c in built] == ["sha256", "metadata", "unavailable"]
+    assert [c.strength for c in built] == ["content", "metadata", "unavailable"]
+    # Every branch populates the identity fields, not just the varying three.
+    for component in built:
+        assert component.kind == "case_file"
+        assert component.role == "required_input"
+        assert component.path

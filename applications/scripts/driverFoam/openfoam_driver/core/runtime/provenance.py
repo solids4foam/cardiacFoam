@@ -236,49 +236,36 @@ def component_for_path(
     size = stat_result.st_size
     mtime_ns = stat_result.st_mtime_ns
 
-    if size > CONTENT_HASH_MAX_BYTES:
+    def _build(method: str, strength: str, digest: str | None) -> ProvenanceComponent:
+        """One construction site for all three outcomes.
+
+        The three branches differ only in method/strength/digest. Building them
+        separately invites a later field being added to two of three -- and a
+        component that silently loses a field is exactly the class of defect
+        this module exists to detect.
+        """
         return ProvenanceComponent(
             kind=resolved_kind,
             path=rel_path,
             role=role,
             origin=origin,
-            method="metadata",
-            strength="metadata",
-            digest=None,
+            method=method,
+            strength=strength,
+            digest=digest,
             size=size,
             mtime_ns=mtime_ns,
             link_target=link_target,
         )
+
+    if size > CONTENT_HASH_MAX_BYTES:
+        return _build("metadata", "metadata", None)
 
     try:
         content = path.read_bytes()
     except OSError:
-        return ProvenanceComponent(
-            kind=resolved_kind,
-            path=rel_path,
-            role=role,
-            origin=origin,
-            method="unavailable",
-            strength="unavailable",
-            digest=None,
-            size=size,
-            mtime_ns=mtime_ns,
-            link_target=link_target,
-        )
+        return _build("unavailable", "unavailable", None)
 
-    digest = "sha256:" + hashlib.sha256(content).hexdigest()
-    return ProvenanceComponent(
-        kind=resolved_kind,
-        path=rel_path,
-        role=role,
-        origin=origin,
-        method="sha256",
-        strength="content",
-        digest=digest,
-        size=size,
-        mtime_ns=mtime_ns,
-        link_target=link_target,
-    )
+    return _build("sha256", "content", "sha256:" + hashlib.sha256(content).hexdigest())
 
 
 def _component_digest_payload(component: ProvenanceComponent) -> dict[str, Any]:
@@ -332,6 +319,23 @@ def snapshot_from_components(
     )
 
 
+def _reject_nondeterministic(value: Any) -> Any:
+    """Refuse to serialise a type whose text form is not guaranteed stable.
+
+    The aggregate digest is only meaningful if it reproduces byte-for-byte for
+    an unchanged case. A permissive ``default=str`` would quietly accept an
+    object whose ``repr`` embeds a memory address, reintroducing exactly the
+    non-determinism the sorting and key-canonicalisation above exist to remove
+    -- and it would do so silently, showing up as a spurious stale_inputs
+    refusal. Fail loudly instead, so the offending type is fixed at its source.
+    """
+    raise TypeError(
+        f"provenance payload contains a value of type {type(value).__name__!r} "
+        "with no deterministic serialisation; add explicit handling rather than "
+        "relying on str()"
+    )
+
+
 def _compute_aggregate_digest(
     components: tuple[ProvenanceComponent, ...],
     workflow_digest: str,
@@ -347,7 +351,7 @@ def _compute_aggregate_digest(
         "plugin_identity": plugin_identity,
         "components": sorted_payloads,
     }
-    blob = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    blob = json.dumps(payload, sort_keys=True, default=_reject_nondeterministic).encode("utf-8")
     return "sha256:" + hashlib.sha256(blob).hexdigest()
 
 
