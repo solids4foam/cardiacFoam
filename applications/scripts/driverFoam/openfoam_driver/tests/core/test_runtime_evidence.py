@@ -74,6 +74,24 @@ def test_extra_provenance_paths_default_to_empty(tmp_path: Path) -> None:
     assert generic.extra_provenance_paths(tmp_path) == ()
 
 
+def test_cardiac_extra_provenance_paths_declares_the_solver_as_a_dependency(
+    tmp_path: Path,
+) -> None:
+    """End-to-end through the adapter: the whole reason extra_provenance_paths
+    was replaced with a typed RuntimeDependency form is so the cardiacFoam
+    binary itself -- never named by an Allrun-driven step's command -- is
+    still declared as something Phase 2 must fingerprint."""
+    from openfoam_driver.core.plugin_capabilities import RuntimeDependency
+
+    evidence = default_driver_context().capabilities.runtime_evidence
+    dependencies = evidence.extra_provenance_paths(tmp_path)
+    assert dependencies
+    assert all(isinstance(dependency, RuntimeDependency) for dependency in dependencies)
+    by_name = {dependency.name: dependency for dependency in dependencies}
+    assert "cardiacFoam" in by_name
+    assert by_name["cardiacFoam"].required is True
+
+
 def test_an_unknown_artifact_format_has_no_reader() -> None:
     evidence = default_driver_context().capabilities.runtime_evidence
     assert evidence.artifact_value_reader("not_a_real_format") is None

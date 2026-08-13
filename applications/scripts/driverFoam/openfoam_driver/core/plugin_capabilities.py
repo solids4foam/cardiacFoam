@@ -62,6 +62,49 @@ class SweepMaterializationRequest:
     routed: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class ResolvedInput:
+    """One field-level input a solver plugin's case model resolves to an
+    actual on-disk path -- or fails to.
+
+    Globs are insufficient here: field *names* are dictionary-configurable
+    (``fieldName``, ``ionicHeterogeneity/field``, ``bathConductivityField``)
+    and field *locations* resolve by a backward ``Time::findInstance``
+    search with a ``constant/`` fallback, so a field's canonical path is not
+    knowable from its name alone. ``consumer`` records which model/domain
+    resolved it, for diagnostics -- never for severity.
+    """
+
+    name: str
+    path: Path | None
+    required: bool
+    consumer: str
+
+
+@dataclass(frozen=True)
+class RuntimeDependency:
+    """One thing the workflow's *executable* consumes at run time, outside
+    the case tree: the solver binary itself, a library it links or loads,
+    or a case-local shared object built from sources inside the case.
+
+    Replaces the earlier ``extra_provenance_paths() -> tuple[Path, ...]``
+    stub, which could not express "this was required and I could not find
+    it" -- a tuple of paths can only omit, and omission reads as "nothing to
+    check". ``path is None`` on a ``required=True`` dependency must surface
+    as ``unavailable`` rather than silently vanishing from the list.
+
+    Most cases run through an ``Allrun`` script, so a workflow step's
+    command fingerprints the script, never the solver binary the script
+    invokes -- the exact gap that let a rebuilt solver replay a resumed
+    run's previous numbers as fresh. Declaring dependencies this way, apart
+    from however a step happens to be launched, is the fix.
+    """
+
+    name: str
+    path: Path | None
+    required: bool
+
+
 class TutorialCatalogCapability(Protocol):
     def catalog(self) -> dict[str, Any]: ...
     def displays(self) -> tuple[Any, ...]: ...
@@ -186,12 +229,10 @@ class OverrideSchemaCapability(Protocol):
 class RuntimeEvidenceCapability(Protocol):
     """Where the plugin's runtime evidence lives.
 
-    Declaration surface only in Phase 1 -- nothing in core reads it yet.
-    Phase 2 (provenance) consumes ``extra_provenance_paths``, Phase 4
-    (telemetry) consumes ``solve_step_commands`` and
-    ``telemetry_source_globs``, and Phase 5 (observables) consumes
-    ``artifact_value_reader``. Declaring them together now means those phases
-    need not reopen the plugin contract.
+    Phase 4 (telemetry) consumes ``solve_step_commands`` and
+    ``telemetry_source_globs``; Phase 5 (observables) will consume
+    ``artifact_value_reader``; both remain declaration-only for now. Phase 2
+    (provenance) now consumes ``extra_provenance_paths`` for real.
 
     Every member degrades to empty for a plugin that declares nothing, which
     is the honest answer rather than a solver-shaped guess -- so this
@@ -200,8 +241,48 @@ class RuntimeEvidenceCapability(Protocol):
 
     def solve_step_commands(self) -> frozenset[str]: ...
     def telemetry_source_globs(self, command: str) -> tuple[str, ...]: ...
-    def extra_provenance_paths(self, case_root: Path) -> tuple[Path, ...]: ...
+    def extra_provenance_paths(self, case_root: Path) -> tuple[RuntimeDependency, ...]: ...
     def artifact_value_reader(self, artifact_format: str) -> Any | None: ...
+
+
+class CaseProvenanceCapability(Protocol):
+    """Solver-declared case classification for the provenance snapshot.
+
+    ``required_inputs`` returns already-*resolved* paths, not patterns --
+    field names are dictionary-configurable and field locations resolve by
+    a backward ``Time::findInstance`` search with a ``constant/`` fallback,
+    so a field's canonical path is not knowable from its name alone.
+    ``generated_output_globs`` may stay globs: generated diagnostic outputs
+    have fixed names.
+
+    Both take the resolved case dictionaries (not just the model name) and
+    the selected start time, because gating is by dictionary *value*: e.g.
+    ``conductivitySource field`` vs ``uniform`` flips a mandatory read on
+    and off, and an absent key silently defaults to ``uniform``.
+
+    Routed through the capability adapter exactly like every other plugin
+    capability -- deliberately **not** a mandatory ``SolverPluginV2``
+    member, so existing v2 third-party plugins keep loading. The adapter's
+    fallback returns empty for both, which under the resolution precedence
+    (a DAG step's ``consumes``, then a plugin's ``required_inputs``, then
+    ``generated_output_globs``, then: unknown files are ``required_input``)
+    means "everything unknown is a required input" -- the safe default for
+    a plugin that declares nothing.
+    """
+
+    def required_inputs(
+        self,
+        case_root: Path,
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple[ResolvedInput, ...]: ...
+
+    def generated_output_globs(
+        self,
+        case_root: Path,
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple[str, ...]: ...
 
 
 @dataclass(frozen=True)
@@ -476,6 +557,33 @@ class _RuntimeEvidenceAdapter:
 
 
 @dataclass(frozen=True)
+class _CaseProvenanceAdapter:
+    plugin: "SolverPlugin"
+
+    def required_inputs(
+        self,
+        case_root: Path,
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple[ResolvedInput, ...]:
+        hook = getattr(self.plugin, "get_required_inputs", None)
+        if callable(hook):
+            return tuple(hook(case_root, resolved_case, selected_start_time))
+        return ()
+
+    def generated_output_globs(
+        self,
+        case_root: Path,
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple[str, ...]:
+        hook = getattr(self.plugin, "get_generated_output_globs", None)
+        if callable(hook):
+            return tuple(hook(case_root, resolved_case, selected_start_time))
+        return ()
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -495,6 +603,7 @@ class PluginCapabilities:
     case_files: CaseFileContractCapability
     override_schema: OverrideSchemaCapability
     runtime_evidence: RuntimeEvidenceCapability
+    case_provenance: CaseProvenanceCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -517,4 +626,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         case_files=_CaseFileContractAdapter(plugin),
         override_schema=_OverrideSchemaAdapter(plugin),
         runtime_evidence=_RuntimeEvidenceAdapter(plugin),
+        case_provenance=_CaseProvenanceAdapter(plugin),
     )
