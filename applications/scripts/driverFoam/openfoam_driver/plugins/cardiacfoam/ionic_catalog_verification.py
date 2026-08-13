@@ -250,9 +250,10 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
     # choice exposes the same variable set, so 3D is arbitrary but sufficient.
     # Found by the first live run.
     if "Manufactured" in model:
-        # Quoted: OpenFOAM cannot lex a bare token starting with a digit,
-        # so `dimension 3D;` is a FatalIOError. Tutorials write `dimension "3D";`.
-        overrides["$ELECTRO_MODEL_COEFFS.dimension"] = chr(34) + "3D" + chr(34)
+        # Plain value: dict_builder quotes tokens OpenFOAM cannot lex bare
+        # (see _openfoam_value_token). Any valid choice exposes the same
+        # variable set, so 3D is arbitrary but sufficient.
+        overrides["$ELECTRO_MODEL_COEFFS.dimension"] = "3D"
 
     (case_dir / "constant" / "electroProperties").write_text(
         build_electro_properties(

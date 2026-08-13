@@ -499,6 +499,33 @@ def _set_nested(node: dict, path: list[str], value: Any) -> None:
     cursor[path[-1]] = value
 
 
+def _openfoam_value_token(value: str) -> str:
+    """Return `value` in a form OpenFOAM's tokenizer accepts as a dict value.
+
+    OpenFOAM lexes a bare token starting with a digit as a number. A word like
+    ``3D`` therefore reads as label ``3`` followed by junk, and the run dies
+    with "expected word, found label 3" -- which is exactly what made
+    ``$ELECTRO_MODEL_COEFFS.dimension`` unusable through the driver. Tutorials
+    write ``dimension "3D";``.
+
+    Quote ONLY that case. Anything that parses as a number, is already quoted,
+    or is a compound token (vector, list, dimension set) must pass through
+    untouched -- quoting those would break dictionaries that work today.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    token = value.strip()
+    if not token or not token[0].isdigit():
+        return value
+    if any(ch.isspace() for ch in token) or token[0] in "([{\"":
+        return value
+    try:
+        float(token)
+    except ValueError:
+        return f'"{token}"'
+    return value
+
+
 def _serialize_block(tree: dict, indent: int) -> str:
     """Emit nested OpenFOAM block syntax. Leaves are `key value;`,
     sub-blocks are `key\\n{\\n  ...\\n}` recursively."""
@@ -511,7 +538,7 @@ def _serialize_block(tree: dict, indent: int) -> str:
             lines.append(_serialize_block(value, indent + 4))
             lines.append(f"{pad}}}")
         else:
-            lines.append(f"{pad}{key} {value};")
+            lines.append(f"{pad}{key} {_openfoam_value_token(value)};")
     return "\n".join(lines)
 
 
@@ -561,7 +588,7 @@ def _serialize(
 
     parts: list[str] = []
     for key, value in top_level.items():
-        parts.append(f"{key} {value};")
+        parts.append(f"{key} {_openfoam_value_token(value)};")
     if coeffs:
         coeffs_scope = f"{myocardium_solver}Coeffs"
         parts.append("")
