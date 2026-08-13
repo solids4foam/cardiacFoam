@@ -245,6 +245,14 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
     overrides: dict[str, str] = {}
     if "Batched" in model:
         overrides["$ELECTRO_MODEL_COEFFS.batchedIntegrator"] = "rushLarsen"
+    # The FDA manufactured models select their analytical solution by
+    # dimensionality and fatal without it (ionicSelector.C:73). Any valid
+    # choice exposes the same variable set, so 3D is arbitrary but sufficient.
+    # Found by the first live run.
+    if "Manufactured" in model:
+        # Quoted: OpenFOAM cannot lex a bare token starting with a digit,
+        # so `dimension 3D;` is a FatalIOError. Tutorials write `dimension "3D";`.
+        overrides["$ELECTRO_MODEL_COEFFS.dimension"] = chr(34) + "3D" + chr(34)
 
     (case_dir / "constant" / "electroProperties").write_text(
         build_electro_properties(
@@ -259,6 +267,13 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
     (case_dir / "constant" / "physicsProperties").write_text(
         build_physics_properties(selectors={"type": "electroModel"})
     )
+
+    # Every OpenFOAM application reads system/controlDict via createTime.H
+    # before anything else, so the utility fatals without it even though it
+    # needs no mesh. Found by the first live run, not by inspection.
+    from openfoam_driver.specs.system_templates import build_control_dict
+
+    (case_dir / "system" / "controlDict").write_text(build_control_dict())
 
     from openfoam_driver.specs.mesh_provisioning import provision_mesh
 
