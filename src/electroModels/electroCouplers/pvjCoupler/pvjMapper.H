@@ -50,8 +50,7 @@ public:
         const fvMesh& mesh,
         const pointField& terminalLocations,
         scalar radius,
-        const word& kernelType = "uniform",
-        bool reportSetup = false
+        const word& kernelType = "uniform"
     );
 
     void gatherVm3DPvjs

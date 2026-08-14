@@ -58,6 +58,62 @@ def _normalize_scope(scope: str | list[str] | tuple[str, ...] | None) -> list[st
     return normalized
 
 
+def _explode_inline_blocks(lines: list[str]) -> list[str]:
+    """Rewrite ``a { b 1; }`` as one brace or entry per line.
+
+    The scope machinery reasons in whole lines, so a block written inline --
+    legal OpenFOAM, and present in tracked tutorial dicts -- collapses to a
+    degenerate line range and resolves to nothing. Splitting at braces and
+    semicolons lets the existing line-based logic handle it unchanged.
+
+    Read-only: the result drops comments and does not preserve line numbers,
+    so it must not be used by the writing path, which indexes real lines.
+    """
+    exploded: list[str] = []
+    for line in lines:
+        code = _strip_inline_comment(line)
+        if ("{" not in code and "}" not in code) or code.strip() in ("{", "}"):
+            exploded.append(line)
+            continue
+
+        buffer = ""
+        for char in code:
+            if char in "{}":
+                if buffer.strip():
+                    exploded.append(buffer.strip() + "\n")
+                exploded.append(char + "\n")
+                buffer = ""
+            elif char == ";":
+                exploded.append((buffer + char).strip() + "\n")
+                buffer = ""
+            else:
+                buffer += char
+        if buffer.strip():
+            exploded.append(buffer.strip() + "\n")
+    return exploded
+
+
+def _iter_direct_child_lines(lines: list[str], start: int, end: int):
+    """Yield the indices in ``[start, end)`` that sit at that span's own
+    level, skipping lines owned by a nested sub-dictionary.
+
+    A scope names one dictionary, not it and all its descendants -- so both
+    the key scans and the block-header scan below must ignore nested content.
+    Braces inside comments don't count; tracked dicts do contain ``// }``.
+    """
+    depth = 0
+    for idx in range(start, end):
+        # Yield before this line's braces, so a sub-dictionary's header and
+        # its closing brace both count as part of the nested block.
+        if depth == 0:
+            yield idx
+        for ch in _strip_inline_comment(lines[idx]):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+
+
 def _find_dict_block_bounds(
     lines: list[str],
     dict_name: str,
@@ -75,11 +131,9 @@ def _find_dict_block_bounds(
     # must not match a line starting "singleCellSolverCoeffsExtra").
     header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}(?=\s|\{{|$)")
 
-    i = start
-    while i < end:
+    for i in _iter_direct_child_lines(lines, start, end):
         candidate = _strip_inline_comment(lines[i])
         if not header_pattern.match(candidate):
-            i += 1
             continue
 
         # OpenFOAM dicts commonly appear as:
@@ -133,33 +187,6 @@ def _resolve_search_region(
     return start, end
 
 
-def read_foam_entry_via_foamDictionary(
-    file_path: Path,
-    key: str,
-    *,
-    scope: str | list[str] | tuple[str, ...] | None = None,
-) -> str | None:
-    """Read a key using OpenFOAM's foamDictionary utility."""
-    if not file_path.exists():
-        return None
-
-    scope_path = _normalize_scope(scope)
-    entry_path = "/".join(scope_path + [key]) if scope_path else key
-
-    cmd = [
-        "foamDictionary",
-        str(file_path),
-        "-entry",
-        entry_path,
-        "-value",
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise KeyError(f"Key not found by foamDictionary: {entry_path}")
-    return result.stdout.strip()
-
-
 def read_foam_entry(
     file_path: Path,
     key: str,
@@ -172,25 +199,28 @@ def read_foam_entry(
     infrastructure from :func:`update_foam_entry`. Returns the raw value
     string — trailing semicolon and inline comments stripped — or ``None``
     if the key or its scope block is absent.
+
+    Deliberately does NOT shell out to foamDictionary, unlike its writing
+    siblings. foamDictionary re-serialises what it reads (``0.0`` -> ``0``,
+    ``5.5e-3`` -> ``0.0055``), and those values feed the dict builders, so
+    preferring it made generated dicts and their provenance digests depend on
+    whether OpenFOAM happened to be sourced. It also *evaluates* the file:
+    a ``#calc``/``#codeStream`` entry is compiled and executed to produce the
+    value, which is not an acceptable side effect of reading a case whose
+    override values are written in verbatim. Returning the literal source
+    text is both deterministic and inert.
     """
     if not file_path.exists():
         return None
 
-    has_foam_dict = shutil.which("foamDictionary") is not None
-    if has_foam_dict:
-        try:
-            return read_foam_entry_via_foamDictionary(file_path, key, scope=scope)
-        except Exception:
-            pass
-
     key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
-    lines = file_path.read_text().splitlines(keepends=True)
+    lines = _explode_inline_blocks(file_path.read_text().splitlines(keepends=True))
     try:
         search_start, search_end = _resolve_search_region(lines, scope)
     except KeyError:
         return None
 
-    for idx in range(search_start, search_end):
+    for idx in _iter_direct_child_lines(lines, search_start, search_end):
         line = lines[idx]
         stripped = _strip_inline_comment(line).strip()
         if stripped.startswith("//"):
@@ -349,6 +379,7 @@ def update_foam_entry(
     key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
     lines = file_path.read_text().splitlines(keepends=True)
     search_start, search_end = _resolve_search_region(lines, scope)
+    direct_child_lines = set(_iter_direct_child_lines(lines, search_start, search_end))
 
     replaced = False
     with file_path.open("w") as handle:
@@ -359,7 +390,7 @@ def update_foam_entry(
                 handle.write(line)
                 continue
 
-            within_scope = search_start <= idx < search_end
+            within_scope = idx in direct_child_lines
             if within_scope and (not replaced) and key_pattern.match(line):
                 indent = line[: len(line) - len(line.lstrip())]
                 handle.write(f"{indent}{key}    {_format_value(value)};\n")

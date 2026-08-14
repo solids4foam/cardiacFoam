@@ -32,7 +32,6 @@
       "outputVariables.ionic.export": "(V u1 u2 u3 Iion)",
       "outputVariables.ionic.debug": "(V u1 u2 u3 Iion)",
       "verificationModel.type": "manufacturedFDABathBidomainVerifier",
-      "bathPotentialDomain.reportSetup": "yes",
       "solver": "RKF45",
       "initialODEStep": "1e-5",
       "maxSteps": "1000000000"

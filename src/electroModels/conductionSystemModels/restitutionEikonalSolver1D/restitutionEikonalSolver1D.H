@@ -88,7 +88,6 @@ class restitutionEikonalSolver1D
     Switch  useEdgeConductance_;
     scalar  refConductance_;
 
-    Switch  reportSetup_;
     bool    initialised_;
 
     void initialiseState(const conductionSystemDomain& domain, scalar t0);

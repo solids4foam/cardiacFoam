@@ -31,7 +31,6 @@ eikonalSolverCoeffs
 
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
     eikonalAdvectionDiffusionApproach true;
-    reportSetup true;
 
     // No intramural box stimulus: Purkinje graph deposits activation constraints.
     stimulusLocationMin (1e6 1e6 1e6);
@@ -63,7 +62,6 @@ eikonalSolverCoeffs
                 chi         14000;
                 cm          0.01;
                 vm1DRest    -0.084;
-                reportSetup false;
 
                 rootStimulus
                 {
@@ -88,7 +86,6 @@ eikonalSolverCoeffs
             conductionNetworkDomain purkinjeNetwork;
             pvjRadius               6e-4;
             couplingMode            unidirectional;
-            reportSetup             false;
         }
     }
 

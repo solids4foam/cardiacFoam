@@ -345,7 +345,6 @@ myocardiumDomain::myocardiumDomain
             "solutionAlgorithm", "implicit"
         ) == "explicit"
     ),
-    reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false)),
     timeCouplingScheme_
     (
         electroProperties_.lookupOrDefault<word>("timeCouplingScheme", "godunov")
@@ -383,20 +382,6 @@ myocardiumDomain::myocardiumDomain
             << Switch(ionicModel_.supportsIonicCurrentEvaluation())
             << ". Use timeCouplingScheme 'godunov' with this model."
             << exit(FatalError);
-    }
-
-    if (reportSetup_)
-    {
-        Info<< "myocardiumDomain initial Vm[min,max]=["
-            << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
-
-        if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
-        {
-            Info<< "Constructed myocardiumDomain on submesh '"
-                << mesh().name() << "' from cellZone '"
-                << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
-                << "'." << nl << endl;
-        }
     }
 
     if (diffusionSolverPtr_->phiEPtr())
@@ -571,18 +556,6 @@ void myocardiumDomain::initialiseProcessing()
             "postProcess_",
             postProcessFields_
         );
-
-        if (reportSetup_)
-        {
-            Info << "Using verification model "
-                 << verificationModelPtr_->type() << "." << endl;
-        }
-
-        if (reportSetup_ && !preProcessFieldNames_.empty())
-        {
-            Info << "Running preProcess with fields " << preProcessFieldNames_
-                 << "." << endl;
-        }
 
         verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
     }
@@ -802,11 +775,6 @@ void myocardiumDomain::bindExternalPhiE
         verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
     }
 
-    if (reportSetup_)
-    {
-        Info<< "myocardiumDomain: bound bidomainSolver to external global "
-            << "phiE on mesh '" << phiE.mesh().name() << "'." << endl;
-    }
 }
 
 
@@ -829,10 +797,6 @@ void myocardiumDomain::unbindExternalPhiE()
         }
     }
 
-    if (reportSetup_)
-    {
-        Info<< "myocardiumDomain: unbound external global phiE." << endl;
-    }
 }
 
 

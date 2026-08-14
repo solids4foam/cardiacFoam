@@ -354,7 +354,6 @@ monodomainSolverCoeffs
                 // escapeInterval   1.1;     // [s] spontaneous firing if no wave arrives (funny current)
                 // useEdgeConductance  true;   // modulate CV by sqrt(g/gRef)
                 // referenceConductance  1.0;  // [S/m] normalisation for edge conductances
-                // reportSetup     false;
                 //
                 // stimulus
                 // {
@@ -672,7 +671,6 @@ bidomainSolverCoeffs
 
         bathConductivityField  bodyAndOrgansConductivity;  // word - field name to read
         phiEReferenceValue     0.0;                        // scalar [V]
-        reportSetup            false;                      // Switch - log mesh wiring
 
         // Optional Neumann reference point. Omit to skip applying a reference.
         phiERefPoint           ( 0 0 0 );                   // point [m]

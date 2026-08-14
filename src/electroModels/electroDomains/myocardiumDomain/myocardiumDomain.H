@@ -73,7 +73,6 @@ protected:
     const dimensionedScalar Cm_;
     ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
-    Switch reportSetup_;
     word timeCouplingScheme_;
     scalar activationThreshold_;
     bool setDeltaT_;

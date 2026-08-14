@@ -31,8 +31,7 @@ pvjMapper::pvjMapper
     const fvMesh& mesh,
     const pointField& terminalLocations,
     scalar radius,
-    const word& kernelType,
-    bool reportSetup
+    const word& kernelType
 )
 :
     mesh_(mesh),
@@ -182,23 +181,6 @@ pvjMapper::pvjMapper
             }
         }
 
-        if (reportSetup && Pstream::master())
-        {
-            Info<< "PVJ mapping " << i
-                << ": location=" << terminalLocations_[i]
-                << ", pvjRadius=" << radius_
-                << ", nearestCellDistance=" << globalNearestDistance
-                << ", equivalentCellLength=" << nearestCellLength
-                << ", mappedCells=" << nGlobalCells
-                << ", mappedVolume=" << sphereVolumes_[i]
-                << ", sourcePerAmp=" << 1.0/sphereVolumes_[i]
-                << nl;
-        }
-    }
-
-    if (reportSetup && Pstream::master())
-    {
-        Info<< endl;
     }
 }
 

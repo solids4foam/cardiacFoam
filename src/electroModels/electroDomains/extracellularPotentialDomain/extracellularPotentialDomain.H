@@ -93,7 +93,6 @@ class extracellularPotentialDomain
     // with a value that need not match the analytical phiE).
     bool hasDirichletPatch_;
 
-    Switch reportSetup_;
 
     //- Shared number of additional corrected-Laplacian assemblies, read from
     //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.

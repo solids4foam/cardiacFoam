@@ -202,7 +202,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
     surfaceCurrentPatchNames_(),
     surfaceCurrentPatchValues_(),
     hasDirichletPatch_(false),
-    reportSetup_(dict.lookupOrDefault<Switch>("reportSetup", false)),
     nNonOrthogonalCorrectors_
     (
         resolveNonOrthogonalCorrectors(baseMesh)
@@ -234,29 +233,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
             surfaceCurrentPatchValues_[patchI] =
                 currentDict->get<scalar>(surfaceCurrentPatchNames_[patchI]);
         }
-    }
-
-    if (reportSetup_)
-    {
-        Info<< "extracellularPotentialDomain: bathZones=" << bathCellZoneNames_
-            << " bathConductivityField=" << bathConductivityFieldName_
-            << " interfaceConductivityInterpolation="
-            << interfaceConductivityInterpolation_
-            << " heartAssembly=matchedSubmesh"
-            << " nNonOrthogonalCorrectors="
-            << nNonOrthogonalCorrectors_;
-
-        if (hasPhiEReferencePoint_)
-        {
-            Info<< " refPoint=" << phiEReferencePoint_
-                << " refValue=" << phiEReferenceValue_;
-        }
-        else
-        {
-            Info<< " refPoint=<not required with Dirichlet ground>";
-        }
-
-        Info<< endl;
     }
 
     phiEPtr_.reset
@@ -506,8 +482,6 @@ void extracellularPotentialDomain::assembleConductivities()
     );
 
     const scalarField& bathSigmaI = bathSigma.primitiveField();
-    scalar localMinBath = GREAT;
-    scalar localMaxBath = -GREAT;
 
     forAll(bathCellZoneNames_, zoneNameI)
     {
@@ -554,8 +528,6 @@ void extracellularPotentialDomain::assembleConductivities()
 
             sigmaTotalI[cellI] = sigma*tensor::I;
             materialRegion[cellI] = 2;
-            localMinBath = min(localMinBath, sigma);
-            localMaxBath = max(localMaxBath, sigma);
         }
     }
 
@@ -579,14 +551,6 @@ void extracellularPotentialDomain::assembleConductivities()
 
     sigmaTotal.correctBoundaryConditions();
     sigmaIglobal.correctBoundaryConditions();
-
-    if (reportSetup_)
-    {
-        reduce(localMinBath, minOp<scalar>());
-        reduce(localMaxBath, maxOp<scalar>());
-        Info<< "extracellularPotentialDomain: bath sigma min/max = "
-            << localMinBath << " / " << localMaxBath << endl;
-    }
 }
 
 void extracellularPotentialDomain::buildSigmaExtracellularSurface()

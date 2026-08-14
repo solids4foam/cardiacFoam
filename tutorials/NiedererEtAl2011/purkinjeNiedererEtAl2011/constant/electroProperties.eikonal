@@ -30,7 +30,6 @@ eikonalSolverCoeffs
 
     eikonalAdvectionDiffusionApproach true;
     electrophysicsAdvanceScheme       staggeredElectrophysicsAdvanceScheme;
-    reportSetup                       true;
 
     // No direct bounding-box stimulus: all activation constraints are
     // deposited by the Purkinje-ventricular junction coupler below.
@@ -89,7 +88,6 @@ eikonalSolverCoeffs
             conductionNetworkDomain purkinjeNetwork;
             pvjRadius               5e-4;
             couplingMode            unidirectional;
-            reportSetup             true;
         }
     }
 }

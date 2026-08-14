@@ -312,17 +312,6 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 
     stimulusCellIDs_ = stimCellSet.toc();
 
-    if
-    (
-        electroProperties.lookupOrDefault<Switch>("reportSetup", false)
-     && meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
-    )
-    {
-        Info<< "Constructed eikonalMyocardiumDomain on submesh '"
-            << mesh().name() << "' from cellZone '"
-            << electroProperties.lookupOrDefault<word>("cellZone", word::null)
-            << "'." << nl << endl;
-    }
 
     verificationModelPtr_ =
         eikonalVerificationModel::New

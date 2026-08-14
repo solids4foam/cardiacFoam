@@ -95,7 +95,6 @@ monodomainSolverCoeffs
                 initialODEStep 1e-5;
                 maxSteps 1000000000;
 
-                reportSetup true;
             }
         }
     }
@@ -119,7 +118,6 @@ monodomainSolverCoeffs
             pvjCouplingScheme explicit;
             couplingMode unidirectional;
             debugCoupling true;
-            reportSetup true;
         }
     }
 }

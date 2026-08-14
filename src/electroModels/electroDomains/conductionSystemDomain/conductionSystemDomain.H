@@ -99,7 +99,6 @@ class conductionSystemDomain
     labelList ionicExportAlgebraicIndices_;
     labelList probeNodes_;
     PtrList<OFstream> ionicOutputPtrs_;
-    Switch reportSetup_;
 
     // PVD time-series index: parallel lists of physical time and VTK filename
     scalarList pvdTimes_;

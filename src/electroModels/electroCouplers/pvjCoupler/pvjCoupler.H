@@ -53,7 +53,6 @@ protected:
     pvjMapper mapper_;
     scalar pvjRadius_;
     CouplingMode couplingMode_;
-    Switch reportSetup_;
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
 

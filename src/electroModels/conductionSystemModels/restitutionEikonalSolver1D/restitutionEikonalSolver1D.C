@@ -74,7 +74,6 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
     (
         solverCoeffs.lookupOrDefault<scalar>("referenceConductance", 1.0)
     ),
-    reportSetup_(solverCoeffs.lookupOrDefault<Switch>("reportSetup", false)),
     initialised_(false)
 {
     if (solverCoeffs.found("stimulus"))
@@ -83,18 +82,6 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 
         stimSites_ = sDict.get<labelList>("sites");
         stimProtocol_ = stimulusIO::loadStimulusProtocol(sDict);
-    }
-
-    if (reportSetup_)
-    {
-        Info<< "restitutionEikonalSolver1D: " << stimSites_.size()
-            << " stimulus sites; S1 start=" << stimProtocol_.stimStart
-            << " period=" << stimProtocol_.stimPeriodS1
-            << " n=" << stimProtocol_.nStim1
-            << "; S2 coupling=" << stimProtocol_.stimPeriodS2
-            << " n=" << stimProtocol_.nStim2
-            << "; minBeatInterval=" << minBeatInterval_
-            << " escapeInterval=" << escapeInterval_ << endl;
     }
 }
 

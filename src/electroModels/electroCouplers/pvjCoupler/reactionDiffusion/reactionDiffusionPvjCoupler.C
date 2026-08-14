@@ -134,17 +134,6 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     {
         R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
     }
-
-    if (reportSetup_)
-    {
-        Info << "Reaction-diffusion PVJ coupling model: R_pvj[min,max]=["
-             << gMin(R_pvj_) << ", " << gMax(R_pvj_) << "]"
-             << ", pvjRadius=" << pvjRadius_
-             << ", couplingMode=" << couplingModeName(couplingMode_)
-             << ", pvjCouplingScheme=" << couplingScheme_
-             << ", debugCoupling=" << debugCoupling_
-             << endl;
-    }
 }
 
 

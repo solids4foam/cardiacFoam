@@ -425,3 +425,27 @@ def test_strict_dict_key_scanner_fails_on_unallowlisted_key() -> None:
     payload = report.to_json()
     assert payload["status"] == "failed"
     assert payload["absent_keys"] == ["unlistedStrictKey"]
+
+
+def test_batched_ionic_model_does_not_require_optional_batched_keys():
+    """batchedIntegrator/batchedSubsteps default in C++, so a batched case
+    that omits them must still plan cleanly.
+
+    Both are read only via lookupOrDefault -- batchedIonicModel.H:197,200 and
+    batchedActiveTensionModel.C:46,48 (defaults 1 and "euler"). The catalog
+    nonetheless marked them required_when the ionic model is batched, which
+    rejected monodomain1DCableCV: it selects TWorldcompactBatched and sets
+    neither key, which is legal.
+    """
+    from openfoam_driver.core.plugin_interface import default_driver_context
+    from openfoam_driver import strict_planning as sp
+
+    context = default_driver_context()
+    report = sp.strict_plan(
+        "monodomainAndEikonal1DCableCVConvergence", driver_context=context
+    ).to_json()
+    errors = [
+        d for d in report["run_document"]["validation"].get("diagnostics", [])
+        if d.get("level") == "error"
+    ]
+    assert errors == [], f"unexpected validation errors: {errors}"

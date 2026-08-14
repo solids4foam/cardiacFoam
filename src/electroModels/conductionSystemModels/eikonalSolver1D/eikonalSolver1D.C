@@ -53,13 +53,7 @@ addToRunTimeSelectionTable
 eikonalSolver1D::eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
     purkinjeCV_("purkinjeCV", solverCoeffs)
-{
-    if (solverCoeffs.lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info<< "eikonalSolver1D: conduction velocity c0 = " << c0_.value()
-            << " m/s" << endl;
-    }
-}
+{}
 
 
 void eikonalSolver1D::advance

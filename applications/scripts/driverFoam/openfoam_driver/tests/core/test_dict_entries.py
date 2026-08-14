@@ -37,6 +37,7 @@ from openfoam_driver.dict_entries import (
     all_documented_driver_paths,
 )
 from openfoam_driver.specs.common import apply_electro_property_overrides
+from openfoam_driver.tests.conftest import assert_foam_entry
 
 
 class TestDictEntryCatalog(unittest.TestCase):
@@ -161,16 +162,25 @@ class TestDeepElectroOverrides(unittest.TestCase):
                 },
             )
 
-            updated = path.read_text()
-            self.assertIn(
-                "conductivity    [-1 -3 3 0 0 2 0] (0.2 0 0 0.03 0 0.03);",
-                updated,
+            coeffs = "monodomainSolverCoeffs"
+            assert_foam_entry(
+                path,
+                "conductivity",
+                "[-1 -3 3 0 0 2 0] (0.2 0 0 0.03 0 0.03)",
+                scope=coeffs,
             )
-            self.assertIn(
-                "stimulusIntensity    [0 -3 0 0 0 1 0] 75000;",
-                updated,
+            assert_foam_entry(
+                path,
+                "stimulusIntensity",
+                "[0 -3 0 0 0 1 0] 75000",
+                scope=(coeffs, "externalStimulus"),
             )
-            self.assertIn("V1    (1 2 3);", updated)
+            assert_foam_entry(
+                path,
+                "V1",
+                "(1 2 3)",
+                scope=(coeffs, "ecgDomains", "ECG", "electrodePositions"),
+            )
 
 
 class TestConductionSystemSchemaContract(unittest.TestCase):

@@ -36,10 +36,12 @@ from unittest import mock
 
 from openfoam_driver.core.runtime.mutators import (
     ensure_foam_dict,
+    read_foam_entry,
     remove_foam_dict,
     update_foam_entry,
     update_foam_entry_via_foamDictionary,
 )
+from openfoam_driver.tests.conftest import assert_foam_entry
 from openfoam_driver.specs.common import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -88,9 +90,12 @@ class TestScopedMutators(unittest.TestCase):
                 scope="singleCellSolverCoeffs",
             )
 
-            updated = path.read_text()
-            self.assertIn("ionicModel TNNP;", updated)
-            self.assertIn("ionicModel    Gaur;", updated)
+            assert_foam_entry(
+                path, "ionicModel", "TNNP", scope="monodomainSolverCoeffs"
+            )
+            assert_foam_entry(
+                path, "ionicModel", "Gaur", scope="singleCellSolverCoeffs"
+            )
 
     def test_nested_scope_path(self) -> None:
         text = "\n".join(
@@ -111,7 +116,7 @@ class TestScopedMutators(unittest.TestCase):
             path.write_text(text)
 
             update_foam_entry(path, "target", 2, scope=("outer", "inner"))
-            self.assertIn("target    2;", path.read_text())
+            assert_foam_entry(path, "target", "2", scope=("outer", "inner"))
 
     def test_quoted_regex_style_scope_name_is_matched(self) -> None:
         # OpenFOAM's fvSolution commonly names a solver block with a quoted
@@ -175,10 +180,15 @@ class TestScopedMutators(unittest.TestCase):
             path = Path(temp_dir) / "dict"
             path.write_text(text)
 
-            # The current update_foam_entry uses brace counting, so the extra {
-            # inside the block comment throws off the parser, causing it to
-            # incorrectly raise a KeyError for unbalanced braces.
-            with self.assertRaises(KeyError):
+            # The fallback update_foam_entry uses brace counting, so the extra
+            # { inside the block comment throws off the parser, causing it to
+            # incorrectly raise a KeyError for unbalanced braces. Forced off
+            # foamDictionary, which parses /* */ natively and would mask the
+            # limitation being pinned here.
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ), self.assertRaises(KeyError):
                 update_foam_entry(path, "value", 2, scope="someDict")
 
     def test_remove_foam_dict_removes_nested_dictionary(self) -> None:
@@ -288,12 +298,15 @@ class TestScopedMutators(unittest.TestCase):
                 },
             )
 
-            updated = path.read_text()
-            self.assertIn("stim_amplitude    0.8;", updated)
-            self.assertIn("stim_period_S1    1200;", updated)
-            self.assertIn("stim_period_S2    300;", updated)
-            self.assertIn("nstim1    12;", updated)
-            self.assertIn("nstim2    3;", updated)
+            stimulus = ("singleCellSolverCoeffs", "singleCellStimulus")
+            for key, expected in (
+                ("stim_amplitude", "0.8"),
+                ("stim_period_S1", "1200"),
+                ("stim_period_S2", "300"),
+                ("nstim1", "12"),
+                ("nstim2", "3"),
+            ):
+                assert_foam_entry(path, key, expected, scope=stimulus)
 
     def test_detect_electro_coeffs_scope(self) -> None:
         text = "\n".join(
@@ -369,9 +382,15 @@ class TestScopedMutators(unittest.TestCase):
                 },
             )
 
-            updated = path.read_text()
-            self.assertIn("ionicModel    Gaur;", updated)
-            self.assertIn("stim_period_S1    750;", updated)
+            assert_foam_entry(
+                path, "ionicModel", "Gaur", scope="singleCellSolverCoeffs"
+            )
+            assert_foam_entry(
+                path,
+                "stim_period_S1",
+                "750",
+                scope=("singleCellSolverCoeffs", "singleCellStimulus"),
+            )
 
     def test_remove_electro_property_dict_supports_electro_scope_token(self) -> None:
         text = "\n".join(
@@ -489,7 +508,202 @@ class TestScopedMutators(unittest.TestCase):
             path.write_text(text)
 
             apply_physics_property_overrides(path, {"type": "electroMechanicalModel"})
-            self.assertIn("type    electroMechanicalModel;", path.read_text())
+            assert_foam_entry(path, "type", "electroMechanicalModel")
+
+
+class TestScopeDoesNotDescendIntoNestedDicts(unittest.TestCase):
+    """A scope names one dictionary, not that dictionary and everything under
+    it. The pure-Python fallback resolves a scope to a line *span* and then
+    scans it, which without a depth check also matches keys belonging to
+    nested sub-dictionaries -- so a read scoped to the parent returned a
+    child's value, and a write scoped to the parent silently edited the
+    child. foamDictionary is path-exact and does neither, so this divergence
+    only appeared when OpenFOAM was sourced.
+
+    These tests pin the Python implementation directly (foamDictionary forced
+    absent) because it is the side that was wrong.
+    """
+
+    NESTED = "\n".join(
+        [
+            "monodomainSolverCoeffs",
+            "{",
+            "    ionicModel TNNP;",
+            "    externalStimulus",
+            "    {",
+            "        stimulusIntensity 50000;",
+            "    }",
+            "}",
+            "",
+        ]
+    )
+
+    def setUp(self) -> None:
+        patcher = mock.patch(
+            "openfoam_driver.core.runtime.mutators.shutil.which",
+            return_value=None,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _write(self, temp_dir: str) -> Path:
+        path = Path(temp_dir) / "electroProperties"
+        path.write_text(self.NESTED)
+        return path
+
+    def test_read_scoped_to_parent_ignores_nested_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir)
+
+            # stimulusIntensity is a child of externalStimulus, NOT of
+            # monodomainSolverCoeffs -- so this scope has no such key.
+            self.assertIsNone(
+                read_foam_entry(
+                    path, "stimulusIntensity", scope="monodomainSolverCoeffs"
+                )
+            )
+
+    def test_write_scoped_to_parent_refuses_nested_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir)
+
+            with self.assertRaises(KeyError):
+                update_foam_entry(
+                    path, "stimulusIntensity", 99999, scope="monodomainSolverCoeffs"
+                )
+
+            # and the nested value must be left untouched
+            self.assertIn("stimulusIntensity 50000;", path.read_text())
+
+    def test_direct_child_of_scope_still_resolves(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir)
+
+            self.assertEqual(
+                read_foam_entry(path, "ionicModel", scope="monodomainSolverCoeffs"),
+                "TNNP",
+            )
+            update_foam_entry(
+                path, "ionicModel", "Gaur", scope="monodomainSolverCoeffs"
+            )
+            self.assertIn("ionicModel    Gaur;", path.read_text())
+
+    GRANDCHILD = "\n".join(
+        [
+            "monodomainSolverCoeffs",
+            "{",
+            "    outputVariables",
+            "    {",
+            "        ionic",
+            "        {",
+            "            export (Vm Jsi);",
+            "        }",
+            "    }",
+            "}",
+            "",
+        ]
+    )
+
+    def test_scope_path_may_not_skip_an_intermediate_dict(self) -> None:
+        # 'ionic' is a grandchild of monodomainSolverCoeffs, reachable only
+        # through outputVariables -- a scope path that omits that level names
+        # a dictionary which does not exist.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(self.GRANDCHILD)
+            skipping = ["monodomainSolverCoeffs", "ionic"]
+
+            self.assertIsNone(read_foam_entry(path, "export", scope=skipping))
+            with self.assertRaises(KeyError):
+                update_foam_entry(path, "export", "(Vm)", scope=skipping)
+
+            # the fully-qualified path still works
+            full = ["monodomainSolverCoeffs", "outputVariables", "ionic"]
+            self.assertEqual(read_foam_entry(path, "export", scope=full), "(Vm Jsi)")
+
+    def test_nested_key_still_reachable_via_full_scope_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir)
+            scope = ["monodomainSolverCoeffs", "externalStimulus"]
+
+            self.assertEqual(
+                read_foam_entry(path, "stimulusIntensity", scope=scope), "50000"
+            )
+            update_foam_entry(path, "stimulusIntensity", 75000, scope=scope)
+            self.assertIn("stimulusIntensity    75000;", path.read_text())
+
+
+class TestReadFoamEntryIsEnvironmentIndependent(unittest.TestCase):
+    """Reading a dict must not depend on whether OpenFOAM is sourced.
+
+    foamDictionary parses each value into a double and re-serialises it, so
+    reading through it respells the source text (``0.0`` -> ``0``,
+    ``5.5e-3`` -> ``0.0055``, ``(a b c)`` -> ``( a b c )``). Those respelt
+    values flow into build_electro_properties, which made generated dicts --
+    and therefore run documents and provenance digests -- differ between a
+    sourced and an unsourced shell.
+
+    Reading through foamDictionary also *evaluates* the dictionary: a
+    ``#calc`` / ``#codeStream`` entry is compiled, linked and executed to
+    produce the value. Reading a case must never run code, least of all
+    because override values are written verbatim into these dicts.
+
+    These tests hold in either environment; before the fix the second one
+    also left a ``dynamicCode/`` build directory behind.
+    """
+
+    def test_returns_the_literal_spelling_from_the_file(self) -> None:
+        text = "\n".join(
+            [
+                "coeffs",
+                "{",
+                "    activationThreshold 0.0;",
+                "    stimulusLocationMin (0 0 5.5e-3);",
+                "    initialODEStep 1e-6;",
+                "}",
+                "",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "electroProperties"
+            path.write_text(text)
+
+            self.assertEqual(
+                read_foam_entry(path, "activationThreshold", scope="coeffs"), "0.0"
+            )
+            self.assertEqual(
+                read_foam_entry(path, "stimulusLocationMin", scope="coeffs"),
+                "(0 0 5.5e-3)",
+            )
+            self.assertEqual(
+                read_foam_entry(path, "initialODEStep", scope="coeffs"), "1e-6"
+            )
+
+    def test_resolves_a_scope_written_as_an_inline_block(self) -> None:
+        # `solvers { V { tolerance 1e-5; } }` is legal OpenFOAM and appears in
+        # 10 tracked tutorial dicts. The scope machinery works on whole lines,
+        # so an inline block used to resolve to a degenerate range and read as
+        # None -- previously masked because foamDictionary parsed these.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "fvSolution"
+            path.write_text(
+                "solvers { V { tolerance 1e-5; } p { tolerance 1e-7; } }\n"
+            )
+
+            self.assertEqual(
+                read_foam_entry(path, "tolerance", scope=["solvers", "V"]), "1e-5"
+            )
+            self.assertEqual(
+                read_foam_entry(path, "tolerance", scope=["solvers", "p"]), "1e-7"
+            )
+
+    def test_does_not_evaluate_dictionary_directives(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "testDict"
+            path.write_text('a #calc "3.0 * 7.0";\n')
+
+            # The literal entry, never the evaluated 21.
+            self.assertEqual(read_foam_entry(path, "a"), '#calc "3.0 * 7.0"')
 
 
 class TestUpdateFoamEntryPrefersFoamDictionary(unittest.TestCase):

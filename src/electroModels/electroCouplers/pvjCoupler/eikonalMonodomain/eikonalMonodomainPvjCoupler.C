@@ -54,14 +54,6 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
             << "Missing rPvj in domainCouplings dictionary for "
             << "eikonalMonodomainPvjCoupler" << exit(FatalError);
     }
-
-    if (reportSetup_)
-    {
-        Info << "Eikonal-Monodomain PVJ coupling model: pvjRadius=" << pvjRadius_
-             << ", rPvj=" << dict.get<scalar>("rPvj")
-             << ", couplingMode=" << couplingModeName(couplingMode_)
-             << endl;
-    }
 }
 
 

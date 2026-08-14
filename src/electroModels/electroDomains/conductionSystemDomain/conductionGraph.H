@@ -62,7 +62,7 @@ struct conductionGraph
         nEdges(0)
     {}
 
-    void readFromDict(const dictionary& dict, const bool reportSetup = false)
+    void readFromDict(const dictionary& dict)
     {
         const List<scalarList> edgeEntries
         (
@@ -96,25 +96,14 @@ struct conductionGraph
 
         nNodes = maxNode + 1;
 
-        if (reportSetup)
-        {
-            Info<< "Conduction graph: " << nNodes << " nodes, "
-                << nEdges << " edges." << endl;
-        }
-
         if (dict.found("pvjResistances"))
         {
             pvjResistances = scalarField(dict.lookup("pvjResistances"));
-            if (reportSetup)
-            {
-                Info<< "Conduction graph: Read " << pvjResistances.size()
-                    << " pvjResistances." << endl;
-            }
         }
 
         buildAdjacency();
 
-        buildTreeTopology(reportSetup);
+        buildTreeTopology();
     }
 
 private:
@@ -154,7 +143,7 @@ private:
         }
     }
 
-    void buildTreeTopology(const bool reportSetup)
+    void buildTreeTopology()
     {
         if (nNodes == 0) return;
 
@@ -215,10 +204,6 @@ private:
             reverseOrder[i] = orderList[nNodes - 1 - i];
         }
 
-        if (reportSetup)
-        {
-            Info<< "Conduction graph: tree topology built (root=0)." << endl;
-        }
     }
 };
 

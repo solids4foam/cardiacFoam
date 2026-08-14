@@ -43,12 +43,6 @@ eikonalPvjCoupler::eikonalPvjCoupler
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_()
 {
-    if (reportSetup_)
-    {
-        Info << "Eikonal PVJ coupling model: pvjRadius=" << pvjRadius_
-             << ", couplingMode=" << couplingModeName(couplingMode_)
-             << endl;
-    }
 }
 
 

@@ -33,7 +33,6 @@ eikonalSolverCoeffs
 
     eikonalAdvectionDiffusionApproach true;
     electrophysicsAdvanceScheme       staggeredElectrophysicsAdvanceScheme;
-    reportSetup                       true;
 
     stimulusLocationMin (0      0     0);
     stimulusLocationMax (0.0002 0.005 0.0002);
@@ -56,7 +55,6 @@ eikonalSolverCoeffs
 
                 apdNominal      0.002;
                 escapeInterval  1.0;
-                reportSetup     true;
 
                 outputVariables
                 {
@@ -76,7 +74,6 @@ eikonalSolverCoeffs
             pvjRadius               0.0002;
             couplingMode            bidirectional;
             debugCoupling           true;
-            reportSetup             true;
         }
     }
 }

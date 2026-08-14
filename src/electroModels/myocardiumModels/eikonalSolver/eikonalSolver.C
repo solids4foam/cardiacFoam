@@ -80,13 +80,6 @@ tmp<volTensorField> eikonalSolver::initialiseConductivity() const
         return tresult;
     }
 
-    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info<< "\nconductivity not found on disk, using "
-            << "conductivity from " << electroProperties().name()
-            << nl << endl;
-    }
-
     result =
         dimensionedTensor
         (
@@ -99,14 +92,6 @@ tmp<volTensorField> eikonalSolver::initialiseConductivity() const
           & tensor(I)
         );
 
-    if
-    (
-        electroProperties().lookupOrDefault<Switch>("reportSetup", false)
-     && result.size() > 0
-    )
-    {
-        Info<< "Conductivity tensor (cell 0): " << result[0] << nl;
-    }
 
     return tresult;
 }
@@ -186,15 +171,6 @@ eikonalSolver::eikonalSolver(Time& runTime, const word& region)
 
     stimulusCellIDs_ = stimCellSet.toc();
 
-    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info<< "Surface-to-volume ratio chi = " << chi_ << nl
-            << "Membrane capacitance Cm = " << Cm_ << nl
-            << "M tensor field:" << nl
-            << "    max(M) = " << gMax(M_) << nl
-            << "    min(M) = " << gMin(M_) << nl
-            << "    average(M) = " << gAverage(M_) << endl;
-    }
 }
 
 
@@ -202,11 +178,6 @@ eikonalSolver::eikonalSolver(Time& runTime, const word& region)
 
 bool eikonalSolver::evolve()
 {
-    if (electroProperties().lookupOrDefault<Switch>("reportSetup", false))
-    {
-        Info<< "Evolving electro model: " << this->type() << endl;
-    }
-
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);
 

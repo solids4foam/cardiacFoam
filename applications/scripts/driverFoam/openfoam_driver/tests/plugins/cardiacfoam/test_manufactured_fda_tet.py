@@ -34,6 +34,7 @@ from unittest import mock
 import pytest
 
 from openfoam_driver.core.runtime.models import CaseConfig
+from openfoam_driver.tests.conftest import assert_foam_entry
 from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda import (
     _stage_case_output,
     make_spec,
@@ -401,8 +402,12 @@ def test_conductivity_shorthand_updates_monodomain_tensor(tmp_path):
 
     spec.apply_case(spec.case_root, spec.build_cases()[0])
 
-    electro_text = (case_root / "constant" / "electroProperties").read_text()
-    assert "conductivity    " + tensor + ";" in electro_text
+    assert_foam_entry(
+        case_root / "constant" / "electroProperties",
+        "conductivity",
+        tensor,
+        scope="monodomainSolverCoeffs",
+    )
 
 
 def test_apply_case_hex_does_not_render_geo(tmp_path):
@@ -472,8 +477,12 @@ def test_phi_tolerance_changes_only_phie_phii_block(tmp_path):
     )
     cases = spec.build_cases()
     spec.apply_case(spec.case_root, cases[0])
-    text = (case_root / "system" / "fvSolution").read_text()
-    assert "tolerance    1e-06;" in text or "tolerance    1e-6;" in text
+    assert_foam_entry(
+        case_root / "system" / "fvSolution",
+        "tolerance",
+        "1e-6",
+        scope=("solvers", '"phiE|phiEFinal|phiI|phiIFinal"'),
+    )
 
 
 def test_non_positive_phi_tolerance_is_rejected(tmp_path):
@@ -502,10 +511,13 @@ def test_tet_mesh_family_works_with_ecg_enabled(tmp_path):
     cases = spec.build_cases()
     spec.apply_case(spec.case_root, cases[0])
 
-    electro_text = (case_root / "constant" / "electroProperties").read_text()
-    assert "ecgSolver    pseudoECG;" in electro_text
-    assert "enabled    yes;" in electro_text
-    assert "E3    (1.2 0.23 0.61);" in electro_text
+    electro = case_root / "constant" / "electroProperties"
+    ecg = ("monodomainSolverCoeffs", "ecgDomains", "ECG")
+    assert_foam_entry(electro, "ecgSolver", "pseudoECG", scope=ecg)
+    assert_foam_entry(electro, "enabled", "yes", scope=ecg + ("manufactured",))
+    assert_foam_entry(
+        electro, "E3", "(1.2 0.23 0.61)", scope=ecg + ("electrodePositions",)
+    )
     scheme_text = (case_root / "system" / "fvSchemes").read_text()
     assert "leastSquares;" in scheme_text
 
@@ -530,5 +542,4 @@ def test_end_time_overrides_control_dict(tmp_path):
     spec = _call_make_spec(tmp_path, mesh_family="tet", numerics_profile="bidomain_tet", end_time=0.2)
     cases = spec.build_cases()
     spec.apply_case(spec.case_root, cases[0])
-    text = (case_root / "system" / "controlDict").read_text()
-    assert "endTime    0.2;" in text
+    assert_foam_entry(case_root / "system" / "controlDict", "endTime", "0.2")

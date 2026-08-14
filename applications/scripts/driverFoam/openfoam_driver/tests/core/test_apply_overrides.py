@@ -2,7 +2,7 @@ import os
 
 import pytest
 from pathlib import Path
-from openfoam_driver.tests.conftest import skip_without_monorepo
+from openfoam_driver.tests.conftest import assert_foam_entry, skip_without_monorepo
 pytestmark = skip_without_monorepo
 
 from openfoam_driver.specs.apply_overrides import (
@@ -72,6 +72,46 @@ def test_validate_accepts_control_and_electro():
     ])
 
 
+def test_validate_accepts_keys_at_the_scopes_that_actually_read_them():
+    """A key catalogued at the top coeffs level is not thereby addressable at
+    the nested scopes that separately read it.
+
+    conductionSystemDomain.C:508 binds coeffsDict_ to the
+    purkinjeGraphModelCoeffs sub-dict and hands it to ionicModel::New
+    (:282), which passes it to ODESolver::New (ionicModel.H:275) -- so
+    upstream OpenFOAM reads solver/maxSteps from *that* dict, not from the
+    top-level one. Both are used by real tutorials but were rejected by
+    validate_overrides, making them unsettable through the CLI.
+    """
+    validate_overrides([
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV"
+                        ".purkinjeGraphModelCoeffs.solver", "value": "RKF45"},
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV"
+                        ".purkinjeGraphModelCoeffs.maxSteps", "value": "1000"},
+    ])
+
+
+def test_validate_accepts_purkinje_conduction_velocity_and_ode_tolerances():
+    """The Purkinje graph carries its own purkinjeCV and its own ODE tolerances.
+
+    purkinjeGraphModelCoeffs.purkinjeCV is a literal conduction velocity in
+    m/s (eikonalSolver1D.C:134 -- t = Tact + edgeLength/purkinjeCV), NOT the
+    same quantity as the top-level eikonal c0, which has dimensions s^-1/2
+    and only becomes a velocity via c0*sqrt(M) (eikonalMyocardiumDomain.C:359).
+    The two used to share the bare key 'c0' at different scopes of one file;
+    the Purkinje side was renamed to purkinjeCV to remove the ambiguity.
+
+    absTol/relTol reach upstream ODESolver.C:68-69 through the same
+    sub-dict binding as the already-catalogued solver/maxSteps.
+    """
+    purkinje = "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV.purkinjeGraphModelCoeffs"
+    validate_overrides([
+        {"driver_path": f"{purkinje}.purkinjeCV", "value": "[0 1 -1 0 0 0 0] 4.2"},
+        {"driver_path": f"{purkinje}.absTol", "value": "1e-8"},
+        {"driver_path": f"{purkinje}.relTol", "value": "1e-6"},
+    ])
+
+
 def test_validate_rejects_unknown_flat_controldict_key():
     # A flat (non-$, non-":") driver_path is routed to controlDict for backward
     # compatibility, but must still be a real controlDict key -- not silently
@@ -125,8 +165,12 @@ def test_apply_flat_electro_key_edits_solver_coeffs(tmp_path):
         [{"driver_path": "$ELECTRO_MODEL_COEFFS.initialODEStep", "value": "2e-5"}],
         case_root=case,
     )
-    text = (case / "constant" / "electroProperties").read_text()
-    assert "initialODEStep" in text and "2e-5" in text
+    assert_foam_entry(
+        case / "constant" / "electroProperties",
+        "initialODEStep",
+        "2e-5",
+        scope="singleCellSolverCoeffs",
+    )
 
 
 def test_apply_nested_electro_key_edits_nested_block(tmp_path):

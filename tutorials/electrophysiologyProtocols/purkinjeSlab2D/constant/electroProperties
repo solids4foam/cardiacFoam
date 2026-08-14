@@ -68,7 +68,6 @@ monodomainSolverCoeffs
 
                 apdNominal      0.002;
                 escapeInterval  1.0;
-                reportSetup     true;
 
                 outputVariables
                 {
@@ -89,7 +88,6 @@ monodomainSolverCoeffs
             pvjRadius               0.0006;
             couplingMode            bidirectional;
             debugCoupling           true;
-            reportSetup             true;
         }
     }
 }

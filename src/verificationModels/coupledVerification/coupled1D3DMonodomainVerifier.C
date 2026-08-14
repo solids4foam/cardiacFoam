@@ -317,8 +317,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
         mesh,
         terminalLocations,
         dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
-        false
+        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform")
     );
 
     const scalarField R_pvj =
@@ -531,8 +530,7 @@ void coupled1D3DMonodomainVerifier::postProcess
         mesh,
         terminalLocations,
         dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform"),
-        false
+        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform")
     );
 
     scalarField VmExact3D;

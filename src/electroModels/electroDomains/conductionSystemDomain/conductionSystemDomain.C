@@ -171,7 +171,7 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
         )
     );
 
-    graph_.readFromDict(graphDict, reportSetup_);
+    graph_.readFromDict(graphDict);
 
     const scalar purkinjeConductivity =
         dict.lookupOrDefault<scalar>("purkinjeConductivity", 1.0);
@@ -226,18 +226,6 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
         }
     }
 
-    if (reportSetup_)
-    {
-        Info<< "Purkinje graph file '" << graphFile << "': rootNode="
-            << rootNode_ << ", terminals=" << terminalNodes_.size() << nl;
-        forAll(terminalNodes_, i)
-        {
-            Info<< "  terminal" << i
-                << " node=" << terminalNodes_[i]
-                << " location=" << terminalLocations_[i] << nl;
-        }
-        Info<< endl;
-    }
 }
 
 
@@ -466,12 +454,6 @@ void conductionSystemDomain::openOutputFile()
         colNames
     );
 
-    if (reportSetup_)
-    {
-        Info<< "conductionSystemDomain: writing to "
-            << outDir/"purkinjeNetwork.dat" << nl << endl;
-    }
-
     ionicOutputPtrs_.setSize(ionicExport_.size());
     forAll(ionicExport_, i)
     {
@@ -562,7 +544,6 @@ conductionSystemDomain::conductionSystemDomain
     outputPtr_(),
     exportVars_(),
     debugVars_(),
-    reportSetup_(coeffsDict_.lookupOrDefault<Switch>("reportSetup", false)),
     pvdTimes_(),
     pvdFiles_()
 {
@@ -581,13 +562,6 @@ conductionSystemDomain::conductionSystemDomain
 
     preProcess();
     openOutputFile();
-
-    if (reportSetup_)
-    {
-        Info<< "conductionSystemDomain constructed as graph Purkinje model with "
-            << graph_.nNodes << " nodes and " << graph_.nEdges << " edges."
-            << nl << endl;
-    }
 }
 
 
