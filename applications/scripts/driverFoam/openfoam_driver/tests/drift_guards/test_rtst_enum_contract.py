@@ -74,6 +74,17 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
         "electroVerificationModel",
         "polymorphic",
     ),
+    # The Purkinje graph and the PVJ coupling each have their own verifier
+    # table, separate from the myocardium-side electroVerificationModel.
+    "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
+    ".purkinjeGraphModelCoeffs.verificationModel.type": (
+        "graphVerificationModel",
+        "strict",
+    ),
+    "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.verificationModel.type": (
+        "couplingVerificationModel",
+        "strict",
+    ),
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": (
         "ecgSolver",
         "strict",
@@ -115,6 +126,10 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.tissue",                  # tissue enum
     "$ELECTRO_MODEL_COEFFS.sex",                     # biological-sex selector
     "$ELECTRO_MODEL_COEFFS.dimension",               # 1D/2D/3D
+    # Same 1D/2D/3D selector at Purkinje scope: ionicSelector maps the word
+    # to a flag, there is no runtime table.
+    "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
+    ".purkinjeGraphModelCoeffs.dimension",
     "$ELECTRO_MODEL_COEFFS.solver",                  # OpenFOAM ODESolver
     "$ELECTRO_MODEL_COEFFS.couplingSignal",
     # timeCouplingScheme is a plain lookupOrDefault<word> compared against two

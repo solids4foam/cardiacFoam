@@ -70,17 +70,6 @@ _BLOCK_HEADER = re.compile(r"([A-Za-z_][\w.|\"]*)\s*$")
 #: Unaddressable on purpose. Each entry needs a reason; delete the entry when
 #: the reason stops holding, rather than widening the waiver.
 WAIVED: dict[str, str] = {
-    # Verification/MMS machinery -- deliberately not catalogued yet.
-    "$ELECTRO_MODEL_COEFFS.verificationModel.enabled":
-        "MMS kill-switch; verification keys are a deferred package",
-    "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
-    ".purkinjeGraphModelCoeffs.dimension":
-        "selects the manufactured-solution constant; MMS-only",
-    "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
-    ".purkinjeGraphModelCoeffs.verificationModel.type":
-        "graph MMS verifier; single registered value",
-    "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.verificationModel.type":
-        "coupling MMS verifier; single registered value",
     # Inert: present in dicts but read by nothing.
     "$ELECTRO_MODEL_COEFFS.initialODEStep":
         "no reader in this repo or in OpenFOAM; ODE initial step comes from "

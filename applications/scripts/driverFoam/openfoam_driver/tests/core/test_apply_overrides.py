@@ -253,3 +253,31 @@ def test_apply_system_file_override_works_without_foamdictionary(tmp_path):
             case / "system" / "fvSolution", "tolerance", scope=["solvers", "V"]
         )
     assert float(tolerance) == pytest.approx(1e-9)
+
+
+def test_validate_accepts_the_manufactured_solution_switches():
+    """The keys that turn manufactured-solution verification on.
+
+    electroVerificationModel::New is called unconditionally
+    (myocardiumDomainInterface.C:223); selectedType looks for a
+    verificationModel sub-dict and reads `type`, returning nullptr when it is
+    absent, empty or "none" (electroVerificationModel.C:42-45). So `type` is
+    the switch, and `enabled` (default true) turns a configured block off
+    without deleting it.
+
+    The Purkinje graph and the PVJ coupling each have their own verifier
+    table, so each needs its own `type` at its own scope; the manufactured
+    ionic models additionally require `dimension`, which is per-domain (the
+    coupled 1D-3D case runs the myocardium at "3D" and the graph at "1D").
+    """
+    purkinje = "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV.purkinjeGraphModelCoeffs"
+    validate_overrides([
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.verificationModel.enabled",
+         "value": "no"},
+        {"driver_path": f"{purkinje}.dimension", "value": "1D"},
+        {"driver_path": f"{purkinje}.verificationModel.type",
+         "value": "manufacturedGraphVerifier"},
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.domainCouplings.pvj"
+                        ".verificationModel.type",
+         "value": "coupled1D3DMonodomainVerifier"},
+    ])
