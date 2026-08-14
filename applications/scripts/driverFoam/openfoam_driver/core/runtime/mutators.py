@@ -58,39 +58,52 @@ def _normalize_scope(scope: str | list[str] | tuple[str, ...] | None) -> list[st
     return normalized
 
 
-def _explode_inline_blocks(lines: list[str]) -> list[str]:
-    """Rewrite ``a { b 1; }`` as one brace or entry per line.
+def _explode_inline_blocks_with_spans(
+    lines: list[str],
+) -> list[tuple[str, int, int, int]]:
+    """Rewrite ``a { b 1; }`` as one brace or entry per virtual line.
 
     The scope machinery reasons in whole lines, so a block written inline --
     legal OpenFOAM, and present in tracked tutorial dicts -- collapses to a
     degenerate line range and resolves to nothing. Splitting at braces and
     semicolons lets the existing line-based logic handle it unchanged.
 
-    Read-only: the result drops comments and does not preserve line numbers,
-    so it must not be used by the writing path, which indexes real lines.
+    Each result is ``(text, line_index, start_col, end_col)``, so the writing
+    path can splice a replacement back into the original line instead of
+    reformatting the file the way foamDictionary does. Comments are dropped
+    from the virtual text but survive in the untouched remainder of the line.
     """
-    exploded: list[str] = []
-    for line in lines:
+    exploded: list[tuple[str, int, int, int]] = []
+    for index, line in enumerate(lines):
         code = _strip_inline_comment(line)
         if ("{" not in code and "}" not in code) or code.strip() in ("{", "}"):
-            exploded.append(line)
+            exploded.append((line, index, 0, len(line)))
             continue
 
         buffer = ""
-        for char in code:
+        start = 0
+        for position, char in enumerate(code):
             if char in "{}":
                 if buffer.strip():
-                    exploded.append(buffer.strip() + "\n")
-                exploded.append(char + "\n")
+                    exploded.append((buffer.strip() + "\n", index, start, position))
+                exploded.append((char + "\n", index, position, position + 1))
                 buffer = ""
+                start = position + 1
             elif char == ";":
-                exploded.append((buffer + char).strip() + "\n")
+                buffer += char
+                exploded.append((buffer.strip() + "\n", index, start, position + 1))
                 buffer = ""
+                start = position + 1
             else:
                 buffer += char
         if buffer.strip():
-            exploded.append(buffer.strip() + "\n")
+            exploded.append((buffer.strip() + "\n", index, start, len(code)))
     return exploded
+
+
+def _explode_inline_blocks(lines: list[str]) -> list[str]:
+    """The virtual-line texts of :func:`_explode_inline_blocks_with_spans`."""
+    return [text for text, _, _, _ in _explode_inline_blocks_with_spans(lines)]
 
 
 def _iter_direct_child_lines(lines: list[str], start: int, end: int):
@@ -378,25 +391,33 @@ def update_foam_entry(
 
     key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
     lines = file_path.read_text().splitlines(keepends=True)
-    search_start, search_end = _resolve_search_region(lines, scope)
-    direct_child_lines = set(_iter_direct_child_lines(lines, search_start, search_end))
+    virtual = _explode_inline_blocks_with_spans(lines)
+    search_start, search_end = _resolve_search_region([t for t, _, _, _ in virtual], scope)
+    direct = _iter_direct_child_lines([t for t, _, _, _ in virtual], search_start, search_end)
 
-    replaced = False
-    with file_path.open("w") as handle:
-        for idx, line in enumerate(lines):
-            stripped = line.strip()
+    target: tuple[int, int, int] | None = None
+    for idx in direct:
+        text, line_index, start, end = virtual[idx]
+        if text.strip().startswith("//") or not key_pattern.match(text):
+            continue
+        target = (line_index, start, end)
+        break
 
-            if stripped.startswith("//"):
-                handle.write(line)
-                continue
-
-            within_scope = idx in direct_child_lines
-            if within_scope and (not replaced) and key_pattern.match(line):
-                indent = line[: len(line) - len(line.lstrip())]
-                handle.write(f"{indent}{key}    {_format_value(value)};\n")
-                replaced = True
-            else:
-                handle.write(line)
+    replaced = target is not None
+    if replaced:
+        line_index, start, end = target
+        line = lines[line_index]
+        if start == 0 and end >= len(line.rstrip("\n")):
+            # The entry owns the whole line: keep the original indentation.
+            indent = line[: len(line) - len(line.lstrip())]
+            lines[line_index] = f"{indent}{key}    {_format_value(value)};\n"
+        else:
+            # Inline block: splice in place so the rest of the line -- sibling
+            # entries, closing braces, any trailing comment -- is preserved.
+            lines[line_index] = (
+                line[:start] + f"{key}    {_format_value(value)};" + line[end:]
+            )
+        file_path.write_text("".join(lines))
 
     if not replaced:
         if scope is None:

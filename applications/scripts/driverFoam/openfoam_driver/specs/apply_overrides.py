@@ -165,7 +165,14 @@ def apply_overrides(overrides: list[dict[str, Any]], *, case_root: Path) -> None
         try:
             if ":" in dp:
                 file_path, _, entry_path = dp.partition(":")
-                update_foam_entry_via_foamDictionary(case_root / file_path, entry_path, value)
+                # foamDictionary spells this scope as "solvers/V/tolerance";
+                # update_foam_entry takes it apart. Going through it rather
+                # than straight to foamDictionary keeps this route usable
+                # without a sourced OpenFOAM, like every other override path.
+                *scope_path, key = entry_path.split("/")
+                update_foam_entry(
+                    case_root / file_path, key, value, scope=scope_path or None
+                )
             elif not dp.startswith("$"):
                 if shutil.which("foamDictionary"):
                     update_foam_entry_via_foamDictionary(case_root / "system" / "controlDict", dp, value)

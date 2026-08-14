@@ -697,6 +697,36 @@ class TestReadFoamEntryIsEnvironmentIndependent(unittest.TestCase):
                 read_foam_entry(path, "tolerance", scope=["solvers", "p"]), "1e-7"
             )
 
+    def test_writes_into_a_scope_written_as_an_inline_block(self) -> None:
+        # The read path handles inline blocks; the write path indexes real
+        # lines, so it must splice the new entry back into the original line
+        # rather than reformat the file. Forced off foamDictionary, which
+        # re-serialises the whole file and so cannot preserve the layout --
+        # minimal-diff writing is a property of the Python writer alone.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "fvSolution"
+            path.write_text(
+                "solvers { V { tolerance 1e-5; } p { tolerance 1e-7; } }\n"
+            )
+
+            with mock.patch(
+                "openfoam_driver.core.runtime.mutators.shutil.which",
+                return_value=None,
+            ):
+                update_foam_entry(
+                    path, "tolerance", "1e-9", scope=["solvers", "V"]
+                )
+
+            self.assertEqual(
+                read_foam_entry(path, "tolerance", scope=["solvers", "V"]), "1e-9"
+            )
+            # the sibling block must be untouched, and the file must still be
+            # one line -- no wholesale reformat
+            self.assertEqual(
+                read_foam_entry(path, "tolerance", scope=["solvers", "p"]), "1e-7"
+            )
+            self.assertEqual(len(path.read_text().splitlines()), 1)
+
     def test_does_not_evaluate_dictionary_directives(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "testDict"
