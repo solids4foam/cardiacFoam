@@ -23,7 +23,6 @@ singleCellSolverCoeffs
     tissue    epicardialCells;
 
     solver Euler;
-    initialODEStep 1e-5;
     maxSteps 1000000000;
     absTol 1e-6;
     relTol 1e-4;

@@ -29,6 +29,15 @@ autoPtr<graphVerificationModel> graphVerificationModel::New(const dictionary& di
 {
     const word modelType(selectedType(dict));
 
+    // Absent, empty or "none" means no verification: the sub-dict can stay
+    // in the case while it runs as a plain simulation. Matches
+    // electroVerificationModel/eikonalVerificationModel, so "off" is
+    // spelled the same way in every table.
+    if (modelType.empty() || modelType == "none")
+    {
+        return autoPtr<graphVerificationModel>(nullptr);
+    }
+
     auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
@@ -47,7 +56,7 @@ autoPtr<graphVerificationModel> graphVerificationModel::New(const dictionary& di
 
 word graphVerificationModel::selectedType(const dictionary& dict)
 {
-    return dict.get<word>("type");
+    return dict.lookupOrDefault<word>("type", word::null);
 }
 
 

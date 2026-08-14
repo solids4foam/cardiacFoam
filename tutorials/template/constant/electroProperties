@@ -257,7 +257,6 @@ monodomainSolverCoeffs
     // ── ODE time-integration ────────────────────────────────────────────────
     solutionAlgorithm  explicit;     // explicit | implicit
     solver             RKF45;        // RKF45 | euler | RK4
-    initialODEStep     1e-6;         // [s] first adaptive step size
     maxSteps           1000000000;   // hard limit on ODE steps per macro-step
     // absTol          1e-6;         // (optional) absolute tolerance for adaptive solvers
     // relTol          1e-4;         // (optional) relative tolerance
@@ -379,7 +378,6 @@ monodomainSolverCoeffs
                 vm1DRest       -0.084;  // resting potential [V]
 
                 solver          RKF45;
-                initialODEStep  1e-6;
                 maxSteps        1000000000;
 
                 chi     1400.0;   // [1/m]
@@ -450,7 +448,6 @@ bidomainSolverCoeffs
 
     solutionAlgorithm  implicit;
     solver             RKF45;
-    initialODEStep     1e-6;
     maxSteps           1000000000;
     phiERefPoint       (0 0 0);    // required point used to locate the reference cell
     phiEReferenceValue 0.0;
@@ -493,7 +490,6 @@ singleCellSolverCoeffs
 
     solutionAlgorithm  explicit;
     solver             RKF45;
-    initialODEStep     1e-5;
     maxSteps           1000000000;
     absTol             1e-6;
     relTol             1e-4;

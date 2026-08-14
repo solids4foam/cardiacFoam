@@ -40,13 +40,10 @@ monodomainSolverCoeffs
     verificationModel
     {
         type manufacturedFDAMonodomainVerifier;
-        solutionAlgorithm implicit;
     }
 
     solutionAlgorithm implicit;
-    CFL 0.1;
     solver RKF45;
-    initialODEStep 1e-5;
     maxSteps 1000000000;
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
@@ -92,7 +89,6 @@ monodomainSolverCoeffs
                 }
 
                 solver RKF45;
-                initialODEStep 1e-5;
                 maxSteps 1000000000;
 
             }
@@ -109,7 +105,6 @@ monodomainSolverCoeffs
             verificationModel
             {
                 type coupled1D3DMonodomainVerifier;
-                reportBaseline3DReference false;
             }
 
             rPvj 1.0;

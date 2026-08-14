@@ -78,7 +78,7 @@ autoPtr<ecgVerificationModel> ecgVerificationModel::New
 {
     const word modelType(selectedType(dict));
 
-    if (modelType.empty())
+    if (modelType.empty() || modelType == "none")
     {
         return autoPtr<ecgVerificationModel>(nullptr);
     }

@@ -57,20 +57,13 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
     chi_(chi.value()),
     Cm_(Cm.value()),
     c0_(c0.value()),
-    enabled_(true),
     writeErrorField_(false),
     dimension_(max(label(1), min(mesh.nGeometricD(), label(3)))),
     errorsReported_(false)
 {
     const dictionary& cfg = electroProperties.subDict("verificationModel");
-    enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
     writeErrorField_ =
         cfg.lookupOrDefault<Switch>("writeErrorField", false);
-
-    if (!enabled_)
-    {
-        return;
-    }
 
     validateManufacturedEikonalUnitDomain(mesh_, dimension_);
     (void)manufacturedEikonalConstantConductivity(conductivity_);
@@ -130,11 +123,6 @@ void manufacturedEikonalVerifier::applyConstraints
     volScalarField& activationTime
 ) const
 {
-    if (!enabled_)
-    {
-        return;
-    }
-
     scalar minX = GREAT, minY = GREAT, minZ = GREAT;
     const vectorField& centres = mesh_.C().primitiveField();
 

@@ -34,6 +34,15 @@ autoPtr<couplingVerificationModel> couplingVerificationModel::New
 {
     const word modelType(selectedType(dict));
 
+    // Absent, empty or "none" means no verification: the sub-dict can stay
+    // in the case while it runs as a plain simulation. Matches
+    // electroVerificationModel/eikonalVerificationModel, so "off" is
+    // spelled the same way in every table.
+    if (modelType.empty() || modelType == "none")
+    {
+        return autoPtr<couplingVerificationModel>(nullptr);
+    }
+
     Info<< "Selecting couplingVerificationModel " << modelType << nl;
 
     auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
@@ -52,7 +61,7 @@ autoPtr<couplingVerificationModel> couplingVerificationModel::New
 
 word couplingVerificationModel::selectedType(const dictionary& dict)
 {
-    return dict.get<word>("type");
+    return dict.lookupOrDefault<word>("type", word::null);
 }
 
 

@@ -48,13 +48,10 @@ bidomainSolverCoeffs
         k               0.707107;
         alpha           0.01;
         groundElectrode yes;
-        fdaBathVariant  electrodePair;
     }
     dimension       "1D";
     solutionAlgorithm implicit;
-    CFL             0.1;
     solver          RKF45;
-    initialODEStep  1e-05;
     maxSteps        1000000000;
     bathPotentialDomain
     {

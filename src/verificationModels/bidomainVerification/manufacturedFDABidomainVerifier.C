@@ -45,7 +45,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 :
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
-    enabled_(true),
     useExplicitAlgorithm_(false),
     errorsReported_(false),
     k_(0.5),
@@ -56,7 +55,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     const dictionary& coeffDict = this->dict();
     const dictionary& cfg = verificationDict();
 
-    enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
     // solutionAlgorithm is a solver-level key; read it from the parent dict.
     useExplicitAlgorithm_ =
         coeffDict.lookupOrDefault<word>("solutionAlgorithm", "implicit") == "explicit";
@@ -104,7 +102,7 @@ bool manufacturedFDABidomainVerifier::shouldPostProcess
     const volScalarField& Vm
 ) const
 {
-    return enabled_ && !errorsReported_ && shouldReportManufacturedErrors(Vm);
+    return !errorsReported_ && shouldReportManufacturedErrors(Vm);
 }
 
 

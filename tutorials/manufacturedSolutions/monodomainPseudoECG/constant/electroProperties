@@ -45,9 +45,7 @@ monodomainSolverCoeffs
     dimension    "3D";
 
     solutionAlgorithm    implicit;
-    CFL 0.1;
     solver RKF45;
-    initialODEStep 1e-5;
     maxSteps 1000000000;
 
     externalStimulus

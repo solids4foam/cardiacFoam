@@ -41,7 +41,6 @@ class manufacturedFDABathBidomainVerifier
 {
     volScalarField* phiEPtr_;
     const labelUList* phiEHeartCellMapPtr_;
-    Switch enabled_;
     bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
     scalar k_;

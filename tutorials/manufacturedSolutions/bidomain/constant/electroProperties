@@ -43,9 +43,7 @@ bidomainSolverCoeffs
     }
     dimension       "3D";
     solutionAlgorithm implicit;
-    CFL             0.1;
     solver          RKF45;
-    initialODEStep  1e-05;
     maxSteps        1000000000;
     phiERefPoint    ( 0.125 0.05 0.05 );
     phiEReferenceValue 0;

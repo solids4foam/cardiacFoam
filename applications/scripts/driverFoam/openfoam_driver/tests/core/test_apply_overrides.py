@@ -160,15 +160,17 @@ def test_apply_deltat_edits_control_dict(tmp_path):
 
 
 def test_apply_flat_electro_key_edits_solver_coeffs(tmp_path):
+    # maxSteps, not initialODEStep: the latter had no reader anywhere and was
+    # deleted from the tutorial dicts, so there is no longer a key to edit.
     case = _case(tmp_path)
     apply_overrides(
-        [{"driver_path": "$ELECTRO_MODEL_COEFFS.initialODEStep", "value": "2e-5"}],
+        [{"driver_path": "$ELECTRO_MODEL_COEFFS.maxSteps", "value": "20000"}],
         case_root=case,
     )
     assert_foam_entry(
         case / "constant" / "electroProperties",
-        "initialODEStep",
-        "2e-5",
+        "maxSteps",
+        "20000",
         scope="singleCellSolverCoeffs",
     )
 
@@ -262,8 +264,8 @@ def test_validate_accepts_the_manufactured_solution_switches():
     (myocardiumDomainInterface.C:223); selectedType looks for a
     verificationModel sub-dict and reads `type`, returning nullptr when it is
     absent, empty or "none" (electroVerificationModel.C:42-45). So `type` is
-    the switch, and `enabled` (default true) turns a configured block off
-    without deleting it.
+    the one switch -- the redundant `enabled` key it used to share that job
+    with is gone, and all four verifier tables now accept "none" alike.
 
     The Purkinje graph and the PVJ coupling each have their own verifier
     table, so each needs its own `type` at its own scope; the manufactured
@@ -272,8 +274,6 @@ def test_validate_accepts_the_manufactured_solution_switches():
     """
     purkinje = "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV.purkinjeGraphModelCoeffs"
     validate_overrides([
-        {"driver_path": "$ELECTRO_MODEL_COEFFS.verificationModel.enabled",
-         "value": "no"},
         {"driver_path": f"{purkinje}.dimension", "value": "1D"},
         {"driver_path": f"{purkinje}.verificationModel.type",
          "value": "manufacturedGraphVerifier"},

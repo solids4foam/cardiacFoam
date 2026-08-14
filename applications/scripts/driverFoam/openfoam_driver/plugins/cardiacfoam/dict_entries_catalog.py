@@ -648,15 +648,6 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             applicable_when={"$ELECTRO_MODEL_COEFFS.verificationModel.type": ("manufacturedFDABathBidomainVerifier",)},
         ),
         DictEntry(
-            driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.enabled',
-            phases=frozenset({'solver'}),
-            description='Run the configured verification model, or keep its block in the dict while running the case as a plain simulation. Optional: defaults to TRUE, so a verificationModel block with a type is already active -- this is an opt-out, not an opt-in.',
-            source_refs=('src/verificationModels/eikonalVerification/manufacturedEikonalVerifier.C', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C'),
-            notes='Not cosmetic on the eikonal path: eikonalMyocardiumDomain.C:93 reads it again to choose the activationTime boundary conditions (zeroGradient when off, fixedValue when on), so flipping it changes the BCs as well as the MMS source term.',
-            value_kind='boolean',
-            typical_value='yes',
-        ),
-        DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.writeErrorField',
             phases=frozenset({'solver'}),
             description='Writes the per-cell signed activation-time error field to disk each write interval, for correlating error against local mesh quality.',

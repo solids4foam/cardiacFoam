@@ -40,7 +40,6 @@ monodomainSolverCoeffs
 
     solutionAlgorithm    explicit;
     solver             RKF45;
-    initialODEStep    1e-06;
     absTol    1e-06;
     relTol    0.0001;
     maxSteps           1000000000;

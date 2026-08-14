@@ -30,7 +30,6 @@ eikonalSolverCoeffs
     verificationModel
     {
         type            manufacturedEikonalVerifier;
-        enabled         yes;
     }
     ecgDomains
     {

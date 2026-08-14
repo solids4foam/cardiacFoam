@@ -45,7 +45,6 @@ class manufacturedEikonalVerifier : public eikonalVerificationModel
     scalar chi_;
     scalar Cm_;
     scalar c0_;
-    Switch enabled_;
 
     //- Write the cellwise signed error as a volScalarField alongside the
     //  aggregate norms. Off by default, so existing cases are unchanged.
@@ -90,7 +89,7 @@ public:
 
     virtual bool enabled() const override
     {
-        return enabled_;
+        return true;
     }
 
     virtual void applyConstraints(volScalarField& activationTime) const override;
@@ -99,7 +98,7 @@ public:
 
     virtual bool shouldPostProcess() const override
     {
-        return enabled_ && !errorsReported_;
+        return !errorsReported_;
     }
 
     virtual void postProcess(const volScalarField& activationTime) override;

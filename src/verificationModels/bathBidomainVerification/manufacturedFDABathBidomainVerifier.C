@@ -95,7 +95,6 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
     phiEHeartCellMapPtr_(nullptr),
-    enabled_(true),
     useExplicitAlgorithm_(false),
     errorsReported_(false),
     k_(1.0/Foam::sqrt(2.0)),
@@ -105,7 +104,6 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
 {
     const dictionary& cfg = verificationDict();
 
-    enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
     // solutionAlgorithm is a solver-level key (lives in the parent
     // bidomainSolverCoeffs dict, not in verificationModel).
     useExplicitAlgorithm_ =
@@ -183,7 +181,7 @@ bool manufacturedFDABathBidomainVerifier::shouldPostProcess
     const volScalarField& Vm
 ) const
 {
-    return enabled_ && !errorsReported_ && shouldReportManufacturedErrors(Vm);
+    return !errorsReported_ && shouldReportManufacturedErrors(Vm);
 }
 
 

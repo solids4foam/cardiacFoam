@@ -70,25 +70,11 @@ _BLOCK_HEADER = re.compile(r"([A-Za-z_][\w.|\"]*)\s*$")
 #: Unaddressable on purpose. Each entry needs a reason; delete the entry when
 #: the reason stops holding, rather than widening the waiver.
 WAIVED: dict[str, str] = {
-    # Inert: present in dicts but read by nothing.
-    "$ELECTRO_MODEL_COEFFS.initialODEStep":
-        "no reader in this repo or in OpenFOAM; ODE initial step comes from "
-        "the runtime deltaT (ionicModel.C:36-39)",
-    "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
-    ".purkinjeGraphModelCoeffs.initialODEStep":
-        "same inert key at Purkinje scope",
-    "$ELECTRO_MODEL_COEFFS.CFL":
-        "zero reads anywhere in src/",
-    "$ELECTRO_MODEL_COEFFS.infoFrequency":
-        "solids4foam solidProperties key copy-pasted into electroProperties",
-    "$ELECTRO_MODEL_COEFFS.manufacturedBidomain.fdaBathVariant":
-        "bath verifier reads verificationModel; this copy is dead",
-    "$ELECTRO_MODEL_COEFFS.verificationModel.solutionAlgorithm":
-        "verifier reads solutionAlgorithm from the parent coeffs dict",
-    "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>"
-    ".verificationModel.reportBaseline3DReference":
-        "appears in one tutorial only, read by nothing",
+    # Empty, and worth keeping that way. Every key a tracked tutorial sets is
+    # a key something reads. Dead entries were deleted from the dicts rather
+    # than waived here -- a waiver hides drift, deleting the key removes it.
 }
+
 
 #: Sub-dict names that are user-chosen instance names, not fixed keys.
 _DYNAMIC_PARENTS = ("conductionNetworkDomains", "domainCouplings", "ecgDomains")

@@ -40,7 +40,6 @@ monodomainSolverCoeffs
 
     solutionAlgorithm explicit;
     solver            RKF45;
-    initialODEStep    1e-6;
     maxSteps          1000000000;
 
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
@@ -73,7 +72,6 @@ monodomainSolverCoeffs
                 }
 
                 solver         RKF45;
-                initialODEStep 1e-6;
                 maxSteps       1000000000;
 
                 outputVariables
