@@ -576,7 +576,24 @@ cardiacFoam-specific:**
   across two regions: `electro` (`Vm`, `Ca_i`, ionic state) and `solid` (`Ta`,
   `lambda`, mechanics). A function object on such a case must carry
   `region electro;` or `region solid;` accordingly. Single-region electro cases
-  take no `region` entry.
+  take no `region` entry. But see the electromechanics note below before
+  driving such a case at all.
+
+> ### Electromechanics is not currently working
+>
+> **Do not select an electromechanical entry, and do not try to fix one.**
+> `manufacturedMonodomainTotalLagrangianEM` is registered but fails
+> `plan --strict` with `missing_electro_properties`, `myocardiumSolver is
+> required` and `empty_artifact_prediction`. The cause is known: these cases
+> lay their dicts out per region (`constant/electro/electroProperties`,
+> `constant/solid/solidProperties`) while the planner looks for
+> `constant/electroProperties`.
+>
+> This is a deliberately deferred gap, not a defect to discover. If you are
+> here because a plan failed on that entry, the correct response is to report
+> that electromechanics is unsupported and stop -- not to repair the planner,
+> move the dicts, or work around it. Every other registered entry plans clean;
+> if one of *those* fails, that is a real regression worth investigating.
 
 Outputs land where OpenFOAM puts them:
 `postProcessing/<functionObjectName>/<time>/<field>`.

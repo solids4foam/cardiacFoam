@@ -87,10 +87,20 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
     ),
     TutorialDisplay(
         id="manufacturedMonodomainTotalLagrangianEM",
-        title="Manufactured electromechanics (MMS)",
+        title="Manufactured electromechanics (MMS) -- NOT CURRENTLY WORKING",
         summary=(
-            "Electromechanics verification on a fully coupled manufactured field. "
-            "Vm, D, lambda, and Ta are rigorous MMS targets."
+            "NOT CURRENTLY WORKING: electromechanics is unsupported at the "
+            "moment and this entry fails strict planning. Do not pick it, and "
+            "do not try to repair it as a side quest -- it is a known, "
+            "deliberately deferred gap, not a bug you have just found. "
+            "It lays its dicts out per region (constant/electro/"
+            "electroProperties, constant/solid/solidProperties) while the "
+            "planner looks for constant/electroProperties, so it reports "
+            "missing_electro_properties, 'myocardiumSolver is required' and "
+            "empty_artifact_prediction. "
+            "Intended behaviour once supported: electromechanics verification "
+            "on a fully coupled manufactured field, with Vm, D, lambda and Ta "
+            "as rigorous MMS targets."
         ),
         thumbnail="/tutorials/manufactured-electromechanics-bc.png",
         tags=("manufactured-solution", "verification", "electromechanics"),

@@ -449,3 +449,41 @@ def test_batched_ionic_model_does_not_require_optional_batched_keys():
         if d.get("level") == "error"
     ]
     assert errors == [], f"unexpected validation errors: {errors}"
+
+
+def test_electromechanics_is_advertised_as_not_working_while_it_is_not():
+    """Keep the agent-facing warning and reality in sync.
+
+    Electromechanics is a deliberately deferred gap: the EM entry lays its
+    dicts out per region (constant/electro/electroProperties) while the
+    planner looks for constant/electroProperties, so it fails strict
+    planning. Agents were finding that failure and trying to "fix" it.
+
+    This asserts both halves. If EM is ever made to work, this test fails --
+    which is the point: the display summary and AGENT_GUIDE warning must be
+    removed in the same change, not left behind telling agents to stay away
+    from something that now works.
+    """
+    from openfoam_driver.core.plugin_interface import default_driver_context
+    from openfoam_driver import strict_planning as sp
+    from openfoam_driver.plugins.cardiacfoam.tutorials.display import TUTORIALS
+
+    entry = "manufacturedMonodomainTotalLagrangianEM"
+
+    report = sp.strict_plan(entry, driver_context=default_driver_context()).to_json()
+    errors = [
+        d for d in report["run_document"]["validation"].get("diagnostics", [])
+        if d.get("level") == "error"
+    ]
+    assert errors, (
+        f"{entry} now plans cleanly. Electromechanics apparently works: drop "
+        "the NOT CURRENTLY WORKING warning from tutorials/display.py and the "
+        "electromechanics note from AGENT_GUIDE.md, then delete this test."
+    )
+
+    display = next(d for d in TUTORIALS if d.id == entry)
+    haystack = f"{display.title} {display.summary}".lower()
+    assert "not currently working" in haystack, (
+        f"{entry} fails strict planning but its display does not say so; an "
+        "agent will pick it and then try to repair the planner."
+    )
