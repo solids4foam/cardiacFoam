@@ -75,55 +75,50 @@ const fvMesh& resolveMyocardiumMesh
 }
 
 
-bool manufacturedEikonalVerificationEnabled(const dictionary& electroProperties)
+// NOTE: a free function here used to re-derive "is verification enabled?"
+// from type + enabled, in parallel with eikonalVerificationModel::New, which
+// answers the same question by returning nullptr. The boundary types keyed
+// off that duplicate rather than off the verifier that actually got built.
+// The single source of truth is now verificationModelPtr_ itself.
+
+
+// activationTime's boundary conditions come from 0/activationTime like any
+// other field's. They used to be chosen here from the verification settings
+// and handed to the field constructor, which hid them from the case: nothing
+// in the case directory said whether the run used zeroGradient or fixedValue.
+//
+// Manufactured-solution runs need Dirichlet boundaries -- applyConstraints
+// writes the exact solution onto each patch face, and a zeroGradient patch
+// would extrapolate those values away from the interior on the next
+// evaluate(), silently invalidating the verification while still reporting
+// error norms. checkVerificationBoundaryTypes below enforces that instead.
+void checkVerificationBoundaryTypes(const volScalarField& activationTime)
 {
-    const dictionary* verificationDictPtr =
-        electroProperties.findDict("verificationModel");
+    const volScalarField::Boundary& boundary = activationTime.boundaryField();
 
-    if (!verificationDictPtr)
+    forAll(boundary, patchI)
     {
-        return false;
-    }
+        const fvPatchScalarField& patchField = boundary[patchI];
 
-    const word modelType =
-        verificationDictPtr->lookupOrDefault<word>("type", "none");
-
-    return
-        modelType != "none"
-     && verificationDictPtr->lookupOrDefault<Switch>("enabled", true);
-}
-
-
-wordList activationTimePatchTypes
-(
-    const fvMesh& mesh,
-    const dictionary& electroProperties
-)
-{
-    wordList patchTypes
-    (
-        mesh.boundary().size(),
-        zeroGradientFvPatchScalarField::typeName
-    );
-
-    if (!manufacturedEikonalVerificationEnabled(electroProperties))
-    {
-        return patchTypes;
-    }
-
-    forAll(patchTypes, patchI)
-    {
-        if (mesh.boundaryMesh()[patchI].type() == "empty")
+        if (patchField.empty() || patchField.type() == "empty")
         {
-            patchTypes[patchI] = "empty";
+            continue;
         }
-        else
+
+        if (!patchField.fixesValue())
         {
-            patchTypes[patchI] = fixedValueFvPatchScalarField::typeName;
+            FatalErrorInFunction
+                << "Manufactured-solution verification is active, but patch '"
+                << patchField.patch().name() << "' of activationTime is of "
+                << "type '" << patchField.type() << "', which does not fix "
+                << "its value." << nl
+                << "The verifier imposes the exact solution on the boundary; "
+                << "a non-Dirichlet patch discards it and the reported error "
+                << "norms become meaningless." << nl
+                << "Set this patch to fixedValue in 0/activationTime."
+                << exit(FatalError);
         }
     }
-
-    return patchTypes;
 }
 
 
@@ -222,16 +217,10 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             "activationTime",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedScalar("activationTime", dimTime, -1.0),
-        activationTimePatchTypes
-        (
-            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            electroProperties
-        )
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_)
     ),
     Vm_
     (
@@ -324,6 +313,11 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             c0_,
             eikonalAdvectionDiffusionApproach_
         );
+
+    if (verificationModelPtr_)
+    {
+        checkVerificationBoundaryTypes(activationTime_);
+    }
 }
 
 

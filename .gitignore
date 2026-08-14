@@ -142,14 +142,18 @@ tutorials/**/0.[0-9]*/
 tutorials/**/[1-9]*/
 
 # Generated 0 directories and specific untracked cases
-tutorials/manufacturedSolutions/*/0/
+tutorials/manufacturedSolutions/*/0/*
 tutorials/**/0/electro/
 
 # Anatomical and derived initial fields under any tutorial 0/ directory.
 # Fibre, sheet, tag, conductivity and UVC fields are mesh-sized (tens to
 # hundreds of MB each) and are regenerated from the mesh, not authored here.
 # Case dictionaries under constant/ and system/ remain tracked.
-tutorials/**/0/
+tutorials/**/0/*
+# ...except activationTime, which is small, hand-authored case data:
+# the eikonal solver now reads its boundary conditions from it
+# (MUST_READ), so it must be tracked like any constant/ or system/ dict.
+!tutorials/**/0/activationTime
 
 # Large mesh / field exports under tutorials — git cannot handle these
 tutorials/**/*.vtp
