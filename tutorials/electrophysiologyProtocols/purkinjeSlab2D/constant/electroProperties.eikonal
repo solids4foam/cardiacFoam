@@ -49,7 +49,7 @@ eikonalSolverCoeffs
                 conductionSystemSolver restitutionEikonalSolver1D;
                 graphFile              purkinjeGraph;
 
-                c0       [0 1 -1 0 0 0 0] 2.0;
+                purkinjeCV [0 1 -1 0 0 0 0] 2.0;
                 chi      140000;
                 cm       0.01;
                 vm1DRest -0.084;

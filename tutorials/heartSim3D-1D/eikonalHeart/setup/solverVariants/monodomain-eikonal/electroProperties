@@ -58,7 +58,7 @@ monodomainSolverCoeffs
                 conductionSystemSolver restitutionEikonalSolver1D;
                 graphFile              purkinjeGraph_healthy;
 
-                c0                     [0 1 -1 0 0 0 0] 6;
+                purkinjeCV             [0 1 -1 0 0 0 0] 6;
                 chi                    14000;
                 cm                     0.01;
                 vm1DRest               -0.084;

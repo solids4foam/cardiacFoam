@@ -52,7 +52,7 @@ eikonalSolverCoeffs
                 graphFile              purkinjeGraph;
 
                 // Purkinje conduction velocity (m/s).
-                c0      [0 1 -1 0 0 0 0] 2.0;
+                purkinjeCV [0 1 -1 0 0 0 0] 2.0;
 
                 // Required by purkinjeGraphModel even for the eikonal solver.
                 chi     140000;

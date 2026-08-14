@@ -44,7 +44,7 @@ class eikonalSolver1D
 :
     public conductionSystemSolver
 {
-    dimensionedScalar c0_;        //- conduction velocity [m/s]
+    dimensionedScalar purkinjeCV_;        //- conduction velocity [m/s]
 
 public:
 

@@ -87,12 +87,19 @@ electrodePositions
 For a 20 × 3 × 7 mm slab centred near the origin, placing electrodes at
 0.05–0.1 m distance gives a usable pseudo-ECG signal.
 
-## c0 — eikonal conduction velocity
+## c0 — myocardium eikonal wave-speed normalisation factor
 
-`c0` has units **m/s** (`[0 1 -1 0 0 0 0]`). It is the reference conduction
-velocity entering the eikonal wave-speed normalisation.
+`c0` has units **s^-1/2** (`[0 0 -0.5 0 0 0 0]`). It is not itself a
+velocity — the eikonal solver derives the local conduction velocity as
+`CV = c0 * sqrt(conductivity / (chi*cm))`, so its value must be chosen
+together with `conductivity`, `chi`, and `cm` to hit a target CV.
 
-Physiological range for human ventricular tissue:
+(This is a different quantity from the Purkinje-network `purkinjeCV`
+key under `purkinjeGraphModelCoeffs`, which *is* a literal conduction
+velocity in m/s.)
+
+Physiological CV range for human ventricular tissue, useful as a target
+when solving for `c0`:
 
 | Direction | Typical range |
 |-----------|--------------|
@@ -100,9 +107,9 @@ Physiological range for human ventricular tissue:
 | Transverse | 0.2 – 0.4 m/s |
 | Isotropic approximation | 0.6 – 0.8 m/s |
 
-For a homogeneous slab, `c0 = 0.7 m/s` is a reasonable starting point.
-If using an anisotropic conductivity tensor, c0 should reflect the dominant
-(fibre-direction) velocity.
+For a homogeneous slab with the template's default `conductivity`, `chi`,
+and `cm`, solve `c0 = CV / sqrt(conductivity / (chi*cm))` for your target
+CV rather than setting `c0` directly to a velocity value.
 
 ## Utilities
 

@@ -821,8 +821,10 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.c0',
             phases=frozenset({'physics'}),
-            description='Wave-speed parameter for the eikonal formulation.',
-            value_kind='scalar',
+            description="Wave-speed normalisation factor for the eikonal formulation, dimensions s^-1/2. Not itself a velocity: CV = c0*sqrt(conductivity/(chi*cm)). Distinct from the Purkinje-network $ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.purkinjeCV, which is a literal m/s conduction velocity -- the two used to share the bare key 'c0' at different dict scopes until the Purkinje side was renamed to purkinjeCV.",
+            source_refs=('src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C', 'src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.H', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.H'),
+            value_kind='dimensioned_scalar_literal',
+            typical_value='[0 0 -0.5 0 0 0 0] 60',
             required=True,
             constraints=('Required when myocardiumSolver=eikonalSolver.',),
             required_when={"myocardiumSolver": "eikonalSolver"},

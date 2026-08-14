@@ -342,7 +342,7 @@ monodomainSolverCoeffs
                 //
                 // Valid types (registered in conductionSystemSolver RTST):
                 //   monodomain1DSolver         — implicit cable equation + ionic ODE [DEFAULT]
-                //   eikonalSolver1D            — activation-time only, needs c0 [m/s]
+                //   eikonalSolver1D            — activation-time only, needs purkinjeCV [m/s]
                 //   restitutionEikonalSolver1D — multi-beat restitution-aware eikonal; no ionic model
                 //
                 conductionSystemSolver  monodomain1DSolver;   // or: eikonalSolver1D
@@ -371,9 +371,9 @@ monodomainSolverCoeffs
                 //     }
                 // }
 
-                // --- Eikonal solver: only c0 is required ---
+                // --- Eikonal solver: only purkinjeCV is required ---
                 // conduction velocity [m/s] (must be dimensioned)
-                // c0  [0 1 -1 0 0 0 0]  0.8;
+                // purkinjeCV  [0 1 -1 0 0 0 0]  0.8;
 
                 ionicModel      BuenoOrovio;
                 tissue          endocardialCells;
@@ -542,7 +542,7 @@ singleCellSolverCoeffs
 //
 // Solves a steady nonlinear anisotropic eikonal-diffusion equation to compute
 // activation times psi(x) [s]. No ionic model needed — only physical tissue
-// parameters and a reference velocity c0. The stimulus box pins psi = 0 at
+// parameters and a wave-speed normalisation factor c0. The stimulus box pins psi = 0 at
 // the initial activation site.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -558,9 +558,9 @@ eikonalSolverCoeffs
     // Membrane capacitance  [F/m²]
     cm            [-1 -4 4 0 0 2 0]  0.01;
 
-    // Reference conduction velocity  [m/s]
-    // c0 enters the eikonal equation as the wave-speed normalisation.
-    c0            [0 1 -1 0 0 0 0]   0.8;
+    // Reference wave-speed normalisation factor [s^-1/2]
+    // c0 enters the eikonal equation as CV = c0 * sqrt(conductivity / (chi*cm)).
+    c0            [0 0 -0.5 0 0 0 0]   0.8;
 
     // Linearisation scheme:
     //   true  → advection-diffusion approach (more stable, recommended)

@@ -52,7 +52,7 @@ addToRunTimeSelectionTable
 
 eikonalSolver1D::eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
-    c0_("c0", solverCoeffs)
+    purkinjeCV_("purkinjeCV", solverCoeffs)
 {
     if (solverCoeffs.lookupOrDefault<Switch>("reportSetup", false))
     {
@@ -88,7 +88,7 @@ void eikonalSolver1D::advance
         return;
     }
 
-    const scalar c0 = c0_.value();
+    const scalar c0 = purkinjeCV_.value();
     const label  N  = G.nNodes;
 
     // Build undirected adjacency list: adj[node] = list of (neighbour, edgeIdx).
