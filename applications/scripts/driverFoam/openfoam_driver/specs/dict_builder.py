@@ -96,6 +96,12 @@ _VIRTUAL_PRESENCE_TRIGGERS: tuple[tuple[str, str], ...] = (
     ("bathPotentialDomain.", "$bathPotentialDomain_configured"),
     ("ecgDomains.", "$ecgDomains_present"),
     ("conductionNetworkDomains.", "$conductionNetworkDomains_present"),
+    # A single-cell run with no stimulus is legal: stimulusIO.C:149-155
+    # returns a no-op protocol when the sub-dict is absent. Gating the
+    # stimulus family on presence rather than on myocardimSolver keeps the
+    # builder from inventing stim_amplitude/nstim1 defaults and quietly
+    # pacing a case that asked for none.
+    ("singleCellStimulus.", "$singleCellStimulus_present"),
 )
 
 

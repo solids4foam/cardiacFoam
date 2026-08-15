@@ -381,7 +381,14 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
     ),
     "single_cell_stimulus": build_group(
-        defaults={"phases": frozenset({'stimulus'}), "source_refs": ("src/genericWriter/stimulusIO.C",), "applicable_when": {"myocardiumSolver": ("singleCellSolver",)}},
+        # Gated on the block being configured, not on the solver. A single-cell
+        # run with no singleCellStimulus block is legal -- stimulusIO.C:149-155
+        # returns a no-op protocol when the sub-dict is absent -- and gating on
+        # the solver made every entry applicable, so the builder filled them
+        # from typical_value and quietly paced a case that asked for nothing.
+        # Presence is also the more faithful condition: every ionic model calls
+        # the loader, not just the single-cell solver.
+        defaults={"phases": frozenset({'stimulus'}), "source_refs": ("src/genericWriter/stimulusIO.C",), "applicable_when": {"$singleCellStimulus_present": True}},
         entries=(
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_start',
@@ -391,7 +398,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             unit='s',
             typical_value='0.0',
-            required_when={"myocardiumSolver": "singleCellSolver"},
+            required_when={"$singleCellStimulus_present": True},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
@@ -402,7 +409,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             unit='s',
             typical_value='1.0',
-            required_when={"myocardiumSolver": "singleCellSolver"},
+            required_when={"$singleCellStimulus_present": True},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
@@ -413,7 +420,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             unit='s',
             typical_value='1.0',
-            required_when={"myocardiumSolver": "singleCellSolver"},
+            required_when={"$singleCellStimulus_present": True},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
@@ -424,37 +431,31 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=True,
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             typical_value='60',
-            required_when={"myocardiumSolver": "singleCellSolver"},
+            required_when={"$singleCellStimulus_present": True},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim1',
             description='Number of S1 pulses.',
             value_kind='integer',
-            required=True,
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             typical_value='3',
-            required_when={"myocardiumSolver": "singleCellSolver"},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_period_S2',
             description='S2 pacing cycle length.',
             value_kind='scalar',
-            required=True,
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             typical_value='0',
-            required_when={"myocardiumSolver": "singleCellSolver"},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.singleCellStimulus.nstim2',
             description='Number of S2 pulses.',
             value_kind='integer',
-            required=True,
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
             typical_value='0',
-            required_when={"myocardiumSolver": "singleCellSolver"},
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         ),

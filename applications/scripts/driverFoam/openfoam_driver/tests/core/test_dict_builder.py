@@ -217,8 +217,13 @@ class TestValuePopulation(unittest.TestCase):
             resolve_context,
             select_applicable_entries,
         )
+        # A stimulus override makes the block "configured", which is what the
+        # family is gated on -- an unconfigured case must NOT get a stimulus
+        # invented for it (stimulusIO.C:149-155 treats an absent block as a
+        # legal no-op protocol).
         ctx = resolve_context(
             selectors={"myocardiumSolver": "singleCellSolver", "ionicModel": "AlievPanfilov", "tissue": "myocyte"},
+            overrides={"$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_start": "20"},
         )
         entries = select_applicable_entries(ctx)
         populated = populate_values(entries, ctx, typical_value_fallback=True)
@@ -288,10 +293,12 @@ class TestRequiredCheck(unittest.TestCase):
         )
         ctx = resolve_context(
             selectors={"myocardiumSolver": "singleCellSolver", "ionicModel": "AlievPanfilov", "tissue": "myocyte"},
+            overrides={"$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_start": "20"},
         )
         entries = select_applicable_entries(ctx)
         # Fallback OFF — no typical_value fills happen → required-but-no-override
-        # entries are missing.
+        # entries are missing. The stimulus override above makes the stimulus
+        # family applicable, so its four guarded keys appear in the listing.
         populated = populate_values(entries, ctx, typical_value_fallback=False)
         with self.assertRaises(ValueError) as ctx_mgr:
             check_required(entries, populated, context=ctx)
@@ -372,7 +379,29 @@ class TestSerialisation(unittest.TestCase):
         self.assertIn("singleCellSolverCoeffs", text)
         self.assertIn("ionicModel AlievPanfilov;", text)
         self.assertIn("tissue myocyte;", text)
+        # No stimulus was asked for, so none is invented. stimulusIO.C:149-155
+        # treats an absent singleCellStimulus block as a legal no-op protocol;
+        # filling it from typical_value would silently pace a quiescent case.
+        self.assertNotIn("singleCellStimulus", text)
+        self.assertNotIn("stim_amplitude", text)
+
+    def test_singlecell_stimulus_appears_once_configured(self) -> None:
+        from openfoam_driver.specs.dict_builder import build_electro_properties
+        text = build_electro_properties(
+            selectors={
+                "myocardiumSolver": "singleCellSolver",
+                "ionicModel": "AlievPanfilov",
+                "tissue": "myocyte",
+            },
+            overrides={
+                "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_start": "20",
+            },
+        )
+        # One override configures the block; the rest of the family then fills
+        # from typical_value, so the four keys stimulusIO.C:159-176 requires
+        # together are never half-written.
         self.assertIn("singleCellStimulus", text)
+        self.assertIn("stim_start 20;", text)
         self.assertIn("stim_amplitude 60;", text)
 
     def test_monodomain_output_matches_snapshot(self) -> None:

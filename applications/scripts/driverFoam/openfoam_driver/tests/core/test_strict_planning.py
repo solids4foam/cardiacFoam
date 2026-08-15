@@ -487,3 +487,45 @@ def test_electromechanics_is_advertised_as_not_working_while_it_is_not():
         f"{entry} fails strict planning but its display does not say so; an "
         "agent will pick it and then try to repair the planner."
     )
+
+
+def test_absent_stimulus_block_is_not_invented_from_defaults():
+    """A case with no stimulus must not come back paced.
+
+    stimulusIO.C:149-155 returns a no-op protocol when a case has no
+    singleCellStimulus sub-dict at all; the FatalError at :159-176 only
+    guards a block that exists and is incomplete. So "no stimulus" is legal.
+
+    The catalog marked the whole family required whenever
+    myocardiumSolver==singleCellSolver, and the builder satisfies a
+    required-but-absent key by writing its typical_value -- so dropping the
+    block yielded stim_amplitude 60 and nstim1 3, turning a quiescent run
+    into a paced one.
+    """
+    from openfoam_driver.specs.dict_builder import (
+        build_electro_properties,
+        parse_electro_properties,
+    )
+    from openfoam_driver.specs.common import tutorials_root_default
+
+    committed = (
+        tutorials_root_default()
+        / "electrophysiologyProtocols/singleCell/constant/electroProperties"
+    )
+    parsed = parse_electro_properties(committed)
+    without_stimulus = {
+        k: v for k, v in parsed["overrides"].items()
+        if "singleCellStimulus" not in k
+    }
+
+    text = build_electro_properties(parsed["selectors"], overrides=without_stimulus)
+
+    invented = [
+        line.strip() for line in text.splitlines()
+        if any(k in line for k in ("stim_start", "stim_duration",
+                                   "stim_amplitude", "stim_period", "nstim"))
+    ]
+    assert not invented, (
+        "builder invented a stimulus the case did not ask for:\n  "
+        + "\n  ".join(invented)
+    )

@@ -628,6 +628,16 @@ build_electro_properties(
 
 Override paths use the full `$ELECTRO_MODEL_COEFFS.<key>` form. Top-level keys (like `myocardiumSolver`) live in `selectors`, not `overrides`.
 
+**Block-gated families.** Some groups only appear once you configure them.
+`singleCellStimulus.*` is one: override any key under it — as above — and the
+rest of the family fills from its typical values, so the four keys the solver
+requires together (`stim_start`, `stim_period_S1`, `stim_duration`,
+`stim_amplitude`) are never written half-complete. Override none of them and
+**no stimulus block is generated at all**, which is deliberate: a run without a
+stimulus is legal, and inventing one from defaults would silently pace a case
+that asked for nothing. `bathPotentialDomain.*`, `ecgDomains.*` and
+`conductionNetworkDomains.*` behave the same way.
+
 ### Configure a bath bidomain run
 
 ```python
