@@ -15,7 +15,7 @@ Follow this standard workflow when assisting a user with a new or existing case:
 **Do NOT build an OpenFOAM case from absolute scratch.** OpenFOAM requires a complex interplay of dictionaries (`fvSchemes`, `fvSolution`, `blockMeshDict`, boundary fields in `0/`).
 
 When a user asks you to build a new case:
-1. **Find a Base Tutorial:** Identify the closest existing tutorial in `tutorials/` or `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/tutorials/` (e.g., `niederer_cartesian` for Bidomain, `monodomain_cartesian` for Monodomain).
+1. **Find a Base Tutorial:** Identify the closest existing tutorial in `tutorials/` or `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/tutorials/` (e.g., `niederer2012` for the closest Bidomain equivalent, `singleCell` as the simplest Monodomain entry point).
 2. **Copy the Scaffold:** Copy that tutorial folder to the user's requested location.
 3. **Mutate the Scaffold:** Use your code editing tools to modify the `constant/electroProperties`, `system/controlDict`, or boundary conditions to match the user's specific request.
 
@@ -23,19 +23,34 @@ When a user asks you to build a new case:
 
 The user will usually want to run a parameter sweep (e.g., testing 3 different ionic models, or 5 different conductivity values).
 
+A `sweep.json` has two top-level blocks:
+- `base`: the fixed selectors that stay the same across every case (e.g. which
+  registered `entry` to target, or `electro_selectors`/`physics_selectors`).
+- `sweep`: `mode` (`cross_product` or `zip`) plus `independent`, a flat map of
+  axis name → list of values to vary.
+
 1. Create a `sweep.json` file inside the user's case directory.
-2. Define the `axes` mapping exactly to the dictionary paths they want to mutate.
-3. Example of a `sweep.json` overriding an ionic model:
+2. Example of a `sweep.json` overriding the ionic model on the `singleCell` entry
+   (`ionic_model` and `tissue` must be given together, and each must be a value
+   the target entry's `make_spec()` actually accepts — check
+   `IONIC_MODEL_TISSUE_MAP` for valid pairs, or use `foamctl describe` on the
+   entry to see its accepted kwargs):
    ```json
    {
-       "axes": {
-           "ionic_model": {
-               "path": "constant/electroProperties:ionicModel",
-               "values": ["Courtemanche", "TenTusscher", "BuenoOrovio"]
+       "base": {
+           "entry": "singleCell"
+       },
+       "sweep": {
+           "mode": "zip",
+           "independent": {
+               "ionic_model": ["Courtemanche", "TNNP", "BuenoOrovio"],
+               "tissue": ["myocyte", "epicardialCells", "epicardialCells"]
            }
        }
    }
    ```
+3. The sweep is not run as part of `foamctl plan` — it is run separately with
+   `foamctl sweep-run` (see Section 4).
 
 ## 3. The Strict Diagnostics Loop (Auto-Repair)
 
@@ -44,8 +59,10 @@ This is your superpower. Before running the actual simulation, you MUST validate
 1. **Run the Planner:**
    Run the following command from the terminal:
    ```bash
-   foamctl plan --strict --entry ./user_case_dir --spec sweep.json
+   foamctl plan --strict --entry <registered_entry_name>
    ```
+   Note: `--spec` does not belong with `plan` — it is only used with
+   `sweep-plan`/`sweep-run` (see Section 4).
 2. **Parse the Diagnostics:**
    The strict planner will output a structured JSON report. It will check if the chosen solver supports the chosen ionic model, if required fields like `defaultFieldValues` are present, and if the dictionary groups are complete.
 3. **Auto-Repair:**
@@ -60,8 +77,10 @@ Once the strict plan passes, execute the sweep:
 
 1. **Run the Sweep:**
    ```bash
-   foamctl sweep-run --entry ./user_case_dir --spec sweep.json
+   foamctl sweep-run --spec sweep.json --output-dir ./sweep_output/
    ```
+   Note: `--entry` is not valid with sweep actions (the target entry lives in
+   `sweep.json`'s `base` block instead); `--output-dir` is required.
 2. **Analyze Artifacts:**
    After the run completes, read the `artifacts_manifest.json` file generated in the output directory.
 3. **Present to the User:**

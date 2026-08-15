@@ -28,8 +28,7 @@ before driving the orchestrator.
 The solver-injection refactor does not change this public loop. A single
 per-operation driver context now supplies focused solver capabilities
 internally, while omitted contexts, RunDocument v2, legacy fallbacks, commands,
-diagnostics, and artifacts retain their established behavior. The fallback
-inventory is documented in `openfoam_driver/core/COMPATIBILITY.md`.
+diagnostics, and artifacts retain their established behavior.
 
 Use strict planning before launching. It is the only path that tells an agent
 whether the run is machine-readable, validated, catalog-covered, artifact
@@ -175,7 +174,9 @@ design. The trust model is local/single-tenant: it assumes `PATH` and the
 `$FOAM_*BIN` variables are not attacker-controlled.
 
 See [`SECURITY.md`](SECURITY.md) for the full trust model, output-location
-contract, and the explicit list of what is and is not mitigated.
+contract, and the explicit list of what is and is not mitigated. For the
+plugin-boundary compatibility fallbacks (v1 plugin support, legacy shims),
+see `openfoam_driver/core/compatibility.py`.
 
 ## Compatibility one-shot loop
 
@@ -316,8 +317,7 @@ above, since there's no old manifest left to compare against. Mutually
 exclusive with `--retry-failed` (resume-only-failures vs. wipe-everything are
 contradictory intents).
 
-See `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md`
-for the full design rationale.
+See `openfoam_driver/core/runtime/sweep_runner.py` for the full implementation.
 
 ### Sweeping an existing registered tutorial (`base.entry`)
 
@@ -509,9 +509,9 @@ Three layers of discovery:
 
 1. **What tutorials exist?** `from openfoam_driver.introspection import describe_launch_matrix; describe_launch_matrix()` returns every registered entry.
 2. **What dict keys can I set?** Iterate `openfoam_driver.dict_entries.ELECTRO_PROPERTY_ENTRY_GROUPS` and `PHYSICS_PROPERTY_ENTRIES` for case-physics entries. For time-control use `openfoam_driver.dict_entries.CONTROL_DICT_ENTRIES` (`deltaT`, `endTime`). Each entry carries `driver_path`, `value_kind`, `enum_values`, `unit`, `typical_value`, and structured constraints (`applicable_when`, `forbidden_when`, `required_when`, `mutually_exclusive_with`).
-3. **What ionic models can I pick?** `from openfoam_driver.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
+3. **What ionic models can I pick?** `from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
 4. **What utilities are known?** `from openfoam_driver.utility_catalog import UTILITY_CATALOG`. Strict planning fails when a workflow command has missing required `produces` metadata.
-5. **What dict keys have parser limitations?** Read `openfoam_driver/scripts/dict_key_allowlist.json`. Strict dict-key scanning fails when new uncatalogued keys appear, stale catalog paths remain, or allowlist entries become unused.
+5. **What dict keys have parser limitations?** Read `openfoam_driver/plugins/cardiacfoam/dict_key_allowlist.json`. Strict dict-key scanning fails when new uncatalogued keys appear, stale catalog paths remain, or allowlist entries become unused.
 6. **What commands may a workflow step run, and what fields may a function object sample?** Read the `capability_manifest` block emitted by both `describe --entry <name>` and `plan --strict --entry <name>` (and `describe_entry(...)` / `strict_plan(...).to_json()` programmatically). It is the authoritative, machine-readable accept-surface: `allowed_commands` (`core`, `case_scripts`, `utilities`, plus the `$FOAM_APPBIN` note) mirrors the command allowlist exactly, and `samplable_fields` lists the field names the *resolved* model exposes,
 keyed by region. **Both blocks are plugin-dependent.** For cardiacFoam the
 regions are `electro` / `solid`; under `--plugin none` neither key is
@@ -764,17 +764,15 @@ If your agent depends on any of these, expect failure and consider a workaround 
 ## Where to read further
 
 - `applications/scripts/driverFoam/openfoam_driver/dict_entries.py` — every dict key with its constraints
-- `applications/scripts/driverFoam/openfoam_driver/ionic_model_catalog.py` — every ionic model
+- `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/ionic_model_catalog.py` — every ionic model
 - `applications/scripts/driverFoam/openfoam_driver/utility_catalog.py` — every utility's CLI surface and outputs
-- `applications/scripts/driverFoam/openfoam_driver/solver_coupling.py` — cross-domain coupler rules
+- `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/solver_coupling.py` — cross-domain coupler rules
 - `applications/scripts/driverFoam/openfoam_driver/strict_planning.py` — strict preflight report and RunDocument v2 assembly
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/run_model.py` — RunDocument v2 model and v1 migration
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow.py` — workflow DAG normalization and validation
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_state.py` — persisted step state model
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_runner.py` — low-level strict step executor
 - `applications/scripts/driverFoam/schemas/run-document.json` — canonical RunDocument v2 JSON Schema
-- `docs/superpowers/plans/2026-05-19-driverfoam-agentic-integration.md` — historical architecture rationale
-- `docs/superpowers/specs/2026-07-01-driverfoam-strict-sweep-orchestration-design.md` — sweep orchestration design and rationale
 
 ## Plugin selection (Phase 1)
 

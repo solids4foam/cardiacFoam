@@ -21,7 +21,7 @@ provides (mesh setup, parameter sweeps, convergence ladders, artifact
 tracking) in untracked bash. This has caused real, silent damage before: an
 ad-hoc script once flipped a tracked `fvSchemes` default and overwrote
 `box.geo.template` with the wrong mesh-generation variant, undetected until a
-manual audit (commit `fa1a48d5`). If an existing tutorial script already does
+manual audit. If an existing tutorial script already does
 what you need, reuse it. Otherwise, write a `sweep.json` (or `RunDocument`)
 and drive it through `foamctl` — don't add a new `run_*.sh`.
 
