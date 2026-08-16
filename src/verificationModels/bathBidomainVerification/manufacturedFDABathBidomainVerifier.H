@@ -66,7 +66,6 @@ public:
 private:
 
     bathVariant variant_;
-    fileName outputFileName_;
 
     //- Mean of a field over the mesh, volume weighted. Used to remove the
     //  arbitrary constant before comparing phiE in the electrodePair variant.

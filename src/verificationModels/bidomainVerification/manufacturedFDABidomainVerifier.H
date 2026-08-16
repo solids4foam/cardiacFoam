@@ -42,7 +42,6 @@ class manufacturedFDABidomainVerifier : public electroVerificationModel
     scalar k_;
     scalar phiEReferenceValue_;
     point phiEReferencePoint_;
-    fileName outputFileName_;
 
     const dictionary& verificationDict() const;
 

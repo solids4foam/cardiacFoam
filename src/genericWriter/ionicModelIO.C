@@ -938,11 +938,6 @@ namespace Foam
         const dictionary& dict
     )
     {
-        if (dict.found("outputSuffix"))
-        {
-            return dict.lookupOrDefault<word>("outputSuffix", word());
-        }
-
         if (!dict.found("ionicConstantOverrides"))
         {
             return word();

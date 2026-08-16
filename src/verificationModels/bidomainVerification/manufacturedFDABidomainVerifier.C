@@ -49,8 +49,7 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     errorsReported_(false),
     k_(0.5),
     phiEReferenceValue_(0.0),
-    phiEReferencePoint_(point::zero),
-    outputFileName_()
+    phiEReferencePoint_(point::zero)
 {
     const dictionary& coeffDict = this->dict();
     const dictionary& cfg = verificationDict();
@@ -63,7 +62,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
     phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
     phiEReferencePoint_ = coeffDict.get<point>("phiERefPoint");
-    outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
 }
 
 
@@ -283,22 +281,18 @@ void manufacturedFDABidomainVerifier::postProcess
     const scalar dt = time.deltaTValue();
     const label nSteps = max(label(0), time.timeIndex());
 
-    fileName outputFile = outputFileName_;
-    if (outputFile.empty())
-    {
-        const fileName outputDir(time.globalPath()/"postProcessing");
-        mkDir(outputDir);
-        outputFile =
-            outputDir
-          / (
-                dimensionName(dimension)
-              + "_"
-              + Foam::name(nPerDirection)
-              + "_cells_"
-              + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
-              + ".dat"
-            );
-    }
+    const fileName outputDir(time.globalPath()/"postProcessing");
+    mkDir(outputDir);
+    const fileName outputFile =
+        outputDir
+      / (
+            dimensionName(dimension)
+          + "_"
+          + Foam::name(nPerDirection)
+          + "_cells_"
+          + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
+          + ".dat"
+        );
 
     if (Pstream::master())
     {

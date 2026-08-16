@@ -78,8 +78,7 @@ Foam::scalar Foam::manufacturedFDABathBidomainVerifier::volumeMean
 
 
 // Return the verificationModel sub-dictionary, which holds all
-// bath-bidomain verifier parameters (k, alpha, fdaBathVariant,
-// enabled, outputFile).
+// bath-bidomain verifier parameters (k, alpha, fdaBathVariant, enabled).
 const dictionary&
 manufacturedFDABathBidomainVerifier::verificationDict() const
 {
@@ -99,8 +98,7 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     errorsReported_(false),
     k_(1.0/Foam::sqrt(2.0)),
     alpha_(0.01),
-    variant_(bathVariant::groundElectrode),
-    outputFileName_()
+    variant_(bathVariant::groundElectrode)
 {
     const dictionary& cfg = verificationDict();
 
@@ -127,8 +125,6 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
           ? bathVariant::groundElectrode
           : bathVariant::electrodePair;
     }
-
-    outputFileName_ = cfg.lookupOrDefault<fileName>("outputFile", fileName());
 }
 
 
@@ -439,23 +435,19 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const scalar dt = time.deltaTValue();
     const label nSteps = max(label(0), time.timeIndex());
 
-    fileName outputFile = outputFileName_;
-    if (outputFile.empty())
-    {
-        const fileName outputDir(time.globalPath()/"postProcessing");
-        mkDir(outputDir);
-        outputFile =
-            outputDir
-          / (
-                "bathBidomain_"
-              + dimensionName(dimension)
-              + "_"
-              + Foam::name(nPerDirection)
-              + "_cells_"
-              + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
-              + ".dat"
-            );
-    }
+    const fileName outputDir(time.globalPath()/"postProcessing");
+    mkDir(outputDir);
+    const fileName outputFile =
+        outputDir
+      / (
+            "bathBidomain_"
+          + dimensionName(dimension)
+          + "_"
+          + Foam::name(nPerDirection)
+          + "_cells_"
+          + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
+          + ".dat"
+        );
 
     if (Pstream::master())
     {
