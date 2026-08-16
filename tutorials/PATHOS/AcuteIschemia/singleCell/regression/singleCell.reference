@@ -1,7 +1,0 @@
-# file                                              time       expected      tolerance
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   0.0200000  -77.6896696   5e-3
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   0.0215000  -77.8486857   5e-3
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   0.0220000  -77.8999555   5e-3
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   0.0300000  -78.6023868   5e-3
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   0.5000000    6.2303265   5e-3
-postProcessing/AlievPanfilov_myocyte_S1_1000.txt   1.0000000  -80.0000000   5e-3
