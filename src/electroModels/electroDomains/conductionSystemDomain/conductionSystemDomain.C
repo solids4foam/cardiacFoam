@@ -507,7 +507,7 @@ conductionSystemDomain::conductionSystemDomain
             supportMesh_.time().timeName(),
             supportMesh_,
             IOobject::READ_IF_PRESENT,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         0
     ),
@@ -519,7 +519,7 @@ conductionSystemDomain::conductionSystemDomain
             supportMesh_.time().timeName(),
             supportMesh_,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         0
     ),
@@ -746,8 +746,11 @@ void conductionSystemDomain::write()
         return;
     }
 
-    writeGraphStateField(Vm1D_);
-    writeGraphStateField(Iion1D_);
+    if (ionicModelPtr_.valid())
+    {
+        writeGraphStateField(Vm1D_);
+        writeGraphStateField(Iion1D_);
+    }
     writeGraphStateField(activationTime_);
 
     DynamicList<scalar> values;
@@ -888,6 +891,7 @@ void conductionSystemDomain::write()
             Iion1D_,
             terminalNodes_,
             terminalSource_,
+            ionicModelPtr_.valid(),
             vtkFields,
             vtkNames
         );

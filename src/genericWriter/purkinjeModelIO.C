@@ -174,6 +174,7 @@ void purkinjeModelIO::writeVTK
             const scalarField& Iion1D,
             const labelList&   pvjNodes,
             const scalarField& terminalSource,
+            bool                includeVmIion,
             const PtrList<scalarField>& ionicFields,
             const wordList&             ionicFieldNames
         )
@@ -221,24 +222,29 @@ void purkinjeModelIO::writeVTK
     // ---- Point data fields ----
     os  << "\nPOINT_DATA " << nNodes << "\n";
 
-    // Vm natively in Volts
-    os  << "SCALARS Vm_V float 1\n"
-        << "LOOKUP_TABLE default\n";
-    forAll(Vm1D, i)
+    if (includeVmIion)
     {
-        os  << Vm1D[i] << "\n";
+        // Vm natively in Volts
+        os  << "SCALARS Vm_V float 1\n"
+            << "LOOKUP_TABLE default\n";
+        forAll(Vm1D, i)
+        {
+            os  << Vm1D[i] << "\n";
+        }
+
+        // Ionic current
+        os  << "SCALARS Iion float 1\n"
+            << "LOOKUP_TABLE default\n";
+        forAll(Iion1D, i)
+        {
+            os  << Iion1D[i] << "\n";
+        }
     }
 
-    // Ionic current
-    os  << "SCALARS Iion float 1\n"
-        << "LOOKUP_TABLE default\n";
-    forAll(Iion1D, i)
-    {
-        os  << Iion1D[i] << "\n";
-    }
-
-    // Volumetric coupling source — non-zero only at PVJ nodes
-    if (pvjNodes.size() && terminalSource.size() == pvjNodes.size())
+    // Volumetric coupling source — non-zero only at PVJ nodes. Eikonal
+    // couplers work on arrival time, not a volumetric source, so this is
+    // meaningless (permanently zero) when there is no ionic model.
+    if (includeVmIion && pvjNodes.size() && terminalSource.size() == pvjNodes.size())
     {
         scalarField pvjField(nNodes, 0.0);
         forAll(pvjNodes, k)
@@ -251,22 +257,6 @@ void purkinjeModelIO::writeVTK
         forAll(pvjField, i)
         {
             os  << pvjField[i] << "\n";
-        }
-    }
-
-    // PVJ marker — 1 at terminal nodes, 0 elsewhere (useful for selection in
-    // ParaView with Threshold filter)
-    {
-        scalarField pvjMarker(nNodes, 0.0);
-        forAll(pvjNodes, k)
-        {
-            pvjMarker[pvjNodes[k]] = 1.0;
-        }
-        os  << "SCALARS isPVJ float 1\n"
-            << "LOOKUP_TABLE default\n";
-        forAll(pvjMarker, i)
-        {
-            os  << pvjMarker[i] << "\n";
         }
     }
 

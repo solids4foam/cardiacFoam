@@ -120,6 +120,7 @@ public:
         //  Iion1D        : ionic current at every node.
         //  pvjNodes      : node indices of the PVJ terminals.
         //  terminalSource: volumetric source at each PVJ (size = pvjNodes.size()).
+        //  includeVmIion : false for ionic-model-less (eikonal) 1D solvers.
         static void writeVTK
         (
             const fileName&     outDir,
@@ -132,6 +133,7 @@ public:
             const scalarField&  Iion1D,
             const labelList&    pvjNodes,
             const scalarField&  terminalSource,
+            bool                includeVmIion = true,
             const PtrList<scalarField>& ionicFields = PtrList<scalarField>(),
             const wordList&             ionicFieldNames = wordList()
         );
