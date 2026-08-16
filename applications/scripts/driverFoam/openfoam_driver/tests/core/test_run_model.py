@@ -124,18 +124,27 @@ def test_schema_accepts_valid_heterogeneity_block(schema):
     jsonschema.validate(doc, schema)  # does not raise
 
 
-def test_schema_rejects_unknown_heterogeneity_mode(schema):
+def test_schema_rejects_unknown_heterogeneity_mode() -> None:
+    # The physics-phase vocabulary moved to the cardiac plugin's own config
+    # schema (P2.2) -- core's run-document schema no longer enforces it, so
+    # this now validates against the plugin schema directly.
+    from openfoam_driver.plugins.cardiacfoam.config_schema import CONFIG_SCHEMA
+
     doc = _valid_run_dict()
     doc["config"]["physics"] = {"ionicHeterogeneity.mode": "bogusMode"}
     with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(doc, schema)
+        jsonschema.validate(doc["config"], CONFIG_SCHEMA)
 
 
-def test_schema_rejects_unknown_tissue(schema):
+def test_schema_rejects_unknown_tissue() -> None:
+    # See test_schema_rejects_unknown_heterogeneity_mode: validated against
+    # the cardiac plugin's own config schema now, not core's.
+    from openfoam_driver.plugins.cardiacfoam.config_schema import CONFIG_SCHEMA
+
     doc = _valid_run_dict()
     doc["config"]["physics"] = {"tissue": "notATissue"}
     with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(doc, schema)
+        jsonschema.validate(doc["config"], CONFIG_SCHEMA)
 
 
 def test_schema_still_allows_unlisted_physics_keys(schema):
@@ -252,3 +261,19 @@ def test_phase_literal_is_not_independently_redefined() -> None:
     from openfoam_driver.core.runtime.run_model import Phase as RunModelPhase
 
     assert ContractsPhase is RunModelPhase
+
+
+def test_run_document_config_accepts_arbitrary_non_cardiac_keys() -> None:
+    """A non-cardiac plugin's config shape (no anatomy/physics/stimulus/solver
+    keys at all) must pass core schema validation -- the core schema no longer
+    enforces a fixed phase vocabulary."""
+    from openfoam_driver.core.runtime.run_model import RunDocument
+
+    doc = RunDocument(
+        id="plan-non-cardiac",
+        name="non-cardiac-entry",
+        status="draft",
+        config={"mesh": {"type": "tet"}, "material": {"model": "neoHookean"}},
+    )
+    payload = doc.to_json()
+    assert payload["config"] == {"mesh": {"type": "tet"}, "material": {"model": "neoHookean"}}

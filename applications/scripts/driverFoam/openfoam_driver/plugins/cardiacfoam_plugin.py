@@ -291,6 +291,14 @@ class CardiacFoamPlugin:
 
         return build_config(spec)
 
+    def get_run_document_config_schema(self) -> dict:
+        """cardiacFoam's RunDocument.config JSON Schema (the phase vocabulary)."""
+        from openfoam_driver.plugins.cardiacfoam.config_schema import (
+            get_run_document_config_schema,
+        )
+
+        return get_run_document_config_schema()
+
     def has_case_marker(self, case_root: Path) -> bool:
         """Return the historical cardiac case-folder discovery evidence."""
         from openfoam_driver.plugins.cardiacfoam.case_compatibility import has_case_marker

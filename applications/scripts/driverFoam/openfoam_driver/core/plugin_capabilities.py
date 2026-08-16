@@ -138,6 +138,7 @@ class RunDocumentConfigurationCapability(Protocol):
     def build(
         self, request: RunDocumentConfigurationRequest,
     ) -> tuple[dict[str, dict[str, Any]], tuple["StrictDiagnostic", ...]]: ...
+    def schema(self) -> dict[str, Any]: ...
 
 
 class CxxMappingCapability(Protocol):
@@ -359,6 +360,14 @@ class _RunDocumentConfigurationAdapter:
         from .compatibility import legacy_run_document_config
 
         return legacy_run_document_config(request.spec)
+
+    def schema(self) -> dict[str, Any]:
+        hook = getattr(self.plugin, "get_run_document_config_schema", None)
+        if callable(hook):
+            return hook()
+        from .compatibility import legacy_run_document_config_schema
+
+        return legacy_run_document_config_schema(self.plugin)
 
 
 @dataclass(frozen=True)

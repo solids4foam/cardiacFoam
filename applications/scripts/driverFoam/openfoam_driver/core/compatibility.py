@@ -81,6 +81,18 @@ def legacy_run_document_config(spec):
     return build_config(spec)
 
 
+def legacy_run_document_config_schema(plugin) -> dict:
+    """v1 plugins predate get_run_document_config_schema(). Only the built-in
+    cardiac plugin has an authored config schema; other v1 plugins get a fully
+    open schema (no constraint) and must declare their own by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.config_schema import get_run_document_config_schema
+
+        return get_run_document_config_schema()
+    return {"type": "object", "additionalProperties": True}
+
+
 def legacy_nondimensional_case(spec) -> bool:
     """Preserve cardiac mesh-diagnostic exemptions for legacy plugins."""
 

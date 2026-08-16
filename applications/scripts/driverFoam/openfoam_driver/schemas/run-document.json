@@ -33,14 +33,8 @@
     },
     "config": {
       "type": "object",
-      "required": ["anatomy", "physics", "stimulus", "solver"],
-      "properties": {
-        "anatomy": {"type": "object"},
-        "physics": {"$ref": "#/$defs/physicsSlice"},
-        "stimulus": {"type": "object"},
-        "solver": {"type": "object"}
-      },
-      "additionalProperties": false
+      "description": "Plugin-defined configuration. Core imposes no required keys or shape; a plugin declares and validates its own config schema via get_run_document_config_schema().",
+      "additionalProperties": true
     },
     "resolvedEntry": {
       "type": ["object", "null"],
@@ -289,41 +283,6 @@
         "time_indexed": {"type": "boolean"}
       },
       "additionalProperties": false
-    },
-    "physicsSlice": {
-      "type": "object",
-      "description": "Physics-phase configuration as flat slot-keys. The complete authoritative key catalogue is openfoam_driver.dict_entries.",
-      "properties": {
-        "myocardiumSolver": {
-          "type": "string",
-          "description": "Top-level myocardium solver selector."
-        },
-        "ionicModel": {
-          "type": "string",
-          "description": "Ionic cell model selector."
-        },
-        "tissue": {
-          "type": "string",
-          "enum": ["epicardialCells", "mCells", "endocardialCells", "myocyte"]
-        },
-        "ionicHeterogeneity.field": {"type": "string"},
-        "ionicHeterogeneity.mode": {
-          "type": "string",
-          "enum": ["transmuralBands"]
-        },
-        "ionicHeterogeneity.endoMInterface": {"type": ["string", "number"]},
-        "ionicHeterogeneity.mEpiInterface": {"type": ["string", "number"]},
-        "ionicHeterogeneity.transitionWidth": {"type": ["string", "number"]},
-        "ionicHeterogeneity.transitionMode": {
-          "type": "string",
-          "enum": ["blend", "hard"]
-        },
-        "ionicHeterogeneity.smoothing": {
-          "type": "string",
-          "enum": ["smoothstep"]
-        }
-      },
-      "additionalProperties": true
     }
   }
 }

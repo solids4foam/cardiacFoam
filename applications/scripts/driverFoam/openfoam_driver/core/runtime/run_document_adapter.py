@@ -56,6 +56,20 @@ def _run_document_from_case(
     diagnostics: list[StrictDiagnostic] = list(configuration_diagnostics)
     generic_case = bool(spec.metadata.get("generic_case")) if spec.metadata else False
 
+    if not generic_case:
+        import jsonschema
+
+        config_schema = driver_context.capabilities.run_document_configuration.schema()
+        try:
+            jsonschema.validate(config, config_schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            diagnostics.append(diagnostic(
+                "error",
+                "plugin_config_schema_violation",
+                f"Plugin-declared config schema rejected the built config: {exc.message}",
+                field=".".join(str(part) for part in exc.absolute_path) or "",
+            ))
+
     run_doc = RunDocument(
         id=f"plan-{entry}",
         name=entry,
