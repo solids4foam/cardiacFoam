@@ -53,6 +53,8 @@ protected:
     const fvMesh& supportMesh_;
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
+    // Registered grad(Vm), looked up by name by "corrected" boundary conditions.
+    volVectorField gradVm_;
     volScalarField sourceField_;
     volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
@@ -85,6 +87,9 @@ protected:
     ) const;
 
     void updateActivationTime();
+
+    //- Refresh gradVm_ before a diffusion solve.
+    void updateGradVm();
 
     //- Advance the ionic ODE over [t0, t0+dt] and update Iion_.
     void solveIonicCurrent(scalar t0, scalar dt);

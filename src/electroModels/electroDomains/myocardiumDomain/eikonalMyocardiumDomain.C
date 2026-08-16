@@ -100,7 +100,7 @@ void checkVerificationBoundaryTypes(const volScalarField& activationTime)
     {
         const fvPatchScalarField& patchField = boundary[patchI];
 
-        if (patchField.empty() || patchField.type() == "empty")
+        if (patchField.empty() || patchField.type() == "empty" || patchField.patch().coupled())
         {
             continue;
         }
@@ -250,7 +250,18 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
         "zeroGradient"
     ),
-    gradActivationTime_(fvc::grad(activationTime_)),
+    gradActivationTime_
+    (
+        IOobject
+        (
+            "grad(" + activationTime_.name() + ")",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        fvc::grad(activationTime_)
+    ),
     stimulusCellIDs_(0),
     electroProperties_(electroProperties),
     chi_("chi", dimArea/dimVolume, electroProperties),

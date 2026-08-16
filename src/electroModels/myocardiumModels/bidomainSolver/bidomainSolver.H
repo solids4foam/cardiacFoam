@@ -42,6 +42,8 @@ class bidomainSolver
     public myocardiumSolver
 {
     volScalarField phiE_;
+    // Registered grad(phiE), looked up by name by "corrected" boundary conditions.
+    volVectorField gradPhiE_;
     volScalarField phiI_;
     volTensorField Gi_;
     volTensorField Ge_;
@@ -66,6 +68,9 @@ class bidomainSolver
     bool externalPhiEBound() const;
 
     void restrictExternalPhiE();
+
+    //- Refresh gradPhiE_ before a phiE diffusion solve.
+    void updateGradPhiE();
 
     void solvePhiEImplicitOnce(electroVolumeFieldDomain& domain);
 

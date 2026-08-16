@@ -54,6 +54,19 @@ bidomainSolver::bidomainSolver
         dimensionedScalar("phiE", dimVoltage, 0.0),
         "zeroGradient"
     ),
+    gradPhiE_
+    (
+        IOobject
+        (
+            "grad(" + phiE_.name() + ")",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedVector("0", dimVoltage/dimLength, vector::zero)
+    ),
     phiI_
     (
         IOobject
@@ -120,6 +133,12 @@ bidomainSolver::bidomainSolver
     externalPhiEBasePtr_(nullptr),
     externalPhiECellMapPtr_(nullptr)
 {
+}
+
+
+void bidomainSolver::updateGradPhiE()
+{
+    gradPhiE_ = fvc::grad(phiE_);
 }
 
 
@@ -248,6 +267,7 @@ void bidomainSolver::solveDiffusionExplicit
     {
         const label refCell = referenceCell();
 
+        updateGradPhiE();
         fvScalarMatrix phiEqn
         (
             fvm::laplacian(GiPlusGe_, phiE_)
@@ -318,6 +338,7 @@ void bidomainSolver::solvePhiEImplicitOnce
     {
         const label refCell = referenceCell();
 
+        updateGradPhiE();
         fvScalarMatrix phiEqn
         (
             fvm::laplacian(GiPlusGe_, phiE_)

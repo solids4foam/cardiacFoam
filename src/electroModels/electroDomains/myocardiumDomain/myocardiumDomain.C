@@ -209,6 +209,19 @@ myocardiumDomain::myocardiumDomain
         dimensionedScalar("Vm", dimVoltage, -0.084),
         "zeroGradient"
     ),
+    gradVm_
+    (
+        IOobject
+        (
+            "grad(" + Vm_.name() + ")",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedVector("0", dimVoltage/dimLength, vector::zero)
+    ),
     sourceField_
     (
         IOobject
@@ -440,6 +453,12 @@ void myocardiumDomain::updateExternalStimulusCurrent
 }
 
 
+void myocardiumDomain::updateGradVm()
+{
+    gradVm_ = fvc::grad(Vm_);
+}
+
+
 void myocardiumDomain::updateActivationTime()
 {
     const scalarField& VmI = Vm_.primitiveField();
@@ -658,6 +677,8 @@ void myocardiumDomain::advance
     solveIonicCurrent(t0, dt);
     ionicModel_.clearVmRate();
 
+    updateGradVm();
+
     if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
@@ -699,6 +720,8 @@ void myocardiumDomain::solveDiffusionStep
 {
     (void)t0;
 
+    updateGradVm();
+
     if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
@@ -737,6 +760,7 @@ void myocardiumDomain::solveDiffusionStepOnce
     {
         while (pimplePtr->correctNonOrthogonal())
         {
+            updateGradVm();
             diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
         }
     }
