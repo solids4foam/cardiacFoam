@@ -82,7 +82,27 @@ def solve_steps(
 
     n = read_number_of_subdomains(case_root, decompose_par_dict_relpath)
     steps = [
-        {"id": "decomposePar", "command": "decomposePar", "depends_on": depends_on},
+        {
+            "id": "decomposePar",
+            "command": "decomposePar",
+            # -force: entry-based sweeps reuse one shared case_root across
+            # cases, so a prior case's processor*/ dirs are still on disk --
+            # bare decomposePar refuses to run against those. -force deletes
+            # them before decomposing (confirmed via decomposePar.C: a full
+            # rmDir per processor* dir, not a merge -- no stale data survives
+            # to be read back).
+            # Deliberately no -time restriction here: OpenFOAM's -time
+            # <value> selects the *nearest* existing time to that value, not
+            # an exact match (timeSelector.C) -- for case families with no
+            # real 0/ (e.g. manufactured-solution verifiers, whose IC is
+            # computed by the solver, not read from disk), "-time 0" would
+            # silently match a leftover reconstructed time directory from a
+            # prior sweep case instead. Removing any such stale time
+            # directories between cases is the sweep runner's job (see
+            # sweep_runner._materialize_entry_case), not this step's.
+            "args": ["-force"],
+            "depends_on": depends_on,
+        },
         {
             "id": solve_id,
             "command": "mpirun",

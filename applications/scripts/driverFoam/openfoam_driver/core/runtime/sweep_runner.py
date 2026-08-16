@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -79,6 +80,45 @@ def _relative_or_absolute(path: Path, base: Path) -> str:
         return str(path)
 
 
+def _is_stale_time_dir_name(name: str) -> bool:
+    """True for an OpenFOAM time-directory name other than the literal '0'.
+
+    '0' is a real, on-disk initial condition for some tutorials and must
+    never be touched here. Every other numeric name (e.g. '0.0982143',
+    written by a prior case's reconstructPar) is always solve *output*,
+    never an input -- safe to clear before the next case reuses this
+    case_root.
+    """
+    if name == "0":
+        return False
+    try:
+        float(name)
+    except ValueError:
+        return False
+    return True
+
+
+def _clean_stale_time_directories(case_root: Path) -> None:
+    """Remove a prior case's leftover reconstructed time directories.
+
+    Entry-based sweeps reuse one shared case_root across cases (see
+    _materialize_entry_case's docstring). decomposePar's -force flag already
+    clears stale processor*/ dirs, but a case with no real 0/ (e.g. a
+    manufactured-solution verifier, whose IC the solver computes rather than
+    reads from disk) has nothing to anchor OpenFOAM's -time selector to --
+    "-time <value>" matches the *nearest* existing time, not an exact one
+    (confirmed via timeSelector.C), so a leftover time directory from the
+    previous case would silently get decomposed onto this case's new mesh
+    instead. Clearing them here, before the case that would otherwise read
+    them, is the fix.
+    """
+    if not case_root.is_dir():
+        return
+    for child in case_root.iterdir():
+        if child.is_dir() and _is_stale_time_dir_name(child.name):
+            shutil.rmtree(child)
+
+
 def _materialize_entry_case(
     entry: str,
     routed: dict[str, Any],
@@ -103,6 +143,7 @@ def _materialize_entry_case(
             f"for entry '{entry}'; expected exactly 1 -- add enough constraining "
             "overrides (e.g. 'solvers') to collapse this combination to a single case"
         )
+    _clean_stale_time_directories(spec.case_root)
     spec.apply_case(spec.case_root, cases[0])
 
 
