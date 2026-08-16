@@ -47,7 +47,6 @@ class eikonalECG
     scalar startTime_;
     scalar endTime_;
     scalar deltaT_;
-    Switch report_;
     scalar sigmaE_;
 
     scalarField lastValues_;

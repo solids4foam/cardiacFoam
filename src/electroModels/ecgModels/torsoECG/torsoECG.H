@@ -40,7 +40,6 @@ class torsoECG
 :
     public ecgSolver
 {
-    Switch reportElectrodeLookup_;
     labelList electrodeCells_;
     bool cellsBuilt_;
 

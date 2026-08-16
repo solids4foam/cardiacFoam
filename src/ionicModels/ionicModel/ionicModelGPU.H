@@ -269,9 +269,6 @@ protected:
 
 public:
 
-        virtual void writeProfilingSummary() const
-        {}
-
         virtual void write(const scalar t, OFstream& os) const override
         {
             const wordList names = exportedFieldNames();

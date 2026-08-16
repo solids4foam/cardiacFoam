@@ -386,15 +386,6 @@ void conductionSystemDomain::initialiseOutputControls()
         "debug",
         wordList()
     );
-
-    if (ovDict.found("probeNodes"))
-    {
-        probeNodes_ = ovDict.lookup("probeNodes");
-    }
-    else
-    {
-        probeNodes_ = identity(graph_.nNodes);
-    }
 }
 
 
@@ -458,10 +449,10 @@ void conductionSystemDomain::openOutputFile()
     forAll(ionicExport_, i)
     {
         const word& var = ionicExport_[i];
-        DynamicList<word> ionicColNames(probeNodes_.size());
-        forAll(probeNodes_, pI)
+        DynamicList<word> ionicColNames(graph_.nNodes);
+        for (label nodeI = 0; nodeI < graph_.nNodes; ++nodeI)
         {
-            ionicColNames.append("node" + Foam::name(probeNodes_[pI]) + "_" + var);
+            ionicColNames.append("node" + Foam::name(nodeI) + "_" + var);
         }
 
         ionicOutputPtrs_.set
@@ -830,10 +821,10 @@ void conductionSystemDomain::write()
 
             if (Pstream::master() && ionicOutputPtrs_.set(i))
             {
-                DynamicList<scalar> ionicValues(probeNodes_.size());
-                forAll(probeNodes_, pI)
+                DynamicList<scalar> ionicValues(varField.size());
+                forAll(varField, nodeI)
                 {
-                    ionicValues.append(varField[probeNodes_[pI]]);
+                    ionicValues.append(varField[nodeI]);
                 }
                 purkinjeModelIO::writeRow(ionicOutputPtrs_[i], time().value(), ionicValues);
             }

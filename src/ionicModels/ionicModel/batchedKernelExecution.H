@@ -29,7 +29,6 @@ Author
 #ifndef batchedKernelExecution_H
 #define batchedKernelExecution_H
 
-#include <chrono>
 #include <cmath>
 #ifdef _OPENMP
 #include <omp.h>
@@ -37,29 +36,6 @@ Author
 
 namespace Foam
 {
-
-struct BatchedKernelProfileTotals
-{
-    scalar vmInputSyncTime;
-    scalar gatherScatterTime;
-    scalar evaluateStateTime;
-    scalar stateUpdateTime;
-    scalar stabilizeTime;
-    scalar finalSyncTime;
-    label evaluateStateCalls;
-
-    BatchedKernelProfileTotals()
-    :
-        vmInputSyncTime(0.0),
-        gatherScatterTime(0.0),
-        evaluateStateTime(0.0),
-        stateUpdateTime(0.0),
-        stabilizeTime(0.0),
-        finalSyncTime(0.0),
-        evaluateStateCalls(0)
-    {}
-};
-
 
 struct BatchedKernelConfig
 {
@@ -725,17 +701,13 @@ public:
 };
 
 
-template<class Backend, class KernelConfig, class CellScratch, class SolveProfileTotals>
+template<class Backend, class KernelConfig, class CellScratch>
 class BatchedKernelExecutor
 {
-    using clock = std::chrono::steady_clock;
-
     const Backend& backend_;
     const KernelConfig& kernel_;
     const bool parallelCellLoops_;
-    const bool profileSolve_;
     PtrList<CellScratch>& threadScratch_;
-    List<SolveProfileTotals>& threadProfiles_;
 
     static label cellLoopThreadIndex()
     {
@@ -753,44 +725,14 @@ public:
         const Backend& backend,
         const KernelConfig& kernel,
         const bool parallelCellLoops,
-        const bool profileSolve,
-        PtrList<CellScratch>& threadScratch,
-        List<SolveProfileTotals>& threadProfiles
+        PtrList<CellScratch>& threadScratch
     )
     :
         backend_(backend),
         kernel_(kernel),
         parallelCellLoops_(parallelCellLoops),
-        profileSolve_(profileSolve),
-        threadScratch_(threadScratch),
-        threadProfiles_(threadProfiles)
+        threadScratch_(threadScratch)
     {}
-
-    clock::time_point profileStart() const
-    {
-        return profileSolve_ ? clock::now() : clock::time_point();
-    }
-
-    void addProfileTime
-    (
-        scalar& total,
-        const clock::time_point& start
-    ) const
-    {
-        if (profileSolve_)
-        {
-            total +=
-                std::chrono::duration<scalar>(clock::now() - start).count();
-        }
-    }
-
-    void recordEvaluateCall(label& total) const
-    {
-        if (profileSolve_)
-        {
-            ++total;
-        }
-    }
 
     template<class VmBuffer>
     void syncVmInputs(const VmBuffer& Vm) const
@@ -800,15 +742,11 @@ public:
 #endif
         for (label cellI = 0; cellI < backend_.nCells(); ++cellI)
         {
-            SolveProfileTotals& profile =
-                threadProfiles_[cellLoopThreadIndex()];
-            const auto vmSyncStart = profileStart();
             if (!kernel_.solveVm)
             {
                 backend_.stateRef(cellI, kernel_.vmStateI) =
                     backend_.vmInputToState(Vm[cellI]);
             }
-            addProfileTime(profile.vmInputSyncTime, vmSyncStart);
         }
     }
 
@@ -826,20 +764,12 @@ public:
         }
 
         CellScratch& scratch = threadScratch_[0];
-        SolveProfileTotals& profile = threadProfiles_[0];
-        auto gatherStart = profileStart();
         backend_.gatherCellState(sampleCell, scratch.stateValues);
-        addProfileTime(profile.gatherScatterTime, gatherStart);
         scratch.resetPrimary();
 
-        auto evaluateStart = profileStart();
         backend_.evaluateScratchAtTime(sampleCell, tStart, scratch, kernel_);
-        addProfileTime(profile.evaluateStateTime, evaluateStart);
-        recordEvaluateCall(profile.evaluateStateCalls);
 
-        auto scatterStart = profileStart();
         backend_.syncEvaluatedOutputs(sampleCell, scratch, kernel_);
-        addProfileTime(profile.finalSyncTime, scatterStart);
         backend_.stepField()[sampleCell] = dtModel;
         backend_.setIOEvaluationModelTime(tStart);
         backend_.debugPrintFields(sampleCell, tStart, tEnd, dtModel);
@@ -861,11 +791,7 @@ public:
         for (label cellI = 0; cellI < backend_.nCells(); ++cellI)
         {
             CellScratch& scratch = threadScratch_[cellLoopThreadIndex()];
-            SolveProfileTotals& profile =
-                threadProfiles_[cellLoopThreadIndex()];
-            auto gatherStart = profileStart();
             backend_.gatherCellState(cellI, scratch.stateValues);
-            addProfileTime(profile.gatherScatterTime, gatherStart);
 
             for (label substepI = 0; substepI < nSubsteps; ++substepI)
             {
@@ -873,47 +799,29 @@ public:
                     tStart + scalar(substepI)*kernel_.dtSubstep;
 
                 scratch.resetPrimary();
-                auto evaluateStart = profileStart();
                 backend_.evaluateScratchAtTime(cellI, substepTime, scratch, kernel_);
-                addProfileTime(profile.evaluateStateTime, evaluateStart);
-                recordEvaluateCall(profile.evaluateStateCalls);
                 backend_.stepField()[cellI] = kernel_.dtSubstep;
 
-                auto updateStart = profileStart();
                 if (kernel_.useExplicitEuler)
                 {
                     backend_.applyExplicitEulerStep(scratch, kernel_);
-                    addProfileTime(profile.stateUpdateTime, updateStart);
                 }
                 else
                 {
                     backend_.buildPredictorState(cellI, scratch, kernel_);
-                    addProfileTime(profile.stateUpdateTime, updateStart);
-
-                    updateStart = profileStart();
                     backend_.applyCorrectorState(scratch, kernel_);
-                    addProfileTime(profile.stateUpdateTime, updateStart);
                 }
 
-                auto stabilizeStart = profileStart();
                 backend_.stabilizeStateValues(scratch.stateValues);
-                addProfileTime(profile.stabilizeTime, stabilizeStart);
             }
 
             scratch.resetPrimary();
-            auto evaluateStart = profileStart();
             backend_.evaluateScratchAtTime(cellI, tEnd, scratch, kernel_);
-            addProfileTime(profile.evaluateStateTime, evaluateStart);
-            recordEvaluateCall(profile.evaluateStateCalls);
 
-            auto finalSyncStart = profileStart();
             backend_.syncEvaluatedOutputs(cellI, scratch, kernel_);
             Im[cellI] = backend_.ionicCurrentFromScratch(cellI, scratch, kernel_);
-            addProfileTime(profile.finalSyncTime, finalSyncStart);
 
-            auto scatterStart = profileStart();
             backend_.scatterCellState(cellI, scratch.stateValues);
-            addProfileTime(profile.gatherScatterTime, scatterStart);
         }
     }
 };

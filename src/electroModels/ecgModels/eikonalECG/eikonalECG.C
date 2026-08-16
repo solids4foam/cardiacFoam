@@ -44,7 +44,6 @@ eikonalECG::eikonalECG(const dictionary& dict)
     startTime_(0.0),
     endTime_(0.0),
     deltaT_(0.0),
-    report_(dict.lookupOrDefault<Switch>("report", true)),
     sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
     lastValues_(),
     outputPtr_(),
@@ -427,18 +426,15 @@ void eikonalECG::solve
 
     values = lastValues_;
 
-    if (report_)
-    {
-        Info<< "eikonalECG: wrote sampled ECG from t=" << startTime_
-            << " to t=" << endTime_ << " with deltaT=" << deltaT_
-            << " to postProcessing/eikonalECG.dat" << nl << endl;
+    Info<< "eikonalECG: wrote sampled ECG from t=" << startTime_
+        << " to t=" << endTime_ << " with deltaT=" << deltaT_
+        << " to postProcessing/eikonalECG.dat" << nl << endl;
 
-        if (useManufacturedTemplate_)
-        {
-            Info<< "eikonalECG: using fixed manufactured eikonal ECG "
-                << "template because no template dictionary was supplied."
-                << nl << endl;
-        }
+    if (useManufacturedTemplate_)
+    {
+        Info<< "eikonalECG: using fixed manufactured eikonal ECG "
+            << "template because no template dictionary was supplied."
+            << nl << endl;
     }
 }
 

@@ -63,10 +63,6 @@ addToRunTimeSelectionTable(ecgSolver, torsoECG, dictionary);
 
 torsoECG::torsoECG(const dictionary& dict)
 :
-    reportElectrodeLookup_
-    (
-        dict.lookupOrDefault<Switch>("reportElectrodeLookup", true)
-    ),
     electrodeCells_(),
     cellsBuilt_(false)
 {}
@@ -147,7 +143,7 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
             ownerCount = electrodeCells_[electrodeI] >= 0 ? 1 : 0;
             reduce(ownerCount, sumOp<label>());
 
-            if (reportElectrodeLookup_ && electrodeCells_[electrodeI] >= 0)
+            if (electrodeCells_[electrodeI] >= 0)
             {
                 if (initialOwnerCount == 0)
                 {
@@ -187,12 +183,9 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
         }
     }
 
-    if (reportElectrodeLookup_)
-    {
-        Info<< "torsoECG: located " << electrodes.size()
-            << " electrodes on phiE mesh '" << phiEMesh.name() << "'."
-            << endl;
-    }
+    Info<< "torsoECG: located " << electrodes.size()
+        << " electrodes on phiE mesh '" << phiEMesh.name() << "'."
+        << endl;
 
     cellsBuilt_ = true;
 }

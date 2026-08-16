@@ -33,7 +33,6 @@ Author
 #include "../ionicModel/batchedIonicCore.H"
 #include "../ionicModel/batchedKernelExecution.H"
 #include "PstreamReduceOps.H"
-#include <chrono>
 #include <cmath>
 #ifdef _OPENMP
 #include <omp.h>
@@ -59,7 +58,6 @@ class batchedIonicModel
         label nHotPathSupport_;
         label nSubsteps_;
         word integratorName_;
-        Switch profileBatchedModel_;
         Switch parallelCellUpdates_;
         label parallelMinCells_;
         bool persistAlgebraics_;
@@ -75,22 +73,12 @@ class batchedIonicModel
         mutable bool ioSynchronized_;
         mutable bool transientAlgebraicsSynchronized_;
         mutable scalar ioEvaluationModelTime_;
-        mutable scalar totalSolveODETime_;
-        mutable scalar totalVmInputSyncTime_;
-        mutable scalar totalGatherScatterTime_;
-        mutable scalar totalEvaluateStateTime_;
-        mutable scalar totalStateUpdateTime_;
-        mutable scalar totalStabilizeTime_;
-        mutable scalar totalFinalSyncTime_;
-        mutable label totalEvaluateStateCalls_;
-        mutable label totalSolveODECalls_;
 
 
     // Private Member Functions
 
         using SolveFieldBuffer = scalarField;
         using SolveStepBuffer = scalarList;
-        using SolveProfileTotals = BatchedKernelProfileTotals;
         using SolveKernelConfig = BatchedKernelConfig;
         using SolveStorageBackend =
             BatchedKernelSoAStorageView<SolveFieldBuffer, SolveStepBuffer>;
@@ -199,10 +187,6 @@ protected:
             (
                 dict.lookupOrDefault<word>("batchedIntegrator", "euler")
             ),
-            profileBatchedModel_
-            (
-                dict.lookupOrDefault<Switch>("profileBatchedModel", false)
-            ),
             parallelCellUpdates_
             (
                 dict.lookupOrDefault<Switch>("batchedParallelCells", false)
@@ -219,15 +203,6 @@ protected:
             ioSynchronized_(false),
             transientAlgebraicsSynchronized_(false),
             ioEvaluationModelTime_(0.0),
-            totalSolveODETime_(0.0),
-            totalVmInputSyncTime_(0.0),
-            totalGatherScatterTime_(0.0),
-            totalEvaluateStateTime_(0.0),
-            totalStateUpdateTime_(0.0),
-            totalStabilizeTime_(0.0),
-            totalFinalSyncTime_(0.0),
-            totalEvaluateStateCalls_(0),
-            totalSolveODECalls_(0),
             solveScratch_(),
             solveScratchThreads_(-1),
             solveScratchSupportSize_(-1),
@@ -1061,12 +1036,8 @@ protected:
             using ModelHooks = BatchedKernelModelHooksView<Model>;
             using ModelPolicy =
                 BatchedKernelModelPolicy<ModelHooks, SolveFieldBuffer>;
-            using clock = std::chrono::steady_clock;
 
-            const bool profileSolve = profileBatchedModel_;
             const bool emitDebugSample = debugPrintedNames().size();
-            const auto solveStart =
-                profileSolve ? clock::now() : clock::time_point();
             const scalar tStart = stepStartTime*timeScaleFactor();
             const scalar dtModel = deltaT*timeScaleFactor();
             const scalar tEnd = tStart + dtModel;
@@ -1106,7 +1077,6 @@ protected:
             const bool parallelCellLoops = useParallelCellLoops();
             const label nCellLoopThreads =
                 parallelCellLoops ? maxCellLoopThreads() : 1;
-            List<SolveProfileTotals> threadProfiles(nCellLoopThreads);
 
             prepareSolveScratch
             (
@@ -1141,16 +1111,13 @@ protected:
                     SolveStepBuffer
                 >,
                 SolveKernelConfig,
-                CellScratch,
-                SolveProfileTotals
+                CellScratch
             > executor
             (
                 backend,
                 kernel,
                 parallelCellLoops,
-                profileSolve,
-                solveScratch_,
-                threadProfiles
+                solveScratch_
             );
 
             executor.syncVmInputs(Vm);
@@ -1166,24 +1133,6 @@ protected:
             if (sampleCell >= 0 && sampleCell < nCells_)
             {
                 debugPrintFields(sampleCell, tStart, tEnd, dtModel);
-            }
-
-            forAll(threadProfiles, threadI)
-            {
-                totalVmInputSyncTime_ += threadProfiles[threadI].vmInputSyncTime;
-                totalGatherScatterTime_ += threadProfiles[threadI].gatherScatterTime;
-                totalEvaluateStateTime_ += threadProfiles[threadI].evaluateStateTime;
-                totalStateUpdateTime_ += threadProfiles[threadI].stateUpdateTime;
-                totalStabilizeTime_ += threadProfiles[threadI].stabilizeTime;
-                totalFinalSyncTime_ += threadProfiles[threadI].finalSyncTime;
-                totalEvaluateStateCalls_ += threadProfiles[threadI].evaluateStateCalls;
-            }
-
-            if (profileSolve)
-            {
-                totalSolveODETime_ +=
-                    std::chrono::duration<scalar>(clock::now() - solveStart).count();
-                ++totalSolveODECalls_;
             }
 
             clearVmRate();
@@ -1247,55 +1196,6 @@ public:
             }
         }
 
-        virtual void writeProfilingSummary() const override
-        {
-            if (!profileBatchedModel_)
-            {
-                return;
-            }
-
-            auto printScalarMetric = [&](const word& metricName, const scalar localValue)
-            {
-                scalar sumValue = localValue;
-                scalar maxValue = localValue;
-                reduce(sumValue, sumOp<scalar>());
-                reduce(maxValue, maxOp<scalar>());
-
-                if (Pstream::master())
-                {
-                    Info<< "PROFILE_BATCHED model=" << type()
-                        << " metric=" << metricName
-                        << " sum=" << sumValue
-                        << " max=" << maxValue << nl;
-                }
-            };
-
-            auto printLabelMetric = [&](const word& metricName, const label localValue)
-            {
-                label sumValue = localValue;
-                label maxValue = localValue;
-                reduce(sumValue, sumOp<label>());
-                reduce(maxValue, maxOp<label>());
-
-                if (Pstream::master())
-                {
-                    Info<< "PROFILE_BATCHED model=" << type()
-                        << " metric=" << metricName
-                        << " sum=" << sumValue
-                        << " max=" << maxValue << nl;
-                }
-            };
-
-            printScalarMetric("totalSolveODETime_s", totalSolveODETime_);
-            printScalarMetric("vmInputSyncTime_s", totalVmInputSyncTime_);
-            printScalarMetric("gatherScatterTime_s", totalGatherScatterTime_);
-            printScalarMetric("evaluateStateTime_s", totalEvaluateStateTime_);
-            printScalarMetric("stateUpdateTime_s", totalStateUpdateTime_);
-            printScalarMetric("stabilizeTime_s", totalStabilizeTime_);
-            printScalarMetric("finalSyncTime_s", totalFinalSyncTime_);
-            printLabelMetric("evaluateStateCalls", totalEvaluateStateCalls_);
-            printLabelMetric("solveODECalls", totalSolveODECalls_);
-        }
 
         virtual label nEqns() const override
         {
