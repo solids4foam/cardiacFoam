@@ -1,7 +1,7 @@
-../solids4foam/src/solids4FoamModels/numerics/patchCorrectionVectors/patchCorrectionVectors.C
-../solids4foam/src/solids4FoamModels/fluidModels/fvPatchFields/correctedFvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchScalarField.C
-../solids4foam/src/solids4FoamModels/fluidModels/fvPatchFields/correctedFvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchVectorField.C
-../solids4foam/src/solids4FoamModels/fluidModels/fvPatchFields/correctedFvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchScalarField.C
-../solids4foam/src/solids4FoamModels/fluidModels/fvPatchFields/correctedFvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchVectorField.C
+src/numerics/patchCorrectionVectors/patchCorrectionVectors.C
+src/fvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchScalarField.C
+src/fvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchVectorField.C
+src/fvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchScalarField.C
+src/fvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchVectorField.C
 
 LIB = $(FOAM_MODULE_LIBBIN)/libcorrectedFvPatchFields

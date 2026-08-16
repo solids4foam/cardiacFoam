@@ -26,12 +26,32 @@ is in use.
 
 ```text
 modules/correctedFvPatchFields/
-├── Make/files      -- sources itself directly from modules/solids4foam
-│                      (not copied, so upstream fixes flow through on a
-│                      normal 'git submodule update')
-├── Make/options     -- only needs -lfiniteVolume
+├── src/numerics/patchCorrectionVectors/    -- vendored copy from solids4foam
+├── src/numerics/compatibilityFunctions/    -- vendored copy from solids4foam
+├── src/fvPatchFields/fixedValueCorrected/  -- vendored copy from solids4foam
+├── src/fvPatchFields/fixedGradientCorrected/ -- vendored copy from solids4foam
+├── Make/files
+├── Make/options     -- only needs -lfiniteVolume -lmeshTools
 └── README.md
 ```
+
+These five files are **vendored copies**, not sourced by relative path from
+`modules/solids4foam`. That submodule is not checked out in CI (all three
+workflows use `submodules: false`) and is also absent under
+`USE_LIGHTWEIGHT_PHYSICSMODEL=1`, so a build-time reference to
+`../solids4foam/...` fails in both cases -- this library needs to be buildable
+unconditionally, which for these five self-contained files (no dependency on
+the rest of `solids4FoamModels`) means owning a copy rather than reaching
+across a submodule boundary that may not exist. If solids4foam's upstream
+copies of these files change, re-copy them here manually; there is no
+automatic sync.
+
+`fixedValueCorrectedFvPatchScalarField.C`'s `write()` here also carries a bug
+fix (calls `fixedValueFvPatchScalarField::write()` instead of
+`fvPatchField<scalar>::write()`, matching how every other `fixedValue`-derived
+BC serialises its `value` entry -- the original dropped it, breaking
+`reconstructPar` after any parallel run using this BC) that has not been
+applied to the `modules/solids4foam` submodule itself.
 
 ## What it provides
 
