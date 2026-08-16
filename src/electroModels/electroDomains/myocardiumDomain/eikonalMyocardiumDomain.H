@@ -63,6 +63,7 @@ class eikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
+    const Switch useGraphPrePopulation_; // Test flag
     autoPtr<eikonalVerificationModel> verificationModelPtr_;
 
     tmp<volTensorField> initialiseConductivity() const;

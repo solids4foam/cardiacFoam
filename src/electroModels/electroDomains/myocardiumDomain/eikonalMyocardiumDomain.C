@@ -291,6 +291,10 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     (
         electroProperties.lookup("eikonalAdvectionDiffusionApproach")
     ),
+    useGraphPrePopulation_
+    (
+        electroProperties.lookupOrDefault<Switch>("useGraphPrePopulation", true)
+    ),
     verificationModelPtr_()
 {
     const boundBox bb
@@ -460,7 +464,7 @@ void eikonalMyocardiumDomain::advance
         constrainedValues
     );
 
-    preInitialiseFromSeeds(constrainedCells, constrainedValues);
+    if (useGraphPrePopulation_) preInitialiseFromSeeds(constrainedCells, constrainedValues);
 
     const dimensionedScalar one("one", dimless, 1.0);
     const dimensionedScalar smallG("smallG", dimTime, SMALL);
