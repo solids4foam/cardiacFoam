@@ -7,10 +7,9 @@ plugins own the entries and document-specific catalogues built from it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Any, Literal
+from typing import Any
 
-
-Phase = Literal["anatomy", "physics", "stimulus", "solver"]
+from ..runtime.run_model import Phase
 
 
 @dataclass(frozen=True)

@@ -50,16 +50,14 @@ validation errors.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, get_args
 
 from openfoam_driver.core.contracts.dictionary import DictEntry, Phase
 
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
 
-_PHASE_ORDER: tuple[Phase, ...] = (
-    "anatomy", "physics", "stimulus", "solver",
-)
+_PHASE_ORDER: tuple[Phase, ...] = get_args(Phase)
 
 
 from .validation_types import ValidationError

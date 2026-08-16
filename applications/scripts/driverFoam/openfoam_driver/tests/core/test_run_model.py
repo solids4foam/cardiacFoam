@@ -243,3 +243,12 @@ def test_run_document_migrates_v1_explicitly():
     assert payload["config"] == old["config"]
     assert payload["resolvedEntry"] is None
     assert payload["workflowState"] is None
+
+
+def test_phase_literal_is_not_independently_redefined() -> None:
+    """core.contracts.dictionary.Phase must be the same object as
+    run_model.Phase, not a textually-identical but type-distinct redeclaration."""
+    from openfoam_driver.core.contracts.dictionary import Phase as ContractsPhase
+    from openfoam_driver.core.runtime.run_model import Phase as RunModelPhase
+
+    assert ContractsPhase is RunModelPhase
