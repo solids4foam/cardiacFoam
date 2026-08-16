@@ -1,0 +1,41 @@
+{
+  "base": {
+    "entry": "manufacturedEikonalECG",
+    "case_dir_name": "manufacturedSolutions/eikonalECG",
+    "setup_dir_name": "setup",
+    "postprocess_strict_artifacts": false,
+    "run_in_parallel": true,
+    "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases_pointCellsLeastSquares",
+    "fv_scheme_overrides": [
+      {"key": "default", "value": "pointCellsLeastSquares", "scope": ["gradSchemes"]}
+    ]
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dimensions": [
+        ["2D"],
+        ["2D"],
+        ["2D"],
+        ["3D"],
+        ["3D"],
+        ["3D"]
+      ],
+      "number_cells": [
+        [10],
+        [20],
+        [40],
+        [10],
+        [20],
+        [40]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": ["dimensions", "number_cells"]
+      }
+    ]
+  }
+}
