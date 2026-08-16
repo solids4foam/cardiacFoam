@@ -7,6 +7,7 @@ Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 Requires-Dist: gmsh>=4.15.2
 Requires-Dist: jsonschema>=4.0
+Requires-Dist: PyYAML>=6.0
 Provides-Extra: post
 Requires-Dist: matplotlib>=3.7; extra == "post"
 Requires-Dist: numpy>=1.24; extra == "post"
@@ -35,7 +36,10 @@ openfoam_driver/
 │   │   ├── workflow_orchestrator.py # runs a workflow_dag to completion
 │   │   ├── models.py              # TutorialSpec, CaseConfig contracts
 │   │   └── registry.py            # tutorial name -> make_spec factory
-│   └── defaults/                  # per-tutorial default parameters
+│   ├── defaults/                  # per-tutorial default parameters
+│   ├── plugin_capabilities.py     # focused internal solver capability adapters
+│   ├── compatibility.py           # behavior-preserving legacy boundary
+│   └── COMPATIBILITY.md           # fallback reasons, activation, and tests
 ├── specs/
 │   ├── common.py                  # mutators/path helpers
 │   ├── mesh_geometry.py           # mesh geometry checks for 1D 3D
@@ -46,6 +50,19 @@ openfoam_driver/
 │   └── dict_key_allowlist.json    # strict scanner parser/pass-through allowlist
 └── tests/                         # contract and regression tests for architecture
 ```
+
+## Standalone Usage
+
+`driverFOAM` can be used completely independently of the `cardiacFoam` C++ repository (e.g. cloned into a `/tmp` directory or installed as a standalone `pip` package).
+
+This mode is designed for CI pipelines or users wanting to drive their own existing OpenFOAM simulations without keeping the entire `cardiacFoam` source tree around.
+
+When run standalone (where `src/` and `tutorials/` siblings do not exist):
+
+- `driverFOAM` automatically falls back to bundled template fixtures (like `electroProperties`) for schema parsing and planning.
+- The C++ drift guards (tests that assert Python configurations match C++ `Names.H` headers) are gracefully skipped.
+- Regression equivalence and verification tests (which expect physical tutorials on disk) are skipped.
+- `strict` and `generic` planning work out of the box using your local simulation paths.
 
 ## TutorialSpec contract
 
@@ -58,6 +75,19 @@ Each tutorial module in `specs/tutorials/` builds a `TutorialSpec` with:
 - optional `postprocess(setup, output_dir)`
 
 This keeps all tutorial workflows on one engine while allowing per-tutorial sweep logic.
+
+## Solver injection boundary
+
+The public `SolverPlugin` interface remains backward compatible. Internally, a
+per-operation `DriverContext` adapts it into focused tutorial, dictionary,
+validation, artifact, case-compatibility, C++ mapping, mesh-policy, RunDocument,
+and sweep capabilities. Core code consumes those capabilities and does not
+reach through the plugin object directly.
+
+Omitting a context still selects cardiacFoam exactly as before. Legacy case,
+sweep, mutation, and planning decisions are named in
+[`core/COMPATIBILITY.md`](core/COMPATIBILITY.md); Plan 1 moves their ownership
+without changing their activation or output.
 
 ## Registered tutorials
 
@@ -301,7 +331,7 @@ Generic-case sweeps can also use a `cases` array. Each case may override
 `electro_property_overrides`, `physics_property_overrides`, `dimension`,
 `parallel`, `touch_case_foam`, and `openfoam_bashrc` on top of the spec defaults.
 
-Defaults live in `core/defaults/*.py`.
+Defaults live in `plugins/cardiacfoam/defaults/*.py`.
 
 ## Runtime artifacts
 
