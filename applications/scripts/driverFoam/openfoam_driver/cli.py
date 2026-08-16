@@ -33,6 +33,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .core.runtime.failure_context import build_failure_context
+from .core.runtime.launch_readiness import is_execution_successful, is_launchable
 from .core.runtime.openfoam_environment import load_openfoam_environment
 from .core.runtime.remediation import build_candidate_remediations
 from .core.runtime.remediation_audit import append_remediation_record
@@ -101,21 +102,23 @@ def _step_payload(
 def _terminal_status_label(workflow_status: str) -> str:
     """Map a WorkflowStepState/WorkflowRunState status to the CLI's ok/failed label.
 
-    The single source of truth for the strict success contract, so step and run
-    cannot drift. Decisions derive from status, never from a subprocess exit code.
-    Any non-completed terminal state (pending, running, failed, skipped) is a
-    failure at this boundary.
+    Delegates to ``is_execution_successful``, the shared post-execution
+    predicate, so step and run cannot drift from each other. Decisions
+    derive from status, never from a subprocess exit code.
     """
-    return "ok" if workflow_status == "completed" else "failed"
-
-
-def _environment_errors(diagnostics: tuple[StrictDiagnostic, ...]) -> list[StrictDiagnostic]:
-    return [diagnostic for diagnostic in diagnostics if diagnostic.level == "error"]
+    return "ok" if is_execution_successful(workflow_status) else "failed"
 
 
 def _refuse_environment_errors(context: _ExecutionContext, *, action: str) -> int | None:
-    errors = _environment_errors(context.environment_diagnostics)
-    if not errors:
+    # Structural validity was already established when this context was
+    # built (_context_from_entry / _context_from_run_document both refuse to
+    # hand back a context otherwise), so only the environment half of
+    # is_launchable is relevant at this dispatch-time gate.
+    readiness = is_launchable(
+        plan_status="ok",
+        environment_diagnostics=context.environment_diagnostics,
+    )
+    if readiness.environment_ok:
         return None
     payload = {
         "status": "failed",
@@ -411,7 +414,11 @@ def _context_from_entry(
         openfoam_bashrc=openfoam_bashrc,
         driver_context=driver_context,
     )
-    if report.status != "ok":
+    readiness = is_launchable(
+        plan_status=report.status,
+        environment_diagnostics=report.environment_diagnostics,
+    )
+    if not readiness.structural_ok:
         print(json.dumps(report.to_json(), indent=2))
         return None, 1
     if report.workflow_dag is None or report.workflow_state is None:
@@ -841,7 +848,11 @@ def main(argv: list[str] | None = None) -> int:
             driver_context=driver_context,
         )
         print(json.dumps(report.to_json(), indent=2))
-        return 0 if report.status == "ok" else 1
+        readiness = is_launchable(
+            plan_status=report.status,
+            environment_diagnostics=report.environment_diagnostics,
+        )
+        return 0 if readiness.structural_ok else 1
 
     if args.action == "step":
         if not (args.strict or args.run_document):
