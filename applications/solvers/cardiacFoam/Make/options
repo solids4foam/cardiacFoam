@@ -51,5 +51,4 @@ EXE_LIBS = \
     -lionicModels \
     -lgenericWriter \
     -lactiveTensionModels \
-    -lcorrectedFvPatchFields \
     $(GFORTRAN_LIBS)

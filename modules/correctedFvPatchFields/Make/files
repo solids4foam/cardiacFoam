@@ -1,7 +1,0 @@
-src/numerics/patchCorrectionVectors/patchCorrectionVectors.C
-src/fvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchScalarField.C
-src/fvPatchFields/fixedValueCorrected/fixedValueCorrectedFvPatchVectorField.C
-src/fvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchScalarField.C
-src/fvPatchFields/fixedGradientCorrected/fixedGradientCorrectedFvPatchVectorField.C
-
-LIB = $(FOAM_MODULE_LIBBIN)/libcorrectedFvPatchFields
