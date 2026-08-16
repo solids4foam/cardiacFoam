@@ -822,6 +822,16 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             constraints=('Required when myocardiumSolver=eikonalSolver.',),
             required_when={"myocardiumSolver": "eikonalSolver"},
         ),
+        DictEntry(
+            driver_path='$ELECTRO_MODEL_COEFFS.useGraphPrePopulation',
+            phases=frozenset({'physics'}),
+            description='Whether to warm-start the eikonal activation-time field before the main nonlinear solve. When true (default), a parallel-safe Bellman-Ford relay propagates minimum arrival time outward from the stimulus/graph-constrained seed cells across face connectivity (using an upper-bound wave speed from the conductivity tensor) to initialise all other cells, instead of leaving them at the GREAT placeholder. Marked "Test flag" in the header; exists mainly to disable pre-population and compare cold-start convergence/robustness.',
+            source_refs=('src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.H'),
+            value_kind='boolean',
+            typical_value='true',
+            constraints=('Only applicable when myocardiumSolver=eikonalSolver.',),
+            applicable_when={"myocardiumSolver": "eikonalSolver"},
+        ),
         ),
     ),
     "ecg": build_group(
