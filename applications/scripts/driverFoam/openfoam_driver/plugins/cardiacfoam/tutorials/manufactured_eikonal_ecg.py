@@ -168,6 +168,7 @@ def _apply_case(
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     dimension = str(case.params["dimension"])
     cells = int(case.params["cells"])
@@ -212,6 +213,11 @@ def _apply_case(
             "default",
             _GRAD_SCHEME_TOKENS[grad_scheme],
             scope=["gradSchemes"],
+        )
+    for entry in fv_scheme_overrides or ():
+        update_foam_entry(
+            case_root / "system" / "fvSchemes", entry["key"], entry["value"],
+            scope=entry.get("scope"),
         )
     apply_electro_property_overrides(electro_properties, case_overrides)
     apply_electro_property_overrides(electro_properties, electro_property_overrides)
@@ -398,6 +404,7 @@ def make_spec(
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
+    fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
     if not dimensions_list:
@@ -453,6 +460,7 @@ def make_spec(
             mesh_family=mesh_family,
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
+            fv_scheme_overrides=fv_scheme_overrides,
         ),
         run_case=partial(
             _run_case,
