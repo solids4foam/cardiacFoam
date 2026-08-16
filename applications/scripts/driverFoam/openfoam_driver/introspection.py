@@ -467,3 +467,13 @@ def describe_tutorial(
         config_path=config_path,
         driver_context=driver_context,
     )
+
+
+def describe_launch_matrix(
+    driver_context: "DriverContext | None" = None,
+) -> list[dict[str, Any]]:
+    """Return every registered entry. Alias kept for AGENT_GUIDE.md compatibility.
+
+    Equivalent to list_entries() from openfoam_driver.core.runtime.registry.
+    """
+    return list_entries(driver_context=driver_context)

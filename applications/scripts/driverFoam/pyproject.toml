@@ -30,6 +30,9 @@ post = [
 foamctl = "openfoam_driver.cli:main"
 driverFoam = "openfoam_driver.cli:main"
 
+[project.entry-points."driverfoam.plugins"]
+cardiacfoam = "openfoam_driver.plugins.cardiacfoam_plugin:CardiacFoamPlugin"
+
 [tool.pytest.ini_options]
 markers = [
     "integration: tests requiring a real cardiacFoam binary (skipped by default in CI)",
