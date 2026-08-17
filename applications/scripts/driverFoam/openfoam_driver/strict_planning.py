@@ -268,10 +268,26 @@ def _mesh_geometry_diagnostics(
     case_root: str | Path,
     *,
     exempt: bool = False,
+    driver_context: "DriverContext | None" = None,
 ) -> tuple[StrictDiagnostic, ...]:
-    """Adapt mesh-scale detection into StrictDiagnostics for the report."""
+    """Adapt mesh-scale detection into StrictDiagnostics for the report.
+
+    Core classifies every polyMesh region's scale; the active plugin may add
+    checks for point sets that are not mesh regions (cardiacFoam's
+    ``constant/purkinjeGraph*``). Both report under the same
+    ``mesh_geometry`` source, and both are skipped by the same exemption.
+    """
     if exempt or "SKIP_MESH_DIAGNOSTICS" in os.environ:
         return ()
+    from .core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    detected = list(_detect_mesh_geometry(Path(case_root)))
+    detected.extend(
+        driver_context.capabilities.mesh_diagnostic_policy.extra_geometry_diagnostics(
+            Path(case_root),
+        )
+    )
     return tuple(
         _diagnostic(
             d.level,
@@ -280,7 +296,7 @@ def _mesh_geometry_diagnostics(
             source="mesh_geometry",
             field=d.region,
         )
-        for d in _detect_mesh_geometry(Path(case_root))
+        for d in detected
     )
 
 
@@ -383,6 +399,7 @@ def strict_plan(
             _is_nondimensional_entry(spec, driver_context)
             or bool(spec.metadata.get("generic_case"))
         ),
+        driver_context=driver_context,
     )
     simulation_audit, generation_diagnostics, readiness_score = _build_simulation_audit(
         spec=spec,

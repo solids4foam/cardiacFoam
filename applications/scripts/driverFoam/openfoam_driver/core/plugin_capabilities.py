@@ -148,6 +148,7 @@ class CxxMappingCapability(Protocol):
 
 class MeshDiagnosticPolicyCapability(Protocol):
     def is_nondimensional(self, spec: "TutorialSpec") -> bool: ...
+    def extra_geometry_diagnostics(self, case_root: Path) -> tuple[Any, ...]: ...
 
 
 class CaseCompatibilityCapability(Protocol):
@@ -432,6 +433,21 @@ class _MeshDiagnosticPolicyAdapter:
         from .compatibility import legacy_nondimensional_case
 
         return legacy_nondimensional_case(spec)
+
+    def extra_geometry_diagnostics(self, case_root: Path) -> tuple[Any, ...]:
+        """Plugin-owned plan-time geometry checks core cannot express.
+
+        Core classifies the scale of every polyMesh region; a plugin may own
+        further point sets in the case that are not mesh regions (cardiacFoam's
+        ``constant/purkinjeGraph*`` conduction trees, for example). A plugin
+        that declares no such check contributes nothing -- there is no legacy
+        fallback here, because "no extra checks" is the correct answer for a
+        plugin that never had any.
+        """
+        hook = getattr(self.plugin, "get_mesh_geometry_diagnostics", None)
+        if callable(hook):
+            return tuple(hook(case_root))
+        return ()
 
 
 @dataclass(frozen=True)

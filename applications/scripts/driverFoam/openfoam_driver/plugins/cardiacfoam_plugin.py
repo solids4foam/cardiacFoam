@@ -387,6 +387,19 @@ class CardiacFoamPlugin:
 
         return is_nondimensional_case(spec)
 
+    def get_mesh_geometry_diagnostics(self, case_root: Path) -> tuple:
+        """Scale checks for point sets core's region discovery cannot see.
+
+        cardiacFoam cases may carry a Purkinje conduction tree in
+        ``constant/purkinjeGraph*`` -- a Foam dictionary with its own point
+        list, not a mesh region.
+        """
+        from openfoam_driver.plugins.cardiacfoam.mesh_geometry import (
+            purkinje_graph_diagnostics,
+        )
+
+        return purkinje_graph_diagnostics(case_root)
+
 
 # Ensure CardiacFoamPlugin satisfies the SolverPlugin protocol
 def _check_protocol() -> None:
