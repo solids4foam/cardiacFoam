@@ -13,7 +13,7 @@ before driving the orchestrator.
 | Execute an agent-authored RunDocument | `foamctl run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
-| Validate RunDocument v2 or migrate v1 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)` | `openfoam_driver.core.runtime.run_model` |
+| Validate RunDocument v3 or migrate v1/v2 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)`, `RunDocument.migrate_v2(...)` | `openfoam_driver.core.runtime.run_model` |
 | Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.specs.validation` |
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
@@ -27,7 +27,7 @@ before driving the orchestrator.
 
 The solver-injection refactor does not change this public loop. A single
 per-operation driver context now supplies focused solver capabilities
-internally, while omitted contexts, RunDocument v2, legacy fallbacks, commands,
+internally, while omitted contexts, RunDocument v3, legacy fallbacks, commands,
 diagnostics, and artifacts retain their established behavior.
 
 Use strict planning before launching. It is the only path that tells an agent
@@ -124,7 +124,7 @@ print(payload["workflow_state"]["current_step_id"])
 
 ### Executing an agent-authored RunDocument
 
-`plan --strict` emits a complete `run_document` (RunDocument v2) in its JSON
+`plan --strict` emits a complete `run_document` (RunDocument v3) in its JSON
 output. An agent can persist that document, edit it (e.g. tune `config`, add or
 reorder `workflowDag` steps, set per-step `retry_policy`), and execute the
 edited document directly — the driver runs *your* document instead of
@@ -767,12 +767,12 @@ If your agent depends on any of these, expect failure and consider a workaround 
 - `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/ionic_model_catalog.py` — every ionic model
 - `applications/scripts/driverFoam/openfoam_driver/utility_catalog.py` — every utility's CLI surface and outputs
 - `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/solver_coupling.py` — cross-domain coupler rules
-- `applications/scripts/driverFoam/openfoam_driver/strict_planning.py` — strict preflight report and RunDocument v2 assembly
-- `applications/scripts/driverFoam/openfoam_driver/core/runtime/run_model.py` — RunDocument v2 model and v1 migration
+- `applications/scripts/driverFoam/openfoam_driver/strict_planning.py` — strict preflight report and RunDocument v3 assembly
+- `applications/scripts/driverFoam/openfoam_driver/core/runtime/run_model.py` — RunDocument v3 model and explicit v1/v2 migration
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow.py` — workflow DAG normalization and validation
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_state.py` — persisted step state model
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_runner.py` — low-level strict step executor
-- `applications/scripts/driverFoam/schemas/run-document.json` — canonical RunDocument v2 JSON Schema
+- `applications/scripts/driverFoam/schemas/run-document.json` — canonical RunDocument v3 JSON Schema
 
 ## Plugin selection (Phase 1)
 

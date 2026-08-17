@@ -65,7 +65,7 @@ criticism:
 
 | Scope | What can be claimed now | Required framing/work |
 |---|---|---|
-| **cardiacFoam orchestration system** | A domain-specific, agent-facing planner and workflow executor with explicit cardiac catalogs, validation, provenance, sweeps, and artifacts | Keep RunDocument v2 as cardiac-specific; stop calling the complete package project-agnostic; evaluate cardiac use cases rigorously |
+| **cardiacFoam orchestration system** | A domain-specific, agent-facing planner and workflow executor with explicit cardiac catalogs, validation, provenance, sweeps, and artifacts | Keep RunDocument v3 as cardiac-specific; stop calling the complete package project-agnostic; evaluate cardiac use cases rigorously |
 | **Reusable OpenFOAM orchestration platform** | A promising plugin architecture with several generic execution mechanisms | Complete the P0 schema separation and external-plugin conformance work before making the broad claim |
 
 The first scope is narrower but already coherent. The second is architecturally
@@ -182,7 +182,7 @@ applications/scripts/driverFoam/
 │   │   └── apply_overrides.py        ← --apply override machinery; imports `plugins/cardiacfoam/detection.py` directly (same open coupling — Task 14)
 │   │
 │   ├── schemas/
-│   │   └── run-document.json         ← JSON Schema v2 (`config` is now an open, plugin-declared object)
+│   │   └── run-document.json         ← JSON Schema v3 (`config` is now an open, plugin-declared object)
 │   └── postprocessing/               ← Post-processing task runner
 │
 ├── schemas/run-document.json         ← Canonical hand-authored copy; `openfoam_driver/schemas/run-document.json` is generated from it (P2.8, `schemas/generate_run_document_schema.py`)
@@ -613,7 +613,7 @@ score.
 | `PluginCapabilities` | Focused set of typed seams wrapping a `SolverPlugin` | Good | — | Correctly named; "capabilities" reflects the seam-based design |
 | `TutorialSpec` | A complete case execution specification (case root, I/O paths, build/apply/run callbacks) | Misleading — it is not only for "tutorials" | `CaseSpec`, `ExecutionSpec`, `CaseExecutionSpec` | Any filesystem case folder resolves to this, not just registered tutorials |
 | `CaseConfig` | One parameterised variant within a sweep | Acceptable | `CaseVariant`, `SweepCaseParams` | "Config" implies configuration file; it's actually a parameter bundle for one sweep point |
-| `RunDocument` | The machine-readable plan + execution state document for one case run | Name is good; v2 shape is not generic | Keep name; version schema | The envelope is well named, but its required config vocabulary is cardiac-specific |
+| `RunDocument` | The machine-readable plan + execution state document for one case run | Name is good; the v3 envelope is generic, the built-in plugin's config shape is not | Keep name; version schema | The envelope is well named; the cardiac config vocabulary now lives in the plugin's own declared schema |
 | `workflow_dag` | The executable DAG of steps | Good | — | Standard terminology |
 | `StrictPlanReport` | The output of the strict planner: diagnostics, DAG, artifacts, audit | Good | — | Accurately describes the full planning output |
 | `make_spec` | Factory function producing a `TutorialSpec` | Misleading | `make_case_spec` | No longer "spec" in the sense of specification document; it's a case execution spec |
@@ -622,8 +622,8 @@ score.
 | `SolverPluginV2` | Extended plugin contract with command authorization, case introspection, override schema | Reasonable | `ProjectPluginV2` | Same reason as `SolverPlugin` |
 | `CapabilityManifest` (Protocol) | Opaque object returned by `get_capabilities()` — solver/project capabilities for the plan | Vague | `ProjectCapabilitiesManifest` | Should clarify it is the project's capability surface |
 | `CORE_NEUTRAL_COMMANDS` | OpenFOAM utilities always allowed regardless of plugin | Good | — | Accurately named; "neutral" = neither solver nor case-script |
-| `detect_myocardium_solver_name` | Parse `electroProperties` for `myocardiumSolver` value | **Project-specific** — should not be in `specs/` | Move to `plugins/cardiacfoam/case_introspection.py` | This is a cardiacFoam dictionary key, not a generic OpenFOAM concept |
-| `apply_electro_property_overrides` | Write overrides into `electroProperties` | **Project-specific** | Move to `plugins/cardiacfoam/` | `electroProperties` is a cardiacFoam dictionary name |
+| `detect_myocardium_solver_name` | Parse `electroProperties` for `myocardiumSolver` value | **Project-specific** — **moved out of `specs/` (P2.5, `e137b390`)** | Now `plugins/cardiacfoam/detection.py` | This is a cardiacFoam dictionary key, not a generic OpenFOAM concept; see §6's `plugins/cardiacfoam/detection.py` rows |
+| `apply_electro_property_overrides` | Write overrides into `electroProperties` | **Project-specific** — **moved out of `specs/` (P2.5, `e137b390`)** | Now `plugins/cardiacfoam/overrides.py` | `electroProperties` is a cardiacFoam dictionary name; see §6's `plugins/cardiacfoam/overrides.py` rows. The `$ELECTRO_MODEL_COEFFS` sentinel convention it carries is only *partially* retired — still re-parsed by `specs/validation.py` and `scripts/_dict_keys_scanner.py` |
 | `repo_root_default` | Navigate upward looking for `src/` + `tutorials/` | Convention-dependent | Prefer explicit roots | The layout is common but not reliable for installed, nested, or differently structured projects |
 
 ### 5.1 Recommended Final Vocabulary
@@ -650,7 +650,7 @@ score.
 
 More precisely:
 - **Solver-agnostic mechanisms (within OpenFOAM):** DAG normalization, subprocess execution, workflow state, retry orchestration, and command validation are largely solver-neutral.
-- **Solver-agnostic data model:** Partial. The core v2 `RunDocument` JSON schema's `config` property is now an open, plugin-declared object (P2.2, commit `73ca43f7`); `specs/validation.py`'s phase vocabulary and the `Phase` literal in `core/runtime/run_model.py` still encode cardiac phases and fields independently of that schema, and the built-in `CardiacFoamPlugin` still declares a cardiac-shaped config schema for itself (by design).
+- **Solver-agnostic data model:** Partial. The core v3 `RunDocument` JSON schema's `config` property is now an open, plugin-declared object (P2.2, commit `73ca43f7`); `specs/validation.py`'s phase vocabulary and the `Phase` literal in `core/runtime/run_model.py` still encode cardiac phases and fields independently of that schema, and the built-in `CardiacFoamPlugin` still declares a cardiac-shaped config schema for itself (by design).
 - **OpenFOAM-agnostic:** The engine is not agnostic to OpenFOAM. It assumes the `$FOAM_APPBIN` / `$FOAM_USER_APPBIN` environment, OpenFOAM dictionary text format, Allrun/Allclean script conventions, and `constant/ system/ 0/` case layout.
 - **Project-agnostic:** NOT YET. Several modules assume cardiacFoam's dictionary vocabulary.
 
@@ -679,11 +679,11 @@ More precisely:
 | `plugins/cardiacfoam/overrides.py` | `$ELECTRO_MODEL_COEFFS` scope token | C — Project-specific | **Partially resolved (P2.5)** — the constant lives in the plugin and `specs/dict_builder.py`'s copy travelled with `_serialize`/`_entry_scope_and_key` into `plugins/cardiacfoam/dict_builder.py` (`d8effc00`), but the sentinel *convention* is still parsed independently in `specs/validation.py` and `scripts/_dict_keys_scanner.py` | Not yet — split across two core parsers | This sentinel still names a cardiac concept from two core sites; full retirement needs a plugin-declared scope resolver |
 | `specs/paths.py` | `repo_root_default` — looks for `src/` + `tutorials/` | B/C — Layout convention | Not inherently, but fragile | Partially | Prefer explicit configured/package-resource roots over ancestor guessing |
 | `specs/dict_builder.py`, `core/runtime/mutators.py` | OpenFOAM text dictionary manipulation | B — OpenFOAM-specific | No | Yes | Correctly shared; not cardiac-specific |
-| `core/runtime/strict_audit.py` | Success text naming `physicsProperties` and `electroProperties` | C — Project-specific presentation | **Yes** | No | Use plugin-neutral wording or let the plugin supply the summary |
+| `core/runtime/strict_audit.py` | ~~Success text naming `physicsProperties` and `electroProperties`~~ | C — Project-specific presentation | No — **Resolved (P2.7, `80d83c88`)** | Yes (text is now plugin-sourced) | Done; the audit summary wording comes from the plugin, so core names no cardiac dictionary |
 | `plugins/cardiacfoam_plugin.py` | `CardiacFoamPlugin` | C — Project adapter | — | No (correct location) | Correctly in plugins/ |
 | `plugins/cardiacfoam/validation.py` | `_evaluate_solver_coupling`, `_evaluate_heterogeneity` | C — Project-specific | — | No (correct location) | Correctly in plugins/ |
 | `plugins/cardiacfoam/tutorials/*` | 12 tutorial spec factories | D — Tutorial-specific | — | No (correct location) | Correctly in plugins/ |
-| `strict_planning.py` | `function_object_diagnostics` using `samplable_fields: {"electro": [], "solid": []}` | C — Mild leak | **Yes** | Needs fix | The fallback names `electro`/`solid` as region names, which are cardiac |
+| `strict_planning.py` | ~~`function_object_diagnostics` using `samplable_fields: {"electro": [], "solid": []}`~~ | C — Mild leak | No — **Resolved (P2.5, `4f3cd7a8`)** | Yes | Done; the fallback is gone — `samplable` comes from the plugin's capability manifest with an empty-mapping default that names no regions |
 | `pyproject.toml` | `name = "cardiacfoam-tutorials-driver"` | C — Project-specific | Naming only | Rename for reuse | Should be `openfoam-driver` or `driverfoam` |
 | `pyproject.toml` | `[driverfoam.plugins]\ncardiacfoam = ...CardiacFoamPlugin` | C — Project-specific | No (correct use of mechanism) | This is correct | The mechanism is right; the bundling with the core is the issue |
 
@@ -709,7 +709,7 @@ More precisely:
 | `core/compatibility.py::legacy_solver_commands()` | Same branch on `plugin_id == "org.cardiacfoam"` | Same reason | **Architectural smell** |
 | `core/runtime/generic_case.py::make_spec()` | ~~Parameters `electro_property_overrides`, `physics_property_overrides`, `electro_properties_relpath`, `physics_properties_relpath`~~ Resolved (P2.6) — the signature now takes `dict_file_relpaths` / `dict_file_overrides`, and `TutorialSpec.metadata` carries `dict_file_relpaths` / `has_default_dict_file_overrides` | Historical: generic factory was originally the cardiac factory | **Resolved** — the cardiac names remain only as deprecated aliases and default values sourced from the named `core/compatibility.py` seam |
 | `core/runtime/generic_case.py::make_spec()` | `_apply_case_mutation` fallback to `legacy_generic_case_mutation` | Must preserve cardiac apply-case behaviour for existing callers | **Architectural smell** — generic case factory has a cardiac default |
-| `schemas/run-document.json` | ~~Required cardiac config phases and cardiac physics fields~~ Resolved (P2.2, `73ca43f7`) — `config` is now `{"type": "object", "additionalProperties": true}`, validated per-plugin via `get_run_document_config_schema()` | RunDocument v2 originated as the cardiac agent contract | **Resolved for the schema** — a plugin builds and declares its own config shape; `core/runtime/run_model.py`'s `Phase` literal is a separate, still-open item (see next row) |
+| `schemas/run-document.json` | ~~Required cardiac config phases and cardiac physics fields~~ Resolved (P2.2, `73ca43f7`) — `config` is now `{"type": "object", "additionalProperties": true}`, validated per-plugin via `get_run_document_config_schema()` | The v2 RunDocument originated as the cardiac agent contract (v3 since P2.3, `fc2ec652`) | **Resolved for the schema** — a plugin builds and declares its own config shape; `core/runtime/run_model.py`'s `Phase` literal is a separate, still-open item (see next row) |
 | `core/runtime/run_model.py` | `Phase = Literal["anatomy", "physics", "stimulus", "solver"]` | Independent of the JSON schema; used by `specs/validation.py` and elsewhere | **Extraction blocker** — a plugin can build and schema-validate its own config, but the `Phase` type itself is still project-specific |
 | `specs/validation.py` | Fixed phase vocabulary and plugin-catalog checks applied to the RunDocument (cardiac-shaped for the built-in plugin, but plugin schemas are now independently declared) | Validates RunDocument config and semantic constraints | **Extraction blocker** — generic schema validation and cardiac semantic validation are not separated cleanly |
 | `plugins/cardiacfoam/detection.py` | Entire module — `detect_myocardium_solver_name`, `detect_ionic_model_name`, `electro_properties_has_block`, `detect_active_tension_model_name` | Moved out of `specs/` into the plugin (P2.5, `e137b390`); used by cardiacFoam tutorial factories | **Resolved** — no longer cardiac code in the shared `specs/` layer. `specs/apply_overrides.py` still imports this module directly from `specs/`, which is an explicit, correct-direction plugin dependency but still open core→plugin coupling; `specs/dict_builder.py`'s import went away when its cardiac half moved to the plugin (`d8effc00`) |
@@ -731,7 +731,7 @@ graph TB
     subgraph CurrentCore["'Core' package (openfoam_driver)"]
         GenEngine["Generic engine\n(workflow, DAG, provenance,\nRunDocument, audit)"]
         CardiacSpecs["specs/apply_overrides.py\n(imports plugins/cardiacfoam/ directly)\nspecs/validation.py,\nscripts/_dict_keys_scanner.py\n($ELECTRO_MODEL_COEFFS sentinel re-parsed independently)\n[detection.py/overrides.py moved to\nplugins/cardiacfoam/, P2.5 e137b390;\ndict_builder.py's cardiac half moved\nthere too, d8effc00 — a plugin-declared\nscope resolver would retire the rest]"]
-        CardiacRunDoc["RunDocument v2 envelope + Phase literal\n(config schema itself now plugin-declared;\nPhase/anatomy/physics/stimulus/solver\nstill hardcoded outside the config schema)"]
+        CardiacRunDoc["RunDocument v3 envelope + Phase literal\n(config schema itself now plugin-declared;\nPhase/anatomy/physics/stimulus/solver\nstill hardcoded outside the config schema)"]
         CardiacDefault["compatibility.py default\n→ CardiacFoamPlugin"]
         GenericCaseCardiac["generic_case.py\n(electro_property_overrides\nphysics_property_overrides)"]
     end
@@ -1150,7 +1150,7 @@ If Project C calls the legacy public `make_spec()` directly, it will encounter:
 - `electro_property_overrides`, `physics_property_overrides` parameters — these names make no sense for Project C.
 - `_apply_case_mutation` defaulting to the cardiac mutation function via `legacy_generic_case_mutation`.
 
-As of P2.2 (`73ca43f7`), the core RunDocument v2 `config` schema no longer
+As of P2.2 (`73ca43f7`), the core RunDocument `config` schema (v3 since P2.3) no longer
 requires the cardiac phase names — it validates each plugin's config against
 that plugin's own `get_run_document_config_schema()`. `GenericOpenFOAMPlugin`
 declares an unconstrained schema and may return any config shape; the four
@@ -1159,7 +1159,7 @@ from `build_run_document_config()` are a leftover compatibility choice, not a
 schema requirement, and could be replaced with a Project-C-shaped config.
 
 **Verdict:** The execution engine works, and the wrapper makes filesystem cases
-usable. The RunDocument v2 `config` schema is no longer a blocker to a strong
+usable. The RunDocument `config` schema is no longer a blocker to a strong
 project-agnostic claim; remaining blockers are the cardiac fallbacks elsewhere
 (`Phase` literal, `specs/validation.py`, `compatibility.py`) and the legacy
 `make_spec()` API, which is additional design debt, not an absolute execution
@@ -1298,7 +1298,7 @@ tests that can fail:
 10. **The intended integration path requires no driver-core edits.** Treat that
     as a design objective until an independently packaged, non-cardiac plugin
     passes plan/run/sweep conformance tests. As of P2.2 (`73ca43f7`), the
-    RunDocument v2 `config` property no longer constrains every plugin to a
+    RunDocument `config` property no longer constrains every plugin to a
     cardiac-shaped configuration envelope — each plugin declares its own via
     `get_run_document_config_schema()` — but the `Phase` literal and
     `specs/validation.py`'s phase vocabulary are still fixed independently of

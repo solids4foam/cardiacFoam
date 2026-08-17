@@ -11,7 +11,7 @@ openfoam_driver/
 ├── strict_planning.py              # strict preflight contract report
 ├── core/
 │   ├── runtime/
-│   │   ├── run_model.py           # RunDocument v2 + v1 migration
+│   │   ├── run_model.py           # RunDocument v3 + explicit v1/v2 migration
 │   │   ├── workflow.py            # workflow DAG normalization/validation
 │   │   ├── workflow_state.py      # persisted step state model
 │   │   ├── workflow_runner.py     # one-step strict subprocess runner
@@ -141,7 +141,7 @@ The `describe` action resolves the requested entry and prints:
 ## Strict autonomous contract
 
 The `plan --strict` action resolves the requested entry, validates the resolved
-RunDocument v2, checks dict-key catalog coverage, predicts data artifacts,
+RunDocument v3, checks dict-key catalog coverage, predicts data artifacts,
 normalizes the workflow DAG, and exits non-zero if any machine-readable
 contract is incomplete. It does not mutate case files.
 
@@ -175,7 +175,7 @@ The JSON report contains:
 - `workflow_dag`: normalized executable workflow steps
 - `workflow_state`: initial or resumed state snapshot
 - `expected_artifacts`: predicted data artifacts
-- `run_document`: canonical RunDocument v2 payload
+- `run_document`: canonical RunDocument v3 payload
 
 In strict-plan output, `workflow_dag.steps[*]` is normalized for the strict step
 runner: `command` contains only the executable name, `args` contains argv
