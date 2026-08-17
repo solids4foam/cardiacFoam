@@ -19,7 +19,7 @@
 #     run_document_exec
 #
 # Description
-#     Adapts an agent-authored RunDocument v2 into the inputs the strict
+#     Adapts an agent-authored RunDocument v3 into the inputs the strict
 #     workflow executor consumes. The producer-side counterpart to
 #     strict_planning.strict_plan: instead of deriving the plan from the
 #     on-disk case, it executes the plan the agent already authored.
@@ -28,7 +28,7 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Load and adapt a RunDocument v2 for strict workflow execution.
+"""Load and adapt a RunDocument v3 for strict workflow execution.
 
 ``load_run_document(path)`` reads and schema-validates a document (migrating
 v1 explicitly); raises ``ValueError`` or ``json.JSONDecodeError`` on malformed
@@ -113,6 +113,36 @@ def _allowed_runs_root(env: dict[str, str] | None = None) -> Path | None:
     return Path(value).resolve()
 
 
+def _validate_config_against_plugin_schema(
+    run_doc: RunDocument,
+    driver_context: "DriverContext | None",
+    diagnostics: list[dict[str, Any]],
+) -> None:
+    """Append a ``plugin_config_schema_violation`` diagnostic per violation.
+
+    Same check, code, and message shape as
+    ``run_document_adapter._run_document_from_case`` uses on the emission
+    path -- kept symmetric so a config the planner would refuse to emit is
+    also a config the executor refuses to ingest.
+    """
+    import jsonschema
+
+    from ..compatibility import resolve_public_driver_context
+
+    context = resolve_public_driver_context(driver_context)
+    config_schema = context.capabilities.run_document_configuration.schema()
+    try:
+        jsonschema.validate(run_doc.config, config_schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        diagnostics.append(_diag(
+            "error",
+            "plugin_config_schema_violation",
+            f"Plugin-declared config schema rejected the run document config: "
+            f"{exc.message}",
+            ".".join(str(part) for part in exc.absolute_path) or "config",
+        ))
+
+
 def build_execution_inputs(
     run_doc: RunDocument,
     *,
@@ -151,6 +181,19 @@ def build_execution_inputs(
     for err in validate_run(run_doc, driver_context=driver_context):
         message = f"[{err.phase}] {err.message}" if err.phase else err.message
         diagnostics.append(_diag(err.level, "run_validation", message, err.field))
+
+    # 1b) Plugin-declared config schema. run_document_adapter applies this on
+    # the *emission* path (config the plugin just built); an ingested,
+    # agent-authored document is the untrusted counterpart and must clear the
+    # same gate, with the same `plugin_config_schema_violation` code.
+    #
+    # No generic-case exemption here: unlike run_document_adapter (which reads
+    # spec.metadata["generic_case"]), a RunDocument carries no generic-case
+    # marker -- resolvedEntry.entryKind/sourceType do not distinguish a core
+    # generic case from any other discovered case folder. This mirrors the
+    # unconditional validate_run above, and a generic case's all-empty config
+    # satisfies the plugin schemas in-tree regardless.
+    _validate_config_against_plugin_schema(run_doc, driver_context, diagnostics)
 
     # 2) Expected artifacts: reconstruct, reporting any malformed entry.
     expected_artifacts: list[DataArtifact] = []

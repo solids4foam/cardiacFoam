@@ -25,8 +25,19 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Plugin-declared RunDocument.config schema validation (P2.2)."""
+"""Plugin-declared RunDocument.config schema validation (P2.2).
+
+Covers both directions of the contract: the *emission* path (a plugin-built
+config, checked in ``run_document_adapter``) and the *ingestion* path (an
+agent-authored document read off disk, checked in ``run_document_exec``).
+The two must stay symmetric -- a config the planner would refuse to emit is
+a config the executor must refuse to ingest.
+"""
 from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.strict_planning import strict_plan
@@ -59,3 +70,75 @@ def test_strict_plan_reports_a_structured_diagnostic_for_schema_violation(monkey
     assert "plugin_config_schema_violation" in codes
     messages = [d.message for d in report.validation_diagnostics if d.code == "plugin_config_schema_violation"]
     assert any("solver" in message for message in messages)
+
+
+def _document_json(config: dict) -> dict:
+    return {
+        "version": "3",
+        "id": "ingested",
+        "name": "ingested",
+        "status": "planned",
+        "config": config,
+        "launch": {"caseRoot": "/nonexistent/case", "outputDir": "/nonexistent/case/out"},
+        "workflowDag": {
+            "schema_version": "1",
+            "step_status_values": [
+                "pending", "running", "completed", "failed", "skipped",
+            ],
+            "steps": [{
+                "id": "solve", "command": "Allrun", "args": [], "cwd": ".",
+                "depends_on": [], "produces": [], "consumes": [],
+                "retry_policy": {}, "command_display": "Allrun",
+            }],
+        },
+    }
+
+
+def _ingest(config: dict) -> tuple[dict, ...]:
+    """Load a hand-authored document off disk and adapt it for execution."""
+    from openfoam_driver.core.runtime.run_document_exec import (
+        build_execution_inputs,
+        load_run_document,
+    )
+
+    with tempfile.TemporaryDirectory() as temp:
+        path = Path(temp) / "run.json"
+        path.write_text(json.dumps(_document_json(config)))
+        run_doc = load_run_document(path)
+    _inputs, diagnostics = build_execution_inputs(run_doc)
+    return diagnostics
+
+
+def test_ingested_document_is_checked_against_the_plugin_config_schema() -> None:
+    """An agent-authored config that violates the plugin's own schema must be
+    rejected at *ingestion*, with the same diagnostic code the emission path
+    uses. The ingestion path is the untrusted one: before this gate it saw
+    only ``validate_run`` and never consulted the plugin schema at all.
+
+    ``tissue`` carries a closed enum in the cardiac plugin's config schema
+    but no catalog enum that ``validate_run`` would independently reject, so
+    an out-of-enum value here isolates the plugin-schema gate.
+    """
+    diagnostics = _ingest({
+        "anatomy": {},
+        "physics": {"tissue": "notATissue"},
+        "stimulus": {},
+        "solver": {},
+    })
+    violations = [
+        d for d in diagnostics if d["code"] == "plugin_config_schema_violation"
+    ]
+    assert violations, diagnostics
+    assert violations[0]["field"] == "physics.tissue"
+    assert "notATissue" in violations[0]["message"]
+
+
+def test_ingested_document_with_a_schema_valid_config_raises_no_violation() -> None:
+    """The gate must not fire on a config the plugin schema accepts (the
+    all-empty phase config a core generic case emits)."""
+    diagnostics = _ingest({
+        "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
+    })
+    assert not [
+        d for d in diagnostics if d["code"] == "plugin_config_schema_violation"
+    ], diagnostics

@@ -49,6 +49,7 @@ validation errors.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, get_args
 
@@ -101,6 +102,40 @@ def _slice_value(run, phase: Phase, driver_path: str):
     """Look up the slot value for a driver_path inside a phase slice."""
     slice_ = run.config.get(phase, {}) or {}
     return slice_.get(slot_key(driver_path))
+
+
+def _non_mapping_phase_errors(run) -> list[ValidationError]:
+    """Reject any ``run.config`` phase slice that is not a mapping.
+
+    ``RunDocument.config`` is plugin-defined and the core JSON Schema only
+    constrains it to be an object -- per-phase values are unconstrained
+    (P2.2). Both :func:`_flatten_context` (``slice_.items()``) and
+    :func:`_slice_value` (``slice_.get(...)``) assume every slice is
+    dict-shaped, so an agent-authored document such as
+    ``config={"anatomy": "not-an-object"}`` would otherwise raise an
+    uncaught ``AttributeError`` instead of producing a diagnostic. This
+    single guard protects both; ``validate_run`` returns early when it
+    fires, so neither helper ever sees a non-mapping slice.
+
+    ``None`` and other falsy values are tolerated: both helpers already
+    coerce them to an empty slice.
+    """
+    errors: list[ValidationError] = []
+    for phase, slice_ in (run.config or {}).items():
+        if not slice_ or isinstance(slice_, Mapping):
+            continue
+        errors.append(ValidationError(
+            # `phase` is the *reporting* phase and must stay inside the
+            # declared vocabulary; the offending key is carried by `field`.
+            phase=phase if phase in _PHASE_ORDER else "physics",
+            field=str(phase),
+            message=(
+                f"config[{phase!r}] must be an object, got "
+                f"{type(slice_).__name__}."
+            ),
+            level="error",
+        ))
+    return errors
 
 
 def _flatten_context(run) -> dict[str, Any]:
@@ -221,9 +256,19 @@ def validate_run(
     ``entries`` overrides the live catalog for testability and for callers
     that want to validate against a curated subset (e.g., dict_builder).
     When omitted, the full live catalog is used.
+
+    A ``run.config`` whose phase slices are not all mappings is reported as
+    error-level diagnostics and short-circuits the remaining checks (see
+    :func:`_non_mapping_phase_errors`).
     """
     from openfoam_driver.core.compatibility import resolve_public_driver_context
     from openfoam_driver.core.plugin_capabilities import RunSemanticValidationRequest
+
+    # 0) Shape guard. Every later step indexes phase slices as mappings;
+    #    bail out with diagnostics rather than crashing on a malformed one.
+    shape_errors = _non_mapping_phase_errors(run)
+    if shape_errors:
+        return shape_errors
 
     driver_context = resolve_public_driver_context(driver_context)
     entry_list: list[DictEntry] = (

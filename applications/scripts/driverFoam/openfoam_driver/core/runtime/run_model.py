@@ -62,7 +62,12 @@ class RunDocument:
     id: str
     name: str
     status: Status
-    config: dict[str, dict[str, Any]]
+    # Plugin-defined: the core schema constrains ``config`` to an object but
+    # imposes no shape on the per-phase values (P2.2). Annotating the values
+    # as ``dict`` would assert a guarantee the schema no longer makes;
+    # ``specs.validation.validate_run`` enforces the mapping shape and
+    # reports violations as diagnostics.
+    config: dict[str, Any]
     version: str = "3"
     createdAt: str = ""
     lastModified: str = ""

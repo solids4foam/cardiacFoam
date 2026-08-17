@@ -561,14 +561,10 @@ def test_invalid_config_blocks_execution_at_ingestion() -> None:
 
     The malformed value here is an out-of-enum string (a domain-semantic
     violation `validate_run` is meant to catch), not a wrong Python type for
-    a phase slice: since P2.2 opened the core schema's per-phase `type:
-    object` constraint (commit 73ca43f7), a non-dict phase value (e.g.
-    `{"anatomy": "not-an-object"}`) reaches `validate_run`'s
-    `_flatten_context` and raises an uncaught `AttributeError` instead of a
-    diagnostic -- a real, pre-existing gap in
-    openfoam_driver/specs/validation.py, out of scope for this test file to
-    fix. This test sticks to the codepath SECURITY.md actually documents as
-    mitigated.
+    a phase slice. The wrong-type case is gated separately by
+    `test_non_mapping_config_phase_blocks_execution_at_ingestion` below;
+    keeping the two apart preserves this test's original claim (domain
+    semantics) as its own regression gate.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         tutorials_root = Path(temp_dir)
@@ -589,6 +585,46 @@ def test_invalid_config_blocks_execution_at_ingestion() -> None:
         assert code != 0, payload
         assert any(
             d.get("level") == "error" for d in payload.get("diagnostics", ())
+        ), payload
+        assert not (case_root / "0.001").exists(), "config was not gated before execution"
+
+
+def test_non_mapping_config_phase_blocks_execution_at_ingestion() -> None:
+    """A wrong-*type* config phase must produce a diagnostic, not a crash.
+
+    P2.2 opened the core schema's `config` to `additionalProperties: true`
+    with no per-phase type constraint, so a phase value can legally be any
+    JSON type by the time it reaches `validate_run`. Before the guard in
+    `specs/validation.py::_non_mapping_phase_errors`, a non-dict phase
+    (`{"anatomy": "not-an-object"}`) reached `_flatten_context` and raised an
+    uncaught `AttributeError` through the real
+    `foamctl run --run-document` path -- a traceback instead of the
+    diagnostic SECURITY.md promises. This is the regression gate for that
+    fix: the CLI must exit non-zero with a parseable JSON payload.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tutorials_root = Path(temp_dir)
+        case_root = _write_case(tutorials_root)
+        doc_path = _hand_authored_document(
+            tutorials_root / "run.json",
+            case_root=case_root,
+            steps=[_step("Allrun")],
+            config={
+                "anatomy": "not-an-object",
+                "physics": {},
+                "stimulus": {},
+                "solver": {},
+            },
+        )
+        # A traceback escaping `main` would fail here before any assertion.
+        code, payload = _cli(["run", "--run-document", str(doc_path)])
+
+        assert code != 0, payload
+        diagnostics = payload.get("diagnostics", ())
+        assert any(d.get("level") == "error" for d in diagnostics), payload
+        assert any(
+            d.get("field") == "anatomy" and "must be an object" in d.get("message", "")
+            for d in diagnostics
         ), payload
         assert not (case_root / "0.001").exists(), "config was not gated before execution"
 
