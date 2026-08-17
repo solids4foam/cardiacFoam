@@ -64,3 +64,23 @@ def test_existing_case_discovery_and_runnability_matrix(
     assert bool(matches) is discovered
     if discovered:
         assert matches[0]["is_runnable"] is runnable
+
+
+def test_legacy_resolve_case_models_neutral_shape_has_no_cardiac_keys() -> None:
+    from openfoam_driver.core.compatibility import legacy_resolve_case_models
+
+    class NotCardiac:
+        plugin_id = "org.example.notcardiac"
+
+    result = legacy_resolve_case_models(NotCardiac(), case_root=None)
+    assert result == {}
+
+
+def test_legacy_samplable_fields_neutral_shape_has_no_cardiac_keys() -> None:
+    from openfoam_driver.core.compatibility import legacy_samplable_fields
+
+    class NotCardiac:
+        plugin_id = "org.example.notcardiac"
+
+    result = legacy_samplable_fields(NotCardiac(), resolved={})
+    assert result == {}

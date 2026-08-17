@@ -415,9 +415,7 @@ def strict_plan(
     capability_manifest = _jsonable(raw_capability_manifest)
     function_object_diagnostics = function_object_field_diagnostics(
         spec.case_root,
-        samplable=raw_capability_manifest.get(
-            "samplable_fields", {"electro": [], "solid": []},
-        ),
+        samplable=raw_capability_manifest.get("samplable_fields", {}),
     )
     # Field diagnostics are warn-only: reported (in all_diagnostics) but never
     # part of plan_diagnostics, so a sampled-field warning cannot fail a plan.

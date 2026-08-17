@@ -218,7 +218,7 @@ def legacy_resolve_case_models(plugin, case_root) -> dict:
         from ..plugins.cardiacfoam.case_introspection import resolve_case_models
 
         return resolve_case_models(case_root)
-    return {"solver": None, "ionic_model": None, "active_tension": None}
+    return {}
 
 
 @_instrumented
@@ -231,7 +231,7 @@ def legacy_samplable_fields(plugin, resolved) -> dict:
         from ..plugins.cardiacfoam.case_introspection import samplable_fields
 
         return samplable_fields(resolved)
-    return {"electro": (), "solid": ()}
+    return {}
 
 
 @_instrumented
