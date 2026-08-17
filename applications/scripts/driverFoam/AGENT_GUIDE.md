@@ -15,9 +15,9 @@ before driving the orchestrator.
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
 | Validate RunDocument v2 or migrate v1 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)` | `openfoam_driver.core.runtime.run_model` |
 | Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.specs.validation` |
-| Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.specs.dict_builder` |
-| Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.specs.dict_builder` |
-| Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.specs.dict_builder` |
+| Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
+| Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
+| Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Locate predicted outputs | Read `artifacts_manifest.json` (sidecar, atomic) | `<output_dir>/` |
 | Verify outputs vs predictions | Read `artifacts_realized.json` (written at terminal status) | `<output_dir>/` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
@@ -185,7 +185,7 @@ but it is not the preferred autonomous path because it mutates and launches in
 one call instead of first emitting a strict contract.
 
 ```python
-from openfoam_driver.specs.dict_builder import build_and_launch
+from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
 result = build_and_launch(
     electro_selectors={
@@ -655,7 +655,7 @@ Declaring any `bathPotentialDomain.*` override auto-enables the bath block — t
 ### Read back an existing dict
 
 ```python
-from openfoam_driver.specs.dict_builder import parse_electro_properties
+from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
 
 parsed = parse_electro_properties("/path/to/case/constant/electroProperties")
 # {"selectors": {"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", ...},
@@ -665,7 +665,7 @@ parsed = parse_electro_properties("/path/to/case/constant/electroProperties")
 Pass the result directly to `build_electro_properties` to round-trip:
 
 ```python
-from openfoam_driver.specs.dict_builder import build_electro_properties, parse_electro_properties
+from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties, parse_electro_properties
 
 parsed = parse_electro_properties(existing_path)
 text = build_electro_properties(parsed["selectors"], overrides=parsed["overrides"] or None)
