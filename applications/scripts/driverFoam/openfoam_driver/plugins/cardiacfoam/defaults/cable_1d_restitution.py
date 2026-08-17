@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from .shared import (
+    CONTROL_DICT_RELPATH,
+    ELECTRO_PROPERTIES_RELPATH as SHARED_ELECTRO_PROPERTIES_RELPATH,
+    OUTPUT_DIR_NAME,
+    RUN_CASE_SCRIPT_RELPATH,
+)
+
+TUTORIAL_NAME = "cable1DRestitution"
+CASE_DIR_NAME = "electrophysiologyProtocols/cableProtocol/monodomain1DCableCV"
+SETUP_DIR_NAME = "setup"
+
+IONIC_MODELS = ("Stewart",)
+IONIC_MODEL_TISSUE_MAP = {
+    "Stewart": ("myocyte",),
+}
+
+# S1–S2 protocol parameters
+S1_INTERVAL_MS = 1000.0
+N_S1 = 5
+N_S2 = 1
+S2_INTERVALS_MS = (700.0, 500.0)
+
+# Physical Mesh Defaults
+CABLE_LENGTH_MM = 20.0
+CROSS_SECTION_CELL_COUNTS = (1, 1)
+DX_VALUES = (0.1,)
+DT_VALUES = (0.01,)
+CONDUCTIVITY_VALUES = (
+    "[-1 -3 3 0 0 2 0] (2.3 0 0 2.3 0 2.3)",
+)
+SOLVERS = ("implicit",)
+PARALLEL = True
+
+# Timing
+END_TIME_BUFFER_S = 0.1
+
+ELECTRO_PROPERTIES_SCOPE = "monodomainSolverCoeffs"
+ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH
+BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
+RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
+POSTPROCESS_SCRIPT_RELPATH = Path("postProcessing_cableRestitution.py")
+POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
+CV_EXTRACT_SCRIPT_RELPATH = Path("postProcessing_cableRestitution.py")
+TABLE_SUMMARY_RELPATH = Path("table_summary.py")
+
+__all__ = [
+    "TUTORIAL_NAME",
+    "CASE_DIR_NAME",
+    "SETUP_DIR_NAME",
+    "IONIC_MODELS",
+    "IONIC_MODEL_TISSUE_MAP",
+    "S1_INTERVAL_MS",
+    "N_S1",
+    "N_S2",
+    "S2_INTERVALS_MS",
+    "CABLE_LENGTH_MM",
+    "CROSS_SECTION_CELL_COUNTS",
+    "DX_VALUES",
+    "DT_VALUES",
+    "CONDUCTIVITY_VALUES",
+    "SOLVERS",
+    "PARALLEL",
+    "END_TIME_BUFFER_S",
+    "ELECTRO_PROPERTIES_SCOPE",
+    "ELECTRO_PROPERTIES_RELPATH",
+    "BLOCK_MESH_DICT_RELPATH",
+    "RUN_SCRIPT_RELPATH",
+    "POSTPROCESS_SCRIPT_RELPATH",
+    "POSTPROCESS_FUNCTION_NAME",
+    "CV_EXTRACT_SCRIPT_RELPATH",
+    "TABLE_SUMMARY_RELPATH",
+    "CONTROL_DICT_RELPATH",
+    "OUTPUT_DIR_NAME",
+]

@@ -1,9 +1,0 @@
-{
-  "h_definition": "n_cells^(-1/3)",
-  "levels": [
-    {"nominal_N": 10, "n_cells": 6861},
-    {"nominal_N": 20, "n_cells": 47200},
-    {"nominal_N": 40, "n_cells": 349109},
-    {"nominal_N": 80, "n_cells": 2662487}
-  ]
-}

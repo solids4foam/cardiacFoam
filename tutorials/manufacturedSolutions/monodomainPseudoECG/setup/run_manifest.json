@@ -2,10 +2,10 @@
   "schema_version": "2.0",
   "run_id": "1773923630-abf55c3c",
   "requested_action": "all",
-  "tutorial": "manufacturedFDA",
-  "case_root": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA",
-  "setup_root": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA/setup",
-  "output_dir": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA/postProcessing",
+  "tutorial": "manufacturedMonodomainPseudoECG",
+  "case_root": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedMonodomainPseudoECG",
+  "setup_root": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedMonodomainPseudoECG/setup",
+  "output_dir": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedMonodomainPseudoECG/postProcessing",
   "dry_run": true,
   "continue_on_error": false,
   "status": "planned",
@@ -19,7 +19,7 @@
   "completed_cases": 0,
   "failed_cases": 0,
   "error": null,
-  "plots_manifest_path": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA/postProcessing/plots.json",
+  "plots_manifest_path": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedMonodomainPseudoECG/postProcessing/plots.json",
   "results": [
     {
       "case_id": "1D_10_cells_implicit_DT0p00892857",
@@ -310,5 +310,5 @@
       "finished_at_utc": null
     }
   ],
-  "human_report_path": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedFDA/setup/run_report.md"
+  "human_report_path": "/Users/simaocastro/cardiacFoamv2/tutorials/manufacturedMonodomainPseudoECG/setup/run_report.md"
 }

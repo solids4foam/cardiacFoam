@@ -55,7 +55,7 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config.json
 ```
 
 After the sweep completes, persist the canonical Paper I convergence tables (reads
@@ -73,8 +73,8 @@ asymptotic regime and were dropped, and the coarser 2D `N = 320` study was super
 by `N = 640`.
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal1D_N640/config.json
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedFDA --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal2D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal1D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal2D_N640/config.json
 ```
 
 Each temporal config holds a fixed fine mesh (`N = 640`) with a `dt` ladder

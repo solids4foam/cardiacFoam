@@ -2,7 +2,7 @@
   "schema_version": "2.1",
   "run_id": "1779094500-f7e1f92d",
   "requested_action": "sim",
-  "entry": "manufacturedFDABathBidomain",
+  "entry": "manufacturedBathBidomain",
   "entry_kind": "registered_tutorial",
   "entry_path": "manufacturedSolutions/bathBidomain",
   "source_type": "spec_factory",

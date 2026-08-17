@@ -1,6 +1,6 @@
 {
   "base": {
-    "entry": "manufacturedFDABidomain",
+    "entry": "manufacturedBidomain",
     "case_dir_name": "manufacturedSolutions/bidomain",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,

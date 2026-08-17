@@ -71,7 +71,7 @@ Parallel ECG ownership smoke run:
 ```bash
 source $WM_PROJECT_DIR/etc/bashrc
 applications/scripts/driverFoam/bin/driverFoam sim \
-    --entry manufacturedFDABathBidomain \
+    --entry manufacturedBathBidomain \
     --config tutorials/manufacturedSolutions/bathBidomain/setup/driver_config_ecg_smoke.json
 ```
 

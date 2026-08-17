@@ -17,19 +17,19 @@ FoamFile
 
 application     cardiacFoam;
 
-startFrom       startTime;
+startFrom       latestTime;
 
 startTime       0;
 
 stopAt          endTime;
 
-endTime    1.0;
+endTime    5.6;
 
-deltaT    1.0;
+deltaT    1e-05;
 
 writeControl    runTime;
 
-writeInterval   2e-3;
+writeInterval   4.25;
 
 purgeWrite      0;
 

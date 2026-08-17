@@ -99,7 +99,7 @@ The decomposition is defined in `system/decomposeParDict`.
 This case is also exposed as a registered driver sweep:
 
 ```bash
-foamctl all --entry monodomainAndEikonal1DCableCVConvergence
+foamctl all --entry cable1DCVConvergence
 ```
 
 The default sweep config is stored in:
@@ -113,6 +113,28 @@ per sweep case, runs in parallel by default, exports one CV summary per case,
 and then writes per-ionic-model convergence CSVs plus convergence plots under
 model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
 `outputsCVConvergence/TWorld/`.
+
+## Driver restitution entry
+
+This case is also exposed as a newly normalized S1-S2 restitution sweep:
+
+```bash
+foamctl run --entry cableRestitutionCurves --strict
+```
+
+Or you can sweep custom restitution intervals using a JSON config:
+
+```bash
+foamctl sweep-run --spec sweep_restitution.json --output-dir validation_run
+```
+
+The sweep logic and default S2 pacing intervals are fully centralized in:
+
+```text
+applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/defaults/cable_restitution_curves.py
+```
+
+*Note:* Because multiple wavefronts are generated, the normalized post-processing step (`setup/postProcessing_cableRestitution.py`) parses the raw voltage traces to isolate the CV of the second (S2) wavefront.
 
 ## Main calibration knob
 

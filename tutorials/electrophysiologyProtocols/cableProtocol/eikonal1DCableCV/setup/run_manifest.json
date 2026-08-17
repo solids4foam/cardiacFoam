@@ -2,7 +2,7 @@
   "schema_version": "2.3",
   "run_id": "1782662811-83ca12ab",
   "requested_action": "all",
-  "entry": "monodomainAndEikonal1DCableCVConvergence",
+  "entry": "cable1DCVConvergence",
   "entry_kind": "registered_tutorial",
   "entry_path": "coreProtocols/cableProtocol/monodomain1DCableCV",
   "source_type": "spec_factory",

@@ -1,6 +1,6 @@
 {
   "base": {
-    "entry": "manufacturedFDABathBidomain",
+    "entry": "manufacturedBathBidomain",
     "case_dir_name": "manufacturedSolutions/bathBidomain",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,

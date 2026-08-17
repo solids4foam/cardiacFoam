@@ -99,7 +99,7 @@ The decomposition is defined in `system/decomposeParDict`.
 This case is also exposed as a registered driver sweep:
 
 ```bash
-foamctl all --entry monodomainAndEikonal1DCableCVConvergence
+foamctl all --entry cable1DCVConvergence
 ```
 
 The default sweep config is stored in:

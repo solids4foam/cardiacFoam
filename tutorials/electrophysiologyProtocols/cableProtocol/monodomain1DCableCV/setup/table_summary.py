@@ -50,7 +50,7 @@ def _parse_filename(stem: str) -> dict[str, object]:
 def build_summary_rows(output_dir: Path) -> list[dict]:
     files = sorted(output_dir.glob("*_cv_summary.json"))
     if not files:
-        print(f"[monodomainAndEikonal1DCableCVConvergence/table_summary] No *_cv_summary.json files in {output_dir}")
+        print(f"[cable1DCVConvergence/table_summary] No *_cv_summary.json files in {output_dir}")
         return []
 
     rows: list[dict] = []
@@ -114,12 +114,12 @@ def build_summary_rows(output_dir: Path) -> list[dict]:
 
 def _discover_summary_dirs(output_root: Path) -> list[tuple[Path, Path]]:
     if not output_root.exists():
-        print(f"[monodomainAndEikonal1DCableCVConvergence/table_summary] Output directory does not exist: {output_root}")
+        print(f"[cable1DCVConvergence/table_summary] Output directory does not exist: {output_root}")
         return []
 
     files = sorted(output_root.rglob("*_cv_summary.json"))
     if not files:
-        print(f"[monodomainAndEikonal1DCableCVConvergence/table_summary] No *_cv_summary.json files in {output_root}")
+        print(f"[cable1DCVConvergence/table_summary] No *_cv_summary.json files in {output_root}")
         return []
 
     parents = sorted({file_path.parent for file_path in files})
@@ -222,7 +222,7 @@ def _plot_group_convergence(
     output_dir: Path,
 ) -> list[dict[str, object]]:
     if not _has_matplotlib():
-        print("[monodomainAndEikonal1DCableCVConvergence/table_summary] matplotlib unavailable; writing CSV only.")
+        print("[cable1DCVConvergence/table_summary] matplotlib unavailable; writing CSV only.")
         return []
 
     configure_matplotlib_defaults()
@@ -271,7 +271,7 @@ def _plot_group_convergence(
         legend=True,
     )
     fig_dx.suptitle(f"1D cable CV mesh convergence\n{title}", fontsize=12)
-    dx_path = output_dir / f"monodomainAndEikonal1DCableCVConvergence_dx_{tag}.png"
+    dx_path = output_dir / f"cable1DCVConvergence_dx_{tag}.png"
     finalize_matplotlib_figure(fig_dx, save_path=dx_path, show=False, close=True)
     artifacts.append(
         {
@@ -314,7 +314,7 @@ def _plot_group_convergence(
         legend=True,
     )
     fig_dt.suptitle(f"1D cable CV time-step convergence\n{title}", fontsize=12)
-    dt_path = output_dir / f"monodomainAndEikonal1DCableCVConvergence_dt_{tag}.png"
+    dt_path = output_dir / f"cable1DCVConvergence_dt_{tag}.png"
     finalize_matplotlib_figure(fig_dt, save_path=dt_path, show=False, close=True)
     artifacts.append(
         {
@@ -332,7 +332,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
     del setup_root
     output_path = Path(output_dir)
     meta = TableMetadata(
-        tutorial="monodomainAndEikonal1DCableCVConvergence",
+        tutorial="cable1DCVConvergence",
         units={
             "DX_mm": "mm",
             "DT_ms": "ms",
@@ -355,7 +355,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             _write_summary_csv(
                 rows,
                 output_dir=summary_dir,
-                filename_stem="monodomainAndEikonal1DCableCVConvergence_summary",
+                filename_stem="cable1DCVConvergence_summary",
                 label="1D cable CV convergence summary",
                 metadata=meta,
             )

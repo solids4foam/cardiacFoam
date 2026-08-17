@@ -1,6 +1,6 @@
 {
   "base": {
-    "entry": "manufacturedFDA",
+    "entry": "manufacturedMonodomainPseudoECG",
     "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
     "setup_dir_name": "setup",
     "postprocess_strict_artifacts": false,

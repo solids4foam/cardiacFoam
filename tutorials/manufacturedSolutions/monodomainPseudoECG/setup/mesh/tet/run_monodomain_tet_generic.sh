@@ -45,13 +45,13 @@ mono_metrics(){ D=$(ls postProcessing/3D_*_cells_implicit.dat 2>/dev/null|head -
 # Fail loudly rather than emitting empty ECG columns. This script runs the
 # committed case directory, whose constant/electroProperties must therefore
 # configure ecgDomains; driverFOAM runs are unaffected because the driver
-# generates its own configuration from the manufacturedFDA entry defaults.
+# generates its own configuration from the manufacturedMonodomainPseudoECG entry defaults.
 ecg_metrics(){
   local f=postProcessing/manufacturedPseudoECGSummary.dat
   if [[ ! -f "$f" ]]; then
     echo "ERROR: $f not written. The case's constant/electroProperties has no" >&2
     echo "       ecgDomains block, so no pseudo-ECG was computed. Either add it" >&2
-    echo "       or drive this study through driverFOAM (entry manufacturedFDA)," >&2
+    echo "       or drive this study through driverFOAM (entry manufacturedMonodomainPseudoECG)," >&2
     echo "       whose defaults already carry the five electrodes." >&2
     exit 1
   fi

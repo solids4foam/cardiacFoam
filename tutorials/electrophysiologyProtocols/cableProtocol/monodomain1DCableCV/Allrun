@@ -21,4 +21,3 @@ else
     runApplication cardiacFoam
 fi
 
-python3 setupMonodomain1DCableCV/extract_cv.py
