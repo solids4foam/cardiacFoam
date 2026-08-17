@@ -452,6 +452,32 @@ class TestPredictorExportListFiltering(unittest.TestCase):
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
             self.assertEqual(trace.variables, ("u", "recovery_r"))
 
+    def test_explicitly_empty_export_list_predicts_zero_ionic_exports(self) -> None:
+        """``outputVariables.ionic.export ( );`` is a real, deliberate
+        declaration -- the solver will write no ionic fields at all. This is
+        NOT the same as omitting the export block (the fallback-to-catalog
+        case above): predicting the catalog's recommended exports here
+        would report artifacts that the run can never produce."""
+        with tempfile.TemporaryDirectory() as temp:
+            case_root = Path(temp) / "case"
+            case_root.mkdir()
+            _write_pde_electro_properties(
+                case_root,
+                solver="monodomainSolver",
+                ionic_model="TNNP",
+                export_list=(),
+            )
+            spec = _make_spec(case_root)
+            artifacts = predict_data_artifacts(case_root, spec)
+            ids = {a.artifact_id for a in artifacts}
+            # Vm is always predicted for monodomain; no per-ionic-variable
+            # artifact should appear since the declared export list is empty.
+            self.assertIn("monodomain_vm_series", ids)
+            self.assertFalse(
+                {a.artifact_id for a in artifacts if a.artifact_id != "monodomain_vm_series"},
+                f"expected zero ionic-export artifacts beyond Vm, got {ids - {'monodomain_vm_series'}}",
+            )
+
 
 class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):
     """A verification tutorial declares analytic-error artifacts statically
