@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from .plugin_profile import CaseFileRule
     from .runtime.models import DataArtifact, TutorialSpec
     from ..planning_types import StrictDiagnostic
+    from ..report_catalog import ReportDefinition
 
 
 @dataclass(frozen=True)
@@ -204,11 +205,18 @@ class CaseFileContractCapability(Protocol):
     validate the namespace. ``get_profile()`` is a required v1 plugin member and
     ``case_files`` is already part of ``PluginProfile``, so every plugin
     already carries this data -- no compatibility fallback is needed.
+
+    ``describe_config_resolution`` is different: it is a human-readable
+    sentence, not derived from ``case_files`` data, so it *does* need a
+    compatibility fallback (``legacy_describe_config_resolution``) for v1
+    plugins and plugins that never authored one -- cardiac-shaped only for
+    the built-in cardiac plugin, plugin-neutral for everyone else.
     """
 
     def required_files(self) -> tuple[str, ...]: ...
     def conditional_files(self) -> tuple[str, ...]: ...
     def required_rules(self) -> tuple["CaseFileRule", ...]: ...
+    def describe_config_resolution(self) -> str: ...
 
 
 class OverrideSchemaCapability(Protocol):
@@ -284,6 +292,24 @@ class CaseProvenanceCapability(Protocol):
         resolved_case: dict[str, Any],
         selected_start_time: str,
     ) -> tuple[str, ...]: ...
+
+
+class ReportCatalogCapability(Protocol):
+    """Post-run report definitions the active plugin wants offered.
+
+    ``report_catalog`` (:mod:`openfoam_driver.report_catalog`) owns the
+    solver-neutral machinery -- ``ReportDefinition``, the ``applicable_when``
+    predicate evaluator, the JSON record shape -- but the *catalog itself*
+    (which reports exist, e.g. "Vm field" or "activation map") is
+    solver-specific data. Not a mandatory ``SolverPluginV2`` member, so
+    existing v2 third-party plugins keep loading; the fallback
+    (``legacy_report_catalog``) is cardiac-shaped only for the built-in
+    cardiac plugin and empty for everyone else -- the honest answer for a
+    plugin that declares no reports, matching the pattern already used by
+    :class:`CaseProvenanceCapability`.
+    """
+
+    def reports(self) -> tuple["ReportDefinition", ...]: ...
 
 
 @dataclass(frozen=True)
@@ -520,6 +546,14 @@ class _CaseFileContractAdapter:
     def conditional_files(self) -> tuple[str, ...]:
         return tuple(rule.path for rule in self._rules() if rule.required != "always")
 
+    def describe_config_resolution(self) -> str:
+        hook = getattr(self.plugin, "get_config_resolution_description", None)
+        if callable(hook):
+            return str(hook())
+        from .compatibility import legacy_describe_config_resolution
+
+        return legacy_describe_config_resolution(self.plugin)
+
 
 @dataclass(frozen=True)
 class _OverrideSchemaAdapter:
@@ -593,6 +627,19 @@ class _CaseProvenanceAdapter:
 
 
 @dataclass(frozen=True)
+class _ReportCatalogAdapter:
+    plugin: "SolverPlugin"
+
+    def reports(self) -> tuple["ReportDefinition", ...]:
+        hook = getattr(self.plugin, "get_report_catalog", None)
+        if callable(hook):
+            return tuple(hook())
+        from .compatibility import legacy_report_catalog
+
+        return legacy_report_catalog(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -613,6 +660,7 @@ class PluginCapabilities:
     override_schema: OverrideSchemaCapability
     runtime_evidence: RuntimeEvidenceCapability
     case_provenance: CaseProvenanceCapability
+    report_catalog: ReportCatalogCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -636,4 +684,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         override_schema=_OverrideSchemaAdapter(plugin),
         runtime_evidence=_RuntimeEvidenceAdapter(plugin),
         case_provenance=_CaseProvenanceAdapter(plugin),
+        report_catalog=_ReportCatalogAdapter(plugin),
     )

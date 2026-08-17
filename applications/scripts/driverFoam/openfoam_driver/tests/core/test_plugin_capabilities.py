@@ -86,6 +86,20 @@ def test_legacy_plugin_case_evidence_preserves_pre_capability_behavior(
     assert context.capabilities.case_compatibility.is_runnable_without_workflow(request)
 
 
+def test_report_catalog_is_empty_for_non_cardiac_plugin() -> None:
+    """P2.7: report_catalog.py's former REPORTS tuple was cardiac-specific
+    data consumed unconditionally. A non-cardiac v1 plugin must get an empty
+    report catalog, not the built-in "Vm field"/"activation map" reports."""
+    plugin = MinimalOpenFOAMPlugin()
+    context = driver_context(plugin, source="test")
+
+    reports = context.capabilities.report_catalog.reports()
+
+    assert reports == ()
+    assert not any("Vm field" in r.title for r in reports)
+    assert not any("activation map" in r.title.lower() for r in reports)
+
+
 def test_capability_adapter_preserves_plugin_exceptions(tmp_path: Path) -> None:
     class ThrowingPlugin(MinimalOpenFOAMPlugin):
         def validate_configuration(self, spec):

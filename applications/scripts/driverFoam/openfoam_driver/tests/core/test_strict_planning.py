@@ -529,3 +529,40 @@ def test_absent_stimulus_block_is_not_invented_from_defaults():
         "builder invented a stimulus the case did not ask for:\n  "
         + "\n  ".join(invented)
     )
+
+
+def test_dictionary_resolution_audit_text_is_plugin_neutral_for_non_cardiac_plugin(
+    tmp_path: Path,
+) -> None:
+    """P2.7: the dictionary_resolution audit stage's success text must come
+    from the active plugin, not a core-hardcoded cardiac sentence. A
+    non-cardiac plugin must not see "electroProperties"/"physicsProperties"
+    in its own audit text."""
+    from openfoam_driver.core.runtime.strict_audit import _build_simulation_audit
+    from openfoam_driver.core.plugin_interface import driver_context
+    from openfoam_driver.tests.plugins.minimal_plugin import MinimalOpenFOAMPlugin
+
+    context = driver_context(MinimalOpenFOAMPlugin(), source="test:minimal")
+    spec = SimpleNamespace(
+        case_root=tmp_path,
+        metadata={},  # not a generic_case, exercises the plugin-sourced branch
+        build_cases=lambda: [],
+    )
+
+    audit_items, _generation_diagnostics, _readiness = _build_simulation_audit(
+        spec=spec,
+        driver_context=context,
+        workflow_dag=None,
+        artifacts=(),
+        validation_diagnostics=(),
+        workflow_diagnostics=(),
+        artifact_diagnostics=(),
+        environment_diagnostics=(),
+        mesh_geometry_diagnostics=(),
+    )
+
+    resolution_item = next(
+        item for item in audit_items if item.stage == "dictionary_resolution"
+    )
+    assert "electroProperties" not in resolution_item.summary
+    assert "physicsProperties" not in resolution_item.summary

@@ -332,3 +332,28 @@ def legacy_dict_entry_catalog(plugin) -> dict:
             plugin.get_dictionary_catalog(), plugin.get_dict_groups(),
         )
     return {}
+
+
+@_instrumented
+def legacy_describe_config_resolution(plugin) -> str:
+    """v1 plugins predate describe_config_resolution(). Only the built-in
+    cardiac plugin has an authored description; other v1 plugins get a
+    plugin-neutral sentence."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        return "physicsProperties and electroProperties resolve into a valid RunDocument config."
+    return "The plugin's configuration files resolve into a valid RunDocument config."
+
+
+@_instrumented
+def legacy_report_catalog(plugin) -> tuple:
+    """v1 plugins predate get_report_catalog(). Same rule as
+    :func:`legacy_override_schema`: only the built-in cardiac plugin has an
+    authored post-run report catalog; other v1 plugins get no reports and
+    must declare their own by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.reports import CARDIAC_REPORTS
+
+        return CARDIAC_REPORTS
+    return ()

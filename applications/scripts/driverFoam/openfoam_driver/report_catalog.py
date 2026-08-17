@@ -25,12 +25,18 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Source of truth for cardiacFoam report definitions.
+"""Solver-neutral report-catalog infrastructure.
 
 After a run completes, downstream tools can select report definitions whose
-``applicable_when`` predicate matches the run's configuration. The backend
-authors definitions in Python; ``scripts/export-report-catalog.py`` serializes
-them to JSON.
+``applicable_when`` predicate matches the run's configuration. This module
+owns the shared machinery -- the ``ReportDefinition`` record, the
+``applicable_when`` predicate evaluator, and the JSON record shape -- but
+not any concrete catalog: which reports exist is solver-specific data owned
+by the plugin that authors them (the built-in cardiac plugin's catalog lives
+at ``plugins/cardiacfoam/reports.py``). ``scripts/export-report-catalog.py``
+reaches the active plugin's catalog through
+``driver_context.capabilities.report_catalog.reports()`` and serializes it
+to JSON.
 
 Two design choices worth re-reading later:
 
@@ -88,48 +94,6 @@ class ReportDefinition:
     applicable_when: Mapping[str, Any] | None = None
     show_by_default: bool = True
     description: str = ""
-
-
-# --- the catalog ------------------------------------------------------------
-
-REPORTS: tuple[ReportDefinition, ...] = (
-    ReportDefinition(
-        id="vm-field-3d",
-        title="Vm field (3D)",
-        kind="iframe",
-        url_template=URL_TEMPLATE,
-        applicable_when=None,  # always available post-completion
-        show_by_default=True,
-        description=(
-            "Volumetric Vm field rendered by 4Dpapers from the run's "
-            "foam/VTK output."
-        ),
-    ),
-    ReportDefinition(
-        id="activation-map",
-        title="Activation map",
-        kind="iframe",
-        url_template=URL_TEMPLATE,
-        applicable_when=None,
-        show_by_default=True,
-        description=(
-            "Local activation time map. Useful for checking conduction "
-            "patterns and reentry."
-        ),
-    ),
-    ReportDefinition(
-        id="stub",
-        title="Stub (4Dpapers not running)",
-        kind="iframe",
-        url_template=STUB_URL,
-        applicable_when=None,
-        show_by_default=False,
-        description=(
-            "Bundled fallback that renders when the 4Dpapers backend is "
-            "not reachable. Visible for diagnostics, not by default."
-        ),
-    ),
-)
 
 
 # --- predicate evaluator (v1: flat key-equality) ---------------------------

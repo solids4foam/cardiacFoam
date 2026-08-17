@@ -386,6 +386,7 @@ def strict_plan(
     )
     simulation_audit, generation_diagnostics, readiness_score = _build_simulation_audit(
         spec=spec,
+        driver_context=driver_context,
         workflow_dag=workflow_dag,
         artifacts=artifacts,
         validation_diagnostics=validation_diagnostics,

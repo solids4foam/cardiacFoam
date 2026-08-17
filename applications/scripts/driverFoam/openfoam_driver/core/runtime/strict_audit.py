@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from ...planning_types import (
     StrictDiagnostic,
@@ -39,6 +39,9 @@ from ...planning_types import (
     has_warning,
 )
 from .models import DataArtifact
+
+if TYPE_CHECKING:
+    from ..plugin_interface import DriverContext  # noqa: F401
 
 
 _READINESS_WEIGHTS = {
@@ -202,6 +205,7 @@ def _case_preparation_files_audit(
 def _build_simulation_audit(
     *,
     spec,
+    driver_context: "DriverContext",
     workflow_dag: dict[str, Any] | None,
     artifacts: tuple[DataArtifact, ...],
     validation_diagnostics: tuple[StrictDiagnostic, ...],
@@ -227,7 +231,7 @@ def _build_simulation_audit(
             success_summary=(
                 "The generic case needs no plugin configuration parsing."
                 if generic_case else
-                "physicsProperties and electroProperties resolve into a valid RunDocument config."
+                driver_context.capabilities.case_files.describe_config_resolution()
             ),
             warning_summary=(
                 "Generic case validation emitted warnings."
