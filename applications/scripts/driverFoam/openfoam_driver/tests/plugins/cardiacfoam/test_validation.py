@@ -69,6 +69,27 @@ def _blank_run(**overrides) -> RunDocument:
     return RunDocument(id="r1", name="r", status="draft", config=config)
 
 
+class TestSlotKeyScopeTokenStripping:
+    """slot_key's prefix strip is a syntactic transform (recognize and strip
+    a "$SCOPE_TOKEN." shape) -- it must not hardcode the one token the
+    built-in cardiac plugin happens to declare, since a future plugin can
+    register its own scope token under the same $TOKEN. convention."""
+
+    def test_strips_the_cardiac_scope_token(self) -> None:
+        assert slot_key("$ELECTRO_MODEL_COEFFS.myocardiumSolver") == "myocardiumSolver"
+
+    def test_strips_an_arbitrary_scope_token_of_the_same_shape(self) -> None:
+        assert slot_key("$SOME_OTHER_PLUGIN_COEFFS.foo.bar") == "foo.bar"
+
+    def test_leaves_an_unprefixed_path_unchanged(self) -> None:
+        assert slot_key("myocardiumSolver") == "myocardiumSolver"
+
+    def test_leaves_a_dollar_sign_not_matching_the_scope_token_shape_unchanged(self) -> None:
+        # No trailing "." after an all-caps run means this isn't the
+        # $TOKEN. convention -- must not be stripped.
+        assert slot_key("$notAToken") == "$notAToken"
+
+
 def _filled_run(**overrides) -> RunDocument:
     """A Run with every required leaf-name pre-populated with a plausible stub.
 

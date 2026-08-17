@@ -228,7 +228,7 @@ def scan_dict_reads(src_root: Path) -> list[DictRead]:
 @dataclass(frozen=True)
 class CataloguePath:
     driver_path: str            # original value from DictEntry
-    normalised: str             # driver_path with $ELECTRO_MODEL_COEFFS. stripped
+    normalised: str             # driver_path with a leading $SCOPE_TOKEN. stripped
     leaf: str                   # last dot-segment
     parents: tuple[str, ...]    # all segments before the leaf
     has_wildcard: bool          # True if any segment matches <...>
@@ -258,15 +258,16 @@ class DictKeyStrictReport:
 
 
 _WILDCARD_RE = re.compile(r"<[^>]+>")
-_PREFIX = "$ELECTRO_MODEL_COEFFS."
+# Any plugin-declared override scope token, not just the built-in cardiac
+# plugin's $ELECTRO_MODEL_COEFFS -- this is a syntactic "$TOKEN." shape,
+# never resolved to a file or scope path here, so no plugin lookup is
+# needed to recognize and strip it.
+_SCOPE_TOKEN_PREFIX_RE = re.compile(r"^\$[A-Z][A-Z0-9_]*\.")
 
 
 def _parse_path(driver_path: str, is_dynamic: bool) -> CataloguePath:
-    # Strip the common prefix.
-    if driver_path.startswith(_PREFIX):
-        normalised = driver_path[len(_PREFIX):]
-    else:
-        normalised = driver_path
+    # Strip a leading scope-token prefix, if present.
+    normalised = _SCOPE_TOKEN_PREFIX_RE.sub("", driver_path, count=1)
 
     segments = normalised.split(".")
     leaf = segments[-1]

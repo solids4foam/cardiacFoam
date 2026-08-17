@@ -177,3 +177,29 @@ def ensure_electro_property_dict(
         block_text,
         scope=resolved_scope,
     )
+
+
+def _resolve_electro_model_coeffs_entry(
+    driver_path: str, case_root: Path,
+) -> tuple[list[str] | None, str]:
+    from .detection import detect_myocardium_solver_name
+    from .dict_builder import _entry_scope_and_key
+
+    electro_path = case_root / "constant" / "electroProperties"
+    coeffs_scope = f"{detect_myocardium_solver_name(electro_path)}Coeffs"
+    return _entry_scope_and_key(driver_path, coeffs_scope)
+
+
+def electro_model_coeffs_scope() -> "OverrideScope":
+    """The cardiac plugin's one `step --strict --apply` override scope:
+    $ELECTRO_MODEL_COEFFS -> constant/electroProperties, addressed against
+    the "electroProperties" dictionary-catalog group, with the active
+    solver's <solver>Coeffs block resolved per-case at apply time."""
+    from ...specs.apply_overrides import OverrideScope
+
+    return OverrideScope(
+        token="ELECTRO_MODEL_COEFFS",
+        file_relpath="constant/electroProperties",
+        catalog_group="electroProperties",
+        resolve_entry=_resolve_electro_model_coeffs_entry,
+    )

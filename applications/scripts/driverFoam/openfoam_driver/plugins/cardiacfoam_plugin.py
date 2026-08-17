@@ -223,6 +223,15 @@ class CardiacFoamPlugin:
 
         return named_catalogs(self.get_capabilities())
 
+    def get_override_scopes(self) -> tuple:
+        """This plugin's one `step --strict --apply` override scope:
+        $ELECTRO_MODEL_COEFFS -> constant/electroProperties."""
+        from openfoam_driver.plugins.cardiacfoam.overrides import (
+            electro_model_coeffs_scope,
+        )
+
+        return (electro_model_coeffs_scope(),)
+
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
         from openfoam_driver.core.runtime.generic_case import make_spec as make_generic_case_spec

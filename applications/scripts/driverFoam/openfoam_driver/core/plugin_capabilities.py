@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .runtime.models import DataArtifact, TutorialSpec
     from ..planning_types import StrictDiagnostic
     from ..report_catalog import ReportDefinition
+    from ..specs.apply_overrides import OverrideScope
 
 
 @dataclass(frozen=True)
@@ -328,6 +329,23 @@ class NamedCatalogsCapability(Protocol):
     """
 
     def catalogs(self) -> dict[str, Any]: ...
+
+
+class OverrideScopeCapability(Protocol):
+    """Plugin-declared ``$TOKEN.`` override scopes for the agent-facing
+    ``step --strict --apply`` path (:mod:`openfoam_driver.specs.apply_overrides`).
+
+    Generalizes what was previously a single hardcoded cardiac scope
+    (``$ELECTRO_MODEL_COEFFS`` -> ``constant/electroProperties``): core no
+    longer assumes there is exactly one scope, or that it lives at that one
+    path. Not a mandatory ``SolverPluginV2`` member, so existing v2
+    third-party plugins keep loading; the fallback (``legacy_override_scopes``)
+    declares the cardiac plugin's one scope and an empty tuple for everyone
+    else, matching the pattern already used by
+    :class:`ReportCatalogCapability`/:class:`NamedCatalogsCapability`.
+    """
+
+    def scopes(self) -> tuple["OverrideScope", ...]: ...
 
 
 @dataclass(frozen=True)
@@ -686,6 +704,19 @@ class _NamedCatalogsAdapter:
 
 
 @dataclass(frozen=True)
+class _OverrideScopeAdapter:
+    plugin: "SolverPlugin"
+
+    def scopes(self) -> tuple["OverrideScope", ...]:
+        hook = getattr(self.plugin, "get_override_scopes", None)
+        if callable(hook):
+            return tuple(hook())
+        from .compatibility import legacy_override_scopes
+
+        return legacy_override_scopes(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -708,6 +739,7 @@ class PluginCapabilities:
     case_provenance: CaseProvenanceCapability
     report_catalog: ReportCatalogCapability
     named_catalogs: NamedCatalogsCapability
+    override_scopes: OverrideScopeCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -733,4 +765,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         case_provenance=_CaseProvenanceAdapter(plugin),
         report_catalog=_ReportCatalogAdapter(plugin),
         named_catalogs=_NamedCatalogsAdapter(plugin),
+        override_scopes=_OverrideScopeAdapter(plugin),
     )

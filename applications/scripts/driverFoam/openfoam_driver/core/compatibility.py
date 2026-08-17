@@ -371,3 +371,17 @@ def legacy_named_catalogs(plugin) -> dict:
 
         return named_catalogs(plugin.get_capabilities())
     return {}
+
+
+@_instrumented
+def legacy_override_scopes(plugin) -> tuple:
+    """v1/v2 plugins predate get_override_scopes(). Only the built-in
+    cardiac plugin has an authored override scope ($ELECTRO_MODEL_COEFFS);
+    other plugins get none and must declare their own by implementing
+    get_override_scopes()."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.overrides import electro_model_coeffs_scope
+
+        return (electro_model_coeffs_scope(),)
+    return ()

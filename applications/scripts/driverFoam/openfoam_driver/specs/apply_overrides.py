@@ -22,22 +22,23 @@
 #     Mechanically apply an agent-chosen override set to a case's dicts for
 #     `step --strict --apply`. Validates each override for *applyability*
 #     (catalog-addressable AND writable by the router) before any write, then
-#     routes controlDict leaves to update_control_dict and $ELECTRO_MODEL_COEFFS
-#     keys through the existing solver-coeffs resolver. The driver never decides
-#     *what* to change — the agent authors the override set; this only applies a
+#     routes controlDict leaves to update_control_dict and "$TOKEN." leaves
+#     through whichever OverrideScope the active plugin declares for that
+#     token (see :class:`OverrideScope`). The driver never decides *what* to
+#     change — the agent authors the override set; this only applies a
 #     validated one.
 #
-#     KNOWN COUPLING (deferred, P2.6): the "$ELECTRO_MODEL_COEFFS" scope token,
-#     the "electroProperties" catalog group, and the constant/electroProperties
-#     write target below are all still hardcoded cardiac vocabulary in a
-#     generic, agent-facing path. Retiring them needs a plugin-declared scope
-#     resolver that supplies the scope name *and* the target dict relpath;
-#     doing it here alone would not remove the sentinel from core, because
-#     specs/validation.py and scripts/_dict_keys_scanner.py both re-parse the
-#     same literal prefix independently. (The third re-parse site,
-#     `_entry_scope_and_key`, moved into plugins/cardiacfoam/dict_builder.py
-#     with Task 14's dict_builder split; this module delegates the parse
-#     there.)
+#     Core knows no scope tokens itself: a plugin declares each one via
+#     ``PluginCapabilities.override_scopes`` (the built-in cardiac plugin
+#     declares exactly one, $ELECTRO_MODEL_COEFFS -> constant/electroProperties
+#     -> plugins/cardiacfoam/overrides.py::electro_model_coeffs_scope). An
+#     override whose token matches no declared scope is rejected with an
+#     explicit "unknown scope token" error rather than the generic
+#     "not catalog-addressable" this module used to raise for every $-prefixed
+#     miss. specs/validation.py and scripts/_dict_keys_scanner.py separately
+#     strip a leading "$TOKEN." for phase-slice/drift-scan normalization —
+#     that's a syntactic transform needing no plugin lookup, so it stayed
+#     generalized independently rather than routed through this capability.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -47,12 +48,37 @@ from __future__ import annotations
 
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path, PurePath
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
-from openfoam_driver.plugins.cardiacfoam.detection import detect_myocardium_solver_name
-from openfoam_driver.plugins.cardiacfoam.dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
+
+
+@dataclass(frozen=True)
+class OverrideScope:
+    """One ``$TOKEN.`` override scope a plugin declares for `step --strict
+    --apply`.
+
+    token: the bare scope name after ``$`` and before the first ``.`` (e.g.
+        ``"ELECTRO_MODEL_COEFFS"`` for ``"$ELECTRO_MODEL_COEFFS.myocardiumSolver"``).
+    file_relpath: the case-relative dict file this scope's overrides write
+        into (e.g. ``"constant/electroProperties"``).
+    catalog_group: the dictionary-catalog group name this scope's overrides
+        are validated against (``DictionaryCatalogCapability.catalog()
+        .entries_for(catalog_group)``).
+    resolve_entry: given the full ``driver_path`` and the case root, return
+        ``(scope_path, key)`` ready for
+        :func:`openfoam_driver.core.runtime.mutators.update_foam_entry`.
+        Plugin-owned: how a token's dotted suffix maps onto nested OpenFOAM
+        scope segments is catalog-specific (e.g. which ``<solver>Coeffs``
+        block is active for this case), not something core can infer.
+    """
+
+    token: str
+    file_relpath: str
+    catalog_group: str
+    resolve_entry: Callable[[str, Path], tuple[list[str] | None, str]]
 
 
 def _is_safe_system_path(path_str: str) -> bool:
@@ -67,23 +93,23 @@ class OverrideError(ValueError):
     """An override is malformed, non-applyable, out-of-enum, or failed to apply."""
 
 
-def _catalog_entries(driver_context=None) -> tuple[set[str], tuple[Any, ...]]:
+def _catalog_entries(
+    driver_context=None,
+) -> tuple[set[str], dict[str, Any], tuple[OverrideScope, ...]]:
     from openfoam_driver.core.compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     catalog = driver_context.capabilities.dictionaries.catalog()
+    scopes = driver_context.capabilities.override_scopes.scopes()
+    scoped_entries: dict[str, Any] = {}
+    for scope in scopes:
+        for entry in catalog.entries_for(scope.catalog_group):
+            scoped_entries[entry.driver_path] = entry
     return (
         {entry.driver_path for entry in catalog.entries_for("controlDict")},
-        catalog.entries_for("electroProperties"),
+        scoped_entries,
+        scopes,
     )
-
-
-def _electro_by_path(entries: Iterable[Any]) -> dict[str, Any]:
-    """Map every electro entry's full driver_path ($ELECTRO_MODEL_COEFFS.<...>) -> entry."""
-    out: dict[str, Any] = {}
-    for entry in entries:
-        out[entry.driver_path] = entry
-    return out
 
 
 def _match_dynamic_entry(dp: str, all_entries: Iterable[Any]) -> Any | None:
@@ -106,14 +132,21 @@ def _match_dynamic_entry(dp: str, all_entries: Iterable[Any]) -> Any | None:
     return None
 
 
+def _scope_token(dp: str) -> str:
+    """Return the bare token between "$" and the first "." (or the whole
+    remainder if there is no "."). ``dp`` must already be known to start
+    with "$"."""
+    return dp[1:].split(".", 1)[0]
+
+
 def validate_overrides(overrides: Any, *, driver_context=None) -> None:
     """Reject anything not safely applyable, *before* any write. Raises OverrideError."""
     if not isinstance(overrides, list):
         raise OverrideError(
             "overrides payload must be a JSON list of {driver_path, value} objects"
         )
-    control_dict_keys, electro_entries = _catalog_entries(driver_context)
-    electro = _electro_by_path(electro_entries)
+    control_dict_keys, scoped_entries, scopes = _catalog_entries(driver_context)
+    scope_by_token = {scope.token: scope for scope in scopes}
     for ov in overrides:
         if not isinstance(ov, dict) or "driver_path" not in ov or "value" not in ov:
             raise OverrideError(
@@ -147,9 +180,17 @@ def validate_overrides(overrides: Any, *, driver_context=None) -> None:
                 f"concrete name"
             )
 
-        entry = electro.get(dp)
+        token = _scope_token(dp)
+        if token not in scope_by_token:
+            known = ", ".join(f"${t}" for t in sorted(scope_by_token)) or "(none declared)"
+            raise OverrideError(
+                f"override driver_path {dp!r} uses unknown scope token {'$' + token!r}. "
+                f"Known scope tokens: {known}"
+            )
+
+        entry = scoped_entries.get(dp)
         if entry is None:
-            entry = _match_dynamic_entry(dp, electro.values())
+            entry = _match_dynamic_entry(dp, scoped_entries.values())
             if entry is None:
                 raise OverrideError(
                     f"override driver_path {dp!r} is not catalog-addressable / applyable"
@@ -161,14 +202,21 @@ def validate_overrides(overrides: Any, *, driver_context=None) -> None:
             )
 
 
-def apply_overrides(overrides: list[dict[str, Any]], *, case_root: Path) -> None:
+def apply_overrides(
+    overrides: list[dict[str, Any]], *, case_root: Path, driver_context=None,
+) -> None:
     """Apply validated overrides to the case dicts.
 
     Raises OverrideError on any mutator failure (caught at the CLI boundary). Not
     transactional: a mid-list failure can leave earlier overrides applied.
     """
-    electro_path = case_root / "constant" / "electroProperties"
-    coeffs_scope: str | None = None
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    scope_by_token = {
+        scope.token: scope
+        for scope in driver_context.capabilities.override_scopes.scopes()
+    }
     for ov in overrides:
         dp, value = ov["driver_path"], ov["value"]
         try:
@@ -188,9 +236,11 @@ def apply_overrides(overrides: list[dict[str, Any]], *, case_root: Path) -> None
                 else:
                     update_foam_entry(case_root / "system" / "controlDict", dp, value)
             else:
-                if coeffs_scope is None:
-                    coeffs_scope = f"{detect_myocardium_solver_name(electro_path)}Coeffs"
-                scope_path, key = _entry_scope_and_key(dp, coeffs_scope)
-                update_foam_entry(electro_path, key, value, scope=scope_path)
+                token = _scope_token(dp)
+                scope = scope_by_token.get(token)
+                if scope is None:
+                    raise OverrideError(f"unknown scope token {'$' + token!r}")
+                scope_path, key = scope.resolve_entry(dp, case_root)
+                update_foam_entry(case_root / scope.file_relpath, key, value, scope=scope_path)
         except (OSError, KeyError, ValueError, RuntimeError) as exc:
             raise OverrideError(f"failed to apply override {dp!r}: {exc}") from exc

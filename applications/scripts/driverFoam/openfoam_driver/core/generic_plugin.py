@@ -127,6 +127,10 @@ class GenericOpenFOAMPlugin:
         """No solver semantics means no named catalogs to expose."""
         return {}
 
+    def get_override_scopes(self):
+        """No solver semantics means no $TOKEN. override scopes to declare."""
+        return ()
+
     def build_run_document_config(self, spec):
         del spec
         return {

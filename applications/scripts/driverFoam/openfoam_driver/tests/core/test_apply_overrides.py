@@ -281,3 +281,64 @@ def test_validate_accepts_the_manufactured_solution_switches():
                         ".verificationModel.type",
          "value": "coupled1D3DMonodomainVerifier"},
     ])
+
+
+# --- override scopes are plugin-declared, not core-hardcoded ---------------
+#
+# P2.5-followup: $ELECTRO_MODEL_COEFFS is no longer the one scope token core
+# assumes exists. A plugin declares its own scopes via
+# PluginCapabilities.override_scopes; core only knows how to route a "$TOKEN."
+# override to whichever scope's token matches.
+
+def test_validate_rejects_an_unknown_scope_token():
+    with pytest.raises(OverrideError) as exc:
+        validate_overrides([{"driver_path": "$SOME_OTHER_PLUGIN.foo", "value": "1"}])
+    assert "unknown scope token" in str(exc.value)
+    assert "$SOME_OTHER_PLUGIN" in str(exc.value)
+    assert "$ELECTRO_MODEL_COEFFS" in str(exc.value)  # the one scope that IS known
+
+
+def test_apply_rejects_an_unknown_scope_token_before_any_write(tmp_path):
+    case = _case(tmp_path)
+    with pytest.raises(OverrideError) as exc:
+        apply_overrides(
+            [{"driver_path": "$SOME_OTHER_PLUGIN.foo", "value": "1"}],
+            case_root=case,
+        )
+    assert "unknown scope token" in str(exc.value)
+    # Nothing should have been touched.
+    assert "foo" not in (case / "constant" / "electroProperties").read_text()
+
+
+def test_generic_plugin_declares_zero_override_scopes():
+    from openfoam_driver.core.plugin_interface import generic_openfoam_context
+
+    context = generic_openfoam_context()
+    assert context.capabilities.override_scopes.scopes() == ()
+
+
+def test_cardiac_plugin_declares_the_electro_model_coeffs_scope():
+    from openfoam_driver.core.plugin_interface import default_driver_context
+
+    context = default_driver_context()
+    scopes = context.capabilities.override_scopes.scopes()
+    assert len(scopes) == 1
+    scope = scopes[0]
+    assert scope.token == "ELECTRO_MODEL_COEFFS"
+    assert scope.file_relpath == "constant/electroProperties"
+    assert scope.catalog_group == "electroProperties"
+
+
+def test_cardiac_scope_resolve_entry_matches_the_old_hardcoded_behavior(tmp_path):
+    """Same (scope_path, key) shape apply_overrides used to compute inline
+    via detect_myocardium_solver_name + _entry_scope_and_key."""
+    from openfoam_driver.core.plugin_interface import default_driver_context
+
+    case = _case(tmp_path)
+    context = default_driver_context()
+    scope = context.capabilities.override_scopes.scopes()[0]
+    scope_path, key = scope.resolve_entry(
+        "$ELECTRO_MODEL_COEFFS.solutionAlgorithm", case,
+    )
+    assert scope_path == ["singleCellSolverCoeffs"]
+    assert key == "solutionAlgorithm"

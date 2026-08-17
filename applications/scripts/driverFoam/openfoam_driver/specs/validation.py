@@ -49,6 +49,7 @@ validation errors.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, get_args
@@ -81,21 +82,25 @@ def primary_phase(entry) -> Phase | None:
     return None
 
 
-_COEFFS_PREFIX = "$ELECTRO_MODEL_COEFFS."
+# Any plugin-declared override scope token, not just the built-in cardiac
+# plugin's $ELECTRO_MODEL_COEFFS -- this is a syntactic "$TOKEN." shape,
+# never resolved to a file or scope path here, so no plugin lookup is
+# needed to recognize and strip it.
+_SCOPE_TOKEN_PREFIX_RE = re.compile(r"^\$[A-Z][A-Z0-9_]*\.")
 
 
 def slot_key(driver_path: str) -> str:
     """Map a driver_path to its slot key inside a phase slice.
 
-    Strips the ``$ELECTRO_MODEL_COEFFS.`` prefix when present; otherwise
-    returns the path as-is. Multi-segment unprefixed paths are kept intact
-    so that nested-group leaves don't collide with top-level keys of the
-    same name (e.g. ``$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiEReferenceValue`` must not overwrite the
-    top-level ``type`` entry inside the physics slice).
+    Strips a leading ``$SCOPE_TOKEN.`` prefix when present (any plugin's
+    override scope, not just the built-in cardiac plugin's
+    ``$ELECTRO_MODEL_COEFFS.``); otherwise returns the path as-is.
+    Multi-segment unprefixed paths are kept intact so that nested-group
+    leaves don't collide with top-level keys of the same name (e.g.
+    ``$ELECTRO_MODEL_COEFFS.bathPotentialDomain.phiEReferenceValue`` must
+    not overwrite the top-level ``type`` entry inside the physics slice).
     """
-    if driver_path.startswith(_COEFFS_PREFIX):
-        return driver_path[len(_COEFFS_PREFIX):]
-    return driver_path
+    return _SCOPE_TOKEN_PREFIX_RE.sub("", driver_path, count=1)
 
 
 def _slice_value(run, phase: Phase, driver_path: str):
