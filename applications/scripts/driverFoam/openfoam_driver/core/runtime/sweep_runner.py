@@ -371,6 +371,8 @@ def sweep_run(
                         case_root_for_archive = Path(run_document["launch"]["caseRoot"])
                         pp_before = snapshot_postprocessing(case_root_for_archive)
                     try:
+                        if workflow_state_path.exists():
+                            workflow_state_path.unlink()
                         result = subprocess.run(
                             [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
                             capture_output=True, text=True,

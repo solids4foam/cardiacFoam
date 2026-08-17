@@ -82,20 +82,20 @@ class TestPostprocessingDriver(unittest.TestCase):
             run_postprocess_tasks(
                 setup_root=setup_root,
                 output_dir=output_dir,
-                tutorial_name="monodomainAndEikonal1DCableCVConvergence",
+                tutorial_name="cable1DCVConvergence",
                 tasks=[PostprocessTask(module_relpath=Path("table_summary.py"))],
             )
 
-            csv_path = output_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
-            html_path = output_dir / "monodomainAndEikonal1DCableCVConvergence_summary.html"
+            csv_path = output_dir / "cable1DCVConvergence_summary.csv"
+            html_path = output_dir / "cable1DCVConvergence_summary.html"
             manifest = json.loads((output_dir / "plots.json").read_text())
 
             self.assertTrue(csv_path.exists())
             self.assertFalse(html_path.exists())
 
             artifact_paths = {artifact["path"] for artifact in manifest["artifacts"]}
-            self.assertIn("monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
-            self.assertNotIn("monodomainAndEikonal1DCableCVConvergence_summary.html", artifact_paths)
+            self.assertIn("cable1DCVConvergence_summary.csv", artifact_paths)
+            self.assertNotIn("cable1DCVConvergence_summary.html", artifact_paths)
 
             plot_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "plot"]
             if has_matplotlib:
@@ -151,20 +151,20 @@ class TestPostprocessingDriver(unittest.TestCase):
             run_postprocess_tasks(
                 setup_root=setup_root,
                 output_dir=output_dir,
-                tutorial_name="monodomainAndEikonal1DCableCVConvergence",
+                tutorial_name="cable1DCVConvergence",
                 tasks=[PostprocessTask(module_relpath=Path("table_summary.py"))],
             )
 
-            csv_path = model_dir / "monodomainAndEikonal1DCableCVConvergence_summary.csv"
-            html_path = model_dir / "monodomainAndEikonal1DCableCVConvergence_summary.html"
+            csv_path = model_dir / "cable1DCVConvergence_summary.csv"
+            html_path = model_dir / "cable1DCVConvergence_summary.html"
             manifest = json.loads((output_dir / "plots.json").read_text())
 
             self.assertTrue(csv_path.exists())
             self.assertFalse(html_path.exists())
 
             artifact_paths = {artifact["path"] for artifact in manifest["artifacts"]}
-            self.assertIn("BuenoOrovio/monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
-            self.assertNotIn("monodomainAndEikonal1DCableCVConvergence_summary.csv", artifact_paths)
+            self.assertIn("BuenoOrovio/cable1DCVConvergence_summary.csv", artifact_paths)
+            self.assertNotIn("cable1DCVConvergence_summary.csv", artifact_paths)
 
             plot_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "plot"]
             if has_matplotlib:
@@ -319,7 +319,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             run_postprocess_tasks(
                 setup_root=setup_root,
                 output_dir=output_dir,
-                tutorial_name="manufacturedFDA",
+                tutorial_name="manufacturedMonodomainPseudoECG",
                 tasks=[PostprocessTask(module_relpath=Path("post_processing_manufactured.py"))],
             )
 
@@ -402,7 +402,7 @@ class TestPostprocessingDriver(unittest.TestCase):
             run_postprocess_tasks(
                 setup_root=setup_root,
                 output_dir=output_dir,
-                tutorial_name="manufacturedFDA",
+                tutorial_name="manufacturedMonodomainPseudoECG",
                 tasks=[PostprocessTask(module_relpath=Path("post_processing_manufactured.py"))],
             )
 

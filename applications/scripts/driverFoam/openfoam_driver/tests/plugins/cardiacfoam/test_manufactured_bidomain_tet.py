@@ -16,13 +16,12 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     test_manufactured_fda_bidomain_tet
+#     test_manufactured_bidomain_tet
 #
 # Description
-#     Confirms manufactured_fda_bidomain.make_spec's wrapper threads the new
-#     mesh_family/numerics_profile/grad_scheme/phi_tolerance/end_time/
-#     fv_scheme_overrides/fv_solution_overrides kwargs through to the base
-#     manufactured_fda.make_spec (pass-through only, no new logic here).
+#     Confirms manufactured_bidomain.make_spec's wrapper threads the new
+#     tet-mesh logic through the base
+#     manufactured_monodomain_pseudo_ecg.make_spec (pass-through only, no new logic here).
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -30,7 +29,7 @@
 
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bidomain import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bidomain import make_spec
 
 
 def test_mesh_family_tet_reaches_workflow_dag(tmp_path):

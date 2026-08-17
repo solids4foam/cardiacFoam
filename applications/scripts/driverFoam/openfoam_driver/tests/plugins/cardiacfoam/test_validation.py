@@ -537,9 +537,9 @@ Warnings are permitted; only ``level="error"`` must be empty for each fixture ru
 
 Fixture-to-solver mapping (derived from each spec's defaults.ELECTRO_PROPERTIES_SCOPE):
     single_cell          → singleCellSolver
-    manufactured_fda     → monodomainSolver  (ionic = monodomainFDAManufactured)
-    manufactured_fda_bidomain → bidomainSolver (ionic = bidomainFDAManufactured)
-    manufactured_fda_bath_bidomain → bidomainSolver (ionic = bathBidomainFDAManufactured)
+    manufactured_monodomain_pseudo_ecg     → monodomainSolver  (ionic = monodomainFDAManufactured)
+    manufactured_bidomain → bidomainSolver (ionic = bidomainFDAManufactured)
+    manufactured_bath_bidomain → bidomainSolver (ionic = bathBidomainFDAManufactured)
     niederer_2012        → monodomainSolver  (ionic = TNNP, tissue = epicardialCells)
     restitution_curves   → singleCellSolver  (ionic = TNNP, tissue = epicardialCells)
     generic_case         → monodomainSolver  (representative; generic_case is
@@ -628,7 +628,7 @@ _FIXTURE_RUNS = [
         ),
     ),
     (
-        "manufactured_fda",
+        "manufactured_monodomain_pseudo_ecg",
         _filled_run_for_solver(
             "monodomainSolver",
             physics={
@@ -639,7 +639,7 @@ _FIXTURE_RUNS = [
         ),
     ),
     (
-        "manufactured_fda_bidomain",
+        "manufactured_bidomain",
         _filled_run_for_solver(
             "bidomainSolver",
             physics={
@@ -649,7 +649,7 @@ _FIXTURE_RUNS = [
         ),
     ),
     (
-        "manufactured_fda_bath_bidomain",
+        "manufactured_bath_bidomain",
         _filled_run_for_solver(
             "bidomainSolver",
             physics={

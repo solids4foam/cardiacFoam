@@ -74,11 +74,11 @@ without changing their activation or output.
 ## Registered tutorials
 
 - `singleCell`
-- `monodomainAndEikonal1DCableCVConvergence`
+- `cable1DCVConvergence`
 - `niederer2012`
-- `manufacturedFDA`
-- `manufacturedFDABidomain`
-- `manufacturedFDABathBidomain`
+- `manufacturedMonodomainPseudoECG`
+- `manufacturedBidomain`
+- `manufacturedBathBidomain`
 - `restitutionCurves`
 
 In addition to these curated specs, the driver can also run:

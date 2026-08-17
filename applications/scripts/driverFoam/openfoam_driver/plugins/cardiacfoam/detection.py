@@ -175,4 +175,4 @@ def detect_active_tension_export_list(
     if match is None:
         return None
     tokens = tuple(t for t in match.group(1).split() if t)
-    return tokens if tokens else None
+    return tokens

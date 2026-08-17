@@ -104,7 +104,7 @@ def test_archive_dir_name_key_in_base_is_not_forwarded():
     # make_spec kwarg for any registered tutorial and must not be forwarded,
     # same as entry/caseId.
     routed = route_entry_case_values(
-        base={"entry": "manufacturedFDABidomain", "archive_dir_name": "driverPostProcessingArchive_postProcessing"},
+        base={"entry": "manufacturedBidomain", "archive_dir_name": "driverPostProcessingArchive_postProcessing"},
         resolved_axis_values={"number_cells": [10]},
     )
     assert "archive_dir_name" not in routed

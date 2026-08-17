@@ -322,11 +322,11 @@ See `openfoam_driver/core/runtime/sweep_runner.py` for the full implementation.
 ### Sweeping an existing registered tutorial (`base.entry`)
 
 The generic mode above always materializes a fresh, from-scratch `case_folder`
-via `build_and_launch`. Some tutorials (`niederer2012`, `manufacturedFDA`, and
+via `build_and_launch`. Some tutorials (`niederer2012`, `manufacturedMonodomainPseudoECG`, and
 others under `openfoam_driver/specs/tutorials/`) instead expose their own
 `make_spec(**kwargs)` with tutorial-specific parameters (e.g. `niederer2012`'s
 `dx_values`/`dt_values`/`end_time_by_dx`, in millimetres/milliseconds;
-`manufacturedFDA`'s `dimensions`/`number_cells`/`dt_values`). To sweep one of
+`manufacturedMonodomainPseudoECG`'s `dimensions`/`number_cells`/`dt_values`). To sweep one of
 these instead of a from-scratch case, set `base.entry` to the tutorial's
 registered name:
 
@@ -361,7 +361,7 @@ failure. Values fixed across every case in the sweep (like `solvers`/
 
 **One case per resolved combination, and why.** Several of these tutorials'
 own `apply_case()` mutate that tutorial's *shared* `case_root` in place
-(confirmed for `niederer2012` and `manufacturedFDA`: they patch
+(confirmed for `niederer2012` and `manufacturedMonodomainPseudoECG`: they patch
 `system/controlDict`/`system/blockMeshDict*` directly rather than writing an
 isolated per-case directory). So each resolved axis combination must collapse
 to exactly one case — if it doesn't (e.g. a config that still fans out

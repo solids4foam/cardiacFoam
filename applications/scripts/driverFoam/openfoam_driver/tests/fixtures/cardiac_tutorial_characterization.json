@@ -1,6 +1,44 @@
 {
   "schema_version": 1,
   "tutorials": {
+    "cable1DCVConvergence": {
+      "case_count": 9,
+      "dictionary_paths": [
+        "constant/electroProperties",
+        "constant/physicsProperties",
+        "system/controlDict",
+        "system/fvSchemes",
+        "system/fvSolution"
+      ],
+      "section_digests": {
+        "artifacts": "sha256:fbb28764c505ccbec71915896f813c6d3ec46761e71aff5960d0699c76353bb8",
+        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
+        "dictionary_contents": "sha256:03d104047c78cb3ccbcc20567a3e103e68eaf1995c7a7c85a648aa30c1b20b4e",
+        "entry_resolution": "sha256:744f582c88b6a71605686557981b9023c90a79448b652037ae9d762cf97b23bc",
+        "run_document_v2": "sha256:6e202fe3c852cafde3c858f3fd8e283212fb276412668494152cd5c63795ea87",
+        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
+        "workflow_dag": "sha256:82be1ba958882a4145c0b2b5242929f669a22938a263a0d874b3db6c080ac4e4"
+      }
+    },
+    "cable1DRestitution": {
+      "case_count": 2,
+      "dictionary_paths": [
+        "constant/electroProperties",
+        "constant/physicsProperties",
+        "system/controlDict",
+        "system/fvSchemes",
+        "system/fvSolution"
+      ],
+      "section_digests": {
+        "artifacts": "sha256:907fbb391e36b1555acab4bc7f2d472d6f89b5d011519c66b9a09979a8ca78b8",
+        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
+        "dictionary_contents": "sha256:03d104047c78cb3ccbcc20567a3e103e68eaf1995c7a7c85a648aa30c1b20b4e",
+        "entry_resolution": "sha256:ba428f174c955c484f4be9ce11c54a4173b4c0779e69f1386ad3eae088d664f7",
+        "run_document_v2": "sha256:52fef7314e6c3bbc502591e9d2acb92e9351153db89665a0617baadd2a56c1ad",
+        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
+        "workflow_dag": "sha256:addc7afd29eba2482c09f9fe39c4ff6c7a45a7dd352810699eee53fa0ef1a3f1"
+      }
+    },
     "heartSolverComparison": {
       "case_count": 1,
       "dictionary_paths": [
@@ -18,6 +56,44 @@
         "run_document_v2": "sha256:e45c9f341b7ad88a9579f2903138d341d4e316bb97e98eea7c22b0203f4debd9",
         "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
         "workflow_dag": "sha256:96d9695dedc5b270b3b1709a52529ef3269c49954bae0c3ecd5315960b95f231"
+      }
+    },
+    "manufacturedBathBidomain": {
+      "case_count": 12,
+      "dictionary_paths": [
+        "constant/electroProperties",
+        "constant/physicsProperties",
+        "system/controlDict",
+        "system/fvSchemes",
+        "system/fvSolution"
+      ],
+      "section_digests": {
+        "artifacts": "sha256:76de5e49f88128e0230d8e05cb7744227e31c50a1d566fe751f27d79b2760e8c",
+        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
+        "dictionary_contents": "sha256:de514c8b30be46e554a2dd41239253aa912c8e3f2e2724aab41336028019a7a4",
+        "entry_resolution": "sha256:04ef81e585e3bb5b75930bec0877109c347af29ab8fde853eae4a95b5c2de99c",
+        "run_document_v2": "sha256:72f4319bfa00fe9ff02bacf666cdb7c6f00bcb780e925af6dc29f6eba0fd19d6",
+        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
+        "workflow_dag": "sha256:e618d748a429712a8541705b611c9dd7353353da5dc016dd3de2d3563f230b2b"
+      }
+    },
+    "manufacturedBidomain": {
+      "case_count": 12,
+      "dictionary_paths": [
+        "constant/electroProperties",
+        "constant/physicsProperties",
+        "system/controlDict",
+        "system/fvSchemes",
+        "system/fvSolution"
+      ],
+      "section_digests": {
+        "artifacts": "sha256:ad7eccc382012759b6d59a22ba43c91f32e994201fa572c013fd271b1e8e8437",
+        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
+        "dictionary_contents": "sha256:8acd2c39194c3ce08cd8416a7d67ceb064647670b2aefe2dc6afe4445f04f930",
+        "entry_resolution": "sha256:94828eb34f2ba5533ef4c87ec784dfc2ebd0ba1b9a37983b26926f746af5633d",
+        "run_document_v2": "sha256:980d2396fa3eafc3608166a352eb6426f5a0de16a1d99810e1bae2133efc7ddf",
+        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
+        "workflow_dag": "sha256:c8963b19a44beb4fe5119f6e63df1185e3e63c06fe9558bc066fda2441a27f91"
       }
     },
     "manufacturedEikonalECG": {
@@ -39,63 +115,6 @@
         "workflow_dag": "sha256:c8963b19a44beb4fe5119f6e63df1185e3e63c06fe9558bc066fda2441a27f91"
       }
     },
-    "manufacturedFDA": {
-      "case_count": 12,
-      "dictionary_paths": [
-        "constant/electroProperties",
-        "constant/physicsProperties",
-        "system/controlDict",
-        "system/fvSchemes",
-        "system/fvSolution"
-      ],
-      "section_digests": {
-        "artifacts": "sha256:4d36cbf1a9ed73e8cff393b0d71301821c246f2a275e9e71f7f27a239f10ff42",
-        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
-        "dictionary_contents": "sha256:8837b6d21a68b738aa12ab1c91f18b5d7b06c1a96995eba868438ef0d19aebfc",
-        "entry_resolution": "sha256:ceef64bdcb127dc5cc419e97e381ba4b94d1e71e8b04cae62c1d4a3649f63556",
-        "run_document_v2": "sha256:a0d69b476f46567208f4eedce123ccc2915ea481da24396296474155dc12c729",
-        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
-        "workflow_dag": "sha256:c8963b19a44beb4fe5119f6e63df1185e3e63c06fe9558bc066fda2441a27f91"
-      }
-    },
-    "manufacturedFDABathBidomain": {
-      "case_count": 12,
-      "dictionary_paths": [
-        "constant/electroProperties",
-        "constant/physicsProperties",
-        "system/controlDict",
-        "system/fvSchemes",
-        "system/fvSolution"
-      ],
-      "section_digests": {
-        "artifacts": "sha256:76de5e49f88128e0230d8e05cb7744227e31c50a1d566fe751f27d79b2760e8c",
-        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
-        "dictionary_contents": "sha256:de514c8b30be46e554a2dd41239253aa912c8e3f2e2724aab41336028019a7a4",
-        "entry_resolution": "sha256:d18cfd4ec24d4c30dce8f859481ae69dbfaed1625c4cff38c18dbd6b086fb88c",
-        "run_document_v2": "sha256:fcb4dce2bcfc46f0838e2dc880e12d853e3430df81e88a80754ff8a54ff6cda7",
-        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
-        "workflow_dag": "sha256:e618d748a429712a8541705b611c9dd7353353da5dc016dd3de2d3563f230b2b"
-      }
-    },
-    "manufacturedFDABidomain": {
-      "case_count": 12,
-      "dictionary_paths": [
-        "constant/electroProperties",
-        "constant/physicsProperties",
-        "system/controlDict",
-        "system/fvSchemes",
-        "system/fvSolution"
-      ],
-      "section_digests": {
-        "artifacts": "sha256:ad7eccc382012759b6d59a22ba43c91f32e994201fa572c013fd271b1e8e8437",
-        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
-        "dictionary_contents": "sha256:8acd2c39194c3ce08cd8416a7d67ceb064647670b2aefe2dc6afe4445f04f930",
-        "entry_resolution": "sha256:39cedf5b368d0a6c333b479d3c577522a0a2e0cf454c0b20660646c3bb29af41",
-        "run_document_v2": "sha256:ed7c301ec17516fff01b662ea08277966e2d6715c73ba1f8be731175ee3f2184",
-        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
-        "workflow_dag": "sha256:c8963b19a44beb4fe5119f6e63df1185e3e63c06fe9558bc066fda2441a27f91"
-      }
-    },
     "manufacturedMonodomain1D3D": {
       "case_count": 4,
       "dictionary_paths": [
@@ -113,6 +132,25 @@
         "run_document_v2": "sha256:814ec2eb2bac7920fbe78c2d3f854141311133977e7acf688a3e058e59ce1687",
         "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
         "workflow_dag": "sha256:8f1b9fd626055d71dbe32b0ecdd67361eea2f22d26d40fa910997597dd0e5830"
+      }
+    },
+    "manufacturedMonodomainPseudoECG": {
+      "case_count": 12,
+      "dictionary_paths": [
+        "constant/electroProperties",
+        "constant/physicsProperties",
+        "system/controlDict",
+        "system/fvSchemes",
+        "system/fvSolution"
+      ],
+      "section_digests": {
+        "artifacts": "sha256:4d36cbf1a9ed73e8cff393b0d71301821c246f2a275e9e71f7f27a239f10ff42",
+        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
+        "dictionary_contents": "sha256:8837b6d21a68b738aa12ab1c91f18b5d7b06c1a96995eba868438ef0d19aebfc",
+        "entry_resolution": "sha256:230975507dc66deeef61f6053366bbcfe9213f69d10312c95eed8da95e4589cd",
+        "run_document_v2": "sha256:593e3a4d7b7b36b8dfcf26c8e23a371a920cc70675f2594c0ce065a77166aa28",
+        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
+        "workflow_dag": "sha256:c8963b19a44beb4fe5119f6e63df1185e3e63c06fe9558bc066fda2441a27f91"
       }
     },
     "manufacturedMonodomainTotalLagrangianEM": {
@@ -150,25 +188,6 @@
         "run_document_v2": "sha256:76ad03854cb9687b348a9d5f383d9cfd6ac98698ec861fe0b8217017b3bae30c",
         "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
         "workflow_dag": "sha256:a5f35c48765ceed1eb31f65385c49fbf67914772e76334216cf859c0b6a29d20"
-      }
-    },
-    "monodomainAndEikonal1DCableCVConvergence": {
-      "case_count": 9,
-      "dictionary_paths": [
-        "constant/electroProperties",
-        "constant/physicsProperties",
-        "system/controlDict",
-        "system/fvSchemes",
-        "system/fvSolution"
-      ],
-      "section_digests": {
-        "artifacts": "sha256:947dd22b20c4c8634169fe78779b7a2a2dc5341dfbc11c7fbad969925b5a0705",
-        "capability_report": "sha256:11e045281b45b7e7e0bcee9545d09c216d641b02d38502cbf411ec65fb040268",
-        "dictionary_contents": "sha256:932ef109388521148e4855362defbca8d5b64fa86e0bce6a923ecee81f42709a",
-        "entry_resolution": "sha256:f49b0330830a0976b3e7dc986abd295cbc19747e526b6c34c9202c162099cee5",
-        "run_document_v2": "sha256:33898ef250cd847c8ee3d4e3700e954d35e3e42f4e0fc0de44292afd2f30c922",
-        "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
-        "workflow_dag": "sha256:c227fe39b793e2ec844586f6060287b6a60969eeb4a04e72e08cf2c75a2709b0"
       }
     },
     "niederer2012": {

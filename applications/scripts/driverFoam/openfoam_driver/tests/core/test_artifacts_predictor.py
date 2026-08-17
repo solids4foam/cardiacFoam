@@ -686,7 +686,7 @@ class TestPredictorVerification(unittest.TestCase):
     """When verificationModel.type is declared, predict the verifier's
     error-summary .dat output."""
 
-    def test_manufactured_fda_monodomain_verifier_is_predicted(self) -> None:
+    def test_manufactured_monodomain_pseudo_ecg_verifier_is_predicted(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             case_root = Path(temp) / "case"
             case_root.mkdir()

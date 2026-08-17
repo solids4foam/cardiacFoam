@@ -109,7 +109,7 @@ def test_exempt_short_circuits_unit_domain(tmp_path: Path) -> None:
 def test_manufactured_entry_is_nondimensional(tmp_path: Path) -> None:
     spec = SimpleNamespace(
         case_root=str(tmp_path),
-        metadata={"entry_name": "manufacturedFDABidomain"},
+        metadata={"entry_name": "manufacturedBidomain"},
     )
     assert _is_nondimensional_entry(spec) is True
 
@@ -184,7 +184,7 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
 
 
 def test_strict_plan_succeeds_for_manufactured_tutorial() -> None:
-    report = strict_plan("manufacturedFDA")
+    report = strict_plan("manufacturedBidomain")
     payload = report.to_json()
 
     assert payload["status"] == "ok"
@@ -442,7 +442,7 @@ def test_batched_ionic_model_does_not_require_optional_batched_keys():
 
     context = default_driver_context()
     report = sp.strict_plan(
-        "monodomainAndEikonal1DCableCVConvergence", driver_context=context
+        "cable1DCVConvergence", driver_context=context
     ).to_json()
     errors = [
         d for d in report["run_document"]["validation"].get("diagnostics", [])

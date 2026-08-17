@@ -40,7 +40,7 @@ from .paths import (
 from .utils import (
     collect_outputs_by_pattern,
     load_python_module,
-    replace_single_block_mesh_resolution,
+    replace_block_mesh_resolutions,
     set_delta_t,
     set_end_time,
 )
@@ -55,5 +55,5 @@ __all__ = [
     "collect_outputs_by_pattern",
     "set_delta_t",
     "set_end_time",
-    "replace_single_block_mesh_resolution",
+    "replace_block_mesh_resolutions",
 ]

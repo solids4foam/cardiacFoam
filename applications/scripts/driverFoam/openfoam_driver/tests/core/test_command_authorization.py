@@ -30,7 +30,7 @@ def test_core_neutral_commands_contain_no_solver_names() -> None:
 def test_cardiac_plugin_authorizes_its_unmanifested_utility() -> None:
     """bathBidomainInterfaceMetrics has no utility.manifest.toml, so it cannot
     come through utility_manifests(); the plugin must authorize it directly or
-    the manufacturedFDABathBidomain workflow stops validating."""
+    the manufacturedBathBidomain workflow stops validating."""
     context = default_driver_context()
     errors = [
         d for d in validate_workflow_commands(

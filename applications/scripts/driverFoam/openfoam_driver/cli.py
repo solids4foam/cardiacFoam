@@ -591,8 +591,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         help=(
             "Path to JSON file with make_spec overrides. Supports either a top-level "
-            "entry map (keys: singleCell, niederer2012, manufacturedFDA, "
-            "manufacturedFDABidomain, manufacturedFDABathBidomain, "
+            "entry map (keys: singleCell, niederer2012, manufacturedMonodomainPseudoECG, "
+            "manufacturedBidomain, manufacturedBathBidomain, "
             "manufacturedEikonalECG, manufacturedMonodomainTotalLagrangianEM, "
             "manufacturedPurkinjeGraph, restitutionCurves, genericCase/randomCase) "
             "or a direct parameter object for the selected entry."

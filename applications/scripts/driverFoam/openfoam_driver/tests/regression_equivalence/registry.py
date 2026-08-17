@@ -51,11 +51,11 @@ REGRESSION_CASES: tuple[RegressionCase, ...] = (
         (_ELECTRO, _PHYSICS), "regression/NiedererEtAl2012.reference",
     ),
     RegressionCase(
-        "manufacturedSolutions/bidomain", "manufacturedFDABidomain",
+        "manufacturedSolutions/bidomain", "manufacturedBidomain",
         (_ELECTRO, _PHYSICS), "regression/bidomainManufactured.reference",
     ),
     RegressionCase(
-        "manufacturedSolutions/monodomainPseudoECG", "manufacturedFDA",
+        "manufacturedSolutions/monodomainPseudoECG", "manufacturedMonodomainPseudoECG",
         (_ELECTRO, _PHYSICS), "regression/monodomainPseudoECG.reference",
     ),
     RegressionCase(
@@ -63,7 +63,7 @@ REGRESSION_CASES: tuple[RegressionCase, ...] = (
         (_ELECTRO, _PHYSICS), "regression/eikonalECG.reference",
     ),
     RegressionCase(
-        "manufacturedSolutions/bathBidomain", "manufacturedFDABathBidomain",
+        "manufacturedSolutions/bathBidomain", "manufacturedBathBidomain",
         (_ELECTRO, _PHYSICS), "regression/bathBidomainManufactured.reference",
     ),
     RegressionCase(

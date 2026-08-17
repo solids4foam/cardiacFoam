@@ -16,7 +16,7 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     test_manufactured_fda_bath_bidomain_tet
+#     test_manufactured_bath_bidomain_tet
 #
 # Description
 #     Tests bath-bidomain tet workflow_dag/materialization and the explicit
@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bath_bidomain import make_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bath_bidomain import make_spec
 
 
 _CONTROL_DICT = """FoamFile
