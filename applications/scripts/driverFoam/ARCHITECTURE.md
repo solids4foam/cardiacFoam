@@ -162,6 +162,9 @@ applications/scripts/driverFoam/
 │   │       ├── run_document_config.py ← build_config (cardiac RunDocument shape)
 │   │       ├── runtime_evidence.py   ← solve_step_commands, telemetry_source_globs
 │   │       ├── planning_policy.py    ← is_nondimensional_case
+│   │       ├── mesh_provisioning.py  ← provision_mesh, MESHLESS_SOLVERS/BLOCK_MESH_SOLVERS + the bundled 1-cell polyMesh fixture (moved from specs/, P2.5, `efe2c338`)
+│   │       ├── mesh_geometry.py      ← purkinjeGraph SI-scale diagnostics, reached via the `get_mesh_geometry_diagnostics` hook (moved from specs/, P2.5, `ac151ff4`)
+│   │       ├── system_templates.py   ← controlDict/fvSchemes/fvSolution baselines per myocardiumSolver (moved from specs/, P2.5, `a1744ba3`)
 │   │       └── tutorials/            ← 12+ cardiacFoam tutorial spec factories
 │   │           ├── registry.py       ← SPEC_FACTORIES, REGISTERED_TUTORIALS
 │   │           ├── single_cell.py
@@ -173,7 +176,9 @@ applications/scripts/driverFoam/
 │   │   ├── paths.py                  ← repo_root_default, tutorials_root_default, resolve_spec_paths
 │   │   ├── dict_builder.py           ← Solver-neutral dictionary-synthesis primitives: entry selection, required-field checks, value population, nested OpenFOAM block emission, value tokenisation. Cardiac builders moved to `plugins/cardiacfoam/dict_builder.py` (P2.5, `d8effc00`); no plugin imports and no sentinel parsing remain here
 │   │   ├── validation.py             ← validate_run (RunDocument validation); independently re-parses the `$ELECTRO_MODEL_COEFFS` sentinel prefix — Task 14
-│   │   ├── mesh_geometry.py          ← SI-scale mesh diagnostic
+│   │   ├── mesh_geometry.py          ← SI-scale polyMesh diagnostic; the purkinjeGraph half moved to `plugins/cardiacfoam/mesh_geometry.py` (P2.5, `ac151ff4`)
+│   │   ├── mesh_provisioning.py      ← Generic default blockMeshDict render + `cell_counts_from_dx`; the solver-keyed strategy moved to the plugin (P2.5, `efe2c338`)
+│   │   ├── tet_mesh_provisioning.py  ← `render_tet_geo` (gmsh `.geo` `__LC__` substitution)
 │   │   └── apply_overrides.py        ← --apply override machinery; imports `plugins/cardiacfoam/detection.py` directly (same open coupling — Task 14)
 │   │
 │   ├── schemas/
@@ -413,7 +418,7 @@ graph LR
     subgraph OFLayer["B: OpenFOAM Infrastructure\n(specs/ + runtime/environment)"]
         DICT["specs/dict_builder.py\ncore/runtime/mutators.py"]
         ENV["environment_preflight.py\nopenfoam_environment.py"]
-        MESH["mesh_geometry.py"]
+        MESH["mesh_geometry.py\n(polyMesh regions only)"]
         PATHS["paths.py (partially contaminated)"]
         AOV["apply_overrides.py\n($ELECTRO_MODEL_COEFFS sentinel\nstill parsed independently in\nvalidation.py and\nscripts/_dict_keys_scanner.py;\napply_overrides delegates the parse\nto plugins/cardiacfoam/dict_builder.py)"]
     end
@@ -458,7 +463,7 @@ stateDiagram-v2
         validate_run_semantics (plugin)
         validate_workflow_commands (core)
         _catalog_diagnostics (core+plugin)
-        _mesh_geometry_diagnostics (core)
+        _mesh_geometry_diagnostics (core + plugin hook)
     end note
 
     Validation --> Normalisation: normalize_workflow_dag()
@@ -813,7 +818,8 @@ graph TB
 - `strict_planning.py` — planning orchestration
 - `artifacts.py`, `provenance.py`, `strict_audit.py`
 - `specs/dict_builder.py`, `core/runtime/mutators.py` — OpenFOAM text manipulation (genuinely generic)
-- `specs/mesh_geometry.py` — SI-scale mesh diagnostic (OpenFOAM-specific but not cardiac)
+- `specs/mesh_geometry.py` — SI-scale polyMesh diagnostic (OpenFOAM-specific but not cardiac); plugins add their own point-set checks through `get_mesh_geometry_diagnostics`
+- `specs/mesh_provisioning.py`, `specs/tet_mesh_provisioning.py` — generic default blockMeshDict / gmsh `.geo` rendering
 
 **Inside the project adapter (must be provided by each project):**
 - `get_dict_entries()` — the project's dictionary entry descriptors
