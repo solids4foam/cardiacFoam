@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "RunDocument",
-  "description": "cardiacFoam Run document v2. Version 2 is the canonical agent-authored planning contract; version 1 documents must be migrated explicitly before emission.",
+  "description": "driverFOAM Run document v3. Version 3 is the canonical agent-authored planning contract with an open, plugin-schema-validated config object; version 1 and 2 documents must be migrated explicitly before emission.",
   "type": "object",
   "required": ["version", "id", "name", "status", "config"],
   "properties": {
-    "version": {"const": "2"},
+    "version": {"const": "3"},
     "id": {"type": "string", "minLength": 1},
     "name": {"type": "string", "minLength": 1},
     "createdAt": {"type": "string", "format": "date-time"},

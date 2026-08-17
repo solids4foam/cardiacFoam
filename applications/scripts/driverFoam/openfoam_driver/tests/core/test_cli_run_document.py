@@ -112,7 +112,7 @@ def test_run_document_with_bad_dag_surfaces_diagnostics() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         doc_path = Path(temp_dir) / "run.json"
         doc_path.write_text(json.dumps({
-            "version": "2",
+            "version": "3",
             "id": "d",
             "name": "bad",
             "status": "planned",
@@ -137,7 +137,7 @@ def test_run_document_rejects_unknown_command() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         doc_path = Path(temp_dir) / "run.json"
         doc_path.write_text(json.dumps({
-            "version": "2",
+            "version": "3",
             "id": "d",
             "name": "danger",
             "status": "planned",

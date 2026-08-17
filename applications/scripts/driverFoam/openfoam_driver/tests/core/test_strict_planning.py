@@ -147,7 +147,7 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
     assert generation_audit["evidence"]["case_count"] >= 1
     assert payload["resolved_entry"]["entry_kind"] == "registered_tutorial"
     assert payload["expected_artifacts"]
-    assert payload["run_document"]["version"] == "2"
+    assert payload["run_document"]["version"] == "3"
     assert payload["run_document"]["validation"]["status"] == "ok"
     assert payload["workflow_diagnostics"] == []
     assert payload["workflow_dag"]["schema_version"] == "1"

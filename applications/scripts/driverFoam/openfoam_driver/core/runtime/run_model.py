@@ -63,7 +63,7 @@ class RunDocument:
     name: str
     status: Status
     config: dict[str, dict[str, Any]]
-    version: str = "2"
+    version: str = "3"
     createdAt: str = ""
     lastModified: str = ""
     intent: dict[str, Any] = field(default_factory=dict)
@@ -82,10 +82,11 @@ class RunDocument:
 
     def to_json(self) -> dict[str, Any]:
         data = asdict(self)
-        if data.get("version") != "2":
+        if data.get("version") != "3":
             raise ValueError(
-                "RunDocument.to_json emits only version '2'; use "
-                "RunDocument.migrate_v1(...) before serializing old documents"
+                "RunDocument.to_json emits only version '3'; use "
+                "RunDocument.migrate_v1(...) or RunDocument.migrate_v2(...) "
+                "before serializing old documents"
             )
         if data.get("reports") is None:
             data.pop("reports", None)
@@ -96,10 +97,11 @@ class RunDocument:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "RunDocument":
-        if data.get("version") == "1":
+        if data.get("version") in ("1", "2"):
             raise ValueError(
-                "RunDocument.from_json expects version '2'. Use "
-                "RunDocument.migrate_v1(data) to migrate v1 input explicitly."
+                f"RunDocument.from_json expects version '3'. Use "
+                f"RunDocument.migrate_v1(data) or RunDocument.migrate_v2(data) "
+                f"to migrate version {data.get('version')!r} input explicitly."
             )
         jsonschema.validate(data, _SCHEMA)
         return cls(
@@ -107,7 +109,7 @@ class RunDocument:
             name=data["name"],
             status=data["status"],
             config=data["config"],
-            version=data.get("version", "2"),
+            version=data.get("version", "3"),
             createdAt=data.get("createdAt", ""),
             lastModified=data.get("lastModified", ""),
             intent=data.get("intent", {}),
@@ -127,17 +129,17 @@ class RunDocument:
 
     @classmethod
     def migrate_v1(cls, data: dict[str, Any]) -> "RunDocument":
-        """Return a v2 RunDocument from the legacy v1 shape.
+        """Return a v3 RunDocument from the legacy v1 shape.
 
         The migration is deliberately conservative: it preserves the config,
-        validation, results, reports, and timestamps, then adds empty v2 planning
+        validation, results, reports, and timestamps, then adds empty v3 planning
         fields. Callers must still run the strict planner to populate
         resolvedEntry, workflowDag, launch, and expectedArtifacts.
         """
         if data.get("version") != "1":
             raise ValueError("migrate_v1 expects a RunDocument with version '1'")
         migrated = {
-            "version": "2",
+            "version": "3",
             "id": data["id"],
             "name": data["name"],
             "createdAt": data.get("createdAt", ""),
@@ -157,4 +159,21 @@ class RunDocument:
         }
         if "reports" in data:
             migrated["reports"] = data["reports"]
+        return cls.from_json(migrated)
+
+    @classmethod
+    def migrate_v2(cls, data: dict[str, Any]) -> "RunDocument":
+        """Return a v3 RunDocument from the v2 shape.
+
+        v2's config was schema-constrained by core to the cardiac phase
+        envelope; v3 makes config an open object validated by the plugin's
+        own schema instead. The migration is a pure version-field bump --
+        config, validation, results, reports, and timestamps carry over
+        unchanged, since v2's config already satisfies any v3 plugin schema
+        shaped like the (now plugin-owned) v2 constraint.
+        """
+        if data.get("version") != "2":
+            raise ValueError("migrate_v2 expects a RunDocument with version '2'")
+        migrated = dict(data)
+        migrated["version"] = "3"
         return cls.from_json(migrated)

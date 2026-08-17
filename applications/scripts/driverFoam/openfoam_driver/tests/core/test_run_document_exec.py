@@ -64,13 +64,13 @@ def _minimal_doc(**overrides) -> RunDocument:
 
 
 class TestLoadRunDocument(unittest.TestCase):
-    def test_loads_a_v2_document(self) -> None:
+    def test_loads_a_v3_document(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "run.json"
             path.write_text(json.dumps(_minimal_doc().to_json()))
             doc = load_run_document(path)
             self.assertEqual(doc.name, "doc-one")
-            self.assertEqual(doc.version, "2")
+            self.assertEqual(doc.version, "3")
 
     def test_migrates_a_v1_document(self) -> None:
         v1 = {
@@ -84,8 +84,22 @@ class TestLoadRunDocument(unittest.TestCase):
             path = Path(temp) / "run.json"
             path.write_text(json.dumps(v1))
             doc = load_run_document(path)
-            self.assertEqual(doc.version, "2")
+            self.assertEqual(doc.version, "3")
             self.assertEqual(doc.name, "legacy")
+
+    def test_v2_document_is_rejected(self) -> None:
+        v2 = {
+            "version": "2",
+            "id": "old",
+            "name": "archived",
+            "status": "draft",
+            "config": _empty_config(),
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "run.json"
+            path.write_text(json.dumps(v2))
+            with self.assertRaises(ValueError):
+                load_run_document(path)
 
     def test_non_object_json_raises(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -84,7 +84,7 @@ def test_sweep_plan_entry_mode_materializes_via_apply_case_and_audits(tmp_path):
     fake_report.status = "ok"
     fake_report.to_json.return_value = {
         "status": "ok",
-        "run_document": {"version": "2", "launch": {"outputDir": str(tmp_path / "out")}},
+        "run_document": {"version": "3", "launch": {"outputDir": str(tmp_path / "out")}},
     }
 
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec) as mock_load, \
@@ -155,7 +155,7 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
         # found via a real (non-mocked) sweep-run: relative_to(output_dir)
         # raised ValueError because these are two unrelated directory trees.
         state_dir = fake_spec.case_root / f"state_{len(call_order)}"
-        return {"status": "ok", "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}}}
+        return {"status": "ok", "run_document": {"version": "3", "launch": {"outputDir": str(state_dir)}}}
     fake_report.to_json.side_effect = fake_to_json
 
     def fake_subprocess_run(cmd, **kwargs):
@@ -211,7 +211,7 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
 
     def fake_to_json():
         state_dir = case_root / f"state_{len(call_order)}"
-        return {"status": "ok", "run_document": {"version": "2", "launch": {"caseRoot": str(case_root), "outputDir": str(state_dir)}}}
+        return {"status": "ok", "run_document": {"version": "3", "launch": {"caseRoot": str(case_root), "outputDir": str(state_dir)}}}
     fake_report.to_json.side_effect = fake_to_json
 
     def fake_subprocess_run(cmd, **kwargs):
@@ -431,7 +431,7 @@ def test_sweep_run_accepts_over_cap_with_explicit_override(tmp_path):
     fake_report.to_json.return_value = {
         "status": "ok",
         "run_document": {
-            "version": "2",
+            "version": "3",
             "launch": {"outputDir": str(output_dir / "dummy" / "postProcessing")},
         },
     }
@@ -517,7 +517,7 @@ def test_fresh_reruns_case_reported_as_completed_and_wipes_stray_files(tmp_path)
     fake_report.status = "ok"
     fake_report.to_json.return_value = {
         "status": "ok",
-        "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}},
+        "run_document": {"version": "3", "launch": {"outputDir": str(state_dir)}},
     }
 
     def fake_subprocess_run(cmd, **kwargs):
@@ -645,7 +645,7 @@ def test_resume_retries_terminal_failed_case_with_retry_flag(tmp_path):
     fake_report.status = "ok"
     fake_report.to_json.return_value = {
         "status": "ok",
-        "run_document": {"version": "2", "launch": {"outputDir": str(state_dir)}},
+        "run_document": {"version": "3", "launch": {"outputDir": str(state_dir)}},
     }
 
     def fake_subprocess_run(cmd, **kwargs):
@@ -684,7 +684,7 @@ def test_sweep_run_case_timeout_marks_failed_and_continues(tmp_path):
     fake_report.to_json.return_value = {
         "status": "ok",
         "run_document": {
-            "version": "2",
+            "version": "3",
             "launch": {"outputDir": str(output_dir / "TNNP" / "postProcessing")},
         },
     }

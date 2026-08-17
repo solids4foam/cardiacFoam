@@ -55,7 +55,7 @@ def schema():
 
 def _valid_run_dict():
     return {
-        "version": "2",
+        "version": "3",
         "id": "run-0001",
         "name": "demo",
         "createdAt": "2026-04-20T10:00:00Z",
@@ -89,7 +89,7 @@ def test_packaged_schema_resource_matches_fixture_schema(schema):
     )
     assert packaged == schema
     doc = RunDocument.from_json(_valid_run_dict())
-    assert doc.to_json()["version"] == "2"
+    assert doc.to_json()["version"] == "3"
 
 
 def test_schema_rejects_unknown_status(schema):
@@ -105,7 +105,7 @@ def test_run_document_round_trip():
     assert back["id"] == "run-0001"
     assert back["config"]["anatomy"] == {}
     assert back["status"] == "draft"
-    assert back["version"] == "2"
+    assert back["version"] == "3"
 
 
 def test_schema_accepts_valid_heterogeneity_block(schema):
@@ -236,6 +236,13 @@ def test_run_document_rejects_implicit_v1_from_json():
         RunDocument.from_json(old)
 
 
+def test_run_document_rejects_implicit_v2_from_json():
+    old = _valid_run_dict()
+    old["version"] = "2"
+    with pytest.raises(ValueError, match="migrate_v2"):
+        RunDocument.from_json(old)
+
+
 def test_run_document_migrates_v1_explicitly():
     old = _valid_run_dict()
     old["version"] = "1"
@@ -248,7 +255,7 @@ def test_run_document_migrates_v1_explicitly():
 
     doc = RunDocument.migrate_v1(old)
     payload = doc.to_json()
-    assert payload["version"] == "2"
+    assert payload["version"] == "3"
     assert payload["config"] == old["config"]
     assert payload["resolvedEntry"] is None
     assert payload["workflowState"] is None

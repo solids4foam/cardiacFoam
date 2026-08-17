@@ -81,9 +81,11 @@ class RunDocumentExecutionInputs:
 def load_run_document(path: str | Path) -> RunDocument:
     """Read, schema-validate, and return a RunDocument from ``path``.
 
-    A version-1 document is migrated to v2 via the explicit migration path;
-    a version-2 document is validated against ``schemas/run-document.json``.
-    Raises ``ValueError`` / ``json.JSONDecodeError`` on malformed input.
+    A version-1 document is migrated to v3 via the explicit migration path;
+    a version-3 document is validated against ``schemas/run-document.json``.
+    Version-2 documents are rejected -- callers must migrate them explicitly
+    via ``RunDocument.migrate_v2`` before loading. Raises ``ValueError`` /
+    ``json.JSONDecodeError`` on malformed input.
     """
     data = json.loads(Path(path).read_text())
     if not isinstance(data, dict):
