@@ -35,6 +35,8 @@ helpers and catalog exporters.
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from importlib import resources
 from pathlib import Path
 
@@ -90,6 +92,32 @@ def test_packaged_schema_resource_matches_fixture_schema(schema):
     assert packaged == schema
     doc = RunDocument.from_json(_valid_run_dict())
     assert doc.to_json()["version"] == "3"
+
+
+def test_packaged_schema_is_reproducible_from_the_generator() -> None:
+    result = subprocess.run(
+        [sys.executable, "schemas/generate_run_document_schema.py"],
+        cwd=Path(__file__).resolve().parents[3],  # applications/scripts/driverFoam
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    diff = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--stat",
+            "--",
+            "openfoam_driver/schemas/run-document.json",
+        ],
+        cwd=Path(__file__).resolve().parents[3],
+        capture_output=True,
+        text=True,
+    )
+    assert diff.stdout.strip() == "", (
+        "generator produced a diff in the packaged schema copy:\n"
+        f"{diff.stdout}"
+    )
 
 
 def test_schema_rejects_unknown_status(schema):

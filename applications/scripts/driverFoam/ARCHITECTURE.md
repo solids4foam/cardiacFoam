@@ -179,7 +179,7 @@ applications/scripts/driverFoam/
 │   │   └── run-document.json         ← JSON Schema v2 (`config` is now an open, plugin-declared object)
 │   └── postprocessing/               ← Post-processing task runner
 │
-├── schemas/run-document.json         ← Second identical schema copy (drift risk)
+├── schemas/run-document.json         ← Canonical hand-authored copy; `openfoam_driver/schemas/run-document.json` is generated from it (P2.8, `schemas/generate_run_document_schema.py`)
 └── pyproject.toml                    ← Package metadata, entry-points, scripts
 ```
 
@@ -1219,7 +1219,7 @@ The following documents should exist for a new developer to understand and integ
 | Generalise `paths.py::repo_root_default()` | Prefer an explicit CLI/config/environment root and package resources; retain ancestor discovery only as a documented source-checkout convenience. | Small |
 | Rename `SolverPlugin` → `ProjectPlugin` | Requires updating the protocol name, all imports, documentation, and the public-facing CLI help text. | Medium (mostly mechanical) |
 | Rename `TutorialSpec` → `CaseSpec` | Same — internal and external references. | Medium |
-| Eliminate the duplicate RunDocument schema | Both `schemas/run-document.json` and `openfoam_driver/schemas/run-document.json` exist and were byte-identical at review time. Declare the packaged file as the source of truth and generate/check any documentation copy. | Small |
+| ~~Eliminate the duplicate RunDocument schema~~ | **Resolved (P2.8).** `schemas/run-document.json` is now the sole hand-authored source; `openfoam_driver/schemas/run-document.json` is generated from it via `schemas/generate_run_document_schema.py` and checked for drift by `test_packaged_schema_is_reproducible_from_the_generator`. | Small |
 
 ### P2 — Cleanup / future improvement
 
