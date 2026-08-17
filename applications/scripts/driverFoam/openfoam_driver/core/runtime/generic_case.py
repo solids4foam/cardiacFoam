@@ -29,11 +29,43 @@ RUN_CASE_SCRIPT_RELPATH = Path(
 )
 
 
+DictFileOverrides = Mapping[str, "Mapping[str, Any] | Sequence[Mapping[str, Any]]"]
+
+
+def _merged_dict_file_overrides(
+    item: Mapping[str, Any],
+    default_overrides: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Per-case ``dict_file_overrides``, falling back to the spec-level default.
+
+    A case entry may name only some of the dictionary files; the remaining ones
+    keep whatever the spec-level default declared for them.
+    """
+    from openfoam_driver.core.compatibility import (
+        legacy_generic_case_alias_names,
+        legacy_generic_case_dict_file_aliases,
+    )
+
+    merged = dict(default_overrides)
+    merged.update(item.get("dict_file_overrides") or {})
+
+    deprecated = {
+        key: value
+        for key, value in item.items()
+        if key in legacy_generic_case_alias_names()
+    }
+    if deprecated:
+        _relpaths, alias_overrides, _unknown = legacy_generic_case_dict_file_aliases(
+            deprecated,
+        )
+        merged.update(alias_overrides)
+    return {key: value for key, value in merged.items() if value}
+
+
 def _normalize_case_specs(
     *,
     cases: Sequence[Mapping[str, Any]] | None,
-    electro_property_overrides: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
-    physics_property_overrides: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
+    dict_file_overrides: Mapping[str, Any],
     dimension: str | None,
     parallel: bool,
     touch_case_foam: bool,
@@ -43,8 +75,7 @@ def _normalize_case_specs(
 ) -> list[CaseConfig]:
     if cases is None:
         payload = {
-            "electro_property_overrides": electro_property_overrides,
-            "physics_property_overrides": physics_property_overrides,
+            "dict_file_overrides": dict(dict_file_overrides),
             "dimension": dimension,
             "parallel": parallel,
             "touch_case_foam": touch_case_foam,
@@ -61,13 +92,8 @@ def _normalize_case_specs(
             CaseConfig(
                 case_id=case_id,
                 params={
-                    "electro_property_overrides": item.get(
-                        "electro_property_overrides",
-                        electro_property_overrides,
-                    ),
-                    "physics_property_overrides": item.get(
-                        "physics_property_overrides",
-                        physics_property_overrides,
+                    "dict_file_overrides": _merged_dict_file_overrides(
+                        item, dict_file_overrides,
                     ),
                     "dimension": item.get("dimension", dimension),
                     "parallel": bool(item.get("parallel", parallel)),
@@ -89,15 +115,14 @@ def _apply_case(
     case_root: Path,
     case: CaseConfig,
     *,
-    electro_properties_relpath: Path,
-    physics_properties_relpath: Path,
+    dict_file_relpaths: Mapping[str, Path],
     mutation_callback,
 ) -> None:
     mutation_callback(
         case_root,
         case,
-        electro_properties_relpath=electro_properties_relpath,
-        physics_properties_relpath=physics_properties_relpath,
+        dict_file_relpaths=dict(dict_file_relpaths),
+        dict_file_overrides=dict(case.params.get("dict_file_overrides") or {}),
     )
 
 
@@ -252,10 +277,8 @@ def make_spec(
     case_dir_name: str,
     setup_dir_name: str | None = None,
     output_dir_name: str | None = None,
-    electro_properties_relpath: str | Path = "constant/electroProperties",
-    physics_properties_relpath: str | Path = "constant/physicsProperties",
-    electro_property_overrides: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None = None,
-    physics_property_overrides: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None = None,
+    dict_file_relpaths: Mapping[str, str | Path] | None = None,
+    dict_file_overrides: DictFileOverrides | None = None,
     cases: Sequence[Mapping[str, Any]] | None = None,
     dimension: str | None = None,
     parallel: bool = False,
@@ -268,12 +291,47 @@ def make_spec(
     solver_command: str | Sequence[str] | None = None,
     pre_solve_commands: Sequence[str | Sequence[str]] | None = None,
     _apply_case_mutation=None,
+    **deprecated_kwargs: Any,
 ) -> TutorialSpec:
     if not str(case_dir_name).strip():
         raise ValueError("case_dir_name cannot be empty")
 
-    electro_properties_path = Path(electro_properties_relpath)
-    physics_properties_path = Path(physics_properties_relpath)
+    from openfoam_driver.core.compatibility import (
+        legacy_generic_case_dict_file_aliases,
+        legacy_generic_case_dict_file_relpaths,
+    )
+
+    # ``dict_file_relpaths``/``dict_file_overrides`` are the supported spelling.
+    # The historical solver-specific keyword names survive only as deprecated
+    # aliases, translated by the named compatibility seam so that no plugin
+    # vocabulary reaches core.
+    alias_relpaths: dict[str, Any] = {}
+    alias_overrides: dict[str, Any] = {}
+    unknown_kwargs: list[str] = []
+    if deprecated_kwargs:
+        alias_relpaths, alias_overrides, unknown_kwargs = (
+            legacy_generic_case_dict_file_aliases(deprecated_kwargs)
+        )
+    if unknown_kwargs:
+        raise TypeError(
+            "make_spec() got an unexpected keyword argument "
+            + ", ".join(repr(key) for key in sorted(unknown_kwargs))
+        )
+
+    resolved_relpaths_raw: dict[str, Any] = dict(
+        legacy_generic_case_dict_file_relpaths()
+        if dict_file_relpaths is None
+        else dict_file_relpaths
+    )
+    resolved_relpaths_raw.update(alias_relpaths)
+    resolved_relpaths = {
+        str(key): Path(value) for key, value in resolved_relpaths_raw.items()
+    }
+
+    resolved_overrides: dict[str, Any] = dict(dict_file_overrides or {})
+    resolved_overrides.update(alias_overrides)
+    resolved_overrides = {key: value for key, value in resolved_overrides.items() if value}
+
     run_script_path = Path(run_script_relpath)
     normalized_postprocess_tasks = _normalize_postprocess_tasks(postprocess_tasks)
     normalized_pre_solve = tuple(pre_solve_commands or ())
@@ -292,8 +350,7 @@ def make_spec(
 
     normalized_cases = _normalize_case_specs(
         cases=cases,
-        electro_property_overrides=electro_property_overrides,
-        physics_property_overrides=physics_property_overrides,
+        dict_file_overrides=resolved_overrides,
         dimension=dimension,
         parallel=parallel,
         touch_case_foam=touch_case_foam,
@@ -302,14 +359,20 @@ def make_spec(
         pre_solve_commands=normalized_pre_solve,
     )
 
+    # A case counts as generic when its *primary* declared dictionary file --
+    # the first entry of ``dict_file_relpaths`` -- is absent from the folder.
+    # Core imposes no vocabulary on that mapping: whichever file a caller (or
+    # the legacy default in ``core.compatibility``) declares first is the one
+    # whose presence marks the folder as belonging to that solver. Declaring no
+    # dictionary files at all leaves the folder generic.
+    primary_relpaths = list(resolved_relpaths.values())[:1]
     generic_case = (
         solver_command is None
         and cases is None
-        and not electro_property_overrides
-        and not physics_property_overrides
+        and not resolved_overrides
         and not collect_patterns
         and not normalized_postprocess_tasks
-        and not (case_root / electro_properties_path).exists()
+        and not any((case_root / relpath).exists() for relpath in primary_relpaths)
     )
 
     return TutorialSpec(
@@ -320,8 +383,7 @@ def make_spec(
         build_cases=lambda: list(normalized_cases),
         apply_case=partial(
             _apply_case,
-            electro_properties_relpath=electro_properties_path,
-            physics_properties_relpath=physics_properties_path,
+            dict_file_relpaths=resolved_relpaths,
             mutation_callback=_apply_case_mutation,
         ),
         run_case=(
@@ -359,14 +421,14 @@ def make_spec(
                 solver_command=solver_command,
                 pre_solve_commands=normalized_pre_solve,
             ),
-            "electro_properties_relpath": str(electro_properties_path),
-            "physics_properties_relpath": str(physics_properties_path),
+            "dict_file_relpaths": {
+                key: str(value) for key, value in resolved_relpaths.items()
+            },
             "run_script_relpath": str(run_script_path),
             "collect_patterns": list(collect_patterns),
             "postprocess_task_count": len(normalized_postprocess_tasks),
             "case_count": len(normalized_cases),
-            "has_default_electro_property_overrides": bool(electro_property_overrides),
-            "has_default_physics_property_overrides": bool(physics_property_overrides),
+            "has_default_dict_file_overrides": bool(resolved_overrides),
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
             "solver_command": list(solver_command) if not isinstance(solver_command, str) and solver_command is not None else solver_command,
             "pre_solve_commands": list(pre_solve_commands or ()),

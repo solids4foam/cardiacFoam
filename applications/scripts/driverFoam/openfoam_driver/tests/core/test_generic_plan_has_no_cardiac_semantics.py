@@ -126,20 +126,18 @@ def test_generic_describe_override_surface_has_no_cardiac_semantics(
     assert leaked == [], f"cardiac override semantics leaked: {leaked}"
 
 
-def test_known_residual_tutorialspec_carries_cardiac_field_names(
+def test_generic_spec_metadata_names_dict_files_generically(
     tmp_path, monkeypatch
 ) -> None:
-    """Documents a leak Phase 1 does NOT close, so it stays visible.
+    """Phase 2 (P2.6) closes the residual that Phase 1 only documented.
 
-    ``TutorialSpec`` -- core's own spec model -- has fields named
-    ``electro_properties_relpath`` and ``physics_properties_relpath``, and
-    core's generic-case factory populates them even under ``--plugin none``.
-    This predates Phase 1 (it is present at the phase's base commit) and is
-    outside the spec's Phase 1 consumer list, so closing it here would mean
-    restructuring the spec model that Phase 2's provenance work touches
-    directly. Asserted as a *known* leak: when Phase 2 closes it this test
-    fails loudly and should be deleted, rather than the residual being
-    forgotten."""
+    Core's generic-case metadata used to carry two hard-coded cardiac field
+    names (``electro_properties_relpath``/``physics_properties_relpath``) even
+    under ``--plugin none``. It now carries a single generic
+    ``dict_file_relpaths`` mapping whose *keys* are chosen by whoever declares
+    the dictionaries; the cardiac-shaped default values still arrive via the
+    named ``core.compatibility`` seam, so the paths are unchanged while the
+    core-owned vocabulary is not."""
     monkeypatch.setenv("SKIP_ENV_DIAGNOSTICS", "1")
     monkeypatch.setenv("SKIP_MESH_DIAGNOSTICS", "1")
     case = _minimal_case(tmp_path)
@@ -149,5 +147,9 @@ def test_known_residual_tutorialspec_carries_cardiac_field_names(
         driver_context=generic_openfoam_context(),
     )
     metadata = payload["spec"]["metadata"]
-    assert metadata["electro_properties_relpath"] == "constant/electroProperties"
-    assert metadata["physics_properties_relpath"] == "constant/physicsProperties"
+    assert "electro_properties_relpath" not in metadata
+    assert "physics_properties_relpath" not in metadata
+    assert "has_default_electro_property_overrides" not in metadata
+    assert "has_default_physics_property_overrides" not in metadata
+    assert metadata["has_default_dict_file_overrides"] is False
+    assert set(metadata["dict_file_relpaths"]) == {"electro", "physics"}

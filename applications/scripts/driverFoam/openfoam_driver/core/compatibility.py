@@ -76,16 +76,88 @@ def resolve_public_driver_context(
 def legacy_generic_case_mutation(*args, **kwargs) -> None:
     """Preserve direct callers of the formerly cardiac-owned generic factory.
 
-    Why: the historical public ``make_spec`` accepted electro/physics override
-    arguments.  Activation: a caller imports core ``make_spec`` directly rather
-    than the solver-neutral registry alias.  Tests in the cardiac generic-case
-    and template suites preserve it.  Plan 2 may replace this with explicit
-    generic dictionary mutations.
+    Why: the historical public ``make_spec`` mutated the cardiac electro and
+    physics dictionaries.  Activation: a caller imports core ``make_spec``
+    directly rather than the solver-neutral registry alias.  Tests in the
+    cardiac generic-case and template suites preserve it.  Plan 2 may replace
+    this with explicit generic dictionary mutations.
     """
 
     from ..plugins.cardiacfoam.generic_case_mutation import apply_case_mutation
 
     apply_case_mutation(*args, **kwargs)
+
+
+# The dictionary files the historical generic-case factory addressed, keyed by
+# the generic ``dict_file_relpaths`` names.  Insertion order matters: the first
+# entry is the "primary" file whose presence marks a folder as non-generic, and
+# ``electroProperties`` has always been that marker.
+_LEGACY_GENERIC_CASE_DICT_FILES = (
+    ("electro", "constant/electroProperties"),
+    ("physics", "constant/physicsProperties"),
+)
+
+# Historical cardiac-named ``make_spec`` keyword arguments, mapped onto the
+# generic ``(bucket, dict-file name)`` they now address.
+_LEGACY_GENERIC_CASE_ALIASES = {
+    "electro_properties_relpath": ("relpaths", "electro"),
+    "physics_properties_relpath": ("relpaths", "physics"),
+    "electro_property_overrides": ("overrides", "electro"),
+    "physics_property_overrides": ("overrides", "physics"),
+}
+
+
+@_instrumented
+def legacy_generic_case_dict_file_relpaths() -> dict[str, str]:
+    """Return the dictionary files core ``make_spec`` has always defaulted to.
+
+    Why: the historical signature defaulted ``electro_properties_relpath`` and
+    ``physics_properties_relpath`` to fixed cardiac paths, and the generic-case
+    detection keyed off the first of them.  Activation: a caller of core
+    ``make_spec`` declares no ``dict_file_relpaths``.  Preserved by the core
+    generic-case and strict-plan suites.  Plan 2 seam: a plugin declaring its
+    own dictionary files makes this default unnecessary.
+    """
+
+    return dict(_LEGACY_GENERIC_CASE_DICT_FILES)
+
+
+def legacy_generic_case_alias_names() -> frozenset[str]:
+    """Names :func:`legacy_generic_case_dict_file_aliases` recognises.
+
+    Uninstrumented on purpose: callers use it to *decide* whether a legacy
+    alias is present at all, so consulting it is not itself a fallback.
+    """
+
+    return frozenset(_LEGACY_GENERIC_CASE_ALIASES)
+
+
+@_instrumented
+def legacy_generic_case_dict_file_aliases(
+    payload,
+) -> tuple[dict, dict, list[str]]:
+    """Translate deprecated cardiac-named generic-case keywords.
+
+    Why: ``electro_property_overrides`` and friends are advertised as common
+    override keys and reach ``make_spec`` verbatim from ``--config``/``--set``.
+    Activation: any such key appears in a ``make_spec`` call or in a ``cases``
+    entry.  Returns ``(relpaths, overrides, unknown_keys)`` so the caller keeps
+    ownership of rejecting genuinely unknown keywords.  Plan 2 seam: the
+    aliases may be dropped once callers migrate to ``dict_file_relpaths`` and
+    ``dict_file_overrides``.
+    """
+
+    relpaths: dict = {}
+    overrides: dict = {}
+    unknown: list[str] = []
+    for key, value in dict(payload).items():
+        target = _LEGACY_GENERIC_CASE_ALIASES.get(key)
+        if target is None:
+            unknown.append(key)
+            continue
+        bucket, name = target
+        (relpaths if bucket == "relpaths" else overrides)[name] = value
+    return relpaths, overrides, unknown
 
 
 @_instrumented
