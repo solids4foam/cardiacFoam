@@ -36,10 +36,7 @@
   `core/runtime/run_model.py` and the phase vocabulary in
   `specs/validation.py` are still hardcoded to those four names independently
   of the JSON schema.
-- **The `specs/` module is also architecturally ambiguous.** Its `detection.py`
-  and `overrides.py` contain cardiac-specific OpenFOAM dictionary names
-  (`electroProperties`, `physicsProperties`, `myocardiumSolver`, `ionicModel`)
-  in what is presented as a shared layer.
+- **The `specs/` module's outright cardiac functions have moved out; a narrower coupling remains.** As of `e137b390` (P2.5), `detection.py` and `overrides.py` — which contain cardiac-specific OpenFOAM dictionary names (`electroProperties`, `physicsProperties`, `myocardiumSolver`, `ionicModel`) — live in `plugins/cardiacfoam/`, not `specs/`. What's left in `specs/` is narrower but still open: `specs/apply_overrides.py` and `specs/dict_builder.py` now import directly from the plugin (an explicit, correct-direction dependency, but still core→plugin coupling), and the `$ELECTRO_MODEL_COEFFS` sentinel convention is still parsed independently by `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` — deferred to Task 14.
 - **`generic_case.py::make_spec`'s parameter vocabulary is cardiac-shaped.** Even the "generic" case factory accepts `electro_property_overrides` and `physics_property_overrides`, which are cardiacFoam dictionary names, not generic OpenFOAM concepts.
 - **The path-discovery logic (`paths.py`) assumes a conventional source-tree layout** by preferring an ancestor containing both `src/` and `tutorials/`. That convention is not uniquely cardiac, but implicit ancestor discovery is fragile for installed packages and external projects.
 - **The plugin boundary is not a sandbox.** Discovered plugins execute trusted Python in-process. `Allrun`-family scripts execute case-authored code, and OpenFOAM dictionary values may contain executable directives such as `#codeStream`. The implemented threat model is local, semi-trusted, and single-tenant.
@@ -146,6 +143,8 @@ applications/scripts/driverFoam/
 │   │   ├── cardiacfoam_plugin.py     ← CardiacFoamPlugin (SolverPluginV2 implementation)
 │   │   └── cardiacfoam/              ← cardiacFoam domain code
 │   │       ├── plugin.yaml           ← Profile: case files, C++ source roots, allowlist
+│   │       ├── detection.py          ← detect_myocardium_solver_name, detect_ionic_model_name, etc. (moved from specs/, P2.5, `e137b390`)
+│   │       ├── overrides.py          ← apply_electro_property_overrides, apply_physics_property_overrides, `$ELECTRO_MODEL_COEFFS` (moved from specs/, P2.5, `e137b390`)
 │   │       ├── dict_entries_catalog.py ← electroProperties entry descriptors
 │   │       ├── common_dict_entries.py  ← physicsProperties, controlDict entries
 │   │       ├── ionic_model_catalog.py  ← IONIC_MODEL_CATALOG
@@ -168,15 +167,13 @@ applications/scripts/driverFoam/
 │   │           ├── niederer_2012.py
 │   │           └── ...
 │   │
-│   ├── specs/                        ← Shared spec-building utilities (partially cardiac-specific)
-│   │   ├── common.py                 ← Facade re-exporting detection, overrides, paths, utils
-│   │   ├── detection.py              ← detect_myocardium_solver_name, detect_ionic_model_name, etc.
-│   │   ├── overrides.py              ← apply_electro_property_overrides, apply_physics_property_overrides
+│   ├── specs/                        ← Shared spec-building utilities (narrower cardiac coupling remains)
+│   │   ├── common.py                 ← No longer re-exports detection/overrides (removed in P2.5, `e137b390`); still re-exports paths, utils
 │   │   ├── paths.py                  ← repo_root_default, tutorials_root_default, resolve_spec_paths
-│   │   ├── dict_builder.py           ← OpenFOAM dictionary text manipulation
-│   │   ├── validation.py             ← validate_run (RunDocument validation)
+│   │   ├── dict_builder.py           ← OpenFOAM dictionary text manipulation; imports `plugins/cardiacfoam/detection.py` directly (explicit, correct-direction, but still open core→plugin coupling — Task 14) and independently re-parses the `$ELECTRO_MODEL_COEFFS` sentinel prefix
+│   │   ├── validation.py             ← validate_run (RunDocument validation); independently re-parses the `$ELECTRO_MODEL_COEFFS` sentinel prefix — Task 14
 │   │   ├── mesh_geometry.py          ← SI-scale mesh diagnostic
-│   │   └── apply_overrides.py        ← --apply override machinery
+│   │   └── apply_overrides.py        ← --apply override machinery; imports `plugins/cardiacfoam/detection.py` directly (same open coupling — Task 14)
 │   │
 │   ├── schemas/
 │   │   └── run-document.json         ← JSON Schema v2 (`config` is now an open, plugin-declared object)
@@ -223,12 +220,13 @@ graph TB
         CMD["command_authorization.py\n(solver/auxiliary cmds)"]
         ARP["artifacts_predictor.py"]
         CCI["case_introspection.py\n(reads electroProperties)"]
+        DET["detection.py\n(detect_myocardium_solver_name\ndetect_ionic_model_name)\n(moved from specs/, P2.5, e137b390)"]
+        OVR["overrides.py\n(apply_electro_property_overrides)\n(moved from specs/, P2.5, e137b390)"]
     end
 
-    subgraph SpecsLayer["specs/ (partially cardiac-contaminated)"]
-        DET["detection.py\n(detect_myocardium_solver_name\ndetect_ionic_model_name)"]
-        OVR["overrides.py\n(apply_electro_property_overrides)"]
+    subgraph SpecsLayer["specs/ (narrower cardiac coupling remains)"]
         PAT["paths.py\n(repo_root_default)"]
+        AOV["apply_overrides.py\n(imports plugins/cardiacfoam/detection.py\ndirectly — Task 14)"]
     end
 
     subgraph OFInfra["OpenFOAM Infrastructure"]
@@ -256,9 +254,10 @@ graph TB
     CFP --> CMD
     CFP --> ARP
     CFP --> CCI
-    GC --> DET
-    GC --> OVR
+    CFP --> DET
+    CFP --> OVR
     GC --> PAT
+    AOV --> DET
     WFR --> OFCASE
     WFR --> OFSOLVER
     WFR --> OFUTILS
@@ -407,6 +406,7 @@ graph LR
         CATS["dict_entries_catalog\nionic_model_catalog\nactive_tension_catalog"]
         VALID["validation.py\nartifacts_predictor.py\ncase_introspection.py"]
         CMD["command_authorization.py"]
+        DET["detection.py\noverrides.py\n(moved from specs/, P2.5, e137b390)"]
     end
 
     subgraph OFLayer["B: OpenFOAM Infrastructure\n(specs/ + runtime/environment)"]
@@ -414,7 +414,7 @@ graph LR
         ENV["environment_preflight.py\nopenfoam_environment.py"]
         MESH["mesh_geometry.py"]
         PATHS["paths.py (partially contaminated)"]
-        DET["detection.py (contaminated)"]
+        AOV["apply_overrides.py\n($ELECTRO_MODEL_COEFFS sentinel\nstill parsed independently here,\nin dict_builder.py, validation.py,\nand scripts/_dict_keys_scanner.py)"]
     end
 
     subgraph GenCore["A: Generic Driver Core\n(core/ + strict_planning.py)"]
@@ -442,7 +442,7 @@ graph LR
     GenCore --> OFBins
 
     GenCore -. "COMPAT LEAK\ncompatibility.py defaults to\nCardiacFoamPlugin" .-> CardiacDomain
-    OFLayer -. "CONTAMINATION\ndetection.py names\nelectroProperties/ionicModel" .-> CardiacDomain
+    OFLayer -. "REMAINING COUPLING (P2.5, e137b390)\n$ELECTRO_MODEL_COEFFS sentinel convention\n+ explicit plugin import in apply_overrides.py\n(detection.py/overrides.py themselves\nalready moved to CardiacDomain)" .-> CardiacDomain
 ```
 
 ### 4.4 Diagram C — Workflow Lifecycle
@@ -665,12 +665,12 @@ More precisely:
 | `core/runtime/generic_case.py` | `_apply_case_mutation` fallback → `legacy_generic_case_mutation` | E — Legacy compat | **Yes** | No | Should be an optional plugin-provided mutation callback |
 | `core/runtime/registry.py` | `_is_case_directory` — falls back to plugin's `has_case_marker` | A — Generic core (uses plugin) | No | Yes | Plugin owns the marker logic correctly |
 | `core/runtime/registry.py` | `resolve_entry` using `has_case_marker` to choose `make_generic_case_spec` vs plugin's | A — Acceptable | Mild | Yes | Logic is correct but the comment "cardiac case-folder semantics" reveals the intent |
-| `specs/detection.py` | `detect_myocardium_solver_name` | C — Project-specific | **Yes** | No | Should be in `plugins/cardiacfoam/case_introspection.py` |
-| `specs/detection.py` | `detect_ionic_model_name` | C — Project-specific | **Yes** | No | Same |
-| `specs/detection.py` | `detect_ionic_export_list`, `detect_active_tension_model_name` | C — Project-specific | **Yes** | No | Same |
-| `specs/overrides.py` | `apply_electro_property_overrides` | C — Project-specific | **Yes** | No | `electroProperties` is cardiacFoam-specific |
-| `specs/overrides.py` | `apply_physics_property_overrides` | C — Project-specific | **Yes** | No | `physicsProperties` is cardiacFoam-specific |
-| `specs/overrides.py` | `$ELECTRO_MODEL_COEFFS` scope token | C — Project-specific | **Yes** | No | This sentinel names a cardiac concept |
+| `plugins/cardiacfoam/detection.py` | `detect_myocardium_solver_name` | C — Project-specific | No — **resolved (P2.5, `e137b390`)** | No (correct location) | Moved from `specs/detection.py`; correctly in `plugins/cardiacfoam/` |
+| `plugins/cardiacfoam/detection.py` | `detect_ionic_model_name` | C — Project-specific | No — **resolved (P2.5, `e137b390`)** | No (correct location) | Same |
+| `plugins/cardiacfoam/detection.py` | `detect_ionic_export_list`, `detect_active_tension_model_name` | C — Project-specific | No — **resolved (P2.5, `e137b390`)** | No (correct location) | Same |
+| `plugins/cardiacfoam/overrides.py` | `apply_electro_property_overrides` | C — Project-specific | No — **resolved (P2.5, `e137b390`)** | No (correct location) | Moved from `specs/overrides.py`; `electroProperties` is cardiacFoam-specific |
+| `plugins/cardiacfoam/overrides.py` | `apply_physics_property_overrides` | C — Project-specific | No — **resolved (P2.5, `e137b390`)** | No (correct location) | Moved from `specs/overrides.py`; `physicsProperties` is cardiacFoam-specific |
+| `plugins/cardiacfoam/overrides.py` | `$ELECTRO_MODEL_COEFFS` scope token | C — Project-specific | **Partially resolved (P2.5)** — the constant itself now lives in the plugin, but the `driver_path` sentinel *convention* is still parsed independently in `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` | Not yet — split across core parsers | This sentinel still names a cardiac concept from multiple core sites; full retirement deferred to Task 14 |
 | `specs/paths.py` | `repo_root_default` — looks for `src/` + `tutorials/` | B/C — Layout convention | Not inherently, but fragile | Partially | Prefer explicit configured/package-resource roots over ancestor guessing |
 | `specs/dict_builder.py`, `core/runtime/mutators.py` | OpenFOAM text dictionary manipulation | B — OpenFOAM-specific | No | Yes | Correctly shared; not cardiac-specific |
 | `core/runtime/strict_audit.py` | Success text naming `physicsProperties` and `electroProperties` | C — Project-specific presentation | **Yes** | No | Use plugin-neutral wording or let the plugin supply the summary |
@@ -706,8 +706,8 @@ More precisely:
 | `schemas/run-document.json` | ~~Required cardiac config phases and cardiac physics fields~~ Resolved (P2.2, `73ca43f7`) — `config` is now `{"type": "object", "additionalProperties": true}`, validated per-plugin via `get_run_document_config_schema()` | RunDocument v2 originated as the cardiac agent contract | **Resolved for the schema** — a plugin builds and declares its own config shape; `core/runtime/run_model.py`'s `Phase` literal is a separate, still-open item (see next row) |
 | `core/runtime/run_model.py` | `Phase = Literal["anatomy", "physics", "stimulus", "solver"]` | Independent of the JSON schema; used by `specs/validation.py` and elsewhere | **Extraction blocker** — a plugin can build and schema-validate its own config, but the `Phase` type itself is still project-specific |
 | `specs/validation.py` | Fixed phase vocabulary and plugin-catalog checks applied to the RunDocument (cardiac-shaped for the built-in plugin, but plugin schemas are now independently declared) | Validates RunDocument config and semantic constraints | **Extraction blocker** — generic schema validation and cardiac semantic validation are not separated cleanly |
-| `specs/detection.py` | Entire module — `detect_myocardium_solver_name`, `detect_ionic_model_name`, `electro_properties_has_block`, `detect_active_tension_model_name` | These utilities are used by cardiacFoam tutorial factories | **Blocker to extraction** — cardiac code in a supposedly shared layer |
-| `specs/overrides.py` | `apply_electro_property_overrides`, `apply_physics_property_overrides`, `$ELECTRO_MODEL_COEFFS` | Cardiac-specific mutation helpers used by tutorial spec factories | **Actual coupling** |
+| `plugins/cardiacfoam/detection.py` | Entire module — `detect_myocardium_solver_name`, `detect_ionic_model_name`, `electro_properties_has_block`, `detect_active_tension_model_name` | Moved out of `specs/` into the plugin (P2.5, `e137b390`); used by cardiacFoam tutorial factories | **Resolved** — no longer cardiac code in the shared `specs/` layer. `specs/apply_overrides.py` and `specs/dict_builder.py` now import this module directly from `specs/`, which is an explicit, correct-direction plugin dependency but still open core→plugin coupling (Task 14) |
+| `plugins/cardiacfoam/overrides.py` | `apply_electro_property_overrides`, `apply_physics_property_overrides`, `$ELECTRO_MODEL_COEFFS` | Moved out of `specs/` into the plugin (P2.5, `e137b390`); cardiac-specific mutation helpers used by tutorial spec factories | **Resolved for the module itself.** The `$ELECTRO_MODEL_COEFFS` sentinel *convention*, however, is still independently re-parsed in `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` — **actual coupling remains**, deferred to Task 14 |
 | `specs/paths.py::repo_root_default()` | Looks for `src/` + `tutorials/` to detect a source tree | Convenient repository checkout discovery | **Deployment smell** — a convention-based ancestor search is ambiguous for installed or nested projects |
 | `strict_planning.py` | `function_object_field_diagnostics` fallback `{"electro": [], "solid": []}` | The `electro`/`solid` region names come from cardiacFoam's multi-region solver architecture | **Mild leak** — only affects the fallback, not the main path |
 | `core/runtime/strict_audit.py` | Passed-stage summary names cardiac dictionary files | Historical report wording | **Presentation leak** — generated audit text can misdescribe a non-cardiac plugin |
@@ -724,7 +724,7 @@ More precisely:
 graph TB
     subgraph CurrentCore["'Core' package (openfoam_driver)"]
         GenEngine["Generic engine\n(workflow, DAG, provenance,\nRunDocument, audit)"]
-        CardiacSpecs["specs/detection.py\nspecs/overrides.py\n(cardiac dictionary names)"]
+        CardiacSpecs["specs/apply_overrides.py, specs/dict_builder.py\n(import plugins/cardiacfoam/detection.py directly)\nspecs/dict_builder.py, specs/validation.py,\nscripts/_dict_keys_scanner.py\n($ELECTRO_MODEL_COEFFS sentinel re-parsed independently)\n[detection.py/overrides.py themselves already\nmoved to plugins/cardiacfoam/, P2.5 e137b390 —\nTask 14 tracks retiring this remaining coupling]"]
         CardiacRunDoc["RunDocument v2 envelope + Phase literal\n(config schema itself now plugin-declared;\nPhase/anatomy/physics/stimulus/solver\nstill hardcoded outside the config schema)"]
         CardiacDefault["compatibility.py default\n→ CardiacFoamPlugin"]
         GenericCaseCardiac["generic_case.py\n(electro_property_overrides\nphysics_property_overrides)"]
@@ -732,13 +732,14 @@ graph TB
 
     subgraph PluginsPackage["plugins/ (same package)"]
         CFPlugin["CardiacFoamPlugin"]
-        CFCode["plugins/cardiacfoam/\n(cardiac domain)"]
+        CFCode["plugins/cardiacfoam/\n(cardiac domain, incl. detection.py/overrides.py)"]
     end
 
     GenEngine --> CardiacSpecs
     GenEngine --> CardiacRunDoc
     GenEngine --> CardiacDefault
     GenEngine --> GenericCaseCardiac
+    CardiacSpecs -.-> CFCode
     CardiacDefault --> CFPlugin
     CFPlugin --> CFCode
 ```
@@ -758,7 +759,7 @@ graph TB
     subgraph CardiacAdapter["cardiacfoam-driver-plugin (separate package)"]
         CFPlugin2["CardiacFoamPlugin\n(moves to separate repo/package)"]
         CFTutorials["tutorials/\n(12 spec factories)"]
-        CFDetection["detection.py\noverrides.py\n(moved from core)"]
+        CFDetection["detection.py\noverrides.py\n(moved from core — achieved, P2.5 e137b390)"]
     end
 
     DriverCore -. "driverfoam.plugins entry-point" .-> CardiacAdapter
@@ -770,8 +771,8 @@ graph TB
 | Difference | Status | Priority |
 |---|---|---|
 | Canonical RunDocument `config` schema is cardiac-shaped | **Partially solved (P2.2, `73ca43f7`)** — `config` property is now open/plugin-declared; the `Phase` literal and `specs/validation.py` vocabulary are still cardiac-shaped | P0 |
-| `specs/detection.py` cardiac functions in shared layer | **Missing** — not moved | P0 |
-| `specs/overrides.py` cardiac functions in shared layer | **Missing** — not moved | P0 |
+| `specs/detection.py` cardiac functions in shared layer | **Resolved (P2.5, `e137b390`)** — moved verbatim to `plugins/cardiacfoam/detection.py` | ✅ Done |
+| `specs/overrides.py` cardiac functions in shared layer | **Resolved (P2.5, `e137b390`)** — moved verbatim to `plugins/cardiacfoam/overrides.py`. The `$ELECTRO_MODEL_COEFFS` sentinel *convention* itself remains split across `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` — that residual coupling is deferred to Task 14 | P1 (residual sentinel only) |
 | `generic_case.py::make_spec()` has cardiac parameter names | **Missing** — not generalised | P0 |
 | `default_driver_context()` defaults to cardiacFoam | **Missing** — needs explicit-or-env default | P1 |
 | `compatibility.py` hardcodes `plugin_id == "org.cardiacfoam"` | **Partially solved** — named boundary exists, but coupling remains | P1 |
@@ -829,8 +830,8 @@ graph TB
 - Cardiac configuration phases/fields from `schemas/run-document.json`,
   `core/runtime/run_model.py`, and `specs/validation.py` (or expose them through
   a plugin-owned schema extension while keeping a generic envelope)
-- `specs/detection.py` — `detect_myocardium_solver_name`, `detect_ionic_model_name`, etc.
-- `specs/overrides.py` — `apply_electro_property_overrides`, `apply_physics_property_overrides`
+- ~~`specs/detection.py` — `detect_myocardium_solver_name`, `detect_ionic_model_name`, etc.~~ **Done (P2.5, `e137b390`)** — now `plugins/cardiacfoam/detection.py`
+- ~~`specs/overrides.py` — `apply_electro_property_overrides`, `apply_physics_property_overrides`~~ **Done (P2.5, `e137b390`)** — now `plugins/cardiacfoam/overrides.py`; the `$ELECTRO_MODEL_COEFFS` sentinel convention still needs retiring from `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` (Task 14)
 - `generic_case.py` parameters `electro_property_overrides` / `physics_property_overrides`
 - The default context in `compatibility.py::legacy_default_driver_context`
 
@@ -1205,8 +1206,8 @@ The following documents should exist for a new developer to understand and integ
 | Add an out-of-tree reference plugin | Package a small non-cardiac plugin independently, install it through `driverfoam.plugins`, and run describe/plan/run/sweep tests in CI. This is the acceptance test for “no core changes.” | Medium |
 | Unify plan/readiness semantics | Either make environment errors fail the plan, or introduce explicit `plan_valid` and `execution_ready` fields and make every CLI/API consumer use them consistently. | Medium |
 | Publish the agent threat model | Link `SECURITY.md` from the architecture, README, generated docs, and presentation. State that plugins, cases, dictionary code, binaries, and the host environment are trusted. | Small |
-| Move `specs/detection.py` cardiac functions | `detect_myocardium_solver_name`, `detect_ionic_model_name`, etc. belong in `plugins/cardiacfoam/case_introspection.py`. The `specs/detection.py` module should contain only genuinely generic OpenFOAM text-parsing utilities (if any exist). | Small |
-| Move `specs/overrides.py` cardiac functions | `apply_electro_property_overrides`, `apply_physics_property_overrides`, `$ELECTRO_MODEL_COEFFS` belong in the cardiacFoam plugin. | Small |
+| Move `specs/detection.py` cardiac functions | **Done (P2.5, `e137b390`).** `detect_myocardium_solver_name`, `detect_ionic_model_name`, etc. moved verbatim to `plugins/cardiacfoam/detection.py`; the old `specs/detection.py` no longer exists and `specs/common.py` no longer re-exports it. | ✅ Done |
+| Move `specs/overrides.py` cardiac functions | **Done (P2.5, `e137b390`)** for the module itself — `apply_electro_property_overrides`, `apply_physics_property_overrides` moved verbatim to `plugins/cardiacfoam/overrides.py`. **Remaining (Task 14):** the `$ELECTRO_MODEL_COEFFS` sentinel *convention* is still parsed independently in `specs/dict_builder.py`, `specs/validation.py`, and `scripts/_dict_keys_scanner.py` — retiring it needs a plugin-declared scope resolver, deliberately deferred rather than half-migrated. | Small (residual) |
 | Generalise `generic_case.py::make_spec()` parameter names | Replace `electro_property_overrides`/`physics_property_overrides` with `dictionary_overrides: dict[str, Any]` (a map from dictionary relpath to overrides). Keep the existing parameters as deprecated aliases internally for the cardiac plugin. | Medium |
 
 ### P1 — Important but not blocking
