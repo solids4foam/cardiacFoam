@@ -312,6 +312,23 @@ class ReportCatalogCapability(Protocol):
     def reports(self) -> tuple["ReportDefinition", ...]: ...
 
 
+class NamedCatalogsCapability(Protocol):
+    """The plugin's own named catalogs, namespaced generically.
+
+    ``catalogs`` returns a mapping from plugin-chosen catalog name to
+    plugin-chosen catalog content (e.g. the cardiac plugin's
+    ``ionic_model_catalog``/``active_tension_catalog``) -- core imposes no
+    key set, it only namespaces the whole mapping under
+    ``describe_entry``'s ``plugin_catalogs`` key and serializes it. Not a
+    mandatory ``SolverPluginV2`` member, so existing v2 third-party plugins
+    keep loading; the fallback (``legacy_named_catalogs``) is cardiac-shaped
+    only for the built-in cardiac plugin and empty for everyone else,
+    matching the pattern already used by :class:`ReportCatalogCapability`.
+    """
+
+    def catalogs(self) -> dict[str, Any]: ...
+
+
 @dataclass(frozen=True)
 class _TutorialCatalogAdapter:
     plugin: "SolverPlugin"
@@ -640,6 +657,19 @@ class _ReportCatalogAdapter:
 
 
 @dataclass(frozen=True)
+class _NamedCatalogsAdapter:
+    plugin: "SolverPlugin"
+
+    def catalogs(self) -> dict[str, Any]:
+        hook = getattr(self.plugin, "get_named_catalogs", None)
+        if callable(hook):
+            return dict(hook())
+        from .compatibility import legacy_named_catalogs
+
+        return legacy_named_catalogs(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -661,6 +691,7 @@ class PluginCapabilities:
     runtime_evidence: RuntimeEvidenceCapability
     case_provenance: CaseProvenanceCapability
     report_catalog: ReportCatalogCapability
+    named_catalogs: NamedCatalogsCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -685,4 +716,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         runtime_evidence=_RuntimeEvidenceAdapter(plugin),
         case_provenance=_CaseProvenanceAdapter(plugin),
         report_catalog=_ReportCatalogAdapter(plugin),
+        named_catalogs=_NamedCatalogsAdapter(plugin),
     )

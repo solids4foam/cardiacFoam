@@ -115,8 +115,16 @@ class TestIntrospection(unittest.TestCase):
             overrides={"tutorials_root": self.tutorials_root},
         )
 
-        self.assertIn("ionic_model_catalog", payload)
-        catalog = payload["ionic_model_catalog"]
+        # P2.5/P2.6: the two cardiac-named catalogs now live nested under the
+        # plugin-namespaced "plugin_catalogs" key instead of as bare
+        # top-level keys -- core no longer hardcodes their field names.
+        self.assertNotIn("ionic_model_catalog", payload)
+        self.assertNotIn("active_tension_catalog", payload)
+        self.assertIn("plugin_catalogs", payload)
+        plugin_catalogs = payload["plugin_catalogs"]
+
+        self.assertIn("ionic_model_catalog", plugin_catalogs)
+        catalog = plugin_catalogs["ionic_model_catalog"]
         self.assertEqual(catalog["schema_version"], "1.0")
 
         # ionic_models
@@ -136,11 +144,54 @@ class TestIntrospection(unittest.TestCase):
         self.assertIsInstance(catalog["solver_compatibility"], list)
         self.assertGreater(len(catalog["solver_compatibility"]), 0)
 
-        self.assertIn("active_tension_catalog", payload)
-        at_catalog = payload["active_tension_catalog"]
+        self.assertIn("active_tension_catalog", plugin_catalogs)
+        at_catalog = plugin_catalogs["active_tension_catalog"]
         self.assertEqual(at_catalog["schema_version"], "1.0")
         self.assertIn("active_tension_models", at_catalog)
         self.assertGreater(len(at_catalog["active_tension_models"]), 0)
+
+    def test_describe_entry_payload_has_no_bare_cardiac_catalog_keys_for_non_cardiac_plugin(
+        self,
+    ) -> None:
+        """P2.5/P2.7: a non-cardiac plugin's describe payload must carry no
+        cardiac-named catalog keys at all -- not even an empty stub -- since
+        core imposes no catalog vocabulary and this plugin declares none."""
+        import json
+        import stat
+        import tempfile as _tempfile
+
+        from openfoam_driver.core.plugin_interface import generic_openfoam_context
+        from openfoam_driver.introspection import describe_entry
+
+        with _tempfile.TemporaryDirectory() as temp_dir:
+            tutorials_root = Path(temp_dir)
+            case_root = tutorials_root / "minimalCase"
+            (case_root / "system").mkdir(parents=True)
+            (case_root / "constant").mkdir(parents=True)
+            (case_root / "system" / "controlDict").write_text(
+                "FoamFile{version 2.0; format ascii; class dictionary; "
+                "object controlDict;}\n"
+                "application myGenericSolver;\nstartFrom startTime;\n"
+                "startTime 0;\nstopAt endTime;\nendTime 1;\ndeltaT 0.1;\n"
+                "writeControl timeStep;\nwriteInterval 10;\n"
+            )
+            allrun = case_root / "Allrun"
+            allrun.write_text("#!/bin/sh\necho generic-allrun-ran\n")
+            allrun.chmod(allrun.stat().st_mode | stat.S_IEXEC)
+            (case_root / "workflow_contract.json").write_text(
+                json.dumps({"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]})
+            )
+
+            payload = describe_entry(
+                "minimalCase",
+                overrides={"tutorials_root": str(tutorials_root)},
+                driver_context=generic_openfoam_context(),
+            )
+
+        self.assertIn("plugin_catalogs", payload)
+        self.assertEqual(payload["plugin_catalogs"], {})
+        self.assertNotIn("ionic_model_catalog", payload)
+        self.assertNotIn("active_tension_catalog", payload)
 
     def test_describe_tutorial_reports_generic_case_folder_resolution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

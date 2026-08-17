@@ -123,6 +123,10 @@ class GenericOpenFOAMPlugin:
         """No plugin documents, so no document names."""
         return {}
 
+    def get_named_catalogs(self):
+        """No solver semantics means no named catalogs to expose."""
+        return {}
+
     def build_run_document_config(self, spec):
         del spec
         return {

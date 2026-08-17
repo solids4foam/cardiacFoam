@@ -36,13 +36,6 @@ if TYPE_CHECKING:
     from .core.plugin_interface import DriverContext
 
 
-def __get_capabilities(driver_context: "DriverContext | None" = None):
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
-    return driver_context.capabilities.manifest.manifest()
-
-
 from .core.runtime.models import CaseConfig, TutorialSpec
 from .core.runtime.registry import (
     list_entries,
@@ -60,8 +53,8 @@ COMMON_OVERRIDE_KEYS = (
     "setup_dir_name",
     "output_dir_name",
     "run_script_relpath",
-    "electro_property_overrides",
-    "physics_property_overrides",
+    "dict_file_relpaths",
+    "dict_file_overrides",
     "postprocess_strict_artifacts",
 )
 
@@ -154,28 +147,16 @@ def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[s
     )
 
 
-def _ionic_model_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
-    return {
-        "schema_version": "1.0",
-        "ionic_models": {
-            name: _serialize(asdict(entry))
-            for name, entry in __get_capabilities(driver_context).get("ionic_models", {}).items()
-        },
-        "solver_compatibility": [
-            _serialize(rule)
-            for rule in __get_capabilities(driver_context).get("solver_compatibility_rules", [])
-        ],
-    }
+def _plugin_catalogs(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
 
-
-def _active_tension_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
-    return {
-        "schema_version": "1.0",
-        "active_tension_models": {
-            name: _serialize(asdict(entry))
-            for name, entry in __get_capabilities(driver_context).get("active_tension_models", {}).items()
-        },
-    }
+    driver_context = resolve_public_driver_context(driver_context)
+    # The catalog names and their contents are plugin vocabulary (e.g. the
+    # cardiac plugin's ionic_model_catalog/active_tension_catalog); core only
+    # namespaces the whole mapping under this key and serializes it.
+    return _serialize(
+        dict(driver_context.capabilities.named_catalogs.catalogs())
+    )
 
 
 def _describe_config_schema(
@@ -433,8 +414,7 @@ def describe_entry(
             )
         ),
         "dict_entries": _dict_entry_catalog(driver_context),
-        "ionic_model_catalog": _ionic_model_catalog(driver_context),
-        "active_tension_catalog": _active_tension_catalog(driver_context),
+        "plugin_catalogs": _plugin_catalogs(driver_context),
         "strict_launch": _run_launch_description(
             resolution["resolved_name"],
             resolve_execution_context(spec),

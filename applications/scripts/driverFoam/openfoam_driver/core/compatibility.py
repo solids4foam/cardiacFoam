@@ -357,3 +357,17 @@ def legacy_report_catalog(plugin) -> tuple:
 
         return CARDIAC_REPORTS
     return ()
+
+
+@_instrumented
+def legacy_named_catalogs(plugin) -> dict:
+    """v1 plugins predate get_named_catalogs(). Same rule as
+    :func:`legacy_override_schema`: only the built-in cardiac plugin has
+    ionic-model/active-tension catalogs; other v1 plugins get none and must
+    declare their own by migrating to v2."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.named_catalogs import named_catalogs
+
+        return named_catalogs(plugin.get_capabilities())
+    return {}

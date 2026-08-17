@@ -213,6 +213,16 @@ class CardiacFoamPlugin:
             self.get_dictionary_catalog(), self.get_dict_groups(),
         )
 
+    def get_named_catalogs(self) -> dict:
+        """This plugin's own catalogs -- ionic models and active-tension
+        models -- namespaced under introspection's generic
+        ``plugin_catalogs`` key instead of core-hardcoded field names."""
+        from openfoam_driver.plugins.cardiacfoam.named_catalogs import (
+            named_catalogs,
+        )
+
+        return named_catalogs(self.get_capabilities())
+
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
         from openfoam_driver.core.runtime.generic_case import make_spec as make_generic_case_spec
