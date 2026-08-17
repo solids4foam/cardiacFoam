@@ -8,12 +8,42 @@ gives Plan 2 explicit seams at which behaviour may later change.
 
 from __future__ import annotations
 
+import contextvars
+import functools
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .plugin_interface import DriverContext
 
+_fallback_call_log: contextvars.ContextVar[list[str] | None] = contextvars.ContextVar(
+    "_fallback_call_log", default=None,
+)
 
+
+@contextmanager
+def track_fallback_calls():
+    """Yield a list that fills with the name of every legacy_* fallback
+    invoked inside the ``with`` block, in call order. Empty means none fired
+    -- the P2.4 assertion an explicit non-cardiac v2 context should satisfy."""
+    token = _fallback_call_log.set([])
+    try:
+        yield _fallback_call_log.get()
+    finally:
+        _fallback_call_log.reset(token)
+
+
+def _instrumented(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        log = _fallback_call_log.get()
+        if log is not None:
+            log.append(func.__name__)
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@_instrumented
 def legacy_default_driver_context() -> "DriverContext":
     """Return the historical built-in cardiacFoam context.
 
@@ -42,6 +72,7 @@ def resolve_public_driver_context(
     return driver_context if driver_context is not None else legacy_default_driver_context()
 
 
+@_instrumented
 def legacy_generic_case_mutation(*args, **kwargs) -> None:
     """Preserve direct callers of the formerly cardiac-owned generic factory.
 
@@ -57,6 +88,7 @@ def legacy_generic_case_mutation(*args, **kwargs) -> None:
     apply_case_mutation(*args, **kwargs)
 
 
+@_instrumented
 def legacy_case_marker(case_root) -> bool:
     """Preserve cardiac filesystem evidence for plugins without the new hook."""
 
@@ -65,6 +97,7 @@ def legacy_case_marker(case_root) -> bool:
     return has_case_marker(case_root)
 
 
+@_instrumented
 def legacy_case_runnable_without_workflow(case_root) -> bool:
     """Preserve historical uncontracted-case runnability for legacy plugins."""
 
@@ -73,6 +106,7 @@ def legacy_case_runnable_without_workflow(case_root) -> bool:
     return is_runnable_without_workflow(case_root)
 
 
+@_instrumented
 def legacy_run_document_config(spec):
     """Preserve the cardiac-shaped RunDocument-v2 parser for legacy plugins."""
 
@@ -81,6 +115,7 @@ def legacy_run_document_config(spec):
     return build_config(spec)
 
 
+@_instrumented
 def legacy_run_document_config_schema(plugin) -> dict:
     """v1 plugins predate get_run_document_config_schema(). Only the built-in
     cardiac plugin has an authored config schema; other v1 plugins get a fully
@@ -93,6 +128,7 @@ def legacy_run_document_config_schema(plugin) -> dict:
     return {"type": "object", "additionalProperties": True}
 
 
+@_instrumented
 def legacy_nondimensional_case(spec) -> bool:
     """Preserve cardiac mesh-diagnostic exemptions for legacy plugins."""
 
@@ -101,6 +137,7 @@ def legacy_nondimensional_case(spec) -> bool:
     return is_nondimensional_case(spec)
 
 
+@_instrumented
 def legacy_route_sweep_case(*, base, resolved_axis_values, driver_context):
     """Preserve the cardiac-shaped generic sweep router for legacy plugins."""
 
@@ -113,6 +150,7 @@ def legacy_route_sweep_case(*, base, resolved_axis_values, driver_context):
     )
 
 
+@_instrumented
 def legacy_materialize_sweep_case(*, case_dir, routed) -> None:
     """Preserve build_and_launch-based sweep materialization."""
 
@@ -121,6 +159,7 @@ def legacy_materialize_sweep_case(*, case_dir, routed) -> None:
     materialize_case(case_dir=case_dir, routed=routed)
 
 
+@_instrumented
 def legacy_solver_commands(plugin) -> frozenset[str]:
     """v1 plugins predate get_solver_commands(). Only the built-in cardiac
     plugin can be given a solver name; a third-party v1 plugin gets none and
@@ -133,6 +172,7 @@ def legacy_solver_commands(plugin) -> frozenset[str]:
     return frozenset()
 
 
+@_instrumented
 def legacy_auxiliary_commands(plugin) -> frozenset[str]:
     """v1 plugins predate get_auxiliary_commands(). Same rule as
     :func:`legacy_solver_commands`: only the built-in cardiac plugin gets its
@@ -145,6 +185,7 @@ def legacy_auxiliary_commands(plugin) -> frozenset[str]:
     return frozenset()
 
 
+@_instrumented
 def legacy_utility_manifests(plugin) -> dict:
     """Preserve the cardiac utility catalog for plugins without the new hook."""
 
@@ -156,6 +197,7 @@ def legacy_utility_manifests(plugin) -> dict:
     return {}
 
 
+@_instrumented
 def legacy_utility_roots(plugin) -> tuple:
     """Preserve the cardiac utilities root for plugins without the new hook."""
 
@@ -166,6 +208,7 @@ def legacy_utility_roots(plugin) -> tuple:
     return ()
 
 
+@_instrumented
 def legacy_resolve_case_models(plugin, case_root) -> dict:
     """v1 plugins predate resolve_case_models(). Only the built-in cardiac
     plugin can resolve a case's models; other v1 plugins get nothing and must
@@ -178,6 +221,7 @@ def legacy_resolve_case_models(plugin, case_root) -> dict:
     return {"solver": None, "ionic_model": None, "active_tension": None}
 
 
+@_instrumented
 def legacy_samplable_fields(plugin, resolved) -> dict:
     """v1 plugins predate get_samplable_fields(). Same rule as
     :func:`legacy_resolve_case_models`: only the built-in cardiac plugin
@@ -190,6 +234,7 @@ def legacy_samplable_fields(plugin, resolved) -> dict:
     return {"electro": (), "solid": ()}
 
 
+@_instrumented
 def legacy_override_schema(plugin, tutorial_name: str, make_spec_info: dict) -> dict:
     """v1 plugins predate get_override_schema(). Only the built-in cardiac
     plugin has an authored configuration vocabulary; other v1 plugins get an
@@ -202,6 +247,7 @@ def legacy_override_schema(plugin, tutorial_name: str, make_spec_info: dict) -> 
     return {}
 
 
+@_instrumented
 def legacy_dict_entry_catalog(plugin) -> dict:
     """v1 plugins predate get_dict_entry_catalog(). Same rule as
     :func:`legacy_override_schema`: only the built-in cardiac plugin knows the

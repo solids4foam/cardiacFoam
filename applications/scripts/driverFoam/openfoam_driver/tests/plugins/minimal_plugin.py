@@ -70,3 +70,7 @@ class MinimalOpenFOAMPlugin:
 
     def predict_data_artifacts(self, case_root, spec):
         return ()
+
+    def get_run_document_config_schema(self) -> dict:
+        """No solver semantics means no constraint on the config shape."""
+        return {"type": "object", "additionalProperties": True}
