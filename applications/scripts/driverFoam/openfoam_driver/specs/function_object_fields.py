@@ -116,7 +116,15 @@ def _diagnostics_for_text(
     diagnostics: list[StrictDiagnostic] = []
     for subdict in _iter_subdicts(block):
         region = _region_of(subdict)
-        allowed = samplable.get("solid" if region == "solid" else "electro", set())
+        if region not in samplable:
+            # A region this plugin's samplable-fields map doesn't name
+            # (e.g. a not-yet-cataloged bath/torso domain) -- skip rather
+            # than guess. Forcing it into "electro" would fabricate a
+            # warning for a region electro never claimed to cover; the
+            # same "never surface a spurious warning from a limitation"
+            # rule this module already applies to parse/IO failures.
+            continue
+        allowed = samplable[region]
         for field_name in _sampled_fields(subdict):
             if field_name not in allowed:
                 diagnostics.append(
@@ -141,8 +149,12 @@ def function_object_field_diagnostics(
     samplable: Mapping[str, Sequence[str] | set[str]],
 ) -> tuple[StrictDiagnostic, ...]:
     """Warn (never error) about controlDict function objects sampling fields
-    absent from ``samplable`` (a ``{"electro": {...}, "solid": {...}}`` map,
-    typically from :func:`capability_manifest.build_capability_manifest`).
+    absent from ``samplable`` (an open ``{region_name: {field, ...}}`` map,
+    typically from :func:`capability_manifest.build_capability_manifest` --
+    the built-in cardiac plugin currently declares ``"electro"`` and
+    ``"solid"``, but core imposes no fixed key set). A function object whose
+    ``region`` isn't a key in ``samplable`` at all is skipped rather than
+    checked against a guessed bucket -- see :func:`_diagnostics_for_text`.
 
     Degrades to silence on any parse or IO failure — a parser limitation must
     never surface as a spurious field warning. Honors
@@ -150,10 +162,7 @@ def function_object_field_diagnostics(
     """
     if os.environ.get("SKIP_FUNCTION_OBJECT_DIAGNOSTICS"):
         return ()
-    normalized = {
-        "electro": set(samplable.get("electro", set())),
-        "solid": set(samplable.get("solid", set())),
-    }
+    normalized = {region: set(fields) for region, fields in samplable.items()}
     root = Path(case_root)
     diagnostics: list[StrictDiagnostic] = []
     for relpath in _CONTROLDICT_RELPATHS:

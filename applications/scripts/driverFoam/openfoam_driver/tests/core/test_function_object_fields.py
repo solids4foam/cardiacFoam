@@ -112,3 +112,47 @@ def test_electro_controldict_subdir_scanned(tmp_path):
     )
     warns = [d for d in diags if d.code == "unknown_sampled_field"]
     assert len(warns) == 1 and warns[0].field == "bananas"
+
+
+# --- an unrecognized region is skipped, never forced into "electro" --------
+#
+# _region_of() used to collapse any region that wasn't literally "solid"
+# into "electro" -- so a case with a third region (a bath/torso domain, or
+# any not-yet-cataloged region) would get spurious warnings for fields the
+# electro bucket never claimed to cover. A region samplable() doesn't know
+# about should be silently skipped, matching this module's own stated
+# principle: "a parser limitation must never surface as a spurious field
+# warning" -- not knowing a region's vocabulary yet is the same kind of
+# limitation.
+
+def test_unrecognized_region_is_skipped_not_forced_into_electro(tmp_path):
+    root = _write_controldict(
+        tmp_path, "p{ type probes; region torso; fields (bananas); }"
+    )
+    diags = function_object_field_diagnostics(
+        root, samplable={"electro": {"Vm"}, "solid": {"Ta"}}
+    )
+    assert diags == ()
+
+
+def test_no_declared_region_still_checked_against_electro(tmp_path):
+    """No region declared -- the pre-existing default -- must still check
+    against electro, not be silently skipped like a genuinely unknown
+    region name would be."""
+    root = _write_controldict(tmp_path, "p{ type probes; fields (bananas); }")
+    diags = function_object_field_diagnostics(
+        root, samplable={"electro": {"Vm"}, "solid": {"Ta"}}
+    )
+    warns = [d for d in diags if d.code == "unknown_sampled_field"]
+    assert len(warns) == 1 and warns[0].field == "bananas"
+
+
+def test_solid_region_still_checked_against_solid_after_the_lookup_change(tmp_path):
+    root = _write_controldict(
+        tmp_path, "ta{ type volFieldValue; region solid; fields (bananas); }"
+    )
+    diags = function_object_field_diagnostics(
+        root, samplable={"electro": {"Vm"}, "solid": {"Ta"}}
+    )
+    warns = [d for d in diags if d.code == "unknown_sampled_field"]
+    assert len(warns) == 1 and warns[0].field == "bananas"
