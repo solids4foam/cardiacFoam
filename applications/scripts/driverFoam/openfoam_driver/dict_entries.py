@@ -29,10 +29,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from .core.contracts.dictionary import DictEntry, Phase, build_group
-from .plugins.cardiacfoam.common_dict_entries import (
-    CONTROL_DICT_ENTRIES,
-    PHYSICS_PROPERTY_ENTRIES,
-)
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
 
@@ -56,8 +52,38 @@ def get_electro_property_entry_groups(
     driver_context = resolve_public_driver_context(driver_context)
     return driver_context.capabilities.dictionaries.groups()
 
-def all_documented_driver_paths() -> tuple[str, ...]:
-    paths = [entry.driver_path for entry in PHYSICS_PROPERTY_ENTRIES]
-    for entries in get_electro_property_entry_groups().values():
-        paths.extend(entry.driver_path for entry in entries)
+def all_documented_driver_paths(
+    driver_context: "DriverContext | None" = None,
+) -> tuple[str, ...]:
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
+    driver_context = resolve_public_driver_context(driver_context)
+    paths = [
+        entry.driver_path
+        for entry in driver_context.capabilities.dictionaries.entries()
+    ]
     return tuple(dict.fromkeys(paths))
+
+
+def __getattr__(name: str):
+    """PEP 562 lazy resolution for deprecated cardiac-catalog re-exports.
+
+    ``CONTROL_DICT_ENTRIES``/``PHYSICS_PROPERTY_ENTRIES`` used to be imported
+    at module scope from the cardiacFoam plugin, which meant every consumer
+    of this (solver-neutral) module transitively imported cardiac plugin
+    internals just by importing ``dict_entries``. Resolving them lazily here
+    keeps ``from openfoam_driver.dict_entries import CONTROL_DICT_ENTRIES``
+    (and ``PHYSICS_PROPERTY_ENTRIES``) working unchanged for existing
+    external callers while removing the module-scope import.
+    """
+    if name in ("CONTROL_DICT_ENTRIES", "PHYSICS_PROPERTY_ENTRIES"):
+        from .plugins.cardiacfoam.common_dict_entries import (
+            CONTROL_DICT_ENTRIES,
+            PHYSICS_PROPERTY_ENTRIES,
+        )
+
+        return {
+            "CONTROL_DICT_ENTRIES": CONTROL_DICT_ENTRIES,
+            "PHYSICS_PROPERTY_ENTRIES": PHYSICS_PROPERTY_ENTRIES,
+        }[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

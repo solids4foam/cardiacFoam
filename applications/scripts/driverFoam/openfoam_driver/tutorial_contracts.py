@@ -45,36 +45,6 @@ if TYPE_CHECKING:
     from .core.plugin_interface import DriverContext
 
 
-# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
-# source is the active plugin profile via
-# driver_context.capabilities.case_files. Remove once no consumer imports them.
-CORE_REQUIRED_FILES = (
-    "constant/electroProperties",
-    "constant/physicsProperties",
-)
-
-# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
-# source is the active plugin profile via
-# driver_context.capabilities.case_files. Remove once no consumer imports them.
-SOLVER_REQUIRED_FILES = (
-    "system/controlDict",
-    "system/fvSchemes",
-    "system/fvSolution",
-)
-
-# Deprecated: kept so pre-Phase-1 importers keep working. The authoritative
-# source is the active plugin profile via
-# driver_context.capabilities.case_files. Remove once no consumer imports them.
-CONDITIONAL_FILES = (
-    "system/decomposeParDict",
-    "system/blockMeshDict",
-    "Allrun",
-    "Allclean",
-    "README.md",
-    "runRegressionTest.sh",
-)
-
-
 def _existing_relpaths(case_root: Path, candidates: tuple[str, ...]) -> list[str]:
     existing: list[str] = []
     for relpath in candidates:
