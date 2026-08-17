@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda_bidomain
+#     manufactured_bidomain
 #
 # Description
-#     Defines configuration template for manufactured FDA bidomain scenarios.
+#     Defines configuration template for manufactured bidomain scenarios.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -30,8 +30,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_fda_bidomain as defaults
-from .manufactured_fda import make_spec as make_base_spec
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_bidomain as defaults
+from .manufactured_monodomain_pseudo_ecg import make_spec as make_base_spec
 
 
 def make_spec(

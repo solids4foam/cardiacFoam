@@ -16,11 +16,11 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda_rotated_anisotropy
+#     manufactured_rotated_anisotropy
 #
 # Description
 #     Defines configuration template for the rotated-anisotropy manufactured
-#     monodomain scenario.
+#     monodomain scenario (direct modification of the FDA monodomain).
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -28,7 +28,7 @@
 
 from __future__ import annotations
 
-from .manufactured_fda import (
+from .manufactured_monodomain_pseudo_ecg import (
     BLOCK_MESH_DICT_TEMPLATE,
     BLOCK_MESH_RESOLUTION_BY_DIMENSION,
     DT_VALUES,

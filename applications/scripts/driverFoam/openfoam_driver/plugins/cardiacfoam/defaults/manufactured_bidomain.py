@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda_bidomain
+#     manufactured_bidomain
 #
 # Description
-#     Defines configuration template for manufactured FDA bidomain scenarios.
+#     Defines configuration template for manufactured bidomain scenarios for FDA verification.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -27,7 +27,9 @@
 
 from __future__ import annotations
 
-from .manufactured_fda import (
+from ..tutorials.ids import CardiacTutorialID
+
+from .manufactured_monodomain_pseudo_ecg import (
     BLOCK_MESH_DICT_TEMPLATE,
     BLOCK_MESH_RESOLUTION_BY_DIMENSION,
     DT_VALUES,
@@ -39,7 +41,7 @@ from .manufactured_fda import (
 )
 
 
-TUTORIAL_NAME = "manufacturedFDABidomain"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_BIDOMAIN.value
 CASE_DIR_NAME = "manufacturedSolutions/bidomain"
 SETUP_DIR_NAME = "setup"
 SOLVER_TYPES = ("implicit",)

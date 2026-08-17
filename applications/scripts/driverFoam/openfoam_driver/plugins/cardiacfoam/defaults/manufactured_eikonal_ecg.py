@@ -19,7 +19,7 @@
 #     manufactured_eikonal_ecg
 #
 # Description
-#     Defines configuration template for manufactured eikonal ECG scenarios.
+#     Defines configuration template for standalone manufactured eikonal scenarios.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -27,12 +27,14 @@
 
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
 from .shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
 
 
-TUTORIAL_NAME = "manufacturedEikonalECG"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value
 CASE_DIR_NAME = "manufacturedSolutions/eikonalECG"
 SETUP_DIR_NAME = "setup"
 NUMBER_CELLS = (10, 20, 40, 80)

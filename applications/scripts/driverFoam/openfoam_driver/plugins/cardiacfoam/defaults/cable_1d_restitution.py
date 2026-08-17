@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
 from .shared import (
@@ -9,7 +11,7 @@ from .shared import (
     RUN_CASE_SCRIPT_RELPATH,
 )
 
-TUTORIAL_NAME = "cable1DRestitution"
+TUTORIAL_NAME = CardiacTutorialID.CABLE_1D_RESTITUTION.value
 CASE_DIR_NAME = "electrophysiologyProtocols/cableProtocol/monodomain1DCableCV"
 SETUP_DIR_NAME = "setup"
 

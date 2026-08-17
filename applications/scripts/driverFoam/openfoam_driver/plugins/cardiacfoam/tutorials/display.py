@@ -1,3 +1,4 @@
+from openfoam_driver.plugins.cardiacfoam.tutorials.ids import CardiacTutorialID
 from openfoam_driver.tutorials_display import TutorialDisplay
 
 TUTORIALS: tuple[TutorialDisplay, ...] = (
@@ -30,7 +31,7 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="manufacturedFDA",
+        id=CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value,
         title="Manufactured solution (monodomain)",
         summary=(
             "Method of manufactured solutions on the monodomain "
@@ -44,7 +45,7 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="manufacturedFDABidomain",
+        id=CardiacTutorialID.MANUFACTURED_BIDOMAIN.value,
         title="Manufactured solution (bidomain)",
         summary=(
             "Same MMS verification at bidomain resolution. Pairs with "
@@ -58,7 +59,7 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="manufacturedFDABathBidomain",
+        id=CardiacTutorialID.MANUFACTURED_BATH_BIDOMAIN.value,
         title="Manufactured solution (bath bidomain)",
         summary=(
             "FDA bidomain-with-bath manufactured solution with a grounded "
@@ -86,7 +87,7 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="manufacturedMonodomainTotalLagrangianEM",
+        id=CardiacTutorialID.MANUFACTURED_MONODOMAIN_TOTAL_LAGRANGIAN_EM.value,
         title="Manufactured electromechanics (MMS) -- NOT CURRENTLY WORKING",
         summary=(
             "NOT CURRENTLY WORKING: electromechanics is unsupported at the "
@@ -170,14 +171,27 @@ TUTORIALS: tuple[TutorialDisplay, ...] = (
         },
     ),
     TutorialDisplay(
-        id="monodomainAndEikonal1DCableCVConvergence",
-        title="1D Cable CV Convergence (Monodomain & Eikonal)",
+        id="cable1DCVConvergence",
+        title="1D Cable CV Convergence",
         summary=(
             "1D cable verification protocol to extract continuous conduction "
             "velocity profiles and perform mesh resolution convergence sweeps."
         ),
         thumbnail="/tutorials/cable-cv-convergence.png",
         tags=("cable", "cv", "convergence", "monodomain", "eikonal"),
+        preset={
+            "anatomy.mesh": "cable-1d",
+            "physics.ionic_model": "BuenoOrovio",
+        },
+    ),
+    TutorialDisplay(
+        id="cable1DRestitution",
+        title="1D Cable Restitution",
+        summary=(
+            "1D cable protocol to extract continuous APD and CV restitution curves."
+        ),
+        thumbnail="/tutorials/cable-restitution.png",
+        tags=("cable", "restitution", "apd", "cv"),
         preset={
             "anatomy.mesh": "cable-1d",
             "physics.ionic_model": "BuenoOrovio",

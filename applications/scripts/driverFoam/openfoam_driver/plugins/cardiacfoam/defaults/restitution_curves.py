@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
 from .shared import (
@@ -38,7 +40,7 @@ from .shared import (
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG, planning_tissues
 
 
-TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
+TUTORIAL_NAME = CardiacTutorialID.RESTITUTION_CURVES.value
 CASE_DIR_NAME = "electrophysiologyProtocols/restitutionCurves_s1s2Protocol"
 SETUP_DIR_NAME = "setup"
 

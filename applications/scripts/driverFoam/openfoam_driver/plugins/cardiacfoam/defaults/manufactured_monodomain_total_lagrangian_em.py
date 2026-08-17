@@ -28,9 +28,11 @@
 
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
-from .manufactured_fda import (
+from .manufactured_monodomain_pseudo_ecg import (
     BLOCK_MESH_RESOLUTION_BY_DIMENSION,
     DT_VALUES,
     DIMENSIONS,
@@ -46,7 +48,7 @@ DT_VALUES = [0.00892857, 0.00224215, 0.000560538, 0.000140174]
 OUTPUT_DIR_NAME = "postProcessing"
 OUTPUT_RELPATH = Path("postProcessing")
 
-TUTORIAL_NAME = "manufacturedMonodomainTotalLagrangianEM"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_MONODOMAIN_TOTAL_LAGRANGIAN_EM.value
 CASE_DIR_NAME = "manufacturedSolutions/monodomainTotalLagrangianEM"
 SETUP_DIR_NAME = "setup"
 SOLVER_TYPES = ("implicit",)

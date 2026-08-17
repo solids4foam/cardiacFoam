@@ -15,12 +15,12 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
 )
 from openfoam_driver.specs.common import (
+    load_python_module,
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
     set_end_time,
-    replace_single_block_mesh_resolution,
-    load_python_module,
 )
 from openfoam_driver.specs.spatial_pacing import generate_spatial_s1_s2_stimulus_lists
 from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
@@ -91,14 +91,8 @@ def _apply_case(
     physics_properties = case_root / physics_properties_relpath
 
     (cells,) = cell_counts_from_dx(float(case.params["dx_mm"]), (cable_length_mm,))
-    replace_single_block_mesh_resolution(
-        block_mesh_dict,
-        cells,
-        dimension="cable",
-        resolution_by_dimension={
-            "cable": f"{{cells}} {int(cross_section_cell_counts[0])} {int(cross_section_cell_counts[1])}",
-        },
-    )
+    cell_counts_str = f"{cells} {int(cross_section_cell_counts[0])} {int(cross_section_cell_counts[1])}"
+    replace_block_mesh_resolutions(block_mesh_dict, cell_counts_str)
 
     set_delta_t(control_dict, float(case.params["dt_ms"]) * 1.0e-3)
     

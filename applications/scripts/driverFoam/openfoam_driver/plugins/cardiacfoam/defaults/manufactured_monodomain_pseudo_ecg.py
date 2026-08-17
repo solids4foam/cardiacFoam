@@ -16,16 +16,18 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda
+#     manufactured_monodomain_pseudo_ecg
 #
 # Description
-#     Defines configuration template for manufactured FDA scenarios.
+#     Defines configuration template for manufactured monodomain with pseudo ECG
+#     for FDA verification.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
-
 from __future__ import annotations
+
+from ..tutorials.ids import CardiacTutorialID
 
 from pathlib import Path
 
@@ -37,7 +39,7 @@ from .shared import (
 )
 
 
-TUTORIAL_NAME = "manufacturedFDA"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value
 CASE_DIR_NAME = "manufacturedSolutions/monodomainPseudoECG"
 SETUP_DIR_NAME = "setup"
 NUMBER_CELLS = (10, 20, 40, 80)

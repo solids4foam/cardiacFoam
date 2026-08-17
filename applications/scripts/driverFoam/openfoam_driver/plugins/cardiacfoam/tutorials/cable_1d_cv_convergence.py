@@ -28,12 +28,13 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from functools import partial
 from itertools import product
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import monodomain_and_eikonal_1d_cable_cv_convergence as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import cable_1d_cv_convergence as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
@@ -42,6 +43,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
 )
 from openfoam_driver.specs.common import (
     load_python_module,
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
@@ -49,46 +51,6 @@ from openfoam_driver.specs.common import (
 )
 from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
 
-
-def _replace_blockmesh_resolution(
-    block_mesh_dict_path: Path,
-    dx_mm: float,
-    *,
-    cable_length_mm: float,
-    cross_section_cell_counts: Sequence[int],
-) -> None:
-    if not block_mesh_dict_path.exists():
-        raise FileNotFoundError(f"blockMeshDict not found: {block_mesh_dict_path}")
-
-    # cell_counts_from_dx does the same divide-or-error math (shared with
-    # specs/mesh_provisioning.py's generic default mesh and
-    # niederer_2012.py) for the cable's single dx-driven axis; the other two
-    # axes are the caller-supplied cross-section counts, unrelated to dx.
-    (x_cells,) = cell_counts_from_dx(dx_mm, (cable_length_mm,))
-
-    replacement_line = (
-        "    hex (0 1 2 3 4 5 6 7) "
-        f"({x_cells} {int(cross_section_cell_counts[0])} {int(cross_section_cell_counts[1])}) "
-        "simpleGrading (1 1 1)\n"
-    )
-
-    lines = block_mesh_dict_path.read_text().splitlines(keepends=True)
-    replaced = False
-    with block_mesh_dict_path.open("w", encoding="ascii") as handle:
-        for line in lines:
-            stripped = line.strip()
-            if (
-                not replaced
-                and stripped.startswith("hex (0 1 2 3 4 5 6 7)")
-                and not stripped.startswith("//")
-            ):
-                handle.write(replacement_line)
-                replaced = True
-            else:
-                handle.write(line)
-
-    if not replaced:
-        raise KeyError(f"Did not find target hex line in {block_mesh_dict_path}")
 
 
 def _build_cases(
@@ -146,12 +108,9 @@ def _apply_case(
     electro_properties = case_root / electro_properties_relpath
     physics_properties = case_root / physics_properties_relpath
 
-    _replace_blockmesh_resolution(
-        block_mesh_dict,
-        float(case.params["dx_mm"]),
-        cable_length_mm=cable_length_mm,
-        cross_section_cell_counts=cross_section_cell_counts,
-    )
+    (x_cells,) = cell_counts_from_dx(float(case.params["dx_mm"]), (cable_length_mm,))
+    cell_counts_str = f"{x_cells} {int(cross_section_cell_counts[0])} {int(cross_section_cell_counts[1])}"
+    replace_block_mesh_resolutions(block_mesh_dict, cell_counts_str)
     set_delta_t(control_dict, float(case.params["dt_ms"]) * 1.0e-3)
     set_end_time(control_dict, end_time_s)
 
@@ -186,12 +145,19 @@ def _run_case(
     command = [
         "bash",
         "-l",
+        str(case_root / "Allclean"),
+    ]
+    subprocess.run(command, cwd=case_root, check=True)
+
+    command = [
+        "bash",
+        "-l",
         str(run_script),
         "--case-dir",
         str(case_root),
     ]
     if parallel:
-        command.append("--parallel")
+        command.append("parallel")
     subprocess.run(command, check=True)
 
     output_dir = case_root / output_dir_name / str(case.params["ionicModel"])
@@ -315,10 +281,17 @@ def make_spec(
             strict_artifacts=postprocess_strict_artifacts,
         ),
         metadata={
+            "python": sys.executable,
+            "expected_artifacts": [],
             "notes": "1D cable conduction-velocity convergence sweep.",
             "workflow_dag": {
                 "steps": [
-                    {"id": "run", "command": "Allrun", "depends_on": []},
+                    {
+                        "id": "run",
+                        "command": "Allrun",
+                        "args": ["parallel"] if parallel else [],
+                        "depends_on": []
+                    },
                 ]
             },
             "dx_values": dx_values_list,

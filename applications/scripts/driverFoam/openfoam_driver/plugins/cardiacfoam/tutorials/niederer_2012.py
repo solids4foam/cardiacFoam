@@ -44,6 +44,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
 )
 from openfoam_driver.specs.common import (
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
@@ -81,46 +82,6 @@ DEFAULT_LINE_N_POINTS = int(getattr(defaults, "NIEDERER_LINE_NUM_POINTS", 101))
 def _closest_key(mapping: dict[float, object], value: float) -> float:
     return min(mapping.keys(), key=lambda item: abs(item - value))
 
-
-def _replace_blockmesh_resolution(
-    block_mesh_dict_path: Path,
-    dx: float,
-    slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
-) -> None:
-    if not block_mesh_dict_path.exists():
-        raise FileNotFoundError(f"blockMeshDict not found: {block_mesh_dict_path}")
-    if len(slab_size_mm) != 3:
-        raise ValueError("slab_size_mm must have exactly 3 entries (x, y, z)")
-
-    # cell_counts_from_dx does the same divide-or-error math (in whatever
-    # unit dx/slab_size_mm share -- mm here) that
-    # specs/mesh_provisioning.py's generic default mesh also needs; shared
-    # rather than duplicated. The file-patching below (this function's own
-    # job) stays local since it's specific to mutating an existing,
-    # author-provided blockMeshDict.
-    axis_cell_counts = [str(count) for count in cell_counts_from_dx(dx, slab_size_mm)]
-
-    replacement_line = (
-        f"hex (0 1 2 3 4 5 6 7) ({' '.join(axis_cell_counts)}) simpleGrading (1 1 1)\n"
-    )
-
-    lines = block_mesh_dict_path.read_text().splitlines(keepends=True)
-    replaced = False
-    with block_mesh_dict_path.open("w") as handle:
-        for line in lines:
-            stripped = line.strip()
-            if (
-                not replaced
-                and stripped.startswith("hex (0 1 2 3 4 5 6 7)")
-                and not stripped.startswith("//")
-            ):
-                handle.write(replacement_line)
-                replaced = True
-            else:
-                handle.write(line)
-
-    if not replaced:
-        raise KeyError(f"Did not find target hex line in {block_mesh_dict_path}")
 
 
 def _update_end_time(control_dict_path: Path, dx: float, end_time_by_dx: Mapping[float, float]) -> None:
@@ -258,7 +219,8 @@ def _apply_case(
         target_file = case_root / "setup" / "slab.geo"
         target_file.write_text(rendered)
     else:
-        _replace_blockmesh_resolution(block_mesh_dict, dx_mm, slab_size_mm=slab_size_mm)
+        axis_cell_counts = [str(count) for count in cell_counts_from_dx(dx_mm, slab_size_mm)]
+        replace_block_mesh_resolutions(block_mesh_dict, " ".join(axis_cell_counts))
     # Input dt is provided in milliseconds in the JSON/spec settings.
     set_delta_t(control_dict, dt_ms * 1.0e-3)
     _update_end_time(control_dict, dx_mm, end_time_by_dx=end_time_by_dx)
@@ -452,7 +414,7 @@ def _run_case(
             str(run_script),
             "--case-dir",
             str(case_root),
-            "--parallel",
+            "parallel",
         ],
         check=True,
     )

@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
 from .shared import (
@@ -37,7 +39,7 @@ from .shared import (
 )
 
 
-TUTORIAL_NAME = "monodomainAndEikonal1DCableCVConvergence"
+TUTORIAL_NAME = CardiacTutorialID.CABLE_1D_CV_CONVERGENCE.value
 CASE_DIR_NAME = "electrophysiologyProtocols/cableProtocol/monodomain1DCableCV"
 SETUP_DIR_NAME = "setup"
 DEFAULT_OUTPUT_DIR_NAME = "outputsCVConvergence"
@@ -46,9 +48,9 @@ DT_VALUES = (0.02, 0.01, 0.005)  # ms
 CONDUCTIVITY_VALUES = (
     "[-1 -3 3 0 0 2 0] (0.1334 0 0 0.1334 0 0.1334)",
 )
-IONIC_MODELS = ("BuenoOrovio",)
+IONIC_MODELS = ("Stewart",)
 IONIC_MODEL_TISSUE_MAP = {
-    "BuenoOrovio": ("epicardialCells",),
+    "Stewart": ("myocyte",),
 }
 SOLVERS = ("implicit",)
 PARALLEL = True

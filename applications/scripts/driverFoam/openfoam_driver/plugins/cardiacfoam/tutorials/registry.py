@@ -1,8 +1,8 @@
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bidomain import (
-    make_spec as make_manufactured_fda_bidomain_spec,
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bidomain import (
+    make_spec as make_manufactured_bidomain_spec,
 )
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda_bath_bidomain import (
-    make_spec as make_manufactured_fda_bath_bidomain_spec,
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bath_bidomain import (
+    make_spec as make_manufactured_bath_bidomain_spec,
 )
 from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_eikonal_ecg import (
     make_spec as make_manufactured_eikonal_ecg_spec,
@@ -20,52 +20,61 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.heart_solver_comparison impor
     make_spec as make_heart_solver_comparison_spec,
 )
 from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec as make_generic_case_spec
-from openfoam_driver.plugins.cardiacfoam.tutorials.monodomain_and_eikonal_1d_cable_cv_convergence import (
-    make_spec as make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
+from openfoam_driver.plugins.cardiacfoam.tutorials.cable_1d_cv_convergence import (
+    make_spec as make_cable_1d_cv_convergence_spec,
 )
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda import make_spec as make_manufactured_fda_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_monodomain_pseudo_ecg import make_spec as make_manufactured_monodomain_pseudo_ecg_spec
 from openfoam_driver.plugins.cardiacfoam.tutorials.niederer_2012 import make_spec as make_niederer_2012_spec
 from openfoam_driver.plugins.cardiacfoam.tutorials.restitution_curves import make_spec as make_restitution_curves_spec
 from openfoam_driver.plugins.cardiacfoam.tutorials.single_cell import make_spec as make_single_cell_spec
+from openfoam_driver.plugins.cardiacfoam.tutorials.cable_1d_restitution import (
+    make_spec as make_cable_1d_restitution_spec,
+)
+
+from openfoam_driver.plugins.cardiacfoam.tutorials.ids import CardiacTutorialID
 
 SPEC_FACTORIES = {
-    "singleCell": make_single_cell_spec,
-    "singlecell": make_single_cell_spec,
-    "monodomainAndEikonal1DCableCVConvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
-    "monodomainandeikonal1dcablecvconvergence": make_monodomain_and_eikonal_1d_cable_cv_convergence_spec,
-    "niederer2012": make_niederer_2012_spec,
+    CardiacTutorialID.SINGLE_CELL.value: make_single_cell_spec,
+    CardiacTutorialID.SINGLE_CELL.value.lower(): make_single_cell_spec,
+    CardiacTutorialID.CABLE_1D_CV_CONVERGENCE.value: make_cable_1d_cv_convergence_spec,
+    CardiacTutorialID.CABLE_1D_CV_CONVERGENCE.value.lower(): make_cable_1d_cv_convergence_spec,
+    CardiacTutorialID.NIEDERER_2012.value: make_niederer_2012_spec,
+    CardiacTutorialID.NIEDERER_2012.value.lower(): make_niederer_2012_spec,
     "niedereretal2012": make_niederer_2012_spec,
-    "manufacturedFDA": make_manufactured_fda_spec,
-    "manufacturedfda": make_manufactured_fda_spec,
-    "manufacturedFDABidomain": make_manufactured_fda_bidomain_spec,
-    "manufacturedfdabidomain": make_manufactured_fda_bidomain_spec,
-    "manufacturedFDABathBidomain": make_manufactured_fda_bath_bidomain_spec,
-    "manufacturedfdabathbidomain": make_manufactured_fda_bath_bidomain_spec,
-    "manufacturedEikonalECG": make_manufactured_eikonal_ecg_spec,
-    "manufacturedeikonalecg": make_manufactured_eikonal_ecg_spec,
-    "manufacturedMonodomainTotalLagrangianEM": make_manufactured_monodomain_total_lagrangian_em_spec,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value: make_manufactured_monodomain_pseudo_ecg_spec,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value.lower(): make_manufactured_monodomain_pseudo_ecg_spec,
+    CardiacTutorialID.MANUFACTURED_BIDOMAIN.value: make_manufactured_bidomain_spec,
+    CardiacTutorialID.MANUFACTURED_BIDOMAIN.value.lower(): make_manufactured_bidomain_spec,
+    CardiacTutorialID.MANUFACTURED_BATH_BIDOMAIN.value: make_manufactured_bath_bidomain_spec,
+    CardiacTutorialID.MANUFACTURED_BATH_BIDOMAIN.value.lower(): make_manufactured_bath_bidomain_spec,
+    CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value: make_manufactured_eikonal_ecg_spec,
+    CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value.lower(): make_manufactured_eikonal_ecg_spec,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_TOTAL_LAGRANGIAN_EM.value: make_manufactured_monodomain_total_lagrangian_em_spec,
     "manufacturedelectromechanicsbc": make_manufactured_monodomain_total_lagrangian_em_spec,
-    "manufacturedMonodomain1D3D": make_manufactured_monodomain_1d3d_spec,
-    "manufacturedmonodomain1d3d": make_manufactured_monodomain_1d3d_spec,
-    "manufacturedPurkinjeGraph": make_manufactured_purkinje_graph_spec,
-    "manufacturedpurkinjegraph": make_manufactured_purkinje_graph_spec,
-    "heartSolverComparison": make_heart_solver_comparison_spec,
-    "heartsolvercomparison": make_heart_solver_comparison_spec,
-    "restitutionCurves": make_restitution_curves_spec,
-    "restitutioncurves": make_restitution_curves_spec,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_1D3D.value: make_manufactured_monodomain_1d3d_spec,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_1D3D.value.lower(): make_manufactured_monodomain_1d3d_spec,
+    CardiacTutorialID.MANUFACTURED_PURKINJE_GRAPH.value: make_manufactured_purkinje_graph_spec,
+    CardiacTutorialID.MANUFACTURED_PURKINJE_GRAPH.value.lower(): make_manufactured_purkinje_graph_spec,
+    CardiacTutorialID.HEART_SOLVER_COMPARISON.value: make_heart_solver_comparison_spec,
+    CardiacTutorialID.HEART_SOLVER_COMPARISON.value.lower(): make_heart_solver_comparison_spec,
+    CardiacTutorialID.RESTITUTION_CURVES.value: make_restitution_curves_spec,
+    CardiacTutorialID.RESTITUTION_CURVES.value.lower(): make_restitution_curves_spec,
+    CardiacTutorialID.CABLE_1D_RESTITUTION.value: make_cable_1d_restitution_spec,
+    CardiacTutorialID.CABLE_1D_RESTITUTION.value.lower(): make_cable_1d_restitution_spec,
 }
 
 REGISTERED_TUTORIALS = (
-    "singleCell",
-    "monodomainAndEikonal1DCableCVConvergence",
-    "niederer2012",
-    "manufacturedFDA",
-    "manufacturedFDABidomain",
-    "manufacturedFDABathBidomain",
-    "manufacturedEikonalECG",
-    "manufacturedMonodomainTotalLagrangianEM",
-    "manufacturedMonodomain1D3D",
-    "manufacturedPurkinjeGraph",
-    "heartSolverComparison",
-    "restitutionCurves",
+    CardiacTutorialID.SINGLE_CELL.value,
+    CardiacTutorialID.CABLE_1D_CV_CONVERGENCE.value,
+    CardiacTutorialID.NIEDERER_2012.value,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value,
+    CardiacTutorialID.MANUFACTURED_BIDOMAIN.value,
+    CardiacTutorialID.MANUFACTURED_BATH_BIDOMAIN.value,
+    CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_TOTAL_LAGRANGIAN_EM.value,
+    CardiacTutorialID.MANUFACTURED_MONODOMAIN_1D3D.value,
+    CardiacTutorialID.MANUFACTURED_PURKINJE_GRAPH.value,
+    CardiacTutorialID.HEART_SOLVER_COMPARISON.value,
+    CardiacTutorialID.RESTITUTION_CURVES.value,
+    CardiacTutorialID.CABLE_1D_RESTITUTION.value,
 )

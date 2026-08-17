@@ -27,10 +27,12 @@
 
 from __future__ import annotations
 
+from ..tutorials.ids import CardiacTutorialID
+
 from pathlib import Path
 
 
-TUTORIAL_NAME = "manufacturedPurkinjeGraph"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_PURKINJE_GRAPH.value
 CASE_DIR_NAME = "manufacturedSolutions/monodomain1D3D"
 SETUP_DIR_NAME = "setup"
 OUTPUT_DIR_NAME = "outputs/1dGraphConvergence"
