@@ -65,6 +65,16 @@ public:
         scalar t0,
         scalar dt
     ) override;
+
+    virtual bool writesGraphVm() const override
+    {
+        return true;
+    }
+
+    virtual bool writesGraphIion() const override
+    {
+        return true;
+    }
 };
 
 } // End namespace Foam

@@ -91,6 +91,16 @@ public:
     {
         return false;
     }
+
+    virtual bool writesGraphVm() const
+    {
+        return false;
+    }
+
+    virtual bool writesGraphIion() const
+    {
+        return false;
+    }
 };
 
 } // End namespace Foam

@@ -870,6 +870,34 @@ void conductionSystemDomain::write()
             vtkFields.set(1 + nIonic + i, new scalarField(diagFields[i]));
         }
 
+        const bool writeGraphVm = solverPtr_.valid() && solverPtr_->writesGraphVm();
+        const bool writeGraphIion = solverPtr_.valid() && solverPtr_->writesGraphIion();
+
+        PtrList<scalarField> vtkFieldsWithVmIion(vtkFields.size() + writeGraphVm + writeGraphIion);
+        wordList vtkNamesWithVmIion(vtkNames.size() + writeGraphVm + writeGraphIion);
+
+        label outI = 0;
+        if (writeGraphVm)
+        {
+            vtkNamesWithVmIion[outI] = "Vm_V";
+            vtkFieldsWithVmIion.set(outI, new scalarField(Vm1D_));
+            ++outI;
+        }
+
+        if (writeGraphIion)
+        {
+            vtkNamesWithVmIion[outI] = "Iion";
+            vtkFieldsWithVmIion.set(outI, new scalarField(Iion1D_));
+            ++outI;
+        }
+
+        forAll(vtkNames, i)
+        {
+            vtkNamesWithVmIion[outI] = vtkNames[i];
+            vtkFieldsWithVmIion.set(outI, new scalarField(vtkFields[i]));
+            ++outI;
+        }
+
         purkinjeModelIO::writeVTK
         (
             vtkDir,
@@ -882,9 +910,9 @@ void conductionSystemDomain::write()
             Iion1D_,
             terminalNodes_,
             terminalSource_,
-            ionicModelPtr_.valid(),
-            vtkFields,
-            vtkNames
+            false,
+            vtkFieldsWithVmIion,
+            vtkNamesWithVmIion
         );
 
         pvdTimes_.append(time().value());

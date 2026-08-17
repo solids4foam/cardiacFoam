@@ -33,17 +33,21 @@ namespace restitutionTemplates
 
 static const int purkinjeSize = 6;
 
-static const scalar purkinjeAPDnominal    = 0.290;  //- constant ERP [s] (Stewart S1-S2 data)
-static const scalar purkinjeEscapeInterval = 1.1;   //- spontaneous firing interval [s] (funny current)
+// APD nominal [s]: steady-state APD90 from Stewart 2009.
+static const scalar purkinjeAPDnominal    = 0.290;
 
-// DI axis [s]: minimum 0.060 s is the conduction block threshold (Stewart S1-S2 data)
+// Escape interval [s]: spontaneous If firing period (funny current).
+static const scalar purkinjeEscapeInterval = 1.1;
+
+// DI axis [s].
+// Minimum 0.060 s gives a minimum beat interval (ERP) of 0.290 + 0.060 = 0.350 s.
 static const scalar purkinjeDI[] = {
-    0.060, 0.080, 0.100, 0.150, 0.300, 0.700
+    0.330, 0.350, 0.400, 0.450, 0.500, 0.700
 };
 
 // CV [m/s]: placeholder shape pending 1D conduction velocity protocol
 static const scalar purkinjeCV[] = {
-    0.50, 1.00, 1.50, 2.00, 2.50, 3.00
+    2.03, 2.43, 2.95, 3.18, 3.29, 3.37
 };
 
 static const label numPurkinjeVmSamples = 1000;

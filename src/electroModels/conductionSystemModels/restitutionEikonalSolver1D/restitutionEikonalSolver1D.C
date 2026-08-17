@@ -90,11 +90,12 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 
 void Foam::restitutionEikonalSolver1D::initialiseState
 (
-    const conductionSystemDomain& domain,
+    conductionSystemDomain& domain,
     const scalar t0
 )
 {
     const label N = domain.graph().nNodes;
+    const scalarField& Tact = domain.activationTime();
 
     lastActTime_.setSize(N, -GREAT);
     DI_.setSize(N, GREAT);
@@ -108,6 +109,28 @@ void Foam::restitutionEikonalSolver1D::initialiseState
     wavebreakCount_.setSize(N, 0);
 
     tStart_ = t0;
+
+    // Seed the event queue from any activation times already present on the
+    // graph (for example the rootNode activation configured at t=0, or a
+    // restart that carries past/future graph activations).
+    forAll(Tact, i)
+    {
+        if (Tact[i] < 0.0)
+        {
+            continue;
+        }
+
+        if (Tact[i] >= t0 - SMALL)
+        {
+            nextTact_[i] = Tact[i];
+            nextTactSource_[i] = -1;
+        }
+        else
+        {
+            lastActTime_[i] = Tact[i];
+        }
+    }
+
     initialised_ = true;
 }
 
@@ -126,6 +149,13 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
         const label nodeI = terminalNodes[i];
         const scalar incomingTime = Tact[nodeI];
         const scalar lastActTime = lastActTime_[nodeI];
+
+        // Negative activation times mean "not yet activated" for this graph
+        // field and must not be treated as a real incoming wave.
+        if (incomingTime < 0.0)
+        {
+            continue;
+        }
 
         if (incomingTime <= lastActTime + SMALL)
         {
@@ -187,7 +217,9 @@ void Foam::restitutionEikonalSolver1D::advance
 
     forAll(lastActTime_, i)
     {
-        const scalar tEscape = max(lastActTime_[i], tStart_) + escapeInterval_;
+        const scalar tRef =
+            lastActTime_[i] < 0 ? tStart_ : lastActTime_[i];
+        const scalar tEscape = tRef + escapeInterval_;
         if (tEscape < nextTact_[i])
         {
             nextTact_[i] = tEscape;
@@ -200,7 +232,8 @@ void Foam::restitutionEikonalSolver1D::advance
         forAll(stimSites_, s)
         {
             const label site = stimSites_[s];
-            const scalar beatInterval = tNow - lastActTime_[site];
+            const scalar beatInterval =
+                lastActTime_[site] < 0 ? GREAT : tNow - lastActTime_[site];
 
             if (beatInterval >= minBeatInterval_ && tNow < nextTact_[site])
             {
@@ -217,7 +250,8 @@ void Foam::restitutionEikonalSolver1D::advance
     {
         if (nextTact_[i] <= tNow)
         {
-            const scalar beatInterval = nextTact_[i] - lastActTime_[i];
+            const scalar beatInterval =
+                lastActTime_[i] < 0 ? GREAT : nextTact_[i] - lastActTime_[i];
             if (beatInterval >= minBeatInterval_)
             {
                 pq.push(std::make_pair(nextTact_[i], i));
@@ -231,7 +265,8 @@ void Foam::restitutionEikonalSolver1D::advance
         const label  i  = pq.top().second;
         pq.pop();
 
-        const scalar beatInterval_i = te - lastActTime_[i];
+        const scalar beatInterval_i =
+            lastActTime_[i] < 0 ? GREAT : te - lastActTime_[i];
         if (beatInterval_i < minBeatInterval_ || te != nextTact_[i])
         {
             continue;
@@ -263,7 +298,8 @@ void Foam::restitutionEikonalSolver1D::advance
                 continue;
             }
 
-            const scalar beatInterval_j = te - lastActTime_[j];
+            const scalar beatInterval_j =
+                lastActTime_[j] < 0 ? GREAT : te - lastActTime_[j];
             if (beatInterval_j < minBeatInterval_)
             {
                 ++blockCount_[j];
