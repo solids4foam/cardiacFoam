@@ -184,6 +184,28 @@ def test_generic_detection_keys_off_the_primary_declared_dict_file(
     assert _spec(tmp_path, dict_file_relpaths=relpaths).metadata["generic_case"] is False
 
 
+def test_default_mapping_stays_generic_when_only_the_secondary_dict_exists(
+    tmp_path: Path,
+) -> None:
+    """The real scenario the primary-file heuristic exists for: two shipped
+    tutorials (``electroMechanicalNiedererEtAl2011``,
+    ``monodomainTotalLagrangianEM``) keep ``electroProperties`` nested under
+    ``constant/electro/electroProperties`` while still carrying a top-level
+    ``constant/physicsProperties``. Under the DEFAULT dict-file mapping (primary
+    ``electro`` -> ``constant/electroProperties``, secondary ``physics`` ->
+    ``constant/physicsProperties``, from ``core.compatibility``), the presence
+    of ``physicsProperties`` alone must not flip the case out of generic --
+    only the primary file's presence may do that. This is not exercised by
+    ``test_generic_detection_keys_off_the_primary_declared_dict_file`` above,
+    which uses synthetic ``primary``/``secondary`` names rather than
+    ``make_spec``'s real default mapping."""
+    case_root = tmp_path / "aCase"
+    (case_root / "constant").mkdir(parents=True)
+    (case_root / "constant" / "physicsProperties").write_text("")
+
+    assert _spec(tmp_path).metadata["generic_case"] is True
+
+
 def test_declaring_no_dict_files_leaves_the_case_generic(tmp_path: Path) -> None:
     spec = _spec(tmp_path, dict_file_relpaths={})
     assert spec.metadata["dict_file_relpaths"] == {}
