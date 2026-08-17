@@ -34,7 +34,7 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_monodomain_pseudo_ecg as defaults
+from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_monodomain_pseudo_ecg as defaults
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,

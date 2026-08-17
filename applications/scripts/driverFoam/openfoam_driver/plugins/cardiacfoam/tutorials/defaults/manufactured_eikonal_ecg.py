@@ -16,53 +16,40 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_monodomain_pseudo_ecg
+#     manufactured_eikonal_ecg
 #
 # Description
-#     Defines configuration template for manufactured monodomain with pseudo ECG
-#     for FDA verification.
+#     Defines configuration template for standalone manufactured eikonal scenarios.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
+
 from __future__ import annotations
 
-from ..tutorials.ids import CardiacTutorialID
+from ..ids import CardiacTutorialID
 
 from pathlib import Path
 
-from .shared import (
-    CONTROL_DICT_RELPATH,
-    ELECTRO_PROPERTIES_RELPATH as SHARED_ELECTRO_PROPERTIES_RELPATH,
-    OUTPUT_DIR_NAME,
-    RUN_CASE_SCRIPT_RELPATH,
-)
+from .shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
 
 
-TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_MONODOMAIN_PSEUDO_ECG.value
-CASE_DIR_NAME = "manufacturedSolutions/monodomainPseudoECG"
+TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value
+CASE_DIR_NAME = "manufacturedSolutions/eikonalECG"
 SETUP_DIR_NAME = "setup"
 NUMBER_CELLS = (10, 20, 40, 80)
-DT_VALUES = (
-    0.00892857,
-    0.00224215,
-    0.000560538,
-    0.000140174,
-)
 DIMENSIONS = ("1D", "2D", "3D")
-SOLVER_TYPES = ("implicit",)
+SOLVER_TYPES = ("eikonal",)
 PIECEWISE_SWEEP = True
-ELECTRO_PROPERTIES_SCOPE = "monodomainSolverCoeffs"
-ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH
+ELECTRO_PROPERTIES_SCOPE = "eikonalSolverCoeffs"
 BLOCK_MESH_DICT_TEMPLATE = "system/blockMeshDict.{dimension}"
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
-POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured.py")
+POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured_eikonal_ecg.py")
 POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
 RUN_IN_PARALLEL = True
-VERIFICATION_MODEL_TYPE = "manufacturedFDAMonodomainVerifier"
-ECG_ENABLED = True
+VERIFICATION_MODEL_TYPE = "manufacturedEikonalVerifier"
 ECG_REFERENCE_QUADRATURE_ORDER = 96
-ECG_CHECK_QUADRATURE_ORDERS = (6, 12, 24, 48)
+ECG_CHECK_QUADRATURE_ORDERS = (6, 12, 24, 48, 96)
 ECG_ELECTRODES_BY_DIMENSION = {
     "1D": {
         "E1": "(-0.5 0 0)",

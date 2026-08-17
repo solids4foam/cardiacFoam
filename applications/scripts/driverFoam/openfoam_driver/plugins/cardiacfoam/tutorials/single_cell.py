@@ -33,7 +33,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import single_cell as defaults
+from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import single_cell as defaults
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,

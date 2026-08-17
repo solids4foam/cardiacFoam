@@ -34,7 +34,7 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import cable_1d_cv_convergence as defaults
+from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import cable_1d_cv_convergence as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (

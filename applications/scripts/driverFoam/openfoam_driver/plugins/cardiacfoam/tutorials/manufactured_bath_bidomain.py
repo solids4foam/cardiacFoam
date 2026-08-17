@@ -33,7 +33,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_bath_bidomain as defaults
+from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_bath_bidomain as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps

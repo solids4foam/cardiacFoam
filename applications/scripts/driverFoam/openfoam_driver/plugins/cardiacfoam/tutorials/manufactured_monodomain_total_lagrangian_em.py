@@ -34,7 +34,7 @@ from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_monodomain_total_lagrangian_em as defaults
+from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_monodomain_total_lagrangian_em as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..tutorials.ids import CardiacTutorialID
+from ..ids import CardiacTutorialID
 
 from pathlib import Path
 
