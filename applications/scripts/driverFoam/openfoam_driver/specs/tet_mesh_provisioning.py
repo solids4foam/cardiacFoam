@@ -32,18 +32,17 @@ module only *writes* `blockMeshDict` with a resolved cell count, it never
 runs `blockMesh` itself -- `blockMesh` runs later as a `workflow_dag` step.
 This module keeps the same split for tet: `render_tet_geo` only substitutes
 the `__LC__` characteristic-length placeholder and writes `box.geo`; `gmsh`/
-`gmshToFoam`/`checkMesh` are workflow_dag steps (see
-`manufactured_fda.py::make_spec`), executed only when the strict workflow
-actually runs, never during `apply_case`/materialization.
+`gmshToFoam`/`checkMesh` are workflow_dag steps declared by the tutorial's
+own spec, executed only when the strict workflow actually runs, never during
+`apply_case`/materialization.
 
-The three tutorials that currently have a tet variant (`bidomain`,
-`monodomainPseudoECG`, `eikonalECG`) each keep their own copy of
-`setup/mesh/tet/box.geo.template` -- diffed directly, they are functionally
-equivalent (identical gmsh geometry commands: `SetFactory`, `Box`,
-`Physical Volume`/`Surface`, `Mesh.*` settings) but not byte-identical
-(each has its own header comment written from that tutorial's perspective).
+Each tutorial with a tet variant keeps its own copy of
+`setup/mesh/tet/box.geo.template`. Those copies are typically functionally
+equivalent (the same gmsh geometry commands: `SetFactory`, `Box`,
+`Physical Volume`/`Surface`, `Mesh.*` settings) but not byte-identical --
+each carries a header comment written from its own tutorial's perspective.
 This function renders whichever template belongs to the case at hand; it
-does not assume one canonical file services all three.
+never assumes one canonical file services them all.
 """
 
 from __future__ import annotations
