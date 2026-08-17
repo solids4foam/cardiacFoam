@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.detection import (
     detect_myocardium_solver_name,
     detect_verification_model_type,
 )

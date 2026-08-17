@@ -662,7 +662,7 @@ def parse_electro_properties(
         ``{"selectors": {...}, "overrides": {...}, "ignored_keys": [...]}``
     """
     from pathlib import Path as _Path
-    from openfoam_driver.specs.common import detect_myocardium_solver_name
+    from openfoam_driver.plugins.cardiacfoam.detection import detect_myocardium_solver_name
     from openfoam_driver.core.runtime.mutators import read_foam_entry
 
     electro_properties_path = _Path(electro_properties_path)

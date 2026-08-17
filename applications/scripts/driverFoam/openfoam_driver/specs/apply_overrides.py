@@ -23,10 +23,19 @@
 #     `step --strict --apply`. Validates each override for *applyability*
 #     (catalog-addressable AND writable by the router) before any write, then
 #     routes controlDict leaves to update_control_dict and $ELECTRO_MODEL_COEFFS
-#     keys through the existing solver-coeffs resolver. Lives in the specs layer
-#     because routing needs that resolver (detect_myocardium_solver_name +
-#     _entry_scope_and_key). The driver never decides *what* to change — the
-#     agent authors the override set; this only applies a validated one.
+#     keys through the existing solver-coeffs resolver. The driver never decides
+#     *what* to change — the agent authors the override set; this only applies a
+#     validated one.
+#
+#     KNOWN COUPLING (deferred, P2.6): the "$ELECTRO_MODEL_COEFFS" scope token,
+#     the "electroProperties" catalog group, and the constant/electroProperties
+#     write target below are all still hardcoded cardiac vocabulary in a
+#     generic, agent-facing path. Retiring them needs a plugin-declared scope
+#     resolver that supplies the scope name *and* the target dict relpath;
+#     doing it here alone would not remove the sentinel from core, because
+#     specs/dict_builder.py::_entry_scope_and_key (which this module delegates
+#     the parse to), specs/validation.py and scripts/_dict_keys_scanner.py all
+#     re-parse the same literal prefix independently.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -39,11 +48,9 @@ import shutil
 from pathlib import Path, PurePath
 from typing import Any, Iterable
 
-from .common import detect_myocardium_solver_name
+from openfoam_driver.plugins.cardiacfoam.detection import detect_myocardium_solver_name
 from .dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
-
-_PREFIX = "$ELECTRO_MODEL_COEFFS."
 
 
 def _is_safe_system_path(path_str: str) -> bool:

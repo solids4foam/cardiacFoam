@@ -5,7 +5,7 @@ from typing import Callable, Iterable
 from openfoam_driver.core.runtime.models import DataArtifact, TutorialSpec
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
 from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.detection import (
     detect_ionic_model_name,
     detect_myocardium_solver_name,
     detect_ionic_export_list,

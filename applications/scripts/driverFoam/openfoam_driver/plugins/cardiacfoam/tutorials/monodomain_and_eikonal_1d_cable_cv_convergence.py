@@ -36,9 +36,11 @@ from pathlib import Path
 from openfoam_driver.plugins.cardiacfoam.defaults import monodomain_and_eikonal_1d_cable_cv_convergence as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+)
+from openfoam_driver.specs.common import (
     load_python_module,
     resolve_run_script_path,
     resolve_spec_paths,

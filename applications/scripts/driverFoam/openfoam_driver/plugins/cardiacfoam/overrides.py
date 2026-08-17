@@ -2,7 +2,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ..core.runtime.mutators import ensure_foam_dict, remove_foam_dict, update_foam_entry
+from ...core.runtime.mutators import ensure_foam_dict, remove_foam_dict, update_foam_entry
 from .detection import detect_electro_coeffs_scope
 
 

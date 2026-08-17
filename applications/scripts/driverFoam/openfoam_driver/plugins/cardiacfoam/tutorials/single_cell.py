@@ -35,9 +35,11 @@ from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.defaults import single_cell as defaults
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+)
+from openfoam_driver.specs.common import (
     collect_outputs_by_pattern,
     resolve_run_script_path,
     resolve_spec_paths,

@@ -42,7 +42,7 @@ _SOLID_SOLVER_FIELDS = ("Ta", "lambda")
 def resolve_case_models(case_root: str | Path) -> dict[str, str | None]:
     """Best-effort resolution from ``constant/electroProperties``. Never raises;
     any of the three values may be ``None`` when the file or entry is absent."""
-    from openfoam_driver.specs.common import (
+    from openfoam_driver.plugins.cardiacfoam.detection import (
         detect_active_tension_model_name,
         detect_ionic_model_name,
         detect_myocardium_solver_name,

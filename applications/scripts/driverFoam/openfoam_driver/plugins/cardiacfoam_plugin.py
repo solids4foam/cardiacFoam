@@ -228,7 +228,10 @@ class CardiacFoamPlugin:
 
     def validate_configuration(self, spec: TutorialSpec) -> tuple[StrictDiagnostic, ...]:
         from pathlib import Path
-        from openfoam_driver.specs.common import detect_myocardium_solver_name, detect_ionic_model_name
+        from openfoam_driver.plugins.cardiacfoam.detection import (
+            detect_myocardium_solver_name,
+            detect_ionic_model_name,
+        )
         from openfoam_driver.planning_types import diagnostic as _diagnostic
 
         diagnostics = []

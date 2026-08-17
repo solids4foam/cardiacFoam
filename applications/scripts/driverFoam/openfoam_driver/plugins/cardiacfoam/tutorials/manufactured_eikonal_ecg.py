@@ -39,9 +39,11 @@ from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+)
+from openfoam_driver.specs.common import (
     replace_single_block_mesh_resolution,
     resolve_run_script_path,
     resolve_spec_paths,

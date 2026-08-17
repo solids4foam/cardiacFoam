@@ -20,34 +20,16 @@
 #
 # Description
 #     Provides shared definitions and defaults for specification templates.
-#     (Refactored into a facade: imports from detection, overrides, paths, utils)
+#     (Refactored into a facade: imports from paths, utils.)  Solver-specific
+#     helpers are NOT re-exported here: cardiac dictionary detection and
+#     electro/physics-property overrides live in
+#     `plugins/cardiacfoam/{detection,overrides}.py` and must be imported from
+#     there directly.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-from .detection import (
-    _AT_EXPORT_RE,
-    _BLOCK_DECL_RE,
-    _IONIC_EXPORT_RE,
-    detect_active_tension_export_list,
-    detect_active_tension_model_name,
-    detect_electro_coeffs_scope,
-    detect_ionic_export_list,
-    detect_ionic_model_name,
-    detect_myocardium_solver_name,
-    detect_verification_model_type,
-    electro_properties_has_block,
-)
-from .overrides import (
-    _resolve_scope_tokens,
-    apply_electro_property_overrides,
-    apply_entry_overrides,
-    apply_physics_property_overrides,
-    ensure_electro_property_dict,
-    normalize_entry_overrides,
-    remove_electro_property_dict,
-)
 from .paths import (
     default_setup_dir_name,
     repo_root_default,
@@ -67,21 +49,6 @@ __all__ = [
     "repo_root_default",
     "tutorials_root_default",
     "default_setup_dir_name",
-    "detect_myocardium_solver_name",
-    "detect_electro_coeffs_scope",
-    "detect_ionic_model_name",
-    "detect_ionic_export_list",
-    "electro_properties_has_block",
-    "detect_verification_model_type",
-    "detect_active_tension_model_name",
-    "detect_active_tension_export_list",
-    "_resolve_scope_tokens",
-    "normalize_entry_overrides",
-    "apply_entry_overrides",
-    "apply_electro_property_overrides",
-    "apply_physics_property_overrides",
-    "remove_electro_property_dict",
-    "ensure_electro_property_dict",
     "resolve_spec_paths",
     "resolve_run_script_path",
     "load_python_module",
@@ -89,7 +56,4 @@ __all__ = [
     "set_delta_t",
     "set_end_time",
     "replace_single_block_mesh_resolution",
-    "_IONIC_EXPORT_RE",
-    "_BLOCK_DECL_RE",
-    "_AT_EXPORT_RE",
 ]

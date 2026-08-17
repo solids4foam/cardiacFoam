@@ -36,8 +36,10 @@ from itertools import product
 
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
-from openfoam_driver.specs.common import (
+from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
+)
+from openfoam_driver.specs.common import (
     resolve_spec_paths,
     set_delta_t,
 )
