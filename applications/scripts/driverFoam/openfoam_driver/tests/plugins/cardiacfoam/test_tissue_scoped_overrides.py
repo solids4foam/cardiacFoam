@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import pytest
 
-from openfoam_driver.specs.dict_builder import build_electro_properties
+from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
 _SELECTORS = {
     "myocardiumSolver": "singleCellSolver",

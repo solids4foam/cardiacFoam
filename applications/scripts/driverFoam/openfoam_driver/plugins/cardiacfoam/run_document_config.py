@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
-from openfoam_driver.specs.dict_builder import (
+from openfoam_driver.specs.dict_builder import populate_values
+from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     build_electro_properties,
     build_physics_properties,
     parse_electro_properties,
-    populate_values,
     resolve_context,
     select_applicable_entries,
 )

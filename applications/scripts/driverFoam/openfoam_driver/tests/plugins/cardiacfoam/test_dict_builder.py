@@ -37,7 +37,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[6]
+REPO_ROOT = Path(__file__).resolve().parents[7]
 SINGLE_CELL_ELECTRO_PROPERTIES = (
     REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
     / "constant" / "electroProperties"
@@ -48,12 +48,12 @@ class TestDictBuilderModule(unittest.TestCase):
     """Module-level structural contract — the import path + signature."""
 
     def test_module_exposes_build_electro_properties(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         self.assertTrue(callable(build_electro_properties))
 
     def test_function_accepts_documented_kwargs(self) -> None:
         import inspect
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         sig = inspect.signature(build_electro_properties)
         params = sig.parameters
         self.assertIn("selectors", params)
@@ -70,7 +70,7 @@ class TestMinimalSingleCellBuild(unittest.TestCase):
     selector. Drives the bare-minimum end-to-end pipeline."""
 
     def test_returns_string_with_foamfile_preamble(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         text = build_electro_properties(
             selectors={
                 "myocardiumSolver": "singleCellSolver",
@@ -89,7 +89,7 @@ class TestContextResolution(unittest.TestCase):
     callers can introspect what slot_keys + values the pipeline will use."""
 
     def test_resolve_context_collapses_selectors_and_overrides(self) -> None:
-        from openfoam_driver.specs.dict_builder import resolve_context
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import resolve_context
         ctx = resolve_context(
             selectors={"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP"},
             overrides={
@@ -105,7 +105,7 @@ class TestContextResolution(unittest.TestCase):
         self.assertEqual(ctx["singleCellStimulus.stim_amplitude"], "60")
 
     def test_resolve_context_overrides_silent_when_none(self) -> None:
-        from openfoam_driver.specs.dict_builder import resolve_context
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import resolve_context
         ctx = resolve_context(
             selectors={"myocardiumSolver": "singleCellSolver"},
             overrides=None,
@@ -122,7 +122,7 @@ class TestApplicableEntrySelection(unittest.TestCase):
         — but the *applicable_when*-based exclusion is the tissue entry,
         which applies only to mono/bi/single-cell solvers. Under eikonal,
         the tissue entry must be filtered out by select_applicable_entries."""
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -134,7 +134,7 @@ class TestApplicableEntrySelection(unittest.TestCase):
         self.assertNotIn("$ELECTRO_MODEL_COEFFS.tissue", paths)
 
     def test_monodomain_context_includes_ionic_model_entry(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -147,7 +147,7 @@ class TestApplicableEntrySelection(unittest.TestCase):
         self.assertIn("$ELECTRO_MODEL_COEFFS.tissue", paths)
 
     def test_field_source_omits_monodomain_uniform_tensor(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
         text = build_electro_properties(
             selectors={
@@ -161,7 +161,7 @@ class TestApplicableEntrySelection(unittest.TestCase):
         self.assertNotIn("\n    conductivity ", text)
 
     def test_field_source_omits_both_bidomain_uniform_tensors(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
         text = build_electro_properties(
             selectors={
@@ -176,7 +176,7 @@ class TestApplicableEntrySelection(unittest.TestCase):
         self.assertNotIn("conductivityExtracellular", text)
 
     def test_spatial_solver_defaults_to_uniform_source(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
         text = build_electro_properties(
             selectors={
@@ -195,8 +195,8 @@ class TestValuePopulation(unittest.TestCase):
     the applicability filter."""
 
     def test_override_wins_over_typical_value(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
-            populate_values,
+        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -212,8 +212,8 @@ class TestValuePopulation(unittest.TestCase):
         self.assertEqual(populated["singleCellStimulus.stim_amplitude"], "0.4")
 
     def test_typical_value_fills_when_no_override(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
-            populate_values,
+        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -231,8 +231,8 @@ class TestValuePopulation(unittest.TestCase):
         self.assertEqual(populated["singleCellStimulus.stim_amplitude"], "60")
 
     def test_fallback_disabled_omits_typical_value(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
-            populate_values,
+        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -248,8 +248,8 @@ class TestValuePopulation(unittest.TestCase):
         """Selectors are part of the context AND many of them correspond to
         DictEntry paths (myocardiumSolver, ionicModel, tissue). Those entries
         must end up in the populated dict using the selector's own value."""
-        from openfoam_driver.specs.dict_builder import (
-            populate_values,
+        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -273,6 +273,8 @@ class TestRequiredCheck(unittest.TestCase):
         from openfoam_driver.specs.dict_builder import (
             check_required,
             populate_values,
+        )
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -288,6 +290,8 @@ class TestRequiredCheck(unittest.TestCase):
         from openfoam_driver.specs.dict_builder import (
             check_required,
             populate_values,
+        )
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -333,7 +337,7 @@ class TestValidatorIntegration(unittest.TestCase):
         """Setting both stimulusDuration and stimulusDurationList violates the
         structured mutually_exclusive_with constraint — the builder must
         catch it before returning the synthesised text."""
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         with self.assertRaises(ValueError) as ctx:
             build_electro_properties(
                 selectors={
@@ -351,7 +355,7 @@ class TestValidatorIntegration(unittest.TestCase):
     def test_build_raises_on_forbidden_when_violation(self) -> None:
         """ionicModel under eikonalSolver triggers forbidden_when — builder
         must reject this combination."""
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         with self.assertRaises(ValueError) as ctx:
             build_electro_properties(
                 selectors={
@@ -367,7 +371,7 @@ class TestSerialisation(unittest.TestCase):
     to verify the generated electroProperties output matches expectations."""
 
     def test_singlecell_output_matches_snapshot(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         text = build_electro_properties(
             selectors={
                 "myocardiumSolver": "singleCellSolver",
@@ -386,7 +390,7 @@ class TestSerialisation(unittest.TestCase):
         self.assertNotIn("stim_amplitude", text)
 
     def test_singlecell_stimulus_appears_once_configured(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         text = build_electro_properties(
             selectors={
                 "myocardiumSolver": "singleCellSolver",
@@ -405,7 +409,7 @@ class TestSerialisation(unittest.TestCase):
         self.assertIn("stim_amplitude 60;", text)
 
     def test_monodomain_output_matches_snapshot(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         text = build_electro_properties(
             selectors={
                 "myocardiumSolver": "monodomainSolver",
@@ -425,7 +429,7 @@ class TestPhysicsPropertiesBuilder(unittest.TestCase):
 
     def test_function_accepts_documented_kwargs(self) -> None:
         import inspect
-        from openfoam_driver.specs.dict_builder import build_physics_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_physics_properties
         sig = inspect.signature(build_physics_properties)
         params = sig.parameters
         self.assertIn("selectors", params)
@@ -434,7 +438,7 @@ class TestPhysicsPropertiesBuilder(unittest.TestCase):
         self.assertEqual(params["overrides"].kind, inspect.Parameter.KEYWORD_ONLY)
 
     def test_minimal_electroModel_build(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_physics_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_physics_properties
         text = build_physics_properties(selectors={"type": "electroModel"})
         self.assertIn("type electroModel;", text)
         self.assertIn("FoamFile", text)
@@ -445,13 +449,13 @@ class TestPhysicsPropertiesBuilder(unittest.TestCase):
         self.assertNotIn("Coeffs", text)
 
     def test_missing_required_type_raises(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_physics_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_physics_properties
         with self.assertRaises(ValueError) as ctx:
             build_physics_properties(selectors={})
         self.assertIn("type", str(ctx.exception))
 
     def test_invalid_enum_value_raises(self) -> None:
-        from openfoam_driver.specs.dict_builder import build_physics_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_physics_properties
         with self.assertRaises(ValueError) as ctx:
             build_physics_properties(selectors={"type": "notARealModel"})
         self.assertIn("notARealModel", str(ctx.exception))
@@ -468,7 +472,7 @@ class TestBuildAndLaunch(unittest.TestCase):
         running cardiacFoam, so the test never needs the binary."""
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -492,7 +496,7 @@ class TestBuildAndLaunch(unittest.TestCase):
         the caller explicitly passes `overwrite=True`."""
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -514,7 +518,7 @@ class TestBuildAndLaunch(unittest.TestCase):
     def test_overwrite_true_replaces_existing_dicts(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -552,7 +556,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
     def test_single_cell_solver_gets_a_static_polymesh(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -574,7 +578,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
     def test_spatial_solver_gets_a_block_mesh_dict(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -597,7 +601,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
     def test_dx_kwarg_controls_generated_block_mesh_resolution(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
 
         with tempfile.TemporaryDirectory() as temp:
@@ -620,7 +624,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
     def test_dx_kwarg_rejected_for_meshless_solver(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -640,7 +644,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
     def test_existing_mesh_is_not_clobbered_without_overwrite(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -675,7 +679,7 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
     def test_dry_run_still_completes_without_pre_solve(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._base_selectors()
         with tempfile.TemporaryDirectory() as d:
             result = build_and_launch(
@@ -692,7 +696,7 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
         import tempfile
         from pathlib import Path
         from unittest.mock import patch
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._base_selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
@@ -719,7 +723,7 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
         import tempfile
         from pathlib import Path
         from unittest.mock import patch
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._base_selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
@@ -741,7 +745,7 @@ class TestParseElectroProperties(unittest.TestCase):
     @staticmethod
     def _build_and_write(tmp_dir, selectors, overrides=None):
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
         text = build_electro_properties(selectors, overrides=overrides)
         p = Path(tmp_dir) / "electroProperties"
         p.write_text(text)
@@ -749,7 +753,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_returns_dict_with_selectors_and_overrides_keys(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -763,7 +767,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_solver_in_selectors(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -776,7 +780,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_ionic_model_and_tissue_in_selectors(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -790,7 +794,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_ignored_keys_lists_structurally_skipped_dynamic_paths(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -815,7 +819,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_non_default_override_is_captured(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -835,7 +839,7 @@ class TestParseElectroProperties(unittest.TestCase):
     def test_default_value_absent_from_overrides(self) -> None:
         """typical_value entries that were not changed must not appear as overrides."""
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -851,7 +855,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_selector_keys_not_duplicated_in_overrides(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
         with tempfile.TemporaryDirectory() as d:
             p = self._build_and_write(
                 d,
@@ -876,7 +880,7 @@ class TestParseElectroProperties(unittest.TestCase):
         (round-trip) must preserve it for singleCellSolver."""
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             build_electro_properties,
             parse_electro_properties,
         )
@@ -905,7 +909,7 @@ class TestParseElectroProperties(unittest.TestCase):
         """The hand-authored singleCell tutorial dict declares
         'activeTensionModel LandNiederer;' as a flat entry — parsing it must
         not silently drop that setting."""
-        from openfoam_driver.specs.dict_builder import parse_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
 
         if not SINGLE_CELL_ELECTRO_PROPERTIES.exists():
             self.skipTest("tutorial fixture not present in this checkout")
@@ -928,7 +932,7 @@ class TestParseElectroProperties(unittest.TestCase):
         """
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             build_electro_properties,
             parse_electro_properties,
         )
@@ -983,7 +987,7 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
 
     def test_delta_t_written_to_control_dict(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = self._make_case_with_control_dict(d)
@@ -999,7 +1003,7 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
 
     def test_end_time_written_to_control_dict(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = self._make_case_with_control_dict(d)
@@ -1015,7 +1019,7 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
 
     def test_none_params_leave_control_dict_unchanged(self) -> None:
         import tempfile
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = self._make_case_with_control_dict(d)
@@ -1034,7 +1038,7 @@ class TestBuildAndLaunchControlDict(unittest.TestCase):
     def test_control_dict_is_generated_when_delta_t_set(self) -> None:
         import tempfile
         from pathlib import Path
-        from openfoam_driver.specs.dict_builder import build_and_launch
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
         electro, physics = self._selectors()
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
@@ -1058,7 +1062,7 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
     def test_sigmaExtracellular_in_catalog_when_ecgDomains_present(self) -> None:
         """sigmaExtracellular must appear in select_applicable_entries whenever
         any ecgDomains override is set ($ecgDomains_present virtual key)."""
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
         )
@@ -1079,7 +1083,10 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
 
     def test_sigmaExtracellular_absent_without_ecgDomains(self) -> None:
         """sigmaExtracellular must NOT appear when no ecgDomains are configured."""
-        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            resolve_context,
+            select_applicable_entries,
+        )
 
         context = resolve_context(selectors={"myocardiumSolver": "eikonalSolver"})
         entries = select_applicable_entries(context)
@@ -1091,7 +1098,10 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
 
     def test_ionic_heterogeneity_entries_applicable_for_eikonalSolver(self) -> None:
         """All ionicHeterogeneity sub-entries must be selectable for eikonalSolver."""
-        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            resolve_context,
+            select_applicable_entries,
+        )
 
         context = resolve_context(selectors={"myocardiumSolver": "eikonalSolver"})
         entries = select_applicable_entries(context)
@@ -1109,7 +1119,10 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
 
     def test_ionic_heterogeneity_entries_applicable_for_monodomainSolver(self) -> None:
         """ionicHeterogeneity entries must still fire for monodomainSolver (no regression)."""
-        from openfoam_driver.specs.dict_builder import resolve_context, select_applicable_entries
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            resolve_context,
+            select_applicable_entries,
+        )
 
         context = resolve_context(
             selectors={"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", "tissue": "epicardialCells"},
@@ -1122,7 +1135,7 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
     def test_eikonalSolver_with_ionicHeterogeneity_overrides_round_trips(self) -> None:
         """build_electro_properties must accept eikonalSolver with an explicit
         ionicHeterogeneity block and write the values into the output dict."""
-        from openfoam_driver.specs.dict_builder import build_electro_properties
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
         text = build_electro_properties(
             selectors={"myocardiumSolver": "eikonalSolver"},

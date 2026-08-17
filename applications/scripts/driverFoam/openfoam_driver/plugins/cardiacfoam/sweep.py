@@ -27,10 +27,10 @@ from pathlib import Path
 from typing import Any
 
 from ...sweep_expansion import SweepValidationError
-from ...specs.dict_builder import (
+from ...specs.dict_builder import is_known_override_driver_path
+from .dict_builder import (
     SELECTOR_KEYS,
     build_and_launch,
-    is_known_override_driver_path,
 )
 
 

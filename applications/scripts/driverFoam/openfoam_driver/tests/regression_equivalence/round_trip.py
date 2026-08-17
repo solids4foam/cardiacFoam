@@ -24,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 from openfoam_driver.specs.common import tutorials_root_default
-from openfoam_driver.specs.dict_builder import (
+from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     build_electro_properties,
     parse_electro_properties,
 )

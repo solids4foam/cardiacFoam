@@ -55,7 +55,7 @@ from __future__ import annotations
 import pytest
 
 from openfoam_driver.core.plugin_interface import default_driver_context
-from openfoam_driver.specs.dict_builder import (
+from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     build_electro_properties,
     select_applicable_entries,
 )

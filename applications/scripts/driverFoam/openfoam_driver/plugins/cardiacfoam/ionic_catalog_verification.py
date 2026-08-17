@@ -229,7 +229,7 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
     Uses the driver's own dictionary synthesis rather than hand-written text,
     so this exercises the same path an agent would use to configure a run.
     """
-    from openfoam_driver.specs.dict_builder import (
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import (
         build_electro_properties,
         build_physics_properties,
     )

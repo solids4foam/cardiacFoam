@@ -33,9 +33,11 @@
 #     generic, agent-facing path. Retiring them needs a plugin-declared scope
 #     resolver that supplies the scope name *and* the target dict relpath;
 #     doing it here alone would not remove the sentinel from core, because
-#     specs/dict_builder.py::_entry_scope_and_key (which this module delegates
-#     the parse to), specs/validation.py and scripts/_dict_keys_scanner.py all
-#     re-parse the same literal prefix independently.
+#     specs/validation.py and scripts/_dict_keys_scanner.py both re-parse the
+#     same literal prefix independently. (The third re-parse site,
+#     `_entry_scope_and_key`, moved into plugins/cardiacfoam/dict_builder.py
+#     with Task 14's dict_builder split; this module delegates the parse
+#     there.)
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -49,7 +51,7 @@ from pathlib import Path, PurePath
 from typing import Any, Iterable
 
 from openfoam_driver.plugins.cardiacfoam.detection import detect_myocardium_solver_name
-from .dict_builder import _entry_scope_and_key
+from openfoam_driver.plugins.cardiacfoam.dict_builder import _entry_scope_and_key
 from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
 
 

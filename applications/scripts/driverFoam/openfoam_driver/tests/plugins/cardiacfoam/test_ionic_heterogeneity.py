@@ -234,7 +234,7 @@ _HET_OVERRIDES = {
 
 
 def test_build_emits_nested_heterogeneity_block():
-    from openfoam_driver.specs.dict_builder import build_electro_properties
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
     text = build_electro_properties(
         selectors={
             "myocardiumSolver": "monodomainSolver",
@@ -249,7 +249,7 @@ def test_build_emits_nested_heterogeneity_block():
 
 
 def test_build_then_parse_round_trips_heterogeneity(tmp_path):
-    from openfoam_driver.specs.dict_builder import (
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import (
         build_electro_properties,
         parse_electro_properties,
     )
@@ -273,7 +273,7 @@ def test_build_then_parse_round_trips_heterogeneity(tmp_path):
 def test_default_build_omits_heterogeneity_block():
     # Heterogeneity must be opt-in: a capable model with no het overrides
     # produces no ionicHeterogeneity block.
-    from openfoam_driver.specs.dict_builder import build_electro_properties
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
     text = build_electro_properties(
         selectors={
             "myocardiumSolver": "monodomainSolver",

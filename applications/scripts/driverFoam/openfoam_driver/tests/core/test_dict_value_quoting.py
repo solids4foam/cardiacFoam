@@ -63,7 +63,7 @@ def test_dimension_reaches_the_dict_in_a_form_openfoam_can_parse():
     """The end-to-end regression: this exact value produced an unparseable
     dictionary, making $ELECTRO_MODEL_COEFFS.dimension unusable through the
     driver. Found by running listCellModelsVariables for real."""
-    from openfoam_driver.specs.dict_builder import build_electro_properties
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
 
     text = build_electro_properties(
         selectors={

@@ -502,7 +502,7 @@ def test_absent_stimulus_block_is_not_invented_from_defaults():
     block yielded stim_amplitude 60 and nstim1 3, turning a quiescent run
     into a paced one.
     """
-    from openfoam_driver.specs.dict_builder import (
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import (
         build_electro_properties,
         parse_electro_properties,
     )
