@@ -276,7 +276,7 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
 
     (case_dir / "system" / "controlDict").write_text(build_control_dict())
 
-    from openfoam_driver.specs.mesh_provisioning import provision_mesh
+    from openfoam_driver.plugins.cardiacfoam.mesh_provisioning import provision_mesh
 
     # Keyword-only. singleCellSolver copies the bundled 1-cell polyMesh
     # directly, so no blockMesh run is needed before the utility.

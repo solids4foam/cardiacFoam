@@ -591,7 +591,7 @@ def build_and_launch(
             end_time=end_time,
         )
 
-    from openfoam_driver.specs.mesh_provisioning import provision_mesh
+    from openfoam_driver.plugins.cardiacfoam.mesh_provisioning import provision_mesh
     needs_block_mesh = provision_mesh(
         case_dir=case_dir, myocardium_solver=myocardium_solver, dx_m=dx,
     )

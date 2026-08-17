@@ -19,55 +19,42 @@
 #     mesh_provisioning
 #
 # Description
-#     Provisions a real fvMesh for cases built from scratch by build_and_launch.
+#     Renders the generic default blockMeshDict for cases built from scratch,
+#     and the dx-to-cell-count arithmetic it shares with tutorial meshes.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""electroModel.C requires a real fvMesh regardless of solver
-(`refCast<const fvMesh>(mesh())` at electroModel.C:344) -- even
-singleCellSolver needs one, which is why the real singleCell tutorial ships a
-static trivial 1-cell `constant/polyMesh/`. Neither `build_and_launch` nor
-`sweep_runner.materialize_case` provisioned any mesh for a from-scratch
-`case_folder` before this module existed.
+"""Generic default geometry for a case built from scratch.
 
-Two provisioning strategies, chosen by `myocardiumSolver`:
-  - `singleCellSolver` has no real spatial geometry: copy the bundled static
-    1-cell polyMesh fixture directly into `constant/polyMesh/`.
-  - `monodomainSolver`/`bidomainSolver`/`eikonalSolver` need real geometry:
-    write a generic default `system/blockMeshDict` (a small slab, "walls"
-    patch) and let `blockMesh` generate the mesh at run time. This is a sane
-    generic default, not a scientifically tuned geometry for any specific
-    tutorial -- callers that need particular dimensions should still author
-    their own blockMeshDict (this only fills the gap for a case built purely
-    from selectors/overrides, which have no geometry concept at all today).
+A case materialized purely from selectors/overrides has no geometry concept
+at all, yet OpenFOAM needs a real mesh before any solver can run. This module
+renders a sane generic default `system/blockMeshDict` (a small slab, "walls"
+patch) that `blockMesh` turns into a mesh at run time. It is not a
+scientifically tuned geometry for any specific tutorial -- callers that need
+particular dimensions should still author their own blockMeshDict.
+
+Which solver actually wants this default (versus a static polyMesh, or a real
+anatomical mesh) is a solver-vocabulary decision and belongs to the active
+plugin; cardiacFoam's lives in
+`plugins/cardiacfoam/mesh_provisioning.py::provision_mesh`.
 
 The default `blockMeshDict` is generated fresh from our own template each
-time (like `system_templates.py`'s `build_control_dict`/`get_fv_schemes`) --
-there is no pre-existing author file to parse or risk corrupting, so this
-does not need `mutators.py`'s `foamDictionary`-based mutation machinery
-(that's for patching values into an *already-written* file). `dx` (metres,
-isotropic cell size) derives the cell count via `cell_counts_from_dx`, a
-small pure function factored out so `niederer_2012.py`'s own
-`_replace_blockmesh_resolution` (which *does* patch an existing
-author-provided file, a genuinely different problem) can share the exact
-same divide-or-error math instead of duplicating it.
+time (like `system_templates.py`'s `build_control_dict`) -- there is no
+pre-existing author file to parse or risk corrupting, so this does not need
+`mutators.py`'s `foamDictionary`-based mutation machinery (that's for patching
+values into an *already-written* file). `dx` (metres, isotropic cell size)
+derives the cell count via `cell_counts_from_dx`, a small pure function
+factored out so `niederer_2012.py`'s own `_replace_blockmesh_resolution`
+(which *does* patch an existing author-provided file, a genuinely different
+problem) can share the exact same divide-or-error math instead of duplicating
+it.
 """
 
 from __future__ import annotations
 
-import shutil
 from collections.abc import Sequence
-from pathlib import Path
-
-_FIXTURES_DIR = Path(__file__).parent / "fixtures"
-_SINGLE_CELL_POLYMESH_DIR = _FIXTURES_DIR / "single_cell_polymesh"
-
-MESHLESS_SOLVERS = frozenset({"singleCellSolver"})
-BLOCK_MESH_SOLVERS = frozenset({"monodomainSolver", "bidomainSolver", "eikonalSolver"})
-
-_POLYMESH_FILES = ("points", "faces", "owner", "neighbour", "boundary")
 
 _DEFAULT_BLOCK_MESH_DICT = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
@@ -187,52 +174,3 @@ def default_block_mesh_dict_text(*, dx_m: float | None = None) -> str:
         counts = cell_counts_from_dx(dx_m, _DEFAULT_SLAB_SIZE_M)
         cells = counts[0]
     return _DEFAULT_BLOCK_MESH_DICT.replace("__CELLS__", str(cells))
-
-
-def provision_mesh(
-    *, case_dir: Path, myocardium_solver: str, dx_m: float | None = None,
-) -> bool:
-    """Provision whatever mesh `myocardium_solver` needs under `case_dir`.
-
-    Returns True if the case now needs a `blockMesh` run before solving
-    (a `system/blockMeshDict` was written or already exists), False if a
-    concrete mesh was copied directly (or the solver needs no mesh at all,
-    which no current solver does).
-
-    Unlike `build_and_launch`'s other generated files, a mesh is never
-    clobbered on a repeat call regardless of that call's own `overwrite`
-    flag: re-materializing a case (e.g. a retried sweep-run case) should not
-    wipe out an already-valid mesh, and a hand-authored custom
-    blockMeshDict/polyMesh must never be silently replaced by this generic
-    default.
-
-    `dx_m` (metres) only means something for the generic default
-    `blockMeshDict` (`BLOCK_MESH_SOLVERS`) -- it is meaningless for
-    `MESHLESS_SOLVERS` (no spatial geometry at all) and rejected outright
-    rather than silently having no effect, and it has no bearing on real
-    anatomical meshes imported via `vtkUnstructuredToFoam`, which this
-    function never touches.
-    """
-    if myocardium_solver in MESHLESS_SOLVERS:
-        if dx_m is not None:
-            raise ValueError(
-                f"dx has no effect for myocardiumSolver={myocardium_solver!r} "
-                "(no spatial mesh -- it has no geometry for dx to resolve)."
-            )
-        poly_mesh_dir = case_dir / "constant" / "polyMesh"
-        already_present = all((poly_mesh_dir / name).exists() for name in _POLYMESH_FILES)
-        if not already_present:
-            poly_mesh_dir.mkdir(parents=True, exist_ok=True)
-            for name in _POLYMESH_FILES:
-                shutil.copyfile(_SINGLE_CELL_POLYMESH_DIR / name, poly_mesh_dir / name)
-        return False
-
-    if myocardium_solver in BLOCK_MESH_SOLVERS:
-        block_mesh_dict = case_dir / "system" / "blockMeshDict"
-        if not block_mesh_dict.exists():
-            block_mesh_dict.parent.mkdir(parents=True, exist_ok=True)
-            block_mesh_dict.write_text(default_block_mesh_dict_text(dx_m=dx_m))
-        return True
-
-    # Unknown/future solver: leave mesh provisioning to the caller.
-    return False

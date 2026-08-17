@@ -19,7 +19,9 @@
 #     test_mesh_provisioning
 #
 # Description
-#     Tests default mesh provisioning for from-scratch case_folder cases.
+#     Tests the generic default blockMeshDict render and its dx arithmetic.
+#     The solver-keyed provisioning strategy is the active plugin's; see
+#     tests/plugins/cardiacfoam/test_solver_mesh_provisioning.py.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -32,7 +34,6 @@ import pytest
 from openfoam_driver.specs.mesh_provisioning import (
     cell_counts_from_dx,
     default_block_mesh_dict_text,
-    provision_mesh,
 )
 
 
@@ -79,20 +80,3 @@ def test_dx_controls_cell_count_finer_mesh_for_smaller_dx():
 def test_dx_that_does_not_evenly_divide_default_slab_raises():
     with pytest.raises(ValueError, match="does not evenly divide"):
         default_block_mesh_dict_text(dx_m=0.0003)
-
-
-def test_provision_mesh_spatial_solver_honours_dx(tmp_path):
-    case_dir = tmp_path / "case"
-    provision_mesh(case_dir=case_dir, myocardium_solver="monodomainSolver", dx_m=0.0004)
-    text = (case_dir / "system" / "blockMeshDict").read_text()
-    default_cells = _cell_counts(default_block_mesh_dict_text())
-    assert _cell_counts(text)[0] > default_cells[0]
-
-
-def test_provision_mesh_rejects_dx_for_meshless_solver(tmp_path):
-    # singleCellSolver has no spatial geometry at all -- dx would silently
-    # have zero effect, same silent-no-op failure mode this whole fix pass
-    # exists to close off.
-    case_dir = tmp_path / "case"
-    with pytest.raises(ValueError, match="dx"):
-        provision_mesh(case_dir=case_dir, myocardium_solver="singleCellSolver", dx_m=0.0004)
