@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda
+#     manufactured_monodomain_pseudo_ecg
 #
 # Description
-#     Defines configuration template for manufactured FDA scenarios.
+#     Defines configuration template for manufactured monodomain scenarios.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -34,7 +34,7 @@ from functools import partial
 from itertools import product
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_fda as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_monodomain_pseudo_ecg as defaults
 from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
@@ -42,10 +42,16 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     remove_electro_property_dict,
 )
 from openfoam_driver.specs.common import (
-    replace_single_block_mesh_resolution,
+    load_python_module,
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
+)
+from openfoam_driver.specs.utils import (
+    archive_case_logs,
+    set_end_time,
+    stage_post_processing_outputs,
 )
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
@@ -135,12 +141,6 @@ def _build_cases(
             )
     return cases
 
-
-def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimension: str) -> None:
-    replace_single_block_mesh_resolution(
-        block_mesh_dict_path, cells, dimension,
-        resolution_by_dimension=defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION,
-    )
 
 
 def _workflow_dag_for(
@@ -282,11 +282,15 @@ def _apply_case(
             overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
             shutil.copy(overlay_source, case_root / "system" / overlay_name)
     else:
-        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+        try:
+            cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(cells=cells)
+        except KeyError as exc:
+            raise ValueError(f"Unsupported dimension: {dimension}") from exc
+        replace_block_mesh_resolutions(block_mesh_dict, cell_counts)
 
     set_delta_t(control_dict, dt_value)
     if end_time is not None:
-        update_foam_entry(control_dict, "endTime", end_time)
+        set_end_time(control_dict, end_time)
     if grad_scheme is not None:
         update_foam_entry(
             case_root / "system" / "fvSchemes",
@@ -363,133 +367,42 @@ def _run_case(
             check=True,
         )
     finally:
-        _archive_case_logs(case_root, case)
-    _stage_case_output(
-        case_root,
-        case,
-        convergence_axis=convergence_axis,
-        archive_tag=archive_tag,
-        verification_model_type=verification_model_type,
-    )
-    _stage_case_ecg_outputs(
-        case_root,
-        case,
-        archive_tag=archive_tag,
-    )
+        archive_case_logs(case_root, case.case_id)
 
-
-def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
-    log_files = sorted(path for path in case_root.glob("log.*") if path.is_file())
-    if not log_files:
-        return None
-
-    destination_root = case_root / "logs" / case.case_id
-    if destination_root.exists():
-        shutil.rmtree(destination_root)
-    destination_root.mkdir(parents=True, exist_ok=True)
-
-    for source in log_files:
-        shutil.copy2(source, destination_root / source.name)
-
-    print(f"Archived {len(log_files)} log file(s) for {case.case_id}: {destination_root}")
-    return destination_root
-
-
-def _stage_case_output(
-    case_root: Path,
-    case: CaseConfig,
-    *,
-    convergence_axis: str = "spatial",
-    archive_tag: str = "default",
-    verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
-) -> Path:
-    # The manufactured verifiers write via Time::globalPath(), so their
-    # postProcessing/ output lands in the shared case dir under both serial
-    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
-    # is kept as a fallback only for output from an unrebuilt/older solver
-    # binary that predates that fix.
+    # 1. Stage the convergence manufactured output (with anisotropic/legacy fallbacks)
     filename = _case_output_filename(case, convergence_axis=convergence_axis)
     legacy_filename = _case_output_filename(case, convergence_axis="spatial")
     destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination = destination_dir / filename
-    candidates = [
-        case_root / "postProcessing" / filename,
-        case_root / "processor0" / "postProcessing" / filename,
-    ]
 
+    source_names = [filename]
     if verification_model_type == "manufacturedAnisotropicMonodomainVerifier":
-        rotated_filename = (
-            f"rotatedAnisotropy_3D_{int(case.params['cells'])}_cells_"
-            f"{case.params['solver']}.dat"
+        source_names.append(
+            f"rotatedAnisotropy_3D_{int(case.params['cells'])}_cells_{case.params['solver']}.dat"
         )
-        candidates.extend(
-            [
-                case_root / "postProcessing" / rotated_filename,
-                case_root / "processor0" / "postProcessing" / rotated_filename,
-            ]
-        )
-
     if convergence_axis != "spatial" and legacy_filename != filename:
-        candidates.extend(
-            [
-                case_root / "postProcessing" / legacy_filename,
-                case_root / "processor0" / "postProcessing" / legacy_filename,
-            ]
-        )
-
-    for candidate in candidates:
-        if not candidate.exists():
-            continue
-        if candidate == destination:
-            return destination
-        shutil.copy2(candidate, destination)
-        print(f"Archived manufactured output: {candidate} -> {destination}")
-        return destination
-
-    checked = ", ".join(str(path) for path in candidates)
-    raise FileNotFoundError(
-        f"Manufactured output '{filename}' not found after run. Checked: {checked}"
-    )
-
-
-def _stage_case_ecg_outputs(
-    case_root: Path,
-    case: CaseConfig,
-    *,
-    archive_tag: str = "default",
-) -> list[Path]:
-    staged_outputs: list[Path] = []
-    destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-
-    for source_name in (
-        "pseudoECG.dat",
-        "manufacturedPseudoECG.dat",
-        "manufacturedPseudoECGSummary.dat",
-    ):
-        destination = destination_dir / f"ECG_{case.case_id}_{source_name}"
-        candidates = (
-            case_root / "postProcessing" / source_name,
-            case_root / "processor0" / "postProcessing" / source_name,
-        )
-
-        for candidate in candidates:
-            if not candidate.exists():
-                continue
-            if candidate == destination:
-                staged_outputs.append(destination)
-                break
-            if candidate.parent == destination_dir:
-                shutil.move(str(candidate), str(destination))
-                print(f"Archived ECG output: {candidate} -> {destination} (moved)")
-            else:
-                shutil.copy2(candidate, destination)
-                print(f"Archived ECG output: {candidate} -> {destination}")
-            staged_outputs.append(destination)
+        source_names.append(legacy_filename)
+        
+    found = False
+    for name in source_names:
+        try:
+            stage_post_processing_outputs(
+                case_root, destination_dir, {name: filename}, missing_ok=False
+            )
+            found = True
             break
+        except FileNotFoundError:
+            continue
+            
+    if not found:
+        raise FileNotFoundError(f"Manufactured output not found. Checked: {source_names}")
 
-    return staged_outputs
+    # 2. Stage ECG outputs
+    ecg_mapping = {
+        "pseudoECG.dat": f"ECG_{case.case_id}_pseudoECG.dat",
+        "manufacturedPseudoECG.dat": f"ECG_{case.case_id}_manufacturedPseudoECG.dat",
+        "manufacturedPseudoECGSummary.dat": f"ECG_{case.case_id}_manufacturedPseudoECGSummary.dat",
+    }
+    stage_post_processing_outputs(case_root, destination_dir, ecg_mapping, missing_ok=True)
 
 
 def _collect_outputs(case_root: Path, output_dir: Path, *, archive_tag: str = "default") -> None:

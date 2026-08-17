@@ -43,15 +43,19 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
 )
 from openfoam_driver.specs.common import (
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
 )
-from .manufactured_fda import (
-    _archive_case_logs,
+from openfoam_driver.specs.utils import (
+    archive_case_logs,
+    stage_post_processing_outputs,
+)
+from .manufactured_monodomain_pseudo_ecg import (
     _build_cases,
+    _case_output_filename,
     _collect_outputs,
-    _replace_blockmesh_resolution,
 )
 
 
@@ -92,7 +96,11 @@ def _apply_case(
     physics_properties = case_root / physics_properties_relpath
     block_mesh_dict = case_root / Path(block_mesh_dict_template.format(dimension=dimension))
 
-    _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+    try:
+        cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(cells=cells)
+    except KeyError as exc:
+        raise ValueError(f"Unsupported dimension: {dimension}") from exc
+    replace_block_mesh_resolutions(block_mesh_dict, cell_counts)
     set_delta_t(control_dict, dt_value)
 
     apply_electro_property_overrides(
@@ -119,40 +127,7 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _stage_case_output(
-    case_root: Path,
-    case: CaseConfig,
-) -> Path:
-    # The manufactured verifiers write via Time::globalPath(), so their
-    # postProcessing/ output lands in the shared case dir under both serial
-    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
-    # is kept as a fallback only for output from an unrebuilt/older solver
-    # binary that predates that fix.
-    filename = _case_output_filename(case)
-    destination_dir = _archive_output_dir(case_root)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination = destination_dir / filename
 
-    source_name = "manufacturedElectromechanicsSummary.dat"
-    candidates = (
-        case_root / "postProcessing" / source_name,
-        case_root / "processor0" / "postProcessing" / source_name,
-    )
-
-    for candidate in candidates:
-        if not candidate.exists():
-            continue
-        if candidate == destination:
-            return destination
-        shutil.copy2(candidate, destination)
-        print(f"Archived manufactured output: {candidate} -> {destination}")
-        return destination
-
-    checked = ", ".join(str(path) for path in candidates)
-    raise FileNotFoundError(
-        f"Manufactured electromechanics output '{source_name}' not found after run. "
-        f"Checked: {checked}"
-    )
 
 
 def _run_case(
@@ -185,8 +160,16 @@ def _run_case(
     try:
         subprocess.run(command, check=True)
     finally:
-        _archive_case_logs(case_root, case)
-    _stage_case_output(case_root, case)
+        archive_case_logs(case_root, case.case_id)
+        
+    filename = _case_output_filename(case)
+    destination_dir = _archive_output_dir(case_root)
+    stage_post_processing_outputs(
+        case_root, 
+        destination_dir, 
+        {"manufacturedElectromechanicsSummary.dat": filename}, 
+        missing_ok=False
+    )
 
 
 def _postprocess(

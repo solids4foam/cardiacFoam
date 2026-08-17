@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     test_manufactured_fda_tet
+#     test_manufactured_monodomain_pseudo_ecg_tet
 #
 # Description
-#     Tests mesh_family="tet" support in manufactured_fda.py: workflow_dag
+#     Tests mesh_family="tet" support in manufactured_monodomain_pseudo_ecg.py: workflow_dag
 #     branching, apply_case's render-only materialization (never invokes
 #     gmsh), numerics_profile overlay selection, grad_scheme/phi_tolerance/
 #     end_time application, and strict kwarg validation.
@@ -35,8 +35,7 @@ import pytest
 
 from openfoam_driver.core.runtime.models import CaseConfig
 from openfoam_driver.tests.conftest import assert_foam_entry
-from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda import (
-    _stage_case_output,
+from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_monodomain_pseudo_ecg import (
     make_spec,
 )
 
@@ -344,7 +343,7 @@ def test_apply_case_renders_geo_but_never_calls_gmsh(tmp_path):
     cases = spec.build_cases()
     assert len(cases) == 1
 
-    with mock.patch("openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_fda.subprocess") as mock_subprocess:
+    with mock.patch("openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_monodomain_pseudo_ecg.subprocess") as mock_subprocess:
         spec.apply_case(spec.case_root, cases[0])
 
     mock_subprocess.run.assert_not_called()
@@ -374,25 +373,7 @@ def test_apply_case_can_select_an_optimised_geo_template(tmp_path):
     assert spec.metadata["tet_geo_template_relpath"].endswith("box.geo.template.optimised")
 
 
-def test_rotated_anisotropy_output_is_staged_under_canonical_name(tmp_path):
-    case = CaseConfig(
-        case_id="3D_10_cells_implicit_DT0p00892857",
-        params={"dimension": "3D", "cells": 10, "solver": "implicit", "dt": 0.00892857},
-    )
-    source_dir = tmp_path / "postProcessing"
-    source_dir.mkdir()
-    source = source_dir / "rotatedAnisotropy_3D_10_cells_implicit.dat"
-    source.write_text("rotated result\n")
 
-    staged = _stage_case_output(
-        tmp_path,
-        case,
-        archive_tag="rotated",
-        verification_model_type="manufacturedAnisotropicMonodomainVerifier",
-    )
-
-    assert staged.name == "3D_10_cells_implicit.dat"
-    assert staged.read_text() == "rotated result\n"
 
 
 def test_conductivity_shorthand_updates_monodomain_tensor(tmp_path):

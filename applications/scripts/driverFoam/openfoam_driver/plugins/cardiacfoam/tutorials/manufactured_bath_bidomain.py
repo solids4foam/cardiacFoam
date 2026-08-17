@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     manufactured_fda_bath_bidomain
+#     manufactured_bath_bidomain
 #
 # Description
-#     Defines configuration template for manufactured FDA bath bidomain scenarios.
+#     Defines configuration template for manufactured bath bidomain scenarios.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -33,7 +33,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_fda_bath_bidomain as defaults
+from openfoam_driver.plugins.cardiacfoam.defaults import manufactured_bath_bidomain as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps
@@ -45,12 +45,19 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     remove_electro_property_dict,
 )
 from openfoam_driver.specs.common import (
+    load_python_module,
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
+    set_end_time,
+)
+from openfoam_driver.specs.utils import (
+    archive_case_logs,
+    stage_post_processing_outputs,
 )
 from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
-from .manufactured_fda import _build_cases
+from .manufactured_monodomain_pseudo_ecg import _build_cases
 
 
 _GRAD_SCHEME_TOKENS: dict[str, str] = {
@@ -58,27 +65,7 @@ _GRAD_SCHEME_TOKENS: dict[str, str] = {
     "least_squares": "leastSquares",
 }
 
-# Surface stimulus magnitude of the FDA bidomain-with-bath problems (A/m^2).
-# Section 3.3 of the FDA document: I_E = -alpha at x = -1 and +alpha at x = 2.
-_FDA_ALPHA = 0.01
 
-# y/z domain extent per dimension, read off each blockMeshDict.<dim>'s own
-# vertices block (x always spans -1..2 for all three; only the y/z slab
-# thickness differs -- 1D and 2D are thin slivers, not full 1x1 cross
-# sections). Paired with which of y/z BLOCK_MESH_RESOLUTION_BY_DIMENSION
-# actually subdivides by `cells` (1D: neither: both fixed at 1 cell; 2D:
-# y only, z fixed at 1; 3D: both) -- a fixed-at-1-cell direction is always
-# safe at its exact center regardless of resolution.
-_DOMAIN_YZ_EXTENT_BY_DIMENSION: dict[str, tuple[float, float]] = {
-    "1D": (0.1, 0.1),
-    "2D": (1.0, 0.05),
-    "3D": (1.0, 1.0),
-}
-_YZ_SUBDIVIDED_BY_DIMENSION: dict[str, tuple[bool, bool]] = {
-    "1D": (False, False),
-    "2D": (True, False),
-    "3D": (True, True),
-}
 
 
 def _phi_e_ref_point_yz(dimension: str, cells: int) -> tuple[float, float]:
@@ -100,12 +87,12 @@ def _phi_e_ref_point_yz(dimension: str, cells: int) -> tuple[float, float]:
     every resolution, not just the ones tested so far.
     """
     try:
-        y_extent, z_extent = _DOMAIN_YZ_EXTENT_BY_DIMENSION[dimension]
-        y_subdivided, z_subdivided = _YZ_SUBDIVIDED_BY_DIMENSION[dimension]
+        y_extent, z_extent = defaults.DOMAIN_YZ_EXTENT_BY_DIMENSION[dimension]
+        y_subdivided, z_subdivided = defaults.YZ_SUBDIVIDED_BY_DIMENSION[dimension]
     except KeyError as exc:
         raise ValueError(
             f"No phiERefPoint geometry known for dimension {dimension!r}; "
-            f"expected one of {sorted(_DOMAIN_YZ_EXTENT_BY_DIMENSION)}."
+            f"expected one of {sorted(defaults.DOMAIN_YZ_EXTENT_BY_DIMENSION)}."
         ) from exc
     ref_y = y_extent / 2 + (y_extent / (2 * cells) if y_subdivided else 0.0)
     ref_z = z_extent / 2 + (z_extent / (2 * cells) if z_subdivided else 0.0)
@@ -152,44 +139,6 @@ _DEFAULT_ECG_DOMAINS_BLOCK = """    ecgDomains
 def _archive_output_dir(case_root: Path) -> Path:
     return case_root / "archivedPostProcessing"
 
-
-def _replace_blockmesh_resolution(block_mesh_dict_path: Path, cells: int, dimension: str) -> None:
-    # NOT consolidated onto specs/common.py::replace_single_block_mesh_resolution
-    # (used by manufactured_fda.py/manufactured_eikonal_ecg.py/
-    # manufactured_monodomain_total_lagrangian_em.py): this bath+bidomain
-    # domain has 3 hex blocks, not 1, so it needs the more general
-    # any-"hex ("-line matching + exactly-3-replacements check below, not
-    # the single "hex (0 1 2 3 4 5 6 7)"-specific matcher those three share.
-    if not block_mesh_dict_path.exists():
-        raise FileNotFoundError(f"Missing mesh dictionary: {block_mesh_dict_path}")
-
-    try:
-        cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(cells=cells)
-    except KeyError as exc:
-        raise ValueError(f"Unsupported dimension: {dimension}") from exc
-
-    lines = block_mesh_dict_path.read_text().splitlines(keepends=True)
-    replaced = 0
-
-    with block_mesh_dict_path.open("w") as handle:
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("hex (") and not stripped.startswith("//"):
-                prefix, _, suffix = line.partition(") (")
-                if not suffix:
-                    handle.write(line)
-                    continue
-                _, _, trailing = suffix.partition(") simpleGrading")
-                handle.write(f"{prefix}) ({cell_counts}) simpleGrading{trailing}")
-                replaced += 1
-            else:
-                handle.write(line)
-
-    if replaced != 3:
-        raise KeyError(
-            f"Expected to update 3 hex blocks in {block_mesh_dict_path}, "
-            f"updated {replaced}."
-        )
 
 
 def _workflow_dag_for(
@@ -349,7 +298,11 @@ def _apply_case(
                 case_root / "system" / overlay_name,
             )
     else:
-        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+        try:
+            cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(cells=cells)
+        except KeyError as exc:
+            raise ValueError(f"Unsupported dimension: {dimension}") from exc
+        replace_block_mesh_resolutions(block_mesh_dict, cell_counts, expected_blocks=3)
 
     # The two FDA bidomain-with-bath variants differ in their outer bath
     # boundary conditions, and the dictionary has to follow the verifier or the
@@ -375,8 +328,8 @@ def _apply_case(
         ref_y, ref_z = _phi_e_ref_point_yz(dimension, cells)
         case_overrides.update(
             {
-                f"{bath_scope}.surfaceCurrentPatches.xMin": -_FDA_ALPHA,
-                f"{bath_scope}.surfaceCurrentPatches.xMax": _FDA_ALPHA,
+                f"{bath_scope}.surfaceCurrentPatches.xMin": -defaults.FDA_ALPHA,
+                f"{bath_scope}.surfaceCurrentPatches.xMax": defaults.FDA_ALPHA,
                 f"{bath_scope}.phiERefPoint": f"(-0.9 {ref_y} {ref_z})",
                 f"{bath_scope}.phiEReferenceValue": 0.0,
             }
@@ -394,7 +347,7 @@ def _apply_case(
         case_overrides.update(
             {
                 f"{bath_scope}.groundPatches.xMin": 0.0,
-                f"{bath_scope}.surfaceCurrentPatches.xMax": _FDA_ALPHA,
+                f"{bath_scope}.surfaceCurrentPatches.xMax": defaults.FDA_ALPHA,
             }
         )
 
@@ -482,96 +435,22 @@ def _run_case(
     try:
         subprocess.run(command, check=True)
     finally:
-        _archive_case_logs(case_root, case)
-    _stage_case_output(case_root, case)
-    if ecg_enabled:
-        _stage_case_ecg_outputs(case_root, case)
+        archive_case_logs(case_root, case.case_id)
 
-
-def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
-    log_files = sorted(path for path in case_root.glob("log.*") if path.is_file())
-    if not log_files:
-        return None
-
-    destination_root = case_root / "logs" / case.case_id
-    if destination_root.exists():
-        shutil.rmtree(destination_root)
-    destination_root.mkdir(parents=True, exist_ok=True)
-
-    for source in log_files:
-        shutil.copy2(source, destination_root / source.name)
-
-    print(f"Archived {len(log_files)} log file(s) for {case.case_id}: {destination_root}")
-    return destination_root
-
-
-def _stage_case_output(
-    case_root: Path,
-    case: CaseConfig,
-) -> Path:
-    # The manufactured verifiers write via Time::globalPath(), so their
-    # postProcessing/ output lands in the shared case dir under both serial
-    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
-    # is kept as a fallback only for output from an unrebuilt/older solver
-    # binary that predates that fix.
+    destination_dir = _archive_output_dir(case_root)
     filename = _case_output_filename(case)
-    destination_dir = _archive_output_dir(case_root)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination = destination_dir / filename
-    candidates = (
-        case_root / "postProcessing" / filename,
-        case_root / "processor0" / "postProcessing" / filename,
+    stage_post_processing_outputs(
+        case_root, destination_dir, {filename: filename}
     )
 
-    for candidate in candidates:
-        if not candidate.exists():
-            continue
-        if candidate != destination:
-            shutil.copy2(candidate, destination)
-            print(f"Archived bath manufactured output: {candidate} -> {destination}")
-        return destination
-
-    checked = ", ".join(str(path) for path in candidates)
-    raise FileNotFoundError(
-        f"Bath manufactured output '{filename}' not found after run. Checked: {checked}"
-    )
-
-
-def _stage_case_ecg_outputs(
-    case_root: Path,
-    case: CaseConfig,
-) -> list[Path]:
-    staged_outputs: list[Path] = []
-    destination_dir = _archive_output_dir(case_root)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-
-    ecg_outputs = (
-        ("BathECG", "torsoECG.dat"),
-        ("BathECG", "manufacturedBathECG.dat"),
-        ("BathECG", "manufacturedBathECGSummary.dat"),
-        ("PseudoECG", "pseudoECG.dat"),
-    )
-
-    for prefix, source_name in ecg_outputs:
-        destination = destination_dir / f"{prefix}_{case.case_id}_{source_name}"
-        candidates = (
-            case_root / "postProcessing" / source_name,
-            case_root / "processor0" / "postProcessing" / source_name,
-        )
-
-        for candidate in candidates:
-            if not candidate.exists():
-                continue
-            if candidate.parent == destination_dir:
-                shutil.move(str(candidate), str(destination))
-                print(f"Archived bath ECG output: {candidate} -> {destination} (moved)")
-            else:
-                shutil.copy2(candidate, destination)
-                print(f"Archived bath ECG output: {candidate} -> {destination}")
-            staged_outputs.append(destination)
-            break
-
-    return staged_outputs
+    if ecg_enabled:
+        ecg_mapping = {
+            "torsoECG.dat": f"BathECG_{case.case_id}_torsoECG.dat",
+            "manufacturedBathECG.dat": f"BathECG_{case.case_id}_manufacturedBathECG.dat",
+            "manufacturedBathECGSummary.dat": f"BathECG_{case.case_id}_manufacturedBathECGSummary.dat",
+            "pseudoECG.dat": f"PseudoECG_{case.case_id}_pseudoECG.dat",
+        }
+        stage_post_processing_outputs(case_root, destination_dir, ecg_mapping)
 
 
 def _collect_outputs(

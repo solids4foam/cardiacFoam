@@ -44,9 +44,14 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
 )
 from openfoam_driver.specs.common import (
-    replace_single_block_mesh_resolution,
+    replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
+    set_delta_t,
+)
+from openfoam_driver.specs.utils import (
+    archive_case_logs,
+    stage_post_processing_outputs,
 )
 from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
 
@@ -81,16 +86,6 @@ def _build_cases(
         )
     return cases
 
-
-def _replace_blockmesh_resolution(
-    block_mesh_dict_path: Path,
-    cells: int,
-    dimension: str,
-) -> None:
-    replace_single_block_mesh_resolution(
-        block_mesh_dict_path, cells, dimension,
-        resolution_by_dimension=defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION,
-    )
 
 
 def _workflow_dag_for(
@@ -207,7 +202,11 @@ def _apply_case(
             overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
             shutil.copy(overlay_source, case_root / "system" / overlay_name)
     else:
-        _replace_blockmesh_resolution(block_mesh_dict, cells, dimension)
+        try:
+            cell_counts = defaults.BLOCK_MESH_RESOLUTION_BY_DIMENSION[dimension].format(cells=cells)
+        except KeyError as exc:
+            raise ValueError(f"Unsupported dimension: {dimension}") from exc
+        replace_block_mesh_resolutions(block_mesh_dict, cell_counts)
 
     if grad_scheme is not None:
         update_foam_entry(
@@ -226,66 +225,7 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _archive_output_dir(case_root: Path) -> Path:
-    return case_root / "postProcessing"
 
-
-def _candidate_paths(case_root: Path, source_name: str) -> tuple[Path, ...]:
-    # The manufactured verifiers write via Time::globalPath(), so their
-    # postProcessing/ output lands in the shared case dir under both serial
-    # and parallel (./Allrun parallel) execution. processor0/postProcessing/
-    # is kept as a fallback only for output from an unrebuilt/older solver
-    # binary that predates that fix.
-    return (
-        case_root / "postProcessing" / source_name,
-        case_root / "processor0" / "postProcessing" / source_name,
-    )
-
-
-def _stage_case_outputs(
-    case_root: Path,
-    case: CaseConfig,
-) -> list[Path]:
-    staged_outputs: list[Path] = []
-    destination_dir = _archive_output_dir(case_root)
-    destination_dir.mkdir(parents=True, exist_ok=True)
-
-    for source_name in (
-        "eikonalECG.dat",
-        "manufacturedEikonalECG.dat",
-        "manufacturedEikonalECGSummary.dat",
-        "manufacturedEikonalActivationTime.dat",
-    ):
-        destination = destination_dir / f"{case.case_id}_{source_name}"
-        for candidate in _candidate_paths(case_root, source_name):
-            if not candidate.exists():
-                continue
-            if candidate.parent == destination_dir:
-                shutil.move(str(candidate), str(destination))
-            else:
-                shutil.copy2(candidate, destination)
-            print(f"Archived eikonal ECG output: {candidate} -> {destination}")
-            staged_outputs.append(destination)
-            break
-
-    return staged_outputs
-
-
-def _archive_case_logs(case_root: Path, case: CaseConfig) -> Path | None:
-    log_files = sorted(path for path in case_root.glob("log.*") if path.is_file())
-    if not log_files:
-        return None
-
-    destination_root = case_root / "logs" / case.case_id
-    if destination_root.exists():
-        shutil.rmtree(destination_root)
-    destination_root.mkdir(parents=True, exist_ok=True)
-
-    for source in log_files:
-        shutil.copy2(source, destination_root / source.name)
-
-    print(f"Archived {len(log_files)} log file(s) for {case.case_id}: {destination_root}")
-    return destination_root
 
 
 def _run_case(
@@ -322,10 +262,23 @@ def _run_case(
         command.append("--parallel")
 
     try:
-        subprocess.run(command, check=True)
+        subprocess.run(
+            command,
+            check=True,
+        )
     finally:
-        _archive_case_logs(case_root, case)
-    _stage_case_outputs(case_root, case)
+        archive_case_logs(case_root, case.case_id)
+
+    destination_dir = case_root / "postProcessing"
+    file_mapping = {
+        name: f"{case.case_id}_{name}" for name in (
+            "eikonalECG.dat",
+            "manufacturedEikonalECG.dat",
+            "manufacturedEikonalECGSummary.dat",
+            "manufacturedEikonalActivationTime.dat",
+        )
+    }
+    stage_post_processing_outputs(case_root, destination_dir, file_mapping, missing_ok=True)
 
 
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
