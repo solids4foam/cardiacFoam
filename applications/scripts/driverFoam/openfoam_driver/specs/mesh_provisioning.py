@@ -41,7 +41,7 @@ plugin; cardiacFoam's lives in
 `plugins/cardiacfoam/mesh_provisioning.py::provision_mesh`.
 
 The default `blockMeshDict` is generated fresh from our own template each
-time (like `system_templates.py`'s `build_control_dict`) -- there is no
+time (like the plugin's own `system_templates.py`) -- there is no
 pre-existing author file to parse or risk corrupting, so this does not need
 `mutators.py`'s `foamDictionary`-based mutation machinery (that's for patching
 values into an *already-written* file). `dx` (metres, isotropic cell size)

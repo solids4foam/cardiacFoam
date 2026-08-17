@@ -566,7 +566,7 @@ def build_and_launch(
     system_dir = case_dir / "system"
     system_dir.mkdir(parents=True, exist_ok=True)
 
-    from openfoam_driver.specs.system_templates import get_fv_schemes, get_fv_solution, build_control_dict
+    from openfoam_driver.plugins.cardiacfoam.system_templates import get_fv_schemes, get_fv_solution, build_control_dict
     myocardium_solver = electro_selectors.get("myocardiumSolver", "monodomainSolver")
 
     fv_schemes_path = system_dir / "fvSchemes"

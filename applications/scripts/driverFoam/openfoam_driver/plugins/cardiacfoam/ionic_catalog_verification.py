@@ -272,7 +272,7 @@ def _synthesize_case(case_dir: Path, model: str, entry: Any) -> None:
     # Every OpenFOAM application reads system/controlDict via createTime.H
     # before anything else, so the utility fatals without it even though it
     # needs no mesh. Found by the first live run, not by inspection.
-    from openfoam_driver.specs.system_templates import build_control_dict
+    from openfoam_driver.plugins.cardiacfoam.system_templates import build_control_dict
 
     (case_dir / "system" / "controlDict").write_text(build_control_dict())
 

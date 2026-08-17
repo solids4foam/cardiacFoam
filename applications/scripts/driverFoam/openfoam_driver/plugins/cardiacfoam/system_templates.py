@@ -16,10 +16,10 @@
 #     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Module
-#     system_templates
+#     plugins.cardiacfoam.system_templates
 #
 # Description
-#     Provides baseline OpenFOAM system dictionaries for different solvers.
+#     Baseline cardiacFoam system dictionaries, one set per myocardiumSolver.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -29,6 +29,12 @@
 
 These templates provide a clean starting point for generating cases from scratch.
 Overrides can be applied to them using standard driverFoam mechanisms.
+
+Every template here is cardiacFoam's: the controlDict names `cardiacFoam` as
+its application, and the schemes/solution sets are keyed on the fields each
+myocardiumSolver actually solves for (`Vm`, `psi`, `phiE`/`phiI`). That is why
+this module lives in the plugin rather than in `specs/` -- there is no
+solver-neutral fvSchemes to share.
 """
 
 from __future__ import annotations
