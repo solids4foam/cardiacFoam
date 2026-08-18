@@ -334,6 +334,79 @@ def test_tuple_predicate_matches_membership():
     assert len(required_errors) >= 1
 
 
+def test_applicable_when_matches_a_scope_prefixed_predicate_key():
+    """applicable_when keys are written in catalog form -- they carry the
+    leading "$ELECTRO_MODEL_COEFFS." scope token the same as any other
+    driver_path. The predicate lookup must strip that token before
+    comparing against context, which is always in slot_key (prefix-
+    stripped) form. Regression: before the fix, EVERY applicable_when
+    referencing a real driver_path -- not just the bare virtual
+    "$..._present"/"$..._supported" tokens -- silently never matched,
+    which is what made the restitutionEikonalSolver1D build drop its own
+    solver-specific keys without error."""
+    from openfoam_driver.specs.dict_builder import select_applicable_entries
+
+    entry = _entry(
+        "$ELECTRO_MODEL_COEFFS.gatedByPrefixedKey",
+        applicable_when={
+            "$ELECTRO_MODEL_COEFFS.verificationModel.type": (
+                "manufacturedFDABidomainVerifier",
+            ),
+        },
+    )
+    inactive = select_applicable_entries(
+        {"verificationModel.type": "manufacturedEikonalVerifier"}, entries=[entry],
+    )
+    assert inactive == []
+
+    active = select_applicable_entries(
+        {"verificationModel.type": "manufacturedFDABidomainVerifier"}, entries=[entry],
+    )
+    assert active == [entry]
+
+
+def test_applicable_when_matches_a_dynamic_placeholder_sibling_key():
+    """A dynamic_path entry's applicable_when may name a SIBLING leaf inside
+    the same <name>-templated block -- e.g. restitutionEikonalSolver1D's
+    useEdgeConductance gated on the sibling conductionSystemSolver leaf one
+    level up in the same conductionNetworkDomains.<name>.
+    purkinjeGraphModelCoeffs block. The predicate key still carries the
+    literal "<name>" placeholder while context carries the concrete
+    resolved instance name (e.g. "purkinjeNetwork"), so the two can never
+    be made equal by prefix-stripping alone -- the placeholder must be
+    treated as a wildcard and matched against any configured instance."""
+    from openfoam_driver.specs.dict_builder import select_applicable_entries
+
+    entry = _entry(
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>."
+        "purkinjeGraphModelCoeffs.useEdgeConductance",
+        dynamic_path=True,
+        applicable_when={
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>."
+            "purkinjeGraphModelCoeffs.conductionSystemSolver": (
+                "restitutionEikonalSolver1D",
+            ),
+        },
+    )
+    inactive = select_applicable_entries(
+        {
+            "conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs"
+            ".conductionSystemSolver": "eikonalSolver1D",
+        },
+        entries=[entry],
+    )
+    assert inactive == []
+
+    active = select_applicable_entries(
+        {
+            "conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs"
+            ".conductionSystemSolver": "restitutionEikonalSolver1D",
+        },
+        entries=[entry],
+    )
+    assert active == [entry]
+
+
 def test_validate_run_accepts_default_entries_for_backward_compat():
     """When no entries kwarg is supplied, validate_run uses the live
     catalog (existing public API contract)."""

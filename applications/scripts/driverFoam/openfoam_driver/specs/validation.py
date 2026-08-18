@@ -88,6 +88,15 @@ def primary_phase(entry) -> Phase | None:
 # needed to recognize and strip it.
 _SCOPE_TOKEN_PREFIX_RE = re.compile(r"^\$[A-Z][A-Z0-9_]*\.")
 
+# Same generic placeholder shape used by dynamic_path entries themselves
+# (see specs/dict_builder.py's _PLACEHOLDER_RE). A condition key can name a
+# *sibling* leaf inside the same dynamic block -- e.g.
+# ``conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.
+# conductionSystemSolver`` gating ``...useEdgeConductance`` in the same
+# block -- so predicate keys need the identical wildcard treatment that
+# entry driver_paths get, not just the "$SCOPE." prefix.
+_PLACEHOLDER_RE = re.compile(r"<[A-Za-z_][A-Za-z0-9_]*>")
+
 
 def slot_key(driver_path: str) -> str:
     """Map a driver_path to its slot key inside a phase slice.
@@ -172,10 +181,47 @@ def _predicate_matches(
     Scalar ``expected`` → equality. Tuple ``expected`` → membership.
     A missing key is treated as not-matching (the predicate's
     precondition is absent).
+
+    ``key`` is written in catalog form -- i.e. it may carry a leading
+    ``$SCOPE_TOKEN.`` (e.g. ``$ELECTRO_MODEL_COEFFS.``) and, for a
+    condition that names a sibling leaf inside a ``dynamic_path`` block
+    (e.g. ``conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.
+    conductionSystemSolver``), a ``<placeholder>`` segment. ``context``
+    keys are always in resolved slot-key form: prefix stripped, and any
+    placeholder replaced by the concrete instance name the caller
+    actually configured. Both transforms have to be undone before doing
+    the lookup, or the predicate can never match anything and silently
+    evaluates to "not applicable" -- which is exactly what happened to
+    every ``applicable_when`` gated on a real driver_path instead of a
+    bare virtual ``$..._present`` token (see the
+    restitutionEikonalSolver1D regression tests in
+    tests/plugins/cardiacfoam/test_dict_builder.py and
+    tests/plugins/cardiacfoam/test_validation.py for the case this was
+    found from).
     """
-    if key not in context:
+    resolved_key = slot_key(key)
+    if _PLACEHOLDER_RE.search(resolved_key):
+        # Sibling-leaf condition inside a dynamic block: the concrete
+        # instance name isn't known at this call site (applicability is
+        # evaluated once per catalog entry, not once per resolved
+        # instance), so treat the placeholder as a wildcard and match if
+        # ANY configured instance satisfies the condition.
+        pattern = _PLACEHOLDER_RE.sub(r"[^.]+", re.escape(resolved_key))
+        regex = re.compile(f"^{pattern}$")
+        return any(
+            regex.match(ctx_key)
+            and ctx_val not in (None, "")
+            and _value_matches(ctx_val, expected)
+            for ctx_key, ctx_val in context.items()
+        )
+    if resolved_key not in context:
         return False
-    actual = _normalise_word(context[key])
+    return _value_matches(context[resolved_key], expected)
+
+
+def _value_matches(actual: Any, expected: str | tuple[str, ...]) -> bool:
+    """Shared equality/membership check used by ``_predicate_matches``."""
+    actual = _normalise_word(actual)
     if isinstance(expected, tuple):
         return actual in tuple(_normalise_word(item) for item in expected)
     return actual == _normalise_word(expected)

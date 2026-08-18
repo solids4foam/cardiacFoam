@@ -1162,5 +1162,133 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
         self.assertIn("field uvc_transmural;", text)
 
 
+class TestRestitutionEikonalSolver1D(unittest.TestCase):
+    """Regression coverage for the conductionSystemSolver applicable_when
+    bug: selecting restitutionEikonalSolver1D must emit its own
+    solver-specific keys (useEdgeConductance, referenceConductance), not a
+    dict that is byte-identical to plain eikonalSolver1D apart from the
+    solver name.
+
+    Root cause was that select_applicable_entries never resolved the
+    "$SCOPE." prefix or the "<name>" placeholder on applicable_when
+    predicate keys before comparing them against the (prefix-stripped,
+    instance-resolved) context -- so any applicable_when that referenced a
+    real driver_path instead of a bare virtual "$..._present" token could
+    never match, silently dropping the gated entry regardless of context.
+    See openfoam_driver/specs/validation.py's _predicate_matches.
+    """
+
+    _NETWORK_NAME = "purkinjeNetwork"
+    _COUPLING_NAME = "pvj"
+
+    @classmethod
+    def _overrides(cls, conduction_system_solver: str) -> dict[str, str]:
+        purkinje = (
+            f"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.{cls._NETWORK_NAME}"
+            ".purkinjeGraphModelCoeffs"
+        )
+        coupling = (
+            f"$ELECTRO_MODEL_COEFFS.domainCouplings.{cls._COUPLING_NAME}"
+        )
+        return {
+            f"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.{cls._NETWORK_NAME}"
+            ".conductionSystemDomain": "purkinjeGraphModel",
+            f"{purkinje}.graphFile": "purkinjeGraph",
+            f"{purkinje}.purkinjeCV": "[0 1 -1 0 0 0 0] 2.0",
+            f"{purkinje}.vm1DRest": "-0.084",
+            f"{purkinje}.rootStimulus.node": "0",
+            f"{purkinje}.rootStimulus.startTime": "0.0",
+            f"{purkinje}.rootStimulus.duration": "0.0",
+            f"{purkinje}.rootStimulus.intensity": "0.0",
+            f"{purkinje}.outputVariables.export": "(activationTime)",
+            f"{coupling}.conductionNetworkDomain": cls._NETWORK_NAME,
+            f"{coupling}.couplingMode": "unidirectional",
+            f"{coupling}.electroDomainCoupler": "eikonalMonodomainPvjCoupler",
+            f"{purkinje}.conductionSystemSolver": conduction_system_solver,
+        }
+
+    def _build(self, conduction_system_solver: str) -> str:
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
+
+        return build_electro_properties(
+            {
+                "myocardiumSolver": "monodomainSolver",
+                "ionicModel": "BuenoOrovio",
+                "tissue": "epicardialCells",
+            },
+            overrides=self._overrides(conduction_system_solver),
+        )
+
+    def test_restitution_specific_keys_appear_in_applicable_entries(self) -> None:
+        """useEdgeConductance/referenceConductance must be selectable once
+        conductionSystemSolver=restitutionEikonalSolver1D is set -- not
+        silently dropped as inapplicable."""
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            resolve_context,
+            select_applicable_entries,
+        )
+
+        context = resolve_context(
+            {"myocardiumSolver": "monodomainSolver", "ionicModel": "BuenoOrovio",
+             "tissue": "epicardialCells"},
+            overrides=self._overrides("restitutionEikonalSolver1D"),
+        )
+        paths = {e.driver_path for e in select_applicable_entries(context)}
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>."
+            "purkinjeGraphModelCoeffs.useEdgeConductance",
+            paths,
+        )
+        self.assertIn(
+            "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>."
+            "purkinjeGraphModelCoeffs.referenceConductance",
+            paths,
+        )
+
+    def test_restitution_build_emits_solver_specific_keys(self) -> None:
+        """The synthesised dict must contain the restitution-only keys with
+        their typical_value fallback, keyed under the concrete instance
+        name (not the "<name>" template)."""
+        text = self._build("restitutionEikonalSolver1D")
+        self.assertIn("conductionSystemSolver restitutionEikonalSolver1D;", text)
+        self.assertIn("useEdgeConductance true;", text)
+        self.assertIn("referenceConductance 1.0;", text)
+
+    def test_restitution_build_differs_from_plain_eikonal_by_more_than_the_solver_name(self) -> None:
+        """The two builds must NOT be identical apart from the solver-name
+        line -- that was exactly the reported defect (a dict claiming to be
+        restitutionEikonalSolver1D while carrying none of what makes it
+        one)."""
+        restitution_lines = self._build("restitutionEikonalSolver1D").splitlines()
+        plain_lines = self._build("eikonalSolver1D").splitlines()
+
+        differing = sum(
+            1 for a, b in zip(restitution_lines, plain_lines) if a != b
+        )
+        self.assertGreater(
+            differing, 1,
+            "restitutionEikonalSolver1D and eikonalSolver1D builds differ "
+            f"by only {differing} line(s) -- restitution-specific keys are "
+            "being dropped again",
+        )
+        # useEdgeConductance/referenceConductance must be present in the
+        # restitution build and absent from the plain eikonalSolver1D build.
+        restitution_text = "\n".join(restitution_lines)
+        plain_text = "\n".join(plain_lines)
+        self.assertIn("useEdgeConductance", restitution_text)
+        self.assertNotIn("useEdgeConductance", plain_text)
+        self.assertIn("referenceConductance", restitution_text)
+        self.assertNotIn("referenceConductance", plain_text)
+
+    def test_plain_eikonalSolver1D_does_not_gain_restitution_keys(self) -> None:
+        """Non-regression: plain eikonalSolver1D must still NOT carry the
+        restitution-only keys (they must stay conditional, not become
+        unconditionally applicable)."""
+        text = self._build("eikonalSolver1D")
+        self.assertIn("conductionSystemSolver eikonalSolver1D;", text)
+        self.assertNotIn("useEdgeConductance", text)
+        self.assertNotIn("referenceConductance", text)
+
+
 if __name__ == "__main__":
     unittest.main()
