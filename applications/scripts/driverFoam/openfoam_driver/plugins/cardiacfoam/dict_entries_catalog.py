@@ -51,7 +51,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.activationThreshold',
             phases=frozenset({'solver'}),
-            description='Vm threshold (volts) used to detect cell activation onset. A cell is marked as activated when Vm crosses this value upward. Default 0.0 V (rest potential for most models).',
+            description='Vm threshold (V) to detect cell activation onset.',
             source_refs=('src/electroModels/electroDomains/myocardiumDomain/myocardiumDomain.C',),
             value_kind='scalar',
             typical_value='0.0',
@@ -139,14 +139,14 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.outputVariables.ionic.export',
             phases=frozenset({'solver'}),
-            description="Ionic variables exported to volumetric fields or trace output. Names are filtered against the active ionic model's state and algebraic-variable lists (model-dependent). 'Vm' and 'Iion' are aliased universally (resolve to the model's voltage state and total ionic current via ionicVariableCompatibility.C). Unknown names are silently dropped with a runtime warning at ionicModelIO.C:417. NOT consumed by eikonalSolver (no ionic model owned). 'activationTime' is NOT a valid ionic variable; it is a Purkinje conduction-system field.",
+            description="List of ionic variables exported to volumetric fields or trace output.",
             source_refs=('src/ionicModels/ionicModel/ionicModel.C', 'src/genericWriter/ionicModelIO.C', 'src/genericWriter/ionicVariableCompatibility.C'),
             value_kind='word_list',
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug',
             phases=frozenset({'solver'}),
-            description='Ionic variables printed in debug output. Same filtering and aliasing rules as outputVariables.ionic.export.',
+            description="List of ionic variables exported to volumetric fields or trace output.",
             source_refs=('src/ionicModels/ionicModel/ionicModel.C', 'src/genericWriter/ionicModelIO.C'),
             value_kind='word_list',
         ),
@@ -285,7 +285,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         entries=(
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.<scope>.scale.<constant_name>',
-            description="Scale an ionic model constant by a multiplicative factor. Use for drug effects, channelopathies, or ischaemia: e.g. halving IKr conductance for LQT2/hERG block. <scope> is 'global' (every cell) or a tissue scope; global is applied first, then the ONE tissue scope matching each cell's tissue. scale is applied before set; using both on the same constant is an error.",
+            description="Scale an ionic model constant by a multiplicative factor.",
             notes="<constant_name> must be EXACTLY a name from this model's 'constants' list in ionic_model_catalog.py -- an unknown name is a solver FatalError (ionicModelIO.C:245-255). Do NOT assume a prefix: naming differs per model. AC_-prefixed for AlievPanfilov, Courtemanche, Fabbri, Gaur, Grandi, PerisYague, Stewart, ToRORd_dynCl, Trovato; unprefixed for BuenoOrovio, TNNP and the FDA manufactured models; and TWorld is mixed (273 AC_* plus a bare gnalTissueScale). The split is by provenance -- CellML-generated constants carry AC_, hand-added ones do not -- so it grows over time. The catalog is verified against the built solver by test_ionic_catalog_live_verification.py.",
             value_kind='scalar',
             dynamic_path=True,
@@ -425,8 +425,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude',
-            description='Stimulus amplitude for the S1/S2 protocol.',
-            notes='Magnitude is model-class dependent. Full ionic models (TNNP, ORd, Grandi, Courtemanche, Fabbri, ...) use values around the typical_value below in pA. Phenomenological models (AlievPanfilov, BuenoOrovio) use dimensionless scaled values around 0.4-1.0; see ionic_model_catalog.IonicModelEntry.model_type to detect this case before using typical_value verbatim.',
+            description='Stimulus current amplitude for the S1/S2 protocol. Magnitude is model-dependent: full ionic models use physiological units (~60 pA), whereas phenomenological models require dimensionless values (0.4–1.0).',
             value_kind='scalar',
             required=True,
             constraints=('Required when myocardiumSolver=singleCellSolver.',),
@@ -631,18 +630,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             driver_path='$ELECTRO_MODEL_COEFFS.verificationModel.fdaBathVariant',
             source_refs=('src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainVerifier.C',),
             phases=frozenset({'physics'}),
-            description=(
-                'Which of the two FDA bidomain-with-bath boundary variants of section 3.3 '
-                'is being verified. groundElectrode applies a Dirichlet phiE = 0 at x = -1 '
-                'with a surface current +alpha at x = 2. electrodePair applies -alpha at '
-                'x = -1 and +alpha at x = 2 with no ground, whose integral over the boundary '
-                'vanishes so the problem stays solvable while phiE floats. The key also '
-                'selects the error metric: with an electrode pair the exact phiE carries an '
-                'arbitrary C(t), so phiE and phiI are compared after removing their '
-                'volume-weighted means. Configuring the boundary conditions and the metric '
-                'from one key prevents a case being solved as one variant and measured as '
-                'the other.'
-            ),
+            description='Which of the two FDA bidomain-with-bath boundary variants (groundElectrode or electrodePair) is being verified.',
             value_kind='enum',
             enum_values=('groundElectrode', 'electrodePair'),
             typical_value='groundElectrode',
@@ -814,7 +802,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.c0',
             phases=frozenset({'physics'}),
-            description="Wave-speed normalisation factor for the eikonal formulation, dimensions s^-1/2. Not itself a velocity: CV = c0*sqrt(conductivity/(chi*cm)). Distinct from the Purkinje-network $ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.purkinjeCV, which is a literal m/s conduction velocity -- the two used to share the bare key 'c0' at different dict scopes until the Purkinje side was renamed to purkinjeCV.",
+            description="Proportionality constant linking tissue conductivity to macroscopic conduction velocity in the Eikonal model, intrinsically defined by the ionic model's upstroke dynamics [s^(-1/2)].",
             source_refs=('src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.C', 'src/electroModels/myocardiumModels/eikonalSolver/eikonalSolver.H', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.H'),
             value_kind='dimensioned_scalar_literal',
             typical_value='[0 0 -0.5 0 0 0 0] 60',
@@ -825,7 +813,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.useGraphPrePopulation',
             phases=frozenset({'physics'}),
-            description='Whether to warm-start the eikonal activation-time field before the main nonlinear solve. When true (default), a parallel-safe Bellman-Ford relay propagates minimum arrival time outward from the stimulus/graph-constrained seed cells across face connectivity (using an upper-bound wave speed from the conductivity tensor) to initialise all other cells, instead of leaving them at the GREAT placeholder. Marked "Test flag" in the header; exists mainly to disable pre-population and compare cold-start convergence/robustness.',
+            description='Whether to warm-start the eikonal activation-time field before the main nonlinear solve.',
             source_refs=('src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C', 'src/electroModels/electroDomains/myocardiumDomain/eikonalMyocardiumDomain.H'),
             value_kind='boolean',
             typical_value='true',
@@ -870,7 +858,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.start',
             phases=frozenset({'physics'}),
-            description='Start of the Vm-response interpolation window [s] for eikonalECG. Usually 0. The tissue template lookup begins at this time.',
+            description='Start of the Vm-response interpolation window [s] for eikonalECG.',
             source_refs=('src/electroModels/ecgModels/eikonalECG/eikonalECG.C',),
             dynamic_path=True,
             required=True,
@@ -881,7 +869,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.end',
             phases=frozenset({'physics'}),
-            description='End of the Vm-response interpolation window [s] for eikonalECG. Must be >= action potential duration. Human ventricular AP: ~0.3–0.5 s. Must not exceed tissue template duration (~1.0 s). Setting this shorter than APD truncates repolarisation in the ECG.',
+            description='End of the Vm-response interpolation window [s] for eikonalECG.',
             source_refs=('src/electroModels/ecgModels/eikonalECG/eikonalECG.C',),
             dynamic_path=True,
             required=True,
@@ -892,7 +880,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.sampling.deltaT',
             phases=frozenset({'physics'}),
-            description='Time step of the Vm-response interpolation [s] for eikonalECG. Controls ECG output resolution; independent of the solver deltaT. Typical range: 0.001–0.005 s. Finer than 0.001 s has no benefit as the tissue templates are sampled at 0.1 ms resolution.',
+            description='Time step of the Vm-response interpolation window [s] for eikonalECG.',
             source_refs=('src/electroModels/ecgModels/eikonalECG/eikonalECG.C',),
             dynamic_path=True,
             required=True,
@@ -945,7 +933,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.checkQuadratureOrders',
             phases=frozenset({'physics'}),
-            description='List of quadrature orders used to compare manufactured pseudo-ECG reference convergence. Default when omitted: (6 12 24 48), set at pseudoECGManufacturedVerifier.C:363-367.',
+            description='List of quadrature orders used to compare manufactured pseudo-ECG reference convergence.',
             source_refs=('src/verificationModels/ecgVerification/pseudoECGManufacturedVerifier.C',),
             value_kind='label_list',
             dynamic_path=True,
@@ -1145,7 +1133,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.referenceConductance',
             phases=frozenset({'physics'}),
-            description='Reference conductance value used to normalize the edge conductances when scaling velocity.',
+            description="Reference conductance value used to normalize the edge conductances when scaling velocity. The solver divides the local graph conductance by this reference value to compute a 0-to-1 'health' ratio. If the graph already uses 0-to-1 units, set this to 1.0. If the graph uses raw physical units (e.g., 150.0 for healthy tissue), set this to that healthy baseline value.",
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.C',),
             value_kind='scalar',
             dynamic_path=True,
@@ -1155,19 +1143,21 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.apdNominal',
             phases=frozenset({'physics'}),
-            description='Nominal Action Potential Duration [ms] for multi-beat restitution dynamics.',
+            description='Nominal Action Potential Duration [s] used as the baseline for multi-beat restitution dynamics.',
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.H',),
             value_kind='scalar',
             dynamic_path=True,
+            typical_value='0.290',
             applicable_when={"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver": ("restitutionEikonalSolver1D",)},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.escapeInterval',
             phases=frozenset({'physics'}),
-            description='Funny current escape interval [ms] dictating spontaneous firing in absence of stimulus.',
+            description="Funny current escape interval [s] dictating the intrinsic spontaneous firing rate of the pacemaker cells in the absence of an external stimulus.",
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.H',),
             value_kind='scalar',
             dynamic_path=True,
+            typical_value='1.1',
             applicable_when={"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver": ("restitutionEikonalSolver1D",)},
         ),
         DictEntry(
@@ -1194,7 +1184,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.purkinjeCV',
             phases=frozenset({'physics'}),
-            description="Purkinje conduction velocity [m/s] -- a literal speed, used directly as edgeLength/purkinjeCV for every graph edge. NOT the same quantity as the top-level $ELECTRO_MODEL_COEFFS.c0, which has dimensions s^-1/2 and only becomes a velocity via c0*sqrt(M). Formerly this key was also named 'c0', sharing a bare name with the myocardium parameter at a different dict scope with a different dimension set; it was renamed to purkinjeCV to remove the ambiguity (old tutorials/cases must be updated -- there is no runtime fallback for the old key). Human Purkinje CV is 2-4 m/s.",
+            description="Purkinje conduction velocity [m/s].",
             source_refs=('src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C', 'src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.H'),
             notes='Hard lookup (dimensionedScalar) -- fatal if absent when conductionSystemSolver is eikonalSolver1D. Not read by monodomain1DSolver or restitutionEikonalSolver1D, which derives CV from the restitution curve.',
             value_kind='dimensioned_scalar_literal',
@@ -1325,7 +1315,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.outputVariables.export',
             phases=frozenset({'solver'}),
-            description="Word list of variables written to postProcessing/purkinjeNetwork.dat. Note the FLAT layout — this dict has 'export' and 'debug' directly inside outputVariables, with NO 'ionic' sub-block (unlike the myocardium-side outputVariables.ionic.export). Valid tokens are a hardcoded set: Vm, Iion, activationTime, IcouplingSource, IcouplingCurrent. Unknown tokens are silently dropped without a warning — see the if/else ladder in conductionSystemDomain.C. Default: (Vm IcouplingSource).",
+            description="List of variables written to postProcessing/purkinjeNetwork.dat.",
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='word_list',
             dynamic_path=True,
@@ -1386,7 +1376,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         entries=(
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.activeTensionModel',
-            description="Active-tension model selector. Read as a flat word entry directly inside <solver>Coeffs — there is no 'activeTensionModel { ... }' sub-block in the real dicts. Currently only singleCellSolver constructs an activeTensionModel from electroProperties (electroProperties().found('activeTensionModel') / activeTensionModel::New(electroProperties(), ...) in singleCellSolver.C). The electro-mechanical coupling path reads the identically-named flat key from the separate electroMechanicalProperties file (sequentialElectroMechanical.C), which this catalog does not cover.",
+            description="Active-tension model selector.",
             source_refs=('src/activeTensionModels/activeTensionModel/activeTensionModel.C', 'src/electroModels/myocardiumModels/singleCellSolver/singleCellSolver.C'),
             value_kind='enum',
             enum_values=('GoktepeKuhl', 'NashPanfilov', 'LandNiederer', 'GoktepeKuhlBatched', 'NashPanfilovBatched', 'LandNiedererBatched', 'ManufacturedElectromechanics'),
@@ -1424,7 +1414,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.preconditioningTime',
-            description="Milliseconds of ODE preconditioning run at constant Ca_i (from the ionic model's resting value) and lambda=1, lambda_rate=0 before the real solve starts, to equilibrate the active-tension model's state variables (e.g. LandNiederer's Ca_TRPN/XS) to the ionic model's true resting Ca_i. The shipped initial conditions are the equilibrium at Ca_i=0, so without this a nonzero resting Ca_i produces a spurious global Ta transient at t=0 in every cell simultaneously (see LandNiederer::preconditionToRestingState).",
+            description="Duration (ms) of the ODE preconditioning run used to equilibrate the active-tension model's state variables.",
             source_refs=('src/activeTensionModels/LandNiederer/LandNiederer.C',),
             value_kind='scalar',
             unit='ms',
