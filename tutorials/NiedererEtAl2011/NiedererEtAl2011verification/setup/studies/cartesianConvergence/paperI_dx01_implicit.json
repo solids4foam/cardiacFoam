@@ -1,9 +1,0 @@
-{
-  "niederer2012": {
-    "solvers": ["implicit"],
-    "dx_values": [0.1],
-    "dt_values": [0.01, 0.005, 0.001],
-    "end_time_by_dx": {"0.1": 0.055},
-    "output_dir_name": "postProcessingPaperI_dx01_implicit"
-  }
-}
