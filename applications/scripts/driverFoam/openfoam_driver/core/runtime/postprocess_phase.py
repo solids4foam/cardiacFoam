@@ -59,9 +59,14 @@ pieces on purpose:
   is purely deterministic and has no task concept; the task only enters at
   this hand-off, where reasoning actually happens. It currently does no
   real analysis (`run_postprocessing_module` returns a stub outcome), but
-  it does discover each case's own setup/ postprocessing script via
-  `find_postprocess_script` -- real dispatch (run that script, or reason
-  freely when there isn't one) lands here next.
+  it does list each case's own setup/ postprocessing script catalog via
+  `list_postprocess_scripts` -- real dispatch (run whichever cataloged
+  script fits the task, or reason freely when none does) lands here next.
+
+Every cataloged script carries a standard description (`PostprocessScriptInfo`
+-- path, function_name, description), read statically from its docstring so
+a reasoning agent can judge whether a script applies to the task at hand
+without running or even fully reading it first.
 
 The module isn't limited to the flat summary in `SweepContext`, though.
 `read_case_workflow_state` and `read_case_output_file` let it (or a
@@ -73,6 +78,7 @@ the brain already verified: both raise clearly on an unknown case_id, and
 """
 from __future__ import annotations
 
+import ast
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -238,41 +244,88 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
     )
 
 
-def find_postprocess_script(setup_root: Path) -> Path | None:
-    """Discover whether a tutorial's setup/ directory has its own
-    postprocessing script, by the PostprocessingProtocol convention: a
-    top-level .py file defining `def run_postprocessing(`.
+@dataclass(frozen=True)
+class PostprocessScriptInfo:
+    path: str
+    function_name: str
+    description: str
 
-    Static text search only -- never imports or executes the candidate
-    file. setup/ scripts are untrusted tutorial content, not driver code;
-    discovery must not run arbitrary code as a side effect of looking.
-    Returns the first match in sorted (deterministic) order, or None if the
-    directory doesn't exist or no file matches.
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "function_name": self.function_name,
+            "description": self.description,
+        }
+
+
+def _describe_postprocess_function(tree: ast.Module) -> tuple[str, str] | None:
+    """Find the run_postprocessing() function node and its docstring.
+
+    Returns (function_name, description) or None if no such function is
+    defined at module level. Falls back to the module's own docstring when
+    the function itself has none, since several kept tutorial scripts
+    (table_summary.py) document themselves that way instead.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "run_postprocessing":
+            doc = ast.get_docstring(node)
+            if not doc:
+                doc = ast.get_docstring(tree)
+            return "run_postprocessing", (doc.strip() if doc else "(no description provided)")
+    return None
+
+
+def list_postprocess_scripts(setup_root: Path) -> tuple[PostprocessScriptInfo, ...]:
+    """The catalog: every setup/ script exposing a run_postprocessing()
+    function, each with a standard description -- so the postprocessing
+    module (or a reasoning agent) can see what's *available* and judge
+    whether it applies, before running or reading anything further.
+
+    Descriptions are read statically via `ast` (module/function docstrings)
+    -- never imports or executes a candidate file, since setup/ scripts are
+    untrusted tutorial content, not driver code. A script that fails to
+    parse (SyntaxError) is skipped rather than breaking the whole catalog;
+    that mirrors this codebase's "cataloging is best-effort" convention
+    (see registry.py's _registered_tutorial_entry).
     """
     setup_root = Path(setup_root)
     if not setup_root.is_dir():
-        return None
+        return ()
+
+    catalog: list[PostprocessScriptInfo] = []
     for path in sorted(setup_root.glob("*.py")):
         try:
-            text = path.read_text()
+            source = path.read_text()
         except OSError:
             continue
-        if "def run_postprocessing(" in text:
-            return path
-    return None
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            continue
+        described = _describe_postprocess_function(tree)
+        if described is None:
+            continue
+        function_name, description = described
+        catalog.append(PostprocessScriptInfo(
+            path=str(path), function_name=function_name, description=description,
+        ))
+    return tuple(catalog)
 
 
 def run_postprocessing_module(context: SweepContext, *, task: str) -> PostprocessOutcome:
     """Placeholder postprocessing module. Still no real analysis -- but now
     driven entirely by the brain's grounded SweepContext plus the task it
-    was asked to do. Discovers (does not yet invoke) each case's own
-    postprocessing script, if its tutorial has one under setup/ -- real
-    dispatch (run the script, or reason freely if there isn't one) lands
-    here next."""
+    was asked to do. Lists (does not yet invoke) each case's setup/
+    postprocessing script catalog -- real dispatch (run whichever script
+    fits the task, or reason freely when none does) lands here next."""
     case_summaries = []
     for case in context.cases:
-        script = find_postprocess_script(Path(case.setup_root)) if case.setup_root else None
-        found = f"found {script.name}" if script is not None else "no setup/ script"
+        catalog = list_postprocess_scripts(Path(case.setup_root)) if case.setup_root else ()
+        if catalog:
+            names = ", ".join(Path(info.path).name for info in catalog)
+            found = f"{len(catalog)} script(s) in catalog: {names}"
+        else:
+            found = "no setup/ scripts in catalog"
         case_summaries.append(f"{case.case_id}: {found}, {len(case.output_files)} file(s)")
     return PostprocessOutcome(
         status="stub",

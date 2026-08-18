@@ -212,6 +212,13 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
 
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
+    """Plot 3D activation-time surfaces across the benchmark's 9 probe points.
+
+    Reads every `points*.csv` in output_dir (one per swept case), and for
+    each of the 9 benchmark probe points (excluding the earliest-activated
+    one, used as the stimulus reference) draws a 3D surface of activation
+    time over the swept dx/dt grid. Writes activation_surfaces_3d.html.
+    """
     del setup_root
     output_html = plot_3d_points_and_grid(output_dir, show=False)
     if output_html is None:

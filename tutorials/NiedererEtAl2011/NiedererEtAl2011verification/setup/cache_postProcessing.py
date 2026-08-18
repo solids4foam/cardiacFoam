@@ -54,6 +54,15 @@ def run_postprocessing(
     cache_output_subdir: str = "cachedPostProcessing",
     **_: object,
 ):
+    """Copy every completed case's cached point/line probe CSVs into output_dir.
+
+    driverFOAM sweeps each case into its own directory, but the other
+    postprocessing scripts here (line_postProcessing.py,
+    points_postProcessing.py, table_summary.py) expect all cases' CSVs
+    together in one folder to compare across the dx/dt grid. This gathers
+    them from setup_root's own cache (cachedCasePostProcessing/<case_id>/)
+    into output_dir/cachedPostProcessing/ before those scripts run.
+    """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 

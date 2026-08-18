@@ -313,6 +313,14 @@ def run_postprocessing(
     excel_path: str | None = None,
     **_: object,
 ):
+    """Plot activation time along the benchmark's diagonal probe line.
+
+    Reads every `*line*.csv` in output_dir (one per swept case), shades
+    traces by dx/dt, and -- when excel_path points at the digitized
+    Niederer et al. 2012 reference curves -- overlays them for comparison.
+    Writes cardiacFoam_allSimulations.html (every case) and
+    Niederer_vs_cardiacFoam.html (cases matching the reference's dt only).
+    """
     del setup_root
     plot_line_csvs(folder=output_dir, excel_path=excel_path, show=False)
     artifacts: list[dict[str, Any]] = [

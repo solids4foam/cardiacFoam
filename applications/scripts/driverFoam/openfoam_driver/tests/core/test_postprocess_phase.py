@@ -46,7 +46,8 @@ from openfoam_driver.core.runtime.postprocess_phase import (
     PostprocessOutcome,
     SweepContext,
     build_sweep_context,
-    find_postprocess_script,
+    list_postprocess_scripts,
+    PostprocessScriptInfo,
     read_case_output_file,
     read_case_workflow_state,
     run_postprocess_phase,
@@ -236,50 +237,94 @@ class BuildSweepContextTests(unittest.TestCase):
             self.assertEqual(context.failed_count, 1)
 
 
-class FindPostprocessScriptTests(unittest.TestCase):
-    def test_finds_script_defining_run_postprocessing(self) -> None:
+class ListPostprocessScriptsTests(unittest.TestCase):
+    def test_catalogs_script_with_function_docstring(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             setup_root = Path(tmp)
             (setup_root / "table_summary.py").write_text(
+                "def run_postprocessing(*, output_dir, **kwargs):\n"
+                '    """Activation time summary table."""\n'
+                "    return []\n"
+            )
+            catalog = list_postprocess_scripts(setup_root)
+            self.assertEqual(len(catalog), 1)
+            info = catalog[0]
+            self.assertIsInstance(info, PostprocessScriptInfo)
+            self.assertEqual(info.path, str(setup_root / "table_summary.py"))
+            self.assertEqual(info.function_name, "run_postprocessing")
+            self.assertEqual(info.description, "Activation time summary table.")
+
+    def test_falls_back_to_module_docstring_when_function_has_none(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "table_summary.py").write_text(
+                '"""table_summary.py -- module-level description."""\n'
+                "def run_postprocessing(*, output_dir, **kwargs):\n"
+                "    return []\n"
+            )
+            catalog = list_postprocess_scripts(setup_root)
+            self.assertEqual(catalog[0].description, "table_summary.py -- module-level description.")
+
+    def test_reports_no_description_when_neither_is_present(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "bare.py").write_text(
                 "def run_postprocessing(*, output_dir, **kwargs):\n    return []\n"
             )
-            self.assertEqual(
-                find_postprocess_script(setup_root),
-                setup_root / "table_summary.py",
-            )
+            catalog = list_postprocess_scripts(setup_root)
+            self.assertEqual(catalog[0].description, "(no description provided)")
 
-    def test_returns_none_when_no_script_matches(self) -> None:
+    def test_catalogs_every_matching_script_not_just_the_first(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "z_script.py").write_text(
+                'def run_postprocessing():\n    """Z script."""\n    pass\n'
+            )
+            (setup_root / "a_script.py").write_text(
+                'def run_postprocessing():\n    """A script."""\n    pass\n'
+            )
+            catalog = list_postprocess_scripts(setup_root)
+            self.assertEqual([info.path for info in catalog], [
+                str(setup_root / "a_script.py"),
+                str(setup_root / "z_script.py"),
+            ])
+
+    def test_excludes_scripts_without_run_postprocessing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             setup_root = Path(tmp)
             (setup_root / "helpers.py").write_text("def not_it():\n    pass\n")
-            self.assertIsNone(find_postprocess_script(setup_root))
+            self.assertEqual(list_postprocess_scripts(setup_root), ())
 
-    def test_returns_none_for_nonexistent_directory(self) -> None:
-        self.assertIsNone(find_postprocess_script(Path("/no/such/setup/dir")))
+    def test_empty_for_nonexistent_directory(self) -> None:
+        self.assertEqual(list_postprocess_scripts(Path("/no/such/setup/dir")), ())
 
-    def test_picks_first_match_in_sorted_order(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            setup_root = Path(tmp)
-            (setup_root / "z_script.py").write_text("def run_postprocessing(): pass\n")
-            (setup_root / "a_script.py").write_text("def run_postprocessing(): pass\n")
-            self.assertEqual(
-                find_postprocess_script(setup_root),
-                setup_root / "a_script.py",
-            )
-
-    def test_never_imports_the_candidate_file(self) -> None:
-        # A syntax error would only surface on import/exec -- a pure text
-        # search must not choke on it, since setup/ scripts are untrusted
-        # tutorial content the brain should never execute just to look.
+    def test_skips_unparseable_script_without_breaking_the_catalog(self) -> None:
+        # A syntax error must not crash cataloging for every other script in
+        # the same setup/ directory -- setup/ scripts are untrusted tutorial
+        # content, and one broken file shouldn't hide the rest.
         with tempfile.TemporaryDirectory() as tmp:
             setup_root = Path(tmp)
             (setup_root / "broken.py").write_text(
                 "def run_postprocessing(:\n    this is not valid python\n"
             )
-            self.assertEqual(
-                find_postprocess_script(setup_root),
-                setup_root / "broken.py",
+            (setup_root / "good.py").write_text(
+                'def run_postprocessing():\n    """Fine."""\n    pass\n'
             )
+            catalog = list_postprocess_scripts(setup_root)
+            self.assertEqual([info.path for info in catalog], [str(setup_root / "good.py")])
+
+    def test_to_json_round_trips(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "table_summary.py").write_text(
+                'def run_postprocessing():\n    """Doc."""\n    pass\n'
+            )
+            info = list_postprocess_scripts(setup_root)[0]
+            self.assertEqual(info.to_json(), {
+                "path": str(setup_root / "table_summary.py"),
+                "function_name": "run_postprocessing",
+                "description": "Doc.",
+            })
 
 
 class RunPostprocessingModuleTests(unittest.TestCase):
@@ -314,7 +359,7 @@ class RunPostprocessingModuleTests(unittest.TestCase):
         self.assertIn("case_a", outcome.message)
         self.assertIn("1/1 completed", outcome.message)
         self.assertIn("check convergence", outcome.message)
-        self.assertIn("no setup/ script", outcome.message)
+        self.assertIn("no setup/ scripts in catalog", outcome.message)
 
     def test_discovers_case_setup_root_postprocess_script(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -348,7 +393,7 @@ class RunPostprocessingModuleTests(unittest.TestCase):
 
             outcome = run_postprocessing_module(context, task="summarize")
 
-            self.assertIn("found table_summary.py", outcome.message)
+            self.assertIn("1 script(s) in catalog: table_summary.py", outcome.message)
 
 
 class OnDemandQueryTests(unittest.TestCase):
