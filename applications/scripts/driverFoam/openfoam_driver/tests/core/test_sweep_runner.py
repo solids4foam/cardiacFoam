@@ -184,8 +184,10 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
     # reproduces -- hex workflow_dags have no "clean" step, so
     # case_root/postProcessing/ persists and accumulates across sequential
     # cases sharing one case_root. Each case's own new/changed file must land
-    # under case_root/<archive_dir_name>/<case_id>/, distinctly, without
-    # needing the tutorial's own bespoke staging code.
+    # inside that case's own output_dir_name folder (workflow_state_path's
+    # parent, the same directory workflow_state.json lives in) under
+    # <archive_dir_name>/, distinctly, without needing the tutorial's own
+    # bespoke staging code or a separate cache location.
     spec_path = tmp_path / "sweep.json"
     spec = {
         "base": {"entry": "niederer2012", "archive_dir_name": "sweepCases"},
@@ -201,6 +203,7 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
     (case_root / "postProcessing").mkdir(parents=True)
 
     call_order = []
+    case_output_dirs: dict[int, Path] = {}
     fake_case_config = mock.Mock(case_id="dx0.5")
     fake_spec = mock.Mock()
     fake_spec.case_root = case_root
@@ -217,14 +220,16 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
 
     def fake_subprocess_run(cmd, **kwargs):
         call_order.append("run")
+        n = len([c for c in call_order if c == "run"])
         run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
         run_doc = json.loads(run_doc_path.read_text())
-        workflow_state_path = Path(run_doc["launch"]["outputDir"]) / "workflow_state.json"
+        output_dir_for_case = Path(run_doc["launch"]["outputDir"])
+        case_output_dirs[n] = output_dir_for_case
+        workflow_state_path = output_dir_for_case / "workflow_state.json"
         workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
         workflow_state_path.write_text(json.dumps({"status": "completed"}))
         # Simulate the solver writing this case's own deterministically-named
         # output into the SHARED case_root's postProcessing/ dir.
-        n = len([c for c in call_order if c == "run"])
         (case_root / "postProcessing" / f"case_{n}.dat").write_text(f"result {n}")
         return mock.Mock(returncode=0, stdout="", stderr="")
 
@@ -234,11 +239,12 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
         result = sweep_run(spec_path, output_dir=output_dir)
 
     assert result["completed_count"] == 2
-    archive_dir = case_root / "sweepCases"
-    assert (archive_dir / "0.5" / "case_1.dat").read_text() == "result 1"
-    assert (archive_dir / "0.2" / "case_2.dat").read_text() == "result 2"
-    # Organized by ran case, not a flat merge.
-    assert sorted(p.name for p in archive_dir.iterdir()) == ["0.2", "0.5"]
+    # Each case's archived output lands inside that case's own output_dir --
+    # the same directory workflow_state.json lives in -- not a separate
+    # shared cache keyed by case_id.
+    assert (case_output_dirs[1] / "sweepCases" / "case_1.dat").read_text() == "result 1"
+    assert (case_output_dirs[2] / "sweepCases" / "case_2.dat").read_text() == "result 2"
+    assert case_output_dirs[1] != case_output_dirs[2]
 
 
 def test_sweep_plan_materializes_and_audits_each_case_for_real(tmp_path):

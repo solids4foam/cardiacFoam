@@ -366,13 +366,18 @@ def sweep_run(
                 plan_error = str(exc)
             else:
                 if plan_error is None:
-                    # Entry-mode cases sharing one case_root (needed so a
-                    # shared archive_dir_name accumulates every case's raw
-                    # output, organized one subfolder per case_id, for
-                    # aggregate.py-style readers) all write to the same
-                    # case_root/postProcessing/ -- snapshot it now so
-                    # collect_new_outputs below can tell this case's own
-                    # new/changed output apart from anything left over.
+                    # Entry-mode cases share one case_root, so OpenFOAM's own
+                    # output (mesh, solved field time-dirs, postProcessing/)
+                    # all lands in that one shared case_root/postProcessing/
+                    # -- overwritten by each subsequent case, since OpenFOAM
+                    # itself has no notion of driverFOAM's per-case
+                    # output_dir_name. Snapshot it now so collect_new_outputs
+                    # below (called once this case's own output_dir is known)
+                    # can tell this case's own new/changed output apart from
+                    # anything left over, and archive it into that same
+                    # case's own output_dir_name folder -- the same directory
+                    # workflow_state.json lives in -- so nothing needs a
+                    # separate cache location to find it later.
                     archive_dir_name = base.get("archive_dir_name") if entry is not None else None
                     pp_before: dict[str, tuple[float, int]] = {}
                     if archive_dir_name:
@@ -402,12 +407,12 @@ def sweep_run(
                             status = "failed"
                         else:
                             status = "pending"
-                        if archive_dir_name:
+                        if archive_dir_name and workflow_state_path.exists():
                             collect_new_outputs(
                                 case_root_for_archive,
                                 pp_before,
-                                case_root_for_archive / archive_dir_name,
-                                case_id=case.case_id,
+                                workflow_state_path.parent / archive_dir_name,
+                                label=case.case_id,
                             )
             if status == "completed":
                 completed_count += 1

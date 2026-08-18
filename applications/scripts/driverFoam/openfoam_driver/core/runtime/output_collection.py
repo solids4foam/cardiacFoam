@@ -39,14 +39,15 @@ never needs to be taught about it, because it doesn't key off filenames or
 solver type at all.
 
 Instead: snapshot what's under postProcessing/ before a case runs, diff
-against what's there after, and archive whatever is new or changed under
-that case's own case_id subfolder. That is "this case's output" by
+against what's there after, and archive whatever is new or changed into a
+destination directory the caller chooses. That is "this case's output" by
 construction, regardless of which solver, ionic model, or functionObject
-produced it, or whether driverFOAM has ever heard of it -- and organizing by
-case_id (not a flat merge) means which case produced what is never
-ambiguous, and a cross-case name collision (two cases writing the same
-non-case-qualified functionObject name) is structurally impossible rather
-than merely detected.
+produced it, or whether driverFOAM has ever heard of it. Callers should pass
+a destination that is already unique to this case -- typically the case's
+own output_dir_name folder, the same directory workflow_state.json lives in
+-- so which case produced what is never ambiguous and a cross-case name
+collision (two cases writing the same non-case-qualified functionObject
+name) is structurally impossible rather than merely detected.
 
 For a case whose workflow_dag actually cleans first (tet mesh_family's
 "clean" -> Allclean step), postProcessing/ genuinely doesn't exist yet at
@@ -95,26 +96,27 @@ def snapshot_postprocessing(case_root: Path) -> dict[str, tuple[float, int]]:
 def collect_new_outputs(
     case_root: Path,
     before: dict[str, tuple[float, int]],
-    archive_dir: Path,
+    destination_dir: Path,
     *,
-    case_id: str,
+    label: str = "",
 ) -> list[Path]:
     """Copy every file under postProcessing/ that is new or changed since
-    `before` into archive_dir/<case_id>/, preserving its path relative to
+    `before` into destination_dir, preserving its path relative to
     postProcessing/. Returns the list of archived destination paths.
 
-    Organizing by case_id (rather than a flat merge) means which case
-    produced what is never ambiguous, and makes a cross-case name collision
-    structurally impossible even for a functionObject name that isn't
-    case-parameter-qualified.
+    `destination_dir` is the caller's responsibility to make unique to this
+    case (e.g. that case's own output_dir_name folder) -- this function does
+    not append any case identifier itself. `label` is used only in the
+    collision error message below, to help a human tell which case's
+    archiving call raised it.
 
-    Raises OutputCollisionError if a destination already exists under this
-    same case_id's own subfolder with genuinely different content -- e.g. a
-    retry racing a partial prior attempt for the same case. Re-running to
-    identical content is not a collision.
+    Raises OutputCollisionError if a destination already exists with
+    genuinely different content -- e.g. a retry racing a partial prior
+    attempt for the same case. Re-running to identical content is not a
+    collision.
     """
     root = Path(case_root) / "postProcessing"
-    case_archive_dir = Path(archive_dir) / case_id
+    destination_root = Path(destination_dir)
     if not root.is_dir():
         return []
 
@@ -128,15 +130,15 @@ def collect_new_outputs(
             if before.get(relpath) == current:
                 continue  # unchanged leftover from before this case ran
 
-            destination = case_archive_dir / relpath
+            destination = destination_root / relpath
             if destination.exists():
                 if filecmp.cmp(source, destination, shallow=False):
                     continue  # identical rerun, nothing new to archive
                 raise OutputCollisionError(
-                    f"{relpath!r} already exists under case_id={case_id!r} in "
-                    f"{case_archive_dir} with different content -- likely a "
-                    "retry racing a partial prior attempt for this case. "
-                    "Refusing to overwrite."
+                    f"{relpath!r} already exists in {destination_root} "
+                    f"({label or 'no label given'}) with different content -- "
+                    "likely a retry racing a partial prior attempt for this "
+                    "case. Refusing to overwrite."
                 )
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
