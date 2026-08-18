@@ -585,9 +585,14 @@ def run_postprocessing(
     setup_root: str | None = None,
     **kwargs,
 ) -> list:
-    """PostprocessTask-compatible entry point for the openfoam_driver framework.
+    """run_postprocessing entry point matching openfoam_driver.postprocessing's
+    PostprocessingProtocol shape (output_dir, setup_root, **kwargs) -> list[dict].
 
-    Called by the driver engine after all S1–S2 simulations complete.
+    Not currently invoked automatically -- driverFOAM has no post-DAG hook
+    calling this (openfoam_driver.postprocessing.driver, which used to wire
+    tutorial postprocessing functions into the run engine, was removed
+    2026-08-18 after being found unreachable). Run manually against a
+    completed sweep's output_dir until a replacement hand-off exists.
     Expected kwargs:
         ionic_models  (list[str])        - Models to post-process.
         tissue_map    (dict[str, list])  - Tissue types per ionic model.

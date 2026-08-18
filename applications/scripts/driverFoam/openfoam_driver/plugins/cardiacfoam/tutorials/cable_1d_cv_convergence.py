@@ -36,7 +36,6 @@ from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import cable_1d_cv_convergence as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -173,22 +172,6 @@ def _run_case(
     )
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
-        strict_artifacts=strict_artifacts,
-        tasks=[PostprocessTask(module_relpath=table_summary_relpath)],
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -275,11 +258,6 @@ def make_spec(
             parallel=parallel,
         ),
         collect_outputs=None,
-        postprocess=partial(
-            _postprocess,
-            table_summary_relpath=table_summary_path,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "python": sys.executable,
             "expected_artifacts": [],

@@ -35,7 +35,6 @@ from pathlib import Path
 from itertools import product
 
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
 )
@@ -141,27 +140,6 @@ def _collect_outputs(case_root: Path, output_dir: Path, case: CaseConfig) -> Non
         shutil.copy2(diag, case_output / "coupling_diagnostics.csv")
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    strict_artifacts: bool = False,
-) -> None:
-    # We use a subprocess directly because the original post-processing script
-    # expects `--output-dir` and does not export a single entrypoint function
-    # that conforms to driverFoam's PostprocessTask kwargs convention easily.
-    import subprocess
-    post_proc_script = setup_root / "post_processing_coupled_1D3D.py"
-    if not post_proc_script.exists():
-        print(f"WARN: post-processing script not found at {post_proc_script}")
-        return
-    
-    subprocess.run(
-        ["python3", str(post_proc_script), "--output-dir", str(output_dir)],
-        check=True
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -205,10 +183,6 @@ def make_spec(
         ),
         run_case=_run_case,
         collect_outputs=lambda c_root, o_dir, case: _collect_outputs(c_root, o_dir, case),
-        postprocess=partial(
-            _postprocess,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "notes": "Manufactured coupled 1D-3D monodomain convergence benchmark",
             "workflow_dag": {

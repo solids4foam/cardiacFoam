@@ -37,7 +37,6 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -490,29 +489,6 @@ def _collect_outputs(
         print(f"Copied archived logs -> {destination_logs}")
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    tutorial_name: str = defaults.TUTORIAL_NAME,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=tutorial_name,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-            )
-        ],
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -631,13 +607,6 @@ def make_spec(
             ecg_enabled=ecg_enabled,
         ),
         collect_outputs=partial(_collect_outputs, ecg_enabled=ecg_enabled),
-        postprocess=partial(
-            _postprocess,
-            tutorial_name=tutorial_name,
-            postprocess_script_relpath=Path(postprocess_script_relpath),
-            postprocess_function_name=postprocess_function_name,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "notes": "FDA bath-bidomain manufactured-solution convergence benchmark",
             "workflow_dag": _workflow_dag_for(

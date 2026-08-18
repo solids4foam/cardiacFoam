@@ -34,7 +34,6 @@ from functools import partial
 from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import single_cell as defaults
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -119,29 +118,6 @@ def _collect_outputs(case_root: Path, output_dir: Path, *, output_glob: str = de
     collect_outputs_by_pattern(case_root, output_dir, pattern=output_glob)
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
-    strict_artifacts: bool = False,
-) -> None:
-    # singleCellinteractivePlots.py is a human-facing Plotly viewer (browser
-    # toggle buttons) -- it produces nothing an agent or downstream pipeline
-    # consumes, unlike table_summary.py's APD90/peak/resting-voltage numbers.
-    # driverFOAM no longer invokes it; the script itself is untouched on disk
-    # for anyone who wants to run it manually.
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=table_summary_relpath,
-            ),
-        ],
-    )
 
 
 def make_spec(
@@ -226,11 +202,6 @@ def make_spec(
             run_script_relpath=run_script_path,
         ),
         collect_outputs=partial(_collect_outputs, output_glob=output_glob),
-        postprocess=partial(
-            _postprocess,
-            table_summary_relpath=table_summary_path,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "python": sys.executable,
             "notes": "Single-cell sweep on ionic model and tissue types.",

@@ -14,7 +14,6 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.specs.common import (
     collect_outputs_by_pattern,
     resolve_run_script_path,
@@ -237,40 +236,6 @@ def _collect_outputs(case_root: Path, output_dir: Path, *, patterns: Sequence[st
         collect_outputs_by_pattern(case_root, output_dir, pattern=pattern)
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    tutorial_name: str,
-    postprocess_tasks: Sequence[PostprocessTask],
-    strict_artifacts: bool,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=tutorial_name,
-        tasks=list(postprocess_tasks),
-        strict_artifacts=strict_artifacts,
-    )
-
-
-def _normalize_postprocess_tasks(
-    tasks: Sequence[Mapping[str, Any]] | None,
-) -> list[PostprocessTask]:
-    normalized: list[PostprocessTask] = []
-    for item in tasks or ():
-        if "module_relpath" not in item:
-            raise KeyError("Generic postprocess tasks require 'module_relpath'")
-        normalized.append(
-            PostprocessTask(
-                module_relpath=Path(str(item["module_relpath"])),
-                function_name=str(item.get("function_name", "run_postprocessing")),
-                kwargs=dict(item.get("kwargs", {})),
-            )
-        )
-    return normalized
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -285,9 +250,7 @@ def make_spec(
     touch_case_foam: bool = False,
     openfoam_bashrc: str | Path | None = None,
     collect_patterns: Sequence[str] = (),
-    postprocess_tasks: Sequence[Mapping[str, Any]] | None = None,
     run_script_relpath: str | Path = RUN_CASE_SCRIPT_RELPATH,
-    postprocess_strict_artifacts: bool = False,
     solver_command: str | Sequence[str] | None = None,
     pre_solve_commands: Sequence[str | Sequence[str]] | None = None,
     _apply_case_mutation=None,
@@ -333,7 +296,6 @@ def make_spec(
     resolved_overrides = {key: value for key, value in resolved_overrides.items() if value}
 
     run_script_path = Path(run_script_relpath)
-    normalized_postprocess_tasks = _normalize_postprocess_tasks(postprocess_tasks)
     normalized_pre_solve = tuple(pre_solve_commands or ())
     if _apply_case_mutation is None:
         from openfoam_driver.core.compatibility import legacy_generic_case_mutation
@@ -371,7 +333,6 @@ def make_spec(
         and cases is None
         and not resolved_overrides
         and not collect_patterns
-        and not normalized_postprocess_tasks
         and not any((case_root / relpath).exists() for relpath in primary_relpaths)
     )
 
@@ -405,16 +366,6 @@ def make_spec(
             if collect_patterns
             else None
         ),
-        postprocess=(
-            partial(
-                _postprocess,
-                tutorial_name=case_dir_name,
-                postprocess_tasks=tuple(normalized_postprocess_tasks),
-                strict_artifacts=postprocess_strict_artifacts,
-            )
-            if normalized_postprocess_tasks
-            else None
-        ),
         metadata={
             "notes": "Core generic case runner for arbitrary tutorial folders.",
             "workflow_dag": _workflow_dag_for(
@@ -426,10 +377,8 @@ def make_spec(
             },
             "run_script_relpath": str(run_script_path),
             "collect_patterns": list(collect_patterns),
-            "postprocess_task_count": len(normalized_postprocess_tasks),
             "case_count": len(normalized_cases),
             "has_default_dict_file_overrides": bool(resolved_overrides),
-            "postprocess_strict_artifacts": postprocess_strict_artifacts,
             "solver_command": list(solver_command) if not isinstance(solver_command, str) and solver_command is not None else solver_command,
             "pre_solve_commands": list(pre_solve_commands or ()),
             "generic_case": generic_case,

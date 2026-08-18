@@ -36,7 +36,6 @@ from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_monodomain_total_lagrangian_em as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_entry_overrides,
@@ -172,29 +171,6 @@ def _run_case(
     )
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    tutorial_name: str = defaults.TUTORIAL_NAME,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=tutorial_name,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-            )
-        ],
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -280,13 +256,6 @@ def make_spec(
             run_in_parallel=run_in_parallel,
         ),
         collect_outputs=_collect_outputs,
-        postprocess=partial(
-            _postprocess,
-            tutorial_name=tutorial_name,
-            postprocess_script_relpath=postprocess_script_path,
-            postprocess_function_name=postprocess_function_name,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "notes": (
                 "Manufactured electromechanics MMS benchmark. "

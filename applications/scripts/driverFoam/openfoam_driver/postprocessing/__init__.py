@@ -30,7 +30,6 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from .driver import PostprocessTask, run_postprocess_tasks
 from .plot_builder import (
     DEFAULT_PALETTE,
     GroupShadedColors,
@@ -72,9 +71,6 @@ class PostprocessingProtocol(Protocol):
 __all__ = [
     # contract
     "PostprocessingProtocol",
-    # driver
-    "PostprocessTask",
-    "run_postprocess_tasks",
     # plot_builder — declarative Plotly helpers
     "DEFAULT_PALETTE",
     "GroupShadedColors",

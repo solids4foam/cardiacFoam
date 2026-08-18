@@ -9,7 +9,6 @@ from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import cable_1d_restitution as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec, DataArtifact
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -170,36 +169,6 @@ def _run_case(
         case_id=case.case_id,
     )
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
-    strict_artifacts: bool = False,
-) -> None:
-    tasks = []
-    if (setup_root / postprocess_script_relpath).exists():
-        tasks.append(
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-            )
-        )
-    tasks.append(PostprocessTask(module_relpath=table_summary_relpath))
-
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
-        strict_artifacts=strict_artifacts,
-        tasks=tasks,
-    )
-
-
-
-
 
 def make_spec(
     *,
@@ -291,13 +260,6 @@ def make_spec(
             cv_extract_script_relpath=Path(cv_extract_script_relpath),
         ),
         collect_outputs=None,  # let foamctl collect postProcessing natively
-        postprocess=partial(
-            _postprocess,
-            postprocess_script_relpath=Path(postprocess_script_relpath),
-            postprocess_function_name=postprocess_function_name,
-            table_summary_relpath=Path(table_summary_relpath),
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "python": sys.executable,
             "expected_artifacts": [

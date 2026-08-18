@@ -35,7 +35,6 @@ from typing import Sequence
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_purkinje_graph as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.specs.common import resolve_spec_paths
 
 
@@ -145,30 +144,6 @@ def _collect_outputs(case_root: Path, output_dir: Path) -> None:
     shutil.copytree(archived_dir, output_dir)
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    tutorial_name: str = defaults.TUTORIAL_NAME,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    graph_ids: Sequence[str] = defaults.GRAPH_IDS,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=tutorial_name,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-                kwargs={"graph_ids": list(graph_ids)},
-            )
-        ],
-    )
-
 
 def make_spec(
     *,
@@ -202,14 +177,6 @@ def make_spec(
         apply_case=_apply_case,
         run_case=partial(_run_case, n_steps=n_steps, delta_t=delta_t),
         collect_outputs=_collect_outputs,
-        postprocess=partial(
-            _postprocess,
-            tutorial_name=tutorial_name,
-            postprocess_script_relpath=Path(postprocess_script_relpath),
-            postprocess_function_name=postprocess_function_name,
-            graph_ids=graph_ids_list,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "notes": "Manufactured Purkinje graph convergence benchmark",
             "workflow_dag": {

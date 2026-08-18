@@ -35,7 +35,6 @@ from functools import partial
 from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import restitution_curves as defaults
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -156,40 +155,6 @@ def _run_case(
         print(f"Moved output: {source.name} -> {dest}")
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    postprocess_script_relpath: Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    ionic_models: Sequence[str],
-    ionic_model_tissue_map: Mapping[str, Sequence[str]],
-    show_plots: bool = False,
-    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=postprocess_script_relpath,
-                function_name=postprocess_function_name,
-                kwargs={
-                    "ionic_models": list(ionic_models),
-                    "tissue_map": {m: list(t) for m, t in ionic_model_tissue_map.items()},
-                    "show_plots": show_plots,
-                },
-            ),
-            PostprocessTask(
-                module_relpath=table_summary_relpath,
-            ),
-        ],
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -282,16 +247,6 @@ def make_spec(
             output_dir=output_dir,
         ),
         collect_outputs=None,  # per-case collection handled inside _run_case
-        postprocess=partial(
-            _postprocess,
-            postprocess_script_relpath=postprocess_script_path,
-            postprocess_function_name=postprocess_function_name,
-            ionic_models=ionic_models_list,
-            ionic_model_tissue_map=ionic_model_tissue_map,
-            show_plots=show_plots,
-            table_summary_relpath=table_summary_path,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "python": sys.executable,
             "notes": "S1–S2 restitution protocol sweep on ionic model, tissue, and S2 interval.",

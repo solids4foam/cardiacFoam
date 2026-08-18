@@ -38,7 +38,6 @@ from itertools import product
 from pathlib import Path
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import niederer_2012 as defaults
-from openfoam_driver.postprocessing.driver import PostprocessTask, run_postprocess_tasks
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -461,51 +460,6 @@ def _cache_case_postprocessing(
     print(f"Cached postProcessing for {case_id}: {destination}")
 
 
-def _postprocess(
-    setup_root: Path,
-    output_dir: Path,
-    *,
-    line_postprocess_relpath: Path = defaults.LINE_POSTPROCESS_RELPATH,
-    points_postprocess_relpath: Path = defaults.POINTS_POSTPROCESS_RELPATH,
-    cache_postprocess_relpath: Path = defaults.CACHE_POSTPROCESS_RELPATH,
-    excel_reference_relpath: Path = defaults.EXCEL_REFERENCE_RELPATH,
-    cache_postprocess_function_name: str = defaults.CACHE_POSTPROCESS_FUNCTION,
-    line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
-    points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
-    case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
-    table_summary_relpath: Path = defaults.TABLE_SUMMARY_RELPATH,
-    strict_artifacts: bool = False,
-) -> None:
-    run_postprocess_tasks(
-        setup_root=setup_root,
-        output_dir=output_dir,
-        tutorial_name=defaults.TUTORIAL_NAME,
-        strict_artifacts=strict_artifacts,
-        tasks=[
-            PostprocessTask(
-                module_relpath=cache_postprocess_relpath,
-                function_name=cache_postprocess_function_name,
-                kwargs={
-                    "cache_root": f"$SETUP_ROOT/{case_postprocess_cache_dirname}",
-                    "cache_output_subdir": "cachedPostProcessing",
-                },
-            ),
-            PostprocessTask(
-                module_relpath=line_postprocess_relpath,
-                function_name=line_postprocess_function_name,
-                kwargs={"excel_path": f"$SETUP_ROOT/{excel_reference_relpath.as_posix()}"},
-            ),
-            PostprocessTask(
-                module_relpath=points_postprocess_relpath,
-                function_name=points_postprocess_function_name,
-            ),
-            PostprocessTask(
-                module_relpath=table_summary_relpath,
-            ),
-        ],
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -637,19 +591,6 @@ def make_spec(
             line_n_points=line_n_points,
         ),
         collect_outputs=None,
-        postprocess=partial(
-            _postprocess,
-            line_postprocess_relpath=line_postprocess_path,
-            points_postprocess_relpath=points_postprocess_path,
-            cache_postprocess_relpath=cache_postprocess_path,
-            excel_reference_relpath=excel_reference_path,
-            cache_postprocess_function_name=cache_postprocess_function_name,
-            line_postprocess_function_name=line_postprocess_function_name,
-            points_postprocess_function_name=points_postprocess_function_name,
-            case_postprocess_cache_dirname=case_postprocess_cache_dirname,
-            table_summary_relpath=table_summary_path,
-            strict_artifacts=postprocess_strict_artifacts,
-        ),
         metadata={
             "notes": (
                 "Niederer Et Al. 2012 slab benchmark sweep "

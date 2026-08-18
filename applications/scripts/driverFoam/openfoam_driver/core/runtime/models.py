@@ -183,7 +183,6 @@ BuildCasesFn = Callable[[], list[CaseConfig]]
 ApplyCaseFn = Callable[[Path, CaseConfig], None]
 RunCaseFn = Callable[[Path, Path, CaseConfig], None]
 CollectOutputsFn = Callable[[Path, Path], None]
-PostprocessFn = Callable[[Path, Path], None]
 
 
 @dataclass(frozen=True)
@@ -198,5 +197,4 @@ class TutorialSpec:
     apply_case: ApplyCaseFn
     run_case: RunCaseFn
     collect_outputs: CollectOutputsFn | None = None
-    postprocess: PostprocessFn | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
