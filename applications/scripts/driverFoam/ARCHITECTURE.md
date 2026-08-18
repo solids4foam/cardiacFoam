@@ -16,11 +16,24 @@
 
 - **driverFOAM is a structured OpenFOAM orchestration engine**, not just a script runner. It resolves cases, constructs plans, validates selected contracts, executes workflow DAGs, records provenance, and manages parameter sweeps.
 - **The plugin boundary (`SolverPlugin` / `DriverContext`) is real, but not yet demonstrated as independently portable.** Entry-point discovery through `driverfoam.plugins` exists and a minimal non-cardiac plugin is tested. A publication-strength claim that an external project can integrate without core changes still needs an out-of-tree reference plugin and end-to-end CI test.
-- **Solver agnosticism verdict: PARTIAL, with a schema-level blocker.** The DAG
-  executor and much of provenance/state handling are solver-neutral. However,
-  cardiacFoam assumptions remain in (1) the canonical `RunDocument` schema and
-  validation phases, (2) `specs/`, (3) compatibility defaults, (4) the legacy
-  `generic_case.py::make_spec` vocabulary, and (5) some audit labels/fallbacks.
+- **Solver agnosticism verdict: PARTIAL — the schema-level blocker is resolved; a narrower seam remains.** The DAG
+  executor and much of provenance/state handling are solver-neutral, and as
+  of the Phase 2 decoupling plan (`aed4bdc7..1cf64500`, 2026-08-17):
+  (1) the `RunDocument` `config` schema is open and per-plugin-validated,
+  though the `Phase` Python literal and `specs/validation.py`'s phase
+  vocabulary are still hardcoded to the cardiac four-phase envelope;
+  (2) `specs/`'s outright cardiac functions (`detection.py`, `overrides.py`,
+  the cardiac half of `dict_builder.py`, `mesh_provisioning.py`,
+  `mesh_geometry.py`, `system_templates.py`) have moved into the plugin —
+  what's left is `specs/apply_overrides.py`'s `$ELECTRO_MODEL_COEFFS`
+  sentinel (deferred, tracked) and `specs/function_object_fields.py`'s
+  hardcoded `"electro"`/`"solid"` region vocabulary (found by the final
+  whole-branch review, not yet scoped into a task); (3) compatibility
+  defaults in `core/compatibility.py` remain cardiac-shaped by design — this
+  is the plan's intentional, P2.5-exempted versioned seam, not a leak;
+  (4) `generic_case.py::make_spec`'s vocabulary is resolved (see below);
+  (5) audit labels/fallbacks are resolved (`strict_audit.py`,
+  `report_catalog.py`, `introspection.py`'s `plugin_catalogs` namespacing).
 - **`SolverPlugin` is a project adapter, not merely a solver adapter.** It represents an entire OpenFOAM project integration (tutorials, dictionary catalog, artifact predictions, command authorization, sweep strategy), not a single solver executable. The name understates its scope.
 - **`DriverContext` is a well-designed injection container.** It replaced a global mutable plugin state and is correctly scoped per-operation. This is a genuine architectural improvement.
 - **The compatibility layer (`core/compatibility.py`) is the clearest record of what still leaks.** Most functions there preserve cardiac-shaped legacy behaviour; a few return neutral empty values for non-cardiac v1 plugins. It is a migration boundary, not a clean generic abstraction.
@@ -37,7 +50,7 @@
   `specs/validation.py` are still hardcoded to those four names independently
   of the JSON schema.
 - **The `specs/` module's outright cardiac functions have moved out; a narrower coupling remains.** As of `e137b390` (P2.5), `detection.py` and `overrides.py` — which contain cardiac-specific OpenFOAM dictionary names (`electroProperties`, `physicsProperties`, `myocardiumSolver`, `ionicModel`) — live in `plugins/cardiacfoam/`, not `specs/`. `d8effc00` (Task 14) split `specs/dict_builder.py` the same way: the cardiac builders (`build_electro_properties`, `build_physics_properties`, `parse_electro_properties`, `build_and_launch`, `_serialize`, `_entry_scope_and_key`) are now `plugins/cardiacfoam/dict_builder.py`, and what remains in `specs/dict_builder.py` is solver-neutral. What's left open in `specs/` is narrower: `specs/apply_overrides.py` still imports the plugin directly (an explicit, correct-direction dependency, but still core→plugin coupling), and the `$ELECTRO_MODEL_COEFFS` sentinel convention is still parsed independently by `specs/validation.py` and `scripts/_dict_keys_scanner.py` — retiring those needs a plugin-declared scope resolver, deferred to a follow-up.
-- **`generic_case.py::make_spec`'s parameter vocabulary is cardiac-shaped.** Even the "generic" case factory accepts `electro_property_overrides` and `physics_property_overrides`, which are cardiacFoam dictionary names, not generic OpenFOAM concepts.
+- **`generic_case.py::make_spec`'s parameter vocabulary was cardiac-shaped; resolved.** As of `242d6338` (P2.6), the "generic" case factory's primary parameters are `dict_file_relpaths`/`dict_file_overrides`, keyed by whatever names a plugin's own dictionaries use — core imposes no fixed key set. `electro_property_overrides`/`physics_property_overrides` survive only as deprecated `**kwargs` aliases for direct callers of core `make_spec` (not the generic path itself), matching P2.6's "deprecated aliases only" criterion; they remain CLI-reachable through unvalidated `--set` splatting, so removing them outright would have silently broken existing agent/CLI usage.
 - **The path-discovery logic (`paths.py`) assumes a conventional source-tree layout** by preferring an ancestor containing both `src/` and `tutorials/`. That convention is not uniquely cardiac, but implicit ancestor discovery is fragile for installed packages and external projects.
 - **The plugin boundary is not a sandbox.** Discovered plugins execute trusted Python in-process. `Allrun`-family scripts execute case-authored code, and OpenFOAM dictionary values may contain executable directives such as `#codeStream`. The implemented threat model is local, semi-trusted, and single-tenant.
 - **“Plan valid,” “ready to execute,” and “scientifically valid” are different states.** In the current implementation an environment-only error leaves `StrictPlanReport.status == "ok"` and the `RunDocument` planned, while `readiness_score.status == "blocked"`; the run path refuses execution. Strict planning checks declared contracts, not the correctness of the equations, discretisation, convergence, or results.

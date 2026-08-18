@@ -23,6 +23,9 @@ def test_generic_path_resolves(case):
     assert resolution["is_runnable"] is True, case.case_dir
 
 
+# NOT_ADDRESSABLE is currently empty (every regression case is generic-addressable);
+# pytest's empty-parametrize auto-skip for this is expected, not an environment gate.
+# If this ever collects >0 items, the intent is for it to run, not skip.
 @pytest.mark.parametrize("case", NOT_ADDRESSABLE, ids=lambda c: c.case_dir)
 def test_non_addressable_case_is_not_discoverable(case):
     # Documents a real limitation: the agent's case discovery does not recognize
