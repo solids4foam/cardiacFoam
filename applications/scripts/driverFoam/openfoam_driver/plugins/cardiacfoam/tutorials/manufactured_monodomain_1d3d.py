@@ -40,6 +40,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
 )
 from openfoam_driver.specs.common import (
+    replace_block_mesh_resolutions,
     resolve_spec_paths,
     set_delta_t,
 )
@@ -82,11 +83,8 @@ def _apply_case(
     # 1. 3D blockMesh resolution
     block_mesh_dict = case_root / "system" / "blockMeshDict.3D"
     block_mesh_active = case_root / "system" / "blockMeshDict.3D.active"
-    with block_mesh_dict.open() as f:
-        content = f.read()
-    content = content.replace("(10 10 10)", f"({cells} {cells} {cells})")
-    with block_mesh_active.open("w") as f:
-        f.write(content)
+    block_mesh_active.write_text(block_mesh_dict.read_text())
+    replace_block_mesh_resolutions(block_mesh_active, f"{cells} {cells} {cells}")
 
     # 2. 1D graph selection
     source_graph = case_root / "constant" / f"purkinjeGraph.{graph_id}"

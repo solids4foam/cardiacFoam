@@ -1,5 +1,5 @@
 # kind           key               metric  expected          tolerance
-# (mesh: 20^3 = 8000 cells — set in system/blockMeshDict)
+# (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
 error            activationTime    L1      0.000573521       1e-04
 error            activationTime    L2      0.000781102       1e-04
 error            activationTime    Linf    0.00247517        1e-03

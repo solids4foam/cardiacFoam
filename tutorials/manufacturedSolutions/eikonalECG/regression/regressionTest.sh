@@ -14,7 +14,7 @@ REF_FILE="regression/eikonalECG.reference"
 echo "============================================================"
 echo "Eikonal ECG manufactured-solution regression test"
 echo "Manufactured field and ECG outputs must be present"
-echo "Mesh: system/blockMeshDict (default), run mode: parallel"
+echo "Mesh: system/blockMeshDict.3D, run mode: parallel"
 echo "============================================================"
 echo
 
@@ -42,7 +42,7 @@ findManufacturedErrorFile()
     # The verifier generates convergence-study files for 10/20/40/80 cells per
     # direction. Pick the file matching the actual simulation mesh so reference
     # values stay consistent regardless of which study grids the verifier runs.
-    meshN="$(grep -E 'hex \(' system/blockMeshDict \
+    meshN="$(grep -E 'hex \(' system/blockMeshDict.3D \
              | grep -oE '\) \([0-9]+' \
              | grep -oE '[0-9]+' \
              | head -1 2>/dev/null || echo "")"

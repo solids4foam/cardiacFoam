@@ -22,8 +22,7 @@ fi
 
 if [[ -n "${DIM}" ]]
 then
-    cp system/blockMeshDict.${DIM} system/blockMeshDict
-    runApplication blockMesh
+    runApplication blockMesh -dict system/blockMeshDict.${DIM}
 fi
 
 runApplication topoSet
