@@ -226,6 +226,7 @@ echo "============================================================"
 echo
 
 ./Allclean > /dev/null 2>&1 || true
+cp system/controlDict.monodomain system/controlDict
 foamDictionary system/controlDict -entry endTime -set "${END_TIME}" > /dev/null 2>&1
 cp constant/electroProperties.monodomain constant/electroProperties
 

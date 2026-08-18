@@ -134,6 +134,11 @@ echo "Electromechanical Niederer slab regression test"
 echo "============================================================"
 echo
 
+if [[ "${CARDIAC_REGRESSION_BUILD_MODE:-}" == "lightweight" ]]; then
+    echo "SKIP: electromechanical regression requires a full solids4foam build, but lightweight mode was specified."
+    exit "${SKIP_CODE}"
+fi
+
 if ! fullSolids4FoamAvailable; then
     echo "SKIP: electromechanical regression requires a full solids4foam build."
     echo "      SOLIDS4FOAM_INST_DIR does not point to a compiled full solids4foam tree."
