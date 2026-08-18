@@ -30,6 +30,21 @@ def _exported_ionic_variables(case_root: Path, ionic_model: str | None) -> tuple
         return ()
     return entry.recommended_exports
 
+def _exported_active_tension_variables(case_root: Path) -> tuple[str, ...]:
+    properties = case_root / "constant" / "electroProperties"
+    if not properties.exists():
+        return ()
+    at_model = detect_active_tension_model_name(properties)
+    if at_model is None:
+        return ()
+    declared = detect_active_tension_export_list(properties)
+    if declared is not None:
+        return declared
+    entry = ACTIVE_TENSION_MODEL_CATALOG.get(at_model)
+    if entry is None:
+        return ("Ta",)
+    return entry.recommended_exports
+
 def _time_indexed_field_artifact(*, solver: str, field_name: str, ionic_model: str | None, description: str, optional: bool = False) -> DataArtifact:
     artifact_id = f"{solver}_{field_name.lower()}_series"
     produced_by = {
@@ -57,7 +72,7 @@ def _predict_single_cell(case_root: Path, spec: TutorialSpec, ionic_model: str |
             artifact_id="single_cell_trace",
             path_pattern="postProcessing/*.txt",
             format="csv_sweep",
-            variables=_exported_ionic_variables(case_root, ionic_model),
+            variables=_exported_ionic_variables(case_root, ionic_model) + _exported_active_tension_variables(case_root),
             description=f"Per-case time series produced by singleCellSolver (ionicModel={ionic_model})",
             produced_by="singleCellSolver",
             time_indexed=False,
@@ -188,19 +203,16 @@ def _predict_verification(case_root: Path) -> tuple[DataArtifact, ...]:
         ),
     )
 
-def _predict_active_tension(case_root: Path) -> tuple[DataArtifact, ...]:
+def _predict_active_tension(case_root: Path, solver: str) -> tuple[DataArtifact, ...]:
+    if solver == "singleCellSolver":
+        return ()
     properties = case_root / "constant" / "electroProperties"
     if not properties.exists():
         return ()
     at_model = detect_active_tension_model_name(properties)
     if at_model is None:
         return ()
-    declared = detect_active_tension_export_list(properties)
-    if declared is not None:
-        variables = declared
-    else:
-        entry = ACTIVE_TENSION_MODEL_CATALOG.get(at_model)
-        variables = entry.recommended_exports if entry is not None else ("Ta",)
+    variables = _exported_active_tension_variables(case_root)
     return tuple(
         DataArtifact(
             artifact_id=f"active_tension_{var}_series",
@@ -247,5 +259,5 @@ def predict_cardiac_artifacts(case_root: Path, spec: TutorialSpec) -> tuple[Data
         + _predict_ecg(case_root)
         + _predict_purkinje(case_root)
         + _predict_verification(case_root)
-        + _predict_active_tension(case_root)
+        + _predict_active_tension(case_root, solver)
     )

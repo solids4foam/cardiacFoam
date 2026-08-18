@@ -95,9 +95,9 @@ Typical script pattern
         )
 
         spec = PlotSpec(
-            title="Activation time along diagonal",
+            title="Sampled quantity along diagonal",
             xaxis_title="Distance (mm)",
-            yaxis_title="Activation Time (ms)",
+            yaxis_title="Sampled quantity",
             output_filename="allSimulations.html",
             label="All simulations",
         )
@@ -404,7 +404,7 @@ class PlotSpec:
         Label for the Y axis.
     output_filename:
         Basename of the HTML file written to the output directory
-        (e.g. ``"cardiacFoam_allSimulations.html"``).
+        (e.g. ``"allSimulations.html"``).
     label:
         Human-readable label used in the ``plots.json`` artifact entry.
     legend_title:
@@ -512,7 +512,7 @@ def make_toggle_button(
     """Build a two-state Plotly toggle button (``updatemenus`` entry).
 
     The button switches between two sets of visible traces.  This is the
-    general form of the "All simulations / Niederer vs cardiacFoam" toggle
+    general form of the "all / comparison" toggle
     in the Niederer benchmark scripts.
 
     Parameters

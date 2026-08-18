@@ -6,8 +6,9 @@ committed ``.reference`` within the case's own tolerances. The committed
 reference is the ground truth — the hand-authored path is not re-run.
 
 - Agent run (strict): ``foamctl run --strict --entry <name> --tutorials-root
-  <staged>`` — the agent resolves the registered spec, applies its dict
-  overrides, and executes the case's workflow (solver + post).
+  <staged>`` — the agent resolves the registered spec, plans it (non-mutating),
+  and executes the case's workflow (solver + post). No dictionary overrides are
+  applied; dict mutation lives only in the sweep path.
 - Agent run (generic): the same via the case-folder path with
   ``--entry-kind case_folder`` for cases with no registered spec.
 
@@ -113,7 +114,131 @@ def read_series_value(
 
 
 def values_agree(a: float, b: float, tolerance: float) -> bool:
-    return abs(a - b) < tolerance
+    return abs(a - b) <= tolerance
+
+
+@dataclass(frozen=True)
+class ManufacturedReferencePoint:
+    kind: str
+    key: str
+    metric: str
+    expected: float
+    tolerance: float
+
+
+def parse_manufactured_reference(text: str) -> list[ManufacturedReferencePoint]:
+    points = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        cols = line.split()
+        if len(cols) < 5:
+            return []
+        kind, key, metric, expected, tolerance = cols[:5]
+        if kind not in ("summary", "error", "pseudoECG"):
+            return []
+        try:
+            points.append(
+                ManufacturedReferencePoint(
+                    kind, key, metric, float(expected), float(tolerance)
+                )
+            )
+        except ValueError:
+            return []
+    return points
+
+
+def find_manufactured_error_file(case_path: Path) -> Path | None:
+    for f in case_path.glob("postProcessing/*.dat"):
+        text = f.read_text(errors="ignore")
+        if "manufactured-solution error summary" in text.lower() or "manufactured activation-time summary" in text.lower():
+            return f
+    for f in case_path.glob("processor*/postProcessing/*.dat"):
+        text = f.read_text(errors="ignore")
+        if "manufactured-solution error summary" in text.lower() or "manufactured activation-time summary" in text.lower():
+            return f
+    return None
+
+
+def extract_summary_value(text: str, key: str) -> float | None:
+    for line in text.splitlines():
+        if key == "cells" and "Number of cells" in line:
+            return float(line.split("=")[1].strip())
+        if key == "finalTime" and "Final simulation time" in line:
+            return float(line.split("=")[1].strip())
+    return None
+
+
+def extract_error_metric(text: str, key: str, metric: str) -> float | None:
+    col = {"L1": 1, "L2": 2, "Linf": 3}.get(metric)
+    if col is None: return None
+    for line in text.splitlines():
+        parts = line.split()
+        if not parts: continue
+        if parts[0] == key and len(parts) > col:
+            try:
+                return float(parts[col])
+            except ValueError:
+                pass
+    return None
+
+
+def find_pseudo_ecg_file(case_path: Path) -> Path | None:
+    for p in [case_path / "postProcessing" / "eikonalECG.dat"] + list(case_path.glob("processor*/postProcessing/eikonalECG.dat")):
+        if p.exists(): return p
+    return None
+
+
+def extract_pseudo_ecg_value(text: str, key: str) -> float | None:
+    lines = text.splitlines()
+    if not lines: return None
+    header = lines[0].split()
+    col = -1
+    for i, h in enumerate(header):
+        if h == key or h == f"numeric_{key}":
+            col = i - 1 if header[0] == "#" else i
+            break
+    if col < 0: return None
+    
+    for line in reversed(lines):
+        if line.startswith("#"): continue
+        parts = line.split()
+        if len(parts) > col:
+            try:
+                return float(parts[col])
+            except ValueError:
+                pass
+    return None
+
+
+def _check_manufactured_reference(case_path: Path, points: list[ManufacturedReferencePoint]) -> tuple[bool, str]:
+    problems = []
+    checks = 0
+    error_file = find_manufactured_error_file(case_path)
+    error_text = error_file.read_text(errors="ignore") if error_file else ""
+    
+    ecg_file = find_pseudo_ecg_file(case_path)
+    ecg_text = ecg_file.read_text(errors="ignore") if ecg_file else ""
+    
+    for p in points:
+        checks += 1
+        val = None
+        if p.kind == "summary":
+            if error_text: val = extract_summary_value(error_text, p.key)
+        elif p.kind == "error":
+            if error_text: val = extract_error_metric(error_text, p.key, p.metric)
+        elif p.kind == "pseudoECG":
+            if ecg_text: val = extract_pseudo_ecg_value(ecg_text, p.key)
+            
+        if val is None:
+            problems.append(f"{p.kind} {p.key} {p.metric}: missing in agent output")
+        elif not values_agree(val, p.expected, p.tolerance):
+            problems.append(f"{p.kind} {p.key} {p.metric}: agent={val} expected={p.expected} tol={p.tolerance}")
+            
+    if problems:
+        return False, "\n".join(problems)
+    return True, f"{checks} reference points reproduced within tolerance"
 
 
 # --------------------------------------------------------------------------- #
@@ -155,6 +280,8 @@ def _stage_tutorials_root(case: RegressionCase) -> tuple[Path, Path]:
     for stale in ("postProcessing", "workflow_state.json", "workflow_logs"):
         p = case_path / stale
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink(missing_ok=True)
+    for log_file in case_path.glob("log.*"):
+        log_file.unlink(missing_ok=True)
     return root, case_path
 
 
@@ -175,34 +302,39 @@ def _drive_agent(case: RegressionCase, driver: str, tutorials_root: Path) -> sub
 
 
 def check_reference(case_path: Path, reference_text: str) -> tuple[bool, str]:
-    """Check agent outputs under `case_path` against a columnar reference.
+    """Check agent outputs under `case_path` against a reference file.
 
-    Returns (ok, detail). Columnar layout only:
-    `file time variable expected tolerance`. Non-columnar references raise
-    NotImplementedError so the caller can mark the case unsupported.
+    Returns (ok, detail). Supports columnar layout (`file time variable
+    expected tolerance`) or manufactured layout (`kind key metric expected
+    tolerance`). Non-supported references raise NotImplementedError.
     """
     points = parse_columnar_reference(reference_text)
-    if not points:
-        raise NotImplementedError("reference is not columnar file/time/variable")
-    problems: list[str] = []
-    checks = 0
-    for p in points:
-        checks += 1
-        f = case_path / p.data_file
-        val = (
-            read_series_value(f.read_text(), p.time, p.variable, time_atol=TIME_MATCH_ATOL)
-            if f.exists() else None
-        )
-        if val is None:
-            problems.append(f"{p.data_file} {p.variable}@{p.time}: missing in agent output")
-        elif not values_agree(val, p.expected, p.tolerance):
-            problems.append(
-                f"{p.data_file} {p.variable}@{p.time}: agent={val} "
-                f"expected={p.expected} tol={p.tolerance}"
+    if points:
+        problems: list[str] = []
+        checks = 0
+        for p in points:
+            checks += 1
+            f = case_path / p.data_file
+            val = (
+                read_series_value(f.read_text(), p.time, p.variable, time_atol=TIME_MATCH_ATOL)
+                if f.exists() else None
             )
-    if problems:
-        return False, "\n".join(problems)
-    return True, f"{checks} reference points reproduced within tolerance"
+            if val is None:
+                problems.append(f"{p.data_file} {p.variable}@{p.time}: missing in agent output")
+            elif not values_agree(val, p.expected, p.tolerance):
+                problems.append(
+                    f"{p.data_file} {p.variable}@{p.time}: agent={val} "
+                    f"expected={p.expected} tol={p.tolerance}"
+                )
+        if problems:
+            return False, "\n".join(problems)
+        return True, f"{checks} reference points reproduced within tolerance"
+
+    man_points = parse_manufactured_reference(reference_text)
+    if man_points:
+        return _check_manufactured_reference(case_path, man_points)
+
+    raise NotImplementedError("reference format is not supported")
 
 
 def verify_reproduction(case: RegressionCase, *, driver: str) -> ReproResult:

@@ -5,11 +5,11 @@ import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver.tests.regression_equivalence.__main__ import build_matrix
+from openfoam_driver.tests.regression_equivalence.__main__ import build_matrix_iter
 
 
 def test_matrix_has_row_per_case_driver():
-    rows = build_matrix(run_phase2=False)
+    rows = list(build_matrix_iter(run_phase2=False))
     # 6 mapped * 2 drivers + 3 unmapped * 1 driver = 15 rows.
     assert len(rows) == 15
     for row in rows:
@@ -17,7 +17,7 @@ def test_matrix_has_row_per_case_driver():
 
 
 def test_strict_rows_resolve_and_are_idempotent():
-    rows = build_matrix(run_phase2=False)
+    rows = list(build_matrix_iter(run_phase2=False))
     strict = [r for r in rows if r["driver"] == "strict"]
     assert len(strict) == 6
     assert all(r["resolves"] == "ok" for r in strict)
@@ -25,7 +25,7 @@ def test_strict_rows_resolve_and_are_idempotent():
 
 
 def test_electromechanical_generic_row_is_addressable():
-    rows = build_matrix(run_phase2=False)
+    rows = list(build_matrix_iter(run_phase2=False))
     em = [r for r in rows
           if r["case"] == "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"]
     assert len(em) == 1

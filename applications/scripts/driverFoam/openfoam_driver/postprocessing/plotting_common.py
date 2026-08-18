@@ -33,14 +33,19 @@ from collections.abc import Iterable, Mapping
 import plotly.colors as plotly_colors
 
 
+
+
+
 _DX_PATTERN = re.compile(r"DX(\d+)")
 _DT_PATTERN = re.compile(r"DT(\d+)")
 
 
 def extract_dx_dt(filename: str) -> tuple[float, float]:
     """Extract DX and DT values from filenames like ...DX5...DT005..."""
-    dx_match = _DX_PATTERN.search(filename)
-    dt_match = _DT_PATTERN.search(filename)
+    from pathlib import Path
+    basename = Path(filename).name
+    dx_match = _DX_PATTERN.search(basename)
+    dt_match = _DT_PATTERN.search(basename)
     if not dx_match or not dt_match:
         return float("inf"), float("inf")
 
@@ -71,29 +76,27 @@ def ordered_unique(values: Iterable[str]) -> list[str]:
     return result
 
 
-def parse_model_and_cell(
+def parse_two_part_stem(
     filename: str,
     *,
-    model_map: Mapping[str, str],
-    cell_map: Mapping[str, str],
+    first_map: Mapping[str, str],
+    second_map: Mapping[str, str],
 ) -> tuple[str, str]:
-    file_base = filename.rsplit(".", maxsplit=1)[0]
+    """Split a `<first>_<second>_...` filename stem and map both tokens.
+
+    Tokens absent from their map pass through unchanged, so callers only supply
+    the renames they care about.
+    """
+    from pathlib import Path
+    file_base = Path(filename).stem
     parts = file_base.split("_")
 
-    raw_model = parts[0] if parts else "UnknownModel"
-    raw_cell = parts[1] if len(parts) > 1 else "UnknownCell"
+    raw_first = parts[0] if parts else "UnknownFirst"
+    raw_second = parts[1] if len(parts) > 1 else "UnknownSecond"
 
-    model = model_map.get(raw_model, raw_model)
-    cell = cell_map.get(raw_cell, raw_cell)
-    return model, cell
+    return first_map.get(raw_first, raw_first), second_map.get(raw_second, raw_second)
 
 
 def build_visibility_mask(trace_indices: Iterable[int], total_traces: int) -> list[bool]:
     selected = set(trace_indices)
     return [index in selected for index in range(total_traces)]
-
-
-def rename_cardiacfoam_trace(name: str) -> str:
-    if ", ΔT=" in name:
-        return name.split(", ΔT=")[0] + " cardiacFoam"
-    return name

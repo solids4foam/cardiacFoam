@@ -45,7 +45,7 @@ class TableMetadata:
         Human-readable entry name, e.g. ``"NiedererEtAl2012"``.
     units:
         Mapping of column name → unit string, e.g.
-        ``{"activationTime": "ms", "DX": "mm"}``.
+        ``{"elapsedTime": "s", "DX": "mm"}``.
     generated_at:
         UTC ISO-8601 timestamp string.  Auto-filled on construction if empty.
     """

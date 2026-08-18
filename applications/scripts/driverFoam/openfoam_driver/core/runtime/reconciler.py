@@ -59,6 +59,7 @@ Design notes (rewritten after the 2026-05-21 audit):
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -88,6 +89,17 @@ class ReconciliationReport:
     """Case identifier when invoked per-case during a sweep. ``None`` for
     whole-run reconciliations."""
 
+    def to_json(self) -> dict:
+        """Plain-dict form for embedding in run payloads and manifests."""
+        return {
+            "case_root": self.case_root,
+            "case_id": self.case_id,
+            "predicted_count": self.predicted_count,
+            "matched_count": self.matched_count,
+            "missing_count": self.missing_count,
+            "artifacts": [dict(entry) for entry in self.artifacts],
+        }
+
 
 def _list_time_dirs(case_root: Path) -> list[str]:
     """Return every top-level directory name under case_root that looks
@@ -98,16 +110,32 @@ def _list_time_dirs(case_root: Path) -> list[str]:
     )
 
 
+def _sha256_of(path: Path) -> str | None:
+    """Stream a file's sha256. Returns None if it cannot be read."""
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(65536), b""):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
 def _entries_for_match(path: Path) -> dict | None:
     """Build the per-match dict for a single glob hit. Returns None for
     matches that are neither files nor directories (symlinks to nowhere,
     etc.) so the caller can skip them silently."""
     if path.is_file():
-        return {
+        entry = {
             "path": str(path),
             "kind": "file",
             "size_bytes": path.stat().st_size,
         }
+        digest = _sha256_of(path)
+        if digest is not None:
+            entry["sha256"] = digest
+        return entry
     if path.is_dir():
         # Count immediate children so an agent inspecting the realized
         # manifest knows whether the matched dir is non-empty.

@@ -10,6 +10,7 @@ without a built cardiacFoam.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
 from typing import Any
 
 from openfoam_driver.tests.regression_equivalence.dual_run import verify_reproduction
@@ -38,39 +39,54 @@ def _idempotent(case) -> str:
     return "ok" if once == twice else "DRIFT"
 
 
-def build_matrix(*, run_phase2: bool) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+def build_matrix_iter(*, run_phase2: bool) -> Iterator[dict[str, Any]]:
     for case in REGRESSION_CASES:
         for driver in case.drivers:
             repro = "not-run"
             if run_phase2:
                 repro = verify_reproduction(case, driver=driver).status
-            rows.append({
+            yield {
                 "case": case.case_dir,
                 "driver": driver,
                 "resolves": _resolves(case, driver),
                 "idempotent": _idempotent(case) if driver == "strict" else "n/a",
                 "reproduces": repro,
-            })
-    return rows
+            }
 
 
-def _print_matrix(rows: list[dict[str, Any]]) -> None:
-    width = max(len(r["case"]) for r in rows)
+def _print_header(width: int) -> None:
     header = f"{'case':<{width}}  driver   resolves       idempotent  reproduces"
     print(header)
     print("-" * len(header))
-    for r in rows:
-        print(f"{r['case']:<{width}}  {r['driver']:<7}  "
-              f"{r['resolves']:<13}  {r['idempotent']:<10}  {r['reproduces']}")
+
+
+def _print_row(r: dict[str, Any], width: int) -> None:
+    print(f"{r['case']:<{width}}  {r['driver']:<7}  "
+          f"{r['resolves']:<13}  {r['idempotent']:<10}  {r['reproduces']}")
+
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-phase2", action="store_true")
+    parser.add_argument("--stream", action="store_true", help="Print per-case outcomes live")
     args = parser.parse_args()
-    rows = build_matrix(run_phase2=args.run_phase2)
-    _print_matrix(rows)
+
+    width = max(len(c.case_dir) for c in REGRESSION_CASES) if REGRESSION_CASES else 50
+    if args.stream:
+        _print_header(width)
+
+    rows = []
+    for r in build_matrix_iter(run_phase2=args.run_phase2):
+        if args.stream:
+            _print_row(r, width)
+        rows.append(r)
+
+    if not args.stream:
+        _print_header(width)
+        for r in rows:
+            _print_row(r, width)
+
     failed = [
         r for r in rows
         if r["resolves"] == "not-runnable"

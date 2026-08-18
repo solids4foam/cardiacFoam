@@ -868,23 +868,27 @@ class TestPredictorActiveTension(unittest.TestCase):
             f"}}\n"
         )
 
-    def test_ta_artifact_emitted_for_nash_panfilov(self) -> None:
+    def test_ta_artifact_included_in_single_cell_trace_for_nash_panfilov(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
             self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ids = [a.artifact_id for a in artifacts]
-            self.assertIn("active_tension_Ta_series", ids)
+            self.assertNotIn("active_tension_Ta_series", ids)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertIn("Ta", trace.variables)
 
-    def test_ta_artifact_emitted_for_goktepe_kuhl(self) -> None:
+    def test_ta_artifact_included_in_single_cell_trace_for_goktepe_kuhl(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
             self._write_single_cell_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ids = [a.artifact_id for a in artifacts]
-            self.assertIn("active_tension_Ta_series", ids)
+            self.assertNotIn("active_tension_Ta_series", ids)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertIn("Ta", trace.variables)
 
     def test_no_at_artifacts_when_block_absent(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -909,13 +913,24 @@ class TestPredictorActiveTension(unittest.TestCase):
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             at_artifacts = [a for a in artifacts if "active_tension" in a.artifact_id]
-            self.assertEqual(len(at_artifacts), 1)
-            self.assertEqual(at_artifacts[0].artifact_id, "active_tension_Ta_series")
+            self.assertEqual(len(at_artifacts), 0)
+            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
+            self.assertIn("Ta", trace.variables)
 
     def test_at_artifact_format_is_openfoam_time_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
+            # Use bidomain instead of singleCellSolver to test the time_dirs output format
+            ep = tmp / "constant" / "electroProperties"
+            ep.parent.mkdir(parents=True, exist_ok=True)
+            ep.write_text(
+                "myocardiumSolver bidomainSolver;\n"
+                "bidomainSolverCoeffs\n{\n"
+                "    ionicModel TNNP;\n"
+                "    activeTensionModel NashPanfilov;\n"
+                "    outputVariables { activeTension { export ( Ta ); } }\n"
+                "}\n"
+            )
             spec = _make_spec(tmp)
             artifacts = predict_data_artifacts(tmp, spec)
             ta = next(a for a in artifacts if a.artifact_id == "active_tension_Ta_series")

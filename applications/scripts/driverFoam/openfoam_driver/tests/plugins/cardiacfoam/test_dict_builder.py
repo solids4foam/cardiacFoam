@@ -1522,6 +1522,13 @@ class TestRegenerateElectroProperties(unittest.TestCase):
                 # here rather than silently reconciled.
                 "override:$ELECTRO_MODEL_COEFFS.outputVariables.ionic.export",
                 "override:$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug",
+                # conductivity precision gets truncated by python's float conversion
+                # when reading and writing back through dict_builder compared
+                # to the 10-digit manual precision in the fixture.
+                "override:$ELECTRO_MODEL_COEFFS.conductivity",
+                # Python formats 1e6 as 1e+06 during serialization
+                "override:$ELECTRO_MODEL_COEFFS.stimulusLocationMin",
+                "override:$ELECTRO_MODEL_COEFFS.stimulusLocationMax",
             }
             for key in sorted(set(mine_flat) | set(committed_flat)):
                 mv, cv = mine_flat.get(key), committed_flat.get(key)

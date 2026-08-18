@@ -251,6 +251,18 @@ def _execute_step(
     return 0 if status == "ok" else 1
 
 
+def _reconciliation_payload(case_root: Path, expected_artifacts) -> dict:
+    """Reconcile predicted artifacts against what actually landed on disk.
+
+    Describes only: which predicted artifacts resolved to which files, their
+    size and sha256. It makes no judgement about the values inside them --
+    interpretation is the caller's job.
+    """
+    from .core.runtime.reconciler import reconcile_artifacts
+
+    return reconcile_artifacts(case_root, expected_artifacts or ()).to_json()
+
+
 def _execute_run(
     *,
     entry_label: str,
@@ -332,6 +344,9 @@ def _execute_run(
     }
     if workflow_state.status == "pending" and workflow_state.current_step_id is None:
         payload["error"] = "workflow_state is pending but has no current_step_id"
+    payload["artifact_reconciliation"] = _reconciliation_payload(
+        case_root, expected_artifacts
+    )
     if status == "ok":
         payload["postprocess"] = run_postprocess_phase(
             entry=entry_label, output_dir=output_dir,

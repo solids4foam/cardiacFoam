@@ -1,0 +1,845 @@
+schema_version: 1
+description: Frozen numerical tolerances for E1. Do not edit a tolerance after seeing
+  a comparison result; add a new row with its own rationale.
+rows:
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '10'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '2'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '4'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '5'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '6'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/NiedererEtAl2011verification
+  data_file: Niedererpoints/0/activationTime
+  variable: '9'
+  time: 0.03
+  tolerance: 0.0001
+  source_reference: regression/NiedererEtAl2012.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/electroMechanicalNiedererEtAl2011
+  data_file: Taprobes/solid/0/Ta
+  variable: '2'
+  time: 0.02
+  tolerance: 2.0
+  source_reference: regression/electroMechHeterogeneity.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/electroMechanicalNiedererEtAl2011
+  data_file: Taprobes/solid/0/Ta
+  variable: '3'
+  time: 0.02
+  tolerance: 2.0
+  source_reference: regression/electroMechHeterogeneity.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/electroMechanicalNiedererEtAl2011
+  data_file: Taprobes/solid/0/Ta
+  variable: '4'
+  time: 0.02
+  tolerance: 5.0
+  source_reference: regression/electroMechHeterogeneity.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/rotorInstability
+  data_file: rotorpoints/0/activationTime
+  variable: '2'
+  time: 4.0
+  tolerance: 0.002
+  source_reference: regression/rotorInstability.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/rotorInstability
+  data_file: rotorpoints/0/activationTime
+  variable: '3'
+  time: 4.0
+  tolerance: 0.002
+  source_reference: regression/rotorInstability.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/rotorInstability
+  data_file: rotorpoints/0/activationTime
+  variable: '4'
+  time: 4.0
+  tolerance: 0.002
+  source_reference: regression/rotorInstability.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/rotorInstability
+  data_file: rotorpoints/0/activationTime
+  variable: '5'
+  time: 4.0
+  tolerance: 0.002
+  source_reference: regression/rotorInstability.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/rotorInstability
+  data_file: rotorpoints/0/activationTime
+  variable: '6'
+  time: 4.0
+  tolerance: 0.002
+  source_reference: regression/rotorInstability.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
+  variable: Vm
+  time: 1.0
+  tolerance: 0.005
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
+  variable: Vm
+  time: 1.5
+  tolerance: 0.005
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
+  variable: cai
+  time: 1.0
+  tolerance: 5.0e-05
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
+  variable: cai
+  time: 1.5
+  tolerance: 5.0e-05
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt
+  variable: AV_Ta
+  time: 1.0
+  tolerance: 0.005
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: electrophysiologyProtocols/singleCell
+  data_file: postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt
+  variable: AV_Ta
+  time: 1.5
+  tolerance: 0.005
+  source_reference: regression/singleCell.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+metric_rows:
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj0
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj1
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj2
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj3
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj4
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj5
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj6
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledPVJ
+  key: pvj7
+  metric: final
+  tolerance: 50.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledVm
+  key: node0
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledVm
+  key: node15
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: coupledVm
+  key: node8
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: graphUtilityVm
+  key: node0
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: graphUtilityVm
+  key: node15
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: graphUtilityVm
+  key: node8
+  metric: final
+  tolerance: 1.0e-06
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: topology
+  key: conductionEdges
+  metric: count
+  tolerance: 0.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: topology
+  key: pvjLocations
+  metric: count
+  tolerance: 0.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: topology
+  key: pvjNodes
+  metric: count
+  tolerance: 0.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: NiedererEtAl2011/purkinjeNiedererEtAl2011
+  kind: topology
+  key: rootNode
+  metric: value
+  tolerance: 0.0
+  source_reference: regression/purkinjeSlab.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: Vm
+  metric: L1
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: Vm
+  metric: L2
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: Vm
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiE
+  metric: L1
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiE
+  metric: L2
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiE
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiI
+  metric: L1
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiI
+  metric: L2
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: phiI
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u1
+  metric: L1
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u1
+  metric: L2
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u1
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u2
+  metric: L1
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u2
+  metric: L2
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u2
+  metric: Linf
+  tolerance: 1.0e-08
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u3
+  metric: L1
+  tolerance: 1.0e-12
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u3
+  metric: L2
+  tolerance: 1.0e-12
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: error
+  key: u3
+  metric: Linf
+  tolerance: 1.0e-12
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: summary
+  key: cellsPerDirection
+  metric: value
+  tolerance: 0.0
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bathBidomain
+  kind: summary
+  key: finalTime
+  metric: value
+  tolerance: 1.0e-06
+  source_reference: regression/bathBidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: Vm
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: Vm
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: Vm
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE_gauge
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE_gauge
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiE_gauge
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI_gauge
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI_gauge
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: phiI_gauge
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u1
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u1
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u1
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u2
+  metric: L1
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u2
+  metric: L2
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: error
+  key: u2
+  metric: Linf
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: summary
+  key: cells
+  metric: value
+  tolerance: 0.0
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/bidomain
+  kind: summary
+  key: finalTime
+  metric: value
+  tolerance: 1.0e-06
+  source_reference: regression/bidomainManufactured.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: error
+  key: activationTime
+  metric: L1
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: error
+  key: activationTime
+  metric: L2
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: error
+  key: activationTime
+  metric: Linf
+  tolerance: 0.001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: pseudoECG
+  key: E1
+  metric: '-'
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: pseudoECG
+  key: E2
+  metric: '-'
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: pseudoECG
+  key: E3
+  metric: '-'
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: pseudoECG
+  key: E4
+  metric: '-'
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/eikonalECG
+  kind: pseudoECG
+  key: E5
+  metric: '-'
+  tolerance: 0.0001
+  source_reference: regression/eikonalECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: Vm
+  metric: L1
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: Vm
+  metric: L2
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: Vm
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u1
+  metric: L1
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u1
+  metric: L2
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u1
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u2
+  metric: L1
+  tolerance: 1.0e-08
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u2
+  metric: L2
+  tolerance: 1.0e-08
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: error
+  key: u2
+  metric: Linf
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: pseudoECG
+  key: E1
+  metric: final
+  tolerance: 1.0e-08
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: pseudoECG
+  key: E2
+  metric: final
+  tolerance: 1.0e-08
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: pseudoECG
+  key: E3
+  metric: final
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: pseudoECG
+  key: E4
+  metric: final
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: pseudoECG
+  key: E5
+  metric: final
+  tolerance: 1.0e-07
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: summary
+  key: cells
+  metric: value
+  tolerance: 0.0
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.
+- case_dir: manufacturedSolutions/monodomainPseudoECG
+  kind: summary
+  key: finalTime
+  metric: value
+  tolerance: 1.0e-09
+  source_reference: regression/monodomainPseudoECG.reference
+  rationale: Transcribed verbatim from the committed regression reference, which predates
+    E1; adopting it involves no post hoc threshold selection.

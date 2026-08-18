@@ -318,5 +318,53 @@ class TestReconcilerCaseId(unittest.TestCase):
             self.assertIsNone(report.case_id)
 
 
+class TestFileHashing(unittest.TestCase):
+    def test_matched_file_entry_carries_sha256(self) -> None:
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as tmp:
+            case_root = Path(tmp)
+            (case_root / "out").mkdir()
+            (case_root / "out" / "x.dat").write_text("hello")
+            report = reconcile_artifacts(case_root, (_make_artifact(),))
+            entry = report.artifacts[0]
+            self.assertEqual(entry["status"], "matched")
+            match = entry["matched_files"][0]
+            # sha256("hello")
+            self.assertEqual(
+                match["sha256"],
+                "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            )
+
+    def test_directory_entry_has_no_sha256(self) -> None:
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as tmp:
+            case_root = Path(tmp)
+            (case_root / "out").mkdir()
+            (case_root / "out" / "d").mkdir()
+            report = reconcile_artifacts(
+                case_root, (_make_artifact(path_pattern="out/d"),)
+            )
+            match = report.artifacts[0]["matched_files"][0]
+            self.assertEqual(match["kind"], "dir")
+            self.assertNotIn("sha256", match)
+
+
+class TestReportSerialization(unittest.TestCase):
+    def test_to_json_round_trips_summary_fields(self) -> None:
+        import json
+        from openfoam_driver.core.runtime.reconciler import reconcile_artifacts
+        with tempfile.TemporaryDirectory() as tmp:
+            case_root = Path(tmp)
+            report = reconcile_artifacts(
+                case_root, (_make_artifact(),), case_id="c1"
+            )
+            payload = report.to_json()
+            self.assertEqual(payload["case_id"], "c1")
+            self.assertEqual(payload["predicted_count"], 1)
+            self.assertEqual(payload["missing_count"], 1)
+            self.assertIsInstance(payload["artifacts"], list)
+            json.dumps(payload)  # must be JSON-serializable
+
+
 if __name__ == "__main__":
     unittest.main()
