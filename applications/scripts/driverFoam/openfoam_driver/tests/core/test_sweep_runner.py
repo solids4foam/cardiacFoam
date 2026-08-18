@@ -175,6 +175,7 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
     assert call_order == ["apply_case", "run", "apply_case", "run"]
     assert result["completed_count"] == 2
     assert result["failed_count"] == 0
+    assert result["postprocess"]["status"] == "stub"
 
 
 def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_path):
@@ -363,6 +364,7 @@ def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
     assert state_paths["TNNP"] == "TNNP/postProcessing/workflow_state.json"
     assert result["failed_count"] == 1
     assert result["completed_count"] == 1
+    assert result["postprocess"]["status"] == "skipped"
 
 
 def test_sweep_run_records_unrecognized_axis_as_per_case_failure(tmp_path):

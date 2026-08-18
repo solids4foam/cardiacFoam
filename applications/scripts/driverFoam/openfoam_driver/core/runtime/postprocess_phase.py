@@ -55,7 +55,7 @@ class PostprocessOutcome:
         return {"status": self.status, "message": self.message}
 
 
-def run_postprocess_phase(*, entry: str, output_dir: Path) -> PostprocessOutcome:
+def run_postprocess_phase(*, entry: str | None, output_dir: Path) -> PostprocessOutcome:
     """Placeholder post-DAG hand-off. Proves the wiring; does no real work yet."""
     return PostprocessOutcome(
         status="stub",
