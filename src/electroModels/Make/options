@@ -63,7 +63,6 @@ EXE_INC = \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
     -I../couplingModels/lnInclude \
-    -I../../modules/physicsModel/src/solids4FoamModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \

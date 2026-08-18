@@ -128,8 +128,6 @@ class TestPredictorSingleCell(unittest.TestCase):
             )
             self.assertIn("u", trace.variables)
             self.assertIn("recovery_r", trace.variables)
-            # Time-indexed Vm artifact must also be present.
-            self.assertIn("single_cell_vm_series", ids)
 
     def test_variables_change_with_ionic_model(self) -> None:
         """Convergence guard: the predictor must return different variables
@@ -159,27 +157,6 @@ class TestPredictorSingleCell(unittest.TestCase):
             # AlievPanfilov has no calcium.
             self.assertIn("calcium_Cai", trace_tnnp.variables)
 
-    def test_single_cell_also_emits_time_indexed_vm_field(self) -> None:
-        """singleCellSolver writes <time>/Vm via AUTO_WRITE (1-cell mesh).
-        The predictor must emit a separate time-indexed artifact for it,
-        alongside the `postProcessing/*_*_*.txt` trace."""
-        with tempfile.TemporaryDirectory() as temp:
-            case_root = Path(temp) / "case"
-            case_root.mkdir()
-            _write_single_cell_electro_properties(
-                case_root, ionic_model="AlievPanfilov"
-            )
-            spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
-            ids = {a.artifact_id for a in artifacts}
-            self.assertIn("single_cell_trace", ids)
-            self.assertIn("single_cell_vm_series", ids)
-            vm_artifact = next(
-                a for a in artifacts if a.artifact_id == "single_cell_vm_series"
-            )
-            self.assertEqual(vm_artifact.path_pattern, "{time}/Vm")
-            self.assertTrue(vm_artifact.time_indexed)
-            self.assertTrue(vm_artifact.optional)
 
     def test_unknown_ionic_model_returns_only_vm_and_empty_trace(self) -> None:
         """The predictor must not raise on a model name absent from the

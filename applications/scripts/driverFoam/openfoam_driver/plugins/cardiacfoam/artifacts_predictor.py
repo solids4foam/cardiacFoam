@@ -62,13 +62,6 @@ def _predict_single_cell(case_root: Path, spec: TutorialSpec, ionic_model: str |
             produced_by="singleCellSolver",
             time_indexed=False,
         ),
-        _time_indexed_field_artifact(
-            solver="single_cell",
-            field_name="Vm",
-            ionic_model=ionic_model,
-            description=f"Membrane voltage Vm on 1-cell mesh (singleCellSolver, ionicModel={ionic_model})",
-            optional=True,
-        ),
     )
 
 def _predict_monodomain(case_root: Path, spec: TutorialSpec, ionic_model: str | None) -> tuple[DataArtifact, ...]:
