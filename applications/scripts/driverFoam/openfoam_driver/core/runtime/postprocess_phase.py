@@ -58,9 +58,18 @@ pieces on purpose:
   real analysis (`run_postprocessing_module` returns a stub outcome), but its
   signature already reflects the real contract: analysis code lands here,
   consuming grounded context, not raw paths it has to re-verify.
+
+The module isn't limited to the flat summary in `SweepContext`, though.
+`read_case_workflow_state` and `read_case_output_file` let it (or a
+reasoning agent driving it) ask the brain for more -- full workflow_state.json
+detail, or a specific output file's content -- without ever bypassing what
+the brain already verified: both raise clearly on an unknown case_id, and
+`read_case_output_file` only reads a path already present in the brain's own
+`CaseRecord.output_files` scan, never an arbitrary path the caller guesses.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -215,3 +224,44 @@ def run_postprocessing_module(context: SweepContext) -> PostprocessOutcome:
             f"({context.completed_count}/{context.case_count} completed) -- {case_summaries}"
         ),
     )
+
+
+def _case_by_id(context: SweepContext, case_id: str) -> CaseRecord:
+    for case in context.cases:
+        if case.case_id == case_id:
+            return case
+    raise KeyError(f"{case_id!r} is not a case in this SweepContext (sweep {context.sweep_spec_hash})")
+
+
+def read_case_workflow_state(context: SweepContext, case_id: str) -> dict[str, Any]:
+    """On-demand deeper read: the full workflow_state.json for one case.
+
+    CaseRecord only summarizes status/outcome; this returns the real
+    per-step detail (status, attempt, produced_artifacts, diagnostics, ...)
+    for callers that need more than the summary.
+    """
+    case = _case_by_id(context, case_id)
+    workflow_state_path = Path(case.workflow_state_path)
+    if not workflow_state_path.is_file():
+        raise FileNotFoundError(
+            f"workflow_state_path for case {case_id!r} no longer exists: {workflow_state_path}"
+        )
+    return json.loads(workflow_state_path.read_text())
+
+
+def read_case_output_file(context: SweepContext, case_id: str, relative_path: str) -> str:
+    """On-demand deeper read: one case's output file content.
+
+    `relative_path` must be one the brain already found during
+    `build_sweep_context` (present in `case.output_files`) -- this can never
+    be used to read a file the brain hasn't verified exists.
+    """
+    case = _case_by_id(context, case_id)
+    if relative_path not in case.output_files:
+        raise KeyError(
+            f"{relative_path!r} is not among the verified output files for case "
+            f"{case_id!r}: {list(case.output_files)}"
+        )
+    if case.case_output_dir is None:
+        raise FileNotFoundError(f"case {case_id!r} has no case_output_dir on record")
+    return (Path(case.case_output_dir) / relative_path).read_text()

@@ -36,6 +36,7 @@ re-derive "what ran and where" itself.
 """
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -45,6 +46,8 @@ from openfoam_driver.core.runtime.postprocess_phase import (
     PostprocessOutcome,
     SweepContext,
     build_sweep_context,
+    read_case_output_file,
+    read_case_workflow_state,
     run_postprocess_phase,
     run_postprocessing_module,
 )
@@ -207,6 +210,69 @@ class RunPostprocessingModuleTests(unittest.TestCase):
         self.assertIn("sha256:abc123", outcome.message)
         self.assertIn("case_a", outcome.message)
         self.assertIn("1/1 completed", outcome.message)
+
+
+class OnDemandQueryTests(unittest.TestCase):
+    def _build_real_context(self, output_dir: Path) -> SweepContext:
+        case_dir = output_dir / "case_a" / "postProcessing"
+        case_dir.mkdir(parents=True)
+        (case_dir / "workflow_state.json").write_text(json.dumps({
+            "status": "completed",
+            "steps": [{"step_id": "solve", "status": "completed", "produced_artifacts": ["vm_series"]}],
+        }))
+        (case_dir / "activationTime.csv").write_text("t,v\n0,0\n")
+
+        _write_sweep_manifest(output_dir, [
+            CaseManifestEntry(
+                case_id="case_a",
+                resolved_axis_values={"dx_mm": 0.5},
+                override_hash="sha256:x",
+                run_document_path="case_a/run_document.json",
+                workflow_state_path="case_a/postProcessing/workflow_state.json",
+                status="completed",
+                outcome="fresh",
+                started_at="2026-08-18T00:00:00+00:00",
+                updated_at="2026-08-18T00:01:00+00:00",
+            ),
+        ])
+        return build_sweep_context(output_dir)
+
+    def test_read_case_workflow_state_returns_full_step_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = self._build_real_context(Path(tmp))
+            state = read_case_workflow_state(context, "case_a")
+            self.assertEqual(state["status"], "completed")
+            self.assertEqual(state["steps"][0]["produced_artifacts"], ["vm_series"])
+
+    def test_read_case_workflow_state_unknown_case_id_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = self._build_real_context(Path(tmp))
+            with self.assertRaises(KeyError):
+                read_case_workflow_state(context, "does_not_exist")
+
+    def test_read_case_output_file_returns_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = self._build_real_context(Path(tmp))
+            content = read_case_output_file(context, "case_a", "activationTime.csv")
+            self.assertEqual(content, "t,v\n0,0\n")
+
+    def test_read_case_output_file_rejects_unverified_path(self) -> None:
+        # Even though this exact file exists on disk (planted after the brain
+        # already scanned), the brain never verified it -- must not be
+        # readable via the query function. This is the guarantee the split
+        # exists for: no path the brain hasn't confirmed is ever accessible.
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            context = self._build_real_context(output_dir)
+            (output_dir / "case_a" / "postProcessing" / "planted_after_scan.txt").write_text("sneaky")
+            with self.assertRaises(KeyError):
+                read_case_output_file(context, "case_a", "planted_after_scan.txt")
+
+    def test_read_case_output_file_unknown_case_id_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = self._build_real_context(Path(tmp))
+            with self.assertRaises(KeyError):
+                read_case_output_file(context, "does_not_exist", "activationTime.csv")
 
 
 if __name__ == "__main__":
