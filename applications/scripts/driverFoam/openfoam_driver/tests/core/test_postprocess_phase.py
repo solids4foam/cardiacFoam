@@ -46,6 +46,7 @@ from openfoam_driver.core.runtime.postprocess_phase import (
     PostprocessOutcome,
     SweepContext,
     build_sweep_context,
+    find_postprocess_script,
     read_case_output_file,
     read_case_workflow_state,
     run_postprocess_phase,
@@ -123,6 +124,61 @@ class BuildSweepContextTests(unittest.TestCase):
                 ("activationTime.csv", "workflow_state.json"),
             )
 
+    def test_resolves_setup_root_from_real_run_document(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            case_dir = output_dir / "case_a" / "postProcessing"
+            case_dir.mkdir(parents=True)
+            (case_dir / "workflow_state.json").write_text("{}")
+
+            run_document_dir = output_dir / "case_a"
+            (run_document_dir / "run_document.json").write_text(json.dumps({
+                "launch": {"setupRoot": "/tutorials/someTutorial/setup"},
+            }))
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="case_a",
+                    resolved_axis_values={},
+                    override_hash="sha256:x",
+                    run_document_path="case_a/run_document.json",
+                    workflow_state_path="case_a/postProcessing/workflow_state.json",
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-18T00:00:00+00:00",
+                    updated_at="2026-08-18T00:01:00+00:00",
+                ),
+            ])
+
+            context = build_sweep_context(output_dir)
+
+            self.assertEqual(context.cases[0].setup_root, "/tutorials/someTutorial/setup")
+
+    def test_missing_run_document_yields_no_setup_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            case_dir = output_dir / "case_a" / "postProcessing"
+            case_dir.mkdir(parents=True)
+            (case_dir / "workflow_state.json").write_text("{}")
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="case_a",
+                    resolved_axis_values={},
+                    override_hash="sha256:x",
+                    run_document_path="case_a/run_document.json",  # never written
+                    workflow_state_path="case_a/postProcessing/workflow_state.json",
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-18T00:00:00+00:00",
+                    updated_at="2026-08-18T00:01:00+00:00",
+                ),
+            ])
+
+            context = build_sweep_context(output_dir)
+
+            self.assertIsNone(context.cases[0].setup_root)
+
     def test_resolves_absolute_workflow_state_path_outside_output_dir(self) -> None:
         # Entry-mode sweeps record an absolute workflow_state_path pointing
         # into the target tutorial's own case_root, unrelated to the sweep's
@@ -180,8 +236,54 @@ class BuildSweepContextTests(unittest.TestCase):
             self.assertEqual(context.failed_count, 1)
 
 
+class FindPostprocessScriptTests(unittest.TestCase):
+    def test_finds_script_defining_run_postprocessing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "table_summary.py").write_text(
+                "def run_postprocessing(*, output_dir, **kwargs):\n    return []\n"
+            )
+            self.assertEqual(
+                find_postprocess_script(setup_root),
+                setup_root / "table_summary.py",
+            )
+
+    def test_returns_none_when_no_script_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "helpers.py").write_text("def not_it():\n    pass\n")
+            self.assertIsNone(find_postprocess_script(setup_root))
+
+    def test_returns_none_for_nonexistent_directory(self) -> None:
+        self.assertIsNone(find_postprocess_script(Path("/no/such/setup/dir")))
+
+    def test_picks_first_match_in_sorted_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "z_script.py").write_text("def run_postprocessing(): pass\n")
+            (setup_root / "a_script.py").write_text("def run_postprocessing(): pass\n")
+            self.assertEqual(
+                find_postprocess_script(setup_root),
+                setup_root / "a_script.py",
+            )
+
+    def test_never_imports_the_candidate_file(self) -> None:
+        # A syntax error would only surface on import/exec -- a pure text
+        # search must not choke on it, since setup/ scripts are untrusted
+        # tutorial content the brain should never execute just to look.
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp)
+            (setup_root / "broken.py").write_text(
+                "def run_postprocessing(:\n    this is not valid python\n"
+            )
+            self.assertEqual(
+                find_postprocess_script(setup_root),
+                setup_root / "broken.py",
+            )
+
+
 class RunPostprocessingModuleTests(unittest.TestCase):
-    def test_message_is_grounded_in_the_supplied_context(self) -> None:
+    def test_message_is_grounded_in_the_supplied_context_and_task(self) -> None:
         context = SweepContext(
             output_dir="/tmp/sweep_out",
             sweep_spec_hash="sha256:abc123",
@@ -199,17 +301,54 @@ class RunPostprocessingModuleTests(unittest.TestCase):
                     workflow_state_path="/tmp/sweep_out/case_a/postProcessing/workflow_state.json",
                     case_output_dir="/tmp/sweep_out/case_a/postProcessing",
                     output_files=("activationTime.csv",),
+                    setup_root=None,
                 ),
             ),
         )
 
-        outcome = run_postprocessing_module(context)
+        outcome = run_postprocessing_module(context, task="check convergence")
 
         self.assertIsInstance(outcome, PostprocessOutcome)
         self.assertEqual(outcome.status, "stub")
         self.assertIn("sha256:abc123", outcome.message)
         self.assertIn("case_a", outcome.message)
         self.assertIn("1/1 completed", outcome.message)
+        self.assertIn("check convergence", outcome.message)
+        self.assertIn("no setup/ script", outcome.message)
+
+    def test_discovers_case_setup_root_postprocess_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_root = Path(tmp) / "setup"
+            setup_root.mkdir()
+            (setup_root / "table_summary.py").write_text(
+                "def run_postprocessing(*, output_dir, setup_root=None, **kwargs):\n    return []\n"
+            )
+
+            context = SweepContext(
+                output_dir="/tmp/sweep_out",
+                sweep_spec_hash="sha256:def456",
+                started_at="2026-08-18T00:00:00+00:00",
+                finished_at="2026-08-18T00:05:00+00:00",
+                case_count=1,
+                completed_count=1,
+                failed_count=0,
+                cases=(
+                    CaseRecord(
+                        case_id="case_a",
+                        resolved_axis_values={},
+                        status="completed",
+                        outcome="fresh",
+                        workflow_state_path="/tmp/sweep_out/case_a/postProcessing/workflow_state.json",
+                        case_output_dir="/tmp/sweep_out/case_a/postProcessing",
+                        output_files=(),
+                        setup_root=str(setup_root),
+                    ),
+                ),
+            )
+
+            outcome = run_postprocessing_module(context, task="summarize")
+
+            self.assertIn("found table_summary.py", outcome.message)
 
 
 class OnDemandQueryTests(unittest.TestCase):

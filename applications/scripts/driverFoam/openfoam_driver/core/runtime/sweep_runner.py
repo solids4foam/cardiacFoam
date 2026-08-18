@@ -232,8 +232,15 @@ def sweep_run(
     retry_failed: bool = False,
     case_timeout_s: float | None = None,
     fresh: bool = False,
+    task: str = "summarize",
     driver_context=None,
 ) -> dict[str, Any]:
+    """`task` plays no part in the sweep loop itself -- expanding, routing,
+    materializing, and running cases is fully deterministic and has no use
+    for it. It is only consumed at the very end, handed to
+    run_postprocessing_module: the sweep is task(sweep), no reasoning
+    involved; the postprocess hand-off is where a task actually matters.
+    """
     from ..compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
@@ -440,7 +447,7 @@ def sweep_run(
 
     if failed_count == 0:
         context = build_sweep_context(output_dir)
-        postprocess = run_postprocessing_module(context).to_json()
+        postprocess = run_postprocessing_module(context, task=task).to_json()
     else:
         postprocess = {
             "status": "skipped",

@@ -52,12 +52,16 @@ pieces on purpose:
   "what ran and where its output went."
 
 * **The postprocessing module** (`run_postprocessing_module`) is a separate,
-  independent function that receives that `SweepContext` as input. It never
-  re-reads the manifest or re-derives file locations itself -- that is
-  exactly the confusion the brain/module split avoids. It currently does no
-  real analysis (`run_postprocessing_module` returns a stub outcome), but its
-  signature already reflects the real contract: analysis code lands here,
-  consuming grounded context, not raw paths it has to re-verify.
+  independent function that receives that `SweepContext`, plus a `task`
+  (what the caller actually wants done), as input. It never re-reads the
+  manifest or re-derives file locations itself -- that is exactly the
+  confusion the brain/module split avoids. task(sweep) (sweep_run itself)
+  is purely deterministic and has no task concept; the task only enters at
+  this hand-off, where reasoning actually happens. It currently does no
+  real analysis (`run_postprocessing_module` returns a stub outcome), but
+  it does discover each case's own setup/ postprocessing script via
+  `find_postprocess_script` -- real dispatch (run that script, or reason
+  freely when there isn't one) lands here next.
 
 The module isn't limited to the flat summary in `SweepContext`, though.
 `read_case_workflow_state` and `read_case_output_file` let it (or a
@@ -109,6 +113,7 @@ class CaseRecord:
     workflow_state_path: str
     case_output_dir: str | None
     output_files: tuple[str, ...]
+    setup_root: str | None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -119,6 +124,7 @@ class CaseRecord:
             "workflow_state_path": self.workflow_state_path,
             "case_output_dir": self.case_output_dir,
             "output_files": list(self.output_files),
+            "setup_root": self.setup_root,
         }
 
 
@@ -170,6 +176,27 @@ def _resolve_case_output(workflow_state_raw: str, *, output_dir: Path) -> tuple[
     return workflow_state_path, case_output_dir, output_files
 
 
+def _resolve_case_setup_root(run_document_path_raw: str, *, output_dir: Path) -> str | None:
+    """Read a case's run_document.json and extract launch.setupRoot.
+
+    run_document_path is always written under the sweep's own output_dir
+    (sweep_runner._relative_or_absolute's docstring), unlike
+    workflow_state_path -- no relative/absolute branching needed here.
+    Returns None if the file is missing or malformed rather than raising,
+    since setup_root is used for postprocess-script discovery, not for
+    judging whether the case itself succeeded.
+    """
+    run_document_path = output_dir / run_document_path_raw
+    if not run_document_path.is_file():
+        return None
+    try:
+        run_document = json.loads(run_document_path.read_text())
+    except json.JSONDecodeError:
+        return None
+    setup_root = run_document.get("launch", {}).get("setupRoot")
+    return str(setup_root) if setup_root else None
+
+
 def build_sweep_context(output_dir: Path) -> SweepContext:
     """The brain: read sweep_manifest.json, then verify it against disk.
 
@@ -187,6 +214,7 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
         workflow_state_path, case_output_dir, output_files = _resolve_case_output(
             case_entry.workflow_state_path, output_dir=output_dir,
         )
+        setup_root = _resolve_case_setup_root(case_entry.run_document_path, output_dir=output_dir)
         cases.append(CaseRecord(
             case_id=case_entry.case_id,
             resolved_axis_values=dict(case_entry.resolved_axis_values),
@@ -195,6 +223,7 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
             workflow_state_path=str(workflow_state_path),
             case_output_dir=str(case_output_dir) if case_output_dir is not None else None,
             output_files=output_files,
+            setup_root=setup_root,
         ))
 
     return SweepContext(
@@ -209,19 +238,48 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
     )
 
 
-def run_postprocessing_module(context: SweepContext) -> PostprocessOutcome:
+def find_postprocess_script(setup_root: Path) -> Path | None:
+    """Discover whether a tutorial's setup/ directory has its own
+    postprocessing script, by the PostprocessingProtocol convention: a
+    top-level .py file defining `def run_postprocessing(`.
+
+    Static text search only -- never imports or executes the candidate
+    file. setup/ scripts are untrusted tutorial content, not driver code;
+    discovery must not run arbitrary code as a side effect of looking.
+    Returns the first match in sorted (deterministic) order, or None if the
+    directory doesn't exist or no file matches.
+    """
+    setup_root = Path(setup_root)
+    if not setup_root.is_dir():
+        return None
+    for path in sorted(setup_root.glob("*.py")):
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        if "def run_postprocessing(" in text:
+            return path
+    return None
+
+
+def run_postprocessing_module(context: SweepContext, *, task: str) -> PostprocessOutcome:
     """Placeholder postprocessing module. Still no real analysis -- but now
-    driven entirely by the brain's grounded SweepContext, not by re-reading
-    the manifest or the filesystem itself."""
-    case_summaries = ", ".join(
-        f"{case.case_id}: {len(case.output_files)} file(s) @ {case.case_output_dir}"
-        for case in context.cases
-    )
+    driven entirely by the brain's grounded SweepContext plus the task it
+    was asked to do. Discovers (does not yet invoke) each case's own
+    postprocessing script, if its tutorial has one under setup/ -- real
+    dispatch (run the script, or reason freely if there isn't one) lands
+    here next."""
+    case_summaries = []
+    for case in context.cases:
+        script = find_postprocess_script(Path(case.setup_root)) if case.setup_root else None
+        found = f"found {script.name}" if script is not None else "no setup/ script"
+        case_summaries.append(f"{case.case_id}: {found}, {len(case.output_files)} file(s)")
     return PostprocessOutcome(
         status="stub",
         message=(
             f"postprocess stub: sweep {context.sweep_spec_hash} "
-            f"({context.completed_count}/{context.case_count} completed) -- {case_summaries}"
+            f"({context.completed_count}/{context.case_count} completed), task={task!r} -- "
+            + "; ".join(case_summaries)
         ),
     )
 
