@@ -41,6 +41,7 @@ from .core.runtime.resume_guard import stale_resume_warnings
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
+from .core.runtime.postprocess_phase import run_postprocess_phase
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials
 from .core.runtime.sweep_runner import sweep_plan, sweep_run
 from .introspection import describe_entry
@@ -331,6 +332,15 @@ def _execute_run(
     }
     if workflow_state.status == "pending" and workflow_state.current_step_id is None:
         payload["error"] = "workflow_state is pending but has no current_step_id"
+    if status == "ok":
+        payload["postprocess"] = run_postprocess_phase(
+            entry=entry_label, output_dir=output_dir,
+        ).to_json()
+    else:
+        payload["postprocess"] = {
+            "status": "skipped",
+            "message": f"workflow did not complete (status={status}); postprocess not run",
+        }
     _attach_failure_context(payload, workflow_state, workflow_state.failed_step_id, tail_lines=tail_lines)
     print(json.dumps(payload, indent=2))
     return 0 if status == "ok" else 1
