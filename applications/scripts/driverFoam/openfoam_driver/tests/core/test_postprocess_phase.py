@@ -25,20 +25,33 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for the post-DAG hand-off placeholder.
+"""Tests for the post-DAG hand-off.
 
-`run_postprocess_phase` currently does no real work -- it proves the hand-off
-point exists and returns a stable, serializable shape. These tests pin that
-shape so the eventual real implementation has a contract to keep.
+`run_postprocess_phase` (single-run) and `run_postprocessing_module`
+(sweep) currently do no real analysis -- they prove the hand-off point
+exists and returns a stable, serializable shape. `build_sweep_context` is
+the "brain": it reads sweep_manifest.json and verifies it against what is
+actually on disk per case, so `run_postprocessing_module` never has to
+re-derive "what ran and where" itself.
 """
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
 
 from openfoam_driver.core.runtime.postprocess_phase import (
+    CaseRecord,
     PostprocessOutcome,
+    SweepContext,
+    build_sweep_context,
     run_postprocess_phase,
+    run_postprocessing_module,
+)
+from openfoam_driver.core.runtime.sweep_manifest import (
+    CaseManifestEntry,
+    SweepManifest,
+    write_manifest,
 )
 
 
@@ -54,6 +67,146 @@ class PostprocessPhaseTests(unittest.TestCase):
         outcome = run_postprocess_phase(entry="niederer2012", output_dir=Path("/tmp/x"))
         payload = outcome.to_json()
         self.assertEqual(payload, {"status": outcome.status, "message": outcome.message})
+
+
+def _write_sweep_manifest(output_dir: Path, cases: list[CaseManifestEntry]) -> None:
+    manifest = SweepManifest(
+        schema_version="1.0",
+        sweep_spec_hash="sha256:deadbeef",
+        created_at="2026-08-18T00:00:00+00:00",
+        updated_at="2026-08-18T00:05:00+00:00",
+        cases=cases,
+    )
+    write_manifest(output_dir / "sweep_manifest.json", manifest)
+
+
+class BuildSweepContextTests(unittest.TestCase):
+    def test_resolves_relative_workflow_state_path_and_lists_real_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            case_dir = output_dir / "case_a" / "postProcessing"
+            case_dir.mkdir(parents=True)
+            (case_dir / "workflow_state.json").write_text("{}")
+            (case_dir / "activationTime.csv").write_text("t,v\n0,0\n")
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="case_a",
+                    resolved_axis_values={"dx_mm": 0.5},
+                    override_hash="sha256:x",
+                    run_document_path="case_a/run_document.json",
+                    workflow_state_path="case_a/postProcessing/workflow_state.json",
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-18T00:00:00+00:00",
+                    updated_at="2026-08-18T00:01:00+00:00",
+                ),
+            ])
+
+            context = build_sweep_context(output_dir)
+
+            self.assertIsInstance(context, SweepContext)
+            self.assertEqual(context.case_count, 1)
+            self.assertEqual(context.completed_count, 1)
+            self.assertEqual(context.failed_count, 0)
+            self.assertEqual(len(context.cases), 1)
+            case = context.cases[0]
+            self.assertIsInstance(case, CaseRecord)
+            self.assertEqual(case.case_id, "case_a")
+            self.assertEqual(case.resolved_axis_values, {"dx_mm": 0.5})
+            self.assertEqual(case.case_output_dir, str(case_dir))
+            self.assertEqual(
+                case.output_files,
+                ("activationTime.csv", "workflow_state.json"),
+            )
+
+    def test_resolves_absolute_workflow_state_path_outside_output_dir(self) -> None:
+        # Entry-mode sweeps record an absolute workflow_state_path pointing
+        # into the target tutorial's own case_root, unrelated to the sweep's
+        # --output-dir tree (see sweep_runner._relative_or_absolute).
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "sweep_out"
+            output_dir.mkdir()
+            tutorial_case_dir = root / "tutorials" / "someTutorial" / "outputs"
+            tutorial_case_dir.mkdir(parents=True)
+            (tutorial_case_dir / "workflow_state.json").write_text("{}")
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="implicit_TNNP_DX0.5",
+                    resolved_axis_values={"dx_values": [0.5]},
+                    override_hash="sha256:y",
+                    run_document_path="implicit_TNNP_DX0.5/run_document.json",
+                    workflow_state_path=str(tutorial_case_dir / "workflow_state.json"),
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-18T00:00:00+00:00",
+                    updated_at="2026-08-18T00:01:00+00:00",
+                ),
+            ])
+
+            context = build_sweep_context(output_dir)
+
+            case = context.cases[0]
+            self.assertEqual(case.case_output_dir, str(tutorial_case_dir))
+            self.assertEqual(case.output_files, ("workflow_state.json",))
+
+    def test_missing_workflow_state_file_yields_no_output_dir_or_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="never_ran",
+                    resolved_axis_values={},
+                    override_hash="sha256:z",
+                    run_document_path="never_ran/run_document.json",
+                    workflow_state_path="never_ran/postProcessing/workflow_state.json",
+                    status="failed",
+                    outcome="fresh",
+                    started_at="2026-08-18T00:00:00+00:00",
+                    updated_at="2026-08-18T00:01:00+00:00",
+                ),
+            ])
+
+            context = build_sweep_context(output_dir)
+
+            case = context.cases[0]
+            self.assertIsNone(case.case_output_dir)
+            self.assertEqual(case.output_files, ())
+            self.assertEqual(context.failed_count, 1)
+
+
+class RunPostprocessingModuleTests(unittest.TestCase):
+    def test_message_is_grounded_in_the_supplied_context(self) -> None:
+        context = SweepContext(
+            output_dir="/tmp/sweep_out",
+            sweep_spec_hash="sha256:abc123",
+            started_at="2026-08-18T00:00:00+00:00",
+            finished_at="2026-08-18T00:05:00+00:00",
+            case_count=1,
+            completed_count=1,
+            failed_count=0,
+            cases=(
+                CaseRecord(
+                    case_id="case_a",
+                    resolved_axis_values={"dx_mm": 0.5},
+                    status="completed",
+                    outcome="fresh",
+                    workflow_state_path="/tmp/sweep_out/case_a/postProcessing/workflow_state.json",
+                    case_output_dir="/tmp/sweep_out/case_a/postProcessing",
+                    output_files=("activationTime.csv",),
+                ),
+            ),
+        )
+
+        outcome = run_postprocessing_module(context)
+
+        self.assertIsInstance(outcome, PostprocessOutcome)
+        self.assertEqual(outcome.status, "stub")
+        self.assertIn("sha256:abc123", outcome.message)
+        self.assertIn("case_a", outcome.message)
+        self.assertIn("1/1 completed", outcome.message)
 
 
 if __name__ == "__main__":

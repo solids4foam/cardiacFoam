@@ -42,7 +42,7 @@ from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values, route_entry_case_values
 from .fresh import ensure_fresh_output_dir
 from .output_collection import collect_new_outputs, snapshot_postprocessing
-from .postprocess_phase import run_postprocess_phase
+from .postprocess_phase import build_sweep_context, run_postprocessing_module
 from .registry import load_entry_spec
 from .run_document_exec import _allowed_runs_root
 from .sweep_manifest import (
@@ -439,7 +439,8 @@ def sweep_run(
         write_manifest(manifest_path, manifest)
 
     if failed_count == 0:
-        postprocess = run_postprocess_phase(entry=entry, output_dir=output_dir).to_json()
+        context = build_sweep_context(output_dir)
+        postprocess = run_postprocessing_module(context).to_json()
     else:
         postprocess = {
             "status": "skipped",
