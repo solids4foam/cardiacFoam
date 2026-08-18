@@ -148,6 +148,7 @@ def _workflow_dag_for(
     *,
     case_root: Path,
     run_in_parallel: bool = False,
+    tet_geo_relpath: Path = Path("setup/mesh/tet/box.geo"),
 ) -> dict[str, object]:
     """Build this spec's workflow_dag, branching on mesh_family.
 
@@ -156,6 +157,10 @@ def _workflow_dag_for(
     the tet mesh with a Cartesian block. gmsh/gmshToFoam/checkMesh run as
     real workflow steps (executed only when run --strict/sweep-run actually
     runs), never inside apply_case/materialization.
+
+    tet_geo_relpath must agree with where _apply_case's render_tet_geo call
+    actually wrote the .geo file (derived from tet_geo_template_relpath), or
+    gmsh will mesh a stale/nonexistent file.
 
     run_in_parallel=True wraps the solve step with decomposePar/reconstructPar
     via solve_steps() -- identical mechanism regardless of mesh_family, so
@@ -171,7 +176,7 @@ def _workflow_dag_for(
                 # forever instead of meshing anything (found via a real,
                 # non-mocked sweep-run) -- these are the same args the
                 # original bash scripts pass.
-                "args": ["-3", "setup/mesh/tet/box.geo", "-o", "box.msh", "-format", "msh2"],
+                "args": ["-3", str(tet_geo_relpath), "-o", "box.msh", "-format", "msh2"],
                 "depends_on": ["clean"],
             },
             {
@@ -222,13 +227,16 @@ def _apply_case(
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     mesh_family: str = "hex",
-    tet_geo_template_relpath: Path = Path("setup/mesh/tet/box.geo.template"),
+    tet_geo_template_relpath: Path = Path("setup/studies/tetConvergence/box.geo.template"),
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
+    n_outer_correctors: int | None = None,
+    n_nonorthogonal_correctors: int | None = None,
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
+    control_dict_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> None:
     dimension = str(case.params["dimension"])
     solver = str(case.params["solver"])
@@ -276,9 +284,18 @@ def _apply_case(
         # Render-only: substitutes __LC__ and writes overlay files. gmsh/
         # gmshToFoam/checkMesh are workflow_dag steps, not run here -- see
         # _workflow_dag_for's docstring.
-        render_tet_geo(case_root, cells, template_relpath=tet_geo_template_relpath)
+        #
+        # The .geo output and any numerics-profile overlay files (fvSchemes/
+        # fvSolution) are siblings of the template, wherever the caller has
+        # placed it -- not hardcoded to setup/mesh/tet/, since different
+        # tutorials co-locate their tet mesh with different studies. Always
+        # named "box.geo" regardless of the template's own filename: template
+        # variants exist (e.g. bidomain's own box.geo.template),
+        # but they all render into the same transient, gitignored .geo name.
+        tet_geo_relpath = tet_geo_template_relpath.parent / "box.geo"
+        render_tet_geo(case_root, cells, template_relpath=tet_geo_template_relpath, geo_relpath=tet_geo_relpath)
         for overlay_name in _NUMERICS_PROFILES.get(numerics_profile or "", ()):
-            overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
+            overlay_source = case_root / tet_geo_template_relpath.parent / overlay_name
             shutil.copy(overlay_source, case_root / "system" / overlay_name)
     else:
         try:
@@ -304,6 +321,18 @@ def _apply_case(
             phi_tolerance,
             scope=["solvers", '"phiE|phiEFinal|phiI|phiIFinal"'],
         )
+    if n_outer_correctors is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSolution",
+            "nOuterCorrectors", n_outer_correctors,
+            scope=["PIMPLE"],
+        )
+    if n_nonorthogonal_correctors is not None:
+        update_foam_entry(
+            case_root / "system" / "fvSolution",
+            "nNonOrthogonalCorrectors", n_nonorthogonal_correctors,
+            scope=["PIMPLE"], add_if_missing=True,
+        )
     for entry in fv_scheme_overrides or ():
         update_foam_entry(
             case_root / "system" / "fvSchemes", entry["key"], entry["value"],
@@ -312,6 +341,11 @@ def _apply_case(
     for entry in fv_solution_overrides or ():
         update_foam_entry(
             case_root / "system" / "fvSolution", entry["key"], entry["value"],
+            scope=entry.get("scope"),
+        )
+    for entry in control_dict_overrides or ():
+        update_foam_entry(
+            control_dict, entry["key"], entry["value"],
             scope=entry.get("scope"),
         )
 
@@ -471,13 +505,16 @@ def make_spec(
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
     mesh_family: str = "hex",
-    tet_geo_template_relpath: str | Path = "setup/mesh/tet/box.geo.template",
+    tet_geo_template_relpath: str | Path = "setup/studies/tetConvergence/box.geo.template",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     phi_tolerance: float | None = None,
+    n_outer_correctors: int | None = None,
+    n_nonorthogonal_correctors: int | None = None,
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
+    control_dict_overrides: Sequence[Mapping[str, object]] | None = None,
 ) -> TutorialSpec:
     # Entry-based sweep-run routes a zip axis's per-case resolved value
     # straight through as a scalar (e.g. dimensions="1D"), not wrapped in a
@@ -566,9 +603,12 @@ def make_spec(
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             phi_tolerance=phi_tolerance,
+            n_outer_correctors=n_outer_correctors,
+            n_nonorthogonal_correctors=n_nonorthogonal_correctors,
             end_time=end_time,
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
+            control_dict_overrides=control_dict_overrides,
             verification_model_type=verification_model_type,
             conductivity=conductivity,
             ecg_enabled=ecg_enabled,
@@ -595,6 +635,7 @@ def make_spec(
             "workflow_dag": _workflow_dag_for(
                 mesh_family, dimensions_list,
                 case_root=case_root, run_in_parallel=run_in_parallel,
+                tet_geo_relpath=tet_geo_template_path.parent / "box.geo",
             ),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,

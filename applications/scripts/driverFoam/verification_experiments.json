@@ -339,7 +339,6 @@
       "case_dir": "tutorials/manufacturedSolutions/bidomain",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/run_bidomain_cartesian.sh",
         "driver_specs": [
           "setup/studies/cartesianConvergence/sweep_hex_convergence.json"
         ]
@@ -378,8 +377,10 @@
       "description": "Bidomain temporal convergence",
       "case_dir": "tutorials/manufacturedSolutions/bidomain",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/studies/temporalConvergence/run_temporal_convergence.sh"
+        "kind": "driver_sweep",
+        "driver_specs": [
+          "setup/studies/temporalConvergence/sweep_temporal_convergence.json"
+        ]
       },
       "matrix": {
         "mesh_family": [
@@ -413,8 +414,10 @@
       "description": "Generic tetrahedral bidomain gradient-scheme comparison",
       "case_dir": "tutorials/manufacturedSolutions/bidomain",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/mesh/tet/run_bidomain_tet_generic.sh"
+        "kind": "driver_sweep",
+        "driver_specs": [
+          "setup/studies/tetConvergence/sweep_tet_generic.json"
+        ]
       },
       "matrix": {
         "mesh_family": [

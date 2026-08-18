@@ -11,7 +11,7 @@ from openfoam_driver.verification_contracts import load_contracts, plan, tsv_row
 def test_contract_catalog_is_unique_and_complete():
     contracts = load_contracts()
     identifiers = [item["experiment_id"] for item in contracts]
-    assert len(identifiers) == 16
+    assert len(identifiers) == 15
     assert len(identifiers) == len(set(identifiers))
 
 
@@ -26,23 +26,23 @@ def test_every_registered_path_is_ready():
     assert failures == {}
 
 
-def test_frontal_monodomain_is_one_full_sweep_in_contract_and_bash():
+def test_monodomain_tet_generic_is_one_full_sweep_in_contract_and_bash():
     experiment = next(
         item for item in load_contracts()
-        if item["experiment_id"] == "monodomain_tet_frontal"
+        if item["experiment_id"] == "monodomain_tet_generic"
     )
     assert experiment["matrix"]["N"] == [10, 20, 40, 80]
     assert experiment["execution"]["driver_specs"] == [
-        "setup/studies/tetConvergence/sweep_tet_frontal.json"
+        "setup/studies/tetConvergence/sweep_tet_generic.json"
     ]
 
 
 
 
-def test_tsv_adapter_has_one_six_column_row_per_contract():
+def test_tsv_adapter_has_one_eight_column_row_per_contract():
     rows = tsv_rows().splitlines()
     assert len(rows) == len(load_contracts())
-    assert all(len(row.split("\t")) == 6 for row in rows)
+    assert all(len(row.split("\t")) == 8 for row in rows)
 
 
 def test_cli_can_describe_one_experiment(capsys):

@@ -9,7 +9,7 @@
     "piecewise_sweep": false,
     "mesh_family": "hex",
     "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/temporalConvergence/results/sweepCases",
+    "archive_dir_name": "sweepCases",
     "convergence_axis": "temporal"
   },
   "sweep": {

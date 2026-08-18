@@ -203,7 +203,7 @@ def _write_case(tutorials_root: Path, *, case_dir_name: str = "manufacturedSolut
     case_root = tutorials_root / case_dir_name
     (case_root / "constant").mkdir(parents=True)
     (case_root / "system").mkdir(parents=True)
-    (case_root / "setup" / "mesh" / "tet").mkdir(parents=True)
+    (case_root / "setup" / "studies" / "tetConvergence").mkdir(parents=True)
 
     (case_root / "constant" / "electroProperties").write_text(_ELECTRO_PROPERTIES)
     (case_root / "constant" / "physicsProperties").write_text(_PHYSICS_PROPERTIES)
@@ -212,9 +212,9 @@ def _write_case(tutorials_root: Path, *, case_dir_name: str = "manufacturedSolut
     (case_root / "system" / "fvSchemes").write_text(_HEX_FV_SCHEMES)
     (case_root / "system" / "fvSolution").write_text(_HEX_FV_SOLUTION)
     (case_root / "system" / "decomposeParDict").write_text(_DECOMPOSE_PAR_DICT)
-    (case_root / "setup" / "mesh" / "tet" / "box.geo.template").write_text(_GEO_TEMPLATE)
-    (case_root / "setup" / "mesh" / "tet" / "fvSchemes").write_text(_TET_FV_SCHEMES)
-    (case_root / "setup" / "mesh" / "tet" / "fvSolution").write_text(_TET_FV_SOLUTION)
+    (case_root / "setup" / "studies" / "tetConvergence" / "box.geo.template").write_text(_GEO_TEMPLATE)
+    (case_root / "setup" / "studies" / "tetConvergence" / "fvSchemes").write_text(_TET_FV_SCHEMES)
+    (case_root / "setup" / "studies" / "tetConvergence" / "fvSolution").write_text(_TET_FV_SOLUTION)
     return case_root
 
 
@@ -281,7 +281,7 @@ def test_tet_workflow_dag_gmsh_steps_have_correct_args(tmp_path):
     spec = _make_case(tmp_path, mesh_family="tet")
     by_id = {s["id"]: s for s in spec.metadata["workflow_dag"]["steps"]}
     assert by_id["gmsh"]["args"] == [
-        "-3", "setup/mesh/tet/box.geo", "-o", "box.msh", "-format", "msh2",
+        "-3", "setup/studies/tetConvergence/box.geo", "-o", "box.msh", "-format", "msh2",
     ]
     assert by_id["gmshToFoam"]["args"] == ["box.msh"]
 
@@ -347,14 +347,14 @@ def test_apply_case_renders_geo_but_never_calls_gmsh(tmp_path):
         spec.apply_case(spec.case_root, cases[0])
 
     mock_subprocess.run.assert_not_called()
-    geo_text = (case_root / "setup" / "mesh" / "tet" / "box.geo").read_text()
+    geo_text = (case_root / "setup" / "studies" / "tetConvergence" / "box.geo").read_text()
     assert "__LC__" not in geo_text
     assert "lc = 0.1;" in geo_text
 
 
 def test_apply_case_can_select_an_optimised_geo_template(tmp_path):
     case_root = _write_case(tmp_path)
-    optimised_template = case_root / "setup" / "mesh" / "tet" / "box.geo.template.optimised"
+    optimised_template = case_root / "setup" / "studies" / "tetConvergence" / "box.geo.template.optimised"
     optimised_template.write_text(
         _GEO_TEMPLATE + "Mesh.Algorithm3D = 4;\nMesh.OptimizeNetgen = 1;\n"
     )
@@ -362,12 +362,12 @@ def test_apply_case_can_select_an_optimised_geo_template(tmp_path):
         tmp_path,
         mesh_family="tet",
         numerics_profile="bidomain_tet",
-        tet_geo_template_relpath="setup/mesh/tet/box.geo.template.optimised",
+        tet_geo_template_relpath="setup/studies/tetConvergence/box.geo.template.optimised",
     )
 
     spec.apply_case(spec.case_root, spec.build_cases()[0])
 
-    geo_text = (case_root / "setup" / "mesh" / "tet" / "box.geo").read_text()
+    geo_text = (case_root / "setup" / "studies" / "tetConvergence" / "box.geo").read_text()
     assert "lc = 0.1;" in geo_text
     assert "Mesh.Algorithm3D = 4;" in geo_text
     assert spec.metadata["tet_geo_template_relpath"].endswith("box.geo.template.optimised")

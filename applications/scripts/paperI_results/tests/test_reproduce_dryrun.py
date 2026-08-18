@@ -9,7 +9,7 @@ def test_dry_run_lists_all_cases():
                          capture_output=True, text=True)
     assert out.returncode == 0
     for key in (
-        "monodomain_cartesian", "monodomain_tet_generic", "monodomain_tet_frontal",
+        "monodomain_cartesian", "monodomain_tet_generic",
         "eikonal_cartesian", "eikonal_tet_generic", "eikonal_tet_frontal",
         "eikonal_gradient_tet", "bidomain_cartesian", "bidomain_tet_generic",
         "bath_bidomain_cartesian", "bath_bidomain_tet_conformal",

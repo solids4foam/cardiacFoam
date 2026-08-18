@@ -15,7 +15,7 @@
     "phi_tolerance": 1e-06,
     "end_time": 0.2,
     "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCases"
+    "archive_dir_name": "sweepCases"
   },
   "sweep": {
     "mode": "zip",

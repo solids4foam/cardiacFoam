@@ -1,0 +1,331 @@
+{
+  "base": {
+    "entry": "manufacturedBidomain",
+    "case_dir_name": "manufacturedSolutions/bidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bidomain_tet",
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "number_cells": [
+        [
+          10
+        ],
+        [
+          10
+        ],
+        [
+          10
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          20
+        ],
+        [
+          20
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          40
+        ],
+        [
+          40
+        ],
+        [
+          40
+        ]
+      ],
+      "dt_values": [
+        [
+          0.00892857
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000560538
+        ]
+      ],
+      "end_time": [
+        0.01785714,
+        0.01785714,
+        0.01785714,
+        0.01785714,
+        0.02017935,
+        0.02017935,
+        0.02017935,
+        0.02017935,
+        0.020179368,
+        0.020179368,
+        0.020179368,
+        0.020179368
+      ],
+      "n_outer_correctors": [
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2
+      ],
+      "n_nonorthogonal_correctors": [
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1
+      ],
+      "control_dict_overrides": [
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 2
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 2
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 2
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 2
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 9
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 9
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 9
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 9
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 36
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 36
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 36
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ],
+        [
+          {
+            "key": "writeControl",
+            "value": "timeStep"
+          },
+          {
+            "key": "writeInterval",
+            "value": 36
+          },
+          {
+            "key": "writeFormat",
+            "value": "ascii"
+          }
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "number_cells",
+          "n_outer_correctors",
+          "n_nonorthogonal_correctors"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "number_cells",
+          "n_outer_correctors",
+          "n_nonorthogonal_correctors"
+        ]
+      }
+    ]
+  }
+}

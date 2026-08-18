@@ -11,7 +11,7 @@ def _rows():
     return [{
         "experiment_id": item["experiment_id"],
         "case_dir": item["case_dir"],
-        "runner": item["execution"]["runner"],
+        "runner": item["execution"].get("runner") or "-",
         "aggregator": item["aggregation"].get("key") or "-",
         "result": item["aggregation"]["result"],
         "reference": item["aggregation"].get("reference") or "-",
@@ -33,7 +33,7 @@ def test_expected_case_keys_present():
     keys = {r["experiment_id"] for r in _rows()}
     assert keys == {
         "monodomain_cartesian", "monodomain_temporal",
-        "monodomain_tet_generic", "monodomain_tet_frontal",
+        "monodomain_tet_generic",
         "eikonal_cartesian", "eikonal_tet_generic", "eikonal_tet_frontal",
         "eikonal_gradient_tet", "eikonal_bulk_boundary_tet",
         "bidomain_cartesian", "bidomain_temporal", "bidomain_tet_generic",
@@ -52,7 +52,8 @@ def test_normalized_ids_and_result_names():
 def test_registry_paths_are_real():
     for row in _rows():
         case_root = ROOT / row["case_dir"]
-        assert (case_root / row["runner"]).is_file()
+        if row["runner"] != "-":
+            assert (case_root / row["runner"]).is_file()
         assert (case_root / row["result"]).is_file()
         if row["reference"] != "-":
             assert (case_root / row["reference"]).is_file()

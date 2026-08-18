@@ -34,12 +34,15 @@ def load_contracts(path: Path = CONTRACT_PATH) -> list[dict]:
         execution = experiment["execution"]
         if execution.get("kind") not in {"driver_sweep", "legacy_bash"}:
             raise ValueError(f"{experiment_id}: invalid execution kind")
-        if not execution.get("runner"):
-            raise ValueError(f"{experiment_id}: missing execution runner")
         if execution["kind"] == "driver_sweep":
             specs = execution.get("driver_specs")
             if not isinstance(specs, list) or not specs:
                 raise ValueError(f"{experiment_id}: driver_sweep requires driver_specs")
+            # runner is optional here: reproduce_verification.sh runs
+            # driver_sweep experiments straight from driver_specs +
+            # aggregation.key, no wrapper script required.
+        elif not execution.get("runner"):
+            raise ValueError(f"{experiment_id}: legacy_bash requires execution runner")
         aggregation = experiment["aggregation"]
         expected_result = f"setup/results/{experiment_id}.csv"
         if aggregation.get("result") != expected_result:
@@ -60,9 +63,10 @@ def plan(experiment_id: str | None = None) -> dict:
         case_root = REPO_ROOT / item["case_dir"]
         execution = item["execution"]
         aggregation = item["aggregation"]
+        runner = execution.get("runner")
         checks = {
             "case_dir": case_root.is_dir(),
-            "runner": (case_root / execution["runner"]).is_file(),
+            "runner": True if not runner else (case_root / runner).is_file(),
             "result": (case_root / aggregation["result"]).is_file(),
             "reference": (
                 True if aggregation.get("reference") is None
@@ -87,9 +91,13 @@ def tsv_rows(experiment_id: str | None = None) -> str:
         if not experiments:
             raise KeyError(f"unknown verification experiment: {experiment_id}")
     for item in experiments:
+        execution = item["execution"]
         aggregation = item["aggregation"]
+        driver_specs = execution.get("driver_specs") or []
         rows.append("\t".join((
-            item["experiment_id"], item["case_dir"], item["execution"]["runner"],
+            item["experiment_id"], item["case_dir"], execution["kind"],
+            execution.get("runner") or "-",
+            driver_specs[0] if driver_specs else "-",
             aggregation.get("key") or "-", aggregation["result"],
             aggregation.get("reference") or "-",
         )))

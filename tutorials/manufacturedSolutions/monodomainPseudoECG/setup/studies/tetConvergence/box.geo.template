@@ -1,9 +1,8 @@
 // Unit-cube [0,1]^3 tetrahedral mesh for the monodomain manufactured MMS.
 //
-// This is the anatomically-oriented quality family. It keeps the domain,
-// boundary surfaces, and characteristic-length ladder identical to the
-// Delaunay family in box.geo.template, while changing only Gmsh's 3D
-// generation and optimisation controls.
+// Frontal-Delaunay 3D generation (anatomically-oriented quality family),
+// with Netgen optimisation and extra smoothing passes. The characteristic
+// length placeholder __LC__ is substituted by render_tet_geo (lc = 1/N).
 
 SetFactory("OpenCASCADE");
 

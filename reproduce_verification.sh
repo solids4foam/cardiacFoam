@@ -31,7 +31,7 @@ selected() {
 }
 
 rc=0
-while IFS=$'\t' read -r experiment_id case_dir runner aggregator result reference; do
+while IFS=$'\t' read -r experiment_id case_dir kind runner driver_spec aggregator result reference; do
     [[ -z "$experiment_id" || "$experiment_id" == "experiment_id" ]] && continue
     selected "$experiment_id" || continue
     case_root="$REPO_ROOT/$case_dir"
@@ -39,7 +39,11 @@ while IFS=$'\t' read -r experiment_id case_dir runner aggregator result referenc
     echo "== $experiment_id =="
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
-        echo "  run: $case_dir/$runner"
+        if [[ "$kind" == "driver_sweep" ]]; then
+            echo "  run: driverFoam sweep-run --spec $case_dir/$driver_spec"
+        else
+            echo "  run: $case_dir/$runner"
+        fi
         echo "  result: $case_dir/$result"
         [[ "$aggregator" != "-" ]] && echo "  aggregate: $aggregator"
         [[ "$reference" != "-" ]] && echo "  reference: $case_dir/$reference"
@@ -47,9 +51,25 @@ while IFS=$'\t' read -r experiment_id case_dir runner aggregator result referenc
     fi
 
     if [[ "$SKIP_RUN" -eq 0 ]]; then
-        (cd "$case_root" && bash "$runner") < /dev/null || {
-            echo "  RUN FAILED"; rc=1; continue;
-        }
+        if [[ "$kind" == "driver_sweep" ]]; then
+            # No wrapper script: run straight from the registry's own
+            # driver_specs, the same rm-rf/mkdir/sweep-run sequence every
+            # tutorial's thin run_*.sh wrapper used to hand-duplicate (see
+            # run_study_sweep_common.sh, which this inlines for the
+            # reproduce-all path).
+            spec_path="$case_root/$driver_spec"
+            study_dir="$(dirname "$spec_path")"
+            rm -rf "$study_dir/results/sweepCases" "$study_dir/results/sweepRun"
+            mkdir -p "$study_dir/results"
+            (cd "$case_root" && "$DRIVER" sweep-run --spec "$spec_path" \
+                --output-dir "$study_dir/results/sweepRun") < /dev/null || {
+                echo "  RUN FAILED"; rc=1; continue;
+            }
+        else
+            (cd "$case_root" && bash "$runner") < /dev/null || {
+                echo "  RUN FAILED"; rc=1; continue;
+            }
+        fi
         provenance_tmp="$case_root/provenance.json.tmp"
         PROVENANCE_CMD="./reproduce_verification.sh $experiment_id" \
           PROVENANCE_EXIT=0 \

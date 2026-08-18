@@ -368,6 +368,7 @@ def update_foam_entry(
     value: Any,
     *,
     scope: str | list[str] | tuple[str, ...] | None = None,
+    add_if_missing: bool = False,
 ) -> None:
     """
     Update a key in an OpenFOAM dictionary-like text file.
@@ -377,6 +378,14 @@ def update_foam_entry(
 
     If `scope` is provided, the update is restricted to the named dictionary
     block (or nested path of blocks).
+
+    add_if_missing=True appends `<key>    <value>;` as a new line at the end
+    of the scoped block instead of raising when the key isn't already
+    present -- e.g. an optional fvSolution PIMPLE control (nNonOrthogonal-
+    Correctors) that a case's committed dict may or may not already declare.
+    foamDictionary's own `-set` already does this implicitly (auto-creates a
+    missing key); this mirrors that for the pure-Python fallback path so
+    behaviour doesn't depend on whether OpenFOAM happens to be sourced.
     """
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
@@ -420,6 +429,24 @@ def update_foam_entry(
         file_path.write_text("".join(lines))
 
     if not replaced:
+        if add_if_missing:
+            if scope is None:
+                raise ValueError("add_if_missing requires a scope")
+            if search_end >= len(virtual):
+                raise KeyError(f"Scope '{scope}' not found in {file_path}")
+            insert_before_index = virtual[search_end][1]
+            indent = "    "
+            for idx in _iter_direct_child_lines(
+                [t for t, _, _, _ in virtual], search_start, search_end
+            ):
+                text, line_index, _start, _end = virtual[idx]
+                if text.strip() and not text.strip().startswith("//"):
+                    sibling_line = lines[line_index]
+                    indent = sibling_line[: len(sibling_line) - len(sibling_line.lstrip())]
+                    break
+            lines.insert(insert_before_index, f"{indent}{key}    {_format_value(value)};\n")
+            file_path.write_text("".join(lines))
+            return
         if scope is None:
             raise KeyError(f"Key '{key}' not found in {file_path}")
         raise KeyError(f"Key '{key}' not found in scope '{scope}' in {file_path}")

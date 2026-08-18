@@ -52,45 +52,48 @@ blockMesh -dict system/blockMeshDict.1D
 ./regressionTest.sh
 ```
 
-Driver-managed sweeps:
+Driver-managed sweeps (Cartesian spatial convergence):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedBidomain --config tutorials/manufacturedSolutions/bidomain/setup/config/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+python3 applications/scripts/paperI_results/aggregate.py bidomain_cartesian
 ```
 
-After the sweep completes, persist the canonical Paper I convergence table:
+Temporal convergence:
 
 ```bash
-python3 applications/scripts/paperI_results/aggregate.py bidomain
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json
+python3 applications/scripts/paperI_results/aggregate.py bidomain_temporal
+```
+
+Or run every registered experiment for this case through the normalized registry:
+
+```bash
+./reproduce_verification.sh bidomain_cartesian bidomain_temporal bidomain_tet_generic
 ```
 
 ## Tetrahedral (unstructured) mesh variant
 
-`setup/mesh/tet/` holds this case's own tetrahedral-mesh overlay: a unit-cube
-Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length
-placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default`
-forced to `leastSquares`. The geometry and gradient-scheme override are
-byte-identical to `monodomainPseudoECG`'s and `eikonalECG`'s own tet
-overlays -- all three manufactured-solution families refine on the same unit
-cube -- but are kept as a local copy here rather than referenced across
-cases, matching how every merged tet overlay in this repo is scoped to its
-own case.
+`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh
+overlay, co-located with the study that drives it: a unit-cube Delaunay mesh
+(`box.geo.template`, gmsh OpenCASCADE, characteristic length placeholder
+`__LC__`) and an `fvSchemes` copy with `gradSchemes.default` forced to
+`leastSquares`. The geometry and gradient-scheme override are byte-identical
+to `monodomainPseudoECG`'s and `eikonalECG`'s own tet overlays -- all three
+manufactured-solution families refine on the same unit cube -- but are kept
+as a local copy here rather than referenced across cases, matching how every
+merged tet overlay in this repo is scoped to its own case.
 
 ### Gradient-scheme convergence sweep (paper table)
 
 ```bash
-cd tutorials/manufacturedSolutions/bidomain
-bash setup/mesh/tet/run_scheme_study.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetConvergence/sweep_tet_generic.json
+python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
 ```
 
 Runs both `Gauss linear` and `leastSquares` gradient reconstruction across
-`N = 10, 20, 40, 80` (overridable via `RESOLUTIONS`) for the coupled `Vm`/
-`phiE` (gauge-shifted) bidomain system, writes
-`setup/results/scheme_study.csv`, and persists the canonical Paper I table:
-
-```bash
-python3 applications/scripts/paperI_results/aggregate.py bidomain_tet
-```
+`N = 10, 20, 40, 80` for the coupled `Vm`/`phiE` (gauge-shifted) bidomain
+system and persists the canonical Paper I table.
 
 `nOuterCorrectors` is left at this case's own default (2): the corrector
 study below already established that two outer sweeps are within 1% of the
@@ -99,7 +102,7 @@ limited.
 
 ### Corrector study purpose
 
-`setup/mesh/tet/setup/corrector/run_corrector_study.sh` produces
+`setup/studies/corrector/sweep_corrector_study.json` produces
 `@tbl-bidomain-corrector-sensitivity`: a same-mesh sensitivity screen that
 separates two solver-loop controls the segregated bidomain equations expose
 on this tetrahedral family --
@@ -110,19 +113,14 @@ on this tetrahedral family --
 
 The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`)
 cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the
-`N=10,20,40` Delaunay meshes; `run_corrector_study.sh` also defines
-`outer3`/`outer4`/`outer8`/`outer16` variants used for exploratory screening
-but not reported in the paper table. These are same-mesh, same-time-step
-iteration-sensitivity controls, not an additional spatial convergence study.
+`N=10,20,40` Delaunay meshes -- a same-mesh, same-time-step
+iteration-sensitivity screen, not an additional spatial convergence study.
 
 ### Running the corrector study
 
 ```bash
-cd tutorials/manufacturedSolutions/bidomain
-bash setup/mesh/tet/setup/corrector/run_corrector_study.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
 ```
 
-Override `RESOLUTIONS`, `VARIANTS`, `RESULTS_DIR`, or `KEEP_WORK` through the
-environment for focused reruns. `MESH_MODE=ortho` instead exercises the
-case's own `blockMeshDict.3D` ladder (the configuration behind the reported
-Cartesian `bidomain` convergence table) rather than the tet overlay.
+See `setup/studies/corrector/README.md` for how the variants map to
+`n_outer_correctors`/`n_nonorthogonal_correctors` overrides.
