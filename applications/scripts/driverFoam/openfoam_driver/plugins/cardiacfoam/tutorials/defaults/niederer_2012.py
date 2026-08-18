@@ -36,7 +36,6 @@ from .shared import (
     ELECTRO_PROPERTIES_RELPATH as SHARED_ELECTRO_PROPERTIES_RELPATH,
     OUTPUT_DIR_NAME,
     OUTPUT_RELPATH,
-    RUN_CASE_SCRIPT_RELPATH,
 )
 
 
@@ -61,37 +60,18 @@ END_TIME_BY_DX = {
     0.1: 0.055,
 }
 BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
-RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
-NIEDERER_POINTS_FUNCTION_OBJECT = "Niedererpoints"
-NIEDERER_LINE_FUNCTION_OBJECT = "Niedererlines"
-NIEDERER_SAMPLED_FIELD = "activationTime"
-NIEDERER_POINTS = (
-    ("P1", 0.0, 0.0, 0.007),
-    ("P2", 0.0, 0.0, 0.0),
-    ("P3", 0.019999, 0.0, 0.007),
-    ("P4", 0.019999, 0.0, 0.0),
-    ("P5", 0.0, 0.003, 0.007),
-    ("P6", 0.0, 0.003, 0.0),
-    ("P7", 0.019999, 0.003, 0.007),
-    ("P8", 0.019999, 0.003, 0.0),
-    ("P9", 0.01, 0.0015, 0.0035),
-)
-NIEDERER_LINE_START = (0.0, 0.0, 0.007)
-NIEDERER_LINE_END = (0.02, 0.003, 0.0)
-NIEDERER_LINE_NUM_POINTS = 101
-LINE_POSTPROCESS_RELPATH = Path("line_postProcessing.py")
-POINTS_POSTPROCESS_RELPATH = Path("points_postProcessing.py")
-CACHE_POSTPROCESS_RELPATH = Path("convert_raw_samples.py")
-LINE_POSTPROCESS_FUNCTION = "run_postprocessing"
-POINTS_POSTPROCESS_FUNCTION = "run_postprocessing"
-CACHE_POSTPROCESS_FUNCTION = "run_postprocessing"
-CASE_POSTPROCESS_CACHE_DIRNAME = "cachedCasePostProcessing"
-TABLE_SUMMARY_RELPATH = Path("table_summary.py")
-EXCEL_REFERENCE_RELPATH = Path(
-    "postProcessing/Niederer_graphs_webplotdigitilizer_points_slab/WebPlotDigitilizerdata.xlsx"
-)
 
 # Explicit exports used by the Niederer tutorial spec.
+#
+# Deliberately NOT here: NIEDERER_POINTS/_LINE_START/_LINE_END/_NUM_POINTS,
+# NIEDERER_POINTS_FUNCTION_OBJECT/_LINE_FUNCTION_OBJECT, NIEDERER_SAMPLED_FIELD,
+# RUN_SCRIPT_RELPATH, and every *_POSTPROCESS_* constant. All of them existed
+# solely to feed niederer_2012.py's _run_case/_export_openfoam_samples --
+# code that TutorialSpec.run_case never actually calls (confirmed: zero
+# references anywhere in core/runtime/*.py or cli.py) and that duplicated,
+# with hardcoded probe labels, what setup/convert_raw_samples.py now reads
+# directly from the raw OpenFOAM probes file's own header. Removed alongside
+# that dead code in the niederer_2012.py cleanup that follows 32cc29dd.
 __all__ = [
     "TUTORIAL_NAME",
     "CASE_DIR_NAME",
@@ -107,24 +87,6 @@ __all__ = [
     "SLAB_SIZE_MM",
     "END_TIME_BY_DX",
     "BLOCK_MESH_DICT_RELPATH",
-    "RUN_SCRIPT_RELPATH",
-    "RUN_CASE_SCRIPT_RELPATH",
     "OUTPUT_DIR_NAME",
     "OUTPUT_RELPATH",
-    "NIEDERER_POINTS_FUNCTION_OBJECT",
-    "NIEDERER_LINE_FUNCTION_OBJECT",
-    "NIEDERER_SAMPLED_FIELD",
-    "NIEDERER_POINTS",
-    "NIEDERER_LINE_START",
-    "NIEDERER_LINE_END",
-    "NIEDERER_LINE_NUM_POINTS",
-    "LINE_POSTPROCESS_RELPATH",
-    "POINTS_POSTPROCESS_RELPATH",
-    "CACHE_POSTPROCESS_RELPATH",
-    "LINE_POSTPROCESS_FUNCTION",
-    "POINTS_POSTPROCESS_FUNCTION",
-    "CACHE_POSTPROCESS_FUNCTION",
-    "CASE_POSTPROCESS_CACHE_DIRNAME",
-    "TABLE_SUMMARY_RELPATH",
-    "EXCEL_REFERENCE_RELPATH",
 ]

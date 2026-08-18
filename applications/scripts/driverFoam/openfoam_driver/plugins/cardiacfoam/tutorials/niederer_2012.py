@@ -27,11 +27,7 @@
 
 from __future__ import annotations
 
-import csv
-import math
 import re
-import shutil
-import subprocess
 from collections.abc import Mapping, Sequence
 from functools import partial
 from itertools import product
@@ -44,38 +40,11 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
 )
 from openfoam_driver.specs.common import (
     replace_block_mesh_resolutions,
-    resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
 )
 from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-
-DEFAULT_POINTS_FUNCTION_OBJECT = getattr(
-    defaults, "NIEDERER_POINTS_FUNCTION_OBJECT", "Niedererpoints"
-)
-DEFAULT_LINE_FUNCTION_OBJECT = getattr(
-    defaults, "NIEDERER_LINE_FUNCTION_OBJECT", "Niedererlines"
-)
-DEFAULT_SAMPLED_FIELD = getattr(defaults, "NIEDERER_SAMPLED_FIELD", "activationTime")
-DEFAULT_SAMPLED_POINTS = getattr(
-    defaults,
-    "NIEDERER_POINTS",
-    (
-        ("P1", 0.0, 0.0, 0.007),
-        ("P2", 0.0, 0.0, 0.0),
-        ("P3", 0.019999, 0.0, 0.007),
-        ("P4", 0.019999, 0.0, 0.0),
-        ("P5", 0.0, 0.003, 0.007),
-        ("P6", 0.0, 0.003, 0.0),
-        ("P7", 0.019999, 0.003, 0.007),
-        ("P8", 0.019999, 0.003, 0.0),
-        ("P9", 0.01, 0.0015, 0.0035),
-    ),
-)
-DEFAULT_LINE_START = getattr(defaults, "NIEDERER_LINE_START", (0.0, 0.0, 0.007))
-DEFAULT_LINE_END = getattr(defaults, "NIEDERER_LINE_END", (0.02, 0.003, 0.0))
-DEFAULT_LINE_N_POINTS = int(getattr(defaults, "NIEDERER_LINE_NUM_POINTS", 101))
 
 
 def _closest_key(mapping: dict[float, object], value: float) -> float:
@@ -228,236 +197,24 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _float_to_case_tag(value: float) -> str:
-    tag = f"{value:.7f}".rstrip("0").rstrip(".").replace(".", "")
-    return tag or "0"
+def _run_case(case_root: Path, setup_root: Path, case: CaseConfig) -> None:
+    """Never called. TutorialSpec.run_case is a required dataclass field, but
+    nothing in the current execution engine (run --strict / sweep-run) reads
+    it -- both drive a case entirely through workflow_dag's own DAG steps
+    (mesh/solve/samplePoints/sampleLines, see _workflow_dag_for), executed by
+    core.runtime.workflow_orchestrator.run_workflow. Confirmed: zero
+    references to `.run_case` anywhere in core/runtime/*.py or cli.py.
 
-
-def _read_latest_probe_values(
-    *,
-    postprocess_root: Path,
-    function_object_name: str,
-    sampled_field: str,
-) -> list[float]:
-    function_root = postprocess_root / function_object_name
-    if not function_root.exists():
-        raise FileNotFoundError(
-            f"Missing functionObject output folder: {function_root}"
-        )
-
-    time_dirs: list[tuple[float, Path]] = []
-    for child in function_root.iterdir():
-        if not child.is_dir():
-            continue
-        try:
-            time_value = float(child.name)
-        except ValueError:
-            continue
-        time_dirs.append((time_value, child))
-
-    if not time_dirs:
-        raise FileNotFoundError(
-            f"No numeric time folders found in: {function_root}"
-        )
-
-    _, latest_time_dir = max(time_dirs, key=lambda item: item[0])
-    sampled_file = latest_time_dir / sampled_field
-    if not sampled_file.exists():
-        raise FileNotFoundError(f"Missing sampled field file: {sampled_file}")
-
-    numeric_rows: list[list[float]] = []
-    for line in sampled_file.read_text().splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        try:
-            numeric_rows.append([float(token) for token in stripped.split()])
-        except ValueError:
-            continue
-
-    if not numeric_rows or len(numeric_rows[-1]) < 2:
-        raise ValueError(f"No probe values found in {sampled_file}")
-
-    return numeric_rows[-1][1:]
-
-
-def _write_points_csv(
-    *,
-    output_dir: Path,
-    file_name: str,
-    sampled_points: Sequence[tuple[str, float, float, float]],
-    activation_values: Sequence[float],
-) -> None:
-    if len(sampled_points) != len(activation_values):
-        raise ValueError(
-            f"Points count mismatch: expected {len(sampled_points)}, got {len(activation_values)}"
-        )
-
-    output_file = output_dir / file_name
-    with output_file.open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["Label", "Points:0", "Points:1", "Points:2", "activationTime"])
-        for (label, x, y, z), activation_time in zip(sampled_points, activation_values):
-            writer.writerow([label, x, y, z, activation_time])
-
-
-def _write_line_csv(
-    *,
-    output_dir: Path,
-    file_name: str,
-    activation_values: Sequence[float],
-    line_start: Sequence[float],
-    line_end: Sequence[float],
-    expected_n_points: int,
-) -> None:
-    if len(activation_values) != expected_n_points:
-        raise ValueError(
-            f"Line sample count mismatch: expected {expected_n_points}, got {len(activation_values)}"
-        )
-
-    x0, y0, z0 = [float(value) for value in line_start]
-    x1, y1, z1 = [float(value) for value in line_end]
-    line_length = math.dist((x0, y0, z0), (x1, y1, z1))
-    n_intervals = max(expected_n_points - 1, 1)
-
-    output_file = output_dir / file_name
-    with output_file.open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["activationTime", "arc_length", "Points_0", "Points_1", "Points_2"])
-        for index, activation_time in enumerate(activation_values):
-            t = index / n_intervals
-            x = x0 + t * (x1 - x0)
-            y = y0 + t * (y1 - y0)
-            z = z0 + t * (z1 - z0)
-            arc_length = t * line_length
-            writer.writerow([activation_time, arc_length, x, y, z])
-
-
-def _export_openfoam_samples(
-    *,
-    case_root: Path,
-    output_dir: Path,
-    case: CaseConfig,
-    points_function_object_name: str,
-    line_function_object_name: str,
-    sampled_field: str,
-    sampled_points: Sequence[tuple[str, float, float, float]],
-    line_start: Sequence[float],
-    line_end: Sequence[float],
-    line_n_points: int,
-) -> None:
-    postprocess_root = case_root / "postProcessing"
-    points_values = _read_latest_probe_values(
-        postprocess_root=postprocess_root,
-        function_object_name=points_function_object_name,
-        sampled_field=sampled_field,
-    )
-    line_values = _read_latest_probe_values(
-        postprocess_root=postprocess_root,
-        function_object_name=line_function_object_name,
-        sampled_field=sampled_field,
-    )
-
-    dx_tag = _float_to_case_tag(float(case.params["dx_mm"]))
-    dt_tag = _float_to_case_tag(float(case.params["dt_ms"]))
-    solver = str(case.params["solver"])
-    ionic_model = str(case.params["ionicModel"])
-    tissue = str(case.params["tissue"])
-
-    points_file_name = f"{solver}_{ionic_model}_{tissue}_points_DT{dt_tag}_DX{dx_tag}.csv"
-    line_file_name = f"{solver}_{ionic_model}_{tissue}_line_DT{dt_tag}_DX{dx_tag}.csv"
-
-    _write_points_csv(
-        output_dir=output_dir,
-        file_name=points_file_name,
-        sampled_points=sampled_points,
-        activation_values=points_values,
-    )
-    _write_line_csv(
-        output_dir=output_dir,
-        file_name=line_file_name,
-        activation_values=line_values,
-        line_start=line_start,
-        line_end=line_end,
-        expected_n_points=line_n_points,
-    )
-
-
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    output_relpath: Path = defaults.OUTPUT_RELPATH,
-    points_function_object_name: str = DEFAULT_POINTS_FUNCTION_OBJECT,
-    line_function_object_name: str = DEFAULT_LINE_FUNCTION_OBJECT,
-    sampled_field: str = DEFAULT_SAMPLED_FIELD,
-    sampled_points: Sequence[tuple[str, float, float, float]] = DEFAULT_SAMPLED_POINTS,
-    line_start: Sequence[float] = DEFAULT_LINE_START,
-    line_end: Sequence[float] = DEFAULT_LINE_END,
-    line_n_points: int = DEFAULT_LINE_N_POINTS,
-) -> None:
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    output_dir = case_root / output_relpath
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    subprocess.run(
-        [
-            "bash",
-            "-l",
-            str(run_script),
-            "--case-dir",
-            str(case_root),
-            "parallel",
-        ],
-        check=True,
-    )
-
-    _export_openfoam_samples(
-        case_root=case_root,
-        output_dir=output_dir,
-        case=case,
-        points_function_object_name=points_function_object_name,
-        line_function_object_name=line_function_object_name,
-        sampled_field=sampled_field,
-        sampled_points=sampled_points,
-        line_start=line_start,
-        line_end=line_end,
-        line_n_points=line_n_points,
-    )
-
-    _cache_case_postprocessing(
-        case_root=case_root,
-        setup_root=setup_root,
-        case_id=case.case_id,
-        cache_dir_name=defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
-    )
-
-
-def _cache_case_postprocessing(
-    *,
-    case_root: Path,
-    setup_root: Path,
-    case_id: str,
-    cache_dir_name: str,
-) -> None:
-    source = case_root / "postProcessing"
-    if not source.exists():
-        raise FileNotFoundError(f"Missing postProcessing folder to cache: {source}")
-
-    cache_root = setup_root / cache_dir_name
-    cache_root.mkdir(parents=True, exist_ok=True)
-    destination = cache_root / case_id
-
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(source, destination)
-    print(f"Cached postProcessing for {case_id}: {destination}")
+    This used to do real work -- launch the case via a bash wrapper script,
+    then convert OpenFOAM's raw probe samples into labeled CSVs with a
+    hardcoded probe-label list. All of that duplicated, in dead code, what
+    the DAG's own samplePoints/sampleLines steps plus
+    setup/convert_raw_samples.py now do for real: the DAG samples the field
+    natively; convert_raw_samples.py reads probe labels and coordinates
+    directly from the raw sample file's own header instead of a second,
+    hand-maintained copy of them. See 9e98e71b.
+    """
+    del case_root, setup_root, case
 
 
 def make_spec(
@@ -482,24 +239,6 @@ def make_spec(
     physics_properties_relpath: str | Path = "constant/physicsProperties",
     electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
-    run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    points_function_object_name: str = DEFAULT_POINTS_FUNCTION_OBJECT,
-    line_function_object_name: str = DEFAULT_LINE_FUNCTION_OBJECT,
-    sampled_field: str = DEFAULT_SAMPLED_FIELD,
-    sampled_points: Sequence[tuple[str, float, float, float]] = DEFAULT_SAMPLED_POINTS,
-    line_start: Sequence[float] = DEFAULT_LINE_START,
-    line_end: Sequence[float] = DEFAULT_LINE_END,
-    line_n_points: int = DEFAULT_LINE_N_POINTS,
-    line_postprocess_relpath: str | Path = defaults.LINE_POSTPROCESS_RELPATH,
-    points_postprocess_relpath: str | Path = defaults.POINTS_POSTPROCESS_RELPATH,
-    cache_postprocess_relpath: str | Path = defaults.CACHE_POSTPROCESS_RELPATH,
-    excel_reference_relpath: str | Path = defaults.EXCEL_REFERENCE_RELPATH,
-    cache_postprocess_function_name: str = defaults.CACHE_POSTPROCESS_FUNCTION,
-    line_postprocess_function_name: str = defaults.LINE_POSTPROCESS_FUNCTION,
-    points_postprocess_function_name: str = defaults.POINTS_POSTPROCESS_FUNCTION,
-    case_postprocess_cache_dirname: str = defaults.CASE_POSTPROCESS_CACHE_DIRNAME,
-    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
-    postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     ionic_models_list = [str(item) for item in ionic_models]
     ionic_model_tissue_map_normalized: dict[str, list[str]] = {}
@@ -535,13 +274,6 @@ def make_spec(
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     tet_geo_template_path = Path(tet_geo_template_relpath)
-    run_script_path = Path(run_script_relpath)
-    line_postprocess_path = Path(line_postprocess_relpath)
-    points_postprocess_path = Path(points_postprocess_relpath)
-    cache_postprocess_path = Path(cache_postprocess_relpath)
-    excel_reference_path = Path(excel_reference_relpath)
-    table_summary_path = Path(table_summary_relpath)
-    output_relpath = Path(output_dir_name)
 
     case_root, setup_root, output_dir = resolve_spec_paths(
         tutorials_root=tutorials_root,
@@ -577,19 +309,7 @@ def make_spec(
             slab_size_mm=slab_size_mm_list,
             end_time_by_dx=end_time_by_dx_map,
         ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
-            output_relpath=output_relpath,
-            points_function_object_name=points_function_object_name,
-            line_function_object_name=line_function_object_name,
-            sampled_field=sampled_field,
-            sampled_points=sampled_points,
-            line_start=line_start,
-            line_end=line_end,
-            line_n_points=line_n_points,
-        ),
+        run_case=_run_case,
         collect_outputs=None,
         metadata={
             "notes": (
@@ -610,25 +330,7 @@ def make_spec(
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),
             "electro_properties_scope": electro_properties_scope,
-            "run_script_relpath": str(run_script_path),
-            "output_relpath": str(output_relpath),
-            "points_function_object_name": points_function_object_name,
-            "line_function_object_name": line_function_object_name,
-            "sampled_field": sampled_field,
-            "sampled_points_count": len(sampled_points),
-            "line_start": [float(value) for value in line_start],
-            "line_end": [float(value) for value in line_end],
-            "line_n_points": line_n_points,
-            "line_postprocess_relpath": str(line_postprocess_path),
-            "points_postprocess_relpath": str(points_postprocess_path),
-            "cache_postprocess_relpath": str(cache_postprocess_path),
-            "excel_reference_relpath": str(excel_reference_path),
-            "cache_postprocess_function_name": cache_postprocess_function_name,
-            "line_postprocess_function_name": line_postprocess_function_name,
-            "points_postprocess_function_name": points_postprocess_function_name,
-            "case_postprocess_cache_dirname": case_postprocess_cache_dirname,
             "has_electro_property_overrides": bool(electro_property_overrides),
             "has_physics_property_overrides": bool(physics_property_overrides),
-            "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )
