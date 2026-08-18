@@ -232,6 +232,18 @@ class CardiacFoamPlugin:
 
         return (electro_model_coeffs_scope(),)
 
+    def get_regeneration_scopes(self) -> tuple:
+        """This plugin's one `step --strict --apply` regeneration scope:
+        myocardiumSolver -> constant/electroProperties. Switching
+        myocardiumSolver renames the active <solver>Coeffs sub-block and
+        changes which sibling keys are legal, so it needs a full rebuild
+        rather than the key-patch $ELECTRO_MODEL_COEFFS route above."""
+        from openfoam_driver.plugins.cardiacfoam.overrides import (
+            electro_properties_regeneration_scope,
+        )
+
+        return (electro_properties_regeneration_scope(),)
+
     def get_tutorial_catalog(self) -> dict:
         from openfoam_driver.plugins.cardiacfoam.tutorials.registry import SPEC_FACTORIES, REGISTERED_TUTORIALS
         from openfoam_driver.core.runtime.generic_case import make_spec as make_generic_case_spec

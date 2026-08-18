@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .runtime.models import DataArtifact, TutorialSpec
     from ..planning_types import StrictDiagnostic
     from ..report_catalog import ReportDefinition
-    from ..specs.apply_overrides import OverrideScope
+    from ..specs.apply_overrides import OverrideScope, RegenerationScope
 
 
 @dataclass(frozen=True)
@@ -346,6 +346,25 @@ class OverrideScopeCapability(Protocol):
     """
 
     def scopes(self) -> tuple["OverrideScope", ...]: ...
+
+
+class DictRegenerationCapability(Protocol):
+    """Plugin-declared bare "selector" overrides that must REGENERATE a
+    dict file rather than key-patch it, for the agent-facing
+    ``step --strict --apply`` path (:mod:`openfoam_driver.specs.apply_overrides`).
+
+    A sibling of :class:`OverrideScopeCapability`: that one covers
+    ``$TOKEN.``-scoped leaves that patch in place; this one covers bare
+    selectors (e.g. cardiacFoam's ``myocardiumSolver``) whose value change
+    restructures the file -- renames a sub-block, changes which sibling
+    keys are legal -- so a single key/value/scope patch cannot express it.
+    Not a mandatory ``SolverPluginV2`` member, so existing v2 third-party
+    plugins keep loading; the fallback (``legacy_dict_regeneration_scopes``)
+    declares the cardiac plugin's one scope and an empty tuple for everyone
+    else, matching :class:`OverrideScopeCapability`.
+    """
+
+    def scopes(self) -> tuple["RegenerationScope", ...]: ...
 
 
 @dataclass(frozen=True)
@@ -717,6 +736,19 @@ class _OverrideScopeAdapter:
 
 
 @dataclass(frozen=True)
+class _DictRegenerationAdapter:
+    plugin: "SolverPlugin"
+
+    def scopes(self) -> tuple["RegenerationScope", ...]:
+        hook = getattr(self.plugin, "get_regeneration_scopes", None)
+        if callable(hook):
+            return tuple(hook())
+        from .compatibility import legacy_dict_regeneration_scopes
+
+        return legacy_dict_regeneration_scopes(self.plugin)
+
+
+@dataclass(frozen=True)
 class PluginCapabilities:
     """Focused internal view over the unchanged public plugin object."""
 
@@ -740,6 +772,7 @@ class PluginCapabilities:
     report_catalog: ReportCatalogCapability
     named_catalogs: NamedCatalogsCapability
     override_scopes: OverrideScopeCapability
+    dict_regeneration: DictRegenerationCapability
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
@@ -766,4 +799,5 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
         report_catalog=_ReportCatalogAdapter(plugin),
         named_catalogs=_NamedCatalogsAdapter(plugin),
         override_scopes=_OverrideScopeAdapter(plugin),
+        dict_regeneration=_DictRegenerationAdapter(plugin),
     )

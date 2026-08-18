@@ -81,6 +81,56 @@ class OverrideScope:
     resolve_entry: Callable[[str, Path], tuple[list[str] | None, str]]
 
 
+@dataclass(frozen=True)
+class RegenerationScope:
+    """One bare (non-``$``-prefixed) "selector" override a plugin declares
+    for `step --strict --apply` that must REGENERATE a dict file rather
+    than key-patch it, because changing the value restructures the file --
+    renames a sub-block, changes which sibling keys are legal -- instead of
+    changing one leaf in place. The motivating case is cardiacFoam's
+    ``myocardiumSolver``: switching it renames ``<oldSolver>Coeffs`` to
+    ``<newSolver>Coeffs`` and flips which keys the catalog's
+    ``applicable_when``/``required_when``/``forbidden_when`` predicates
+    allow, none of which ``update_foam_entry`` (a single key/value/scope
+    patch) can express.
+
+    selector_keys: the bare ``driver_path`` names this scope owns (e.g.
+        ``{"myocardiumSolver"}`` for the cardiac plugin). Deliberately a
+        small, explicit set: a selector only belongs here if changing it
+        actually restructures the file. Plain leaf selectors that only
+        change a value in place (e.g. cardiacFoam's ``ionicModel``,
+        ``tissue``) stay on the ordinary ``$TOKEN.`` :class:`OverrideScope`
+        path instead -- routing them through regeneration too would be a
+        capability the catalog does not need yet.
+    file_relpath: the case-relative dict file this scope regenerates (e.g.
+        ``"constant/electroProperties"``).
+    catalog_group: the dictionary-catalog group name used to validate enum
+        values for these selector keys (mirrors
+        :attr:`OverrideScope.catalog_group`).
+    regenerate: given the on-disk file path, the full ``driver_path``, the
+        new value, and any OTHER ``$TOKEN.``-scoped overrides from the same
+        `step --strict --apply` call that target this same
+        ``file_relpath`` (``{driver_path: value}``, empty if none),
+        rewrite the file in place from its current content with that one
+        selector changed. The extra-overrides map exists because
+        ``update_foam_entry`` can only patch a key that already exists --
+        a solver switch can make a *new* key required with no catalog
+        default (e.g. eikonalSolver's ``stimulusLocationMin``, absent from
+        a monodomain source and un-defaultable, case-specific geometry),
+        and there would otherwise be no way for such a value to reach the
+        file: too late to key-patch it in afterward (nothing to patch),
+        and the rebuild has no default to fall back on. Plugin-owned: how
+        to decompose the existing file into selectors/overrides, rebuild
+        it, and preserve whatever the rebuild pipeline cannot itself
+        round-trip is catalog-specific, not something core can infer.
+    """
+
+    selector_keys: frozenset[str]
+    file_relpath: str
+    catalog_group: str
+    regenerate: Callable[[Path, str, str, dict[str, str]], None]
+
+
 def _is_safe_system_path(path_str: str) -> bool:
     """Validate that the path is strictly inside system/ and has no traversal segments."""
     if not path_str.startswith("system/"):
@@ -95,20 +145,25 @@ class OverrideError(ValueError):
 
 def _catalog_entries(
     driver_context=None,
-) -> tuple[set[str], dict[str, Any], tuple[OverrideScope, ...]]:
+) -> tuple[set[str], dict[str, Any], tuple[OverrideScope, ...], tuple[RegenerationScope, ...]]:
     from openfoam_driver.core.compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     catalog = driver_context.capabilities.dictionaries.catalog()
     scopes = driver_context.capabilities.override_scopes.scopes()
+    regeneration_scopes = driver_context.capabilities.dict_regeneration.scopes()
     scoped_entries: dict[str, Any] = {}
     for scope in scopes:
         for entry in catalog.entries_for(scope.catalog_group):
             scoped_entries[entry.driver_path] = entry
+    for regen_scope in regeneration_scopes:
+        for entry in catalog.entries_for(regen_scope.catalog_group):
+            scoped_entries.setdefault(entry.driver_path, entry)
     return (
         {entry.driver_path for entry in catalog.entries_for("controlDict")},
         scoped_entries,
         scopes,
+        regeneration_scopes,
     )
 
 
@@ -145,8 +200,13 @@ def validate_overrides(overrides: Any, *, driver_context=None) -> None:
         raise OverrideError(
             "overrides payload must be a JSON list of {driver_path, value} objects"
         )
-    control_dict_keys, scoped_entries, scopes = _catalog_entries(driver_context)
+    control_dict_keys, scoped_entries, scopes, regeneration_scopes = _catalog_entries(driver_context)
     scope_by_token = {scope.token: scope for scope in scopes}
+    regen_scope_by_key: dict[str, RegenerationScope] = {
+        key: regen_scope
+        for regen_scope in regeneration_scopes
+        for key in regen_scope.selector_keys
+    }
     for ov in overrides:
         if not isinstance(ov, dict) or "driver_path" not in ov or "value" not in ov:
             raise OverrideError(
@@ -161,6 +221,20 @@ def validate_overrides(overrides: Any, *, driver_context=None) -> None:
                 raise OverrideError(f"override driver_path {dp!r} is missing an entry path after ':'")
             continue
         elif not dp.startswith("$"):
+            if dp in regen_scope_by_key:
+                # A bare selector that RESTRUCTURES the file (renames a
+                # sub-block, changes which sibling keys are legal) rather
+                # than patching one leaf in place -- e.g. myocardiumSolver.
+                # Still enum-checked against the catalog exactly like any
+                # other entry; only the *application* differs (regenerate
+                # vs. key-patch), not the trust boundary.
+                entry = scoped_entries.get(dp)
+                enum_values = getattr(entry, "enum_values", None)
+                if enum_values and ov["value"] not in enum_values:
+                    raise OverrideError(
+                        f"override {dp!r} value {ov['value']!r} not in enum {tuple(enum_values)}"
+                    )
+                continue
             # Backward compatibility: flat strings are treated as controlDict entries.
             # Still must be a real controlDict key -- otherwise this silently passes
             # validation and, at apply time, either raises a raw KeyError (no
@@ -217,6 +291,11 @@ def apply_overrides(
         scope.token: scope
         for scope in driver_context.capabilities.override_scopes.scopes()
     }
+    regen_scope_by_key: dict[str, RegenerationScope] = {
+        key: regen_scope
+        for regen_scope in driver_context.capabilities.dict_regeneration.scopes()
+        for key in regen_scope.selector_keys
+    }
     for ov in overrides:
         dp, value = ov["driver_path"], ov["value"]
         try:
@@ -229,6 +308,25 @@ def apply_overrides(
                 *scope_path, key = entry_path.split("/")
                 update_foam_entry(
                     case_root / file_path, key, value, scope=scope_path or None
+                )
+            elif not dp.startswith("$") and dp in regen_scope_by_key:
+                regen_scope = regen_scope_by_key[dp]
+                # Other $TOKEN. overrides in this same call that target the
+                # scope's file: the rebuild needs to see these (not just
+                # the selector) because update_foam_entry can only patch a
+                # key that already exists, and the new solver may require
+                # a key the old file never had (see RegenerationScope.regenerate).
+                extra_overrides = {
+                    other["driver_path"]: other["value"]
+                    for other in overrides
+                    if other is not ov
+                    and str(other.get("driver_path", "")).startswith("$")
+                    and scope_by_token.get(_scope_token(other["driver_path"])) is not None
+                    and scope_by_token[_scope_token(other["driver_path"])].file_relpath
+                    == regen_scope.file_relpath
+                }
+                regen_scope.regenerate(
+                    case_root / regen_scope.file_relpath, dp, value, extra_overrides,
                 )
             elif not dp.startswith("$"):
                 if shutil.which("foamDictionary"):

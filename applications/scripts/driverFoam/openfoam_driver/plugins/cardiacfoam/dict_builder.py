@@ -432,6 +432,201 @@ def parse_electro_properties(
     }
 
 
+def _dynamic_container_names() -> tuple[str, ...]:
+    """The first dotted segment of every ``dynamic_path=True`` catalog
+    entry's slot key, e.g. ``"conductionNetworkDomains"`` for
+    ``$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>...`` -- the
+    top-level block names :func:`parse_electro_properties` cannot itself
+    round-trip (it can only enumerate them into ``ignored_keys``, since it
+    has no way to invent the concrete ``<name>`` instances)."""
+    names: set[str] = set()
+    for entry in _all_electro_entries():
+        if not entry.dynamic_path:
+            continue
+        sk = slot_key(entry.driver_path)
+        names.add(sk.split(".", 1)[0])
+    return tuple(sorted(names))
+
+
+def _capture_dynamic_containers(path: "Any", solver: str) -> dict[str, str]:
+    """Snapshot the raw text of every dynamic-path container
+    (``conductionNetworkDomains``, ``domainCouplings``, ``ecgDomains``,
+    ``bathPotentialDomain``, ``ionicHeterogeneity``,
+    ``ionicConstantOverrides``, ``constants``, ``initialStates``) present
+    under ``<solver>Coeffs`` in the file at ``path``. Must be called
+    *before* ``path`` is overwritten -- these are exactly the block
+    families :func:`parse_electro_properties` cannot itself round-trip
+    (it can only enumerate them into ``ignored_keys``, having no way to
+    invent the concrete ``<name>`` instances), so a rebuild that does not
+    carry them forward would silently drop them."""
+    from openfoam_driver.core.runtime.mutators import read_foam_dict_block
+
+    coeffs_scope = f"{solver}Coeffs"
+    captured: dict[str, str] = {}
+    for name in _dynamic_container_names():
+        block_text = read_foam_dict_block(path, name, scope=[coeffs_scope])
+        if block_text is not None:
+            captured[name] = block_text
+    return captured
+
+
+def _carry_forward_dynamic_containers(
+    path: "Any", new_solver: str, captured: dict[str, str],
+) -> None:
+    """Reinsert, verbatim, the dynamic containers ``captured`` by
+    :func:`_capture_dynamic_containers` (from the OLD file, before it was
+    overwritten) into ``path``'s NEW ``<new_solver>Coeffs`` block --
+    ``build_electro_properties`` only synthesises these blocks when an
+    override under the matching prefix is present (see
+    ``_VIRTUAL_PRESENCE_TRIGGERS``), and a bare ``myocardiumSolver``
+    override supplies none.
+
+    Intentionally a raw, unmodified carry-forward, not a resynthesis: the
+    catalog has no way to know what a dynamic block's contents *should*
+    become under the new solver (e.g. whether a Purkinje network's own 1-D
+    solver should also switch) -- that is a separate, deliberate decision
+    left to the agent via ordinary ``$ELECTRO_MODEL_COEFFS.*`` overrides
+    applied after this one, which correctly resolve against the
+    now-renamed ``<new_solver>Coeffs`` scope.
+    """
+    from openfoam_driver.core.runtime.mutators import ensure_foam_dict
+
+    new_coeffs_scope = f"{new_solver}Coeffs"
+    for name, block_text in captured.items():
+        ensure_foam_dict(path, name, block_text, scope=[new_coeffs_scope])
+
+
+def _prune_now_forbidden(
+    selectors: dict[str, Any], overrides: dict[str, Any], changed_key: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Drop selectors/overrides that become ``forbidden_when`` under the
+    context produced by ``selectors`` (with ``changed_key`` already set to
+    its new value).
+
+    Switching ``myocardiumSolver`` legitimately makes some of the OLD
+    file's selectors meaningless for the new one -- e.g. ``ionicModel``/
+    ``tissue`` are ``forbidden_when myocardiumSolver=eikonalSolver``
+    because ``eikonalSolverCoeffs`` has no such key at all (there is no 3-D
+    reaction-diffusion ODE to select a model for). This is NOT the
+    information-loss hazard the dynamic-container carry-forward guards
+    against: a forbidden key has no valid location in the new solver's
+    coeffs block, exactly like the committed
+    ``electroProperties.eikonal`` fixture, which sets neither. Without
+    this prune, ``build_electro_properties`` would (correctly) raise
+    rather than emit an invalid dict -- pruning is what makes the
+    solver-switch case succeed instead of always erroring.
+    """
+    context = resolve_context(selectors, overrides=overrides)
+    entry_by_driver_path = {
+        e.driver_path: e for e in _all_electro_entries() if not e.dynamic_path
+    }
+    entry_by_slot_key = {
+        slot_key(e.driver_path): e for e in entry_by_driver_path.values()
+    }
+
+    def is_forbidden(entry: DictEntry) -> bool:
+        if not entry.forbidden_when:
+            return False
+        return any(
+            _predicate_matches(context, pred_key, expected)
+            for pred_key, expected in entry.forbidden_when.items()
+        )
+
+    pruned_selectors = dict(selectors)
+    for sk in list(pruned_selectors):
+        if sk == changed_key:
+            continue
+        entry = entry_by_slot_key.get(sk)
+        if entry is not None and is_forbidden(entry):
+            del pruned_selectors[sk]
+
+    pruned_overrides = {
+        dp: v
+        for dp, v in overrides.items()
+        if dp not in entry_by_driver_path or not is_forbidden(entry_by_driver_path[dp])
+    }
+
+    return pruned_selectors, pruned_overrides
+
+
+def regenerate_electro_properties(
+    path: "Any",
+    driver_path: str,
+    value: str,
+    extra_overrides: dict[str, str] | None = None,
+) -> None:
+    """Rewrite ``constant/electroProperties`` at ``path`` in place with one
+    selector key (``myocardiumSolver``, ..., see ``_SELECTOR_KEYS``) changed
+    to ``value``, preserving everything else the file already had.
+
+    This is the regeneration counterpart to the ordinary
+    ``$ELECTRO_MODEL_COEFFS.*`` key-patch route
+    (:func:`openfoam_driver.plugins.cardiacfoam.overrides.electro_model_coeffs_scope`):
+    changing ``myocardiumSolver`` renames the active ``<solver>Coeffs``
+    sub-block and flips which sibling keys the catalog allows, which a
+    single key/value/scope patch cannot express. Instead this:
+
+    1. Parses the existing file back into ``{selectors, overrides}`` via
+       :func:`parse_electro_properties`.
+    2. Captures, verbatim, every dynamic-path container
+       (``conductionNetworkDomains``, ``domainCouplings``, ...) that the
+       parse step structurally cannot round-trip, so step 3 cannot
+       silently drop it (:func:`_capture_dynamic_containers`).
+    3. Sets the one changed selector, drops any OTHER selector/override
+       that the new value makes ``forbidden_when`` (:func:`_prune_now_forbidden`
+       -- e.g. ``ionicModel``/``tissue`` under ``myocardiumSolver=eikonalSolver``,
+       which has no such keys at all), and rebuilds via
+       :func:`build_electro_properties`, which re-validates the whole
+       result against the catalog for the new solver.
+    4. Merges in ``extra_overrides`` -- other ``$ELECTRO_MODEL_COEFFS.*``
+       overrides from the same `step --strict --apply` call, needed for
+       any key the new solver requires that has no catalog default and
+       that the old file never had (nothing for a later key-patch pass to
+       patch) -- then rebuilds via :func:`build_electro_properties`, which
+       re-validates the whole result against the catalog for the new
+       solver.
+    5. Writes the rebuilt text to ``path``, then reinserts the containers
+       captured in step 2 under the newly-named coeffs scope
+       (:func:`_carry_forward_dynamic_containers`).
+
+    Raises:
+        ValueError: ``driver_path``'s slot key is not a selector key, or
+            the rebuild fails catalog validation for the new value (e.g. a
+            still-missing required field with no default and no
+            ``extra_overrides`` entry -- the case-specific gap this
+            parameter exists to close).
+    """
+    from pathlib import Path as _Path
+
+    path = _Path(path)
+    key = slot_key(driver_path)
+    if key not in _SELECTOR_KEYS:
+        raise ValueError(
+            f"regenerate_electro_properties: {driver_path!r} is not a "
+            f"regeneration selector key (known: {sorted(_SELECTOR_KEYS)})"
+        )
+
+    parsed = parse_electro_properties(path)
+    selectors = dict(parsed["selectors"])
+    overrides = dict(parsed["overrides"])
+    old_solver = selectors.get("myocardiumSolver")
+
+    # Step 2: snapshot dynamic containers from the OLD file before it is
+    # overwritten below.
+    captured = _capture_dynamic_containers(path, old_solver) if old_solver else {}
+
+    selectors[key] = value
+    selectors, overrides = _prune_now_forbidden(selectors, overrides, key)
+    if extra_overrides:
+        overrides.update(extra_overrides)
+    new_text = build_electro_properties(selectors, overrides=overrides)
+    path.write_text(new_text)
+
+    new_solver = selectors.get("myocardiumSolver", old_solver)
+    if new_solver and captured:
+        _carry_forward_dynamic_containers(path, new_solver, captured)
+
+
 def build_physics_properties(
     selectors: dict[str, str],
     *,

@@ -203,3 +203,26 @@ def electro_model_coeffs_scope() -> "OverrideScope":
         catalog_group="electroProperties",
         resolve_entry=_resolve_electro_model_coeffs_entry,
     )
+
+
+def electro_properties_regeneration_scope() -> "RegenerationScope":
+    """The cardiac plugin's one `step --strict --apply` regeneration scope:
+    the bare ``myocardiumSolver`` selector -> constant/electroProperties,
+    rebuilt (not key-patched) via
+    :func:`openfoam_driver.plugins.cardiacfoam.dict_builder.regenerate_electro_properties`
+    because switching it renames the active ``<solver>Coeffs`` sub-block and
+    changes which sibling keys the catalog allows -- something a single
+    key/value/scope patch cannot express. Only ``myocardiumSolver`` is
+    wired in: the other three ``_SELECTOR_KEYS`` (``ionicModel``,
+    ``tissue``, ``conductivitySource``) are ``$ELECTRO_MODEL_COEFFS.``-scoped
+    leaves that change a value in place without renaming anything, so they
+    stay on the ordinary key-patch route above."""
+    from ...specs.apply_overrides import RegenerationScope
+    from .dict_builder import regenerate_electro_properties
+
+    return RegenerationScope(
+        selector_keys=frozenset({"myocardiumSolver"}),
+        file_relpath="constant/electroProperties",
+        catalog_group="electroProperties",
+        regenerate=regenerate_electro_properties,
+    )

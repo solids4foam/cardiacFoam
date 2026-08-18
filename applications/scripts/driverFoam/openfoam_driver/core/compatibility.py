@@ -385,3 +385,17 @@ def legacy_override_scopes(plugin) -> tuple:
 
         return (electro_model_coeffs_scope(),)
     return ()
+
+
+@_instrumented
+def legacy_dict_regeneration_scopes(plugin) -> tuple:
+    """v1/v2 plugins predate get_regeneration_scopes(). Only the built-in
+    cardiac plugin has an authored regeneration scope (myocardiumSolver ->
+    constant/electroProperties); other plugins get none and must declare
+    their own by implementing get_regeneration_scopes()."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.overrides import electro_properties_regeneration_scope
+
+        return (electro_properties_regeneration_scope(),)
+    return ()

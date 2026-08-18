@@ -536,6 +536,73 @@ def remove_foam_dict(
     file_path.write_text("".join(lines))
 
 
+def read_foam_dict_block(
+    file_path: Path,
+    dict_name: str,
+    *,
+    scope: str | list[str] | tuple[str, ...] | None = None,
+) -> str | None:
+    """Read the raw text of a named sub-dictionary block -- header line,
+    braces, and body verbatim -- from an OpenFOAM dictionary-like text
+    file, or ``None`` if the file, its scope, or the block itself is
+    absent.
+
+    Block-location logic is the read-only twin of :func:`remove_foam_dict`'s
+    fallback scan (same header pattern, same brace-depth bookkeeping),
+    deliberately operating on raw, unexploded lines rather than
+    :func:`read_foam_entry`'s exploded ones: the goal here is to hand back
+    exactly what is on disk so it can be replayed verbatim via
+    :func:`ensure_foam_dict`'s ``block_text`` parameter elsewhere (e.g. a
+    dict regenerator carrying a ``conductionNetworkDomains`` block forward
+    unmodified across a top-level solver switch it has no way to
+    reconstruct from the catalog alone), not to reformat or reason about
+    individual leaf entries.
+
+    Deliberately text-based, not foamDictionary-based, for the same reason
+    as :func:`read_foam_entry`: foamDictionary re-serialises and evaluates
+    the file it reads, which is not an acceptable side effect of a read.
+    """
+    if not file_path.exists():
+        return None
+
+    lines = file_path.read_text().splitlines(keepends=True)
+    try:
+        search_start, search_end = _resolve_search_region(lines, scope)
+    except KeyError:
+        return None
+
+    header_pattern = re.compile(rf"^\s*{re.escape(dict_name)}(?=\s|\{{|$)")
+
+    i = search_start
+    while i < search_end:
+        candidate = _strip_inline_comment(lines[i])
+        if not header_pattern.match(candidate):
+            i += 1
+            continue
+
+        open_line = i
+        while open_line < search_end and "{" not in _strip_inline_comment(lines[open_line]):
+            open_line += 1
+        if open_line >= search_end:
+            return None
+
+        depth = 0
+        saw_open = False
+        for j in range(open_line, search_end):
+            text = _strip_inline_comment(lines[j])
+            for ch in text:
+                if ch == "{":
+                    depth += 1
+                    saw_open = True
+                elif ch == "}" and saw_open:
+                    depth -= 1
+                    if depth == 0:
+                        return "".join(lines[i:j + 1])
+        return None
+
+    return None
+
+
 def ensure_foam_dict_via_foamDictionary(
     file_path: Path,
     dict_name: str,

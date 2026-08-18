@@ -342,3 +342,105 @@ def test_cardiac_scope_resolve_entry_matches_the_old_hardcoded_behavior(tmp_path
     )
     assert scope_path == ["singleCellSolverCoeffs"]
     assert key == "solutionAlgorithm"
+
+
+# --- regeneration scopes: myocardiumSolver routed through override channel -
+#
+# myocardiumSolver is a bare (non-"$") catalog entry whose value change
+# RESTRUCTURES electroProperties (renames the active <solver>Coeffs
+# sub-block, flips which sibling keys the catalog allows) rather than
+# patching one leaf in place. A plugin declares this via
+# PluginCapabilities.dict_regeneration, the sibling of override_scopes for
+# $TOKEN. leaves.
+
+PURKINJE_NIEDERER = REPO_ROOT / "tutorials" / "NiedererEtAl2011" / "purkinjeNiedererEtAl2011"
+
+
+def test_generic_plugin_declares_zero_regeneration_scopes():
+    from openfoam_driver.core.plugin_interface import generic_openfoam_context
+
+    context = generic_openfoam_context()
+    assert context.capabilities.dict_regeneration.scopes() == ()
+
+
+def test_cardiac_plugin_declares_the_myocardium_solver_regeneration_scope():
+    from openfoam_driver.core.plugin_interface import default_driver_context
+
+    context = default_driver_context()
+    scopes = context.capabilities.dict_regeneration.scopes()
+    assert len(scopes) == 1
+    scope = scopes[0]
+    assert scope.selector_keys == frozenset({"myocardiumSolver"})
+    assert scope.file_relpath == "constant/electroProperties"
+    assert scope.catalog_group == "electroProperties"
+
+
+def test_validate_accepts_a_bare_myocardium_solver_override_with_a_valid_enum_value():
+    # Previously rejected outright: "not a known controlDict entry" (VERIFIED
+    # FACT #1 in the task this test guards). Now routed to regeneration.
+    validate_overrides([{"driver_path": "myocardiumSolver", "value": "eikonalSolver"}])
+
+
+def test_validate_rejects_a_bare_myocardium_solver_override_with_an_invalid_enum_value():
+    with pytest.raises(OverrideError) as exc:
+        validate_overrides([{"driver_path": "myocardiumSolver", "value": "notARealSolver"}])
+    assert "not in enum" in str(exc.value)
+
+
+def test_validate_still_rejects_other_bare_selector_keys_as_unknown_controlDict_entries():
+    """ionicModel/tissue/conductivitySource are also _SELECTOR_KEYS, but are
+    NOT wired into regeneration (see dict_builder._SELECTOR_KEYS docstring
+    and electro_properties_regeneration_scope): they change a value in
+    place without renaming anything, so they stay on the ordinary
+    $ELECTRO_MODEL_COEFFS.* key-patch route. A bare (un-scoped) override
+    for one of them is still just an unrecognised controlDict entry."""
+    with pytest.raises(OverrideError) as exc:
+        validate_overrides([{"driver_path": "ionicModel", "value": "TNNP"}])
+    assert "not a known controlDict entry" in str(exc.value)
+
+
+def test_apply_regenerates_electro_properties_for_a_myocardium_solver_override(tmp_path):
+    """End-to-end through the public apply_overrides() entry point (not the
+    dict_builder function directly): on a copy of the real purkinjeNiedererEtAl2011
+    monodomain fixture, myocardiumSolver=eikonalSolver -- bundled, in the
+    same call, with the handful of new fields eikonalSolver requires with
+    no catalog default -- renames the active coeffs block and preserves the
+    dynamic conductionNetworkDomains block (not silently dropped)."""
+    if not (PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain").exists():
+        pytest.skip("tutorial fixture not present in this checkout")
+
+    (tmp_path / "constant").mkdir()
+    (tmp_path / "constant" / "electroProperties").write_text(
+        (PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain").read_text()
+    )
+
+    overrides = [
+        {"driver_path": "myocardiumSolver", "value": "eikonalSolver"},
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach", "value": "true"},
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.stimulusLocationMin", "value": "(1e6 1e6 1e6)"},
+        {"driver_path": "$ELECTRO_MODEL_COEFFS.stimulusLocationMax", "value": "(1e6 1e6 1e6)"},
+    ]
+    validate_overrides(overrides)
+    apply_overrides(overrides, case_root=tmp_path)
+
+    text = (tmp_path / "constant" / "electroProperties").read_text()
+    assert "myocardiumSolver eikonalSolver;" in text
+    assert "eikonalSolverCoeffs" in text
+    assert "monodomainSolverCoeffs" not in text
+    assert_foam_entry(
+        tmp_path / "constant" / "electroProperties",
+        "eikonalAdvectionDiffusionApproach", "true",
+        scope=["eikonalSolverCoeffs"],
+    )
+    # ionicModel/tissue are forbidden_when eikonalSolver -- pruned at the
+    # top level (the carried-forward Purkinje conductionNetworkDomains
+    # block below legitimately keeps its own nested ionicModel/tissue,
+    # which is a different, un-restructured scope).
+    assert read_foam_entry(
+        tmp_path / "constant" / "electroProperties",
+        "ionicModel", scope=["eikonalSolverCoeffs"],
+    ) is None
+    # The Purkinje conductionNetworkDomains block must still be present,
+    # carried forward from the old file rather than silently dropped.
+    assert "conductionNetworkDomains" in text
+    assert "purkinjeNetwork" in text
