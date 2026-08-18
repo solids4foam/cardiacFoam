@@ -1,17 +1,18 @@
 // Niederer et al. (2011) slab as an unstructured tetrahedral mesh.
 //
-// Geometry is identical to the structured-hex verification case
-// (../NiedererEtAl2011verification/system/blockMeshDict): a
-// 20 x 3 x 7 mm slab, fibres along the long (x) axis. The only difference
-// between this case and the hex one is HOW the mesh is built -- here gmsh
-// generates near-uniform isotropic tets at characteristic length lc,
-// converted with gmshToFoam. Everything downstream (conductivity, stimulus,
-// ionic model, schemes, probes, reference activation times) is reused
-// unchanged.
+// Geometry is identical to this same tutorial's structured-hex case
+// (../../../system/blockMeshDict): a 20 x 3 x 7 mm slab, fibres along the
+// long (x) axis. The only difference between this case and the hex one is
+// HOW the mesh is built -- here gmsh generates near-uniform isotropic tets
+// at characteristic length lc, converted with gmshToFoam. Everything
+// downstream (conductivity, stimulus, ionic model, schemes, probes,
+// reference activation times) is reused unchanged.
 //
 // The characteristic length placeholder __LC__ is substituted by
-// run_tet_sweep.sh (lc = the nominal dx in metres) to build the refinement
-// ladder {0.5, 0.2, 0.1} mm, mirroring the published Niederer dx sweep.
+// niederer_2012.py's _apply_case (lc = the nominal dx in metres, from
+// setup/studies/tetConvergence/sweep_tet_generic.json's dx sweep) to build
+// the refinement ladder {0.5, 0.2, 0.1} mm, mirroring the published
+// Niederer dx sweep.
 //
 // The box is built directly in METRES: gmshToFoam imports coordinates
 // verbatim (no scale factor is applied), and cardiacFoam works in SI, so the

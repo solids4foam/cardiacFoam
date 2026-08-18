@@ -23,9 +23,9 @@ myocardiumSolver eikonalSolver;
 
 eikonalSolverCoeffs
 {
-    chi         [0 -1 0 0 0 0 0] 140000;
-    cm          [-1 -4 4 0 0 2 0] 0.01;
-    c0          [0 0 -0.5 0 0 0 0] 60;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
+    c0          [ 0 0 -0.5 0 0 0 0 ] 60;
 
     conductivitySource field;
 
@@ -58,7 +58,7 @@ eikonalSolverCoeffs
                 conductionSystemSolver eikonalSolver1D;
                 graphFile              purkinjeGraph_healthy;
 
-                purkinjeCV  [0 1 -1 0 0 0 0] 4.2;
+                purkinjeCV  [ 0 1 -1 0 0 0 0 ] 4.2;
                 chi         14000;
                 cm          0.01;
                 vm1DRest    -0.084;
@@ -117,3 +117,4 @@ eikonalSolverCoeffs
 }
 
 // ************************************************************************* //
+useGraphPrePopulation false;

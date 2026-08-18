@@ -11,7 +11,7 @@ PATHOS AcuteIschemia case.
 - coupling: `eikonalPvjCoupler`
 - ECG: `eikonalECG`
 
-The Purkinje graph activates from `rootStimulus.node 14083`; terminal activation
+The Purkinje graph activates from `rootStimulus.node 0`; terminal activation
 times are deposited into the 3D heart mesh as constraints for `psi`. The 3D
 solve uses the same PIMPLE style as
 `tutorials/manufacturedSolutions/eikonalECG`: `nOuterCorrectors 5000`,

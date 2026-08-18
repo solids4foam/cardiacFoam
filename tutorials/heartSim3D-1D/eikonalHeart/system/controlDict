@@ -1,19 +1,19 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
+|  \\    /   O peration     | Version:  2412                                  |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 FoamFile
 {
-    version     2.0;
-    format      ascii;
-    class       dictionary;
-    location    "system";
-    object      controlDict;
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "system";
+    object          controlDict;
 }
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 application     cardiacFoam;
 
@@ -29,7 +29,7 @@ deltaT          1;
 
 writeControl    runTime;
 
-writeInterval   0.05;
+writeInterval   1;
 
 purgeWrite      0;
 
@@ -45,6 +45,7 @@ timePrecision   6;
 
 runTimeModifiable false;
 
+libs            ( "libelectroModels.so" );
 
 
 // ************************************************************************* //

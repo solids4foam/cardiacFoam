@@ -19,8 +19,8 @@ myocardiumSolver monodomainSolver;
 
 monodomainSolverCoeffs
 {
-    chi         [0 -1 0 0 0 0 0] 140000;
-    cm          [-1 -4 4 0 0 2 0] 0.01;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
 
     conductivitySource field;
 
@@ -57,7 +57,6 @@ monodomainSolverCoeffs
                 conductionSystemSolver restitutionEikonalSolver1D;
                 graphFile              purkinjeGraph;
 
-                purkinjeCV             [0 1 -1 0 0 0 0] 6;
                 chi                    14000;
                 cm                     0.01;
                 vm1DRest               -0.084;

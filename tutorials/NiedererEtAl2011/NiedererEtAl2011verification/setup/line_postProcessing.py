@@ -15,9 +15,15 @@ from openfoam_driver.postprocessing.plotting_common import (
     build_visibility_mask,
     extract_dx_dt,
     lighten_hex_color,
-    rename_cardiacfoam_trace,
 )
 from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plotly_html
+
+
+def rename_cardiacfoam_trace(name: str) -> str:
+    """Strip the ΔT suffix and label the trace as cardiacFoam output."""
+    if ", ΔT=" in name:
+        return name.split(", ΔT=")[0] + " cardiacFoam"
+    return name
 
 
 # ----------------------------------------------------------

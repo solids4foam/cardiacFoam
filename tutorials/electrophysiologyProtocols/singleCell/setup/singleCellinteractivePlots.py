@@ -53,7 +53,7 @@ if str(TUTORIALS_ROOT) not in sys.path:
 from openfoam_driver.postprocessing.plotting_common import (
     build_visibility_mask,
     ordered_unique,
-    parse_model_and_cell,
+    parse_two_part_stem,
 )
 from openfoam_driver.postprocessing.style import apply_plotly_layout
 from openfoam_driver.postprocessing.style import write_plotly_html
@@ -227,10 +227,10 @@ def add_traces(fig, file_dfs_vars, all_vars, legend_map):
 
     for file_name, df, selected_variables in file_dfs_vars:
         time = df['time']
-        model, cell_type = parse_model_and_cell(
+        model, cell_type = parse_two_part_stem(
             file_name,
-            model_map=MODEL_MAP,
-            cell_map=CELL_TYPE_MAP,
+            first_map=MODEL_MAP,
+            second_map=CELL_TYPE_MAP,
         )
 
         for category, var_list in selected_variables.items():
