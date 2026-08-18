@@ -199,7 +199,13 @@ tutorials/manufacturedSolutions/*/setup/**/*.dat
 tutorials/manufacturedSolutions/*/setup/**/*.vtk
 tutorials/manufacturedSolutions/*/setup/**/*.sha256
 tutorials/manufacturedSolutions/**/__pycache__/
-tutorials/manufacturedSolutions/**/*.geo
+
+# Generated tet-mesh .geo files (rendered from a tracked *.geo.template by
+# substituting the actual mesh resolution at apply_case time -- e.g.
+# niederer_2012.py writes setup/slab.geo from setup/mesh/tet/slab.geo.template
+# on every tet-mesh_family run). Only the .template source is ever tracked;
+# a bare *.geo getting committed is always leftover build output.
+tutorials/**/*.geo
 
 # MMS: coupled 1D-3D generated mesh-variant sweep scratch (regenerated per-N)
 tutorials/manufacturedSolutions/**/blockMeshDict.*.active*

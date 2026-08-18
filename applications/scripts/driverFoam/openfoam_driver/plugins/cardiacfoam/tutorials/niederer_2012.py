@@ -144,7 +144,7 @@ def _workflow_dag_for(mesh_family: str) -> dict[str, object]:
             {
                 "id": "gmsh",
                 "command": "gmsh",
-                "args": ["-3", "setup/slab.geo", "-o", "slab.msh", "-format", "msh2"],
+                "args": ["-3", "setup/studies/tetConvergence/slab.geo", "-o", "slab.msh", "-format", "msh2"],
                 "depends_on": ["clean"],
             },
             {
@@ -182,7 +182,7 @@ def _apply_case(
     case: CaseConfig,
     *,
     mesh_family: str = "hex",
-    tet_geo_template_relpath: Path = Path("setup/mesh/tet/slab.geo.template"),
+    tet_geo_template_relpath: Path = Path("setup/studies/tetConvergence/slab.geo.template"),
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     control_dict_relpath: Path = defaults.CONTROL_DICT_RELPATH,
     block_mesh_dict_relpath: Path = defaults.BLOCK_MESH_DICT_RELPATH,
@@ -215,7 +215,7 @@ def _apply_case(
             raise FileNotFoundError(f"Missing tet geo template: {template_file}")
         lc_m = dx_mm * 1e-3
         rendered = template_file.read_text().replace("__LC__", str(lc_m))
-        target_file = case_root / "setup" / "slab.geo"
+        target_file = case_root / "setup" / "studies" / "tetConvergence" / "slab.geo"
         target_file.write_text(rendered)
     else:
         axis_cell_counts = [str(count) for count in cell_counts_from_dx(dx_mm, slab_size_mm)]
@@ -472,7 +472,7 @@ def make_spec(
     dx_values: Sequence[float] = defaults.DX_VALUES,
     solvers: Sequence[str] = defaults.SOLVERS,
     mesh_family: str = "hex",
-    tet_geo_template_relpath: str | Path = "setup/mesh/tet/slab.geo.template",
+    tet_geo_template_relpath: str | Path = "setup/studies/tetConvergence/slab.geo.template",
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     slab_size_mm: Sequence[float] = defaults.SLAB_SIZE_MM,
     end_time_by_dx: Mapping[float, float] = defaults.END_TIME_BY_DX,
