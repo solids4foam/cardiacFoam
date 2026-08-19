@@ -1,5 +1,4 @@
 {
-  "schema_version": 1,
   "tutorials": {
     "singleCell": {
       "case_count": 40,
@@ -109,10 +108,10 @@
         "entry_resolution": "sha256:04ef81e585e3bb5b75930bec0877109c347af29ab8fde853eae4a95b5c2de99c",
         "workflow_dag": "sha256:e618d748a429712a8541705b611c9dd7353353da5dc016dd3de2d3563f230b2b",
         "strict_diagnostics": "sha256:cbee2ebc5e0effd71e03a1b3d0b1b0e21c36c9e2f467730c11bde83faaf5acdc",
-        "run_document_v2": "sha256:7651043c0dea6128bbb29e1159c66ea27b31ac7548499ce5315d46728419d7ad",
+        "run_document_v2": "sha256:0adb0b2c5c49f5559ea77c0338f831397734f03d109e68d1a49152db323e2943",
         "capability_report": "sha256:8925d51e60e0372d52c331ae7c51fd6bc2993eebbe5a84e53e360c8ac39142b1",
         "artifacts": "sha256:76de5e49f88128e0230d8e05cb7744227e31c50a1d566fe751f27d79b2760e8c",
-        "dictionary_contents": "sha256:de514c8b30be46e554a2dd41239253aa912c8e3f2e2724aab41336028019a7a4"
+        "dictionary_contents": "sha256:b75b288487829c2c975806cafdcc25edb7c27c0439c2251e3e62cfecec1e5325"
       }
     },
     "manufacturedEikonalECG": {

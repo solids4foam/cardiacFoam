@@ -40,15 +40,12 @@ bidomainSolverCoeffs
         type            manufacturedFDABathBidomainVerifier;
         k               0.707107;
         alpha           0.01;
-        groundElectrode yes;
         fdaBathVariant  electrodePair;
     }
     manufacturedBidomain
     {
         k               0.707107;
         alpha           0.01;
-        groundElectrode yes;
-        fdaBathVariant  electrodePair;
     }
     dimension       "1D";
     solutionAlgorithm implicit;

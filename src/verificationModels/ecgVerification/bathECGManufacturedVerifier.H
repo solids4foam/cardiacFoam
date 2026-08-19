@@ -45,7 +45,6 @@ class bathECGManufacturedVerifier
     Switch enabled_;
     scalar k_;
     scalar alpha_;
-    Switch groundElectrode_;
 
     label sampleCount_;
     scalar fieldErrorL1Sum_;

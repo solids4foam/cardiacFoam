@@ -138,6 +138,8 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.timeCouplingScheme",
     "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
+    "$ELECTRO_MODEL_COEFFS.verificationModel.fdaBathVariant",
+    "$ELECTRO_MODEL_COEFFS.manufacturedBidomain.fdaBathVariant",
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
     ".purkinjeGraphModelCoeffs.tissue",
     # pvjKernel selects the PVJ spatial-spreading kernel (uniform / ...) via a

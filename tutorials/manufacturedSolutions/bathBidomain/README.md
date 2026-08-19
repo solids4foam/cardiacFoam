@@ -31,7 +31,7 @@ verificationModel
     type            manufacturedFDABathBidomainVerifier;
     k               0.7071067811865476;
     alpha           0.01;
-    groundElectrode yes;
+    fdaBathVariant  groundElectrode;
 }
 ```
 

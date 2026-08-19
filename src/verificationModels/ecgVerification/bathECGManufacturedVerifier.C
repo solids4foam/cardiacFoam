@@ -170,7 +170,6 @@ bathECGManufacturedVerifier::bathECGManufacturedVerifier
     enabled_(true),
     k_(1.0/Foam::sqrt(2.0)),
     alpha_(0.01),
-    groundElectrode_(true),
     sampleCount_(0),
     fieldErrorL1Sum_(0.0),
     fieldErrorL2Sum_(0.0),
@@ -230,15 +229,15 @@ bool bathECGManufacturedVerifier::read(const dictionary& dict)
     enabled_ = manufactured.lookupOrDefault<Switch>("enabled", true);
     k_ = manufactured.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = manufactured.lookupOrDefault<scalar>("alpha", 0.01);
-    groundElectrode_ =
-        manufactured.lookupOrDefault<Switch>("groundElectrode", true);
+    
+    const word variantStr = manufactured.lookupOrDefault<word>("fdaBathVariant", "groundElectrode");
 
-    if (!groundElectrode_)
+    if (variantStr != "groundElectrode")
     {
         FatalErrorInFunction
             << type()
             << " currently implements the FDA ground-electrode variant only. "
-            << "Set manufacturedBidomain { groundElectrode yes; }."
+            << "Set manufacturedBidomain { fdaBathVariant groundElectrode; }."
             << exit(FatalError);
     }
 
@@ -257,7 +256,7 @@ bool bathECGManufacturedVerifier::read(const dictionary& dict)
     Info<< (enabled_ ? "Enabled" : "Disabled")
         << " bath ECG manufactured verification: k=" << k_
         << ", alpha=" << alpha_
-        << ", groundElectrode=" << groundElectrode_ << "." << endl;
+        << ", fdaBathVariant=" << variantStr << "." << endl;
 
     return true;
 }
@@ -369,7 +368,7 @@ void bathECGManufacturedVerifier::writeSummary()
     os << "samples " << sampleCount_ << "\n";
     os << "k " << k_ << "\n";
     os << "alpha " << alpha_ << "\n";
-    os << "groundElectrode " << groundElectrode_ << "\n";
+    os << "fdaBathVariant groundElectrode\n";
     os << "field_L1 " << fieldErrorL1Sum_/count << "\n";
     os << "field_L2 " << Foam::sqrt(fieldErrorL2Sum_/count) << "\n";
     os << "field_Linf " << fieldErrorLinf_ << "\n";

@@ -14,9 +14,9 @@ internally inconsistent — a real defect independent of any tutorial's
 hand-formatting.
 
 Note: comparing the *parsed* selectors/overrides directly is NOT a valid test —
-``parse_electro_properties`` deliberately omits values equal to a catalog
-``typical_value``, so a default-valued override (e.g. ``groundElectrode yes``)
-appears only on the first parse. The generated *text* is the stable object.
+# ``parse_electro_properties`` deliberately omits values equal to a catalog
+# ``typical_value``, so a default-valued override (e.g. ``fdaBathVariant groundElectrode``)
+# appears only on the first parse. The generated *text* is the stable object.
 """
 from __future__ import annotations
 

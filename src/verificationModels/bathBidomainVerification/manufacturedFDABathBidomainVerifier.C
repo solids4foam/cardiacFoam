@@ -111,20 +111,7 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
     // Preferred key: selects which FDA bidomain-with-bath boundary variant is
     // being verified, and with it the error metric.
-    if (cfg.found("fdaBathVariant"))
-    {
-        variant_ = bathVariantNames.get("fdaBathVariant", cfg);
-    }
-    else if (cfg.found("groundElectrode"))
-    {
-        // Legacy key, retained so archived cases keep running unchanged:
-        // groundElectrode yes -> groundElectrode, no -> electrodePair.
-        const Switch grounded(cfg.get<Switch>("groundElectrode"));
-        variant_ =
-            grounded
-          ? bathVariant::groundElectrode
-          : bathVariant::electrodePair;
-    }
+    variant_ = bathVariantNames.getOrDefault("fdaBathVariant", cfg, bathVariant::electrodePair);
 }
 
 

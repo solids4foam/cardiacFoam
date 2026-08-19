@@ -78,11 +78,11 @@ bidomainSolverCoeffs
     verificationModel
     {
         type manufacturedFDABathBidomainVerifier;
-        groundElectrode yes;
+        fdaBathVariant groundElectrode;
     }
     manufacturedBidomain
     {
-        groundElectrode yes;
+        fdaBathVariant groundElectrode;
     }
     dimension "1D";
     solutionAlgorithm implicit;
