@@ -708,7 +708,14 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                # capture_output=True, text=True always yields str stdout/stderr;
+                # CompletedProcess defaults them to None, which is not a
+                # shape subprocess.run can actually return. The global patch
+                # is intentional (the test observes calls from several
+                # modules), so the mock must be faithful instead.
+                mock_run.return_value = subprocess.CompletedProcess(
+                    [], 0, stdout="", stderr=""
+                )
                 build_and_launch(
                     electro,
                     physics_selectors=physics,
@@ -735,7 +742,14 @@ class TestBuildAndLaunchDirectRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             case_dir = Path(d) / "case"
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = subprocess.CompletedProcess([], 0)
+                # capture_output=True, text=True always yields str stdout/stderr;
+                # CompletedProcess defaults them to None, which is not a
+                # shape subprocess.run can actually return. The global patch
+                # is intentional (the test observes calls from several
+                # modules), so the mock must be faithful instead.
+                mock_run.return_value = subprocess.CompletedProcess(
+                    [], 0, stdout="", stderr=""
+                )
                 build_and_launch(
                     electro,
                     physics_selectors=physics,

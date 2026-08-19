@@ -40,8 +40,12 @@ def _sanitize(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_sanitize(item) for item in value]
     if isinstance(value, str):
-        value = value.replace(str(monorepo_root), "<repo>")
+        # sys.executable FIRST: a project-local virtualenv lives inside
+        # monorepo_root, so replacing the repo prefix first mangles the
+        # interpreter path and the exact-match replace below then finds
+        # nothing. Always substitute the more specific token first.
         value = value.replace(sys.executable, "<python>")
+        value = value.replace(str(monorepo_root), "<repo>")
         return value
     return value
 
