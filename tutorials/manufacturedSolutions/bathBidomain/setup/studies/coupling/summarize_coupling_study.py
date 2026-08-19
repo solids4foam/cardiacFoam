@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
-"""Summarise the bath predictor-corrector control."""
+"""Summarise the bath predictor-corrector control.
+
+Reads driverFOAM sweep-run's own archive layout for
+setup/studies/coupling/sweep_coupling_study.json: each case lands at
+<case_root>/<caseId>/<archive_dir_name>/bathBidomainInterfaceMetrics.csv,
+where <archive_dir_name> is the spec's own
+"setup/studies/coupling/results/sweepCases" and <caseId> is
+"<number_cells>_<bath_predictor_corrector>" (e.g. "10_False", "10_True"),
+per the spec's case_id_template derive. Verified against a real N=10
+baseline/predictor run (2026-08-19).
+"""
 
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 import sys
 
@@ -16,24 +27,38 @@ METRICS = (
     "x0AssembledFlux_L2",
 )
 
+ARCHIVE_RELPATH = Path("setup/studies/coupling/results/sweepCases")
+CASE_ID_RE = re.compile(r"^(?P<resolution>\d+)_(?P<predictor>True|False)$")
 
-def metadata(path: Path) -> dict[str, str]:
-    return dict(line.split("=", 1) for line in path.read_text().splitlines())
+
+def discover_rows(case_root: Path) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for csv_path in sorted(case_root.glob(f"*/{ARCHIVE_RELPATH}/bathBidomainInterfaceMetrics.csv")):
+        case_id = csv_path.parents[len(ARCHIVE_RELPATH.parts)].name
+        match = CASE_ID_RE.match(case_id)
+        if match is None:
+            continue
+        with csv_path.open() as handle:
+            values = next(csv.DictReader(handle))
+        row = {
+            "resolution": match["resolution"],
+            "variant": "predictor" if match["predictor"] == "True" else "baseline",
+        }
+        row.update({name: values[name] for name in METRICS})
+        rows.append(row)
+    return rows
 
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("usage: summarize_coupling_study.py RESULTS_DIR")
-    root = Path(sys.argv[1]).resolve()
-    rows: list[dict[str, str]] = []
-    for meta_path in sorted(root.glob("*/metadata.env")):
-        row = metadata(meta_path)
-        with (meta_path.parent / "metrics.csv").open() as handle:
-            values = next(csv.DictReader(handle))
-        row.update({name: values[name] for name in METRICS})
-        rows.append(row)
+        raise SystemExit("usage: summarize_coupling_study.py CASE_ROOT")
+    case_root = Path(sys.argv[1]).resolve()
+    rows = discover_rows(case_root)
     if not rows:
-        raise SystemExit(f"No study results found under {root}")
+        raise SystemExit(
+            f"No sweep-run case output found under {case_root}/*/{ARCHIVE_RELPATH}/ "
+            "-- run 'driverFoam sweep-run --spec setup/studies/coupling/sweep_coupling_study.json' first."
+        )
 
     baselines = {
         row["resolution"]: row for row in rows if row["variant"] == "baseline"
@@ -48,8 +73,11 @@ def main() -> None:
                 100.0 * (float(row[name]) - reference) / reference
             )
 
+    output_dir = case_root / "setup" / "studies" / "coupling" / "results"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     fields = list(rows[0])
-    with (root / "raw_results.csv").open("w", newline="") as handle:
+    with (output_dir / "raw_results.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
@@ -64,7 +92,7 @@ def main() -> None:
         "assembled current L2 | change |",
         "|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
-    for row in rows:
+    for row in sorted(rows, key=lambda r: (int(r["resolution"]), r["variant"])):
         values: dict[str, object] = dict(row)
         values.update(
             heart_value=float(row["heartPhiE_L2"]),
@@ -79,7 +107,8 @@ def main() -> None:
             "{heart_change:+.2f}% | {bath_value:.6e} | {bath_change:+.2f}% | "
             "{flux_value:.6e} | {flux_change:+.2f}% |".format(**values)
         )
-    (root / "summary.md").write_text("\n".join(lines) + "\n")
+    (output_dir / "summary.md").write_text("\n".join(lines) + "\n")
+    print(f"Wrote {output_dir / 'raw_results.csv'} and {output_dir / 'summary.md'}")
 
 
 if __name__ == "__main__":

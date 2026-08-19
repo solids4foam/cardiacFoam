@@ -45,25 +45,19 @@ Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and manufacture
 
 `setup/mesh/tet/` is this case's tetrahedral-mesh overlay (formerly standalone `bathBidomainTetMMS`, merged here the same way `monodomainTetMMS` was merged into `monodomainPseudoECG`). Unlike those cases, the bath geometry itself changes: built from a single Gmsh model over `[-1,2] x [0,1] x [0,1]` (left bath `-1<=x<=0`, myocardium `0<=x<=1`, right bath `1<=x<=2`) with heart-bath interfaces as internal conformal faces. This overlay needs its own `constant/electroProperties` copy (`dimension "3D"` plus `interfaceConductivityInterpolation`) alongside `fvSchemes` (`leastSquares` gradient); `fvSolution`'s `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1` already match hex default.
 
-For selected formulation, final results, and limitations, see [`setup/mesh/tet/FINAL_SOLUTION.md`](setup/mesh/tet/FINAL_SOLUTION.md). Files under `setup/mesh/tet/interfaceStudy/` retain verification audit trail.
+Mesh generation, `checkMesh`, and the tet `electroProperties`/`fvSchemes` overlay activation are handled directly by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG (`Allclean → gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics`) for every sweep case below — there is no separate mesh-gate or smoke-test step to run by hand.
 
-#### Mesh Gate and Smoke Test
+#### Predictor-Corrector Coupling Study
 
-```bash
-cd tutorials/manufacturedSolutions/bathBidomain
-bash setup/mesh/tet/run_mesh_gate.sh 10
-bash setup/mesh/tet/Allrun.smoke
-```
-
-Results land under `setup/mesh/tet/results/N10/` (mesh gate) and `setup/mesh/tet/results/N10/smoke/`. Review `mesh_manifest.txt`, `log.checkMesh`, `log.checkMesh.strict`, and `log.gmshToFoam` before starting a convergence sweep.
-
-#### Potential-Field Convergence Sweep
-
-The default ladder is `N=10 20 40`, with `deltaT ~ h²` and `endTime=0.02`. Each resolution is generated from scratch; combined `summary.csv` computes observed order from `h_heart=(1/N_myocardium_cells)^(1/3)`. This verifies **potential** convergence for tetrahedral bath-bidomain system (`Vm`, `phiE`, `phiI` errors).
+`setup/studies/coupling/` compares the decoupled/baseline vs. predictor-corrector bath coupling at `N=10,20,40`. This is the source of the paperI `bath_bidomain_tet_conformal` experiment. See [`setup/studies/coupling/README.md`](setup/studies/coupling/README.md).
 
 #### Interface-Current (Assembled-Flux) Convergence Sweep
 
-Sweeps assembled-current rows for `@tbl-bath-bidomain-tet`. Both sweeps use the same selected formulation (`matchedSubmesh` assembly with `distanceWeightedHarmonic`, baked into `setup/mesh/tet/electroProperties`) and committed `snGrad corrected` scheme.
+Sweeps assembled-current rows for `@tbl-bath-bidomain-tet` at `N=10,20,40,80`, comparing `unweightedHarmonic` and `distanceWeightedHarmonic` interface-conductivity interpolation (`matchedSubmesh` assembly, committed `snGrad corrected` scheme). See [`setup/studies/interfaceCurrentConvergence/README.md`](setup/studies/interfaceCurrentConvergence/README.md).
+
+#### Gradient-Scheme Screen
+
+Screens four gradient/laplacian/snGrad scheme combinations at `N=20`. See [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md).
 
 ## Usage
 
@@ -77,33 +71,27 @@ blockMesh -dict system/blockMeshDict.1D
 
 ### Driver-Managed Sweeps (Suggested)
 
-1D/2D/3D parallel convergence sweep:
+Cartesian (1D/2D/3D) spatial convergence:
 
 ```bash
-source $WM_PROJECT_DIR/etc/bashrc
-tutorials/manufacturedSolutions/bathBidomain/setup/run_all_dimensions.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+python3 applications/scripts/paperI_results/aggregate.py bath_bidomain_cartesian
 ```
 
-Use `run_all_dimensions.sh sim` to run simulations only and skip post-processing.
-
-Tetrahedral potential-field convergence:
+Tetrahedral predictor-corrector coupling study:
 
 ```bash
-bash setup/mesh/tet/run_bath_tet.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json
+python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/results/sweepCases
 ```
 
 Tetrahedral interface-current convergence:
 
 ```bash
-METHODS=distanceWeightedHarmonic RESOLUTIONS="10 20 40 80" \
-  bash setup/mesh/tet/run_parallel_interface_sweep.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
 ```
 
-Parallel ECG ownership smoke run:
+Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.
 
-```bash
-source $WM_PROJECT_DIR/etc/bashrc
-applications/scripts/driverFoam/bin/driverFoam sim \
-    --entry manufacturedBathBidomain \
-    --config tutorials/manufacturedSolutions/bathBidomain/setup/driver_config_ecg_smoke.json
-```
+All of the above are JSON sweep specs driven entirely through `driverFoam sweep-run` — there is no bash left in this tutorial's `setup/` beyond the standard OpenFOAM `Allrun`/`Allclean`/`regressionTest.sh` entrypoints. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs haven't been re-run against OpenFOAM since being converted from their old bash scripts (see each study's own README "Status" section) — dry-run with `driverFoam sweep-plan --spec <file>` before relying on them, and expect to iterate on the JSON if a case fails to reproduce the old numbers exactly.

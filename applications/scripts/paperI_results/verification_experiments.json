@@ -378,7 +378,6 @@
       "case_dir": "tutorials/manufacturedSolutions/bathBidomain",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/run_bath_bidomain_cartesian.sh",
         "driver_specs": [
           "setup/studies/cartesianConvergence/sweep_hex_convergence.json"
         ]
@@ -413,8 +412,10 @@
       "description": "Conformal tetrahedral bath-interface predictor-corrector verification",
       "case_dir": "tutorials/manufacturedSolutions/bathBidomain",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/mesh/tet/run_bath_bidomain_tet_conformal.sh"
+        "kind": "driver_sweep",
+        "driver_specs": [
+          "setup/studies/coupling/sweep_coupling_study.json"
+        ]
       },
       "matrix": {
         "mesh_family": [

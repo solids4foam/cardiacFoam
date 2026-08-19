@@ -164,8 +164,21 @@ def _bath_hex(root: Path):
 
 
 def _bath_tet(root: Path):
-    base = root / _TUT / "bathBidomain/setup/mesh/tet/studies/coupling/results"
-    files = {n: base / f"N{n}_predictor/metrics.csv" for n in (10, 20, 40)}
+    # setup/studies/coupling/sweep_coupling_study.json (driverFOAM sweep-run,
+    # replacing the old bash run_coupling_study.sh) archives each case to
+    # <case_root>/<caseId>/<archive_dir_name>/, where <archive_dir_name> is
+    # the spec's own "setup/studies/coupling/results/sweepCases" and
+    # <caseId> is "<number_cells>_<bath_predictor_corrector>" per the spec's
+    # case_id_template -- confirmed against a real N=10 baseline/predictor
+    # run (2026-08-19), not the shared setup/studies/<study>/results/
+    # sweepCases/ convention _sweep_cases_and_manifest() assumes (that
+    # convention's postprocess consolidation step is a driverFOAM stub as of
+    # this writing). The paper's reported ladder is the predictor variant.
+    base = root / _TUT / "bathBidomain"
+    files = {
+        n: base / f"{n}_True" / "setup/studies/coupling/results/sweepCases/bathBidomainInterfaceMetrics.csv"
+        for n in (10, 20, 40)
+    }
     return schema.fill_rates(adapters.from_bath_interface_metric_files(files))
 
 
