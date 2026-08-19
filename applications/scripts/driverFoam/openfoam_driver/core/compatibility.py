@@ -161,30 +161,57 @@ def legacy_generic_case_dict_file_aliases(
 
 
 @_instrumented
-def legacy_case_marker(case_root) -> bool:
-    """Preserve cardiac filesystem evidence for plugins without the new hook."""
+def legacy_case_marker(plugin, case_root) -> bool:
+    """Plugins predating has_case_marker(). Only the built-in cardiac plugin
+    has authored filesystem evidence for its own cases; every other plugin
+    gets ``False`` and must declare its own marker.
 
-    from ..plugins.cardiacfoam.case_compatibility import has_case_marker
+    Gating matters here even though ``False`` is also what the cardiac rule
+    returns for a case with no ``constant/electroProperties``: ungated, the
+    *reason* a non-cardiac case was rejected was that it failed a cardiac
+    test, so a non-cardiac case that happened to carry an
+    ``electroProperties`` file was claimed by whichever plugin was loaded."""
 
-    return has_case_marker(case_root)
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.case_compatibility import has_case_marker
+
+        return has_case_marker(case_root)
+    return False
 
 
 @_instrumented
-def legacy_case_runnable_without_workflow(case_root) -> bool:
-    """Preserve historical uncontracted-case runnability for legacy plugins."""
+def legacy_case_runnable_without_workflow(plugin, case_root) -> bool:
+    """Plugins predating is_case_runnable_without_workflow(). Same rule as
+    :func:`legacy_case_marker`: only the built-in cardiac plugin can judge an
+    uncontracted case runnable, because the judgement reads cardiac
+    dictionaries. Others get ``False`` -- core then falls back to the
+    workflow contract or ``Allrun``, which is plugin-neutral evidence."""
 
-    from ..plugins.cardiacfoam.case_compatibility import is_runnable_without_workflow
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.case_compatibility import is_runnable_without_workflow
 
-    return is_runnable_without_workflow(case_root)
+        return is_runnable_without_workflow(case_root)
+    return False
 
 
 @_instrumented
-def legacy_run_document_config(spec):
-    """Preserve the cardiac-shaped RunDocument-v2 parser for legacy plugins."""
+def legacy_run_document_config(plugin, spec):
+    """Plugins predating build_run_document_config(). Only the built-in
+    cardiac plugin has an authored RunDocument config builder; others get an
+    empty config and no diagnostics -- they constrain nothing, exactly as
+    :func:`legacy_run_document_config_schema` hands them a fully open schema.
 
-    from ..plugins.cardiacfoam.run_document_config import build_config
+    The pre-gate return for a non-cardiac plugin was the cardiac *phase*
+    vocabulary (``anatomy``/``physics``/``stimulus``/``solver``). That
+    vocabulary is precisely what RunDocument v3 removed from core, where
+    ``config`` is an open object with no fixed phases, so returning it for a
+    plugin that never declared those phases contradicts the schema."""
 
-    return build_config(spec)
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.run_document_config import build_config
+
+        return build_config(spec)
+    return {}, ()
 
 
 @_instrumented
@@ -201,34 +228,76 @@ def legacy_run_document_config_schema(plugin) -> dict:
 
 
 @_instrumented
-def legacy_nondimensional_case(spec) -> bool:
-    """Preserve cardiac mesh-diagnostic exemptions for legacy plugins."""
+def legacy_nondimensional_case(plugin, spec) -> bool:
+    """Plugins predating is_nondimensional_case(). The cardiac exemption is
+    read out of ``constant/electroProperties`` (a singleCell or verification
+    model), so only the built-in cardiac plugin can answer it. Others get
+    ``False``: their meshes are dimensional until they say otherwise, which
+    is the conservative answer -- it keeps mesh-scale diagnostics ON rather
+    than silently exempting a case from them."""
 
-    from ..plugins.cardiacfoam.planning_policy import is_nondimensional_case
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.planning_policy import is_nondimensional_case
 
-    return is_nondimensional_case(spec)
+        return is_nondimensional_case(spec)
+    return False
 
 
 @_instrumented
-def legacy_route_sweep_case(*, base, resolved_axis_values, driver_context):
-    """Preserve the cardiac-shaped generic sweep router for legacy plugins."""
+def legacy_route_sweep_case(plugin, *, base, resolved_axis_values, driver_context):
+    """Plugins predating route_sweep_case_values().
 
-    from ..plugins.cardiacfoam.sweep import route_case_values
+    Unlike every other fallback here, a neutral empty return is not available:
+    routing produces the values a case is then materialized from, so an empty
+    routing silently yields a case that is not the one the sweep asked for.
+    The honest neutral is to refuse, naming the hook the plugin must
+    implement.
 
-    return route_case_values(
-        base=base,
-        resolved_axis_values=resolved_axis_values,
-        driver_context=driver_context,
+    The cardiac router validates axes against ``electroProperties``/
+    ``physicsProperties`` vocabulary, so ungated it rejected a non-cardiac
+    plugin's axes in cardiac terms -- or, worse, accepted them."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.sweep import route_case_values
+
+        return route_case_values(
+            base=base,
+            resolved_axis_values=resolved_axis_values,
+            driver_context=driver_context,
+        )
+    from ..sweep_expansion import SweepValidationError
+
+    raise SweepValidationError(
+        f"plugin {getattr(plugin, 'plugin_id', '<unknown>')!r} does not implement "
+        "route_sweep_case_values(); driverFOAM cannot route sweep axes for it. "
+        "Implement route_sweep_case_values(base, resolved_axis_values, "
+        "driver_context) on the plugin to support sweeps."
     )
 
 
 @_instrumented
-def legacy_materialize_sweep_case(*, case_dir, routed) -> None:
-    """Preserve build_and_launch-based sweep materialization."""
+def legacy_materialize_sweep_case(plugin, *, case_dir, routed) -> None:
+    """Plugins predating materialize_sweep_case(). Refuses for the same
+    reason as :func:`legacy_route_sweep_case`.
 
-    from ..plugins.cardiacfoam.sweep import materialize_case
+    This is the fallback with real teeth. The cardiac materializer writes an
+    ``Allrun`` containing a hardcoded ``cardiacFoam`` command, so ungated it
+    generated a case invoking the cardiacFoam binary under whichever plugin
+    was loaded (reproduced against GenericOpenFOAMPlugin, 2026-08-19)."""
 
-    materialize_case(case_dir=case_dir, routed=routed)
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        from ..plugins.cardiacfoam.sweep import materialize_case
+
+        materialize_case(case_dir=case_dir, routed=routed)
+        return
+    from ..sweep_expansion import SweepValidationError
+
+    raise SweepValidationError(
+        f"plugin {getattr(plugin, 'plugin_id', '<unknown>')!r} does not implement "
+        "materialize_sweep_case(); driverFOAM cannot materialize sweep cases "
+        "for it. Implement materialize_sweep_case(case_dir, routed) on the "
+        "plugin to support sweeps."
+    )
 
 
 @_instrumented

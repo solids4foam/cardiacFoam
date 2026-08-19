@@ -93,7 +93,17 @@ def test_unrecognized_axis_is_rejected_instead_of_silently_ignored():
 
 
 def test_routing_uses_the_selected_plugin_catalog():
-    with pytest.raises(SweepValidationError, match="not a recognized selector"):
+    # Originally this asserted that "type" (a cardiac physicsProperties
+    # selector) is "not a recognized selector" under the generic plugin's
+    # catalog -- i.e. that routing consults the SELECTED plugin rather than a
+    # hardcoded cardiac vocabulary.
+    #
+    # Gating legacy_route_sweep_case makes that point more strongly: the
+    # generic plugin does not implement route_sweep_case_values() at all, so
+    # routing refuses outright instead of running cardiac validation over a
+    # non-cardiac plugin's axes. The refusal names the missing hook, so the
+    # message tells a plugin author what to implement.
+    with pytest.raises(SweepValidationError, match="route_sweep_case_values"):
         route_case_values(
             base={},
             resolved_axis_values={"type": "electroModel"},

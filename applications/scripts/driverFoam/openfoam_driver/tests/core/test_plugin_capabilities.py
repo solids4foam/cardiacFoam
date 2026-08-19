@@ -53,7 +53,14 @@ def test_context_exposes_focused_adapters_without_replacing_public_plugin(
     config, diagnostics = context.capabilities.run_document_configuration.build(
         RunDocumentConfigurationRequest(spec),
     )
-    assert config == {"anatomy": {}, "physics": {}, "stimulus": {}, "solver": {}}
+    # A non-cardiac plugin with no build_run_document_config() hook now gets
+    # an empty config rather than the cardiac phase vocabulary. Those four
+    # phase names are exactly what RunDocument v3 removed from core, where
+    # `config` is an open object with no fixed phases (schemas/run-document.json),
+    # so handing them to a plugin that never declared them contradicted the
+    # schema. Matches legacy_run_document_config_schema, which already handed
+    # non-cardiac plugins a fully open schema.
+    assert config == {}
     assert diagnostics == ()
 
     # Existing callers that constructed DriverContext(plugin, identity)
@@ -64,9 +71,22 @@ def test_context_exposes_focused_adapters_without_replacing_public_plugin(
     assert [item.name for item in fields(reconstructed)] == ["plugin", "identity"]
 
 
-def test_legacy_plugin_case_evidence_preserves_pre_capability_behavior(
+def test_non_cardiac_plugin_does_not_inherit_cardiac_case_evidence(
     tmp_path: Path,
 ) -> None:
+    """Same rule as :func:`test_report_catalog_is_empty_for_non_cardiac_plugin`,
+    applied to case compatibility.
+
+    This test previously asserted the opposite, under the name
+    ``test_legacy_plugin_case_evidence_preserves_pre_capability_behavior``: a
+    non-cardiac plugin DID claim a case carrying ``electroProperties*``,
+    because legacy_case_marker/legacy_case_runnable_without_workflow called
+    the cardiac implementation without checking plugin_id -- unlike the
+    thirteen sibling fallbacks, which all gate on ``org.cardiacfoam``.
+
+    Preserving that behaviour was never the intent; it was the Plan-1
+    fallback's unexamined default, and it meant a third-party plugin was
+    silently judged by cardiac filesystem evidence."""
     plugin = MinimalOpenFOAMPlugin()
     context = driver_context(plugin, source="test")
     case_root = tmp_path / "case"
@@ -82,8 +102,10 @@ def test_legacy_plugin_case_evidence_preserves_pre_capability_behavior(
         path.write_text("")
 
     request = CaseCompatibilityRequest(case_root)
-    assert context.capabilities.case_compatibility.has_case_marker(request)
-    assert context.capabilities.case_compatibility.is_runnable_without_workflow(request)
+    assert not context.capabilities.case_compatibility.has_case_marker(request)
+    assert not context.capabilities.case_compatibility.is_runnable_without_workflow(
+        request
+    )
 
 
 def test_report_catalog_is_empty_for_non_cardiac_plugin() -> None:

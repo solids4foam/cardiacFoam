@@ -39,6 +39,9 @@ if TYPE_CHECKING:
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
     from openfoam_driver.planning_types import StrictDiagnostic
     from openfoam_driver.tutorials_display import TutorialDisplay
+    from openfoam_driver.core.plugin_capabilities import ResolvedInput
+    from openfoam_driver.report_catalog import ReportDefinition
+    from openfoam_driver.specs.apply_overrides import OverrideScope, RegenerationScope
     from pathlib import Path
 
 
@@ -147,6 +150,7 @@ class PluginIdentity:
     capability_digest: str
 
     def to_json(self) -> dict[str, str]:
+        """Serialise this identity for provenance records and ``describe``."""
         return {
             "id": self.id,
             "version": self.version,
@@ -192,21 +196,215 @@ class SolverPluginV2(SolverPlugin, Protocol):
     list gates v1 plugins too, and adding them there would break v1 loading.
     """
 
-    def get_solver_commands(self) -> frozenset[str]: ...
-    def get_auxiliary_commands(self) -> frozenset[str]: ...
-    def get_utility_manifests(self) -> dict[str, Any]: ...
-    def get_utility_roots(self) -> tuple["Path", ...]: ...
-    def resolve_case_models(self, case_root: "Path") -> dict[str, Any]: ...
-    def get_samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]: ...
+    # -- Command authorization -----------------------------------------------
+    def get_solver_commands(self) -> frozenset[str]:
+        """Binaries that produce a run's artifacts. Core's artifact-producer
+        heuristic consults this set alone, never the auxiliary one."""
+        ...
+
+    def get_auxiliary_commands(self) -> frozenset[str]:
+        """Additionally authorized binaries that produce no artifacts of their
+        own -- meshers, decomposers, reconstructors."""
+        ...
+
+    def get_utility_manifests(self) -> dict[str, Any]:
+        """Per-utility declarations of what each pre/post-solve utility
+        consumes and produces, so workflow steps can be checked before they
+        run."""
+        ...
+
+    def get_utility_roots(self) -> tuple["Path", ...]:
+        """Directories holding this plugin's utility sources, for provenance
+        fingerprinting."""
+        ...
+
+    # -- Case introspection ---------------------------------------------------
+    def resolve_case_models(self, case_root: "Path") -> dict[str, Any]:
+        """Best-effort read of a case's on-disk model selections. Must never
+        raise: agents call it against partly-written cases."""
+        ...
+
+    def get_samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+        """Fields the resolved model exposes for sampling by function objects,
+        keyed by region."""
+        ...
+
+    # -- Configuration vocabulary --------------------------------------------
     def get_override_schema(
         self, tutorial_name: str, make_spec_info: dict[str, Any],
-    ) -> dict[str, Any]: ...
-    def get_run_document_config_schema(self) -> dict[str, Any]: ...
-    def get_dict_entry_catalog(self) -> dict[str, Any]: ...
-    def get_solve_step_commands(self) -> frozenset[str]: ...
-    def get_telemetry_source_globs(self, command: str) -> tuple[str, ...]: ...
-    def get_extra_provenance_paths(self, case_root: "Path") -> tuple["RuntimeDependency", ...]: ...
-    def get_artifact_value_reader(self, artifact_format: str) -> Any | None: ...
+    ) -> dict[str, Any]:
+        """Machine-readable description of the ``--config`` JSON an agent may
+        write for this tutorial, including a worked example."""
+        ...
+
+    def get_run_document_config_schema(self) -> dict[str, Any]:
+        """JSON Schema for this plugin's RunDocument ``config`` object. Core
+        validates against it dynamically and reports structured diagnostics,
+        which is what lets an agent repair its own document."""
+        ...
+
+    def get_dict_entry_catalog(self) -> dict[str, Any]:
+        """The plugin's dictionary entries arranged by its own document names,
+        unserialized -- core owns serialization, the plugin owns vocabulary."""
+        ...
+
+    # -- Runtime evidence ------------------------------------------------------
+    def get_solve_step_commands(self) -> frozenset[str]:
+        """Which commands count as the solve step, for telemetry attribution."""
+        ...
+
+    def get_telemetry_source_globs(self, command: str) -> tuple[str, ...]:
+        """Where a given command writes the logs telemetry is parsed from."""
+        ...
+
+    def get_extra_provenance_paths(self, case_root: "Path") -> tuple["RuntimeDependency", ...]:
+        """Run-time dependencies outside the case tree: the solver binary, a
+        linked library, a case-local shared object.
+
+        Returns ``RuntimeDependency`` rather than bare paths so that "required
+        but not found" is expressible. A tuple of paths can only omit, and
+        omission reads as "nothing to check" -- the gap that let a rebuilt
+        solver replay a resumed run's numbers as fresh."""
+        ...
+
+    def get_artifact_value_reader(self, artifact_format: str) -> Any | None:
+        """Reader for a plugin-specific artifact format, or ``None`` if this
+        plugin cannot read that format."""
+        ...
+
+
+@runtime_checkable
+class SolverPluginOptionalHooks(Protocol):
+    """Optional hooks a plugin MAY implement. Documentation, not enforcement.
+
+    Every member here is probed with ``getattr`` by an adapter in
+    :mod:`openfoam_driver.core.plugin_capabilities`. None is listed in
+    ``_REQUIRED_PLUGIN_MEMBERS`` or ``_REQUIRED_V2_MEMBERS``, so this class is
+    inert at load time: ``validate_plugin`` never consults it, and declaring or
+    omitting any of these changes no plugin's loading behaviour.
+
+    **Why this class exists.** Until it did, these fourteen hooks appeared
+    nowhere in the plugin contract. They were reachable only by reading the
+    private ``_*Adapter`` bodies, so a plugin author reading this file could
+    not discover that the extension points existed at all -- while *not*
+    implementing one silently routed them into a compatibility fallback.
+
+    **Not implementing a hook is a real choice, not a no-op.** When the hook
+    is absent, the adapter falls back to
+    :mod:`openfoam_driver.core.compatibility`, whose ``legacy_*`` functions
+    return cardiac data for the built-in cardiac plugin and a neutral value
+    for everyone else. Two of them cannot be neutral and refuse instead:
+    a plugin that does not implement ``route_sweep_case_values`` and
+    ``materialize_sweep_case`` cannot be swept, and will be told so by name.
+
+    Hooks are grouped by the capability they back; see that capability's
+    docstring in ``plugin_capabilities.py`` for the full contract.
+    """
+
+    # -- CaseCompatibilityCapability -----------------------------------------
+    def has_case_marker(self, case_root: "Path") -> bool:
+        """Whether this case folder belongs to this plugin, by filesystem
+        evidence alone. Absent -> ``False`` for non-cardiac plugins."""
+        ...
+
+    def is_case_runnable_without_workflow(self, case_root: "Path") -> bool:
+        """Whether a case with no workflow contract and no ``Allrun`` is still
+        runnable. Absent -> ``False``; core then relies on the contract or
+        ``Allrun``, which is plugin-neutral evidence."""
+        ...
+
+    # -- RunDocumentConfigurationCapability ----------------------------------
+    def build_run_document_config(
+        self, spec: "TutorialSpec",
+    ) -> tuple[dict[str, dict[str, Any]], tuple["StrictDiagnostic", ...]]:
+        """Build this plugin's RunDocument ``config`` object and any
+        diagnostics. Core imposes no key set (``schemas/run-document.json``
+        declares ``config`` open). Absent -> ``({}, ())``."""
+        ...
+
+    # -- MeshDiagnosticPolicyCapability --------------------------------------
+    def is_nondimensional_case(self, spec: "TutorialSpec") -> bool:
+        """Whether SI mesh-scale diagnostics should be skipped for this case.
+        Absent -> ``False``, keeping the diagnostics on."""
+        ...
+
+    def get_mesh_geometry_diagnostics(self, case_root: "Path") -> tuple[Any, ...]:
+        """Plan-time geometry checks over plugin-owned point sets that are not
+        polyMesh regions. Absent -> ``()``; there is no fallback, because "no
+        extra checks" is correct for a plugin that has none."""
+        ...
+
+    # -- SweepMaterializerCapability -----------------------------------------
+    def route_sweep_case_values(
+        self,
+        *,
+        base: dict[str, Any],
+        resolved_axis_values: dict[str, Any],
+        driver_context: Any,
+    ) -> dict[str, Any]:
+        """Map one resolved sweep-axis combination onto this plugin's own
+        case vocabulary. Must be pure -- no writes; ``materialize_sweep_case``
+        does those. Absent -> sweeps are refused by name."""
+        ...
+
+    def materialize_sweep_case(self, *, case_dir: "Path", routed: dict[str, Any]) -> None:
+        """Write one routed sweep case to disk. Absent -> sweeps are refused
+        by name rather than materialized by another plugin's writer."""
+        ...
+
+    # -- CaseFileContractCapability ------------------------------------------
+    def get_config_resolution_description(self) -> str:
+        """One human-readable sentence naming which files resolve into a valid
+        RunDocument config. Absent -> a plugin-neutral sentence."""
+        ...
+
+    # -- CaseProvenanceCapability --------------------------------------------
+    def get_required_inputs(
+        self,
+        case_root: "Path",
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple["ResolvedInput", ...]:
+        """Already-resolved input paths this case reads. Resolved, not globs:
+        field names are dictionary-configurable and locations resolve by a
+        backward ``Time::findInstance`` search. Absent -> ``()``, which under
+        the resolution precedence means "every unknown file is a required
+        input" -- safe, but coarse."""
+        ...
+
+    def get_generated_output_globs(
+        self,
+        case_root: "Path",
+        resolved_case: dict[str, Any],
+        selected_start_time: str,
+    ) -> tuple[str, ...]:
+        """Globs for files this case generates rather than consumes. Globs are
+        fine here: generated diagnostics have fixed names. Absent -> ``()``."""
+        ...
+
+    # -- ReportCatalogCapability ---------------------------------------------
+    def get_report_catalog(self) -> tuple["ReportDefinition", ...]:
+        """Post-run reports this plugin offers. Core owns the machinery; the
+        catalog itself is plugin data. Absent -> ``()``."""
+        ...
+
+    # -- NamedCatalogsCapability ---------------------------------------------
+    def get_named_catalogs(self) -> dict[str, Any]:
+        """Plugin-chosen catalogs, namespaced under ``plugin_catalogs`` in
+        ``describe``. Core imposes no key set. Absent -> ``{}``."""
+        ...
+
+    # -- OverrideScopeCapability / DictRegenerationCapability ----------------
+    def get_override_scopes(self) -> tuple["OverrideScope", ...]:
+        """``$TOKEN.``-scoped override targets that patch a dict in place.
+        Absent -> ``()``."""
+        ...
+
+    def get_regeneration_scopes(self) -> tuple["RegenerationScope", ...]:
+        """Bare selector overrides whose value change REGENERATES a dict file
+        rather than patching it -- renaming sub-blocks or changing which
+        sibling keys are legal. Absent -> ``()``."""
+        ...
 
 
 # Plugin contract versions this core can drive. "1" is the original contract,

@@ -28,38 +28,59 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ConfigurationValidationRequest:
+    """Input to :class:`ConfigurationValidatorCapability`: the resolved spec
+    whose configuration the plugin should judge."""
+
     spec: "TutorialSpec"
 
 
 @dataclass(frozen=True)
 class RunSemanticValidationRequest:
+    """Input to :class:`RunSemanticValidatorCapability`: the loose run-context
+    mapping assembled at execution time, not a resolved ``TutorialSpec``."""
+
     context: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class ArtifactPredictionRequest:
+    """Input to :class:`ArtifactPredictorCapability`: the case to inspect and
+    the spec it was built from. May name a case that does not exist yet."""
+
     case_root: Path
     spec: "TutorialSpec"
 
 
 @dataclass(frozen=True)
 class RunDocumentConfigurationRequest:
+    """Input to :class:`RunDocumentConfigurationCapability`: the spec whose
+    plugin-owned RunDocument ``config`` object is to be built."""
+
     spec: "TutorialSpec"
 
 
 @dataclass(frozen=True)
 class CaseCompatibilityRequest:
+    """Input to :class:`CaseCompatibilityCapability`: the case folder to judge
+    by filesystem evidence, before any dictionary is parsed."""
+
     case_root: Path
 
 
 @dataclass(frozen=True)
 class SweepRoutingRequest:
+    """Input to :class:`SweepMaterializerCapability` ``route``: the sweep's
+    static base values plus one expanded axis combination from core."""
+
     base: dict[str, Any]
     resolved_axis_values: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class SweepMaterializationRequest:
+    """Input to :class:`SweepMaterializerCapability` ``materialize``: where to
+    write, and the routed values ``route`` produced for this case."""
+
     case_dir: Path
     routed: dict[str, Any]
 
@@ -108,35 +129,145 @@ class RuntimeDependency:
 
 
 class TutorialCatalogCapability(Protocol):
+    """The tutorials this plugin registers, and how to display them.
+
+    ``catalog`` returns the plugin's registry keyed by tutorial name -- the
+    entry names ``foamctl`` accepts. ``displays`` returns the presentation
+    metadata ``describe`` renders. Both are required v1 members, so there is
+    no fallback: a plugin that registers no tutorials returns empty rather
+    than omitting the member.
+
+    :adapts: get_tutorial_catalog, get_tutorial_displays
+    :consumed-by: openfoam_driver/core/runtime/registry.py, openfoam_driver/plugins/cardiacfoam/dict_builder.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def catalog(self) -> dict[str, Any]: ...
     def displays(self) -> tuple[Any, ...]: ...
 
 
 class DictionaryCatalogCapability(Protocol):
+    """The plugin's dictionary vocabulary, in three shapes for three callers.
+
+    ``entries`` is the flat tuple of ``DictEntry`` values; ``catalog`` is the
+    same data as a queryable ``DictionaryCatalog`` (``entries_for(document)``);
+    ``groups`` buckets entries by the plugin's own document names. Core does
+    not know those names -- ``electroProperties`` is cardiac vocabulary, and a
+    solids4foam plugin would say ``solidProperties`` instead.
+
+    All three are required v1 members with no fallback. This is the seam that
+    keeps dictionary *syntax* knowledge (core's) apart from dictionary
+    *meaning* (the plugin's).
+
+    :adapts: get_dict_entries, get_dict_groups, get_dictionary_catalog
+    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/specs/apply_overrides.py, openfoam_driver/specs/dict_builder.py, openfoam_driver/specs/validation.py, openfoam_driver/strict_planning.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def entries(self) -> tuple[Any, ...]: ...
     def catalog(self) -> Any: ...
     def groups(self) -> dict[str, tuple[Any, ...]]: ...
 
 
 class CapabilityManifestCapability(Protocol):
+    """The plugin's self-description of what it can model.
+
+    Deliberately untyped at the core boundary: ``CapabilityManifest`` in
+    ``plugin_interface`` is an empty Protocol, because the axes a plugin
+    advertises are its own (cardiacFoam declares ionic models and solvers; a
+    different plugin would declare something else entirely). Core namespaces
+    and serialises it for ``describe`` without interpreting it.
+
+    :adapts: get_capabilities
+    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/introspection.py, openfoam_driver/strict_planning.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def manifest(self) -> Any: ...
 
 
 class ConfigurationValidatorCapability(Protocol):
+    """Plan-time validation of a resolved tutorial spec, in the plugin's terms.
+
+    Returns ``StrictDiagnostic`` values rather than raising, so the strict
+    planner can report every problem in one pass instead of stopping at the
+    first -- the property that lets an agent self-heal a case in one edit
+    round. An empty tuple means "nothing this plugin can object to", never
+    "not checked".
+
+    :adapts: validate_configuration
+    :consumed-by: openfoam_driver/strict_planning.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def validate(
         self, request: ConfigurationValidationRequest,
     ) -> tuple["StrictDiagnostic", ...]: ...
 
 
 class RunSemanticValidatorCapability(Protocol):
+    """Validation of a run's semantics, as opposed to its configuration.
+
+    Distinct from :class:`ConfigurationValidatorCapability`: that one judges a
+    ``TutorialSpec``, this one judges a looser run context dictionary at
+    execution time. Required v1 member, no fallback.
+
+    :adapts: validate_run_semantics
+    :consumed-by: openfoam_driver/specs/validation.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def validate(self, request: RunSemanticValidationRequest) -> tuple[Any, ...]: ...
 
 
 class ArtifactPredictorCapability(Protocol):
+    """What files this case will produce, predicted before it runs.
+
+    The prediction is a contract: the strict runner compares it against what
+    actually appeared and fails with ``missing_expected_artifacts`` on a
+    mismatch, which is how a silently-not-writing solver gets caught.
+
+    That makes the predictor's honesty load-bearing. It must never raise --
+    agents call it against partly-mutated cases -- and it must distinguish
+    "I could not determine the exports" from "the exports are declared
+    empty". Conflating those two through a falsy empty tuple is a real defect
+    this code has already had.
+
+    :adapts: predict_data_artifacts
+    :consumed-by: openfoam_driver/core/runtime/artifacts.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def predict(self, request: ArtifactPredictionRequest) -> tuple["DataArtifact", ...]: ...
 
 
 class RunDocumentConfigurationCapability(Protocol):
+    """The plugin's half of a RunDocument: its ``config`` object and schema.
+
+    ``schemas/run-document.json`` declares ``config`` as an open object
+    (``additionalProperties: true``) with no fixed key set, so the whole
+    vocabulary inside it belongs to the plugin. ``build`` produces the object
+    and any diagnostics; ``schema`` produces the JSON Schema core validates it
+    against dynamically, turning a plugin's own rules into structured
+    diagnostics an agent can act on.
+
+    The fallback returns an empty config for a non-cardiac plugin. It used to
+    return the cardiac phase vocabulary
+    (``anatomy``/``physics``/``stimulus``/``solver``) to every plugin --
+    exactly the fixed phases RunDocument v3 removed from core.
+
+    :adapts: build_run_document_config, get_run_document_config_schema
+    :consumed-by: openfoam_driver/core/runtime/run_document_adapter.py, openfoam_driver/core/runtime/run_document_exec.py
+    :fallback: legacy_run_document_config, legacy_run_document_config_schema
+    :status: optional
+    """
+
     def build(
         self, request: RunDocumentConfigurationRequest,
     ) -> tuple[dict[str, dict[str, Any]], tuple["StrictDiagnostic", ...]]: ...
@@ -144,20 +275,98 @@ class RunDocumentConfigurationCapability(Protocol):
 
 
 class CxxMappingCapability(Protocol):
+    """The plugin's declarative profile: case-file rules and C++ provenance.
+
+    Sourced from the plugin's ``plugin.yaml`` via ``get_profile()``. Named for
+    the C++ source mapping it carries (which solver sources back which
+    dictionary keys, used for provenance fingerprinting), but the same profile
+    also backs :class:`CaseFileContractCapability`.
+
+    :adapts: get_profile
+    :consumed-by: openfoam_driver/strict_planning.py
+    :fallback: none
+    :status: mandatory
+    """
+
     def profile(self) -> Any: ...
 
 
 class MeshDiagnosticPolicyCapability(Protocol):
+    """Plugin-owned exemptions from, and additions to, core's mesh diagnostics.
+
+    Core classifies the physical scale of every polyMesh region and warns when
+    it looks wrong. Two plugin-specific escapes exist: a case may be
+    deliberately non-dimensional (a manufactured-solution verifier, a
+    single-cell model) and should not be judged against SI expectations at
+    all; and a plugin may own point sets that are not polyMesh regions and
+    that core therefore cannot check (cardiacFoam's ``constant/purkinjeGraph*``
+    conduction trees).
+
+    ``is_nondimensional`` falls back to ``False`` for a non-cardiac plugin,
+    which keeps the diagnostics on -- the conservative direction, since the
+    failure mode of a wrong exemption is silence.
+
+    :adapts: get_mesh_geometry_diagnostics, is_nondimensional_case
+    :consumed-by: openfoam_driver/strict_planning.py
+    :fallback: legacy_nondimensional_case
+    :status: optional
+    """
+
     def is_nondimensional(self, spec: "TutorialSpec") -> bool: ...
     def extra_geometry_diagnostics(self, case_root: Path) -> tuple[Any, ...]: ...
 
 
 class CaseCompatibilityCapability(Protocol):
+    """Whether a case folder on disk belongs to this plugin, and whether it
+    can run without a driverFOAM workflow contract.
+
+    Both questions are answered from filesystem evidence alone, before any
+    dictionary is parsed, so both are necessarily plugin-specific: cardiacFoam
+    recognises its own cases by ``constant/electroProperties*``, which means
+    nothing to any other solver.
+
+    Consulted only when core cannot answer from plugin-neutral evidence first
+    (a workflow contract, or an ``Allrun``). The fallback returns ``False`` for
+    a non-cardiac plugin. Before it was gated it returned the *cardiac* answer
+    whichever plugin was loaded, so a case carrying an ``electroProperties``
+    file was claimed by a plugin that had never heard of it.
+
+    :adapts: has_case_marker, is_case_runnable_without_workflow
+    :consumed-by: openfoam_driver/core/runtime/registry.py
+    :fallback: legacy_case_marker, legacy_case_runnable_without_workflow
+    :status: optional
+    """
+
     def has_case_marker(self, request: CaseCompatibilityRequest) -> bool: ...
     def is_runnable_without_workflow(self, request: CaseCompatibilityRequest) -> bool: ...
 
 
 class SweepMaterializerCapability(Protocol):
+    """How one resolved sweep-axis combination becomes a runnable case.
+
+    Core owns sweep *expansion* -- ``sweep_expansion.py`` computes the
+    cross-product or zip of axes, validates lengths, and caps case counts
+    without knowing what any axis means. This capability owns what a resolved
+    combination *is*: which of the plugin's dictionaries and keys each axis
+    lands in, and how the case is written.
+
+    The split between the two methods is pure/impure, not two kinds of sweep.
+    ``route`` is a total function from axis values to a routed mapping and
+    must not touch the filesystem, which is what makes ``sweep-plan``
+    non-destructive; ``materialize`` does every write.
+
+    Uniquely among these capabilities, the fallback cannot be neutral. An
+    empty routing would silently yield a case that is not the one the sweep
+    asked for, so a plugin without these hooks is refused by name instead.
+    Before it was gated, the cardiac materializer ran for any plugin --
+    writing an ``Allrun`` invoking the ``cardiacFoam`` binary.
+
+    :adapts: materialize_sweep_case, route_sweep_case_values
+    :consumed-by: openfoam_driver/sweep_materialize.py, openfoam_driver/sweep_routing.py
+    :fallback: legacy_materialize_sweep_case, legacy_route_sweep_case
+    :status: optional
+    """
+
     def route(self, request: SweepRoutingRequest, *, driver_context: Any) -> dict[str, Any]: ...
     def materialize(self, request: SweepMaterializationRequest) -> None: ...
 
@@ -168,6 +377,11 @@ class CommandAuthorizationCapability(Protocol):
     ``solver_commands`` and ``auxiliary_commands`` are both authorized, but
     only ``solver_commands`` names binaries that produce a run's artifacts;
     core's artifact-producer heuristic must consult that one alone.
+
+    :adapts: get_auxiliary_commands, get_solver_commands, get_utility_manifests, get_utility_roots
+    :consumed-by: openfoam_driver/core/runtime/artifacts.py, openfoam_driver/core/runtime/workflow.py, openfoam_driver/strict_planning.py
+    :fallback: legacy_auxiliary_commands, legacy_solver_commands, legacy_utility_manifests, legacy_utility_roots
+    :status: optional
     """
 
     def solver_commands(self) -> frozenset[str]: ...
@@ -184,6 +398,11 @@ class CaseIntrospectionCapability(Protocol):
     model exposes for sampling by function objects, split by region. A
     plugin with no solver semantics (the generic plugin) resolves nothing and
     exposes no fields.
+
+    :adapts: get_samplable_fields, resolve_case_models
+    :consumed-by: openfoam_driver/capability_manifest.py, openfoam_driver/core/runtime/provenance_inputs.py
+    :fallback: legacy_resolve_case_models, legacy_samplable_fields
+    :status: optional
     """
 
     def resolve_case_models(self, case_root: Path) -> dict[str, Any]: ...
@@ -213,6 +432,11 @@ class CaseFileContractCapability(Protocol):
     compatibility fallback (``legacy_describe_config_resolution``) for v1
     plugins and plugins that never authored one -- cardiac-shaped only for
     the built-in cardiac plugin, plugin-neutral for everyone else.
+
+    :adapts: get_profile, get_config_resolution_description
+    :consumed-by: openfoam_driver/core/runtime/strict_audit.py, openfoam_driver/tutorial_contracts.py
+    :fallback: legacy_describe_config_resolution
+    :status: mixed
     """
 
     def required_files(self) -> tuple[str, ...]: ...
@@ -229,6 +453,11 @@ class OverrideSchemaCapability(Protocol):
     ``dict_entry_catalog`` returns the plugin's dictionary entries arranged by
     its own document names, **unserialized** -- core owns serialization, the
     plugin owns the vocabulary and the document shape.
+
+    :adapts: get_dict_entry_catalog, get_override_schema
+    :consumed-by: openfoam_driver/introspection.py
+    :fallback: legacy_dict_entry_catalog, legacy_override_schema
+    :status: optional
     """
 
     def config_schema(
@@ -248,6 +477,11 @@ class RuntimeEvidenceCapability(Protocol):
     Every member degrades to empty for a plugin that declares nothing, which
     is the honest answer rather than a solver-shaped guess -- so this
     capability needs no compatibility fallback.
+
+    :adapts: get_artifact_value_reader, get_extra_provenance_paths, get_solve_step_commands, get_telemetry_source_globs
+    :consumed-by: openfoam_driver/core/runtime/provenance_inputs.py
+    :fallback: none
+    :status: optional
     """
 
     def solve_step_commands(self) -> frozenset[str]: ...
@@ -279,6 +513,11 @@ class CaseProvenanceCapability(Protocol):
     ``generated_output_globs``, then: unknown files are ``required_input``)
     means "everything unknown is a required input" -- the safe default for
     a plugin that declares nothing.
+
+    :adapts: get_generated_output_globs, get_required_inputs
+    :consumed-by: openfoam_driver/core/runtime/provenance_inputs.py
+    :fallback: none
+    :status: optional
     """
 
     def required_inputs(
@@ -309,6 +548,11 @@ class ReportCatalogCapability(Protocol):
     cardiac plugin and empty for everyone else -- the honest answer for a
     plugin that declares no reports, matching the pattern already used by
     :class:`CaseProvenanceCapability`.
+
+    :adapts: get_report_catalog
+    :consumed-by: scripts/export-report-catalog.py
+    :fallback: legacy_report_catalog
+    :status: optional
     """
 
     def reports(self) -> tuple["ReportDefinition", ...]: ...
@@ -326,6 +570,11 @@ class NamedCatalogsCapability(Protocol):
     keep loading; the fallback (``legacy_named_catalogs``) is cardiac-shaped
     only for the built-in cardiac plugin and empty for everyone else,
     matching the pattern already used by :class:`ReportCatalogCapability`.
+
+    :adapts: get_named_catalogs
+    :consumed-by: openfoam_driver/introspection.py
+    :fallback: legacy_named_catalogs
+    :status: optional
     """
 
     def catalogs(self) -> dict[str, Any]: ...
@@ -343,6 +592,11 @@ class OverrideScopeCapability(Protocol):
     declares the cardiac plugin's one scope and an empty tuple for everyone
     else, matching the pattern already used by
     :class:`ReportCatalogCapability`/:class:`NamedCatalogsCapability`.
+
+    :adapts: get_override_scopes
+    :consumed-by: openfoam_driver/specs/apply_overrides.py
+    :fallback: legacy_override_scopes
+    :status: optional
     """
 
     def scopes(self) -> tuple["OverrideScope", ...]: ...
@@ -362,6 +616,11 @@ class DictRegenerationCapability(Protocol):
     plugins keep loading; the fallback (``legacy_dict_regeneration_scopes``)
     declares the cardiac plugin's one scope and an empty tuple for everyone
     else, matching :class:`OverrideScopeCapability`.
+
+    :adapts: get_regeneration_scopes
+    :consumed-by: openfoam_driver/specs/apply_overrides.py
+    :fallback: legacy_dict_regeneration_scopes
+    :status: optional
     """
 
     def scopes(self) -> tuple["RegenerationScope", ...]: ...
@@ -440,7 +699,7 @@ class _RunDocumentConfigurationAdapter:
         # adapter.  Preserve that fallback until Plan 2 changes the document.
         from .compatibility import legacy_run_document_config
 
-        return legacy_run_document_config(request.spec)
+        return legacy_run_document_config(self.plugin, request.spec)
 
     def schema(self) -> dict[str, Any]:
         hook = getattr(self.plugin, "get_run_document_config_schema", None)
@@ -469,7 +728,7 @@ class _MeshDiagnosticPolicyAdapter:
             return bool(hook(spec))
         from .compatibility import legacy_nondimensional_case
 
-        return legacy_nondimensional_case(spec)
+        return legacy_nondimensional_case(self.plugin, spec)
 
     def extra_geometry_diagnostics(self, case_root: Path) -> tuple[Any, ...]:
         """Plugin-owned plan-time geometry checks core cannot express.
@@ -497,7 +756,7 @@ class _CaseCompatibilityAdapter:
             return bool(hook(request.case_root))
         from .compatibility import legacy_case_marker
 
-        return legacy_case_marker(request.case_root)
+        return legacy_case_marker(self.plugin, request.case_root)
 
     def is_runnable_without_workflow(self, request: CaseCompatibilityRequest) -> bool:
         hook = getattr(self.plugin, "is_case_runnable_without_workflow", None)
@@ -505,7 +764,7 @@ class _CaseCompatibilityAdapter:
             return bool(hook(request.case_root))
         from .compatibility import legacy_case_runnable_without_workflow
 
-        return legacy_case_runnable_without_workflow(request.case_root)
+        return legacy_case_runnable_without_workflow(self.plugin, request.case_root)
 
 
 @dataclass(frozen=True)
@@ -525,6 +784,7 @@ class _SweepMaterializerAdapter:
         from .compatibility import legacy_route_sweep_case
 
         return legacy_route_sweep_case(
+            self.plugin,
             base=request.base,
             resolved_axis_values=request.resolved_axis_values,
             driver_context=driver_context,
@@ -537,7 +797,9 @@ class _SweepMaterializerAdapter:
             return
         from .compatibility import legacy_materialize_sweep_case
 
-        legacy_materialize_sweep_case(case_dir=request.case_dir, routed=request.routed)
+        legacy_materialize_sweep_case(
+            self.plugin, case_dir=request.case_dir, routed=request.routed
+        )
 
 
 @dataclass(frozen=True)
@@ -750,7 +1012,45 @@ class _DictRegenerationAdapter:
 
 @dataclass(frozen=True)
 class PluginCapabilities:
-    """Focused internal view over the unchanged public plugin object."""
+    """Core's focused, internal view over one loaded plugin.
+
+    **Direction matters.** This is not an authoring surface. A plugin author
+    implements :class:`~openfoam_driver.core.plugin_interface.SolverPlugin`,
+    ``SolverPluginV2``, and optionally ``SolverPluginOptionalHooks``; this
+    bundle is what *core* holds to consult that plugin, pointing the other
+    way. Nothing here is implemented by a plugin.
+
+    Its purpose is to stop core reaching through ``DriverContext.plugin``
+    directly: each field is a narrow seam over one concern, so a core module
+    can depend on the one capability it needs instead of the whole plugin.
+    ``test_plugin_dependency_boundary.py`` enforces that -- no production
+    module may use ``driver_context.plugin.``.
+
+    **Reading a capability.** Every capability Protocol below carries prose
+    explaining why the seam exists, then four structured fields:
+
+    ``:adapts:``
+        the plugin member(s) the adapter calls, or ``none``
+    ``:consumed-by:``
+        core modules that really touch this capability (subset, not exhaustive)
+    ``:fallback:``
+        the ``compatibility.py`` function used when the hook is absent
+    ``:status:``
+        ``mandatory`` (called unconditionally), ``optional`` (probed via
+        ``getattr`` and degraded), or ``mixed``
+
+    Those fields are the single source of the "Plugin capability seams" table
+    in ``ARCHITECTURE.md``, rendered by
+    ``scripts/export-capability-seams.py`` and kept honest by
+    ``test_capability_seam_documentation.py`` -- which checks that every
+    ``:adapts:`` names a real plugin member and every ``:fallback:`` a real
+    compatibility function, so a stale reference fails rather than rots.
+
+    **What a missing optional hook means.** The named fallback runs, returning
+    cardiac data only for ``org.cardiacfoam`` and a neutral value for every
+    other plugin. Two cannot be neutral: a plugin without the sweep hooks is
+    refused by name rather than swept by another plugin's writer.
+    """
 
     tutorials: TutorialCatalogCapability
     dictionaries: DictionaryCatalogCapability
@@ -776,6 +1076,14 @@ class PluginCapabilities:
 
 
 def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
+    """Wrap one loaded plugin in the capability bundle core consumes.
+
+    Called once per :class:`~openfoam_driver.core.plugin_interface.DriverContext`
+    and cheap: every adapter is a frozen dataclass holding the plugin, and no
+    plugin member is called here. Optional hooks are probed lazily at each
+    call site, so a plugin missing one is adapted successfully and degrades
+    only when that capability is actually used.
+    """
     """Build a behavior-preserving capability bundle for ``plugin``."""
 
     return PluginCapabilities(
