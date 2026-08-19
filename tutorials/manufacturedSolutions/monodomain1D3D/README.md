@@ -1,127 +1,91 @@
 # monodomain1D3D
 
-Manufactured 1D-3D monodomain coupling test case.
+Manufactured 1D-3D monodomain coupling test case. Couples a 3D monodomain myocardium domain to a small 1D Purkinje graph through `reactionDiffusionPvjCoupler` and verifies coupled fields with `coupled1D3DMonodomainVerifier`.
 
-The case couples a 3D monodomain myocardium domain to a small 1D Purkinje
-graph through `reactionDiffusionPvjCoupler` and verifies the coupled fields with
-`coupled1D3DMonodomainVerifier`.
+## Overview
 
-The active 1D graph input is `constant/purkinjeGraph`.  Refined graph inputs and
-matching VTK geometry files can be generated with:
+Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs (unlike older `y=0.5, z=1/3` placement).
+
+## Graph Configuration
+
+### Generating Refined Graphs
 
 ```bash
 setup/generate_purkinje_graphs.py
 ```
 
-By default the graph lies on `y=1/6, z=1/3`, with PVJ terminals at
-`(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`.  The terminal faces still satisfy the
-homogeneous Neumann boundary condition for the 3D manufactured solution because
-the terminals are on `x=0` and `x=1`, where `d cos(pi x)/dx = 0`.  Unlike the
-older `y=0.5, z=1/3` placement, the terminal values do not cancel:
-`F_3D = -0.5 F_1D` at the PVJs.
+Creates:
 
-This creates:
-
-- `constant/purkinjeGraph.nodes003`
-- `constant/purkinjeGraph.nodes011`
-- `constant/purkinjeGraph.nodes021`
-- `constant/purkinjeGraph.nodes041`
-- `constant/purkinjeGraph.nodes081`
-- `constant/purkinjeGraph.nodes161`
+- `constant/purkinjeGraph.nodes003` through `.nodes161`
 - `constant/graphFiles/purkinjeGraph.nodes*.vtk`
 
-Select one graph as the active input with:
+### Selecting Active Graph
 
 ```bash
 setup/select_purkinje_graph.sh nodes041
 ```
 
-Run the case from this directory:
+The active 1D graph input is `constant/purkinjeGraph`.
+
+## Usage
+
+### Manual Execution
 
 ```bash
 ./Allrun
 ```
 
-`Allrun` regenerates `constant/polyMesh` from `system/blockMeshDict.3D` before
-launching `cardiacFoam`.
+`Allrun` regenerates `constant/polyMesh` from `system/blockMeshDict.3D` before launching `cardiacFoam`.
 
-For a graph-only diagnostic, run:
+### Graph-Only Diagnostic
 
 ```bash
 blockMesh -dict system/blockMeshDict.3D
 runPurkinjeGraph -case .
 ```
 
-For graph-only manufactured convergence rates, run:
+### Graph-Only Convergence Rates
+
+Example of running a graph convergence study via driverFOAM (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`):
 
 ```bash
-setup/run_coupling1D3D_hex.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
 ```
 
-The sweep selects each `constant/purkinjeGraph.nodes*` input, runs
-`runPurkinjeGraph`, copies the graph verifier summaries, and writes:
-
+Writes:
 - `outputs/1dGraphConvergence/graph_convergence_summary.csv`
 - `outputs/1dGraphConvergence/graph_convergence_rates.csv`
 
-For coupled 1D-3D manufactured convergence rates, run:
+### Coupled 1D-3D Convergence Sweeps (Suggested)
+
+Active coupling (bidirectional PVJ):
 
 ```bash
-setup/run_coupling1D3D_hex.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
 ```
 
-The coupled sweep can exercise the explicit and implicit PVJ source split without
-manual dictionary edits:
+Bidirectional coupling:
 
 ```bash
-PVJ_COUPLING_SCHEME=explicit OUTPUT_SUFFIX=_pvjExplicit setup/run_coupling1D3D_hex.sh
-PVJ_COUPLING_SCHEME=implicit OUTPUT_SUFFIX=_pvjImplicit setup/run_coupling1D3D_hex.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_bidirectional.json
 ```
 
-The tissue diffusion algorithm can also be switched with
-`SOLUTION_ALGORITHM=explicit` or `SOLUTION_ALGORITHM=implicit`.
-
-To run the canonical coupling-scheme matrix for the new 1D-3D tests, use:
+Decoupled (negligible PVJ coupling with `rPvj=1e6`):
 
 ```bash
-setup/run_coupling1D3D_hex.sh
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_decoupled.json
 ```
 
-This runs four full convergence sweeps:
-
-- `uni_pvjExplicit`: `couplingMode unidirectional`, `pvjCouplingScheme explicit`
-- `uni_pvjImplicit`: `couplingMode unidirectional`, `pvjCouplingScheme implicit`
-- `bi_pvjExplicit`: `couplingMode bidirectional`, `pvjCouplingScheme explicit`
-- `bi_pvjImplicit`: `couplingMode bidirectional`, `pvjCouplingScheme implicit`
-
-All four canonical runs keep `solutionAlgorithm implicit`, because
-`pvjCouplingScheme implicit` only becomes a true matrix split when the myocardium
-diffusion solve is implicit.  For a quick smoke check of the same matrix, run:
-
-```bash
-COUPLED_1D3D_PAIRS="10:nodes011" ENDTIME=0.02 setup/run_coupling1D3D_hex.sh
-```
-
-The suite writes `outputs/coupled1D3DSchemeSuite/manifest.csv`.  Individual
-convergence tables and plots are written under
-`outputs/coupled1D3DConvergence_<case_id>/`.
-
-The coupled sweep runs `cardiacFoam` under joint 1D/3D refinement, copies the
-myocardium, graph, and PVJ coupling verifier summaries, and writes:
+Coupled sweeps run `cardiacFoam` under joint 1D/3D refinement, copy verifier summaries, and write:
 
 - `outputs/coupled1D3DConvergence/coupled_convergence_summary.csv`
 - `outputs/coupled1D3DConvergence/coupled_convergence_rates.csv`
 - `outputs/coupled1D3DConvergence/coupled_1D3D_convergence.png`
 - `outputs/coupled1D3DConvergence/coupled_1D3D_convergence.pdf`
 
-The coupled post-processing script also writes the same PNG/PDF convergence plot
-for any alternate output directory passed via `--output-dir`, including the
-bidirectional sweep directory.
-
 ## Convergence verification
 
-**Why this study exists.** Before the coupled 1D-3D monodomain can be trusted in
-the paper, the implementation has to be shown to converge at the expected rate
+**Why this study exists.** The coupled 1D-3D monodomain implementation has to be shown to converge at the expected rate
 against a known solution. The Method of Manufactured Solutions (MMS) supplies that
 known solution: an analytical `V_exact` is imposed on both domains, the matching
 forcing terms are injected, and the solver error is measured under joint

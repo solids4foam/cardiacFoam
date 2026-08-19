@@ -1,112 +1,89 @@
 # manufacturedSolutions/monodomainTotalLagrangianEM tutorial
 
-This tutorial is a full coupled electromechanics manufactured-solution (MMS)
-verification case built on the current `cardiacFoam` + `solids4foam` stack.
+Full coupled electromechanics manufactured-solution verification case built on `cardiacFoam` + `solids4foam` stack.
 
-It uses:
+## Overview
+
+This case verifies the full coupled electromechanical solve, including interior solid momentum balance:
+
+- `Vm` verified with existing monodomain manufactured verifier
+- `Ta` computed from numerical `Vm` and numerical fibre stretch
+- solid follows manufactured displacement on every outer boundary via tutorial-local `fixedDisplacement` derivative
+- tutorial-local `fvOption` (`manufacturedSolidForce`) adds manufactured body force `B = -Div(P)` so interior `D` converges to manufactured field
+
+Stack uses:
 
 - numerical monodomain manufactured electrophysiology
 - numerical manufactured active tension (`ManufacturedElectromechanics`)
 - numerical nonlinear solid mechanics (`electroMechanicalLaw`)
-- the exact manufactured displacement imposed on the solid boundaries, plus a
-  manufactured mechanical body force in the interior so the nonlinear solid
-  equations admit the same analytical solution
+- exact manufactured displacement on solid boundaries + manufactured mechanical body force
 
-## What this case is for
+Exercises:
 
-This case verifies the full coupled electromechanical solve, including the
-interior solid momentum balance:
+- electro-to-active-tension path
+- active-tension-to-solid path
+- region coupling and field mapping
+- nonlinear solid solve under prescribed manufactured motion and body force
 
-- `Vm` is verified with the existing monodomain manufactured verifier
-- `Ta` is computed from the numerical `Vm` and numerical fibre stretch
-- the solid follows the manufactured displacement on every outer boundary
-  through a tutorial-local `fixedDisplacement` derivative
-- a tutorial-local `fvOption` (`manufacturedSolidForce`) adds the manufactured
-  body force `B = -Div(P)` so the interior `D` converges to the manufactured
-  field
+## Technical Implementation
 
-It exercises:
+### Manufactured Solution
 
-- the electro-to-active-tension path
-- the active-tension-to-solid path
-- the region coupling and field mapping
-- the nonlinear solid solve under a prescribed manufactured motion and body
-  force
-
-## Manufactured solution
-
-The manufactured displacement (reference configuration) is
+Manufactured displacement (reference configuration):
 
 ```
-D = ( Ax x^2 y,  Ay y^2 z,  Az z^2 x ) * sin(t)
+D = ( Ax x² y,  Ay y² z,  Az z² x ) * sin(t)
 ```
 
-with fibre `f0 = (1,0,0)`. The active tension follows
+with fibre `f0 = (1,0,0)`. Active tension:
 
 ```
-Ta = Tmax * Vm^2/(V0^2 + Vm^2) * (1 + gamma (lambda - 1))
+Ta = Tmax * Vm²/(V₀² + Vm²) * (1 + γ(λ - 1))
 ```
 
-and the body force `B` is the symbolic divergence of the first
-Piola-Kirchhoff stress (compressible neo-Hookean passive part plus the
-active fibre stress), generated in `src/manufacturedSolidForce/B_expr.H`.
+Body force `B` is the symbolic divergence of the first Piola-Kirchhoff stress (compressible neo-Hookean passive part plus active fibre stress), generated in `src/manufacturedSolidForce/B_expr.H`.
 
-So all of `Vm`, `D`, `lambda` and `Ta` are rigorous manufactured convergence
-targets and should converge at the formal scheme order.
+All of `Vm`, `D`, `λ`, and `Ta` are rigorous manufactured convergence targets and should converge at formal scheme order.
 
-### Single source of truth for parameters
+### Parameter Sources (Single Source of Truth)
 
-The body force `manufacturedSolidForce` does not hard-code any physics
-parameters. At run time it deduces them from the same dictionaries the solver
-uses, so they can never drift:
+Body force `manufacturedSolidForce` does not hard-code physics parameters; deduces them at runtime from solver dictionaries so they never drift:
 
-- `amplitude`, `Tmax`, `V0`, `gamma`, `TaScale`
-  from `constant/electroMechanicalProperties`
+- `amplitude`, `Tmax`, `V0`, `gamma`, `TaScale` from `constant/electroMechanicalProperties`
 - `E`, `nu` from `constant/solid/mechanicalProperties` (`passiveMechanicalLaw`)
 
-Note that the effective active-stress amplitude is `TaScale * Tmax`, matching
-the `Ta` field the coupler hands to the solid.
+Effective active-stress amplitude is `TaScale * Tmax`, matching the `Ta` field the coupler hands to the solid.
 
-## solids4foam changes required
+### solids4foam Integration
 
-This case requires two small, related `solids4foam` changes:
+This case requires two `solids4foam` changes:
 
-- `electroMechanicalLaw` looks up the runtime `Ta` field and derives
-  `f0f0 = sqr(f0)` from the `f0` field (so the case only ships `f0`)
-- `nonLinGeomTotalLagTotalDispSolid` applies the `fvOptions` source in its SNES
-  residual (the no-rho `fvOptions()(D)` overload), enabling the MMS body force
+- `electroMechanicalLaw` looks up runtime `Ta` field and derives `f0f0 = sqr(f0)` from `f0` field (case only ships `f0`)
+- `nonLinGeomTotalLagTotalDispSolid` applies `fvOptions` source in its SNES residual (no-rho `fvOptions()(D)` overload), enabling MMS body force
 
-## Execution
+Implementation note: coupled verifier dictionary belongs inside `sequentialElectroMechanicalCoeffs`. Electromechanical model stores only that `...Coeffs` sub-dictionary, so top-level `electromechanicalVerificationModel` entry is ignored.
+
+## Usage
+
+### Manual Execution
 
 ```bash
 ./Allrun
 ./Allrun parallel
 ```
 
-The local boundary-condition library is compiled from `src/` before the case is
-run. The compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`,
-so the tutorial does not need write access to the user's global
-`FOAM_USER_LIBBIN`.
+Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, so tutorial does not need write access to global `FOAM_USER_LIBBIN`.
 
-## Convergence workflow
-
-This case also supports the same driverFoam-style refinement workflow used by
-the other manufactured tutorials:
+### Driver-Managed Convergence Sweeps (Suggested)
 
 ```bash
 python3 -m applications.scripts.driverFoam.openfoam_driver run --strict --entry manufacturedMonodomainTotalLagrangianEM
 ```
 
-The refinement sweep keeps the monodomain manufactured pattern:
+Refinement sweep follows monodomain manufactured pattern:
 
 - dimensions: `1D`, `2D`, `3D`
 - mesh sizes: `10`, `20`, `40`, `80`
-- piecewise `dt ~ h^2`
+- temporal discretization: `dt ~ h²`
 
-The post-processing reports rigorous manufactured convergence for `Vm`, `D`,
-`lambda`, and `Ta`.
-
-Implementation note: the coupled verifier dictionary belongs inside
-`sequentialElectroMechanicalCoeffs`. The electromechanical model stores only
-that `...Coeffs` sub-dictionary, so a top-level
-`electromechanicalVerificationModel` entry would be ignored.
+Post-processing reports rigorous manufactured convergence for `Vm`, `D`, `λ`, and `Ta`.
