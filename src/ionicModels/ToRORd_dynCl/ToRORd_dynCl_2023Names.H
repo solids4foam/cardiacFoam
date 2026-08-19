@@ -466,9 +466,9 @@ enum CONSTANTS_INDEX {
     AC_btp,
     AC_a_relp,
 
-    // Tissue-dependent algebraic parameters (promoted from hot-path branches
-    // in ToRORd_dynClcomputeVariables — see spec
-    // docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.2)
+    // Tissue-dependent algebraic parameters, promoted from hot-path branches
+    // in ToRORd_dynClcomputeVariables so the per-cell tissue type is resolved
+    // once here rather than re-branched on every call.
     deltaEpiAmp,
     deltaEpiShift,
     deltaEpiScale,

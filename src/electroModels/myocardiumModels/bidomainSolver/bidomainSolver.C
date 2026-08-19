@@ -317,8 +317,10 @@ void bidomainSolver::solveDiffusionImplicit
     // Heart-only bidomain: phiE and Vm are re-solved together on every outer
     // PIMPLE corrector, so the phiE<->Vm coupling iteration is owned here by
     // the inherited outer loop (myocardiumSolver::solveDiffusionImplicit).
-    // Bath/global-phiE owns its coupling in the advance scheme instead
-    // (see .audit/pimple-coupling-design-analysis.md).
+    // Bath/global-phiE owns its coupling in the advance scheme instead, via
+    // the explicit predictor/corrector in staggeredElectrophysicsAdvanceScheme
+    // (myocardiumDomain::solveDiffusionStepOnce), which is a different, outer
+    // Vm<->phiE sweep and not the non-orthogonal corrector loop used here.
     solvePhiEImplicitOnce(domain);
     solveVmImplicitOnce(domain);
     phiI_ = domain.Vm() + phiE_;

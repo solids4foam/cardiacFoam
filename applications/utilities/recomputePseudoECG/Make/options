@@ -6,7 +6,8 @@ EXE_INC = \
     -I$(LIB_SRC)/dynamicMesh/dynamicFvMesh/lnInclude \
     -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
     -I$(LIB_SRC)/ODE/lnInclude \
-    -I../../../src/electroModels/core
+    -I../../../src/electroModels/core \
+    -I../../../src/genericWriter/lnInclude
 
 EXE_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
@@ -15,4 +16,5 @@ EXE_LIBS = \
     -lODE \
     -ldynamicFvMesh \
     -ldynamicMesh \
-    -lelectroModels
+    -lelectroModels \
+    -lgenericWriter

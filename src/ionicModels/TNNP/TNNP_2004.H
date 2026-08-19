@@ -355,11 +355,11 @@ CONSTANTS[g_to] = (tissueFlag == 3)
           ? 0.073
           : 0.294;
 
-// Tissue-dependent algebraic parameters (promoted from hot-path branches
-// in TNNPcomputeRates / TNNPcomputeVariables — see spec
-// docs/superpowers/specs/2026-05-12-hot-path-tissue-removal-design.md §3.1).
-// Original branch: only tissueFlag == 1 (epi) selects the first set;
-// M-cells and endo share the second set.
+// Tissue-dependent algebraic parameters, promoted from hot-path branches in
+// TNNPcomputeRates / TNNPcomputeVariables so the per-cell tissue type is
+// resolved once here rather than re-branched on every call. Original branch:
+// only tissueFlag == 1 (epi) selects the first set; M-cells and endo share
+// the second set.
 {
     const bool isEpi = (tissueFlag == 1);
 

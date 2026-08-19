@@ -19,6 +19,7 @@ License
 
 #include "myocardiumDomain.H"
 #include "fvc.H"
+#include "nonOrthogonalCorrectorLoop.H"
 
 namespace Foam
 {
@@ -740,6 +741,10 @@ void myocardiumDomain::solveDiffusionStep
 }
 
 
+// Called twice per step by the bath-PDE predictor/corrector (the outer
+// Vm(phiE^n) -> phiE^n+1 -> Vm(phiE^n+1) sweep owned by the advance scheme).
+// Each call here is only the inner, single-stage non-orthogonal reassembly
+// for that one Vm solve; it does not itself predict or correct anything.
 void myocardiumDomain::solveDiffusionStepOnce
 (
     scalar t0,
@@ -758,11 +763,15 @@ void myocardiumDomain::solveDiffusionStepOnce
     }
     else if (pimplePtr)
     {
-        while (pimplePtr->correctNonOrthogonal())
-        {
-            updateGradVm();
-            diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
-        }
+        correctNonOrthogonalLoop
+        (
+            *pimplePtr,
+            [&]()
+            {
+                updateGradVm();
+                diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
+            }
+        );
     }
     else
     {
