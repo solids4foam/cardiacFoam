@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import glob
 import os
 import shlex
 import subprocess
@@ -36,13 +37,44 @@ from pathlib import Path
 from typing import Mapping
 
 
-_KNOWN_OPENFOAM_BASHRCS = (
-    Path("/Volumes/OpenFOAM-v2512/etc/bashrc"),
-    Path("/Volumes/OpenFOAM-v2506/etc/bashrc"),
-    Path("/Volumes/OpenFOAM-v2412/etc/bashrc"),
-    Path("/Volumes/OpenFOAM-v2406/etc/bashrc"),
-    Path("/Volumes/OpenFOAM-v2312/etc/bashrc"),
-)
+def _discover_openfoam_bashrcs() -> tuple[Path, ...]:
+    """Discover OpenFOAM installations across common locations.
+
+    Searches (in order):
+      - /opt/openfoam* (Linux)
+      - /usr/local/openfoam* (Linux/macOS)
+      - /Volumes/OpenFOAM-v* (macOS)
+      - Result of `which foamVersion` if available
+    """
+    candidates: set[Path] = set()
+
+    for search_pattern in [
+        "/opt/openfoam*/etc/bashrc",
+        "/usr/local/openfoam*/etc/bashrc",
+        "/Volumes/OpenFOAM-v*/etc/bashrc",
+    ]:
+        for path in glob.glob(search_pattern):
+            candidates.add(Path(path))
+
+    try:
+        result = subprocess.run(
+            ("which", "foamVersion"),
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode == 0:
+            foam_exe = Path(result.stdout.strip())
+            if foam_exe.exists():
+                wm_project_dir = foam_exe.parent.parent.parent
+                bashrc = wm_project_dir / "etc" / "bashrc"
+                if bashrc.exists():
+                    candidates.add(bashrc)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    return tuple(sorted(candidates, reverse=True))
 
 
 @dataclass(frozen=True)
@@ -91,7 +123,7 @@ def _candidate_bashrcs(
     if wm_project_dir:
         candidates.append(Path(wm_project_dir).expanduser() / "etc" / "bashrc")
 
-    candidates.extend(_KNOWN_OPENFOAM_BASHRCS)
+    candidates.extend(_discover_openfoam_bashrcs())
 
     seen: set[str] = set()
     unique: list[Path] = []

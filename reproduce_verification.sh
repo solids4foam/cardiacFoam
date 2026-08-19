@@ -103,5 +103,5 @@ while IFS=$'\t' read -r experiment_id case_dir kind runner driver_spec aggregato
         echo "  FAIL"; rc=1; continue;
     }
     echo "  PASS"
-done < <("$DRIVER" experiment-plan --format tsv)
+done < <(cd "$TOOLS" && python3 -c "import sys; sys.path.insert(0, '.'); from verification_contracts import tsv_rows; print(tsv_rows())")
 exit "$rc"

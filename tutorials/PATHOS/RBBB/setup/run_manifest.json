@@ -1,0 +1,23 @@
+{
+  "tutorial": "ECG",
+  "case_root": "/Users/simaocastro/cardiacFoamv2/tutorials/ECG",
+  "setup_root": "/Users/simaocastro/cardiacFoamv2/tutorials/ECG/setup",
+  "output_dir": "/Users/simaocastro/cardiacFoamv2/tutorials/ECG/postProcessing",
+  "dry_run": true,
+  "results": [
+    {
+      "case_id": "default",
+      "status": "planned",
+      "duration_s": 0.0,
+      "params": {
+        "electro_property_overrides": null,
+        "physics_property_overrides": null,
+        "dimension": null,
+        "parallel": false,
+        "touch_case_foam": false,
+        "openfoam_bashrc": null
+      },
+      "error": null
+    }
+  ]
+}

@@ -180,11 +180,9 @@ def _describe_config_schema(
 def _manifest_schema() -> dict[str, Any]:
     """Static schema description for run_manifest.json.
 
-    This describes the legacy sim/post/all CLI's own manifest -- see
-    payload["strict_launch"] for the canonical way to actually execute an
-    entry today (run --strict), whose own state lives in
-    output_dir/workflow_state.json instead, written by every workflow step
-    as it runs."""
+    Updated by every case completion and polled to track run progress.
+    For strict execution state, see payload["strict_launch"] and
+    output_dir/workflow_state.json, which is written by every workflow step."""
     return {
         "description": (
             "run_manifest.json is the run-state source of truth. "

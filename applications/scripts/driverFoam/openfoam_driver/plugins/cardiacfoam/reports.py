@@ -29,13 +29,7 @@
 
 """cardiacFoam's report catalog.
 
-Moved out of ``openfoam_driver.report_catalog`` (P2.7): that module owns the
-solver-neutral machinery (``ReportDefinition``, the ``applicable_when``
-predicate evaluator, the JSON record shape); the actual list of reports is
-solver-specific data and belongs with the plugin that authored it. Reached
-through ``driver_context.capabilities.report_catalog.reports()`` --
-``core/compatibility.py``'s ``legacy_report_catalog`` returns this tuple only
-for ``org.cardiacfoam`` and ``()`` for every other plugin.
+Accessed through ``driver_context.capabilities.report_catalog.reports()``.
 """
 
 from __future__ import annotations

@@ -1,0 +1,18 @@
+{
+  "tutorial_family": "manufacturedSolutions",
+  "status": {
+    "runnable_without_substitution": true
+  },
+  "steps": [
+    {
+      "id": "mesh",
+      "command": "blockMesh",
+      "args": ["-dict", "system/blockMeshDict.3D"]
+    },
+    {
+      "id": "solve",
+      "command": "cardiacFoam",
+      "depends_on": ["mesh"]
+    }
+  ]
+}

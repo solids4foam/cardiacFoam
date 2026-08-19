@@ -1,0 +1,11 @@
+{
+  "system/controlDict": {
+    "endTime": 0.04,
+    "writeInterval": 0.04
+  },
+  "constant/electroProperties": {
+    "ionic": {
+      "export": "(Vm FakeJsi)"
+    }
+  }
+}

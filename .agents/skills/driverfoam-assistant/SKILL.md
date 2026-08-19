@@ -8,6 +8,12 @@ description: >
 
 As an AI agent, your goal is to help users bridge the gap between their custom OpenFOAM simulation ideas and the `driverFOAM` automation engine. OpenFOAM cases are highly complex; you will use `driverFOAM`'s strict diagnostic planner to automatically ensure the physical correctness of the user's setup before running it.
 
+**Architecture Status Context:**
+- **Phase 1 (CI green):** Complete.
+- **Phase 2 (core/plugin decoupling):** Complete (as of 2026-08-18). The `--plugin` flag is stable and the architecture is solver-agnostic.
+- **Phase 3 (deterministic experiments & hybrid solvers):** In progress.
+- **Catalog Maintenance:** `dict_key_allowlist.json` and the ionic model catalog are auto-gated by CI (failures on stale keys/renames). The `--plugin` selection affects the `capability_manifest` (allowed commands and samplable fields).
+
 Follow this standard workflow when assisting a user with a new or existing case:
 
 ## 1. Case Scaffolding Workflow (Hybrid Approach)
@@ -21,7 +27,7 @@ When a user asks you to build a new case:
 
 ## 2. Sweep Generation
 
-The user will usually want to run a parameter sweep (e.g., testing 3 different ionic models, or 5 different conductivity values).
+The user will usually want to run a parameter sweep (e.g., testing 3 different ionic models, or 5 different conductivity values). Entry-mode sweeps (using a registered tutorial's `make_spec`) differ from generic (from-scratch) sweeps, but the brain phase handles these differences.
 
 A `sweep.json` has two top-level blocks:
 - `base`: the fixed selectors that stay the same across every case (e.g. which
@@ -71,7 +77,7 @@ This is your superpower. Before running the actual simulation, you MUST validate
 4. **Loop until Green:**
    Re-run `foamctl plan --strict` until the case passes 100% of the diagnostics.
 
-## 4. Execution and Summary
+## 4. Execution
 
 Once the strict plan passes, execute the sweep:
 
@@ -81,7 +87,52 @@ Once the strict plan passes, execute the sweep:
    ```
    Note: `--entry` is not valid with sweep actions (the target entry lives in
    `sweep.json`'s `base` block instead); `--output-dir` is required.
-2. **Analyze Artifacts:**
-   After the run completes, read the `artifacts_manifest.json` file generated in the output directory.
-3. **Present to the User:**
-   Summarize the results for the user. Tell them exactly where their VTK files, ECG traces, or CSV summaries were generated based on the artifact manifest, and highlight any interesting findings if applicable.
+2. **Wait for Terminal State:**
+   The post-processing phase (Step 5) will be executed once the sweep reaches a terminal state and all cases are completed. Artifact tracking (where OpenFOAM puts artifacts vs where they are realized) will be verified by the "brain".
+
+## 5. Post-Processing Phase (Brain + Module)
+
+The execution engine hands off to the post-processing phase once a sweep or DAG finishes. This is deliberately split into two independent pieces:
+
+### The Brain
+The brain (`build_sweep_context` in `postprocess_phase.py`) grounds the execution data. It:
+- Reads `sweep_manifest.json` (started at, finished at, status, axis values).
+- Verifies output against the actual disk state.
+- Resolves case output directories (entry-mode vs. generic-mode differences are handled automatically).
+- Extracts the `setup_root` from each case's `run_document.json`.
+- Outputs a grounded `SweepContext` which serves as the single source of truth.
+
+### The Post-Processing Module
+The post-processing module (`run_postprocessing_module`) receives the `SweepContext` and a specific reasoning task. **It never re-reads the manifest or re-derives file locations.** 
+- If any cases failed during execution, you should explain why and skip post-processing.
+- The module lists available scripts using `list_postprocess_scripts()` and dispatches the task to the appropriate script based on its parsed description.
+
+**Available Query Functions:**
+You can query the brain for deeper reasoning without bypassing its verification:
+- `read_case_workflow_state(context, case_id)`: Read full per-step status, diagnostics, and artifacts for a case.
+- `read_case_output_file(context, case_id, relative_path)`: Safely read file content (only paths already verified by the brain).
+
+### PostprocessingProtocol & Script Authoring
+Every tutorial post-processing script must expose a `run_postprocessing` function matching the `PostprocessingProtocol` signature:
+
+```python
+from openfoam_driver.postprocessing import PostprocessingProtocol
+
+def run_postprocessing(
+    *,
+    output_dir: str,
+    setup_root: str | None = None,
+    **kwargs: object,
+) -> list[dict]:
+    # Extract description from docstring for agent discovery
+    '''Loads summary CSVs and plots them using the default palette.'''
+    pass
+```
+
+The catalog extracts the script's `description` directly from this docstring as a `PostprocessScriptInfo` object, allowing the reasoning agent to decide if the script applies to the task.
+
+**Available Utilities (`openfoam_driver.postprocessing`):**
+- **Plotly Declarative Traces:** `PlotSpec`, `TraceSpec`, `build_line_traces`
+- **Data Loading:** `load_csv_folder` (bulk CSV reading)
+- **Styling:** `apply_plotly_layout`, `write_plotly_html` (Plotly) and `configure_matplotlib_defaults`, `finalize_matplotlib_figure` (Matplotlib).
+- **Colors:** `DEFAULT_PALETTE`, `GroupShadedColors`

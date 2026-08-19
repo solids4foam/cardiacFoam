@@ -12,6 +12,12 @@
       "id": "solve",
       "command": "cardiacFoam",
       "depends_on": ["mesh"]
+    },
+    {
+      "id": "postProcess",
+      "command": "postProcess",
+      "args": ["-func", "rotorpoints", "-latestTime"],
+      "depends_on": ["solve"]
     }
   ]
 }

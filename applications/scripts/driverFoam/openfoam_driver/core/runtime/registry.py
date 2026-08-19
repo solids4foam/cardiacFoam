@@ -263,8 +263,6 @@ def _entry_catalog_for_root(
     known_registered = {tutorial.casefold() for tutorial in list_tutorials(driver_context)}
     for case_root in _iter_case_directories_recursive(tutorials_root, driver_context):
         classified = _classify_case_entry(case_root, tutorials_root, driver_context)
-        if classified["entry_name"].casefold() in known_registered:
-            continue
         entries.append(classified)
 
     return sorted(

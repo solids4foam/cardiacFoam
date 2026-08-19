@@ -151,12 +151,12 @@ def parse_manufactured_reference(text: str) -> list[ManufacturedReferencePoint]:
 
 def find_manufactured_error_file(case_path: Path) -> Path | None:
     for f in case_path.glob("postProcessing/*.dat"):
-        text = f.read_text(errors="ignore")
-        if "manufactured-solution error summary" in text.lower() or "manufactured activation-time summary" in text.lower():
+        text = f.read_text(errors="ignore").lower()
+        if "manufactured solution error summary" in text.replace("-", " ") or "manufactured activation time summary" in text.replace("-", " "):
             return f
     for f in case_path.glob("processor*/postProcessing/*.dat"):
-        text = f.read_text(errors="ignore")
-        if "manufactured-solution error summary" in text.lower() or "manufactured activation-time summary" in text.lower():
+        text = f.read_text(errors="ignore").lower()
+        if "manufactured solution error summary" in text.replace("-", " ") or "manufactured activation time summary" in text.replace("-", " "):
             return f
     return None
 
@@ -185,8 +185,9 @@ def extract_error_metric(text: str, key: str, metric: str) -> float | None:
 
 
 def find_pseudo_ecg_file(case_path: Path) -> Path | None:
-    for p in [case_path / "postProcessing" / "eikonalECG.dat"] + list(case_path.glob("processor*/postProcessing/eikonalECG.dat")):
-        if p.exists(): return p
+    for name in ["pseudoECG.dat", "eikonalECG.dat"]:
+        for p in [case_path / "postProcessing" / name] + list(case_path.glob(f"processor*/postProcessing/{name}")):
+            if p.exists(): return p
     return None
 
 

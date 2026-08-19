@@ -409,6 +409,28 @@ while True:
 so the read above is safe at any instant. Do not implement polling that opens
 `.tmp` files directly.
 
+## Post-processing phase (brain + module)
+
+The execution engine hands off to the postprocessing phase once a workflow or sweep reaches a terminal state. This is split into two independent pieces:
+
+1. **The brain (`build_sweep_context`)**: Reads the sweep's own record (`sweep_manifest.json`), verifies it against what is actually on disk (resolving entry-mode vs generic-mode output directory differences), and returns a single grounded `SweepContext`.
+2. **The postprocessing module (`run_postprocessing_module`)**: A separate function that receives the `SweepContext` and a task. **It never re-reads the manifest or re-derives file locations.** It lists each case's postprocessing script catalog via `list_postprocess_scripts()`.
+
+If an agent needs deeper reasoning than the flat summary, it must use the brain's query functions:
+- `read_case_workflow_state(context, case_id)`
+- `read_case_output_file(context, case_id, relative_path)`
+
+These query functions raise clearly on an unknown case ID and safely restrict reads to files the brain has already verified.
+
+### Authoring postprocessing scripts
+
+Every postprocessing script in a tutorial's `setup/` directory must expose a `run_postprocessing` function matching the `PostprocessingProtocol` signature:
+```python
+def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **kwargs: object) -> list[dict]: ...
+```
+
+The script's docstring is statically extracted as its `description`, allowing reasoning agents to decide if the script applies to a task. Reusable plotting and styling utilities are exposed under `openfoam_driver.postprocessing`.
+
 ## Verifying outputs
 
 Strict planning predicts artifacts before launch and assigns artifact ids to

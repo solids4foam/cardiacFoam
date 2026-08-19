@@ -27,10 +27,7 @@
 
 """The cardiacFoam plugin's RunDocument.config JSON Schema.
 
-Moved out of the core run-document.json schema in Phase 2 (P2.2): core no
-longer knows the anatomy/physics/stimulus/solver phase vocabulary or the
-physicsSlice shape. This module is the cardiac plugin's own declaration,
-returned by CardiacFoamPlugin.get_run_document_config_schema() and validated
+Returned by CardiacFoamPlugin.get_run_document_config_schema() and validated
 by core via jsonschema.validate() against whatever config the plugin built.
 """
 from __future__ import annotations
