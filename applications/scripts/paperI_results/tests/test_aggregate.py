@@ -46,43 +46,40 @@ def test_build_tet_rows_have_rates(tmp_path):
     assert fine_vm["rate_L2"] != ""      # rate computed between 20 and 40
 
 
-def test_build_frontal_monodomain_uses_one_sweep_and_cell_count_h(tmp_path):
-    study = (
+def test_build_mono_tet_distinguishes_diagonal_and_rotated_conductivity(tmp_path):
+    # The merged tet study (sweep_tet_generic.json) zips a diagonal/rotated
+    # conductivity axis against grad_scheme -- mono_tet's variant label must
+    # carry both, or a diagonal and a rotated case at the same (grad_scheme,
+    # N) collide onto one row instead of two.
+    sweep_cases = (
         tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
-        "/setup/studies/tetConvergence"
+        "/setup/studies/tetConvergence/results/sweepCases"
     )
-    archive = study / "results/sweepCasesFrontal"
+    manifest = (
+        tmp_path / "tutorials/manufacturedSolutions/monodomainPseudoECG"
+        "/setup/studies/tetConvergence/results/sweepRun/sweep_manifest.json"
+    )
     cases = [
-        ("least_squares_40_manufacturedFDAMonodomainVerifier", 40, "0.00051079"),
-        ("least_squares_80_manufacturedFDAMonodomainVerifier", 80, "0.000141195"),
+        ("least_squares_80_diag", 80, "manufacturedFDAMonodomainVerifier", "0.000141195"),
+        ("least_squares_80_rot", 80, "manufacturedAnisotropicMonodomainVerifier", "0.0000349113"),
     ]
-    _write_manifest(study / "results/sweepRunFrontal/sweep_manifest.json", {
+    _write_manifest(manifest, {
         case_id: {
             "grad_scheme": "least_squares", "number_cells": [n],
-            "verification_model_type": "manufacturedFDAMonodomainVerifier",
+            "verification_model_type": model,
         }
-        for case_id, n, _ in cases
+        for case_id, n, model, _ in cases
     })
-    for case_id, n, l2 in cases:
-        case_dir = archive / case_id
+    for case_id, n, _, l2 in cases:
+        case_dir = sweep_cases / case_id
         case_dir.mkdir(parents=True)
         (case_dir / f"3D_{n}_cells_implicit.dat").write_text(
             f"Vm 1e-4 {l2} 1e-3\nGrid spacing (dx) = {1/n}\n"
         )
-    (study / "mesh_metadata_optimised.json").write_text(json.dumps({
-        "h_definition": "n_cells^(-1/3)",
-        "levels": [
-            {"nominal_N": 40, "n_cells": 349109},
-            {"nominal_N": 80, "n_cells": 2662487},
-        ],
-    }))
 
-    rows = aggregate.CASES["mono_tet_frontal"](tmp_path)
-    assert len(rows) == 2
-    fine = [r for r in rows if r["N"] == "80"][0]
-    assert fine["variant"] == "diagonal/leastSquares"
-    assert abs(float(fine["h"]) - 2662487 ** (-1 / 3)) < 1e-15
-    assert fine["rate_L2"] == "1.90"
+    rows = aggregate.CASES["mono_tet"](tmp_path)
+    variants = {r["variant"] for r in rows if r["field"] == "Vm" and r["N"] == "80"}
+    assert variants == {"diagonal/leastSquares", "rotated/leastSquares"}
 
 
 def test_build_mono_tet_includes_per_electrode_rows(tmp_path):
