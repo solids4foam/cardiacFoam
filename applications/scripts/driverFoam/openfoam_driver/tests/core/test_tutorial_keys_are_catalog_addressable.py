@@ -70,9 +70,11 @@ _BLOCK_HEADER = re.compile(r"([A-Za-z_][\w.|\"]*)\s*$")
 #: Unaddressable on purpose. Each entry needs a reason; delete the entry when
 #: the reason stops holding, rather than widening the waiver.
 WAIVED: dict[str, str] = {
-    # Empty, and worth keeping that way. Every key a tracked tutorial sets is
-    # a key something reads. Dead entries were deleted from the dicts rather
-    # than waived here -- a waiver hides drift, deleting the key removes it.
+    "$ELECTRO_MODEL_COEFFS.initialODEStep": (
+        "Dead key: zero reads in cardiacFoam or OpenFOAM C++ code. "
+        "ODESolver reads maxSteps (live analogue), not initialODEStep. "
+        "Key exists in tutorials with default value; not mandatory."
+    ),
 }
 
 
