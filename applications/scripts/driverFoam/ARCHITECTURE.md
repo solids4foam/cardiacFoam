@@ -92,6 +92,7 @@ dependency diagrams.
 driverFoam is a **Python-based OpenFOAM workflow orchestration engine** that sits between an AI agent or CI system and the OpenFOAM solver infrastructure.
 
 Its core job is:
+
 1. **Resolve** which simulation case (tutorial) to run and what configuration to apply.
 2. **Plan** a validated, machine-readable execution plan (a `RunDocument`) including the workflow DAG, expected artifacts, and environment requirements.
 3. **Execute** the DAG step-by-step, tracking state, capturing logs, and verifying artifact production.
@@ -120,7 +121,6 @@ applications/scripts/driverFoam/
 │   ├── planning_types.py             ← StrictDiagnostic, SimulationAuditItem
 │   ├── sweep_*.py                    ← Sweep expansion, routing, materialisation
 │   ├── capability_manifest.py        ← Build the plan's capability manifest
-│   ├── verification_contracts.py     ← Verification experiment runner
 │   │
 │   ├── core/                         ← Generic driver engine
 │   │   ├── plugin_interface.py       ← SolverPlugin (Protocol), DriverContext, SolverPluginV2
@@ -296,6 +296,7 @@ graph TB
 ### 4.1 Step-by-Step Causality (foamctl plan --strict --entry niederer2012)
 
 **Step 1 — CLI entry**
+
 - `cli.py::main()` parses args; selects plugin from `--plugin` flag.
 - With no `--plugin`: calls `default_driver_context()` → `compatibility.py::legacy_default_driver_context()` → instantiates `CardiacFoamPlugin()`.
 - With `--plugin none`: calls `generic_openfoam_context()` → `GenericOpenFOAMPlugin()`.
@@ -303,12 +304,14 @@ graph TB
 - Result: an immutable `DriverContext` with `plugin`, `identity`, and lazy `capabilities`.
 
 **Step 2 — Plugin validation**
+
 - `plugin_interface.py::driver_context()` calls `validate_plugin()`: checks all required members exist and are callable, checks `plugin_api_version` is in `{"1","2"}`, enforces v2 member list if `api_version="2"`.
 - `get_profile()` is called; profile `plugin_id` and `api_version` are cross-checked against the plugin object.
 - `get_dict_entries()` is called; entries are checked for duplicate `driver_path` values.
 - Result: validated `DriverContext` with stable `PluginIdentity`.
 
 **Step 3 — Entry resolution (`strict_plan`)**
+
 - `strict_planning.py::strict_plan()` calls `load_entry_spec(entry, driver_context=ctx)`.
 - `registry.py::load_entry_spec()` → `resolve_entry()`:
   - Tries to match `name` against `_normalized_registry(driver_context)` — the plugin's `get_tutorial_catalog()["spec_factories"]`.
@@ -317,26 +320,31 @@ graph TB
 - Result: a `TutorialSpec` (frozen dataclass with `name`, `case_root`, `setup_root`, `output_dir`, `build_cases`, `apply_case`, `run_case`, `metadata`).
 
 **Step 4 — Artifact prediction**
+
 - `artifacts.py::predict_data_artifacts()` calls `driver_context.capabilities.artifacts.predict(...)`.
 - For cardiacFoam: dispatches to `artifacts_predictor.py::predict_cardiac_artifacts()`, which reads `electroProperties` on-disk and predicts ECG CSV, VTK sequences, etc.
 - Result: `tuple[DataArtifact, ...]`.
 
 **Step 5 — Workflow DAG normalisation**
+
 - `workflow.py::normalize_workflow_dag()` is called with the raw DAG from `spec.metadata["workflow_dag"]`.
 - Parses and validates steps; checks for duplicate IDs, self-dependencies, cycles.
 - Assigns unclaimed artifacts to the last solver step via `driver_context.capabilities.command_authorization.solver_commands()`.
 - Result: normalized DAG dict + `tuple[WorkflowDiagnostic, ...]`.
 
 **Step 6 — Command allowlist validation**
+
 - `workflow.py::validate_workflow_commands()` checks each step's command is in: `CORE_NEUTRAL_COMMANDS` (blockMesh, checkMesh, …) ∪ plugin solver commands ∪ plugin auxiliary commands ∪ case scripts ∪ installed OpenFOAM apps (via `$FOAM_APPBIN`).
 - Any unknown command → `WorkflowDiagnostic(level="error", code="unknown_workflow_command")`.
 
 **Step 7 — RunDocument construction**
+
 - `run_document_adapter.py::_run_document_from_case()` builds a `RunDocument` dataclass.
 - Calls `driver_context.capabilities.run_document_configuration.build(...)` → `cardiacfoam/run_document_config.py::build_config()` for cardiac, or generic empty sections for others.
 - Also calls `specs/validation.py::validate_run()` for semantic validation of the run config.
 
 **Step 8 — Plan diagnostics and readiness assembly**
+
 - Catalog diagnostics: `_catalog_diagnostics()` — checks C++ source dictionary keys against `DictEntry.driver_path` values.
 - Artifact diagnostics: `_artifact_diagnostics()` — calls plugin `validate_configuration()`, then `validate_workflow_commands()`.
 - Environment diagnostics: checks OpenFOAM is sourced, required executables exist.
@@ -352,6 +360,7 @@ graph TB
   and a non-blocked readiness result (plus the run-path ingestion checks).
 
 **Step 9 — Execution (foamctl run --strict --entry niederer2012)**
+
 - CLI reads `report.workflow_dag`, `report.workflow_state`, `report.case_root`, `report.expected_artifacts` from the plan.
 - Calls `_execute_run()` → `workflow_orchestrator.py::run_workflow()`.
 - Orchestrator iterates: finds next pending step → calls `workflow_runner.py::run_workflow_step()`.
@@ -362,6 +371,7 @@ graph TB
 - After each step: checks `produces` artifacts exist; if missing, marks step failed.
 
 **Step 10 — Artifacts manifest**
+
 - On run completion, `output_collection.py` collects outputs and writes `artifacts_manifest.json`.
 
 ### 4.2 Diagram A — Runtime Causal Flow
@@ -662,6 +672,7 @@ score.
 ### Verdict: **PARTIALLY SOLVER-AGNOSTIC**
 
 More precisely:
+
 - **Solver-agnostic mechanisms (within OpenFOAM):** DAG normalization, subprocess execution, workflow state, retry orchestration, and command validation are largely solver-neutral.
 - **Solver-agnostic data model:** Partial. The core v3 `RunDocument` JSON schema's `config` property is now an open, plugin-declared object (P2.2, commit `73ca43f7`); `specs/validation.py`'s phase vocabulary and the `Phase` literal in `core/runtime/run_model.py` still encode cardiac phases and fields independently of that schema, and the built-in `CardiacFoamPlugin` still declares a cardiac-shaped config schema for itself (by design).
 - **OpenFOAM-agnostic:** The engine is not agnostic to OpenFOAM. It assumes the `$FOAM_APPBIN` / `$FOAM_USER_APPBIN` environment, OpenFOAM dictionary text format, Allrun/Allclean script conventions, and `constant/ system/ 0/` case layout.
@@ -813,6 +824,7 @@ graph TB
 ### What belongs on each side
 
 **Inside the generic core (stays unchanged for any project):**
+
 - The `SolverPlugin` / `ProjectPlugin` Protocol and validation
 - `DriverContext` construction and caching
 - `PluginCapabilities` adapter bundle and all 17 focused seam protocols
@@ -835,6 +847,7 @@ graph TB
 - `specs/mesh_provisioning.py`, `specs/tet_mesh_provisioning.py` — generic default blockMeshDict / gmsh `.geo` rendering
 
 **Inside the project adapter (must be provided by each project):**
+
 - `get_dict_entries()` — the project's dictionary entry descriptors
 - `get_capabilities()` — solver/model catalog for the plan
 - `get_tutorial_catalog()` — registered tutorial spec factories
@@ -847,6 +860,7 @@ graph TB
 - Tutorial-specific `make_spec()` factories
 
 **Should move from "generic" to the project adapter:**
+
 - Cardiac configuration phases/fields from `schemas/run-document.json`,
   `core/runtime/run_model.py`, and `specs/validation.py` (or expose them through
   a plugin-owned schema extension while keeping a generic envelope)
@@ -1160,6 +1174,7 @@ and avoids the legacy cardiac mutation fallback. Basic DAG execution is
 therefore supported.
 
 If Project C calls the legacy public `make_spec()` directly, it will encounter:
+
 - `electro_property_overrides`, `physics_property_overrides` parameters — these names make no sense for Project C.
 - `_apply_case_mutation` defaulting to the cardiac mutation function via `legacy_generic_case_mutation`.
 
