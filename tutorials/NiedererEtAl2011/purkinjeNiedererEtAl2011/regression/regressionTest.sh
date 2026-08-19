@@ -11,6 +11,11 @@ IFS=$'\n\t'
 # Phase 2 — eikonal 1-D Purkinje + 3-D steady-state eikonal
 #   Run to completion and check quantitative activationTime values
 #   at PVJ nodes against eikonalSlab.reference.
+#
+# Phase 3 — eikonal 1-D Purkinje + 3-D monodomain (hybrid)
+#   Hybrid solver combining fast deterministic Purkinje (eikonal)
+#   with full ionic myocardium (monodomain) via eikonalMonodomainPvjCoupler.
+#   Check Purkinje activation times against hybridSlab.reference.
 # ============================================================
 
 REF_FILE="regression/purkinjeSlab.reference"
@@ -330,6 +335,78 @@ fi
 
 echo
 echo "Phase 2 PASSED"
+
+# ================================================================
+# Phase 3 — eikonal 1-D Purkinje + 3-D monodomain (hybrid)
+# ================================================================
+
+echo
+echo "============================================================"
+echo "Phase 3: eikonal 1-D Purkinje + 3-D monodomain (hybrid)"
+echo "Quantitative checks: Purkinje activationTime vs hybridSlab.reference"
+echo "============================================================"
+echo
+
+./Allclean > /dev/null 2>&1 || true
+
+HYBRID_LOGFILE="log.Allrun.hybrid"
+./Allrun solver=hybrid > "${HYBRID_LOGFILE}" 2>&1
+
+# Check solver log for errors
+HYBRID_SOLVER_LOG="log.cardiacFoam"
+if grep -q "FatalError" "${HYBRID_SOLVER_LOG:-/dev/null}"; then
+    echo "FAIL: hybrid run produced a FatalError"
+    echo "--- last 20 lines of ${HYBRID_SOLVER_LOG} ---"
+    tail -20 "${HYBRID_SOLVER_LOG}"
+    exit 1
+fi
+
+if ! grep -q "^End" "${HYBRID_SOLVER_LOG:-/dev/null}"; then
+    echo "FAIL: hybrid run did not reach normal End"
+    echo "--- last 20 lines of ${HYBRID_LOGFILE} ---"
+    tail -20 "${HYBRID_LOGFILE}"
+    exit 1
+fi
+
+if [[ ! -s postProcessing/purkinjeNetwork.dat ]]; then
+    echo "FAIL: hybrid run did not write postProcessing/purkinjeNetwork.dat"
+    exit 1
+fi
+
+echo "PASS: hybrid run completed and wrote postProcessing/purkinjeNetwork.dat"
+
+# Quantitative checks: Purkinje Dijkstra activation times at key nodes.
+# These are deterministic (Dijkstra) and bitwise-reproducible.
+HYBRID_REF_FILE="regression/hybridSlab.reference"
+if [[ ! -f "${HYBRID_REF_FILE}" ]]; then
+    echo "FAIL: hybrid reference file not found: ${HYBRID_REF_FILE}"
+    exit 1
+fi
+
+hybridFailures=0
+hybridChecks=0
+while IFS=' ' read -r kind key metric expected tolerance; do
+    if [[ -z "${kind}" || "${kind}" == \#* ]]; then
+        continue
+    fi
+    actual="$(extractReferenceValue "${kind}" "${key}" "${metric}" "" "")"
+    hybridChecks=$((hybridChecks + 1))
+    if [[ -z "${actual}" ]]; then
+        echo "FAIL: could not extract ${kind} ${key} ${metric}"
+        hybridFailures=$((hybridFailures + 1))
+        continue
+    fi
+    checkWithinTolerance "${kind} ${key} ${metric}" "${actual}" "${expected}" "${tolerance}" \
+        || hybridFailures=$((hybridFailures + 1))
+done < "${HYBRID_REF_FILE}"
+
+echo "Hybrid slab reference comparison: ${hybridChecks} checks, ${hybridFailures} failures"
+if (( hybridFailures > 0 )); then
+    exit 1
+fi
+
+echo
+echo "Phase 3 PASSED"
 
 echo
 echo "============================================================"
