@@ -301,22 +301,33 @@ def _drive_agent(case: RegressionCase, driver: str, tutorials_root: Path) -> sub
     return subprocess.run(argv, env=env, capture_output=True, text=True)
 
 
-def check_reference(case_path: Path, reference_text: str) -> tuple[bool, str]:
-    """Check agent outputs under `case_path` against a reference file.
+def check_protocol(case_dir: str, case_path: Path) -> tuple[bool, str]:
+    """Check agent outputs under `case_path` against the frozen equivalence protocol.
 
-    Returns (ok, detail). Supports columnar layout (`file time variable
-    expected tolerance`) or manufactured layout (`kind key metric expected
-    tolerance`). Non-supported references raise NotImplementedError.
+    Returns (ok, detail). The protocol is loaded from `equivalence_protocol.yaml`.
+    Raises NotImplementedError if no rules exist for the case (unsupported).
     """
-    points = parse_columnar_reference(reference_text)
-    if points:
-        problems: list[str] = []
-        checks = 0
-        for p in points:
+    from openfoam_driver.tests.equivalence.protocol import load_protocol
+    
+    pkg_root = Path(openfoam_driver.__file__).resolve().parent.parent
+    protocol_path = pkg_root / "equivalence_protocol.yaml"
+    protocol = load_protocol(protocol_path)
+    
+    rows = [r for r in protocol.rows if r.case_dir == case_dir]
+    metric_rows = [r for r in protocol.metric_rows if r.case_dir == case_dir]
+    
+    if not rows and not metric_rows:
+        raise NotImplementedError(f"no rules found in equivalence_protocol.yaml for {case_dir}")
+
+    problems: list[str] = []
+    checks = 0
+
+    if rows:
+        for p in rows:
             checks += 1
             f = case_path / p.data_file
             val = (
-                read_series_value(f.read_text(), p.time, p.variable, time_atol=TIME_MATCH_ATOL)
+                read_series_value(f.read_text(errors="ignore"), p.time, p.variable, time_atol=TIME_MATCH_ATOL)
                 if f.exists() else None
             )
             if val is None:
@@ -326,15 +337,31 @@ def check_reference(case_path: Path, reference_text: str) -> tuple[bool, str]:
                     f"{p.data_file} {p.variable}@{p.time}: agent={val} "
                     f"expected={p.expected} tol={p.tolerance}"
                 )
-        if problems:
-            return False, "\n".join(problems)
-        return True, f"{checks} reference points reproduced within tolerance"
 
-    man_points = parse_manufactured_reference(reference_text)
-    if man_points:
-        return _check_manufactured_reference(case_path, man_points)
+    if metric_rows:
+        error_file = find_manufactured_error_file(case_path)
+        error_text = error_file.read_text(errors="ignore") if error_file else ""
+        ecg_file = find_pseudo_ecg_file(case_path)
+        ecg_text = ecg_file.read_text(errors="ignore") if ecg_file else ""
+        
+        for p in metric_rows:
+            checks += 1
+            val = None
+            if p.kind == "summary":
+                if error_text: val = extract_summary_value(error_text, p.key)
+            elif p.kind == "error":
+                if error_text: val = extract_error_metric(error_text, p.key, p.metric)
+            elif p.kind == "pseudoECG":
+                if ecg_text: val = extract_pseudo_ecg_value(ecg_text, p.key)
+                
+            if val is None:
+                problems.append(f"{p.kind} {p.key} {p.metric}: missing in agent output")
+            elif not values_agree(val, p.expected, p.tolerance):
+                problems.append(f"{p.kind} {p.key} {p.metric}: agent={val} expected={p.expected} tol={p.tolerance}")
 
-    raise NotImplementedError("reference format is not supported")
+    if problems:
+        return False, "\n".join(problems)
+    return True, f"{checks} reference points reproduced against YAML protocol"
 
 
 def verify_reproduction(case: RegressionCase, *, driver: str) -> ReproResult:
@@ -362,12 +389,14 @@ def verify_reproduction(case: RegressionCase, *, driver: str) -> ReproResult:
                 f"agent run rc={proc.returncode}; stderr tail:\n{proc.stderr[-1500:]}",
             )
         try:
-            ok, detail = check_reference(case_path, reference_text)
+            ok, detail = check_protocol(case.case_dir, case_path)
         except NotImplementedError as exc:
             return ReproResult(
                 case.case_dir, driver, "unsupported_ref",
-                f"agent run ok, but {exc} (reference {case.reference_file})",
+                f"agent run ok, but {exc} (YAML missing case)",
             )
+        if not ok:
+            print(f"FAILED {case.case_dir} via {driver}:\n{detail}")
         return ReproResult(
             case.case_dir, driver, "reproduced" if ok else "mismatch", detail
         )

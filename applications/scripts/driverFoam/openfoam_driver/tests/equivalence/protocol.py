@@ -44,6 +44,7 @@ class MetricToleranceRow:
     kind: str
     key: str
     metric: str
+    expected: float
     tolerance: float
     source_reference: str
     rationale: str
@@ -61,6 +62,7 @@ class ToleranceRow:
     data_file: str
     variable: str
     time: float
+    expected: float
     tolerance: float
     source_reference: str
     rationale: str
@@ -81,6 +83,7 @@ def transcribe_reference(
             data_file=point.data_file,
             variable=point.variable,
             time=point.time,
+            expected=point.expected,
             tolerance=point.tolerance,
             source_reference=reference_relpath,
             rationale=_RATIONALE,
@@ -89,14 +92,14 @@ def transcribe_reference(
     ]
 
 
-def _metric_records(reference_text: str) -> list[tuple[str, str, str, float]]:
+def _metric_records(reference_text: str) -> list[tuple[str, str, str, float, float]]:
     """Parse the `kind key metric expected tolerance` layout.
 
     Returns [] for the columnar layout, which is distinguished by its second
     column parsing as a float (a time), where this layout's second column is a
     field or quantity name.
     """
-    records: list[tuple[str, str, str, float]] = []
+    records: list[tuple[str, str, str, float, float]] = []
     for raw in reference_text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -113,8 +116,7 @@ def _metric_records(reference_text: str) -> list[tuple[str, str, str, float]]:
             # Second column is numeric -> this is the columnar time layout.
             return []
         try:
-            float(expected)
-            records.append((kind, key, metric, float(tolerance)))
+            records.append((kind, key, metric, float(expected), float(tolerance)))
         except ValueError:
             return []
     return records
@@ -130,11 +132,12 @@ def transcribe_metric_reference(
             kind=kind,
             key=key,
             metric=metric,
+            expected=expected,
             tolerance=tolerance,
             source_reference=reference_relpath,
             rationale=_RATIONALE,
         )
-        for kind, key, metric, tolerance in _metric_records(reference_text)
+        for kind, key, metric, expected, tolerance in _metric_records(reference_text)
     ]
 
 

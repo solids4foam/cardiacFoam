@@ -6,6 +6,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '10'
   time: 0.03
+  expected: 0.02396
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -14,6 +15,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '2'
   time: 0.03
+  expected: 0.00119338
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -22,6 +24,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '4'
   time: 0.03
+  expected: -1.0
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -30,6 +33,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '5'
   time: 0.03
+  expected: -1.0
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -38,6 +42,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '6'
   time: 0.03
+  expected: 0.0112286
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -46,6 +51,7 @@ rows:
   data_file: Niedererpoints/0/activationTime
   variable: '9'
   time: 0.03
+  expected: -1.0
   tolerance: 0.0001
   source_reference: regression/NiedererEtAl2012.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -54,6 +60,7 @@ rows:
   data_file: Taprobes/solid/0/Ta
   variable: '2'
   time: 0.02
+  expected: 125.91
   tolerance: 2.0
   source_reference: regression/electroMechHeterogeneity.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -62,6 +69,7 @@ rows:
   data_file: Taprobes/solid/0/Ta
   variable: '3'
   time: 0.02
+  expected: 121.498
   tolerance: 2.0
   source_reference: regression/electroMechHeterogeneity.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -70,6 +78,7 @@ rows:
   data_file: Taprobes/solid/0/Ta
   variable: '4'
   time: 0.02
+  expected: 482.663
   tolerance: 5.0
   source_reference: regression/electroMechHeterogeneity.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -78,6 +87,7 @@ rows:
   data_file: rotorpoints/0/activationTime
   variable: '2'
   time: 4.0
+  expected: 3.76742
   tolerance: 0.002
   source_reference: regression/rotorInstability.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -86,6 +96,7 @@ rows:
   data_file: rotorpoints/0/activationTime
   variable: '3'
   time: 4.0
+  expected: 3.99164
   tolerance: 0.002
   source_reference: regression/rotorInstability.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -94,6 +105,7 @@ rows:
   data_file: rotorpoints/0/activationTime
   variable: '4'
   time: 4.0
+  expected: 3.75302
   tolerance: 0.002
   source_reference: regression/rotorInstability.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -102,6 +114,7 @@ rows:
   data_file: rotorpoints/0/activationTime
   variable: '5'
   time: 4.0
+  expected: 3.94159
   tolerance: 0.002
   source_reference: regression/rotorInstability.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -110,6 +123,7 @@ rows:
   data_file: rotorpoints/0/activationTime
   variable: '6'
   time: 4.0
+  expected: 3.814
   tolerance: 0.002
   source_reference: regression/rotorInstability.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -118,6 +132,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
   variable: Vm
   time: 1.0
+  expected: -87.0639985
   tolerance: 0.005
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -126,6 +141,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
   variable: Vm
   time: 1.5
+  expected: -86.9210695
   tolerance: 0.005
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -134,6 +150,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
   variable: cai
   time: 1.0
+  expected: 9.66e-05
   tolerance: 5.0e-05
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -142,6 +159,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000.txt
   variable: cai
   time: 1.5
+  expected: 0.0001139
   tolerance: 5.0e-05
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -150,6 +168,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt
   variable: AV_Ta
   time: 1.0
+  expected: 0.613332
   tolerance: 0.005
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -158,6 +177,7 @@ rows:
   data_file: postProcessing/TWorld_endocardialCells_S1_1000_Ta.txt
   variable: AV_Ta
   time: 1.5
+  expected: 1.7613833
   tolerance: 0.005
   source_reference: regression/singleCell.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -167,6 +187,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj0
   metric: final
+  expected: 124743.74
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -175,6 +196,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj1
   metric: final
+  expected: 82539.617
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -183,6 +205,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj2
   metric: final
+  expected: 124752.8
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -191,6 +214,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj3
   metric: final
+  expected: 153383.09
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -199,6 +223,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj4
   metric: final
+  expected: 153383.12
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -207,6 +232,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj5
   metric: final
+  expected: 136942.39
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -215,6 +241,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj6
   metric: final
+  expected: 46630.119
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -223,6 +250,7 @@ metric_rows:
   kind: coupledPVJ
   key: pvj7
   metric: final
+  expected: 46406.468
   tolerance: 50.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -231,6 +259,7 @@ metric_rows:
   kind: coupledVm
   key: node0
   metric: final
+  expected: 0.008848017
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -239,6 +268,7 @@ metric_rows:
   kind: coupledVm
   key: node15
   metric: final
+  expected: -0.068973
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -247,6 +277,7 @@ metric_rows:
   kind: coupledVm
   key: node8
   metric: final
+  expected: 0.03915147
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -255,6 +286,7 @@ metric_rows:
   kind: graphUtilityVm
   key: node0
   metric: final
+  expected: 0.008851655
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -263,6 +295,7 @@ metric_rows:
   kind: graphUtilityVm
   key: node15
   metric: final
+  expected: 0.04032262
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -271,6 +304,7 @@ metric_rows:
   kind: graphUtilityVm
   key: node8
   metric: final
+  expected: 0.03643902
   tolerance: 1.0e-06
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -279,6 +313,7 @@ metric_rows:
   kind: topology
   key: conductionEdges
   metric: count
+  expected: 192.0
   tolerance: 0.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -287,6 +322,7 @@ metric_rows:
   kind: topology
   key: pvjLocations
   metric: count
+  expected: 8.0
   tolerance: 0.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -295,6 +331,7 @@ metric_rows:
   kind: topology
   key: pvjNodes
   metric: count
+  expected: 8.0
   tolerance: 0.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -303,6 +340,7 @@ metric_rows:
   kind: topology
   key: rootNode
   metric: value
+  expected: 0.0
   tolerance: 0.0
   source_reference: regression/purkinjeSlab.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -311,6 +349,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L1
+  expected: 1.5292e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -319,6 +358,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L2
+  expected: 1.99547e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -327,6 +367,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: Linf
+  expected: 3.99209e-05
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -335,6 +376,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L1
+  expected: 0.000114436
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -343,6 +385,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L2
+  expected: 0.000135097
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -351,6 +394,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: Linf
+  expected: 0.000167827
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -359,6 +403,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L1
+  expected: 4.09842e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -367,6 +412,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L2
+  expected: 4.56894e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -375,6 +421,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: Linf
+  expected: 8.07195e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -383,6 +430,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L1
+  expected: 2.81317e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -391,6 +439,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L2
+  expected: 3.17467e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -399,6 +448,7 @@ metric_rows:
   kind: error
   key: u1
   metric: Linf
+  expected: 5.34962e-05
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -407,6 +457,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L1
+  expected: 7.39916e-06
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -415,6 +466,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L2
+  expected: 8.81596e-06
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -423,6 +475,7 @@ metric_rows:
   kind: error
   key: u2
   metric: Linf
+  expected: 1.86162e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -431,6 +484,7 @@ metric_rows:
   kind: error
   key: u3
   metric: L1
+  expected: 0.0
   tolerance: 1.0e-12
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -439,6 +493,7 @@ metric_rows:
   kind: error
   key: u3
   metric: L2
+  expected: 0.0
   tolerance: 1.0e-12
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -447,6 +502,7 @@ metric_rows:
   kind: error
   key: u3
   metric: Linf
+  expected: 0.0
   tolerance: 1.0e-12
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -455,6 +511,7 @@ metric_rows:
   kind: summary
   key: cellsPerDirection
   metric: value
+  expected: 80.0
   tolerance: 0.0
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -463,6 +520,7 @@ metric_rows:
   kind: summary
   key: finalTime
   metric: value
+  expected: 0.200112
   tolerance: 1.0e-06
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -471,6 +529,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L1
+  expected: 0.000250658
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -479,6 +538,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L2
+  expected: 0.000341438
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -487,6 +547,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: Linf
+  expected: 0.000980434
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -495,6 +556,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L1
+  expected: 0.0814546
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -503,6 +565,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L2
+  expected: 0.0814549
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -511,6 +574,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: Linf
+  expected: 0.082142
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -519,6 +583,7 @@ metric_rows:
   kind: error
   key: phiE_gauge
   metric: L1
+  expected: 0.000176522
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -527,6 +592,7 @@ metric_rows:
   kind: error
   key: phiE_gauge
   metric: L2
+  expected: 0.000240418
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -535,6 +601,7 @@ metric_rows:
   kind: error
   key: phiE_gauge
   metric: Linf
+  expected: 0.000687473
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -543,6 +610,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L1
+  expected: 0.0814503
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -551,6 +619,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L2
+  expected: 0.0814503
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -559,6 +628,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: Linf
+  expected: 0.081723
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -567,6 +637,7 @@ metric_rows:
   kind: error
   key: phiI_gauge
   metric: L1
+  expected: 7.41954e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -575,6 +646,7 @@ metric_rows:
   kind: error
   key: phiI_gauge
   metric: L2
+  expected: 0.000101084
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -583,6 +655,7 @@ metric_rows:
   kind: error
   key: phiI_gauge
   metric: Linf
+  expected: 0.000292962
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -591,6 +664,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L1
+  expected: 3.22463e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -599,6 +673,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L2
+  expected: 4.47365e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -607,6 +682,7 @@ metric_rows:
   kind: error
   key: u1
   metric: Linf
+  expected: 0.000158851
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -615,6 +691,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L1
+  expected: 1.40427e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -623,6 +700,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L2
+  expected: 1.92251e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -631,6 +709,7 @@ metric_rows:
   kind: error
   key: u2
   metric: Linf
+  expected: 5.62394e-05
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -639,6 +718,7 @@ metric_rows:
   kind: summary
   key: cells
   metric: value
+  expected: 20.0
   tolerance: 0.0
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -647,6 +727,7 @@ metric_rows:
   kind: summary
   key: finalTime
   metric: value
+  expected: 0.2
   tolerance: 1.0e-06
   source_reference: regression/bidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -655,6 +736,7 @@ metric_rows:
   kind: error
   key: activationTime
   metric: L1
+  expected: 0.000573521
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -663,6 +745,7 @@ metric_rows:
   kind: error
   key: activationTime
   metric: L2
+  expected: 0.000781102
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -671,6 +754,7 @@ metric_rows:
   kind: error
   key: activationTime
   metric: Linf
+  expected: 0.00247517
   tolerance: 0.001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -679,6 +763,7 @@ metric_rows:
   kind: pseudoECG
   key: E1
   metric: '-'
+  expected: -0.0037016344
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -687,6 +772,7 @@ metric_rows:
   kind: pseudoECG
   key: E2
   metric: '-'
+  expected: 0.00018387287
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -695,6 +781,7 @@ metric_rows:
   kind: pseudoECG
   key: E3
   metric: '-'
+  expected: -0.0042235169
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -703,6 +790,7 @@ metric_rows:
   kind: pseudoECG
   key: E4
   metric: '-'
+  expected: 0.0013015033
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -711,6 +799,7 @@ metric_rows:
   kind: pseudoECG
   key: E5
   metric: '-'
+  expected: -0.00035653491
   tolerance: 0.0001
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -719,6 +808,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L1
+  expected: 0.000293945
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -727,6 +817,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L2
+  expected: 0.0003914
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -735,6 +826,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: Linf
+  expected: 0.00148244
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -743,6 +835,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L1
+  expected: 4.09866e-05
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -751,6 +844,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L2
+  expected: 5.70471e-05
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -759,6 +853,7 @@ metric_rows:
   kind: error
   key: u1
   metric: Linf
+  expected: 0.000252586
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -767,6 +862,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L1
+  expected: 1.69077e-05
   tolerance: 1.0e-08
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -775,6 +871,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L2
+  expected: 2.27228e-05
   tolerance: 1.0e-08
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -783,6 +880,7 @@ metric_rows:
   kind: error
   key: u2
   metric: Linf
+  expected: 8.81125e-05
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -791,6 +889,7 @@ metric_rows:
   kind: pseudoECG
   key: E1
   metric: final
+  expected: 0.0074106238
   tolerance: 1.0e-08
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -799,6 +898,7 @@ metric_rows:
   kind: pseudoECG
   key: E2
   metric: final
+  expected: 0.0074106271
   tolerance: 1.0e-08
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -807,6 +907,7 @@ metric_rows:
   kind: pseudoECG
   key: E3
   metric: final
+  expected: 0.017480815
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -815,6 +916,7 @@ metric_rows:
   kind: pseudoECG
   key: E4
   metric: final
+  expected: 0.012227997
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -823,6 +925,7 @@ metric_rows:
   kind: pseudoECG
   key: E5
   metric: final
+  expected: 0.00069783531
   tolerance: 1.0e-07
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -831,6 +934,7 @@ metric_rows:
   kind: summary
   key: cells
   metric: value
+  expected: 20.0
   tolerance: 0.0
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -839,6 +943,7 @@ metric_rows:
   kind: summary
   key: finalTime
   metric: value
+  expected: 0.200028
   tolerance: 1.0e-09
   source_reference: regression/monodomainPseudoECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
