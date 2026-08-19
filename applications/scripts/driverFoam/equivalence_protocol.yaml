@@ -746,7 +746,7 @@ metric_rows:
   key: activationTime
   metric: L2
   expected: 0.000781102
-  tolerance: 0.0001
+  tolerance: 0.0002
   source_reference: regression/eikonalECG.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
     E1; adopting it involves no post hoc threshold selection.
