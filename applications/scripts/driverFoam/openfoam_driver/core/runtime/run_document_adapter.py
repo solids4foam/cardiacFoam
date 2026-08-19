@@ -92,7 +92,7 @@ def _run_document_from_case(
             "action": launch.get("action"),
             "command": launch.get("command", []),
             "commandDisplay": launch.get("command_display", ""),
-            "manifestPath": launch.get("manifest_path"),
+            "workflowStatePath": launch.get("workflow_state_path"),
             "caseRoot": launch.get("case_root"),
             "setupRoot": launch.get("setup_root"),
             "outputDir": launch.get("output_dir"),

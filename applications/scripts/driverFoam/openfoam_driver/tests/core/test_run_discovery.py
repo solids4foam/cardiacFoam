@@ -27,8 +27,8 @@
 
 """Tests for run discovery.
 
-`list_runs(root)` walks a directory and returns one parsed manifest dict
-per `run_manifest.json` found. Used by agents to inspect past runs
+`list_runs(root)` walks a directory and returns one parsed state dict
+per `workflow_state.json` found. Used by agents to inspect past runs
 without manual filesystem traversal.
 """
 from __future__ import annotations
@@ -51,17 +51,17 @@ class TestListRunsBehaviour(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             self.assertEqual(list(list_runs(Path(temp))), [])
 
-    def test_returns_one_entry_per_manifest_found(self) -> None:
+    def test_returns_one_entry_per_state_file_found(self) -> None:
         from openfoam_driver.core.runtime.run_discovery import list_runs
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             # Two synthesized runs under different sub-paths.
             for run_id, sub in [("r1", "alpha/output"), ("r2", "beta/output")]:
                 (root / sub).mkdir(parents=True)
-                (root / sub / "run_manifest.json").write_text(
+                (root / sub / "workflow_state.json").write_text(
                     json.dumps({"run_id": run_id, "status": "completed"})
                 )
-            # And one decoy non-manifest file that must be ignored.
+            # And one decoy non-state file that must be ignored.
             (root / "alpha" / "other.json").write_text('{"random": true}')
 
             runs = list(list_runs(root))
@@ -69,29 +69,29 @@ class TestListRunsBehaviour(unittest.TestCase):
             run_ids = sorted(r["run_id"] for r in runs)
             self.assertEqual(run_ids, ["r1", "r2"])
 
-    def test_returns_manifest_path_alongside_payload(self) -> None:
-        """Each yielded entry carries the absolute path to the manifest
+    def test_returns_state_path_alongside_payload(self) -> None:
+        """Each yielded entry carries the absolute path to the state file
         file so agents can locate sibling sidecars."""
         from openfoam_driver.core.runtime.run_discovery import list_runs
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "out").mkdir()
-            manifest = root / "out" / "run_manifest.json"
+            manifest = root / "out" / "workflow_state.json"
             manifest.write_text(json.dumps({"run_id": "r"}))
             runs = list(list_runs(root))
             self.assertEqual(len(runs), 1)
-            self.assertEqual(runs[0]["_manifest_path"], str(manifest))
+            self.assertEqual(runs[0]["_state_path"], str(manifest))
 
-    def test_malformed_manifest_is_skipped_silently(self) -> None:
+    def test_malformed_state_file_is_skipped_silently(self) -> None:
         """Malformed JSON should not crash the iterator; agents should
         still see the well-formed manifests."""
         from openfoam_driver.core.runtime.run_discovery import list_runs
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "broken").mkdir()
-            (root / "broken" / "run_manifest.json").write_text("{ not json")
+            (root / "broken" / "workflow_state.json").write_text("{ not json")
             (root / "good").mkdir()
-            (root / "good" / "run_manifest.json").write_text('{"run_id": "ok"}')
+            (root / "good" / "workflow_state.json").write_text('{"run_id": "ok"}')
             runs = list(list_runs(root))
             ids = [r["run_id"] for r in runs]
             self.assertEqual(ids, ["ok"])

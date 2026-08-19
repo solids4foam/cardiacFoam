@@ -197,7 +197,7 @@
           "items": {"type": "string"}
         },
         "commandDisplay": {"type": "string"},
-        "manifestPath": {"type": ["string", "null"]},
+        "workflowStatePath": {"type": ["string", "null"]},
         "caseRoot": {"type": ["string", "null"]},
         "setupRoot": {"type": ["string", "null"]},
         "outputDir": {"type": ["string", "null"]}

@@ -19,7 +19,7 @@
 #     execution_context
 #
 # Description
-#     Resolves the case_root/setup_root/output_dir/manifest_path a strict
+#     Resolves the case_root/setup_root/output_dir/workflow_state_path a strict
 #     plan needs, independent of any legacy CLI action vocabulary.
 #
 # Author
@@ -50,7 +50,7 @@ class ExecutionContext:
     case_root: Path
     setup_root: Path
     output_dir: Path
-    manifest_path: Path
+    workflow_state_path: Path
 
 
 def resolve_execution_context(spec: TutorialSpec) -> ExecutionContext:
@@ -59,5 +59,5 @@ def resolve_execution_context(spec: TutorialSpec) -> ExecutionContext:
         case_root=Path(spec.case_root),
         setup_root=Path(spec.setup_root),
         output_dir=output_dir,
-        manifest_path=output_dir / "run_manifest.json",
+        workflow_state_path=output_dir / "workflow_state.json",
     )

@@ -20,7 +20,7 @@
 #
 # Description
 #     Tests resolve_execution_context(), the neutral case_root/setup_root/
-#     output_dir/manifest_path resolver that replaces strict_plan's reuse of
+#     output_dir/workflow_state_path resolver that replaces strict_plan's reuse of
 #     describe_launch("sim", ...) for path calculation.
 #
 # Author
@@ -41,7 +41,7 @@ from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 @skip_without_monorepo
 class TestResolveExecutionContext(unittest.TestCase):
-    def test_reports_case_setup_output_and_manifest_paths(self) -> None:
+    def test_reports_case_setup_output_and_workflow_state_paths(self) -> None:
         tutorials_root = monorepo_root / "tutorials"  # type: ignore[operator]
         spec = load_entry_spec("singleCell", overrides={"tutorials_root": str(tutorials_root)})
 
@@ -50,7 +50,10 @@ class TestResolveExecutionContext(unittest.TestCase):
         self.assertEqual(context.case_root, Path(spec.case_root))
         self.assertEqual(context.setup_root, Path(spec.setup_root))
         self.assertEqual(context.output_dir, Path(spec.output_dir))
-        self.assertEqual(context.manifest_path, Path(spec.output_dir) / "run_manifest.json")
+        self.assertEqual(
+            context.workflow_state_path,
+            Path(spec.output_dir) / "workflow_state.json",
+        )
 
     def test_never_re_resolves_the_entry(self) -> None:
         """Takes an already-built spec directly -- no resolve_entry/factory call of

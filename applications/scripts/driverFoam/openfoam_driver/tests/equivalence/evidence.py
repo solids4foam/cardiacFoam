@@ -19,7 +19,7 @@ VOLATILE_PATHS: tuple[str, ...] = (
     "postProcessing",
     "workflow_logs",
     "workflow_state.json",
-    "run_manifest.json",
+    "workflow_state.json",
     "logs",
 )
 

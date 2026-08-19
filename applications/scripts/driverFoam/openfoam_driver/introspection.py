@@ -177,113 +177,47 @@ def _describe_config_schema(
     )
 
 
-def _manifest_schema() -> dict[str, Any]:
-    """Static schema description for run_manifest.json.
+def _run_state_schema() -> dict[str, Any]:
+    """Static schema description for workflow_state.json.
 
-    Updated by every case completion and polled to track run progress.
-    For strict execution state, see payload["strict_launch"] and
-    output_dir/workflow_state.json, which is written by every workflow step."""
+    Replaces the former run_manifest.json description. That file was
+    advertised here as "the run-state source of truth", with polling
+    guidance -- but nothing in driverFOAM has ever written it; the only
+    writers are test fixtures that fabricate one to exercise the reader.
+    Six stale copies were committed under tutorials/, so an agent following
+    the old guidance either polled a file that never appeared or read a
+    months-old fossil and reported a run that never happened.
+
+    workflow_state.json is what the strict workflow orchestrator actually
+    writes, once per step.
+    """
     return {
         "description": (
-            "run_manifest.json is the run-state source of truth. "
-            "It is written to output_dir/run_manifest.json and updated after every "
-            "case completes. Poll this file to track run progress."
+            "workflow_state.json is the run-state source of truth. It is "
+            "written to output_dir/workflow_state.json by the strict workflow "
+            "orchestrator and updated after every workflow step. Poll this "
+            "file to track run progress."
         ),
-        "schema_version": "2.3",
-        "file_location": "output_dir/run_manifest.json  (see launch.<action>.manifest_path)",
+        "schema_version": "3.0",
+        "file_location": (
+            "output_dir/workflow_state.json  (see launch.<action>.workflowStatePath)"
+        ),
         "companion_file": (
-            "output_dir/action_events.jsonl — append-only JSONL log with one "
+            "output_dir/action_events.jsonl -- append-only JSONL log with one "
             "event per line: sim_started, case_started, case_finished, "
             "sim_finished, postprocess_started, postprocess_finished, all_started, all_finished."
         ),
         "polling_guidance": (
-            "Poll every 15-30 seconds. Stop when status is one of the terminal states. "
-            "Reading the file is safe at any time — it is written atomically."
+            "Poll every 15-30 seconds. Read status and current_step_id; each "
+            "step carries its own status, attempts, exit code, and log path. "
+            "Stop when status is a terminal state."
         ),
-        "top_level_fields": {
-            "schema_version": "string — manifest format version (currently '2.3'; v2.x is additive-only)",
-            "run_id": "string — unique ID for this run (timestamp + random suffix)",
-            "requested_action": "string — 'sim', 'post', or 'all'",
-            "entry": "string — selected entry name",
-            "entry_kind": "string | null — entry classification such as registered_tutorial or workflow_case",
-            "entry_path": "string | null — relative path of the resolved entry under tutorials/",
-            "source_type": "string | null — spec_factory, workflow_contract, workflow_reference_case, filesystem_case, or generic_alias",
-            "workflow_family": "string | null — workflow family name when the entry belongs to one",
-            "case_root": "string — absolute path to the case directory",
-            "setup_root": "string — absolute path to the setup directory",
-            "output_dir": "string — absolute path to the output directory",
-            "dry_run": "boolean",
-            "continue_on_error": "boolean",
-            "status": "string — see status_values below",
-            "postprocess_status": "string — see postprocess_status_values below",
-            "current_case_id": "string | null — case currently executing, null between cases",
-            "started_at_utc": "string | null — ISO 8601 UTC timestamp",
-            "updated_at_utc": "string — ISO 8601 UTC timestamp of last write",
-            "finished_at_utc": "string | null — ISO 8601 UTC timestamp, null until terminal",
-            "total_cases": "integer",
-            "planned_cases": "integer — cases with status 'planned' (dry_run only)",
-            "completed_cases": "integer — cases with status 'ok'",
-            "failed_cases": "integer — cases with status 'failed'",
-            "error": "string | null — top-level error message if run failed early",
-            "plots_manifest_path": "string | null — path to plots.json if postprocess produced plots",
-            "artifacts_manifest_path": "string | null — path to artifacts_manifest.json (predicted DataArtifacts for the current case state; v2.2+)",
-            "artifacts_realized_path": "string | null — path to artifacts_realized.json (v1.1: cases[] array, one entry per sweep case; predicted-vs-actual reconciliation; written only at terminal status on non-dry runs; v2.3+)",
-            "human_report_path": "string — path to run_report.md",
-            "results": "array of CaseResult objects — see case_result_fields",
-        },
-        "status_values": {
-            "running": "Simulation is in progress.",
-            "completed": "All cases finished successfully. Terminal.",
-            "completed_with_failures": "All cases ran; at least one failed. Terminal.",
-            "failed": "A case failed and continue_on_error=false. Terminal.",
-            "postprocessing": "Simulations done; postprocessing is now running.",
-            "postprocess_failed": "Postprocessing raised an exception. Terminal.",
-            "planned": "Dry-run completed — no actual simulation was run. Terminal.",
-        },
-        "postprocess_status_values": {
-            "not_started": "Postprocessing has not begun.",
-            "running": "Postprocessing is executing.",
-            "completed": "Postprocessing finished successfully.",
-            "failed": "Postprocessing raised an exception.",
-            "skipped": "Dry-run mode; postprocessing was not attempted.",
-        },
-        "terminal_states": [
-            "completed",
-            "completed_with_failures",
-            "failed",
-            "postprocess_failed",
-            "planned",
-        ],
-        "case_result_fields": {
-            "case_id": "string — unique case identifier",
-            "status": "'ok' | 'failed' | 'planned'",
-            "duration_s": "float — wall-clock seconds",
-            "params": "object — parameter values for this case",
-            "error": "string | null — exception message if status='failed'",
-            "index": "integer — 1-based position in the case list",
-            "total_cases": "integer",
-            "started_at_utc": "string | null — ISO 8601",
-            "finished_at_utc": "string | null — ISO 8601",
-        },
+        "retired": (
+            "run_manifest.json was described here through schema 2.3 but was "
+            "never written by driverFOAM. Do not poll it; any copy on disk is "
+            "a stale artifact."
+        ),
     }
-
-
-def list_runs(runs_root: str | Path) -> list[dict[str, Any]]:
-    import json
-    root = Path(runs_root)
-    manifests = []
-    if not root.exists():
-        return manifests
-
-    for path in root.rglob("run_manifest.json"):
-        try:
-            payload = json.loads(path.read_text())
-            manifests.append(payload)
-        except Exception:
-            pass
-
-    manifests.sort(key=lambda m: m.get("started_at_utc") or "", reverse=True)
-    return manifests
 
 
 def _workflow_catalog(
@@ -424,7 +358,7 @@ def describe_entry(
             make_spec_info,
             driver_context,
         ),
-        "manifest_schema": _manifest_schema(),
+        "run_state_schema": _run_state_schema(),
         "capability_manifest": _serialize({
             **dict(driver_context.capabilities.manifest.manifest()),
             "plugin_identity": driver_context.identity.to_json(),

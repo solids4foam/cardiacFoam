@@ -28,12 +28,12 @@
 """Discover past runs under a directory tree.
 
 `list_runs(root)` walks `root` recursively and yields one parsed
-manifest per `run_manifest.json` found. Malformed manifests are
+state document per `workflow_state.json` found. Malformed state files are
 silently skipped so an unfinished or partially-written run does not
 break agent recovery workflows.
 
 Each yielded entry is the raw manifest dict augmented with a
-``_manifest_path`` key carrying the absolute path to the source file —
+``_state_path`` key carrying the absolute path to the source file —
 agents use it to locate sibling sidecars (artifacts_manifest.json,
 artifacts_realized.json, action_events.jsonl, run_report.md).
 """
@@ -45,22 +45,22 @@ from typing import Iterator
 
 
 def list_runs(root: Path) -> Iterator[dict]:
-    """Yield every parseable `run_manifest.json` under `root`.
+    """Yield every parseable `workflow_state.json` under `root`.
 
     Walks recursively. Order of iteration follows ``Path.rglob`` —
     filesystem-defined and not deterministic across platforms. Callers
-    that need a stable order should sort by ``_manifest_path`` or
+    that need a stable order should sort by ``_state_path`` or
     ``started_at_utc``.
     """
     root = Path(root)
     if not root.is_dir():
         return
-    for manifest_path in root.rglob("run_manifest.json"):
+    for state_path in root.rglob("workflow_state.json"):
         try:
-            payload = json.loads(manifest_path.read_text())
+            payload = json.loads(state_path.read_text())
         except (json.JSONDecodeError, OSError):
             continue
         if not isinstance(payload, dict):
             continue
-        payload["_manifest_path"] = str(manifest_path)
+        payload["_state_path"] = str(state_path)
         yield payload

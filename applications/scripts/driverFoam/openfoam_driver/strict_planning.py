@@ -330,7 +330,7 @@ def _run_launch_description(
         "action": "run",
         "command": command,
         "command_display": shlex.join(command),
-        "manifest_path": str(context.manifest_path),
+        "workflow_state_path": str(context.workflow_state_path),
         "case_root": str(context.case_root),
         "setup_root": str(context.setup_root),
         "output_dir": str(context.output_dir),
