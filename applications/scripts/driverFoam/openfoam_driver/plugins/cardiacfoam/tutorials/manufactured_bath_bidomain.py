@@ -42,6 +42,8 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
     ensure_electro_property_dict,
     remove_electro_property_dict,
+    ensure_electro_property_entry,
+    remove_electro_property_entry,
 )
 from openfoam_driver.specs.common import (
     load_python_module,
@@ -227,6 +229,22 @@ def _workflow_dag_for(
     return {"steps": mesh_steps + steps}
 
 
+def _ensure_patch_entry(
+    electro_properties: Path,
+    electro_properties_scope: str,
+    patch_list: str,
+    patch_name: str,
+    value: float,
+) -> None:
+    """Set one bath boundary patch entry, adding it if absent."""
+    ensure_electro_property_entry(
+        electro_properties,
+        patch_name,
+        value,
+        scope=[electro_properties_scope, "bathPotentialDomain", patch_list],
+    )
+
+
 def _apply_case(
     case_root: Path,
     case: CaseConfig,
@@ -241,7 +259,7 @@ def _apply_case(
     ecg_enabled: bool = False,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     bath_predictor_corrector: bool = False,
-    fda_bath_variant: str = "groundElectrode",
+    fda_bath_variant: str = "electrodePair",
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
@@ -315,20 +333,33 @@ def _apply_case(
     if fda_bath_variant == "electrodePair":
         # groundPatches and surfaceCurrentPatches are mutually exclusive per
         # patch (extracellularPotentialDomain.C rejects a patch listed in
-        # both). The checked-in electroProperties defaults to groundElectrode
-        # and so carries groundPatches.xMin; switching variants must remove
-        # it, not just add the electrodePair surfaceCurrentPatches.xMin.
-        remove_electro_property_dict(
+        # both). The committed electroProperties records whichever variant
+        # ran last -- the shared case_root entry-based sweeps mutate in
+        # place -- so it may carry groundPatches.xMin; switching variants
+        # must remove it, not just add surfaceCurrentPatches.xMin.
+        # xMin is a scalar entry, so this needs the entry remover: the
+        # dict remover rejects it for having no opening brace, and
+        # missing_ok covers only absence, not a shape mismatch.
+        remove_electro_property_entry(
             electro_properties,
             "xMin",
             scope=[electro_properties_scope, "bathPotentialDomain", "groundPatches"],
             missing_ok=True,
         )
         ref_y, ref_z = _phi_e_ref_point_yz(dimension, cells)
+        # Patch entries are upserts, not updates: which list holds a patch
+        # depends on the variant the case was last written for, so the key may
+        # legitimately be absent. Everything else stays a strict update.
+        _ensure_patch_entry(
+            electro_properties, electro_properties_scope,
+            "surfaceCurrentPatches", "xMin", -defaults.FDA_ALPHA,
+        )
+        _ensure_patch_entry(
+            electro_properties, electro_properties_scope,
+            "surfaceCurrentPatches", "xMax", defaults.FDA_ALPHA,
+        )
         case_overrides.update(
             {
-                f"{bath_scope}.surfaceCurrentPatches.xMin": -defaults.FDA_ALPHA,
-                f"{bath_scope}.surfaceCurrentPatches.xMax": defaults.FDA_ALPHA,
                 f"{bath_scope}.phiERefPoint": f"(-0.9 {ref_y} {ref_z})",
                 f"{bath_scope}.phiEReferenceValue": 0.0,
             }
@@ -337,17 +368,19 @@ def _apply_case(
         # Symmetric cleanup: a prior electrodePair case sharing this
         # case_root may have left surfaceCurrentPatches.xMin behind, which
         # would collide with groundPatches.xMin below the same way.
-        remove_electro_property_dict(
+        remove_electro_property_entry(
             electro_properties,
             "xMin",
             scope=[electro_properties_scope, "bathPotentialDomain", "surfaceCurrentPatches"],
             missing_ok=True,
         )
-        case_overrides.update(
-            {
-                f"{bath_scope}.groundPatches.xMin": 0.0,
-                f"{bath_scope}.surfaceCurrentPatches.xMax": defaults.FDA_ALPHA,
-            }
+        _ensure_patch_entry(
+            electro_properties, electro_properties_scope,
+            "groundPatches", "xMin", 0.0,
+        )
+        _ensure_patch_entry(
+            electro_properties, electro_properties_scope,
+            "surfaceCurrentPatches", "xMax", defaults.FDA_ALPHA,
         )
 
     if ecg_enabled:
@@ -516,7 +549,7 @@ def make_spec(
     ecg_enabled: bool = False,
     postprocess_strict_artifacts: bool = False,
     bath_predictor_corrector: bool = False,
-    fda_bath_variant: str = "groundElectrode",
+    fda_bath_variant: str = "electrodePair",
     mesh_family: str = "hex",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,

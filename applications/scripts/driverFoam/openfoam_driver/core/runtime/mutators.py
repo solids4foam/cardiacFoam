@@ -563,6 +563,74 @@ def remove_foam_dict(
     file_path.write_text("".join(lines))
 
 
+def remove_foam_entry(
+    file_path: Path,
+    entry_name: str,
+    *,
+    scope: str | list[str] | tuple[str, ...] | None = None,
+    missing_ok: bool = False,
+) -> None:
+    """Remove a scalar entry (``name value;``) from an OpenFOAM dictionary file.
+
+    The scalar counterpart of :func:`remove_foam_dict`. That one deletes a
+    ``name { ... }`` block and raises if the matched name has no opening
+    brace; this one deletes the entry's line (or lines, for a value that
+    wraps before its terminating ``;``) and raises if the matched name turns
+    out to open a block instead.
+
+    Needed because a caller who wants a scalar gone has no way to say so with
+    the block remover: ``missing_ok`` covers only *absence*, so a key that is
+    present but the wrong shape raises regardless. Deleting
+    ``surfaceCurrentPatches.xMin`` when switching a bath-bidomain case between
+    boundary variants is exactly that case.
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
+
+    lines = file_path.read_text().splitlines(keepends=True)
+    try:
+        search_start, search_end = _resolve_search_region(lines, scope)
+    except KeyError:
+        if missing_ok:
+            return
+        raise
+
+    header_pattern = re.compile(rf"^\s*{re.escape(entry_name)}(?=\s|;|$)")
+
+    for i in range(search_start, search_end):
+        candidate = _strip_inline_comment(lines[i])
+        if not header_pattern.match(candidate):
+            continue
+
+        # Distinguish a scalar from a block: a block's brace opens either on
+        # the header line or before the first ``;``.
+        end = i
+        while end < search_end and ";" not in _strip_inline_comment(lines[end]):
+            if "{" in _strip_inline_comment(lines[end]):
+                raise KeyError(
+                    f"'{entry_name}' is a dictionary, not a scalar entry; "
+                    "use remove_foam_dict"
+                )
+            end += 1
+        if end >= search_end:
+            raise KeyError(f"Entry '{entry_name}' has no terminating ';'")
+        if "{" in _strip_inline_comment(lines[i]):
+            raise KeyError(
+                f"'{entry_name}' is a dictionary, not a scalar entry; "
+                "use remove_foam_dict"
+            )
+
+        del lines[i:end + 1]
+        file_path.write_text("".join(lines))
+        return
+
+    if missing_ok:
+        return
+    if scope is None:
+        raise KeyError(f"Entry '{entry_name}' not found in {file_path}")
+    raise KeyError(f"Entry '{entry_name}' not found in scope '{scope}' in {file_path}")
+
+
 def read_foam_dict_block(
     file_path: Path,
     dict_name: str,

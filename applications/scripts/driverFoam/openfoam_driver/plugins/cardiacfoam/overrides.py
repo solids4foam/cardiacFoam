@@ -2,7 +2,12 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ...core.runtime.mutators import ensure_foam_dict, remove_foam_dict, update_foam_entry
+from ...core.runtime.mutators import (
+    ensure_foam_dict,
+    remove_foam_dict,
+    remove_foam_entry,
+    update_foam_entry,
+)
 from .detection import detect_electro_coeffs_scope
 
 
@@ -147,6 +152,79 @@ def remove_electro_property_dict(
     remove_foam_dict(
         electro_properties_path,
         dict_name,
+        scope=resolved_scope,
+        missing_ok=missing_ok,
+    )
+
+
+def ensure_electro_property_entry(
+    electro_properties_path: Path,
+    entry_name: str,
+    value: Any,
+    *,
+    scope: str | Sequence[str] | None = None,
+) -> None:
+    """Set a scalar entry, adding it if the key is absent.
+
+    The general override path deliberately requires a key to exist already, so
+    that a typo fails loudly instead of silently growing a new entry. That is
+    the right default, but it cannot express a key whose *presence* legitimately
+    varies -- the bath-bidomain patch entries, where which of
+    ``groundPatches``/``surfaceCurrentPatches`` holds a patch depends on the
+    boundary variant the case was last written for.
+
+    Use this only for such entries. Everything else should stay strict.
+    """
+    resolved_scope = None
+    if scope is not None:
+        raw_scope = (scope,) if isinstance(scope, str) else tuple(scope)
+        resolved_scope = tuple(
+            part
+            for token in raw_scope
+            for part in _resolve_scope_tokens(
+                str(token),
+                electro_properties_path=electro_properties_path,
+            )
+        )
+
+    update_foam_entry(
+        electro_properties_path,
+        entry_name,
+        value,
+        scope=resolved_scope,
+        add_if_missing=True,
+    )
+
+
+def remove_electro_property_entry(
+    electro_properties_path: Path,
+    entry_name: str,
+    *,
+    scope: str | Sequence[str] | None = None,
+    missing_ok: bool = False,
+) -> None:
+    """Scalar counterpart of :func:`remove_electro_property_dict`.
+
+    Same ``$TOKEN`` scope resolution; delegates to
+    :func:`~openfoam_driver.core.runtime.mutators.remove_foam_entry` so a
+    ``name value;`` entry can be removed without the block remover rejecting
+    it for having no opening brace.
+    """
+    resolved_scope = None
+    if scope is not None:
+        raw_scope = (scope,) if isinstance(scope, str) else tuple(scope)
+        resolved_scope = tuple(
+            part
+            for token in raw_scope
+            for part in _resolve_scope_tokens(
+                str(token),
+                electro_properties_path=electro_properties_path,
+            )
+        )
+
+    remove_foam_entry(
+        electro_properties_path,
+        entry_name,
         scope=resolved_scope,
         missing_ok=missing_ok,
     )

@@ -46,6 +46,7 @@ bidomainSolverCoeffs
     {
         k               0.707107;
         alpha           0.01;
+        fdaBathVariant  electrodePair;
     }
     dimension       "1D";
     solutionAlgorithm implicit;
