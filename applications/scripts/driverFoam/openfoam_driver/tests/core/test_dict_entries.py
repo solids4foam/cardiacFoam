@@ -527,6 +527,105 @@ class TestDetectActiveTensionExportList(unittest.TestCase):
         self.assertIsNone(detect_active_tension_export_list(props))
 
 
+class TestEmptyExportListIsKnownEmpty(unittest.TestCase):
+    """An explicit ``export ()`` means "known, and empty" -- never "unknown".
+
+    Regression guard for the artifact-prediction bug in which an empty token
+    tuple was coerced to ``None`` (``tokens if tokens else None``).  ``None``
+    is the predictor's signal that nothing was declared, so it fell back to
+    the ionic/active-tension catalog's recommended exports and predicted
+    artifacts the solver was explicitly told not to write, failing the strict
+    run with ``missing_expected_artifacts``.  The detector's ``None`` must
+    mean "no ``export`` block found" and nothing else.
+    """
+
+    def _case_root(self, text: str) -> Path:
+        case_root = Path(tempfile.mkdtemp())
+        constant = case_root / "constant"
+        constant.mkdir()
+        (constant / "electroProperties").write_text(text)
+        return case_root
+
+    def _electro_properties(self, *, ionic_export: str, at_export: str | None = None) -> str:
+        at_block = ""
+        if at_export is not None:
+            at_block = (
+                "        activeTension\n        {\n"
+                f"            export ( {at_export} );\n"
+                "        }\n"
+            )
+        return (
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    ionicModel AlievPanfilov;\n"
+            "    outputVariables\n    {\n"
+            "        ionic\n        {\n"
+            f"            export ( {ionic_export} );\n"
+            "        }\n"
+            f"{at_block}"
+            "    }\n"
+            "}\n"
+        )
+
+    def test_empty_ionic_export_detects_as_empty_tuple_not_none(self) -> None:
+        from openfoam_driver.plugins.cardiacfoam.detection import detect_ionic_export_list
+
+        case_root = self._case_root(self._electro_properties(ionic_export=""))
+        declared = detect_ionic_export_list(case_root / "constant" / "electroProperties")
+        self.assertIsNotNone(declared, "empty export () must not be reported as unknown")
+        self.assertEqual(declared, ())
+
+    def test_empty_active_tension_export_detects_as_empty_tuple_not_none(self) -> None:
+        from openfoam_driver.plugins.cardiacfoam.detection import (
+            detect_active_tension_export_list,
+        )
+
+        case_root = self._case_root(
+            self._electro_properties(ionic_export="Vm", at_export="")
+        )
+        declared = detect_active_tension_export_list(
+            case_root / "constant" / "electroProperties"
+        )
+        self.assertIsNotNone(declared, "empty export () must not be reported as unknown")
+        self.assertEqual(declared, ())
+
+    def test_predictor_honours_empty_export_over_catalog_defaults(self) -> None:
+        """The behaviour the detector fix exists to protect."""
+        from openfoam_driver.plugins.cardiacfoam.artifacts_predictor import (
+            _exported_ionic_variables,
+        )
+        from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import (
+            IONIC_MODEL_CATALOG,
+        )
+
+        # The catalog must actually recommend something, or this test would
+        # pass for the wrong reason.
+        self.assertTrue(IONIC_MODEL_CATALOG["AlievPanfilov"].recommended_exports)
+
+        empty = self._case_root(self._electro_properties(ionic_export=""))
+        self.assertEqual(_exported_ionic_variables(empty, "AlievPanfilov"), ())
+
+    def test_predictor_still_falls_back_when_export_block_absent(self) -> None:
+        """The other half of the distinction: absent really is unknown."""
+        from openfoam_driver.plugins.cardiacfoam.artifacts_predictor import (
+            _exported_ionic_variables,
+        )
+        from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import (
+            IONIC_MODEL_CATALOG,
+        )
+
+        case_root = self._case_root(
+            "myocardiumSolver monodomainSolver;\n"
+            "monodomainSolverCoeffs\n{\n"
+            "    ionicModel AlievPanfilov;\n"
+            "}\n"
+        )
+        self.assertEqual(
+            _exported_ionic_variables(case_root, "AlievPanfilov"),
+            IONIC_MODEL_CATALOG["AlievPanfilov"].recommended_exports,
+        )
+
+
 class TestReadFoamEntry(unittest.TestCase):
     """read_foam_entry returns the raw value string for a key, or None."""
 
