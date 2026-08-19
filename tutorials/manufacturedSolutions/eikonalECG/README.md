@@ -1,42 +1,153 @@
-# Manufactured Eikonal ECG
+# manufacturedSolutions/eikonalECG tutorial
 
-This case verifies the eikonal activation-time solve and the eikonal template
-ECG calculation on manufactured unit domains.
+Manufactured-solution verification for the eikonal activation-time solve and its template ECG calculation.
 
-The eikonal solver writes `psi` as the activation time. The ECG solver samples
-`Vm(x,t) = U(t - psi(x))` internally and writes `postProcessing/eikonalECG.dat`.
+## Overview
 
-Run one 3D case directly with:
+### Stack
 
-```sh
-blockMesh -dict system/blockMeshDict.3D
-./Allrun
-```
+- myocardium solver: `eikonalSolver`
+- field verification: `manufacturedEikonalVerifier` from `libverificationModels`
+- ECG verification: `eikonalECGManufacturedVerifier` from `libverificationModels`
+- shared analytical oracle: `verificationModels`
 
-Run the available manufactured dimensions through the setup directory with:
+### Purpose
 
-```sh
-./setup/run_all_dimensions.sh
-```
+This case verifies:
 
-Expected verification outputs:
+- activation-time (`psi`) convergence against an analytical oracle
+  ($\tau(x) = \exp(k \cdot x)$), compared point-by-point at each cell centre
+  (no quadrature needed -- the manufactured solution is exact there)
+- the eikonal template ECG, `Vm(x,t) = U(t - psi(x))`, sampled internally and
+  written to `postProcessing/eikonalECG.dat`, checked against a
+  Gauss-Legendre quadrature reference (`referenceQuadratureOrder = 96`) of
+  the manufactured volume integral
+
+### Key Configuration
+
+- solver-side behavior: `eikonalSolverCoeffs` (`constant/electroProperties`)
+- analytical oracle: `verificationModels`
+- field verifier: `verificationModels/eikonalVerification`
+- ECG verifier: `verificationModels/ecgVerification`
+
+Typical outputs include:
 
 - `postProcessing/manufacturedEikonalActivationTime.dat`
 - `postProcessing/eikonalECG.dat`
 - `postProcessing/manufacturedEikonalECG.dat`
 - `postProcessing/manufacturedEikonalECGSummary.dat`
 
-The post-processing helper in `setup` collects activation
-and ECG summary files into CSV tables for manufactured mesh studies.
+## Variants & Extensions
 
-After the driver runs, generate the convergence plot with:
+### Tetrahedral (unstructured) Mesh Variant
 
-```sh
-python3 setup/plot_convergence.py postProcessing
+`setup/studies/tetConvergence/` is an activatable overlay of this same case
+on a genuinely unstructured mesh: identical `constant/` and `system/` dicts,
+except the mesh generator changes and `setup/studies/tetConvergence/fvSolution`
+is swapped in for the duration of a tet run and restored on exit. It was
+formerly the standalone `eikonalTetMMS` tutorial, merged in here (the 5
+shared dicts were byte-identical, so this case stayed the canonical hex case
+unchanged; only the tet-specific `box.geo.template` and `fvSolution` became
+the overlay). `box.geo.template` and its `fvSolution` overlay are co-located
+with the study that drives them (`setup/studies/tetConvergence/`) rather than
+under `setup/mesh/tet/`, matching `bidomain/setup/studies/tetConvergence/`
+and `monodomainPseudoECG`'s own tet variant.
+
+#### Tet Convergence
+
+`setup/studies/tetConvergence/box.geo.template` is a unit-cube gmsh
+(OpenCASCADE, Delaunay) template with a characteristic-length placeholder
+`__LC__`, instantiated per resolution by the driverFOAM tutorial
+(`manufactured_eikonal_ecg.py`'s `render_tet_geo`). Every tet study in this
+tutorial (`tetConvergence/sweep_tet_generic.json`, `errorLocalisation/`,
+`gradientVerification/`, `gradient_reconstruction/`) renders from this one
+template -- there is no separate mesh geometry variant. All six boundary
+faces lie on the axis-aligned planes `x,y,z in {0,1}`, where the manufactured
+cosine field has zero normal derivative, so the solver's default
+zeroGradient (no-flux) boundary stays compatible with the exact solution.
+
+#### Solved-Field Bulk/Boundary Error Decomposition
+
+`setup/studies/errorLocalisation/` sweeps the tet `N` ladder with
+`writeErrorField` enabled to separate the solved field's boundary-adjacent
+error from its interior (bulk) error.
+
+#### Gradient-Operator Studies
+
+`gradientReconstructionOrder` (`applications/test/gradientReconstructionOrder/`)
+exercises the gradient reconstruction operator alone against an exact
+analytic field. It is driven as a `gradient_reconstruction=True` workflow_dag
+step, appended after the case's solve (see `manufactured_eikonal_ecg.py`'s
+`_workflow_dag_for`) -- a real driverFOAM sweep, not bash, the same as every
+other study here. `setup/studies/gradientVerification/` covers the full
+gaussLinear-vs-leastSquares comparison; `setup/studies/gradient_reconstruction/`
+restricts that same matrix to the registered `eikonal_gradient_tet`
+experiment's leastSquares-only subset. See each folder's `README.md` for the
+exact commands.
+
+## Usage
+
+### Manual Execution
+
+```bash
+blockMesh -dict system/blockMeshDict.3D
+./Allrun
+./regressionTest.sh
 ```
 
-This writes `postProcessing/convergence_plot.pdf` and `.png` with three panels:
-spacing h. Cases that hit the nonlinear solver iteration cap are marked with ×.
+### Driver-Managed Sweeps (Suggested)
+
+Cartesian spatial convergence (1D/2D/3D):
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+python3 applications/scripts/paperI_results/aggregate.py eikonal_cartesian
+```
+
+Tet convergence:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+python3 applications/scripts/paperI_results/aggregate.py eikonal_tet_generic
+```
+
+Bulk/boundary error decomposition:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+```
+
+Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only):
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
+```
+
+Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table):
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
+```
+
+Or run every registered experiment through the normalized registry:
+
+```bash
+./reproduce_verification.sh eikonal_cartesian eikonal_tet_generic eikonal_gradient_tet eikonal_bulk_boundary_tet
+```
+
+## Effective mesh spacing and observed order
+
+The manufactured verifier assumes a structured mesh and back-computes an
+*effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count.
+For an unstructured tet mesh of the unit cube this is the mean cell size, and
+it is the correct convergence abscissa. `setup/mesh/tet/summarize_tet.py`
+therefore computes the observed order from consecutive `dx` values,
+`p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming a
+factor-of-two refinement, and reports it next to the `checkMesh` max
+non-orthogonality and max skewness so the mesh quality is explicit.
 
 ## Error Calculation and Quadrature
 
@@ -45,38 +156,3 @@ It is important to clarify how the errors are evaluated for the different fields
 1. **Activation Times ($\tau$)**: No quadrature is used here. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
 
 2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature (e.g. $q=96$), which integrates the continuous analytical function down to machine precision. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.
-
-## Tetrahedral (unstructured) mesh variant
-
-`setup/mesh/tet/` is an activatable overlay of this same case on a genuinely
-unstructured mesh: identical `constant/` and `system/` dicts, except the mesh
-generator changes and `setup/mesh/tet/fvSolution` is swapped in for the
-duration of a tet run and restored on exit. It was formerly the standalone
-`eikonalTetMMS` tutorial, merged in here (the 5 shared dicts were
-byte-identical, so this case stayed the canonical hex case unchanged; only the
-tet-specific `box.geo.template`, `fvSolution`, and run scripts became the
-overlay). The same pattern was later applied to
-`monodomainPseudoECG/setup/mesh/tet/` (formerly `monodomainTetMMS`).
-
-Run the gradient-scheme convergence sweep (paper table):
-
-```bash
-cd tutorials/manufacturedSolutions/eikonalECG
-bash setup/mesh/tet/run_scheme_study.sh
-```
-
-Runs `Gauss linear` and `leastSquares` gradient reconstruction across
-`N = 10, 20, 40` (Gauss--linear) and `N = 10, 20, 40, 80` (least-squares,
-overridable via `RESOLUTIONS`), writes `setup/results/scheme_study.csv`, and
-persists the canonical Paper I table:
-
-```bash
-python3 applications/scripts/paperI_results/aggregate.py eikonal_tet
-```
-
-The mesh-quality-only sweep (`setup/mesh/tet/run_eikonal_tet.sh`) and its
-resolution/end-time overrides follow the same convention as
-`monodomainPseudoECG`'s tet variant; see that case's README for the full
-description of the mesh-generation and effective-spacing methodology, which
-this case reuses unchanged (same `box.geo.template`,
-`setup/mesh/tet/summarize_tet.py` convergence-order convention).

@@ -6,7 +6,11 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-Execute the sweep using `foamctl run --sweep sweep_hex_convergence.json` or by invoking the local runner script.
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+python3 applications/scripts/paperI_results/aggregate.py eikonal_cartesian
+```
 
 ## Tracking & Outputs
 

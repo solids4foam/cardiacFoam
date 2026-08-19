@@ -59,24 +59,6 @@ def _eikonal_tet(root: Path):
     return schema.fill_rates(rows)
 
 
-def _eikonal_tet_frontal(root: Path):
-    """Frontal-family rotated-anisotropy eikonal control (@tbl-frontal-eikonal-control).
-
-    Reads its own sweepCasesFrontal/ archive, not the generic study's
-    sweepCases/ that _eikonal_tet reads -- sweep_tet_frontal.json sets a
-    distinct archive_dir_name precisely so the two case sets never collide.
-    from_eikonal_tet_activation/from_eikonal_tet_ecg's variant filtering
-    (_generic_eikonal_variant) falls through to a plain grad_scheme label
-    when conductivity_label/eikonal_advection_diffusion_approach are absent,
-    which this sweep's cases never set, so no adaptation is needed there."""
-    study = root / _TUT / "eikonalECG/setup/studies/tetConvergence"
-    archive = study / "results" / "sweepCasesFrontal"
-    manifest = study / "results" / "sweepRunFrontal" / "sweep_manifest.json"
-    rows = adapters.from_eikonal_tet_activation(archive, manifest, case="eikonal_tet_frontal")
-    rows += adapters.from_eikonal_tet_ecg(archive, manifest, case="eikonal_tet_frontal")
-    return schema.fill_rates(rows)
-
-
 def _coupling1D3D_hex(root: Path):
     base = root / _TUT / "monodomain1D3D/setup/studies/coupledConvergence/results"
     regimes = {
@@ -214,7 +196,6 @@ CASES = {
     "monodomain_tet_generic": _normalized(_mono_tet, "monodomain_tet_generic"),
     "eikonal_cartesian": _normalized(_eikonal_hex, "eikonal_cartesian"),
     "eikonal_tet_generic": _normalized(_eikonal_tet, "eikonal_tet_generic"),
-    "eikonal_tet_frontal": _normalized(_eikonal_tet_frontal, "eikonal_tet_frontal"),
     "bidomain_cartesian": _normalized(_bidomain_hex, "bidomain_cartesian"),
     "bidomain_temporal": _normalized(_bidomain_temporal, "bidomain_temporal"),
     "bidomain_tet_generic": _normalized(_bidomain_tet, "bidomain_tet_generic"),
@@ -242,7 +223,6 @@ _OUT = {
     "monodomain_tet_generic": "monodomainPseudoECG/setup/results/monodomain_tet_generic.csv",
     "eikonal_cartesian": "eikonalECG/setup/results/eikonal_cartesian.csv",
     "eikonal_tet_generic": "eikonalECG/setup/results/eikonal_tet_generic.csv",
-    "eikonal_tet_frontal": "eikonalECG/setup/results/eikonal_tet_frontal.csv",
     "bidomain_cartesian": "bidomain/setup/results/bidomain_cartesian.csv",
     "bidomain_temporal": "bidomain/setup/results/bidomain_temporal.csv",
     "bidomain_tet_generic": "bidomain/setup/results/bidomain_tet_generic.csv",

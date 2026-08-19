@@ -7,7 +7,6 @@ for arg in "$@"; do
     case "$arg" in
         mono_hex) mapped+=(monodomain_cartesian) ;;
         mono_tet) mapped+=(monodomain_tet_generic) ;;
-        mono_tet_frontal) mapped+=(monodomain_tet_frontal) ;;
         eikonal_hex) mapped+=(eikonal_cartesian) ;;
         eikonal_tet) mapped+=(eikonal_tet_generic) ;;
         bidomain_hex) mapped+=(bidomain_cartesian) ;;

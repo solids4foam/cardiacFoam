@@ -139,6 +139,50 @@ def test_eikonal_bulk_boundary_reads_activation_time_split(tmp_path):
     assert row["boundary_energy_fraction"] == f"{(0.0190353 / 0.022572) ** 2:g}"
 
 
+def test_eikonal_gradient_reconstruction_reads_workflow_log(tmp_path):
+    manifest = tmp_path / "sweepRun" / "sweep_manifest.json"
+    sweep_cases = tmp_path / "sweepCases"
+    _write_manifest(manifest, {
+        "leastSquares_10": {"grad_scheme": "least_squares", "number_cells": [10]},
+        "gaussLinear_10": {"grad_scheme": "gauss_linear", "number_cells": [10]},
+    })
+    log_dir = sweep_cases / "leastSquares_10" / "workflow_logs"
+    log_dir.mkdir(parents=True)
+    (log_dir / "gradientReconstructionOrder.attempt1.stdout.log").write_text(
+        "Manufactured eikonal gradient reconstruction test\n"
+        "  cells      : 4913\n"
+        "  k          : (1 0 0)\n"
+        "  gradScheme : leastSquares\n"
+        "gradient error against k*exp(k.x)\n"
+        "  nCells = 4913\n"
+        "  E_inf = 0.05\n"
+        "  Mean E = 0.01\n"
+        "  Cells with error > 0.05 = 3\n"
+        "  L2 Bulk = 0.0121307\n"
+        "  L2 Bound = 0.0190353\n"
+        "  L2 Total = 0.022572\n"
+        "  |grad|_RMS = 1.0\n"
+        "  relative = 0.022572\n"
+    )
+    # A case whose step never completed (no workflow_logs at all) must be
+    # skipped, not raise.
+    (sweep_cases / "gaussLinear_10").mkdir(parents=True)
+
+    rows = adapters.from_eikonal_gradient_reconstruction(sweep_cases, manifest)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["case"] == "eikonal_tet"
+    assert row["scheme"] == "leastSquares" and row["N"] == "10"
+    assert row["h"] == "0.0588235"          # 1/int(4913**(1/3)+0.5) == 1/17
+    assert row["n_cells"] == "4913"
+    assert row["Linf_max"] == "0.05"
+    assert row["Linf_mean"] == "0.01"
+    assert row["n_cells_Linf_gt_0_05"] == "3"
+    assert row["L2_bulk"] == "0.0121307"
+    assert row["L2_boundary"] == "0.0190353"
+    assert row["L2_total"] == "0.022572"
+
+
 def test_monodomain_tet_vm_merges_completed_manifest_batches(tmp_path):
     archive = tmp_path / "sweepCasesOptimised"
     manifest_a = tmp_path / "sweepRunA" / "sweep_manifest.json"
@@ -166,8 +210,8 @@ def test_monodomain_tet_vm_merges_completed_manifest_batches(tmp_path):
         (case_dir / name).write_text(f"Vm 1e-4 {l2} 1e-3\n")
 
     rows = adapters.from_monodomain_tet_vm(
-        archive, [manifest_a, manifest_b], case="mono_tet_frontal",
-        variant_of=adapters.frontal_monodomain_variant,
+        archive, [manifest_a, manifest_b], case="mono_tet",
+        variant_of=adapters.tet_conductivity_variant,
         h_by_n={40: 0.0142, 80: 0.0072},
         require_completed=True, require_case_dirs=True,
     )
@@ -193,7 +237,7 @@ def test_multi_manifest_reader_rejects_duplicate_case_ids(tmp_path):
 
     with pytest.raises(ValueError, match="duplicate case_id"):
         adapters.from_monodomain_tet_vm(
-            archive, manifests, variant_of=adapters.frontal_monodomain_variant,
+            archive, manifests, variant_of=adapters.tet_conductivity_variant,
             require_completed=True, require_case_dirs=True,
         )
 
@@ -213,7 +257,7 @@ def test_strict_manifest_reader_rejects_unfinished_case(tmp_path):
 
     with pytest.raises(ValueError, match="not completed"):
         adapters.from_monodomain_tet_vm(
-            archive, manifest, variant_of=adapters.frontal_monodomain_variant,
+            archive, manifest, variant_of=adapters.tet_conductivity_variant,
             require_completed=True, require_case_dirs=True,
         )
 

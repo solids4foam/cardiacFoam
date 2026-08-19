@@ -8,8 +8,8 @@ import subprocess
 from pathlib import Path
 
 
-CONTRACT_PATH = Path(__file__).resolve().parents[1] / "verification_experiments.json"
-REPO_ROOT = Path(__file__).resolve().parents[4]
+CONTRACT_PATH = Path(__file__).resolve().parent / "verification_experiments.json"
+REPO_ROOT = Path(__file__).resolve().parents[3]
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
 
 

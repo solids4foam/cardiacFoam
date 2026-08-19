@@ -55,16 +55,6 @@ from openfoam_driver.specs.utils import (
 from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
 
 
-_GRAD_SCHEME_TOKENS: dict[str, str] = {
-    "gauss_linear": "Gauss linear",
-    "least_squares": "leastSquares",
-}
-
-_TET_NUMERICS_PROFILES: dict[str, tuple[str, ...]] = {
-    "eikonal_tet": ("fvSolution",),
-}
-
-
 def _build_cases(
     number_cells: Sequence[int],
     dimensions: Sequence[str],
@@ -93,6 +83,9 @@ def _workflow_dag_for(
     *,
     case_root: Path,
     run_in_parallel: bool = False,
+    tet_geo_relpath: Path = Path("setup/studies/tetConvergence/box.geo"),
+    gradient_reconstruction: bool = False,
+    error_localisation_analysis: bool = False,
 ) -> dict[str, object]:
     # 1D is cheap enough that the original bash scripts never bothered
     # decomposing it; preserved here rather than in the (now dead) legacy
@@ -107,7 +100,7 @@ def _workflow_dag_for(
                 "command": "gmsh",
                 "args": [
                     "-3",
-                    "setup/mesh/tet/box.geo",
+                    str(tet_geo_relpath),
                     "-o",
                     "box.msh",
                     "-format",
@@ -135,14 +128,58 @@ def _workflow_dag_for(
         ]
         solve_depends_on = ["mesh"]
 
-    steps, _final_id = solve_steps(
+    steps, final_id = solve_steps(
         solve_id="solve",
         solve_command="cardiacFoam",
         depends_on=solve_depends_on,
         run_in_parallel=effective_run_in_parallel,
         case_root=case_root,
     )
-    return {"steps": mesh_steps + steps}
+    all_steps = mesh_steps + steps
+    if gradient_reconstruction:
+        # Standalone gradient-operator diagnostic (applications/test/
+        # gradientReconstructionOrder): no solve involved -- it only needs
+        # the mesh and system/fvSchemes -- but is placed after the solve
+        # step regardless, so it always runs against a case that has
+        # actually completed rather than racing a partial/failed solve.
+        # Its stdout, captured under postProcessing/workflow_logs/ like
+        # every workflow_dag step, is picked up by the same generic
+        # snapshot/diff archiver as every other case output (see
+        # output_collection.py) -- no bespoke wiring needed here.
+        all_steps = all_steps + [
+            {
+                "id": "gradientReconstructionOrder",
+                "command": "gradientReconstructionOrder",
+                "depends_on": [final_id],
+            }
+        ]
+    if error_localisation_analysis:
+        # Single-case spatial-correlation deep dive (writeErrorField's
+        # cellwise activation-time error, correlated against cell-centre
+        # position): writeCellCentres needs the reconstructed final-time
+        # solution, so it chains strictly after the solve step -- same
+        # reasoning as bathBidomain's interfaceMetrics step.
+        #
+        # The correlation analysis itself (analyse_error_localisation.py)
+        # is deliberately NOT a further workflow_dag step: normalize_workflow_dag's
+        # command allowlist (core/runtime/workflow.py) only permits an
+        # explicit-path command as "./<Allrun-family case script>" -- an
+        # arbitrary repo-relative script is refused on purpose, the same
+        # command-injection boundary documented in
+        # applications/scripts/driverFoam/SECURITY.md. It is a read-only
+        # analysis over writeCellCentres's already-written output, exactly
+        # like aggregate_bulk_boundary.py / aggregate_gradient_verification.py
+        # -- run manually after the sweep, not orchestrated by it (see
+        # gradientVerification/README.md).
+        all_steps = all_steps + [
+            {
+                "id": "writeCellCentres",
+                "command": "postProcess",
+                "args": ["-func", "writeCellCentres", "-latestTime"],
+                "depends_on": [final_id],
+            },
+        ]
+    return {"steps": all_steps}
 
 
 def _apply_case(
@@ -150,7 +187,7 @@ def _apply_case(
     case: CaseConfig,
     *,
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
-    electro_properties_relpath: Path = Path("constant/electroProperties"),
+    electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     physics_properties_relpath: Path = Path("constant/physicsProperties"),
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
@@ -162,6 +199,7 @@ def _apply_case(
     ),
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     mesh_family: str = "hex",
+    tet_geo_template_relpath: Path = Path("setup/studies/tetConvergence/box.geo.template"),
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
@@ -196,9 +234,18 @@ def _apply_case(
         )
 
     if mesh_family == "tet":
-        render_tet_geo(case_root, cells)
-        for overlay_name in _TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
-            overlay_source = case_root / "setup" / "mesh" / "tet" / overlay_name
+        # The .geo output and any numerics-profile overlay files (e.g.
+        # fvSolution) are siblings of the template, wherever the caller has
+        # placed it -- co-located with the study that drives it
+        # (setup/studies/tetConvergence/), matching bidomain/monodomainPseudoECG.
+        tet_geo_relpath = tet_geo_template_relpath.parent / "box.geo"
+        render_tet_geo(
+            case_root, cells,
+            template_relpath=tet_geo_template_relpath,
+            geo_relpath=tet_geo_relpath,
+        )
+        for overlay_name in defaults.TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
+            overlay_source = case_root / tet_geo_template_relpath.parent / overlay_name
             shutil.copy(overlay_source, case_root / "system" / overlay_name)
     else:
         try:
@@ -211,7 +258,7 @@ def _apply_case(
         update_foam_entry(
             case_root / "system" / "fvSchemes",
             "default",
-            _GRAD_SCHEME_TOKENS[grad_scheme],
+            defaults.GRAD_SCHEME_TOKENS[grad_scheme],
             scope=["gradSchemes"],
         )
     for entry in fv_scheme_overrides or ():
@@ -316,7 +363,7 @@ def make_spec(
     dimensions: Sequence[str] = defaults.DIMENSIONS,
     solver_types: Sequence[str] = defaults.SOLVER_TYPES,
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
-    electro_properties_relpath: str | Path = "constant/electroProperties",
+    electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     physics_properties_relpath: str | Path = "constant/physicsProperties",
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
@@ -333,9 +380,12 @@ def make_spec(
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
     mesh_family: str = "hex",
+    tet_geo_template_relpath: str | Path = "setup/studies/tetConvergence/box.geo.template",
     numerics_profile: str | None = None,
     grad_scheme: str | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
+    gradient_reconstruction: bool = False,
+    error_localisation_analysis: bool = False,
 ) -> TutorialSpec:
     dimensions_list = [str(item) for item in dimensions]
     if not dimensions_list:
@@ -347,15 +397,16 @@ def make_spec(
             f"mesh_family='tet' requires dimensions=['3D']; got {dimensions_list!r} "
             "(the unit-cube tet mesh has no 1D/2D variant)"
         )
-    if numerics_profile is not None and numerics_profile not in _TET_NUMERICS_PROFILES:
-        known = ", ".join(sorted(_TET_NUMERICS_PROFILES))
+    if numerics_profile is not None and numerics_profile not in defaults.TET_NUMERICS_PROFILES:
+        known = ", ".join(sorted(defaults.TET_NUMERICS_PROFILES))
         raise ValueError(f"numerics_profile must be one of: {known}; got {numerics_profile!r}")
-    if grad_scheme is not None and grad_scheme not in _GRAD_SCHEME_TOKENS:
-        known = ", ".join(sorted(_GRAD_SCHEME_TOKENS))
+    if grad_scheme is not None and grad_scheme not in defaults.GRAD_SCHEME_TOKENS:
+        known = ", ".join(sorted(defaults.GRAD_SCHEME_TOKENS))
         raise ValueError(f"grad_scheme must be one of: {known}; got {grad_scheme!r}")
 
     cells_list = [int(item) for item in number_cells]
     solver_types_list = [str(item) for item in solver_types]
+    tet_geo_template_path = Path(tet_geo_template_relpath)
 
     case_root, setup_root, output_dir = resolve_spec_paths(
         tutorials_root=tutorials_root,
@@ -389,6 +440,7 @@ def make_spec(
             ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
             block_mesh_dict_template=block_mesh_dict_template,
             mesh_family=mesh_family,
+            tet_geo_template_relpath=tet_geo_template_path,
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             fv_scheme_overrides=fv_scheme_overrides,
@@ -405,10 +457,16 @@ def make_spec(
             "workflow_dag": _workflow_dag_for(
                 mesh_family, dimensions_list,
                 case_root=case_root, run_in_parallel=run_in_parallel,
+                tet_geo_relpath=tet_geo_template_path.parent / "box.geo",
+                gradient_reconstruction=gradient_reconstruction,
+                error_localisation_analysis=error_localisation_analysis,
             ),
             "dimensions": dimensions_list,
             "solver_types": solver_types_list,
             "mesh_family": mesh_family,
+            "tet_geo_template_relpath": str(tet_geo_template_path),
+            "gradient_reconstruction": gradient_reconstruction,
+            "error_localisation_analysis": error_localisation_analysis,
             "numerics_profile": numerics_profile,
             "grad_scheme": grad_scheme,
             "electro_properties_scope": electro_properties_scope,

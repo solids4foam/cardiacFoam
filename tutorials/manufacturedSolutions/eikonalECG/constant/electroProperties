@@ -29,13 +29,13 @@ eikonalSolverCoeffs
     stimulusLocationMax ( 0.05 1 1 );
     verificationModel
     {
-        type            manufacturedEikonalVerifier;
+        type    manufacturedEikonalVerifier;
     }
     ecgDomains
     {
         ECG
         {
-            ecgSolver       eikonalECG;
+            ecgSolver    eikonalECG;
             sampling
             {
                 start           0;
@@ -44,17 +44,17 @@ eikonalSolverCoeffs
             }
             manufacturedEikonalECG
             {
-                enabled         yes;
-                referenceQuadratureOrder 96;
-                checkQuadratureOrders ( 6 12 24 48 96 );
+                enabled    yes;
+                referenceQuadratureOrder    96;
+                checkQuadratureOrders    (6 12 24 48 96);
             }
             electrodePositions
             {
-                E1              ( -0.5 0.5 0.5 );
-                E2              ( 1.5 0.5 0.5 );
-                E3              ( 1.2 0.23 0.61 );
-                E4              ( 1.35 0.74 0.28 );
-                E5              ( 1.55 0.41 0.83 );
+                E1    (-0.5 0.5 0.5);
+                E2    (1.5 0.5 0.5);
+                E3    (1.2 0.23 0.61);
+                E4    (1.35 0.74 0.28);
+                E5    (1.55 0.41 0.83);
             }
         }
     }

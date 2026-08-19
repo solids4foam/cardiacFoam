@@ -60,7 +60,23 @@ CARDIAC_SOLVER_COMMANDS = frozenset({"cardiacFoam"})
 # UTILITY_CATALOG does not contain it -- yet it is a live workflow step in the
 # manufacturedFDABathBidomain tutorial. It is post-processing: it reads the
 # reconstructed final-time solution the solver already wrote.
-CARDIAC_AUXILIARY_COMMANDS = frozenset({"bathBidomainInterfaceMetrics"})
+#
+# gradientReconstructionOrder (applications/test/gradientReconstructionOrder)
+# is the same shape of thing: no utility.manifest.toml, but a live workflow
+# step in manufactured_eikonal_ecg.py's gradient_reconstruction=True path,
+# appended after the solve step (see that module's _workflow_dag_for).
+#
+# The error_localisation_analysis=True path's other two steps need no entry
+# here: `postProcess` is already core-authorized generically
+# (CORE_NEUTRAL_COMMANDS in core/runtime/workflow.py), and the analysis
+# script itself is invoked by its own relative path (containing "/"), which
+# command_authorization does not gate at all -- see
+# workflow_runner._resolve_command: a "/" in the command is used verbatim as
+# an explicit opt-in, the same as any case's own Allrun/Allclean script.
+CARDIAC_AUXILIARY_COMMANDS = frozenset({
+    "bathBidomainInterfaceMetrics",
+    "gradientReconstructionOrder",
+})
 
 
 def solver_commands() -> frozenset[str]:

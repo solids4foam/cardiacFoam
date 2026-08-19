@@ -84,17 +84,17 @@ def _write_case(tutorials_root: Path) -> Path:
     case_root = tutorials_root / "manufacturedSolutions" / "eikonalECG"
     (case_root / "constant").mkdir(parents=True, exist_ok=True)
     (case_root / "system").mkdir(parents=True, exist_ok=True)
-    (case_root / "setup" / "mesh" / "tet").mkdir(parents=True, exist_ok=True)
+    (case_root / "setup" / "studies" / "tetConvergence").mkdir(parents=True, exist_ok=True)
 
     (case_root / "constant" / "electroProperties").write_text(_ELECTRO_PROPERTIES)
     (case_root / "constant" / "physicsProperties").write_text(_PHYSICS_PROPERTIES)
     (case_root / "system" / "blockMeshDict.3D").write_text("blocks ((10 10 10));\n")
     (case_root / "system" / "fvSchemes").write_text(_FVS)
     (case_root / "system" / "fvSolution").write_text(_FVSOL)
-    (case_root / "setup" / "mesh" / "tet" / "box.geo.template").write_text(
+    (case_root / "setup" / "studies" / "tetConvergence" / "box.geo.template").write_text(
         "lc = __LC__;\nBox(1) = {0, 0, 0, 1, 1, 1};\n"
     )
-    (case_root / "setup" / "mesh" / "tet" / "fvSolution").write_text(
+    (case_root / "setup" / "studies" / "tetConvergence" / "fvSolution").write_text(
         _FVSOL.replace("solvers", "tetSolvers")
     )
     return case_root
@@ -135,12 +135,43 @@ def test_tet_workflow_dag_matches_gmsh_pipeline(tmp_path):
     ]
     assert steps[1]["args"] == [
         "-3",
-        "setup/mesh/tet/box.geo",
+        "setup/studies/tetConvergence/box.geo",
         "-o",
         "box.msh",
         "-format",
         "msh2",
     ]
+
+
+def test_tet_workflow_dag_appends_gradient_reconstruction_after_solve(tmp_path):
+    spec = _make_spec(tmp_path, mesh_family="tet", gradient_reconstruction=True)
+    steps = spec.metadata["workflow_dag"]["steps"]
+    assert [step["id"] for step in steps] == [
+        "clean",
+        "gmsh",
+        "gmshToFoam",
+        "checkMesh",
+        "solve",
+        "gradientReconstructionOrder",
+    ]
+    assert steps[-1]["command"] == "gradientReconstructionOrder"
+    assert steps[-1]["depends_on"] == ["solve"]
+
+
+def test_tet_workflow_dag_appends_write_cell_centres_after_solve(tmp_path):
+    spec = _make_spec(tmp_path, mesh_family="tet", error_localisation_analysis=True)
+    steps = spec.metadata["workflow_dag"]["steps"]
+    assert [step["id"] for step in steps] == [
+        "clean",
+        "gmsh",
+        "gmshToFoam",
+        "checkMesh",
+        "solve",
+        "writeCellCentres",
+    ]
+    assert steps[-1]["command"] == "postProcess"
+    assert steps[-1]["args"] == ["-func", "writeCellCentres", "-latestTime"]
+    assert steps[-1]["depends_on"] == ["solve"]
 
 
 def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
@@ -160,7 +191,7 @@ def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
         spec.apply_case(spec.case_root, spec.build_cases()[0])
 
     mock_subprocess.run.assert_not_called()
-    assert "lc = 0.1;" in (case_root / "setup" / "mesh" / "tet" / "box.geo").read_text()
+    assert "lc = 0.1;" in (case_root / "setup" / "studies" / "tetConvergence" / "box.geo").read_text()
     assert "tetSolvers" in (case_root / "system" / "fvSolution").read_text()
     assert "leastSquares;" in (case_root / "system" / "fvSchemes").read_text()
 

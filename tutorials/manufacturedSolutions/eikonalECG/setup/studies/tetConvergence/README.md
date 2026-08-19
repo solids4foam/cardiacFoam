@@ -6,7 +6,11 @@ This study validates spatial convergence on unstructured tetrahedral meshes usin
 
 ## Execution
 
-Execute the sweep using `foamctl run --sweep sweep_tet_generic.json` or by invoking the local runner script.
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+python3 applications/scripts/paperI_results/aggregate.py eikonal_tet_generic
+```
 
 ## Tracking & Outputs
 

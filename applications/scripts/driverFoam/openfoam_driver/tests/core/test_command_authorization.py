@@ -131,7 +131,9 @@ def test_solver_and_auxiliary_commands_are_distinct() -> None:
     run's artifacts (see normalize_workflow_dag's producer heuristic)."""
     auth = default_driver_context().capabilities.command_authorization
     assert auth.solver_commands() == frozenset({"cardiacFoam"})
-    assert auth.auxiliary_commands() == frozenset({"bathBidomainInterfaceMetrics"})
+    assert auth.auxiliary_commands() == frozenset(
+        {"bathBidomainInterfaceMetrics", "gradientReconstructionOrder"}
+    )
     assert not (auth.solver_commands() & auth.auxiliary_commands())
 
 

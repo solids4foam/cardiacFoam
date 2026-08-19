@@ -7,7 +7,6 @@
       "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/run_monodomain_cartesian.sh",
         "driver_specs": [
           "setup/studies/cartesianConvergence/sweep_hex_convergence.json"
         ]
@@ -81,8 +80,10 @@
       "description": "Generic tetrahedral monodomain and pseudo-ECG gradient-scheme comparison",
       "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/mesh/tet/run_monodomain_tet_generic.sh"
+        "kind": "driver_sweep",
+        "driver_specs": [
+          "setup/studies/tetConvergence/sweep_tet_generic.json"
+        ]
       },
       "matrix": {
         "mesh_family": [
@@ -110,51 +111,11 @@
       }
     },
     {
-      "experiment_id": "monodomain_tet_frontal",
-      "description": "Frontal tetrahedral monodomain diagonal and rotated-anisotropy comparison",
-      "case_dir": "tutorials/manufacturedSolutions/monodomainPseudoECG",
-      "execution": {
-        "kind": "driver_sweep",
-        "runner": "setup/mesh/tet/run_monodomain_tet_frontal.sh",
-        "driver_specs": [
-          "setup/studies/tetConvergence/sweep_tet_frontal.json"
-        ]
-      },
-      "matrix": {
-        "mesh_family": [
-          "tet_frontal"
-        ],
-        "conductivity": [
-          "diagonal",
-          "rotated"
-        ],
-        "gradient_scheme": [
-          "GaussLinear",
-          "leastSquares"
-        ],
-        "N": [
-          10,
-          20,
-          40,
-          80
-        ]
-      },
-      "observables": [
-        "Vm"
-      ],
-      "aggregation": {
-        "key": "monodomain_tet_frontal",
-        "result": "setup/results/monodomain_tet_frontal.csv",
-        "reference": "reference/mono_tet_convergence.csv"
-      }
-    },
-    {
       "experiment_id": "eikonal_cartesian",
       "description": "Cartesian eikonal activation and pseudo-ECG convergence",
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/run_eikonal_cartesian.sh",
         "driver_specs": [
           "setup/studies/cartesianConvergence/sweep_hex_convergence.json"
         ]
@@ -190,8 +151,10 @@
       "description": "Generic tetrahedral eikonal activation and pseudo-ECG gradient-scheme comparison",
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
       "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/mesh/tet/run_eikonal_tet_generic.sh"
+        "kind": "driver_sweep",
+        "driver_specs": [
+          "setup/studies/tetConvergence/sweep_tet_generic.json"
+        ]
       },
       "matrix": {
         "mesh_family": [
@@ -225,52 +188,18 @@
       }
     },
     {
-      "experiment_id": "eikonal_tet_frontal",
-      "description": "Frontal tetrahedral least-squares eikonal control",
+      "experiment_id": "eikonal_gradient_tet",
+      "description": "Isolated least-squares gradient reconstruction on tetrahedral meshes",
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/studies/tetConvergence/run_eikonal_tet_frontal.sh",
         "driver_specs": [
-          "setup/studies/tetConvergence/sweep_tet_frontal.json"
+          "setup/studies/gradient_reconstruction/sweep_gradient_tet.json"
         ]
       },
       "matrix": {
         "mesh_family": [
-          "tet_frontal"
-        ],
-        "gradient_scheme": [
-          "leastSquares"
-        ],
-        "N": [
-          10,
-          20,
-          40,
-          80
-        ]
-      },
-      "observables": [
-        "activationTime",
-        "Phi_e"
-      ],
-      "aggregation": {
-        "key": "eikonal_tet_frontal",
-        "result": "setup/results/eikonal_tet_frontal.csv",
-        "reference": null
-      }
-    },
-    {
-      "experiment_id": "eikonal_gradient_tet",
-      "description": "Isolated least-squares gradient reconstruction on generic and Frontal tetrahedral meshes",
-      "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
-      "execution": {
-        "kind": "legacy_bash",
-        "runner": "setup/studies/gradient_reconstruction/run.sh"
-      },
-      "matrix": {
-        "mesh_family": [
-          "tet_generic",
-          "tet_frontal"
+          "tet_generic"
         ],
         "gradient_scheme": [
           "leastSquares"
@@ -301,7 +230,6 @@
       "case_dir": "tutorials/manufacturedSolutions/eikonalECG",
       "execution": {
         "kind": "driver_sweep",
-        "runner": "setup/studies/errorLocalisation/run_bulk_boundary_tet.sh",
         "driver_specs": [
           "setup/studies/errorLocalisation/sweep_tet_error_localisation.json"
         ]

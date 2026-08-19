@@ -24,12 +24,31 @@ is interior truncation.
 
 Usage
     postProcess -func writeCellCentres          # writes Cx, Cy, Cz
-    ./analyse_error_localisation.py <timeDir>
+    ./analyse_error_localisation.py [timeDir] [nbins]
+
+With no timeDir given, resolves the latest numeric time directory under the
+current directory itself (same convention as `foamListTimes -latestTime`),
+so this can run as a driverFOAM workflow_dag step -- a static command with
+no data flow from a preceding step's output -- immediately after a
+`postProcess -func writeCellCentres -latestTime` step.
 """
 
 import sys
 import math
 import os
+
+
+def _latest_time_dir(case_root="."):
+    candidates = []
+    for name in os.listdir(case_root):
+        try:
+            value = float(name)
+        except ValueError:
+            continue
+        candidates.append((value, name))
+    if not candidates:
+        raise SystemExit(f"no numeric time directories found under {case_root}")
+    return max(candidates)[1]
 
 
 def read_internal_field(path):
@@ -120,9 +139,7 @@ def stats(pairs, nbins, label):
 
 
 def main():
-    if len(sys.argv) < 2:
-        raise SystemExit(__doc__)
-    time_dir = sys.argv[1]
+    time_dir = sys.argv[1] if len(sys.argv) > 1 else _latest_time_dir()
     nbins = int(sys.argv[2]) if len(sys.argv) > 2 else 10
 
     err = load(time_dir, "activationTimeError")

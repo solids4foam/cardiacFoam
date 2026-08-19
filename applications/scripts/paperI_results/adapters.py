@@ -208,13 +208,17 @@ _MONODOMAIN_TENSOR_LABELS = {
 }
 
 
-def frontal_monodomain_variant(values):
-    """Canonical ``tensor/gradient`` label for the Frontal MMS matrix."""
-    model = _scalar(values["verification_model_type"])
+def tet_conductivity_variant(values):
+    """Canonical ``tensor/gradient`` label for the tet monodomain MMS matrix
+    (diagonal vs. rotated conductivity, crossed with grad_scheme). A case
+    that never recorded verification_model_type (the plain grad_scheme-only
+    matrix, from before the diagonal/rotated axis existed) defaults to the
+    diagonal tensor -- the only one that axis ever varied from."""
+    model = _scalar(values.get("verification_model_type", "manufacturedFDAMonodomainVerifier"))
     try:
         tensor = _MONODOMAIN_TENSOR_LABELS[model]
     except KeyError as exc:
-        raise ValueError(f"unsupported Frontal monodomain verifier: {model}") from exc
+        raise ValueError(f"unsupported tet monodomain verifier: {model}") from exc
     return f"{tensor}/{_grad_scheme_variant(values)}"
 
 
@@ -517,6 +521,75 @@ def from_eikonal_bulk_boundary(sweep_cases_dir, manifest_path, case="eikonal_tet
                 "L2_total": f"{l2_total:g}",
                 "boundary_energy_fraction": f"{fraction:g}",
             })
+    return rows
+
+
+_GRADIENT_RECONSTRUCTION_LOG_PATTERNS = {
+    "n_cells": re.compile(r"nCells\s*=\s*(\d+)"),
+    "linf_max": re.compile(r"E_inf\s*=\s*([-+0-9.eE]+)"),
+    "linf_mean": re.compile(r"Mean E\s*=\s*([-+0-9.eE]+)"),
+    "n_above": re.compile(r"Cells with error > 0\.05\s*=\s*(\d+)"),
+    "l2_bulk": re.compile(r"L2 Bulk\s*=\s*([-+0-9.eE]+)"),
+    "l2_boundary": re.compile(r"L2 Bound\s*=\s*([-+0-9.eE]+)"),
+    "l2_total": re.compile(r"L2 Total\s*=\s*([-+0-9.eE]+)"),
+}
+
+
+def _parse_gradient_reconstruction_log(text):
+    """Parse gradientReconstructionOrder's stdout (applications/test/
+    gradientReconstructionOrder/gradientReconstructionOrder.C's own
+    'nCells = .. / E_inf = .. / Mean E = .. / Cells with error > 0.05 = ..
+    / L2 Bulk = .. / L2 Bound = .. / L2 Total = ..' report block). Returns
+    None if any expected line is missing (a partial/failed run)."""
+    values = {}
+    for key, pattern in _GRADIENT_RECONSTRUCTION_LOG_PATTERNS.items():
+        match = pattern.search(text)
+        if not match:
+            return None
+        values[key] = match.group(1)
+    return values
+
+
+def from_eikonal_gradient_reconstruction(sweep_cases_dir, manifest_path, case="eikonal_tet"):
+    """Isolated gradient-operator reconstruction error, read from
+    gradientReconstructionOrder's own stdout log rather than a
+    postProcessing/*.dat file: it is a workflow_dag step appended after the
+    case's solve (see manufactured_eikonal_ecg.py's
+    gradient_reconstruction=True), so its stdout is captured under
+    postProcessing/workflow_logs/ like every other workflow step and
+    archived by the same generic snapshot/diff collector as everything else
+    (see output_collection.py) -- no bespoke wiring in the tutorial itself.
+
+    Reads the single (generic Delaunay) tet mesh this study covers -- see
+    setup/studies/tetConvergence/box.geo.template.
+
+    Column set (scheme,N,h,n_cells,Linf_max,Linf_mean,n_cells_Linf_gt_0_05,
+    L2_bulk,L2_boundary,L2_total) matches the original bash-era
+    scheme_study.csv this replaces -- not schema.CANONICAL_FIELDS, so
+    callers write it directly rather than through schema.write_canonical."""
+    rows = []
+    for case_dir, _dim, n, values in _iter_sweep_case_dirs(
+        sweep_cases_dir, manifest_path, "dimensions", "number_cells", fixed_dim="3D",
+    ):
+        scheme = _grad_scheme_variant(values)
+        log_paths = sorted(case_dir.glob("workflow_logs/gradientReconstructionOrder.attempt*.stdout.log"))
+        if not log_paths:
+            continue
+        parsed = _parse_gradient_reconstruction_log(log_paths[-1].read_text(errors="ignore"))
+        if parsed is None:
+            continue
+        n_cells = int(parsed["n_cells"])
+        n_per_direction = max(1, round(n_cells ** (1.0 / 3.0)))
+        rows.append({
+            "case": case, "scheme": scheme,
+            "N": str(n), "h": f"{1.0 / n_per_direction:g}", "n_cells": str(n_cells),
+            "Linf_max": f"{float(parsed['linf_max']):g}",
+            "Linf_mean": f"{float(parsed['linf_mean']):g}",
+            "n_cells_Linf_gt_0_05": parsed["n_above"],
+            "L2_bulk": f"{float(parsed['l2_bulk']):g}",
+            "L2_boundary": f"{float(parsed['l2_boundary']):g}",
+            "L2_total": f"{float(parsed['l2_total']):g}",
+        })
     return rows
 
 

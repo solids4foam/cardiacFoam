@@ -31,7 +31,11 @@ from ..ids import CardiacTutorialID
 
 from pathlib import Path
 
-from .shared import OUTPUT_DIR_NAME, RUN_CASE_SCRIPT_RELPATH
+from .shared import (
+    ELECTRO_PROPERTIES_RELPATH as SHARED_ELECTRO_PROPERTIES_RELPATH,
+    OUTPUT_DIR_NAME,
+    RUN_CASE_SCRIPT_RELPATH,
+)
 
 
 TUTORIAL_NAME = CardiacTutorialID.MANUFACTURED_EIKONAL_ECG.value
@@ -42,8 +46,16 @@ DIMENSIONS = ("1D", "2D", "3D")
 SOLVER_TYPES = ("eikonal",)
 PIECEWISE_SWEEP = True
 ELECTRO_PROPERTIES_SCOPE = "eikonalSolverCoeffs"
+ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH
 BLOCK_MESH_DICT_TEMPLATE = "system/blockMeshDict.{dimension}"
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
+GRAD_SCHEME_TOKENS = {
+    "gauss_linear": "Gauss linear",
+    "least_squares": "leastSquares",
+}
+TET_NUMERICS_PROFILES = {
+    "eikonal_tet": ("fvSolution",),
+}
 POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured_eikonal_ecg.py")
 POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
 RUN_IN_PARALLEL = True

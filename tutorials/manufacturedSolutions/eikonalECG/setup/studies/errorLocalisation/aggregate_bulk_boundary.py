@@ -2,8 +2,9 @@
 """Regenerate eikonalECG's canonical solved-field bulk/boundary CSV.
 
 Reads this study's own driverFOAM sweep archive (results/sweepCases +
-results/sweepRun/sweep_manifest.json, produced by run_bulk_boundary_tet.sh)
-via adapters.from_eikonal_bulk_boundary, and writes
+results/sweepRun/sweep_manifest.json, produced by `driverFoam sweep-run
+--spec sweep_tet_error_localisation.json`, see README.md) via
+adapters.from_eikonal_bulk_boundary, and writes
 setup/results/eikonal_bulk_boundary_tet.csv.
 
 Naming follows applications/scripts/paperI_results/README.md's
@@ -19,7 +20,8 @@ rate columns), so this writes its own bespoke CSV shape directly rather than
 going through schema.write_canonical -- see adapters.from_eikonal_bulk_boundary's
 docstring.
 
-Usage (normally invoked by run_bulk_boundary_tet.sh after the sweep):
+Usage (run after `driverFoam sweep-run --spec sweep_tet_error_localisation.json`,
+see README.md):
     python3 aggregate_bulk_boundary.py
 """
 from __future__ import annotations
