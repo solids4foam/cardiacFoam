@@ -75,66 +75,6 @@ def _ensure_mesh(case_root: Path, block_mesh_dict_relpath: Path) -> None:
         )
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    n_steps: int = defaults.N_STEPS,
-    delta_t: float = defaults.DELTA_T,
-    block_mesh_dict_relpath: Path = defaults.BLOCK_MESH_DICT_RELPATH,
-) -> None:
-    del setup_root
-    graph_id = str(case.params["graph_id"])
-    output_dir = case_root / defaults.OUTPUT_DIR_NAME / graph_id
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    _ensure_mesh(case_root, block_mesh_dict_relpath)
-
-    stale_patterns = (
-        "postProcessing/graph_*_nodes.dat",
-        "postProcessing/purkinjeNetwork.dat",
-    )
-    for pattern in stale_patterns:
-        for path in case_root.glob(pattern):
-            path.unlink()
-
-    with (output_dir / "log.runPurkinjeGraph").open("w") as log:
-        subprocess.run(
-            [
-                "runPurkinjeGraph",
-                "-case",
-                str(case_root),
-                "-nSteps",
-                str(int(n_steps)),
-                "-deltaT",
-                f"{float(delta_t):.12g}",
-            ],
-            check=True,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-        )
-
-    purkinje_dat = case_root / "postProcessing" / "purkinjeNetwork.dat"
-    if purkinje_dat.exists():
-        shutil.copy2(purkinje_dat, output_dir / purkinje_dat.name)
-
-    graph_outputs = sorted((case_root / "postProcessing").glob("graph_*_nodes.dat"))
-    if not graph_outputs:
-        raise FileNotFoundError(
-            f"No manufactured graph verifier output was written for {graph_id}"
-        )
-    for source in graph_outputs:
-        shutil.copy2(source, output_dir / source.name)
-
-    vtk_dir = case_root / "postProcessing" / "purkinjeNetworkVTK"
-    if vtk_dir.exists():
-        destination_vtk = output_dir / "purkinjeNetworkVTK"
-        shutil.copytree(vtk_dir, destination_vtk, dirs_exist_ok=True)
-
-
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
     archived_dir = case_root / defaults.OUTPUT_DIR_NAME
     if not archived_dir.exists() or archived_dir.resolve() == output_dir.resolve():
@@ -175,7 +115,6 @@ def make_spec(
         output_dir=output_dir,
         build_cases=partial(_build_cases, graph_ids=graph_ids_list),
         apply_case=_apply_case,
-        run_case=partial(_run_case, n_steps=n_steps, delta_t=delta_t),
         collect_outputs=_collect_outputs,
         metadata={
             "notes": "Manufactured Purkinje graph convergence benchmark",

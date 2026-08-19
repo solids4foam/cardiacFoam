@@ -99,24 +99,6 @@ def _apply_case(case_root: Path, case: CaseConfig) -> None:
         shutil.copy(template_dir / name, case_root / "system" / name)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    run_in_parallel: bool,
-) -> None:
-    # Structural TutorialSpec requirement only -- run --strict/sweep-run
-    # execute the workflow_dag below exclusively, never this function.
-    del setup_root, case
-    if run_in_parallel:
-        subprocess.run(["decomposePar"], cwd=case_root, check=True)
-        subprocess.run(["mpirun", "-np", "6", "cardiacFoam", "-parallel"], cwd=case_root, check=True)
-        subprocess.run(["reconstructPar"], cwd=case_root, check=True)
-    else:
-        subprocess.run(["cardiacFoam"], cwd=case_root, check=True)
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -151,7 +133,6 @@ def make_spec(
         output_dir=output_dir,
         build_cases=partial(_build_cases, solver_variant=solver_variant),
         apply_case=_apply_case,
-        run_case=partial(_run_case, run_in_parallel=run_in_parallel),
         metadata={
             "notes": "Solver-stack comparison over one shared real heart anatomy.",
             "workflow_dag": {"steps": steps},

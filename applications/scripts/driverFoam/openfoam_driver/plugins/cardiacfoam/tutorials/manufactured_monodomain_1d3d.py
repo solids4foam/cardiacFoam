@@ -104,22 +104,6 @@ def _apply_case(
         apply_electro_property_overrides(electro_properties, electro_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-) -> None:
-    del setup_root
-
-    # Clean previous dynamic outputs before run
-    stale_patterns = (
-        "postProcessing/graph_*_nodes.dat",
-        "postProcessing/3D_*_cells_*.dat",
-        "verification/coupled1D3DMonodomain_diagnostics.csv",
-    )
-    for pattern in stale_patterns:
-        for path in case_root.glob(pattern):
-            path.unlink()
     # The actual execution is handled by the generic executor running the workflow_dag
 
 
@@ -181,7 +165,6 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             end_time=end_time,
         ),
-        run_case=_run_case,
         collect_outputs=lambda c_root, o_dir, case: _collect_outputs(c_root, o_dir, case),
         metadata={
             "notes": "Manufactured coupled 1D-3D monodomain convergence benchmark",

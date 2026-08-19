@@ -125,73 +125,6 @@ def _apply_case(
     )
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None,
-    run_script_relpath: Path,
-) -> None:
-    del setup_root
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-
-    command = [
-        "bash",
-        "-l",
-        str(run_script),
-        "--case-dir",
-        str(case_root),
-    ]
-
-    dimension = case.params.get("dimension")
-    if dimension:
-        command.extend(["--dimension", str(dimension)])
-    if case.params.get("parallel"):
-        command.append("--parallel")
-    if case.params.get("touch_case_foam"):
-        command.append("--touch-case-foam")
-
-    openfoam_bashrc = case.params.get("openfoam_bashrc")
-    if openfoam_bashrc:
-        command.extend(["--openfoam-bashrc", str(openfoam_bashrc)])
-
-    subprocess.run(command, check=True)
-
-
-def _run_direct(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    solver_command: str | Sequence[str],
-    pre_solve_commands: Sequence[str | Sequence[str]],
-    openfoam_bashrc: str | Path | None,
-) -> None:
-    del setup_root
-    env_prefix: list[str] = []
-    if openfoam_bashrc:
-        env_prefix = ["bash", "-c", f"source {openfoam_bashrc} && exec \"$@\"", "--"]
-
-    for raw_cmd in pre_solve_commands:
-        cmd = list(raw_cmd) if not isinstance(raw_cmd, str) else raw_cmd.split()
-        subprocess.run(env_prefix + cmd if env_prefix else cmd, cwd=case_root, check=True)
-
-    solver_cmd = (
-        solver_command.split()
-        if isinstance(solver_command, str)
-        else list(solver_command)
-    )
-    subprocess.run(
-        env_prefix + solver_cmd if env_prefix else solver_cmd,
-        cwd=case_root,
-        check=True,
-    )
-
-
 def _split_command(command: str | Sequence[str]) -> list[str]:
     return command.split() if isinstance(command, str) else list(command)
 
@@ -346,20 +279,6 @@ def make_spec(
             _apply_case,
             dict_file_relpaths=resolved_relpaths,
             mutation_callback=_apply_case_mutation,
-        ),
-        run_case=(
-            partial(
-                _run_direct,
-                solver_command=solver_command,
-                pre_solve_commands=normalized_pre_solve,
-                openfoam_bashrc=openfoam_bashrc,
-            )
-            if solver_command is not None
-            else partial(
-                _run_case,
-                tutorials_root=tutorials_root,
-                run_script_relpath=run_script_path,
-            )
         ),
         collect_outputs=(
             partial(_collect_outputs, patterns=tuple(str(item) for item in collect_patterns))

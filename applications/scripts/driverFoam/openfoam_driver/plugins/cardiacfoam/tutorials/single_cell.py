@@ -96,24 +96,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties_file, physics_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    _: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-) -> None:
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    subprocess.run(
-        ["bash", "-l", str(run_script), "--case-dir", str(case_root)],
-        check=True,
-    )
-
-
 def _collect_outputs(case_root: Path, output_dir: Path, *, output_glob: str = defaults.OUTPUT_GLOB) -> None:
     collect_outputs_by_pattern(case_root, output_dir, pattern=output_glob)
 
@@ -195,11 +177,6 @@ def make_spec(
             physics_properties_relpath=physics_properties_path,
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
         ),
         collect_outputs=partial(_collect_outputs, output_glob=output_glob),
         metadata={

@@ -364,80 +364,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
-    convergence_axis: str = "spatial",
-    archive_tag: str = "default",
-    verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
-) -> None:
-    del setup_root
-    dimension = str(case.params["dimension"])
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    command = [
-        "bash",
-        "-l",
-        str(run_script),
-        "--case-dir",
-        str(case_root),
-        "--dimension",
-        dimension,
-    ]
-    if run_in_parallel:
-        command.append("--parallel")
-
-    try:
-        subprocess.run(
-            command,
-            check=True,
-        )
-    finally:
-        archive_case_logs(case_root, case.case_id)
-
-    # 1. Stage the convergence manufactured output (with anisotropic/legacy fallbacks)
-    filename = _case_output_filename(case, convergence_axis=convergence_axis)
-    legacy_filename = _case_output_filename(case, convergence_axis="spatial")
-    destination_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
-
-    source_names = [filename]
-    if verification_model_type == "manufacturedAnisotropicMonodomainVerifier":
-        source_names.append(
-            f"rotatedAnisotropy_3D_{int(case.params['cells'])}_cells_{case.params['solver']}.dat"
-        )
-    if convergence_axis != "spatial" and legacy_filename != filename:
-        source_names.append(legacy_filename)
-        
-    found = False
-    for name in source_names:
-        try:
-            stage_post_processing_outputs(
-                case_root, destination_dir, {name: filename}, missing_ok=False
-            )
-            found = True
-            break
-        except FileNotFoundError:
-            continue
-            
-    if not found:
-        raise FileNotFoundError(f"Manufactured output not found. Checked: {source_names}")
-
-    # 2. Stage ECG outputs
-    ecg_mapping = {
-        "pseudoECG.dat": f"ECG_{case.case_id}_pseudoECG.dat",
-        "manufacturedPseudoECG.dat": f"ECG_{case.case_id}_manufacturedPseudoECG.dat",
-        "manufacturedPseudoECGSummary.dat": f"ECG_{case.case_id}_manufacturedPseudoECGSummary.dat",
-    }
-    stage_post_processing_outputs(case_root, destination_dir, ecg_mapping, missing_ok=True)
-
-
 def _collect_outputs(case_root: Path, output_dir: Path, *, archive_tag: str = "default") -> None:
     archived_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
     archived_outputs = []
@@ -616,15 +542,6 @@ def make_spec(
             ecg_check_quadrature_orders=ecg_check_quadrature_orders,
             ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
             block_mesh_dict_template=block_mesh_dict_template,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
-            run_in_parallel=run_in_parallel,
-            convergence_axis=convergence_axis_normalized,
-            archive_tag=archive_tag,
-            verification_model_type=verification_model_type,
         ),
         collect_outputs=partial(
             _collect_outputs,

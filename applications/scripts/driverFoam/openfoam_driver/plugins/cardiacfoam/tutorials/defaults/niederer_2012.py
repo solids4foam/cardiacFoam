@@ -67,11 +67,11 @@ BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict")
 # NIEDERER_POINTS_FUNCTION_OBJECT/_LINE_FUNCTION_OBJECT, NIEDERER_SAMPLED_FIELD,
 # RUN_SCRIPT_RELPATH, and every *_POSTPROCESS_* constant. All of them existed
 # solely to feed niederer_2012.py's _run_case/_export_openfoam_samples --
-# code that TutorialSpec.run_case never actually calls (confirmed: zero
-# references anywhere in core/runtime/*.py or cli.py) and that duplicated,
+# code that TutorialSpec.run_case never actually called, and that duplicated,
 # with hardcoded probe labels, what setup/convert_raw_samples.py now reads
 # directly from the raw OpenFOAM probes file's own header. Removed alongside
 # that dead code in the niederer_2012.py cleanup that follows 32cc29dd.
+# TutorialSpec.run_case itself has since been removed entirely.
 __all__ = [
     "TUTORIAL_NAME",
     "CASE_DIR_NAME",

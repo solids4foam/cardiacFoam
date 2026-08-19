@@ -25,7 +25,6 @@ def _spec(tmp_path: Path) -> TutorialSpec:
         output_dir=tmp_path / "postProcessing",
         build_cases=lambda: [],
         apply_case=lambda *_args: None,
-        run_case=lambda *_args: None,
         metadata={"generic_case": True},
     )
 

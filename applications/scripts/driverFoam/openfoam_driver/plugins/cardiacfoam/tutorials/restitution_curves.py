@@ -119,42 +119,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties_file, physics_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    output_dir: Path,
-) -> None:
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    subprocess.run(
-        ["bash", "-l", str(run_script), "--case-dir", str(case_root)],
-        check=True,
-    )
-
-    # Per-case collection: generate video, then rename & move the .txt output
-    # before the next simulation overwrites it.
-    ionic_model = case.params["ionicModel"]
-    tissue = case.params["tissue"]
-    s2_interval = case.params["s2Interval"]
-    model_dir = output_dir / ionic_model / tissue
-    model_dir.mkdir(parents=True, exist_ok=True)
-
-    for source in sorted(output_dir.glob(f"{ionic_model}_{tissue}_S1_*_S2_{s2_interval}.txt")):
-        stem = source.stem
-
-        dest = model_dir / source.name
-        if dest.exists():
-            dest.unlink()
-        shutil.move(str(source), str(dest))
-        print(f"Moved output: {source.name} -> {dest}")
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -240,13 +204,7 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
         ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
-            output_dir=output_dir,
-        ),
-        collect_outputs=None,  # per-case collection handled inside _run_case
+        collect_outputs=None,  # per-case collection happens in the workflow DAG
         metadata={
             "python": sys.executable,
             "notes": "S1–S2 restitution protocol sweep on ionic model, tissue, and S2 interval.",

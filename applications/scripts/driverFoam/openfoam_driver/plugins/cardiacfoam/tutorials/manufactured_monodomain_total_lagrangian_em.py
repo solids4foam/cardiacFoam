@@ -129,48 +129,6 @@ def _apply_case(
 
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
-) -> None:
-    del setup_root
-    dimension = str(case.params["dimension"])
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    command = [
-        "bash",
-        "-l",
-        str(run_script),
-        "--case-dir",
-        str(case_root),
-        "--dimension",
-        dimension,
-    ]
-    if run_in_parallel:
-        command.append("--parallel")
-
-    try:
-        subprocess.run(command, check=True)
-    finally:
-        archive_case_logs(case_root, case.case_id)
-        
-    filename = _case_output_filename(case)
-    destination_dir = _archive_output_dir(case_root)
-    stage_post_processing_outputs(
-        case_root, 
-        destination_dir, 
-        {"manufacturedElectromechanicsSummary.dat": filename}, 
-        missing_ok=False
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -248,12 +206,6 @@ def make_spec(
             electromechanical_property_overrides=electromechanical_property_overrides,
             physics_property_overrides=physics_property_overrides,
             verification_model_type=verification_model_type,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
-            run_in_parallel=run_in_parallel,
         ),
         collect_outputs=_collect_outputs,
         metadata={

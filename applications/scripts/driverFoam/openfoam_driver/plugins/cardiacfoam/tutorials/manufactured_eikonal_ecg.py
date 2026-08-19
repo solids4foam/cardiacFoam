@@ -88,8 +88,8 @@ def _workflow_dag_for(
     error_localisation_analysis: bool = False,
 ) -> dict[str, object]:
     # 1D is cheap enough that the original bash scripts never bothered
-    # decomposing it; preserved here rather than in the (now dead) legacy
-    # _run_case path, since this is the mechanism sweep-run actually executes.
+    # decomposing it; this lives on the workflow_dag path, which is the
+    # mechanism sweep-run actually executes.
     effective_run_in_parallel = run_in_parallel and dimensions_list[-1] != "1D"
 
     if mesh_family == "tet":
@@ -274,59 +274,6 @@ def _apply_case(
 
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
-) -> None:
-    del setup_root
-    dimension = str(case.params["dimension"])
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    # 1D manufactured meshes only have 10-80 cells total; decomposing them
-    # across the tutorial's 6-way decomposeParDict leaves some ranks with
-    # 1-2 cells, which has produced a DILU-preconditioner SIGFPE (degenerate
-    # local matrix) at tight PIMPLE tolerance. 6-way decomposition is fine for
-    # the 2D/3D cases, so only 1D is forced to run serially.
-    case_run_in_parallel = run_in_parallel and dimension != "1D"
-    command = [
-        "bash",
-        "-l",
-        str(run_script),
-        "--case-dir",
-        str(case_root),
-        "--dimension",
-        dimension,
-    ]
-    if case_run_in_parallel:
-        command.append("--parallel")
-
-    try:
-        subprocess.run(
-            command,
-            check=True,
-        )
-    finally:
-        archive_case_logs(case_root, case.case_id)
-
-    destination_dir = case_root / "postProcessing"
-    file_mapping = {
-        name: f"{case.case_id}_{name}" for name in (
-            "eikonalECG.dat",
-            "manufacturedEikonalECG.dat",
-            "manufacturedEikonalECGSummary.dat",
-            "manufacturedEikonalActivationTime.dat",
-        )
-    }
-    stage_post_processing_outputs(case_root, destination_dir, file_mapping, missing_ok=True)
-
-
 def _collect_outputs(case_root: Path, output_dir: Path) -> None:
     archived_dir = _archive_output_dir(case_root)
     archived_outputs = []
@@ -444,12 +391,6 @@ def make_spec(
             numerics_profile=numerics_profile,
             grad_scheme=grad_scheme,
             fv_scheme_overrides=fv_scheme_overrides,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=Path(run_script_relpath),
-            run_in_parallel=run_in_parallel,
         ),
         collect_outputs=_collect_outputs,
         metadata={

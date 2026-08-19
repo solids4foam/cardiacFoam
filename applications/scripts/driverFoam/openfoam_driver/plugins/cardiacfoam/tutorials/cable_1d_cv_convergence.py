@@ -126,52 +126,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    output_dir_name: str = defaults.DEFAULT_OUTPUT_DIR_NAME,
-    cv_extract_script_relpath: Path = defaults.CV_EXTRACT_SCRIPT_RELPATH,
-    parallel: bool = defaults.PARALLEL,
-) -> None:
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    command = [
-        "bash",
-        "-l",
-        str(case_root / "Allclean"),
-    ]
-    subprocess.run(command, cwd=case_root, check=True)
-
-    command = [
-        "bash",
-        "-l",
-        str(run_script),
-        "--case-dir",
-        str(case_root),
-    ]
-    if parallel:
-        command.append("parallel")
-    subprocess.run(command, check=True)
-
-    output_dir = case_root / output_dir_name / str(case.params["ionicModel"])
-    output_dir.mkdir(parents=True, exist_ok=True)
-    extract_module = load_python_module(
-        setup_root / cv_extract_script_relpath,
-        module_name=f"{defaults.TUTORIAL_NAME}_extract_cv",
-    )
-    extract_module.write_summary_files(
-        case_dir=case_root,
-        output_dir=output_dir,
-        case_id=case.case_id,
-    )
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -248,14 +202,6 @@ def make_spec(
             cable_length_mm=cable_length_mm,
             cross_section_cell_counts=cross_section_cell_counts,
             end_time_s=end_time_s,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=run_script_path,
-            output_dir_name=output_dir.name,
-            cv_extract_script_relpath=cv_extract_script_path,
-            parallel=parallel,
         ),
         collect_outputs=None,
         metadata={

@@ -73,7 +73,6 @@ def _make_spec(
         output_dir=case_root / "output",
         build_cases=lambda: list(cases),
         apply_case=lambda _c, _case: None,
-        run_case=lambda _c, _s, _case: None,
         metadata=metadata,
     )
 
@@ -759,7 +758,6 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
                 output_dir=spec.output_dir,
                 build_cases=spec.build_cases,
                 apply_case=spec.apply_case,
-                run_case=spec.run_case,
                 metadata={
                     "workflow_dag": {
                         "steps": [
@@ -807,7 +805,6 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
                 output_dir=base.output_dir,
                 build_cases=base.build_cases,
                 apply_case=base.apply_case,
-                run_case=base.run_case,
                 metadata={
                     "workflow_dag": {
                         "steps": [

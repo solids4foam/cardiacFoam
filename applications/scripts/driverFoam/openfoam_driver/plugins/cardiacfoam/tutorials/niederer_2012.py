@@ -197,26 +197,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _run_case(case_root: Path, setup_root: Path, case: CaseConfig) -> None:
-    """Never called. TutorialSpec.run_case is a required dataclass field, but
-    nothing in the current execution engine (run --strict / sweep-run) reads
-    it -- both drive a case entirely through workflow_dag's own DAG steps
-    (mesh/solve/samplePoints/sampleLines, see _workflow_dag_for), executed by
-    core.runtime.workflow_orchestrator.run_workflow. Confirmed: zero
-    references to `.run_case` anywhere in core/runtime/*.py or cli.py.
-
-    This used to do real work -- launch the case via a bash wrapper script,
-    then convert OpenFOAM's raw probe samples into labeled CSVs with a
-    hardcoded probe-label list. All of that duplicated, in dead code, what
-    the DAG's own samplePoints/sampleLines steps plus
-    setup/convert_raw_samples.py now do for real: the DAG samples the field
-    natively; convert_raw_samples.py reads probe labels and coordinates
-    directly from the raw sample file's own header instead of a second,
-    hand-maintained copy of them. See 9e98e71b.
-    """
-    del case_root, setup_root, case
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -309,7 +289,6 @@ def make_spec(
             slab_size_mm=slab_size_mm_list,
             end_time_by_dx=end_time_by_dx_map,
         ),
-        run_case=_run_case,
         collect_outputs=None,
         metadata={
             "notes": (

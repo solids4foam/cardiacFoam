@@ -444,47 +444,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _run_case(
-    case_root: Path,
-    setup_root: Path,
-    case: CaseConfig,
-    *,
-    tutorials_root: Path | None = None,
-    run_script_relpath: Path = defaults.RUN_SCRIPT_RELPATH,
-    run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
-    ecg_enabled: bool = False,
-) -> None:
-    del setup_root
-    dimension = str(case.params["dimension"])
-    run_script = resolve_run_script_path(
-        tutorials_root=tutorials_root,
-        run_script_relpath=run_script_relpath,
-    )
-    command = ["bash", "-l", str(run_script), "--case-dir", str(case_root), "--dimension", dimension]
-    if run_in_parallel:
-        command.append("--parallel")
-
-    try:
-        subprocess.run(command, check=True)
-    finally:
-        archive_case_logs(case_root, case.case_id)
-
-    destination_dir = _archive_output_dir(case_root)
-    filename = _case_output_filename(case)
-    stage_post_processing_outputs(
-        case_root, destination_dir, {filename: filename}
-    )
-
-    if ecg_enabled:
-        ecg_mapping = {
-            "torsoECG.dat": f"BathECG_{case.case_id}_torsoECG.dat",
-            "manufacturedBathECG.dat": f"BathECG_{case.case_id}_manufacturedBathECG.dat",
-            "manufacturedBathECGSummary.dat": f"BathECG_{case.case_id}_manufacturedBathECGSummary.dat",
-            "pseudoECG.dat": f"PseudoECG_{case.case_id}_pseudoECG.dat",
-        }
-        stage_post_processing_outputs(case_root, destination_dir, ecg_mapping)
-
-
 def _collect_outputs(
     case_root: Path,
     output_dir: Path,
@@ -631,13 +590,6 @@ def make_spec(
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
             tet_geo_template_relpath=tet_geo_template_path,
-        ),
-        run_case=partial(
-            _run_case,
-            tutorials_root=tutorials_root,
-            run_script_relpath=Path(run_script_relpath),
-            run_in_parallel=run_in_parallel,
-            ecg_enabled=ecg_enabled,
         ),
         collect_outputs=partial(_collect_outputs, ecg_enabled=ecg_enabled),
         metadata={

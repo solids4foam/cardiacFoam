@@ -19,11 +19,10 @@
 #     test_generic_case
 #
 # Description
-#     Tests generic_case.make_spec's workflow_dag: it must reflect what
-#     run_case actually executes (solver_command/pre_solve_commands via
-#     _run_direct, or the run-script/Allrun convention via _run_case),
-#     since build_and_launch's non-dry path now runs this workflow_dag
-#     through the strict executor instead of DriverEngine.
+#     Tests generic_case.make_spec's workflow_dag: it must reflect what is
+#     actually executed (solver_command/pre_solve_commands, or the
+#     run-script/Allrun convention), since build_and_launch's non-dry path
+#     runs this workflow_dag through the strict executor.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
