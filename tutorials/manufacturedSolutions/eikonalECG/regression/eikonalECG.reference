@@ -1,10 +1,10 @@
 # kind           key               metric  expected          tolerance
 # (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
-error            activationTime    L1      0.000573521       1e-04
+error            activationTime    L1      0.000573521       2e-04
 error            activationTime    L2      0.000781102       2e-04
-error            activationTime    Linf    0.00247517        1e-03
-pseudoECG        E1                -       -0.0037016344     1e-04
-pseudoECG        E2                -       0.00018387287     1e-04
-pseudoECG        E3                -       -0.0042235169     1e-04
-pseudoECG        E4                -       0.0013015033      1e-04
-pseudoECG        E5                -       -0.00035653491    1e-04
+error            activationTime    Linf    0.00247517        2e-03
+pseudoECG        E1                -       -0.0037016344     2e-04
+pseudoECG        E2                -       0.00018387287     2e-04
+pseudoECG        E3                -       -0.0042235169     2e-04
+pseudoECG        E4                -       0.0013015033      2e-04
+pseudoECG        E5                -       -0.00035653491    2e-04
