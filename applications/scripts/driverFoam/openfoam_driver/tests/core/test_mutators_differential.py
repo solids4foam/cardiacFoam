@@ -1,12 +1,10 @@
 """Differential harness: post-change mutators vs. the tier-1-only reference.
 
-The reference module and the two tests comparing against it
-(`test_tier1_output_is_byte_identical`, `test_tier2_case_reference_fails_and_
-new_code_succeeds`) were a one-time regression check run against the
-pre-migration `mutators.py` (captured from git history as
-`_mutators_reference.py`) across the real tutorial corpus, then deleted once
-the migration was verified clean. `test_no_directive_is_evaluated` stands
-alone and is worth keeping permanently.
+The one-time byte-identity and semantic-preservation comparisons that used to
+live here (against ``_mutators_reference.py``, the pre-migration
+implementation) have been run and verified across the real ``tutorials/``
+corpus and removed per plan. What remains is the standing security
+regression: a directive embedded in a dict value must never be evaluated.
 """
 
 import shutil
