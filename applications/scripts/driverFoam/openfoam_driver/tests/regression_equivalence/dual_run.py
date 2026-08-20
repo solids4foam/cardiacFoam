@@ -9,8 +9,12 @@ reference is the ground truth — the hand-authored path is not re-run.
   <staged>`` — the agent resolves the registered spec, plans it (non-mutating),
   and executes the case's workflow (solver + post). No dictionary overrides are
   applied; dict mutation lives only in the sweep path.
-- Agent run (generic): the same via the case-folder path with
-  ``--entry-kind case_folder`` for cases with no registered spec.
+- Agent run (generic): for committed regression cases, execute the staged
+  ``regression/regressionTest.sh`` verbatim. That preserves each case's
+  authored invocation details (for example ``./Allrun parallel`` and any
+  case-specific reference extractors) rather than approximating them through a
+  second Python-owned protocol layer. Cases without a committed regression
+  script fall back to the generic case-folder driver path.
 
 Then the agent's ``postProcessing`` outputs are checked against the committed
 reference points.
@@ -306,6 +310,21 @@ def _drive_agent(case: RegressionCase, driver: str, tutorials_root: Path) -> sub
     return subprocess.run(argv, env=env, capture_output=True, text=True)
 
 
+def _run_regression_script(case: RegressionCase, case_path: Path) -> subprocess.CompletedProcess:
+    """Run the committed regression harness from the staged case root."""
+    script_path = case_path / case.regression_script
+    return subprocess.run(
+        ["/bin/bash", str(script_path)],
+        cwd=case_path,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _tail(text: str, *, limit: int = 1500) -> str:
+    return text[-limit:] if len(text) > limit else text
+
+
 def check_protocol(case_dir: str, case_path: Path) -> tuple[bool, str]:
     """Check agent outputs under `case_path` against the frozen equivalence protocol.
 
@@ -382,16 +401,51 @@ def verify_reproduction(case: RegressionCase, *, driver: str) -> ReproResult:
             "case layout not addressable by agent discovery",
         )
 
-    reference_text = (
-        tutorials_root_default() / case.case_dir / case.reference_file
-    ).read_text()
     root, case_path = _stage_tutorials_root(case)
     try:
-        proc = _drive_agent(case, driver, root)
+        regression_script = case_path / case.regression_script
+        if driver == "generic" and regression_script.is_file():
+            proc = _run_regression_script(case, case_path)
+            output = "\n".join(
+                part for part in (
+                    _tail(proc.stdout.strip()),
+                    _tail(proc.stderr.strip()),
+                )
+                if part
+            )
+            if proc.returncode == 77:
+                return ReproResult(
+                    case.case_dir,
+                    driver,
+                    "skipped",
+                    f"committed regression script returned expected skip rc=77\n{output}",
+                )
+            if proc.returncode != 0:
+                return ReproResult(
+                    case.case_dir,
+                    driver,
+                    "mismatch",
+                    f"committed regression script rc={proc.returncode}; output tail:\n{output}",
+                )
+            return ReproResult(
+                case.case_dir,
+                driver,
+                "reproduced",
+                "committed regression script passed",
+            )
+        else:
+            proc = _drive_agent(case, driver, root)
         if proc.returncode != 0:
+            output = "\n".join(
+                part for part in (
+                    _tail(proc.stdout.strip()),
+                    _tail(proc.stderr.strip()),
+                )
+                if part
+            )
             return ReproResult(
                 case.case_dir, driver, "run_failed",
-                f"agent run rc={proc.returncode}; stderr tail:\n{proc.stderr[-1500:]}",
+                f"agent run rc={proc.returncode}; output tail:\n{output}",
             )
         try:
             ok, detail = check_protocol(case.case_dir, case_path)

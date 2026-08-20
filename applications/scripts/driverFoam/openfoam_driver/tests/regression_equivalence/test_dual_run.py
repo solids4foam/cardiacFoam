@@ -1,6 +1,8 @@
 """Unit tests for dual-run helpers + skip behavior (solver-free)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
@@ -116,3 +118,85 @@ def test_verify_reproduction_skips_non_addressable_generic(monkeypatch):
     )
     assert result.status == "skipped"
     assert "not addressable" in result.detail
+
+
+def test_verify_reproduction_generic_prefers_regression_script(monkeypatch, tmp_path):
+    case = RegressionCase(
+        "synthetic/case",
+        "syntheticEntry",
+        (),
+        "regression/reference.txt",
+    )
+    root = tmp_path / "sandbox" / "tutorials"
+    case_path = root / "synthetic" / "case"
+    script_path = case_path / "regression" / "regressionTest.sh"
+    script_path.parent.mkdir(parents=True)
+    script_path.write_text("#!/usr/bin/env bash\nexit 0\n")
+
+    monkeypatch.setattr(dual_run, "solver_available", lambda: True)
+    monkeypatch.setattr(dual_run, "_stage_tutorials_root", lambda _case: (root, case_path))
+    monkeypatch.setattr(
+        dual_run,
+        "_run_regression_script",
+        lambda _case, _case_path: SimpleNamespace(returncode=0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(dual_run, "_drive_agent", lambda *_args, **_kwargs: pytest.fail("should not call foamctl run"))
+    monkeypatch.setattr(dual_run, "check_protocol", lambda *_args, **_kwargs: (True, "ok"))
+
+    result = verify_reproduction(case, driver="generic")
+
+    assert result.status == "reproduced"
+    assert result.detail == "committed regression script passed"
+
+
+def test_verify_reproduction_generic_falls_back_without_regression_script(monkeypatch, tmp_path):
+    case = RegressionCase(
+        "synthetic/case",
+        "syntheticEntry",
+        (),
+        "regression/reference.txt",
+    )
+    root = tmp_path / "sandbox" / "tutorials"
+    case_path = root / "synthetic" / "case"
+    case_path.mkdir(parents=True)
+
+    monkeypatch.setattr(dual_run, "solver_available", lambda: True)
+    monkeypatch.setattr(dual_run, "_stage_tutorials_root", lambda _case: (root, case_path))
+    monkeypatch.setattr(
+        dual_run,
+        "_drive_agent",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(dual_run, "check_protocol", lambda *_args, **_kwargs: (True, "ok"))
+
+    result = verify_reproduction(case, driver="generic")
+
+    assert result.status == "reproduced"
+    assert result.detail == "ok"
+
+
+def test_verify_reproduction_generic_maps_regression_skip(monkeypatch, tmp_path):
+    case = RegressionCase(
+        "synthetic/case",
+        "syntheticEntry",
+        (),
+        "regression/reference.txt",
+    )
+    root = tmp_path / "sandbox" / "tutorials"
+    case_path = root / "synthetic" / "case"
+    script_path = case_path / "regression" / "regressionTest.sh"
+    script_path.parent.mkdir(parents=True)
+    script_path.write_text("#!/usr/bin/env bash\nexit 77\n")
+
+    monkeypatch.setattr(dual_run, "solver_available", lambda: True)
+    monkeypatch.setattr(dual_run, "_stage_tutorials_root", lambda _case: (root, case_path))
+    monkeypatch.setattr(
+        dual_run,
+        "_run_regression_script",
+        lambda _case, _case_path: SimpleNamespace(returncode=77, stdout="expected skip", stderr=""),
+    )
+
+    result = verify_reproduction(case, driver="generic")
+
+    assert result.status == "skipped"
+    assert "rc=77" in result.detail

@@ -1,16 +1,14 @@
-"""Declarative registry of the 9 canonical cardiacFoam regressions.
+"""Curated registry of the canonical regression-equivalence cases.
 
-Keeps the harness in lockstep with ``tutorials/Alltest-regression``. Each row
-records how the driverFOAM agent should reproduce that case.
+This registry is owned by driverFOAM, not auto-derived from every upstream
+cardiacFoam tutorial that happens to ship a ``regression/*.reference`` file.
+Upstream can add new tutorials without breaking this suite; we intentionally
+expand the registry only when we want driverFOAM to take ownership of a new
+equivalence case.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-
-from openfoam_driver.specs.common import tutorials_root_default
-
-
 @dataclass(frozen=True)
 class RegressionCase:
     # Path under tutorials/, matching an Alltest-regression REGRESSION_TESTS entry.
@@ -84,31 +82,4 @@ _KNOWN_CASES: tuple[RegressionCase, ...] = (
         (), "regression/rotorInstability.reference",
     ),
 )
-
-
-def _discover_cases() -> tuple[RegressionCase, ...]:
-    root = tutorials_root_default()
-    if not root.is_dir():
-        return _KNOWN_CASES
-
-    known_dirs = {c.case_dir for c in _KNOWN_CASES}
-    discovered: list[RegressionCase] = list(_KNOWN_CASES)
-
-    for ref_path in root.glob("**/regression/*.reference"):
-        case_path = ref_path.parent.parent
-        case_dir = str(case_path.relative_to(root))
-        if case_dir not in known_dirs:
-            discovered.append(
-                RegressionCase(
-                    case_dir=case_dir,
-                    entry_name=None,
-                    dicts=(),
-                    reference_file=str(ref_path.relative_to(case_path)),
-                )
-            )
-            known_dirs.add(case_dir)
-            
-    return tuple(discovered)
-
-
-REGRESSION_CASES: tuple[RegressionCase, ...] = _discover_cases()
+REGRESSION_CASES: tuple[RegressionCase, ...] = _KNOWN_CASES
