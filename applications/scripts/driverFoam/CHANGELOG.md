@@ -18,6 +18,19 @@ individual change was verified to have zero remaining in-tree importers at the
 time it landed; this entry exists for **out-of-tree** consumers, for whom none
 of that verification applies.
 
+### Dictionary mutation and dependencies
+
+- Dictionary mutation no longer shells out to `foamDictionary`. The complex-syntax
+  fallback is now foamlib, in process. Written bytes no longer depend on whether
+  OpenFOAM is sourced.
+- **Provenance note:** in a *sourced* environment, mutated dictionary bytes change
+  from `foamDictionary`'s re-serialisation to the line tier's form, so sha256
+  provenance digests move for anyone who previously ran sourced. No golden digest
+  baselines are committed, so nothing in-tree breaks; archived Paper I provenance
+  JSON will not match a fresh re-run.
+- Python floor raised to 3.11 (foamlib requirement). `numpy` is now a core
+  dependency rather than a `[post]` extra.
+
 ### Document format
 
 - **`RunDocument` is now version `"3"`.** `RunDocument.from_json()` rejects

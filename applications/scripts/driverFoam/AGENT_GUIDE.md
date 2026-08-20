@@ -730,22 +730,25 @@ build_and_launch(
 
 Each entry in `pre_solve_commands` runs in `case_dir` before `cardiacFoam`. Strings are shell-split; lists are passed directly. When `openfoam_bashrc` is set every command is sourced into the OpenFOAM environment.
 
-### Parsing Complex OpenFOAM Dictionaries (foamDictionary)
+### Parsing Complex OpenFOAM Dictionaries
 
-`mutators.py` implements a hybrid parsing architecture for all OpenFOAM dictionary mutations (`read_foam_entry`, `update_foam_entry`, `ensure_foam_dict`, `remove_foam_dict`).
+`mutators.py` mutates dictionaries in two tiers.
 
-If a target dictionary uses complex OpenFOAM C++ syntax (e.g., `#include` macros, `/* block comments */`, nested scopes, `#calc`), the naive Python regex parser may fail with `KeyError: unbalanced braces` or `KeyError: not found`.
+**Tier 1** is a line-based reader/writer. It is the primary path because it
+returns and writes values *verbatim* -- `5e-6` stays `5e-6`. It handles block
+comments, `#include`, and `#calc` correctly.
 
-To handle this, all mutator functions automatically fallback to using OpenFOAM's native `foamDictionary` C++ executable if it exists in the `PATH`.
-If you are writing custom bash scripts or tools that need to query values from these complex dictionaries, do not rely on `grep` or `sed`. Instead, use the native CLI or the `mutators.py` API:
+**Tier 2** is `foam_backend.py`, backed by foamlib. It is consulted only when
+tier 1 cannot locate the target -- most commonly a brace inside a quoted value,
+which defeats brace counting. foamlib parses in process and never evaluates
+`#calc` or `#codeStream`.
 
-```bash
-# Safely extract a value, ignoring comments and expanding macros
-foamDictionary system/controlDict -entry functions/myFunction/type -value
+Reads never reach tier 2: `read_foam_entry` and `read_foam_dict_block` return
+verbatim source text, and foamlib returns typed values.
 
-# Safely modify a value inline
-foamDictionary system/controlDict -entry startTime -set 0.0
-```
+driverFOAM no longer shells out to the `foamDictionary` binary. Behaviour no
+longer depends on whether OpenFOAM is sourced. If you are writing tools that
+query these dictionaries, use the `mutators.py` API -- not `grep` or `sed`.
 
 ### Find past runs
 

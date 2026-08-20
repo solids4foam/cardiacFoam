@@ -43,7 +43,7 @@ plugin; cardiacFoam's lives in
 The default `blockMeshDict` is generated fresh from our own template each
 time (like the plugin's own `system_templates.py`) -- there is no
 pre-existing author file to parse or risk corrupting, so this does not need
-`mutators.py`'s `foamDictionary`-based mutation machinery (that's for patching
+`mutators.py`'s dictionary mutation machinery (that's for patching
 values into an *already-written* file). `dx` (metres, isotropic cell size)
 derives the cell count via `cell_counts_from_dx`, a small pure function
 factored out so `niederer_2012.py`'s own `_replace_blockmesh_resolution`
