@@ -237,5 +237,11 @@ def remove_dict(
         if missing_ok:
             return
         raise KeyError(f"Dictionary '{dict_name}' not found in {file_path}") from None
+    except (TypeError, ValueError) as exc:
+        # Mirrors update_entry's mapping: `del` re-parses the whole file, so
+        # a FoamFileDecodeError elsewhere in the file (a ValueError subclass)
+        # can surface here even when the target path itself is well-formed.
+        file_path.write_text(before)
+        raise ValueError(f"cannot remove dictionary {dict_name!r}: {exc}") from exc
 
     file_path.write_text(normalize_output(before, file_path.read_text()))

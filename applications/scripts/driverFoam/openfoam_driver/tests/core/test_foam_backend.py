@@ -131,6 +131,25 @@ def test_remove_dict_leaves_no_whitespace_only_line(tmp_path):
     assert not any(line.strip() == "" and line != "\n" for line in text.splitlines(keepends=True))
 
 
+def test_remove_dict_maps_decode_error_to_value_error(tmp_path):
+    """``del`` re-parses the whole file, so unrelated garbage elsewhere can
+
+    surface as a ``FoamFileDecodeError`` even when the delete target itself
+    is well-formed. Measured directly: deleting a perfectly valid
+    ``solvers/Vm`` from a file that *also* contains unrelated malformed text
+    raises ``foamlib.FoamFileDecodeError`` (a ``ValueError`` subclass) from
+    the ``del`` call, not a ``KeyError`` -- the bare ``except KeyError:`` an
+    earlier draft of this function had would let it escape unmapped.
+    """
+    path = _dict(
+        tmp_path,
+        "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n"
+        "garbage {{{ not valid @@@ ;;; \n",
+    )
+    with pytest.raises(ValueError):
+        foam_backend.remove_dict(path, "Vm", scope=["solvers"])
+
+
 def test_missing_file_raises_file_not_found(tmp_path):
     with pytest.raises(FileNotFoundError):
         foam_backend.update_entry(tmp_path / "nope", "k", "1")
