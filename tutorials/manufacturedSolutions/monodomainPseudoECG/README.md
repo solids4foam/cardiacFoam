@@ -41,7 +41,7 @@ Typical outputs include:
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/mesh/tet/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh generator changes and `setup/mesh/tet/fvSolution` (a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the duration of a tet run and restored on exit. It was formerly the standalone `monodomainTetMMS` tutorial, merged here the same way `eikonalTetMMS` was merged into `eikonalECG`.
+`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSolution` (a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the duration of a tet run and restored on exit. It was formerly the standalone `monodomainTetMMS` tutorial, merged here the same way `eikonalTetMMS` was merged into `eikonalECG`.
 
 #### Purpose
 
@@ -52,11 +52,11 @@ Verifies that OpenFOAM's non-orthogonal `Gauss linear corrected` Laplacian schem
 
 #### Grid Generation
 
-`setup/mesh/tet/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a characteristic length placeholder `__LC__`. `setup/mesh/tet/run_mono_tet.sh` substitutes `lc = 1/N` per resolution, meshes with gmsh (legacy msh2 format), and imports via `gmshToFoam`. All six boundary faces lie on axis-aligned planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal derivative, so the solver's default zeroGradient boundary stays compatible with the exact solution.
+`setup/studies/tetConvergence/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a characteristic length placeholder `__LC__`. `setup/studies/tetConvergence/run_mono_tet.sh` substitutes `lc = 1/N` per resolution, meshes with gmsh (legacy msh2 format), and imports via `gmshToFoam`. All six boundary faces lie on axis-aligned planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal derivative, so the solver's default zeroGradient boundary stays compatible with the exact solution.
 
 #### Effective Mesh Spacing and Observed Order
 
-The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count. For an unstructured tet mesh this is the mean cell size and the correct convergence abscissa. `setup/mesh/tet/summarize_tet.py` computes the observed order from consecutive `dx` values, `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming factor-of-two refinement, and reports it next to `checkMesh` max non-orthogonality and max skewness.
+The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count. For an unstructured tet mesh this is the mean cell size and the correct convergence abscissa. `setup/studies/tetConvergence/summarize_tet.py` computes the observed order from consecutive `dx` values, `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming factor-of-two refinement, and reports it next to `checkMesh` max non-orthogonality and max skewness.
 
 #### Tetrahedral Convergence Sweep
 

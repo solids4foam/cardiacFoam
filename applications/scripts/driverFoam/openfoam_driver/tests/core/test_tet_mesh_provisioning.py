@@ -33,7 +33,7 @@ import pytest
 from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
 
 
-def _write_template(root: Path, *, relpath: str = "setup/mesh/tet/box.geo.template", body: str = "lc = __LC__;\nBox(1) = {0, 0, 0, 1, 1, 1};\n") -> None:
+def _write_template(root: Path, *, relpath: str = "setup/studies/tetConvergence/box.geo.template", body: str = "lc = __LC__;\nBox(1) = {0, 0, 0, 1, 1, 1};\n") -> None:
     path = root / relpath
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body)
@@ -50,7 +50,7 @@ def test_renders_lc_from_n(tmp_path):
 def test_returns_the_written_geo_path(tmp_path):
     _write_template(tmp_path)
     geo_path = render_tet_geo(tmp_path, 20)
-    assert geo_path == tmp_path / "setup/mesh/tet/box.geo"
+    assert geo_path == tmp_path / "setup/studies/tetConvergence/box.geo"
     assert geo_path.exists()
 
 

@@ -50,7 +50,7 @@ shared dicts were byte-identical, so this case stayed the canonical hex case
 unchanged; only the tet-specific `box.geo.template` and `fvSolution` became
 the overlay). `box.geo.template` and its `fvSolution` overlay are co-located
 with the study that drives them (`setup/studies/tetConvergence/`) rather than
-under `setup/mesh/tet/`, matching `bidomain/setup/studies/tetConvergence/`
+under `setup/studies/tetConvergence/`, matching `bidomain/setup/studies/tetConvergence/`
 and `monodomainPseudoECG`'s own tet variant.
 
 #### Tet Convergence
@@ -143,7 +143,7 @@ Or run every registered experiment through the normalized registry:
 The manufactured verifier assumes a structured mesh and back-computes an
 *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count.
 For an unstructured tet mesh of the unit cube this is the mean cell size, and
-it is the correct convergence abscissa. `setup/mesh/tet/summarize_tet.py`
+it is the correct convergence abscissa. `setup/studies/tetConvergence/summarize_tet.py`
 therefore computes the observed order from consecutive `dx` values,
 `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming a
 factor-of-two refinement, and reports it next to the `checkMesh` max

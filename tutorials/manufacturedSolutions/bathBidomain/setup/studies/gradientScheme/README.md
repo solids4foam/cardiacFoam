@@ -42,7 +42,7 @@ lands (not the naive `archive_dir_name` reading) if you go on to aggregate
 these.
 
 This also required a fix: the checked-in `constant/electroProperties` and
-`setup/mesh/tet/electroProperties` were both missing the
+`setup/studies/tetConvergence/electroProperties (removed; see bathBidomain/README.md)` were both missing the
 `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
 key that `_apply_case` always writes — every driverFOAM sweep for this
 tutorial (tet or hex, old specs included) crashed with a `KeyError` before

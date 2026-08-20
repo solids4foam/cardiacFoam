@@ -8,7 +8,7 @@ conformal tetrahedral mesh. Source of the paperI `bath_bidomain_tet_conformal`
 experiment (`@tbl-bath-bidomain-corrector`-style sensitivity, not a spatial
 convergence study).
 
-Formerly `setup/mesh/tet/studies/coupling/run_coupling_study.sh` (relocated
+Formerly `setup/studies/tetConvergence/studies/coupling/run_coupling_study.sh` (relocated
 here alongside its own study, matching this tutorial's other studies); mesh
 generation and the tet electroProperties/fvSchemes overlay swap are handled
 by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG rather than
@@ -40,7 +40,7 @@ This is *not* the same as `applications/scripts/paperI_results/aggregate.py`'s `
 
 Verified with a real `driverFoam sweep-run` at `N=10` (both `baseline` and `predictor`, 2026-08-19): both cases complete, and `summarize_coupling_study.py` correctly reads the archived output and reports a genuine physical difference (predictor-corrector coupling reduces `heartPhiE_L2`/`bathPhiE_L2` by roughly 50% at N=10 relative to baseline — sane and paper-consistent in direction). `N=20,40` unrun in this session but use the identical mechanism. `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1` are left at this case's own tet-overlay defaults rather than force-set (the old script explicitly forced both to 1; the checked-in default already matches, per the top-level README).
 
-This also required a fix: the checked-in `constant/electroProperties` and `setup/mesh/tet/electroProperties` were both missing the `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant` key that `_apply_case` always writes — every driverFOAM sweep for this tutorial (tet or hex, old specs included) crashed with a `KeyError` before this was added.
+This also required a fix: the checked-in `constant/electroProperties` and `setup/studies/tetConvergence/electroProperties (removed; see bathBidomain/README.md)` were both missing the `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant` key that `_apply_case` always writes — every driverFOAM sweep for this tutorial (tet or hex, old specs included) crashed with a `KeyError` before this was added.
 
 ## Tracking & Outputs
 

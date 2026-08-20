@@ -157,7 +157,7 @@ def _workflow_dag_for(
                 "command": "gmsh",
                 "args": [
                     "-3",
-                    "setup/mesh/tet/three_domain_box.geo",
+                    "setup/studies/tetConvergence/three_domain_box.geo",
                     "-o",
                     "three_domain_box.msh",
                     "-format",
@@ -267,7 +267,7 @@ def _apply_case(
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
-    tet_geo_template_relpath: Path = Path("setup/mesh/tet/three_domain_box.geo.template"),
+    tet_geo_template_relpath: Path = Path("setup/studies/tetConvergence/three_domain_box.geo.template"),
 ) -> None:
     dimension = str(case.params["dimension"])
     solver = str(case.params["solver"])
@@ -301,17 +301,19 @@ def _apply_case(
             case_root,
             cells,
             template_relpath=tet_geo_template_relpath,
-            geo_relpath=Path("setup/mesh/tet/three_domain_box.geo"),
+            geo_relpath=Path("setup/studies/tetConvergence/three_domain_box.geo"),
         )
-        # Must happen before the variant branch below: this copy resets
-        # electro_properties to the tet template's own groundElectrode
-        # defaults (its own groundPatches.xMin), which the electrodePair
-        # branch then needs to remove. Doing it the other way around lets
-        # this copy silently reintroduce the key the removal just cleared.
-        shutil.copy(case_root / "setup" / "mesh" / "tet" / "electroProperties", electro_properties)
+        # No electroProperties copy here. The tet path used to overwrite
+        # constant/electroProperties with a full duplicate dictionary shipped
+        # under setup/mesh/tet/. Everything that duplicate carried is either
+        # cosmetic, per-run state this function sets anyway (dimension,
+        # fdaBathVariant, the patch blocks), or numerical precision -- and the
+        # precision has been restored into constant/electroProperties, which
+        # is now the single source. manufactured_bidomain.py has never needed
+        # such a copy.
         for overlay_name in _TET_NUMERICS_PROFILES.get(numerics_profile or "", ()):
             shutil.copy(
-                case_root / "setup" / "mesh" / "tet" / overlay_name,
+                case_root / "setup" / "studies" / "tetConvergence" / overlay_name,
                 case_root / "system" / overlay_name,
             )
     else:
@@ -516,7 +518,7 @@ def make_spec(
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
-    tet_geo_template_relpath: str | Path = "setup/mesh/tet/three_domain_box.geo.template",
+    tet_geo_template_relpath: str | Path = "setup/studies/tetConvergence/three_domain_box.geo.template",
 ) -> TutorialSpec:
     mesh_family = str(mesh_family)
     if mesh_family not in {"hex", "tet"}:

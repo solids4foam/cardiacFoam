@@ -66,7 +66,7 @@ _GRAD_SCHEME_TOKENS: dict[str, str] = {
     "least_squares": "leastSquares",
 }
 
-# Which system/ overlay files mesh_family="tet" installs from setup/mesh/tet/
+# Which system/ overlay files mesh_family="tet" installs from setup/studies/tetConvergence/
 # -- not every tet case has the same set. Confirmed: monodomainPseudoECG's
 # tet variant additionally installs an fvSolution overlay that bidomain's
 # does not have. Explicit per case, never inferred from what happens to
@@ -148,7 +148,7 @@ def _workflow_dag_for(
     *,
     case_root: Path,
     run_in_parallel: bool = False,
-    tet_geo_relpath: Path = Path("setup/mesh/tet/box.geo"),
+    tet_geo_relpath: Path = Path("setup/studies/tetConvergence/box.geo"),
 ) -> dict[str, object]:
     """Build this spec's workflow_dag, branching on mesh_family.
 
@@ -287,7 +287,7 @@ def _apply_case(
         #
         # The .geo output and any numerics-profile overlay files (fvSchemes/
         # fvSolution) are siblings of the template, wherever the caller has
-        # placed it -- not hardcoded to setup/mesh/tet/, since different
+        # placed it -- not hardcoded to setup/studies/tetConvergence/, since different
         # tutorials co-locate their tet mesh with different studies. Always
         # named "box.geo" regardless of the template's own filename: template
         # variants exist (e.g. bidomain's own box.geo.template),

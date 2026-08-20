@@ -37,7 +37,7 @@ own spec, executed only when the strict workflow actually runs, never during
 `apply_case`/materialization.
 
 Each tutorial with a tet variant keeps its own copy of
-`setup/mesh/tet/box.geo.template`. Those copies are typically functionally
+`setup/studies/tetConvergence/box.geo.template`. Those copies are typically functionally
 equivalent (the same gmsh geometry commands: `SetFactory`, `Box`,
 `Physical Volume`/`Surface`, `Mesh.*` settings) but not byte-identical --
 each carries a header comment written from its own tutorial's perspective.
@@ -56,8 +56,8 @@ def render_tet_geo(
     case_root: Path,
     n: int,
     *,
-    template_relpath: Path = Path("setup/mesh/tet/box.geo.template"),
-    geo_relpath: Path = Path("setup/mesh/tet/box.geo"),
+    template_relpath: Path = Path("setup/studies/tetConvergence/box.geo.template"),
+    geo_relpath: Path = Path("setup/studies/tetConvergence/box.geo"),
 ) -> Path:
     """Write `geo_relpath` with `__LC__` substituted by `1/n`.
 

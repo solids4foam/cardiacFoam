@@ -36,16 +36,16 @@ plus a per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes).
 
 | key | case |
 |---|---|
-| tet | monodomainPseudoECG (`setup/mesh/tet`) |
-| eikonal_tet | eikonalECG (`setup/mesh/tet`) |
+| tet | monodomainPseudoECG (`setup/studies/tetConvergence`) |
+| eikonal_tet | eikonalECG (`setup/studies/tetConvergence`) |
 | coupling | monodomain1D3D |
 | eikonal | eikonalECG |
 | mono_spatial | monodomainPseudoECG |
 | pseudo_ecg_spatial | monodomainPseudoECG |
 | bidomain | bidomain |
-| bidomain_tet | bidomain (`setup/mesh/tet`) |
+| bidomain_tet | bidomain (`setup/studies/tetConvergence`) |
 | bath | bathBidomain |
-| bath_tet | bathBidomain (`setup/mesh/tet`) |
+| bath_tet | bathBidomain (`setup/studies/tetConvergence`) |
 | niederer | NiedererEtAl2011verification |
 
 Cases whose sweep has not been run yet (`bidomain`, `bath`, and `bath_tet`

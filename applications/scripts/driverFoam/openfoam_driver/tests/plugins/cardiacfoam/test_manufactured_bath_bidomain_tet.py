@@ -201,7 +201,7 @@ def test_tet_workflow_dag_uses_three_domain_gmsh_pipeline(tmp_path):
     ]
     by_id = {s["id"]: s for s in steps}
     assert by_id["gmsh"]["args"] == [
-        "-3", "setup/mesh/tet/three_domain_box.geo", "-o",
+        "-3", "setup/studies/tetConvergence/three_domain_box.geo", "-o",
         "three_domain_box.msh", "-format", "msh2",
     ]
     assert by_id["gmshToFoam"]["args"] == ["three_domain_box.msh"]
