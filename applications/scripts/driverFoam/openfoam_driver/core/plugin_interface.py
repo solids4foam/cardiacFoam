@@ -308,9 +308,11 @@ class SolverPluginOptionalHooks(Protocol):
         ...
 
     def is_case_runnable_without_workflow(self, case_root: "Path") -> bool:
-        """Whether a case with no workflow contract and no ``Allrun`` is still
-        runnable. Absent -> ``False``; core then relies on the contract or
-        ``Allrun``, which is plugin-neutral evidence."""
+        """Whether a case with no driver-owned workflow metadata and no
+        ``Allrun`` is still runnable.
+
+        Absent -> ``False``; core then relies on an executable ``Allrun``.
+        """
         ...
 
     # -- RunDocumentConfigurationCapability ----------------------------------

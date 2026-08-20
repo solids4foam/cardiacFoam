@@ -25,15 +25,14 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-"""Tests for workflow_dag ingest from on-disk workflow_contract.json.
+"""Tests for filesystem case workflow ownership.
 
-Filesystem cases (loaded via registry.py) must prefer an on-disk contract when
-it provides steps, but retain the generic Allrun fallback when no contract is
-present at all.
+Plain case folders are owned by their on-disk Allrun. Registry discovery may
+still find a non-runnable cardiac-marked folder, but it must not invent a
+workflow_dag unless Allrun exists.
 """
 from __future__ import annotations
 
-import json
 import unittest
 from pathlib import Path
 import tempfile
@@ -41,8 +40,8 @@ import tempfile
 from openfoam_driver.core.runtime.registry import load_tutorial_spec, resolve_entry
 
 
-class TestWorkflowDagFilesystemIngest(unittest.TestCase):
-    """workflow_dag is populated from workflow_contract.json for filesystem cases."""
+class TestFilesystemCaseWorkflowOwnership(unittest.TestCase):
+    """Filesystem case folders own their run definition through Allrun."""
 
     def _write_case_files(self, case_root: Path) -> None:
         (case_root / "constant").mkdir(parents=True, exist_ok=True)
@@ -53,44 +52,15 @@ class TestWorkflowDagFilesystemIngest(unittest.TestCase):
             "type electroModel;\n"
         )
 
-    def test_filesystem_case_workflow_dag_matches_workflow_contract(self) -> None:
-        """spec.metadata['workflow_dag'] round-trips the steps from workflow_contract.json."""
-        steps = [
-            {"id": "mesh", "command": "blockMesh", "depends_on": []},
-            {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
-        ]
-        contract = {
-            "tutorial_family": "custom",
-            "status": {"runnable_without_substitution": True},
-            "steps": steps,
-        }
-
+    def test_filesystem_case_with_allrun_uses_allrun_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tutorials_root = Path(temp_dir)
             case_root = tutorials_root / "myCase"
             self._write_case_files(case_root)
-            (case_root / "workflow_contract.json").write_text(json.dumps(contract))
+            (case_root / "Allrun").write_text("#!/bin/sh\n")
 
             spec = load_tutorial_spec(
                 "myCase",
-                overrides={"tutorials_root": tutorials_root},
-            )
-
-            dag = spec.metadata.get("workflow_dag")
-            self.assertIsNotNone(dag, "workflow_dag must be populated from workflow_contract.json")
-            self.assertIn("steps", dag)
-            self.assertEqual(dag["steps"], steps)
-
-    def test_filesystem_case_without_contract_has_no_workflow_dag(self) -> None:
-        """Filesystem case with no workflow_contract.json keeps Allrun fallback."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            tutorials_root = Path(temp_dir)
-            case_root = tutorials_root / "bareCase"
-            self._write_case_files(case_root)
-            # No workflow_contract.json written
-
-            spec = load_tutorial_spec(
-                "bareCase",
                 overrides={"tutorials_root": tutorials_root},
             )
 
@@ -100,26 +70,19 @@ class TestWorkflowDagFilesystemIngest(unittest.TestCase):
                 {"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]},
             )
 
-    def test_filesystem_case_contract_without_steps_has_no_workflow_dag(self) -> None:
-        """workflow_contract.json without a 'steps' key → workflow_dag is None."""
-        contract = {
-            "tutorial_family": "custom",
-            "status": {"runnable_without_substitution": True},
-        }
-
+    def test_filesystem_case_without_allrun_has_no_workflow_dag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tutorials_root = Path(temp_dir)
-            case_root = tutorials_root / "noStepsCase"
+            case_root = tutorials_root / "bareCase"
             self._write_case_files(case_root)
-            (case_root / "workflow_contract.json").write_text(json.dumps(contract))
 
             spec = load_tutorial_spec(
-                "noStepsCase",
+                "bareCase",
                 overrides={"tutorials_root": tutorials_root},
             )
 
             dag = spec.metadata.get("workflow_dag")
-            self.assertIsNone(dag, "workflow_dag must be None when contract has no 'steps' key")
+            self.assertIsNone(dag, "workflow_dag must be None when Allrun is absent")
 
     def test_variant_electro_properties_case_is_discoverable_and_runnable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

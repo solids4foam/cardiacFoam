@@ -234,26 +234,19 @@ def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
 def test_apply_system_file_override_works_without_foamdictionary(tmp_path):
     """A system/<file>:<entry> override must not require a sourced OpenFOAM.
 
-    This route called update_foam_entry_via_foamDictionary directly, with no
-    fallback, so fvSolution/fvSchemes overrides only worked in a sourced
-    shell -- unlike every other override path, and unlike the tutorial specs,
-    which reach the same files through the dual-path update_foam_entry.
+    This route used to call a foamDictionary-only writer directly, so
+    fvSolution/fvSchemes overrides only worked in a sourced shell. It now
+    goes through the same pure-Python mutator path as the rest of the
+    override machinery.
     """
-    from unittest import mock
-
     case = _case(tmp_path)
-    with mock.patch(
-        "openfoam_driver.core.runtime.mutators.shutil.which", return_value=None
-    ), mock.patch(
-        "openfoam_driver.specs.apply_overrides.shutil.which", return_value=None
-    ):
-        apply_overrides(
-            [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-9"}],
-            case_root=case,
-        )
-        tolerance = read_foam_entry(
-            case / "system" / "fvSolution", "tolerance", scope=["solvers", "V"]
-        )
+    apply_overrides(
+        [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-9"}],
+        case_root=case,
+    )
+    tolerance = read_foam_entry(
+        case / "system" / "fvSolution", "tolerance", scope=["solvers", "V"]
+    )
     assert float(tolerance) == pytest.approx(1e-9)
 
 

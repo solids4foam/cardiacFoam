@@ -19,7 +19,7 @@
 #     sweep_materialize
 #
 # Description
-#     Materializes a resolved sweep case via build_and_launch, Allrun, and workflow_contract.json.
+#     Materializes a resolved sweep case via build_and_launch and Allrun.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -32,11 +32,13 @@ from typing import Any
 
 
 def _materialize_case_legacy(*, case_dir: Path, routed: dict[str, Any]) -> None:
-    """Write a resolved+routed case's dict files, Allrun script, and
-    workflow_contract.json. Raises ValueError (propagated from
-    build_and_launch/build_electro_properties) if the routed selectors are
-    structurally invalid — the caller treats that as this case's failure,
-    not a crash of the whole sweep.
+    """Write a resolved+routed case's dict files and Allrun script.
+
+    Raises ValueError (propagated from build_and_launch/
+    build_electro_properties) if the routed selectors are structurally invalid
+    — the caller treats that as this case's failure, not a crash of the whole
+    sweep. Per-run workflow intent/state is persisted later by strict planning
+    and execution as ``run_document.json`` and ``workflow_state.json``.
     """
     from .plugins.cardiacfoam.sweep import materialize_case
 

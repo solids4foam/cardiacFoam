@@ -27,7 +27,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import replace
 from pathlib import Path
@@ -60,12 +59,8 @@ SpecFactory = Callable[..., TutorialSpec]
 
 ENTRY_KIND_VALUES = (
     "registered_tutorial",
-    "workflow_template",
-    "workflow_case",
     "case_folder",
 )
-
-_ENTRY_HINTS: dict[str, dict[str, object]] = {}
 
 def _is_case_directory(
     path: Path,
@@ -81,34 +76,15 @@ def _is_case_directory(
         driver_context.capabilities.case_compatibility.has_case_marker(
             CaseCompatibilityRequest(path),
         )
-        or (path / "workflow_contract.json").is_file()
         or (path / "Allrun").is_file()
     )
 
 
-def _read_json_if_exists(path: Path) -> dict[str, object] | None:
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
-
-
 def _case_is_runnable(
     case_root: Path,
-    authoring_contract: dict[str, object] | None = None,
     *,
     driver_context: "DriverContext | None" = None,
 ) -> bool:
-    if authoring_contract is not None:
-        status = authoring_contract.get("status")
-        if isinstance(status, dict):
-            runnable_without_substitution = status.get("runnable_without_substitution")
-            if runnable_without_substitution is False:
-                return False
-
-    if authoring_contract is not None:
-        steps = authoring_contract.get("steps")
-        if isinstance(steps, list) and steps:
-            return True
     if (case_root / "Allrun").is_file():
         return True
 
@@ -191,62 +167,14 @@ def _classify_case_entry(
     driver_context: "DriverContext | None" = None,
 ) -> dict[str, object]:
     relative_path = str(case_root.relative_to(tutorials_root))
-    normalized_relative_path = relative_path.casefold()
-    authoring_contract = _read_json_if_exists(case_root / "workflow_contract.json")
-
-    hint = _ENTRY_HINTS.get(normalized_relative_path)
-    if hint is None:
-        hint = _ENTRY_HINTS.get(case_root.name.casefold())
-
-    if hint is not None:
-        entry_kind = str(hint["entry_kind"])
-        source_type = str(hint["source_type"])
-        workflow_family = hint.get("workflow_family")
-        is_runnable = bool(hint["is_runnable"])
-    elif authoring_contract is not None:
-        status = authoring_contract.get("status", {})
-        template_kind = status.get("template_kind") if isinstance(status, dict) else None
-        runnable_without_substitution = (
-            status.get("runnable_without_substitution") if isinstance(status, dict) else None
-        )
-        if template_kind == "symbolic_authoring_template" or runnable_without_substitution is False:
-            entry_kind = "workflow_template"
-            source_type = "workflow_contract"
-            workflow_family = authoring_contract.get("tutorial_family")
-            is_runnable = False
-        else:
-            entry_kind = "case_folder"
-            source_type = "filesystem_case"
-            workflow_family = authoring_contract.get("tutorial_family")
-            is_runnable = _case_is_runnable(
-                case_root,
-                authoring_contract,
-                driver_context=driver_context,
-            )
-    else:
-        entry_kind = "case_folder"
-        source_type = "filesystem_case"
-        workflow_family = None
-        is_runnable = _case_is_runnable(case_root, driver_context=driver_context)
-
-    # Extract workflow_dag from the on-disk contract if a steps array is present.
-    workflow_dag: dict[str, object] | None = None
-    if authoring_contract is not None:
-        raw_steps = authoring_contract.get("steps")
-        if isinstance(raw_steps, list) and raw_steps:
-            workflow_dag = {"steps": raw_steps}
-
-    payload = {
+    return {
         "entry_name": case_root.name,
-        "entry_kind": entry_kind,
+        "entry_kind": "case_folder",
         "entry_path": relative_path,
-        "is_runnable": is_runnable,
-        "source_type": source_type,
-        "workflow_family": workflow_family,
+        "is_runnable": _case_is_runnable(case_root, driver_context=driver_context),
+        "source_type": "filesystem_case",
+        "workflow_family": None,
     }
-    if authoring_contract is not None:
-        payload["workflow_dag"] = workflow_dag
-    return payload
 
 
 def _entry_catalog_for_root(
@@ -367,21 +295,13 @@ def _with_entry_metadata(
             "resolution": resolution["resolution"],
         }
     )
-    # For filesystem cases, an on-disk workflow_contract.json is authoritative.
-    # When the registry found a 'steps' array there, set it unconditionally so
-    # it overrides any generic-spec fallback. When there is no on-disk contract
-    # at all (resolution key absent), preserve the spec's own workflow_dag
-    # fallback. When a contract exists but omits steps (explicit None), clear
-    # any placeholder so callers can see that the contract itself is incomplete.
-    if "workflow_dag" in resolution:
-        on_disk_dag = resolution["workflow_dag"]
-        if on_disk_dag is not None:
-            # On-disk steps win; overwrite spec-factory default.
-            metadata["workflow_dag"] = on_disk_dag
-        else:
-            # Contract present but no steps array (or absent contract) — clear
-            # any generic-spec placeholder so callers see None.
-            metadata["workflow_dag"] = None
+    # Plain case folders are owned by their on-disk Allrun. If a discovered
+    # folder has no Allrun, do not preserve the generic-spec placeholder DAG.
+    if (
+        resolution["resolution"] == "case_folder"
+        and not (Path(spec.case_root) / "Allrun").is_file()
+    ):
+        metadata["workflow_dag"] = None
     return replace(spec, metadata=metadata)
 
 

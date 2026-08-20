@@ -21,7 +21,6 @@ format at this seam.
 
 from __future__ import annotations
 
-import json
 import stat
 from pathlib import Path
 from typing import Any
@@ -102,6 +101,13 @@ def route_case_values(
 
 
 def materialize_case(*, case_dir: Path, routed: dict[str, Any]) -> None:
+    """Write a runnable generic sweep case without any authored workflow metadata.
+
+    The case root remains OpenFOAM-owned: dictionaries plus a hand-runnable
+    ``Allrun`` only. Agent-visible execution intent/state is persisted later as
+    driver-owned ``run_document.json`` and ``workflow_state.json`` under the
+    sweep output tree.
+    """
     result = build_and_launch(
         electro_selectors=routed["electro_selectors"],
         physics_selectors=routed["physics_selectors"],
@@ -120,9 +126,4 @@ def materialize_case(*, case_dir: Path, routed: dict[str, Any]) -> None:
     allrun_path.write_text("#!/bin/sh\n" + allrun_body)
     allrun_path.chmod(
         allrun_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
-    )
-
-    contract_path = case_dir / "workflow_contract.json"
-    contract_path.write_text(
-        json.dumps({"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]})
     )

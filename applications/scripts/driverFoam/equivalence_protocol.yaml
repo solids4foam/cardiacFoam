@@ -349,7 +349,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L1
-  expected: 1.5292e-05
+  expected: 1.52888e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -358,7 +358,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: L2
-  expected: 1.99547e-05
+  expected: 1.99517e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -367,7 +367,7 @@ metric_rows:
   kind: error
   key: Vm
   metric: Linf
-  expected: 3.99209e-05
+  expected: 3.99158e-05
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -376,7 +376,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L1
-  expected: 0.000114436
+  expected: 0.000113666
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -385,7 +385,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: L2
-  expected: 0.000135097
+  expected: 0.00013437
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -394,7 +394,7 @@ metric_rows:
   kind: error
   key: phiE
   metric: Linf
-  expected: 0.000167827
+  expected: 0.000166819
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -403,7 +403,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L1
-  expected: 4.09842e-06
+  expected: 4.71042e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -412,7 +412,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: L2
-  expected: 4.56894e-06
+  expected: 5.22528e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -421,7 +421,7 @@ metric_rows:
   kind: error
   key: phiI
   metric: Linf
-  expected: 8.07195e-06
+  expected: 9.0771e-06
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -430,7 +430,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L1
-  expected: 2.81317e-05
+  expected: 2.81312e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -439,7 +439,7 @@ metric_rows:
   kind: error
   key: u1
   metric: L2
-  expected: 3.17467e-05
+  expected: 3.17462e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -448,7 +448,7 @@ metric_rows:
   kind: error
   key: u1
   metric: Linf
-  expected: 5.34962e-05
+  expected: 5.34953e-05
   tolerance: 1.0e-07
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -457,7 +457,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L1
-  expected: 7.39916e-06
+  expected: 7.39904e-06
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -466,7 +466,7 @@ metric_rows:
   kind: error
   key: u2
   metric: L2
-  expected: 8.81596e-06
+  expected: 8.81582e-06
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates
@@ -475,7 +475,7 @@ metric_rows:
   kind: error
   key: u2
   metric: Linf
-  expected: 1.86162e-05
+  expected: 1.86159e-05
   tolerance: 1.0e-08
   source_reference: regression/bathBidomainManufactured.reference
   rationale: Transcribed verbatim from the committed regression reference, which predates

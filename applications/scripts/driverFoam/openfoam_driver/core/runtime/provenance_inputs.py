@@ -49,12 +49,11 @@ still a mandatory input. The resolution precedence, first match wins:
 Concretely: ``system/**``, ``constant/**``, the **selected** start-time
 directory (read from ``system/controlDict``'s ``startFrom``/``startTime`` --
 not always ``0/``), and ``processor*/<selected-time>/**`` during a decomposed
-restart (I9) are walked and classified by that precedence. Case-local
-``workflow_contract.json`` (if present) and the exact Allrun-family scripts
-named by the DAG are added directly. Other time directories, ``postProcessing/``
-(which holds ``workflow_logs/``), and state/manifest files are never walked,
-so they are excluded by construction rather than by an exclusion rule that
-could be gotten wrong.
+restart (I9) are walked and classified by that precedence. The exact
+Allrun-family scripts named by the DAG are added directly. Other time
+directories, ``postProcessing/`` (which holds ``workflow_logs/``), and
+state/manifest files are never walked, so they are excluded by construction
+rather than by an exclusion rule that could be gotten wrong.
 
 Step executables -- including an MPI launcher's payload
 (``mpirun -np 4 cardiacFoam`` -> both) -- are resolved through
@@ -351,11 +350,6 @@ def enumerate_case_inputs(
     # the walk above excluded or never visited at all.
     for rel in consumed_relpaths:
         add(component_for_path(case_root / rel, kind="case_file", relative_to=case_root))
-
-    # -- case-local workflow_contract.json, if present.
-    contract = case_root / "workflow_contract.json"
-    if contract.is_file():
-        add(component_for_path(contract, kind="case_file", relative_to=case_root))
 
     # -- step executables, resolved the same way the executor resolves them
     # (workflow_runner._resolve_command), including an MPI launcher's

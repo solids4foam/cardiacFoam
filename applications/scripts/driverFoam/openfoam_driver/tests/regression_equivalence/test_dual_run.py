@@ -8,6 +8,7 @@ pytestmark = skip_without_monorepo
 from openfoam_driver.tests.regression_equivalence.registry import REGRESSION_CASES, RegressionCase
 from openfoam_driver.tests.regression_equivalence import dual_run
 from openfoam_driver.tests.regression_equivalence.dual_run import (
+    extract_summary_value,
     parse_columnar_reference,
     read_series_value,
     solver_available,
@@ -32,6 +33,20 @@ time        Vm          cai
 0.5000000   -80.0       0.0001
 1.0000000   -87.06      0.00009
 1.5000000   -86.90      0.0001139
+"""
+
+BATH_SUMMARY = """\
+# Bath-bidomain manufactured solution error summary
+# dimension 1D
+# cellsPerDirection 80
+# time 0.200112
+Vm 1.52888e-05 1.99517e-05 3.99158e-05
+"""
+
+STANDARD_SUMMARY = """\
+Number of cells (N)   = 80
+Final simulation time = 0.200112
+Vm 1.52888e-05 1.99517e-05 3.99158e-05
 """
 
 
@@ -67,6 +82,13 @@ def test_read_series_value_missing_variable_or_time():
 def test_values_agree():
     assert values_agree(1.0, 1.0004, 5e-3)
     assert not values_agree(1.0, 1.01, 5e-3)
+
+
+def test_extract_summary_value_supports_standard_and_bath_formats():
+    assert extract_summary_value(STANDARD_SUMMARY, "cells") == 80.0
+    assert extract_summary_value(STANDARD_SUMMARY, "finalTime") == 0.200112
+    assert extract_summary_value(BATH_SUMMARY, "cellsPerDirection") == 80.0
+    assert extract_summary_value(BATH_SUMMARY, "finalTime") == 0.200112
 
 
 def test_solver_available_returns_bool():

@@ -60,10 +60,7 @@ def _write_case(root: Path, *, allrun: str, steps: list[dict]) -> Path:
     allrun_path = case_root / "Allrun"
     allrun_path.write_text(allrun)
     os.chmod(allrun_path, 0o755)
-    (case_root / "workflow_contract.json").write_text(json.dumps({
-        "tutorial_family": "cli-step-test",
-        "steps": steps,
-    }))
+    del steps
     return case_root
 
 
@@ -130,160 +127,6 @@ def test_cli_step_returns_nonzero_for_failing_step() -> None:
         assert Path(payload["stderr_log"]).read_text() == "step failed\n"
         assert payload["workflow_state"]["status"] == "failed"
         assert payload["workflow_state"]["failed_step_id"] == "run"
-
-
-def test_cli_step_refuses_dependency_incomplete_step() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tutorials_root = Path(temp_dir)
-        _write_case(
-            tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\nexit 0\n",
-            steps=[
-                {"id": "mesh", "command": "Allrun", "depends_on": []},
-                {"id": "solve", "command": "Allrun", "depends_on": ["mesh"]},
-            ],
-        )
-
-        out = StringIO()
-        with redirect_stdout(out):
-            code = main([
-                "step",
-                "--strict",
-                "--entry",
-                "cliStepCase",
-                "--step",
-                "solve",
-                "--tutorials-root",
-                str(tutorials_root),
-            ])
-
-        payload = json.loads(out.getvalue())
-        assert code == 1
-        assert payload["status"] == "failed"
-        assert "incomplete dependencies" in payload["error"]
-
-
-def test_cli_step_continues_from_existing_workflow_state() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tutorials_root = Path(temp_dir)
-        case_root = _write_case(
-            tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\nprintf 'ran %s\\n' \"$1\"\n",
-            steps=[
-                {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
-                {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
-            ],
-        )
-
-        first_out = StringIO()
-        with redirect_stdout(first_out):
-            first_code = main([
-                "step",
-                "--strict",
-                "--entry",
-                "cliStepCase",
-                "--step",
-                "mesh",
-                "--tutorials-root",
-                str(tutorials_root),
-            ])
-        assert first_code == 0
-
-        second_out = StringIO()
-        with redirect_stdout(second_out):
-            second_code = main([
-                "step",
-                "--strict",
-                "--entry",
-                "cliStepCase",
-                "--step",
-                "solve",
-                "--tutorials-root",
-                str(tutorials_root),
-            ])
-
-        payload = json.loads(second_out.getvalue())
-        state_path = case_root / "postProcessing" / "workflow_state.json"
-        assert second_code == 0
-        assert payload["workflow_state"]["status"] == "completed"
-        assert payload["workflow_state"]["completed_steps"] == ["mesh", "solve"]
-        assert [step["status"] for step in payload["workflow_state"]["steps"]] == [
-            "completed",
-            "completed",
-        ]
-        assert json.loads(state_path.read_text()) == payload["workflow_state"]
-
-
-def test_cli_run_executes_all_runnable_steps_in_order() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tutorials_root = Path(temp_dir)
-        case_root = _write_case(
-            tutorials_root,
-            allrun="#!/bin/sh\nmkdir -p postProcessing 0.001\ntouch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\nprintf 'ran %s\\n' \"$1\"\n",
-            steps=[
-                {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
-                {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
-            ],
-        )
-
-        out = StringIO()
-        with redirect_stdout(out):
-            code = main([
-                "run",
-                "--strict",
-                "--entry",
-                "cliStepCase",
-                "--tutorials-root",
-                str(tutorials_root),
-            ])
-
-        payload = json.loads(out.getvalue())
-        state_path = case_root / "postProcessing" / "workflow_state.json"
-        assert code == 0
-        assert payload["status"] == "ok"
-        assert [step["step"] for step in payload["steps"]] == ["mesh", "solve"]
-        assert payload["workflow_state"]["status"] == "completed"
-        assert payload["workflow_state"]["completed_steps"] == ["mesh", "solve"]
-        assert json.loads(state_path.read_text()) == payload["workflow_state"]
-
-
-def test_cli_run_stops_on_failed_step() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tutorials_root = Path(temp_dir)
-        _write_case(
-            tutorials_root,
-            allrun=(
-                "#!/bin/sh\n"
-                    "mkdir -p postProcessing 0.001\n"
-                    "touch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\n"
-                "if [ \"$1\" = mesh ]; then printf 'mesh\\n'; exit 0; fi\n"
-                "printf 'solve failed\\n' >&2\n"
-                "exit 9\n"
-            ),
-            steps=[
-                {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
-                {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
-            ],
-        )
-
-        out = StringIO()
-        with redirect_stdout(out):
-            code = main([
-                "run",
-                "--strict",
-                "--entry",
-                "cliStepCase",
-                "--tutorials-root",
-                str(tutorials_root),
-            ])
-
-        payload = json.loads(out.getvalue())
-        assert code == 1
-        assert payload["status"] == "failed"
-        assert [step["step"] for step in payload["steps"]] == ["mesh", "solve"]
-        assert payload["steps"][-1]["exit_code"] == 9
-        assert payload["workflow_state"]["status"] == "failed"
-        assert payload["workflow_state"]["failed_step_id"] == "solve"
 
 
 def test_cli_run_does_not_retry_failed_saved_state() -> None:
@@ -486,14 +329,10 @@ def test_cli_run_attaches_failure_context_for_failed_step() -> None:
                 "#!/bin/sh\n"
                 "mkdir -p postProcessing 0.001\n"
                 "touch postProcessing/cliStepCase_1.txt 0.001/Vm 0.001/AV_Ta\n"
-                "if [ \"$1\" = mesh ]; then printf 'mesh\\n'; exit 0; fi\n"
-                "printf 'solve blew up\\n' >&2\n"
+                "printf 'run blew up\\n' >&2\n"
                 "exit 9\n"
             ),
-            steps=[
-                {"id": "mesh", "command": "Allrun", "args": ["mesh"], "depends_on": []},
-                {"id": "solve", "command": "Allrun", "args": ["solve"], "depends_on": ["mesh"]},
-            ],
+            steps=[{"id": "run", "command": "Allrun", "depends_on": []}],
         )
 
         out = StringIO()
@@ -509,8 +348,8 @@ def test_cli_run_attaches_failure_context_for_failed_step() -> None:
         assert code == 1
         assert payload["status"] == "failed"
         ctx = payload["failure_context"]
-        assert ctx["step_id"] == "solve"
-        assert "solve blew up" in ctx["stderr_tail"]
+        assert ctx["step_id"] == "run"
+        assert "run blew up" in ctx["stderr_tail"]
 
 
 def test_cli_step_reports_failed_when_status_failed_with_exit_code_zero(monkeypatch) -> None:

@@ -14,12 +14,12 @@ def _touch(case_root: Path, relative: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("files", "contract", "discovered", "runnable"),
+    ("files", "discovered", "runnable"),
     [
-        ((), None, False, False),
-        (("Allrun",), None, True, True),
-        (("constant/electroProperties",), None, True, False),
-        (("constant/electroProperties.variant",), None, True, False),
+        ((), False, False),
+        (("Allrun",), True, True),
+        (("constant/electroProperties",), True, False),
+        (("constant/electroProperties.variant",), True, False),
         (
             (
                 "constant/electroProperties",
@@ -28,23 +28,14 @@ def _touch(case_root: Path, relative: str) -> None:
                 "system/fvSchemes",
                 "system/fvSolution",
             ),
-            None,
             True,
             True,
-        ),
-        ((), {"steps": [{"id": "run", "command": "Allrun"}]}, True, True),
-        (
-            ("Allrun",),
-            {"status": {"runnable_without_substitution": False}},
-            True,
-            False,
         ),
     ],
 )
 def test_existing_case_discovery_and_runnability_matrix(
     tmp_path: Path,
     files: tuple[str, ...],
-    contract: dict | None,
     discovered: bool,
     runnable: bool,
 ) -> None:
@@ -52,10 +43,6 @@ def test_existing_case_discovery_and_runnability_matrix(
     case_root.mkdir()
     for relative in files:
         _touch(case_root, relative)
-    if contract is not None:
-        import json
-
-        (case_root / "workflow_contract.json").write_text(json.dumps(contract))
 
     matches = [
         entry for entry in list_entries(tmp_path)

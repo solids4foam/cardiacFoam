@@ -230,7 +230,7 @@ def _workflow_catalog(
         if not workflow_family:
             continue
         family_name = str(workflow_family)
-        family = families.setdefault(
+        families.setdefault(
             family_name,
             {
                 "workflow_family": family_name,
@@ -239,33 +239,6 @@ def _workflow_catalog(
                 "workflow_templates": [],
             },
         )
-
-        entry_kind = str(entry["entry_kind"])
-        if entry_kind == "workflow_template":
-            authoring_contract = (
-                Path(tutorials_root) / str(entry["entry_path"]) / "workflow_contract.json"
-            )
-            payload = None
-            if authoring_contract.exists():
-                import json
-
-                payload = json.loads(authoring_contract.read_text())
-            family["template_entry"] = {
-                "entry_name": entry["entry_name"],
-                "entry_path": entry["entry_path"],
-                "entry_kind": entry_kind,
-                "is_runnable": entry["is_runnable"],
-            }
-            family["workflow_templates"] = list((payload or {}).get("workflow_templates", []))
-        elif entry_kind == "workflow_case":
-            family["reference_cases"].append(
-                {
-                    "entry_name": entry["entry_name"],
-                    "entry_path": entry["entry_path"],
-                    "entry_kind": entry_kind,
-                    "is_runnable": entry["is_runnable"],
-                }
-            )
 
     return sorted(families.values(), key=lambda item: item["workflow_family"].casefold())
 

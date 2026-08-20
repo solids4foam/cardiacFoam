@@ -318,7 +318,7 @@ class MeshDiagnosticPolicyCapability(Protocol):
 
 class CaseCompatibilityCapability(Protocol):
     """Whether a case folder on disk belongs to this plugin, and whether it
-    can run without a driverFOAM workflow contract.
+    can run without driver-owned workflow metadata.
 
     Both questions are answered from filesystem evidence alone, before any
     dictionary is parsed, so both are necessarily plugin-specific: cardiacFoam
@@ -326,8 +326,8 @@ class CaseCompatibilityCapability(Protocol):
     nothing to any other solver.
 
     Consulted only when core cannot answer from plugin-neutral evidence first
-    (a workflow contract, or an ``Allrun``). The fallback returns ``False`` for
-    a non-cardiac plugin. Before it was gated it returned the *cardiac* answer
+    (an executable ``Allrun``). The fallback returns ``False`` for a
+    non-cardiac plugin. Before it was gated it returned the *cardiac* answer
     whichever plugin was loaded, so a case carrying an ``electroProperties``
     file was claimed by a plugin that had never heard of it.
 

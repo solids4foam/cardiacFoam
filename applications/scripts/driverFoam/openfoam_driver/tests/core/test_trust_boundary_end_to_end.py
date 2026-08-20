@@ -29,12 +29,14 @@ from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
 from openfoam_driver.cli import main
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.workflow_runner import (
     _resolve_case_cwd,
     _resolve_command,
     run_workflow_step,
 )
 from openfoam_driver.core.runtime.workflow_state import initial_workflow_state
+from openfoam_driver.strict_planning import strict_plan
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
 SECURITY_MD = REPO_ROOT / "applications" / "scripts" / "driverFoam" / "SECURITY.md"
@@ -54,7 +56,7 @@ ALLRUN_OK = (
 
 
 def _write_case(root: Path, *, allrun: str = ALLRUN_OK, steps: list[dict] | None = None) -> Path:
-    """Create a minimal runnable OpenFOAM case with a workflow contract.
+    """Create a minimal runnable OpenFOAM case with an Allrun-owned workflow.
 
     Mirrors tests/core/test_cli_run_document.py::_write_case so these tests
     drive the same real planning path without needing a cardiacFoam binary.
@@ -73,13 +75,27 @@ def _write_case(root: Path, *, allrun: str = ALLRUN_OK, steps: list[dict] | None
     allrun_path = case_root / "Allrun"
     allrun_path.write_text(allrun)
     os.chmod(allrun_path, 0o755)
-    (case_root / "workflow_contract.json").write_text(
-        json.dumps({
-            "tutorial_family": "trust-boundary-test",
-            "steps": steps or [{"id": "run", "command": "Allrun", "depends_on": []}],
-        })
-    )
+    del steps
     return case_root
+
+
+def _spec_with_workflow(case_root: Path, *, steps: list[dict]) -> TutorialSpec:
+    return TutorialSpec(
+        name=case_root.name,
+        case_root=case_root,
+        setup_root=case_root,
+        output_dir=case_root / "postProcessing",
+        build_cases=lambda: [CaseConfig(case_id="default", params={})],
+        apply_case=lambda *_args, **_kwargs: None,
+        metadata={
+            "entry_name": case_root.name,
+            "entry_kind": "case_folder",
+            "entry_path": case_root.name,
+            "source_type": "filesystem_case",
+            "workflow_family": None,
+            "workflow_dag": {"steps": steps},
+        },
+    )
 
 
 def _cli(argv: list[str]) -> tuple[int, dict]:
@@ -419,18 +435,21 @@ def test_command_allowlist_has_one_owner_shared_by_both_producers() -> None:
     planner and the run-document adapter cannot drift apart.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Producer 1: strict planning from an on-disk workflow contract.
+        # Producer 1: strict planning from a driver-owned Python workflow.
         planner_root = Path(temp_dir) / "planner"
         planner_root.mkdir()
-        _write_case(
-            planner_root,
-            steps=[{"id": "run", "command": "curl", "depends_on": []}],
-        )
-        code, plan_report = _cli([
-            "plan", "--strict", "--entry", CASE_NAME,
-            "--tutorials-root", str(planner_root),
-        ])
-        assert code != 0, plan_report
+        planner_case = _write_case(planner_root)
+        with mock.patch(
+            "openfoam_driver.strict_planning.load_entry_spec",
+            return_value=_spec_with_workflow(
+                planner_case,
+                steps=[{"id": "run", "command": "curl", "depends_on": []}],
+            ),
+        ):
+            plan_report = strict_plan(
+                CASE_NAME,
+                overrides={"tutorials_root": str(planner_root)},
+            ).to_json()
         assert "unknown_workflow_command" in _plan_codes(plan_report), plan_report
 
         # Producer 2: an agent-authored RunDocument carrying the same command,
@@ -535,15 +554,12 @@ def test_steps_run_argv_style_so_arguments_are_not_shell_interpreted() -> None:
                 f"touch postProcessing/{CASE_NAME}_1.txt 0.001/Vm 0.001/AV_Ta\n"
                 "exit 0\n"
             ),
-            steps=[{
-                "id": "run",
-                "command": "Allrun",
-                "args": [f"; touch {sentinel}"],
-                "depends_on": [],
-            }],
         )
-        doc_path = tutorials_root / "run.json"
-        _plan_to_file(tutorials_root, doc_path)
+        doc_path = _hand_authored_document(
+            tutorials_root / "run.json",
+            case_root=case_root,
+            steps=[_step("Allrun", args=[f"; touch {sentinel}"])],
+        )
 
         code, payload = _cli(["run", "--run-document", str(doc_path)])
         assert code == 0, payload

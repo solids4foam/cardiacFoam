@@ -35,7 +35,6 @@ This module stays for CLI consumers (``introspection.py``, ``listVerifiers``,
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -90,12 +89,6 @@ def _case_parameter_contract(spec: TutorialSpec) -> dict[str, list[Any]]:
     }
 
 
-def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
-
-
 def _find_tutorials_root(case_root: Path) -> Path:
     for candidate in (case_root.parent, *case_root.parents):
         if (candidate / "regressionTests").exists():
@@ -114,8 +107,6 @@ def describe_tutorial_contract(
     regression_root = tutorials_root / "regressionTests" / spec.name
 
     block_mesh_variants = _glob_relpaths(case_root / "system", "blockMeshDict*")
-    authoring_contract_path = case_root / "workflow_contract.json"
-    authoring_contract = _read_json_if_exists(authoring_contract_path)
     reference_cases = []
     if regression_root.exists():
         reference_cases.append(
@@ -154,11 +145,5 @@ def describe_tutorial_contract(
         "reference_cases": reference_cases,
         "postprocess_modules": _glob_relpaths(case_root, "post_processing*.py"),
         "case_parameters": _case_parameter_contract(spec),
-        "authoring_contract_path": (
-            str(authoring_contract_path.relative_to(case_root))
-            if authoring_contract_path.exists()
-            else None
-        ),
-        "authoring_contract": authoring_contract,
         "metadata": spec.metadata,
     }

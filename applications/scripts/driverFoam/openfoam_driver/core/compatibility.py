@@ -184,8 +184,8 @@ def legacy_case_runnable_without_workflow(plugin, case_root) -> bool:
     """Plugins predating is_case_runnable_without_workflow(). Same rule as
     :func:`legacy_case_marker`: only the built-in cardiac plugin can judge an
     uncontracted case runnable, because the judgement reads cardiac
-    dictionaries. Others get ``False`` -- core then falls back to the
-    workflow contract or ``Allrun``, which is plugin-neutral evidence."""
+    dictionaries. Others get ``False`` -- core then falls back to an
+    executable ``Allrun``, which is plugin-neutral filesystem evidence."""
 
     if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
         from ..plugins.cardiacfoam.case_compatibility import is_runnable_without_workflow

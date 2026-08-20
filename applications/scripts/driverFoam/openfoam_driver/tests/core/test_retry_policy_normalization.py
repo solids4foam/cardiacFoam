@@ -94,5 +94,4 @@ def test_missing_dag_message_names_contract_files():
     _, diagnostics = normalize_workflow_dag(None, driver_context=None)
     missing = [d for d in diagnostics if d.code == "missing_workflow_dag"]
     assert len(missing) == 1
-    assert "workflow_contract.json" in missing[0].message
     assert "Allrun" in missing[0].message

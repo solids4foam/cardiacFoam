@@ -328,19 +328,6 @@ def test_optional_required_input_that_is_absent_is_not_added(tmp_path: Path) -> 
     assert "Optional" not in _paths(components)
 
 
-def test_workflow_contract_json_is_included_when_present(tmp_path: Path) -> None:
-    _write_control_dict(tmp_path, start_from="startTime", start_time="0")
-    (tmp_path / "workflow_contract.json").write_text('{"version": 1}')
-
-    components = enumerate_case_inputs(
-        tmp_path, workflow_dag={"steps": []}, driver_context=generic_openfoam_context(),
-    )
-
-    contract = _by_path(components, "workflow_contract.json")
-    assert contract.kind == "case_file"
-    assert contract.strength == "content"
-
-
 def test_processor_selected_time_is_included_other_processor_times_excluded(tmp_path: Path) -> None:
     """I9: processor*/<selected-time>/** is a required input on the same
     footing as the serial case; other times under processor*/ are outputs."""

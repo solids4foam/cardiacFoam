@@ -32,6 +32,7 @@ import tempfile
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
@@ -46,6 +47,7 @@ from openfoam_driver.scripts._dict_keys_scanner import (
 from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 from types import SimpleNamespace
 
+from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.strict_planning import (
     StrictPlanReport,
     _is_nondimensional_entry,
@@ -71,6 +73,25 @@ def _write_unit_mesh(case_root: Path) -> None:
     pm = case_root / "constant" / "polyMesh"
     pm.mkdir(parents=True)
     pm.joinpath("points").write_text(_FOAM_HEADER + "\n2\n(\n(0 0 0)\n(1 1 1)\n)\n")
+
+
+def _spec_with_workflow(case_root: Path, *, steps: list[dict]) -> TutorialSpec:
+    return TutorialSpec(
+        name=case_root.name,
+        case_root=case_root,
+        setup_root=case_root,
+        output_dir=case_root / "postProcessing",
+        build_cases=lambda: [CaseConfig(case_id="default", params={})],
+        apply_case=lambda *_args, **_kwargs: None,
+        metadata={
+            "entry_name": case_root.name,
+            "entry_kind": "case_folder",
+            "entry_path": case_root.name,
+            "source_type": "filesystem_case",
+            "workflow_family": None,
+            "workflow_dag": {"steps": steps},
+        },
+    )
 
 
 def test_report_has_mesh_geometry_field() -> None:
@@ -290,17 +311,18 @@ def test_strict_plan_fails_on_unknown_workflow_command() -> None:
         )
         for name in ("controlDict", "fvSchemes", "fvSolution"):
             (case_root / "system" / name).write_text("\n")
-        (case_root / "workflow_contract.json").write_text(json.dumps({
-            "tutorial_family": "strict-test",
-            "steps": [
-                {"id": "unknown", "command": "notARealUtility", "depends_on": []}
-            ],
-        }))
-
-        report = strict_plan(
-            "badCase",
-            overrides={"tutorials_root": str(tutorials_root)},
-        )
+        with mock.patch.object(
+            strict_planning,
+            "load_entry_spec",
+            return_value=_spec_with_workflow(
+                case_root,
+                steps=[{"id": "unknown", "command": "notARealUtility", "depends_on": []}],
+            ),
+        ):
+            report = strict_plan(
+                "badCase",
+                overrides={"tutorials_root": str(tutorials_root)},
+            )
 
     payload = report.to_json()
     assert payload["status"] == "failed"
@@ -328,17 +350,18 @@ def test_strict_plan_fails_on_unknown_workflow_dependency() -> None:
         )
         for name in ("controlDict", "fvSchemes", "fvSolution"):
             (case_root / "system" / name).write_text("\n")
-        (case_root / "workflow_contract.json").write_text(json.dumps({
-            "tutorial_family": "strict-test",
-            "steps": [
-                {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]}
-            ],
-        }))
-
-        report = strict_plan(
-            "badDependency",
-            overrides={"tutorials_root": str(tutorials_root)},
-        )
+        with mock.patch.object(
+            strict_planning,
+            "load_entry_spec",
+            return_value=_spec_with_workflow(
+                case_root,
+                steps=[{"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]}],
+            ),
+        ):
+            report = strict_plan(
+                "badDependency",
+                overrides={"tutorials_root": str(tutorials_root)},
+            )
 
     payload = report.to_json()
     assert payload["status"] == "failed"

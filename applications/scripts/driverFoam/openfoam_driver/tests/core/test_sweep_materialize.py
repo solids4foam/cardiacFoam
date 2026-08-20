@@ -25,16 +25,12 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-import json
-import tempfile
-from pathlib import Path
-
 import pytest
 
 from openfoam_driver.sweep_materialize import materialize_case
 
 
-def test_materialize_case_writes_dict_files_allrun_and_contract(tmp_path):
+def test_materialize_case_writes_dict_files_and_allrun_only(tmp_path):
     case_dir = tmp_path / "TNNP_1e-06"
     materialize_case(
         case_dir=case_dir,
@@ -55,9 +51,7 @@ def test_materialize_case_writes_dict_files_allrun_and_contract(tmp_path):
     allrun = case_dir / "Allrun"
     assert allrun.exists()
     assert allrun.stat().st_mode & 0o111  # executable
-
-    contract = json.loads((case_dir / "workflow_contract.json").read_text())
-    assert contract["steps"] == [{"id": "run", "command": "Allrun", "depends_on": []}]
+    assert not (case_dir / "workflow_contract.json").exists()
 
 
 def test_materialize_case_two_cases_do_not_collide(tmp_path):

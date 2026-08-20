@@ -178,10 +178,6 @@ class TestIntrospection(unittest.TestCase):
             allrun = case_root / "Allrun"
             allrun.write_text("#!/bin/sh\necho generic-allrun-ran\n")
             allrun.chmod(allrun.stat().st_mode | stat.S_IEXEC)
-            (case_root / "workflow_contract.json").write_text(
-                json.dumps({"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]})
-            )
-
             payload = describe_entry(
                 "minimalCase",
                 overrides={"tutorials_root": str(tutorials_root)},

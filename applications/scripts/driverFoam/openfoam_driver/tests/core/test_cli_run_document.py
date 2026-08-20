@@ -40,10 +40,6 @@ def _write_case(root: Path, *, allrun: str, steps: list[dict]) -> Path:
     allrun_path = case_root / "Allrun"
     allrun_path.write_text(allrun)
     os.chmod(allrun_path, 0o755)
-    (case_root / "workflow_contract.json").write_text(json.dumps({
-        "tutorial_family": "run-doc-test",
-        "steps": steps,
-    }))
     return case_root
 
 

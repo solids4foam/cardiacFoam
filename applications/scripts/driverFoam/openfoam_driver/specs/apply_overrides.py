@@ -47,12 +47,11 @@
 from __future__ import annotations
 
 import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Callable, Iterable
 
-from ..core.runtime.mutators import update_foam_entry, update_foam_entry_via_foamDictionary
+from ..core.runtime.mutators import update_foam_entry
 
 
 @dataclass(frozen=True)
@@ -329,10 +328,7 @@ def apply_overrides(
                     case_root / regen_scope.file_relpath, dp, value, extra_overrides,
                 )
             elif not dp.startswith("$"):
-                if shutil.which("foamDictionary"):
-                    update_foam_entry_via_foamDictionary(case_root / "system" / "controlDict", dp, value)
-                else:
-                    update_foam_entry(case_root / "system" / "controlDict", dp, value)
+                update_foam_entry(case_root / "system" / "controlDict", dp, value)
             else:
                 token = _scope_token(dp)
                 scope = scope_by_token.get(token)

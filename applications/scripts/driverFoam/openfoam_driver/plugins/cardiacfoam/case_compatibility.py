@@ -2,15 +2,15 @@
 
 Why this exists
 ---------------
-Older cardiacFoam tutorial folders often predate ``workflow_contract.json``
-and do not provide ``Allrun``.  driverFOAM historically discovered them from
-``electroProperties*`` and considered them runnable when the matching physics
-and standard OpenFOAM system dictionaries were present.
+Older cardiacFoam tutorial folders may not provide ``Allrun``. driverFOAM
+historically discovered them from ``electroProperties*`` and considered them
+runnable when the matching physics and standard OpenFOAM system dictionaries
+were present.
 
 Activation
 ----------
 The rule applies only while the cardiacFoam plugin is selected and core cannot
-establish runnability from a workflow contract or ``Allrun`` first.
+establish runnability from an executable ``Allrun`` first.
 
 Compatibility
 -------------

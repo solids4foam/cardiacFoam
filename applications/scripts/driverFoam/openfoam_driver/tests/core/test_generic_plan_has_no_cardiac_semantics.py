@@ -54,8 +54,7 @@ _CARDIAC_TOKENS = (
 
 
 def _minimal_case(root: Path) -> Path:
-    """A plain OpenFOAM case with an Allrun and a workflow contract -- no
-    cardiac dictionaries anywhere."""
+    """A plain OpenFOAM case with an Allrun and no cardiac dictionaries."""
     case = root / "case"
     (case / "system").mkdir(parents=True)
     (case / "constant").mkdir(parents=True)
@@ -69,9 +68,6 @@ def _minimal_case(root: Path) -> Path:
     allrun = case / "Allrun"
     allrun.write_text("#!/bin/sh\necho generic-allrun-ran\n")
     allrun.chmod(allrun.stat().st_mode | stat.S_IEXEC)
-    (case / "workflow_contract.json").write_text(
-        json.dumps({"steps": [{"id": "run", "command": "Allrun", "depends_on": []}]})
-    )
     return case
 
 

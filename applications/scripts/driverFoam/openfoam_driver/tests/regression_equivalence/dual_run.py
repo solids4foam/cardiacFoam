@@ -165,8 +165,12 @@ def extract_summary_value(text: str, key: str) -> float | None:
     for line in text.splitlines():
         if key == "cells" and "Number of cells" in line:
             return float(line.split("=")[1].strip())
+        if key == "cellsPerDirection" and line.startswith("# cellsPerDirection "):
+            return float(line.split()[2])
         if key == "finalTime" and "Final simulation time" in line:
             return float(line.split("=")[1].strip())
+        if key == "finalTime" and line.startswith("# time "):
+            return float(line.split()[2])
     return None
 
 

@@ -358,6 +358,15 @@ def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
     assert len(call_log) == 2
     assert (output_dir / "TNNP" / "run_document.json").exists()
     assert (output_dir / "BuenoOrovio" / "run_document.json").exists()
+    run_doc = json.loads((output_dir / "TNNP" / "run_document.json").read_text())
+    step = run_doc["workflowDag"]["steps"][0]
+    assert step["id"] == "run"
+    assert step["command"] == "Allrun"
+    assert step["depends_on"] == []
+    state_step = run_doc["workflowState"]["steps"][0]
+    assert state_step["step_id"] == "run"
+    assert state_step["status"] == "pending"
+    assert state_step["attempt"] == 0
 
     manifest_path = output_dir / "sweep_manifest.json"
     assert manifest_path.exists()
