@@ -28,10 +28,10 @@
 from __future__ import annotations
 
 import re
-import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
+
+from . import foam_backend
 
 
 def _format_value(value: Any) -> str:
@@ -273,93 +273,9 @@ def update_control_dict(
         "purgeWrite": purge_write,
     }
 
-    # Check if foamDictionary is available in the current environment
-    has_foam_dict = shutil.which("foamDictionary") is not None
-
     for key, value in patches.items():
         if value is not None:
-            success = False
-            if has_foam_dict:
-                try:
-                    update_foam_entry_via_foamDictionary(control_dict_path, key, value)
-                    success = True
-                except Exception:
-                    # Fallback to python string parsing on failure
-                    pass
-
-            if not success:
-                update_foam_entry(control_dict_path, key, value)
-
-
-_FOAM_ENTRY_LINE = re.compile(r"^[A-Za-z_][\w.]*\s+\S.*;\s*$")
-
-
-def _count_foam_entries(text: str) -> int:
-    """Count lines that look like a top-level ``key value;`` entry.
-
-    A coarse, syntax-unaware count used only to sanity-check that
-    foamDictionary didn't silently discard most of a file's content while
-    still exiting 0 (see update_foam_entry_via_foamDictionary).
-    """
-    count = 0
-    for line in text.splitlines():
-        stripped = _strip_inline_comment(line).strip()
-        if stripped and _FOAM_ENTRY_LINE.match(stripped):
-            count += 1
-    return count
-
-
-def update_foam_entry_via_foamDictionary(
-    file_path: Path,
-    key: str,
-    value: Any,
-    *,
-    scope: str | list[str] | tuple[str, ...] | None = None,
-) -> None:
-    """Update a key using OpenFOAM's foamDictionary utility."""
-    if not file_path.exists():
-        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
-
-    original_text = file_path.read_text()
-
-    scope_path = _normalize_scope(scope)
-    entry_path = "/".join(scope_path + [key]) if scope_path else key
-
-    cmd = [
-        "foamDictionary",
-        str(file_path),
-        "-entry",
-        entry_path,
-        "-set",
-        _format_value(value),
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"foamDictionary failed to update '{entry_path}' in {file_path}:\n"
-            f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-        )
-
-    # foamDictionary can exit 0 while having silently rewritten the file as a
-    # near-empty dict (e.g. a malformed header comment makes it fail to parse
-    # the existing content, then `-set` auto-creates the missing key). Byte
-    # count alone doesn't catch this: foamDictionary always re-serializes its
-    # full banner, which can pad a gutted file back up to a similar size. Count
-    # recognizable `key value;` entries instead, and revert + raise if most of
-    # them vanished, instead of leaving a gutted file behind.
-    new_text = file_path.read_text()
-    original_entries = _count_foam_entries(original_text)
-    new_entries = _count_foam_entries(new_text)
-    if original_entries >= 2 and new_entries < original_entries * 0.5:
-        file_path.write_text(original_text)
-        raise RuntimeError(
-            f"foamDictionary reported success but the result has only "
-            f"{new_entries} recognizable entries versus {original_entries} "
-            f"before, for '{entry_path}' in {file_path}; the input likely "
-            "failed to parse (e.g. a malformed header comment). Reverted the "
-            "file to avoid silent data loss."
-        )
+            update_foam_entry(control_dict_path, key, value)
 
 
 def update_foam_entry(
@@ -390,18 +306,20 @@ def update_foam_entry(
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
 
-    has_foam_dict = shutil.which("foamDictionary") is not None
-    if has_foam_dict:
-        try:
-            update_foam_entry_via_foamDictionary(file_path, key, value, scope=scope)
-            return
-        except Exception:
-            pass
-
     key_pattern = re.compile(rf"^\s*{re.escape(key)}\b")
     lines = file_path.read_text().splitlines(keepends=True)
     virtual = _explode_inline_blocks_with_spans(lines)
-    search_start, search_end = _resolve_search_region([t for t, _, _, _ in virtual], scope)
+    try:
+        search_start, search_end = _resolve_search_region(
+            [t for t, _, _, _ in virtual], scope
+        )
+    except KeyError:
+        # The line scanner couldn't even resolve the scope -- e.g. a brace
+        # inside a quoted value defeats its brace counting. Let a real parser
+        # have a go before giving up.
+        return foam_backend.update_entry(
+            file_path, key, value, scope=scope, add_if_missing=add_if_missing
+        )
     direct = _iter_direct_child_lines([t for t, _, _, _ in virtual], search_start, search_end)
 
     target: tuple[int, int, int] | None = None
@@ -447,38 +365,9 @@ def update_foam_entry(
             lines.insert(insert_before_index, f"{indent}{key}    {_format_value(value)};\n")
             file_path.write_text("".join(lines))
             return
-        if scope is None:
-            raise KeyError(f"Key '{key}' not found in {file_path}")
-        raise KeyError(f"Key '{key}' not found in scope '{scope}' in {file_path}")
-
-
-def remove_foam_dict_via_foamDictionary(
-    file_path: Path,
-    dict_name: str,
-    *,
-    scope: str | list[str] | tuple[str, ...] | None = None,
-    missing_ok: bool = False,
-) -> None:
-    """Remove a dictionary block using OpenFOAM's foamDictionary utility."""
-    if not file_path.exists():
-        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
-
-    scope_path = _normalize_scope(scope)
-    entry_path = "/".join(scope_path + [dict_name]) if scope_path else dict_name
-
-    cmd = [
-        "foamDictionary",
-        str(file_path),
-        "-entry",
-        entry_path,
-        "-remove",
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        if missing_ok:
-            return
-        raise KeyError(f"Dictionary '{entry_path}' not found by foamDictionary in {file_path}")
+        return foam_backend.update_entry(
+            file_path, key, value, scope=scope, add_if_missing=add_if_missing
+        )
 
 
 def remove_foam_dict(
@@ -491,14 +380,6 @@ def remove_foam_dict(
     """Remove a dictionary block from an OpenFOAM dictionary-like text file."""
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
-
-    has_foam_dict = shutil.which("foamDictionary") is not None
-    if has_foam_dict:
-        try:
-            remove_foam_dict_via_foamDictionary(file_path, dict_name, scope=scope, missing_ok=missing_ok)
-            return
-        except Exception:
-            pass
 
     lines = file_path.read_text().splitlines(keepends=True)
     try:
@@ -555,9 +436,9 @@ def remove_foam_dict(
     if remove_start is None or remove_end is None:
         if missing_ok:
             return
-        if scope is None:
-            raise KeyError(f"Dictionary '{dict_name}' not found in {file_path}")
-        raise KeyError(f"Dictionary '{dict_name}' not found in scope '{scope}' in {file_path}")
+        return foam_backend.remove_dict(
+            file_path, dict_name, scope=scope, missing_ok=missing_ok
+        )
 
     del lines[remove_start:remove_end]
     file_path.write_text("".join(lines))
@@ -698,48 +579,10 @@ def read_foam_dict_block(
     return None
 
 
-def ensure_foam_dict_via_foamDictionary(
-    file_path: Path,
-    dict_name: str,
-    block_text: str,
-    *,
-    scope: str | list[str] | tuple[str, ...] | None = None,
-) -> bool:
-    """Insert a dictionary block using OpenFOAM's foamDictionary utility."""
-    if not file_path.exists():
-        raise FileNotFoundError(f"Dictionary file not found: {file_path}")
-
-    scope_path = _normalize_scope(scope)
-    entry_path = "/".join(scope_path + [dict_name]) if scope_path else dict_name
-
-    # Check if the entry already exists
-    cmd_check = ["foamDictionary", str(file_path), "-entry", entry_path]
-    res_check = subprocess.run(cmd_check, capture_output=True)
-    if res_check.returncode == 0:
-        return False
-
-    # Extract the internal brace content since -add only takes the value
-    start_idx = block_text.find("{")
-    end_idx = block_text.rfind("}")
-    if start_idx == -1 or end_idx == -1 or start_idx > end_idx:
-        raise ValueError("block_text must contain { and }")
-
-    inner_val = block_text[start_idx : end_idx + 1]
-
-    cmd_add = [
-        "foamDictionary",
-        str(file_path),
-        "-entry",
-        entry_path,
-        "-add",
-        inner_val,
-    ]
-    res_add = subprocess.run(cmd_add, capture_output=True, text=True)
-    if res_add.returncode != 0:
-        raise RuntimeError(f"foamDictionary failed to add block to '{entry_path}' in {file_path}:\n{res_add.stderr}")
-    return True
-
-
+# No foamlib fallback here, deliberately. block_text is inserted verbatim to
+# preserve comments and formatting for the dynamic-container carry-forward
+# in plugins/cardiacfoam/dict_builder.py; routing it through a parser would
+# re-serialise exactly what this path exists to keep intact.
 def ensure_foam_dict(
     file_path: Path,
     dict_name: str,
@@ -750,13 +593,6 @@ def ensure_foam_dict(
     """Insert a dictionary block if it is missing from the selected scope."""
     if not file_path.exists():
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
-
-    has_foam_dict = shutil.which("foamDictionary") is not None
-    if has_foam_dict:
-        try:
-            return ensure_foam_dict_via_foamDictionary(file_path, dict_name, block_text, scope=scope)
-        except Exception:
-            pass
 
     lines = file_path.read_text().splitlines(keepends=True)
     search_start, search_end = _resolve_search_region(lines, scope)

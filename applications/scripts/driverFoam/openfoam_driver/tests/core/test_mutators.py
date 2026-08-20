@@ -39,7 +39,6 @@ from openfoam_driver.core.runtime.mutators import (
     read_foam_entry,
     remove_foam_dict,
     update_foam_entry,
-    update_foam_entry_via_foamDictionary,
 )
 from openfoam_driver.tests.conftest import assert_foam_entry
 
@@ -118,9 +117,6 @@ class TestScopedMutators(unittest.TestCase):
         # non-word characters, so there is no word boundary at all at that
         # position (verified: re.match(r'^\s*"foo"\b', '    "foo"\n') is
         # None). This is the quoted equivalent of test_nested_scope_path.
-        # Forced off foamDictionary (which would mask the regex bug, since
-        # it understands its own dictionary syntax natively) to test the
-        # fallback parser's scope matching specifically.
         text = "\n".join(
             [
                 "solvers",
@@ -138,14 +134,10 @@ class TestScopedMutators(unittest.TestCase):
             path = Path(temp_dir) / "fvSolution"
             path.write_text(text)
 
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value=None,
-            ):
-                update_foam_entry(
-                    path, "tolerance", 1e-15,
-                    scope=("solvers", '"phiE|phiEFinal|phiI|phiIFinal"'),
-                )
+            update_foam_entry(
+                path, "tolerance", 1e-15,
+                scope=("solvers", '"phiE|phiEFinal|phiI|phiIFinal"'),
+            )
             self.assertIn("tolerance    1e-15;", path.read_text())
 
     def test_missing_scope_raises(self) -> None:
@@ -156,7 +148,14 @@ class TestScopedMutators(unittest.TestCase):
             with self.assertRaises(KeyError):
                 update_foam_entry(path, "b", 2, scope="missing")
 
-    def test_python_parser_fails_on_c_style_comments(self) -> None:
+    def test_falls_back_for_c_style_comments(self) -> None:
+        """Tier 1's brace counting is comment-unaware (it only strips ``//``),
+        so a ``/* ... { ... */`` block comment's literal brace throws off its
+        depth tracking and it reports the enclosing scope as having
+        unbalanced braces. That KeyError is exactly the class the foamlib
+        tier exists to catch: a real parser understands ``/* */`` natively,
+        so the update now succeeds instead of raising.
+        """
         text = "\n".join(
             [
                 "someDict",
@@ -172,16 +171,11 @@ class TestScopedMutators(unittest.TestCase):
             path = Path(temp_dir) / "dict"
             path.write_text(text)
 
-            # The fallback update_foam_entry uses brace counting, so the extra
-            # { inside the block comment throws off the parser, causing it to
-            # incorrectly raise a KeyError for unbalanced braces. Forced off
-            # foamDictionary, which parses /* */ natively and would mask the
-            # limitation being pinned here.
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value=None,
-            ), self.assertRaises(KeyError):
-                update_foam_entry(path, "value", 2, scope="someDict")
+            update_foam_entry(path, "value", 2, scope="someDict")
+
+            updated = path.read_text()
+            self.assertIn("value    2;", updated)
+            self.assertIn("a brace { inside it", updated)
 
     def test_remove_foam_dict_removes_nested_dictionary(self) -> None:
         text = "\n".join(
@@ -301,8 +295,8 @@ class TestScopeDoesNotDescendIntoNestedDicts(unittest.TestCase):
     child. foamDictionary is path-exact and does neither, so this divergence
     only appeared when OpenFOAM was sourced.
 
-    These tests pin the Python implementation directly (foamDictionary forced
-    absent) because it is the side that was wrong.
+    These tests pin the Python implementation directly, which is the side
+    that was wrong.
     """
 
     NESTED = "\n".join(
@@ -318,14 +312,6 @@ class TestScopeDoesNotDescendIntoNestedDicts(unittest.TestCase):
             "",
         ]
     )
-
-    def setUp(self) -> None:
-        patcher = mock.patch(
-            "openfoam_driver.core.runtime.mutators.shutil.which",
-            return_value=None,
-        )
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     def _write(self, temp_dir: str) -> Path:
         path = Path(temp_dir) / "electroProperties"
@@ -481,22 +467,17 @@ class TestReadFoamEntryIsEnvironmentIndependent(unittest.TestCase):
     def test_writes_into_a_scope_written_as_an_inline_block(self) -> None:
         # The read path handles inline blocks; the write path indexes real
         # lines, so it must splice the new entry back into the original line
-        # rather than reformat the file. Forced off foamDictionary, which
-        # re-serialises the whole file and so cannot preserve the layout --
-        # minimal-diff writing is a property of the Python writer alone.
+        # rather than reformat the file -- minimal-diff writing is a property
+        # of the Python writer alone.
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "fvSolution"
             path.write_text(
                 "solvers { V { tolerance 1e-5; } p { tolerance 1e-7; } }\n"
             )
 
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value=None,
-            ):
-                update_foam_entry(
-                    path, "tolerance", "1e-9", scope=["solvers", "V"]
-                )
+            update_foam_entry(
+                path, "tolerance", "1e-9", scope=["solvers", "V"]
+            )
 
             self.assertEqual(
                 read_foam_entry(path, "tolerance", scope=["solvers", "V"]), "1e-9"
@@ -517,99 +498,37 @@ class TestReadFoamEntryIsEnvironmentIndependent(unittest.TestCase):
             self.assertEqual(read_foam_entry(path, "a"), '#calc "3.0 * 7.0"')
 
 
-class TestUpdateFoamEntryPrefersFoamDictionary(unittest.TestCase):
-    """update_foam_entry is the one sibling of read_foam_entry/remove_foam_dict/
-    ensure_foam_dict that skipped the shutil.which("foamDictionary")
-    preference -- these tests pin down that it now matches its siblings."""
+class TestUpdateFoamEntryUsesLineTier(unittest.TestCase):
+    """update_foam_entry runs the line-based tier 1 unconditionally now --
+    there is no foamDictionary preference or availability check left to pin."""
 
-    def test_prefers_foamdictionary_when_available(self) -> None:
+    def test_updates_an_existing_scalar_entry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "controlDict"
             path.write_text("deltaT 1e-06;\n")
 
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value="/usr/bin/foamDictionary",
-            ), mock.patch(
-                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary"
-            ) as mock_via_foamdictionary:
-                update_foam_entry(path, "deltaT", 0.0001)
-
-            mock_via_foamdictionary.assert_called_once_with(path, "deltaT", 0.0001, scope=None)
-
-    def test_falls_back_to_regex_when_foamdictionary_raises(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "controlDict"
-            path.write_text("deltaT 1e-06;\n")
-
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value="/usr/bin/foamDictionary",
-            ), mock.patch(
-                "openfoam_driver.core.runtime.mutators.update_foam_entry_via_foamDictionary",
-                side_effect=RuntimeError("boom"),
-            ):
-                update_foam_entry(path, "deltaT", 0.0001)
-
-            self.assertIn("deltaT    0.0001;", path.read_text())
-
-    def test_uses_regex_directly_when_foamdictionary_unavailable(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "controlDict"
-            path.write_text("deltaT 1e-06;\n")
-
-            with mock.patch(
-                "openfoam_driver.core.runtime.mutators.shutil.which",
-                return_value=None,
-            ):
-                update_foam_entry(path, "deltaT", 0.0001)
+            update_foam_entry(path, "deltaT", 0.0001)
 
             self.assertIn("deltaT    0.0001;", path.read_text())
 
 
-class TestFoamDictionarySilentTruncationGuard(unittest.TestCase):
-    """A malformed OpenFOAM header comment (missing the closing ``\\*---*/``
-    line) makes ``foamDictionary`` treat the whole file as an empty dict; it
-    then exits 0 after silently rewriting the file with only the newly-set
-    key. update_foam_entry_via_foamDictionary must detect that and refuse to
-    leave the file gutted."""
+def test_update_foam_entry_falls_back_for_brace_in_quoted_string(tmp_path):
+    """Tier 1 cannot parse this; the foamlib tier must pick it up.
 
-    @unittest.skipUnless(shutil.which("foamDictionary"), "foamDictionary not available")
-    def test_detects_and_reverts_silent_truncation(self) -> None:
-        text = "\n".join(
-            [
-                "/*--------------------------------*- C++ -*----------------------------------*\\",
-                "FoamFile",
-                "{",
-                "    version     2.0;",
-                "    format      ascii;",
-                "    class       dictionary;",
-                "    object      controlDict;",
-                "}",
-                "",
-                "application     cardiacFoam;",
-                "startFrom       startTime;",
-                "startTime       0;",
-                "stopAt          endTime;",
-                "endTime         1.0;",
-                "deltaT          1e-06;",
-                "writeControl    adjustableRunTime;",
-                "writeInterval   0.01;",
-                "purgeWrite      0;",
-                "",
-            ]
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "controlDict"
-            path.write_text(text)
-
-            with self.assertRaises(RuntimeError):
-                update_foam_entry_via_foamDictionary(path, "deltaT", 0.0001)
-
-            reverted = path.read_text()
-            self.assertIn("application", reverted)
-            self.assertIn("writeInterval", reverted)
+    A brace inside a quoted value defeats brace counting, so the line scanner
+    reports the enclosing scope as missing. Before the foamlib backend this
+    raised KeyError whenever OpenFOAM was not sourced.
+    """
+    path = tmp_path / "d"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object d; }\n"
+        'note  "a value with { an unbalanced brace";\n'
+        "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n"
+    )
+    update_foam_entry(path, "tolerance", 1e-12, scope=["solvers", "Vm"])
+    text = path.read_text()
+    assert "1e-12" in text
+    assert 'note  "a value with { an unbalanced brace";' in text
 
 
 if __name__ == "__main__":
