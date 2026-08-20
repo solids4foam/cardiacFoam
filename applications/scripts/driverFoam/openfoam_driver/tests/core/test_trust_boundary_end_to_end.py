@@ -725,23 +725,13 @@ def test_run_workflow_step_is_still_a_trusted_unvalidating_primitive() -> None:
         )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "SECURITY.md 'Explicitly NOT mitigated': override/spec *values* are "
-        "written verbatim into case dictionaries, so a value containing an "
-        "OpenFOAM coded entry (#codeStream / #calc / a coded function object) "
-        "is compiled and executed by the solver at run time. Documented-open, "
-        "accepted under the local/single-tenant trust model. This xfail is the "
-        "regression gate for *closing* it later -- if it starts passing, "
-        "update SECURITY.md and remove the xfail rather than leaving a stale "
-        "xfail on fixed behavior."
-    ),
-    strict=True,
-)
 def test_override_values_containing_a_coded_entry_are_rejected() -> None:
-    """Asserts the *mitigated* behaviour (currently absent): `step --apply`
-    should refuse an override whose value smuggles executable OpenFOAM code
-    into a case dictionary.
+    """Asserts the *mitigated* behaviour: `step --apply` refuses an override
+    whose value smuggles executable OpenFOAM code into a case dictionary.
+
+    `mutators._format_value` (tier 1, the path almost every override takes)
+    now rejects any override value containing `#`, `;`, or a newline before
+    it is ever written to a case dictionary file. See SECURITY.md.
 
     Real entry point: `foamctl step --run-document <doc> --step <id> --apply
     <overrides.json>`, which routes through specs.apply_overrides.

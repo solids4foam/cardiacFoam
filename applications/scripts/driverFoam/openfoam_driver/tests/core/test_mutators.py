@@ -34,6 +34,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from openfoam_driver.core.runtime.mutators import (
     ensure_foam_dict,
     read_foam_entry,
@@ -612,6 +614,37 @@ def test_name_matching_no_pattern_still_fails_closed(tmp_path):
     path = tmp_path / "fvSolution"
     path.write_text(REGEX_KEYED)
     assert read_foam_entry(path, "tolerance", scope=["solvers", "nope"]) is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "1e-6;  rogue  1",
+        '#calc "2*3"',
+        "#codeStream { code #{ os << 1; #}; }",
+        "0.3;\n    endTime 99",
+    ],
+)
+def test_update_foam_entry_rejects_injected_value(tmp_path, payload):
+    path = tmp_path / "controlDict"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object controlDict; }\n"
+        "deltaT 1e-06;\n"
+    )
+    original = path.read_text()
+    with pytest.raises(ValueError):
+        update_foam_entry(path, "deltaT", payload)
+    assert path.read_text() == original
+
+
+def test_update_foam_entry_still_accepts_ordinary_values(tmp_path):
+    path = tmp_path / "controlDict"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object controlDict; }\n"
+        "deltaT 1e-06;\n"
+    )
+    update_foam_entry(path, "deltaT", "5e-06")
+    assert "5e-06" in path.read_text()
 
 
 if __name__ == "__main__":

@@ -47,18 +47,22 @@ results directory — it is not forced under `caseRoot`.
 - `caseRoot` must be a runnable OpenFOAM case; `caseRoot`/`outputDir` resolved to
   canonical paths; opt-in `DRIVERFOAM_ALLOWED_RUNS_ROOT` containment.
 - Steps run argv-style (no shell).
+- Override / spec **values** are rejected before they reach a case dictionary
+  if they are directive- or entry-terminating-shaped. The command allowlist
+  gates *what binary runs*, not the *content* of the dicts it reads, so this
+  is enforced at the write path instead: `mutators._format_value` (tier 1 —
+  the path almost every override takes) raises `ValueError` on any value
+  containing `;`, a newline, or `#`, before the value is written. The foamlib
+  tier (tier 2, the line-scanner fallback) independently refuses
+  type-inconsistent and directive-shaped values at the write call. This closes
+  the gap previously recorded here as documented-but-unenforced: a value
+  carrying `;` can no longer append a second dictionary entry, and a
+  `#codeStream` / `#calc` / coded-function-object value can no longer reach a
+  dict file to be compiled and executed by the solver at run time.
 
 ## Explicitly NOT mitigated
 
 - Arbitrary code inside an invoked `Allrun` (running a case is running its code).
-- Override / spec **values** (not just commands) are written verbatim into case
-  dictionaries. A value containing an OpenFOAM coded entry — `#codeStream`,
-  `#calc`, or a coded function object — is compiled and executed by the solver
-  at run time. The command allowlist gates *what binary runs*, not the *content*
-  of the dicts it reads; dict values are arbitrary code at solve time by design.
-  This is acceptable under the local/single-tenant trust model (the same actor
-  authoring values could run the solver directly) but is NOT a sandbox against a
-  malicious value channel.
 - No rlimit / output-size bounds (local DoS).
 - Trusts the ambient `PATH` and `$FOAM_*BIN`.
 - Assumes a single-tenant host.

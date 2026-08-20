@@ -37,7 +37,26 @@ from . import foam_backend
 def _format_value(value: Any) -> str:
     if isinstance(value, bool):
         return "yes" if value else "no"
-    return str(value)
+
+    text = str(value)
+
+    # Override values arrive verbatim from sweep.json and the CLI and are
+    # written straight into a case dictionary, so a value carrying a `;` can
+    # append a second entry, and a `#`-directive becomes code OpenFOAM will
+    # compile and run. Neither is a legitimate scalar override; refuse both
+    # rather than trusting the caller. See SECURITY.md.
+    if ";" in text or "\n" in text:
+        raise ValueError(
+            f"override value {text!r} contains a statement separator; "
+            "a value may not introduce additional dictionary entries"
+        )
+    if "#" in text:
+        raise ValueError(
+            f"override value {text!r} contains an OpenFOAM directive; "
+            "directives are not permitted in override values"
+        )
+
+    return text
 
 
 def _strip_inline_comment(line: str) -> str:
