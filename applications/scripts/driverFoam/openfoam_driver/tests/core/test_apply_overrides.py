@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from pathlib import Path
 from openfoam_driver.tests.conftest import assert_foam_entry, skip_without_monorepo
@@ -196,11 +194,6 @@ def test_apply_missing_control_dict_raises_override_error(tmp_path):
 
 
 def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
-    import shutil
-    if not shutil.which("foamDictionary"):
-        if os.environ.get("REQUIRE_FOAMDICTIONARY") == "1":
-            pytest.fail("foamDictionary is required for this integration test")
-        pytest.skip("foamDictionary not available")
     case = _case(tmp_path)
     apply_overrides(
         [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
@@ -212,11 +205,6 @@ def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
 
 
 def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
-    import shutil
-    if not shutil.which("foamDictionary"):
-        if os.environ.get("REQUIRE_FOAMDICTIONARY") == "1":
-            pytest.fail("foamDictionary is required for this integration test")
-        pytest.skip("foamDictionary not available")
     case = _case(tmp_path)
     apply_overrides(
         [{"driver_path": "system/electro/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
