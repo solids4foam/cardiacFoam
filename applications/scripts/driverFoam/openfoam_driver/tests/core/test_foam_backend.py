@@ -146,8 +146,15 @@ def test_remove_dict_maps_decode_error_to_value_error(tmp_path):
         "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n"
         "garbage {{{ not valid @@@ ;;; \n",
     )
-    with pytest.raises(ValueError):
+    before = path.read_text()
+    with pytest.raises(ValueError) as excinfo:
         foam_backend.remove_dict(path, "Vm", scope=["solvers"])
+    # exact-type, not isinstance: FoamFileDecodeError IS a ValueError subclass,
+    # so `pytest.raises(ValueError)` alone passes whether or not this is
+    # actually mapped -- it would also pass against the unmapped bug this
+    # test exists to catch. The exact-type check is what discriminates.
+    assert type(excinfo.value) is ValueError
+    assert path.read_text() == before
 
 
 def test_missing_file_raises_file_not_found(tmp_path):
