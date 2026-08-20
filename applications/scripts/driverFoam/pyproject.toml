@@ -7,20 +7,21 @@ name = "cardiacfoam-tutorials-driver"
 version = "0.1.0"
 description = "Reusable Python-spec driver for OpenFOAM tutorial automation."
 readme = "openfoam_driver/README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "cardiacFoam contributors" }
 ]
 dependencies = [
+  "foamlib>=1.7.5,<2",
   "gmsh>=4.15.2",
   "jsonschema>=4.0",
+  "numpy>=1.24",
   "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
 post = [
   "matplotlib>=3.7",
-  "numpy>=1.24",
   "pandas>=2.0",
   "plotly>=5.0",
   "prompt-toolkit>=3.0",
