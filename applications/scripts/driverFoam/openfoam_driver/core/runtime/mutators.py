@@ -127,6 +127,48 @@ def _iter_direct_child_lines(lines: list[str], start: int, end: int):
                 depth -= 1
 
 
+def _quoted_pattern_headers(
+    lines: list[str], start: int, end: int
+) -> list[tuple[str, str]]:
+    """Return ``(regex_source, on_disk_name)`` for quoted block headers.
+
+    OpenFOAM lets a sub-dictionary be keyed by a quoted regex, e.g.
+    ``"Vm|VmFinal|u|uFinal"``, which matches the field ``Vm``. Both this
+    module's line scanner and foamlib match block names literally, so such a
+    block was previously unreachable by member name.
+    """
+    headers: list[tuple[str, str]] = []
+    for index in _iter_direct_child_lines(lines, start, end):
+        candidate = _strip_inline_comment(lines[index]).strip()
+        if not candidate.startswith('"'):
+            continue
+        closing = candidate.find('"', 1)
+        if closing <= 0:
+            continue
+        headers.append((candidate[1:closing], candidate[: closing + 1]))
+    return headers
+
+
+def _resolve_pattern_scope(
+    lines: list[str], dict_name: str, *, start: int, end: int
+) -> str | None:
+    """Map a member name onto the quoted-regex block header that matches it.
+
+    OpenFOAM's precedence: an exact literal key wins; otherwise the
+    *last-declared* matching pattern wins. Returns the on-disk header text
+    (quotes included) so the caller can match it literally, or ``None``.
+    """
+    for regex_source, on_disk in reversed(
+        _quoted_pattern_headers(lines, start, end)
+    ):
+        try:
+            if re.fullmatch(regex_source, dict_name):
+                return on_disk
+        except re.error:
+            continue
+    return None
+
+
 def _find_dict_block_bounds(
     lines: list[str],
     dict_name: str,
@@ -182,6 +224,11 @@ def _find_dict_block_bounds(
             raise KeyError(f"Scope '{dict_name}' has unbalanced braces")
 
         return open_line + 1, close_line
+
+    if not dict_name.startswith('"'):
+        resolved = _resolve_pattern_scope(lines, dict_name, start=start, end=end)
+        if resolved is not None:
+            return _find_dict_block_bounds(lines, resolved, start=start, end=end)
 
     raise KeyError(f"Scope '{dict_name}' not found")
 

@@ -551,5 +551,68 @@ def test_remove_foam_dict_falls_back_for_brace_in_quoted_string(tmp_path):
     assert 'note  "a value with { an unbalanced brace";' in text
 
 
+REGEX_KEYED = (
+    "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
+    "solvers\n"
+    "{\n"
+    '    "Vm|VmFinal|u|uFinal"\n'
+    "    {\n"
+    "        solver          PCG;\n"
+    "        tolerance       1e-11;\n"
+    "    }\n"
+    '    "psi|psiFinal"\n'
+    "    {\n"
+    "        solver          PCG;\n"
+    "        tolerance       1e-11;\n"
+    "    }\n"
+    "}\n"
+)
+
+
+def test_regex_key_resolves_member_name(tmp_path):
+    path = tmp_path / "fvSolution"
+    path.write_text(REGEX_KEYED)
+    assert read_foam_entry(path, "tolerance", scope=["solvers", "Vm"]) == "1e-11"
+
+
+def test_regex_key_write_targets_the_matching_block(tmp_path):
+    path = tmp_path / "fvSolution"
+    path.write_text(REGEX_KEYED)
+    update_foam_entry(path, "tolerance", 1e-12, scope=["solvers", "psi"])
+    text = path.read_text()
+    assert text.count("1e-12") == 1
+    assert text.index("1e-12") > text.index('"psi|psiFinal"')
+
+
+def test_literal_key_wins_over_pattern(tmp_path):
+    path = tmp_path / "fvSolution"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
+        "solvers\n{\n"
+        '    "Vm|psi" { tolerance 1e-11; }\n'
+        "    Vm       { tolerance 1e-09; }\n"
+        "}\n"
+    )
+    assert read_foam_entry(path, "tolerance", scope=["solvers", "Vm"]) == "1e-09"
+
+
+def test_last_declared_pattern_wins(tmp_path):
+    path = tmp_path / "fvSolution"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
+        "solvers\n{\n"
+        '    "V.*"  { tolerance 1e-11; }\n'
+        '    "Vm.*" { tolerance 1e-09; }\n'
+        "}\n"
+    )
+    assert read_foam_entry(path, "tolerance", scope=["solvers", "Vm"]) == "1e-09"
+
+
+def test_name_matching_no_pattern_still_fails_closed(tmp_path):
+    path = tmp_path / "fvSolution"
+    path.write_text(REGEX_KEYED)
+    assert read_foam_entry(path, "tolerance", scope=["solvers", "nope"]) is None
+
+
 if __name__ == "__main__":
     unittest.main()
