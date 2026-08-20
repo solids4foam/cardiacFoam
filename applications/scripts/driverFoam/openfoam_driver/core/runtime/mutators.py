@@ -387,7 +387,9 @@ def remove_foam_dict(
     except KeyError:
         if missing_ok:
             return
-        raise
+        return foam_backend.remove_dict(
+            file_path, dict_name, scope=scope, missing_ok=missing_ok
+        )
     # A trailing \b fails to match a scope name ending in a non-word
     # character (e.g. a quoted regex-style block name like
     # "phiE|phiEFinal|phiI|phiIFinal" -- both the closing quote and whatever

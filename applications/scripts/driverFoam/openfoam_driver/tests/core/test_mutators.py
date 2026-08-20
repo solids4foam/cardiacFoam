@@ -531,5 +531,25 @@ def test_update_foam_entry_falls_back_for_brace_in_quoted_string(tmp_path):
     assert 'note  "a value with { an unbalanced brace";' in text
 
 
+def test_remove_foam_dict_falls_back_for_brace_in_quoted_string(tmp_path):
+    """Same defeats-the-scanner fixture as the update_foam_entry test above,
+
+    but for remove_foam_dict's own early _resolve_search_region call. Before
+    this fix, remove_foam_dict raised the same KeyError update_foam_entry
+    used to raise here, with no fallback -- a real regression versus the old
+    foamDictionary-first behaviour in a sourced environment.
+    """
+    path = tmp_path / "d"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object d; }\n"
+        'note  "a value with { an unbalanced brace";\n'
+        "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n"
+    )
+    remove_foam_dict(path, "Vm", scope=["solvers"])
+    text = path.read_text()
+    assert "Vm" not in text
+    assert 'note  "a value with { an unbalanced brace";' in text
+
+
 if __name__ == "__main__":
     unittest.main()
