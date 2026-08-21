@@ -47,18 +47,23 @@ results directory — it is not forced under `caseRoot`.
 - `caseRoot` must be a runnable OpenFOAM case; `caseRoot`/`outputDir` resolved to
   canonical paths; opt-in `DRIVERFOAM_ALLOWED_RUNS_ROOT` containment.
 - Steps run argv-style (no shell).
-- Override / spec **values** are rejected before they reach a case dictionary
-  if they are directive- or entry-terminating-shaped. The command allowlist
-  gates *what binary runs*, not the *content* of the dicts it reads, so this
-  is enforced at the write path instead: `mutators._format_value` (tier 1 —
-  the path almost every override takes) raises `ValueError` on any value
-  containing `;`, a newline, or `#`, before the value is written. The foamlib
-  tier (tier 2, the line-scanner fallback) independently refuses
-  type-inconsistent and directive-shaped values at the write call. This closes
-  the gap previously recorded here as documented-but-unenforced: a value
-  carrying `;` can no longer append a second dictionary entry, and a
+- Override / spec **values** are rejected at the `update_foam_entry` write
+  path if they are directive- or entry-terminating-shaped. The command
+  allowlist gates *what binary runs*, not the *content* of the dicts it
+  reads, so this is enforced at the write path instead: `mutators._format_value`
+  (tier 1 — the path almost every override takes) raises `ValueError` on any
+  value containing `;`, a newline, or `#`, before the value is written. The
+  foamlib tier (tier 2, the line-scanner fallback) has its own explicit
+  `_reject_directive_shaped` guard mirroring the same rule — it does not rely
+  on foamlib's incidental type-strictness, which is narrower (foamlib only
+  objects to a string that would read back as a different type, so it lets
+  `'#includeEtcFuncs'`, a bare `'#'`, and `'PCG#calc'` through unconverted).
+  This closes the gap previously recorded here as documented-but-unenforced:
+  a value carrying `;` can no longer append a second dictionary entry, and a
   `#codeStream` / `#calc` / coded-function-object value can no longer reach a
-  dict file to be compiled and executed by the solver at run time.
+  dict file through `update_foam_entry` to be compiled and executed by the
+  solver at run time. This guard covers `update_foam_entry` specifically —
+  see the dict-regeneration gap noted below, which it does not cover.
 
 ## Explicitly NOT mitigated
 
@@ -70,3 +75,14 @@ results directory — it is not forced under `caseRoot`.
   invokes it directly with an unvalidated `case_root` / `log_dir` / `state_path`
   / command bypasses path and command validation. Untrusted document content
   never reaches the runner except through validated ingestion.
+- The dict-regeneration/synthesis path is not screened for injection. When an
+  override targets a selector key (e.g. `myocardiumSolver`),
+  `specs/apply_overrides.py` routes sibling `$TOKEN.`-scoped override values
+  in the same call to `RegenerationScope.regenerate`, which serializes them
+  via `specs/dict_builder._openfoam_value_token` /
+  `_serialize_block` in `plugins/cardiacfoam/dict_builder.py`. That path
+  performs no injection screening at all — a `#codeStream` payload routed
+  through it reaches the written dict file unrejected. Only
+  `update_foam_entry`'s direct write path (both tiers, above) is guarded.
+  This is a pre-existing gap; `dict_builder.py` synthesizes dicts rather than
+  mutating them and was never migrated to the guarded write path.

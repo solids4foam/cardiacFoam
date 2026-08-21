@@ -99,6 +99,25 @@ def test_update_entry_rejects_directive_value(tmp_path):
         foam_backend.update_entry(path, "deltaT", '#calc "2*3"')
 
 
+@pytest.mark.parametrize(
+    "payload",
+    ["#includeEtcFuncs", "#", "PCG#calc"],
+)
+def test_update_entry_rejects_directive_value_foamlib_would_have_allowed(tmp_path, payload):
+    """foamlib's own type-strictness is not a substitute for an explicit check.
+
+    Measured directly against 1.7.5: none of these three payloads look
+    type-inconsistent to foamlib (none reads back as another type), so
+    foamlib accepts and writes them completely unconverted -- e.g.
+    ``'#includeEtcFuncs'``, a bare ``'#'``, and ``'PCG#calc'`` all pass
+    through with no error. Only an explicit rejection (mirroring tier 1's
+    rule, not delegating to foamlib's incidental behaviour) closes this.
+    """
+    path = _dict(tmp_path, "solvers\n{\n    Vm { solver PCG; }\n}\n")
+    with pytest.raises(ValueError):
+        foam_backend.update_entry(path, "solver", payload, scope=["solvers", "Vm"])
+
+
 def test_remove_dict_deletes_block(tmp_path):
     path = _dict(tmp_path, "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n")
     foam_backend.remove_dict(path, "Vm", scope=["solvers"])

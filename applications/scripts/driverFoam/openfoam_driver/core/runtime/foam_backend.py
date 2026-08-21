@@ -158,6 +158,33 @@ def _require_file(file_path: Path) -> None:
         raise FileNotFoundError(f"Dictionary file not found: {file_path}")
 
 
+def _reject_directive_shaped(value: Any) -> None:
+    """Mirror ``mutators._format_value``'s tier-1 guard on this tier too.
+
+    Without this, tier 2 relies solely on foamlib's own type-strictness to
+    reject dangerous values -- which is narrower than tier 1's explicit
+    rule. Measured directly: foamlib accepts ``'#includeEtcFuncs'``, a bare
+    ``'#'``, and ``'PCG#calc'`` completely unconverted (none of them read
+    back as another type, so foamlib's type check has nothing to object
+    to), even though tier 1 rejects all three as directive-shaped. Enforcing
+    the same explicit rule here, rather than depending on what foamlib
+    happens to catch, is what makes the "both tiers reject this" claim in
+    SECURITY.md actually true.
+    """
+    if not isinstance(value, str):
+        return
+    if ";" in value or "\n" in value:
+        raise ValueError(
+            f"override value {value!r} contains a statement separator; "
+            "a value may not introduce additional dictionary entries"
+        )
+    if "#" in value:
+        raise ValueError(
+            f"override value {value!r} contains an OpenFOAM directive; "
+            "directives are not permitted in override values"
+        )
+
+
 def update_entry(
     file_path: Path,
     key: str,
@@ -179,6 +206,7 @@ def update_entry(
     _require_file(file_path)
     if add_if_missing and scope is None:
         raise ValueError("add_if_missing requires a scope")
+    _reject_directive_shaped(value)
     path = tuple(_normalize_scope(scope)) + (key,)
 
     before = file_path.read_text()
