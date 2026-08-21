@@ -488,7 +488,7 @@ under the output directory. The driver accepts three forms of overrides:
    `$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.scale.myChannel`). The
    concrete key must already exist in the generated dictionary.
 2. `system/path/to/dict:entry_path`: Explicit overrides for any OpenFOAM dictionary (e.g., `system/fvSolution:solvers/V/tolerance`). The file path must be strictly inside `system/`. If the case uses multiple regions (e.g., electromechanics), check `constant/physicsProperties` to determine if you need to target `system/electro/fvSolution` or the top-level `system/fvSolution`.
-   - **Note on entry paths**: `foamDictionary` uses `/` to traverse nested blocks. If a block name contains special characters (like the `Vm|VmFinal|u|uFinal` solver block), you **must** wrap that specific block name in quotes within the path: e.g., `system/electro/fvSolution:solvers/"Vm|VmFinal|u|uFinal"/tolerance`.
+   - **Note on entry paths**: `/` traverses nested blocks. OpenFOAM lets a sub-dictionary be keyed by a quoted regex instead of a literal name (e.g. a solver block declared as `"Vm|VmFinal|u|uFinal"`); mutators.py resolves an ordinary member name (`solvers/Vm/tolerance`) against such a pattern automatically, so you do **not** need to know the pattern or spell it out in quotes — just use the field name you actually mean (e.g. `system/electro/fvSolution:solvers/Vm/tolerance`). An exact literal key always wins over a pattern match if both exist.
 3. Flat string paths (e.g., `deltaT`): Routed to `system/controlDict` for backward compatibility.
 
 Invalid overrides are rejected **before** any mutation or rerun.

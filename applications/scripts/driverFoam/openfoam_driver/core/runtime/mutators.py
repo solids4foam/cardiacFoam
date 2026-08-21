@@ -210,6 +210,15 @@ def _find_dict_block_bounds(
         if not header_pattern.match(candidate):
             continue
 
+        stripped = candidate.strip()
+        if stripped.endswith(";") and "{" not in stripped:
+            # This candidate is shaped like a scalar entry (name value;)
+            # sharing dict_name, not a block header. Scanning forward from
+            # here for the first '{' would silently walk into an unrelated
+            # sibling block and treat its contents as this scope's -- keep
+            # looking for a genuine block header with this name instead.
+            continue
+
         # OpenFOAM dicts commonly appear as:
         #   someDict
         #   {
@@ -502,6 +511,14 @@ def remove_foam_dict(
         break
 
     if remove_start is None or remove_end is None:
+        if not dict_name.startswith('"'):
+            resolved = _resolve_pattern_scope(
+                lines, dict_name, start=search_start, end=search_end
+            )
+            if resolved is not None:
+                return remove_foam_dict(
+                    file_path, resolved, scope=scope, missing_ok=missing_ok
+                )
         return foam_backend.remove_dict(
             file_path, dict_name, scope=scope, missing_ok=missing_ok
         )
@@ -675,6 +692,19 @@ def ensure_foam_dict(
     for idx in range(search_start, search_end):
         candidate = _strip_inline_comment(lines[idx])
         if header_pattern.match(candidate):
+            return False
+
+    if not dict_name.startswith('"'):
+        # dict_name may already be covered by a quoted-regex block header
+        # (e.g. "Vm|VmFinal" already matches "Vm") even though no literal
+        # header matched above. Without this check, ensure_foam_dict would
+        # insert a duplicate literal block that OpenFOAM's own
+        # literal-beats-pattern precedence then shadows the existing one
+        # with -- a surprising side effect of a false "not found".
+        if (
+            _resolve_pattern_scope(lines, dict_name, start=search_start, end=search_end)
+            is not None
+        ):
             return False
 
     block_lines = block_text.splitlines(keepends=True)

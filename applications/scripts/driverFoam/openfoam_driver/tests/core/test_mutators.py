@@ -28,11 +28,9 @@
 from __future__ import annotations
 
 import re
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 import pytest
 
@@ -210,14 +208,10 @@ class TestScopedMutators(unittest.TestCase):
             self.assertNotIn("removeMe", updated)
             self.assertNotIn("value 1;", updated)
 
-    def test_remove_foam_dict_missing_ok_tolerates_absent_scope_without_foamDictionary(
+    def test_remove_foam_dict_missing_ok_tolerates_absent_scope(
         self,
     ) -> None:
-        # The foamDictionary-backed path already returns cleanly on a missing
-        # scope when missing_ok=True (remove_foam_dict_via_foamDictionary's
-        # subprocess-failure branch checks it). The pure-Python fallback used
-        # when foamDictionary isn't on PATH previously called
-        # _resolve_search_region(lines, scope) unguarded, so it raised
+        # _resolve_search_region(lines, scope) previously raised
         # KeyError("Scope '<name>' not found") before missing_ok was ever
         # consulted -- missing_ok only guarded the "dict_name not found
         # inside an existing scope" case, not "scope itself absent".
@@ -235,23 +229,22 @@ class TestScopedMutators(unittest.TestCase):
             path = Path(temp_dir) / "dict"
             path.write_text(text)
 
-            with mock.patch.object(shutil, "which", return_value=None):
+            remove_foam_dict(
+                path,
+                "xMin",
+                scope=["outer", "neverExisted"],
+                missing_ok=True,
+            )
+
+            self.assertEqual(path.read_text(), text)
+
+            with self.assertRaises(KeyError):
                 remove_foam_dict(
                     path,
                     "xMin",
                     scope=["outer", "neverExisted"],
-                    missing_ok=True,
+                    missing_ok=False,
                 )
-
-                self.assertEqual(path.read_text(), text)
-
-                with self.assertRaises(KeyError):
-                    remove_foam_dict(
-                        path,
-                        "xMin",
-                        scope=["outer", "neverExisted"],
-                        missing_ok=False,
-                    )
 
     def test_ensure_foam_dict_inserts_missing_dict_in_scope(self) -> None:
         text = "\n".join(
@@ -598,6 +591,26 @@ def test_remove_foam_dict_missing_ok_still_uses_fallback(tmp_path):
     assert 'note  "a value with { an unbalanced brace";' in text
 
 
+def test_scope_resolution_does_not_treat_a_scalar_entry_as_a_block(tmp_path):
+    """A scalar entry sharing a scope name must not be silently treated as
+
+    a block by walking forward into an unrelated sibling's braces.
+    Reproduced directly: scope=["outer", "Vm"] against a scalar "Vm 5;"
+    line followed by an unrelated "unrelatedBlock { tolerance 1e-9; }"
+    previously returned unrelatedBlock's tolerance as if it belonged to
+    Vm's scope -- a silent wrong answer, not even a KeyError.
+    """
+    path = tmp_path / "d"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object d; }\n"
+        "outer\n{\n"
+        "    Vm 5;\n"
+        "    unrelatedBlock\n    {\n        tolerance 1e-9;\n    }\n"
+        "}\n"
+    )
+    assert read_foam_entry(path, "tolerance", scope=["outer", "Vm"]) is None
+
+
 REGEX_KEYED = (
     "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
     "solvers\n"
@@ -659,6 +672,51 @@ def test_name_matching_no_pattern_still_fails_closed(tmp_path):
     path = tmp_path / "fvSolution"
     path.write_text(REGEX_KEYED)
     assert read_foam_entry(path, "tolerance", scope=["solvers", "nope"]) is None
+
+
+_SINGLE_PATTERN_BLOCK = (
+    "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
+    "solvers\n{\n"
+    '    "Vm|VmFinal"\n    {\n        tolerance 1e-11;\n    }\n'
+    "}\n"
+)
+
+
+def test_remove_foam_dict_resolves_a_pattern_keyed_member(tmp_path):
+    """remove_foam_dict's own target-name matching must resolve patterns too.
+
+    _find_dict_block_bounds (used for scope-PATH segments) already resolves
+    quoted-regex headers. remove_foam_dict has its own separate scan for the
+    dict being removed, which did not reuse that resolution -- so removing
+    "Vm" from a block keyed only by "Vm|VmFinal" fell through to the
+    foamlib fallback and raised KeyError, even though "Vm" plainly resolves
+    against the pattern by OpenFOAM's own rules.
+    """
+    path = tmp_path / "fvSolution"
+    path.write_text(_SINGLE_PATTERN_BLOCK)
+    remove_foam_dict(path, "Vm", scope=["solvers"])
+    text = path.read_text()
+    assert "Vm|VmFinal" not in text
+    assert "tolerance" not in text
+
+
+def test_ensure_foam_dict_does_not_duplicate_a_pattern_covered_member(tmp_path):
+    """ensure_foam_dict must recognize a name already covered by a pattern.
+
+    Without pattern resolution, ensure_foam_dict("Vm", ...) on a block keyed
+    only by "Vm|VmFinal" reports "Vm" as missing and inserts a duplicate
+    literal Vm block -- which OpenFOAM's literal-beats-pattern precedence
+    then silently prefers over the existing, intentionally-shared one.
+    """
+    path = tmp_path / "fvSolution"
+    path.write_text(_SINGLE_PATTERN_BLOCK)
+    inserted = ensure_foam_dict(
+        path, "Vm", "Vm\n{\n    tolerance 1e-9;\n}\n", scope=["solvers"]
+    )
+    assert inserted is False
+    text = path.read_text()
+    assert text.count("tolerance") == 1
+    assert "1e-11" in text
 
 
 @pytest.mark.parametrize(

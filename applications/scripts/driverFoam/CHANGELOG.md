@@ -20,9 +20,25 @@ of that verification applies.
 
 ### Dictionary mutation and dependencies
 
+Plan: `docs/superpowers/plans/2026-08-20-driverfoam-foamlib-tier2-backend.md` and
+`docs/superpowers/plans/2026-08-21-driverfoam-foamlib-parser-migration-phase2.md`
+(both gitignored, local-only — not the ROADMAP Phase 2 plan this section is
+nested under; noted here since the two pieces of work landed on the same
+branch at the same time).
+
 - Dictionary mutation no longer shells out to `foamDictionary`. The complex-syntax
   fallback is now foamlib, in process. Written bytes no longer depend on whether
   OpenFOAM is sourced.
+- **`update_foam_entry_via_foamDictionary`, `remove_foam_dict_via_foamDictionary`,
+  and `ensure_foam_dict_via_foamDictionary` are deleted.** Any out-of-tree importer
+  of these three names breaks; there is no replacement to import — the fallback
+  they provided is now internal to `mutators.py`/`foam_backend.py`, not a
+  separately callable public function.
+- **`update_foam_entry` now raises `ValueError` on override values it previously
+  accepted.** A value containing `;`, a newline, or `#` is rejected before it
+  reaches a case dictionary (closes a documented value-channel injection risk —
+  see `SECURITY.md`). A caller that was relying on such a value being written
+  verbatim will now get an exception instead.
 - **Provenance note:** in a *sourced* environment, mutated dictionary bytes change
   from `foamDictionary`'s re-serialisation to the line tier's form, so sha256
   provenance digests move for anyone who previously ran sourced. No golden digest
@@ -30,6 +46,11 @@ of that verification applies.
   JSON will not match a fresh re-run.
 - Python floor raised to 3.11 (foamlib requirement). `numpy` is now a core
   dependency rather than a `[post]` extra.
+- Four more hand-rolled OpenFOAM parsers (`specs/function_object_fields.py`,
+  `plugins/cardiacfoam/detection.py`, `specs/mesh_geometry.py`,
+  `plugins/cardiacfoam/run_document_config.py`) now read through foamlib instead
+  of manual brace/paren-depth counting. No import-surface or on-disk format
+  change; noted here because it's part of the same migration.
 
 ### Document format
 
