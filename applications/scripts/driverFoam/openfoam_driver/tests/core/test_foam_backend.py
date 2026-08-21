@@ -118,6 +118,23 @@ def test_update_entry_rejects_directive_value_foamlib_would_have_allowed(tmp_pat
         foam_backend.update_entry(path, "solver", payload, scope=["solvers", "Vm"])
 
 
+def test_update_entry_rejects_directive_shaped_container_value(tmp_path):
+    """A non-str value must not bypass the guard by skipping the string check.
+
+    Reproduced directly: an earlier version of _reject_directive_shaped
+    returned immediately for any non-str value, so a dict/list containing a
+    directive-shaped string inside it reached foamlib completely unscreened
+    -- e.g. {"codeInclude": '#{ system("id"); #}'} was accepted and written
+    as a live coded block. Tier 1's _format_value has no equivalent hole
+    because it stringifies unconditionally, for every type, before
+    screening; this guard must do the same.
+    """
+    path = _dict(tmp_path, "solvers\n{\n    Vm { solver PCG; }\n}\n")
+    payload = {"codeInclude": '#{ system("id"); #}'}
+    with pytest.raises(ValueError):
+        foam_backend.update_entry(path, "solver", payload, scope=["solvers", "Vm"])
+
+
 def test_remove_dict_deletes_block(tmp_path):
     path = _dict(tmp_path, "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n")
     foam_backend.remove_dict(path, "Vm", scope=["solvers"])

@@ -170,9 +170,21 @@ def _reject_directive_shaped(value: Any) -> None:
     the same explicit rule here, rather than depending on what foamlib
     happens to catch, is what makes the "both tiers reject this" claim in
     SECURITY.md actually true.
+
+    The stringify below is unconditional -- applied to every value type, not
+    just ``str`` -- exactly like ``mutators._format_value``. An earlier
+    version special-cased non-``str`` inputs and returned immediately for
+    them (``if not isinstance(value, str): return``), which let a container
+    value bypass the guard entirely: ``update_foam_entry``'s delegation
+    passes through whatever type the original caller supplied, and a
+    ``dict``/``list`` containing a directive-shaped string never hit the
+    ``isinstance`` check, so it reached foamlib completely unscreened.
+    Reproduced directly: ``{"codeInclude": '#{ system("id"); #}'}`` was
+    accepted and written to disk as a live coded block. Tier 1 has no
+    equivalent hole because it stringifies every value before screening,
+    regardless of type; this guard now does the same.
     """
-    if not isinstance(value, str):
-        return
+    value = str(value)
     if ";" in value or "\n" in value:
         raise ValueError(
             f"override value {value!r} contains a statement separator; "
