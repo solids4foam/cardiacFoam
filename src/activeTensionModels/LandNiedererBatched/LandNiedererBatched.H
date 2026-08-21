@@ -46,6 +46,7 @@ class LandNiedererBatched
     mutable scalarField CONSTANTS_;
     mutable scalarField prevLambda_;
     mutable scalarField lambdaRate_;
+    mutable scalarField restartTa_;
 
 protected:
 
@@ -122,6 +123,14 @@ public:
         const scalarField& lambda,
         scalarField& Ta
     ) override;
+
+    virtual bool readRestartState(const fvMesh& mesh) override;
+
+    virtual void writeRestartState(const fvMesh& mesh) const override;
+
+    virtual void refreshRestartState(const fvMesh& mesh) override;
+
+    virtual bool restartTension(scalarField& Ta) const override;
 };
 
 } // End namespace Foam

@@ -125,6 +125,8 @@ public:
 
             //- Evolve the electro-mechanical model
             virtual bool evolve() override;
+
+        virtual void writeFields(const Time& runTime) override;
 };
 
 

@@ -86,16 +86,6 @@ sequentialElectroMechanical::sequentialElectroMechanical
 
     activeTensionModel_->validateProvider();
 
-    // Pre-condition the active tension model to the ionic model's resting state.
-    // We query Ca_i at cell 0 from the provider — at t=0 all cells share the
-    // same initial Ca_i, so cell 0 is representative of the whole field.
-    // This call is a no-op for models that don't override preconditionToRestingState().
-    if (prov && activeTensionRequirements_.needCai)
-    {
-        const scalar restingCai = prov->signal(0, CouplingSignal::CAI);
-        activeTensionModel_->preconditionToRestingState(restingCai);
-    }
-
     if (solid().mesh().nCells() != electro().mesh().nCells())
     {
         FatalErrorInFunction
@@ -144,6 +134,35 @@ sequentialElectroMechanical::sequentialElectroMechanical
         }
     }
 
+    const bool activeTensionRestarted =
+        activeTensionModel_->readRestartState(solid().mesh());
+
+    if (activeTensionRestarted)
+    {
+        activeTensionModel_->refreshRestartState(solid().mesh());
+        scalarField restartTa(Ta_.primitiveField());
+        if (activeTensionModel_->restartTension(restartTa))
+        {
+            if (TaScale_ != 1.0)
+            {
+                restartTa *= TaScale_;
+            }
+            Ta_.primitiveFieldRef() = restartTa;
+            Ta_.correctBoundaryConditions();
+        }
+    }
+
+    if
+    (
+        prov
+     && activeTensionRequirements_.needCai
+     && !activeTensionRestarted
+    )
+    {
+        const scalar restingCai = prov->signal(0, CouplingSignal::CAI);
+        activeTensionModel_->preconditionToRestingState(restingCai);
+    }
+
     if
     (
         electromechanicalVerificationModel::configured
@@ -173,6 +192,14 @@ sequentialElectroMechanical::sequentialElectroMechanical
         << "    TaScale (model units -> Pa): " << TaScale_ << nl
         << "    Integration points: " << electro().mesh().nCells() << nl
         << endl;
+}
+
+
+void sequentialElectroMechanical::writeFields(const Time& runTime)
+{
+    electroMechanicalModel::writeFields(runTime);
+    electro().writeRestartState();
+    activeTensionModel_->writeRestartState(solid().mesh());
 }
 
 

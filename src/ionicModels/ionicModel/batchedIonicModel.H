@@ -32,6 +32,7 @@ Author
 #include "ionicModelGPU.H"
 #include "../ionicModel/batchedIonicCore.H"
 #include "../ionicModel/batchedKernelExecution.H"
+#include "restartStateIO.H"
 #include "PstreamReduceOps.H"
 #include <cmath>
 #ifdef _OPENMP
@@ -1139,6 +1140,77 @@ protected:
         }
 
 public:
+
+        virtual bool supportsRestartState() const override
+        {
+            return true;
+        }
+
+        virtual bool readRestartState(const fvMesh& mesh) override
+        {
+            prepareIOAccess(wordList(), false);
+            ensureIOSynchronized();
+
+            if (!restartStateIO::readStates(mesh, type(), nStates_, ioStates_))
+            {
+                return false;
+            }
+
+            syncStatesFromIO();
+            clearTransientIOData();
+            markIODirty();
+            return true;
+        }
+
+        virtual void writeRestartState(const fvMesh& mesh) const override
+        {
+            prepareIOAccess(wordList(), false);
+            markIODirty();
+            ensureIOSynchronized();
+            restartStateIO::writeStates(mesh, type(), nStates_, ioStates_);
+        }
+
+        virtual void refreshRestartState(const fvMesh& mesh) override
+        {
+            const volScalarField& Vm = mesh.lookupObject<volScalarField>("Vm");
+            scalarField Im(Vm.size(), 0.0);
+            const scalar modelTime = mesh.time().value()*timeScaleFactor();
+            const label vmStateI = voltageStateIndex();
+            const bool useExplicitEuler = integratorName_ == "euler";
+            const label supportSize = activeHotPathSupportSize(useExplicitEuler);
+            scalarField stateValues(nStates_, 0.0);
+            scalarField rateValues(nStates_, 0.0);
+            scalarField supportValues(max(supportSize, label(1)), 0.0);
+
+            for (label cellI = 0; cellI < nCells_; ++cellI)
+            {
+                gatherCellState(cellI, stateValues);
+                if (!solveVmWithinODESolver())
+                {
+                    stateValues[vmStateI] = vmToState(Vm[cellI]);
+                    state(cellI, vmStateI) = stateValues[vmStateI];
+                }
+
+                rateValues = 0.0;
+                supportValues = 0.0;
+                evaluateHotPathStateForCell
+                (
+                    cellI, modelTime, stateValues, rateValues, supportValues
+                );
+
+                for (label stateI = 0; stateI < nStates_; ++stateI)
+                {
+                    rate(cellI, stateI) = rateValues[stateI];
+                }
+
+                Im[cellI] =
+                    ionicCurrentFromHotPathSupportForCell(cellI, supportValues);
+            }
+
+            markIODirty();
+            setIOEvaluationModelTime(modelTime);
+            prepareIOAccess(wordList(), true);
+        }
 
         //- Vm follows its linear extrapolant when a rate is supplied
         virtual bool supportsVmRateCoupling() const override

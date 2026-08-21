@@ -263,6 +263,16 @@ public:
         scalarField& Ta
     ) override;
 
+    virtual bool supportsRestartState() const override;
+
+    virtual bool readRestartState(const fvMesh& mesh) override;
+
+    virtual void writeRestartState(const fvMesh& mesh) const override;
+
+    virtual void refreshRestartState(const fvMesh& mesh) override;
+
+    virtual bool restartTension(scalarField& Ta) const override;
+
     // Optional legacy override, but calculateTension is the real entry point
     virtual void solveAtPoint
     (

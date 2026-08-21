@@ -39,6 +39,7 @@ SourceFiles
 #include "dictionary.H"
 #include "GoktepeKuhl_2004Names.H"
 #include "overrideTypeName.H"
+#include "restartStateIO.H"
 
 namespace Foam
 {
@@ -125,6 +126,31 @@ public:
     GoktepeKuhl(const dictionary& dict, const label num);
 
     virtual ~GoktepeKuhl() = default;
+
+    virtual bool supportsRestartState() const override
+    {
+        return true;
+    }
+
+    virtual bool readRestartState(const fvMesh& mesh) override
+    {
+        return restartStateIO::readStates
+        (
+            mesh, type(), NUM_STATES, STATES_
+        );
+    }
+
+    virtual void writeRestartState(const fvMesh& mesh) const override
+    {
+        restartStateIO::writeStates
+        (
+            mesh, type(), NUM_STATES, STATES_
+        );
+    }
+
+    virtual void refreshRestartState(const fvMesh& mesh) override;
+
+    virtual bool restartTension(scalarField& Ta) const override;
 
     virtual Requirements requirements() const override
     {

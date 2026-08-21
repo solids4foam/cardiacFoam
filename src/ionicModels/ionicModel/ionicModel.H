@@ -144,6 +144,22 @@ class ionicModel
             return nullptr;
         }
 
+        virtual bool supportsRestartState() const
+        {
+            return false;
+        }
+
+        virtual bool readRestartState(const fvMesh&)
+        {
+            return false;
+        }
+
+        virtual void writeRestartState(const fvMesh&) const
+        {}
+
+        virtual void refreshRestartState(const fvMesh&)
+        {}
+
 
 
         virtual label ioNumConstants() const

@@ -209,6 +209,14 @@ public:
   //- Write fields
   virtual void writeFields(const Time &runTime);
 
+  virtual bool readRestartState()
+  {
+      return false;
+  }
+
+  virtual void writeRestartState() const
+  {}
+
   //- This function is called at the end of the simulation
   virtual void end();
 };

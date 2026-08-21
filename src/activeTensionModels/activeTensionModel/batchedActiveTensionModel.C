@@ -27,6 +27,7 @@ Author
 \*---------------------------------------------------------------------------*/
 
 #include "batchedActiveTensionModel.H"
+#include "restartStateIO.H"
 
 namespace Foam
 {
@@ -149,6 +150,88 @@ void batchedActiveTensionModel::syncStatesFromIO() const
         }
     }
     ioSynchronized_ = false;
+}
+
+
+bool batchedActiveTensionModel::supportsRestartState() const
+{
+    return true;
+}
+
+
+bool batchedActiveTensionModel::readRestartState(const fvMesh& mesh)
+{
+    syncAllToIO();
+    if (!restartStateIO::readStates(mesh, type(), nStates_, ioStates_))
+    {
+        return false;
+    }
+
+    syncStatesFromIO();
+    core_.clearTransientSolveData(persistAlgebraics_);
+    return true;
+}
+
+
+void batchedActiveTensionModel::writeRestartState(const fvMesh& mesh) const
+{
+    syncAllToIO();
+    restartStateIO::writeStates(mesh, type(), nStates_, ioStates_);
+}
+
+
+void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
+{
+    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    BatchedTensionBackend backend(*this);
+    const ElectromechanicalSignalProvider& p = provider();
+
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        backend.gatherCellState(cellI, scratch.stateValues);
+        scratch.resetPrimary();
+        backend.evaluateScratchAtTime
+        (
+            cellI,
+            mesh.time().value(),
+            p.signal(cellI, driveSignal()),
+            1.0,
+            scratch
+        );
+        backend.syncEvaluatedOutputs(cellI, scratch);
+    }
+
+    ioSynchronized_ = false;
+}
+
+
+bool batchedActiveTensionModel::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != nCells_)
+    {
+        return false;
+    }
+
+    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    BatchedTensionBackend backend(*this);
+    const ElectromechanicalSignalProvider& p = provider();
+
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        backend.gatherCellState(cellI, scratch.stateValues);
+        scratch.resetPrimary();
+        backend.evaluateScratchAtTime
+        (
+            cellI,
+            0.0,
+            p.signal(cellI, driveSignal()),
+            1.0,
+            scratch
+        );
+        Ta[cellI] = backend.activeTensionFromScratch(cellI, scratch);
+    }
+
+    return true;
 }
 
 

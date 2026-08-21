@@ -20,6 +20,8 @@ License
 #include "LandNiederer.H"
 #include "addToRunTimeSelectionTable.H"
 #include "error.H"
+#include "fvcGrad.H"
+#include "restartStateIO.H"
 
 #include "LandNiederer_2017.H"   // self-contained ODE equations
 
@@ -52,6 +54,133 @@ const char* const* LandNiederer::ioStateNames() const
 const char* const* LandNiederer::ioAlgebraicNames() const
 {
     return LandNiedererALGEBRAIC_NAMES;
+}
+
+
+bool LandNiederer::readRestartState(const fvMesh& mesh)
+{
+    const fileName statePath =
+        restartStateIO::path(mesh, "LandNiedererState");
+
+    if (!isFile(statePath))
+    {
+        return false;
+    }
+
+    std::ifstream is(statePath.c_str(), std::ios::binary);
+    if (!is)
+    {
+        FatalErrorInFunction
+            << "Cannot read restart state file " << statePath
+            << exit(FatalError);
+    }
+    restartStateIO::validateHeader
+    (
+        "LandNiederer", NUM_STATES + 1, STATES_.size(), is, statePath
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            STATES_[integrationPtI][stateI] =
+                restartStateIO::readScalar(is, statePath);
+            restartStateIO::checkValue
+            (
+                STATES_[integrationPtI][stateI], statePath
+            );
+        }
+
+        prevLambda_[integrationPtI] =
+            restartStateIO::readScalar(is, statePath);
+        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
+    }
+
+    const volVectorField& D = mesh.lookupObject<volVectorField>("D");
+    const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
+    const volTensorField gradD(fvc::grad(D));
+    const scalar t = mesh.time().value()*1000.0;
+
+    forAll(STATES_, integrationPtI)
+    {
+        const tensor F(I + gradD[integrationPtI].T());
+        const scalar lambda = mag(F & f0[integrationPtI]);
+        const scalar driveVal = provider().signal
+        (
+            integrationPtI, CouplingSignal::CAI
+        );
+
+        currentDriveSignal_ = driveVal;
+        currentLambda_ = lambda;
+        currentLambdaRate_ = 0.0;
+        ALGEBRAIC_[integrationPtI][AV_Cai] = driveVal;
+        ALGEBRAIC_[integrationPtI][AV_lambda] = lambda;
+        ALGEBRAIC_[integrationPtI][AV_lambda_rate] = 0.0;
+
+        LandNiederer2017computeVariables
+        (
+            t,
+            CONSTANTS_.data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data(),
+            ALGEBRAIC_[integrationPtI].data()
+        );
+    }
+
+    return true;
+}
+
+
+void LandNiederer::writeRestartState(const fvMesh& mesh) const
+{
+    const fileName statePath =
+        restartStateIO::path(mesh, "LandNiedererState");
+    std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
+    if (!os)
+    {
+        FatalErrorInFunction
+            << "Cannot write restart state file " << statePath
+            << exit(FatalError);
+    }
+    restartStateIO::writeHeader
+    (
+        "LandNiederer", NUM_STATES + 1, STATES_.size(), os
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            restartStateIO::checkValue
+            (
+                STATES_[integrationPtI][stateI], statePath
+            );
+            restartStateIO::writeScalar
+            (
+                os, STATES_[integrationPtI][stateI], statePath
+            );
+        }
+        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
+        restartStateIO::writeScalar(os, prevLambda_[integrationPtI], statePath);
+    }
+}
+
+
+bool LandNiederer::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != ALGEBRAIC_.size())
+    {
+        FatalErrorInFunction
+            << "Restart tension size mismatch"
+            << exit(FatalError);
+    }
+
+    forAll(Ta, integrationPtI)
+    {
+        Ta[integrationPtI] = ALGEBRAIC_[integrationPtI][AV_Ta];
+    }
+
+    return true;
 }
 
 

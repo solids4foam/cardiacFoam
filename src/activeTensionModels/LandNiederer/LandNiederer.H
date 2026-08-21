@@ -150,6 +150,17 @@ protected:
             return NUM_ALGEBRAIC;
         }
 
+        virtual bool supportsRestartState() const override
+        {
+            return true;
+        }
+
+        virtual bool readRestartState(const fvMesh& mesh) override;
+
+        virtual void writeRestartState(const fvMesh& mesh) const override;
+
+        virtual bool restartTension(scalarField& Ta) const override;
+
         //- This model is driven by intracellular calcium.
         virtual CouplingSignal driveSignal() const override
         {

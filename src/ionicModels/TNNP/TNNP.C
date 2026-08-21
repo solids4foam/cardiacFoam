@@ -25,6 +25,7 @@ License
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
+#include "restartStateIO.H"
 
 #include <math.h>
 
@@ -107,6 +108,108 @@ const char* const* Foam::TNNP::ioConstantNames() const
 const char* const* Foam::TNNP::ioAlgebraicNames() const
 {
     return TNNP_ALGEBRAIC_NAMES;
+}
+
+
+bool Foam::TNNP::readRestartState(const fvMesh& mesh)
+{
+    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
+
+    if (!isFile(statePath))
+    {
+        return false;
+    }
+
+    std::ifstream is(statePath.c_str(), std::ios::binary);
+    if (!is)
+    {
+        FatalErrorInFunction
+            << "Cannot read restart state file " << statePath
+            << exit(FatalError);
+    }
+    restartStateIO::validateHeader
+    (
+        "TNNP", NUM_STATES, STATES_.size(), is, statePath
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            STATES_[integrationPtI][stateI] =
+                restartStateIO::readScalar(is, statePath);
+            restartStateIO::checkValue
+            (
+                STATES_[integrationPtI][stateI], statePath
+            );
+        }
+    }
+
+    const volScalarField& Vm = mesh.lookupObject<volScalarField>("Vm");
+    const scalar t = mesh.time().value()*1000.0;
+
+    forAll(STATES_, integrationPtI)
+    {
+        if (!solveVmWithinODESolver())
+        {
+            STATES_[integrationPtI][0] = Vm[integrationPtI]*1000.0;
+        }
+
+        ::TNNPcomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data(),
+            ALGEBRAIC_[integrationPtI].data(),
+            solveVmWithinODESolver(),
+            stimulusProtocol()
+        );
+        ::TNNPcomputeRates
+        (
+            t,
+            constants(integrationPtI).data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data(),
+            ALGEBRAIC_[integrationPtI].data(),
+            solveVmWithinODESolver(),
+            stimulusProtocol()
+        );
+    }
+
+    return true;
+}
+
+
+void Foam::TNNP::writeRestartState(const fvMesh& mesh) const
+{
+    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
+    std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
+    if (!os)
+    {
+        FatalErrorInFunction
+            << "Cannot write restart state file " << statePath
+            << exit(FatalError);
+    }
+    restartStateIO::writeHeader
+    (
+        "TNNP", NUM_STATES, STATES_.size(), os
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            restartStateIO::checkValue
+            (
+                STATES_[integrationPtI][stateI], statePath
+            );
+            restartStateIO::writeScalar
+            (
+                os, STATES_[integrationPtI][stateI], statePath
+            );
+        }
+    }
 }
 
 

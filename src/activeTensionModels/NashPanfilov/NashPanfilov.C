@@ -50,6 +50,42 @@ const char* const* Foam::NashPanfilov::ioAlgebraicNames() const
     return NashPanfilovALGEBRAIC_NAMES;
 }
 
+void Foam::NashPanfilov::refreshRestartState(const fvMesh& mesh)
+{
+    forAll(STATES_, i)
+    {
+        scalarField& rates = RATES_[i];
+        scalarField& algebraic = ALGEBRAIC_[i];
+        const scalar drive = provider().signal(i, driveSignal());
+        scalar u =
+            (drive - CONSTANTS_[AC_Vr])
+          / (CONSTANTS_[AC_Vp] - CONSTANTS_[AC_Vr]);
+        u = max(scalar(0.0), min(u, scalar(1.0)));
+        algebraic[AV_u] = u;
+        NashPanfilovcomputeVariables
+        (
+            mesh.time().value()*1000.0/12.9,
+            CONSTANTS_.data(),
+            rates.data(),
+            STATES_[i].data(),
+            algebraic.data()
+        );
+    }
+}
+
+bool Foam::NashPanfilov::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != STATES_.size())
+    {
+        return false;
+    }
+    forAll(Ta, i)
+    {
+        Ta[i] = STATES_[i][::Ta];
+    }
+    return true;
+}
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 

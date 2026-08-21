@@ -105,6 +105,31 @@ protected:
         return nullptr;
     }
 
+public:
+
+    virtual bool supportsRestartState() const
+    {
+        return false;
+    }
+
+    virtual bool readRestartState(const fvMesh&)
+    {
+        return false;
+    }
+
+    virtual void writeRestartState(const fvMesh&) const
+    {}
+
+    virtual void refreshRestartState(const fvMesh&)
+    {}
+
+    virtual bool restartTension(scalarField&) const
+    {
+        return false;
+    }
+
+protected:
+
     virtual label ioNumConstants() const
     {
         return 0;

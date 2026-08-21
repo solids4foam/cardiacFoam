@@ -19,6 +19,8 @@ License
 
 #include "LandNiedererBatched.H"
 #include "addToRunTimeSelectionTable.H"
+#include "fvcGrad.H"
+#include "restartStateIO.H"
 #include "../LandNiederer/LandNiederer_2017Names.H"
 #include "../LandNiederer/LandNiederer_2017.H"
 
@@ -47,6 +49,121 @@ const char* const* Foam::LandNiedererBatched::ioAlgebraicNames() const
     return LandNiedererALGEBRAIC_NAMES;
 }
 
+
+bool Foam::LandNiedererBatched::readRestartState(const fvMesh& mesh)
+{
+    const fileName statePath = restartStateIO::path(mesh, type() + "State");
+    if (!isFile(statePath))
+    {
+        return false;
+    }
+
+    syncAllToIO();
+    std::ifstream is(statePath.c_str(), std::ios::binary);
+    if (!is)
+    {
+        FatalErrorInFunction
+            << "Cannot read restart state file " << statePath
+            << exit(FatalError);
+    }
+
+    restartStateIO::validateHeader
+    (
+        type(), nStates_ + 1, nCells_, is, statePath
+    );
+
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        for (label stateI = 0; stateI < nStates_; ++stateI)
+        {
+            ioStates_[cellI][stateI] =
+                restartStateIO::readScalar(is, statePath);
+            restartStateIO::checkValue(ioStates_[cellI][stateI], statePath);
+        }
+
+        prevLambda_[cellI] = restartStateIO::readScalar(is, statePath);
+        restartStateIO::checkValue(prevLambda_[cellI], statePath);
+    }
+
+    syncStatesFromIO();
+    core_.clearTransientSolveData(persistAlgebraics_);
+    lambdaRate_ = 0.0;
+    return true;
+}
+
+
+void Foam::LandNiedererBatched::writeRestartState(const fvMesh& mesh) const
+{
+    const fileName statePath = restartStateIO::path(mesh, type() + "State");
+    syncAllToIO();
+    std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
+    if (!os)
+    {
+        FatalErrorInFunction
+            << "Cannot write restart state file " << statePath
+            << exit(FatalError);
+    }
+
+    restartStateIO::writeHeader(type(), nStates_ + 1, nCells_, os);
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        for (label stateI = 0; stateI < nStates_; ++stateI)
+        {
+            restartStateIO::checkValue(ioStates_[cellI][stateI], statePath);
+            restartStateIO::writeScalar(os, ioStates_[cellI][stateI], statePath);
+        }
+        restartStateIO::checkValue(prevLambda_[cellI], statePath);
+        restartStateIO::writeScalar(os, prevLambda_[cellI], statePath);
+    }
+}
+
+
+void Foam::LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
+{
+    const volVectorField& D = mesh.lookupObject<volVectorField>("D");
+    const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
+    const volTensorField gradD(fvc::grad(D));
+    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    BatchedTensionBackend backend(*this);
+    const ElectromechanicalSignalProvider& p = provider();
+
+    lambdaRate_ = 0.0;
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        const tensor F(I + gradD[cellI].T());
+        backend.gatherCellState(cellI, scratch.stateValues);
+        scratch.resetPrimary();
+        backend.evaluateScratchAtTime
+        (
+            cellI,
+            mesh.time().value(),
+            p.signal(cellI, driveSignal()),
+            mag(F & f0[cellI]),
+            scratch
+        );
+        backend.syncEvaluatedOutputs(cellI, scratch);
+        restartTa_[cellI] = backend.activeTensionFromScratch(cellI, scratch);
+    }
+
+    ioSynchronized_ = false;
+}
+
+
+bool Foam::LandNiedererBatched::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != nCells_)
+    {
+        return false;
+    }
+
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        Ta[cellI] = restartTa_[cellI];
+    }
+
+    return true;
+}
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::LandNiedererBatched::LandNiedererBatched
@@ -58,7 +175,8 @@ Foam::LandNiedererBatched::LandNiedererBatched
     batchedActiveTensionModel(dict, num, NUM_STATES, NUM_ALGEBRAIC),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     prevLambda_(num, 1.0),
-    lambdaRate_(num, 0.0)
+    lambdaRate_(num, 0.0),
+    restartTa_(num, 0.0)
 {
     const word requestedSignal = dict_.lookupOrDefault<word>("couplingSignal", "Cai");
 

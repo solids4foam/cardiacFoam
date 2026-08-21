@@ -50,6 +50,41 @@ const char* const* Foam::GoktepeKuhl::ioAlgebraicNames() const
     return GoktepeKuhlALGEBRAIC_NAMES;
 }
 
+void Foam::GoktepeKuhl::refreshRestartState(const fvMesh& mesh)
+{
+    forAll(STATES_, i)
+    {
+        scalarField& rates = RATES_[i];
+        scalarField& algebraic = ALGEBRAIC_[i];
+        const scalar drive = provider().signal(i, driveSignal());
+        scalar u = (drive - CONSTANTS_[AC_Vr])/100.0;
+        u = max(scalar(0.0), min(u, scalar(1.0)));
+        algebraic[AV_Vm] = drive;
+        algebraic[AV_u] = u;
+        GoktepeKuhlcomputeVariables
+        (
+            mesh.time().value(),
+            CONSTANTS_.data(),
+            rates.data(),
+            STATES_[i].data(),
+            algebraic.data()
+        );
+    }
+}
+
+bool Foam::GoktepeKuhl::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != STATES_.size())
+    {
+        return false;
+    }
+    forAll(Ta, i)
+    {
+        Ta[i] = STATES_[i][::Ta];
+    }
+    return true;
+}
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
