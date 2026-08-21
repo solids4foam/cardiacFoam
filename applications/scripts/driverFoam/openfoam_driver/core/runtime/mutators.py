@@ -451,8 +451,6 @@ def remove_foam_dict(
     try:
         search_start, search_end = _resolve_search_region(lines, scope)
     except KeyError:
-        if missing_ok:
-            return
         return foam_backend.remove_dict(
             file_path, dict_name, scope=scope, missing_ok=missing_ok
         )
@@ -502,8 +500,6 @@ def remove_foam_dict(
         break
 
     if remove_start is None or remove_end is None:
-        if missing_ok:
-            return
         return foam_backend.remove_dict(
             file_path, dict_name, scope=scope, missing_ok=missing_ok
         )

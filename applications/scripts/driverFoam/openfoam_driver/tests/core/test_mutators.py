@@ -553,6 +553,29 @@ def test_remove_foam_dict_falls_back_for_brace_in_quoted_string(tmp_path):
     assert 'note  "a value with { an unbalanced brace";' in text
 
 
+def test_remove_foam_dict_missing_ok_still_uses_fallback(tmp_path):
+    """missing_ok=True must not disable the foamlib fallback entirely.
+
+    Before this fix, both of remove_foam_dict's delegation points checked
+    `if missing_ok: return` before ever calling foam_backend -- so a caller
+    that set missing_ok=True got a silent no-op even when the target
+    genuinely existed in a file the line scanner couldn't parse. This
+    fixture is deletable via foam_backend (the same brace-in-quoted-string
+    case the other fallback tests use); it must actually be removed, not
+    silently skipped, when missing_ok=True.
+    """
+    path = tmp_path / "d"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object d; }\n"
+        'note  "a value with { an unbalanced brace";\n'
+        "solvers\n{\n    Vm { tolerance 1e-11; }\n}\n"
+    )
+    remove_foam_dict(path, "Vm", scope=["solvers"], missing_ok=True)
+    text = path.read_text()
+    assert "Vm" not in text
+    assert 'note  "a value with { an unbalanced brace";' in text
+
+
 REGEX_KEYED = (
     "FoamFile { version 2.0; class dictionary; object fvSolution; }\n"
     "solvers\n"
