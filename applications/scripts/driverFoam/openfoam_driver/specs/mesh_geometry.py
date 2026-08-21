@@ -16,11 +16,11 @@
 """Plan-time mesh-scale detection. Stdlib-only; never mutates the case."""
 from __future__ import annotations
 
-import gzip
 import re
-import struct
 from dataclasses import dataclass
 from pathlib import Path
+
+from foamlib import FoamFile
 
 
 # Thresholds MUST mirror applications/utilities/checkMeshGeometry/checkMeshGeometry.C.
@@ -78,9 +78,6 @@ class BoundingBox:
         return max(hi - lo for lo, hi in zip(self.min_pt, self.max_pt))
 
 
-_FORMAT_RE = re.compile(rb"format\s+(\w+)\s*;")
-_ARCH_RE = re.compile(rb'arch\s+"([^"]*)"')
-_COUNT_RE = re.compile(rb"(\d+)\s*\(")
 # One `(x y z)` vector in an OpenFOAM ASCII list. Public so a plugin adding
 # its own point-set check parses coordinates exactly the way core does.
 ASCII_TRIPLE_RE = re.compile(
@@ -101,51 +98,17 @@ def bounding_box_from_flat_coords(coords) -> BoundingBox:
 
 def read_bounding_box(points_path: Path) -> BoundingBox:
     """Return the point bounding box, handling ASCII/binary/gz formats."""
-    data = points_path.read_bytes()
-    if data[:2] == b"\x1f\x8b":  # gzip magic bytes
-        data = gzip.decompress(data)
-
-    fmt_m = _FORMAT_RE.search(data)
-    arch_m = _ARCH_RE.search(data)
-    fmt = fmt_m.group(1).decode() if fmt_m else "ascii"
-    arch = arch_m.group(1).decode() if arch_m else ""
-
-    # Locate the point count, searching past the FoamFile header block.
-    brace = data.find(b"}")
-    search_from = brace + 1 if brace != -1 else 0
-    count_m = _COUNT_RE.search(data, search_from)
-    if not count_m:
-        raise MeshParseError("could not locate point count")
-    count = int(count_m.group(1))
-    if count == 0:
-        raise MeshParseError("mesh declares zero points")
-    data_open = count_m.end()  # byte index just past the opening '('
-    # Real OpenFOAM binary lists put a newline (and sometimes spaces) after the
-    # '(' before the raw doubles begin. Skip any whitespace so the first
-    # unpacked double is not corrupted by a stray \n byte.
-    while data_open < len(data) and data[data_open:data_open + 1] in b" \t\r\n":
-        data_open += 1
-
-    if fmt == "binary":
-        scalar_bits = 64
-        sm = re.search(r"scalar=(\d+)", arch)
-        if sm:
-            scalar_bits = int(sm.group(1))
-        if scalar_bits != 64:
-            raise MeshParseError(f"unsupported scalar width {scalar_bits}")
-        endian = ">" if arch.startswith("MSB") else "<"
-        needed = count * 3 * 8
-        block = data[data_open:data_open + needed]
-        if len(block) < needed:
-            raise MeshParseError("truncated binary point block")
-        coords = struct.unpack(f"{endian}{count * 3}d", block)
-        return bounding_box_from_flat_coords(coords)
-
-    text = data[data_open:].decode("latin-1")
-    triples = ASCII_TRIPLE_RE.findall(text)
-    if not triples:
-        raise MeshParseError("no ASCII points parsed")
-    coords = [float(v) for triple in triples for v in triple]
+    try:
+        points = FoamFile(points_path)[None]
+        if len(points) == 0:
+            raise MeshParseError("fewer than one point parsed")
+        coords = [float(v) for point in points for v in point]
+    except (ValueError, OSError, TypeError) as exc:
+        # Not just a foamlib decode failure: a syntactically valid but
+        # non-points file (e.g. bare standalone words) parses without
+        # raising, so the failure only surfaces once we try to read the
+        # result as coordinates. Both cases map to the same MeshParseError.
+        raise MeshParseError(f"could not parse points file: {exc}") from exc
     return bounding_box_from_flat_coords(coords)
 
 

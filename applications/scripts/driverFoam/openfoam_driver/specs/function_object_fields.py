@@ -32,9 +32,10 @@
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 from typing import Mapping, Sequence
+
+from foamlib import FoamFile
 
 from ..planning_types import StrictDiagnostic, diagnostic as _diagnostic
 
@@ -42,80 +43,22 @@ from ..planning_types import StrictDiagnostic, diagnostic as _diagnostic
 # multi-region electromechanical cases.
 _CONTROLDICT_RELPATHS = ("system/controlDict", "system/electro/controlDict")
 
-_REGION_RE = re.compile(r"\bregion\s+(\w+)\s*;")
-_FIELDS_RE = re.compile(r"\bfields\s*\(([^)]*)\)", re.DOTALL)
 
-
-def _strip_comments(text: str) -> str:
-    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
-    text = re.sub(r"//[^\n]*", " ", text)
-    return text
-
-
-def _balanced_block(text: str, open_index: int) -> tuple[str, int] | None:
-    """Return (inner_text, index_after_close) for the brace opening at
-    ``open_index`` (which must point at ``{``). ``None`` if unbalanced."""
-    depth = 0
-    for i in range(open_index, len(text)):
-        char = text[i]
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return text[open_index + 1 : i], i + 1
-    return None
-
-
-def _functions_block(text: str) -> str | None:
-    match = re.search(r"\bfunctions\b\s*", text)
-    if match is None:
-        return None
-    brace = text.find("{", match.end())
-    if brace == -1:
-        return None
-    result = _balanced_block(text, brace)
-    return result[0] if result else None
-
-
-def _iter_subdicts(block: str):
-    """Yield the inner text of each top-level ``name { ... }`` sub-dictionary in
-    a functions block. ``#includeFunc`` lines carry no braces and are skipped."""
-    i = 0
-    length = len(block)
-    while i < length:
-        brace = block.find("{", i)
-        if brace == -1:
-            return
-        result = _balanced_block(block, brace)
-        if result is None:
-            return
-        inner, after = result
-        yield inner
-        i = after
-
-
-def _sampled_fields(subdict: str) -> list[str]:
-    fields: list[str] = []
-    for match in _FIELDS_RE.finditer(subdict):
-        fields.extend(match.group(1).split())
-    return fields
-
-
-def _region_of(subdict: str) -> str:
-    match = _REGION_RE.search(subdict)
-    return match.group(1) if match else "electro"
-
-
-def _diagnostics_for_text(
-    text: str, samplable: Mapping[str, set[str]], source: str
+def _diagnostics_for_path(
+    path: Path, samplable: Mapping[str, set[str]], source: str
 ) -> list[StrictDiagnostic]:
-    block = _functions_block(_strip_comments(text))
-    if block is None:
+    try:
+        functions = FoamFile(path)["functions"]
+    except KeyError:
         return []
     diagnostics: list[StrictDiagnostic] = []
-    for subdict in _iter_subdicts(block):
-        region = _region_of(subdict)
+    for name in functions.keys():
+        subdict = functions[name]
+        if not hasattr(subdict, "keys"):
+            # A non-dict entry inside functions -- e.g. #includeFunc, which
+            # carries no braces and samples nothing of its own.
+            continue
+        region = subdict.get("region", "electro")
         if region not in samplable:
             # A region this plugin's samplable-fields map doesn't name
             # (e.g. a not-yet-cataloged bath/torso domain) -- skip rather
@@ -125,7 +68,7 @@ def _diagnostics_for_text(
             # rule this module already applies to parse/IO failures.
             continue
         allowed = samplable[region]
-        for field_name in _sampled_fields(subdict):
+        for field_name in subdict.get("fields", []):
             if field_name not in allowed:
                 diagnostics.append(
                     _diagnostic(
@@ -167,15 +110,15 @@ def function_object_field_diagnostics(
     diagnostics: list[StrictDiagnostic] = []
     for relpath in _CONTROLDICT_RELPATHS:
         path = root / relpath
-        try:
-            if not path.is_file():
-                continue
-            text = path.read_text()
-        except OSError:
+        if not path.is_file():
             continue
         try:
-            diagnostics.extend(_diagnostics_for_text(text, normalized, str(path)))
+            diagnostics.extend(_diagnostics_for_path(path, normalized, str(path)))
         except Exception:
-            # A parse failure must not fabricate a warning.
+            # A parse failure must not fabricate a warning -- this module's
+            # entire contract is "degrade to silence," never surface a
+            # parser limitation as a false positive or a crash. Catches
+            # both OSError (unreadable file) and foamlib.FoamFileDecodeError
+            # (a ValueError subclass, malformed file) uniformly.
             continue
     return tuple(diagnostics)

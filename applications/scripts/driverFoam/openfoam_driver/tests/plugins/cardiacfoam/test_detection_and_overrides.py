@@ -36,7 +36,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openfoam_driver.plugins.cardiacfoam.detection import detect_electro_coeffs_scope
+from openfoam_driver.plugins.cardiacfoam.detection import (
+    detect_electro_coeffs_scope,
+    detect_ionic_export_list,
+    detect_ionic_model_name,
+)
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
@@ -258,6 +262,85 @@ class TestCardiacPropertyOverrides(unittest.TestCase):
 
             apply_physics_property_overrides(path, {"type": "electroMechanicalModel"})
             assert_foam_entry(path, "type", "electroMechanicalModel")
+
+
+_QUOTED_BRACE_ELECTRO_PROPERTIES = (
+    "FoamFile{ version 2.0; format ascii; class dictionary; object electroProperties; }\n"
+    'myocardiumSolver monodomainSolver;\n'
+    "monodomainSolverCoeffs\n{\n"
+    '    note  "a value with { an unbalanced brace";\n'
+    "    ionicModel TenTusscherPanfilov;\n"
+    "    activeTensionModel simple;\n"
+    "    verificationModel\n    {\n        type manufactured;\n    }\n"
+    "    ionic\n    {\n        export (Vm Cai);\n    }\n"
+    "}\n"
+)
+
+
+def test_detect_ionic_model_name_survives_a_quoted_brace_inside_the_active_scope():
+    """Reproduced against the pre-migration scanner: a brace inside a quoted
+
+    string *inside* the active Coeffs block throws off its manual depth
+    counter (the counter is only consulted once in_scope is True), raising
+    KeyError even though ionicModel is present and well-formed. A quoted
+    brace *before* the scope's own opening line does not trigger this --
+    the scanner ignores braces entirely until in_scope flips True.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        path = Path(temp_dir) / "electroProperties"
+        path.write_text(_QUOTED_BRACE_ELECTRO_PROPERTIES)
+        assert detect_ionic_model_name(path) == "TenTusscherPanfilov"
+
+
+_BLOCK_COMMENT_ELECTRO_PROPERTIES = (
+    "FoamFile{ version 2.0; format ascii; class dictionary; object electroProperties; }\n"
+    "myocardiumSolver monodomainSolver;\n"
+    "monodomainSolverCoeffs\n{\n"
+    "    /* TODO: fix the { syntax someday */\n"
+    "    ionicModel TenTusscherPanfilov;\n"
+    "}\n"
+)
+
+
+def test_detect_ionic_model_name_survives_a_block_comment_inside_the_active_scope():
+    """Reproduced against the pre-migration scanner: it only strips `//` line
+
+    comments, never `/* */` block comments, so a literal `{` inside one
+    corrupts the depth count the same way a quoted brace does, when the
+    comment sits inside the active Coeffs block.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        path = Path(temp_dir) / "electroProperties"
+        path.write_text(_BLOCK_COMMENT_ELECTRO_PROPERTIES)
+        assert detect_ionic_model_name(path) == "TenTusscherPanfilov"
+
+
+_NESTED_SUBBLOCK_BEFORE_EXPORT = (
+    "FoamFile{ version 2.0; format ascii; class dictionary; object electroProperties; }\n"
+    "myocardiumSolver monodomainSolver;\n"
+    "monodomainSolverCoeffs\n{\n"
+    "    ionicModel TenTusscherPanfilov;\n"
+    "    outputVariables\n    {\n"
+    "        ionic\n        {\n"
+    "            options\n            {\n                someKnob 1;\n            }\n"
+    "            export (Vm Cai);\n"
+    "        }\n"
+    "    }\n"
+    "}\n"
+)
+
+
+def test_detect_ionic_export_list_survives_a_nested_subblock_before_export():
+    """Reproduced against the pre-migration scanner: _IONIC_EXPORT_RE's
+
+    [^}]* cannot cross a nested '}', so a sub-block placed before export(...)
+    makes the regex silently fail to match -- returning None (treated
+    downstream as "not declared") instead of the real export list.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        path = Path(temp_dir) / "electroProperties"
+        path.write_text(_NESTED_SUBBLOCK_BEFORE_EXPORT)
+        assert detect_ionic_export_list(path) == ("Vm", "Cai")
 
 
 if __name__ == "__main__":

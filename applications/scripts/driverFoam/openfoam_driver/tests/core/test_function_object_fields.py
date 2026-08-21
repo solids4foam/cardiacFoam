@@ -156,3 +156,42 @@ def test_solid_region_still_checked_against_solid_after_the_lookup_change(tmp_pa
     )
     warns = [d for d in diags if d.code == "unknown_sampled_field"]
     assert len(warns) == 1 and warns[0].field == "bananas"
+
+
+def test_unknown_field_still_warns_with_a_lookalike_string_earlier_in_the_file(tmp_path):
+    """A quoted string containing 'functions {' must not hide the real block.
+
+    Reproduced against the pre-migration scanner: re.search(r"\\bfunctions\\b\\s*", text)
+    matches the fake occurrence inside the quoted string first, so the real
+    functions block -- which has a genuinely bad sampled field -- is never
+    scanned, and function_object_field_diagnostics silently returns ().
+    """
+    system = tmp_path / "system"
+    system.mkdir(parents=True, exist_ok=True)
+    (system / "controlDict").write_text(
+        _HEADER
+        + 'someEntry "this string mentions functions { in a sentence";\n'
+        + "functions\n{\nprobe1{ type probes; fields (Vm bogusField); }\n}\n"
+    )
+    diags = function_object_field_diagnostics(
+        tmp_path, samplable={"electro": {"Vm"}, "solid": set()}
+    )
+    warns = [d for d in diags if d.code == "unknown_sampled_field"]
+    assert len(warns) == 1
+    assert warns[0].field == "bogusField"
+
+
+def test_includeFunc_alongside_a_real_function_object_is_skipped_not_crashed_on(tmp_path):
+    """#includeFunc is a directive, not a field-sampling sub-dict -- must not
+
+    error, and must not stop the real sibling function object from being
+    checked (distinct from test_includefunc_not_flagged, which only has the
+    includeFunc line and nothing else to iterate past).
+    """
+    root = _write_controldict(
+        tmp_path, "#includeFunc residuals\nprobe1{ type probes; fields (Vm); }"
+    )
+    diags = function_object_field_diagnostics(
+        root, samplable={"electro": {"Vm"}, "solid": set()}
+    )
+    assert [d for d in diags if d.level == "error"] == []

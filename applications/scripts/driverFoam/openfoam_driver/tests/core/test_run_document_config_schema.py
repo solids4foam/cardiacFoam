@@ -40,6 +40,7 @@ import tempfile
 from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import default_driver_context
+from openfoam_driver.plugins.cardiacfoam.run_document_config import _read_physics_type
 from openfoam_driver.strict_planning import strict_plan
 
 
@@ -142,3 +143,23 @@ def test_ingested_document_with_a_schema_valid_config_raises_no_violation() -> N
     assert not [
         d for d in diagnostics if d["code"] == "plugin_config_schema_violation"
     ], diagnostics
+
+
+def test_read_physics_type_ignores_a_nested_type_key(tmp_path):
+    """A nested block's own 'type' key must not shadow the real top-level one.
+
+    The pre-migration scanner matches the first line starting with 'type'
+    anywhere in the file, with no nesting awareness -- a hypothetical
+    nested block declared before the real entry would silently win.
+    """
+    path = tmp_path / "physicsProperties"
+    path.write_text(
+        "FoamFile{ version 2.0; format ascii; class dictionary; object physicsProperties; }\n"
+        "someSubBlock\n{\n    type notTheRealAnswer;\n}\n"
+        "type monodomain;\n"
+    )
+    assert _read_physics_type(path) == "monodomain"
+
+
+def test_read_physics_type_returns_none_when_file_missing(tmp_path):
+    assert _read_physics_type(tmp_path / "nope") is None

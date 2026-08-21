@@ -10,6 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from foamlib import FoamFile
+
 from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
 from openfoam_driver.specs.dict_builder import populate_values
 from openfoam_driver.plugins.cardiacfoam.dict_builder import (
@@ -25,14 +27,10 @@ from openfoam_driver.specs.validation import primary_phase, slot_key
 def _read_physics_type(path: Path) -> str | None:
     if not path.exists():
         return None
-    for line in path.read_text().splitlines():
-        stripped = line.split("//", 1)[0].strip()
-        if not stripped.startswith("type"):
-            continue
-        tokens = stripped.rstrip(";").split()
-        if len(tokens) >= 2:
-            return tokens[1]
-    return None
+    try:
+        return str(FoamFile(path)["type"])
+    except (KeyError, ValueError):
+        return None
 
 
 def build_config(spec) -> tuple[dict[str, dict[str, Any]], tuple[StrictDiagnostic, ...]]:

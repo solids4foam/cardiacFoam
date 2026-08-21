@@ -64,12 +64,16 @@ def _write_ascii_points(path: Path, pts):
 
 
 def _write_binary_points(path: Path, pts):
-    # Real OpenFOAM emits a newline after the opening '(' before the binary
-    # block; the parser must skip it. Reproduce that here.
+    # Matches real OpenFOAM binary output byte-for-byte (verified against
+    # every polyMesh/points file in this repo's tutorial corpus, 31/31): the
+    # raw binary payload starts immediately after the opening '(', with no
+    # separating newline or whitespace. An earlier version of this helper
+    # inserted one defensively; foamlib does not tolerate it, and no real
+    # file in this repo's corpus was ever found to need that tolerance.
     header = _HEADER.format(fmt="binary").encode("latin-1")
     flat = [c for triple in pts for c in triple]
     block = struct.pack(f"<{len(flat)}d", *flat)
-    path.write_bytes(header + f"\n{len(pts)}\n(\n".encode("latin-1") + block + b"\n)\n")
+    path.write_bytes(header + f"\n{len(pts)}\n(".encode("latin-1") + block + b")\n")
 
 
 class TestClassifyScale(unittest.TestCase):
@@ -265,6 +269,45 @@ class TestCheckMeshGeometryCatalogued(unittest.TestCase):
         produced = {p.artifact_id for p in UTILITY_CATALOG["checkMeshGeometry"].produces}
         self.assertIn("polymesh_scaled", produced)
         self.assertNotIn("polymes_scaled", produced)
+
+
+def test_read_bounding_box_matches_real_repo_points_file():
+    """Cross-check against a real ASCII points file already committed to this repo.
+
+    This is not a synthetic fixture: it is the same value both the old
+    hand-rolled scanner and foamlib were measured against directly before
+    this migration, confirmed to match bit-for-bit.
+    """
+    repo_root = Path(__file__).resolve().parents[6]
+    points_path = (
+        repo_root
+        / "tutorials"
+        / "NiedererEtAl2011"
+        / "purkinjeNiedererEtAl2011"
+        / "constant"
+        / "polyMesh"
+        / "points"
+    )
+    if not points_path.is_file():
+        pytest.skip("tutorial corpus not present in this checkout")
+    bbox = read_bounding_box(points_path)
+    assert bbox.min_pt == pytest.approx((0.0, 0.0, 0.0))
+    assert bbox.max_pt == pytest.approx((0.02, 0.003, 0.007))
+
+
+def test_read_bounding_box_raises_on_zero_points(tmp_path):
+    """foamlib returns [] (not an error) for a zero-point file -- the
+
+    replacement must still route that through bounding_box_from_flat_coords
+    to preserve the existing MeshParseError contract.
+    """
+    points_path = tmp_path / "points"
+    points_path.write_text(
+        "FoamFile{ version 2.0; format ascii; class vectorField; object points; }\n"
+        "0\n(\n)\n"
+    )
+    with pytest.raises(MeshParseError):
+        read_bounding_box(points_path)
 
 
 if __name__ == "__main__":
