@@ -479,7 +479,9 @@ def remove_foam_dict(
             open_line += 1
 
         if open_line >= search_end:
-            raise KeyError(f"Dictionary '{dict_name}' has no opening brace")
+            return foam_backend.remove_dict(
+                file_path, dict_name, scope=scope, missing_ok=missing_ok
+            )
 
         depth = 0
         saw_open = False

@@ -553,6 +553,28 @@ def test_remove_foam_dict_falls_back_for_brace_in_quoted_string(tmp_path):
     assert 'note  "a value with { an unbalanced brace";' in text
 
 
+def test_remove_foam_dict_falls_back_when_name_matches_a_scalar_entry(tmp_path):
+    """remove_foam_dict must handle a name that's a scalar, not a block.
+
+    Reproduced directly: before this fix, remove_foam_dict("xMin", ...)
+    raised KeyError("... has no opening brace") unconditionally -- not even
+    honoring missing_ok=True -- whenever the matched name turned out to be a
+    plain `xMin -1.0;` entry rather than a `{ ... }` block. This is exactly
+    the case plugins/cardiacfoam/tutorials/manufactured_bath_bidomain.py
+    worked around by calling the separate remove_foam_entry function
+    instead. foamlib's `del` has no such shape restriction.
+    """
+    path = tmp_path / "d"
+    path.write_text(
+        "FoamFile { version 2.0; class dictionary; object d; }\n"
+        "groundPatches\n{\n    xMin -1.0;\n    yMin 0.0;\n}\n"
+    )
+    remove_foam_dict(path, "xMin", scope=["groundPatches"])
+    text = path.read_text()
+    assert "xMin" not in text
+    assert "yMin 0.0;" in text
+
+
 def test_remove_foam_dict_missing_ok_still_uses_fallback(tmp_path):
     """missing_ok=True must not disable the foamlib fallback entirely.
 
