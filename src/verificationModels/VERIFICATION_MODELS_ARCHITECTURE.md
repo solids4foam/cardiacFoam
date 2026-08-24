@@ -54,9 +54,9 @@ Role:
 Current concrete verifiers include:
 
 - `manufacturedFDAMonodomainVerifier`
+- `manufacturedAnisotropicMonodomainVerifier`
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
-- `manufactured1D3DMonodomainVerifier`
 
 ### Manufactured/reference helpers
 

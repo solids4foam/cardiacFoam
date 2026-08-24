@@ -104,7 +104,8 @@ The coupler reuses internal buffers for:
 `eikonalPvjCoupler` supports:
 
 - `unidirectional` — one-way transfer of Purkinje terminal activation times into the myocardium eikonal domain
-- `bidirectional` — reserved; stops with an "in development" message
+- `bidirectional` — gathers myocardial activation times back onto the network
+    terminals (retrograde 3D-to-1D)
 
 ## Runtime sequence
 

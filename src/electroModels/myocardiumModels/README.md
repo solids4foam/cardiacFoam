@@ -11,7 +11,6 @@ solve implementations used by those workflows.
 src/electroModels/myocardiumModels/
 ├── monodomainSolver/   # Single-potential tissue PDE
 ├── bidomainSolver/     # Coupled Vm and phiE tissue PDE
-├── eikonalSolver/      # Reduced-order activation-time model
 ├── singleCellSolver/   # ODE-only single-cell workflow
 └── README.md
 ```
@@ -31,12 +30,11 @@ src/electroModels/myocardiumModels/
   - Owns intracellular and extracellular conductivity tensors and the `phiE`
     field exposed through `myocardiumDomain`.
 
-- `eikonalSolver`
-  - Not registered as a dictionary-selectable top-level solver.
-  - Computes activation times with a reduced-order anisotropic eikonal
-    formulation rather than a full ionic-PDE solve.
-  - The canonical dictionary path is `myocardiumSolver eikonalSolver`, which
-    selects `electrophysiologyModel` and builds `eikonalMyocardiumDomain`.
+There is no eikonal kernel in this directory. The dictionary entry
+`myocardiumSolver eikonalSolver` selects `electrophysiologyModel`, which builds
+`eikonalMyocardiumDomain` (in `../electroDomains/myocardiumDomain/`). That domain
+assembles the eikonal-diffusion equation itself; there is no separate eikonal
+`myocardiumSolver`.
 
 ## ODE-only workflow
 

@@ -117,7 +117,7 @@ eikonalSolverCoeffs
 
 Setting `end` shorter than the AP duration truncates repolarisation in the
 reconstructed ECG. Setting it longer than 1.0 s requests template samples
-outside the tabulated range; the solver warns and clamps.
+outside the tabulated range; the solver clamps to the last tabulated sample **silently** — no warning is issued.
 
 ### Transmural heterogeneity
 

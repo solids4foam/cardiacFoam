@@ -308,8 +308,8 @@ domainCouplings
 
 ```
 
-`bidirectional` is parsed but explicitly rejected as in development for
-`eikonalPvjCoupler`.
+`bidirectional` is implemented for `eikonalPvjCoupler`: it gathers myocardial
+activation times onto the network terminals via `mapper_.gatherActivationTimes`.
 
 ---
 

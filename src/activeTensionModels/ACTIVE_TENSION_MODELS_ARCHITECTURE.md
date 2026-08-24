@@ -54,4 +54,10 @@ Current concrete models request `Vm`.
 - integration-point ODE model
 - follows the same provider and I/O pattern as `GoktepeKuhl`
 
+### `LandNiederer`
+
+- runtime name: `LandNiederer`
+- biophysically detailed, in contrast to the two phenomenological models above
+- ships a GPU-batched variant, as do `GoktepeKuhl` and `NashPanfilov`
+
 For the folder-level overview, see [`README.md`](./README.md).

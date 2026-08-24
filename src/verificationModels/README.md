@@ -61,6 +61,7 @@ reference helpers used to validate:
 Registered verifier types include:
 
 - `manufacturedFDAMonodomainVerifier`
+- `manufacturedAnisotropicMonodomainVerifier`
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
 - `manufacturedEikonalVerifier`
@@ -68,7 +69,6 @@ Registered verifier types include:
 - `bathECGManufacturedVerifier`
 - `eikonalECGManufacturedVerifier`
 - `manufacturedGraphVerifier`
-- `manufactured1D3DMonodomainVerifier`
 - `coupled1D3DMonodomainVerifier`
 
 ## What this folder does not own

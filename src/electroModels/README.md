@@ -97,7 +97,10 @@ Contains Purkinje/conduction solver kernels used by
 
 - `monodomain1DSolver`
 
-- `eikonalSolver`
+- `eikonalSolver1D`
+
+- `restitutionEikonalSolver1D` — re-excitable activation solver with CV(DI)
+  restitution and a fixed nominal APD
 
 ### `ecgModels/`
 
@@ -107,6 +110,10 @@ Contains downstream ECG kernels:
 
 - `torsoECG` — electrode sampler on the global phiE from
   `extracellularPotentialDomain`
+
+- `eikonalECG` — manufactured-solution verification construct and
+  activation-time ECG surrogate, not a general-purpose ECG model; see
+  [`ecgModels/eikonalECG/README.md`](ecgModels/eikonalECG/README.md)
 
 ### `electroCouplers/`
 
