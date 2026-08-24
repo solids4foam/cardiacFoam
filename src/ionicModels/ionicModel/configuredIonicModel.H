@@ -65,7 +65,8 @@ public:
 
     virtual bool readRestartState(const fvMesh& mesh) override
     {
-        const PtrList<scalarField>* states = ioStatesPtr();
+        PtrList<scalarField>* states =
+            const_cast<PtrList<scalarField>*>(ioStatesPtr());
         if (states == nullptr || states->empty())
         {
             return false;

@@ -11,14 +11,33 @@ reaction-diffusion solve at each time step. Instead it uses:
 2. **Precomputed tissue templates** `U(t)` — lookup tables of Vm vs. time
    for each tissue type (endocardial, mid-myocardial, epicardial), obtained
    from reference single-cell simulations.
-3. **Surrogate reconstruction**: for every cell, `Vm(x,t) = U(t − ψ(x))`.
-   The action potential waveform is simply shifted in time by the local
-   activation delay.
-4. **Pseudo-ECG integration** over the reconstructed Vm field using
-   precomputed lead vectors.
+3. **Analytical gradient**: the surrogate is `Vm(x,t) = U(t − ψ(x))`, i.e. the
+   action potential waveform shifted in time by the local activation delay. The
+   solver does **not** build a `Vm` field and differentiate it numerically; it
+   applies the chain rule directly,
+
+   ```
+   grad(Vm) = -dU/ds(t − ψ) * grad(ψ)
+   ```
+
+   evaluating the template **derivative** `dU/ds` per cell as a weighted blend
+   of the endocardial, mid-myocardial and epicardial templates. Templates are
+   stored in mV and scaled to volts.
+4. **Lead-field sum** over cells using precomputed anisotropic lead vectors
+   `z = (σ · r) V_cell / |r|³`, where `r` is the vector from the electrode to
+   the cell centre. The sum is reduced across MPI ranks.
+
+   The same lead-vector construction is used by `pseudoECG`, so the two ECG
+   paths are consistent by construction.
 
 After the eikonal solve, ECG computation evaluates templates once per output
 time step rather than per solver iteration.
+
+## Verification
+
+Setting the manufactured-template path replaces the tabulated blend with
+`manufacturedTemplateDerivative(localTime)`, so the ECG functional can be driven
+by a manufactured `dU/ds` for method-of-manufactured-solutions verification.
 
 ## Tissue templates (`tissueTemplates.H`)
 

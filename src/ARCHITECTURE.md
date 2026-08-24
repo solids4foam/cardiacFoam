@@ -129,6 +129,10 @@ Current concrete models:
 
 - `NashPanfilov`
 
+- `LandNiederer`
+
+Each ships a serial and a GPU-batched variant.
+
 ### `couplingModels`
 
 Currently this folder is small and contains shared signal-side coupling

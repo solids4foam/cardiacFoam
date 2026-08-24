@@ -193,6 +193,7 @@ Concrete implementations of `ecgSolver`.
 |---|---|---|---|
 | `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
 | `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
+| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - psi(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
 
 ---
 
@@ -204,6 +205,7 @@ Concrete implementations of `conductionSystemSolver`.
 |---|---|---|
 | `monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
 | `eikonalSolver1D` | `eikonalSolver1D` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
+| `restitutionEikonalSolver1D` | `restitutionEikonalSolver1D` | Re-excitable activation solver. Beat-to-beat interval logic per node with CV(DI) restitution and constant `apdNominal`; reports block, wavebreak, short-DI and minimum-DI diagnostics. See [conductionSystemModels/README.md](conductionSystemModels/README.md) |
 
 **Cable equation (per edge):**
 
@@ -232,6 +234,7 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
 | `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it explicitly into `myocardiumDomain::sourceField_` or, with `pvjCouplingScheme implicit`, splits the tissue-voltage term into the myocardium Vm matrix diagonal. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
+| `pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.H/C` | Eikonal-network to monodomain-tissue PVJ coupling. Anterograde transfer uses a voltage template; under `couplingMode bidirectional` it additionally gathers myocardial activation times back onto the network terminals (retrograde 3D-to-1D). This is the only coupler with a working bidirectional path. |
 
 Bath/extracellular-potential coupling is **not** a coupler class. `extracellularPotentialDomain` (an `electroStateDomain` under `electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve and binds a restricted view of it directly into the bidomain myocardium solver.
 
@@ -267,7 +270,7 @@ monodomainSolverCoeffs
             // ...
             purkinjeGraphModelCoeffs
             {
-                conductionSystemSolver  monodomain1DSolver;  // default; or: eikonalSolver
+                conductionSystemSolver  monodomain1DSolver;  // default; or: eikonalSolver1D | restitutionEikonalSolver1D
                 ionicModel  BuenoOrovio;
                 // ...
             }

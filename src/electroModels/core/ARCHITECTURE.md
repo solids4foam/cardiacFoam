@@ -126,7 +126,8 @@ electrophysiology system.
 
 - Owns the assembled `electrophysicsSystem`
 
-- Exposes `evolve(timeValue, deltaT)` called by the main solver each timestep
+- Exposes `evolve()` called by the main solver each timestep (the `physicsModel`
+  interface takes no arguments; timing comes from the shared `Time` object)
 
 - Collects per-phase performance timings
 

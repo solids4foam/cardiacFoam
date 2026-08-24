@@ -33,8 +33,12 @@ src/electroModels/conductionSystemModels/
   - Registered as `restitutionEikonalSolver1D`.
   - Tracks refractory state, recovery time, diastolic interval, action
     potential duration, and per-node activation history across timesteps.
-  - Uses tabulated APD(DI) and CV(DI) restitution curves through
-    `restitutionModel`.
+  - Uses a tabulated CV(DI) restitution curve through `restitutionModel`.
+    APD is **not** restituted: it is held at the constant `apdNominal`
+    (default `restitutionTemplates::purkinjeAPDnominal` = 0.290 s, the
+    Stewart 2009 steady-state APD90). The CV curve and DI axis are the
+    calibrated output of the S1-S2 protocol documented in
+    `tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/Purkinje_S1_S2_Calibration.md`.
   - Reports diagnostic fields for block, wavebreak, short-DI events, and
     minimum DI.
 
