@@ -20,7 +20,7 @@ myocardiumSolver monodomainSolver;
 monodomainSolverCoeffs
 {
     conductivitySource uniform;
-    conductivity    [ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 );
+    conductivity    [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355);
     chi             [ 0 -1 0 0 0 0 0 ] 3;
     cm              [ -1 -4 4 0 0 2 0 ] 2;
     ionicModel      monodomainFDAManufactured;
@@ -35,10 +35,10 @@ monodomainSolverCoeffs
     }
     verificationModel
     {
-        type            manufacturedAnisotropicMonodomainVerifier;
+        type    manufacturedFDAMonodomainVerifier;
     }
-    dimension       "3D";
-    solutionAlgorithm implicit;
+    dimension    "3D";
+    solutionAlgorithm    implicit;
     solver          RKF45;
     maxSteps        1000000000;
     externalStimulus
@@ -53,21 +53,21 @@ monodomainSolverCoeffs
     {
         ECG
         {
-            ecgSolver       pseudoECG;
+            ecgSolver    pseudoECG;
             manufactured
             {
-                enabled         yes;
-                dimension       "3D";
-                referenceQuadratureOrder 96;
-                checkQuadratureOrders ( 6 12 24 48 );
+                enabled    yes;
+                dimension    "3D";
+                referenceQuadratureOrder    96;
+                checkQuadratureOrders    (6 12 24 48);
             }
             electrodePositions
             {
-                E1              ( -0.5 0.5 0.5 );
-                E2              ( 1.5 0.5 0.5 );
-                E3              ( 1.2 0.23 0.61 );
-                E4              ( 1.35 0.74 0.28 );
-                E5              ( 1.55 0.41 0.83 );
+                E1    (-0.5 0.5 0.5);
+                E2    (1.5 0.5 0.5);
+                E3    (1.2 0.23 0.61);
+                E4    (1.35 0.74 0.28);
+                E5    (1.55 0.41 0.83);
             }
         }
     }
