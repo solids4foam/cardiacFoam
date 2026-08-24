@@ -182,13 +182,18 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
             / "singleCellSolver"
             / "singleCellSolver.H"
         )
+        # In the new architecture, eikonalSolver is no longer a standalone class
+        # under myocardiumModels/.  It is registered as a named alias of
+        # electrophysiologyModel via addNamedToRunTimeSelectionTable in
+        # electrophysiologyModel.C, which then dispatches to
+        # EikonalMyocardiumDomain.  Read the registration file instead.
         eikonal_runtime = _read(
             repo_root
             / "src"
             / "electroModels"
-            / "myocardiumModels"
-            / "eikonalSolver"
-            / "eikonalSolver.H"
+            / "core"
+            / "electrophysiologyModel"
+            / "electrophysiologyModel.C"
         )
         conduction_runtime = _read(
             repo_root
@@ -223,7 +228,11 @@ class TestTemplateAndSchemaContract(unittest.TestCase):
         self.assertIn('OverrideTypeName("monodomainSolver")', monodomain_runtime)
         self.assertIn('OverrideTypeName("bidomainSolver")', bidomain_runtime)
         self.assertIn('OverrideTypeName("singleCellSolver")', single_cell_runtime)
-        self.assertIn('OverrideTypeName("eikonalSolver")', eikonal_runtime)
+        # eikonalSolver is registered as a named alias of electrophysiologyModel
+        # via addNamedToRunTimeSelectionTable, not via OverrideTypeName on a
+        # separate class (the old standalone eikonalSolver class was removed).
+        self.assertIn("addNamedToRunTimeSelectionTable", eikonal_runtime)
+        self.assertIn("eikonalSolver", eikonal_runtime)
         self.assertIn('OverrideTypeName("monodomain1DSolver")', conduction_runtime)
         self.assertIn('OverrideTypeName("eikonalSolver1D")', _read(
             repo_root
