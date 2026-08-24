@@ -1096,7 +1096,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.graphFile',
             phases=frozenset({'physics', 'anatomy'}),
-            description="REQUIRED: Name of the graph file in constant/ directory (e.g., 'purkinjeGraph'). The graph file must contain 'edges', 'points', 'pvjNodes', 'pvjLocations' dictionaries/lists.",
+            description="REQUIRED: Basename of the solver-facing graph dictionary in constant/. The value may name any graph dictionary produced by upstream preprocessing and may vary between study cases. The selected file must contain 'conductionEdges', 'points', 'pvjNodes', and 'pvjLocations'.",
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='word',
             dynamic_path=True,
@@ -1117,7 +1117,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.useEdgeConductance',
             phases=frozenset({'physics'}),
-            description='If true, uses local edge conductances to scale conduction velocity in the eikonal solver.',
+            description='If true, restitutionEikonalSolver1D uses local edge conductances to scale conduction velocity.',
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.C',),
             value_kind='boolean',
             dynamic_path=True,
@@ -1127,7 +1127,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.referenceConductance',
             phases=frozenset({'physics'}),
-            description="Reference conductance value used to normalize the edge conductances when scaling velocity. The solver divides the local graph conductance by this reference value to compute a 0-to-1 'health' ratio. If the graph already uses 0-to-1 units, set this to 1.0. If the graph uses raw physical units (e.g., 150.0 for healthy tissue), set this to that healthy baseline value.",
+            description='Reference conductance used to normalize local edge conductances when scaling velocity. The solver divides each local graph conductance by this value; the resulting relative conductance may be below, equal to, or above 1.0.',
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.C',),
             value_kind='scalar',
             dynamic_path=True,
@@ -1164,6 +1164,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             enum_values=('1D', '2D', '3D'),
             typical_value='1D',
             dynamic_path=True,
+            required=True,
+            required_when={"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.ionicModel": ("monodomainFDAManufactured", "bidomainFDAManufactured")},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.verificationModel.type',
@@ -1184,6 +1186,8 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind='dimensioned_scalar_literal',
             typical_value='[0 1 -1 0 0 0 0] 4.2',
             dynamic_path=True,
+            required=True,
+            required_when={"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver": "eikonalSolver1D"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.absTol',
@@ -1249,7 +1253,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.startTime',
             phases=frozenset({'stimulus'}),
-            description='Start time [s] of the root-node stimulus applied to Purkinje node 0.',
+            description='Start time [s] of the optional rootStimulus block. If rootStimulus is present, this entry is required; without the block, no root stimulus is applied.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
             dynamic_path=True,
@@ -1257,7 +1261,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.duration',
             phases=frozenset({'stimulus'}),
-            description='Duration [s] of the root-node stimulus pulse.',
+            description='Duration [s] of the optional rootStimulus pulse. Defaults to 0, which disables the pulse even when the block exists.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
             dynamic_path=True,
@@ -1265,7 +1269,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.intensity',
             phases=frozenset({'stimulus'}),
-            description='Amplitude [A/m³] of the root-node stimulus current applied to Purkinje node 0.',
+            description='Amplitude of the optional rootStimulus current added at the selected Purkinje node. Defaults to 0; the scalar uses the Purkinje solver current convention.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
             dynamic_path=True,
@@ -1273,7 +1277,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.node',
             phases=frozenset({'stimulus'}),
-            description='Optional graph-node index that overrides the graph-file rootNode for the applied root stimulus.',
+            description='Optional Purkinje node index that overrides the graph-file rootNode for rootStimulus.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='label',
             dynamic_path=True,
@@ -1424,11 +1428,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler',
             description='Coupling model selector for domain-to-domain interactions (e.g., Purkinje-to-myocardium). Used only when multiple domains are present.',
-            source_refs=('src/electroModels/electroCouplers/electroDomainCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C'),
+            source_refs=('src/electroModels/electroCouplers/electroDomainCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/eikonal/eikonalPvjCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C'),
             value_kind='enum',
             enum_values=('reactionDiffusionPvjCoupler', 'eikonalPvjCoupler', 'eikonalMonodomainPvjCoupler'),
             dynamic_path=True,
-            constraints=('reactionDiffusionPvjCoupler valid only with monodomainSolver+monodomain1DSolver; eikonalPvjCoupler valid only with eikonalSolver+eikonalSolver (1D).',),
+            constraints=('Compatibility is determined by the myocardiumSolver/conductionSystemSolver pair: reactionDiffusionPvjCoupler is used with monodomainSolver or bidomainSolver plus monodomain1DSolver; eikonalPvjCoupler is used with eikonalSolver plus eikonalSolver1D or restitutionEikonalSolver1D; eikonalMonodomainPvjCoupler is used with monodomainSolver plus eikonalSolver1D or restitutionEikonalSolver1D.',),
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.conductionNetworkDomain',
@@ -1441,10 +1445,12 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj',
-            description='Junction resistance [Ω·m²] per unit surface area. Used by reactionDiffusionPvjCoupler for monodomain coupling. Example: 500.0 Ω·m².',
-            source_refs=('src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C',),
+            description='Scalar PVJ resistance used in the voltage-difference coupling current. reactionDiffusionPvjCoupler uses it when the graph does not provide terminal-specific resistances; eikonalMonodomainPvjCoupler requires it at construction and may later use graph-provided terminal resistances instead.',
+            source_refs=('src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C'),
             value_kind='scalar',
             dynamic_path=True,
+            required=True,
+            required_when={"$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler": "eikonalMonodomainPvjCoupler"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.pvjRadius',
@@ -1471,6 +1477,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             typical_value='explicit',
             constraints=("Only applicable to reactionDiffusionPvjCoupler.",),
+            applicable_when={"$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.electroDomainCoupler": "reactionDiffusionPvjCoupler"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.verificationModel.type',
@@ -1484,17 +1491,18 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.debugCoupling',
             description='Outputs verbose logging about PVJ coupling weights and mappings.',
-            source_refs=('src/electroModels/electroCouplers/electroDomainCoupler.C',),
+            source_refs=('src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C',),
             value_kind='boolean',
             dynamic_path=True,
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode',
             description="Coupling direction: 'unidirectional' (Purkinje→myocardium only) or 'bidirectional' (both ways). REQUIRED -- pvjCoupler.C:91 uses get<word>, so omitting it is a fatal error, not a default.",
-            source_refs=('src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.H',),
+            source_refs=('src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.C',),
             value_kind='enum',
             enum_values=('unidirectional', 'bidirectional'),
             dynamic_path=True,
+            required=True,
         ),
         ),
     ),
