@@ -39,13 +39,19 @@ static const scalar purkinjeAPDnominal    = 0.290;
 // Escape interval [s]: spontaneous If firing period (funny current).
 static const scalar purkinjeEscapeInterval = 1.1;
 
-// DI axis [s].
-// Minimum 0.060 s gives a minimum beat interval (ERP) of 0.290 + 0.060 = 0.350 s.
+// DI axis [s]. The lower bound 0.330 is the measured edge of capture: in the
+// S1-S2 protocol, premature beats below this DI fell inside the absolute
+// refractory period and failed to propagate. With the default apdNominal it
+// gives minBeatInterval (ERP) = 0.290 + 0.330 = 0.620 s.
 static const scalar purkinjeDI[] = {
     0.330, 0.350, 0.400, 0.450, 0.500, 0.700
 };
 
-// CV [m/s]: placeholder shape pending 1D conduction velocity protocol
+// CV [m/s]: calibrated output of the S1-S2 protocol documented in
+// tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
+// Purkinje_S1_S2_Calibration.md (Stewart model, conductivity 2.3 S/m giving a
+// resting CV of 3.03 m/s against a 3.0 m/s target; five S1 beats at BCL 1000 ms,
+// checkpointed at 4.25 s, one S2 branch per DI).
 static const scalar purkinjeCV[] = {
     2.03, 2.43, 2.95, 3.18, 3.29, 3.37
 };
