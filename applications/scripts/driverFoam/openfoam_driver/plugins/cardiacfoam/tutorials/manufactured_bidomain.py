@@ -53,6 +53,7 @@ def make_spec(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    convergence_axis: str | None = None,
     ecg_enabled: bool = defaults.ECG_ENABLED,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,

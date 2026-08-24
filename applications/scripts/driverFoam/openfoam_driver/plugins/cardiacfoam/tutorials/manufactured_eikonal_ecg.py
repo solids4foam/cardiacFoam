@@ -192,6 +192,9 @@ def _apply_case(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    conductivity: str | None = None,
+    eikonal_advection_diffusion_approach: str | None = None,
+    convergence_axis: str | None = None,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = (
@@ -227,6 +230,10 @@ def _apply_case(
         + " ".join(str(int(value)) for value in ecg_check_quadrature_orders)
         + ")",
     }
+    if conductivity is not None:
+        case_overrides[f"{electro_properties_scope}.conductivity"] = conductivity
+    if eikonal_advection_diffusion_approach is not None:
+        case_overrides[f"{electro_properties_scope}.eikonalAdvectionDiffusionApproach"] = eikonal_advection_diffusion_approach
 
     for electrode_name, electrode_position in electrodes.items():
         case_overrides[f"{ecg_scope}.electrodePositions.{electrode_name}"] = (
@@ -315,6 +322,9 @@ def make_spec(
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
+    conductivity: str | None = None,
+    eikonal_advection_diffusion_approach: str | None = None,
+    convergence_axis: str | None = None,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = (
