@@ -89,6 +89,7 @@ __pycache__/
 venv/
 .venv/
 env/
+*.egg-info/
 
 # other stuff
 .build
