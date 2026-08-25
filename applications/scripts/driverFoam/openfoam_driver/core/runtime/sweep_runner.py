@@ -497,7 +497,7 @@ def sweep_run(
                     # case's own output_dir_name folder -- the same directory
                     # workflow_state.json lives in -- so nothing needs a
                     # separate cache location to find it later.
-                    archive_dir_name = base.get("archive_dir_name") if entry is not None else None
+                    archive_dir_name = (base.get("archive_dir_name") or "collectedOutput") if entry is not None else None
                     pp_before: dict[str, tuple[float, int]] = {}
                     if archive_dir_name:
                         case_root_for_archive = Path(run_document["launch"]["caseRoot"])

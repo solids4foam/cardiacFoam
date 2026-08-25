@@ -191,7 +191,7 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
         # found via a real (non-mocked) sweep-run: relative_to(output_dir)
         # raised ValueError because these are two unrelated directory trees.
         state_dir = fake_spec.case_root / f"state_{len(call_order)}"
-        return {"status": "ok", "run_document": {"version": "3", "launch": {"outputDir": str(state_dir)}}}
+        return {"status": "ok", "run_document": {"version": "3", "launch": {"caseRoot": str(fake_spec.case_root), "outputDir": str(state_dir)}}}
     fake_report.to_json.side_effect = fake_to_json
 
     def fake_subprocess_run(cmd, **kwargs):
@@ -322,6 +322,79 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
     assert (case_output_dirs[1] / "sweepCases" / "case_1.dat").read_text() == "result 1"
     assert (case_output_dirs[2] / "sweepCases" / "case_2.dat").read_text() == "result 2"
     assert case_output_dirs[1] != case_output_dirs[2]
+
+
+def test_sweep_run_archives_each_case_postprocessing_output_by_default(tmp_path):
+    # Same setup as test_sweep_run_archives_each_case_postprocessing_output_when_configured,
+    # but the spec does NOT supply base.archive_dir_name -- archival must still
+    # happen, using the built-in default name, not be skipped entirely.
+    spec_path = tmp_path / "sweep.json"
+    spec = {
+        "base": {"entry": "niederer2012"},
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"dx_values": [[0.5], [0.2]]},
+            "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["dx_values"]}],
+        },
+    }
+    spec_path.write_text(json.dumps(spec))
+    output_dir = tmp_path / "out"
+    case_root = tmp_path / "case_root"
+    (case_root / "postProcessing").mkdir(parents=True)
+
+    call_order = []
+    case_output_dirs: dict[int, Path] = {}
+    fake_case_config = mock.Mock(case_id="dx0.5")
+    fake_spec = mock.Mock()
+    fake_spec.case_root = case_root
+    fake_spec.build_cases.return_value = [fake_case_config]
+    fake_spec.apply_case.side_effect = lambda *a, **k: call_order.append("apply_case")
+
+    fake_report = mock.Mock()
+    fake_report.status = "ok"
+
+    def fake_to_json():
+        state_dir = case_root / f"state_{len(call_order)}"
+        return {"status": "ok", "run_document": {"version": "3", "launch": {"caseRoot": str(case_root), "outputDir": str(state_dir)}}}
+    fake_report.to_json.side_effect = fake_to_json
+
+    def fake_subprocess_run(cmd, **kwargs):
+        call_order.append("run")
+        n = len([c for c in call_order if c == "run"])
+        run_doc_path = Path(cmd[cmd.index("--run-document") + 1])
+        run_doc = json.loads(run_doc_path.read_text())
+        output_dir_for_case = Path(run_doc["launch"]["outputDir"])
+        case_output_dirs[n] = output_dir_for_case
+        workflow_state_path = output_dir_for_case / "workflow_state.json"
+        workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
+        workflow_state_path.write_text(json.dumps({"status": "completed"}))
+        (case_root / "postProcessing" / f"case_{n}.dat").write_text(f"result {n}")
+        return mock.Mock(returncode=0, stdout="", stderr="")
+
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
+         mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
+        result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert result["completed_count"] == 2
+    assert (case_output_dirs[1] / "collectedOutput" / "case_1.dat").read_text() == "result 1"
+    assert (case_output_dirs[2] / "collectedOutput" / "case_2.dat").read_text() == "result 2"
+
+
+def test_sweep_run_archives_nothing_for_generic_case_folder_sweeps(tmp_path):
+    # archive_dir_name only applies to entry mode (see sweep_runner.sweep_run's
+    # archive_dir_name assignment) -- a generic/case-folder sweep must not
+    # gain a spurious "collectedOutput" subfolder just because the default
+    # changed from None to a string.
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path)
+    output_dir = tmp_path / "out"
+
+    result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert result["completed_count"] == 2
+    for case_id in ("TNNP", "BuenoOrovio"):
+        assert not (output_dir / case_id / "collectedOutput").exists()
 
 
 def test_sweep_plan_materializes_and_audits_each_case_for_real(tmp_path):
