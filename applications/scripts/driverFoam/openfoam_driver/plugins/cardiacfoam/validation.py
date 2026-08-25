@@ -10,6 +10,11 @@ if TYPE_CHECKING:
 _CONDUCTION_SOLVER_SUFFIX = ".purkinjeGraphModelCoeffs.conductionSystemSolver"
 _COUPLER_SUFFIX = ".electroDomainCoupler"
 _NETWORK_REF_SUFFIX = ".conductionNetworkDomain"
+import re as _re
+
+# A dynamic-path placeholder segment, e.g. <name> / <region_name> / <patch>.
+_PLACEHOLDER_RE = _re.compile(r"<[^>]+>")
+
 _CONDUCTION_NET_PREFIX = "conductionNetworkDomains."
 _DOMAIN_COUPLINGS_PREFIX = "domainCouplings."
 
@@ -173,73 +178,174 @@ def _value_matches_scoped(actual: Any, expected: str | tuple) -> bool:
     return actual == expected
 
 
-def _evaluate_dynamic_required_fields(context: dict[str, Any]) -> list[ValidationError]:
-    """Required-field checks for ``conductionNetworkDomains.<name>.*``
-    dynamic entries, evaluated independently per declared network.
+def _dynamic_block_templates() -> dict[str, list[Any]]:
+    """Group every dynamic catalogue entry by its block template.
 
-    ``validate_run``'s generic required-field pass (``specs/validation.py``)
-    skips every ``dynamic_path`` entry outright: "concrete required leaves
-    are the user's responsibility when those blocks are actually
-    configured." This is where that responsibility is discharged. Each
-    declared network gets its own scoped substitution of the catalog
-    template, built from only that network's own keys, so a sibling
-    network's value can never satisfy this network's requirement (and vice
-    versa).
+    A template is the slot key truncated through its FIRST placeholder --
+    ``domainCouplings.<name>``, ``ecgDomains.<name>``,
+    ``ionicHeterogeneity.regions.<region_name>``. Entries sharing a template
+    are the leaves that one configured instance of that block may carry.
     """
     from openfoam_driver.dict_entries import get_electro_property_entry_groups
     from openfoam_driver.core.specs.validation import slot_key
 
+    templates: dict[str, list[Any]] = {}
+    for group in get_electro_property_entry_groups().values():
+        for entry in group:
+            if not entry.dynamic_path:
+                continue
+            key = slot_key(entry.driver_path)
+            match = _PLACEHOLDER_RE.search(key)
+            if not match:
+                continue
+            templates.setdefault(key[: match.end()], []).append(entry)
+    return templates
+
+
+def _literal_segments_at(position: int, templates: dict[str, list[Any]]) -> set[str]:
+    """Literal (non-placeholder) segments any template uses at ``position``.
+
+    ``ecgDomains.<name>`` and ``ecgDomains.electrodePositions.<electrode>``
+    share a prefix, so a naive instance scan would read the literal
+    ``electrodePositions`` as an ECG domain called "electrodePositions".
+    Excluding segments the catalogue itself uses literally at that depth
+    keeps the two apart without hardcoding either name.
+    """
+    literals: set[str] = set()
+    for template in templates:
+        segments = template.split(".")
+        if len(segments) > position and not _PLACEHOLDER_RE.fullmatch(segments[position]):
+            literals.add(segments[position])
+    return literals
+
+
+def _declared_instances(
+    context: dict[str, Any], template: str, templates: dict[str, list[Any]]
+) -> set[str]:
+    """Names of every ``<template>`` block with at least one key in context."""
+    prefix_segments = template.split(".")[:-1]
+    prefix = ".".join(prefix_segments) + "."
+    position = len(prefix_segments)
+    reserved = _literal_segments_at(position, templates)
+
+    instances: set[str] = set()
+    for key in context:
+        if _is_template_slot_key(key) or not key.startswith(prefix):
+            continue
+        remainder = key[len(prefix):].split(".")
+        if len(remainder) < 2:
+            # The block's own leaf must sit BELOW the instance name.
+            continue
+        name = remainder[0]
+        if name and name not in reserved:
+            instances.add(name)
+    return instances
+
+
+def _instance_applicable(
+    entry: Any,
+    context: dict[str, Any],
+    template_prefix: str,
+    instance_prefix: str,
+) -> bool:
+    """Is ``entry`` applicable for this concrete instance?
+
+    Scoped exactly like ``required_when``: a predicate naming a sibling leaf
+    inside the same block is resolved against THIS instance's keys, so one
+    instance's configuration can never make another instance's leaf
+    applicable. Predicates pointing outside the block are left to the generic
+    pass and treated as satisfied here.
+    """
+    from openfoam_driver.core.specs.validation import slot_key
+
+    if not entry.applicable_when:
+        return True
+    for pred_template, expected in entry.applicable_when.items():
+        pred_slot = slot_key(pred_template)
+        if not pred_slot.startswith(template_prefix):
+            continue
+        actual = context.get(instance_prefix + pred_slot[len(template_prefix):])
+        if actual is None or not _value_matches_scoped(actual, expected):
+            return False
+    return True
+
+
+def _evaluate_dynamic_required_fields(context: dict[str, Any]) -> list[ValidationError]:
+    """Required-field checks for every configured dynamic block.
+
+    ``validate_run``'s generic required-field pass (``specs/validation.py``)
+    skips every ``dynamic_path`` entry outright: "concrete required leaves
+    are the user's responsibility when those blocks are actually
+    configured." This is where that responsibility is discharged.
+
+    Each declared instance gets its own scoped substitution of the catalogue
+    template, built from only that instance's own keys, so a sibling's value
+    can never satisfy this instance's requirement (and vice versa).
+
+    This was previously hardcoded to ``conductionNetworkDomains.<name>.*``,
+    which left the other dynamic blocks unenforced -- notably
+    ``domainCouplings.<name>``, whose leaves all carry an empty
+    ``typical_value`` and so are not silently filled by the builder the way
+    ``ecgDomains.<name>.sampling.*`` are. The blocks are now discovered from
+    the catalogue instead of named here, so a new dynamic block is covered
+    the moment it is catalogued.
+    """
+    from openfoam_driver.core.specs.validation import slot_key
+
     errors: list[ValidationError] = []
+    templates = _dynamic_block_templates()
 
-    declared_networks = _declared_conduction_networks(context)
-    if not declared_networks:
-        return errors
+    for template, entries in sorted(templates.items()):
+        template_prefix = f"{template}."
+        for instance in sorted(_declared_instances(context, template, templates)):
+            instance_prefix = ".".join(template.split(".")[:-1] + [instance]) + "."
+            for entry in entries:
+                suffix = slot_key(entry.driver_path)[len(template_prefix):]
+                if not suffix:
+                    continue
+                concrete_key = instance_prefix + suffix
 
-    template_prefix = f"{_CONDUCTION_NET_PREFIX}<name>."
-    dynamic_entries = [
-        entry
-        for group in get_electro_property_entry_groups().values()
-        for entry in group
-        if entry.dynamic_path and slot_key(entry.driver_path).startswith(template_prefix)
-    ]
+                required = entry.required
+                if entry.required_when:
+                    required = False
+                    for pred_template, expected in entry.required_when.items():
+                        pred_slot = slot_key(pred_template)
+                        if not pred_slot.startswith(template_prefix):
+                            # Predicate references something outside this
+                            # instance's own block (e.g. a top-level
+                            # selector); out of scope for this per-instance
+                            # pass.
+                            continue
+                        pred_suffix = pred_slot[len(template_prefix):]
+                        actual = context.get(instance_prefix + pred_suffix)
+                        if actual is None:
+                            continue
+                        if _value_matches_scoped(actual, expected):
+                            required = True
+                            break
 
-    for network in sorted(declared_networks):
-        instance_prefix = f"{_CONDUCTION_NET_PREFIX}{network}."
-        for entry in dynamic_entries:
-            suffix = slot_key(entry.driver_path)[len(template_prefix):]
-            concrete_key = instance_prefix + suffix
-
-            required = entry.required
-            if entry.required_when:
-                required = False
-                for pred_template, expected in entry.required_when.items():
-                    pred_slot = slot_key(pred_template)
-                    if not pred_slot.startswith(template_prefix):
-                        # Predicate references something outside this
-                        # network's own block (e.g. a top-level selector);
-                        # out of scope for this per-instance pass.
-                        continue
-                    pred_suffix = pred_slot[len(template_prefix):]
-                    actual = context.get(instance_prefix + pred_suffix)
-                    if actual is None:
-                        continue
-                    if _value_matches_scoped(actual, expected):
-                        required = True
-                        break
-
-            if not required:
-                continue
-            if concrete_key in context and context[concrete_key] not in (None, ""):
-                continue
-            errors.append(ValidationError(
-                phase="physics",
-                field=concrete_key,
-                message=(
-                    f"{concrete_key} is required for "
-                    f"conductionNetworkDomains.{network} but has no value."
-                ),
-                level="error",
-            ))
+                if not required:
+                    continue
+                if not _instance_applicable(entry, context, template_prefix, instance_prefix):
+                    # Required only WHERE APPLICABLE. The three
+                    # ecgDomains.<name>.sampling.* leaves are gated on
+                    # ecgSolver == eikonalECG; an ECG domain using any other
+                    # solver never emits them, so demanding them there is a
+                    # false error. Every other dynamic required entry has an
+                    # empty applicable_when, so this narrows nothing else.
+                    continue
+                if concrete_key in context and context[concrete_key] not in (None, ""):
+                    continue
+                block = template.split(".")[:-1]
+                errors.append(ValidationError(
+                    phase="physics",
+                    field=concrete_key,
+                    message=(
+                        f"{concrete_key} is required for "
+                        f"{'.'.join(block)}.{instance} but has no value."
+                    ),
+                    level="error",
+                ))
 
     return errors
 

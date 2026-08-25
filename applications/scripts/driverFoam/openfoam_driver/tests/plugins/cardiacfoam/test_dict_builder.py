@@ -1222,6 +1222,11 @@ class TestRestitutionEikonalSolver1D(unittest.TestCase):
             f"{coupling}.conductionNetworkDomain": cls._NETWORK_NAME,
             f"{coupling}.couplingMode": "unidirectional",
             f"{coupling}.electroDomainCoupler": "eikonalMonodomainPvjCoupler",
+            # eikonalMonodomainPvjCoupler.C:47-55 FatalErrors at construction
+            # when rPvj is absent -- no graph-file escape, unlike
+            # reactionDiffusionPvjCoupler. Without it this fixture built a
+            # dictionary the solver would refuse to start on.
+            f"{coupling}.rPvj": "1e5",
             f"{purkinje}.conductionSystemSolver": conduction_system_solver,
         }
 
@@ -1420,6 +1425,9 @@ class TestRegenerateElectroProperties(unittest.TestCase):
         "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.rootStimulus.intensity": "500000.0",
         "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.electroDomainCoupler": "reactionDiffusionPvjCoupler",
         "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.conductionNetworkDomain": "purkinjeNetwork",
+        # pvjCoupler.C:90 reads couplingMode with a hard dict.get<word>, so
+        # every coupler needs it; the fixture predates that being enforced.
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.couplingMode": "unidirectional",
     }
 
     def test_carries_forward_a_dynamic_container_verbatim(self) -> None:
