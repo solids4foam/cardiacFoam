@@ -426,8 +426,6 @@ def make_spec(
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = defaults.ECG_ELECTRODES_BY_DIMENSION,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
     mesh_family: str = "hex",
@@ -486,7 +484,6 @@ def make_spec(
     physics_properties_path = Path(physics_properties_relpath)
     tet_geo_template_path = Path(tet_geo_template_relpath)
     run_script_path = Path(run_script_relpath)
-    postprocess_script_path = Path(postprocess_script_relpath)
     convergence_axis_normalized = _normalize_convergence_axis(convergence_axis)
     archive_tag = output_dir_name if output_dir_name else defaults.OUTPUT_DIR_NAME
 
@@ -566,8 +563,6 @@ def make_spec(
             "tet_geo_template_relpath": str(tet_geo_template_path),
             "run_script_relpath": str(run_script_path),
             "run_in_parallel": run_in_parallel,
-            "postprocess_script_relpath": str(postprocess_script_path),
-            "postprocess_function_name": postprocess_function_name,
             "has_electro_property_overrides": bool(electro_property_overrides),
             "conductivity_override": conductivity,
             "has_physics_property_overrides": bool(physics_property_overrides),

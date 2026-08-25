@@ -150,10 +150,6 @@ def make_spec(
     electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    cv_extract_script_relpath: str | Path = defaults.CV_EXTRACT_SCRIPT_RELPATH,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     parallel: bool = defaults.PARALLEL,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
@@ -217,6 +213,8 @@ def make_spec(
                 )
             ],
             "notes": "1D spatial S1-S2 protocol using monodomain natively inside driverFOAM.",
+            "run_script_relpath": str(run_script_relpath),
+            "postprocess_strict_artifacts": postprocess_strict_artifacts,
             "workflow_dag": {
                 "steps": [
                     {

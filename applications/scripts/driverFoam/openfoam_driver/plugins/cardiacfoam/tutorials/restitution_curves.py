@@ -141,9 +141,6 @@ def make_spec(
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     output_glob: str = defaults.OUTPUT_GLOB,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
-    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     show_plots: bool = False,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
@@ -164,8 +161,6 @@ def make_spec(
     control_dict_path = Path(control_dict_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    postprocess_script_path = Path(postprocess_script_relpath)
-    table_summary_path = Path(table_summary_relpath)
 
     # write_after_time: start writing 2 s before the end of the S1 phase
     write_after_time_s = (s1_interval_ms * n_s1) / 1000.0 - 2.0
@@ -224,8 +219,6 @@ def make_spec(
             "physics_properties_relpath": str(physics_properties_path),
             "run_script_relpath": str(run_script_path),
             "output_glob": output_glob,
-            "postprocess_script_relpath": str(postprocess_script_path),
-            "postprocess_function_name": postprocess_function_name,
             "show_plots": show_plots,
             "has_electro_property_overrides": bool(electro_property_overrides),
             "has_physics_property_overrides": bool(physics_property_overrides),

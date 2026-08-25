@@ -149,8 +149,6 @@ def make_spec(
     electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    cv_extract_script_relpath: str | Path = defaults.CV_EXTRACT_SCRIPT_RELPATH,
-    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     parallel: bool = defaults.PARALLEL,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
@@ -165,8 +163,6 @@ def make_spec(
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    cv_extract_script_path = Path(cv_extract_script_relpath)
-    table_summary_path = Path(table_summary_relpath)
 
     case_root, setup_root, output_dir = resolve_spec_paths(
         tutorials_root=tutorials_root,
@@ -225,5 +221,7 @@ def make_spec(
             "solvers": solvers_list,
             "parallel": parallel,
             "output_dir_name": output_dir.name,
+            "run_script_relpath": str(run_script_path),
+            "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

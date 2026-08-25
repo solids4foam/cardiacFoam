@@ -194,7 +194,6 @@ def _apply_case(
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
     conductivity: str | None = None,
     eikonal_advection_diffusion_approach: str | None = None,
-    convergence_axis: str | None = None,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = (
@@ -325,7 +324,6 @@ def make_spec(
     conductivity: str | None = None,
     conductivity_label: str | None = None,
     eikonal_advection_diffusion_approach: str | None = None,
-    convergence_axis: str | None = None,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
     ecg_check_quadrature_orders: Sequence[int] = defaults.ECG_CHECK_QUADRATURE_ORDERS,
     ecg_electrodes_by_dimension: Mapping[str, Mapping[str, str]] = (
@@ -333,8 +331,6 @@ def make_spec(
     ),
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     run_in_parallel: bool = defaults.RUN_IN_PARALLEL,
     postprocess_strict_artifacts: bool = False,
     mesh_family: str = "hex",
@@ -430,8 +426,6 @@ def make_spec(
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_relpath),
             "run_in_parallel": run_in_parallel,
-            "postprocess_script_relpath": str(postprocess_script_relpath),
-            "postprocess_function_name": postprocess_function_name,
             "ecg_reference_quadrature_order": ecg_reference_quadrature_order,
             "ecg_check_quadrature_orders":
                 [int(value) for value in ecg_check_quadrature_orders],

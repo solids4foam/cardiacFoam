@@ -148,8 +148,6 @@ def make_spec(
     physics_properties_relpath: str | Path = defaults.PHYSICS_PROPERTIES_RELPATH,
     block_mesh_dict_template: str = defaults.BLOCK_MESH_DICT_TEMPLATE,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     electro_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     electromechanical_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
@@ -166,7 +164,6 @@ def make_spec(
     electromechanical_properties_path = Path(electromechanical_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    postprocess_script_path = Path(postprocess_script_relpath)
 
     if piecewise_sweep and len(cells_list) != len(dt_values_list):
         raise ValueError(
@@ -235,8 +232,6 @@ def make_spec(
             "block_mesh_dict_template": block_mesh_dict_template,
             "run_script_relpath": str(run_script_path),
             "run_in_parallel": run_in_parallel,
-            "postprocess_script_relpath": str(postprocess_script_path),
-            "postprocess_function_name": postprocess_function_name,
             "has_electro_property_overrides": bool(electro_property_overrides),
             "has_electromechanical_property_overrides": bool(electromechanical_property_overrides),
             "has_physics_property_overrides": bool(physics_property_overrides),

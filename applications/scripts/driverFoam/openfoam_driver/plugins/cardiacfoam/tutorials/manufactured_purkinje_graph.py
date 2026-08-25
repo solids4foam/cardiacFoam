@@ -95,8 +95,6 @@ def make_spec(
     graph_ids: Sequence[str] = defaults.GRAPH_IDS,
     n_steps: int = defaults.N_STEPS,
     delta_t: float = defaults.DELTA_T,
-    postprocess_script_relpath: str | Path = defaults.POSTPROCESS_SCRIPT_RELPATH,
-    postprocess_function_name: str = defaults.POSTPROCESS_FUNCTION_NAME,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     case_root, setup_root, output_dir = resolve_spec_paths(
@@ -138,8 +136,6 @@ def make_spec(
             "delta_t": float(delta_t),
             "control_dict_relpath": str(defaults.CONTROL_DICT_RELPATH),
             "electro_properties_relpath": str(defaults.ELECTRO_PROPERTIES_RELPATH),
-            "postprocess_script_relpath": str(postprocess_script_relpath),
-            "postprocess_function_name": postprocess_function_name,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

@@ -1,3 +1,4 @@
+import inspect
 from pathlib import Path
 from unittest import mock
 
@@ -116,6 +117,10 @@ def _make_spec(tmp_path, **overrides):
         **overrides,
     }
     return make_spec(**kwargs)
+
+
+def test_eikonal_factory_does_not_advertise_a_nonexistent_convergence_axis():
+    assert "convergence_axis" not in inspect.signature(make_spec).parameters
 
 
 def test_tet_workflow_dag_matches_gmsh_pipeline(tmp_path):

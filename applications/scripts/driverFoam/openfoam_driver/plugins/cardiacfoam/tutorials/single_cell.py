@@ -120,7 +120,6 @@ def make_spec(
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
     output_glob: str = defaults.OUTPUT_GLOB,
-    table_summary_relpath: str | Path = defaults.TABLE_SUMMARY_RELPATH,
     postprocess_strict_artifacts: bool = False,
 ) -> TutorialSpec:
     if (ionic_model is None) != (tissue is None):
@@ -148,7 +147,6 @@ def make_spec(
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
     run_script_path = Path(run_script_relpath)
-    table_summary_path = Path(table_summary_relpath)
 
     default_output_dir_name = defaults.OUTPUT_DIR_NAME
     case_root, setup_root, output_dir = resolve_spec_paths(
