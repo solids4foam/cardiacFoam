@@ -58,11 +58,7 @@ BLOCK_MESH_DICT_TEMPLATE = "system/blockMeshDict.{dimension}"
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
 POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured.py")
 POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
-# The tutorial's supported ``Allrun`` path is serial unless ``parallel`` is
-# explicitly requested. Keep driverFOAM consistent with that path: the
-# macOS cardiacFoam binaries currently reach ``End`` but can SIGBUS during
-# MPI teardown, so parallel execution must be an explicit opt-in.
-RUN_IN_PARALLEL = False
+RUN_IN_PARALLEL = True
 VERIFICATION_MODEL_TYPE = "manufacturedFDAMonodomainVerifier"
 ECG_ENABLED = True
 ECG_REFERENCE_QUADRATURE_ORDER = 96
