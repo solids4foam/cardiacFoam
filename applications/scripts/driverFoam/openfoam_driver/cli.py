@@ -939,6 +939,10 @@ def main(argv: list[str] | None = None) -> int:
             driver_context=driver_context,
         )
         print(json.dumps(result, indent=2))
+        # A spec that could not be read yields zero cases, so "no case
+        # failed" would otherwise read as success.
+        if result.get("spec_error"):
+            return 1
         any_failed = any(case["status"] != "ok" for case in result["cases"])
         return 1 if any_failed else 0
 

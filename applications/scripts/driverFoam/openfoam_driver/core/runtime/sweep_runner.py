@@ -262,7 +262,14 @@ def sweep_plan(
     from ..compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
-    sweep_spec = _load_spec(spec_path)
+    try:
+        sweep_spec = _load_spec(spec_path)
+    except (OSError, ValueError) as exc:
+        # A malformed or unreadable spec yields no cases at all, so there is
+        # no per-case slot to report it in -- but the caller still parses this
+        # document, and a traceback on stderr with nothing on stdout is not an
+        # answer. Same shape, zero cases, one explicit reason.
+        return {"case_count": 0, "cases": [], "spec_error": str(exc)}
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
     output_dir = Path(output_dir)
@@ -288,13 +295,20 @@ def sweep_plan(
                     driver_context=driver_context,
                 )
                 materialize_case(case_dir=output_dir / case.case_id, routed=routed)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:
+            # Deliberately broad. A sweep's contract is that one bad axis
+            # value costs one case, not the command -- and a tutorial factory
+            # can raise anything (KeyError for an unknown ionic model, for
+            # instance), not just OSError/ValueError. Narrowing this let
+            # those escape as a traceback with zero bytes on stdout. The
+            # run path's entry-mode branch already catches broadly for the
+            # same reason.
             case_reports.append(
                 {
                     "case_id": case.case_id,
                     "resolved_axis_values": case.resolved_axis_values,
                     "status": "failed",
-                    "materialization_error": str(exc),
+                    "materialization_error": f"{type(exc).__name__}: {exc}",
                 }
             )
             continue
