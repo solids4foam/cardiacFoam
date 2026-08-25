@@ -39,10 +39,15 @@ For the cardiacFoam plugin, configure
 host and expose it through `DRIVERFOAM_RUNTIME_CONFIG`. The plugin declares
 the `lightweight` and `full` physics backends in its `plugin.yaml`; the local
 file selects one backend, its OpenFOAM bashrc, the full-mode solids4foam root,
-and the generated `cardiacFoam.build.json` manifest. driverFOAM rejects an
-unset, invalid, unbuilt, or compiled-metadata-mismatched selection instead of
-letting a shell resolver silently select another checkout. This runtime file
-is separate from case/sweep overrides and applies to all cardiacFoam entries.
+and the generated `cardiacFoam.build.json` manifest. The manifest is not a
+build step you run yourself: `runtime_profile.py` generates or refreshes it
+automatically, on the fly, whenever it is missing or older than the compiled
+`cardiacFoam` solver — by inspecting the solver's actual linked libraries
+(`otool -L`/`ldd`) to infer which backend was compiled, never by trusting an
+asserted flag. driverFOAM rejects an unset, invalid, unbuilt, or
+compiled-metadata-mismatched selection instead of letting a shell resolver
+silently select another checkout. This runtime file is separate from
+case/sweep overrides and applies to all cardiacFoam entries.
 
 ```bash
 driverFoam plan --strict --entry singleCell

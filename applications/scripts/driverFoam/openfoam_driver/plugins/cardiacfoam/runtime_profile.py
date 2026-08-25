@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -17,6 +19,7 @@ _RUNTIME_CONFIG_ENV = "DRIVERFOAM_RUNTIME_CONFIG"
 _BACKEND_ENV = "DRIVERFOAM_CARDIACFOAM_BACKEND"
 _SOLIDS_ROOT_ENV = "DRIVERFOAM_CARDIACFOAM_SOLIDS4FOAM_ROOT"
 _MANIFEST_ENV = "DRIVERFOAM_CARDIACFOAM_BUILD_MANIFEST"
+_LIBRARY_EXTENSIONS = ("dylib", "so")
 
 
 def _profile_contract() -> dict[str, Any]:
@@ -121,6 +124,11 @@ def configure_runtime_environment(env: Mapping[str, str]) -> tuple[dict[str, str
         )
 
     manifest_path = Path(os.path.expandvars(str(manifest_value))).expanduser().resolve()
+
+    regeneration_error = _ensure_build_manifest(manifest_path, configured_env, contract, solids_root)
+    if regeneration_error:
+        return configured_env, regeneration_error
+
     error = _validate_build_manifest(
         manifest_path,
         backend=backend,
@@ -139,6 +147,171 @@ def configure_runtime_environment(env: Mapping[str, str]) -> tuple[dict[str, str
         configured_env[_SOLIDS_ROOT_ENV] = str(solids_root)
         configured_env["SOLIDS4FOAM_INST_DIR"] = str(solids_root)
     return configured_env, None
+
+
+def _library_search_dirs(env: Mapping[str, str]) -> tuple[Path, ...]:
+    dirs = []
+    for key in ("FOAM_USER_LIBBIN", "FOAM_MODULE_LIBBIN", "FOAM_LIBBIN"):
+        value = env.get(key)
+        if value:
+            dirs.append(Path(value))
+    return tuple(dirs)
+
+
+def _find_library(bare_name: str, search_dirs: tuple[Path, ...]) -> Path | None:
+    for directory in search_dirs:
+        for extension in _LIBRARY_EXTENSIONS:
+            candidate = directory / f"lib{bare_name}.{extension}"
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def _linked_library_names(binary: Path) -> tuple[str, ...]:
+    """Return the basenames of shared libraries linked into `binary`.
+
+    Uses `otool -L` on macOS or `ldd` on Linux — whichever is on PATH.
+    """
+    if shutil.which("otool"):
+        result = subprocess.run(["otool", "-L", str(binary)], capture_output=True, text=True)
+        if result.returncode != 0:
+            return ()
+        lines = result.stdout.splitlines()[1:]
+        return tuple(Path(line.split()[0]).name for line in lines if line.strip())
+    if shutil.which("ldd"):
+        result = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
+        if result.returncode != 0:
+            return ()
+        names = []
+        for line in result.stdout.splitlines():
+            lhs = line.strip().split(" =>")[0].strip()
+            if lhs.startswith("lib"):
+                names.append(Path(lhs).name)
+        return tuple(names)
+    return ()
+
+
+def _infer_backend(linked: tuple[str, ...], options: Mapping[str, Any]) -> str | None:
+    """Infer which backend was compiled from the solver's linked libraries.
+
+    Each backend option in the plugin contract declares the libraries that
+    must (`required_libraries`) and must not (`forbidden_libraries`) appear
+    linked into the solver. Exactly one backend matching both conditions is
+    the compiled backend; anything else (zero or more than one match) is
+    ambiguous.
+    """
+    matches = []
+    for backend_name, option in options.items():
+        if not isinstance(option, dict):
+            continue
+        required = [Path(lib).name for lib in option.get("required_libraries", ())]
+        forbidden = [Path(lib).name for lib in option.get("forbidden_libraries", ())]
+        if not required:
+            continue
+        has_all_required = all(any(name.startswith(req) for name in linked) for req in required)
+        has_any_forbidden = any(any(name.startswith(forb) for name in linked) for forb in forbidden)
+        if has_all_required and not has_any_forbidden:
+            matches.append(backend_name)
+    return matches[0] if len(matches) == 1 else None
+
+
+def _ensure_build_manifest(
+    manifest_path: Path,
+    env: Mapping[str, str],
+    contract: Mapping[str, Any],
+    solids_root_hint: Path | None,
+) -> str | None:
+    """Regenerate `cardiacFoam.build.json` from the compiled artifacts.
+
+    Runs only when the manifest is missing or older than the compiled
+    solver, so a fresh (re)build is always reflected without any build-time
+    hook. The backend is inferred from what the solver actually links
+    against, not asserted by the caller, so the manifest can never disagree
+    with reality — it IS the inspection of reality.
+
+    Returns an error string if regeneration was attempted and failed.
+    Returns None if regeneration succeeded, was unnecessary (already
+    up to date), or could not be attempted (e.g. nothing compiled yet) —
+    in the last case the existing missing/stale manifest is reported by the
+    caller's own validation step.
+    """
+    user_appbin = env.get("FOAM_USER_APPBIN")
+    if not user_appbin:
+        return None
+    solver = Path(user_appbin) / "cardiacFoam"
+    if not solver.is_file():
+        return None
+
+    if manifest_path.is_file() and manifest_path.stat().st_mtime >= solver.stat().st_mtime:
+        return None
+
+    linked = _linked_library_names(solver)
+    if not linked:
+        return (
+            f"Could not determine libraries linked into {solver} "
+            "(otool/ldd unavailable or produced no output)."
+        )
+
+    options = contract["options"]
+    backend = _infer_backend(linked, options)
+    if backend is None:
+        return (
+            f"Could not infer the cardiacFoam build backend from {solver}'s "
+            f"linked libraries: {', '.join(sorted(linked))}"
+        )
+
+    search_dirs = _library_search_dirs(env)
+    library_names = tuple(contract.get("common_libraries", ())) + tuple(
+        options[backend].get("required_libraries", ())
+    )
+    artifact_paths: list[tuple[str, Path]] = [("cardiacFoam", solver)]
+    for library_name in library_names:
+        path = _find_library(library_name.removeprefix("lib"), search_dirs)
+        if path is None:
+            return f"Required library {library_name} was not found for backend {backend!r}."
+        artifact_paths.append((library_name, path))
+
+    solids_root: Path | None = None
+    source_revision: str | None = None
+    if backend == "full":
+        solids_root = solids_root_hint
+        if solids_root is None and env.get("SOLIDS4FOAM_INST_DIR"):
+            solids_root = Path(env["SOLIDS4FOAM_INST_DIR"])
+        if solids_root is not None and (solids_root / ".git").exists():
+            result = subprocess.run(
+                ["git", "-C", str(solids_root), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                source_revision = result.stdout.strip() or None
+
+    payload = {
+        "schema_version": 1,
+        "plugin": _PLUGIN_ID,
+        "backend": backend,
+        "openfoam": {
+            "root": str(Path(env["WM_PROJECT_DIR"]).resolve()) if env.get("WM_PROJECT_DIR") else None,
+            "version": env.get("WM_PROJECT_VERSION", ""),
+            "options": env.get("WM_OPTIONS", ""),
+        },
+        "solids4foam": {
+            "root": str(solids_root.resolve()) if solids_root else None,
+            "revision": source_revision,
+        },
+        "linked_libraries": sorted(linked),
+        "artifacts": [
+            {
+                "name": name,
+                "path": str(path),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for name, path in artifact_paths
+        ],
+    }
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return None
 
 
 def _validate_build_manifest(

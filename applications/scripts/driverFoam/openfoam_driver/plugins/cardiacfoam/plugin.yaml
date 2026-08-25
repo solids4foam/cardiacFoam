@@ -8,6 +8,11 @@ runtime:
   backend:
     required: true
     selection_env: DRIVERFOAM_CARDIACFOAM_BACKEND
+    common_libraries:
+      - libelectroModels
+      - libionicModels
+      - libgenericWriter
+      - libactiveTensionModels
     options:
       lightweight:
         build_define: USE_LIGHTWEIGHT_PHYSICSMODEL=1

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from openfoam_driver.core.generic_plugin import GenericOpenFOAMPlugin
 from openfoam_driver.core.plugin_profile import PluginProfile, load_plugin_profile
+from openfoam_driver.plugins.cardiacfoam import runtime_profile
+from openfoam_driver.plugins.cardiacfoam.runtime_profile import configure_runtime_environment
 from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 
 
@@ -74,6 +78,107 @@ def test_cardiac_runtime_exports_one_validated_solids4foam_root(tmp_path: Path) 
     assert error is None
     assert env["SOLIDS4FOAM_INST_DIR"] == str(root.resolve())
     assert env["DRIVERFOAM_CARDIACFOAM_SOLIDS4FOAM_ROOT"] == str(root.resolve())
+
+
+def test_infer_backend_from_linked_libraries() -> None:
+    options = {
+        "lightweight": {
+            "required_libraries": ["libphysicsModel"],
+            "forbidden_libraries": ["libsolids4FoamModels", "libelectroMechanicalModels"],
+        },
+        "full": {
+            "required_libraries": ["libsolids4FoamModels", "libelectroMechanicalModels"],
+            "forbidden_libraries": ["libphysicsModel"],
+        },
+    }
+    lightweight_linked = ("libphysicsModel.dylib", "libelectroModels.dylib")
+    full_linked = ("libsolids4FoamModels.dylib", "libelectroMechanicalModels.dylib")
+
+    assert runtime_profile._infer_backend(lightweight_linked, options) == "lightweight"
+    assert runtime_profile._infer_backend(full_linked, options) == "full"
+    assert runtime_profile._infer_backend(lightweight_linked + full_linked, options) is None
+    assert runtime_profile._infer_backend((), options) is None
+
+
+def _write_fake_library(directory: Path, bare_name: str, content: bytes) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"lib{bare_name}.dylib"
+    path.write_bytes(content)
+    return path
+
+
+def _write_fake_lightweight_build(appbin: Path, libbin: Path, *, solver_content: bytes) -> Path:
+    appbin.mkdir(parents=True, exist_ok=True)
+    solver = appbin / "cardiacFoam"
+    solver.write_bytes(solver_content)
+    for bare_name in ("electroModels", "ionicModels", "genericWriter", "activeTensionModels", "physicsModel"):
+        _write_fake_library(libbin, bare_name, f"fake-{bare_name}".encode())
+    return solver
+
+
+def test_build_manifest_self_generates_from_compiled_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    appbin = tmp_path / "appbin"
+    libbin = tmp_path / "libbin"
+    _write_fake_lightweight_build(appbin, libbin, solver_content=b"fake-solver")
+    monkeypatch.setattr(runtime_profile, "_linked_library_names", lambda binary: ("libphysicsModel.dylib",))
+
+    manifest = tmp_path / "cardiacFoam.build.json"
+    assert not manifest.exists()
+
+    env, error = configure_runtime_environment({
+        "DRIVERFOAM_CARDIACFOAM_BACKEND": "lightweight",
+        "DRIVERFOAM_CARDIACFOAM_BUILD_MANIFEST": str(manifest),
+        "WM_PROJECT_DIR": str(tmp_path),
+        "FOAM_USER_APPBIN": str(appbin),
+        "FOAM_USER_LIBBIN": str(libbin),
+    })
+
+    assert error is None, error
+    payload = json.loads(manifest.read_text())
+    assert payload["backend"] == "lightweight"
+    assert {artifact["name"] for artifact in payload["artifacts"]} == {
+        "cardiacFoam",
+        "libelectroModels",
+        "libionicModels",
+        "libgenericWriter",
+        "libactiveTensionModels",
+        "libphysicsModel",
+    }
+    solver_artifact = next(a for a in payload["artifacts"] if a["name"] == "cardiacFoam")
+    assert solver_artifact["sha256"] == hashlib.sha256(b"fake-solver").hexdigest()
+
+
+def test_build_manifest_self_heals_when_stale(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    appbin = tmp_path / "appbin"
+    libbin = tmp_path / "libbin"
+    solver = _write_fake_lightweight_build(appbin, libbin, solver_content=b"fake-solver-v2")
+
+    manifest = tmp_path / "cardiacFoam.build.json"
+    manifest.write_text(json.dumps({
+        "backend": "lightweight",
+        "openfoam": {"root": str(tmp_path)},
+        "solids4foam": {"root": None},
+        "linked_libraries": ["libphysicsModel.dylib"],
+        "artifacts": [],
+    }))
+    stale_time = solver.stat().st_mtime - 10
+    os.utime(manifest, (stale_time, stale_time))
+    monkeypatch.setattr(runtime_profile, "_linked_library_names", lambda binary: ("libphysicsModel.dylib",))
+
+    env, error = configure_runtime_environment({
+        "DRIVERFOAM_CARDIACFOAM_BACKEND": "lightweight",
+        "DRIVERFOAM_CARDIACFOAM_BUILD_MANIFEST": str(manifest),
+        "WM_PROJECT_DIR": str(tmp_path),
+        "FOAM_USER_APPBIN": str(appbin),
+        "FOAM_USER_LIBBIN": str(libbin),
+    })
+
+    assert error is None, error
+    payload = json.loads(manifest.read_text())
+    solver_artifact = next(a for a in payload["artifacts"] if a["name"] == "cardiacFoam")
+    assert solver_artifact["sha256"] == hashlib.sha256(b"fake-solver-v2").hexdigest()
 
 
 def test_cardiac_runtime_file_selects_backend_and_bashrc(tmp_path: Path) -> None:
