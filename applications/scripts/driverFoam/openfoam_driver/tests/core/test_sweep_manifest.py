@@ -83,6 +83,74 @@ def test_write_then_read_manifest_round_trips(tmp_path):
     assert loaded.cases[0].resolved_axis_values == {"deltaT": 1e-6}
 
 
+def test_case_manifest_entry_defaults_case_record_path_to_empty_string():
+    entry = CaseManifestEntry(
+        case_id="TNNP_1e-06",
+        resolved_axis_values={"deltaT": 1e-6},
+        override_hash="sha256:def",
+        run_document_path="TNNP_1e-06/run_document.json",
+        workflow_state_path="TNNP_1e-06/postProcessing/workflow_state.json",
+        status="pending",
+        outcome="fresh",
+        started_at=None,
+        updated_at="2026-07-01T12:00:00Z",
+    )
+    assert entry.case_record_path == ""
+
+
+def test_write_then_read_manifest_round_trips_case_record_path(tmp_path):
+    manifest = SweepManifest(
+        schema_version="1.0",
+        sweep_spec_hash="sha256:abc",
+        created_at="2026-08-25T12:00:00Z",
+        updated_at="2026-08-25T12:00:00Z",
+        cases=[
+            CaseManifestEntry(
+                case_id="TNNP_1e-06",
+                resolved_axis_values={"deltaT": 1e-6},
+                override_hash="sha256:def",
+                run_document_path="TNNP_1e-06/run_document.json",
+                workflow_state_path="TNNP_1e-06/postProcessing/workflow_state.json",
+                status="completed",
+                outcome="fresh",
+                started_at="2026-08-25T12:00:00Z",
+                updated_at="2026-08-25T12:01:00Z",
+                case_record_path="TNNP_1e-06/case_record.json",
+            )
+        ],
+    )
+    manifest_path = tmp_path / "sweep_manifest.json"
+    write_manifest(manifest_path, manifest)
+    loaded = read_manifest(manifest_path)
+    assert loaded.cases[0].case_record_path == "TNNP_1e-06/case_record.json"
+
+
+def test_read_manifest_defaults_case_record_path_for_pre_existing_manifest(tmp_path):
+    # A manifest written before this field existed must still load -- a
+    # resumed sweep from an older driverFOAM version cannot be forced to
+    # regenerate everything just because one new field appeared.
+    manifest_path = tmp_path / "sweep_manifest.json"
+    manifest_path.write_text(json.dumps({
+        "schema_version": "1.0",
+        "sweep_spec_hash": "sha256:abc",
+        "created_at": "t0",
+        "updated_at": "t0",
+        "cases": [{
+            "case_id": "TNNP_1e-06",
+            "resolved_axis_values": {"deltaT": 1e-6},
+            "override_hash": "sha256:def",
+            "run_document_path": "TNNP_1e-06/run_document.json",
+            "workflow_state_path": "TNNP_1e-06/postProcessing/workflow_state.json",
+            "status": "completed",
+            "outcome": "fresh",
+            "started_at": "t0",
+            "updated_at": "t0",
+        }],
+    }))
+    loaded = read_manifest(manifest_path)
+    assert loaded.cases[0].case_record_path == ""
+
+
 def test_write_manifest_uses_atomic_replace(tmp_path):
     manifest_path = tmp_path / "sweep_manifest.json"
     manifest = SweepManifest(

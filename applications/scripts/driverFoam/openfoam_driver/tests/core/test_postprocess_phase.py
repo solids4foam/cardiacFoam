@@ -45,6 +45,7 @@ from openfoam_driver.core.runtime.postprocess_phase import (
     CaseRecord,
     PostprocessOutcome,
     SweepContext,
+    build_standalone_case_record,
     build_sweep_context,
     list_postprocess_scripts,
     PostprocessScriptInfo,
@@ -52,6 +53,7 @@ from openfoam_driver.core.runtime.postprocess_phase import (
     read_case_workflow_state,
     run_postprocess_phase,
     run_postprocessing_module,
+    write_case_record,
 )
 from openfoam_driver.core.runtime.sweep_manifest import (
     CaseManifestEntry,
@@ -235,6 +237,187 @@ class BuildSweepContextTests(unittest.TestCase):
             self.assertIsNone(case.case_output_dir)
             self.assertEqual(case.output_files, ())
             self.assertEqual(context.failed_count, 1)
+
+    def test_writes_case_record_json_for_each_case_with_a_record_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            case_dir = output_dir / "case_a" / "postProcessing"
+            case_dir.mkdir(parents=True)
+            (case_dir / "workflow_state.json").write_text("{}")
+            (case_dir / "activationTime.csv").write_text("t,v\n0,0\n")
+            run_document_dir = output_dir / "case_a"
+            (run_document_dir / "run_document.json").write_text(json.dumps({
+                "launch": {"setupRoot": "/tutorials/x/setup", "caseRoot": "/tutorials/x/cases/case_a"},
+            }))
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="case_a",
+                    resolved_axis_values={"dx_mm": 0.5},
+                    override_hash="sha256:x",
+                    run_document_path="case_a/run_document.json",
+                    workflow_state_path="case_a/postProcessing/workflow_state.json",
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-25T00:00:00+00:00",
+                    updated_at="2026-08-25T00:01:00+00:00",
+                    case_record_path="case_a/case_record.json",
+                ),
+            ])
+
+            build_sweep_context(output_dir)
+
+            record_path = output_dir / "case_a" / "case_record.json"
+            self.assertTrue(record_path.is_file())
+            record = json.loads(record_path.read_text())
+            self.assertEqual(record["case_id"], "case_a")
+            self.assertEqual(record["case_root"], "/tutorials/x/cases/case_a")
+            self.assertEqual(record["setup_root"], "/tutorials/x/setup")
+            self.assertEqual(record["override_hash"], "sha256:x")
+            self.assertEqual(record["run_document_path"], "case_a/run_document.json")
+            self.assertEqual(record["started_at"], "2026-08-25T00:00:00+00:00")
+            self.assertEqual(record["output_files"], ["activationTime.csv", "workflow_state.json"])
+
+    def test_skips_writing_case_record_when_manifest_entry_has_no_record_path(self) -> None:
+        # Back-compat: a manifest written before case_record_path existed
+        # (case_record_path defaults to "") must not crash build_sweep_context
+        # or invent a path it was never told to write to.
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            case_dir = output_dir / "case_a" / "postProcessing"
+            case_dir.mkdir(parents=True)
+            (case_dir / "workflow_state.json").write_text("{}")
+
+            _write_sweep_manifest(output_dir, [
+                CaseManifestEntry(
+                    case_id="case_a",
+                    resolved_axis_values={},
+                    override_hash="sha256:x",
+                    run_document_path="case_a/run_document.json",
+                    workflow_state_path="case_a/postProcessing/workflow_state.json",
+                    status="completed",
+                    outcome="fresh",
+                    started_at="2026-08-25T00:00:00+00:00",
+                    updated_at="2026-08-25T00:01:00+00:00",
+                ),
+            ])
+
+            build_sweep_context(output_dir)
+
+            self.assertFalse((output_dir / "case_a" / "case_record.json").exists())
+
+
+class CaseRecordPersistenceTests(unittest.TestCase):
+    def test_to_json_includes_new_fields_with_none_default(self) -> None:
+        record = CaseRecord(
+            case_id="case_a",
+            resolved_axis_values={},
+            status="completed",
+            outcome="fresh",
+            workflow_state_path="/tmp/out/case_a/workflow_state.json",
+            case_output_dir="/tmp/out/case_a",
+            output_files=(),
+            setup_root=None,
+        )
+        payload = record.to_json()
+        self.assertIsNone(payload["case_root"])
+        self.assertIsNone(payload["run_document_path"])
+        self.assertIsNone(payload["override_hash"])
+        self.assertIsNone(payload["started_at"])
+        self.assertIsNone(payload["updated_at"])
+
+    def test_to_json_round_trips_new_fields_when_set(self) -> None:
+        record = CaseRecord(
+            case_id="case_a",
+            resolved_axis_values={"dx_mm": 0.5},
+            status="completed",
+            outcome="fresh",
+            workflow_state_path="/tmp/out/case_a/workflow_state.json",
+            case_output_dir="/tmp/out/case_a",
+            output_files=("activationTime.csv",),
+            setup_root="/tutorials/x/setup",
+            case_root="/tmp/out/cases/case_a",
+            run_document_path="case_a/run_document.json",
+            override_hash="sha256:abc",
+            started_at="2026-08-25T00:00:00+00:00",
+            updated_at="2026-08-25T00:01:00+00:00",
+        )
+        payload = record.to_json()
+        self.assertEqual(payload["case_root"], "/tmp/out/cases/case_a")
+        self.assertEqual(payload["run_document_path"], "case_a/run_document.json")
+        self.assertEqual(payload["override_hash"], "sha256:abc")
+        self.assertEqual(payload["started_at"], "2026-08-25T00:00:00+00:00")
+        self.assertEqual(payload["updated_at"], "2026-08-25T00:01:00+00:00")
+
+    def test_write_case_record_writes_readable_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "case_a" / "case_record.json"
+            record = CaseRecord(
+                case_id="case_a",
+                resolved_axis_values={"dx_mm": 0.5},
+                status="completed",
+                outcome="fresh",
+                workflow_state_path="/tmp/out/case_a/workflow_state.json",
+                case_output_dir="/tmp/out/case_a",
+                output_files=("activationTime.csv",),
+                setup_root=None,
+            )
+            write_case_record(path, record)
+            self.assertTrue(path.is_file())
+            loaded = json.loads(path.read_text())
+            self.assertEqual(loaded["case_id"], "case_a")
+            self.assertEqual(loaded["output_files"], ["activationTime.csv"])
+
+    def test_write_case_record_uses_atomic_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "case_record.json"
+            record = CaseRecord(
+                case_id="case_a", resolved_axis_values={}, status="completed",
+                outcome="fresh", workflow_state_path="/tmp/x", case_output_dir=None,
+                output_files=(), setup_root=None,
+            )
+            write_case_record(path, record)
+            self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+    def test_write_case_record_creates_parent_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nested" / "case_a" / "case_record.json"
+            record = CaseRecord(
+                case_id="case_a", resolved_axis_values={}, status="completed",
+                outcome="fresh", workflow_state_path="/tmp/x", case_output_dir=None,
+                output_files=(), setup_root=None,
+            )
+            write_case_record(path, record)
+            self.assertTrue(path.is_file())
+
+
+class BuildStandaloneCaseRecordTests(unittest.TestCase):
+    def test_builds_record_from_real_workflow_state_and_output_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            (output_dir / "workflow_state.json").write_text(json.dumps({"status": "completed"}))
+            (output_dir / "activationTime.csv").write_text("t,v\n0,0\n")
+            case_root = Path(tmp) / "case_root"
+
+            record = build_standalone_case_record(
+                entry="singleCell", case_root=case_root, setup_root=None, output_dir=output_dir,
+            )
+
+            self.assertEqual(record.case_id, "singleCell")
+            self.assertEqual(record.status, "completed")
+            self.assertEqual(record.case_root, str(case_root))
+            self.assertEqual(record.case_output_dir, str(output_dir))
+            self.assertIn("activationTime.csv", record.output_files)
+            self.assertIn("workflow_state.json", record.output_files)
+
+    def test_status_is_unknown_when_workflow_state_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            record = build_standalone_case_record(
+                entry="singleCell", case_root=Path(tmp) / "case_root",
+                setup_root=None, output_dir=output_dir,
+            )
+            self.assertEqual(record.status, "unknown")
 
 
 class ListPostprocessScriptsTests(unittest.TestCase):

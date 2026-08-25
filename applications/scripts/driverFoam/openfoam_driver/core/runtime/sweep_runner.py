@@ -402,6 +402,7 @@ def sweep_run(
         case_dir = output_dir / case.case_id
         run_document_path = case_dir / "run_document.json"
         workflow_state_path = case_dir / "postProcessing" / "workflow_state.json"
+        case_record_path = case_dir / "case_record.json"
 
         prior_status = existing_status_by_case.get(case.case_id)
         prior_entry = existing_entry_by_case.get(case.case_id)
@@ -565,13 +566,14 @@ def sweep_run(
                 outcome=outcome,
                 started_at=_now(),
                 updated_at=_now(),
+                case_record_path=str(case_record_path.relative_to(output_dir)),
             )
         )
         manifest.updated_at = _now()
         write_manifest(manifest_path, manifest)
 
+    context = build_sweep_context(output_dir)
     if failed_count == 0:
-        context = build_sweep_context(output_dir)
         postprocess = run_postprocessing_module(context, task=task).to_json()
     else:
         postprocess = {

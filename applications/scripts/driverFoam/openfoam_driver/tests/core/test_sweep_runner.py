@@ -214,6 +214,47 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
     assert result["postprocess"]["status"] == "stub"
 
 
+def test_sweep_run_writes_case_record_json_for_every_case(tmp_path):
+    spec_path = tmp_path / "sweep.json"
+    _write_spec(spec_path)
+    output_dir = tmp_path / "out"
+
+    result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert result["completed_count"] == 2
+    for case_id in ("TNNP", "BuenoOrovio"):
+        record_path = output_dir / case_id / "case_record.json"
+        assert record_path.is_file()
+        record = json.loads(record_path.read_text())
+        assert record["case_id"] == case_id
+        assert record["status"] == "completed"
+
+
+def test_sweep_run_writes_case_record_json_even_when_a_case_fails(tmp_path):
+    # case_record.json must exist for every case regardless of whether the
+    # whole sweep succeeded -- an agent diagnosing a partially-failed sweep
+    # needs the successful cases' records just as much as a clean sweep does.
+    spec_path = tmp_path / "sweep.json"
+    spec = {
+        "base": {
+            "electro_selectors": {"myocardiumSolver": "singleCellSolver", "tissue": "epicardialCells"},
+            "physics_selectors": {"type": "electroModel"},
+        },
+        "sweep": {
+            "mode": "cross_product",
+            "independent": {"ionicModel": ["TNNP", "not_a_real_model"]},
+            "dependent": [{"name": "caseId", "derive": "case_id_template", "of": ["ionicModel"]}],
+        },
+    }
+    spec_path.write_text(json.dumps(spec))
+    output_dir = tmp_path / "out"
+
+    result = sweep_run(spec_path, output_dir=output_dir)
+
+    assert result["failed_count"] >= 1
+    assert (output_dir / "TNNP" / "case_record.json").is_file()
+
+
 def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_path):
     # base.archive_dir_name opts an entry-mode sweep into the generic
     # snapshot/diff collection (output_collection.py): real bug this

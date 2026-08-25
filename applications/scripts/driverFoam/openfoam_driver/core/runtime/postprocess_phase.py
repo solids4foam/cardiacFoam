@@ -80,6 +80,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -110,6 +111,47 @@ def run_postprocess_phase(*, entry: str | None, output_dir: Path) -> Postprocess
     )
 
 
+def build_standalone_case_record(
+    *, entry: str, case_root: Path, setup_root: Path | None, output_dir: Path,
+) -> "CaseRecord":
+    """Build a standalone (non-sweep) run's case_record.json equivalent.
+
+    Mirrors what build_sweep_context derives per sweep case, but a
+    standalone run has no sweep_manifest.json to ground itself in --
+    case_root and output_dir are already known directly from the CLI's own
+    execution context (_execute_run has resolved them before calling this),
+    so there is no manifest indirection to resolve.
+
+    resolved_axis_values is always {} and outcome is always "fresh": a
+    standalone run has no sweep axes and no manifest-tracked retry
+    bookkeeping to report.
+    """
+    output_dir = Path(output_dir)
+    workflow_state_path = output_dir / "workflow_state.json"
+    status = "unknown"
+    if workflow_state_path.is_file():
+        try:
+            status = json.loads(workflow_state_path.read_text()).get("status", "unknown")
+        except json.JSONDecodeError:
+            status = "unknown"
+    output_files = _list_output_files(output_dir) if output_dir.is_dir() else ()
+    return CaseRecord(
+        case_id=entry,
+        resolved_axis_values={},
+        status=status,
+        outcome="fresh",
+        workflow_state_path=str(workflow_state_path),
+        case_output_dir=str(output_dir),
+        output_files=output_files,
+        setup_root=str(setup_root) if setup_root else None,
+        case_root=str(case_root),
+        run_document_path=None,
+        override_hash=None,
+        started_at=None,
+        updated_at=None,
+    )
+
+
 @dataclass(frozen=True)
 class CaseRecord:
     case_id: str
@@ -120,6 +162,11 @@ class CaseRecord:
     case_output_dir: str | None
     output_files: tuple[str, ...]
     setup_root: str | None
+    case_root: str | None = None
+    run_document_path: str | None = None
+    override_hash: str | None = None
+    started_at: str | None = None
+    updated_at: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -131,7 +178,24 @@ class CaseRecord:
             "case_output_dir": self.case_output_dir,
             "output_files": list(self.output_files),
             "setup_root": self.setup_root,
+            "case_root": self.case_root,
+            "run_document_path": self.run_document_path,
+            "override_hash": self.override_hash,
+            "started_at": self.started_at,
+            "updated_at": self.updated_at,
         }
+
+
+def write_case_record(path: Path, record: CaseRecord) -> None:
+    """Persist one case's record atomically (os.replace of a .tmp sibling),
+    matching sweep_manifest.write_manifest's crash-safety pattern -- a
+    reader must never observe a half-written case_record.json.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path.write_text(json.dumps(record.to_json(), indent=2))
+    os.replace(tmp_path, path)
 
 
 @dataclass(frozen=True)
@@ -158,6 +222,14 @@ class SweepContext:
         }
 
 
+def _list_output_files(case_output_dir: Path) -> tuple[str, ...]:
+    return tuple(sorted(
+        str(path.relative_to(case_output_dir))
+        for path in case_output_dir.rglob("*")
+        if path.is_file()
+    ))
+
+
 def _resolve_case_output(workflow_state_raw: str, *, output_dir: Path) -> tuple[Path, Path | None, tuple[str, ...]]:
     """Resolve one case's real output directory and list what's on it.
 
@@ -174,23 +246,18 @@ def _resolve_case_output(workflow_state_raw: str, *, output_dir: Path) -> tuple[
         return workflow_state_path, None, ()
 
     case_output_dir = workflow_state_path.parent
-    output_files = tuple(sorted(
-        str(path.relative_to(case_output_dir))
-        for path in case_output_dir.rglob("*")
-        if path.is_file()
-    ))
-    return workflow_state_path, case_output_dir, output_files
+    return workflow_state_path, case_output_dir, _list_output_files(case_output_dir)
 
 
-def _resolve_case_setup_root(run_document_path_raw: str, *, output_dir: Path) -> str | None:
-    """Read a case's run_document.json and extract launch.setupRoot.
+def _read_run_document_field(run_document_path_raw: str, field: str, *, output_dir: Path) -> str | None:
+    """Read a case's run_document.json and extract launch.<field>.
 
     run_document_path is always written under the sweep's own output_dir
     (sweep_runner._relative_or_absolute's docstring), unlike
     workflow_state_path -- no relative/absolute branching needed here.
-    Returns None if the file is missing or malformed rather than raising,
-    since setup_root is used for postprocess-script discovery, not for
-    judging whether the case itself succeeded.
+    Returns None if the file is missing, malformed, or the field is absent
+    -- never raises, since this is used for record-keeping (setup_root,
+    case_root), not for judging whether the case itself succeeded.
     """
     run_document_path = output_dir / run_document_path_raw
     if not run_document_path.is_file():
@@ -199,8 +266,22 @@ def _resolve_case_setup_root(run_document_path_raw: str, *, output_dir: Path) ->
         run_document = json.loads(run_document_path.read_text())
     except json.JSONDecodeError:
         return None
-    setup_root = run_document.get("launch", {}).get("setupRoot")
-    return str(setup_root) if setup_root else None
+    value = run_document.get("launch", {}).get(field)
+    return str(value) if value else None
+
+
+def _resolve_case_setup_root(run_document_path_raw: str, *, output_dir: Path) -> str | None:
+    """Read a case's run_document.json and extract launch.setupRoot."""
+    return _read_run_document_field(run_document_path_raw, "setupRoot", output_dir=output_dir)
+
+
+def _resolve_case_root(run_document_path_raw: str, *, output_dir: Path) -> str | None:
+    """Read a case's run_document.json and extract launch.caseRoot -- the
+    staged OpenFOAM case root the solver actually ran in (entry mode) or
+    the case-folder root (generic mode). Same missing/malformed handling as
+    _resolve_case_setup_root.
+    """
+    return _read_run_document_field(run_document_path_raw, "caseRoot", output_dir=output_dir)
 
 
 def build_sweep_context(output_dir: Path) -> SweepContext:
@@ -211,6 +292,13 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
     `_resolve_case_output`) and list the files genuinely found there. This
     is the single grounded picture `run_postprocessing_module` consumes; it
     never re-derives any of this itself.
+
+    As a side effect, persists each case's full CaseRecord to
+    `output_dir / case_entry.case_record_path` (skipped for a case whose
+    manifest entry predates that field and so has an empty path) -- this is
+    the durable case_record.json the design review asked for: one file per
+    case that answers "what ran, with which inputs, where's its output"
+    without an agent reconstructing paths from the manifest and disk itself.
     """
     output_dir = Path(output_dir)
     manifest = read_manifest(output_dir / "sweep_manifest.json")
@@ -221,7 +309,8 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
             case_entry.workflow_state_path, output_dir=output_dir,
         )
         setup_root = _resolve_case_setup_root(case_entry.run_document_path, output_dir=output_dir)
-        cases.append(CaseRecord(
+        case_root = _resolve_case_root(case_entry.run_document_path, output_dir=output_dir)
+        record = CaseRecord(
             case_id=case_entry.case_id,
             resolved_axis_values=dict(case_entry.resolved_axis_values),
             status=case_entry.status,
@@ -230,7 +319,15 @@ def build_sweep_context(output_dir: Path) -> SweepContext:
             case_output_dir=str(case_output_dir) if case_output_dir is not None else None,
             output_files=output_files,
             setup_root=setup_root,
-        ))
+            case_root=case_root,
+            run_document_path=case_entry.run_document_path,
+            override_hash=case_entry.override_hash,
+            started_at=case_entry.started_at,
+            updated_at=case_entry.updated_at,
+        )
+        if case_entry.case_record_path:
+            write_case_record(output_dir / case_entry.case_record_path, record)
+        cases.append(record)
 
     return SweepContext(
         output_dir=str(output_dir),
@@ -277,7 +374,11 @@ def _describe_postprocess_function(tree: ast.Module) -> tuple[str, str] | None:
 
 def list_postprocess_scripts(setup_root: Path) -> tuple[PostprocessScriptInfo, ...]:
     """The catalog: every setup/ script exposing a run_postprocessing()
-    function, each with a standard description -- so the postprocessing
+    function, each with a standard description. ``TutorialSpec.metadata`` is
+    deliberately not a selector here: it is not persisted in RunDocument and
+    cannot be the source of truth after a sweep has completed. The setup root
+    recorded in that document is the durable discovery boundary. This lets
+    the postprocessing
     module (or a reasoning agent) can see what's *available* and judge
     whether it applies, before running or reading anything further.
 

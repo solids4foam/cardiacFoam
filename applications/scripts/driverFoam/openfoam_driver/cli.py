@@ -40,7 +40,7 @@ from .core.runtime.remediation_audit import append_remediation_record
 from .core.runtime.workflow_runner import run_workflow_step, _step_state_by_id
 from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
-from .core.runtime.postprocess_phase import run_postprocess_phase
+from .core.runtime.postprocess_phase import build_standalone_case_record, run_postprocess_phase, write_case_record
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials
 from .core.runtime.sweep_runner import _stage_entry_case, sweep_plan, sweep_run
 from .introspection import describe_entry
@@ -352,6 +352,12 @@ def _execute_run(
             "status": "skipped",
             "message": f"workflow did not complete (status={status}); postprocess not run",
         }
+    case_record = build_standalone_case_record(
+        entry=entry_label, case_root=case_root, setup_root=None, output_dir=output_dir,
+    )
+    case_record_path = output_dir / "case_record.json"
+    write_case_record(case_record_path, case_record)
+    payload["case_record_path"] = str(case_record_path)
     _attach_failure_context(payload, workflow_state, workflow_state.failed_step_id, tail_lines=tail_lines)
     print(json.dumps(payload, indent=2))
     return 0 if status == "ok" else 1

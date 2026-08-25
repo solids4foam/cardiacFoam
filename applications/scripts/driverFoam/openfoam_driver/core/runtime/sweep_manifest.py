@@ -46,6 +46,7 @@ class CaseManifestEntry:
     outcome: str  # "fresh" | "skipped" | "retried"
     started_at: str | None
     updated_at: str
+    case_record_path: str = ""
 
 
 @dataclass
