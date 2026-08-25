@@ -75,7 +75,7 @@ SUMMARY_FIELDS = (
     "L2_Ta",
     "Linf_Ta",
 )
-FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells_(explicit|implicit)")
+FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells(?:_DT[^_]+)?\.dat$")
 FIELD_LINE_PATTERN = re.compile(
     r"^(Vm|D|lambda|Ta)\s+(\S+)\s+(\S+)\s+(\S+)\s*$",
     re.MULTILINE,
@@ -164,7 +164,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
             {
                 "Dimension": match.group(1),
                 "N": int(match.group(2)),
-                "Solver": match.group(3),
+                "Solver": "implicit",
                 "L1_Vm": values["Vm"][0],
                 "L2_Vm": values["Vm"][1],
                 "Linf_Vm": values["Vm"][2],

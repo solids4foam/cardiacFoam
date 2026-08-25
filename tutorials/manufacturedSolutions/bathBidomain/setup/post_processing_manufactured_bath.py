@@ -36,10 +36,10 @@ ERROR_FIELDS = (
     "Solver",
     *(f"{norm}_{name}" for name in FIELD_NAMES for norm in ("L1", "L2", "Linf")),
 )
-FILENAME_PATTERN = re.compile(r"bathBidomain_(\dD)_(\d+)_cells_(explicit|implicit)\.dat$")
+FILENAME_PATTERN = re.compile(r"bathBidomain_(\dD)_(\d+)_cells\.dat$")
 BATH_ECG_SUMMARY_PATTERN = re.compile(
     r"BathECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_"
-    r"(?P<solver>explicit|implicit)_DT[^_]+_manufacturedBathECGSummary\.dat$"
+    r"DT[^_]+_manufacturedBathECGSummary\.dat$"
 )
 DISABLE_PLOT_ENV_VAR = "BATH_BIDOMAIN_DISABLE_PLOTS"
 PLOT_DISABLED = os.environ.get(DISABLE_PLOT_ENV_VAR, "").strip().lower() in {
@@ -59,8 +59,8 @@ if not PLOT_DISABLED:
     except ModuleNotFoundError:
         plt = None
 
-SOLVER_MARKERS = {"explicit": "o", "implicit": "s"}
-SOLVER_LINESTYLES = {"explicit": "-", "implicit": "--"}
+SOLVER_MARKERS = {"implicit": "s"}
+SOLVER_LINESTYLES = {"implicit": "--"}
 FIELD_COLORS = {
     "Vm": "tab:blue",
     "phiE": "tab:orange",
@@ -155,7 +155,7 @@ def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None
         row = {
             "Dimension": match.group(1),
             "N": int(match.group(2)),
-            "Solver": match.group(3),
+            "Solver": "implicit",
         }
 
         compact = content.replace("\n", " ")
@@ -206,7 +206,7 @@ def read_bath_ecg_summary_files(folder_name, expected_filenames: set[str] | None
             {
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": match.group("solver"),
+                "Solver": "implicit",
                 "samples": int(metadata.get("samples", "0")),
                 "field_L1": float(metadata.get("field_L1", "nan")),
                 "field_L2": float(metadata.get("field_L2", "nan")),

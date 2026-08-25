@@ -95,14 +95,14 @@ class TestSnapshotAndCollect(unittest.TestCase):
             collect_new_outputs(case_root, before_1, sweep_cases / "10", label="10")
 
             before_2 = snapshot_postprocessing(case_root)
-            (case_root / "postProcessing" / "1D_10_cells.dat").write_text("N=20 result")
+            (case_root / "postProcessing" / "1D_20_cells.dat").write_text("N=20 result")
             collect_new_outputs(case_root, before_2, sweep_cases / "20", label="20")
 
             self.assertEqual(
                 (sweep_cases / "10" / "1D_10_cells.dat").read_text(), "N=10 result"
             )
             self.assertEqual(
-                (sweep_cases / "20" / "1D_10_cells.dat").read_text(), "N=20 result"
+                (sweep_cases / "20" / "1D_20_cells.dat").read_text(), "N=20 result"
             )
             # Per-case destinations make a cross-case name collision
             # structurally impossible even for a non-case-qualified

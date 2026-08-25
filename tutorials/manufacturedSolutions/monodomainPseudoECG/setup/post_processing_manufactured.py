@@ -70,8 +70,8 @@ ERR_PATTERN = re.compile(r"errQ(?P<q>\d+)_(?P<electrode>.+)")
 DELTA_PATTERN = re.compile(
     r"deltaQuadratureQ(?P<qcheck>\d+)_Q(?P<qreference>\d+)_(?P<electrode>.+)"
 )
-SOLVER_MARKERS = {"explicit": "o", "implicit": "s"}
-SOLVER_LINESTYLES = {"explicit": "-", "implicit": "--"}
+SOLVER_MARKERS = {"implicit": "s"}
+SOLVER_LINESTYLES = {"implicit": "--"}
 FIELD_COLORS = {"Linf_V": "tab:blue", "Linf_u1": "tab:orange", "Linf_u2": "tab:green"}
 FIELD_LABELS = {"Linf_V": "Vm", "Linf_u1": "u1", "Linf_u2": "u2"}
 DIMENSION_COLORS = {"1D": "tab:blue", "2D": "tab:orange", "3D": "tab:green"}
@@ -1063,7 +1063,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     Reads all .dat files in folder_name and extracts:
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
-        - Solver     (explicit, implicit)
+        - Solver     (always "implicit" — solutionAlgorithm is no longer in the filename)
         - Linf errors for Vm, u1, u2
 
     Returns one row per file.
@@ -1089,8 +1089,8 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
     for f in files:
         # Expected filename formats:
-        #   1D_320_cells_explicit.dat
-        #   3D_80_cells_implicit_DT0p000560538.dat
+        #   1D_320_cells.dat
+        #   3D_80_cells_DT0p000560538.dat
         m = FILENAME_PATTERN.match(f.name)
         if not m:
             print("Skipping unrecognized filename:", f.name)

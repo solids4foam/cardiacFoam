@@ -54,7 +54,7 @@ RATE_FIELDS = (
     "rate_u1",
     "rate_u2",
 )
-FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells_(explicit|implicit)")
+FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells(?:_DT[^_]+)?\.dat$")
 ECG_SUMMARY_PATTERN = re.compile(
     r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT[^_]+_"
     r"manufacturedPseudoECGSummary\.dat$"
@@ -68,8 +68,8 @@ ERR_PATTERN = re.compile(r"errQ(?P<q>\d+)_(?P<electrode>.+)")
 DELTA_PATTERN = re.compile(
     r"deltaQuadratureQ(?P<qcheck>\d+)_Q(?P<qreference>\d+)_(?P<electrode>.+)"
 )
-SOLVER_MARKERS = {"explicit": "o", "implicit": "s"}
-SOLVER_LINESTYLES = {"explicit": "-", "implicit": "--"}
+SOLVER_MARKERS = {"implicit": "s"}
+SOLVER_LINESTYLES = {"implicit": "--"}
 FIELD_COLORS = {
     "Linf_V": "tab:blue",
     "Linf_phiE": "tab:orange",
@@ -1021,7 +1021,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     Reads all .dat files in folder_name and extracts:
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
-        - Solver     (explicit, implicit)
+        - Solver     (always "implicit" — solutionAlgorithm is no longer in the filename)
         - Linf errors for Vm, gauge-corrected phiE, u1, u2
 
     Returns one row per file.
@@ -1047,7 +1047,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
     for f in files:
         # Expected filename format:
-        #   1D_320_cells_explicit.dat
+        #   1D_320_cells.dat
         m = FILENAME_PATTERN.match(f.name)
         if not m:
             print("Skipping unrecognized filename:", f.name)
@@ -1055,7 +1055,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
         dimension = m.group(1)   # "1D"
         N = int(m.group(2))      # 320
-        solver = m.group(3)      # "explicit" or "implicit"
+        solver = "implicit"
 
         content = f.read_text()
 
@@ -1160,7 +1160,7 @@ def read_ecg_summary_dat_files(folder_name):
             {
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": match.group("solver"),
+                "Solver": "implicit",
                 "samples": int(metadata.get("samples", "0")),
                 "electrodes": len(electrode_rows),
                 "qCheck": q_check,
@@ -1208,7 +1208,7 @@ def read_ecg_timeseries_dat_files(folder_name):
                 "path": path,
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": match.group("solver"),
+                "Solver": "implicit",
                 "times": columns["time"],
                 "groups": _group_manufactured_columns(columns),
             }
