@@ -180,7 +180,6 @@ class CaseConfig:
 
 BuildCasesFn = Callable[[], list[CaseConfig]]
 ApplyCaseFn = Callable[[Path, CaseConfig], None]
-CollectOutputsFn = Callable[[Path, Path], None]
 
 
 @dataclass(frozen=True)
@@ -193,5 +192,4 @@ class TutorialSpec:
     output_dir: Path
     build_cases: BuildCasesFn
     apply_case: ApplyCaseFn
-    collect_outputs: CollectOutputsFn | None = None
     metadata: dict[str, Any] = field(default_factory=dict)

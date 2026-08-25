@@ -416,7 +416,7 @@ while True:
 ```
 
 `workflow_state.json` is written by the strict workflow orchestrator and
-updated after every step, so the read above is safe at any instant. 
+updated after every step, so the read above is safe at any instant.
 
 ## Post-processing phase (brain + module)
 
@@ -426,6 +426,7 @@ The execution engine hands off to the postprocessing phase once a workflow or sw
 2. **The postprocessing module (`run_postprocessing_module`)**: A separate function that receives the `SweepContext` and a task. **It never re-reads the manifest or re-derives file locations.** It lists each case's postprocessing script catalog via `list_postprocess_scripts()`.
 
 If an agent needs deeper reasoning than the flat summary, it must use the brain's query functions:
+
 - `read_case_workflow_state(context, case_id)`
 - `read_case_output_file(context, case_id, relative_path)`
 
@@ -434,6 +435,7 @@ These query functions raise clearly on an unknown case ID and safely restrict re
 ### Authoring postprocessing scripts
 
 Every postprocessing script in a tutorial's `setup/` directory must expose a `run_postprocessing` function matching the `PostprocessingProtocol` signature:
+
 ```python
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **kwargs: object) -> list[dict]: ...
 ```
@@ -814,6 +816,60 @@ import (a colon always selects this form), or `none` for generic OpenFOAM.
 The `capability_manifest` accept-surface is plugin-dependent:
 `allowed_commands.core` lists solver-neutral OpenFOAM commands plus the
 active plugin's own, so it changes with `--plugin`.
+
+---
+
+## Adding a New cardiacFoam Tutorial
+
+This is for adding one more registered tutorial (a manufactured-solution
+case, a benchmark, a new sweep-able configuration) that uses the cardiacFoam
+solver family already wired up — not for adding support for a different
+solver binary. For that, see "Plugin Guide — Adding a New Solver" below.
+
+**The registry is the single source of truth:**
+`openfoam_driver/plugins/cardiacfoam/tutorials/registry.py` holds
+`SPEC_FACTORIES` (id, and its lowercase alias, → factory function) and
+`REGISTERED_TUTORIALS` (the canonical id tuple). Both are exported through
+`CardiacFoamPlugin.get_tutorial_catalog()`.
+
+1. **Add an id** to the `CardiacTutorialID` enum in
+   `openfoam_driver/plugins/cardiacfoam/tutorials/ids.py`, e.g.
+   `MY_NEW_CASE = "myNewCase"`.
+2. **Write `tutorials/my_new_case.py`** with a `make_spec(...) -> TutorialSpec`
+   factory. `TutorialSpec` (`core/runtime/models.py`) needs `name`,
+   `case_root`/`setup_root`/`output_dir` (build via the shared
+   `resolve_spec_paths(...)` helper), `build_cases` (returns
+   `list[CaseConfig]`), `apply_case` (mutates the case's dict files per
+   `CaseConfig`, typically via `apply_electro_property_overrides`/
+   `apply_physics_property_overrides` from `plugins/cardiacfoam/overrides.py`),
+   and a `metadata` dict with at least a `workflow_dag` (a `solve` step at
+   minimum). `collect_outputs` is optional and usually left unset — output
+   discovery globs the case's actual on-disk files rather than needing a
+   per-tutorial callback. `single_cell.py` is the smallest complete worked
+   example of this shape.
+3. **Do not accept any of the four dead postprocess-selector parameter
+   names** — `cv_extract_script_relpath`, `postprocess_script_relpath`,
+   `postprocess_function_name`, `table_summary_relpath`. The runtime cannot
+   discover through them (see `test_tutorial_postprocessing_contract.py`,
+   which fails the whole suite if any factory's signature advertises one).
+4. **Register it** in `registry.py`: import your `make_spec`, add
+   `CardiacTutorialID.MY_NEW_CASE.value` (and its `.lower()` form) to
+   `SPEC_FACTORIES`, add the id to `REGISTERED_TUTORIALS`.
+5. **Add a display entry** in `tutorials/display.py` (a `TutorialDisplay(...)`)
+   — an exporter cross-checks this one-to-one against `REGISTERED_TUTORIALS`,
+   so a tutorial without a display card (or a display card without a
+   factory) fails.
+6. **Extend the characterization fixture** —
+   `openfoam_driver/tests/core/test_cardiac_tutorial_characterization.py`
+   iterates every id in `REGISTERED_TUTORIALS` against
+   `tests/fixtures/cardiac_tutorial_characterization.json`. Regenerate it
+   once your factory exists (there's no dedicated CLI for this — write
+   `{"tutorials": _current_characterization()}` back to the fixture path,
+   `json.dumps(..., indent=2, sort_keys=True)`, matching the existing
+   formatting).
+
+Once registered, drive it exclusively through `driverFoam`
+(plan/run/sweep) per `CLAUDE.md` — never a bespoke shell script.
 
 ---
 

@@ -347,8 +347,6 @@ Defaults live in `plugins/cardiacfoam/defaults/*.py`.
   overrides, written by `remediation_audit.append_remediation_record` --
   present only if an override was ever applied for this case.
 
-
-
 `workflow_state.json` is the current machine-facing state file for strict
 autonomous execution. Status vocabulary is:
 

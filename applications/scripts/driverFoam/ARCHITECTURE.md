@@ -1331,7 +1331,6 @@ tests that can fail:
     `specs/validation.py`'s phase vocabulary are still fixed independently of
     that schema.
 
-
 ## Plugin capability seams
 
 <!-- BEGIN GENERATED: capability-seams -->

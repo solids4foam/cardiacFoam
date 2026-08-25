@@ -19,7 +19,6 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_purkinje_graph i
 from openfoam_driver.plugins.cardiacfoam.tutorials.heart_solver_comparison import (
     make_spec as make_heart_solver_comparison_spec,
 )
-from openfoam_driver.plugins.cardiacfoam.tutorials.generic_case import make_spec as make_generic_case_spec
 from openfoam_driver.plugins.cardiacfoam.tutorials.cable_1d_cv_convergence import (
     make_spec as make_cable_1d_cv_convergence_spec,
 )

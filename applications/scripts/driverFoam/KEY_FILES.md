@@ -107,6 +107,7 @@ Quick navigational map for every reader type. All paths are relative to
 ### Common Troubleshooting
 
 **Plugin not found (`KeyError: 'mysolver'`)**
+
 ```bash
 # Verify the entry-point is registered under the exact group name:
 python -c "from importlib.metadata import entry_points; print(list(entry_points(group='driverfoam.plugins')))"
