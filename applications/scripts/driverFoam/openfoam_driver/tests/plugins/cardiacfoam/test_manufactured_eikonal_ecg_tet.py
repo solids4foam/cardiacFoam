@@ -16,6 +16,8 @@ _ELECTRO_PROPERTIES = """FoamFile
 myocardiumSolver eikonalSolver;
 eikonalSolverCoeffs
 {
+    conductivity [ -1 -3 3 0 0 2 0 ] (1 0 0 1 0 1);
+    eikonalAdvectionDiffusionApproach true;
     verificationModel
     {
         type manufacturedEikonalVerifier;
@@ -194,6 +196,27 @@ def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
     assert "lc = 0.1;" in (case_root / "setup" / "studies" / "tetConvergence" / "box.geo").read_text()
     assert "tetSolvers" in (case_root / "system" / "fvSolution").read_text()
     assert "leastSquares;" in (case_root / "system" / "fvSchemes").read_text()
+
+
+def test_tet_apply_case_forwards_conductivity_and_advection_approach(tmp_path):
+    case_root = _write_case(tmp_path)
+    conductivity = "[ -1 -3 3 0 0 2 0 ] (0.111 0 0 0.122 0 0.030)"
+    spec = make_spec(
+        tutorials_root=tmp_path,
+        case_dir_name="manufacturedSolutions/eikonalECG",
+        dimensions=["3D"],
+        number_cells=[10],
+        mesh_family="tet",
+        run_in_parallel=False,
+        conductivity=conductivity,
+        eikonal_advection_diffusion_approach="false",
+    )
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    properties = (case_root / "constant" / "electroProperties").read_text()
+    assert conductivity in properties
+    assert "eikonalAdvectionDiffusionApproach    false;" in properties
 
 
 def test_tet_validation_rejects_invalid_options(tmp_path):

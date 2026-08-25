@@ -393,6 +393,8 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
             verification_model_type=verification_model_type,
+            conductivity=conductivity,
+            eikonal_advection_diffusion_approach=eikonal_advection_diffusion_approach,
             ecg_reference_quadrature_order=ecg_reference_quadrature_order,
             ecg_check_quadrature_orders=ecg_check_quadrature_orders,
             ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
