@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,87 @@ def test_cardiac_catalog_partitions_entries_by_document() -> None:
     assert {"electroProperties", "physicsProperties", "controlDict"} <= set(catalog.documents)
     assert {entry.driver_path for entry in catalog.entries_for("physicsProperties")} == {"type"}
     assert {entry.driver_path for entry in catalog.entries_for("controlDict")} >= {"deltaT", "endTime"}
+
+
+def test_cardiac_runtime_requires_explicit_solids4foam_root(tmp_path: Path) -> None:
+    del tmp_path
+    env, error = CardiacFoamPlugin().configure_execution_environment({})
+
+    assert env == {}
+    assert error is not None
+    assert "DRIVERFOAM_CARDIACFOAM_BACKEND" in error
+
+
+def test_cardiac_runtime_exports_one_validated_solids4foam_root(tmp_path: Path) -> None:
+    root = tmp_path / "solids4foam"
+    header = root / "src/solids4FoamModels/physicsModel/physicsModel.H"
+    ln_include = root / "src/solids4FoamModels/lnInclude/physicsModel.H"
+    header.parent.mkdir(parents=True)
+    ln_include.parent.mkdir(parents=True)
+    header.write_text("// source header\n")
+    ln_include.write_text("// generated include\n")
+    manifest = tmp_path / "cardiacFoam.build.json"
+    manifest.write_text(
+        json.dumps({
+            "backend": "full",
+            "openfoam": {"root": str(tmp_path)},
+            "solids4foam": {"root": str(root)},
+            "linked_libraries": [
+                "libsolids4FoamModels.dylib",
+                "libelectroMechanicalModels.dylib",
+            ],
+            "artifacts": [],
+        })
+    )
+
+    env, error = CardiacFoamPlugin().configure_execution_environment({
+        "DRIVERFOAM_CARDIACFOAM_BACKEND": "full",
+        "DRIVERFOAM_CARDIACFOAM_SOLIDS4FOAM_ROOT": str(root),
+        "DRIVERFOAM_CARDIACFOAM_BUILD_MANIFEST": str(manifest),
+        "WM_PROJECT_DIR": str(tmp_path),
+    })
+
+    assert error is None
+    assert env["SOLIDS4FOAM_INST_DIR"] == str(root.resolve())
+    assert env["DRIVERFOAM_CARDIACFOAM_SOLIDS4FOAM_ROOT"] == str(root.resolve())
+
+
+def test_cardiac_runtime_file_selects_backend_and_bashrc(tmp_path: Path) -> None:
+    root = tmp_path / "solids4foam"
+    for relative in (
+        "src/solids4FoamModels/physicsModel/physicsModel.H",
+        "src/solids4FoamModels/lnInclude/physicsModel.H",
+    ):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("// header\n")
+    manifest = tmp_path / "cardiacFoam.build.json"
+    manifest.write_text(json.dumps({
+        "backend": "full",
+        "openfoam": {"root": str(tmp_path)},
+        "solids4foam": {"root": str(root)},
+        "linked_libraries": ["libsolids4FoamModels.dylib", "libelectroMechanicalModels.dylib"],
+        "artifacts": [],
+    }))
+    config = tmp_path / "driverfoam-runtime.yaml"
+    config.write_text(
+        "openfoam:\n  bashrc: /tmp/openfoam/etc/bashrc\n"
+        "plugins:\n  org.cardiacfoam:\n"
+        f"    backend: full\n    solids4foam_root: {root}\n"
+        f"    build_manifest: {manifest}\n"
+    )
+
+    env, error = CardiacFoamPlugin().configure_execution_environment({
+        "DRIVERFOAM_RUNTIME_CONFIG": str(config),
+        "WM_PROJECT_DIR": str(tmp_path),
+    })
+
+    assert error is None
+    assert env["DRIVERFOAM_CARDIACFOAM_BACKEND"] == "full"
+    assert env["SOLIDS4FOAM_INST_DIR"] == str(root.resolve())
+    assert CardiacFoamPlugin().get_openfoam_bashrc({
+        "DRIVERFOAM_RUNTIME_CONFIG": str(config),
+    }) == "/tmp/openfoam/etc/bashrc"
 
 
 def test_generic_profile_declares_no_solver_specific_files() -> None:

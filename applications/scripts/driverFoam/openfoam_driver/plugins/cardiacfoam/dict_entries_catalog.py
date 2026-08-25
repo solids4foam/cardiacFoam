@@ -1127,10 +1127,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.referenceConductance',
             phases=frozenset({'physics'}),
-            description='Reference conductance used to normalize local edge conductances when scaling velocity. The solver divides each local graph conductance by this value; the resulting relative conductance may be below, equal to, or above 1.0.',
+            description='Reference conductance [S] used to normalize local edge conductances when scaling velocity. The solver divides each local graph conductance by this value; the resulting relative conductance may be below, equal to, or above 1.0.',
             source_refs=('src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionEikonalSolver1D.C',),
             value_kind='scalar',
             dynamic_path=True,
+            unit='S',
             typical_value='1.0',
             applicable_when={"$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.conductionSystemSolver": ("restitutionEikonalSolver1D",)},
         ),
@@ -1184,6 +1185,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             source_refs=('src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.C', 'src/electroModels/conductionSystemModels/eikonalSolver1D/eikonalSolver1D.H'),
             notes='Hard lookup (dimensionedScalar) -- fatal if absent when conductionSystemSolver is eikonalSolver1D. Not read by monodomain1DSolver or restitutionEikonalSolver1D, which derives CV from the restitution curve.',
             value_kind='dimensioned_scalar_literal',
+            unit='m/s',
             typical_value='[0 1 -1 0 0 0 0] 4.2',
             dynamic_path=True,
             required=True,
@@ -1256,6 +1258,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Start time [s] of the optional rootStimulus block. If rootStimulus is present, this entry is required; without the block, no root stimulus is applied.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
+            unit='s',
             dynamic_path=True,
         ),
         DictEntry(
@@ -1264,14 +1267,16 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Duration [s] of the optional rootStimulus pulse. Defaults to 0, which disables the pulse even when the block exists.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
+            unit='s',
             dynamic_path=True,
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>.purkinjeGraphModelCoeffs.rootStimulus.intensity',
             phases=frozenset({'stimulus'}),
-            description='Amplitude of the optional rootStimulus current added at the selected Purkinje node. Defaults to 0; the scalar uses the Purkinje solver current convention.',
+            description='Amplitude [A/m³] of the optional rootStimulus current added at the selected Purkinje node. Defaults to 0.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
+            unit='A/m³',
             dynamic_path=True,
         ),
         DictEntry(
@@ -1308,6 +1313,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Resting transmembrane potential [V] used to initialise the 1D Purkinje field. Default: -0.084 V.',
             source_refs=('src/electroModels/electroDomains/conductionSystemDomain/conductionSystemDomain.C',),
             value_kind='scalar',
+            unit='V',
             dynamic_path=True,
         ),
         DictEntry(
@@ -1445,8 +1451,9 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.rPvj',
-            description='Scalar PVJ resistance used in the voltage-difference coupling current. reactionDiffusionPvjCoupler uses it when the graph does not provide terminal-specific resistances; eikonalMonodomainPvjCoupler requires it at construction and may later use graph-provided terminal resistances instead.',
+            description='PVJ resistance-like scalar used in the voltage-difference coupling current. reactionDiffusionPvjCoupler uses it when the graph does not provide terminal-specific resistances; eikonalMonodomainPvjCoupler requires it at construction and may later use graph-provided terminal resistances instead.',
             source_refs=('src/electroModels/electroCouplers/pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C', 'src/electroModels/electroCouplers/pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.C'),
+            notes='The 3D mapper path interprets voltage/rPvj as a terminal current and divides it by PVJ volume, which implies rPvj in Ω. The same terminal-current array is later inserted into the 1D applied-current array without control-volume normalization, while the 1D equation requires an A/m³ source. Do not publish a single physical unit for rPvj until this shared-current normalization is resolved.',
             value_kind='scalar',
             dynamic_path=True,
             required=True,
@@ -1457,6 +1464,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description='Sphere radius [m] around each PVJ used to identify 3D cells for coupling. Default: 0.5e-3 m.',
             source_refs=('src/electroModels/electroCouplers/pvjCoupler/pvjCoupler.C',),
             value_kind='scalar',
+            unit='m',
             dynamic_path=True,
         ),
         DictEntry(

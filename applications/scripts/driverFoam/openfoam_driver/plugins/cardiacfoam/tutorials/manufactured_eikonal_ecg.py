@@ -323,6 +323,7 @@ def make_spec(
     physics_property_overrides: Sequence[dict[str, object]] | dict[str, object] | None = None,
     verification_model_type: str = defaults.VERIFICATION_MODEL_TYPE,
     conductivity: str | None = None,
+    conductivity_label: str | None = None,
     eikonal_advection_diffusion_approach: str | None = None,
     convergence_axis: str | None = None,
     ecg_reference_quadrature_order: int = defaults.ECG_REFERENCE_QUADRATURE_ORDER,
@@ -405,6 +406,9 @@ def make_spec(
         collect_outputs=_collect_outputs,
         metadata={
             "notes": "Manufactured eikonal activation and ECG benchmark",
+            # Sweep labels are provenance metadata used by Paper I aggregators.
+            # They do not alter the physical conductivity dictionary.
+            "conductivity_label": conductivity_label,
             "workflow_dag": _workflow_dag_for(
                 mesh_family, dimensions_list,
                 case_root=case_root, run_in_parallel=run_in_parallel,

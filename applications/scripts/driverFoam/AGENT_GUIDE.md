@@ -34,6 +34,16 @@ Use strict planning before launching. It is the only path that tells an agent
 whether the run is machine-readable, validated, catalog-covered, artifact
 predictable, and workflow-addressable before execution starts.
 
+For the cardiacFoam plugin, configure
+`applications/scripts/driverFoam/driverfoam-runtime.example.yaml` once per
+host and expose it through `DRIVERFOAM_RUNTIME_CONFIG`. The plugin declares
+the `lightweight` and `full` physics backends in its `plugin.yaml`; the local
+file selects one backend, its OpenFOAM bashrc, the full-mode solids4foam root,
+and the generated `cardiacFoam.build.json` manifest. driverFOAM rejects an
+unset, invalid, unbuilt, or compiled-metadata-mismatched selection instead of
+letting a shell resolver silently select another checkout. This runtime file
+is separate from case/sweep overrides and applies to all cardiacFoam entries.
+
 ```bash
 foamctl plan --strict --entry singleCell
 foamctl run --strict --entry singleCell
@@ -297,8 +307,8 @@ Both actions enforce a safety cap of 200 expanded cases by default (override
 with `--max-cases`), checked before any case is expanded or materialized:
 
 ```bash
-foamctl sweep-plan --spec sweep.json --output-dir sweeps/my_sweep/
-foamctl sweep-run --spec sweep.json --output-dir sweeps/my_sweep/
+foamctl sweep-plan --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
+foamctl sweep-run --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
 ```
 
 `sweep-plan` materializes and strict-plans every case without launching
@@ -360,28 +370,29 @@ failure. Values fixed across every case in the sweep (like `solvers`/
 `independent`/`dependent` and win on conflict.
 
 **One case per resolved combination, and why.** Several of these tutorials'
-own `apply_case()` mutate that tutorial's *shared* `case_root` in place
-(confirmed for `niederer2012` and `manufacturedMonodomainPseudoECG`: they patch
-`system/controlDict`/`system/blockMeshDict*` directly rather than writing an
-isolated per-case directory). So each resolved axis combination must collapse
-to exactly one case — if it doesn't (e.g. a config that still fans out
-internally because a constraining kwarg like `solvers` is missing),
+own `apply_case()` methods patch `system/controlDict`/`system/blockMeshDict*`
+directly instead of writing an isolated per-case directory. driverFOAM stages
+a fresh copy under the disposable workspace before applying those mutations,
+but each resolved axis combination must still collapse to exactly one case —
+if it doesn't (e.g. a config that still fans out internally because a
+constraining kwarg like `solvers` is missing),
 `sweep-plan`/`sweep-run` reports that case as `failed` with a clear
 `materialization_error` rather than silently applying only the first of
 several. In practice this means giving `dt`/`dx`-style axes their own
 dedicated sweep row (`"zip"` mode with per-case single-element lists, as
 above) instead of relying on the tutorial's own internal multi-value fan-out.
-Because materialization mutates shared state, entry-mode sweeps must never be
-parallelized across cases — `sweep_run`'s plain sequential loop already
-guarantees this.
+Entry-mode sweeps remain serial because each case owns its staged case tree
+and post-processing boundary.
 
-**`sweep-plan` is not fully non-mutating here.** Unlike generic mode (which
-only ever writes into a fresh directory under `--output-dir`), entry-mode's
-`apply_case()` mutates the tutorial's real, shared `case_root` — including
-during `sweep-plan`. Don't run either action against a tutorial whose
-`case_root` holds results you care about without first checking what's there
-(or testing against a scratch copy with a `tutorials_root` override in `base`
-pointed elsewhere).
+**Entry-mode execution is staged and disposable.** `sweep-plan` and
+`sweep-run` copy the registered tutorial into
+`<output_dir>/cases/<case_id>/` before calling `apply_case()`; the source under
+`tutorials/` is never the mutable execution root. If `--output-dir` is omitted,
+the default is `<repo>/.tmp/driverfoam/sweeps/<spec-name>`. All generated
+meshes, processor/time directories, logs, workflow state, manifests,
+post-processing output, and archives must stay below this repository-local
+`.tmp/driverfoam/` workspace. Keep a failed workspace when diagnosing a run;
+cleanup is an explicit, disposable-output action.
 
 Everything else — the manifest, `--retry-failed`, `--case-timeout-s`,
 `--max-cases`, resumability — is identical to generic mode.
@@ -807,3 +818,145 @@ import (a colon always selects this form), or `none` for generic OpenFOAM.
 The `capability_manifest` accept-surface is plugin-dependent:
 `allowed_commands.core` lists solver-neutral OpenFOAM commands plus the
 active plugin's own, so it changes with `--plugin`.
+
+---
+
+## Plugin Guide — Adding a New Solver to driverFOAM
+
+This section is for **plugin authors** — developers or AI agents who need to
+add support for a new OpenFOAM solver to driverFOAM. End-users running existing
+solvers do not need to read this section.
+
+> **Quickest path:** Follow the dedicated skill at
+> `../../../../.agents/skills/driverfoam-plugin-builder/SKILL.md`
+> (relative to this file), which contains a complete step-by-step workflow,
+> a worked `ShallowWaterPlugin` example, and a troubleshooting table.
+
+### What a plugin is
+
+A driverFOAM plugin is a Python class that implements the `SolverPlugin`
+contract defined in `openfoam_driver/core/plugin_interface.py`. It creates a
+clean boundary between the generic execution engine and all solver-specific
+knowledge.
+
+Three Protocol classes define the contract:
+
+| Class | Members | Required when |
+|---|---|---|
+| `SolverPlugin` | 14 | Always (v1 baseline) |
+| `SolverPluginV2` | +13 | `plugin_api_version == "2"` |
+| `SolverPluginOptionalHooks` | 14 (probe-based) | Never required; enable capabilities |
+
+### Mandatory files
+
+| File | Purpose |
+|---|---|
+| `my_solver_plugin.py` | Python class implementing the contract |
+| `plugin.yaml` | Manifest: identity, case file rules, optional C++ roots |
+| `pyproject.toml` entry-point | `[project.entry-points."driverfoam.plugins"]` |
+
+### v1 Required Members (all plugins)
+
+```python
+plugin_name             # str — human display name
+plugin_id               # str — reverse-DNS id, must match plugin.yaml
+plugin_version          # str — plugin semantics version
+plugin_api_version      # str — "1" or "2"
+get_profile()           # PluginProfile from load_plugin_profile("plugin.yaml")
+get_dict_entries()      # tuple[DictEntry, ...] — globally unique driver_paths
+get_dictionary_catalog() # DictionaryCatalog — entries by document name
+get_dict_groups()       # dict[str, tuple[DictEntry, ...]] — by logical group
+get_capabilities()      # CapabilityManifest via build_capability_manifest()
+get_tutorial_catalog()  # dict with spec_factories, registered_tutorials
+get_tutorial_displays() # tuple[TutorialDisplay, ...]
+validate_configuration(spec)   # tuple[StrictDiagnostic, ...]
+validate_run_semantics(context) # tuple[...]
+predict_data_artifacts(case_root, spec) # tuple[DataArtifact, ...]
+```
+
+### v2 Additional Required Members (`plugin_api_version == "2"`)
+
+```python
+get_solver_commands()           # frozenset[str] — artifact-producing binaries
+get_auxiliary_commands()        # frozenset[str] — meshers, decomposers
+get_utility_manifests()         # dict[str, Any]
+get_utility_roots()             # tuple[Path, ...]
+resolve_case_models(case_root)  # dict — best-effort, never raise
+get_samplable_fields(resolved)  # dict[str, tuple[str, ...]] — by region
+get_override_schema(tutorial, info) -> dict
+get_run_document_config_schema() -> dict  # JSON Schema
+get_dict_entry_catalog()        # dict — entries by document name (unserialized)
+get_solve_step_commands()       # frozenset[str]
+get_telemetry_source_globs(command) # tuple[str, ...]
+get_extra_provenance_paths(case_root) # tuple[RuntimeDependency, ...]
+get_artifact_value_reader(format)    # Any | None
+```
+
+### Key Optional Hooks (`SolverPluginOptionalHooks`, probed with `getattr`)
+
+Two have no neutral fallback — sweeps fail if they are absent:
+
+| Hook | If absent |
+|---|---|
+| `route_sweep_case_values(...)` | **Sweeps refused by name** |
+| `materialize_sweep_case(...)` | **Sweeps refused by name** |
+| `has_case_marker(case_root)` | `False` |
+| `is_nondimensional_case(spec)` | `False` (SI mesh checks on) |
+| `build_run_document_config(spec)` | `({}, ())` |
+| `get_override_scopes()` | `()` |
+| `get_regeneration_scopes()` | `()` |
+| `get_report_catalog()` | `()` |
+| `get_named_catalogs()` | `{}` |
+
+### Entry-point registration
+
+```toml
+[project.entry-points."driverfoam.plugins"]
+mysolver = "my_package.my_solver_plugin:MySolverPlugin"
+
+[tool.setuptools.package-data]
+"my_package" = ["plugin.yaml"]
+```
+
+### Validation commands
+
+```bash
+# Verify entry-point is discoverable
+python -c "from importlib.metadata import entry_points; \
+           print(list(entry_points(group='driverfoam.plugins')))"
+
+# Load and validate
+python -c "
+from openfoam_driver.core.plugin_interface import load_plugin_context
+ctx = load_plugin_context('mysolver')
+print('OK:', ctx.identity)
+"
+
+# Strict plan
+foamctl --plugin mysolver plan --strict --entry <tutorial_or_case_path>
+```
+
+### `validate_plugin()` cross-validation rules
+
+- `profile.plugin_id` **must equal** `plugin.plugin_id`
+- `profile.api_version` **must equal** `plugin.plugin_api_version`
+- All `DictEntry.driver_path` values must be **globally unique**
+
+### Common errors
+
+| Error | Cause |
+|---|---|
+| `KeyError: 'mysolver'` | Wrong entry-point group or not installed |
+| `TypeError: missing required members: X` | Missing v1 methods |
+| `TypeError: missing v2 contract; missing: X` | Missing v2 callables |
+| `TypeError: profile id does not match plugin_id` | YAML id ≠ class property |
+| `TypeError: duplicate paths: X` | Two `DictEntry` share same `driver_path` |
+| Sweep refused: `does not implement route_sweep_case_values` | Implement sweep hooks |
+
+### See also
+
+- `openfoam_driver/core/plugin_interface.py` — full Protocol definitions
+- `openfoam_driver/core/generic_plugin.py` — minimal v2 scaffold to copy
+- `openfoam_driver/core/generic-plugin.yaml` — annotated `plugin.yaml` template
+- `openfoam_driver/plugins/cardiacfoam_plugin.py` — full v2 reference
+- `KEY_FILES.md` — navigational map for all reader types

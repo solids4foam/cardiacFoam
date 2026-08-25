@@ -32,7 +32,11 @@ from unittest import mock
 
 import pytest
 
-from openfoam_driver.core.runtime.sweep_runner import sweep_plan, sweep_run
+from openfoam_driver.core.runtime.sweep_runner import (
+    _stage_entry_case,
+    sweep_plan,
+    sweep_run,
+)
 from openfoam_driver.sweep_expansion import SweepValidationError
 
 
@@ -63,6 +67,38 @@ def _write_entry_spec(path, entry="niederer2012", values=(0.5, 0.2)):
     }
     path.write_text(json.dumps(spec))
     return spec
+
+
+def test_entry_case_staging_keeps_authored_case_clean(tmp_path):
+    source = tmp_path / "tutorials" / "case"
+    source.mkdir(parents=True)
+    (source / "system").mkdir()
+    (source / "system" / "controlDict").write_text("endTime 0.2;\n")
+    (source / "0").mkdir()
+    (source / "0" / "Vm").write_text("initial field")
+    (source / "postProcessing").mkdir()
+    (source / "postProcessing" / "old.dat").write_text("stale")
+    (source / "processor0").mkdir()
+    (source / "processor0" / "old").write_text("stale")
+    (source / "0.2").mkdir()
+    (source / "0.2" / "Vm").write_text("stale")
+    (source / "workflow_state.json").write_text("{}")
+    generated_case = source / "gauss_linear_40_manufacturedVerifier"
+    (generated_case / "workflow_logs").mkdir(parents=True)
+    (generated_case / "system").mkdir()
+    (generated_case / "system" / "controlDict").write_text("generated")
+
+    staged = tmp_path / "scratch" / "case_0001"
+    _stage_entry_case(source, staged)
+
+    assert (staged / "system" / "controlDict").read_text() == "endTime 0.2;\n"
+    assert (staged / "0" / "Vm").exists()
+    assert not (staged / "postProcessing").exists()
+    assert not (staged / "processor0").exists()
+    assert not (staged / "0.2").exists()
+    assert not (staged / "workflow_state.json").exists()
+    assert not (staged / generated_case.name).exists()
+    assert (source / "postProcessing" / "old.dat").exists()
 
 
 def test_sweep_plan_entry_mode_materializes_via_apply_case_and_audits(tmp_path):

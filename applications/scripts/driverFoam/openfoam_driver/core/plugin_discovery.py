@@ -27,6 +27,30 @@
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
+"""Discovery of installed driverFOAM solver plugins via Python entry-points.
+
+Plugins register themselves in the installing package's ``pyproject.toml``
+under the ``[project.entry-points."driverfoam.plugins"]`` group::
+
+    [project.entry-points."driverfoam.plugins"]
+    mysolver = "my_package.my_solver_plugin:MySolverPlugin"
+
+The entry-point **name** (``mysolver`` above) is what users pass to
+``--plugin`` and what :func:`load_discovered_plugin` resolves.  It must be
+unique across all installed distributions; a name claimed by more than one
+distribution is reported by :func:`ambiguous_plugin_names` and excluded from
+:func:`discover_plugins`.
+
+Discovery is not sandboxed: loading a plugin executes its Python code in the
+same process, exactly as the trusted ``module:Class`` form does.
+
+Troubleshooting — plugin not found:
+  Verify the entry-point group name is exactly ``driverfoam.plugins``::
+
+      python -c "from importlib.metadata import entry_points; \\
+                 print(list(entry_points(group='driverfoam.plugins')))"
+"""
+
 from __future__ import annotations
 
 from importlib.metadata import entry_points
@@ -36,7 +60,13 @@ ENTRY_POINT_GROUP = "driverfoam.plugins"
 
 
 def _entry_points() -> tuple[Any, ...]:
-    """Indirection seam so tests can inject entry points without installing."""
+    """Indirection seam so tests can inject entry points without installing.
+
+    Tests monkeypatch this function to return synthetic entry-point objects,
+    avoiding the need for a real ``pip install`` of the plugin under test.
+    All public discovery functions call this; none call ``entry_points()``
+    directly.
+    """
     return tuple(entry_points(group=ENTRY_POINT_GROUP))
 
 

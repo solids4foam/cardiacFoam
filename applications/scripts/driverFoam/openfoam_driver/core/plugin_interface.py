@@ -19,13 +19,36 @@
 #     plugin_interface
 #
 # Description
-#     Defines the contract for expanding driverFOAM to other solvers.
+#     Solver-agnostic plugin contract for driverFOAM.
+#     Defines the boundary between the generic OpenFOAM execution engine and
+#     any domain-specific solver plugin (e.g. cardiacFoam, shallowWaterFoam).
 #
 # Author
 #     Simao Nieto de Castro, UCD.
 #----------------------------------------------------------------------------#
 
-from __future__ import annotations
+"""Solver-agnostic plugin contract for driverFOAM.
+
+Three Protocol classes define what a solver plugin must implement:
+
+- :class:`SolverPlugin` — v1 contract; 14 required members; loaded by
+  :func:`validate_plugin`.
+- :class:`SolverPluginV2` — v2 extension; 13 additional required members,
+  enforced when ``plugin_api_version == "2"``.
+- :class:`SolverPluginOptionalHooks` — 14 probe-based optional hooks that
+  unlock additional capabilities (sweeps, mesh diagnostics, report catalogs,
+  override scopes, …).  **Read this class** to discover all extension points
+  before deciding your plugin is complete.
+
+Use :func:`driver_context` or :func:`load_plugin_context` to create a
+validated, immutable :class:`DriverContext` for each public operation.
+Use :func:`generic_openfoam_context` for the built-in no-domain stub and
+:func:`default_driver_context` only at compatibility boundaries.
+
+To build a new plugin start from ``core/generic_plugin.py`` and follow
+``.agents/skills/driverfoam-plugin-builder/SKILL.md``.
+"""
+
 
 import re
 from dataclasses import dataclass

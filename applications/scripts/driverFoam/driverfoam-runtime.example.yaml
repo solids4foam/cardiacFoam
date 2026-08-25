@@ -1,0 +1,17 @@
+# Copy this file to a user-local path and set:
+#   export DRIVERFOAM_RUNTIME_CONFIG=/absolute/path/driverfoam-runtime.yaml
+#
+# This file is machine configuration, not case/sweep configuration. It is
+# selected once for all driverFOAM runs on this host.
+# The same backend/root must be exported before running ./Allwmake:
+#   export DRIVERFOAM_CARDIACFOAM_BACKEND=full
+#   export DRIVERFOAM_CARDIACFOAM_SOLIDS4FOAM_ROOT=/absolute/path/to/solids4foam
+openfoam:
+  bashrc: /Volumes/OpenFOAM-v2412/etc/bashrc
+
+plugins:
+  org.cardiacfoam:
+    # Valid values are declared in the plugin's plugin.yaml.
+    backend: full
+    solids4foam_root: /absolute/path/to/solids4foam
+    build_manifest: /absolute/path/to/OpenFOAM/user/lib/cardiacFoam.build.json

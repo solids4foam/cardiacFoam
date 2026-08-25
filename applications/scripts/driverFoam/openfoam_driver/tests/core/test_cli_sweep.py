@@ -48,15 +48,27 @@ class TestCliSweepActions(unittest.TestCase):
         payload = json.loads(captured[0])
         assert payload["case_count"] == 2
 
-    def test_sweep_plan_requires_output_dir(self):
-        with mock.patch("builtins.print"):
-            with self.assertRaises(SystemExit):
-                main(["sweep-plan", "--spec", "sweep.json"])
+    def test_sweep_plan_defaults_to_repo_scratch_output_dir(self):
+        with mock.patch(
+            "openfoam_driver.cli.sweep_plan",
+            return_value={"case_count": 0, "cases": []},
+        ) as mock_fn, mock.patch("builtins.print"):
+            assert main(["sweep-plan", "--spec", "paperI_methods.json"]) == 0
 
-    def test_sweep_run_requires_output_dir(self):
-        with mock.patch("builtins.print"):
-            with self.assertRaises(SystemExit):
-                main(["sweep-run", "--spec", "sweep.json"])
+        assert ".tmp/driverfoam/sweeps/paperI_methods" in str(
+            mock_fn.call_args.kwargs["output_dir"]
+        )
+
+    def test_sweep_run_defaults_to_repo_scratch_output_dir(self):
+        with mock.patch(
+            "openfoam_driver.cli.sweep_run",
+            return_value={"case_count": 0, "completed_count": 0, "failed_count": 0},
+        ) as mock_fn, mock.patch("builtins.print"):
+            assert main(["sweep-run", "--spec", "paperI_methods.json"]) == 0
+
+        assert ".tmp/driverfoam/sweeps/paperI_methods" in str(
+            mock_fn.call_args.kwargs["output_dir"]
+        )
 
     def test_sweep_run_passes_max_cases_and_retry_flag(self):
         captured = []

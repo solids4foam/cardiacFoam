@@ -2,6 +2,28 @@ schema_version: 1
 plugin:
   id: org.cardiacfoam
   api_version: "2"
+runtime:
+  openfoam:
+    bashrc_env: OPENFOAM_BASHRC
+  backend:
+    required: true
+    selection_env: DRIVERFOAM_CARDIACFOAM_BACKEND
+    options:
+      lightweight:
+        build_define: USE_LIGHTWEIGHT_PHYSICSMODEL=1
+        required_libraries:
+          - libphysicsModel
+        forbidden_libraries:
+          - libsolids4FoamModels
+          - libelectroMechanicalModels
+      full:
+        build_define: USE_LIGHTWEIGHT_PHYSICSMODEL=0
+        required_source: solids4foam
+        required_libraries:
+          - libsolids4FoamModels
+          - libelectroMechanicalModels
+        forbidden_libraries:
+          - libphysicsModel
 case_profile:
   dictionaries:
     - path: system/controlDict

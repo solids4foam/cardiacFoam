@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -41,6 +42,7 @@ from ...sweep_expansion import SweepValidationError, check_case_count_cap, expan
 from ...sweep_materialize import materialize_case
 from ...sweep_routing import route_case_values, route_entry_case_values
 from .fresh import ensure_fresh_output_dir
+from .openfoam_environment import configure_plugin_environment
 from .output_collection import collect_new_outputs, snapshot_postprocessing
 from .postprocess_phase import build_sweep_context, run_postprocessing_module
 from .registry import load_entry_spec
@@ -124,19 +126,47 @@ def _materialize_entry_case(
     entry: str,
     routed: dict[str, Any],
     *,
+    staging_root: Path | None = None,
     driver_context=None,
-) -> None:
+) -> dict[str, Any]:
     """Materialize one entry-based sweep case via the tutorial's own spec.
 
     Entry-based sweeps target an existing registered tutorial whose
-    apply_case()/build_cases() mutate that tutorial's own shared case_root in
-    place (confirmed for niederer_2012.py: it patches system/controlDict and
-    system/blockMeshDict directly rather than writing an isolated per-case
-    directory the way build_and_launch does for generic case_folder sweeps).
+    apply_case()/build_cases() mutate a case root in place.  That root must be
+    a disposable staging copy, never the checked-in tutorial directory.  The
+    returned overrides point the entry at that staged case so strict planning
+    and execution use exactly the same paths.
+
+    ``staging_root`` is optional for compatibility with low-level callers and
+    tests that provide an already-isolated fake spec.  Real sweep callers
+    always pass it.
+
     Raises ValueError if the resolved overrides don't collapse to exactly one
     case -- the sweep model is one case per resolved axis combination.
     """
     spec = load_entry_spec(entry, overrides=routed, driver_context=driver_context)
+    effective_routed = dict(routed)
+    if staging_root is not None and spec.case_root.exists():
+        source_case_root = Path(spec.case_root).resolve()
+        staged_case_root = Path(staging_root).resolve()
+        _stage_entry_case(source_case_root, staged_case_root)
+        # ``make_spec`` resolves case_root as tutorials_root/case_dir_name.
+        # Redirect both values together; changing only tutorials_root would
+        # leave a nested original case_dir_name and recreate the source tree
+        # below the scratch directory.
+        effective_routed["tutorials_root"] = str(staged_case_root.parent)
+        effective_routed["case_dir_name"] = staged_case_root.name
+        staged_spec = load_entry_spec(
+            entry, overrides=effective_routed, driver_context=driver_context,
+        )
+        # A real registered factory consumes tutorials_root/case_dir_name and
+        # therefore returns the staged path.  Keep compatibility with test
+        # doubles and third-party factories that intentionally return their
+        # own fixed spec regardless of overrides.
+        if Path(staged_spec.case_root).resolve() != staged_case_root:
+            effective_routed = dict(routed)
+        else:
+            spec = staged_spec
     cases = spec.build_cases()
     if len(cases) != 1:
         raise ValueError(
@@ -146,6 +176,81 @@ def _materialize_entry_case(
         )
     _clean_stale_time_directories(spec.case_root)
     spec.apply_case(spec.case_root, cases[0])
+    return effective_routed
+
+
+def _stage_entry_case(source_case_root: Path, staged_case_root: Path) -> None:
+    """Copy a registered case into scratch storage without old run output.
+
+    Registered tutorial folders contain source dictionaries and scripts next
+    to OpenFOAM's generated mesh, time, processor, log, and post-processing
+    trees.  Copying those generated trees would reintroduce the stale-state
+    bug this staging boundary is meant to prevent, so the filter is explicit
+    and conservative: keep authored inputs (including ``0/``) and omit only
+    known derived artifacts.
+    """
+    if staged_case_root.exists():
+        shutil.rmtree(staged_case_root)
+
+    generated_dir_names = {
+        "postProcessing", "logs", "workflow_logs", "cachedCasePostProcessing",
+        "polyMesh", "archivedPostProcessing", "results", "data",
+    }
+    generated_file_names = {
+        "workflow_state.json", "run_document.json", "sweep_manifest.json",
+        "artifacts_manifest.json", "artifacts_realized.json",
+    }
+
+    def ignore_generated(_directory: str, names: list[str]) -> set[str]:
+        ignored: set[str] = set()
+        for name in names:
+            candidate = Path(_directory) / name
+            # A previous driverFOAM case can have a descriptive directory name
+            # (for example ``gauss_linear_40_*``) rather than a numeric
+            # OpenFOAM time name. Its workflow markers are the reliable
+            # boundary between authored tutorial content and generated case
+            # content, so omit the whole directory when they are present.
+            if candidate.is_dir() and any(
+                (candidate / marker).exists()
+                for marker in ("workflow_state.json", "workflow_logs", "run_document.json")
+            ):
+                ignored.add(name)
+                continue
+            if name in generated_dir_names or name in generated_file_names:
+                ignored.add(name)
+                continue
+            if name.startswith("processor") or name.startswith("driverPostProcessingArchive"):
+                ignored.add(name)
+                continue
+            if (
+                name.startswith("log.")
+                or name.endswith(".foam")
+                or name.endswith(".msh")
+                or (name.endswith(".geo") and not name.endswith(".geo.template"))
+            ):
+                ignored.add(name)
+                continue
+            path = Path(name)
+            # Numeric OpenFOAM time directories are generated output.  Keep
+            # the authored initial-condition directory ``0``.
+            if path.name != "0":
+                try:
+                    float(path.name)
+                except ValueError:
+                    pass
+                else:
+                    ignored.add(name)
+        return ignored
+
+    if not source_case_root.is_dir():
+        raise FileNotFoundError(f"Registered case root does not exist: {source_case_root}")
+    staged_case_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(
+        source_case_root,
+        staged_case_root,
+        ignore=ignore_generated,
+        symlinks=True,
+    )
 
 
 def sweep_plan(
@@ -171,7 +276,12 @@ def sweep_plan(
         try:
             if entry is not None:
                 routed = route_entry_case_values(base=base, resolved_axis_values=case.resolved_axis_values)
-                _materialize_entry_case(entry, routed, driver_context=driver_context)
+                routed = _materialize_entry_case(
+                    entry,
+                    routed,
+                    staging_root=output_dir / "cases" / case.case_id,
+                    driver_context=driver_context,
+                )
             else:
                 routed = route_case_values(
                     base=base,
@@ -244,6 +354,10 @@ def sweep_run(
     from ..compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
+    execution_environment = configure_plugin_environment(
+        os.environ,
+        driver_context,
+    ).env
     sweep_spec = _load_spec(spec_path)
     check_case_count_cap(sweep_spec, max_cases=max_cases)
 
@@ -337,7 +451,12 @@ def sweep_run(
             status = "failed"
             try:
                 if entry is not None:
-                    _materialize_entry_case(entry, routed, driver_context=driver_context)
+                    routed = _materialize_entry_case(
+                        entry,
+                        routed,
+                        staging_root=output_dir / "cases" / case.case_id,
+                        driver_context=driver_context,
+                    )
                     report = strict_plan(entry, overrides=routed, driver_context=driver_context)
                 else:
                     materialize_case(case_dir=case_dir, routed=routed)
@@ -389,6 +508,7 @@ def sweep_run(
                         result = subprocess.run(
                             [sys.executable, "-m", "openfoam_driver", "run", "--run-document", str(run_document_path)],
                             capture_output=True, text=True,
+                            env=execution_environment,
                             timeout=case_timeout_s,
                         )
                     except subprocess.TimeoutExpired as exc:

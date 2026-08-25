@@ -205,6 +205,7 @@ def _environment_diagnostics(
     *,
     env: dict[str, str] | None = None,
     openfoam_bashrc: str | None = None,
+    driver_context: Any | None = None,
 ) -> tuple[StrictDiagnostic, ...]:
     """Preflight the runtime environment against the plan's actual commands."""
     if "SKIP_ENV_DIAGNOSTICS" in os.environ:
@@ -215,6 +216,7 @@ def _environment_diagnostics(
     if checked_env is None:
         loaded_environment = load_openfoam_environment(
             explicit_bashrc=openfoam_bashrc,
+            driver_context=driver_context,
         )
         checked_env = loaded_environment.env
 

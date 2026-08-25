@@ -81,6 +81,21 @@ class CardiacFoamPlugin:
         from openfoam_driver.core.plugin_profile import load_plugin_profile
 
         return load_plugin_profile(Path(__file__).parent / "cardiacfoam" / "plugin.yaml")
+
+    def configure_execution_environment(self, env: dict[str, str]):
+        """Apply the plugin's declared backend and build-manifest contract."""
+        from openfoam_driver.plugins.cardiacfoam.runtime_profile import (
+            configure_runtime_environment,
+        )
+
+        return configure_runtime_environment(env)
+
+    def get_openfoam_bashrc(self, env: dict[str, str]) -> str | None:
+        from openfoam_driver.plugins.cardiacfoam.runtime_profile import (
+            configured_openfoam_bashrc,
+        )
+
+        return configured_openfoam_bashrc(env)
         
     def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
         """
@@ -429,8 +444,3 @@ class CardiacFoamPlugin:
         )
 
         return purkinje_graph_diagnostics(case_root)
-
-
-# Ensure CardiacFoamPlugin satisfies the SolverPlugin protocol
-def _check_protocol() -> None:
-    plugin: SolverPlugin = CardiacFoamPlugin()

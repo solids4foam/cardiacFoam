@@ -34,7 +34,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
 
 def _discover_openfoam_bashrcs() -> tuple[Path, ...]:
@@ -154,6 +154,7 @@ def load_openfoam_environment(
     *,
     explicit_bashrc: str | Path | None = None,
     base_env: Mapping[str, str] | None = None,
+    driver_context: Any | None = None,
     timeout_s: float = 20.0,
 ) -> OpenFOAMEnvironment:
     """Return an environment suitable for strict OpenFOAM execution.
@@ -163,6 +164,16 @@ def load_openfoam_environment(
     executables.
     """
     env = dict(base_env or os.environ)
+    if explicit_bashrc is None and driver_context is not None:
+        bashrc_hook = getattr(driver_context.plugin, "get_openfoam_bashrc", None)
+        if callable(bashrc_hook):
+            try:
+                explicit_bashrc = bashrc_hook(env)
+            except Exception as exc:  # plugin diagnostics must not crash planning
+                return OpenFOAMEnvironment(
+                    env=env,
+                    error=f"Plugin OpenFOAM runtime configuration failed: {exc}",
+                )
     bashrc = discover_openfoam_bashrc(
         explicit_bashrc=explicit_bashrc,
         base_env=env,
@@ -173,7 +184,8 @@ def load_openfoam_environment(
                 env=env,
                 error=f"OpenFOAM bashrc not found: {explicit_bashrc}",
             )
-        return OpenFOAMEnvironment(env=env)
+        sourced = OpenFOAMEnvironment(env=env)
+        return _configure_plugin_environment(sourced, driver_context)
 
     script = (
         'set +e +u\n'
@@ -229,4 +241,49 @@ def load_openfoam_environment(
         temp_path.unlink(missing_ok=True)
     sourced_env = _parse_exported_environment(raw_env)
 
-    return OpenFOAMEnvironment(env=sourced_env, bashrc=str(bashrc))
+    sourced = OpenFOAMEnvironment(env=sourced_env, bashrc=str(bashrc))
+    return _configure_plugin_environment(sourced, driver_context)
+
+
+def _configure_plugin_environment(
+    environment: OpenFOAMEnvironment,
+    driver_context: Any | None,
+) -> OpenFOAMEnvironment:
+    """Apply an optional plugin-owned runtime environment contract.
+
+    OpenFOAM sourcing is generic. Project-specific library selection belongs
+    to the selected plugin, so the core only invokes the optional hook and
+    carries its returned environment/error forward.
+    """
+    if environment.error or driver_context is None:
+        return environment
+
+    hook = getattr(driver_context.plugin, "configure_execution_environment", None)
+    if hook is None:
+        return environment
+
+    try:
+        configured_env, error = hook(dict(environment.env))
+    except Exception as exc:  # plugin diagnostics must not crash planning
+        return OpenFOAMEnvironment(
+            env=environment.env,
+            bashrc=environment.bashrc,
+            error=f"Plugin runtime environment configuration failed: {exc}",
+        )
+
+    return OpenFOAMEnvironment(
+        env=dict(configured_env),
+        bashrc=environment.bashrc,
+        error=error,
+    )
+
+
+def configure_plugin_environment(
+    env: Mapping[str, str],
+    driver_context: Any | None,
+) -> OpenFOAMEnvironment:
+    """Apply a plugin environment contract without sourcing OpenFOAM again."""
+    return _configure_plugin_environment(
+        OpenFOAMEnvironment(env=dict(env)),
+        driver_context,
+    )

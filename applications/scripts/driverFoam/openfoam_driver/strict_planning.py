@@ -392,6 +392,7 @@ def strict_plan(
     env_diagnostics = _environment_diagnostics(
         workflow_dag,
         openfoam_bashrc=str(openfoam_bashrc) if openfoam_bashrc is not None else None,
+        driver_context=driver_context,
     )
     mesh_diagnostics = _mesh_geometry_diagnostics(
         spec.case_root,

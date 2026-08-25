@@ -1084,7 +1084,6 @@ def adapt_plugin_capabilities(plugin: "SolverPlugin") -> PluginCapabilities:
     call site, so a plugin missing one is adapted successfully and degrades
     only when that capability is actually used.
     """
-    """Build a behavior-preserving capability bundle for ``plugin``."""
 
     return PluginCapabilities(
         tutorials=_TutorialCatalogAdapter(plugin),

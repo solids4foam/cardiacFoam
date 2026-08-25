@@ -41,6 +41,16 @@ def tutorials_root_default() -> Path:
     return repo_root
 
 
+def driverfoam_scratch_root() -> Path:
+    """Return the repository-local root for disposable driverFOAM data."""
+    return repo_root_default() / ".tmp" / "driverfoam"
+
+
+def default_sweep_output_dir(spec_path: str | Path) -> Path:
+    """Return the standard output location for a sweep specification."""
+    return driverfoam_scratch_root() / "sweeps" / Path(spec_path).stem
+
+
 def default_setup_dir_name(case_dir_name: str) -> str:
     normalized_case_dir = case_dir_name.strip()
     if not normalized_case_dir:

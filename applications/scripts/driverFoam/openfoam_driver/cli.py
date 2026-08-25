@@ -42,9 +42,14 @@ from .core.runtime.workflow_orchestrator import run_workflow
 from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.postprocess_phase import run_postprocess_phase
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials
-from .core.runtime.sweep_runner import sweep_plan, sweep_run
+from .core.runtime.sweep_runner import _stage_entry_case, sweep_plan, sweep_run
 from .introspection import describe_entry
 from .specs.common import default_setup_dir_name
+from .specs.paths import (
+    default_sweep_output_dir,
+    driverfoam_scratch_root,
+    repo_root_default,
+)
 from .specs.apply_overrides import validate_overrides, apply_overrides, OverrideError
 from .strict_planning import (
     StrictDiagnostic,
@@ -396,6 +401,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
         return None
     execution_env = load_openfoam_environment(
         explicit_bashrc=args.openfoam_bashrc,
+        driver_context=driver_context,
     ).env
     return _ExecutionContext(
         entry_label=run_doc.name,
@@ -407,6 +413,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
         environment_diagnostics=_environment_diagnostics(
             inputs.workflow_dag,
             openfoam_bashrc=args.openfoam_bashrc,
+            driver_context=driver_context,
         ),
         execution_env=execution_env,
         source_path=args.run_document,
@@ -421,6 +428,8 @@ def _context_from_entry(
     config_path: str | None,
     openfoam_bashrc: str | None,
     driver_context,
+    stage_for_execution: bool = False,
+    fresh: bool = False,
 ) -> tuple[_ExecutionContext | None, int]:
     report = strict_plan(
         selected_entry,
@@ -443,8 +452,40 @@ def _context_from_entry(
             "error": "strict plan did not produce workflow_dag and workflow_state",
         }, indent=2))
         return None, 1
+    source_case_root = Path(report.launch["case_root"]).resolve()
+    # Test/standalone case folders may intentionally live in a caller-owned
+    # temporary root. The repository-template protection applies to registered
+    # cases in this checkout; generic external cases retain their explicit
+    # launch root contract.
+    if stage_for_execution and source_case_root.is_relative_to(repo_root_default()):
+        safe_entry = "".join(
+            char if char.isalnum() or char in {"-", "_", "."} else "_"
+            for char in selected_entry
+        ).strip("._") or "entry"
+        staged_case_root = driverfoam_scratch_root() / "runs" / safe_entry
+        if fresh or not staged_case_root.exists():
+            _stage_entry_case(source_case_root, staged_case_root)
+        staged_overrides = dict(overrides or {})
+        staged_overrides["tutorials_root"] = str(staged_case_root.parent)
+        staged_overrides["case_dir_name"] = staged_case_root.name
+        report = strict_plan(
+            selected_entry,
+            entry_kind=entry_kind,
+            overrides=staged_overrides,
+            config_path=config_path,
+            openfoam_bashrc=openfoam_bashrc,
+            driver_context=driver_context,
+        )
+        readiness = is_launchable(
+            plan_status=report.status,
+            environment_diagnostics=report.environment_diagnostics,
+        )
+        if not readiness.structural_ok:
+            print(json.dumps(report.to_json(), indent=2))
+            return None, 1
     execution_env = load_openfoam_environment(
         explicit_bashrc=openfoam_bashrc,
+        driver_context=driver_context,
     ).env
     return (
         _ExecutionContext(
@@ -615,7 +656,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output-dir",
-        help="Output directory for action=sweep-plan/sweep-run (required for both).",
+        help=(
+            "Output directory for action=sweep-plan/sweep-run. Defaults to "
+            "<repo>/.tmp/driverfoam/sweeps/<spec-name>; generated cases and "
+            "logs never belong under tutorials/."
+        ),
     )
     parser.add_argument(
         "--max-cases",
@@ -754,8 +799,7 @@ def _validate_args(parser: argparse.ArgumentParser, args) -> None:
             parser.error(f"--strict/--run-document/--step/--apply are not valid with action={args.action}")
     if args.action in {"sweep-plan", "sweep-run"} and not args.spec:
         parser.error(f"action={args.action} requires --spec")
-    if args.action in {"sweep-plan", "sweep-run"} and not args.output_dir:
-        parser.error(f"action={args.action} requires --output-dir")
+    # Sweep output defaults to the repository-local disposable workspace.
     if args.retry_failed and args.action != "sweep-run":
         parser.error("--retry-failed is only valid with action=sweep-run")
     if args.fresh and args.action not in {"step", "run", "sweep-run"}:
@@ -848,6 +892,8 @@ def main(argv: list[str] | None = None) -> int:
             config_path=args.config,
             openfoam_bashrc=args.openfoam_bashrc,
             driver_context=driver_context,
+            stage_for_execution=True,
+            fresh=args.fresh,
         )
         if context is None:
             return failure_code
@@ -865,15 +911,18 @@ def main(argv: list[str] | None = None) -> int:
             config_path=args.config,
             openfoam_bashrc=args.openfoam_bashrc,
             driver_context=driver_context,
+            stage_for_execution=True,
+            fresh=args.fresh,
         )
         if context is None:
             return failure_code
         return _dispatch_context(args, context)
 
     if args.action == "sweep-plan":
+        output_dir = args.output_dir or default_sweep_output_dir(args.spec)
         result = sweep_plan(
             args.spec,
-            output_dir=args.output_dir,
+            output_dir=output_dir,
             max_cases=args.max_cases,
             driver_context=driver_context,
         )
@@ -882,9 +931,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if any_failed else 0
 
     if args.action == "sweep-run":
+        output_dir = args.output_dir or default_sweep_output_dir(args.spec)
         result = sweep_run(
             args.spec,
-            output_dir=args.output_dir,
+            output_dir=output_dir,
             max_cases=args.max_cases,
             retry_failed=args.retry_failed,
             case_timeout_s=args.case_timeout_s,

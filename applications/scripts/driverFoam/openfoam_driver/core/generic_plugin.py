@@ -1,4 +1,19 @@
-"""Built-in no-domain plugin for generic OpenFOAM case-folder orchestration."""
+"""Built-in no-domain plugin for generic OpenFOAM case-folder orchestration.
+
+This module is the **canonical scaffold for new solver plugins**. To add support
+for a new solver to driverFOAM:
+
+  1. Copy this file to your own package as ``my_solver_plugin.py``.
+  2. Fill in the identity properties (``plugin_name``, ``plugin_id``, etc.).
+  3. Author a ``plugin.yaml`` (see ``generic-plugin.yaml`` for the template).
+  4. Register an entry-point in your ``pyproject.toml`` under the
+     ``[project.entry-points."driverfoam.plugins"]`` group.
+  5. Follow the full step-by-step guide in:
+     ``.agents/skills/driverfoam-plugin-builder/SKILL.md``
+
+See also ``core/plugin_interface.py`` for the full ``SolverPlugin`` /
+``SolverPluginV2`` / ``SolverPluginOptionalHooks`` contracts.
+"""
 
 from __future__ import annotations
 
@@ -133,12 +148,10 @@ class GenericOpenFOAMPlugin:
 
     def build_run_document_config(self, spec):
         del spec
-        return {
-            "anatomy": {},
-            "physics": {},
-            "stimulus": {},
-            "solver": {},
-        }, ()
+        # Return an empty config — the generic plugin imposes no key structure.
+        # (Contrast with the cardiac plugin which returns anatomy/physics/stimulus/solver.)
+        return {}, ()
+
 
     def get_run_document_config_schema(self) -> dict:
         """No solver semantics means no constraint on the config shape."""
