@@ -185,8 +185,8 @@ design. The trust model is local/single-tenant: it assumes `PATH` and the
 
 See [`SECURITY.md`](SECURITY.md) for the full trust model, output-location
 contract, and the explicit list of what is and is not mitigated. For the
-plugin-boundary compatibility fallbacks (v1 plugin support, legacy shims),
-see `openfoam_driver/core/compatibility.py`.
+plugin-boundary compatibility fallbacks (optional-hook defaults, legacy
+shims), see `openfoam_driver/core/compatibility.py`.
 
 ## Compatibility one-shot loop
 
@@ -839,12 +839,11 @@ contract defined in `openfoam_driver/core/plugin_interface.py`. It creates a
 clean boundary between the generic execution engine and all solver-specific
 knowledge.
 
-Three Protocol classes define the contract:
+Two Protocol classes define the contract:
 
 | Class | Members | Required when |
 |---|---|---|
-| `SolverPlugin` | 14 | Always (v1 baseline) |
-| `SolverPluginV2` | +13 | `plugin_api_version == "2"` |
+| `SolverPlugin` | 27 | Always |
 | `SolverPluginOptionalHooks` | 14 (probe-based) | Never required; enable capabilities |
 
 ### Mandatory files
@@ -855,13 +854,13 @@ Three Protocol classes define the contract:
 | `plugin.yaml` | Manifest: identity, case file rules, optional C++ roots |
 | `pyproject.toml` entry-point | `[project.entry-points."driverfoam.plugins"]` |
 
-### v1 Required Members (all plugins)
+### Required Members (all plugins)
 
 ```python
 plugin_name             # str — human display name
 plugin_id               # str — reverse-DNS id, must match plugin.yaml
 plugin_version          # str — plugin semantics version
-plugin_api_version      # str — "1" or "2"
+plugin_api_version      # str — "2", the only supported contract version
 get_profile()           # PluginProfile from load_plugin_profile("plugin.yaml")
 get_dict_entries()      # tuple[DictEntry, ...] — globally unique driver_paths
 get_dictionary_catalog() # DictionaryCatalog — entries by document name
@@ -872,11 +871,6 @@ get_tutorial_displays() # tuple[TutorialDisplay, ...]
 validate_configuration(spec)   # tuple[StrictDiagnostic, ...]
 validate_run_semantics(context) # tuple[...]
 predict_data_artifacts(case_root, spec) # tuple[DataArtifact, ...]
-```
-
-### v2 Additional Required Members (`plugin_api_version == "2"`)
-
-```python
 get_solver_commands()           # frozenset[str] — artifact-producing binaries
 get_auxiliary_commands()        # frozenset[str] — meshers, decomposers
 get_utility_manifests()         # dict[str, Any]
@@ -891,6 +885,10 @@ get_telemetry_source_globs(command) # tuple[str, ...]
 get_extra_provenance_paths(case_root) # tuple[RuntimeDependency, ...]
 get_artifact_value_reader(format)    # Any | None
 ```
+
+`GenericOpenFOAMPlugin` (`core/generic_plugin.py`) is the canonical scaffold —
+copy it and fill in identity properties; every required member already has a
+neutral implementation to start from.
 
 ### Key Optional Hooks (`SolverPluginOptionalHooks`, probed with `getattr`)
 

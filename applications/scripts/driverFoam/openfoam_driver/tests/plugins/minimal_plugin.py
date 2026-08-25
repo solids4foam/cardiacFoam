@@ -25,7 +25,7 @@ class MinimalOpenFOAMPlugin:
 
     @property
     def plugin_api_version(self) -> str:
-        return "1"
+        return "2"
 
     def get_profile(self) -> PluginProfile:
         return PluginProfile(
@@ -70,6 +70,48 @@ class MinimalOpenFOAMPlugin:
 
     def predict_data_artifacts(self, case_root, spec):
         return ()
+
+    def get_solver_commands(self) -> frozenset[str]:
+        return frozenset()
+
+    def get_auxiliary_commands(self) -> frozenset[str]:
+        return frozenset()
+
+    def get_utility_manifests(self) -> dict:
+        return {}
+
+    def get_utility_roots(self) -> tuple[Path, ...]:
+        return ()
+
+    def resolve_case_models(self, case_root):
+        del case_root
+        return {}
+
+    def get_samplable_fields(self, resolved):
+        del resolved
+        return {}
+
+    def get_override_schema(self, tutorial_name, make_spec_info):
+        del tutorial_name, make_spec_info
+        return {}
+
+    def get_dict_entry_catalog(self):
+        return {}
+
+    def get_solve_step_commands(self) -> frozenset:
+        return frozenset()
+
+    def get_telemetry_source_globs(self, command: str) -> tuple:
+        del command
+        return ()
+
+    def get_extra_provenance_paths(self, case_root) -> tuple:
+        del case_root
+        return ()
+
+    def get_artifact_value_reader(self, artifact_format: str):
+        del artifact_format
+        return None
 
     def get_run_document_config_schema(self) -> dict:
         """No solver semantics means no constraint on the config shape."""

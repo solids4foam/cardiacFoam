@@ -506,7 +506,7 @@ class CaseProvenanceCapability(Protocol):
     and off, and an absent key silently defaults to ``uniform``.
 
     Routed through the capability adapter exactly like every other plugin
-    capability -- deliberately **not** a mandatory ``SolverPluginV2``
+    capability -- deliberately **not** a mandatory ``SolverPlugin``
     member, so existing v2 third-party plugins keep loading. The adapter's
     fallback returns empty for both, which under the resolution precedence
     (a DAG step's ``consumes``, then a plugin's ``required_inputs``, then
@@ -542,7 +542,7 @@ class ReportCatalogCapability(Protocol):
     solver-neutral machinery -- ``ReportDefinition``, the ``applicable_when``
     predicate evaluator, the JSON record shape -- but the *catalog itself*
     (which reports exist, e.g. "Vm field" or "activation map") is
-    solver-specific data. Not a mandatory ``SolverPluginV2`` member, so
+    solver-specific data. Not a mandatory ``SolverPlugin`` member, so
     existing v2 third-party plugins keep loading; the fallback
     (``legacy_report_catalog``) is cardiac-shaped only for the built-in
     cardiac plugin and empty for everyone else -- the honest answer for a
@@ -566,7 +566,7 @@ class NamedCatalogsCapability(Protocol):
     ``ionic_model_catalog``/``active_tension_catalog``) -- core imposes no
     key set, it only namespaces the whole mapping under
     ``describe_entry``'s ``plugin_catalogs`` key and serializes it. Not a
-    mandatory ``SolverPluginV2`` member, so existing v2 third-party plugins
+    mandatory ``SolverPlugin`` member, so existing v2 third-party plugins
     keep loading; the fallback (``legacy_named_catalogs``) is cardiac-shaped
     only for the built-in cardiac plugin and empty for everyone else,
     matching the pattern already used by :class:`ReportCatalogCapability`.
@@ -587,7 +587,7 @@ class OverrideScopeCapability(Protocol):
     Generalizes what was previously a single hardcoded cardiac scope
     (``$ELECTRO_MODEL_COEFFS`` -> ``constant/electroProperties``): core no
     longer assumes there is exactly one scope, or that it lives at that one
-    path. Not a mandatory ``SolverPluginV2`` member, so existing v2
+    path. Not a mandatory ``SolverPlugin`` member, so existing v2
     third-party plugins keep loading; the fallback (``legacy_override_scopes``)
     declares the cardiac plugin's one scope and an empty tuple for everyone
     else, matching the pattern already used by
@@ -612,7 +612,7 @@ class DictRegenerationCapability(Protocol):
     selectors (e.g. cardiacFoam's ``myocardiumSolver``) whose value change
     restructures the file -- renames a sub-block, changes which sibling
     keys are legal -- so a single key/value/scope patch cannot express it.
-    Not a mandatory ``SolverPluginV2`` member, so existing v2 third-party
+    Not a mandatory ``SolverPlugin`` member, so existing v2 third-party
     plugins keep loading; the fallback (``legacy_dict_regeneration_scopes``)
     declares the cardiac plugin's one scope and an empty tuple for everyone
     else, matching :class:`OverrideScopeCapability`.
@@ -1015,10 +1015,10 @@ class PluginCapabilities:
     """Core's focused, internal view over one loaded plugin.
 
     **Direction matters.** This is not an authoring surface. A plugin author
-    implements :class:`~openfoam_driver.core.plugin_interface.SolverPlugin`,
-    ``SolverPluginV2``, and optionally ``SolverPluginOptionalHooks``; this
-    bundle is what *core* holds to consult that plugin, pointing the other
-    way. Nothing here is implemented by a plugin.
+    implements :class:`~openfoam_driver.core.plugin_interface.SolverPlugin`
+    and optionally ``SolverPluginOptionalHooks``; this bundle is what *core*
+    holds to consult that plugin, pointing the other way. Nothing here is
+    implemented by a plugin.
 
     Its purpose is to stop core reaching through ``DriverContext.plugin``
     directly: each field is a narrow seam over one concern, so a core module

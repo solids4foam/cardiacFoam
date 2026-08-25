@@ -12,7 +12,7 @@ for a new solver to driverFOAM:
      ``.agents/skills/driverfoam-plugin-builder/SKILL.md``
 
 See also ``core/plugin_interface.py`` for the full ``SolverPlugin`` /
-``SolverPluginV2`` / ``SolverPluginOptionalHooks`` contracts.
+``SolverPluginOptionalHooks`` contracts.
 """
 
 from __future__ import annotations

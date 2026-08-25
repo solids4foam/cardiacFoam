@@ -29,12 +29,10 @@
 
 """Solver-agnostic plugin contract for driverFOAM.
 
-Three Protocol classes define what a solver plugin must implement:
+Two Protocol classes define what a solver plugin must implement:
 
-- :class:`SolverPlugin` — v1 contract; 14 required members; loaded by
-  :func:`validate_plugin`.
-- :class:`SolverPluginV2` — v2 extension; 13 additional required members,
-  enforced when ``plugin_api_version == "2"``.
+- :class:`SolverPlugin` — the plugin contract; 27 required members,
+  enforced in full by :func:`validate_plugin`.
 - :class:`SolverPluginOptionalHooks` — 14 probe-based optional hooks that
   unlock additional capabilities (sweeps, mesh diagnostics, report catalogs,
   override scopes, …).  **Read this class** to discover all extension points
@@ -102,6 +100,82 @@ class SolverPlugin(Protocol):
     @property
     def plugin_api_version(self) -> str:
         """Version of the driverFOAM plugin contract implemented by this plugin."""
+        ...
+
+    # -- Command authorization -----------------------------------------------
+    def get_solver_commands(self) -> frozenset[str]:
+        """Binaries that produce a run's artifacts. Core's artifact-producer
+        heuristic consults this set alone, never the auxiliary one."""
+        ...
+
+    def get_auxiliary_commands(self) -> frozenset[str]:
+        """Additionally authorized binaries that produce no artifacts of their
+        own -- meshers, decomposers, reconstructors."""
+        ...
+
+    def get_utility_manifests(self) -> dict[str, Any]:
+        """Per-utility declarations of what each pre/post-solve utility
+        consumes and produces, so workflow steps can be checked before they
+        run."""
+        ...
+
+    def get_utility_roots(self) -> tuple["Path", ...]:
+        """Directories holding this plugin's utility sources, for provenance
+        fingerprinting."""
+        ...
+
+    # -- Case introspection ---------------------------------------------------
+    def resolve_case_models(self, case_root: "Path") -> dict[str, Any]:
+        """Best-effort read of a case's on-disk model selections. Must never
+        raise: agents call it against partly-written cases."""
+        ...
+
+    def get_samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+        """Fields the resolved model exposes for sampling by function objects,
+        keyed by region."""
+        ...
+
+    # -- Configuration vocabulary --------------------------------------------
+    def get_override_schema(
+        self, tutorial_name: str, make_spec_info: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Machine-readable description of the ``--config`` JSON an agent may
+        write for this tutorial, including a worked example."""
+        ...
+
+    def get_run_document_config_schema(self) -> dict[str, Any]:
+        """JSON Schema for this plugin's RunDocument ``config`` object. Core
+        validates against it dynamically and reports structured diagnostics,
+        which is what lets an agent repair its own document."""
+        ...
+
+    def get_dict_entry_catalog(self) -> dict[str, Any]:
+        """The plugin's dictionary entries arranged by its own document names,
+        unserialized -- core owns serialization, the plugin owns vocabulary."""
+        ...
+
+    # -- Runtime evidence ------------------------------------------------------
+    def get_solve_step_commands(self) -> frozenset[str]:
+        """Which commands count as the solve step, for telemetry attribution."""
+        ...
+
+    def get_telemetry_source_globs(self, command: str) -> tuple[str, ...]:
+        """Where a given command writes the logs telemetry is parsed from."""
+        ...
+
+    def get_extra_provenance_paths(self, case_root: "Path") -> tuple["RuntimeDependency", ...]:
+        """Run-time dependencies outside the case tree: the solver binary, a
+        linked library, a case-local shared object.
+
+        Returns ``RuntimeDependency`` rather than bare paths so that "required
+        but not found" is expressible. A tuple of paths can only omit, and
+        omission reads as "nothing to check" -- the gap that let a rebuilt
+        solver replay a resumed run's numbers as fresh."""
+        ...
+
+    def get_artifact_value_reader(self, artifact_format: str) -> Any | None:
+        """Reader for a plugin-specific artifact format, or ``None`` if this
+        plugin cannot read that format."""
         ...
 
     def get_profile(self):
@@ -202,98 +276,6 @@ class DriverContext:
         from .plugin_capabilities import adapt_plugin_capabilities
 
         return adapt_plugin_capabilities(self.plugin)
-
-
-@runtime_checkable
-class SolverPluginV2(SolverPlugin, Protocol):
-    """The v2 plugin contract.
-
-    Extends v1 with the members core needs to stay solver-agnostic: command
-    authorization, case introspection, the configuration vocabulary, and the
-    runtime-evidence declarations later phases consume.
-
-    v1 plugins remain loadable. Their missing members are filled by
-    :mod:`openfoam_driver.core.compatibility` fallbacks, which are
-    cardiac-shaped only for the built-in cardiac plugin and empty for anyone
-    else. None of these members appear in ``_REQUIRED_PLUGIN_MEMBERS`` -- that
-    list gates v1 plugins too, and adding them there would break v1 loading.
-    """
-
-    # -- Command authorization -----------------------------------------------
-    def get_solver_commands(self) -> frozenset[str]:
-        """Binaries that produce a run's artifacts. Core's artifact-producer
-        heuristic consults this set alone, never the auxiliary one."""
-        ...
-
-    def get_auxiliary_commands(self) -> frozenset[str]:
-        """Additionally authorized binaries that produce no artifacts of their
-        own -- meshers, decomposers, reconstructors."""
-        ...
-
-    def get_utility_manifests(self) -> dict[str, Any]:
-        """Per-utility declarations of what each pre/post-solve utility
-        consumes and produces, so workflow steps can be checked before they
-        run."""
-        ...
-
-    def get_utility_roots(self) -> tuple["Path", ...]:
-        """Directories holding this plugin's utility sources, for provenance
-        fingerprinting."""
-        ...
-
-    # -- Case introspection ---------------------------------------------------
-    def resolve_case_models(self, case_root: "Path") -> dict[str, Any]:
-        """Best-effort read of a case's on-disk model selections. Must never
-        raise: agents call it against partly-written cases."""
-        ...
-
-    def get_samplable_fields(self, resolved: dict[str, Any]) -> dict[str, tuple[str, ...]]:
-        """Fields the resolved model exposes for sampling by function objects,
-        keyed by region."""
-        ...
-
-    # -- Configuration vocabulary --------------------------------------------
-    def get_override_schema(
-        self, tutorial_name: str, make_spec_info: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Machine-readable description of the ``--config`` JSON an agent may
-        write for this tutorial, including a worked example."""
-        ...
-
-    def get_run_document_config_schema(self) -> dict[str, Any]:
-        """JSON Schema for this plugin's RunDocument ``config`` object. Core
-        validates against it dynamically and reports structured diagnostics,
-        which is what lets an agent repair its own document."""
-        ...
-
-    def get_dict_entry_catalog(self) -> dict[str, Any]:
-        """The plugin's dictionary entries arranged by its own document names,
-        unserialized -- core owns serialization, the plugin owns vocabulary."""
-        ...
-
-    # -- Runtime evidence ------------------------------------------------------
-    def get_solve_step_commands(self) -> frozenset[str]:
-        """Which commands count as the solve step, for telemetry attribution."""
-        ...
-
-    def get_telemetry_source_globs(self, command: str) -> tuple[str, ...]:
-        """Where a given command writes the logs telemetry is parsed from."""
-        ...
-
-    def get_extra_provenance_paths(self, case_root: "Path") -> tuple["RuntimeDependency", ...]:
-        """Run-time dependencies outside the case tree: the solver binary, a
-        linked library, a case-local shared object.
-
-        Returns ``RuntimeDependency`` rather than bare paths so that "required
-        but not found" is expressible. A tuple of paths can only omit, and
-        omission reads as "nothing to check" -- the gap that let a rebuilt
-        solver replay a resumed run's numbers as fresh."""
-        ...
-
-    def get_artifact_value_reader(self, artifact_format: str) -> Any | None:
-        """Reader for a plugin-specific artifact format, or ``None`` if this
-        plugin cannot read that format."""
-        ...
 
 
 @runtime_checkable
@@ -432,11 +414,9 @@ class SolverPluginOptionalHooks(Protocol):
         ...
 
 
-# Plugin contract versions this core can drive. "1" is the original contract,
-# loaded through core.compatibility fallbacks; "2" adds the command
-# authorization, case introspection, override schema, and runtime evidence
-# members. Anything else is refused before any plugin catalog code runs.
-SUPPORTED_PLUGIN_API_VERSIONS: frozenset[str] = frozenset({"1", "2"})
+# The single plugin contract version this core can drive. Anything else is
+# refused before any plugin catalog code runs.
+SUPPORTED_PLUGIN_API_VERSIONS: frozenset[str] = frozenset({"2"})
 
 
 _REQUIRED_PLUGIN_MEMBERS = (
@@ -454,12 +434,6 @@ _REQUIRED_PLUGIN_MEMBERS = (
     "validate_configuration",
     "validate_run_semantics",
     "predict_data_artifacts",
-)
-
-# The v2 contract's members, required of any plugin declaring api_version "2".
-# Deliberately separate from _REQUIRED_PLUGIN_MEMBERS, which gates v1 plugins
-# too -- adding these there would break v1 loading.
-_REQUIRED_V2_MEMBERS = (
     "get_solver_commands",
     "get_auxiliary_commands",
     "get_utility_manifests",
@@ -504,39 +478,24 @@ def validate_plugin(plugin: Any) -> SolverPlugin:
             "not supported; this driverFOAM core drives "
             f"{sorted(SUPPORTED_PLUGIN_API_VERSIONS)}"
         )
-    # A declared version must be honoured, not merely well-formed. Without
-    # this, a plugin claiming "2" while missing v2 members silently falls back
-    # to the v1 compatibility path -- and for a cardiac-id plugin those
-    # fallbacks are cardiac-shaped, so a partial migration would be invisible.
-    if plugin.plugin_api_version == "2":
-        missing_v2 = [
-            name for name in _REQUIRED_V2_MEMBERS if not callable(getattr(plugin, name, None))
-        ]
-        if missing_v2:
-            raise TypeError(
-                "SolverPlugin declares plugin_api_version '2' but does not "
-                "implement the v2 contract; missing: "
-                + ", ".join(sorted(missing_v2))
-            )
     if not _PLUGIN_ID_RE.fullmatch(plugin.plugin_id):
         raise TypeError(
             "SolverPlugin.plugin_id must use lowercase letters, digits, dots, "
             "or hyphens and cannot start or end with punctuation"
         )
-    for name in (
-        "get_dict_entries",
-        "get_dictionary_catalog",
-        "get_dict_groups",
-        "get_capabilities",
-        "get_tutorial_catalog",
-        "get_tutorial_displays",
-        "validate_configuration",
-        "validate_run_semantics",
-        "predict_data_artifacts",
-        "get_profile",
-    ):
-        if not callable(getattr(plugin, name)):
-            raise TypeError(f"SolverPlugin.{name} must be callable")
+    # A member's presence is not enough -- it must be callable. Collected as
+    # one batch rather than raised on the first miss, so a partial
+    # implementation is reported completely instead of one name at a time.
+    non_callable = [
+        name for name in _REQUIRED_PLUGIN_MEMBERS
+        if name not in ("plugin_name", "plugin_id", "plugin_version", "plugin_api_version")
+        and not callable(getattr(plugin, name, None))
+    ]
+    if non_callable:
+        raise TypeError(
+            "SolverPlugin does not implement the plugin contract; missing: "
+            + ", ".join(sorted(non_callable))
+        )
     return plugin
 
 

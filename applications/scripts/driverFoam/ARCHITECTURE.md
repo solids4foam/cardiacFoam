@@ -36,7 +36,7 @@
   `report_catalog.py`, `introspection.py`'s `plugin_catalogs` namespacing).
 - **`SolverPlugin` is a project adapter, not merely a solver adapter.** It represents an entire OpenFOAM project integration (tutorials, dictionary catalog, artifact predictions, command authorization, sweep strategy), not a single solver executable. The name understates its scope.
 - **`DriverContext` is a well-designed injection container.** It replaced a global mutable plugin state and is correctly scoped per-operation. This is a genuine architectural improvement.
-- **The compatibility layer (`core/compatibility.py`) is the clearest record of what still leaks.** Most functions there preserve cardiac-shaped legacy behaviour; a few return neutral empty values for non-cardiac v1 plugins. It is a migration boundary, not a clean generic abstraction.
+- **The compatibility layer (`core/compatibility.py`) is the clearest record of what still leaks.** Most functions there preserve cardiac-shaped legacy behaviour for optional hooks; they return neutral empty values for every other plugin. It is a migration boundary, not a clean generic abstraction.
 - **The canonical `RunDocument` was the most consequential leak; the `config`
   property itself is now fixed.** As of commit `73ca43f7` (P2.2), the core
   JSON schema's `config` property is an open object
@@ -123,7 +123,7 @@ applications/scripts/driverFoam/
 │   ├── capability_manifest.py        ← Build the plan's capability manifest
 │   │
 │   ├── core/                         ← Generic driver engine
-│   │   ├── plugin_interface.py       ← SolverPlugin (Protocol), DriverContext, SolverPluginV2
+│   │   ├── plugin_interface.py       ← SolverPlugin (Protocol), DriverContext
 │   │   ├── plugin_capabilities.py    ← PluginCapabilities (focused capability bundle)
 │   │   ├── plugin_discovery.py       ← Entry-point discovery (driverfoam.plugins group)
 │   │   ├── plugin_profile.py         ← PluginProfile, CaseFileRule, CxxMapping (YAML)
@@ -153,7 +153,7 @@ applications/scripts/driverFoam/
 │   │
 │   ├── plugins/                      ← Project-specific integrations
 │   │   ├── __init__.py
-│   │   ├── cardiacfoam_plugin.py     ← CardiacFoamPlugin (SolverPluginV2 implementation)
+│   │   ├── cardiacfoam_plugin.py     ← CardiacFoamPlugin (SolverPlugin implementation)
 │   │   └── cardiacfoam/              ← cardiacFoam domain code
 │   │       ├── plugin.yaml           ← Profile: case files, C++ source roots, allowlist
 │   │       ├── detection.py          ← detect_myocardium_solver_name, detect_ionic_model_name, etc. (moved from specs/, P2.5, `e137b390`)
@@ -521,7 +521,7 @@ stateDiagram-v2
 ```mermaid
 graph TB
     subgraph MyProject["mySolverProject/"]
-        MP["myPlugin.py\nimplements SolverPlugin v2"]
+        MP["myPlugin.py\nimplements SolverPlugin"]
         MPY["pyproject.toml\n[driverfoam.plugins]\nmysolver = myPlugin:MySolverPlugin"]
         MTUT["tutorials/\nmySolverCase/\n  Allrun\n  workflow_contract.json\n  constant/ system/ 0/"]
         MPYAML["plugin.yaml\n(case_profile.dictionaries,\ncxx_mapping optional)"]
@@ -642,7 +642,6 @@ score.
 | `make_spec` | Factory function producing a `TutorialSpec` | Misleading | `make_case_spec` | No longer "spec" in the sense of specification document; it's a case execution spec |
 | `generic_case.py` | Core module for arbitrary OpenFOAM case-folder execution | Acceptable | `case_factory.py` | "generic" is clear but `case_factory` is more descriptive |
 | `compatibility.py` | Named Plan-1 cardiac fallbacks | Good | — | Clear intent; Plan 2 seams are documented |
-| `SolverPluginV2` | Extended plugin contract with command authorization, case introspection, override schema | Reasonable | `ProjectPluginV2` | Same reason as `SolverPlugin` |
 | `CapabilityManifest` (Protocol) | Opaque object returned by `get_capabilities()` — solver/project capabilities for the plan | Vague | `ProjectCapabilitiesManifest` | Should clarify it is the project's capability surface |
 | `CORE_NEUTRAL_COMMANDS` | OpenFOAM utilities always allowed regardless of plugin | Good | — | Accurately named; "neutral" = neither solver nor case-script |
 | `detect_myocardium_solver_name` | Parse `electroProperties` for `myocardiumSolver` value | **Project-specific** — **moved out of `specs/` (P2.5, `e137b390`)** | Now `plugins/cardiacfoam/detection.py` | This is a cardiacFoam dictionary key, not a generic OpenFOAM concept; see §6's `plugins/cardiacfoam/detection.py` rows |
@@ -729,7 +728,7 @@ More precisely:
 |---|---|---|---|
 | `core/plugin_interface.py::default_driver_context()` | Imports `CardiacFoamPlugin` | Historical default — no plugin selection used to mean cardiacFoam | **Architectural smell** — creates implicit cardiacFoam coupling at the entry point |
 | `core/compatibility.py::legacy_default_driver_context()` | Instantiates `CardiacFoamPlugin` | Named Plan-1 compat boundary | **Acceptable for now** — documented and named |
-| `core/compatibility.py::legacy_resolve_case_models()` | Branches on `plugin_id == "org.cardiacfoam"` | v1 plugins predate `resolve_case_models()` | **Architectural smell** — hardcodes `org.cardiacfoam` as special |
+| `core/compatibility.py::legacy_resolve_case_models()` | Branches on `plugin_id == "org.cardiacfoam"` | Only the built-in cardiac plugin implements this optional hook directly | **Architectural smell** — hardcodes `org.cardiacfoam` as special |
 | `core/compatibility.py::legacy_solver_commands()` | Same branch on `plugin_id == "org.cardiacfoam"` | Same reason | **Architectural smell** |
 | `core/runtime/generic_case.py::make_spec()` | ~~Parameters `electro_property_overrides`, `physics_property_overrides`, `electro_properties_relpath`, `physics_properties_relpath`~~ Resolved (P2.6) — the signature now takes `dict_file_relpaths` / `dict_file_overrides`, and `TutorialSpec.metadata` carries `dict_file_relpaths` / `has_default_dict_file_overrides` | Historical: generic factory was originally the cardiac factory | **Resolved** — the cardiac names remain only as deprecated aliases and default values sourced from the named `core/compatibility.py` seam |
 | `core/runtime/generic_case.py::make_spec()` | `_apply_case_mutation` fallback to `legacy_generic_case_mutation` | Must preserve cardiac apply-case behaviour for existing callers | **Architectural smell** — generic case factory has a cardiac default |
@@ -806,7 +805,7 @@ graph TB
 | `generic_case.py::make_spec()` has cardiac parameter names | **Missing** — not generalised | P0 |
 | `default_driver_context()` defaults to cardiacFoam | **Missing** — needs explicit-or-env default | P1 |
 | `compatibility.py` hardcodes `plugin_id == "org.cardiacfoam"` | **Partially solved** — named boundary exists, but coupling remains | P1 |
-| Plugin contract (`SolverPlugin` v1/v2) | **Already solved** — protocol + validation exists | ✅ Done |
+| Plugin contract (`SolverPlugin`) | **Already solved** — protocol + validation exists | ✅ Done |
 | Entry-point discovery (`driverfoam.plugins`) | **Already solved** | ✅ Done |
 | `DriverContext` per-operation scoping | **Already solved** — replaced global state | ✅ Done |
 | `PluginCapabilities` focused seams | **Already solved** | ✅ Done |
@@ -883,7 +882,7 @@ registration is a packaging requirement, not a member of the Python protocol.
 Passing `validate_plugin()` proves structural conformance only; it does not prove
 that returned values have useful semantics or that the plugin is portable.
 
-1. **A Python class implementing `SolverPlugin` v2.** Must provide all members in `_REQUIRED_PLUGIN_MEMBERS` and `_REQUIRED_V2_MEMBERS`.
+1. **A Python class implementing `SolverPlugin`.** Must provide all members in `_REQUIRED_PLUGIN_MEMBERS`.
 2. **`plugin_name`, `plugin_id`, `plugin_api_version`, `plugin_version`** — string identity fields. `plugin_id` must match `plugin.yaml`.
 3. **`get_profile()`** — returns a `PluginProfile` loaded from a `plugin.yaml` file. At minimum, this YAML must declare `schema_version: 1`, `plugin.id`, `plugin.api_version`, and `case_profile.dictionaries` (may be empty).
 4. **`get_dict_entries()`** — returns a tuple of `DictEntry` objects describing the project's dictionary keys. May be empty `()` for a project with no custom dictionaries.
@@ -971,7 +970,7 @@ mySolverProject/
 │           └── U
 │
 ├── driver/
-│   ├── myproject_plugin.py        ← implements SolverPlugin v2
+│   ├── myproject_plugin.py        ← implements SolverPlugin
 │   ├── plugin.yaml                ← case profile + optional cxx_mapping
 │   ├── tutorials/
 │   │   └── mybasiccase.py         ← make_spec() factory (optional)
@@ -1140,7 +1139,7 @@ empty four-section config is only a compatibility shim.
 
 **Answer: YES, with one workaround.**
 
-The workaround: Project A must supply `has_case_marker()` returning `False` (or returning `True` only for its own cases), otherwise `compatibility.py::legacy_case_marker()` will look for `electroProperties`, which Project A doesn't have. Since v1 plugin compatibility defaults to the cardiac marker, Project A's case folders will not be discovered by `_is_case_directory()` unless it provides `has_case_marker()` (v2) or `workflow_contract.json` / `Allrun`.
+The workaround: Project A must supply `has_case_marker()` returning `False` (or returning `True` only for its own cases), otherwise `compatibility.py::legacy_case_marker()` will look for `electroProperties`, which Project A doesn't have. Since the optional-hook fallback defaults to the cardiac marker for any plugin that omits it, Project A's case folders will not be discovered by `_is_case_directory()` unless it provides `has_case_marker()` or `workflow_contract.json` / `Allrun`.
 
 **If Project A's cases have `Allrun` or `workflow_contract.json`:** works today with no changes.
 **If Project A's cases have neither (relying only on custom dictionary detection):** requires v2 plugin with `has_case_marker()`.
@@ -1250,7 +1249,7 @@ The following documents should exist for a new developer to understand and integ
 | Item | Description | Effort |
 |---|---|---|
 | Remove or configure `default_driver_context()` | The default should be explicit. Consider requiring `--plugin` in the CLI (with a `DRIVERFOAM_PLUGIN` env var override) or making `--plugin cardiacfoam` the explicit default with a visible deprecation warning. | Small |
-| Remove `plugin_id == "org.cardiacfoam"` branching from `compatibility.py` | Replace with generic empty-result fallbacks for all v1 plugins. The cardiac plugin should declare its own commands, models, and resolution via v2 members. | Medium |
+| Remove `plugin_id == "org.cardiacfoam"` branching from `compatibility.py` | Replace with generic empty-result fallbacks for every plugin. The cardiac plugin should implement these optional hooks directly instead of riding the compatibility fallback. | Medium |
 | Generalise `paths.py::repo_root_default()` | Prefer an explicit CLI/config/environment root and package resources; retain ancestor discovery only as a documented source-checkout convenience. | Small |
 | Rename `SolverPlugin` → `ProjectPlugin` | Requires updating the protocol name, all imports, documentation, and the public-facing CLI help text. | Medium (mostly mechanical) |
 | Rename `TutorialSpec` → `CaseSpec` | Same — internal and external references. | Medium |
@@ -1305,7 +1304,7 @@ tests that can fail:
 
 **If you have your own OpenFOAM solver repository, here is what you need to build for driverFoam to drive it:**
 
-1. **A Python class** implementing the `SolverPlugin` v2 structural contract — four identity properties plus 22 methods. Many methods may return empty values, but empty conformance is not the same as useful integration.
+1. **A Python class** implementing the `SolverPlugin` structural contract — four identity properties plus 23 methods. Many methods may return empty values, but empty conformance is not the same as useful integration.
 
 2. **A `plugin.yaml` file** listing which dictionary files your case requires (e.g. `controlDict`, `fvSchemes`, your solver-specific config files).
 
@@ -1341,7 +1340,7 @@ tests that can fail:
      hand. The source of truth is the structured field block in each
      capability Protocol's docstring in core/plugin_capabilities.py. -->
 
-`SolverPlugin` (and `SolverPluginV2`, plus the optional
+`SolverPlugin` (plus the optional
 `SolverPluginOptionalHooks`) in `core/plugin_interface.py` is the **public**
 contract a plugin author implements. `PluginCapabilities` in
 `core/plugin_capabilities.py` is core's **internal** view *over* a loaded

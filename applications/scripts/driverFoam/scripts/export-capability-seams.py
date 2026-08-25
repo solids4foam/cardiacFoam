@@ -137,7 +137,7 @@ def render(seams: list[Seam]) -> str:
         "     hand. The source of truth is the structured field block in each",
         "     capability Protocol's docstring in core/plugin_capabilities.py. -->",
         "",
-        "`SolverPlugin` (and `SolverPluginV2`, plus the optional",
+        "`SolverPlugin` (plus the optional",
         "`SolverPluginOptionalHooks`) in `core/plugin_interface.py` is the **public**",
         "contract a plugin author implements. `PluginCapabilities` in",
         "`core/plugin_capabilities.py` is core's **internal** view *over* a loaded",

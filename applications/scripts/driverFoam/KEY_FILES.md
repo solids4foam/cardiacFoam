@@ -9,9 +9,9 @@ Quick navigational map for every reader type. All paths are relative to
 
 | File | Role |
 |---|---|
-| `openfoam_driver/core/plugin_interface.py` | **Start here.** Defines `SolverPlugin` (v1), `SolverPluginV2`, `SolverPluginOptionalHooks`, `DriverContext`, and `validate_plugin()`. |
+| `openfoam_driver/core/plugin_interface.py` | **Start here.** Defines `SolverPlugin` (the single 27-member contract), `SolverPluginOptionalHooks`, `DriverContext`, and `validate_plugin()`. |
 | `openfoam_driver/core/plugin_capabilities.py` | 17 capability Protocol classes + adapter dataclasses + `adapt_plugin_capabilities()`. Every plugin capability seam is documented here. |
-| `openfoam_driver/core/compatibility.py` | Backward-compatibility shims: provides cardiac-shaped fallbacks for v1 plugins; neutral fallbacks for all other plugins. |
+| `openfoam_driver/core/compatibility.py` | Backward-compatibility shims for optional-hook capabilities: cardiac-shaped fallbacks for the built-in cardiac plugin, neutral fallbacks for every other plugin. |
 | `openfoam_driver/core/plugin_discovery.py` | Entry-point discovery via `importlib.metadata`. Explains `driverfoam.plugins` group name, ambiguity handling, and `_entry_points()` test seam. |
 | `openfoam_driver/strict_planning.py` | The strict planner: `strict_plan()` / `foamctl plan --strict`. Non-mutating; produces machine-readable JSON with readiness score, diagnostics, and launch command. |
 | `openfoam_driver/cli.py` | `foamctl` / `driverFoam` CLI entry-point. All public subcommands are here. |
@@ -27,25 +27,25 @@ Quick navigational map for every reader type. All paths are relative to
 
 | File | Role | Why you must read it |
 |---|---|---|
-| `openfoam_driver/core/generic_plugin.py` | **Canonical scaffold.** Copy this file as `my_solver_plugin.py`. | Shows every required v1+v2 method with minimal stubs. |
+| `openfoam_driver/core/generic_plugin.py` | **Canonical scaffold.** Copy this file as `my_solver_plugin.py`. | Shows every required method with minimal stubs. |
 | `openfoam_driver/core/generic-plugin.yaml` | Minimal `plugin.yaml` template. | Documents all valid `kind`, `role`, `required` values inline. |
 | `openfoam_driver/plugins/cardiacfoam/plugin.yaml` | Full `plugin.yaml` example. | Shows `cxx_mapping`, `reviewed_allowlist`, real dictionary list. |
-| `openfoam_driver/plugins/cardiacfoam_plugin.py` | Full v2 plugin reference (428 lines). | Shows all method signatures, `@lru_cache`, `@staticmethod get_profile()`, catalog patterns. |
+| `openfoam_driver/plugins/cardiacfoam_plugin.py` | Full plugin reference (428 lines). | Shows all method signatures, `@lru_cache`, `@staticmethod get_profile()`, catalog patterns. |
 | `openfoam_driver/core/contracts/dictionary.py` | `DictEntry` dataclass — the vocabulary unit. | Every dictionary key your solver reads must be a `DictEntry`. |
 | `openfoam_driver/core/contracts/dictionary_catalog.py` | `DictionaryCatalog` — immutable partitioned store. | Return from `get_dictionary_catalog()`; validates uniqueness at construction. |
 | `pyproject.toml` | Entry-point registration. | You must add your plugin under `[project.entry-points."driverfoam.plugins"]`. |
-| `openfoam_driver/core/plugin_interface.py` | Full contract definition. | Read `SolverPlugin`, `SolverPluginV2`, and `SolverPluginOptionalHooks`. |
+| `openfoam_driver/core/plugin_interface.py` | Full contract definition. | Read `SolverPlugin` and `SolverPluginOptionalHooks`. |
 
 ### Plugin Contract Quick Reference
 
-**v1 Required (14 members — all plugins)**
+**Required (27 members — all plugins)**
 
 | Member | Returns |
 |---|---|
 | `plugin_name` | `str` — human display name |
 | `plugin_id` | `str` — reverse-DNS id, matches `plugin.yaml` |
 | `plugin_version` | `str` — plugin semantics version |
-| `plugin_api_version` | `str` — `"1"` or `"2"` |
+| `plugin_api_version` | `str` — `"2"`, the only supported contract version |
 | `get_profile()` | `PluginProfile` loaded from `plugin.yaml` |
 | `get_dict_entries()` | `tuple[DictEntry, ...]` — flat; unique `driver_path` |
 | `get_dictionary_catalog()` | `DictionaryCatalog` — entries by document name |
@@ -56,11 +56,6 @@ Quick navigational map for every reader type. All paths are relative to
 | `validate_configuration(spec)` | `tuple[StrictDiagnostic, ...]` — plan-time checks |
 | `validate_run_semantics(context)` | `tuple[...]` — execution-time checks |
 | `predict_data_artifacts(case_root, spec)` | `tuple[DataArtifact, ...]` — never raise |
-
-**v2 Additional Required (13 members — when `plugin_api_version == "2"`)**
-
-| Member | Returns |
-|---|---|
 | `get_solver_commands()` | `frozenset[str]` — artifact-producing binaries |
 | `get_auxiliary_commands()` | `frozenset[str]` — meshers, decomposers |
 | `get_utility_manifests()` | `dict[str, Any]` — per-utility pre-flight declarations |

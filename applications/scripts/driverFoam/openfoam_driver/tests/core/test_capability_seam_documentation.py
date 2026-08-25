@@ -60,11 +60,10 @@ def _fields(field: str) -> dict[str, str]:
 
 
 def _plugin_members() -> set[str]:
-    """Every member a plugin may legitimately expose, across all three protocols."""
+    """Every member a plugin may legitimately expose, across both protocols."""
     members: set[str] = set()
     for protocol in (
         plugin_interface.SolverPlugin,
-        plugin_interface.SolverPluginV2,
         plugin_interface.SolverPluginOptionalHooks,
     ):
         members |= {name for name in dir(protocol) if not name.startswith("_")}
@@ -101,7 +100,7 @@ def test_adapts_names_real_plugin_members(field: str) -> None:
     for member in (item.strip() for item in declared.split(",")):
         assert member in members, (
             f"{name} :adapts: names {member!r}, which is not a member of "
-            "SolverPlugin, SolverPluginV2, or SolverPluginOptionalHooks"
+            "SolverPlugin or SolverPluginOptionalHooks"
         )
 
 

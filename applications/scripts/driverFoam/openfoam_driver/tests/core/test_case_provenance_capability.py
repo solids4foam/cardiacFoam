@@ -53,7 +53,7 @@ def test_generic_plugin_declares_no_generated_outputs(tmp_path: Path) -> None:
 def test_a_v1_plugin_with_no_hooks_gets_the_empty_fallback(tmp_path: Path) -> None:
     """A plugin that predates this capability -- v1 or a v2 third-party
     plugin that never implemented it -- must still load and adapt cleanly.
-    CaseProvenanceCapability is not a mandatory SolverPluginV2 member."""
+    CaseProvenanceCapability is not a mandatory SolverPlugin member."""
     context = driver_context(MinimalOpenFOAMPlugin(), source="test")
     assert context.capabilities.case_provenance.required_inputs(tmp_path, {}, "0") == ()
     assert context.capabilities.case_provenance.generated_output_globs(tmp_path, {}, "0") == ()
