@@ -82,6 +82,17 @@ def test_plan_then_run_document_round_trip_executes() -> None:
         assert payload["steps"]
         assert payload["steps"][0]["status"] == "ok"
 
+        case_record_path = Path(payload["case_record_path"])
+        assert case_record_path.exists()
+        case_record = json.loads(case_record_path.read_text())
+        run_document = json.loads(doc_path.read_text())
+        # setup_root flows from the RunDocument's own launch.setupRoot into
+        # the standalone case record -- an agent can discover this case's
+        # postprocess scripts the same way it already can for a sweep case.
+        # This fixture's case has no setup/ directory on disk, so check
+        # round-trip fidelity against the RunDocument rather than existence.
+        assert case_record["setup_root"] == run_document["launch"]["setupRoot"]
+
 
 def test_step_via_run_document_executes_named_step() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:

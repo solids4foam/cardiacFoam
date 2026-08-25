@@ -69,6 +69,7 @@ class _ExecutionContext:
     case_root: Path
     output_dir: Path
     expected_artifacts: tuple
+    setup_root: Path | None = None
     environment_diagnostics: tuple[StrictDiagnostic, ...] = ()
     execution_env: dict[str, str] | None = None
     source_path: str | None = None
@@ -273,6 +274,7 @@ def _execute_run(
     output_dir: Path,
     expected_artifacts,
     tail_lines: int,
+    setup_root: Path | None = None,
     execution_env: dict[str, str] | None = None,
     max_total_attempts: int | None = None,
 ) -> int:
@@ -353,7 +355,7 @@ def _execute_run(
             "message": f"workflow did not complete (status={status}); postprocess not run",
         }
     case_record = build_standalone_case_record(
-        entry=entry_label, case_root=case_root, setup_root=None, output_dir=output_dir,
+        entry=entry_label, case_root=case_root, setup_root=setup_root, output_dir=output_dir,
     )
     case_record_path = output_dir / "case_record.json"
     write_case_record(case_record_path, case_record)
@@ -409,6 +411,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
         explicit_bashrc=args.openfoam_bashrc,
         driver_context=driver_context,
     ).env
+    setup_root_raw = (run_doc.launch or {}).get("setupRoot")
     return _ExecutionContext(
         entry_label=run_doc.name,
         workflow_dag=inputs.workflow_dag,
@@ -416,6 +419,7 @@ def _context_from_run_document(args, driver_context) -> _ExecutionContext | None
         case_root=inputs.case_root,
         output_dir=inputs.output_dir,
         expected_artifacts=inputs.expected_artifacts,
+        setup_root=Path(setup_root_raw) if setup_root_raw else None,
         environment_diagnostics=_environment_diagnostics(
             inputs.workflow_dag,
             openfoam_bashrc=args.openfoam_bashrc,
@@ -501,6 +505,7 @@ def _context_from_entry(
             case_root=Path(report.launch["case_root"]),
             output_dir=Path(report.launch["output_dir"]),
             expected_artifacts=report.expected_artifacts,
+            setup_root=Path(report.launch["setup_root"]),
             environment_diagnostics=report.environment_diagnostics,
             execution_env=execution_env,
         ),
@@ -544,6 +549,7 @@ def _dispatch_context(args, context: _ExecutionContext) -> int:
         case_root=context.case_root,
         output_dir=context.output_dir,
         expected_artifacts=context.expected_artifacts,
+        setup_root=context.setup_root,
         tail_lines=args.tail_lines,
         execution_env=context.execution_env,
         max_total_attempts=args.max_total_attempts,
