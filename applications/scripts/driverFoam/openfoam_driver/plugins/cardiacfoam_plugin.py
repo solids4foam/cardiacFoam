@@ -316,9 +316,22 @@ class CardiacFoamPlugin:
             from openfoam_driver.plugins.cardiacfoam.validation import (
                 _evaluate_pvj_resistance_requirement,
             )
-            diagnostics.extend(
-                _evaluate_pvj_resistance_requirement(case_root, electro_path)
-            )
+            try:
+                diagnostics.extend(
+                    _evaluate_pvj_resistance_requirement(case_root, electro_path)
+                )
+            except KeyError as exc:
+                # This re-parses electroProperties, so it re-raises the same
+                # KeyError detect_myocardium_solver_name already reported as
+                # missing_solver above. Letting it escape would take the whole
+                # strict plan down with a traceback: the caller gets zero bytes
+                # on stdout and has to read English off stderr, when every
+                # other failure -- including a missing ionicModel -- answers
+                # with a JSON document. Failing is right; failing outside the
+                # contract is not.
+                diagnostics.append(_diagnostic(
+                    "error", "missing_solver", str(exc), source=str(electro_path),
+                ))
 
         return tuple(diagnostics)
 
