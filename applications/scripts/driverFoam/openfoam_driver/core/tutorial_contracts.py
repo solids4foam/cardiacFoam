@@ -38,10 +38,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .core.runtime.models import TutorialSpec
+from .runtime.models import TutorialSpec
 
 if TYPE_CHECKING:
-    from .core.plugin_interface import DriverContext
+    from .plugin_interface import DriverContext
 
 
 def _existing_relpaths(case_root: Path, candidates: tuple[str, ...]) -> list[str]:

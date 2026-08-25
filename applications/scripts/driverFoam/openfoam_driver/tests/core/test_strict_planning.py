@@ -38,7 +38,7 @@ import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver import strict_planning
+from openfoam_driver.core import strict_planning
 from openfoam_driver.cli import main
 from openfoam_driver.scripts._dict_keys_scanner import (
     compute_dict_key_drift,
@@ -48,7 +48,7 @@ from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 from types import SimpleNamespace
 
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.strict_planning import (
+from openfoam_driver.core.strict_planning import (
     StrictPlanReport,
     _is_nondimensional_entry,
     _mesh_geometry_diagnostics,
@@ -461,7 +461,7 @@ def test_batched_ionic_model_does_not_require_optional_batched_keys():
     neither key, which is legal.
     """
     from openfoam_driver.core.plugin_interface import default_driver_context
-    from openfoam_driver import strict_planning as sp
+    from openfoam_driver.core import strict_planning as sp
 
     context = default_driver_context()
     report = sp.strict_plan(
@@ -488,7 +488,7 @@ def test_electromechanics_is_advertised_as_not_working_while_it_is_not():
     from something that now works.
     """
     from openfoam_driver.core.plugin_interface import default_driver_context
-    from openfoam_driver import strict_planning as sp
+    from openfoam_driver.core import strict_planning as sp
     from openfoam_driver.plugins.cardiacfoam.tutorials.display import TUTORIALS
 
     entry = "manufacturedMonodomainTotalLagrangianEM"

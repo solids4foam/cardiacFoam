@@ -13,7 +13,7 @@ Quick navigational map for every reader type. All paths are relative to
 | `openfoam_driver/core/plugin_capabilities.py` | 17 capability Protocol classes + adapter dataclasses + `adapt_plugin_capabilities()`. Every plugin capability seam is documented here. |
 | `openfoam_driver/core/compatibility.py` | Backward-compatibility shims for optional-hook capabilities: cardiac-shaped fallbacks for the built-in cardiac plugin, neutral fallbacks for every other plugin. |
 | `openfoam_driver/core/plugin_discovery.py` | Entry-point discovery via `importlib.metadata`. Explains `driverfoam.plugins` group name, ambiguity handling, and `_entry_points()` test seam. |
-| `openfoam_driver/strict_planning.py` | The strict planner: `strict_plan()` / `driverFoam plan --strict`. Non-mutating; produces machine-readable JSON with readiness score, diagnostics, and launch command. |
+| `openfoam_driver/core/strict_planning.py` | The strict planner: `strict_plan()` / `driverFoam plan --strict`. Non-mutating; produces machine-readable JSON with readiness score, diagnostics, and launch command. |
 | `openfoam_driver/cli.py` | `driverFoam` / `driverFoam` CLI entry-point. All public subcommands are here. |
 | `ARCHITECTURE.md` | Deep architectural review: layer map, claim discipline, coupling analysis, runtime flow diagrams. ~1400 lines. Read §3 and §4.5 first. |
 | `CHANGELOG.md` | History of contract changes per phase. |

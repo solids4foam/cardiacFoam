@@ -35,38 +35,38 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .core.plugin_interface import DriverContext
+    from .plugin_interface import DriverContext
 
 
-from .core.runtime.artifacts import predict_data_artifacts
-from .core.runtime.environment_preflight import (
+from .runtime.artifacts import predict_data_artifacts
+from .runtime.environment_preflight import (
     _environment_diagnostics,
     _required_executables,
     _unwrap_mpi_program,
     shutil,
 )
-from .core.runtime.execution_context import resolve_execution_context
-from .core.runtime.models import DataArtifact
-from .core.runtime.registry import load_entry_spec
-from .core.runtime.run_document_adapter import _run_document_from_case
-from .core.runtime.run_model import RunDocument
-from .core.runtime.strict_audit import _build_simulation_audit
-from .core.runtime.workflow import (
+from .runtime.execution_context import resolve_execution_context
+from .runtime.models import DataArtifact
+from .runtime.registry import load_entry_spec
+from .runtime.run_document_adapter import _run_document_from_case
+from .runtime.run_model import RunDocument
+from .runtime.strict_audit import _build_simulation_audit
+from .runtime.workflow import (
     WorkflowDiagnostic,
     normalize_workflow_dag,
     validate_workflow_commands,
     workflow_output_artifacts,
 )
-from .core.runtime.workflow_state import WorkflowRunState, initial_workflow_state
-from .planning_types import (
+from .runtime.workflow_state import WorkflowRunState, initial_workflow_state
+from openfoam_driver.core.planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,
     artifact_to_json as _artifact_to_json,
     diagnostic as _diagnostic,
 )
-from .scripts._dict_keys_scanner import strict_dict_key_report
-from .specs.function_object_fields import function_object_field_diagnostics
-from .specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
+from ..scripts._dict_keys_scanner import strict_dict_key_report
+from ..specs.function_object_fields import function_object_field_diagnostics
+from ..specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 
 
 @dataclass(frozen=True)
@@ -166,7 +166,7 @@ def _utility_produces_by_command(
 ) -> dict[str, tuple[str, ...]]:
     """The active plugin's utilities, keyed to the artifacts they declare."""
 
-    from .capability_manifest import utility_produces
+    from openfoam_driver.core.capability_manifest import utility_produces
 
     return utility_produces(
         driver_context.capabilities.command_authorization.utility_manifests()
@@ -179,7 +179,7 @@ def _artifact_diagnostics(
     workflow_dag: dict[str, Any] | None,
     driver_context: "DriverContext",
 ) -> tuple[StrictDiagnostic, ...]:
-    from .core.runtime.workflow import validate_workflow_commands
+    from .runtime.workflow import validate_workflow_commands
 
     diagnostics: list[StrictDiagnostic] = []
     case_root = Path(spec.case_root)
@@ -194,7 +194,7 @@ def _artifact_diagnostics(
 
     # Defer domain-specific validation to the selected capability while
     # preserving the public plugin call and diagnostic order.
-    from .core.plugin_capabilities import ConfigurationValidationRequest
+    from .plugin_capabilities import ConfigurationValidationRequest
 
     diagnostics.extend(
         driver_context.capabilities.configuration_validator.validate(
@@ -258,7 +258,7 @@ def _is_nondimensional_entry(spec, driver_context=None) -> bool:
     haystack = f"{entry_name} {family}".lower()
     if "manufactured" in haystack or "verification" in haystack:
         return True
-    from .core.compatibility import resolve_public_driver_context
+    from .compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     return driver_context.capabilities.mesh_diagnostic_policy.is_nondimensional(spec)
@@ -279,7 +279,7 @@ def _mesh_geometry_diagnostics(
     """
     if exempt or "SKIP_MESH_DIAGNOSTICS" in os.environ:
         return ()
-    from .core.compatibility import resolve_public_driver_context
+    from .compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     detected = list(_detect_mesh_geometry(Path(case_root)))
@@ -347,7 +347,7 @@ def strict_plan(
     driver_context: "DriverContext | None" = None,
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
-    from .core.compatibility import resolve_public_driver_context
+    from .compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     spec = load_entry_spec(

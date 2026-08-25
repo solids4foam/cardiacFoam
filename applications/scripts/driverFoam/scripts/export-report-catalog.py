@@ -28,7 +28,7 @@
 
 """Export the active plugin's report catalog to JSON.
 
-Backend authors report definitions against ``openfoam_driver/report_catalog.py``'s
+Backend authors report definitions against ``openfoam_driver/core/report_catalog.py``'s
 ``ReportDefinition`` record; each plugin owns its own catalog (the built-in
 cardiac plugin's lives at ``openfoam_driver/plugins/cardiacfoam/reports.py``)
 and this script writes it to a stable JSON catalog for external consumers.
@@ -50,7 +50,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from openfoam_driver.report_catalog import to_record  # noqa: E402
+from openfoam_driver.core.report_catalog import to_record  # noqa: E402
 
 
 def build_catalog(plugin: str | None) -> dict:

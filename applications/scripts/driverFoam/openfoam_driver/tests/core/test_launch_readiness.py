@@ -20,7 +20,7 @@ from openfoam_driver.core.runtime.launch_readiness import (
     is_execution_successful,
     is_launchable,
 )
-from openfoam_driver.planning_types import StrictDiagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic
 
 
 def _env_diagnostics(*levels: str) -> tuple[StrictDiagnostic, ...]:

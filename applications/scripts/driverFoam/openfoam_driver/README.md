@@ -167,7 +167,7 @@ contract is incomplete. It does not mutate case files.
 Programmatic callers use:
 
 ```python
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.strict_planning import strict_plan
 
 report = strict_plan("singleCell")
 payload = report.to_json()

@@ -31,7 +31,7 @@ import os
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
-from ...planning_types import (
+from openfoam_driver.core.planning_types import (
     StrictDiagnostic,
     SimulationAuditItem,
     diagnostic,

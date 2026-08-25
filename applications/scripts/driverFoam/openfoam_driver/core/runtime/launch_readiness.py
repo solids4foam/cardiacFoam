@@ -49,7 +49,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...planning_types import StrictDiagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic
 
 
 @dataclass(frozen=True)

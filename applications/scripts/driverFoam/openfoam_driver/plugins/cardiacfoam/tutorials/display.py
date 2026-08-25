@@ -1,5 +1,5 @@
 from openfoam_driver.plugins.cardiacfoam.tutorials.ids import CardiacTutorialID
-from openfoam_driver.tutorials_display import TutorialDisplay
+from openfoam_driver.core.tutorials_display import TutorialDisplay
 
 TUTORIALS: tuple[TutorialDisplay, ...] = (
     TutorialDisplay(

@@ -4,7 +4,7 @@ from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBI
 from openfoam_driver.specs.validation_types import ValidationError
 
 if TYPE_CHECKING:
-    from openfoam_driver.planning_types import StrictDiagnostic
+    from openfoam_driver.core.planning_types import StrictDiagnostic
 
 
 _CONDUCTION_SOLVER_SUFFIX = ".purkinjeGraphModelCoeffs.conductionSystemSolver"
@@ -499,7 +499,7 @@ def _evaluate_pvj_resistance_requirement(
     """
     from pathlib import Path as _Path
 
-    from openfoam_driver.planning_types import diagnostic as _diagnostic
+    from openfoam_driver.core.planning_types import diagnostic as _diagnostic
     from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
     from openfoam_driver.specs.validation import slot_key
 

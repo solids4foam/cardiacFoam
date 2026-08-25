@@ -21,7 +21,7 @@
 # Description
 #     cardiacFoam's post-run report catalog: which report definitions the
 #     built-in plugin offers, expressed with the solver-neutral
-#     ``ReportDefinition`` record owned by ``openfoam_driver.report_catalog``.
+#     ``ReportDefinition`` record owned by ``openfoam_driver.core.report_catalog``.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -34,7 +34,7 @@ Accessed through ``driver_context.capabilities.report_catalog.reports()``.
 
 from __future__ import annotations
 
-from ...report_catalog import ReportDefinition, STUB_URL, URL_TEMPLATE
+from openfoam_driver.core.report_catalog import ReportDefinition, STUB_URL, URL_TEMPLATE
 
 CARDIAC_REPORTS: tuple[ReportDefinition, ...] = (
     ReportDefinition(

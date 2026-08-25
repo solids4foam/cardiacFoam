@@ -284,3 +284,8 @@ docs/issues/
 # (a stale reportSetup override survived in one of these until 2026-08-14).
 applications/scripts/driverFoam/*_plan.json
 applications/scripts/driverFoam/out.json
+applications/scripts/driverFoam/validation_run/
+
+# driverFOAM host-local runtime backend selection (mirrors
+# driverfoam-runtime.example.yaml; every host copies its own, never shared).
+applications/scripts/driverFoam/driverfoam-runtime.yaml

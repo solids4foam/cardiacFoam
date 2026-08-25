@@ -66,7 +66,7 @@ class GenericOpenFOAMPlugin:
         here previously omitted that block entirely and hardcoded cardiac
         region names (``electro``/``solid``) for a plugin that has neither.
         """
-        from openfoam_driver.capability_manifest import build_capability_manifest
+        from openfoam_driver.core.capability_manifest import build_capability_manifest
 
         return build_capability_manifest(
             plugin_commands=self.get_solver_commands() | self.get_auxiliary_commands(),

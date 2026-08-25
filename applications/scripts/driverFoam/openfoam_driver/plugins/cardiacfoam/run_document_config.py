@@ -12,7 +12,7 @@ from typing import Any
 
 from foamlib import FoamFile
 
-from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic, diagnostic
 from openfoam_driver.specs.dict_builder import populate_values
 from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     build_electro_properties,

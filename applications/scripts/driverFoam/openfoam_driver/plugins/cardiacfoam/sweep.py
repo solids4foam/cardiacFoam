@@ -25,7 +25,7 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from ...sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 from ...specs.dict_builder import is_known_override_driver_path
 from .dict_builder import (
     SELECTOR_KEYS,

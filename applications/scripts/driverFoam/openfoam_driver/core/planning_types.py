@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .core.runtime.models import DataArtifact
+from .runtime.models import DataArtifact
 
 
 @dataclass(frozen=True)

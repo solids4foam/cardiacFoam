@@ -35,13 +35,13 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from openfoam_driver.cli import main
-from openfoam_driver.introspection import describe_tutorial
+from openfoam_driver.core.introspection import describe_tutorial
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 
 def test_run_state_schema_does_not_advertise_unwritten_action_events_file():
     # action_events.jsonl has no writer anywhere in the codebase.
-    from openfoam_driver.introspection import _run_state_schema
+    from openfoam_driver.core.introspection import _run_state_schema
 
     schema = _run_state_schema()
     assert "companion_file" not in schema
@@ -170,7 +170,7 @@ class TestIntrospection(unittest.TestCase):
         import tempfile as _tempfile
 
         from openfoam_driver.core.plugin_interface import generic_openfoam_context
-        from openfoam_driver.introspection import describe_entry
+        from openfoam_driver.core.introspection import describe_entry
 
         with _tempfile.TemporaryDirectory() as temp_dir:
             tutorials_root = Path(temp_dir)

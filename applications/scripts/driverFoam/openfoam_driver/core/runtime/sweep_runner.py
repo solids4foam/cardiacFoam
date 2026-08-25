@@ -36,11 +36,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ...strict_planning import strict_plan
-from ...sweep_derivation_catalog import get_derivation
-from ...sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
-from ...sweep_materialize import materialize_case
-from ...sweep_routing import route_case_values, route_entry_case_values
+from openfoam_driver.core.strict_planning import strict_plan
+from openfoam_driver.core.sweep.sweep_derivation_catalog import get_derivation
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
+from openfoam_driver.sweep_materialize import materialize_case
+from openfoam_driver.sweep_routing import route_case_values, route_entry_case_values
 from .fresh import ensure_fresh_output_dir
 from .openfoam_environment import configure_plugin_environment
 from .output_collection import collect_new_outputs, snapshot_postprocessing

@@ -6,9 +6,9 @@ and monkeypatches shutil.which / os.environ instead of touching the machine.
 
 import pytest
 
-from openfoam_driver import strict_planning
+from openfoam_driver.core import strict_planning
 from openfoam_driver.core.runtime.openfoam_environment import load_openfoam_environment
-from openfoam_driver.strict_planning import (
+from openfoam_driver.core.strict_planning import (
     StrictDiagnostic,
     StrictPlanReport,
     _environment_diagnostics,
@@ -80,7 +80,7 @@ def test_required_executables_none_dag_is_empty():
 
 
 def test_unwrap_mpi_program_edge_cases():
-    from openfoam_driver.strict_planning import _unwrap_mpi_program
+    from openfoam_driver.core.strict_planning import _unwrap_mpi_program
 
     assert _unwrap_mpi_program(()) is None
     assert _unwrap_mpi_program(("-np",)) is None            # value flag, no value

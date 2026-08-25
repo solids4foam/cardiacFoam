@@ -26,7 +26,7 @@
 #----------------------------------------------------------------------------#
 
 import pytest
-from openfoam_driver.sweep_expansion import expand_sweep, compute_case_count, SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import expand_sweep, compute_case_count, SweepValidationError
 
 
 def test_cross_product_produces_all_combinations():
@@ -103,7 +103,7 @@ def test_empty_axis_is_rejected():
         compute_case_count(spec)
 
 
-from openfoam_driver.sweep_expansion import DEFAULT_MAX_CASES, check_case_count_cap
+from openfoam_driver.core.sweep.sweep_expansion import DEFAULT_MAX_CASES, check_case_count_cap
 
 
 def test_check_case_count_cap_passes_within_default():

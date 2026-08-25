@@ -28,8 +28,8 @@
 """Reusable OpenFOAM tutorial automation driver."""
 
 from .core.runtime.models import CaseConfig, TutorialSpec
-from .dict_entries import DictEntry, all_documented_driver_paths
-from .introspection import describe_entry, describe_tutorial
+from openfoam_driver.dict_entries import DictEntry, all_documented_driver_paths
+from openfoam_driver.core.introspection import describe_entry, describe_tutorial
 
 __all__ = [
     "CaseConfig",

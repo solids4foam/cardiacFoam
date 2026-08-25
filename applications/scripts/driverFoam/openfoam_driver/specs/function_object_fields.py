@@ -37,7 +37,7 @@ from typing import Mapping, Sequence
 
 from foamlib import FoamFile
 
-from ..planning_types import StrictDiagnostic, diagnostic as _diagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic, diagnostic as _diagnostic
 
 # controlDict locations to scan: top-level and the electro sub-region used by
 # multi-region electromechanical cases.

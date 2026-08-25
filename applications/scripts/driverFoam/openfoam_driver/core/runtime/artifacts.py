@@ -64,7 +64,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from ...utility_catalog import ProducesEntry
+from openfoam_driver.core.utility_catalog import ProducesEntry
 from .models import DataArtifact, TutorialSpec
 
 if TYPE_CHECKING:

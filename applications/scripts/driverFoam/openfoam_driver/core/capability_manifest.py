@@ -36,7 +36,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
-from .core.runtime.workflow import (
+from .runtime.workflow import (
     CASE_SCRIPT_COMMANDS,
     CORE_NEUTRAL_COMMANDS,
 )
@@ -51,7 +51,7 @@ def resolve_case_models(
     raises. Kept for callers that imported this function directly before it
     became plugin-owned; new code should go through
     ``driver_context.capabilities.case_introspection`` instead."""
-    from .core.plugin_interface import default_driver_context
+    from .plugin_interface import default_driver_context
 
     introspection = default_driver_context().capabilities.case_introspection
     resolved = introspection.resolve_case_models(Path(case_root))

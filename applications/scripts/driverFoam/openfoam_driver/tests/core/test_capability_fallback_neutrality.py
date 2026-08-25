@@ -33,7 +33,7 @@ from openfoam_driver.core.plugin_capabilities import (
     SweepRoutingRequest,
 )
 from openfoam_driver.core.plugin_interface import driver_context
-from openfoam_driver.sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
 
 def _generic_capabilities():

@@ -8,8 +8,8 @@ before driving the orchestrator.
 
 | Action | Function | Module |
 |---|---|---|
-| Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)` | `openfoam_driver.introspection` |
-| Build a non-mutating strict launch contract | `strict_plan(...)` | `openfoam_driver.strict_planning` |
+| Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)` | `openfoam_driver.core.introspection` |
+| Build a non-mutating strict launch contract | `strict_plan(...)` | `openfoam_driver.core.strict_planning` |
 | Execute an agent-authored RunDocument | `driverFoam run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
@@ -18,7 +18,7 @@ before driving the orchestrator.
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
-| Locate predicted outputs | `strict_plan(...)`'s `expected_artifacts` field (also in `driverFoam plan --strict` JSON) | `openfoam_driver.strict_planning` |
+| Locate predicted outputs | `strict_plan(...)`'s `expected_artifacts` field (also in `driverFoam plan --strict` JSON) | `openfoam_driver.core.strict_planning` |
 | Verify outputs vs predictions | `artifact_reconciliation` in `run --strict`/`step --strict` JSON output | `openfoam_driver.core.runtime.reconciler` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
 | Plan/run a parameter sweep | `driverFoam sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
@@ -128,7 +128,7 @@ Defaults to no timeout.
 Programmatic planning uses the same contract:
 
 ```python
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.strict_planning import strict_plan
 
 report = strict_plan("singleCell")
 payload = report.to_json()
@@ -543,10 +543,10 @@ configurations, for example probes that were not enabled.
 
 Three layers of discovery:
 
-1. **What tutorials exist?** `from openfoam_driver.introspection import describe_launch_matrix; describe_launch_matrix()` returns every registered entry.
+1. **What tutorials exist?** `from openfoam_driver.core.introspection import describe_launch_matrix; describe_launch_matrix()` returns every registered entry.
 2. **What dict keys can I set?** Iterate `openfoam_driver.dict_entries.ELECTRO_PROPERTY_ENTRY_GROUPS` and `PHYSICS_PROPERTY_ENTRIES` for case-physics entries. For time-control use `openfoam_driver.dict_entries.CONTROL_DICT_ENTRIES` (`deltaT`, `endTime`). Each entry carries `driver_path`, `value_kind`, `enum_values`, `unit`, `typical_value`, and structured constraints (`applicable_when`, `forbidden_when`, `required_when`, `mutually_exclusive_with`).
 3. **What ionic models can I pick?** `from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG`. Each entry carries `states`, `algebraic`, `compatible_solvers`, `compatible_tissues`, `species`, `cardiac_region`, `recommended_exports`.
-4. **What utilities are known?** `from openfoam_driver.utility_catalog import UTILITY_CATALOG`. Strict planning fails when a workflow command has missing required `produces` metadata.
+4. **What utilities are known?** `from openfoam_driver.core.utility_catalog import UTILITY_CATALOG`. Strict planning fails when a workflow command has missing required `produces` metadata.
 5. **What dict keys have parser limitations?** Read `openfoam_driver/plugins/cardiacfoam/dict_key_allowlist.json`. Strict dict-key scanning fails when new uncatalogued keys appear, stale catalog paths remain, or allowlist entries become unused.
 6. **What commands may a workflow step run, and what fields may a function object sample?** Read the `capability_manifest` block emitted by both `describe --entry <name>` and `plan --strict --entry <name>` (and `describe_entry(...)` / `strict_plan(...).to_json()` programmatically). It is the authoritative, machine-readable accept-surface: `allowed_commands` (`core`, `case_scripts`, `utilities`, plus the `$FOAM_APPBIN` note) mirrors the command allowlist exactly, and `samplable_fields` lists the field names the *resolved* model exposes,
 keyed by region. **Both blocks are plugin-dependent.** For cardiacFoam the
@@ -804,9 +804,9 @@ If your agent depends on any of these, expect failure and consider a workaround 
 
 - `applications/scripts/driverFoam/openfoam_driver/dict_entries.py` — every dict key with its constraints
 - `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/ionic_model_catalog.py` — every ionic model
-- `applications/scripts/driverFoam/openfoam_driver/utility_catalog.py` — every utility's CLI surface and outputs
+- `applications/scripts/driverFoam/openfoam_driver/core/utility_catalog.py` — every utility's CLI surface and outputs
 - `applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/solver_coupling.py` — cross-domain coupler rules
-- `applications/scripts/driverFoam/openfoam_driver/strict_planning.py` — strict preflight report and RunDocument v3 assembly
+- `applications/scripts/driverFoam/openfoam_driver/core/strict_planning.py` — strict preflight report and RunDocument v3 assembly
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/run_model.py` — RunDocument v3 model and explicit v1/v2 migration
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow.py` — workflow DAG normalization and validation
 - `applications/scripts/driverFoam/openfoam_driver/core/runtime/workflow_state.py` — persisted step state model

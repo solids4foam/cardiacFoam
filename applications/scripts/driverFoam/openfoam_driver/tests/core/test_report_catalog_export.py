@@ -124,13 +124,13 @@ def test_remote_entries_use_4dpapers_template(tmp_path):
 
 
 def test_applicable_when_none_matches_anything():
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     assert matches(None, {"physics": {"ionic_model": "TenTusscher"}}) is True
 
 
 def test_applicable_when_flat_equality_matches():
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     pred = {"physics.ionic_model": "TenTusscher"}
     cfg = {"physics": {"ionic_model": "TenTusscher"}}
@@ -138,7 +138,7 @@ def test_applicable_when_flat_equality_matches():
 
 
 def test_applicable_when_flat_equality_rejects_mismatch():
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     pred = {"physics.ionic_model": "TenTusscher"}
     cfg = {"physics": {"ionic_model": "FentonKarma"}}
@@ -146,7 +146,7 @@ def test_applicable_when_flat_equality_rejects_mismatch():
 
 
 def test_applicable_when_multi_key_is_AND():
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     pred = {
         "physics.ionic_model": "TenTusscher",
@@ -162,7 +162,7 @@ def test_applicable_when_multi_key_is_AND():
 
 
 def test_applicable_when_missing_path_is_not_a_match():
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     pred = {"physics.ionic_model": "TenTusscher"}
     cfg = {"physics": {}}
@@ -173,7 +173,7 @@ def test_applicable_when_unknown_operator_raises():
     """v2 may add operators; v1 must refuse silently-mis-filtering."""
     import pytest
 
-    from openfoam_driver.report_catalog import matches
+    from openfoam_driver.core.report_catalog import matches
 
     pred = {"physics.ionic_model": {"$in": ["TenTusscher"]}}
     with pytest.raises(ValueError, match="unsupported"):

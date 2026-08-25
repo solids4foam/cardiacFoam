@@ -36,7 +36,7 @@ from openfoam_driver.core.runtime.workflow_runner import (
     run_workflow_step,
 )
 from openfoam_driver.core.runtime.workflow_state import initial_workflow_state
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.strict_planning import strict_plan
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
 SECURITY_MD = REPO_ROOT / "applications" / "scripts" / "driverFoam" / "SECURITY.md"
@@ -440,7 +440,7 @@ def test_command_allowlist_has_one_owner_shared_by_both_producers() -> None:
         planner_root.mkdir()
         planner_case = _write_case(planner_root)
         with mock.patch(
-            "openfoam_driver.strict_planning.load_entry_spec",
+            "openfoam_driver.core.strict_planning.load_entry_spec",
             return_value=_spec_with_workflow(
                 planner_case,
                 steps=[{"id": "run", "command": "curl", "depends_on": []}],

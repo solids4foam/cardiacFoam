@@ -47,7 +47,7 @@ from openfoam_driver.specs.mesh_geometry import (
     mesh_geometry_diagnostics,
     read_bounding_box,
 )
-from openfoam_driver.utility_catalog import UTILITY_CATALOG
+from openfoam_driver.core.utility_catalog import UTILITY_CATALOG
 
 
 _HEADER = (

@@ -19,7 +19,7 @@ import pytest
 
 from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.registry import load_entry_spec
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.strict_planning import strict_plan
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 pytestmark = skip_without_monorepo

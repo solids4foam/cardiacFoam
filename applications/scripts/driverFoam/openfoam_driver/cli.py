@@ -43,7 +43,7 @@ from .core.runtime.workflow_state import workflow_state_from_json
 from .core.runtime.postprocess_phase import build_standalone_case_record, run_postprocess_phase, write_case_record
 from .core.runtime.registry import ENTRY_KIND_VALUES, list_tutorials
 from .core.runtime.sweep_runner import _stage_entry_case, sweep_plan, sweep_run
-from .introspection import describe_entry
+from openfoam_driver.core.introspection import describe_entry
 from .specs.common import default_setup_dir_name
 from .specs.paths import (
     default_sweep_output_dir,
@@ -51,7 +51,7 @@ from .specs.paths import (
     repo_root_default,
 )
 from .specs.apply_overrides import validate_overrides, apply_overrides, OverrideError
-from .strict_planning import (
+from openfoam_driver.core.strict_planning import (
     StrictDiagnostic,
     _environment_diagnostics,
     _utility_produces_by_command,

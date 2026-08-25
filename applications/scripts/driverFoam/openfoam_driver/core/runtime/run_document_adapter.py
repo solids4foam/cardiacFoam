@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from ...planning_types import StrictDiagnostic, artifact_to_json, diagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic, artifact_to_json, diagnostic
 from ...specs.validation import validate_run
 from ..plugin_capabilities import RunDocumentConfigurationRequest
 from .models import DataArtifact

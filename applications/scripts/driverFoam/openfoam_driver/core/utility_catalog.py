@@ -114,7 +114,7 @@ else:
                 "Python < 3.11 requires the 'tomli' package: pip install tomli"
             ) from exc
 
-from .core.runtime.models import _validate_path_pattern
+from .runtime.models import _validate_path_pattern
 
 MANIFEST_FILENAME: Final[str] = "utility.manifest.toml"
 
@@ -536,7 +536,7 @@ def load_utility_manifests(utilities_root: Path) -> dict[str, UtilityManifest]:
 #: plugin declaring the same root derives it from here rather than recomputing
 #: its own ``Path(__file__).parents[N]`` arithmetic, which can silently drift.
 UTILITIES_ROOT: Final[Path] = (
-    Path(__file__).resolve().parents[3] / "utilities"
+    Path(__file__).resolve().parents[4] / "utilities"
 )
 
 UTILITY_CATALOG: Final[dict[str, UtilityManifest]] = load_utility_manifests(

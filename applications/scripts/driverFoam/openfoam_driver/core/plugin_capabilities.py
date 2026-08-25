@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from .plugin_interface import SolverPlugin
     from .plugin_profile import CaseFileRule
     from .runtime.models import DataArtifact, TutorialSpec
-    from ..planning_types import StrictDiagnostic
-    from ..report_catalog import ReportDefinition
+    from openfoam_driver.core.planning_types import StrictDiagnostic
+    from openfoam_driver.core.report_catalog import ReportDefinition
     from ..specs.apply_overrides import OverrideScope, RegenerationScope
 
 
@@ -161,7 +161,7 @@ class DictionaryCatalogCapability(Protocol):
     *meaning* (the plugin's).
 
     :adapts: get_dict_entries, get_dict_groups, get_dictionary_catalog
-    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/specs/apply_overrides.py, openfoam_driver/specs/dict_builder.py, openfoam_driver/specs/validation.py, openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/specs/apply_overrides.py, openfoam_driver/specs/dict_builder.py, openfoam_driver/specs/validation.py, openfoam_driver/core/strict_planning.py
     :fallback: none
     :status: mandatory
     """
@@ -181,7 +181,7 @@ class CapabilityManifestCapability(Protocol):
     and serialises it for ``describe`` without interpreting it.
 
     :adapts: get_capabilities
-    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/introspection.py, openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/core/introspection.py, openfoam_driver/core/strict_planning.py
     :fallback: none
     :status: mandatory
     """
@@ -199,7 +199,7 @@ class ConfigurationValidatorCapability(Protocol):
     "not checked".
 
     :adapts: validate_configuration
-    :consumed-by: openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/core/strict_planning.py
     :fallback: none
     :status: mandatory
     """
@@ -283,7 +283,7 @@ class CxxMappingCapability(Protocol):
     also backs :class:`CaseFileContractCapability`.
 
     :adapts: get_profile
-    :consumed-by: openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/core/strict_planning.py
     :fallback: none
     :status: mandatory
     """
@@ -307,7 +307,7 @@ class MeshDiagnosticPolicyCapability(Protocol):
     failure mode of a wrong exemption is silence.
 
     :adapts: get_mesh_geometry_diagnostics, is_nondimensional_case
-    :consumed-by: openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/core/strict_planning.py
     :fallback: legacy_nondimensional_case
     :status: optional
     """
@@ -379,7 +379,7 @@ class CommandAuthorizationCapability(Protocol):
     core's artifact-producer heuristic must consult that one alone.
 
     :adapts: get_auxiliary_commands, get_solver_commands, get_utility_manifests, get_utility_roots
-    :consumed-by: openfoam_driver/core/runtime/artifacts.py, openfoam_driver/core/runtime/workflow.py, openfoam_driver/strict_planning.py
+    :consumed-by: openfoam_driver/core/runtime/artifacts.py, openfoam_driver/core/runtime/workflow.py, openfoam_driver/core/strict_planning.py
     :fallback: legacy_auxiliary_commands, legacy_solver_commands, legacy_utility_manifests, legacy_utility_roots
     :status: optional
     """
@@ -400,7 +400,7 @@ class CaseIntrospectionCapability(Protocol):
     exposes no fields.
 
     :adapts: get_samplable_fields, resolve_case_models
-    :consumed-by: openfoam_driver/capability_manifest.py, openfoam_driver/core/runtime/provenance_inputs.py
+    :consumed-by: openfoam_driver/core/capability_manifest.py, openfoam_driver/core/runtime/provenance_inputs.py
     :fallback: legacy_resolve_case_models, legacy_samplable_fields
     :status: optional
     """
@@ -434,7 +434,7 @@ class CaseFileContractCapability(Protocol):
     the built-in cardiac plugin, plugin-neutral for everyone else.
 
     :adapts: get_profile, get_config_resolution_description
-    :consumed-by: openfoam_driver/core/runtime/strict_audit.py, openfoam_driver/tutorial_contracts.py
+    :consumed-by: openfoam_driver/core/runtime/strict_audit.py, openfoam_driver/core/tutorial_contracts.py
     :fallback: legacy_describe_config_resolution
     :status: mixed
     """
@@ -455,7 +455,7 @@ class OverrideSchemaCapability(Protocol):
     plugin owns the vocabulary and the document shape.
 
     :adapts: get_dict_entry_catalog, get_override_schema
-    :consumed-by: openfoam_driver/introspection.py
+    :consumed-by: openfoam_driver/core/introspection.py
     :fallback: legacy_dict_entry_catalog, legacy_override_schema
     :status: optional
     """
@@ -538,7 +538,7 @@ class CaseProvenanceCapability(Protocol):
 class ReportCatalogCapability(Protocol):
     """Post-run report definitions the active plugin wants offered.
 
-    ``report_catalog`` (:mod:`openfoam_driver.report_catalog`) owns the
+    ``report_catalog`` (:mod:`openfoam_driver.core.report_catalog`) owns the
     solver-neutral machinery -- ``ReportDefinition``, the ``applicable_when``
     predicate evaluator, the JSON record shape -- but the *catalog itself*
     (which reports exist, e.g. "Vm field" or "activation map") is
@@ -572,7 +572,7 @@ class NamedCatalogsCapability(Protocol):
     matching the pattern already used by :class:`ReportCatalogCapability`.
 
     :adapts: get_named_catalogs
-    :consumed-by: openfoam_driver/introspection.py
+    :consumed-by: openfoam_driver/core/introspection.py
     :fallback: legacy_named_catalogs
     :status: optional
     """

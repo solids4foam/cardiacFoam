@@ -96,7 +96,7 @@ def utility_roots() -> tuple[Path, ...]:
     from ``__file__``, so the two cannot drift apart (``utility_roots()``
     returns ``()`` on a missing directory, which would degrade silently).
     """
-    from openfoam_driver.utility_catalog import UTILITIES_ROOT
+    from openfoam_driver.core.utility_catalog import UTILITIES_ROOT
 
     return (UTILITIES_ROOT,) if UTILITIES_ROOT.is_dir() else ()
 
@@ -109,7 +109,7 @@ def utility_manifests() -> Mapping[str, Any]:
     so a mutable dict would let one consumer corrupt the authorization input of
     all the others.
     """
-    from openfoam_driver.utility_catalog import load_utility_manifests
+    from openfoam_driver.core.utility_catalog import load_utility_manifests
 
     manifests: dict[str, Any] = {}
     for root in utility_roots():

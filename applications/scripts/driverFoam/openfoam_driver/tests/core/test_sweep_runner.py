@@ -37,7 +37,7 @@ from openfoam_driver.core.runtime.sweep_runner import (
     sweep_plan,
     sweep_run,
 )
-from openfoam_driver.sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
 
 def _write_spec(path: Path, models=("TNNP", "BuenoOrovio")):

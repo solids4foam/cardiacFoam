@@ -77,6 +77,26 @@ branch at the same time).
 | `openfoam_driver.specs.detection` | `openfoam_driver.plugins.cardiacfoam.detection` |
 | `openfoam_driver.specs.overrides` | `openfoam_driver.plugins.cardiacfoam.overrides` |
 | `openfoam_driver.specs.system_templates` | `openfoam_driver.plugins.cardiacfoam.system_templates` |
+| `openfoam_driver.strict_planning` | `openfoam_driver.core.strict_planning` |
+| `openfoam_driver.planning_types` | `openfoam_driver.core.planning_types` |
+| `openfoam_driver.capability_manifest` | `openfoam_driver.core.capability_manifest` |
+| `openfoam_driver.introspection` | `openfoam_driver.core.introspection` |
+| `openfoam_driver.report_catalog` | `openfoam_driver.core.report_catalog` |
+| `openfoam_driver.utility_catalog` | `openfoam_driver.core.utility_catalog` |
+| `openfoam_driver.tutorial_contracts` | `openfoam_driver.core.tutorial_contracts` |
+| `openfoam_driver.tutorials_display` | `openfoam_driver.core.tutorials_display` |
+| `openfoam_driver.sweep_derivation_catalog` | `openfoam_driver.core.sweep.sweep_derivation_catalog` |
+| `openfoam_driver.sweep_expansion` | `openfoam_driver.core.sweep.sweep_expansion` |
+
+These nine modules were solver-agnostic already; this only finishes moving
+them into `core/` alongside the rest of the generic engine. `dict_entries.py`,
+`sweep_materialize.py`, and `sweep_routing.py` deliberately stay at the
+package root instead of joining them: each carries a lazily-imported (PEP 562
+`__getattr__`, or a `_*_legacy` function-body import) fallback into
+`plugins.cardiacfoam`, and `core/` is enforced by
+`test_plugin_dependency_boundary.py` to import cardiac code only through
+`compatibility.py`. `cli.py` also stays at the package root — the entry
+surface, not engine internals.
 
 The cardiac halves of three more modules were split out, leaving the generic
 half at the original path:

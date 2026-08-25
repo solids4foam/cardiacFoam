@@ -41,14 +41,14 @@ from openfoam_driver.plugins.cardiacfoam.common_dict_entries import (
 from openfoam_driver.core.contracts.dictionary_catalog import DictionaryCatalog
 from openfoam_driver.plugins.cardiacfoam.active_tension_catalog import ACTIVE_TENSION_MODEL_CATALOG
 from openfoam_driver.plugins.cardiacfoam.ionic_model_catalog import IONIC_MODEL_CATALOG
-from openfoam_driver.capability_manifest import build_capability_manifest
+from openfoam_driver.core.capability_manifest import build_capability_manifest
 from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 from openfoam_driver.core.runtime.registry import list_tutorials
-from openfoam_driver.planning_types import StrictDiagnostic, diagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic, diagnostic
 
 if TYPE_CHECKING:
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
-    from openfoam_driver.tutorials_display import TutorialDisplay
+    from openfoam_driver.core.tutorials_display import TutorialDisplay
     from pathlib import Path
 
 
@@ -278,7 +278,7 @@ class CardiacFoamPlugin:
             detect_myocardium_solver_name,
             detect_ionic_model_name,
         )
-        from openfoam_driver.planning_types import diagnostic as _diagnostic
+        from openfoam_driver.core.planning_types import diagnostic as _diagnostic
 
         diagnostics = []
         case_root = Path(spec.case_root)

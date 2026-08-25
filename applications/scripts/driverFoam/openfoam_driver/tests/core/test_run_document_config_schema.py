@@ -41,7 +41,7 @@ from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.plugins.cardiacfoam.run_document_config import _read_physics_type
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.strict_planning import strict_plan
 
 
 def test_cardiac_plugin_declares_a_config_schema() -> None:

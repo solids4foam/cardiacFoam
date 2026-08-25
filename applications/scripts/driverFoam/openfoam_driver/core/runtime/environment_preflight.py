@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ...planning_types import StrictDiagnostic, diagnostic
+from openfoam_driver.core.planning_types import StrictDiagnostic, diagnostic
 from .openfoam_environment import load_openfoam_environment
 from .workflow import CASE_SCRIPT_COMMANDS
 

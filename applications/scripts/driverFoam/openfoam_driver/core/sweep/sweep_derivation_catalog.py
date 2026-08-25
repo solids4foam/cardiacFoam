@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Any, Callable
 
-from .sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
 
 _CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.=-]+$")

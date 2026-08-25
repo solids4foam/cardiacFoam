@@ -58,10 +58,10 @@ if TYPE_CHECKING:
     from openfoam_driver.core.plugin_capabilities import PluginCapabilities, RuntimeDependency
     from openfoam_driver.core.contracts.dictionary import DictEntry
     from openfoam_driver.core.runtime.models import TutorialSpec, CaseConfig, DataArtifact
-    from openfoam_driver.planning_types import StrictDiagnostic
-    from openfoam_driver.tutorials_display import TutorialDisplay
+    from openfoam_driver.core.planning_types import StrictDiagnostic
+    from openfoam_driver.core.tutorials_display import TutorialDisplay
     from openfoam_driver.core.plugin_capabilities import ResolvedInput
-    from openfoam_driver.report_catalog import ReportDefinition
+    from openfoam_driver.core.report_catalog import ReportDefinition
     from openfoam_driver.specs.apply_overrides import OverrideScope, RegenerationScope
     from pathlib import Path
 

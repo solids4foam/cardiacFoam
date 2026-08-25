@@ -265,7 +265,7 @@ def legacy_route_sweep_case(plugin, *, base, resolved_axis_values, driver_contex
             resolved_axis_values=resolved_axis_values,
             driver_context=driver_context,
         )
-    from ..sweep_expansion import SweepValidationError
+    from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
     raise SweepValidationError(
         f"plugin {getattr(plugin, 'plugin_id', '<unknown>')!r} does not implement "
@@ -290,7 +290,7 @@ def legacy_materialize_sweep_case(plugin, *, case_dir, routed) -> None:
 
         materialize_case(case_dir=case_dir, routed=routed)
         return
-    from ..sweep_expansion import SweepValidationError
+    from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
     raise SweepValidationError(
         f"plugin {getattr(plugin, 'plugin_id', '<unknown>')!r} does not implement "

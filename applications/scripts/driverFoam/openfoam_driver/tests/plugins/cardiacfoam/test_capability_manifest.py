@@ -1,7 +1,7 @@
 """Tests for the capability manifest — the machine-readable surface of what the
 driver will accept (allowed commands + samplable field names)."""
 
-from openfoam_driver.capability_manifest import build_capability_manifest
+from openfoam_driver.core.capability_manifest import build_capability_manifest
 
 from openfoam_driver.plugins.cardiacfoam.case_introspection import (
     samplable_fields as _samplable_fields,
@@ -130,13 +130,13 @@ def test_unknown_model_is_not_an_error():
 
 
 def test_resolve_case_models_missing_file_is_none():
-    from openfoam_driver.capability_manifest import resolve_case_models
+    from openfoam_driver.core.capability_manifest import resolve_case_models
 
     assert resolve_case_models("/nonexistent/case") == (None, None, None)
 
 
 def test_describe_entry_includes_capability_manifest():
-    from openfoam_driver.introspection import describe_entry
+    from openfoam_driver.core.introspection import describe_entry
 
     payload = describe_entry("singleCell")
     manifest = payload["capability_manifest"]
@@ -146,7 +146,7 @@ def test_describe_entry_includes_capability_manifest():
 
 def test_strict_plan_carries_capability_manifest(monkeypatch):
     monkeypatch.setenv("SKIP_ENV_DIAGNOSTICS", "1")
-    from openfoam_driver.strict_planning import strict_plan
+    from openfoam_driver.core.strict_planning import strict_plan
 
     report = strict_plan("singleCell").to_json()
     assert "cardiacFoam" in report["capability_manifest"]["allowed_commands"]["core"]

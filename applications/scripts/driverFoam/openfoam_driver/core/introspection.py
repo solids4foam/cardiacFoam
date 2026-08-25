@@ -33,20 +33,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .core.plugin_interface import DriverContext
+    from .plugin_interface import DriverContext
 
 
-from .core.runtime.models import CaseConfig, TutorialSpec
-from .core.runtime.registry import (
+from .runtime.models import CaseConfig, TutorialSpec
+from .runtime.registry import (
     list_entries,
     list_available_tutorials,
     list_case_directories,
     list_tutorials,
     resolve_entry,
 )
-from .core.runtime.execution_context import resolve_execution_context
-from .strict_planning import _run_launch_description
-from .tutorial_contracts import describe_tutorial_contract
+from .runtime.execution_context import resolve_execution_context
+from openfoam_driver.core.strict_planning import _run_launch_description
+from openfoam_driver.core.tutorial_contracts import describe_tutorial_contract
 
 COMMON_OVERRIDE_KEYS = (
     "case_dir_name",
@@ -241,7 +241,7 @@ def describe_entry(
     config_path: str | Path | None = None,
     driver_context: "DriverContext | None" = None,
 ) -> dict[str, Any]:
-    from .core.compatibility import resolve_public_driver_context
+    from .compatibility import resolve_public_driver_context
 
     driver_context = resolve_public_driver_context(driver_context)
     resolution = resolve_entry(

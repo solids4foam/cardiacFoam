@@ -27,7 +27,7 @@
 
 import pytest
 
-from openfoam_driver.sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 from openfoam_driver.sweep_routing import route_case_values
 from openfoam_driver.core.plugin_interface import generic_openfoam_context
 

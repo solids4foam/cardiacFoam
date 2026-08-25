@@ -34,8 +34,8 @@ import stat
 from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import generic_openfoam_context
-from openfoam_driver.introspection import describe_entry
-from openfoam_driver.strict_planning import strict_plan
+from openfoam_driver.core.introspection import describe_entry
+from openfoam_driver.core.strict_planning import strict_plan
 
 # Every token that would betray a cardiac assumption leaking into a plan
 # produced for a non-cardiac solver.

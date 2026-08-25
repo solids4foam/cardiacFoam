@@ -26,8 +26,8 @@
 #----------------------------------------------------------------------------#
 
 import pytest
-from openfoam_driver.sweep_derivation_catalog import get_derivation, SWEEP_DERIVATION_CATALOG
-from openfoam_driver.sweep_expansion import SweepValidationError
+from openfoam_driver.core.sweep.sweep_derivation_catalog import get_derivation, SWEEP_DERIVATION_CATALOG
+from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
 
 def test_case_id_template_joins_named_values():

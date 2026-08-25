@@ -163,7 +163,7 @@ def test_utility_manifests_are_not_a_shared_mutable_dict() -> None:
 def test_plugin_utilities_root_matches_the_utility_catalog_root() -> None:
     """Derived from one constant, not recomputed -- a drift would silently
     degrade to no authorized utilities at all."""
-    from openfoam_driver.utility_catalog import UTILITIES_ROOT
+    from openfoam_driver.core.utility_catalog import UTILITIES_ROOT
     from openfoam_driver.plugins.cardiacfoam.command_authorization import utility_roots
 
     assert utility_roots() == (UTILITIES_ROOT,)

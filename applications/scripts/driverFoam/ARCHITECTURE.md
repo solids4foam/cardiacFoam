@@ -116,19 +116,30 @@ applications/scripts/driverFoam/
 │
 ├── openfoam_driver/                  ← Python package (installable)
 │   ├── cli.py                        ← CLI entry point (driverFoam / driverFoam)
-│   ├── strict_planning.py            ← Planning orchestrator
-│   ├── introspection.py              ← describe_entry
-│   ├── planning_types.py             ← StrictDiagnostic, SimulationAuditItem
-│   ├── sweep_*.py                    ← Sweep expansion, routing, materialisation
-│   ├── capability_manifest.py        ← Build the plan's capability manifest
+│   ├── dict_entries.py               ← Dict-key catalog; PEP 562 lazy shim into
+│   │                                    plugins.cardiacfoam, so it stays out of core/
+│   ├── sweep_materialize.py          ← materialize_case (public API); `_materialize_case_legacy`
+│   │                                    lazily imports plugins.cardiacfoam, so it stays out of core/
+│   ├── sweep_routing.py              ← route_case_values (public API); same legacy-import reason
 │   │
 │   ├── core/                         ← Generic driver engine
+│   │   ├── strict_planning.py        ← Planning orchestrator
+│   │   ├── introspection.py          ← describe_entry
+│   │   ├── planning_types.py         ← StrictDiagnostic, SimulationAuditItem
+│   │   ├── capability_manifest.py    ← Build the plan's capability manifest
 │   │   ├── plugin_interface.py       ← SolverPlugin (Protocol), DriverContext
 │   │   ├── plugin_capabilities.py    ← PluginCapabilities (focused capability bundle)
 │   │   ├── plugin_discovery.py       ← Entry-point discovery (driverfoam.plugins group)
 │   │   ├── plugin_profile.py         ← PluginProfile, CaseFileRule, CxxMapping (YAML)
 │   │   ├── generic_plugin.py         ← GenericOpenFOAMPlugin (no-domain built-in)
 │   │   ├── compatibility.py          ← Named Plan-1 cardiac compatibility fallbacks
+│   │   ├── report_catalog.py         ← ReportDefinition, applicable_when evaluator
+│   │   ├── utility_catalog.py        ← UTILITY_CATALOG, UTILITIES_ROOT
+│   │   ├── tutorial_contracts.py     ← describe_tutorial_contract
+│   │   ├── tutorials_display.py      ← TutorialDisplay rendering
+│   │   ├── sweep/
+│   │   │   ├── sweep_derivation_catalog.py ← Sweep axis derivation
+│   │   │   └── sweep_expansion.py    ← Sweep case-set expansion
 │   │   ├── contracts/
 │   │   │   ├── dictionary.py         ← DictEntry (generic dictionary entry descriptor)
 │   │   │   └── dictionary_catalog.py ← DictionaryCatalog
@@ -1019,7 +1030,7 @@ from pathlib import Path
 from openfoam_driver.core.plugin_interface import SolverPlugin
 from openfoam_driver.core.plugin_profile import load_plugin_profile
 from openfoam_driver.core.contracts.dictionary_catalog import DictionaryCatalog
-from openfoam_driver.capability_manifest import build_capability_manifest
+from openfoam_driver.core.capability_manifest import build_capability_manifest
 
 class MyProjectPlugin:
     @property
@@ -1353,24 +1364,24 @@ plugin. The two sweep fallbacks cannot be neutral and refuse by hook name.
 | capability | protocol | adapts | consumed by | fallback | status |
 |---|---|---|---|---|---|
 | `tutorials` | `TutorialCatalogCapability` | `get_tutorial_catalog`, `get_tutorial_displays` | `openfoam_driver/core/runtime/registry.py`, `openfoam_driver/plugins/cardiacfoam/dict_builder.py` | none | mandatory |
-| `dictionaries` | `DictionaryCatalogCapability` | `get_dict_entries`, `get_dict_groups`, `get_dictionary_catalog` | `openfoam_driver/dict_entries.py`, `openfoam_driver/plugins/cardiacfoam/sweep.py`, `openfoam_driver/specs/apply_overrides.py`, `openfoam_driver/specs/dict_builder.py`, `openfoam_driver/specs/validation.py`, `openfoam_driver/strict_planning.py` | none | mandatory |
-| `manifest` | `CapabilityManifestCapability` | `get_capabilities` | `openfoam_driver/dict_entries.py`, `openfoam_driver/introspection.py`, `openfoam_driver/strict_planning.py` | none | mandatory |
-| `configuration_validator` | `ConfigurationValidatorCapability` | `validate_configuration` | `openfoam_driver/strict_planning.py` | none | mandatory |
+| `dictionaries` | `DictionaryCatalogCapability` | `get_dict_entries`, `get_dict_groups`, `get_dictionary_catalog` | `openfoam_driver/dict_entries.py`, `openfoam_driver/plugins/cardiacfoam/sweep.py`, `openfoam_driver/specs/apply_overrides.py`, `openfoam_driver/specs/dict_builder.py`, `openfoam_driver/specs/validation.py`, `openfoam_driver/core/strict_planning.py` | none | mandatory |
+| `manifest` | `CapabilityManifestCapability` | `get_capabilities` | `openfoam_driver/dict_entries.py`, `openfoam_driver/core/introspection.py`, `openfoam_driver/core/strict_planning.py` | none | mandatory |
+| `configuration_validator` | `ConfigurationValidatorCapability` | `validate_configuration` | `openfoam_driver/core/strict_planning.py` | none | mandatory |
 | `run_semantic_validator` | `RunSemanticValidatorCapability` | `validate_run_semantics` | `openfoam_driver/specs/validation.py` | none | mandatory |
 | `artifacts` | `ArtifactPredictorCapability` | `predict_data_artifacts` | `openfoam_driver/core/runtime/artifacts.py` | none | mandatory |
 | `run_document_configuration` | `RunDocumentConfigurationCapability` | `build_run_document_config`, `get_run_document_config_schema` | `openfoam_driver/core/runtime/run_document_adapter.py`, `openfoam_driver/core/runtime/run_document_exec.py` | `legacy_run_document_config`, `legacy_run_document_config_schema` | optional |
-| `cxx_mapping` | `CxxMappingCapability` | `get_profile` | `openfoam_driver/strict_planning.py` | none | mandatory |
-| `mesh_diagnostic_policy` | `MeshDiagnosticPolicyCapability` | `get_mesh_geometry_diagnostics`, `is_nondimensional_case` | `openfoam_driver/strict_planning.py` | `legacy_nondimensional_case` | optional |
+| `cxx_mapping` | `CxxMappingCapability` | `get_profile` | `openfoam_driver/core/strict_planning.py` | none | mandatory |
+| `mesh_diagnostic_policy` | `MeshDiagnosticPolicyCapability` | `get_mesh_geometry_diagnostics`, `is_nondimensional_case` | `openfoam_driver/core/strict_planning.py` | `legacy_nondimensional_case` | optional |
 | `case_compatibility` | `CaseCompatibilityCapability` | `has_case_marker`, `is_case_runnable_without_workflow` | `openfoam_driver/core/runtime/registry.py` | `legacy_case_marker`, `legacy_case_runnable_without_workflow` | optional |
 | `sweep_materializer` | `SweepMaterializerCapability` | `materialize_sweep_case`, `route_sweep_case_values` | `openfoam_driver/sweep_materialize.py`, `openfoam_driver/sweep_routing.py` | `legacy_materialize_sweep_case`, `legacy_route_sweep_case` | optional |
-| `command_authorization` | `CommandAuthorizationCapability` | `get_auxiliary_commands`, `get_solver_commands`, `get_utility_manifests`, `get_utility_roots` | `openfoam_driver/core/runtime/artifacts.py`, `openfoam_driver/core/runtime/workflow.py`, `openfoam_driver/strict_planning.py` | `legacy_auxiliary_commands`, `legacy_solver_commands`, `legacy_utility_manifests`, `legacy_utility_roots` | optional |
-| `case_introspection` | `CaseIntrospectionCapability` | `get_samplable_fields`, `resolve_case_models` | `openfoam_driver/capability_manifest.py`, `openfoam_driver/core/runtime/provenance_inputs.py` | `legacy_resolve_case_models`, `legacy_samplable_fields` | optional |
-| `case_files` | `CaseFileContractCapability` | `get_profile`, `get_config_resolution_description` | `openfoam_driver/core/runtime/strict_audit.py`, `openfoam_driver/tutorial_contracts.py` | `legacy_describe_config_resolution` | mixed |
-| `override_schema` | `OverrideSchemaCapability` | `get_dict_entry_catalog`, `get_override_schema` | `openfoam_driver/introspection.py` | `legacy_dict_entry_catalog`, `legacy_override_schema` | optional |
+| `command_authorization` | `CommandAuthorizationCapability` | `get_auxiliary_commands`, `get_solver_commands`, `get_utility_manifests`, `get_utility_roots` | `openfoam_driver/core/runtime/artifacts.py`, `openfoam_driver/core/runtime/workflow.py`, `openfoam_driver/core/strict_planning.py` | `legacy_auxiliary_commands`, `legacy_solver_commands`, `legacy_utility_manifests`, `legacy_utility_roots` | optional |
+| `case_introspection` | `CaseIntrospectionCapability` | `get_samplable_fields`, `resolve_case_models` | `openfoam_driver/core/capability_manifest.py`, `openfoam_driver/core/runtime/provenance_inputs.py` | `legacy_resolve_case_models`, `legacy_samplable_fields` | optional |
+| `case_files` | `CaseFileContractCapability` | `get_profile`, `get_config_resolution_description` | `openfoam_driver/core/runtime/strict_audit.py`, `openfoam_driver/core/tutorial_contracts.py` | `legacy_describe_config_resolution` | mixed |
+| `override_schema` | `OverrideSchemaCapability` | `get_dict_entry_catalog`, `get_override_schema` | `openfoam_driver/core/introspection.py` | `legacy_dict_entry_catalog`, `legacy_override_schema` | optional |
 | `runtime_evidence` | `RuntimeEvidenceCapability` | `get_artifact_value_reader`, `get_extra_provenance_paths`, `get_solve_step_commands`, `get_telemetry_source_globs` | `openfoam_driver/core/runtime/provenance_inputs.py` | none | optional |
 | `case_provenance` | `CaseProvenanceCapability` | `get_generated_output_globs`, `get_required_inputs` | `openfoam_driver/core/runtime/provenance_inputs.py` | none | optional |
 | `report_catalog` | `ReportCatalogCapability` | `get_report_catalog` | `scripts/export-report-catalog.py` | `legacy_report_catalog` | optional |
-| `named_catalogs` | `NamedCatalogsCapability` | `get_named_catalogs` | `openfoam_driver/introspection.py` | `legacy_named_catalogs` | optional |
+| `named_catalogs` | `NamedCatalogsCapability` | `get_named_catalogs` | `openfoam_driver/core/introspection.py` | `legacy_named_catalogs` | optional |
 | `override_scopes` | `OverrideScopeCapability` | `get_override_scopes` | `openfoam_driver/specs/apply_overrides.py` | `legacy_override_scopes` | optional |
 | `dict_regeneration` | `DictRegenerationCapability` | `get_regeneration_scopes` | `openfoam_driver/specs/apply_overrides.py` | `legacy_dict_regeneration_scopes` | optional |
 
