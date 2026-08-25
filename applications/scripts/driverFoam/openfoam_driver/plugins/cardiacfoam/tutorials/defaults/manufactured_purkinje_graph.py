@@ -42,5 +42,3 @@ DELTA_T = 0.000140174
 CONTROL_DICT_RELPATH = Path("system/controlDict")
 ELECTRO_PROPERTIES_RELPATH = Path("constant/electroProperties")
 BLOCK_MESH_DICT_RELPATH = Path("system/blockMeshDict.3D")
-POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_purkinje_graph.py")
-POSTPROCESS_FUNCTION_NAME = "run_postprocessing"

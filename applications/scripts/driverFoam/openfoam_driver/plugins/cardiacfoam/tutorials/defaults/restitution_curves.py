@@ -80,9 +80,6 @@ ELECTRO_PROPERTIES_SCOPE = "singleCellSolverCoeffs"
 ELECTRO_PROPERTIES_RELPATH = SHARED_ELECTRO_PROPERTIES_RELPATH
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
 OUTPUT_GLOB = "*.txt"
-POSTPROCESS_SCRIPT_RELPATH = Path("postProcessing_restCurves.py")
-POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
-TABLE_SUMMARY_RELPATH = Path("table_summary.py")
 
 # Re-export shared paths used by the spec
 __all__ = [
@@ -102,7 +99,4 @@ __all__ = [
     "RUN_SCRIPT_RELPATH",
     "OUTPUT_DIR_NAME",
     "OUTPUT_GLOB",
-    "POSTPROCESS_SCRIPT_RELPATH",
-    "POSTPROCESS_FUNCTION_NAME",
-    "TABLE_SUMMARY_RELPATH",
 ]

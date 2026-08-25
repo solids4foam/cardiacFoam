@@ -56,8 +56,6 @@ GRAD_SCHEME_TOKENS = {
 TET_NUMERICS_PROFILES = {
     "eikonal_tet": ("fvSolution",),
 }
-POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured_eikonal_ecg.py")
-POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
 RUN_IN_PARALLEL = True
 VERIFICATION_MODEL_TYPE = "manufacturedEikonalVerifier"
 ECG_REFERENCE_QUADRATURE_ORDER = 96

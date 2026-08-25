@@ -58,8 +58,6 @@ ELECTROMECHANICAL_PROPERTIES_RELPATH = Path("constant/electroMechanicalPropertie
 PHYSICS_PROPERTIES_RELPATH = Path("constant/physicsProperties")
 BLOCK_MESH_DICT_TEMPLATE = "system/blockMeshDict.{dimension}"
 RUN_SCRIPT_RELPATH = RUN_CASE_SCRIPT_RELPATH
-POSTPROCESS_SCRIPT_RELPATH = Path("post_processing_manufactured_monodomain_total_lagrangian_em.py")
-POSTPROCESS_FUNCTION_NAME = "run_postprocessing"
 RUN_IN_PARALLEL = True
 ELECTRO_PROPERTIES_SCOPE = "monodomainSolverCoeffs"
 ELECTROMECHANICAL_VERIFICATION_MODEL_TYPE = "manufacturedElectromechanicsVerifier"
@@ -80,8 +78,6 @@ __all__ = [
     "OUTPUT_RELPATH",
     "PHYSICS_PROPERTIES_RELPATH",
     "PIECEWISE_SWEEP",
-    "POSTPROCESS_FUNCTION_NAME",
-    "POSTPROCESS_SCRIPT_RELPATH",
     "RUN_IN_PARALLEL",
     "RUN_SCRIPT_RELPATH",
     "SETUP_DIR_NAME",
