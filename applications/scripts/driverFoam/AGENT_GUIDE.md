@@ -18,8 +18,8 @@ before driving the orchestrator.
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
-| Locate predicted outputs | Read `artifacts_manifest.json` (sidecar, atomic) | `<output_dir>/` |
-| Verify outputs vs predictions | Read `artifacts_realized.json` (written at terminal status) | `<output_dir>/` |
+| Locate predicted outputs | `strict_plan(...)`'s `expected_artifacts` field (also in `foamctl plan --strict` JSON) | `openfoam_driver.strict_planning` |
+| Verify outputs vs predictions | `artifact_reconciliation` in `run --strict`/`step --strict` JSON output | `openfoam_driver.core.runtime.reconciler` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
 | Plan/run a parameter sweep | `foamctl sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
 
