@@ -1021,7 +1021,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     Reads all .dat files in folder_name and extracts:
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
-        - Solver     (always "implicit" — solutionAlgorithm is no longer in the filename)
+        - Solver     (defaults to "implicit"; solutionAlgorithm is no longer in the filename)
         - Linf errors for Vm, gauge-corrected phiE, u1, u2
 
     Returns one row per file.
