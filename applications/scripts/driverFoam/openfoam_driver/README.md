@@ -412,4 +412,4 @@ python3 applications/scripts/driverFoam/scripts/scan-dict-keys.py --strict
 
 This scanner fails when new uncatalogued C++ dict keys appear, stale catalog
 paths remain, or allowlist entries in
-`openfoam_driver/scripts/dict_key_allowlist.json` become unused.
+`openfoam_driver/plugins/cardiacfoam/dict_key_allowlist.json` become unused.

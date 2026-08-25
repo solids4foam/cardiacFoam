@@ -63,7 +63,29 @@ from openfoam_driver.scripts._dict_keys_scanner import (  # noqa: E402
     strict_dict_key_report,
 )
 
-SRC_ROOT = REPO_ROOT / "src"
+def _plugin_scan_inputs(plugin: str | None):
+    """Resolve the active plugin's C++ mapping and dictionary catalogue.
+
+    Mirrors ``core/strict_planning.py``: the source roots, the allowlist and
+    the catalogue are plugin-owned provenance, not constants of this script.
+    Returns ``(cxx_mapping | None, entries)``.
+    """
+    from openfoam_driver.core.plugin_interface import (
+        default_driver_context,
+        generic_openfoam_context,
+        load_plugin_context,
+    )
+
+    if plugin == "none":
+        context = generic_openfoam_context()
+    elif plugin:
+        context = load_plugin_context(plugin)
+    else:
+        context = default_driver_context()
+    mapping = context.capabilities.cxx_mapping.profile().cxx_mapping
+    entries = tuple(context.capabilities.dictionaries.entries())
+    return mapping, entries
+
 
 # OpenFOAM FoamFile-header boilerplate keys that are never user-facing.
 IGNORED_KEYS: frozenset[str] = frozenset(
@@ -251,19 +273,55 @@ def main() -> int:
         action="store_true",
         help=(
             "Fail on drift not covered by the reviewed allowlist, and fail "
-            "when allowlist entries become unused."
+            "when allowlist entries become unused. Note that "
+            "'driverFoam plan --strict' already runs this same check and "
+            "reports it as plugin_dict_key_* diagnostics."
+        ),
+    )
+    parser.add_argument(
+        "--plugin",
+        help=(
+            "Plugin whose C++ mapping and catalogue to scan: an installed "
+            "plugin id, a trusted local-development import target "
+            "(module.path:PluginClass), or 'none' for generic OpenFOAM. "
+            "Defaults to built-in cardiacFoam."
         ),
     )
     args = parser.parse_args()
 
-    if args.strict:
-        report = strict_dict_key_report(SRC_ROOT)
-        print(json.dumps(report.to_json(), indent=2))
-        return 0 if report.status == "ok" else 1
+    mapping, entries = _plugin_scan_inputs(args.plugin)
+    if mapping is None:
+        print(
+            "Active plugin declares no C++ mapping; nothing to scan.",
+            file=sys.stderr,
+        )
+        return 0
 
-    print(f"Scanning {_short_path(SRC_ROOT)} ...", file=sys.stderr)
-    reads = scan_dict_reads(SRC_ROOT)
-    cat_paths = list(iter_catalogue_paths())
+    src_roots = [root for root in mapping.source_roots if root.is_dir()]
+    for root in mapping.source_roots:
+        if not root.is_dir():
+            print(f"Source root unavailable, skipped: {root}", file=sys.stderr)
+    if not src_roots:
+        print("No usable C++ source root; nothing to scan.", file=sys.stderr)
+        return 0
+
+    if args.strict:
+        status = 0
+        for root in src_roots:
+            report = strict_dict_key_report(
+                root,
+                allowlist_path=mapping.allowlist_path,
+                entries=entries,
+            )
+            print(json.dumps(report.to_json(), indent=2))
+            if report.status != "ok":
+                status = 1
+        return status
+
+    for root in src_roots:
+        print(f"Scanning {_short_path(root)} ...", file=sys.stderr)
+    reads = [read for root in src_roots for read in scan_dict_reads(root)]
+    cat_paths = list(iter_catalogue_paths(entries))
 
     # Index C++ reads.
     key_reads: dict[str, list[DictRead]] = defaultdict(list)

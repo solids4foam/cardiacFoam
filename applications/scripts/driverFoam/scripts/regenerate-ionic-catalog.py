@@ -58,7 +58,11 @@ from openfoam_driver.scripts._names_parser import (  # noqa: E402
 )
 
 CATALOG_PATH = (
-    DRIVER_PKG / "openfoam_driver" / "ionic_model_catalog.py"
+    DRIVER_PKG
+    / "openfoam_driver"
+    / "plugins"
+    / "cardiacfoam"
+    / "ionic_model_catalog.py"
 )
 IONIC_MODELS_DIR = REPO_ROOT / "src" / "ionicModels"
 
