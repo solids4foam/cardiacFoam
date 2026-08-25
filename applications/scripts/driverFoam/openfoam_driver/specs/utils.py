@@ -1,5 +1,4 @@
 import importlib.util
-import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -59,64 +58,3 @@ def replace_block_mesh_resolutions(
             f"Expected to update {expected_blocks} hex blocks in {block_mesh_dict_path}, "
             f"but found {replaced_count}."
         )
-
-
-def archive_case_logs(case_root: Path, case_id: str) -> Path | None:
-    log_files = sorted(path for path in case_root.glob("log.*") if path.is_file())
-    if not log_files:
-        return None
-
-    destination_root = case_root / "logs" / case_id
-    if destination_root.exists():
-        shutil.rmtree(destination_root)
-    destination_root.mkdir(parents=True, exist_ok=True)
-
-    for source in log_files:
-        shutil.copy2(source, destination_root / source.name)
-
-    print(f"Archived {len(log_files)} log file(s) for {case_id}: {destination_root}")
-    return destination_root
-
-
-def stage_post_processing_outputs(
-    case_root: Path,
-    destination_dir: Path,
-    file_mapping: dict[str, str],
-    *,
-    missing_ok: bool = False,
-) -> list[Path]:
-    """
-    Finds files in `case_root/postProcessing/` (or `processor0/postProcessing/` fallback)
-    and copies or moves them to `destination_dir` using the renamed target names.
-    file_mapping is a dict of {source_filename: destination_filename}.
-    """
-    staged_outputs: list[Path] = []
-    destination_dir.mkdir(parents=True, exist_ok=True)
-
-    for source_name, dest_name in file_mapping.items():
-        destination = destination_dir / dest_name
-        candidates = (
-            case_root / "postProcessing" / source_name,
-            case_root / "processor0" / "postProcessing" / source_name,
-        )
-        found = False
-        for candidate in candidates:
-            if not candidate.exists():
-                continue
-            if candidate.parent == destination_dir:
-                shutil.move(str(candidate), str(destination))
-            else:
-                shutil.copy2(candidate, destination)
-            print(f"Archived output: {candidate} -> {destination}")
-            staged_outputs.append(destination)
-            found = True
-            break
-
-        if not found and not missing_ok:
-            checked = ", ".join(str(path) for path in candidates)
-            raise FileNotFoundError(
-                f"Output '{source_name}' not found after run. Checked: {checked}"
-            )
-
-    return staged_outputs
-

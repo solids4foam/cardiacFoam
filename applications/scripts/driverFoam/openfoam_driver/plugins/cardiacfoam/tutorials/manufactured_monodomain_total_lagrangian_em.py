@@ -47,10 +47,6 @@ from openfoam_driver.specs.common import (
     resolve_spec_paths,
     set_delta_t,
 )
-from openfoam_driver.specs.utils import (
-    archive_case_logs,
-    stage_post_processing_outputs,
-)
 from .manufactured_monodomain_pseudo_ecg import (
     _build_cases,
     _case_output_filename,
