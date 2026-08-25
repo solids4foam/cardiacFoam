@@ -349,6 +349,53 @@ def load_dict_key_allowlist(path: Path) -> dict[str, set[str]]:
     }
 
 
+def _as_paths(entries):
+    """Accept either DictEntry objects or already-parsed CataloguePath ones."""
+    items = list(entries)
+    if items and isinstance(items[0], CataloguePath):
+        return items
+    return list(iter_catalogue_paths(items))
+
+
+def catalogued_paths(entries: Iterable["DictEntry"]) -> tuple[str, ...]:
+    """Scope-stripped catalogue paths, for position-aware matching.
+
+    ``catalogued_names`` flattens the catalogue to a set of bare names, which
+    is all the C++ side can use -- a regex match on source gives no position.
+    A case file does give position, so ``core/specs/case_dict_keys.py`` uses
+    these full paths instead and can tell an author's instance label under a
+    ``<placeholder>`` from a real misspelling.
+    """
+    return tuple(path.normalised for path in _as_paths(entries))
+
+
+def catalogued_names(entries: Iterable["DictEntry"]) -> set[str]:
+    """Every name the catalogue knows anywhere, as a flat set.
+
+    Leaves of concrete AND wildcard paths, plus every non-wildcard container
+    segment. This is the "does the catalogue know this name?" set, shared by
+    both drift directions:
+
+      * :func:`compute_dict_key_drift` -- C++ reads with no catalogue match
+      * ``core/specs/case_dict_keys.py`` -- case-file keys with no match
+
+    They must not keep separate copies. A second, subtly different set is
+    exactly what produced the 71% false-positive rate the ``absent_keys`` ->
+    ``unmatched_cxx_reads`` rename fixed.
+
+    Note this is deliberately NOT ``cat_leaves``, which is concrete-only
+    because it also feeds ``stale_paths``, where excluding wildcard paths is
+    correct.
+    """
+    names: set[str] = set()
+    for path in _as_paths(entries):
+        names.add(path.leaf)
+        for seg in path.parents:
+            if not _WILDCARD_RE.fullmatch(seg):
+                names.add(seg)
+    return names
+
+
 def compute_dict_key_drift(
     src_root: Path,
     *,
@@ -387,20 +434,18 @@ def compute_dict_key_drift(
     # concrete-leaf-only comparison.
     cat_leaves: set[str] = set()
     cat_parent_segs: set[str] = set()
-    catalogued_names: set[str] = set()
     for path in cat_paths:
         if not (path.has_wildcard and path.dynamic_path):
             cat_leaves.add(path.leaf)
-        catalogued_names.add(path.leaf)
         for seg in path.parents:
             if not _WILDCARD_RE.fullmatch(seg):
                 cat_parent_segs.add(seg)
-    catalogued_names |= cat_parent_segs
+    known = catalogued_names(cat_paths)
 
     unmatched_cxx_reads = {
         key
         for key in code_keys_set
-        if key not in catalogued_names and key not in IGNORED_FOAMFILE_KEYS
+        if key not in known and key not in IGNORED_FOAMFILE_KEYS
     }
     stale_paths = {
         path.driver_path

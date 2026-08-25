@@ -64,8 +64,12 @@ from openfoam_driver.core.planning_types import (
     artifact_to_json as _artifact_to_json,
     diagnostic as _diagnostic,
 )
-from ..scripts._dict_keys_scanner import strict_dict_key_report
+from ..scripts._dict_keys_scanner import (
+    catalogued_paths as _catalogued_paths,
+    strict_dict_key_report,
+)
 from openfoam_driver.core.specs.function_object_fields import function_object_field_diagnostics
+from openfoam_driver.core.specs.case_dict_keys import case_dict_key_diagnostics as _case_dict_key_diagnostics
 from openfoam_driver.core.specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 
 
@@ -89,6 +93,7 @@ class StrictPlanReport:
     run_document: RunDocument | None = None
     capability_manifest: dict[str, Any] = field(default_factory=dict)
     function_object_diagnostics: tuple[StrictDiagnostic, ...] = ()
+    case_dict_key_diagnostics: tuple[StrictDiagnostic, ...] = ()
     plugin: dict[str, str] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
@@ -114,6 +119,9 @@ class StrictPlanReport:
             "capability_manifest": self.capability_manifest,
             "function_object_diagnostics": [
                 asdict(d) for d in self.function_object_diagnostics
+            ],
+            "case_dict_key_diagnostics": [
+                asdict(d) for d in self.case_dict_key_diagnostics
             ],
             "plugin": self.plugin,
         }
@@ -213,6 +221,38 @@ def _artifact_diagnostics(
         ))
 
     return tuple(diagnostics)
+
+
+def _owned_dict_relpaths(spec, driver_context: "DriverContext") -> tuple[str, ...]:
+    """Case dictionaries the active plugin's catalogue actually addresses.
+
+    Only dictionaries the catalogue covers may be swept: warning about keys in
+    a file the catalogue never claimed to describe would be pure noise.
+
+    The spec's own metadata is authoritative when present. Registered
+    tutorials declare it; a bare case folder does not, so we fall back to the
+    plugin's document names from ``override_schema.dict_entry_catalog()`` --
+    core does not know ``electroProperties`` is a thing, the plugin does -- and
+    locate each one in the conventional OpenFOAM directories. That split is
+    the right one: the plugin owns the names, core owns the case layout.
+    """
+    metadata = getattr(spec, "metadata", None) or {}
+    relpaths: list[str] = []
+    for key in ("electro_properties_relpath", "physics_properties_relpath"):
+        value = metadata.get(key)
+        if value and str(value) not in relpaths:
+            relpaths.append(str(value))
+    if relpaths:
+        return tuple(relpaths)
+
+    case_root = Path(spec.case_root)
+    documents = driver_context.capabilities.override_schema.dict_entry_catalog()
+    for document in documents:
+        for parent in ("constant", "system"):
+            candidate = f"{parent}/{document}"
+            if (case_root / candidate).is_file() and candidate not in relpaths:
+                relpaths.append(candidate)
+    return tuple(relpaths)
 
 
 def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnostic, ...]:
@@ -436,10 +476,23 @@ def strict_plan(
         spec.case_root,
         samplable=raw_capability_manifest.get("samplable_fields", {}),
     )
-    # Field diagnostics are warn-only: reported (in all_diagnostics) but never
-    # part of plan_diagnostics, so a sampled-field warning cannot fail a plan.
+    case_dict_key_diagnostics = _case_dict_key_diagnostics(
+        spec.case_root,
+        catalogued_paths=_catalogued_paths(
+            driver_context.capabilities.dictionaries.entries()
+        ),
+        dict_relpaths=_owned_dict_relpaths(spec, driver_context),
+    )
+    # Field and case-key diagnostics are warn-only: reported (in
+    # all_diagnostics) but never part of plan_diagnostics, so neither a
+    # sampled-field nor an uncatalogued-key warning can fail a plan. The
+    # catalogue does not own every key that may legitimately appear in a case
+    # dictionary, so an unmatched key is a question for a human, not a defect.
     all_diagnostics = (
-        plan_diagnostics + env_diagnostics + function_object_diagnostics
+        plan_diagnostics
+        + env_diagnostics
+        + function_object_diagnostics
+        + case_dict_key_diagnostics
     )
     failed = _has_error(plan_diagnostics)
     run_document.status = "failed" if failed else "planned"
@@ -472,5 +525,6 @@ def strict_plan(
         run_document=run_document,
         capability_manifest=capability_manifest,
         function_object_diagnostics=function_object_diagnostics,
+        case_dict_key_diagnostics=case_dict_key_diagnostics,
         plugin=driver_context.identity.to_json(),
     )
