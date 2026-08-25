@@ -15,17 +15,6 @@ def load_python_module(module_path: Path, *, module_name: str):
     return module
 
 
-def collect_outputs_by_pattern(case_root: Path, output_dir: Path, *, pattern: str) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    matching_files = sorted(case_root.glob(pattern))
-    for source in matching_files:
-        destination = output_dir / source.name
-        if destination.exists():
-            destination.unlink()
-        shutil.move(str(source), str(destination))
-        print(f"Moved output: {source.name} -> {destination}")
-
-
 def set_delta_t(control_dict_path: Path, delta_t_seconds: float) -> None:
     update_foam_entry(control_dict_path, "deltaT", delta_t_seconds)
 

@@ -38,7 +38,6 @@ from .paths import (
     tutorials_root_default,
 )
 from .utils import (
-    collect_outputs_by_pattern,
     load_python_module,
     replace_block_mesh_resolutions,
     set_delta_t,
@@ -52,7 +51,6 @@ __all__ = [
     "resolve_spec_paths",
     "resolve_run_script_path",
     "load_python_module",
-    "collect_outputs_by_pattern",
     "set_delta_t",
     "set_end_time",
     "replace_block_mesh_resolutions",
