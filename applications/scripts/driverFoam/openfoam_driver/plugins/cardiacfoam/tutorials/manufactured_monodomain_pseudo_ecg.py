@@ -255,12 +255,12 @@ def _apply_case(
         case_overrides.update(
             {
                 f"{ecg_scope}.ecgSolver": "pseudoECG",
-                f"{ecg_scope}.manufactured.enabled": True,
-                f"{ecg_scope}.manufactured.dimension": f'"{dimension}"',
-                f"{ecg_scope}.manufactured.referenceQuadratureOrder": int(
+                f"{ecg_scope}.verificationModel.enabled": True,
+                f"{ecg_scope}.verificationModel.dimension": f'"{dimension}"',
+                f"{ecg_scope}.verificationModel.referenceQuadratureOrder": int(
                     ecg_reference_quadrature_order
                 ),
-                f"{ecg_scope}.manufactured.checkQuadratureOrders": "("
+                f"{ecg_scope}.verificationModel.checkQuadratureOrders": "("
                 + " ".join(str(int(value)) for value in ecg_check_quadrature_orders)
                 + ")",
             }

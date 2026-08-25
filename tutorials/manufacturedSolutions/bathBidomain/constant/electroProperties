@@ -42,12 +42,6 @@ bidomainSolverCoeffs
         alpha           0.01;
         fdaBathVariant  electrodePair;
     }
-    manufacturedBidomain
-    {
-        k               0.7071067811865476;
-        alpha           0.01;
-        fdaBathVariant  electrodePair;
-    }
     dimension       "1D";
     solutionAlgorithm implicit;
     solver          RKF45;

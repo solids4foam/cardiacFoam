@@ -366,7 +366,7 @@ bool pseudoECGManufacturedVerifier::read(const dictionary& dict)
     checkQuadratureOrders_[2] = 24;
     checkQuadratureOrders_[3] = 48;
 
-    const dictionary& cfg = dict.subDict("manufactured");
+    const dictionary& cfg = dict.subDict("verificationModel");
     enabled_ = cfg.lookupOrDefault<Switch>("enabled", true);
 
     if (cfg.found("dimension"))

@@ -54,10 +54,18 @@ eikonalECG::eikonalECG(const dictionary& dict)
     const word verifierType =
         dict.lookupOrDefault<word>("ecgVerificationModel", word::null);
 
+    word verifierTypeModern = word::null;
+    if (dict.found("verificationModel"))
+    {
+        verifierTypeModern = dict.subDict("verificationModel").lookupOrDefault<word>("type", "none");
+    }
+
     if
     (
         dict.found("manufacturedEikonalECG")
      || verifierType == "eikonalECGManufacturedVerifier"
+     || verifierTypeModern == "eikonalECGManufacturedVerifier"
+     || verifierTypeModern == "manufacturedEikonalECGVerifier"
     )
     {
         useManufacturedTemplate_ = true;

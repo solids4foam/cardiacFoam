@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    bathECGManufacturedVerifier
+    manufacturedBathBidomainECGVerifier
 
 Description
     Bath ECG manufactured verifier.
@@ -25,8 +25,8 @@ Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef bathECGManufacturedVerifier_H
-#define bathECGManufacturedVerifier_H
+#ifndef manufacturedBathBidomainECGVerifier_H
+#define manufacturedBathBidomainECGVerifier_H
 
 #include "ecgVerificationModel.H"
 #include "OFstream.H"
@@ -36,7 +36,7 @@ Author
 namespace Foam
 {
 
-class bathECGManufacturedVerifier
+class manufacturedBathBidomainECGVerifier
 :
     public ecgVerificationModel
 {
@@ -59,14 +59,14 @@ class bathECGManufacturedVerifier
     void resizeStatistics();
     void writeSummary();
 
-    bathECGManufacturedVerifier(const bathECGManufacturedVerifier&) = delete;
-    void operator=(const bathECGManufacturedVerifier&) = delete;
+    manufacturedBathBidomainECGVerifier(const manufacturedBathBidomainECGVerifier&) = delete;
+    void operator=(const manufacturedBathBidomainECGVerifier&) = delete;
 
 public:
 
-    OverrideTypeName("bathECGManufacturedVerifier");
+    OverrideTypeName("manufacturedBathBidomainECGVerifier");
 
-    bathECGManufacturedVerifier
+    manufacturedBathBidomainECGVerifier
     (
         const electroStateProvider& stateProvider,
         const dictionary& dict,
@@ -74,7 +74,7 @@ public:
         const List<vector>& electrodePositions
     );
 
-    virtual ~bathECGManufacturedVerifier() = default;
+    virtual ~manufacturedBathBidomainECGVerifier() = default;
 
     virtual Requirements requirements() const override;
 

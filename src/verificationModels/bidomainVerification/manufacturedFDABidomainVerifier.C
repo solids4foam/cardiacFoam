@@ -67,7 +67,7 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 
 const dictionary& manufacturedFDABidomainVerifier::verificationDict() const
 {
-    return dict().subDict("manufacturedBidomain");
+    return dict().subDict("verificationModel");
 }
 
 void manufacturedFDABidomainVerifier::bindBidomainField(volScalarField& phiE)

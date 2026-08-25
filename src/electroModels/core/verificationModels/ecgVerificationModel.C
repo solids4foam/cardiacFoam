@@ -44,27 +44,17 @@ ecgVerificationModel::ecgVerificationModel
 
 word ecgVerificationModel::selectedType(const dictionary& dict)
 {
-    const word modelType
-    (
-        dict.lookupOrDefault<word>("ecgVerificationModel", word::null)
-    );
-
-    if (!modelType.empty())
+    if (dict.found("type"))
     {
-        return modelType;
+        return dict.lookupOrDefault<word>("type", "none");
+    }
+    
+    if (dict.found("verificationModel"))
+    {
+        return dict.subDict("verificationModel").lookupOrDefault<word>("type", "none");
     }
 
-    if (dict.found("manufactured"))
-    {
-        return "pseudoECGManufacturedVerifier";
-    }
-
-    if (dict.found("manufacturedEikonalECG"))
-    {
-        return "eikonalECGManufacturedVerifier";
-    }
-
-    return word::null;
+    return dict.lookupOrDefault<word>("ecgVerificationModel", word::null);
 }
 
 

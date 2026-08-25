@@ -36,9 +36,6 @@ bidomainSolverCoeffs
     verificationModel
     {
         type            manufacturedFDABidomainVerifier;
-    }
-    manufacturedBidomain
-    {
         k               0.707107;
     }
     dimension       "3D";
@@ -54,19 +51,6 @@ bidomainSolverCoeffs
         stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
         stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
         stimulusStartTime 0;
-    }
-    ecgDomains
-    {
-        ECG
-        {
-            ecgSolver pseudoECG;
-            manufactured
-            {
-            }
-            electrodePositions
-            {
-            }
-        }
     }
     timeCouplingScheme sbdf2;
 }

@@ -120,7 +120,7 @@ _DEFAULT_ECG_DOMAINS_BLOCK = """    ecgDomains
         bodyECG
         {
             ecgSolver    torsoECG;
-            ecgVerificationModel    bathECGManufacturedVerifier;
+            ecgVerificationModel    manufacturedBathBidomainECGVerifier;
             reportElectrodeLookup    yes;
         }
 
@@ -278,7 +278,6 @@ def _apply_case(
         ),
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
         f"{electro_properties_scope}.verificationModel.fdaBathVariant": fda_bath_variant,
-        f"{electro_properties_scope}.manufacturedBidomain.fdaBathVariant": fda_bath_variant,
     }
 
     if fda_bath_variant not in ("groundElectrode", "electrodePair"):
@@ -387,7 +386,7 @@ def _apply_case(
             {
                 f"{electro_properties_scope}.ecgDomains.bodyECG.ecgSolver": "torsoECG",
                 f"{electro_properties_scope}.ecgDomains.bodyECG.ecgVerificationModel":
-                    "bathECGManufacturedVerifier",
+                    "manufacturedBathBidomainECGVerifier",
                 f"{electro_properties_scope}.ecgDomains.pseudoECGSignals.ecgSolver": "pseudoECG",
             }
         )

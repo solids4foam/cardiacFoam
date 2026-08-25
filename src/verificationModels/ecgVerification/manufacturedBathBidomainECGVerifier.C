@@ -17,7 +17,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "bathECGManufacturedVerifier.H"
+#include "manufacturedBathBidomainECGVerifier.H"
 
 #include "DynamicList.H"
 #include "PstreamReduceOps.H"
@@ -30,11 +30,11 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(bathECGManufacturedVerifier, 0);
+defineTypeNameAndDebug(manufacturedBathBidomainECGVerifier, 0);
 addToRunTimeSelectionTable
 (
     ecgVerificationModel,
-    bathECGManufacturedVerifier,
+    manufacturedBathBidomainECGVerifier,
     dictionary
 );
 
@@ -96,7 +96,7 @@ void validateGroundedFDABathBoundarySetup
     if (!dict.found("groundPatches"))
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier supports only the FDA grounded "
+            << "manufacturedBathBidomainECGVerifier supports only the FDA grounded "
             << "bath variant. Configure groundPatches { xMin 0; }."
             << exit(FatalError);
     }
@@ -107,7 +107,7 @@ void validateGroundedFDABathBoundarySetup
     if (groundNames.size() != 1 || !groundDict.found("xMin"))
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier supports only the FDA grounded "
+            << "manufacturedBathBidomainECGVerifier supports only the FDA grounded "
             << "bath variant with exactly one ground patch: "
             << "groundPatches { xMin 0; }."
             << exit(FatalError);
@@ -118,7 +118,7 @@ void validateGroundedFDABathBoundarySetup
     if (mag(groundValue) > SMALL)
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier requires phiE = 0 on xMin. "
+            << "manufacturedBathBidomainECGVerifier requires phiE = 0 on xMin. "
             << "Found groundPatches { xMin " << groundValue << "; }."
             << exit(FatalError);
     }
@@ -126,7 +126,7 @@ void validateGroundedFDABathBoundarySetup
     if (!dict.found("surfaceCurrentPatches"))
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier supports only the FDA grounded "
+            << "manufacturedBathBidomainECGVerifier supports only the FDA grounded "
             << "bath variant. Configure surfaceCurrentPatches { xMax alpha; }."
             << exit(FatalError);
     }
@@ -137,7 +137,7 @@ void validateGroundedFDABathBoundarySetup
     if (currentNames.size() != 1 || !currentDict.found("xMax"))
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier supports only the FDA grounded "
+            << "manufacturedBathBidomainECGVerifier supports only the FDA grounded "
             << "bath variant with exactly one surface-current patch: "
             << "surfaceCurrentPatches { xMax alpha; }."
             << exit(FatalError);
@@ -148,7 +148,7 @@ void validateGroundedFDABathBoundarySetup
     if (mag(currentValue - alpha) > SMALL)
     {
         FatalErrorInFunction
-            << "bathECGManufacturedVerifier requires +alpha on xMax. "
+            << "manufacturedBathBidomainECGVerifier requires +alpha on xMax. "
             << "Expected " << alpha << " but found " << currentValue << "."
             << exit(FatalError);
     }
@@ -157,7 +157,7 @@ void validateGroundedFDABathBoundarySetup
 }
 
 
-bathECGManufacturedVerifier::bathECGManufacturedVerifier
+manufacturedBathBidomainECGVerifier::manufacturedBathBidomainECGVerifier
 (
     const electroStateProvider& stateProvider,
     const dictionary& dict,
@@ -184,7 +184,7 @@ bathECGManufacturedVerifier::bathECGManufacturedVerifier
 
 
 ecgVerificationModel::Requirements
-bathECGManufacturedVerifier::requirements() const
+manufacturedBathBidomainECGVerifier::requirements() const
 {
     Requirements needs;
     needs.needPhiE = true;
@@ -192,7 +192,7 @@ bathECGManufacturedVerifier::requirements() const
 }
 
 
-void bathECGManufacturedVerifier::resizeStatistics()
+void manufacturedBathBidomainECGVerifier::resizeStatistics()
 {
     electrodeErrorL1Sum_.setSize(electrodePositions_.size(), 0.0);
     electrodeErrorL2Sum_.setSize(electrodePositions_.size(), 0.0);
@@ -200,7 +200,7 @@ void bathECGManufacturedVerifier::resizeStatistics()
 }
 
 
-void bathECGManufacturedVerifier::initialiseOutput()
+void manufacturedBathBidomainECGVerifier::initialiseOutput()
 {
     const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
@@ -222,9 +222,9 @@ void bathECGManufacturedVerifier::initialiseOutput()
 }
 
 
-bool bathECGManufacturedVerifier::read(const dictionary& dict)
+bool manufacturedBathBidomainECGVerifier::read(const dictionary& dict)
 {
-    const dictionary& manufactured = dict.subDict("manufacturedBidomain");
+    const dictionary& manufactured = dict.subDict("verificationModel");
 
     enabled_ = manufactured.lookupOrDefault<Switch>("enabled", true);
     k_ = manufactured.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
@@ -237,7 +237,7 @@ bool bathECGManufacturedVerifier::read(const dictionary& dict)
         FatalErrorInFunction
             << type()
             << " currently implements the FDA ground-electrode variant only. "
-            << "Set manufacturedBidomain { fdaBathVariant groundElectrode; }."
+            << "Set verificationModel { fdaBathVariant groundElectrode; }."
             << exit(FatalError);
     }
 
@@ -262,7 +262,7 @@ bool bathECGManufacturedVerifier::read(const dictionary& dict)
 }
 
 
-void bathECGManufacturedVerifier::record(const List<scalar>& numericValues)
+void manufacturedBathBidomainECGVerifier::record(const List<scalar>& numericValues)
 {
     using namespace verificationUtils;
 
@@ -343,7 +343,7 @@ void bathECGManufacturedVerifier::record(const List<scalar>& numericValues)
 }
 
 
-void bathECGManufacturedVerifier::writeSummary()
+void manufacturedBathBidomainECGVerifier::writeSummary()
 {
     if (!enabled_ || summaryWritten_)
     {
@@ -384,7 +384,7 @@ void bathECGManufacturedVerifier::writeSummary()
 }
 
 
-void bathECGManufacturedVerifier::end()
+void manufacturedBathBidomainECGVerifier::end()
 {
     writeSummary();
 }

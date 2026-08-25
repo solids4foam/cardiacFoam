@@ -86,7 +86,7 @@ const dictionary& eikonalECGManufacturedVerifier::manufacturedDict
     const dictionary& dict
 ) const
 {
-    return dict.subDict("manufacturedEikonalECG");
+    return dict.subDict("verificationModel");
 }
 
 

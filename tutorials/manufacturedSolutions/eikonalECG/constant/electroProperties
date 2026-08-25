@@ -42,8 +42,9 @@ eikonalSolverCoeffs
                 end             2;
                 deltaT          0.01;
             }
-            manufacturedEikonalECG
+            verificationModel
             {
+                type    eikonalECGManufacturedVerifier;
                 enabled    yes;
                 referenceQuadratureOrder    96;
                 checkQuadratureOrders    (6 12 24 48 96);

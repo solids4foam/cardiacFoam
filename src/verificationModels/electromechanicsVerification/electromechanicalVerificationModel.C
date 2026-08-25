@@ -37,7 +37,7 @@ electromechanicalVerificationModel::electromechanicalVerificationModel
 
 bool electromechanicalVerificationModel::configured(const dictionary& dict)
 {
-    return dict.found("electromechanicalVerificationModel");
+    return dict.found("verificationModel");
 }
 
 
@@ -45,7 +45,7 @@ autoPtr<electromechanicalVerificationModel>
 electromechanicalVerificationModel::New(const dictionary& dict)
 {
     const dictionary& verifyDict =
-        dict.subDict("electromechanicalVerificationModel");
+        dict.subDict("verificationModel");
 
     const word modelType(verifyDict.lookup("type"));
 

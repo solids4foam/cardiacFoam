@@ -218,10 +218,10 @@ def _apply_case(
     case_overrides = {
         f"{electro_properties_scope}.verificationModel.type": verification_model_type,
         f"{ecg_scope}.ecgSolver": "eikonalECG",
-        f"{ecg_scope}.manufacturedEikonalECG.enabled": True,
-        f"{ecg_scope}.manufacturedEikonalECG.referenceQuadratureOrder":
+        f"{ecg_scope}.verificationModel.enabled": True,
+        f"{ecg_scope}.verificationModel.referenceQuadratureOrder":
             int(ecg_reference_quadrature_order),
-        f"{ecg_scope}.manufacturedEikonalECG.checkQuadratureOrders": "("
+        f"{ecg_scope}.verificationModel.checkQuadratureOrders": "("
         + " ".join(str(int(value)) for value in ecg_check_quadrature_orders)
         + ")",
     }

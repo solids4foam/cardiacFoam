@@ -54,8 +54,9 @@ monodomainSolverCoeffs
         ECG
         {
             ecgSolver    pseudoECG;
-            manufactured
+            verificationModel
             {
+                type    pseudoECGManufacturedVerifier;
                 enabled    yes;
                 dimension    "3D";
                 referenceQuadratureOrder    96;
