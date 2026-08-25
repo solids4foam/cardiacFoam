@@ -65,9 +65,9 @@ Registered verifier types include:
 - `manufacturedFDABidomainVerifier`
 - `manufacturedFDABathBidomainVerifier`
 - `manufacturedEikonalVerifier`
-- `pseudoECGManufacturedVerifier`
+- `manufacturedPseudoECGVerifier`
 - `bathECGManufacturedVerifier`
-- `eikonalECGManufacturedVerifier`
+- `manufacturedEikonalECGVerifier`
 - `manufacturedGraphVerifier`
 - `coupled1D3DMonodomainVerifier`
 

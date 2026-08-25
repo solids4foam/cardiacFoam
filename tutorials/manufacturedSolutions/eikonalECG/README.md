@@ -8,7 +8,7 @@ Manufactured-solution verification for the eikonal activation-time solve and its
 
 - myocardium solver: `eikonalSolver`
 - field verification: `manufacturedEikonalVerifier` from `libverificationModels`
-- ECG verification: `eikonalECGManufacturedVerifier` from `libverificationModels`
+- ECG verification: `manufacturedEikonalECGVerifier` from `libverificationModels`
 - shared analytical oracle: `verificationModels`
 
 ### Purpose

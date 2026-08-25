@@ -114,7 +114,7 @@ Role:
 
 Current concrete verifier:
 
-- `pseudoECGManufacturedVerifier`
+- `manufacturedPseudoECGVerifier`
 
 ## Coupled verification
 

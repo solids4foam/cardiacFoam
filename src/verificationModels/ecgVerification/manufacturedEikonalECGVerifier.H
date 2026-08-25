@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    eikonalECGManufacturedVerifier
+    manufacturedEikonalECGVerifier
 
 Description
     Manufactured verifier for eikonal template-surrogate ECG.
@@ -25,8 +25,8 @@ Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef eikonalECGManufacturedVerifier_H
-#define eikonalECGManufacturedVerifier_H
+#ifndef manufacturedEikonalECGVerifier_H
+#define manufacturedEikonalECGVerifier_H
 
 #include "ecgVerificationModel.H"
 #include "OFstream.H"
@@ -36,7 +36,7 @@ Author
 namespace Foam
 {
 
-class eikonalECGManufacturedVerifier
+class manufacturedEikonalECGVerifier
 :
     public ecgVerificationModel
 {
@@ -73,17 +73,17 @@ class eikonalECGManufacturedVerifier
 
     const dictionary& manufacturedDict(const dictionary& dict) const;
 
-    eikonalECGManufacturedVerifier
+    manufacturedEikonalECGVerifier
     (
-        const eikonalECGManufacturedVerifier&
+        const manufacturedEikonalECGVerifier&
     ) = delete;
-    void operator=(const eikonalECGManufacturedVerifier&) = delete;
+    void operator=(const manufacturedEikonalECGVerifier&) = delete;
 
 public:
 
-    OverrideTypeName("eikonalECGManufacturedVerifier");
+    OverrideTypeName("manufacturedEikonalECGVerifier");
 
-    eikonalECGManufacturedVerifier
+    manufacturedEikonalECGVerifier
     (
         const electroStateProvider& stateProvider,
         const dictionary& dict,
@@ -91,7 +91,7 @@ public:
         const List<vector>& electrodePositions
     );
 
-    virtual ~eikonalECGManufacturedVerifier() = default;
+    virtual ~manufacturedEikonalECGVerifier() = default;
 
     virtual Requirements requirements() const override;
 

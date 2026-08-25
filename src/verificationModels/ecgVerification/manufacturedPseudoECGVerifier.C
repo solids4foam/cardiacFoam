@@ -17,7 +17,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "pseudoECGManufacturedVerifier.H"
+#include "manufacturedPseudoECGVerifier.H"
 
 #include "DynamicList.H"
 #include "PstreamReduceOps.H"
@@ -28,16 +28,16 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(pseudoECGManufacturedVerifier, 0);
+defineTypeNameAndDebug(manufacturedPseudoECGVerifier, 0);
 addToRunTimeSelectionTable
 (
     ecgVerificationModel,
-    pseudoECGManufacturedVerifier,
+    manufacturedPseudoECGVerifier,
     dictionary
 );
 
 
-pseudoECGManufacturedVerifier::pseudoECGManufacturedVerifier
+manufacturedPseudoECGVerifier::manufacturedPseudoECGVerifier
 (
     const electroStateProvider& stateProvider,
     const dictionary& dict,
@@ -72,7 +72,7 @@ pseudoECGManufacturedVerifier::pseudoECGManufacturedVerifier
 
 
 ecgVerificationModel::Requirements
-pseudoECGManufacturedVerifier::requirements() const
+manufacturedPseudoECGVerifier::requirements() const
 {
     Requirements needs;
     needs.needConductivity = true;
@@ -80,7 +80,7 @@ pseudoECGManufacturedVerifier::requirements() const
 }
 
 
-void pseudoECGManufacturedVerifier::resizeCheckStorage()
+void manufacturedPseudoECGVerifier::resizeCheckStorage()
 {
     const label nChecks = checkQuadratureOrders_.size();
     const label nElectrodes = electrodePositions_.size();
@@ -106,7 +106,7 @@ void pseudoECGManufacturedVerifier::resizeCheckStorage()
 }
 
 
-void pseudoECGManufacturedVerifier::initialiseOutput()
+void manufacturedPseudoECGVerifier::initialiseOutput()
 {
     const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
@@ -161,7 +161,7 @@ void pseudoECGManufacturedVerifier::initialiseOutput()
 }
 
 
-void pseudoECGManufacturedVerifier::invalidateReferenceCache()
+void manufacturedPseudoECGVerifier::invalidateReferenceCache()
 {
     referenceSpatialValues_.clear();
     checkSpatialValues_.clear();
@@ -170,7 +170,7 @@ void pseudoECGManufacturedVerifier::invalidateReferenceCache()
 }
 
 
-void pseudoECGManufacturedVerifier::rebuildReferenceCache
+void manufacturedPseudoECGVerifier::rebuildReferenceCache
 (
     const tensor& referenceConductivity
 )
@@ -235,7 +235,7 @@ void pseudoECGManufacturedVerifier::rebuildReferenceCache
 }
 
 
-void pseudoECGManufacturedVerifier::updateStatistics
+void manufacturedPseudoECGVerifier::updateStatistics
 (
     const List<scalar>& numericValues,
     const List<List<scalar>>& checkReferenceValues,
@@ -280,7 +280,7 @@ void pseudoECGManufacturedVerifier::updateStatistics
 }
 
 
-void pseudoECGManufacturedVerifier::writeSummary()
+void manufacturedPseudoECGVerifier::writeSummary()
 {
     if (!enabled_ || summaryWritten_)
     {
@@ -350,7 +350,7 @@ void pseudoECGManufacturedVerifier::writeSummary()
 }
 
 
-bool pseudoECGManufacturedVerifier::read(const dictionary& dict)
+bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
 {
     const Switch wasEnabled = enabled_;
     const label previousDimension = dimension_;
@@ -514,7 +514,7 @@ bool pseudoECGManufacturedVerifier::read(const dictionary& dict)
 }
 
 
-void pseudoECGManufacturedVerifier::record(const List<scalar>& numericValues)
+void manufacturedPseudoECGVerifier::record(const List<scalar>& numericValues)
 {
     if (!enabled_)
     {
@@ -618,7 +618,7 @@ void pseudoECGManufacturedVerifier::record(const List<scalar>& numericValues)
 }
 
 
-void pseudoECGManufacturedVerifier::end()
+void manufacturedPseudoECGVerifier::end()
 {
     writeSummary();
 }

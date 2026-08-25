@@ -10,7 +10,7 @@ Manufactured-solution verification for the monodomain stack with pseudo-ECG veri
 - ionic model: `monodomainFDAManufactured`
 - field verification: `manufacturedFDAMonodomainVerifier` from `libverificationModels`
 - shared analytical oracle: `verificationModels`
-- optional manufactured pseudo-ECG verification: `pseudoECGManufacturedVerifier` from `libverificationModels`
+- optional manufactured pseudo-ECG verification: `manufacturedPseudoECGVerifier` from `libverificationModels`
 
 ### Purpose
 

@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    pseudoECGManufacturedVerifier
+    manufacturedPseudoECGVerifier
 
 Description
     Pseudo-ECG manufactured verifier.
@@ -25,8 +25,8 @@ Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef pseudoECGManufacturedVerifier_H
-#define pseudoECGManufacturedVerifier_H
+#ifndef manufacturedPseudoECGVerifier_H
+#define manufacturedPseudoECGVerifier_H
 
 #include "ecgVerificationModel.H"
 #include "OFstream.H"
@@ -36,7 +36,7 @@ Author
 namespace Foam
 {
 
-class pseudoECGManufacturedVerifier
+class manufacturedPseudoECGVerifier
 :
     public ecgVerificationModel
 {
@@ -79,14 +79,14 @@ class pseudoECGManufacturedVerifier
 
     void writeSummary();
 
-    pseudoECGManufacturedVerifier(const pseudoECGManufacturedVerifier&);
-    void operator=(const pseudoECGManufacturedVerifier&);
+    manufacturedPseudoECGVerifier(const manufacturedPseudoECGVerifier&);
+    void operator=(const manufacturedPseudoECGVerifier&);
 
 public:
 
-    OverrideTypeName("pseudoECGManufacturedVerifier");
+    OverrideTypeName("manufacturedPseudoECGVerifier");
 
-    pseudoECGManufacturedVerifier
+    manufacturedPseudoECGVerifier
     (
         const electroStateProvider& stateProvider,
         const dictionary& dict,
@@ -94,7 +94,7 @@ public:
         const List<vector>& electrodePositions
     );
 
-    virtual ~pseudoECGManufacturedVerifier() = default;
+    virtual ~manufacturedPseudoECGVerifier() = default;
 
     virtual Requirements requirements() const override;
 

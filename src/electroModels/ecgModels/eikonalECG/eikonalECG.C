@@ -63,8 +63,8 @@ eikonalECG::eikonalECG(const dictionary& dict)
     if
     (
         dict.found("manufacturedEikonalECG")
-     || verifierType == "eikonalECGManufacturedVerifier"
-     || verifierTypeModern == "eikonalECGManufacturedVerifier"
+     || verifierType == "manufacturedEikonalECGVerifier"
+     || verifierTypeModern == "manufacturedEikonalECGVerifier"
      || verifierTypeModern == "manufacturedEikonalECGVerifier"
     )
     {

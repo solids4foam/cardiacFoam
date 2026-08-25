@@ -17,7 +17,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "eikonalECGManufacturedVerifier.H"
+#include "manufacturedEikonalECGVerifier.H"
 
 #include "DynamicList.H"
 #include "PstreamReduceOps.H"
@@ -28,16 +28,16 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(eikonalECGManufacturedVerifier, 0);
+defineTypeNameAndDebug(manufacturedEikonalECGVerifier, 0);
 addToRunTimeSelectionTable
 (
     ecgVerificationModel,
-    eikonalECGManufacturedVerifier,
+    manufacturedEikonalECGVerifier,
     dictionary
 );
 
 
-eikonalECGManufacturedVerifier::eikonalECGManufacturedVerifier
+manufacturedEikonalECGVerifier::manufacturedEikonalECGVerifier
 (
     const electroStateProvider& stateProvider,
     const dictionary& dict,
@@ -69,7 +69,7 @@ eikonalECGManufacturedVerifier::eikonalECGManufacturedVerifier
 
 
 ecgVerificationModel::Requirements
-eikonalECGManufacturedVerifier::requirements() const
+manufacturedEikonalECGVerifier::requirements() const
 {
     Requirements needs;
     needs.needActivationTime = true;
@@ -81,7 +81,7 @@ eikonalECGManufacturedVerifier::requirements() const
 }
 
 
-const dictionary& eikonalECGManufacturedVerifier::manufacturedDict
+const dictionary& manufacturedEikonalECGVerifier::manufacturedDict
 (
     const dictionary& dict
 ) const
@@ -90,7 +90,7 @@ const dictionary& eikonalECGManufacturedVerifier::manufacturedDict
 }
 
 
-void eikonalECGManufacturedVerifier::resizeStorage()
+void manufacturedEikonalECGVerifier::resizeStorage()
 {
     const label nChecks = checkQuadratureOrders_.size();
     const label nElectrodes = electrodePositions_.size();
@@ -117,7 +117,7 @@ void eikonalECGManufacturedVerifier::resizeStorage()
 }
 
 
-void eikonalECGManufacturedVerifier::initialiseOutput()
+void manufacturedEikonalECGVerifier::initialiseOutput()
 {
     const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     wordList columns;
@@ -172,7 +172,7 @@ void eikonalECGManufacturedVerifier::initialiseOutput()
 }
 
 
-bool eikonalECGManufacturedVerifier::read(const dictionary& dict)
+bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
 {
     const dictionary& cfg = manufacturedDict(dict);
 
@@ -297,7 +297,7 @@ bool eikonalECGManufacturedVerifier::read(const dictionary& dict)
 }
 
 
-void eikonalECGManufacturedVerifier::updateStatistics
+void manufacturedEikonalECGVerifier::updateStatistics
 (
     const List<scalar>& numericValues,
     const List<List<scalar>>& checkReferenceValues,
@@ -344,7 +344,7 @@ void eikonalECGManufacturedVerifier::updateStatistics
 }
 
 
-void eikonalECGManufacturedVerifier::record
+void manufacturedEikonalECGVerifier::record
 (
     const List<scalar>& numericValues
 )
@@ -353,7 +353,7 @@ void eikonalECGManufacturedVerifier::record
 }
 
 
-void eikonalECGManufacturedVerifier::record
+void manufacturedEikonalECGVerifier::record
 (
     scalar sampleTime,
     const List<scalar>& numericValues
@@ -486,7 +486,7 @@ void eikonalECGManufacturedVerifier::record
 }
 
 
-void eikonalECGManufacturedVerifier::writeSummary()
+void manufacturedEikonalECGVerifier::writeSummary()
 {
     if (!enabled_ || summaryWritten_)
     {
@@ -559,7 +559,7 @@ void eikonalECGManufacturedVerifier::writeSummary()
 }
 
 
-void eikonalECGManufacturedVerifier::end()
+void manufacturedEikonalECGVerifier::end()
 {
     writeSummary();
 }

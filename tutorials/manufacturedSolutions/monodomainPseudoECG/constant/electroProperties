@@ -56,7 +56,7 @@ monodomainSolverCoeffs
             ecgSolver    pseudoECG;
             verificationModel
             {
-                type    pseudoECGManufacturedVerifier;
+                type    manufacturedPseudoECGVerifier;
                 enabled    yes;
                 dimension    "3D";
                 referenceQuadratureOrder    96;
