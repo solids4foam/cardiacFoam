@@ -114,9 +114,13 @@ def check_required(
 
     `dynamic_path=True` entries are skipped — they describe template paths
     (e.g. ``domainCouplings.<name>.electroDomainCoupler``) rather than
-    concrete required leaves. The user's overrides supply concrete paths
-    when those blocks are actually configured; the cross-block validators catch
-    dangling references at run-construction time.
+    concrete required leaves, and this generic, plugin-agnostic function has
+    no way to discover which concrete ``<name>`` instances a given run
+    actually configures. Required-field enforcement for those concrete
+    instances, if any, is a plugin concern: see e.g. the cardiacfoam
+    plugin's ``_evaluate_dynamic_required_fields``
+    (``plugins/cardiacfoam/validation.py``), which is not guaranteed to
+    exist for every plugin's dynamic-path entries.
 
     The optional `context` enables `_is_required_in_context` to honour
     `required_when` predicates; when omitted, `required=True` is treated

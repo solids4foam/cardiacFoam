@@ -40,9 +40,49 @@ import pytest
 
 from openfoam_driver.plugins.cardiacfoam.runtime_evidence import (
     _LIBRARY_CATALOG,
+    _parse_control_dict_libs,
     resolve_runtime_dependencies,
 )
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
+
+
+def _write_control_dict(tmp_path: Path, body: str) -> Path:
+    p = tmp_path / "controlDict"
+    p.write_text(
+        "FoamFile\n{\n    version 2.0;\n    format ascii;\n"
+        "    class dictionary;\n    object controlDict;\n}\n\n" + body
+    )
+    return p
+
+
+class TestParseControlDictLibs:
+    """Unit coverage for _parse_control_dict_libs, which reads a
+    controlDict's libs ( ... ) list via foamlib's structural, read-only
+    parsing rather than hand-rolled paren-counting. The higher-level
+    resolve_runtime_dependencies tests above exercise this indirectly for
+    the realistic multi-line layout; these pin its edge cases directly."""
+
+    def test_returns_empty_tuple_when_libs_is_absent(self, tmp_path: Path) -> None:
+        p = _write_control_dict(tmp_path, "application cardiacFoam;\n")
+        assert _parse_control_dict_libs(p) == ()
+
+    def test_returns_empty_tuple_when_libs_is_an_empty_list(self, tmp_path: Path) -> None:
+        p = _write_control_dict(tmp_path, "libs\n(\n);\n")
+        assert _parse_control_dict_libs(p) == ()
+
+    def test_strips_quotes_from_a_single_entry(self, tmp_path: Path) -> None:
+        p = _write_control_dict(tmp_path, 'libs\n(\n    "libverificationModels.so"\n);\n')
+        assert _parse_control_dict_libs(p) == ("libverificationModels.so",)
+
+    def test_parses_multiple_entries_in_declaration_order(self, tmp_path: Path) -> None:
+        p = _write_control_dict(
+            tmp_path,
+            'libs\n(\n    "libfoo.so"\n    "libbar.so"\n);\n',
+        )
+        assert _parse_control_dict_libs(p) == ("libfoo.so", "libbar.so")
+
+    def test_returns_empty_tuple_when_file_does_not_exist(self, tmp_path: Path) -> None:
+        assert _parse_control_dict_libs(tmp_path / "missing" / "controlDict") == ()
 
 
 def _make_lib(directory: Path, name: str, extension: str, content: bytes = b"x") -> Path:

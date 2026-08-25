@@ -298,12 +298,20 @@ class CardiacFoamPlugin:
                     field="ionicModel",
                 ))
 
+            from openfoam_driver.plugins.cardiacfoam.validation import (
+                _evaluate_pvj_resistance_requirement,
+            )
+            diagnostics.extend(
+                _evaluate_pvj_resistance_requirement(case_root, electro_path)
+            )
+
         return tuple(diagnostics)
 
     def validate_run_semantics(self, context):
         """Apply cardiacFoam's cross-field rules after core validation."""
         from openfoam_driver.plugins.cardiacfoam.validation import (
             _evaluate_block_references,
+            _evaluate_dynamic_required_fields,
             _evaluate_heterogeneity,
             _evaluate_solver_coupling,
             _evaluate_tissue_compatibility,
@@ -312,6 +320,7 @@ class CardiacFoamPlugin:
         return tuple(
             _evaluate_solver_coupling(context)
             + _evaluate_block_references(context)
+            + _evaluate_dynamic_required_fields(context)
             + _evaluate_heterogeneity(context)
             + _evaluate_tissue_compatibility(context)
         )

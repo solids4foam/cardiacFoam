@@ -593,6 +593,42 @@ def test_block_reference_flags_dangling_target():
     )
 
 
+def test_dynamic_required_field_flags_missing_value_scoped_to_its_own_network():
+    """purkinjeCV is required_when conductionSystemSolver=eikonalSolver1D,
+    but only within the SAME conductionNetworkDomains.<name> block. Two
+    networks must be validated independently: a network missing purkinjeCV
+    must be flagged even though a sibling network satisfies every
+    requirement, and a network that doesn't select eikonalSolver1D must
+    never be told it needs purkinjeCV just because another network does."""
+    config: dict[str, dict] = {
+        "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
+    }
+    config["physics"]["myocardiumSolver"] = "eikonalSolver"
+    config["physics"][
+        "conductionNetworkDomains.networkA.purkinjeGraphModelCoeffs"
+        ".conductionSystemSolver"
+    ] = "eikonalSolver1D"
+    # networkA intentionally omits purkinjeCV.
+    config["physics"][
+        "conductionNetworkDomains.networkB.purkinjeGraphModelCoeffs"
+        ".conductionSystemSolver"
+    ] = "monodomain1DSolver"
+    # networkB never needs purkinjeCV under this solver.
+    run = RunDocument(id="r1", name="r", status="draft", config=config)
+
+    errors = validate_run(run, entries=[])
+    cv_errors = [e for e in errors if "purkinjeCV" in e.message]
+
+    assert any("networkA" in e.message for e in cv_errors), (
+        f"expected a missing-purkinjeCV error scoped to networkA, got: "
+        f"{[e.message for e in errors]}"
+    )
+    assert not any("networkB" in e.message for e in cv_errors), (
+        f"networkB must never be flagged for purkinjeCV -- it does not use "
+        f"eikonalSolver1D: {[e.message for e in errors]}"
+    )
+
+
 #----------------------------------------------------------------------------#
 # License
 #     This file is part of cardiacFoam.
@@ -800,3 +836,146 @@ def test_representative_run_has_no_validator_errors(spec_label: str, run: RunDoc
         f"spec='{spec_label}': expected no validator errors for representative run, "
         f"got:\n" + "\n".join(f"  [{e.phase}] {e.field}: {e.message}" for e in errors)
     )
+
+
+# -------- reactionDiffusionPvjCoupler's graph-aware rPvj requirement --------
+#
+# reactionDiffusionPvjCoupler.C (src/electroModels/electroCouplers/pvjCoupler/
+# reactionDiffusion/reactionDiffusionPvjCoupler.C:120-134): if the graph file
+# provides per-terminal resistances (a non-empty top-level "pvjResistances"
+# list), those are used and a dict-level "rPvj" is never read. Only when the
+# graph provides no such list does the C++ side fall back to
+# dict.get<scalar>("rPvj") -- a hard FatalError if that key is also absent.
+# This is a launch-time semantic check (needs the materialized graph file on
+# disk), not a generic catalog rule, so it lives in
+# _evaluate_pvj_resistance_requirement and is consumed by the cardiacfoam
+# plugin's validate_configuration (the strict pre-flight check gating
+# `foamctl run --strict`), not validate_run_semantics.
+
+def _build_pvj_case(tmp_path, *, coupler="reactionDiffusionPvjCoupler",
+                     myocardium_solver="monodomainSolver",
+                     conduction_solver="monodomain1DSolver",
+                     set_rpvj=False, graph_present=None, graph_has_resistances=False,
+                     graph_file_key=True):
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import build_electro_properties
+
+    prefix = (
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork"
+        ".purkinjeGraphModelCoeffs"
+    )
+    overrides = {
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork"
+        ".conductionSystemDomain": "purkinjeGraphModel",
+        f"{prefix}.conductionSystemSolver": conduction_solver,
+        f"{prefix}.vm1DRest": "-0.084",
+        f"{prefix}.rootStimulus.node": "0",
+        f"{prefix}.rootStimulus.startTime": "0.0",
+        f"{prefix}.rootStimulus.duration": "0.0",
+        f"{prefix}.rootStimulus.intensity": "0.0",
+        f"{prefix}.outputVariables.export": "(activationTime)",
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.pvj.conductionNetworkDomain": "purkinjeNetwork",
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.pvj.couplingMode": "unidirectional",
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.pvj.electroDomainCoupler": coupler,
+    }
+    if conduction_solver == "eikonalSolver1D":
+        overrides[f"{prefix}.purkinjeCV"] = "[0 1 -1 0 0 0 0] 4.2"
+    if myocardium_solver == "eikonalSolver":
+        overrides["$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach"] = "true"
+        overrides["$ELECTRO_MODEL_COEFFS.stimulusLocationMin"] = "(1e6 1e6 1e6)"
+        overrides["$ELECTRO_MODEL_COEFFS.stimulusLocationMax"] = "(1e6 1e6 1e6)"
+    if graph_file_key:
+        overrides[f"{prefix}.graphFile"] = "purkinjeGraph"
+    if set_rpvj:
+        overrides[f"{prefix}.rPvj"] = "150.0"
+
+    selectors = {"myocardiumSolver": myocardium_solver}
+    if myocardium_solver != "eikonalSolver":
+        selectors["ionicModel"] = "BuenoOrovio"
+        selectors["tissue"] = "epicardialCells"
+    text = build_electro_properties(selectors, overrides=overrides)
+    (tmp_path / "constant").mkdir()
+    electro_path = tmp_path / "constant" / "electroProperties"
+    electro_path.write_text(text)
+
+    if graph_present:
+        graph_text = (
+            "FoamFile\n{\n    version 2.0;\n    format ascii;\n"
+            "    class dictionary;\n    object purkinjeGraph;\n}\n\n"
+            "conductionEdges\n(\n    (0 1 1.0 2.0)\n);\n"
+            "pvjNodes (1);\npoints ((0 0 0) (1 0 0));\n"
+            "pvjLocations ((1 0 0));\n"
+        )
+        if graph_has_resistances:
+            graph_text += "pvjResistances (150.0);\n"
+        (tmp_path / "constant" / "purkinjeGraph").write_text(graph_text)
+
+    return electro_path
+
+
+def test_pvj_resistance_silent_when_rpvj_explicitly_set(tmp_path):
+    """rPvj supplied directly -- valid regardless of graph/resistance state."""
+    from openfoam_driver.plugins.cardiacfoam.validation import (
+        _evaluate_pvj_resistance_requirement,
+    )
+    electro_path = _build_pvj_case(tmp_path, set_rpvj=True, graph_present=False)
+    diagnostics = _evaluate_pvj_resistance_requirement(tmp_path, electro_path)
+    assert diagnostics == ()
+
+
+def test_pvj_resistance_defers_when_graph_not_yet_materialized(tmp_path):
+    """No rPvj, and the referenced graph file does not exist on disk yet
+    (cardiacCore generates it later) -- must defer, not error."""
+    from openfoam_driver.plugins.cardiacfoam.validation import (
+        _evaluate_pvj_resistance_requirement,
+    )
+    electro_path = _build_pvj_case(tmp_path, set_rpvj=False, graph_present=False)
+    diagnostics = _evaluate_pvj_resistance_requirement(tmp_path, electro_path)
+    assert diagnostics == ()
+
+
+def test_pvj_resistance_silent_when_graph_provides_terminal_resistances(tmp_path):
+    """No rPvj, but the materialized graph provides a non-empty
+    pvjResistances list -- valid, matching reactionDiffusionPvjCoupler.C's
+    terminalResistances() precedence over the dict-level rPvj lookup."""
+    from openfoam_driver.plugins.cardiacfoam.validation import (
+        _evaluate_pvj_resistance_requirement,
+    )
+    electro_path = _build_pvj_case(
+        tmp_path, set_rpvj=False, graph_present=True, graph_has_resistances=True,
+    )
+    diagnostics = _evaluate_pvj_resistance_requirement(tmp_path, electro_path)
+    assert diagnostics == ()
+
+
+def test_pvj_resistance_errors_when_graph_materialized_without_resistances_and_no_rpvj(tmp_path):
+    """No rPvj, graph IS materialized, but it has no pvjResistances -- this
+    is the case reactionDiffusionPvjCoupler.C's dict.get<scalar>("rPvj")
+    would hard-FatalError on. Neither source exists: must be an error."""
+    from openfoam_driver.plugins.cardiacfoam.validation import (
+        _evaluate_pvj_resistance_requirement,
+    )
+    electro_path = _build_pvj_case(
+        tmp_path, set_rpvj=False, graph_present=True, graph_has_resistances=False,
+    )
+    diagnostics = _evaluate_pvj_resistance_requirement(tmp_path, electro_path)
+    assert len(diagnostics) == 1
+    assert diagnostics[0].level == "error"
+    assert "rPvj" in diagnostics[0].message
+    assert "purkinjeNetwork" in diagnostics[0].message
+
+
+def test_pvj_resistance_irrelevant_for_a_different_coupler(tmp_path):
+    """The graph-aware rPvj requirement is specific to
+    reactionDiffusionPvjCoupler's own dict.get<scalar>("rPvj") fallback --
+    eikonalPvjCoupler doesn't read rPvj at all, so this check must never
+    fire for it regardless of graph/resistance state."""
+    from openfoam_driver.plugins.cardiacfoam.validation import (
+        _evaluate_pvj_resistance_requirement,
+    )
+    electro_path = _build_pvj_case(
+        tmp_path, coupler="eikonalPvjCoupler",
+        myocardium_solver="eikonalSolver", conduction_solver="eikonalSolver1D",
+        set_rpvj=False, graph_present=False,
+    )
+    diagnostics = _evaluate_pvj_resistance_requirement(tmp_path, electro_path)
+    assert diagnostics == ()

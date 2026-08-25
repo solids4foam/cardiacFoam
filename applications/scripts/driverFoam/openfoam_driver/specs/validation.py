@@ -339,9 +339,15 @@ def validate_run(
         if not is_required_in_context(e, context):
             continue
         if e.dynamic_path:
-            # Dynamic-path entries describe templates; concrete required
-            # leaves are the user's responsibility when those blocks are
-            # actually configured.
+            # Dynamic-path entries describe templates (e.g.
+            # "conductionNetworkDomains.<name>.*"); this generic pass has
+            # no way to discover which concrete <name> instances a given
+            # run configures, so it cannot check their required leaves.
+            # That is left to section 4 below (a plugin's own
+            # run_semantic_validator), if the active plugin implements it
+            # for this template family -- see e.g. the cardiacfoam
+            # plugin's _evaluate_dynamic_required_fields. Not every
+            # dynamic-path template is guaranteed such a check.
             continue
         ph = primary_phase(e)
         if ph is None:

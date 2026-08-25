@@ -382,18 +382,32 @@ def test_validate_still_rejects_other_bare_selector_keys_as_unknown_controlDict_
 
 def test_apply_regenerates_electro_properties_for_a_myocardium_solver_override(tmp_path):
     """End-to-end through the public apply_overrides() entry point (not the
-    dict_builder function directly): on a copy of the real purkinjeNiedererEtAl2011
-    monodomain fixture, myocardiumSolver=eikonalSolver -- bundled, in the
-    same call, with the handful of new fields eikonalSolver requires with
-    no catalog default -- renames the active coeffs block and preserves the
-    dynamic conductionNetworkDomains block (not silently dropped)."""
+    dict_builder function directly): on a copy of the real
+    purkinjeNiedererEtAl2011 monodomain fixture, myocardiumSolver=eikonalSolver
+    -- bundled, in the same call, with the handful of new fields eikonalSolver
+    requires with no catalog default -- must now be REJECTED, propagated as
+    an OverrideError.
+
+    The fixture's Purkinje network uses conductionSystemSolver=
+    monodomain1DSolver / electroDomainCoupler=reactionDiffusionPvjCoupler.
+    regenerate_electro_properties carries that network forward verbatim
+    rather than resynthesising it, and eikonalSolver+monodomain1DSolver is
+    explicitly invalid per solver_coupling.SOLVER_COMPATIBILITY_RULES
+    ("eikonal myocardium cannot couple to reaction-diffusion Purkinje") --
+    confirmed against the real, hand-authored electroProperties.eikonal
+    fixture for this same tutorial, which uses a different, compatible
+    pairing (eikonalSolver1D / eikonalPvjCoupler) instead of a bare carry-
+    forward. See test_dict_builder.py's
+    test_purkinje_niederer_monodomain_to_eikonal_end_to_end for the same
+    scenario exercised directly against regenerate_electro_properties."""
     if not (PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain").exists():
         pytest.skip("tutorial fixture not present in this checkout")
 
     (tmp_path / "constant").mkdir()
-    (tmp_path / "constant" / "electroProperties").write_text(
-        (PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain").read_text()
-    )
+    original_text = (
+        PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain"
+    ).read_text()
+    (tmp_path / "constant" / "electroProperties").write_text(original_text)
 
     overrides = [
         {"driver_path": "myocardiumSolver", "value": "eikonalSolver"},
@@ -402,26 +416,13 @@ def test_apply_regenerates_electro_properties_for_a_myocardium_solver_override(t
         {"driver_path": "$ELECTRO_MODEL_COEFFS.stimulusLocationMax", "value": "(1e6 1e6 1e6)"},
     ]
     validate_overrides(overrides)
-    apply_overrides(overrides, case_root=tmp_path)
+    with pytest.raises(OverrideError) as exc:
+        apply_overrides(overrides, case_root=tmp_path)
+    message = str(exc.value)
+    assert "eikonal" in message.lower()
+    assert "reaction-diffusion" in message.lower()
 
-    text = (tmp_path / "constant" / "electroProperties").read_text()
-    assert "myocardiumSolver eikonalSolver;" in text
-    assert "eikonalSolverCoeffs" in text
-    assert "monodomainSolverCoeffs" not in text
-    assert_foam_entry(
-        tmp_path / "constant" / "electroProperties",
-        "eikonalAdvectionDiffusionApproach", "true",
-        scope=["eikonalSolverCoeffs"],
-    )
-    # ionicModel/tissue are forbidden_when eikonalSolver -- pruned at the
-    # top level (the carried-forward Purkinje conductionNetworkDomains
-    # block below legitimately keeps its own nested ionicModel/tissue,
-    # which is a different, un-restructured scope).
-    assert read_foam_entry(
-        tmp_path / "constant" / "electroProperties",
-        "ionicModel", scope=["eikonalSolverCoeffs"],
-    ) is None
-    # The Purkinje conductionNetworkDomains block must still be present,
-    # carried forward from the old file rather than silently dropped.
-    assert "conductionNetworkDomains" in text
-    assert "purkinjeNetwork" in text
+    # The original file must be untouched -- regenerate_electro_properties
+    # stages the rewrite and only commits it once the final, carried-forward
+    # result validates.
+    assert (tmp_path / "constant" / "electroProperties").read_text() == original_text

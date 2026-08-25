@@ -46,9 +46,6 @@ PURKINJE_NIEDERER = REPO_ROOT / "tutorials" / "NiedererEtAl2011" / "purkinjeNied
 PURKINJE_ELECTRO_PROPERTIES_MONODOMAIN = (
     PURKINJE_NIEDERER / "constant" / "electroProperties.monodomain"
 )
-PURKINJE_ELECTRO_PROPERTIES_EIKONAL = (
-    PURKINJE_NIEDERER / "constant" / "electroProperties.eikonal"
-)
 
 
 class TestDictBuilderModule(unittest.TestCase):
@@ -1411,47 +1408,51 @@ class TestRegenerateElectroProperties(unittest.TestCase):
                 regenerate_electro_properties(p, "myocardiumSolver", "eikonalSolver")
             self.assertIn("stimulusLocationMin", str(exc.exception))
 
+    _PURKINJE_OVERRIDES = {
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.conductionSystemDomain": "purkinjeGraphModel",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.conductionSystemSolver": "monodomain1DSolver",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.graphFile": "purkinjeGraph",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.ionicModel": "BuenoOrovio",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.tissue": "epicardialCells",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.rootStimulus.node": "0",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.rootStimulus.startTime": "0.01",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.rootStimulus.duration": "0.002",
+        "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.rootStimulus.intensity": "500000.0",
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.electroDomainCoupler": "reactionDiffusionPvjCoupler",
+        "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.conductionNetworkDomain": "purkinjeNetwork",
+    }
+
     def test_carries_forward_a_dynamic_container_verbatim(self) -> None:
-        """conductionNetworkDomains is dynamic_path=True -- parse_electro_properties
-        cannot round-trip it into overrides (it has no way to invent the
-        concrete <name> instance), so a naive rebuild would silently drop
-        a case's Purkinje network. This is the hazard flagged in the task:
-        the regeneration must carry it forward unmodified instead."""
+        """conductionNetworkDomains is dynamic_path=True. Even though
+        parse_electro_properties can now structurally round-trip most of it
+        into overrides, regenerate_electro_properties still carries it
+        forward verbatim (see _capture_dynamic_containers) rather than
+        resynthesising it -- this is the hazard originally flagged: a naive
+        rebuild must not silently drop a case's Purkinje network.
+
+        Switches to bidomainSolver, which -- like the monodomainSolver this
+        file started with -- physically supports a monodomain1DSolver
+        Purkinje network via reactionDiffusionPvjCoupler (see
+        solver_coupling.SOLVER_COMPATIBILITY_RULES), so the carried-forward
+        network remains valid post-switch and the regeneration succeeds."""
         import tempfile
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             build_electro_properties,
             regenerate_electro_properties,
         )
-        purkinje_prefix = "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.purkinjeNetwork"
-        overrides = {
-            f"{purkinje_prefix}.conductionSystemDomain": "purkinjeGraphModel",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.conductionSystemSolver": "monodomain1DSolver",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.graphFile": "purkinjeGraph",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.ionicModel": "BuenoOrovio",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.tissue": "epicardialCells",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.rootStimulus.node": "0",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.rootStimulus.startTime": "0.01",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.rootStimulus.duration": "0.002",
-            f"{purkinje_prefix}.purkinjeGraphModelCoeffs.rootStimulus.intensity": "500000.0",
-            "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.electroDomainCoupler": "reactionDiffusionPvjCoupler",
-            "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.conductionNetworkDomain": "purkinjeNetwork",
-        }
         with tempfile.TemporaryDirectory() as d:
             p = self._write(d, build_electro_properties(
                 {"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", "tissue": "epicardialCells"},
-                overrides=overrides,
+                overrides=self._PURKINJE_OVERRIDES,
             ))
             self.assertIn("conductionNetworkDomains", p.read_text())
 
-            # Switch to singleCellSolver -- a solver with no spatial domain
-            # at all, so there is no <solver>Coeffs slot the catalog would
-            # ever populate conductionNetworkDomains into on its own.
             regenerate_electro_properties(
-                p, "myocardiumSolver", "singleCellSolver",
+                p, "myocardiumSolver", "bidomainSolver",
                 {"$ELECTRO_MODEL_COEFFS.ionicModel": "TNNP", "$ELECTRO_MODEL_COEFFS.tissue": "epicardialCells"},
             )
             text = p.read_text()
-            self.assertIn("singleCellSolverCoeffs", text)
+            self.assertIn("bidomainSolverCoeffs", text)
             # The Purkinje block must still be present, verbatim, under the
             # renamed coeffs scope -- not dropped.
             self.assertIn("conductionNetworkDomains", text)
@@ -1460,29 +1461,75 @@ class TestRegenerateElectroProperties(unittest.TestCase):
             self.assertIn("graphFile", text)
             self.assertIn("purkinjeGraph", text)
 
+    def test_switching_to_a_physically_incompatible_solver_raises(self) -> None:
+        """singleCellSolver has no PDE domain at all -- SOLVER_COMPATIBILITY_RULES
+        marks ANY Purkinje pairing under it unconditionally invalid. Carrying
+        the same monodomain1DSolver Purkinje network forward into a
+        singleCellSolver switch must now be rejected instead of silently
+        shipping a physically-meaningless file: the final safety net in
+        regenerate_electro_properties validates the actually-shipped file,
+        after the carried-forward block is reinserted, not just the
+        intermediate rebuild the carried-forward block is invisible to."""
+        import tempfile
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            build_electro_properties,
+            regenerate_electro_properties,
+        )
+        with tempfile.TemporaryDirectory() as d:
+            p = self._write(d, build_electro_properties(
+                {"myocardiumSolver": "monodomainSolver", "ionicModel": "TNNP", "tissue": "epicardialCells"},
+                overrides=self._PURKINJE_OVERRIDES,
+            ))
+            with self.assertRaises(ValueError) as exc:
+                regenerate_electro_properties(
+                    p, "myocardiumSolver", "singleCellSolver",
+                    {"$ELECTRO_MODEL_COEFFS.ionicModel": "TNNP", "$ELECTRO_MODEL_COEFFS.tissue": "epicardialCells"},
+                )
+            message = str(exc.exception)
+            self.assertIn("singleCellSolver", message)
+            self.assertIn("incompatible", message.lower())
+            # The rejected attempt must leave the ORIGINAL file completely
+            # untouched -- the rewrite is staged on a scratch copy and only
+            # committed to `path` once the final check passes, so a
+            # rejection here must never ship a known-invalid intermediate
+            # result.
+            from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
+            self.assertEqual(
+                parse_electro_properties(p)["selectors"]["myocardiumSolver"],
+                "monodomainSolver",
+            )
+
     def test_purkinje_niederer_monodomain_to_eikonal_end_to_end(self) -> None:
-        """Acceptance scenario: on a throwaway copy of the real
-        purkinjeNiedererEtAl2011 tutorial's monodomain fixture, switch
-        myocardiumSolver to eikonalSolver (supplying, in the same call,
-        the handful of new fields eikonalSolver requires that have no
-        catalog default -- exactly what a real `step --strict --apply`
-        would bundle as sibling $ELECTRO_MODEL_COEFFS overrides). The
-        catalog-known leaves must then match the committed
-        electroProperties.eikonal fixture, differing only where the
-        committed file relies on a catalog default this run made explicit
-        (conductivitySource) or vice versa (c0's case-specific value has
-        no catalog default to fall back on). The dynamic conductionNetworkDomains/
-        domainCouplings blocks are NOT expected to match -- switching the
-        3-D solver alone does not, and should not, silently reinvent the
-        1-D Purkinje solver/coupler pairing; they are carried forward
-        verbatim instead (see test_carries_forward_a_dynamic_container_verbatim)."""
+        """Acceptance scenario, on a throwaway copy of the real
+        purkinjeNiedererEtAl2011 tutorial's monodomain fixture: a bare
+        myocardiumSolver switch to eikonalSolver, carrying the existing
+        Purkinje network (conductionSystemSolver=monodomain1DSolver,
+        electroDomainCoupler=reactionDiffusionPvjCoupler) forward verbatim,
+        must now be REJECTED.
+
+        This is not a hypothetical: the real, hand-authored, committed
+        electroProperties.eikonal fixture for this same tutorial does NOT
+        carry that Purkinje network forward -- it uses a different, physically
+        compatible pairing instead (conductionSystemSolver=eikonalSolver1D,
+        electroDomainCoupler=eikonalPvjCoupler; see
+        solver_coupling.SOLVER_COMPATIBILITY_RULES, which marks
+        eikonalSolver+monodomain1DSolver invalid: "eikonal myocardium cannot
+        couple to reaction-diffusion Purkinje"). Producing a genuinely valid
+        eikonal file from this tutorial requires resynthesising the Purkinje
+        network's own selector/coupler -- a separate, deliberate step left to
+        ordinary $ELECTRO_MODEL_COEFFS.* overrides applied after this one
+        (regenerate_electro_properties's own documented contract), not
+        something a bare myocardiumSolver switch can produce by carrying the
+        old network forward unmodified. This test previously asserted the
+        opposite (that carrying it forward verbatim succeeds and its static
+        leaves are acceptable) without ever checking whether the carried-
+        forward result was physically valid; it wasn't."""
         import shutil
         import tempfile
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             parse_electro_properties,
             regenerate_electro_properties,
         )
-        from openfoam_driver.core.runtime.mutators import read_foam_dict_block
 
         if not PURKINJE_ELECTRO_PROPERTIES_MONODOMAIN.exists():
             self.skipTest("tutorial fixture not present in this checkout")
@@ -1491,86 +1538,24 @@ class TestRegenerateElectroProperties(unittest.TestCase):
             p = Path(d) / "electroProperties"
             shutil.copyfile(PURKINJE_ELECTRO_PROPERTIES_MONODOMAIN, p)
 
-            regenerate_electro_properties(
-                p, "myocardiumSolver", "eikonalSolver",
-                {
-                    "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach": "true",
-                    "$ELECTRO_MODEL_COEFFS.stimulusLocationMin": "(1e6 1e6 1e6)",
-                    "$ELECTRO_MODEL_COEFFS.stimulusLocationMax": "(1e6 1e6 1e6)",
-                },
-            )
-
-            mine = parse_electro_properties(p)
-            committed = parse_electro_properties(PURKINJE_ELECTRO_PROPERTIES_EIKONAL)
-
-            def flat(d_):
-                out = {f"selector:{k}": v for k, v in d_["selectors"].items()}
-                out.update({f"override:{k}": v for k, v in d_["overrides"].items()})
-                return out
-
-            mine_flat, committed_flat = flat(mine), flat(committed)
-
-            # The catalog's own structural gaps (dynamic_path families) are
-            # identical for both -- neither file's *content* affects which
-            # driver_paths are structurally un-round-trippable.
-            self.assertEqual(mine["ignored_keys"], committed["ignored_keys"])
-
-            # Every catalog-known leaf the committed fixture sets is either
-            # matched, or is one of the two enumerated, justified exceptions:
-            allowed_diff_keys = {
-                # Regeneration always emits the catalog's own default
-                # ("uniform") explicitly; the hand-authored fixture omits
-                # it and relies on the C++ side's identical default.
-                "selector:conductivitySource",
-                # c0 is required_when eikonalSolver with typical_value
-                # '...60' as a generic placeholder; the committed fixture
-                # sets the real case-specific conduction-speed constant
-                # (1) that has no catalog default to fall back on.
-                "override:$ELECTRO_MODEL_COEFFS.c0",
-                # outputVariables.ionic.{export,debug} carry the OLD
-                # monodomain source's Iion/Vm export list forward because
-                # the catalog does not mark them forbidden_when
-                # myocardiumSolver=eikonalSolver (nothing in this catalog
-                # entry ties it to a specific solver) -- a catalog
-                # completeness gap, not a regeneration-logic bug. Flagged
-                # here rather than silently reconciled.
-                "override:$ELECTRO_MODEL_COEFFS.outputVariables.ionic.export",
-                "override:$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug",
-                # conductivity precision gets truncated by python's float conversion
-                # when reading and writing back through dict_builder compared
-                # to the 10-digit manual precision in the fixture.
-                "override:$ELECTRO_MODEL_COEFFS.conductivity",
-                # Python formats 1e6 as 1e+06 during serialization
-                "override:$ELECTRO_MODEL_COEFFS.stimulusLocationMin",
-                "override:$ELECTRO_MODEL_COEFFS.stimulusLocationMax",
-            }
-            for key in sorted(set(mine_flat) | set(committed_flat)):
-                mv, cv = mine_flat.get(key), committed_flat.get(key)
-                if mv == cv:
-                    continue
-                if key in allowed_diff_keys:
-                    continue
-                # chi/conductivity/cm differ only in interior whitespace
-                # (source-file alignment spacing) once re-tokenized -- not
-                # a semantic difference.
-                if mv is not None and cv is not None and mv.split() == cv.split():
-                    continue
-                self.fail(
-                    f"unjustified catalog-leaf difference at {key!r}: "
-                    f"mine={mv!r} committed={cv!r}"
+            with self.assertRaises(ValueError) as exc:
+                regenerate_electro_properties(
+                    p, "myocardiumSolver", "eikonalSolver",
+                    {
+                        "$ELECTRO_MODEL_COEFFS.eikonalAdvectionDiffusionApproach": "true",
+                        "$ELECTRO_MODEL_COEFFS.stimulusLocationMin": "(1e6 1e6 1e6)",
+                        "$ELECTRO_MODEL_COEFFS.stimulusLocationMax": "(1e6 1e6 1e6)",
+                    },
                 )
+            message = str(exc.exception)
+            self.assertIn("eikonal", message.lower())
+            self.assertIn("reaction-diffusion", message.lower())
 
-            # The dynamic Purkinje blocks are deliberately carried forward
-            # unmodified (still describing the monodomain-flavoured 1-D
-            # solver/coupler pairing), not resynthesised to match the
-            # committed eikonal fixture's own separate 1-D solver switch --
-            # confirm they are present (not dropped) rather than equal.
-            mine_conduction = read_foam_dict_block(p, "conductionNetworkDomains", scope=["eikonalSolverCoeffs"])
-            self.assertIsNotNone(mine_conduction)
-            self.assertIn("purkinjeNetwork", mine_conduction)
-            mine_couplings = read_foam_dict_block(p, "domainCouplings", scope=["eikonalSolverCoeffs"])
-            self.assertIsNotNone(mine_couplings)
-            self.assertIn("couplingA", mine_couplings)
+            # Original file untouched: still the monodomain tutorial fixture.
+            self.assertEqual(
+                parse_electro_properties(p)["selectors"]["myocardiumSolver"],
+                "monodomainSolver",
+            )
 
 
 if __name__ == "__main__":

@@ -107,7 +107,6 @@ _LIB_DIR_ENV_VARS = ("FOAM_USER_LIBBIN", "FOAM_MODULE_LIBBIN", "FOAM_LIBBIN")
 _LIB_EXTENSIONS = (".dylib", ".so")
 
 _BARE_LIB_RE = re.compile(r"^lib(.+)\.(?:so|dylib)$")
-_QUOTED_ENTRY_RE = re.compile(r'"([^"]+)"')
 _ENV_VAR_RE = re.compile(r"\$\{(\w+)\}|\$(\w+)")
 
 
@@ -124,28 +123,37 @@ def _resolve_named_library(name: str, *, lib_dirs: tuple[Path, ...]) -> Path | N
     return None
 
 
-def _parse_control_dict_libs(text: str) -> tuple[str, ...]:
-    """Extract the quoted entries of a controlDict's ``libs ( ... )`` list.
+def _parse_control_dict_libs(control_dict_path: Path) -> tuple[str, ...]:
+    """Extract the entries of a controlDict's ``libs ( ... )`` list.
 
-    Paren-counts from the opening bracket rather than assuming a fixed line
-    shape, so both ``libs (`` and ``libs\\n(`` layouts parse the same way.
+    Uses foamlib for structural, read-only parsing instead of hand-rolled
+    paren-counting: this is a pure read of a list's shape with no write-
+    back or provenance-digest concern (contrast core/runtime/mutators.py's
+    read_foam_entry, which deliberately avoids foamlib because ITS values
+    feed dict builders and must stay byte-verbatim), so none of that
+    module's determinism caveats apply here -- foamlib parses in-process
+    without evaluating ``#calc``/``#codeStream`` either way (see
+    core/runtime/foam_backend.py's header comment), so it is safe on an
+    arbitrary case's controlDict regardless.
+
     Unparseable or absent ``libs`` blocks yield an empty tuple rather than
     raising -- a case with no libs entry simply has none to resolve.
     """
-    match = re.search(r"\blibs\s*\(", text)
-    if not match:
+    from foamlib import FoamFile
+
+    try:
+        libs = FoamFile(control_dict_path).get("libs")
+    except (OSError, ValueError):
         return ()
-    start = match.end() - 1
-    depth = 0
-    for index in range(start, len(text)):
-        char = text[index]
-        if char == "(":
-            depth += 1
-        elif char == ")":
-            depth -= 1
-            if depth == 0:
-                return tuple(_QUOTED_ENTRY_RE.findall(text[start + 1 : index]))
-    return ()
+    if not libs:
+        return ()
+    return tuple(_strip_quotes(str(entry)) for entry in libs)
+
+
+def _strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        return value[1:-1]
+    return value
 
 
 def _library_name_from_entry(entry: str) -> str:
@@ -245,11 +253,7 @@ def resolve_runtime_dependencies(
 
     control_dict = case_root / "system" / "controlDict"
     if control_dict.is_file():
-        try:
-            text = control_dict.read_text()
-        except OSError:
-            text = ""
-        for entry in _parse_control_dict_libs(text):
+        for entry in _parse_control_dict_libs(control_dict):
             name, resolved = _resolve_control_dict_libs_entry(
                 entry, case_root=case_root, lib_dirs=lib_dirs, env=environment,
             )

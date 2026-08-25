@@ -1,7 +1,10 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
 from openfoam_driver.specs.validation_types import ValidationError
+
+if TYPE_CHECKING:
+    from openfoam_driver.planning_types import StrictDiagnostic
 
 
 _CONDUCTION_SOLVER_SUFFIX = ".purkinjeGraphModelCoeffs.conductionSystemSolver"
@@ -108,10 +111,10 @@ def _evaluate_solver_coupling(context: dict[str, Any]) -> list[ValidationError]:
     return errors
 
 
-def _evaluate_block_references(
-    context: dict[str, Any],
-) -> list[ValidationError]:
-    errors: list[ValidationError] = []
+def _declared_conduction_networks(context: dict[str, Any]) -> set[str]:
+    """Names of every conductionNetworkDomains.<name> block that has at
+    least one sub-key present in context (i.e. is actually configured, not
+    just a template slot)."""
     declared_networks: set[str] = set()
     for key in context:
         if _is_template_slot_key(key):
@@ -122,6 +125,14 @@ def _evaluate_block_references(
         if "." not in rest:
             continue
         declared_networks.add(rest.split(".", 1)[0])
+    return declared_networks
+
+
+def _evaluate_block_references(
+    context: dict[str, Any],
+) -> list[ValidationError]:
+    errors: list[ValidationError] = []
+    declared_networks = _declared_conduction_networks(context)
 
     for key, val in context.items():
         if _is_template_slot_key(key):
@@ -140,6 +151,92 @@ def _evaluate_block_references(
                     f"conductionNetworkDomain references {referenced!r} but "
                     f"no matching block is declared under "
                     f"conductionNetworkDomains.{referenced}.*"
+                ),
+                level="error",
+            ))
+
+    return errors
+
+
+def _value_matches_scoped(actual: Any, expected: str | tuple) -> bool:
+    """Scalar equality / tuple membership for a single instance's own value.
+
+    Deliberately does not reuse ``specs.validation._predicate_matches``:
+    that helper treats an un-substituted ``<name>`` placeholder as a
+    wildcard matching ANY configured instance, which is correct for its
+    once-per-catalog-entry call site but wrong here -- this function is
+    called once per declared network specifically so one network's value
+    can never satisfy another network's requirement.
+    """
+    if isinstance(expected, tuple):
+        return actual in expected
+    return actual == expected
+
+
+def _evaluate_dynamic_required_fields(context: dict[str, Any]) -> list[ValidationError]:
+    """Required-field checks for ``conductionNetworkDomains.<name>.*``
+    dynamic entries, evaluated independently per declared network.
+
+    ``validate_run``'s generic required-field pass (``specs/validation.py``)
+    skips every ``dynamic_path`` entry outright: "concrete required leaves
+    are the user's responsibility when those blocks are actually
+    configured." This is where that responsibility is discharged. Each
+    declared network gets its own scoped substitution of the catalog
+    template, built from only that network's own keys, so a sibling
+    network's value can never satisfy this network's requirement (and vice
+    versa).
+    """
+    from openfoam_driver.dict_entries import get_electro_property_entry_groups
+    from openfoam_driver.specs.validation import slot_key
+
+    errors: list[ValidationError] = []
+
+    declared_networks = _declared_conduction_networks(context)
+    if not declared_networks:
+        return errors
+
+    template_prefix = f"{_CONDUCTION_NET_PREFIX}<name>."
+    dynamic_entries = [
+        entry
+        for group in get_electro_property_entry_groups().values()
+        for entry in group
+        if entry.dynamic_path and slot_key(entry.driver_path).startswith(template_prefix)
+    ]
+
+    for network in sorted(declared_networks):
+        instance_prefix = f"{_CONDUCTION_NET_PREFIX}{network}."
+        for entry in dynamic_entries:
+            suffix = slot_key(entry.driver_path)[len(template_prefix):]
+            concrete_key = instance_prefix + suffix
+
+            required = entry.required
+            if entry.required_when:
+                required = False
+                for pred_template, expected in entry.required_when.items():
+                    pred_slot = slot_key(pred_template)
+                    if not pred_slot.startswith(template_prefix):
+                        # Predicate references something outside this
+                        # network's own block (e.g. a top-level selector);
+                        # out of scope for this per-instance pass.
+                        continue
+                    pred_suffix = pred_slot[len(template_prefix):]
+                    actual = context.get(instance_prefix + pred_suffix)
+                    if actual is None:
+                        continue
+                    if _value_matches_scoped(actual, expected):
+                        required = True
+                        break
+
+            if not required:
+                continue
+            if concrete_key in context and context[concrete_key] not in (None, ""):
+                continue
+            errors.append(ValidationError(
+                phase="physics",
+                field=concrete_key,
+                message=(
+                    f"{concrete_key} is required for "
+                    f"conductionNetworkDomains.{network} but has no value."
                 ),
                 level="error",
             ))
@@ -334,3 +431,146 @@ def _evaluate_tissue_compatibility(context: dict[str, Any]) -> list[ValidationEr
         ))
 
     return errors
+
+
+_RPVJ_COUPLER = "reactionDiffusionPvjCoupler"
+
+
+def _graph_has_terminal_resistances(graph_path: Any) -> bool:
+    """Read-only, structural check of a materialized Purkinje graph file for
+    a non-empty top-level ``pvjResistances`` list.
+
+    Mirrors ``conductionGraph::readFromDict`` (src/electroModels/
+    electroDomains/conductionSystemDomain/conductionGraph.H): that C++ side
+    reads ``pvjResistances`` as an optional top-level scalar list and, if
+    present, ``conductionSystemDomain::terminalResistances()`` (conductionSystemDomain.H)
+    returns it whenever non-empty. Uses foamlib rather than the line-based
+    scanner in core/runtime/mutators.py because this is a pure existence/
+    shape check on a file this module did not write and never needs
+    verbatim values from -- foamlib parses in-process without evaluating
+    ``#calc``/``#codeStream`` (see core/runtime/foam_backend.py's header
+    comment), so it is safe to point at an arbitrary materialized file.
+    """
+    from foamlib import FoamFile
+
+    try:
+        resistances = FoamFile(graph_path).get("pvjResistances")
+    except (OSError, ValueError):
+        return False
+    if resistances is None:
+        return False
+    try:
+        return len(resistances) > 0
+    except TypeError:
+        return bool(resistances)
+
+
+def _evaluate_pvj_resistance_requirement(
+    case_root: Any, electro_path: Any,
+) -> tuple["StrictDiagnostic", ...]:
+    """Graph-aware requiredness check for ``reactionDiffusionPvjCoupler``'s
+    ``rPvj``.
+
+    ``reactionDiffusionPvjCoupler.C`` (src/electroModels/electroCouplers/
+    pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.C:120-134)
+    only reads ``dict.get<scalar>("rPvj")`` -- a hard ``FatalError`` if
+    absent -- when the graph's own ``terminalResistances()`` is null (i.e.
+    the graph file provides no ``pvjResistances``). The generic catalog has
+    no ``required_when`` predicate that can express "required unless a
+    FILE says otherwise", so this is a plugin-specific semantic check
+    rather than a ``DictEntry`` field, consumed by ``validate_configuration``
+    (the strict pre-flight check gating ``foamctl run --strict``, which has
+    filesystem access to the materialized case) rather than
+    ``validate_run_semantics`` (which only ever sees an abstract run
+    document, never a real graph file on disk).
+
+    Three-way outcome per ``reactionDiffusionPvjCoupler``-coupled network:
+
+    - The graph file is not yet materialized on disk: DEFER (no
+      diagnostic). cardiacCore may still generate it in a later step; a
+      later ``--strict`` re-check (e.g. the one immediately before launch)
+      will see the materialized file and correctly resolve this.
+    - The graph IS materialized and provides ``pvjResistances``, OR
+      ``rPvj`` is set directly: silent (either source is sufficient, same
+      as the C++ precedence).
+    - The graph IS materialized, provides no ``pvjResistances``, and
+      ``rPvj`` is absent: ERROR -- neither source exists, which is exactly
+      what the C++ side would hard-FatalError on at runtime.
+    """
+    from pathlib import Path as _Path
+
+    from openfoam_driver.planning_types import diagnostic as _diagnostic
+    from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
+    from openfoam_driver.specs.validation import slot_key
+
+    case_root = _Path(case_root)
+    electro_path = _Path(electro_path)
+    if not electro_path.exists():
+        return ()
+
+    overrides = parse_electro_properties(electro_path)["overrides"]
+
+    couplings: dict[str, dict[str, str]] = {}
+    for k, v in overrides.items():
+        sk = slot_key(k)
+        if not sk.startswith(_DOMAIN_COUPLINGS_PREFIX):
+            continue
+        rest = sk[len(_DOMAIN_COUPLINGS_PREFIX):]
+        if rest.endswith(_COUPLER_SUFFIX):
+            name = rest[: -len(_COUPLER_SUFFIX)]
+            couplings.setdefault(name, {})["coupler"] = v
+        elif rest.endswith(_NETWORK_REF_SUFFIX):
+            name = rest[: -len(_NETWORK_REF_SUFFIX)]
+            couplings.setdefault(name, {})["network"] = v
+
+    diagnostics: list["StrictDiagnostic"] = []
+    for coupling_name, info in couplings.items():
+        if info.get("coupler") != _RPVJ_COUPLER:
+            continue
+        network = info.get("network")
+        if network is None:
+            # Dangling/absent reference is _evaluate_block_references's
+            # concern, not this function's.
+            continue
+
+        rpvj_key = (
+            f"$ELECTRO_MODEL_COEFFS.{_CONDUCTION_NET_PREFIX}{network}"
+            f".purkinjeGraphModelCoeffs.rPvj"
+        )
+        if rpvj_key in overrides:
+            continue
+
+        graph_key = (
+            f"$ELECTRO_MODEL_COEFFS.{_CONDUCTION_NET_PREFIX}{network}"
+            f".purkinjeGraphModelCoeffs.graphFile"
+        )
+        graph_name = overrides.get(graph_key)
+        if graph_name is None:
+            # No graph reference at all -- required-field checks own
+            # flagging a missing graphFile; not this function's concern.
+            continue
+
+        graph_path = case_root / "constant" / graph_name
+        if not graph_path.exists():
+            continue  # DEFER: not yet materialized.
+
+        if _graph_has_terminal_resistances(graph_path):
+            continue
+
+        diagnostics.append(_diagnostic(
+            "error",
+            "missing_rpvj",
+            (
+                f"conductionNetworkDomains.{network} is coupled via "
+                f"{_RPVJ_COUPLER} (domainCouplings.{coupling_name}) but "
+                f"neither rPvj nor a graph-provided pvjResistances list is "
+                f"available -- the materialized graph file {graph_name!r} "
+                f"has no pvjResistances, and rPvj is not set. "
+                f"reactionDiffusionPvjCoupler.C will FatalError on "
+                f"dict.get<scalar>(\"rPvj\") at runtime."
+            ),
+            source=str(electro_path),
+            field=rpvj_key,
+        ))
+
+    return tuple(diagnostics)

@@ -372,6 +372,50 @@ def _entry_scope_and_key(
     return None, driver_path
 
 
+def _foamlib_child_names(
+    electro_properties_path: "Any",
+    coeffs_scope: str,
+    prefix_segments: list[str],
+) -> tuple[str, ...]:
+    """Structural-only, read-only enumeration of the concrete block names
+    nested at ``coeffs_scope/prefix_segments/*`` in an existing OpenFOAM
+    dict file.
+
+    Uses ``foamlib.FoamFile`` instead of the line-based scanner in
+    ``core/runtime/mutators.py`` because that scanner has no notion of
+    "list the children of this block" -- it locates one named block (or
+    one named key) at a time. foamlib already parses the full nested
+    structure in-process without evaluating ``#calc``/``#codeStream``
+    (see ``core/runtime/foam_backend.py``'s header comment for why that
+    property is what makes foamlib safe to use on a read path at all).
+
+    Deliberately used for STRUCTURE ONLY, never for values: foamlib
+    returns typed, reserialised values (``5.5e-3`` -> ``0.0055``), which
+    would break this module's verbatim round-tripping contract (see
+    :func:`read_foam_entry`'s docstring). Every value in the returned
+    ``overrides`` still comes from the existing line-based
+    ``read_foam_entry``, keyed by the concrete names this function finds.
+
+    Returns an empty tuple if the file, the scope, or the block is
+    absent, or if the located node has no enumerable children (e.g. it is
+    an OpenFOAM list rather than a sub-dictionary) -- callers treat that
+    identically to "could not structurally expand this entry" and fall
+    back to recording it in ``ignored_keys``, so this never regresses
+    behaviour for a container shape this function does not understand.
+    """
+    from foamlib import FoamFile
+
+    try:
+        node: Any = FoamFile(electro_properties_path)
+        for segment in (coeffs_scope, *prefix_segments):
+            node = node[segment]
+    except (KeyError, TypeError):
+        return ()
+    if not hasattr(node, "keys"):
+        return ()
+    return tuple(str(k) for k in node.keys() if k is not None)
+
+
 def parse_electro_properties(
     electro_properties_path: "Any",
 ) -> dict[str, dict[str, str]]:
@@ -385,14 +429,20 @@ def parse_electro_properties(
       present and applicable).
     - ``overrides``: full ``driver_path → value`` for every non-default entry
       found in the file. Values equal to ``entry.typical_value`` are omitted
-      (the builder fills them automatically). Entries with ``dynamic_path=True``
-      are skipped entirely.
+      (the builder fills them automatically). For ``dynamic_path=True``
+      entries whose catalog template names a placeholder segment (e.g.
+      ``conductionNetworkDomains.<name>.*``), :func:`_foamlib_child_names`
+      structurally discovers which concrete instances (``networkA``,
+      ``networkB``, ...) actually exist in the file, and each instance's
+      leaves are read back and included here with the placeholder resolved
+      to that concrete name -- the same round-trip static entries get.
     - ``ignored_keys``: the ``driver_path`` of every catalog entry this parser
-      structurally does not round-trip (the ``dynamic_path=True`` families). If
-      the source dict sets any of these, they will NOT reappear on a rebuild —
-      inspect the source dict manually. Surfacing them here replaces the old
-      silent drop. (Keys entirely outside the catalog remain un-enumerated —
-      the parser only reads catalogued paths.)
+      still does not round-trip: either its template has no placeholder
+      segment to resolve, or no concrete instance could be found in the
+      file (including when the block is simply absent). If the source dict
+      sets any of these, they will NOT reappear on a rebuild — inspect the
+      source dict manually. (Keys entirely outside the catalog remain
+      un-enumerated — the parser only reads catalogued paths.)
 
     Returns:
         ``{"selectors": {...}, "overrides": {...}, "ignored_keys": [...]}``
@@ -411,8 +461,39 @@ def parse_electro_properties(
 
     for entry in _all_electro_entries():
         if entry.dynamic_path:
-            ignored_keys.append(entry.driver_path)
+            sk = slot_key(entry.driver_path)
+            parts = sk.split(".")
+            placeholder_idx = next(
+                (i for i, p in enumerate(parts) if _PLACEHOLDER_RE.fullmatch(p)),
+                None,
+            )
+            if placeholder_idx is None:
+                ignored_keys.append(entry.driver_path)
+                continue
+
+            instances = _foamlib_child_names(
+                electro_properties_path, coeffs_scope, parts[:placeholder_idx],
+            )
+            if not instances:
+                ignored_keys.append(entry.driver_path)
+                continue
+
+            expanded_any = False
+            for instance in instances:
+                concrete_driver_path = _PLACEHOLDER_RE.sub(
+                    instance, entry.driver_path, count=1,
+                )
+                scope_path, key = _entry_scope_and_key(concrete_driver_path, coeffs_scope)
+                value = read_foam_entry(electro_properties_path, key, scope=scope_path)
+                if value is None:
+                    continue
+                expanded_any = True
+                if value != entry.typical_value:
+                    overrides[concrete_driver_path] = value
+            if not expanded_any:
+                ignored_keys.append(entry.driver_path)
             continue
+
         scope_path, key = _entry_scope_and_key(entry.driver_path, coeffs_scope)
         value = read_foam_entry(electro_properties_path, key, scope=scope_path)
         if value is None:
@@ -434,9 +515,13 @@ def _dynamic_container_names() -> tuple[str, ...]:
     """The first dotted segment of every ``dynamic_path=True`` catalog
     entry's slot key, e.g. ``"conductionNetworkDomains"`` for
     ``$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>...`` -- the
-    top-level block names :func:`parse_electro_properties` cannot itself
-    round-trip (it can only enumerate them into ``ignored_keys``, since it
-    has no way to invent the concrete ``<name>`` instances)."""
+    top-level block names carried forward verbatim across a solver switch
+    (see :func:`_capture_dynamic_containers`) rather than resynthesised,
+    even though :func:`parse_electro_properties` can now structurally
+    round-trip most of them into ``overrides``: a verbatim byte carry
+    remains the more robust fallback for content whose exact on-disk
+    formatting a structural round-trip cannot guarantee reproducing, and
+    for any concrete leaf that failed to parse."""
     names: set[str] = set()
     for entry in _all_electro_entries():
         if not entry.dynamic_path:
@@ -444,6 +529,22 @@ def _dynamic_container_names() -> tuple[str, ...]:
         sk = slot_key(entry.driver_path)
         names.add(sk.split(".", 1)[0])
     return tuple(sorted(names))
+
+
+def _strip_dynamic_overrides(overrides: dict[str, str]) -> dict[str, str]:
+    """Remove every override whose slot key falls under a dynamic-path
+    container (``conductionNetworkDomains``, ``domainCouplings``, ...).
+
+    Used by :func:`regenerate_electro_properties`'s intermediate rebuild:
+    those values describe the OLD solver's configuration and are about to
+    be discarded there in favour of a verbatim carry-forward under the NEW
+    solver's coeffs scope, not resynthesised. Letting them leak into that
+    intermediate ``build_electro_properties`` call would validate a stale
+    pairing that does not reflect what the function actually ships.
+    """
+    containers = _dynamic_container_names()
+    prefixes = tuple(f"{_COEFFS_PREFIX}{c}." for c in containers)
+    return {k: v for k, v in overrides.items() if not k.startswith(prefixes)}
 
 
 def _capture_dynamic_containers(path: "Any", solver: str) -> dict[str, str]:
@@ -567,9 +668,12 @@ def regenerate_electro_properties(
     1. Parses the existing file back into ``{selectors, overrides}`` via
        :func:`parse_electro_properties`.
     2. Captures, verbatim, every dynamic-path container
-       (``conductionNetworkDomains``, ``domainCouplings``, ...) that the
-       parse step structurally cannot round-trip, so step 3 cannot
-       silently drop it (:func:`_capture_dynamic_containers`).
+       (``conductionNetworkDomains``, ``domainCouplings``, ...) present in
+       the file (:func:`_capture_dynamic_containers`), and strips their
+       parsed values out of ``overrides`` (:func:`_strip_dynamic_overrides`)
+       so step 3's rebuild stays blind to the OLD solver's dynamic
+       configuration -- it is about to be superseded by step 5's verbatim
+       carry-forward, not resynthesised.
     3. Sets the one changed selector, drops any OTHER selector/override
        that the new value makes ``forbidden_when`` (:func:`_prune_now_forbidden`
        -- e.g. ``ionicModel``/``tissue`` under ``myocardiumSolver=eikonalSolver``,
@@ -583,17 +687,27 @@ def regenerate_electro_properties(
        patch) -- then rebuilds via :func:`build_electro_properties`, which
        re-validates the whole result against the catalog for the new
        solver.
-    5. Writes the rebuilt text to ``path``, then reinserts the containers
+    5. Stages the rebuilt text on a scratch copy, reinserts the containers
        captured in step 2 under the newly-named coeffs scope
-       (:func:`_carry_forward_dynamic_containers`).
+       (:func:`_carry_forward_dynamic_containers`), then re-parses and
+       re-validates THAT result -- this is the only point where the new
+       solver and the (unmodified) old dynamic blocks are checked
+       together, catching e.g. a switch that leaves the carried-forward
+       Purkinje network physically incompatible with the new myocardium
+       solver (see ``solver_coupling.SOLVER_COMPATIBILITY_RULES``), which
+       step 3's rebuild cannot see by design. Only once this passes is the
+       scratch copy's content written to ``path`` -- a rejection here
+       leaves the original file at ``path`` completely untouched.
 
     Raises:
-        ValueError: ``driver_path``'s slot key is not a selector key, or
-            the rebuild fails catalog validation for the new value (e.g. a
+        ValueError: ``driver_path``'s slot key is not a selector key, the
+            rebuild fails catalog validation for the new value (e.g. a
             still-missing required field with no default and no
-            ``extra_overrides`` entry -- the case-specific gap this
-            parameter exists to close).
+            ``extra_overrides`` entry -- the case-specific gap that
+            parameter exists to close), or the carried-forward dynamic
+            blocks are physically incompatible with the new selector value.
     """
+    import tempfile as _tempfile
     from pathlib import Path as _Path
 
     path = _Path(path)
@@ -613,16 +727,57 @@ def regenerate_electro_properties(
     # overwritten below.
     captured = _capture_dynamic_containers(path, old_solver) if old_solver else {}
 
+    # The intermediate rebuild below must stay blind to the OLD dynamic
+    # blocks' own values: they describe the OLD solver's configuration and
+    # are about to be discarded here in favour of the verbatim carry-forward
+    # a few lines down (_carry_forward_dynamic_containers), not
+    # resynthesised for the new solver. Since parse_electro_properties can
+    # now structurally round-trip them (see its docstring), they would
+    # otherwise leak into this intermediate build_electro_properties call
+    # and be validated against a solver they no longer actually describe in
+    # the shipped file. The real, final check happens below, once the
+    # carried-forward blocks are back in the file for real.
+    overrides = _strip_dynamic_overrides(overrides)
+
     selectors[key] = value
     selectors, overrides = _prune_now_forbidden(selectors, overrides, key)
     if extra_overrides:
         overrides.update(extra_overrides)
     new_text = build_electro_properties(selectors, overrides=overrides)
-    path.write_text(new_text)
 
     new_solver = selectors.get("myocardiumSolver", old_solver)
     if new_solver and captured:
-        _carry_forward_dynamic_containers(path, new_solver, captured)
+        # Stage the rewrite on a scratch copy rather than `path` directly:
+        # the carried-forward blocks are only visible to validation AFTER
+        # reinsertion (see the final safety net below), so a failure there
+        # must leave the ORIGINAL file at `path` completely untouched
+        # instead of shipping a known-incompatible intermediate result.
+        with _tempfile.TemporaryDirectory() as scratch_dir:
+            scratch = _Path(scratch_dir) / path.name
+            scratch.write_text(new_text)
+            _carry_forward_dynamic_containers(scratch, new_solver, captured)
+
+            # Final safety net: now that the carried-forward dynamic blocks
+            # are back in the file, validate what would ACTUALLY ship. This
+            # is the only point in the pipeline where the new solver and
+            # the (unmodified) old dynamic blocks are checked together --
+            # catches e.g. switching to a solver the carried-forward
+            # Purkinje network can never physically couple to (see
+            # solver_coupling.SOLVER_COMPATIBILITY_RULES), which the
+            # intermediate rebuild above cannot see by design.
+            final = parse_electro_properties(scratch)
+            try:
+                build_electro_properties(final["selectors"], overrides=final["overrides"] or None)
+            except ValueError as exc:
+                raise ValueError(
+                    f"regenerate_electro_properties: switching {key}={value!r} "
+                    f"leaves a carried-forward dynamic block incompatible with "
+                    f"the new solver -- {exc}"
+                ) from exc
+
+            path.write_text(scratch.read_text())
+    else:
+        path.write_text(new_text)
 
 
 def build_physics_properties(
