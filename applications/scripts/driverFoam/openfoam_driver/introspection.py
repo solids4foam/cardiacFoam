@@ -189,7 +189,9 @@ def _run_state_schema() -> dict[str, Any]:
     months-old fossil and reported a run that never happened.
 
     workflow_state.json is what the strict workflow orchestrator actually
-    writes, once per step.
+    writes, once per step. The action_events.jsonl file, described as a
+    companion through schema 2.9, was a second instance of the same mistake
+    (never written anywhere in the codebase) and has been corrected here.
     """
     return {
         "description": (
@@ -201,11 +203,6 @@ def _run_state_schema() -> dict[str, Any]:
         "schema_version": "3.0",
         "file_location": (
             "output_dir/workflow_state.json  (see launch.<action>.workflowStatePath)"
-        ),
-        "companion_file": (
-            "output_dir/action_events.jsonl -- append-only JSONL log with one "
-            "event per line: sim_started, case_started, case_finished, "
-            "sim_finished, postprocess_started, postprocess_finished, all_started, all_finished."
         ),
         "polling_guidance": (
             "Poll every 15-30 seconds. Read status and current_step_id; each "

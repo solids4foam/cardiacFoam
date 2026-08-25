@@ -39,6 +39,18 @@ from openfoam_driver.introspection import describe_tutorial
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 
+def test_run_state_schema_does_not_advertise_unwritten_action_events_file():
+    # action_events.jsonl has no writer anywhere in the codebase (confirmed
+    # by repo-wide grep) -- advertising it as a "companion_file" here would
+    # repeat exactly the run_manifest.json mistake this function's own
+    # "retired" field already warns against.
+    from openfoam_driver.introspection import _run_state_schema
+
+    schema = _run_state_schema()
+    assert "companion_file" not in schema
+    assert "action_events.jsonl" not in json.dumps(schema)
+
+
 @skip_without_monorepo
 
 class TestIntrospection(unittest.TestCase):
