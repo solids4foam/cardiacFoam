@@ -434,7 +434,7 @@ def test_strict_dict_key_scanner_fails_on_unallowlisted_key() -> None:
         )
         allowlist_path = Path(temp_dir) / "allowlist.json"
         allowlist_path.write_text(json.dumps({
-            "absent_keys": sorted(drift["absent_keys"] - {"unlistedStrictKey"}),
+            "unmatched_cxx_reads": sorted(drift["unmatched_cxx_reads"] - {"unlistedStrictKey"}),
             "stale_paths": sorted(drift["stale_paths"]),
             "unmatched_subdicts": sorted(drift["unmatched_subdicts"]),
         }))
@@ -447,7 +447,7 @@ def test_strict_dict_key_scanner_fails_on_unallowlisted_key() -> None:
 
     payload = report.to_json()
     assert payload["status"] == "failed"
-    assert payload["absent_keys"] == ["unlistedStrictKey"]
+    assert payload["unmatched_cxx_reads"] == ["unlistedStrictKey"]
 
 
 def test_batched_ionic_model_does_not_require_optional_batched_keys():

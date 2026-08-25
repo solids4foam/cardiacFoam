@@ -239,10 +239,32 @@ class CataloguePath:
 
 @dataclass(frozen=True)
 class DictKeyStrictReport:
-    """Allowlist-backed catalogue drift report used by strict planning."""
+    """Allowlist-backed catalogue drift report used by strict planning.
+
+    ``unmatched_cxx_reads`` is deliberately NOT called "absent keys". A name
+    lands there because the scanner could not match a C++ string literal to
+    the catalogue, and there are four quite different reasons for that --
+    only the first is a catalogue bug:
+
+    1. **A genuinely uncatalogued key.** Someone added a read in C++ and did
+       not add the ``driver_path``. This is the signal the check exists for.
+    2. **Not this catalogue's key.** The read belongs to another dictionary
+       file (``electroMechanicalProperties``, a generated
+       ``constant/purkinjeGraph``) that this catalogue does not address.
+    3. **Upstream OpenFOAM's key.** e.g. ``nNonOrthogonalCorrectors``, read
+       from a ``pimpleDict``. OpenFOAM owns it; documenting it here would be
+       claiming someone else's contract.
+    4. **Not a dictionary key at all.** The regex matched a field name in a
+       string comparison (``var == "Vm"``) or a value rather than a key.
+
+    Because 2-4 are permanent and expected, the set is only meaningful
+    against the plugin's reviewed allowlist -- which is why the strict report
+    subtracts it, and why ``unused_allowlist`` exists to catch waivers whose
+    underlying read has since disappeared.
+    """
 
     status: str
-    absent_keys: tuple[str, ...]
+    unmatched_cxx_reads: tuple[str, ...]
     stale_paths: tuple[str, ...]
     unmatched_subdicts: tuple[str, ...]
     unused_allowlist: tuple[str, ...]
@@ -250,7 +272,7 @@ class DictKeyStrictReport:
     def to_json(self) -> dict[str, object]:
         return {
             "status": self.status,
-            "absent_keys": list(self.absent_keys),
+            "unmatched_cxx_reads": list(self.unmatched_cxx_reads),
             "stale_paths": list(self.stale_paths),
             "unmatched_subdicts": list(self.unmatched_subdicts),
             "unused_allowlist": list(self.unused_allowlist),
@@ -321,7 +343,7 @@ def load_dict_key_allowlist(path: Path) -> dict[str, set[str]]:
     """
     payload = json.loads(path.read_text())
     return {
-        "absent_keys": set(payload.get("absent_keys", [])),
+        "unmatched_cxx_reads": set(payload.get("unmatched_cxx_reads", [])),
         "stale_paths": set(payload.get("stale_paths", [])),
         "unmatched_subdicts": set(payload.get("unmatched_subdicts", [])),
     }
@@ -345,19 +367,40 @@ def compute_dict_key_drift(
             subdict_reads[read.name].append(read)
 
     code_keys_set: set[str] = set(key_reads.keys())
+    # Two different questions need two different views of the catalogue.
+    #
+    #   cat_leaves         -- leaves of CONCRETE paths only. Used by
+    #                         stale_paths: you cannot expect the C++ to read a
+    #                         literal "<name>", so wildcard paths must be
+    #                         excluded from "is anyone reading this?".
+    #   catalogued_names   -- every name the catalogue knows anywhere: leaves
+    #                         of concrete AND wildcard paths, plus every
+    #                         non-wildcard parent segment. Used by
+    #                         unmatched_cxx_reads: the C++ really does read
+    #                         "sigmaExtracellular" (catalogued under
+    #                         ecgDomains.<name>.sigmaExtracellular) and really
+    #                         does read the container name "outputVariables",
+    #                         so both must count as known.
+    #
+    # Sharing one set between them was the historical defect: 71% of the
+    # reported drift was catalogued all along, just invisible to a
+    # concrete-leaf-only comparison.
     cat_leaves: set[str] = set()
     cat_parent_segs: set[str] = set()
+    catalogued_names: set[str] = set()
     for path in cat_paths:
         if not (path.has_wildcard and path.dynamic_path):
             cat_leaves.add(path.leaf)
+        catalogued_names.add(path.leaf)
         for seg in path.parents:
             if not _WILDCARD_RE.fullmatch(seg):
                 cat_parent_segs.add(seg)
+    catalogued_names |= cat_parent_segs
 
-    absent_keys = {
+    unmatched_cxx_reads = {
         key
         for key in code_keys_set
-        if key not in cat_leaves and key not in IGNORED_FOAMFILE_KEYS
+        if key not in catalogued_names and key not in IGNORED_FOAMFILE_KEYS
     }
     stale_paths = {
         path.driver_path
@@ -372,7 +415,7 @@ def compute_dict_key_drift(
     }
 
     return {
-        "absent_keys": absent_keys,
+        "unmatched_cxx_reads": unmatched_cxx_reads,
         "stale_paths": stale_paths,
         "unmatched_subdicts": unmatched_subdicts,
     }
@@ -390,14 +433,14 @@ def strict_dict_key_report(
 
     unexpected: dict[str, set[str]] = {}
     unused: set[str] = set()
-    for key in ("absent_keys", "stale_paths", "unmatched_subdicts"):
+    for key in ("unmatched_cxx_reads", "stale_paths", "unmatched_subdicts"):
         unexpected[key] = drift[key] - allowlist[key]
         unused.update(f"{key}:{item}" for item in sorted(allowlist[key] - drift[key]))
 
     status = "ok" if not any(unexpected.values()) and not unused else "failed"
     return DictKeyStrictReport(
         status=status,
-        absent_keys=tuple(sorted(unexpected["absent_keys"])),
+        unmatched_cxx_reads=tuple(sorted(unexpected["unmatched_cxx_reads"])),
         stale_paths=tuple(sorted(unexpected["stale_paths"])),
         unmatched_subdicts=tuple(sorted(unexpected["unmatched_subdicts"])),
         unused_allowlist=tuple(sorted(unused)),

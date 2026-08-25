@@ -237,7 +237,7 @@ def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnos
             entries=driver_context.capabilities.dictionaries.entries(),
         )
         payload = report.to_json()
-        for key in ("absent_keys", "stale_paths", "unmatched_subdicts", "unused_allowlist"):
+        for key in ("unmatched_cxx_reads", "stale_paths", "unmatched_subdicts", "unused_allowlist"):
             for item in payload[key]:
                 diagnostics.append(_diagnostic(
                     "error",
