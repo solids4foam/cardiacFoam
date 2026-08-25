@@ -343,15 +343,16 @@ Defaults live in `plugins/cardiacfoam/defaults/*.py`.
   attempt.
 - `workflow_logs/<step>.attempt<N>.stderr.log`: stderr for a strict step
   attempt.
-- `run_manifest.json`: written by the legacy engine for every `sim`/`post`/`all`
-  run.
-- `run_report.md`: human-readable summary written alongside the legacy engine
-  manifest.
-- `plots.json`: written by the postprocess runner, includes declared artifact
-  metadata.
-- `artifacts_manifest.json`: predicted artifact manifest for legacy engine
-  runs.
-- `artifacts_realized.json`: terminal legacy artifact realization report.
+- `remediation_history.jsonl`: append-only record of applied `--apply`
+  overrides, written by `remediation_audit.append_remediation_record` --
+  present only if an override was ever applied for this case.
+
+There is no `run_manifest.json`, `run_report.md`, `plots.json`,
+`artifacts_manifest.json`, or `artifacts_realized.json` -- these described a
+retired execution engine (the `sim`/`post`/`all` CLI actions) and nothing in
+the current codebase writes any of them. Predicted-vs-actual artifact
+verification is `artifact_reconciliation` in the `run --strict`/`step --strict`
+JSON payload (see "Verifying outputs" in `AGENT_GUIDE.md`), not a file on disk.
 
 `workflow_state.json` is the current machine-facing state file for strict
 autonomous execution. Status vocabulary is:
@@ -377,44 +378,6 @@ Each strict step state reports:
 - `stderr_log`
 - `produced_artifacts`
 - `diagnostics`
-
-`run_manifest.json` remains the machine-facing run-state file for legacy
-local-app integration. The current schema includes:
-
-- `schema_version`
-- `run_id`
-- `requested_action`
-- `entry`
-- `entry_kind`
-- `entry_path`
-- `source_type`
-- `workflow_family`
-- `status`
-- `postprocess_status`
-- `current_case_id`
-- `started_at_utc`
-- `updated_at_utc`
-- `finished_at_utc`
-- `total_cases`
-- `planned_cases`
-- `completed_cases`
-- `failed_cases`
-- `error`
-- `plots_manifest_path`
-- `human_report_path`
-- `results`
-
-Each `results` item reports:
-
-- `case_id`
-- `status`
-- `duration_s`
-- `params`
-- `error`
-- `index`
-- `total_cases`
-- `started_at_utc`
-- `finished_at_utc`
 
 ## Setup-folder dependencies
 
