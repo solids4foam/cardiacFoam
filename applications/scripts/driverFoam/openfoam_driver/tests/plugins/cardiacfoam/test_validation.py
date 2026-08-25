@@ -886,7 +886,11 @@ def _build_pvj_case(tmp_path, *, coupler="reactionDiffusionPvjCoupler",
     if graph_file_key:
         overrides[f"{prefix}.graphFile"] = "purkinjeGraph"
     if set_rpvj:
-        overrides[f"{prefix}.rPvj"] = "150.0"
+        # rPvj lives on the coupler's own dict block (domainCouplings.pvj),
+        # not on the network's purkinjeGraphModelCoeffs -- matches the
+        # catalog (domainCouplings.<name>.rPvj) and the real tutorial
+        # fixtures (see reactionDiffusionPvjCoupler.C's dict.get<scalar>).
+        overrides["$ELECTRO_MODEL_COEFFS.domainCouplings.pvj.rPvj"] = "150.0"
 
     selectors = {"myocardiumSolver": myocardium_solver}
     if myocardium_solver != "eikonalSolver":
