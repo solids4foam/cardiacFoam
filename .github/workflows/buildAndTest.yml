@@ -86,17 +86,16 @@ jobs:
 
           CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.mode }}" ./tutorials/Alltest-regression
 
-      - name: Real foamDictionary mutation tests
+      - name: Real foamlib mutation tests
         if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2512' && matrix.mode == 'lightweight'
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
           python3 -m pip install -e applications/scripts/driverFoam pytest
           cd applications/scripts/driverFoam
-          REQUIRE_FOAMDICTIONARY=1 python3 -m pytest \
+          python3 -m pytest \
             openfoam_driver/tests/core/test_apply_overrides.py::test_apply_fvSolution_edits_file \
             openfoam_driver/tests/core/test_apply_overrides.py::test_apply_region_fvSolution_edits_file \
-            openfoam_driver/tests/core/test_mutators.py::TestFoamDictionarySilentTruncationGuard::test_detects_and_reverts_silent_truncation \
             -q -rs
 
       - name: Live catalog and runtime-dependency verification

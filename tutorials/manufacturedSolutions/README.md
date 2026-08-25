@@ -8,6 +8,8 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
+- `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
+- `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
 
 ## Naming Pattern
 

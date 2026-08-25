@@ -27,6 +27,7 @@ dedicated registered spec. `Regression` means coverage by the cross-case
 | `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `manufacturedBidomain` | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
 | `manufacturedSolutions/bathBidomain` | Verify bidomain-with-bath fields and ECG ownership | `bathBidomainFDAManufactured` and optional `torsoECG` | lightweight or full | `manufacturedBathBidomain` | `Alltest-regression` | global bath fields and manufactured error/ECG summaries |
 | `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `manufacturedEikonalECG` | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
+| `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | `manufacturedMonodomain1D3D` | not covered | coupled convergence summaries under `outputs/` |
 | `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `manufacturedMonodomainTotalLagrangianEM` | not covered | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
 
 ## Common script pattern

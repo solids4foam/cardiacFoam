@@ -1,4 +1,4 @@
-# monodomain1D3D
+# manufacturedSolutions/monodomain1D3D tutorial
 
 Manufactured 1D-3D monodomain coupling test case. Couples a 3D monodomain myocardium domain to a small 1D Purkinje graph through `reactionDiffusionPvjCoupler` and verifies coupled fields with `coupled1D3DMonodomainVerifier`.
 
