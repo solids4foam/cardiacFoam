@@ -1,6 +1,0 @@
-[console_scripts]
-driverFoam = openfoam_driver.cli:main
-foamctl = openfoam_driver.cli:main
-
-[driverfoam.plugins]
-cardiacfoam = openfoam_driver.plugins.cardiacfoam_plugin:CardiacFoamPlugin
