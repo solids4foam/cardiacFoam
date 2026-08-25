@@ -36,10 +36,7 @@ Each yielded entry is the raw manifest dict augmented with a
 ``_state_path`` key carrying the absolute path to the source file --
 agents use it to locate sibling sidecars: ``workflow_logs/`` (per-step
 stdout/stderr logs) and, if any override was ever applied via
-``--apply``, ``remediation_history.jsonl``. Earlier versions of this
-docstring also listed ``artifacts_manifest.json``, ``artifacts_realized.json``,
-and ``action_events.jsonl`` as sidecars -- none of the three has ever had a
-writer in this codebase; do not expect them.
+``--apply``, ``remediation_history.jsonl``.
 """
 from __future__ import annotations
 

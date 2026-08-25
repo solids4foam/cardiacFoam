@@ -13,8 +13,8 @@ Quick navigational map for every reader type. All paths are relative to
 | `openfoam_driver/core/plugin_capabilities.py` | 17 capability Protocol classes + adapter dataclasses + `adapt_plugin_capabilities()`. Every plugin capability seam is documented here. |
 | `openfoam_driver/core/compatibility.py` | Backward-compatibility shims for optional-hook capabilities: cardiac-shaped fallbacks for the built-in cardiac plugin, neutral fallbacks for every other plugin. |
 | `openfoam_driver/core/plugin_discovery.py` | Entry-point discovery via `importlib.metadata`. Explains `driverfoam.plugins` group name, ambiguity handling, and `_entry_points()` test seam. |
-| `openfoam_driver/strict_planning.py` | The strict planner: `strict_plan()` / `foamctl plan --strict`. Non-mutating; produces machine-readable JSON with readiness score, diagnostics, and launch command. |
-| `openfoam_driver/cli.py` | `foamctl` / `driverFoam` CLI entry-point. All public subcommands are here. |
+| `openfoam_driver/strict_planning.py` | The strict planner: `strict_plan()` / `driverFoam plan --strict`. Non-mutating; produces machine-readable JSON with readiness score, diagnostics, and launch command. |
+| `openfoam_driver/cli.py` | `driverFoam` / `driverFoam` CLI entry-point. All public subcommands are here. |
 | `ARCHITECTURE.md` | Deep architectural review: layer map, claim discipline, coupling analysis, runtime flow diagrams. ~1400 lines. Read §3 and §4.5 first. |
 | `CHANGELOG.md` | History of contract changes per phase. |
 
@@ -74,8 +74,8 @@ Quick navigational map for every reader type. All paths are relative to
 
 | Hook | If absent | Unlocks |
 |---|---|---|
-| `route_sweep_case_values(...)` | **Sweeps refused** | `foamctl sweep-run` |
-| `materialize_sweep_case(...)` | **Sweeps refused** | `foamctl sweep-run` |
+| `route_sweep_case_values(...)` | **Sweeps refused** | `driverFoam sweep-run` |
+| `materialize_sweep_case(...)` | **Sweeps refused** | `driverFoam sweep-run` |
 | `has_case_marker(case_root)` | `False` | Case auto-detection |
 | `is_nondimensional_case(spec)` | `False` (diagnostics on) | Skip SI mesh checks |
 | `get_mesh_geometry_diagnostics(case_root)` | `()` | Custom geometry checks |
@@ -91,7 +91,7 @@ Quick navigational map for every reader type. All paths are relative to
 
 | File | Role |
 |---|---|
-| `AGENT_GUIDE.md` | Full agent CLI reference: `foamctl` commands, RunDocument, sweeps, post-processing, PLUGIN_GUIDE section. |
+| `AGENT_GUIDE.md` | Full agent CLI reference: `driverFoam` commands, RunDocument, sweeps, post-processing, PLUGIN_GUIDE section. |
 | `.agents/skills/driverfoam-assistant/SKILL.md` | Agent workflow skill: case scaffolding, sweep generation, strict diagnostics loop, post-processing. |
 | `.agents/skills/driverfoam-plugin-builder/SKILL.md` | **Plugin builder skill:** complete step-by-step guide for integrating a new solver. |
 

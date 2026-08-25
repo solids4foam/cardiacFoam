@@ -29,7 +29,7 @@
 
 The predictor is the single agent-facing answer to "what raw data does this
 case produce?". It is consumed by the engine (to write
-``artifacts_manifest.json`` alongside ``workflow_state.json``) and by agents
+``workflow_state.json``) and by agents
 exploring a case ahead of a real run.
 
 Design discipline (plan v2 section 3):

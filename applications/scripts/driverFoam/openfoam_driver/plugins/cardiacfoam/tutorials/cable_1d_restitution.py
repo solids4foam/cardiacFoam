@@ -200,7 +200,6 @@ def make_spec(
             cable_length_mm=cable_length_mm,
             cross_section_cell_counts=cross_section_cell_counts,
         ),
-        collect_outputs=None,  # let foamctl collect postProcessing natively
         metadata={
             "python": sys.executable,
             "expected_artifacts": [

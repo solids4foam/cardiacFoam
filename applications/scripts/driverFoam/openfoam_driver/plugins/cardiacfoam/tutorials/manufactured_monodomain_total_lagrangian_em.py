@@ -54,7 +54,6 @@ from openfoam_driver.specs.utils import (
 from .manufactured_monodomain_pseudo_ecg import (
     _build_cases,
     _case_output_filename,
-    _collect_outputs,
 )
 
 
@@ -204,7 +203,6 @@ def make_spec(
             physics_property_overrides=physics_property_overrides,
             verification_model_type=verification_model_type,
         ),
-        collect_outputs=_collect_outputs,
         metadata={
             "notes": (
                 "Manufactured electromechanics MMS benchmark. "

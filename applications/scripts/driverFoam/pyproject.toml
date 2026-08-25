@@ -28,7 +28,6 @@ post = [
   "openpyxl>=3.1",
 ]
 [project.scripts]
-foamctl = "openfoam_driver.cli:main"
 driverFoam = "openfoam_driver.cli:main"
 
 [project.entry-points."driverfoam.plugins"]

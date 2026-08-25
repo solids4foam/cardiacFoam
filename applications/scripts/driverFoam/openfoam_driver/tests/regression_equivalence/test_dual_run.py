@@ -140,7 +140,7 @@ def test_verify_reproduction_generic_prefers_regression_script(monkeypatch, tmp_
         "_run_regression_script",
         lambda _case, _case_path: SimpleNamespace(returncode=0, stdout="", stderr=""),
     )
-    monkeypatch.setattr(dual_run, "_drive_agent", lambda *_args, **_kwargs: pytest.fail("should not call foamctl run"))
+    monkeypatch.setattr(dual_run, "_drive_agent", lambda *_args, **_kwargs: pytest.fail("should not call driverFoam run"))
     monkeypatch.setattr(dual_run, "check_protocol", lambda *_args, **_kwargs: (True, "ok"))
 
     result = verify_reproduction(case, driver="generic")

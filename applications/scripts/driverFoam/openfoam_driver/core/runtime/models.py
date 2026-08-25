@@ -50,8 +50,7 @@ updated alongside the addition, and the plan (section 2.1) must be amended."""
 class DataArtifact:
     """Declarative description of a raw data output produced by a run or utility.
 
-    Shared vocabulary between the engine (which writes ``artifacts_manifest.json``
-    listing what a run actually produced) and ``utility.manifest.toml`` ``produces``
+    Shared vocabulary between the engine and ``utility.manifest.toml`` ``produces``
     entries (which declare what a utility writes). Agents consume both through
     the same shape.
 
@@ -93,7 +92,7 @@ class DataArtifact:
 
     def __post_init__(self) -> None:
         # Catch typos like {caseId} or {run_id} at construction so they never
-        # reach artifacts_manifest.json. Expansion-time validation alone is
+        # be finalized. Expansion-time validation alone is
         # not enough: an agent may read path_pattern literally without ever
         # calling expand_path_pattern.
         _validate_path_pattern(self.path_pattern)

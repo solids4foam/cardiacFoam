@@ -40,10 +40,7 @@ from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 
 def test_run_state_schema_does_not_advertise_unwritten_action_events_file():
-    # action_events.jsonl has no writer anywhere in the codebase (confirmed
-    # by repo-wide grep) -- advertising it as a "companion_file" here would
-    # repeat exactly the run_manifest.json mistake this function's own
-    # "retired" field already warns against.
+    # action_events.jsonl has no writer anywhere in the codebase.
     from openfoam_driver.introspection import _run_state_schema
 
     schema = _run_state_schema()

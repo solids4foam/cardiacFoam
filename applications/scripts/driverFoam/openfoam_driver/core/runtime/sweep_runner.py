@@ -198,7 +198,6 @@ def _stage_entry_case(source_case_root: Path, staged_case_root: Path) -> None:
     }
     generated_file_names = {
         "workflow_state.json", "run_document.json", "sweep_manifest.json",
-        "artifacts_manifest.json", "artifacts_realized.json",
     }
 
     def ignore_generated(_directory: str, names: list[str]) -> set[str]:

@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from openfoam_driver.specs.common import (
-    collect_outputs_by_pattern,
     resolve_run_script_path,
     resolve_spec_paths,
 )
@@ -164,11 +163,6 @@ def _workflow_dag_for(
     return {"steps": steps}
 
 
-def _collect_outputs(case_root: Path, output_dir: Path, *, patterns: Sequence[str]) -> None:
-    for pattern in patterns:
-        collect_outputs_by_pattern(case_root, output_dir, pattern=pattern)
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -279,11 +273,6 @@ def make_spec(
             _apply_case,
             dict_file_relpaths=resolved_relpaths,
             mutation_callback=_apply_case_mutation,
-        ),
-        collect_outputs=(
-            partial(_collect_outputs, patterns=tuple(str(item) for item in collect_patterns))
-            if collect_patterns
-            else None
         ),
         metadata={
             "notes": "Core generic case runner for arbitrary tutorial folders.",

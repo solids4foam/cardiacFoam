@@ -84,7 +84,7 @@ without changing their activation or output.
 In addition to these curated specs, the driver can also run:
 
 - `genericCase` / `randomCase` with `case_dir_name` supplied in config
-- any existing case folder directly, for example `foamctl run --strict --entry ECG`
+- any existing case folder directly, for example `driverFoam run --strict --entry ECG`
 
 ## Install and run
 
@@ -98,10 +98,10 @@ Run examples:
 
 ```bash
 # installed entrypoints
-foamctl plan --strict --entry singleCell
-foamctl run --strict --entry singleCell
-foamctl step --strict --entry singleCell --step solve
-foamctl run --strict --entry niederer2012
+driverFoam plan --strict --entry singleCell
+driverFoam run --strict --entry singleCell
+driverFoam step --strict --entry singleCell --step solve
+driverFoam run --strict --entry niederer2012
 
 # module invocation
 python3 -m openfoam_driver run --strict --entry singleCell
@@ -136,7 +136,7 @@ user-local file and set:
 
 ```bash
 export DRIVERFOAM_RUNTIME_CONFIG=/absolute/path/driverfoam-runtime.yaml
-foamctl plan --strict --entry manufacturedMonodomainPseudoECG
+driverFoam plan --strict --entry manufacturedMonodomainPseudoECG
 ```
 
 The plugin declares `lightweight` and `full` backends in
@@ -347,12 +347,7 @@ Defaults live in `plugins/cardiacfoam/defaults/*.py`.
   overrides, written by `remediation_audit.append_remediation_record` --
   present only if an override was ever applied for this case.
 
-There is no `run_manifest.json`, `run_report.md`, `plots.json`,
-`artifacts_manifest.json`, or `artifacts_realized.json` -- these described a
-retired execution engine (the `sim`/`post`/`all` CLI actions) and nothing in
-the current codebase writes any of them. Predicted-vs-actual artifact
-verification is `artifact_reconciliation` in the `run --strict`/`step --strict`
-JSON payload (see "Verifying outputs" in `AGENT_GUIDE.md`), not a file on disk.
+
 
 `workflow_state.json` is the current machine-facing state file for strict
 autonomous execution. Status vocabulary is:

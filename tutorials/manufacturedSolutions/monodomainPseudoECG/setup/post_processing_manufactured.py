@@ -208,47 +208,8 @@ def _write_csv(rows, destination: Path, fieldnames) -> None:
             writer.writerow({field: row.get(field, "") for field in fieldnames})
 
 
-def _load_expected_filenames(output_dir: Path) -> set[str] | None:
-    manifest_path = output_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return None
-
-    manifest = json.loads(manifest_path.read_text())
-    result_rows = []
-    counts_by_base: dict[tuple[str, int, str], int] = {}
-    for result in manifest.get("results", []):
-        status = result.get("status")
-        if status not in {"ok", "planned"}:
-            continue
-        params = result.get("params", {})
-        dimension = params.get("dimension")
-        cells = params.get("cells")
-        solver = params.get("solver")
-        dt_value = params.get("dt")
-        if dimension is None or cells is None or solver is None:
-            continue
-        key = (str(dimension), int(cells), str(solver))
-        counts_by_base[key] = counts_by_base.get(key, 0) + 1
-        result_rows.append(
-            {
-                "dimension": str(dimension),
-                "cells": int(cells),
-                "solver": str(solver),
-                "dt": float(dt_value) if dt_value is not None else None,
-            }
-        )
-
-    expected = set()
-    for row in result_rows:
-        key = (row["dimension"], row["cells"], row["solver"])
-        if counts_by_base.get(key, 0) > 1 and row["dt"] is not None:
-            dt_token = f"{float(row['dt']):.12g}".replace(".", "p").replace("-", "m")
-            expected.add(
-                f"{row['dimension']}_{row['cells']}_cells_{row['solver']}_DT{dt_token}.dat"
-            )
-        else:
-            expected.add(f"{row['dimension']}_{row['cells']}_cells_{row['solver']}.dat")
-    return expected or None
+def _load_expected_filenames(output_dir):
+    return None
 
 
 def _parse_ecg_summary_file(path: Path) -> tuple[dict[str, str], list[dict[str, float | str]]]:

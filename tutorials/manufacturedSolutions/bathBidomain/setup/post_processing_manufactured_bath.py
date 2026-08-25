@@ -127,43 +127,12 @@ def _safe_rate(e1: float, e2: float, h1: float, h2: float) -> float:
     return math.log(e1/e2)/math.log(h1/h2)
 
 
-def _load_expected_filenames(output_dir: Path) -> set[str] | None:
-    manifest_path = output_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return None
-
-    manifest = json.loads(manifest_path.read_text())
-    expected = set()
-    for result in manifest.get("results", []):
-        status = result.get("status")
-        if status not in {"ok", "planned"}:
-            continue
-        params = result.get("params", {})
-        dimension = params.get("dimension")
-        cells = params.get("cells")
-        solver = params.get("solver")
-        if dimension is None or cells is None or solver is None:
-            continue
-        expected.add(f"bathBidomain_{dimension}_{int(cells)}_cells_{solver}.dat")
-    return expected or None
+def _load_expected_filenames(output_dir):
+    return None
 
 
-def _load_expected_bath_ecg_summary_filenames(output_dir: Path) -> set[str] | None:
-    manifest_path = output_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return None
-
-    manifest = json.loads(manifest_path.read_text())
-    expected = set()
-    for result in manifest.get("results", []):
-        status = result.get("status")
-        if status not in {"ok", "planned"}:
-            continue
-        case_id = result.get("case_id")
-        if not case_id:
-            continue
-        expected.add(f"BathECG_{case_id}_manufacturedBathECGSummary.dat")
-    return expected or None
+def _load_expected_bath_ecg_summary_filenames(output_dir):
+    return None
 
 
 def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None):

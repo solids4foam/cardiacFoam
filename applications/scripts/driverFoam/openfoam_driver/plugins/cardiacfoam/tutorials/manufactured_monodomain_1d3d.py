@@ -107,22 +107,6 @@ def _apply_case(
     # The actual execution is handled by the generic executor running the workflow_dag
 
 
-def _collect_outputs(case_root: Path, output_dir: Path, case: CaseConfig) -> None:
-    cells = int(case.params["cells"])
-    # The case output directory
-    case_output = output_dir / str(cells)
-    if case_output.exists():
-        shutil.rmtree(case_output)
-    case_output.mkdir(parents=True, exist_ok=True)
-
-    for source in case_root.glob("postProcessing/graph_*_nodes.dat"):
-        shutil.copy2(source, case_output / source.name)
-    for source in case_root.glob("postProcessing/3D_*_cells_*.dat"):
-        shutil.copy2(source, case_output / source.name)
-    diag = case_root / "verification" / "coupled1D3DMonodomain_diagnostics.csv"
-    if diag.exists():
-        shutil.copy2(diag, case_output / "coupling_diagnostics.csv")
-
 
 def make_spec(
     *,
@@ -165,7 +149,6 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             end_time=end_time,
         ),
-        collect_outputs=lambda c_root, o_dir, case: _collect_outputs(c_root, o_dir, case),
         metadata={
             "notes": "Manufactured coupled 1D-3D monodomain convergence benchmark",
             "workflow_dag": {

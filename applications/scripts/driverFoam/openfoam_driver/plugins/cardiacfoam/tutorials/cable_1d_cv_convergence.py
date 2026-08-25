@@ -199,7 +199,6 @@ def make_spec(
             cross_section_cell_counts=cross_section_cell_counts,
             end_time_s=end_time_s,
         ),
-        collect_outputs=None,
         metadata={
             "python": sys.executable,
             "expected_artifacts": [],

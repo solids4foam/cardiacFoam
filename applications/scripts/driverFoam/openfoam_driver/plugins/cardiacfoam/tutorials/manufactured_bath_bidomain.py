@@ -137,11 +137,6 @@ _DEFAULT_ECG_DOMAINS_BLOCK = """    ecgDomains
 """
 
 
-def _archive_output_dir(case_root: Path) -> Path:
-    return case_root / "archivedPostProcessing"
-
-
-
 def _workflow_dag_for(
     mesh_family: str,
     dimensions_list: list[str],
@@ -446,43 +441,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _collect_outputs(
-    case_root: Path,
-    output_dir: Path,
-    *,
-    ecg_enabled: bool = False,
-) -> None:
-    archived_dir = _archive_output_dir(case_root)
-    archived_outputs = []
-    if archived_dir.exists():
-        for source in sorted(archived_dir.glob("*.dat")):
-            if source.name.startswith("bathBidomain_") or (
-                ecg_enabled
-                and source.name.startswith(("BathECG_", "PseudoECG_"))
-            ):
-                archived_outputs.append(source)
-
-    same_output_dir = archived_dir.exists() and archived_dir.resolve() == output_dir.resolve()
-    if archived_outputs:
-        if same_output_dir:
-            print(f"Archived outputs already available in {output_dir}; preserving in place")
-        else:
-            for stale_output in output_dir.glob("*.dat"):
-                stale_output.unlink()
-            for source in archived_outputs:
-                destination = output_dir / source.name
-                shutil.copy2(source, destination)
-                print(f"Copied output: {source.name} -> {destination}")
-
-    source_logs = case_root / "logs"
-    destination_logs = output_dir / "logs"
-    if destination_logs.exists():
-        shutil.rmtree(destination_logs)
-    if source_logs.exists():
-        shutil.copytree(source_logs, destination_logs)
-        print(f"Copied archived logs -> {destination_logs}")
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -591,7 +549,6 @@ def make_spec(
             fv_solution_overrides=fv_solution_overrides,
             tet_geo_template_relpath=tet_geo_template_path,
         ),
-        collect_outputs=partial(_collect_outputs, ecg_enabled=ecg_enabled),
         metadata={
             "notes": "FDA bath-bidomain manufactured-solution convergence benchmark",
             "workflow_dag": _workflow_dag_for(

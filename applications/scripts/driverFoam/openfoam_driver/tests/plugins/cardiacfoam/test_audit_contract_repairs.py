@@ -30,7 +30,7 @@ def test_dashboard_is_not_advertised_by_package_contract():
         REPO_ROOT / "applications/scripts/driverFoam/openfoam_driver/README.md"
     ).read_text()
     assert "dashboard = [" not in pyproject
-    assert "foamctl dashboard" not in readme
+    assert "driverFoam dashboard" not in readme
     assert "openfoam_driver.dashboard" not in readme
 
 

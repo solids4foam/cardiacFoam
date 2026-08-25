@@ -178,21 +178,7 @@ def _describe_config_schema(
 
 
 def _run_state_schema() -> dict[str, Any]:
-    """Static schema description for workflow_state.json.
-
-    Replaces the former run_manifest.json description. That file was
-    advertised here as "the run-state source of truth", with polling
-    guidance -- but nothing in driverFOAM has ever written it; the only
-    writers are test fixtures that fabricate one to exercise the reader.
-    Six stale copies were committed under tutorials/, so an agent following
-    the old guidance either polled a file that never appeared or read a
-    months-old fossil and reported a run that never happened.
-
-    workflow_state.json is what the strict workflow orchestrator actually
-    writes, once per step. The action_events.jsonl file, described as a
-    companion through schema 2.9, was a second instance of the same mistake
-    (never written anywhere in the codebase) and has been corrected here.
-    """
+    """Static schema description for workflow_state.json."""
     return {
         "description": (
             "workflow_state.json is the run-state source of truth. It is "
@@ -208,11 +194,6 @@ def _run_state_schema() -> dict[str, Any]:
             "Poll every 15-30 seconds. Read status and current_step_id; each "
             "step carries its own status, attempts, exit code, and log path. "
             "Stop when status is a terminal state."
-        ),
-        "retired": (
-            "run_manifest.json was described here through schema 2.3 but was "
-            "never written by driverFOAM. Do not poll it; any copy on disk is "
-            "a stale artifact."
         ),
     }
 

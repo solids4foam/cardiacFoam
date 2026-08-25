@@ -199,7 +199,6 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
         ),
-        collect_outputs=None,  # per-case collection happens in the workflow DAG
         metadata={
             "python": sys.executable,
             "notes": "S1–S2 restitution protocol sweep on ionic model, tissue, and S2 interval.",

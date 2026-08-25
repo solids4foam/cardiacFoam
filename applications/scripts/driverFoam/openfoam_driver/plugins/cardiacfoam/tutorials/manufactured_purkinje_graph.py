@@ -75,16 +75,6 @@ def _ensure_mesh(case_root: Path, block_mesh_dict_relpath: Path) -> None:
         )
 
 
-def _collect_outputs(case_root: Path, output_dir: Path) -> None:
-    archived_dir = case_root / defaults.OUTPUT_DIR_NAME
-    if not archived_dir.exists() or archived_dir.resolve() == output_dir.resolve():
-        return
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    shutil.copytree(archived_dir, output_dir)
-
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -113,7 +103,6 @@ def make_spec(
         output_dir=output_dir,
         build_cases=partial(_build_cases, graph_ids=graph_ids_list),
         apply_case=_apply_case,
-        collect_outputs=_collect_outputs,
         metadata={
             "notes": "Manufactured Purkinje graph convergence benchmark",
             "workflow_dag": {

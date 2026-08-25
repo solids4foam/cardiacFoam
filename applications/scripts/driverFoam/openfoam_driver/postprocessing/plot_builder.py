@@ -37,7 +37,7 @@ Tutorial post-processing scripts share a common pattern:
 3. Build Plotly traces with a group-based color strategy (one base color per
    group, lightened by variant position within the group).
 4. Apply a shared layout and write an interactive HTML file.
-5. Return an artifact dict for inclusion in ``plots.json``.
+5. Return an artifact dict for inclusion.
 
 ``plot_builder`` provides the building blocks that make this pattern
 re-usable across tutorials without duplicating code.
@@ -406,11 +406,11 @@ class PlotSpec:
         Basename of the HTML file written to the output directory
         (e.g. ``"allSimulations.html"``).
     label:
-        Human-readable label used in the ``plots.json`` artifact entry.
+        Human-readable label used in the artifact entry.
     legend_title:
         Optional text shown above the legend.
     kind:
-        Artifact kind for ``plots.json``: ``"plot"`` (default), ``"table"``,
+        Artifact kind: ``"plot"`` (default), ``"table"``,
         ``"data"``, or ``"report"``.
     height:
         Optional figure height in pixels.
@@ -432,7 +432,7 @@ class PlotSpec:
     template: str = "plotly_white"
 
     def artifact(self, output_dir: Path) -> dict[str, Any]:
-        """Return the artifact dict for this figure (for inclusion in ``plots.json``)."""
+        """Return the artifact dict for this figure ."""
         return {
             "path": str(output_dir / self.output_filename),
             "label": self.label,

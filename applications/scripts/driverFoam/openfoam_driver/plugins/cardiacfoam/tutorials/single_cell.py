@@ -39,7 +39,6 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
 )
 from openfoam_driver.specs.common import (
-    collect_outputs_by_pattern,
     resolve_run_script_path,
     resolve_spec_paths,
 )
@@ -94,12 +93,6 @@ def _apply_case(
     apply_electro_property_overrides(electro_properties_file, case_overrides)
     apply_electro_property_overrides(electro_properties_file, electro_property_overrides)
     apply_physics_property_overrides(physics_properties_file, physics_property_overrides)
-
-
-def _collect_outputs(case_root: Path, output_dir: Path, *, output_glob: str = defaults.OUTPUT_GLOB) -> None:
-    collect_outputs_by_pattern(case_root, output_dir, pattern=output_glob)
-
-
 
 
 def make_spec(
@@ -176,7 +169,6 @@ def make_spec(
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
         ),
-        collect_outputs=partial(_collect_outputs, output_glob=output_glob),
         metadata={
             "python": sys.executable,
             "notes": "Single-cell sweep on ionic model and tissue types.",

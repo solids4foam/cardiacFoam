@@ -115,7 +115,7 @@ meet it completely; Sections 6–8 identify the remaining cardiacFoam coupling.
 applications/scripts/driverFoam/
 │
 ├── openfoam_driver/                  ← Python package (installable)
-│   ├── cli.py                        ← CLI entry point (foamctl / driverFoam)
+│   ├── cli.py                        ← CLI entry point (driverFoam / driverFoam)
 │   ├── strict_planning.py            ← Planning orchestrator
 │   ├── introspection.py              ← describe_entry
 │   ├── planning_types.py             ← StrictDiagnostic, SimulationAuditItem
@@ -207,7 +207,7 @@ applications/scripts/driverFoam/
 ```mermaid
 graph TB
     subgraph User["User / Agent / CI"]
-        CLI["foamctl plan|run|step|sweep-run"]
+        CLI["driverFoam plan|run|step|sweep-run"]
     end
 
     subgraph Core["Generic Driver Core (openfoam_driver/core/)"]
@@ -293,7 +293,7 @@ graph TB
 
 ## 4. Current Causal / Runtime Flow
 
-### 4.1 Step-by-Step Causality (foamctl plan --strict --entry niederer2012)
+### 4.1 Step-by-Step Causality (driverFoam plan --strict --entry niederer2012)
 
 **Step 1 — CLI entry**
 
@@ -359,7 +359,7 @@ graph TB
   launch.” For the current schema, launchability requires both a non-failed plan
   and a non-blocked readiness result (plus the run-path ingestion checks).
 
-**Step 9 — Execution (foamctl run --strict --entry niederer2012)**
+**Step 9 — Execution (driverFoam run --strict --entry niederer2012)**
 
 - CLI reads `report.workflow_dag`, `report.workflow_state`, `report.case_root`, `report.expected_artifacts` from the plan.
 - Calls `_execute_run()` → `workflow_orchestrator.py::run_workflow()`.
@@ -378,7 +378,7 @@ graph TB
 
 ```mermaid
 flowchart TD
-    A["User: foamctl plan --strict --entry niederer2012"] --> B
+    A["User: driverFoam plan --strict --entry niederer2012"] --> B
 
     B["cli.py::main\n• parse args\n• select plugin"] --> C
 
@@ -403,8 +403,8 @@ flowchart TD
     L["StrictPlanReport\nplan status + readiness score\n(distinct semantics)"] --> M
 
     M{User proceeds to run?}
-    M -->|foamctl run --strict| N
-    M -->|foamctl run --run-document| N2
+    M -->|driverFoam run --strict| N
+    M -->|driverFoam run --run-document| N2
 
     N["cli::_context_from_entry\n→ _ExecutionContext"] --> O
     N2["run_document_exec::build_execution_inputs\n→ RunDocumentExecutionInputs"] --> O
@@ -478,7 +478,7 @@ graph LR
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Planning: foamctl plan --strict
+    [*] --> Planning: driverFoam plan --strict
 
     Planning --> Validation: strict_plan()
     note right of Validation
@@ -498,7 +498,7 @@ stateDiagram-v2
     end note
 
     Normalisation --> Planned: RunDocument status="planned"
-    Planned --> Executing: foamctl run --strict
+    Planned --> Executing: driverFoam run --strict
 
     state Executing {
         [*] --> StepPending
@@ -1110,10 +1110,10 @@ pip install openfoam-driver
 pip install -e ./  # installs your project with the entry-point
 
 # Plan a case folder
-foamctl plan --strict --plugin myproject --entry myBasicCase
+driverFoam plan --strict --plugin myproject --entry myBasicCase
 
 # Run it
-foamctl run --strict --plugin myproject --entry myBasicCase
+driverFoam run --strict --plugin myproject --entry myBasicCase
 ```
 
 ### What does NOT need to change in the driver core
@@ -1314,7 +1314,7 @@ tests that can fail:
 
 5. **`predict_data_artifacts()`**: Describe what output files a successful run produces. The driver uses this to verify runs completed correctly.
 
-6. **`get_tutorial_catalog()`**: Optionally, register named tutorial configurations so users can say `foamctl run --entry myTutorial` instead of always passing a folder path.
+6. **`get_tutorial_catalog()`**: Optionally, register named tutorial configurations so users can say `driverFoam run --entry myTutorial` instead of always passing a folder path.
 
 7. **`validate_configuration(spec)`**: Optionally, add physics consistency checks — e.g. "model X requires boundary condition Y to be set".
 

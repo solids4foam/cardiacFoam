@@ -850,7 +850,7 @@ def test_representative_run_has_no_validator_errors(spec_label: str, run: RunDoc
 # disk), not a generic catalog rule, so it lives in
 # _evaluate_pvj_resistance_requirement and is consumed by the cardiacfoam
 # plugin's validate_configuration (the strict pre-flight check gating
-# `foamctl run --strict`), not validate_run_semantics.
+# `driverFoam run --strict`), not validate_run_semantics.
 
 def _build_pvj_case(tmp_path, *, coupler="reactionDiffusionPvjCoupler",
                      myocardium_solver="monodomainSolver",

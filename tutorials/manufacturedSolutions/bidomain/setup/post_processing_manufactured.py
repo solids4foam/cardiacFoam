@@ -155,25 +155,8 @@ def _write_csv(rows, destination: Path, fieldnames) -> None:
             writer.writerow({field: row.get(field, "") for field in fieldnames})
 
 
-def _load_expected_filenames(output_dir: Path) -> set[str] | None:
-    manifest_path = output_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return None
-
-    manifest = json.loads(manifest_path.read_text())
-    expected = set()
-    for result in manifest.get("results", []):
-        status = result.get("status")
-        if status not in {"ok", "planned"}:
-            continue
-        params = result.get("params", {})
-        dimension = params.get("dimension")
-        cells = params.get("cells")
-        solver = params.get("solver")
-        if dimension is None or cells is None or solver is None:
-            continue
-        expected.add(f"{dimension}_{int(cells)}_cells_{solver}.dat")
-    return expected or None
+def _load_expected_filenames(output_dir):
+    return None
 
 
 def _parse_ecg_summary_file(path: Path) -> tuple[dict[str, str], list[dict[str, float | str]]]:

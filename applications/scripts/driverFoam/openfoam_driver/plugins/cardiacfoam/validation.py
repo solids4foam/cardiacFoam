@@ -479,7 +479,7 @@ def _evaluate_pvj_resistance_requirement(
     no ``required_when`` predicate that can express "required unless a
     FILE says otherwise", so this is a plugin-specific semantic check
     rather than a ``DictEntry`` field, consumed by ``validate_configuration``
-    (the strict pre-flight check gating ``foamctl run --strict``, which has
+    (the strict pre-flight check gating ``driverFoam run --strict``, which has
     filesystem access to the materialized case) rather than
     ``validate_run_semantics`` (which only ever sees an abstract run
     document, never a real graph file on disk).

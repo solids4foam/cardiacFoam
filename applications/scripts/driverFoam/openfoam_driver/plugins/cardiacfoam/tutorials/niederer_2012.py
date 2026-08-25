@@ -289,7 +289,6 @@ def make_spec(
             slab_size_mm=slab_size_mm_list,
             end_time_by_dx=end_time_by_dx_map,
         ),
-        collect_outputs=None,
         metadata={
             "notes": (
                 "Niederer Et Al. 2012 slab benchmark sweep "

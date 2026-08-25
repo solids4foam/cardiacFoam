@@ -5,7 +5,7 @@ the **agent's own run path** and require the agent-produced outputs to match the
 committed ``.reference`` within the case's own tolerances. The committed
 reference is the ground truth — the hand-authored path is not re-run.
 
-- Agent run (strict): ``foamctl run --strict --entry <name> --tutorials-root
+- Agent run (strict): ``driverFoam run --strict --entry <name> --tutorials-root
   <staged>`` — the agent resolves the registered spec, plans it (non-mutating),
   and executes the case's workflow (solver + post). No dictionary overrides are
   applied; dict mutation lives only in the sweep path.
@@ -295,7 +295,7 @@ def _stage_tutorials_root(case: RegressionCase) -> tuple[Path, Path]:
 
 
 def _drive_agent(case: RegressionCase, driver: str, tutorials_root: Path) -> subprocess.CompletedProcess:
-    """Invoke `foamctl run --strict` through the agent CLI on the staged case."""
+    """Invoke `driverFoam run --strict` through the agent CLI on the staged case."""
     pkg_parent = str(Path(openfoam_driver.__file__).resolve().parent.parent)
     env = os.environ.copy()
     env["PYTHONPATH"] = pkg_parent + os.pathsep + env.get("PYTHONPATH", "")

@@ -103,14 +103,6 @@ def _case_output_filename(case: CaseConfig, *, convergence_axis: str = "spatial"
     return f"{dimension}_{cells}_cells_{solver}.dat"
 
 
-def _sanitize_archive_tag(value: str) -> str:
-    return "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value)
-
-
-def _archive_output_dir(case_root: Path, *, archive_tag: str = "default") -> Path:
-    return case_root / f"driverPostProcessingArchive_{_sanitize_archive_tag(archive_tag)}"
-
-
 def _build_cases(
     dt_values: Sequence[float],
     number_cells: Sequence[int],
@@ -364,41 +356,6 @@ def _apply_case(
     apply_physics_property_overrides(physics_properties, physics_property_overrides)
 
 
-def _collect_outputs(case_root: Path, output_dir: Path, *, archive_tag: str = "default") -> None:
-    archived_dir = _archive_output_dir(case_root, archive_tag=archive_tag)
-    archived_outputs = []
-    if archived_dir.exists():
-        for source in sorted(archived_dir.glob("*.dat")):
-            name = source.name
-            if name.startswith("ECG_") or (
-                name.endswith(".dat") and "_cells_" in name and name[1:2] == "D"
-            ):
-                archived_outputs.append(source)
-    same_output_dir = archived_dir.exists() and archived_dir.resolve() == output_dir.resolve()
-    if archived_outputs:
-        if same_output_dir:
-            print(f"Archived outputs already available in {output_dir}; preserving in place")
-        else:
-            for stale_output in output_dir.glob("*.dat"):
-                stale_output.unlink()
-            for source in archived_outputs:
-                destination = output_dir / source.name
-                shutil.copy2(source, destination)
-                print(f"Copied output: {source.name} -> {destination}")
-    else:
-        print(
-            "No archived .dat files found in case root; preserving existing "
-            f"outputs in {output_dir}"
-        )
-
-    source_logs = case_root / "logs"
-    destination_logs = output_dir / "logs"
-    if destination_logs.exists():
-        shutil.rmtree(destination_logs)
-    if source_logs.exists():
-        shutil.copytree(source_logs, destination_logs)
-        print(f"Copied archived logs -> {destination_logs}")
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -485,7 +442,6 @@ def make_spec(
     tet_geo_template_path = Path(tet_geo_template_relpath)
     run_script_path = Path(run_script_relpath)
     convergence_axis_normalized = _normalize_convergence_axis(convergence_axis)
-    archive_tag = output_dir_name if output_dir_name else defaults.OUTPUT_DIR_NAME
 
     if piecewise_sweep and len(cells_list) != len(dt_values_list):
         raise ValueError(
@@ -539,10 +495,6 @@ def make_spec(
             ecg_check_quadrature_orders=ecg_check_quadrature_orders,
             ecg_electrodes_by_dimension=ecg_electrodes_by_dimension,
             block_mesh_dict_template=block_mesh_dict_template,
-        ),
-        collect_outputs=partial(
-            _collect_outputs,
-            archive_tag=archive_tag,
         ),
         metadata={
             "notes": "Manufactured-solution convergence benchmark",

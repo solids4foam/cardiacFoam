@@ -280,31 +280,6 @@ def _apply_case(
 
 
 
-def _collect_outputs(case_root: Path, output_dir: Path) -> None:
-    archived_dir = _archive_output_dir(case_root)
-    archived_outputs = []
-    if archived_dir.exists():
-        archived_outputs = sorted(archived_dir.glob("*.dat"))
-
-    if archived_outputs:
-        if archived_dir.resolve() != output_dir.resolve():
-            output_dir.mkdir(parents=True, exist_ok=True)
-            for stale_output in output_dir.glob("*.dat"):
-                stale_output.unlink()
-            for source in archived_outputs:
-                destination = output_dir / source.name
-                shutil.copy2(source, destination)
-                print(f"Copied output: {source.name} -> {destination}")
-
-    source_logs = case_root / "logs"
-    destination_logs = output_dir / "logs"
-    if destination_logs.exists():
-        shutil.rmtree(destination_logs)
-    if source_logs.exists():
-        shutil.copytree(source_logs, destination_logs)
-        print(f"Copied archived logs -> {destination_logs}")
-
-
 def make_spec(
     *,
     tutorials_root: Path | None = None,
@@ -401,7 +376,6 @@ def make_spec(
             grad_scheme=grad_scheme,
             fv_scheme_overrides=fv_scheme_overrides,
         ),
-        collect_outputs=_collect_outputs,
         metadata={
             "notes": "Manufactured eikonal activation and ECG benchmark",
             # Sweep labels are provenance metadata used by Paper I aggregators.

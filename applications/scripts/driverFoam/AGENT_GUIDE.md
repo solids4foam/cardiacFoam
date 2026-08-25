@@ -10,7 +10,7 @@ before driving the orchestrator.
 |---|---|---|
 | Discover tutorials, dict keys, ionic models, utilities | `describe_tutorial(...)` | `openfoam_driver.introspection` |
 | Build a non-mutating strict launch contract | `strict_plan(...)` | `openfoam_driver.strict_planning` |
-| Execute an agent-authored RunDocument | `foamctl run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
+| Execute an agent-authored RunDocument | `driverFoam run/step --run-document <file>`; `build_execution_inputs(...)` | `openfoam_driver.core.runtime.run_document_exec` |
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
 | Validate RunDocument v3 or migrate v1/v2 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)`, `RunDocument.migrate_v2(...)` | `openfoam_driver.core.runtime.run_model` |
@@ -18,10 +18,10 @@ before driving the orchestrator.
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
-| Locate predicted outputs | `strict_plan(...)`'s `expected_artifacts` field (also in `foamctl plan --strict` JSON) | `openfoam_driver.strict_planning` |
+| Locate predicted outputs | `strict_plan(...)`'s `expected_artifacts` field (also in `driverFoam plan --strict` JSON) | `openfoam_driver.strict_planning` |
 | Verify outputs vs predictions | `artifact_reconciliation` in `run --strict`/`step --strict` JSON output | `openfoam_driver.core.runtime.reconciler` |
 | List past runs | `list_runs(root)` | `openfoam_driver.core.runtime.run_discovery` |
-| Plan/run a parameter sweep | `foamctl sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
+| Plan/run a parameter sweep | `driverFoam sweep-plan/sweep-run --spec sweep.json --output-dir <dir>` | `openfoam_driver.core.runtime.sweep_runner` |
 
 ## Preferred strict agent loop
 
@@ -45,8 +45,8 @@ letting a shell resolver silently select another checkout. This runtime file
 is separate from case/sweep overrides and applies to all cardiacFoam entries.
 
 ```bash
-foamctl plan --strict --entry singleCell
-foamctl run --strict --entry singleCell
+driverFoam plan --strict --entry singleCell
+driverFoam run --strict --entry singleCell
 ```
 
 The `plan --strict` command is non-mutating. It prints JSON with:
@@ -84,7 +84,7 @@ state. If the saved state is `failed`, it exits non-zero and does not retry the
 failed step automatically. Use `step --strict` for an explicit manual rerun:
 
 ```bash
-foamctl step --strict --entry singleCell --step solve
+driverFoam step --strict --entry singleCell --step solve
 ```
 
 **Resuming can silently replay stale results.** If `workflow_state.json`
@@ -101,7 +101,7 @@ the resolved output directory before running so the workflow executes
 exactly as it would on a first run:
 
 ```bash
-foamctl run --strict --entry singleCell --fresh
+driverFoam run --strict --entry singleCell --fresh
 ```
 
 `--fresh` refuses to delete anything that doesn't look like driverFOAM's own
@@ -142,14 +142,14 @@ regenerating one from `--entry`:
 
 ```bash
 # 1. Plan and capture the run document the planner produced.
-foamctl plan --strict --entry singleCell > plan.json
+driverFoam plan --strict --entry singleCell > plan.json
 python3 -c "import json; json.dump(json.load(open('plan.json'))['run_document'], open('run.json','w'))"
 
 # 2. (optional) edit run.json — config, workflowDag, retry_policy, expectedArtifacts.
 
 # 3. Execute the document. No --entry; --strict is implied by the document.
-foamctl run  --run-document run.json
-foamctl step --run-document run.json --step solve   # single step
+driverFoam run  --run-document run.json
+driverFoam step --run-document run.json --step solve   # single step
 ```
 
 `--run-document` is mutually exclusive with `--entry` (and with
@@ -307,8 +307,8 @@ Both actions enforce a safety cap of 200 expanded cases by default (override
 with `--max-cases`), checked before any case is expanded or materialized:
 
 ```bash
-foamctl sweep-plan --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
-foamctl sweep-run --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
+driverFoam sweep-plan --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
+driverFoam sweep-run --spec sweep.json --output-dir .tmp/driverfoam/sweeps/my_sweep/
 ```
 
 `sweep-plan` materializes and strict-plans every case without launching
@@ -416,11 +416,7 @@ while True:
 ```
 
 `workflow_state.json` is written by the strict workflow orchestrator and
-updated after every step, so the read above is safe at any instant. There is
-no `run_manifest.json` -- nothing in driverFOAM has ever written one (see
-`introspection.py::_run_state_schema()`'s `retired` field). Any copy you find
-under `tutorials/` is a stale artifact from before this guidance was
-corrected; do not poll it.
+updated after every step, so the read above is safe at any instant. 
 
 ## Post-processing phase (brain + module)
 
@@ -487,7 +483,7 @@ To apply a chosen fix mechanically, write an overrides file
 (`[{"driver_path": "...", "value": "..."}]`) and run:
 
 ```
-foamctl step --strict --step <id> --apply overrides.json
+driverFoam step --strict --step <id> --apply overrides.json
 ```
 
 This validates each override for *applyability*, applies it via the dict mutators
@@ -931,7 +927,7 @@ print('OK:', ctx.identity)
 "
 
 # Strict plan
-foamctl --plugin mysolver plan --strict --entry <tutorial_or_case_path>
+driverFoam --plugin mysolver plan --strict --entry <tutorial_or_case_path>
 ```
 
 ### `validate_plugin()` cross-validation rules

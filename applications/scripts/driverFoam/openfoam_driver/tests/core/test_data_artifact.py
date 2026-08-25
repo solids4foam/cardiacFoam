@@ -28,7 +28,7 @@
 """Contract tests for the DataArtifact vocabulary (plan v2 phase 2).
 
 DataArtifact is the shared output-description language between the engine
-(run-side predictions written to artifacts_manifest.json) and the utility
+and the utility
 catalog (static declarations in utility.manifest.toml). The fields, defaults,
 and ArtifactFormat enum below are part of the agent-facing contract — every
 change here is observed by downstream consumers.
@@ -84,7 +84,7 @@ class TestDataArtifact(unittest.TestCase):
 
     def test_construction_rejects_unknown_placeholder(self) -> None:
         """A typo (e.g. {caseId}) in path_pattern must fail at construction,
-        not silently propagate into artifacts_manifest.json where it can
+        not silently propagate where it can
         only be detected when an agent tries to expand it later."""
         with self.assertRaises(ValueError) as ctx:
             DataArtifact(

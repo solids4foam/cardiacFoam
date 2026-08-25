@@ -132,7 +132,7 @@ class TutorialCatalogCapability(Protocol):
     """The tutorials this plugin registers, and how to display them.
 
     ``catalog`` returns the plugin's registry keyed by tutorial name -- the
-    entry names ``foamctl`` accepts. ``displays`` returns the presentation
+    entry names ``driverFoam`` accepts. ``displays`` returns the presentation
     metadata ``describe`` renders. Both are required v1 members, so there is
     no fallback: a plugin that registers no tutorials returns empty rather
     than omitting the member.
