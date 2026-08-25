@@ -397,28 +397,30 @@ cleanup is an explicit, disposable-output action.
 Everything else — the manifest, `--retry-failed`, `--case-timeout-s`,
 `--max-cases`, resumability — is identical to generic mode.
 
-## Polling a long-running legacy run
+## Polling a long-running run
 
-For legacy engine runs that take minutes, prefer the async-friendly polling
-pattern:
+For a run that takes minutes, prefer the async-friendly polling pattern,
+against the real run-state file:
 
 ```python
 import json
 import time
 from pathlib import Path
 
-manifest_path = Path("<output_dir>/run_manifest.json")
+state_path = Path("<output_dir>/workflow_state.json")
 while True:
-    manifest = json.loads(manifest_path.read_text())
-    if manifest["status"] in {"completed", "completed_with_failures", "failed",
-                              "postprocess_failed"}:
+    state = json.loads(state_path.read_text())
+    if state["status"] in {"completed", "failed", "skipped"}:
         break
     time.sleep(15)
 ```
 
-`run_manifest.json` is rewritten atomically (`os.replace` of a `.tmp` sibling),
-so the read above is safe at any instant. Do not implement polling that opens
-`.tmp` files directly.
+`workflow_state.json` is written by the strict workflow orchestrator and
+updated after every step, so the read above is safe at any instant. There is
+no `run_manifest.json` -- nothing in driverFOAM has ever written one (see
+`introspection.py::_run_state_schema()`'s `retired` field). Any copy you find
+under `tutorials/` is a stale artifact from before this guidance was
+corrected; do not poll it.
 
 ## Post-processing phase (brain + module)
 
@@ -517,20 +519,18 @@ them directly. (Note: the ionic catalog, which is auto-generated from the full C
 constant enum, *does* list derived constants; the same rule applies there — listed
 ≠ overridable.)
 
-Legacy engine runs already write `artifacts_realized.json` at terminal status.
-After such a run reaches a terminal status, agents should compare predicted
-artifacts to on-disk reality:
+`run --strict` and `step --strict` already compare predicted artifacts to
+on-disk reality after every step/run -- no separate file to read. The
+printed JSON payload carries an `artifact_reconciliation` object, built by
+`reconcile_artifacts()` (`core/runtime/reconciler.py`):
 
 ```python
-manifest = json.loads(Path("<output_dir>/run_manifest.json").read_text())
-realized_path = manifest["artifacts_realized_path"]
-realized = json.loads(Path(realized_path).read_text())
-
-for case in realized["cases"]:
-    print(case["case_id"], case["matched_count"], "/", case["predicted_count"])
-    for artifact in case["artifacts"]:
-        if artifact["status"] == "missing" and not artifact["optional"]:
-            print("  warning missing required:", artifact["artifact_id"])
+payload = json.loads(run_strict_stdout)  # the JSON run --strict prints
+reconciliation = payload["artifact_reconciliation"]
+print(reconciliation["matched_count"], "/", reconciliation["predicted_count"])
+for artifact in reconciliation["artifacts"]:
+    if artifact["status"] == "missing" and not artifact["optional"]:
+        print("  warning missing required:", artifact["artifact_id"])
 ```
 
 Missing-but-optional artifacts are not errors. They only appear under specific
