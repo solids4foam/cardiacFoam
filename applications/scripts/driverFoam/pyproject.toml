@@ -56,3 +56,8 @@ include-package-data = false
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["openfoam_driver*"]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
