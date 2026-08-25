@@ -70,7 +70,9 @@ def _serialize(value: Any) -> Any:
         return {str(key): _serialize(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_serialize(item) for item in value]
-    if isinstance(value, set):
+    if isinstance(value, (set, frozenset)):
+        # frozenset is NOT a subclass of set; without it, DictEntry.phases fell
+        # through to repr() and shipped "frozenset({'physics'})" as JSON.
         return sorted(_serialize(item) for item in value)
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value

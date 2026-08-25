@@ -13,8 +13,6 @@ last test keeps the rendered table from drifting away from the code.
 from __future__ import annotations
 
 import ast
-import functools
-import importlib.util
 import re
 import subprocess
 import sys
@@ -22,7 +20,12 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.core import compatibility, plugin_capabilities, plugin_interface
+from openfoam_driver.core import (
+    capability_seams,
+    compatibility,
+    plugin_capabilities,
+    plugin_interface,
+)
 
 DRIVER_ROOT = Path(plugin_capabilities.__file__).resolve().parents[2]
 GENERATOR = DRIVER_ROOT / "scripts" / "export-capability-seams.py"
@@ -41,22 +44,9 @@ def _protocol_for(field: str):
     return name, protocol
 
 
-@functools.lru_cache(maxsize=1)
-def _generator():
-    """Load the export script as a module so the test parses fields exactly
-    the way the table generator does -- one parser, not two."""
-    spec = importlib.util.spec_from_file_location("_seam_export", GENERATOR)
-    module = importlib.util.module_from_spec(spec)
-    # Register before exec: the script defines a @dataclass, and dataclasses
-    # resolves annotations via sys.modules[cls.__module__].
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def _fields(field: str) -> dict[str, str]:
     _, protocol = _protocol_for(field)
-    return _generator().parse_fields(protocol.__doc__)
+    return capability_seams.parse_fields(protocol.__doc__)
 
 
 def _plugin_members() -> set[str]:

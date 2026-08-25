@@ -53,7 +53,13 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _manifest_to_record(manifest) -> dict:
-    """Serialise a ``UtilityManifest`` to a JSON-ready dict."""
+    """Serialise a ``UtilityManifest`` to a JSON-ready dict.
+
+    Every field of ``UtilityManifest`` is emitted. The catalog is an agent
+    tool-catalog: ``positional_args`` and ``produces`` are what let a caller
+    build an invocation and know what artifacts come back, so dropping them
+    (as an earlier version did) left the JSON unable to serve that purpose.
+    """
     return {
         "name": manifest.name,
         "description": manifest.description,
@@ -61,13 +67,37 @@ def _manifest_to_record(manifest) -> dict:
         "inputs": list(manifest.inputs),
         "outputs": list(manifest.outputs),
         "requires_mesh": manifest.requires_mesh,
+        "positional_args": [
+            {
+                "name": a.name,
+                "argument_kind": a.argument_kind,
+                "description": a.description,
+            }
+            for a in manifest.positional_args
+        ],
         "flags": [
             {
                 "name": f.name,
                 "description": f.description,
                 "takes_value": f.takes_value,
+                "argument_kind": f.argument_kind,
+                "required": f.required,
+                "default": f.default,
             }
             for f in manifest.flags
+        ],
+        "produces": [
+            {
+                "artifact_id": pr.artifact_id,
+                "path_pattern": pr.path_pattern,
+                "format": pr.format,
+                "description": pr.description,
+                "produced_by": pr.produced_by,
+                "variables": list(pr.variables),
+                "optional": pr.optional,
+                "time_indexed": pr.time_indexed,
+            }
+            for pr in manifest.produces
         ],
         "example": manifest.example,
         "category": manifest.category,
