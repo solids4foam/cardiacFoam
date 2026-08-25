@@ -45,7 +45,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
 :
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
-    useExplicitAlgorithm_(false),
     errorsReported_(false),
     k_(0.5),
     phiEReferenceValue_(0.0),
@@ -54,9 +53,6 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     const dictionary& coeffDict = this->dict();
     const dictionary& cfg = verificationDict();
 
-    // solutionAlgorithm is a solver-level key; read it from the parent dict.
-    useExplicitAlgorithm_ =
-        coeffDict.lookupOrDefault<word>("solutionAlgorithm", "implicit") == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 0.5);
     // phiEReferenceValue and phiERefPoint are physics parameters that belong
     // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
@@ -286,12 +282,7 @@ void manufacturedFDABidomainVerifier::postProcess
     const fileName outputFile =
         outputDir
       / (
-            dimensionName(dimension)
-          + "_"
-          + Foam::name(nPerDirection)
-          + "_cells_"
-          + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
-          + ".dat"
+            dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
         );
 
     if (Pstream::master())
@@ -341,8 +332,7 @@ void manufacturedFDABidomainVerifier::postProcess
             << u2Norms.first().second() << "   " << u2Norms.second() << "\n\n";
 
         out << "Number of cells (N)   = " << nPerDirection << "\n";
-        out << "Solver type           = "
-            << (useExplicitAlgorithm_ ? "Explicit" : "Implicit") << "\n";
+        
         out << "Grid spacing (dx)     = " << dx << "\n";
         out << "Time step (dt)        = " << dt << "\n";
         out << "Number of steps       = " << nSteps << "\n";

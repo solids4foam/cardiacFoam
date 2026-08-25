@@ -94,7 +94,6 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
     phiEHeartCellMapPtr_(nullptr),
-    useExplicitAlgorithm_(false),
     errorsReported_(false),
     k_(1.0/Foam::sqrt(2.0)),
     alpha_(0.01),
@@ -102,11 +101,7 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
 {
     const dictionary& cfg = verificationDict();
 
-    // solutionAlgorithm is a solver-level key (lives in the parent
     // bidomainSolverCoeffs dict, not in verificationModel).
-    useExplicitAlgorithm_ =
-        dict.lookupOrDefault<word>("solutionAlgorithm", "implicit")
-     == "explicit";
     k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
     // Preferred key: selects which FDA bidomain-with-bath boundary variant is
@@ -428,12 +423,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
         outputDir
       / (
             "bathBidomain_"
-          + dimensionName(dimension)
-          + "_"
-          + Foam::name(nPerDirection)
-          + "_cells_"
-          + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
-          + ".dat"
+          + word("bathBidomain_") + dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
         );
 
     if (Pstream::master())

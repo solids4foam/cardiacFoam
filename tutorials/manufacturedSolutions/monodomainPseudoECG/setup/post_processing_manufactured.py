@@ -54,15 +54,15 @@ RATE_FIELDS = (
     "rate_u2",
 )
 FILENAME_PATTERN = re.compile(
-    r"(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)"
+    r"(?P<dimension>\dD)_(?P<cells>\d+)_cells"
     r"(?:_DT(?P<dt_token>[^_]+))?\.dat$"
 )
 ECG_SUMMARY_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT(?P<dt_token>[^_]+)_"
+    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT(?P<dt_token>[^_]+)_"
     r"manufacturedPseudoECGSummary\.dat$"
 )
 ECG_TIMESERIES_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
+    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT[^_]+_"
     r"manufacturedPseudoECG\.dat$"
 )
 REF_PATTERN = re.compile(r"refQ(?P<q>\d+)_(?P<electrode>.+)")
@@ -1098,7 +1098,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
         dimension = m.group("dimension")
         N = int(m.group("cells"))
-        solver = m.group("solver")
+        solver = "implicit"
         dt_from_name = _dt_token_to_float(m.group("dt_token"))
 
         content = f.read_text()

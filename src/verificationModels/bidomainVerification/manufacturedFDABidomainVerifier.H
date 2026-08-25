@@ -37,7 +37,6 @@ namespace Foam
 class manufacturedFDABidomainVerifier : public electroVerificationModel
 {
     volScalarField* phiEPtr_;
-    bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
     scalar k_;
     scalar phiEReferenceValue_;

@@ -39,7 +39,6 @@ class manufacturedAnisotropicMonodomainVerifier
 :
     public electroVerificationModel
 {
-    bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
     scalar beta_;
     bool betaInitialised_;

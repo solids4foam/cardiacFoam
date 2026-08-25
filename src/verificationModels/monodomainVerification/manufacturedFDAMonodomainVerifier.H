@@ -36,7 +36,6 @@ namespace Foam
 
 class manufacturedFDAMonodomainVerifier : public electroVerificationModel
 {
-    bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
 
 public:

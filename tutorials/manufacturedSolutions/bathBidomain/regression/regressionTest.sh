@@ -60,8 +60,8 @@ findManufacturedErrorFile()
     local candidate
 
     for candidate in \
-        postProcessing/bathBidomain_*_cells_*.dat \
-        processor*/postProcessing/bathBidomain_*_cells_*.dat
+        postProcessing/bathBidomain_*_cells.dat \
+        processor*/postProcessing/bathBidomain_*_cells.dat
     do
         if [[ -s "${candidate}" ]] \
             && grep -q 'Bath-bidomain manufactured solution error summary' "${candidate}"

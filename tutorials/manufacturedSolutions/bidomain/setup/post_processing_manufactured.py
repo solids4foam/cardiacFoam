@@ -56,11 +56,11 @@ RATE_FIELDS = (
 )
 FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells_(explicit|implicit)")
 ECG_SUMMARY_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
+    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT[^_]+_"
     r"manufacturedPseudoECGSummary\.dat$"
 )
 ECG_TIMESERIES_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_(?P<solver>explicit|implicit)_DT[^_]+_"
+    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT[^_]+_"
     r"manufacturedPseudoECG\.dat$"
 )
 REF_PATTERN = re.compile(r"refQ(?P<q>\d+)_(?P<electrode>.+)")

@@ -49,11 +49,6 @@ manufacturedAnisotropicMonodomainVerifier
 )
 :
     electroVerificationModel(dict),
-    useExplicitAlgorithm_
-    (
-        dict.lookupOrDefault<word>("solutionAlgorithm", "implicit")
-     == "explicit"
-    ),
     errorsReported_(false),
     beta_(0.0),
     betaInitialised_(false),
@@ -418,11 +413,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
     (
         outputDir
       / (
-            word("rotatedAnisotropy_3D_")
-          + Foam::name(nPerDirection)
-          + "_cells_"
-          + word(useExplicitAlgorithm_ ? "explicit" : "implicit")
-          + ".dat"
+            word("rotatedAnisotropy_3D_") + Foam::name(nPerDirection) + "_cells.dat"
         )
     );
 
@@ -455,8 +446,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
         out << "Simulation summary:\n";
         out << "-------------------\n";
         out << "Number of cells (N)   = " << nPerDirection << "\n";
-        out << "Solver type           = "
-            << (useExplicitAlgorithm_ ? "Explicit" : "Implicit") << "\n";
+        
         out << "Grid spacing (dx)     = " << dx << "\n";
         out << "Time step (dt)        = " << dt << "\n";
         out << "Number of steps       = " << nSteps << "\n";
