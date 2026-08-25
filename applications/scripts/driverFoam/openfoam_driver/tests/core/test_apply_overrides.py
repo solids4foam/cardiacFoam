@@ -3,7 +3,7 @@ from pathlib import Path
 from openfoam_driver.tests.conftest import assert_foam_entry, skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver.specs.apply_overrides import (
+from openfoam_driver.core.specs.apply_overrides import (
     validate_overrides,
     apply_overrides,
     OverrideError,

@@ -529,7 +529,7 @@ def test_absent_stimulus_block_is_not_invented_from_defaults():
         build_electro_properties,
         parse_electro_properties,
     )
-    from openfoam_driver.specs.common import tutorials_root_default
+    from openfoam_driver.core.specs.common import tutorials_root_default
 
     committed = (
         tutorials_root_default()

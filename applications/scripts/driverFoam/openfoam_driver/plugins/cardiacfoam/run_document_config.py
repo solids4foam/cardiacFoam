@@ -13,7 +13,7 @@ from typing import Any
 from foamlib import FoamFile
 
 from openfoam_driver.core.planning_types import StrictDiagnostic, diagnostic
-from openfoam_driver.specs.dict_builder import populate_values
+from openfoam_driver.core.specs.dict_builder import populate_values
 from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     build_electro_properties,
     build_physics_properties,
@@ -21,7 +21,7 @@ from openfoam_driver.plugins.cardiacfoam.dict_builder import (
     resolve_context,
     select_applicable_entries,
 )
-from openfoam_driver.specs.validation import primary_phase, slot_key
+from openfoam_driver.core.specs.validation import primary_phase, slot_key
 
 
 def _read_physics_type(path: Path) -> str | None:

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import pytest
 
-from openfoam_driver.specs.dict_builder import _openfoam_value_token
+from openfoam_driver.core.specs.dict_builder import _openfoam_value_token
 
 
 @pytest.mark.parametrize("value", ["3D", "1D", "2D", "3Dfoo"])

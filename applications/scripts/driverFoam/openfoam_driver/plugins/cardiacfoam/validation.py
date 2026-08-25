@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 from openfoam_driver.plugins.cardiacfoam.solver_coupling import SOLVER_COMPATIBILITY_RULES
-from openfoam_driver.specs.validation_types import ValidationError
+from openfoam_driver.core.specs.validation_types import ValidationError
 
 if TYPE_CHECKING:
     from openfoam_driver.core.planning_types import StrictDiagnostic
@@ -187,7 +187,7 @@ def _evaluate_dynamic_required_fields(context: dict[str, Any]) -> list[Validatio
     versa).
     """
     from openfoam_driver.dict_entries import get_electro_property_entry_groups
-    from openfoam_driver.specs.validation import slot_key
+    from openfoam_driver.core.specs.validation import slot_key
 
     errors: list[ValidationError] = []
 
@@ -501,7 +501,7 @@ def _evaluate_pvj_resistance_requirement(
 
     from openfoam_driver.core.planning_types import diagnostic as _diagnostic
     from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
-    from openfoam_driver.specs.validation import slot_key
+    from openfoam_driver.core.specs.validation import slot_key
 
     case_root = _Path(case_root)
     electro_path = _Path(electro_path)

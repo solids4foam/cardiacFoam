@@ -40,20 +40,20 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_physics_property_overrides,
     remove_electro_property_dict,
 )
-from openfoam_driver.specs.common import (
+from openfoam_driver.core.specs.common import (
     load_python_module,
     replace_block_mesh_resolutions,
     resolve_run_script_path,
     resolve_spec_paths,
     set_delta_t,
 )
-from openfoam_driver.specs.utils import (
+from openfoam_driver.core.specs.utils import (
     set_end_time,
 )
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.mutators import update_foam_entry
 from openfoam_driver.core.runtime.parallel_execution import solve_steps
-from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
+from openfoam_driver.core.specs.tet_mesh_provisioning import render_tet_geo
 
 # Stable driver-side names mapped to the literal OpenFOAM tokens -- "GaussLinear"
 # (no space) is a CSV/shell label from the original bash sweep scripts, not a

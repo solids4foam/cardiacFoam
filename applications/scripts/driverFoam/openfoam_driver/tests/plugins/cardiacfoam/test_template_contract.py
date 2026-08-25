@@ -40,7 +40,7 @@ def _template_path() -> Path:
     Tier 1: monorepo layout — ``tutorials/template/constant/electroProperties``
         found somewhere in the ancestor tree.
     Tier 2: bundled package fixture — shipped inside
-        ``openfoam_driver/specs/fixtures/template/constant/electroProperties``
+        ``openfoam_driver/core/specs/fixtures/template/constant/electroProperties``
         for standalone / CI installs.
     """
     current = Path(__file__).resolve()
@@ -52,7 +52,7 @@ def _template_path() -> Path:
     # Tier 2: bundled fixture co-located with the package
     # __file__ = …/tests/plugins/cardiacfoam/test_template_contract.py
     # parents[0]=cardiacfoam/ parents[1]=plugins/ parents[2]=tests/ parents[3]=openfoam_driver/
-    fixture = current.parents[3] / "specs" / "fixtures" / "template" / "constant" / "electroProperties"
+    fixture = current.parents[3] / "core" / "specs" / "fixtures" / "template" / "constant" / "electroProperties"
     if fixture.exists():
         return fixture
     raise FileNotFoundError(

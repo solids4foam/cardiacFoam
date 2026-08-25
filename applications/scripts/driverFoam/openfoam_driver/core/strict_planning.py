@@ -65,8 +65,8 @@ from openfoam_driver.core.planning_types import (
     diagnostic as _diagnostic,
 )
 from ..scripts._dict_keys_scanner import strict_dict_key_report
-from ..specs.function_object_fields import function_object_field_diagnostics
-from ..specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
+from openfoam_driver.core.specs.function_object_fields import function_object_field_diagnostics
+from openfoam_driver.core.specs.mesh_geometry import mesh_geometry_diagnostics as _detect_mesh_geometry
 
 
 @dataclass(frozen=True)

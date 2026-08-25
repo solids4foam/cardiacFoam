@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     from openfoam_driver.core.tutorials_display import TutorialDisplay
     from openfoam_driver.core.plugin_capabilities import ResolvedInput
     from openfoam_driver.core.report_catalog import ReportDefinition
-    from openfoam_driver.specs.apply_overrides import OverrideScope, RegenerationScope
+    from openfoam_driver.core.specs.apply_overrides import OverrideScope, RegenerationScope
     from pathlib import Path
 
 

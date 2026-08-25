@@ -273,7 +273,7 @@ def electro_model_coeffs_scope() -> "OverrideScope":
     $ELECTRO_MODEL_COEFFS -> constant/electroProperties, addressed against
     the "electroProperties" dictionary-catalog group, with the active
     solver's <solver>Coeffs block resolved per-case at apply time."""
-    from ...specs.apply_overrides import OverrideScope
+    from openfoam_driver.core.specs.apply_overrides import OverrideScope
 
     return OverrideScope(
         token="ELECTRO_MODEL_COEFFS",
@@ -295,7 +295,7 @@ def electro_properties_regeneration_scope() -> "RegenerationScope":
     ``tissue``, ``conductivitySource``) are ``$ELECTRO_MODEL_COEFFS.``-scoped
     leaves that change a value in place without renaming anything, so they
     stay on the ordinary key-patch route above."""
-    from ...specs.apply_overrides import RegenerationScope
+    from openfoam_driver.core.specs.apply_overrides import RegenerationScope
     from .dict_builder import regenerate_electro_properties
 
     return RegenerationScope(

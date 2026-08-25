@@ -38,12 +38,12 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
 )
-from openfoam_driver.specs.common import (
+from openfoam_driver.core.specs.common import (
     replace_block_mesh_resolutions,
     resolve_spec_paths,
     set_delta_t,
 )
-from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
+from openfoam_driver.core.specs.mesh_provisioning import cell_counts_from_dx
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 
 

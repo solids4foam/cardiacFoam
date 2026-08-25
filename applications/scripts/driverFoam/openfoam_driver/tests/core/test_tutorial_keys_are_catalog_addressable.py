@@ -55,7 +55,7 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.specs.apply_overrides import OverrideError, validate_overrides
+from openfoam_driver.core.specs.apply_overrides import OverrideError, validate_overrides
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 pytestmark = skip_without_monorepo

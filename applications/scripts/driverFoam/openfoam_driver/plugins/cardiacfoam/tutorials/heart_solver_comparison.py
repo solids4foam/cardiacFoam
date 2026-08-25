@@ -54,7 +54,7 @@ from typing import Final
 
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.runtime.parallel_execution import solve_steps
-from openfoam_driver.specs.paths import resolve_spec_paths
+from openfoam_driver.core.specs.paths import resolve_spec_paths
 
 # The owner's four named studies -- each key is a directory name under
 # <case_root>/setup/solverVariants/. Adding a fifth study means adding a

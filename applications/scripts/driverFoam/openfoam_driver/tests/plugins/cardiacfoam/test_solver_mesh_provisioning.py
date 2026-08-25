@@ -31,7 +31,7 @@ import re
 import pytest
 
 from openfoam_driver.plugins.cardiacfoam.mesh_provisioning import provision_mesh
-from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+from openfoam_driver.core.specs.mesh_provisioning import default_block_mesh_dict_text
 
 
 def _cell_counts(text: str) -> tuple[int, int, int]:

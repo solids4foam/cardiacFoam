@@ -27,7 +27,7 @@
 
 import pytest
 
-from openfoam_driver.specs.common import replace_block_mesh_resolutions
+from openfoam_driver.core.specs.common import replace_block_mesh_resolutions
 
 
 def _write_template(path):

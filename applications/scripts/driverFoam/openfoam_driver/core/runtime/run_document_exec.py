@@ -60,7 +60,7 @@ from .workflow_state import (
     initial_workflow_state,
     workflow_state_from_json,
 )
-from ...specs.validation import validate_run
+from openfoam_driver.core.specs.validation import validate_run
 
 if TYPE_CHECKING:
     from ..plugin_interface import DriverContext

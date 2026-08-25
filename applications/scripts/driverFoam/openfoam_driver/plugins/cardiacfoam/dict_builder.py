@@ -48,7 +48,7 @@ from openfoam_driver.dict_entries import (
     DictEntry,
     get_electro_property_entry_groups,
 )
-from openfoam_driver.specs.dict_builder import (
+from openfoam_driver.core.specs.dict_builder import (
     _PLACEHOLDER_RE,
     _openfoam_value_token,
     _populated_to_run,
@@ -56,10 +56,10 @@ from openfoam_driver.specs.dict_builder import (
     _set_nested,
     populate_values,
 )
-from openfoam_driver.specs.dict_builder import (
+from openfoam_driver.core.specs.dict_builder import (
     select_applicable_entries as _select_applicable_entries,
 )
-from openfoam_driver.specs.validation import (
+from openfoam_driver.core.specs.validation import (
     _predicate_matches,
     slot_key,
     validate_run,

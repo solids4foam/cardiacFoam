@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import openfoam_driver
-from openfoam_driver.specs.common import tutorials_root_default
+from openfoam_driver.core.specs.common import tutorials_root_default
 from openfoam_driver.tests.regression_equivalence.registry import RegressionCase
 
 

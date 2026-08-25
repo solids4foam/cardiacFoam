@@ -98,6 +98,36 @@ package root instead of joining them: each carries a lazily-imported (PEP 562
 `compatibility.py`. `cli.py` also stays at the package root — the entry
 surface, not engine internals.
 
+The whole `specs/` package also moved under `core/` as `core/specs/`, keeping
+its own identity (like `core/runtime/`, `core/contracts/`, `core/sweep/`)
+rather than scattering its twelve modules flat:
+
+| Was | Now |
+|---|---|
+| `openfoam_driver.specs.apply_overrides` | `openfoam_driver.core.specs.apply_overrides` |
+| `openfoam_driver.specs.common` | `openfoam_driver.core.specs.common` |
+| `openfoam_driver.specs.dict_builder` | `openfoam_driver.core.specs.dict_builder` |
+| `openfoam_driver.specs.function_object_fields` | `openfoam_driver.core.specs.function_object_fields` |
+| `openfoam_driver.specs.mesh_geometry` | `openfoam_driver.core.specs.mesh_geometry` |
+| `openfoam_driver.specs.mesh_provisioning` | `openfoam_driver.core.specs.mesh_provisioning` |
+| `openfoam_driver.specs.paths` | `openfoam_driver.core.specs.paths` |
+| `openfoam_driver.specs.spatial_pacing` | `openfoam_driver.core.specs.spatial_pacing` |
+| `openfoam_driver.specs.tet_mesh_provisioning` | `openfoam_driver.core.specs.tet_mesh_provisioning` |
+| `openfoam_driver.specs.utils` | `openfoam_driver.core.specs.utils` |
+| `openfoam_driver.specs.validation` | `openfoam_driver.core.specs.validation` |
+| `openfoam_driver.specs.validation_types` | `openfoam_driver.core.specs.validation_types` |
+
+The bundled fixture also moved: `openfoam_driver/specs/fixtures/template/...`
+is now `openfoam_driver/core/specs/fixtures/template/...` (pyproject.toml
+package-data entry updated to match). While moving `paths.py`, its dormant
+Tier-3 `parents[3]` fallback (only reachable for a standalone install outside
+this monorepo, so never exercised by this repo's own test suite) turned out
+to have been off by one at the pre-move depth already — the move happened to
+land it on the correct index by coincidence; see the code comment for detail.
+ARCHITECTURE.md's stale claim that `apply_overrides.py` still imports
+`plugins.cardiacfoam.detection` directly was also corrected while moving it:
+it only imports `core/compatibility.py`.
+
 The cardiac halves of three more modules were split out, leaving the generic
 half at the original path:
 

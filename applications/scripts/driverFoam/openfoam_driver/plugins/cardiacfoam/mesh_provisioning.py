@@ -55,7 +55,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+from openfoam_driver.core.specs.mesh_provisioning import default_block_mesh_dict_text
 
 _FIXTURES_DIR = Path(__file__).parent / "fixtures"
 _SINGLE_CELL_POLYMESH_DIR = _FIXTURES_DIR / "single_cell_polymesh"

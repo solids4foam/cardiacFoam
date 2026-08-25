@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .runtime.models import DataArtifact, TutorialSpec
     from openfoam_driver.core.planning_types import StrictDiagnostic
     from openfoam_driver.core.report_catalog import ReportDefinition
-    from ..specs.apply_overrides import OverrideScope, RegenerationScope
+    from openfoam_driver.core.specs.apply_overrides import OverrideScope, RegenerationScope
 
 
 @dataclass(frozen=True)
@@ -161,7 +161,7 @@ class DictionaryCatalogCapability(Protocol):
     *meaning* (the plugin's).
 
     :adapts: get_dict_entries, get_dict_groups, get_dictionary_catalog
-    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/specs/apply_overrides.py, openfoam_driver/specs/dict_builder.py, openfoam_driver/specs/validation.py, openfoam_driver/core/strict_planning.py
+    :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/core/specs/apply_overrides.py, openfoam_driver/core/specs/dict_builder.py, openfoam_driver/core/specs/validation.py, openfoam_driver/core/strict_planning.py
     :fallback: none
     :status: mandatory
     """
@@ -217,7 +217,7 @@ class RunSemanticValidatorCapability(Protocol):
     execution time. Required v1 member, no fallback.
 
     :adapts: validate_run_semantics
-    :consumed-by: openfoam_driver/specs/validation.py
+    :consumed-by: openfoam_driver/core/specs/validation.py
     :fallback: none
     :status: mandatory
     """
@@ -582,7 +582,7 @@ class NamedCatalogsCapability(Protocol):
 
 class OverrideScopeCapability(Protocol):
     """Plugin-declared ``$TOKEN.`` override scopes for the agent-facing
-    ``step --strict --apply`` path (:mod:`openfoam_driver.specs.apply_overrides`).
+    ``step --strict --apply`` path (:mod:`openfoam_driver.core.specs.apply_overrides`).
 
     Generalizes what was previously a single hardcoded cardiac scope
     (``$ELECTRO_MODEL_COEFFS`` -> ``constant/electroProperties``): core no
@@ -594,7 +594,7 @@ class OverrideScopeCapability(Protocol):
     :class:`ReportCatalogCapability`/:class:`NamedCatalogsCapability`.
 
     :adapts: get_override_scopes
-    :consumed-by: openfoam_driver/specs/apply_overrides.py
+    :consumed-by: openfoam_driver/core/specs/apply_overrides.py
     :fallback: legacy_override_scopes
     :status: optional
     """
@@ -605,7 +605,7 @@ class OverrideScopeCapability(Protocol):
 class DictRegenerationCapability(Protocol):
     """Plugin-declared bare "selector" overrides that must REGENERATE a
     dict file rather than key-patch it, for the agent-facing
-    ``step --strict --apply`` path (:mod:`openfoam_driver.specs.apply_overrides`).
+    ``step --strict --apply`` path (:mod:`openfoam_driver.core.specs.apply_overrides`).
 
     A sibling of :class:`OverrideScopeCapability`: that one covers
     ``$TOKEN.``-scoped leaves that patch in place; this one covers bare
@@ -618,7 +618,7 @@ class DictRegenerationCapability(Protocol):
     else, matching :class:`OverrideScopeCapability`.
 
     :adapts: get_regeneration_scopes
-    :consumed-by: openfoam_driver/specs/apply_overrides.py
+    :consumed-by: openfoam_driver/core/specs/apply_overrides.py
     :fallback: legacy_dict_regeneration_scopes
     :status: optional
     """

@@ -2,7 +2,7 @@ import importlib.util
 from collections.abc import Mapping
 from pathlib import Path
 
-from ..core.runtime.mutators import update_foam_entry
+from ..runtime.mutators import update_foam_entry
 
 
 def load_python_module(module_path: Path, *, module_name: str):

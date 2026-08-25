@@ -199,7 +199,7 @@ class TestValuePopulation(unittest.TestCase):
     the applicability filter."""
 
     def test_override_wins_over_typical_value(self) -> None:
-        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.core.specs.dict_builder import populate_values
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
@@ -216,7 +216,7 @@ class TestValuePopulation(unittest.TestCase):
         self.assertEqual(populated["singleCellStimulus.stim_amplitude"], "0.4")
 
     def test_typical_value_fills_when_no_override(self) -> None:
-        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.core.specs.dict_builder import populate_values
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
@@ -235,7 +235,7 @@ class TestValuePopulation(unittest.TestCase):
         self.assertEqual(populated["singleCellStimulus.stim_amplitude"], "60")
 
     def test_fallback_disabled_omits_typical_value(self) -> None:
-        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.core.specs.dict_builder import populate_values
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
@@ -252,7 +252,7 @@ class TestValuePopulation(unittest.TestCase):
         """Selectors are part of the context AND many of them correspond to
         DictEntry paths (myocardiumSolver, ionicModel, tissue). Those entries
         must end up in the populated dict using the selector's own value."""
-        from openfoam_driver.specs.dict_builder import populate_values
+        from openfoam_driver.core.specs.dict_builder import populate_values
         from openfoam_driver.plugins.cardiacfoam.dict_builder import (
             resolve_context,
             select_applicable_entries,
@@ -274,7 +274,7 @@ class TestRequiredCheck(unittest.TestCase):
     earlier by select_applicable_entries)."""
 
     def test_silent_when_all_required_present(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.core.specs.dict_builder import (
             check_required,
             populate_values,
         )
@@ -291,7 +291,7 @@ class TestRequiredCheck(unittest.TestCase):
         check_required(entries, populated, context=ctx)
 
     def test_raises_listing_missing_required_paths(self) -> None:
-        from openfoam_driver.specs.dict_builder import (
+        from openfoam_driver.core.specs.dict_builder import (
             check_required,
             populate_values,
         )
@@ -318,7 +318,7 @@ class TestRequiredCheck(unittest.TestCase):
         """A required=False entry that is absent from the populated dict
         is not a violation, even when no typical_value fallback was used."""
         from openfoam_driver.dict_entries import DictEntry
-        from openfoam_driver.specs.dict_builder import check_required
+        from openfoam_driver.core.specs.dict_builder import check_required
 
         only_optional = [
             DictEntry(
@@ -606,7 +606,7 @@ class TestBuildAndLaunchMeshProvisioning(unittest.TestCase):
         import tempfile
         from pathlib import Path
         from openfoam_driver.plugins.cardiacfoam.dict_builder import build_and_launch
-        from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+        from openfoam_driver.core.specs.mesh_provisioning import default_block_mesh_dict_text
 
         with tempfile.TemporaryDirectory() as temp:
             case_dir = Path(temp) / "case"
@@ -1084,7 +1084,7 @@ class TestEikonalECGHeterogeneity(unittest.TestCase):
             resolve_context,
             select_applicable_entries,
         )
-        from openfoam_driver.specs.validation import slot_key
+        from openfoam_driver.core.specs.validation import slot_key
 
         context = resolve_context(
             selectors={"myocardiumSolver": "eikonalSolver"},

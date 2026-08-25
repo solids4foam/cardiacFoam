@@ -35,7 +35,7 @@ from typing import Sequence
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_purkinje_graph as defaults
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
-from openfoam_driver.specs.common import resolve_spec_paths
+from openfoam_driver.core.specs.common import resolve_spec_paths
 
 
 def _build_cases(graph_ids: Sequence[str]) -> list[CaseConfig]:

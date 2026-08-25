@@ -41,7 +41,7 @@ Covers the four surfaces wired in Phase 2:
 from __future__ import annotations
 
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import validate_run
+from openfoam_driver.core.specs.validation import validate_run
 
 _NATIVE_TISSUE_MODELS = ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl")
 _OVERRIDE_ONLY_TISSUE_MODELS = (

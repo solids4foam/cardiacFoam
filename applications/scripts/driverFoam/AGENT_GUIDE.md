@@ -14,7 +14,7 @@ before driving the orchestrator.
 | Execute one strict workflow step | `run_workflow_step(...)` | `openfoam_driver.core.runtime.workflow_runner` |
 | Read/write strict workflow state | `workflow_state_from_json(...)`, `WorkflowRunState.to_json()` | `openfoam_driver.core.runtime.workflow_state` |
 | Validate RunDocument v3 or migrate v1/v2 explicitly | `RunDocument.from_json(...)`, `RunDocument.migrate_v1(...)`, `RunDocument.migrate_v2(...)` | `openfoam_driver.core.runtime.run_model` |
-| Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.specs.validation` |
+| Validate a configuration before launching | `validate_run(run, *, entries=None)` | `openfoam_driver.core.specs.validation` |
 | Synthesize a fresh `electroProperties` / `physicsProperties` | `build_electro_properties(...)`, `build_physics_properties(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Parse an existing `electroProperties` back to selectors + overrides | `parse_electro_properties(path)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |
 | Build + launch a one-shot run (runs through the strict executor) | `build_and_launch(...)` | `openfoam_driver.plugins.cardiacfoam.dict_builder` |

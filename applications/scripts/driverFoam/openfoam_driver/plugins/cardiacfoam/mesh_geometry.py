@@ -46,7 +46,7 @@ import gzip
 import re
 from pathlib import Path
 
-from openfoam_driver.specs.mesh_geometry import (
+from openfoam_driver.core.specs.mesh_geometry import (
     ASCII_TRIPLE_RE,
     BoundingBox,
     MeshDiagnostic,

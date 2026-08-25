@@ -39,7 +39,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
 )
-from openfoam_driver.specs.common import (
+from openfoam_driver.core.specs.common import (
     resolve_run_script_path,
     resolve_spec_paths,
     set_end_time,

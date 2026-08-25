@@ -28,8 +28,11 @@ def repo_root_default() -> Path:
     if tier2_candidate is not None:
         return tier2_candidate
     # Tier 3: the directory containing openfoam_driver/ (driverFoam/ package root)
-    # current = …/openfoam_driver/specs/paths.py → parents[2] = openfoam_driver/
-    # parents[3] = driverFoam/ (the package root with pyproject.toml)
+    # current = …/openfoam_driver/core/specs/paths.py → parents[2] = openfoam_driver/
+    # parents[3] = driverFoam/ (the package root with pyproject.toml).
+    # (Verified empirically, not just by counting path segments by eye —
+    # this exact line was off by one at the pre-move depth, silently dead
+    # code because Tier 1/2 always win inside this monorepo checkout.)
     return current.parents[3]
 
 

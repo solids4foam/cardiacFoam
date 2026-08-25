@@ -37,7 +37,7 @@ import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver.specs.mesh_geometry import (
+from openfoam_driver.core.specs.mesh_geometry import (
     BoundingBox,
     MeshParseError,
     MeshRegion,

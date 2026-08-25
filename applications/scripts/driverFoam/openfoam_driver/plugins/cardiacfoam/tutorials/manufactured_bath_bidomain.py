@@ -45,7 +45,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     ensure_electro_property_entry,
     remove_electro_property_entry,
 )
-from openfoam_driver.specs.common import (
+from openfoam_driver.core.specs.common import (
     load_python_module,
     replace_block_mesh_resolutions,
     resolve_run_script_path,
@@ -53,7 +53,7 @@ from openfoam_driver.specs.common import (
     set_delta_t,
     set_end_time,
 )
-from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
+from openfoam_driver.core.specs.tet_mesh_provisioning import render_tet_geo
 from .manufactured_monodomain_pseudo_ecg import _build_cases
 
 

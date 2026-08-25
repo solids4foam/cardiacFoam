@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Callable
 
 from .models import TutorialSpec
 from .generic_case import make_generic_case_spec
-from ...specs.common import tutorials_root_default
+from openfoam_driver.core.specs.common import tutorials_root_default
 
 if TYPE_CHECKING:
     from ..plugin_interface import DriverContext

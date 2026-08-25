@@ -13,7 +13,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
 )
-from openfoam_driver.specs.common import (
+from openfoam_driver.core.specs.common import (
     load_python_module,
     replace_block_mesh_resolutions,
     resolve_run_script_path,
@@ -21,8 +21,8 @@ from openfoam_driver.specs.common import (
     set_delta_t,
     set_end_time,
 )
-from openfoam_driver.specs.spatial_pacing import generate_spatial_s1_s2_stimulus_lists
-from openfoam_driver.specs.mesh_provisioning import cell_counts_from_dx
+from openfoam_driver.core.specs.spatial_pacing import generate_spatial_s1_s2_stimulus_lists
+from openfoam_driver.core.specs.mesh_provisioning import cell_counts_from_dx
 
 
 

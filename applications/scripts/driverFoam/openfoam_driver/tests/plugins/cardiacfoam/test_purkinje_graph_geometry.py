@@ -40,7 +40,7 @@ from openfoam_driver.plugins.cardiacfoam.mesh_geometry import (
     purkinje_graph_diagnostics,
     read_purkinje_graph_bbox,
 )
-from openfoam_driver.specs.mesh_geometry import MeshParseError
+from openfoam_driver.core.specs.mesh_geometry import MeshParseError
 
 
 _HEADER = (

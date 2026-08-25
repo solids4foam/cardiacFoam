@@ -49,7 +49,7 @@ from typing import Any
 
 from openfoam_driver.dict_entries import DictEntry
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import (
+from openfoam_driver.core.specs.validation import (
     _entry_is_applicable,
     _predicate_matches,
     primary_phase,

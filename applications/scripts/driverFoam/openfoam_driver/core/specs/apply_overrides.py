@@ -51,7 +51,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Callable, Iterable
 
-from ..core.runtime.mutators import update_foam_entry
+from ..runtime.mutators import update_foam_entry
 
 
 @dataclass(frozen=True)

@@ -95,7 +95,7 @@ def test_materialize_case_runs_block_mesh_first_for_spatial_solver(tmp_path):
 
 
 def test_materialize_case_honours_dx_for_spatial_solver(tmp_path):
-    from openfoam_driver.specs.mesh_provisioning import default_block_mesh_dict_text
+    from openfoam_driver.core.specs.mesh_provisioning import default_block_mesh_dict_text
 
     case_dir = tmp_path / "TNNP_monodomain_fine"
     materialize_case(

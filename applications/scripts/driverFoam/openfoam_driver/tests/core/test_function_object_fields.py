@@ -6,7 +6,7 @@ import pytest
 from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
-from openfoam_driver.specs.function_object_fields import (
+from openfoam_driver.core.specs.function_object_fields import (
     function_object_field_diagnostics,
 )
 

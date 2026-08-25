@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from openfoam_driver.specs.tet_mesh_provisioning import render_tet_geo
+from openfoam_driver.core.specs.tet_mesh_provisioning import render_tet_geo
 
 
 def _write_template(root: Path, *, relpath: str = "setup/studies/tetConvergence/box.geo.template", body: str = "lc = __LC__;\nBox(1) = {0, 0, 0, 1, 1, 1};\n") -> None:

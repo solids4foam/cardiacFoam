@@ -31,7 +31,7 @@ from dataclasses import asdict
 from typing import Any
 
 from openfoam_driver.core.planning_types import StrictDiagnostic, artifact_to_json, diagnostic
-from ...specs.validation import validate_run
+from openfoam_driver.core.specs.validation import validate_run
 from ..plugin_capabilities import RunDocumentConfigurationRequest
 from .models import DataArtifact
 from .run_model import RunDocument

@@ -48,7 +48,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import ValidationError, slot_key, validate_run
+from openfoam_driver.core.specs.validation import ValidationError, slot_key, validate_run
 
 _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 
@@ -344,7 +344,7 @@ def test_applicable_when_matches_a_scope_prefixed_predicate_key():
     "$..._present"/"$..._supported" tokens -- silently never matched,
     which is what made the restitutionEikonalSolver1D build drop its own
     solver-specific keys without error."""
-    from openfoam_driver.specs.dict_builder import select_applicable_entries
+    from openfoam_driver.core.specs.dict_builder import select_applicable_entries
 
     entry = _entry(
         "$ELECTRO_MODEL_COEFFS.gatedByPrefixedKey",
@@ -375,7 +375,7 @@ def test_applicable_when_matches_a_dynamic_placeholder_sibling_key():
     resolved instance name (e.g. "purkinjeNetwork"), so the two can never
     be made equal by prefix-stripping alone -- the placeholder must be
     treated as a wildcard and matched against any configured instance."""
-    from openfoam_driver.specs.dict_builder import select_applicable_entries
+    from openfoam_driver.core.specs.dict_builder import select_applicable_entries
 
     entry = _entry(
         "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>."
@@ -685,7 +685,7 @@ from openfoam_driver.dict_entries import (
     PHYSICS_PROPERTY_ENTRIES,
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
-from openfoam_driver.specs.validation import slot_key, validate_run
+from openfoam_driver.core.specs.validation import slot_key, validate_run
 
 _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
 

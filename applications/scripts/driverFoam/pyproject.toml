@@ -49,7 +49,7 @@ include-package-data = false
     "fixtures/single_cell_polymesh/*",
 ]
 "openfoam_driver.core" = ["generic-plugin.yaml"]
-"openfoam_driver.specs" = [
+"openfoam_driver.core.specs" = [
     "fixtures/template/constant/*",
 ]
 
