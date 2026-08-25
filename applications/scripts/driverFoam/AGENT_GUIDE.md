@@ -843,10 +843,9 @@ solver binary. For that, see "Plugin Guide — Adding a New Solver" below.
    `CaseConfig`, typically via `apply_electro_property_overrides`/
    `apply_physics_property_overrides` from `plugins/cardiacfoam/overrides.py`),
    and a `metadata` dict with at least a `workflow_dag` (a `solve` step at
-   minimum). `collect_outputs` is optional and usually left unset — output
-   discovery globs the case's actual on-disk files rather than needing a
-   per-tutorial callback. `single_cell.py` is the smallest complete worked
-   example of this shape.
+   minimum). There is no per-tutorial output-collection callback to wire up
+   — output discovery globs the case's actual on-disk files instead.
+   `single_cell.py` is the smallest complete worked example of this shape.
 3. **Do not accept any of the four dead postprocess-selector parameter
    names** — `cv_extract_script_relpath`, `postprocess_script_relpath`,
    `postprocess_function_name`, `table_summary_relpath`. The runtime cannot

@@ -39,8 +39,8 @@ A `sweep.json` has two top-level blocks:
 2. Example of a `sweep.json` overriding the ionic model on the `singleCell` entry
    (`ionic_model` and `tissue` must be given together, and each must be a value
    the target entry's `make_spec()` actually accepts — check
-   `IONIC_MODEL_TISSUE_MAP` for valid pairs, or use `foamctl describe` on the
-   entry to see its accepted kwargs):
+   `IONIC_MODEL_TISSUE_MAP` for valid pairs, or use `driverFoam describe` on
+   the entry to see its accepted kwargs):
    ```json
    {
        "base": {
@@ -55,8 +55,8 @@ A `sweep.json` has two top-level blocks:
        }
    }
    ```
-3. The sweep is not run as part of `foamctl plan` — it is run separately with
-   `foamctl sweep-run` (see Section 4).
+3. The sweep is not run as part of `driverFoam plan` — it is run separately
+   with `driverFoam sweep-run` (see Section 4).
 
 ## 3. The Strict Diagnostics Loop (Auto-Repair)
 
@@ -65,7 +65,7 @@ This is your superpower. Before running the actual simulation, you MUST validate
 1. **Run the Planner:**
    Run the following command from the terminal:
    ```bash
-   foamctl plan --strict --entry <registered_entry_name>
+   driverFoam plan --strict --entry <registered_entry_name>
    ```
    Note: `--spec` does not belong with `plan` — it is only used with
    `sweep-plan`/`sweep-run` (see Section 4).
@@ -75,7 +75,7 @@ This is your superpower. Before running the actual simulation, you MUST validate
    If the plan fails, **do not just show the error to the user.**
    Read the JSON error output, open the user's dictionary (e.g., `constant/electroProperties`), and add or fix the missing entries yourself using the active plugin's dictionary catalog as your reference.
 4. **Loop until Green:**
-   Re-run `foamctl plan --strict` until the case passes 100% of the diagnostics.
+   Re-run `driverFoam plan --strict` until the case passes 100% of the diagnostics.
 
 ## 4. Execution
 
@@ -83,7 +83,7 @@ Once the strict plan passes, execute the sweep:
 
 1. **Run the Sweep:**
    ```bash
-   foamctl sweep-run --spec sweep.json --output-dir ./sweep_output/
+   driverFoam sweep-run --spec sweep.json --output-dir ./sweep_output/
    ```
    Note: `--entry` is not valid with sweep actions (the target entry lives in
    `sweep.json`'s `base` block instead); `--output-dir` is required.
