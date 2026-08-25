@@ -46,7 +46,6 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_
 
 RATE_FIELDS = (
     "Dimension",
-    "Solver",
     "N_lower",
     "N_higher",
     "rate_Vm",
@@ -68,8 +67,6 @@ ERR_PATTERN = re.compile(r"errQ(?P<q>\d+)_(?P<electrode>.+)")
 DELTA_PATTERN = re.compile(
     r"deltaQuadratureQ(?P<qcheck>\d+)_Q(?P<qreference>\d+)_(?P<electrode>.+)"
 )
-SOLVER_MARKERS = {"implicit": "s"}
-SOLVER_LINESTYLES = {"implicit": "--"}
 FIELD_COLORS = {
     "Linf_V": "tab:blue",
     "Linf_phiE": "tab:orange",
@@ -86,7 +83,6 @@ DIMENSION_COLORS = {"1D": "tab:blue", "2D": "tab:orange", "3D": "tab:green"}
 SUPPORTED_ECG_POSTPROCESS_DIMENSIONS = ("3D",)
 ECG_RATE_FIELDS = (
     "Dimension",
-    "Solver",
     "N_lower",
     "N_higher",
     "rate_max_Linf_err_ref",
@@ -97,7 +93,6 @@ ECG_RATE_FIELDS = (
 ECG_SUMMARY_FIELDS = (
     "Dimension",
     "N",
-    "Solver",
     "samples",
     "electrodes",
     "qCheck",
@@ -1021,7 +1016,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     Reads all .dat files in folder_name and extracts:
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
-        - Solver     (defaults to "implicit"; solutionAlgorithm is no longer in the filename)
         - Linf errors for Vm, gauge-corrected phiE, u1, u2
 
     Returns one row per file.
@@ -1055,7 +1049,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
 
         dimension = m.group(1)   # "1D"
         N = int(m.group(2))      # 320
-        solver = "implicit"
 
         content = f.read_text()
 
@@ -1071,7 +1064,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         data.append({
             "Dimension": dimension,
             "N": N,
-            "Solver": solver,
             "Linf_V": Linf_V,
             "Linf_phiE_raw": Linf_phiE_raw,
             "Linf_phiE": Linf_phiE,
@@ -1079,7 +1071,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
             "Linf_u2": Linf_u2
         })
 
-    return sorted(data, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(data, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def read_ecg_summary_dat_files(folder_name):
@@ -1160,8 +1152,7 @@ def read_ecg_summary_dat_files(folder_name):
             {
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": "implicit",
-                "samples": int(metadata.get("samples", "0")),
+                    "samples": int(metadata.get("samples", "0")),
                 "electrodes": len(electrode_rows),
                 "qCheck": q_check,
                 "qChecks": " ".join(str(value) for value in q_checks),
@@ -1185,7 +1176,7 @@ def read_ecg_summary_dat_files(folder_name):
             }
         )
 
-    return sorted(rows, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(rows, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def read_ecg_timeseries_dat_files(folder_name):
@@ -1208,13 +1199,12 @@ def read_ecg_timeseries_dat_files(folder_name):
                 "path": path,
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": "implicit",
-                "times": columns["time"],
+                    "times": columns["time"],
                 "groups": _group_manufactured_columns(columns),
             }
         )
 
-    return sorted(cases, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(cases, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def _filter_supported_ecg_rows(rows, *, source_label: str):
@@ -1304,7 +1294,7 @@ def _cleanup_stale_ecg_plot_artifacts(output_dir: Path) -> list[Path]:
 def select_representative_ecg_cases(cases):
     grouped = {}
     for case in cases:
-        key = (case["Dimension"], case["Solver"])
+        key = (case["Dimension"])
         current = grouped.get(key)
         if current is None or int(case["N"]) > int(current["N"]):
             grouped[key] = case
@@ -1314,7 +1304,7 @@ def select_representative_ecg_cases(cases):
 def group_ecg_timeseries_cases(cases):
     grouped = {}
     for case in cases:
-        key = (case["Dimension"], case["Solver"])
+        key = (case["Dimension"])
         grouped.setdefault(key, []).append(case)
     for key in grouped:
         grouped[key] = sorted(grouped[key], key=lambda row: int(row["N"]))
@@ -1325,18 +1315,18 @@ def compute_convergence_rates(rows):
     """
     Compute convergence rates for Linf errors of Vm, phiE, u1, u2.
 
-    - Groups by Dimension (if present) and Solver.
+    - Groups by Dimension (if present).
     - Sorts by N.
     - Skips pairs where N_lower == N_higher.
     """
 
     grouped_rows = {}
     for row in rows:
-        key = (row["Dimension"], row["Solver"])
+        key = row["Dimension"]
         grouped_rows.setdefault(key, []).append(row)
 
     convergence_rows = []
-    for (dimension, solver_type), group_rows in sorted(grouped_rows.items()):
+    for dimension, group_rows in sorted(grouped_rows.items()):
         ordered = sorted(group_rows, key=lambda row: row["N"])
         for lower, higher in zip(ordered, ordered[1:]):
             N1 = int(lower["N"])
@@ -1348,7 +1338,6 @@ def compute_convergence_rates(rows):
             convergence_rows.append(
                 {
                     "Dimension": dimension,
-                    "Solver": solver_type,
                     "N_lower": N1,
                     "N_higher": N2,
                     "rate_Vm": _safe_rate(lower["Linf_V"], higher["Linf_V"], h1, h2),
@@ -1364,11 +1353,11 @@ def compute_convergence_rates(rows):
 def compute_ecg_convergence_rates(rows):
     grouped_rows = {}
     for row in rows:
-        key = (row["Dimension"], row["Solver"])
+        key = row["Dimension"]
         grouped_rows.setdefault(key, []).append(row)
 
     convergence_rows = []
-    for (dimension, solver_type), group_rows in sorted(grouped_rows.items()):
+    for dimension, group_rows in sorted(grouped_rows.items()):
         ordered = sorted(group_rows, key=lambda row: row["N"])
         for lower, higher in zip(ordered, ordered[1:]):
             N1 = int(lower["N"])
@@ -1380,7 +1369,6 @@ def compute_ecg_convergence_rates(rows):
             convergence_rows.append(
                 {
                     "Dimension": dimension,
-                    "Solver": solver_type,
                     "N_lower": N1,
                     "N_higher": N2,
                     "rate_max_Linf_err_ref": _safe_rate(
@@ -1416,7 +1404,7 @@ def plot_convergence_rates(
 
     configure_matplotlib_defaults()
     labels = [
-        f"{row['Dimension']} {row['Solver']} {row['N_lower']}-{row['N_higher']}"
+        f"{row['Dimension']} {row['N_lower']}-{row['N_higher']}"
         for row in rows
     ]
     x_positions = range(len(labels))
@@ -1460,73 +1448,23 @@ def _finalize_axis_legend(ax) -> None:
         ax.legend()
 
 
-def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
-    dimension_rows = _filter_rows(rows, Dimension=dimension)
-    if not dimension_rows:
-        ax.text(
-            0.5,
-            0.5,
-            f"No {dimension} data",
-            transform=ax.transAxes,
-            ha="center",
-            va="center",
-            fontsize=11,
-            color="0.4",
-        )
-        style_matplotlib_axes(
-            ax,
-            title=f"Linf Errors per Dimension ({dimension})",
-            xlabel="Number of cells (N)",
-            ylabel="Linf Error",
-            legend=False,
-            grid_kwargs={"which": "both", "ls": "--", "alpha": 0.6},
-        )
-        return False
-
-    for solver in _unique_values(dimension_rows, "Solver"):
-        solver_rows = _filter_rows(dimension_rows, Solver=solver)
-        if not solver_rows:
-            continue
-
-        for col, color in FIELD_COLORS.items():
-            ax.loglog(
-                [row["N"] for row in solver_rows],
-                [row[col] for row in solver_rows],
-                marker=SOLVER_MARKERS.get(solver, "o"),
-                linestyle=SOLVER_LINESTYLES.get(solver, "-"),
-                color=color,
-                label=f"{FIELD_LABELS[col]} ({solver}, {dimension})",
-            )
-
-    style_matplotlib_axes(
-        ax,
-        title=f"Linf Errors per Dimension ({dimension})",
-        xlabel="Number of cells (N)",
-        ylabel="Linf Error",
-        legend=False,
-        grid_kwargs={"which": "both", "ls": "--", "alpha": 0.6},
-    )
-    _finalize_axis_legend(ax)
-    return True
-
 
 def _plot_vm_across_dimensions_on_axis(ax, rows) -> bool:
     plotted = False
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
 
-        for solver in _unique_values(dimension_rows, "Solver"):
-            solver_rows = _filter_rows(dimension_rows, Solver=solver)
-            if not solver_rows:
-                continue
+        plotted_rows = dimension_rows
+        if not plotted_rows:
+            continue
 
             ax.loglog(
-                [row["N"] for row in solver_rows],
-                [row["Linf_V"] for row in solver_rows],
-                marker=SOLVER_MARKERS.get(solver, "o"),
-                linestyle=SOLVER_LINESTYLES.get(solver, "--"),
+                [row["N"] for row in plotted_rows],
+                [row["Linf_V"] for row in plotted_rows],
+                marker="s",
+                linestyle="--",
                 color=DIMENSION_COLORS.get(dimension, "black"),
-                label=f"{dimension} ({solver})",
+                label=f"{dimension}",
             )
             plotted = True
 
@@ -1559,18 +1497,17 @@ def _plot_ecg_metric_on_axis(ax, rows, *, value_key: str, title: str, ylabel: st
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
 
-        for solver in _unique_values(dimension_rows, "Solver"):
-            solver_rows = _filter_rows(dimension_rows, Solver=solver)
-            if not solver_rows:
-                continue
+        plotted_rows = dimension_rows
+        if not plotted_rows:
+            continue
 
             ax.loglog(
-                [row["N"] for row in solver_rows],
-                [row[value_key] for row in solver_rows],
-                marker=SOLVER_MARKERS.get(solver, "o"),
-                linestyle=SOLVER_LINESTYLES.get(solver, "--"),
+                [row["N"] for row in plotted_rows],
+                [row[value_key] for row in plotted_rows],
+                marker="s",
+                linestyle="--",
                 color=DIMENSION_COLORS.get(dimension, "black"),
-                label=f"{dimension} ({solver})",
+                label=f"{dimension}",
             )
             plotted = True
 
@@ -1630,11 +1567,10 @@ def plot_ecg_quadrature_summary(
         (flat_axes[1], "mean", "Mean"),
     ):
         plotted = False
-        for solver in _unique_values(rows, "Solver"):
-            solver_rows = _filter_rows(rows, Solver=solver)
+        plotted_rows = rows
             for q_check in q_checks:
                 selected_rows = [
-                    row for row in solver_rows
+                    row for row in plotted_rows
                     if q_check in row.get("delta_by_q", {})
                 ]
                 if not selected_rows:
@@ -1642,9 +1578,9 @@ def plot_ecg_quadrature_summary(
                 axis.loglog(
                     [row["N"] for row in selected_rows],
                     [row["delta_by_q"][q_check][reducer_key] for row in selected_rows],
-                    marker=SOLVER_MARKERS.get(solver, "o"),
-                    linestyle=SOLVER_LINESTYLES.get(solver, "-"),
-                    label=f"q={q_check} vs qRef={q_reference} ({solver})",
+                    marker="s",
+                    linestyle="--",
+                    label=f"q={q_check} vs qRef={q_reference}",
                 )
                 plotted = True
 
@@ -1740,7 +1676,7 @@ def plot_ecg_quadrature_reference_overlay_case(
         flat_axes[idx].axis("off")
 
     fig.suptitle(
-        f"Manufactured pseudoECG: quadrature-only reference overlays ({case['Dimension']}, {case['Solver']}, N={case['N']})",
+        f"Manufactured pseudoECG: quadrature-only reference overlays ({case['Dimension']}, N={case['N']})",
         fontsize=12,
     )
     finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
@@ -1765,7 +1701,7 @@ def plot_ecg_quadrature_final_time_heatmap(
     fig, axes = plt.subplots(1, ncols, figsize=(6.2 * ncols, 5.2), squeeze=False)
     flat_axes = axes.flatten()
 
-    for axis, ((dimension, solver), group_cases) in zip(flat_axes, sorted(grouped_cases.items())):
+    for axis, (dimension, group_cases) in zip(flat_axes, sorted(grouped_cases.items())):
         group_cases = sorted(group_cases, key=lambda row: int(row["N"]))
         q_checks = sorted(
             {
@@ -1788,7 +1724,7 @@ def plot_ecg_quadrature_final_time_heatmap(
             )
             style_matplotlib_axes(
                 axis,
-                title=f"Final-time max quadrature difference ({dimension}, {solver})",
+                title=f"Final-time max quadrature difference ({dimension},)",
                 xlabel="N",
                 ylabel="qCheck",
                 legend=False,
@@ -1826,7 +1762,7 @@ def plot_ecg_quadrature_final_time_heatmap(
         axis.set_yticklabels([str(value) for value in q_checks])
         style_matplotlib_axes(
             axis,
-            title=f"Final-time max quadrature difference ({dimension}, {solver})",
+            title=f"Final-time max quadrature difference ({dimension},)",
             xlabel="N",
             ylabel="qCheck",
             legend=False,
@@ -1914,7 +1850,7 @@ def plot_ecg_reference_overlay_case(
         flat_axes[idx].axis("off")
 
     fig.suptitle(
-        f"Manufactured pseudoECG: numeric vs reference(qReference) ({case['Dimension']}, {case['Solver']}, N={case['N']})",
+        f"Manufactured pseudoECG: numeric vs reference(qReference) ({case['Dimension']}, N={case['N']})",
         fontsize=12,
     )
     finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
@@ -1999,7 +1935,7 @@ def plot_ecg_error_timeseries_case(
         flat_axes[idx].axis("off")
 
     fig.suptitle(
-        f"Manufactured pseudoECG: abs. error to reference(qReference) and quadrature difference vs time ({case['Dimension']}, {case['Solver']}, N={case['N']})",
+        f"Manufactured pseudoECG: abs. error to reference(qReference) and quadrature difference vs time ({case['Dimension']}, N={case['N']})",
         fontsize=12,
     )
     finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
@@ -2062,7 +1998,7 @@ def plot_ecg_error_heatmap_case(
     )
 
     fig.suptitle(
-        f"Manufactured pseudoECG time-electrode error surfaces ({case['Dimension']}, {case['Solver']}, N={case['N']}, log z-scale)",
+        f"Manufactured pseudoECG time-electrode error surfaces ({case['Dimension']}, N={case['N']}, log z-scale)",
         fontsize=12,
     )
     fig.subplots_adjust(left=0.04, right=0.88, bottom=0.08, top=0.90)
@@ -2099,7 +2035,7 @@ def export_ecg_error_surface_case_vtp(
 
     base_path = (
         Path(save_dir)
-        / f"manufactured_ecg_reference_error_surface_{str(case['Dimension']).lower()}_{str(case['Solver']).lower()}"
+        / f"manufactured_ecg_reference_error_surface_{str(case['Dimension']).lower()}"
     )
     return _export_dual_surface_polydata(
         base_path=base_path,
@@ -2108,7 +2044,7 @@ def export_ecg_error_surface_case_vtp(
         primary_matrix=err_matrix,
         secondary_matrix=delta_matrix,
         title_prefix=(
-            f"Manufactured pseudoECG representative surface ({case['Dimension']}, {case['Solver']}, N={case['N']})"
+            f"Manufactured pseudoECG representative surface ({case['Dimension']}, N={case['N']})"
         ),
         primary_slug="numerical_reference_error",
         secondary_slug=_slugify_token(_quadrature_difference_label(q_check, q_reference)),
@@ -2131,7 +2067,7 @@ def plot_ecg_error_heatmap_sweep(
     output_paths: list[Path] = []
     grouped_cases = group_ecg_timeseries_cases(cases)
 
-    for (dimension, solver), group_cases in grouped_cases.items():
+    for dimension, group_cases in grouped_cases.items():
         group_cases = sorted(group_cases, key=lambda row: int(row["N"]))
         reference_case = max(group_cases, key=lambda row: len(row["times"]))
         target_times = list(reference_case["times"])
@@ -2201,7 +2137,7 @@ def plot_ecg_error_heatmap_sweep(
                 )
 
             fig.suptitle(
-                f"Manufactured pseudoECG sweep surfaces ({dimension}, {solver}, {electrode}, log z-scale)",
+                f"Manufactured pseudoECG sweep surfaces ({dimension}, {electrode}, log z-scale)",
                 fontsize=12,
             )
             fig.subplots_adjust(left=0.03, right=0.94, bottom=0.08, top=0.90, wspace=0.10)
@@ -2210,7 +2146,7 @@ def plot_ecg_error_heatmap_sweep(
             if save_dir is not None:
                 save_path = (
                     Path(save_dir)
-                    / f"manufactured_ecg_sweep_surface_{dimension.lower()}_{solver.lower()}_{electrode}.png"
+                    / f"manufactured_ecg_sweep_surface_{dimension.lower()}_{electrode}.png"
                 )
                 output_paths.append(save_path)
             finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
@@ -2229,7 +2165,7 @@ def export_ecg_error_sweep_vtp(
     output_paths: list[Path] = []
     grouped_cases = group_ecg_timeseries_cases(cases)
 
-    for (dimension, solver), group_cases in grouped_cases.items():
+    for dimension, group_cases in grouped_cases.items():
         group_cases = sorted(group_cases, key=lambda row: int(row["N"]))
         reference_case = max(group_cases, key=lambda row: len(row["times"]))
         target_times = list(reference_case["times"])
@@ -2267,7 +2203,7 @@ def export_ecg_error_sweep_vtp(
 
             base_path = (
                 Path(save_dir)
-                / f"manufactured_ecg_sweep_surface_{dimension.lower()}_{solver.lower()}_{electrode}"
+                / f"manufactured_ecg_sweep_surface_{dimension.lower()}_{electrode}"
             )
             output_paths.extend(
                 _export_dual_surface_polydata(
@@ -2276,7 +2212,7 @@ def export_ecg_error_sweep_vtp(
                     y_values=n_values,
                     primary_matrix=ref_error_matrix,
                     secondary_matrix=ref_gap_matrix,
-                    title_prefix=f"Manufactured pseudoECG sweep surface ({dimension}, {solver}, {electrode})",
+                    title_prefix=f"Manufactured pseudoECG sweep surface ({dimension}, {electrode})",
                     primary_slug="numerical_reference_error",
                     secondary_slug=_slugify_token(_quadrature_difference_label(q_check, q_reference)),
                 )
@@ -2301,7 +2237,7 @@ def plot_ecg_error_heatmap_sweep_overview(
     output_paths: list[Path] = []
     grouped_cases = group_ecg_timeseries_cases(cases)
 
-    for (dimension, solver), group_cases in grouped_cases.items():
+    for dimension, group_cases in grouped_cases.items():
         group_cases = sorted(group_cases, key=lambda row: int(row["N"]))
         reference_case = max(group_cases, key=lambda row: len(row["times"]))
         target_times = list(reference_case["times"])
@@ -2379,7 +2315,7 @@ def plot_ecg_error_heatmap_sweep_overview(
                 )
 
         fig.suptitle(
-            f"Manufactured pseudoECG sweep surfaces for all electrodes ({dimension}, {solver}, log z-scale)",
+            f"Manufactured pseudoECG sweep surfaces for all electrodes ({dimension}, log z-scale)",
             fontsize=12,
         )
         fig.subplots_adjust(left=0.03, right=0.95, bottom=0.04, top=0.96, hspace=0.30, wspace=0.08)
@@ -2388,7 +2324,7 @@ def plot_ecg_error_heatmap_sweep_overview(
         if save_dir is not None:
             save_path = (
                 Path(save_dir)
-                / f"manufactured_ecg_sweep_surface_{dimension.lower()}_{solver.lower()}_all_electrodes.png"
+                / f"manufactured_ecg_sweep_surface_{dimension.lower()}_all_electrodes.png"
             )
             output_paths.append(save_path)
         finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
@@ -2435,7 +2371,7 @@ def plot_ecg_electrode_geometry(
     return Path(save_path) if save_path is not None else None
 
 
-def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, show: bool = True):
+def plot_errors(rows,  *, save_path: str | Path | None = None, show: bool = True):
     """
     Plot Linf errors for Vm, phiE, u1, u2 vs N.
     """
@@ -2449,8 +2385,6 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
 
-        if solver_type:
-            dimension_rows = _filter_rows(dimension_rows, Solver=solver_type)
         if not dimension_rows:
             continue
 
@@ -2480,8 +2414,6 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
         )
 
     title = "Manufactured-solution Linf errors"
-    if solver_type:
-        title += f" ({solver_type})"
     style_matplotlib_axes(
         ax,
         title=title,
@@ -2493,33 +2425,6 @@ def plot_errors(rows, solver_type=None, *, save_path: str | Path | None = None, 
     return Path(save_path) if save_path is not None else None
 
 
-def plot_errors_implicit_explicit(
-    rows,
-    *,
-    save_dir: str | Path | None = None,
-    show: bool = True,
-):
-    """
-    Plot Linf errors for Vm, u1, u2 vs N for both Explicit and Implicit solvers.
-    Grouped per dimension.
-    """
-    if not _has_matplotlib():
-        print("matplotlib is not available; skipping manufactured implicit/explicit plots.")
-        return []
-
-    configure_matplotlib_defaults()
-
-    output_paths: list[Path] = []
-    for dimension in _unique_values(rows, "Dimension"):
-        fig, ax = plt.subplots(figsize=(8, 6))
-        _plot_dimension_errors_on_axis(ax, rows, dimension)
-        save_path = None
-        if save_dir is not None:
-            save_path = Path(save_dir) / f"manufactured_errors_{dimension.lower()}_implicit_explicit.png"
-            output_paths.append(save_path)
-        finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
-    return output_paths
-
 
 def plot_Vm_across_dimensions(
     rows,
@@ -2528,7 +2433,7 @@ def plot_Vm_across_dimensions(
     show: bool = True,
 ):
     """
-    Plot Linf_V (Vm error) vs N across all dimensions and solvers.
+    Plot Linf_V (Vm error) vs N across all dimensions.
     """
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured Vm plot.")
@@ -2640,21 +2545,20 @@ def plot_ecg_error_vs_gap_summary(
             )
             continue
 
-        for solver in _unique_values(rows, "Solver"):
-            solver_rows = _filter_rows(rows, Solver=solver)
+        plotted_rows = rows
             ax.loglog(
-                [row["N"] for row in solver_rows],
-                [max(row[error_key], 1e-30) for row in solver_rows],
+                [row["N"] for row in plotted_rows],
+                [max(row[error_key], 1e-30) for row in plotted_rows],
                 marker="o",
                 linestyle="-",
-                label=f"{error_label} ({solver})",
+                label=f"{error_label} ()",
             )
             ax.loglog(
-                [row["N"] for row in solver_rows],
-                [max(row[gap_key], 1e-30) for row in solver_rows],
+                [row["N"] for row in plotted_rows],
+                [max(row[gap_key], 1e-30) for row in plotted_rows],
                 marker="s",
                 linestyle="--",
-                label=f"{gap_label} ({solver})",
+                label=f"{gap_label} ()",
             )
 
         style_matplotlib_axes(
@@ -2727,14 +2631,14 @@ During post-processing, archived ECG case files for unsupported dimensions are r
 
 ## ECG representative time-series plots
 
-For each dimension/solver pair, the postprocess chooses the highest available `N` case and produces:
+For each dimension, the postprocess chooses the highest available `N` case and produces:
 
-- `manufactured_ecg_overlay_<dimension>_<solver>.png`
+- `manufactured_ecg_overlay_<dimension>.png`
   Per-electrode time traces of:
   - `numeric`
   - `reference(q=qReference)`
 
-- `manufactured_ecg_quadrature_overlay_<dimension>_<solver>.png`
+- `manufactured_ecg_quadrature_overlay_<dimension>.png`
   Per-electrode time traces of the manufactured reference for all available quadrature orders:
   - `reference(q=6)`
   - `reference(q=12)`
@@ -2744,7 +2648,7 @@ For each dimension/solver pair, the postprocess chooses the highest available `N
 
   This is the direct “quadratures only” comparison at the electrode points.
 
-- `manufactured_ecg_reference_error_timeseries_<dimension>_<solver>.png`
+- `manufactured_ecg_reference_error_timeseries_<dimension>.png`
   Per-electrode semilogy time traces of:
   - `abs error to reference(q=qReference) = |numeric - reference(q=qReference)|`
   - `quadrature difference = |reference(q=qCheck) - reference(q=qReference)|`
@@ -2754,7 +2658,7 @@ For each dimension/solver pair, the postprocess chooses the highest available `N
   - `deltaQuadratureQ6_Q96_<electrode> = |refQ6_<electrode> - refQ96_<electrode>|`
   - more generally, `errQk_<electrode> = |numeric_<electrode> - refQk_<electrode>|`
 
-- `manufactured_ecg_reference_error_surface_<dimension>_<solver>.png`
+- `manufactured_ecg_reference_error_surface_<dimension>.png`
   One 3D plot for the representative case with two overlaid colormapped surfaces:
   - viridis surface with black mesh outline: `|numeric - refQreference|`
   - viridis surface with white mesh outline: `|refQcheck_primary - refQreference|`
@@ -2766,13 +2670,13 @@ For each dimension/solver pair, the postprocess chooses the highest available `N
   - z-axis uses a log scale so both surfaces remain visible when their magnitudes differ
   - both surfaces use one shared heatmap/colorbar, and the legend distinguishes them by outline
 
-- `manufactured_ecg_reference_error_surface_<dimension>_<solver>_*.vtp`
+- `manufactured_ecg_reference_error_surface_<dimension>_*.vtp`
   VTK XML PolyData exports of the representative 3D surfaces.
   These files include the surface triangles plus bounding-box and axis line geometry built from the surface bounds.
   The exported point coordinates are normalized to a unit viewing box, while the original coordinates are stored as point-data arrays `raw_x`, `raw_y`, and `raw_z`.
   Open these in ParaView (or another VTK viewer) if you want to choose your own camera and render the figure there.
 
-- `manufactured_ecg_sweep_surface_<dimension>_<solver>_<electrode>.png`
+- `manufactured_ecg_sweep_surface_<dimension>_<electrode>.png`
   Two side-by-side 3D sweep plots for one electrode:
   - left subplot uses the primary check quadrature difference
   - right subplot uses the `q=24` quadrature difference
@@ -2788,13 +2692,13 @@ For each dimension/solver pair, the postprocess chooses the highest available `N
 
   These are the plots to inspect if you want to see how the numerical reference error evolves jointly in time and mesh resolution for a fixed electrode.
 
-- `manufactured_ecg_sweep_surface_<dimension>_<solver>_<electrode>_*.vtp`
+- `manufactured_ecg_sweep_surface_<dimension>_<electrode>_*.vtp`
   VTK XML PolyData exports of the per-electrode sweep surfaces.
   These files include the surface triangles plus bounding-box and axis line geometry built from the sweep bounds.
   The exported point coordinates are normalized to a unit viewing box, while the original coordinates are stored as point-data arrays `raw_x`, `raw_y`, and `raw_z`.
   These use the raw surface values, not the Matplotlib camera or the PNG view.
 
-- `manufactured_ecg_sweep_surface_<dimension>_<solver>_all_electrodes.png`
+- `manufactured_ecg_sweep_surface_<dimension>_all_electrodes.png`
   Multi-panel overview with all electrodes in one figure.
   Each row is one electrode and contains two 3D plots:
   - left column: primary check quadrature difference
@@ -2879,11 +2783,6 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
         save_path=output_path / "manufactured_convergence_rates.png",
         show=False,
     )
-    error_plots = plot_errors_implicit_explicit(
-        error_rows,
-        save_dir=output_path,
-        show=False,
-    )
     if vm_plot is not None:
         artifacts.append(
             {
@@ -2911,15 +2810,6 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
                 "format": "png",
             }
         )
-    artifacts.extend(
-        {
-            "path": str(path),
-            "label": f"Manufactured errors {path.stem}",
-            "kind": "plot",
-            "format": "png",
-        }
-        for path in error_plots
-    )
 
     ecg_rows = _filter_supported_ecg_rows(
         read_ecg_summary_dat_files(output_dir),
@@ -3052,45 +2942,44 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
     )
     for case in representative_cases:
         dimension_token = str(case["Dimension"]).lower()
-        solver_token = str(case["Solver"]).lower()
-        surface_vtp_paths = export_ecg_error_surface_case_vtp(
+                surface_vtp_paths = export_ecg_error_surface_case_vtp(
             case,
             save_dir=output_path,
         )
         overlay_path = plot_ecg_reference_overlay_case(
             case,
-            save_path=output_path / f"manufactured_ecg_overlay_{dimension_token}_{solver_token}.png",
+            save_path=output_path / f"manufactured_ecg_overlay_{dimension_token}.png",
             show=False,
         )
         quadrature_overlay_path = plot_ecg_quadrature_reference_overlay_case(
             case,
-            save_path=output_path / f"manufactured_ecg_quadrature_overlay_{dimension_token}_{solver_token}.png",
+            save_path=output_path / f"manufactured_ecg_quadrature_overlay_{dimension_token}.png",
             show=False,
         )
         error_time_path = plot_ecg_error_timeseries_case(
             case,
-            save_path=output_path / f"manufactured_ecg_reference_error_timeseries_{dimension_token}_{solver_token}.png",
+            save_path=output_path / f"manufactured_ecg_reference_error_timeseries_{dimension_token}.png",
             show=False,
         )
         surface_path = plot_ecg_error_heatmap_case(
             case,
-            save_path=output_path / f"manufactured_ecg_reference_error_surface_{dimension_token}_{solver_token}.png",
+            save_path=output_path / f"manufactured_ecg_reference_error_surface_{dimension_token}.png",
             show=False,
         )
 
         for path, label in (
-            (overlay_path, f"Manufactured ECG overlay {case['Dimension']} {case['Solver']}"),
+            (overlay_path, f"Manufactured ECG overlay {case['Dimension']}"),
             (
                 quadrature_overlay_path,
-                f"Manufactured ECG quadrature overlay {case['Dimension']} {case['Solver']}",
+                f"Manufactured ECG quadrature overlay {case['Dimension']}",
             ),
             (
                 error_time_path,
-                f"Manufactured ECG reference errors vs time {case['Dimension']} {case['Solver']}",
+                f"Manufactured ECG reference errors vs time {case['Dimension']}",
             ),
             (
                 surface_path,
-                f"Manufactured ECG reference error surface {case['Dimension']} {case['Solver']}",
+                f"Manufactured ECG reference error surface {case['Dimension']}",
             ),
         ):
             if path is None:

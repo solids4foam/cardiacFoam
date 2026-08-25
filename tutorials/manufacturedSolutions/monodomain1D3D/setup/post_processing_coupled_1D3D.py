@@ -22,7 +22,7 @@ from pathlib import Path
 # Regex patterns
 # ---------------------------------------------------------------------------
 
-# postProcessing/3D_10_cells_implicit.dat
+# postProcessing/3D_10_cells.dat
 _3D_FILE_RE = re.compile(r"3D_(?P<n>\d+)_cells_(?P<alg>\w+)\.dat$")
 
 # postProcessing/graph_1D_11_nodes.dat

@@ -50,7 +50,6 @@ from openfoam_driver.postprocessing.style import (
 
 RATE_FIELDS = (
     "Dimension",
-    "Solver",
     "N_lower",
     "N_higher",
     "rate_Vm",
@@ -61,7 +60,6 @@ RATE_FIELDS = (
 SUMMARY_FIELDS = (
     "Dimension",
     "N",
-    "Solver",
     "L1_Vm",
     "L2_Vm",
     "Linf_Vm",
@@ -164,7 +162,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
             {
                 "Dimension": match.group(1),
                 "N": int(match.group(2)),
-                "Solver": "implicit",
                 "L1_Vm": values["Vm"][0],
                 "L2_Vm": values["Vm"][1],
                 "Linf_Vm": values["Vm"][2],
@@ -180,17 +177,17 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
             }
         )
 
-    return sorted(data, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(data, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def compute_convergence_rates(rows):
     grouped_rows = {}
     for row in rows:
-        key = (row["Dimension"], row["Solver"])
+        key = row["Dimension"]
         grouped_rows.setdefault(key, []).append(row)
 
     convergence_rows = []
-    for (dimension, solver_type), group_rows in sorted(grouped_rows.items()):
+    for dimension, group_rows in sorted(grouped_rows.items()):
         ordered = sorted(group_rows, key=lambda row: row["N"])
         for lower, higher in zip(ordered, ordered[1:]):
             n1 = int(lower["N"])
@@ -201,7 +198,6 @@ def compute_convergence_rates(rows):
             convergence_rows.append(
                 {
                     "Dimension": dimension,
-                    "Solver": solver_type,
                     "N_lower": n1,
                     "N_higher": n2,
                     "rate_Vm": _safe_rate(lower["Linf_Vm"], higher["Linf_Vm"], h1, h2),
@@ -226,16 +222,14 @@ def plot_errors_by_dimension(rows, *, save_dir: Path, show: bool = False) -> lis
 
         fig, ax = plt.subplots(figsize=(8.5, 5.5))
         for field_name in ("Linf_Vm", "Linf_D", "Linf_lambda", "Linf_Ta"):
-            for solver_type in _unique_values(dimension_rows, "Solver"):
-                solver_rows = _filter_rows(dimension_rows, Solver=solver_type)
-                ax.loglog(
-                    [row["N"] for row in solver_rows],
-                    [row[field_name] for row in solver_rows],
-                    marker="o",
-                    color=FIELD_COLORS[field_name],
-                    linestyle="-" if solver_type == "implicit" else "--",
-                    label=f"{FIELD_LABELS[field_name]} ({solver_type})",
-                )
+            ax.loglog(
+                [row["N"] for row in dimension_rows],
+                [row[field_name] for row in dimension_rows],
+                marker="s",
+                color=FIELD_COLORS[field_name],
+                linestyle="--",
+                label=f"{FIELD_LABELS[field_name]}",
+            )
 
         style_matplotlib_axes(
             ax,
@@ -258,7 +252,7 @@ def plot_vm_across_dimensions(rows, *, save_path: Path, show: bool = False) -> P
 
     plotted = False
     for dimension in _unique_values(rows, "Dimension"):
-        dimension_rows = _filter_rows(rows, Dimension=dimension, Solver="implicit")
+        dimension_rows = _filter_rows(rows, Dimension=dimension)
         if not dimension_rows:
             continue
 
@@ -298,7 +292,7 @@ def plot_summary_dashboard(rows, *, save_path: Path, show: bool = False) -> Path
         axes = [axes]
 
     for ax, dimension in zip(axes, dimensions):
-        dimension_rows = _filter_rows(rows, Dimension=dimension, Solver="implicit")
+        dimension_rows = _filter_rows(rows, Dimension=dimension)
         for field_name in ("Linf_Vm", "Linf_D", "Linf_lambda", "Linf_Ta"):
             ax.loglog(
                 [row["N"] for row in dimension_rows],

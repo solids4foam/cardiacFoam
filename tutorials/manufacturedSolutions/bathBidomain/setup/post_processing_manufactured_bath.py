@@ -24,7 +24,6 @@ from openfoam_driver.postprocessing.style import (
 FIELD_NAMES = ("Vm", "phiE", "phiI", "u1", "u2", "u3")
 RATE_FIELDS = (
     "Dimension",
-    "Solver",
     "N_lower",
     "N_higher",
     *(f"rate_{name}" for name in FIELD_NAMES),
@@ -33,7 +32,6 @@ RATE_FIELDS = (
 ERROR_FIELDS = (
     "Dimension",
     "N",
-    "Solver",
     *(f"{norm}_{name}" for name in FIELD_NAMES for norm in ("L1", "L2", "Linf")),
 )
 FILENAME_PATTERN = re.compile(r"bathBidomain_(\dD)_(\d+)_cells\.dat$")
@@ -59,8 +57,6 @@ if not PLOT_DISABLED:
     except ModuleNotFoundError:
         plt = None
 
-SOLVER_MARKERS = {"implicit": "s"}
-SOLVER_LINESTYLES = {"implicit": "--"}
 FIELD_COLORS = {
     "Vm": "tab:blue",
     "phiE": "tab:orange",
@@ -155,7 +151,6 @@ def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None
         row = {
             "Dimension": match.group(1),
             "N": int(match.group(2)),
-            "Solver": "implicit",
         }
 
         compact = content.replace("\n", " ")
@@ -173,7 +168,7 @@ def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None
 
         rows.append(row)
 
-    return sorted(rows, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(rows, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def read_bath_ecg_summary_files(folder_name, expected_filenames: set[str] | None = None):
@@ -206,7 +201,6 @@ def read_bath_ecg_summary_files(folder_name, expected_filenames: set[str] | None
             {
                 "Dimension": match.group("dimension"),
                 "N": int(match.group("cells")),
-                "Solver": "implicit",
                 "samples": int(metadata.get("samples", "0")),
                 "field_L1": float(metadata.get("field_L1", "nan")),
                 "field_L2": float(metadata.get("field_L2", "nan")),
@@ -214,16 +208,16 @@ def read_bath_ecg_summary_files(folder_name, expected_filenames: set[str] | None
             }
         )
 
-    return sorted(rows, key=lambda row: (row["Dimension"], row["Solver"], row["N"]))
+    return sorted(rows, key=lambda row: (row["Dimension"], row["N"]))
 
 
 def compute_convergence_rates(rows):
     grouped = {}
     for row in rows:
-        grouped.setdefault((row["Dimension"], row["Solver"]), []).append(row)
+        grouped.setdefault(row["Dimension"], []).append(row)
 
     rate_rows = []
-    for (dimension, solver), group_rows in sorted(grouped.items()):
+    for dimension, group_rows in sorted(grouped.items()):
         ordered = sorted(group_rows, key=lambda row: row["N"])
         for lower, higher in zip(ordered, ordered[1:]):
             n1 = int(lower["N"])
@@ -235,7 +229,6 @@ def compute_convergence_rates(rows):
             h2 = 1.0/n2
             row = {
                 "Dimension": dimension,
-                "Solver": solver,
                 "N_lower": n1,
                 "N_higher": n2,
             }
@@ -256,10 +249,10 @@ def compute_convergence_rates(rows):
 def compute_bath_ecg_convergence_rates(rows):
     grouped = {}
     for row in rows:
-        grouped.setdefault((row["Dimension"], row["Solver"]), []).append(row)
+        grouped.setdefault(row["Dimension"], []).append(row)
 
     rate_rows = []
-    for (dimension, solver), group_rows in sorted(grouped.items()):
+    for dimension, group_rows in sorted(grouped.items()):
         ordered = sorted(group_rows, key=lambda row: row["N"])
         for lower, higher in zip(ordered, ordered[1:]):
             n1 = int(lower["N"])
@@ -271,7 +264,6 @@ def compute_bath_ecg_convergence_rates(rows):
             rate_rows.append(
                 {
                     "Dimension": dimension,
-                    "Solver": solver,
                     "N_lower": n1,
                     "N_higher": n2,
                     "rate_field_L1": _safe_rate(lower["field_L1"], higher["field_L1"], h1, h2),
@@ -312,24 +304,22 @@ def _plot_dimension_errors_on_axis(axis, rows, dimension: str) -> bool:
         return False
 
     plotted = False
-    for solver in _unique_values(dimension_rows, "Solver"):
-        solver_rows = _filter_rows(dimension_rows, Solver=solver)
-        for field_name in FIELD_NAMES:
-            ns, errors = _positive_xy(
-                [row["N"] for row in solver_rows],
-                [row[f"Linf_{field_name}"] for row in solver_rows],
-            )
-            if not ns:
-                continue
-            axis.loglog(
-                ns,
-                errors,
-                marker=SOLVER_MARKERS.get(solver, "o"),
-                linestyle=SOLVER_LINESTYLES.get(solver, "-"),
-                color=FIELD_COLORS.get(field_name),
-                label=f"{field_name} myocardium ({solver}, {dimension})",
-            )
-            plotted = True
+    for field_name in FIELD_NAMES:
+        ns, errors = _positive_xy(
+            [row["N"] for row in dimension_rows],
+            [row[f"Linf_{field_name}"] for row in dimension_rows],
+        )
+        if not ns:
+            continue
+        axis.loglog(
+            ns,
+            errors,
+            marker="s",
+            linestyle="--",
+            color=FIELD_COLORS.get(field_name),
+            label=f"{field_name} myocardium ({dimension})",
+        )
+        plotted = True
 
     if not plotted:
         axis.text(
@@ -359,25 +349,23 @@ def _plot_vm_across_dimensions_on_axis(axis, rows) -> bool:
     plotted = False
     for dimension in _unique_values(rows, "Dimension"):
         dimension_rows = _filter_rows(rows, Dimension=dimension)
-        for solver in _unique_values(dimension_rows, "Solver"):
-            solver_rows = _filter_rows(dimension_rows, Solver=solver)
-            if not solver_rows:
-                continue
-            ns, errors = _positive_xy(
-                [row["N"] for row in solver_rows],
-                [row["Linf_Vm"] for row in solver_rows],
-            )
-            if not ns:
-                continue
-            axis.loglog(
-                ns,
-                errors,
-                marker=SOLVER_MARKERS.get(solver, "o"),
-                linestyle=SOLVER_LINESTYLES.get(solver, "--"),
-                color=DIMENSION_COLORS.get(dimension, "black"),
-                label=f"{dimension} ({solver})",
-            )
-            plotted = True
+        if not dimension_rows:
+            continue
+        ns, errors = _positive_xy(
+            [row["N"] for row in dimension_rows],
+            [row["Linf_Vm"] for row in dimension_rows],
+        )
+        if not ns:
+            continue
+        axis.loglog(
+            ns,
+            errors,
+            marker="s",
+            linestyle="--",
+            color=DIMENSION_COLORS.get(dimension, "black"),
+            label=f"{dimension}",
+        )
+        plotted = True
 
     if not plotted:
         axis.text(
@@ -410,14 +398,14 @@ def _plot_field_errors(rows, destination: Path) -> Path | None:
     configure_matplotlib_defaults()
     grouped = {}
     for row in rows:
-        grouped.setdefault((row["Dimension"], row["Solver"]), []).append(row)
+        grouped.setdefault(row["Dimension"], []).append(row)
 
     fig, axes = plt.subplots(2, 3, figsize=(12, 7))
     fig.suptitle("Myocardium subdomain manufactured errors", fontsize=13)
     flat_axes = axes.ravel()
     for axis, field_name in zip(flat_axes, FIELD_NAMES):
         plotted = False
-        for (dimension, solver), group_rows in sorted(grouped.items()):
+        for dimension, group_rows in sorted(grouped.items()):
             ordered = sorted(group_rows, key=lambda item: item["N"])
             ns, errors = _positive_xy(
                 [int(item["N"]) for item in ordered],
@@ -425,7 +413,7 @@ def _plot_field_errors(rows, destination: Path) -> Path | None:
             )
             if not ns:
                 continue
-            axis.loglog(ns, errors, marker="o", label=f"{dimension} {solver}")
+            axis.loglog(ns, errors, marker="o", label=f"{dimension}")
             plotted = True
         if not plotted:
             axis.text(
@@ -456,7 +444,7 @@ def _plot_convergence_rates(rows, destination: Path) -> Path | None:
         return None
 
     configure_matplotlib_defaults()
-    labels = [f"{row['Dimension']} {row['Solver']} {row['N_lower']}-{row['N_higher']}" for row in rows]
+    labels = [f"{row['Dimension']} {row['N_lower']}-{row['N_higher']}" for row in rows]
     x_positions = range(len(labels))
     fig, axis = plt.subplots(figsize=(max(8, len(labels) * 1.4), 5))
     width = 0.12
@@ -484,10 +472,10 @@ def _plot_bath_ecg_errors(rows, destination: Path) -> Path | None:
     configure_matplotlib_defaults()
     grouped = {}
     for row in rows:
-        grouped.setdefault((row["Dimension"], row["Solver"]), []).append(row)
+        grouped.setdefault(row["Dimension"], []).append(row)
 
     fig, axis = plt.subplots(figsize=(8, 5))
-    for (dimension, solver), group_rows in sorted(grouped.items()):
+    for dimension, group_rows in sorted(grouped.items()):
         ordered = sorted(group_rows, key=lambda item: item["N"])
         ns, errors = _positive_xy(
             [int(item["N"]) for item in ordered],
@@ -499,7 +487,7 @@ def _plot_bath_ecg_errors(rows, destination: Path) -> Path | None:
             ns,
             errors,
             marker="o",
-            label=f"{dimension} {solver}",
+            label=f"{dimension}",
         )
     axis.set_xlabel("N")
     axis.set_ylabel("Bath-domain phiE Linf error")
@@ -517,7 +505,7 @@ def _plot_bath_ecg_convergence_rates(rows, destination: Path) -> Path | None:
 
     configure_matplotlib_defaults()
     labels = [
-        f"{row['Dimension']} {row['Solver']} {row['N_lower']}-{row['N_higher']}"
+        f"{row['Dimension']} {row['N_lower']}-{row['N_higher']}"
         for row in rows
     ]
     x_positions = range(len(labels))
@@ -571,7 +559,7 @@ def plot_errors_by_dimension(
         _plot_dimension_errors_on_axis(axis, rows, dimension)
         save_path = None
         if save_dir is not None:
-            save_path = Path(save_dir) / f"bath_bidomain_errors_{dimension.lower()}_implicit_explicit.png"
+            save_path = Path(save_dir) / f"bath_bidomain_errors_{dimension.lower()}.png"
             output_paths.append(save_path)
         finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
     return output_paths
@@ -698,7 +686,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
         _write_csv(
             bath_ecg_rows,
             bath_ecg_csv,
-            ("Dimension", "N", "Solver", "samples", "field_L1", "field_L2", "field_Linf"),
+            ("Dimension", "N", "samples", "field_L1", "field_L2", "field_Linf"),
         )
         bath_ecg_rate_rows = compute_bath_ecg_convergence_rates(bath_ecg_rows)
         bath_ecg_rates_csv = output_path / "bath_ecg_convergence_rates.csv"
@@ -707,7 +695,6 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             bath_ecg_rates_csv,
             (
                 "Dimension",
-                "Solver",
                 "N_lower",
                 "N_higher",
                 "rate_field_L1",
