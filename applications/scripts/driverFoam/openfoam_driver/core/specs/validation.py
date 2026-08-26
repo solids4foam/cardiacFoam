@@ -52,28 +52,31 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, get_args
+from typing import TYPE_CHECKING, Any, Iterable
 
 from openfoam_driver.core.contracts.dictionary import DictEntry, Phase
 
 if TYPE_CHECKING:
     from openfoam_driver.core.plugin_interface import DriverContext
 
-_PHASE_ORDER: tuple[Phase, ...] = get_args(Phase)
-
-
 from .validation_types import ValidationError
 def _all_entries(driver_context: "DriverContext"):
     yield from driver_context.capabilities.dictionaries.entries()
 
 
-def primary_phase(entry) -> Phase | None:
+def primary_phase(entry, phase_order: tuple[str, ...]) -> str | None:
     """Return the editing phase for a (possibly multi-phase) entry.
 
-    Walks ``_PHASE_ORDER`` and returns the first phase the entry claims;
-    every other declared phase is a read-only mirror.
+    Walks ``phase_order`` -- the ACTIVE PLUGIN's declared phases, from
+    ``capabilities.dictionaries.phases()`` -- and returns the first phase the
+    entry claims; every other declared phase is a read-only mirror.
+
+    The order is passed in rather than read from the core ``Phase`` literal
+    because that literal spells cardiacFoam's vocabulary. Reading it made every
+    entry of a plugin with different phase words return ``None`` here, which the
+    required-field and enum checks then treated as "skip".
     """
-    for ph in _PHASE_ORDER:
+    for ph in phase_order:
         if ph in entry.phases:
             return ph
     return None
@@ -109,13 +112,13 @@ def slot_key(driver_path: str) -> str:
     return _SCOPE_TOKEN_PREFIX_RE.sub("", driver_path, count=1)
 
 
-def _slice_value(run, phase: Phase, driver_path: str):
+def _slice_value(run, phase: str, driver_path: str):
     """Look up the slot value for a driver_path inside a phase slice."""
     slice_ = run.config.get(phase, {}) or {}
     return slice_.get(slot_key(driver_path))
 
 
-def _non_mapping_phase_errors(run) -> list[ValidationError]:
+def _non_mapping_phase_errors(run, phase_order: tuple[str, ...]) -> list[ValidationError]:
     """Reject any ``run.config`` phase slice that is not a mapping.
 
     ``RunDocument.config`` is plugin-defined and the core JSON Schema only
@@ -138,7 +141,9 @@ def _non_mapping_phase_errors(run) -> list[ValidationError]:
         errors.append(ValidationError(
             # `phase` is the *reporting* phase and must stay inside the
             # declared vocabulary; the offending key is carried by `field`.
-            phase=phase if phase in _PHASE_ORDER else "physics",
+            phase=phase if phase in phase_order else (
+                phase_order[0] if phase_order else ""
+            ),
             field=str(phase),
             message=(
                 f"config[{phase!r}] must be an object, got "
@@ -313,7 +318,9 @@ def validate_run(
 
     # 0) Shape guard. Every later step indexes phase slices as mappings;
     #    bail out with diagnostics rather than crashing on a malformed one.
-    shape_errors = _non_mapping_phase_errors(run)
+    phase_order = driver_context.capabilities.dictionaries.phases()
+
+    shape_errors = _non_mapping_phase_errors(run, phase_order)
     if shape_errors:
         return shape_errors
 
@@ -344,8 +351,23 @@ def validate_run(
             # plugin's _evaluate_dynamic_required_fields. Not every
             # dynamic-path template is guaranteed such a check.
             continue
-        ph = primary_phase(e)
+        ph = primary_phase(e, phase_order)
         if ph is None:
+            # Previously a silent `continue`, which skipped this check
+            # entirely for any entry whose phases fall outside the active
+            # plugin's declared order. Report it instead: an unvalidatable
+            # entry is a catalog defect, not a pass.
+            errors.append(ValidationError(
+                phase=phase_order[0] if phase_order else "",
+                field=e.driver_path,
+                message=(
+                    f"{e.driver_path} declares phases {sorted(e.phases)}, none "
+                    f"of which is in the plugin's declared phase order "
+                    f"{list(phase_order)}. It cannot be validated. Add the "
+                    f"phase to get_phases() or correct the entry."
+                ),
+                level="error",
+            ))
             continue
         val = _slice_value(run, ph, e.driver_path)
         if val in (None, ""):
@@ -362,8 +384,23 @@ def validate_run(
             continue
         if not _entry_is_applicable(e, context):
             continue
-        ph = primary_phase(e)
+        ph = primary_phase(e, phase_order)
         if ph is None:
+            # Previously a silent `continue`, which skipped this check
+            # entirely for any entry whose phases fall outside the active
+            # plugin's declared order. Report it instead: an unvalidatable
+            # entry is a catalog defect, not a pass.
+            errors.append(ValidationError(
+                phase=phase_order[0] if phase_order else "",
+                field=e.driver_path,
+                message=(
+                    f"{e.driver_path} declares phases {sorted(e.phases)}, none "
+                    f"of which is in the plugin's declared phase order "
+                    f"{list(phase_order)}. It cannot be validated. Add the "
+                    f"phase to get_phases() or correct the entry."
+                ),
+                level="error",
+            ))
             continue
         val = _slice_value(run, ph, e.driver_path)
         if val is None or val == "":
@@ -381,7 +418,7 @@ def validate_run(
     # 3) Structured constraints.
     # (The ionicModel entry carries forbidden_when={"myocardiumSolver": "eikonalSolver"}
     # which the section below evaluates programmatically.)
-    errors.extend(_evaluate_structured(entry_list, context))
+    errors.extend(_evaluate_structured(entry_list, context, phase_order))
 
     # 4) Domain semantics are a plugin concern.  Core owns only generic
     # catalog constraints and receives solver-specific diagnostics as data.
@@ -397,6 +434,7 @@ def validate_run(
 def _evaluate_structured(
     entries: list[DictEntry],
     context: dict[str, Any],
+    phase_order: tuple[str, ...],
 ) -> list[ValidationError]:
     """Evaluate the four structured-constraint families per entry."""
     errors: list[ValidationError] = []
@@ -404,7 +442,7 @@ def _evaluate_structured(
                  if _entry_value_present(e, context)}
 
     for e in entries:
-        ph = primary_phase(e) or "physics"
+        ph = primary_phase(e, phase_order) or (phase_order[0] if phase_order else "")
 
         # forbidden_when: fires when ANY predicate matches AND the entry's
         # own slot has a value. Each matching predicate emits its own

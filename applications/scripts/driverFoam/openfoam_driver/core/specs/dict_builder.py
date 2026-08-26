@@ -223,20 +223,22 @@ def populate_values(
 def _populated_to_run(
     populated: dict[str, str],
     entries: list[DictEntry],
+    phase_order: tuple[str, ...],
 ) -> RunDocument:
     """Distribute populated values into a Run document keyed by each
     entry's primary phase. Selector keys (which may not correspond to any
     entry, but always do here for the dict-builder entry pool) are placed
     in the physics slice as a sensible default."""
-    config: dict[str, dict[str, str]] = {
-        "anatomy": {}, "physics": {}, "stimulus": {}, "solver": {},
-    }
+    # Slices come from the ACTIVE PLUGIN's declared phases, not a hardcoded
+    # cardiac four -- a plugin with different phase words must not KeyError here.
+    config: dict[str, dict[str, str]] = {ph: {} for ph in phase_order}
+    default_phase = phase_order[0] if phase_order else ""
     placed: set[str] = set()
     for entry in entries:
         key = slot_key(entry.driver_path)
         if key not in populated:
             continue
-        ph = primary_phase(entry) or "physics"
+        ph = primary_phase(entry, phase_order) or default_phase
         config[ph][key] = populated[key]
         placed.add(key)
     # Any populated keys without a matching entry land in physics. This

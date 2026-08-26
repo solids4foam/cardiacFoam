@@ -23,6 +23,9 @@ from openfoam_driver.plugins.cardiacfoam.dict_builder import (
 )
 from openfoam_driver.core.specs.validation import primary_phase, slot_key
 
+# This plugin owns its phase vocabulary; see CardiacFoamPlugin.get_phases().
+_PHASES: tuple[str, ...] = ("anatomy", "physics", "stimulus", "solver")
+
 
 def _read_physics_type(path: Path) -> str | None:
     if not path.exists():
@@ -93,7 +96,7 @@ def build_config(spec) -> tuple[dict[str, dict[str, Any]], tuple[StrictDiagnosti
                     continue
                 if key not in populated:
                     continue
-                phase = primary_phase(entry_obj) or "physics"
+                phase = primary_phase(entry_obj, _PHASES) or "physics"
                 config[phase][key] = populated[key]
         except Exception as exc:
             diagnostics.append(diagnostic(

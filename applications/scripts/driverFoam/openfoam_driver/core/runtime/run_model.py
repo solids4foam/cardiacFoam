@@ -41,6 +41,10 @@ from typing import Any, Literal
 
 import jsonschema
 
+# The built-in cardiac plugin's phases. Retained as a type alias for the
+# RunDocument dataclass annotations only -- it is NO LONGER the runtime source
+# of phase order. That comes from the active plugin's get_phases(); see
+# core/specs/validation.py::primary_phase.
 Phase = Literal["anatomy", "physics", "stimulus", "solver"]
 Status = Literal["draft", "queued", "planning", "planned", "running", "completed", "failed"]
 

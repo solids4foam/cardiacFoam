@@ -272,12 +272,12 @@ def build_electro_properties(
     # just the required-field subset.
     from openfoam_driver.core.compatibility import resolve_public_driver_context
 
-    run = _populated_to_run(populated, entries)
+    context_ = resolve_public_driver_context(driver_context)
+    run = _populated_to_run(
+        populated, entries, context_.capabilities.dictionaries.phases(),
+    )
     errors = [
-        e for e in validate_run(
-            run, entries=entries,
-            driver_context=resolve_public_driver_context(driver_context),
-        )
+        e for e in validate_run(run, entries=entries, driver_context=context_)
         if e.level == "error"
     ]
     if errors:
@@ -867,12 +867,12 @@ def build_physics_properties(
 
     from openfoam_driver.core.compatibility import resolve_public_driver_context
 
-    run = _populated_to_run(populated, entries)
+    context_ = resolve_public_driver_context(driver_context)
+    run = _populated_to_run(
+        populated, entries, context_.capabilities.dictionaries.phases(),
+    )
     errors = [
-        e for e in validate_run(
-            run, entries=entries,
-            driver_context=resolve_public_driver_context(driver_context),
-        )
+        e for e in validate_run(run, entries=entries, driver_context=context_)
         if e.level == "error"
     ]
     if errors:
