@@ -37,7 +37,10 @@ from openfoam_driver.core.runtime.sweep_runner import (
     sweep_plan,
     sweep_run,
 )
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
+
+_CTX = default_driver_context()
 
 
 def _write_spec(path: Path, models=("TNNP", "BuenoOrovio")):
@@ -126,7 +129,7 @@ def test_sweep_plan_entry_mode_materializes_via_apply_case_and_audits(tmp_path):
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec) as mock_load, \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report) as mock_strict_plan, \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize:
-        result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+        result = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     mock_materialize.assert_not_called()
     assert mock_load.call_count == 2
@@ -158,7 +161,7 @@ def test_sweep_plan_entry_mode_rejects_axis_combination_resolving_to_multiple_ca
     fake_spec.build_cases.return_value = [mock.Mock(), mock.Mock()]
 
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec):
-        result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+        result = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     fake_spec.apply_case.assert_not_called()
     assert result["cases"][0]["status"] == "failed"
@@ -206,7 +209,7 @@ def test_sweep_run_entry_mode_executes_run_document_sequentially(tmp_path):
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
-        result = sweep_run(spec_path, output_dir=output_dir)
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert call_order == ["apply_case", "run", "apply_case", "run"]
     assert result["completed_count"] == 2
@@ -219,7 +222,7 @@ def test_sweep_run_writes_case_record_json_for_every_case(tmp_path):
     _write_spec(spec_path)
     output_dir = tmp_path / "out"
 
-    result = sweep_run(spec_path, output_dir=output_dir)
+    result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     for case_id in ("TNNP", "BuenoOrovio"):
@@ -249,7 +252,7 @@ def test_sweep_run_writes_case_record_json_even_when_a_case_fails(tmp_path):
     spec_path.write_text(json.dumps(spec))
     output_dir = tmp_path / "out"
 
-    result = sweep_run(spec_path, output_dir=output_dir)
+    result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["failed_count"] >= 1
     assert (output_dir / "TNNP" / "case_record.json").is_file()
@@ -313,7 +316,7 @@ def test_sweep_run_archives_each_case_postprocessing_output_when_configured(tmp_
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
-        result = sweep_run(spec_path, output_dir=output_dir)
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     # Each case's archived output lands inside that case's own output_dir --
@@ -374,7 +377,7 @@ def test_sweep_run_archives_each_case_postprocessing_output_by_default(tmp_path)
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.load_entry_spec", return_value=fake_spec), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
-        result = sweep_run(spec_path, output_dir=output_dir)
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     assert (case_output_dirs[1] / "collectedOutput" / "case_1.dat").read_text() == "result 1"
@@ -390,7 +393,7 @@ def test_sweep_run_archives_nothing_for_generic_case_folder_sweeps(tmp_path):
     _write_spec(spec_path)
     output_dir = tmp_path / "out"
 
-    result = sweep_run(spec_path, output_dir=output_dir)
+    result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     for case_id in ("TNNP", "BuenoOrovio"):
@@ -402,7 +405,7 @@ def test_sweep_plan_materializes_and_audits_each_case_for_real(tmp_path):
     _write_spec(spec_path)
     output_dir = tmp_path / "out"
 
-    result = sweep_plan(spec_path, output_dir=output_dir)
+    result = sweep_plan(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["case_count"] == 2
     assert {c["case_id"] for c in result["cases"]} == {"TNNP", "BuenoOrovio"}
@@ -422,7 +425,7 @@ def test_sweep_plan_refuses_over_cap_without_expanding(tmp_path):
 
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize:
         with pytest.raises(SweepValidationError):
-            sweep_plan(spec_path, output_dir=tmp_path / "out")
+            sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
     mock_materialize.assert_not_called()
 
 
@@ -441,7 +444,7 @@ def test_sweep_plan_records_materialization_failure_and_continues(tmp_path):
     spec_path = tmp_path / "sweep.json"
     spec_path.write_text(json.dumps(spec))
 
-    result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+    result = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     by_id = {case["case_id"]: case for case in result["cases"]}
     assert by_id["TNNP"]["status"] == "ok"
@@ -470,7 +473,7 @@ def test_sweep_plan_records_unrecognized_axis_as_per_case_failure(tmp_path):
     spec_path = tmp_path / "sweep.json"
     spec_path.write_text(json.dumps(spec))
 
-    result = sweep_plan(spec_path, output_dir=tmp_path / "out")
+    result = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     assert result["case_count"] == 2
     for case in result["cases"]:
@@ -503,7 +506,7 @@ def test_sweep_run_writes_run_documents_and_continues_past_failure(tmp_path):
 
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir)
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert len(call_log) == 2
     assert (output_dir / "TNNP" / "run_document.json").exists()
@@ -552,7 +555,7 @@ def test_sweep_run_records_unrecognized_axis_as_per_case_failure(tmp_path):
 
     from openfoam_driver.core.runtime.sweep_runner import sweep_run
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
-        result = sweep_run(spec_path, output_dir=tmp_path / "out")
+        result = sweep_run(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     mock_run.assert_not_called()
     assert result["failed_count"] == 2
@@ -575,7 +578,7 @@ def test_sweep_run_refuses_over_cap_without_expanding(tmp_path):
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
         with pytest.raises(SweepValidationError):
-            sweep_run(spec_path, output_dir=tmp_path / "out")
+            sweep_run(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
     mock_materialize.assert_not_called()
     mock_run.assert_not_called()
 
@@ -607,7 +610,7 @@ def test_sweep_run_accepts_over_cap_with_explicit_override(tmp_path):
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run"):
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, max_cases=300)
+        result = sweep_run(spec_path, output_dir=output_dir, max_cases=300, driver_context=_CTX)
     assert result["case_count"] == 250
 
 
@@ -640,7 +643,7 @@ def test_resume_skips_terminal_completed_case(tmp_path):
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir)
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     mock_materialize.assert_not_called()
     mock_run.assert_not_called()
@@ -696,7 +699,7 @@ def test_fresh_reruns_case_reported_as_completed_and_wipes_stray_files(tmp_path)
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run) as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, fresh=True)
+        result = sweep_run(spec_path, output_dir=output_dir, fresh=True, driver_context=_CTX)
 
     mock_materialize.assert_called_once()
     mock_run.assert_called_once()
@@ -739,7 +742,7 @@ def test_fresh_defaults_to_false_and_preserves_resume_behavior(tmp_path):
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, fresh=False)
+        result = sweep_run(spec_path, output_dir=output_dir, fresh=False, driver_context=_CTX)
 
     mock_materialize.assert_not_called()
     mock_run.assert_not_called()
@@ -775,7 +778,7 @@ def test_resume_leaves_terminal_failed_alone_without_retry_flag(tmp_path):
     with mock.patch("openfoam_driver.core.runtime.sweep_runner.materialize_case") as mock_materialize, \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run") as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=False)
+        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=False, driver_context=_CTX)
 
     mock_materialize.assert_not_called()
     mock_run.assert_not_called()
@@ -824,7 +827,7 @@ def test_resume_retries_terminal_failed_case_with_retry_flag(tmp_path):
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run) as mock_run:
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=True)
+        result = sweep_run(spec_path, output_dir=output_dir, retry_failed=True, driver_context=_CTX)
 
     mock_materialize.assert_called_once()
     mock_run.assert_called_once()
@@ -866,7 +869,7 @@ def test_sweep_run_case_timeout_marks_failed_and_continues(tmp_path):
          mock.patch("openfoam_driver.core.runtime.sweep_runner.strict_plan", return_value=fake_report), \
          mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run", side_effect=fake_subprocess_run):
         from openfoam_driver.core.runtime.sweep_runner import sweep_run
-        result = sweep_run(spec_path, output_dir=output_dir, case_timeout_s=0.01)
+        result = sweep_run(spec_path, output_dir=output_dir, case_timeout_s=0.01, driver_context=_CTX)
 
     assert seen_kwargs.get("timeout") == 0.01
     assert result["failed_count"] == 1
@@ -890,4 +893,4 @@ def test_spec_hash_mismatch_is_refused(tmp_path):
     )
     from openfoam_driver.core.runtime.sweep_runner import sweep_run
     with pytest.raises(SweepValidationError, match="hash|spec changed"):
-        sweep_run(spec_path, output_dir=output_dir)
+        sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)

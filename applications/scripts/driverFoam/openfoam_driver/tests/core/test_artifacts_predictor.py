@@ -49,12 +49,15 @@ from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
 from openfoam_driver.core.runtime.artifacts import predict_data_artifacts
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.models import (
     CaseConfig,
     DataArtifact,
     TutorialSpec,
     expand_path_pattern,
 )
+
+_CTX = default_driver_context()
 
 
 def _make_spec(
@@ -117,7 +120,7 @@ class TestPredictorSingleCell(unittest.TestCase):
             )
             spec = _make_spec(case_root)
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
             self.assertEqual(trace.produced_by, "singleCellSolver")
@@ -141,8 +144,8 @@ class TestPredictorSingleCell(unittest.TestCase):
             _write_single_cell_electro_properties(case_a, ionic_model="TNNP")
             _write_single_cell_electro_properties(case_b, ionic_model="AlievPanfilov")
 
-            artifacts_tnnp = predict_data_artifacts(case_a, _make_spec(case_a))
-            artifacts_ap = predict_data_artifacts(case_b, _make_spec(case_b))
+            artifacts_tnnp = predict_data_artifacts(case_a, _make_spec(case_a), driver_context=_CTX)
+            artifacts_ap = predict_data_artifacts(case_b, _make_spec(case_b), driver_context=_CTX)
 
             trace_tnnp = next(a for a in artifacts_tnnp if a.artifact_id == "single_cell_trace")
             trace_ap = next(a for a in artifacts_ap if a.artifact_id == "single_cell_trace")
@@ -168,7 +171,7 @@ class TestPredictorSingleCell(unittest.TestCase):
             )
             spec = _make_spec(case_root)
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("single_cell_trace", ids)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
@@ -189,7 +192,7 @@ class TestPredictorMergesStaticOverride(unittest.TestCase):
             )
             spec = _make_spec(case_root, expected_artifacts=(static,))
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("exact_error_norm", ids)
 
@@ -204,7 +207,7 @@ class TestPredictorMergesStaticOverride(unittest.TestCase):
             _write_single_cell_electro_properties(case_root)
 
             # Discover what the derived artifact_ids are, then collide on one.
-            derived = predict_data_artifacts(case_root, _make_spec(case_root))
+            derived = predict_data_artifacts(case_root, _make_spec(case_root), driver_context=_CTX)
             self.assertGreater(len(derived), 0)
             colliding_id = derived[0].artifact_id
 
@@ -216,7 +219,7 @@ class TestPredictorMergesStaticOverride(unittest.TestCase):
             )
             spec = _make_spec(case_root, expected_artifacts=(static,))
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             by_id = {a.artifact_id: a for a in artifacts}
             self.assertEqual(by_id[colliding_id].description, "hand-authored override")
             self.assertEqual(by_id[colliding_id].path_pattern, "custom/path")
@@ -282,7 +285,7 @@ class TestPredictorMonodomain(unittest.TestCase):
             )
             spec = _make_spec(case_root)
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("monodomain_vm_series", ids)
             self.assertIn("monodomain_calcium_cai_series", ids)
@@ -299,7 +302,7 @@ class TestPredictorMonodomain(unittest.TestCase):
                 case_root, solver="monodomainSolver", ionic_model="AlievPanfilov"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             for a in artifacts:
                 self.assertTrue(
                     a.path_pattern.startswith("{time}/"),
@@ -316,7 +319,7 @@ class TestPredictorBidomain(unittest.TestCase):
                 case_root, solver="bidomainSolver", ionic_model="TNNP"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("bidomain_vm_series", ids)
             self.assertIn("bidomain_phie_series", ids)
@@ -337,7 +340,7 @@ class TestPredictorEikonal(unittest.TestCase):
             _write_eikonal_electro_properties(case_root)
             spec = _make_spec(case_root)
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertEqual(ids, {"eikonal_activationtime_series"})
             for a in artifacts:
@@ -362,7 +365,7 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 export_list=("u1", "u2", "u3"),
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             # Per-variable: Vm always + each declared export.
             self.assertIn("monodomain_vm_series", ids)
@@ -381,7 +384,7 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 export_list=("V", "Cai"),
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("bidomain_vm_series", ids)
             self.assertIn("bidomain_phie_series", ids)
@@ -409,7 +412,7 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
             self.assertEqual(trace.variables, ("Vm", "s"))
 
@@ -424,7 +427,7 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 case_root, ionic_model="AlievPanfilov"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
             self.assertEqual(trace.variables, ("u", "recovery_r"))
 
@@ -444,7 +447,7 @@ class TestPredictorExportListFiltering(unittest.TestCase):
                 export_list=(),
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             # Vm is always predicted for monodomain; no per-ionic-variable
             # artifact should appear since the declared export list is empty.
@@ -478,7 +481,7 @@ class TestPredictorManufacturedFdaRoundTrip(unittest.TestCase):
             )
             spec = _make_spec(case_root, expected_artifacts=(error_norm,))
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             derived_ids = {a.artifact_id for a in artifacts}
             # Derived: per-variable artifacts named with the monodomain_ prefix.
             self.assertTrue(
@@ -514,7 +517,7 @@ class TestPredictorPathPatternContract(unittest.TestCase):
                 case_root.mkdir()
                 writer(case_root)
                 spec = _make_spec(case_root)
-                artifacts = predict_data_artifacts(case_root, spec)
+                artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
                 self.assertGreater(
                     len(artifacts), 0,
                     f"{solver_name} produced no artifacts — fixture/handler mismatch",
@@ -548,7 +551,7 @@ class TestPredictorGracefulFallback(unittest.TestCase):
             )
             spec = _make_spec(case_root, expected_artifacts=(static,))
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             self.assertEqual(len(artifacts), 1)
             self.assertEqual(artifacts[0].artifact_id, "placeholder")
 
@@ -565,7 +568,7 @@ class TestPredictorGracefulFallback(unittest.TestCase):
             )
             spec = _make_spec(case_root)
 
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             self.assertEqual(artifacts, ())
 
 
@@ -591,7 +594,7 @@ class TestPredictorECG(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("ecg_pseudo_ecg", ids)
             ecg = next(a for a in artifacts if a.artifact_id == "ecg_pseudo_ecg")
@@ -615,7 +618,7 @@ class TestPredictorECG(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("ecg_torso_ecg", ids)
 
@@ -627,7 +630,7 @@ class TestPredictorECG(unittest.TestCase):
                 case_root, solver="bidomainSolver", ionic_model="TNNP",
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertNotIn("ecg_pseudo_ecg", ids)
             self.assertNotIn("ecg_torso_ecg", ids)
@@ -657,7 +660,7 @@ class TestPredictorPurkinje(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("purkinje_network_time_series", ids)
             self.assertIn("purkinje_network_vtk_series", ids)
@@ -678,7 +681,7 @@ class TestPredictorPurkinje(unittest.TestCase):
                 case_root, solver="monodomainSolver", ionic_model="TNNP",
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertNotIn("purkinje_network_time_series", ids)
             self.assertNotIn("purkinje_network_vtk_series", ids)
@@ -703,7 +706,7 @@ class TestPredictorVerification(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(case_root)
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             self.assertIn("verification_error_summary", ids)
             verify = next(
@@ -725,7 +728,7 @@ class TestPredictorVerification(unittest.TestCase):
                 case_root, solver="monodomainSolver", ionic_model="TNNP",
             )
             spec = _make_spec(case_root)
-            ids = {a.artifact_id for a in predict_data_artifacts(case_root, spec)}
+            ids = {a.artifact_id for a in predict_data_artifacts(case_root, spec, driver_context=_CTX)}
             self.assertNotIn("verification_error_summary", ids)
 
 
@@ -771,7 +774,7 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
                 },
             )
 
-            artifacts = predict_data_artifacts(case_root, spec_with_dag)
+            artifacts = predict_data_artifacts(case_root, spec_with_dag, driver_context=_CTX)
             ids = {a.artifact_id for a in artifacts}
             # The migrated setTorsoOrganConductivityField manifest declares
             # produces entries — at least one should appear.
@@ -816,7 +819,7 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
             )
             # Must not raise — predictor returns whatever the solver
             # handler produced, without any blockMesh contribution.
-            artifacts = predict_data_artifacts(case_root, spec_with_dag)
+            artifacts = predict_data_artifacts(case_root, spec_with_dag, driver_context=_CTX)
             self.assertGreater(len(artifacts), 0)
             produced_by_blockmesh = [
                 a for a in artifacts if a.produced_by == "blockMesh"
@@ -833,7 +836,7 @@ class TestPredictorComposesUtilityProduces(unittest.TestCase):
                 case_root, solver="monodomainSolver", ionic_model="TNNP",
             )
             spec = _make_spec(case_root)  # _make_spec gives no workflow_dag
-            artifacts = predict_data_artifacts(case_root, spec)
+            artifacts = predict_data_artifacts(case_root, spec, driver_context=_CTX)
             # All artifacts must be from the solver handler, none from
             # a utility.
             for a in artifacts:
@@ -870,7 +873,7 @@ class TestPredictorActiveTension(unittest.TestCase):
             tmp = Path(d)
             self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec)
+            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
             ids = [a.artifact_id for a in artifacts]
             self.assertNotIn("active_tension_Ta_series", ids)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
@@ -881,7 +884,7 @@ class TestPredictorActiveTension(unittest.TestCase):
             tmp = Path(d)
             self._write_single_cell_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
             spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec)
+            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
             ids = [a.artifact_id for a in artifacts]
             self.assertNotIn("active_tension_Ta_series", ids)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
@@ -899,7 +902,7 @@ class TestPredictorActiveTension(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec)
+            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
             ids = [a.artifact_id for a in artifacts]
             self.assertFalse(any("active_tension" in i for i in ids))
 
@@ -908,7 +911,7 @@ class TestPredictorActiveTension(unittest.TestCase):
             tmp = Path(d)
             self._write_single_cell_with_at(tmp, at_model="NashPanfilov", exports="Ta")
             spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec)
+            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
             at_artifacts = [a for a in artifacts if "active_tension" in a.artifact_id]
             self.assertEqual(len(at_artifacts), 0)
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
@@ -929,7 +932,7 @@ class TestPredictorActiveTension(unittest.TestCase):
                 "}\n"
             )
             spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec)
+            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
             ta = next(a for a in artifacts if a.artifact_id == "active_tension_Ta_series")
             self.assertEqual(ta.format, "openfoam_time_dirs")
             self.assertTrue(ta.time_indexed)

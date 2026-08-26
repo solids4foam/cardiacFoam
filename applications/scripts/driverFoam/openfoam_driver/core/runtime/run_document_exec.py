@@ -115,7 +115,7 @@ def _allowed_runs_root(env: dict[str, str] | None = None) -> Path | None:
 
 def _validate_config_against_plugin_schema(
     run_doc: RunDocument,
-    driver_context: "DriverContext | None",
+    driver_context: "DriverContext",
     diagnostics: list[dict[str, Any]],
 ) -> None:
     """Append a ``plugin_config_schema_violation`` diagnostic per violation.
@@ -127,10 +127,7 @@ def _validate_config_against_plugin_schema(
     """
     import jsonschema
 
-    from ..compatibility import resolve_public_driver_context
-
-    context = resolve_public_driver_context(driver_context)
-    config_schema = context.capabilities.run_document_configuration.schema()
+    config_schema = driver_context.capabilities.run_document_configuration.schema()
     try:
         jsonschema.validate(run_doc.config, config_schema)
     except jsonschema.exceptions.ValidationError as exc:

@@ -18,6 +18,9 @@ import json
 from pathlib import Path
 
 from openfoam_driver.core.runtime.sweep_runner import sweep_plan
+from openfoam_driver.core.plugin_interface import default_driver_context
+
+_CTX = default_driver_context()
 
 _SPEC = {
     "base": {
@@ -46,7 +49,7 @@ def test_a_factory_failure_fails_one_case_not_the_command(tmp_path):
     spec_path = tmp_path / "sweep.json"
     spec_path.write_text(json.dumps(_SPEC))
 
-    report = sweep_plan(spec_path, output_dir=tmp_path / "out")
+    report = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     failed = [c for c in report["cases"] if c["status"] == "failed"]
     assert len(failed) == 1, report["cases"]
@@ -59,7 +62,7 @@ def test_a_malformed_spec_is_reported_structurally(tmp_path):
     spec_path = tmp_path / "sweep.json"
     spec_path.write_text("{ not json")
 
-    report = sweep_plan(spec_path, output_dir=tmp_path / "out")
+    report = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
 
     assert report["case_count"] == 0
     assert report["cases"] == []
@@ -70,7 +73,7 @@ def test_a_malformed_spec_is_reported_structurally(tmp_path):
 def test_a_valid_spec_reports_no_spec_error(tmp_path):
     spec_path = tmp_path / "sweep.json"
     spec_path.write_text(json.dumps(_SPEC))
-    report = sweep_plan(spec_path, output_dir=tmp_path / "out")
+    report = sweep_plan(spec_path, output_dir=tmp_path / "out", driver_context=_CTX)
     assert "spec_error" not in report
 
 

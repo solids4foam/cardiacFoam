@@ -162,7 +162,7 @@ def predict_data_artifacts(
     case_root: Path,
     spec: TutorialSpec,
     *,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> tuple[DataArtifact, ...]:
     """Return the artifacts ``case_root`` will (or does) produce.
 
@@ -175,10 +175,7 @@ def predict_data_artifacts(
     Never raises. Returns ``()`` when nothing can be derived and no static
     override is supplied.
     """
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
     from openfoam_driver.core.plugin_capabilities import ArtifactPredictionRequest
-
-    driver_context = resolve_public_driver_context(driver_context)
 
     static_override = spec.metadata.get("expected_artifacts", ()) if spec.metadata else ()
     static_tuple = tuple(static_override)

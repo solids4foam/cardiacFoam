@@ -34,10 +34,13 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openfoam_driver.core.strict_planning import strict_plan
 from openfoam_driver.core.sweep.sweep_derivation_catalog import get_derivation
+
+if TYPE_CHECKING:
+    from ..plugin_interface import DriverContext
 from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError, check_case_count_cap, expand_sweep
 from openfoam_driver.sweep_materialize import materialize_case
 from openfoam_driver.sweep_routing import route_case_values, route_entry_case_values
@@ -257,11 +260,8 @@ def sweep_plan(
     *,
     output_dir: str | Path,
     max_cases: int = 200,
-    driver_context=None,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
-    from ..compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     try:
         sweep_spec = _load_spec(spec_path)
     except (OSError, ValueError) as exc:
@@ -356,7 +356,7 @@ def sweep_run(
     case_timeout_s: float | None = None,
     fresh: bool = False,
     task: str = "summarize",
-    driver_context=None,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
     """`task` plays no part in the sweep loop itself -- expanding, routing,
     materializing, and running cases is fully deterministic and has no use
@@ -364,9 +364,6 @@ def sweep_run(
     run_postprocessing_module: the sweep is task(sweep), no reasoning
     involved; the postprocess hand-off is where a task actually matters.
     """
-    from ..compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     execution_environment = configure_plugin_environment(
         os.environ,
         driver_context,
