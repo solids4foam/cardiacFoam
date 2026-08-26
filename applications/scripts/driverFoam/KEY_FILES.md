@@ -68,7 +68,7 @@ Quick navigational map for every reader type. All paths are relative to
 | `get_solve_step_commands()` | `frozenset[str]` — for telemetry attribution |
 | `get_telemetry_source_globs(command)` | `tuple[str, ...]` — solver log locations |
 | `get_extra_provenance_paths(case_root)` | `tuple[RuntimeDependency, ...]` |
-| `get_artifact_value_reader(format)` | `Any | None` |
+| `get_artifact_value_reader(format)` | `Any &#124; None` |
 
 **Key Optional Hooks (`SolverPluginOptionalHooks` — probed with `getattr`)**
 

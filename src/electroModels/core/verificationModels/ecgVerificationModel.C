@@ -48,7 +48,7 @@ word ecgVerificationModel::selectedType(const dictionary& dict)
     {
         return dict.lookupOrDefault<word>("type", "none");
     }
-    
+
     if (dict.found("verificationModel"))
     {
         return dict.subDict("verificationModel").lookupOrDefault<word>("type", "none");

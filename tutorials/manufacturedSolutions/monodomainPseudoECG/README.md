@@ -43,7 +43,7 @@ Typical outputs include:
 
 `setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSolution` (a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the duration of a tet run and restored on exit. It was formerly the standalone `monodomainTetMMS` tutorial, merged here the same way `eikonalTetMMS` was merged into `eikonalECG`.
 
-#### Purpose
+#### Tetrahedral Variant Purpose
 
 Verifies that OpenFOAM's non-orthogonal `Gauss linear corrected` Laplacian scheme sustains its spatial convergence rate on a genuinely unstructured tetrahedral mesh of the unit cube:
 

@@ -446,7 +446,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
         out << "Simulation summary:\n";
         out << "-------------------\n";
         out << "Number of cells (N)   = " << nPerDirection << "\n";
-        
+
         out << "Grid spacing (dx)     = " << dx << "\n";
         out << "Time step (dt)        = " << dt << "\n";
         out << "Number of steps       = " << nSteps << "\n";

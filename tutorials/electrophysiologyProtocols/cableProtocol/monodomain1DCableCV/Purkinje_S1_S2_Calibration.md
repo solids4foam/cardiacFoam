@@ -10,9 +10,10 @@ Through iterative testing, the `conductivity` in `constant/electroProperties` wa
 
 ## 2. S1-S2 Protocol Automation (Smart Branching)
 
-To generate a steady-state functional restitution curve, we needed to run a standard S1-S2 pacing protocol. 
+To generate a steady-state functional restitution curve, we needed to run a standard S1-S2 pacing protocol.
 
 We automated this using a "smart branching" bash script (`run_smart_restitution.sh`) that leverages OpenFOAM's native restart capabilities to save massive amounts of compute time:
+
 1. **Phase 1 (S1 Drive Train)**: We fired 5 S1 beats at a Basic Cycle Length (BCL) of 1000 ms. This simulated from `0.0s` to `4.25s` using `mpirun` across 6 cores. We saved the OpenFOAM field state at `t = 4.25s`.
 2. **Phase 2 (S2 Branches)**: For each Diastolic Interval (DI) we wanted to test, we restored the `4.25s` checkpoint and resumed the parallel simulation, injecting the S2 premature beat and only simulating the brief ~25ms window required for the wave to propagate.
 
@@ -21,7 +22,9 @@ We automated this using a "smart branching" bash script (`run_smart_restitution.
 During the generation of the restitution curve, two critical, physiologically accurate behaviors emerged from the Stewart model:
 
 ### A. Supernormal Conduction (Velocity Peaking)
+
 While the 1st S1 beat traveled at the calibrated `3.03 m/s`, subsequent beats in the drive train sped up:
+
 - **Beat 1**: 3.03 m/s
 - **Beat 2**: 3.22 m/s
 - **Beat 5**: 3.17 m/s
@@ -30,7 +33,8 @@ While the 1st S1 beat traveled at the calibrated `3.03 m/s`, subsequent beats in
 **Why this happens:** When pacing the tissue at 1 Hz, the resting membrane potential ($V_m$) does not perfectly return to its absolute minimum (e.g., -85 mV) before the next beat arrives due to ionic memory (e.g., slight accumulation of extracellular $K^+$). Because $V_m$ sits slightly higher (less negative), the membrane is closer to the excitation threshold. It therefore requires less depolarizing current to trigger adjacent cells, resulting in a faster conduction velocity known as **supernormal conduction**.
 
 ### B. APD Prolongation and ERP Shift
-The nominal resting Action Potential Duration (APD) of the Stewart model is `~290 ms`. However, pacing it 5 times at 1.0 Hz caused the APD to physiologically lengthen to **`~450 ms`**. 
+
+The nominal resting Action Potential Duration (APD) of the Stewart model is `~290 ms`. However, pacing it 5 times at 1.0 Hz caused the APD to physiologically lengthen to **`~450 ms`**.
 
 Because the APD prolonged, the Effective Refractory Period (ERP) pushed significantly outward. Any premature S2 beats with a DI below `0.330` fell inside the Absolute Refractory Period and naturally failed to propagate.
 

@@ -192,7 +192,7 @@ void manufacturedFDAMonodomainVerifier::postProcess
         Info << "\nSimulation summary:\n"
              << "-------------------\n"
              << "Number of cells (N)   = " << nPerDirection << nl
-             
+
              << "Grid spacing (dx)     = " << dx << nl
              << "Time step (dt)        = " << dt << nl
              << "Number of steps       = " << nSteps << nl
@@ -224,7 +224,7 @@ void manufacturedFDAMonodomainVerifier::postProcess
         out << "Simulation summary:\n";
         out << "-------------------\n";
         out << "Number of cells (N)   = " << nPerDirection << "\n";
-        
+
         out << "Grid spacing (dx)     = " << dx << "\n";
         out << "Time step (dt)        = " << dt << "\n";
         out << "Number of steps       = " << nSteps << "\n";

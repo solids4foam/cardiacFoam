@@ -332,7 +332,7 @@ void manufacturedFDABidomainVerifier::postProcess
             << u2Norms.first().second() << "   " << u2Norms.second() << "\n\n";
 
         out << "Number of cells (N)   = " << nPerDirection << "\n";
-        
+
         out << "Grid spacing (dx)     = " << dx << "\n";
         out << "Time step (dt)        = " << dt << "\n";
         out << "Number of steps       = " << nSteps << "\n";

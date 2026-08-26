@@ -229,7 +229,7 @@ bool manufacturedBathBidomainECGVerifier::read(const dictionary& dict)
     enabled_ = manufactured.lookupOrDefault<Switch>("enabled", true);
     k_ = manufactured.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = manufactured.lookupOrDefault<scalar>("alpha", 0.01);
-    
+
     const word variantStr = manufactured.lookupOrDefault<word>("fdaBathVariant", "groundElectrode");
 
     if (variantStr != "groundElectrode")
