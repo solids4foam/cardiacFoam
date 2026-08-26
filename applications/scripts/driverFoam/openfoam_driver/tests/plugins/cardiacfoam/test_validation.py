@@ -49,8 +49,11 @@ from openfoam_driver.dict_entries import (
 )
 from openfoam_driver.core.runtime.run_model import RunDocument
 from openfoam_driver.core.specs.validation import ValidationError, slot_key, validate_run
+from openfoam_driver.core.plugin_interface import driver_context as _driver_context
+from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 
 _PHASE_ORDER = ("anatomy", "physics", "stimulus", "solver")
+_CTX = _driver_context(CardiacFoamPlugin(), source="test")
 
 
 def _all_entries():
@@ -135,7 +138,7 @@ def _filled_run(**overrides) -> RunDocument:
 
 
 def test_empty_run_reports_missing_required_fields_per_phase():
-    errors = validate_run(_blank_run())
+    errors = validate_run(_blank_run(), driver_context=_CTX)
     phases_with_errors = {e.phase for e in errors}
     assert {"physics"} <= phases_with_errors
     assert all(isinstance(e, ValidationError) for e in errors)
@@ -143,7 +146,7 @@ def test_empty_run_reports_missing_required_fields_per_phase():
 
 def test_valid_minimal_run_has_no_errors():
     run = _filled_run()
-    errors = [e for e in validate_run(run) if e.level == "error"]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if e.level == "error"]
     assert errors == [], f"expected no errors, got: {errors}"
 
 
@@ -155,7 +158,7 @@ def test_constraint_violation_is_flagged():
             "ionicModel": "tenTusscher2006",
         },
     })
-    errors = validate_run(run)
+    errors = validate_run(run, driver_context=_CTX)
     assert any("eikonal" in e.message.lower() for e in errors), (
         f"expected an eikonal-related error, got: {[e.message for e in errors]}"
     )
@@ -189,7 +192,7 @@ def test_forbidden_when_flags_violation_in_run():
         "myocardiumSolver": "eikonalSolver",
         "ionicModel": "TNNP",
     }})
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     forbidden_errors = [e for e in errors if "forbidden" in e.message.lower()]
     assert len(forbidden_errors) == 1, (
         f"expected exactly one forbidden_when violation, got: "
@@ -209,7 +212,7 @@ def test_forbidden_when_silent_when_predicate_doesnt_match():
         "myocardiumSolver": "monodomainSolver",
         "ionicModel": "TNNP",
     }})
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     forbidden_errors = [e for e in errors if "forbidden" in e.message.lower()]
     assert forbidden_errors == []
 
@@ -224,7 +227,7 @@ def test_required_when_flags_missing_value():
     run = _blank_run(config={"physics": {
         "myocardiumSolver": "singleCellSolver",
     }})
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     required_errors = [
         e for e in errors
         if "required" in e.message.lower() and "stim_amplitude" in e.message
@@ -245,7 +248,7 @@ def test_required_when_silent_when_value_present():
         "physics": {"myocardiumSolver": "singleCellSolver"},
         "stimulus": {"singleCellStimulus.stim_amplitude": "60"},
     })
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     assert errors == []
 
 
@@ -259,7 +262,7 @@ def test_required_when_silent_when_predicate_doesnt_match():
     run = _blank_run(config={"physics": {
         "myocardiumSolver": "monodomainSolver",
     }})
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     assert errors == []
 
 
@@ -274,7 +277,7 @@ def test_applicable_when_skips_inapplicable_entry():
     run = _blank_run(config={"physics": {
         "myocardiumSolver": "monodomainSolver",
     }})
-    errors = validate_run(run, entries=[entry])
+    errors = validate_run(run, entries=[entry], driver_context=_CTX)
     assert errors == [], (
         f"inapplicable entry must not fire required check, got: "
         f"{[e.message for e in errors]}"
@@ -303,7 +306,7 @@ def test_mutually_exclusive_with_flags_violation():
         "externalStimulus.stimulusDuration": "0.002",
         "externalStimulus.stimulusDurationList": "(0.002 0.001)",
     }})
-    errors = validate_run(run, entries=[entry_a, entry_b])
+    errors = validate_run(run, entries=[entry_a, entry_b], driver_context=_CTX)
     mutex_errors = [e for e in errors if "mutually exclusive" in e.message.lower()]
     assert len(mutex_errors) >= 1, (
         f"expected mutually-exclusive violation, got: {[e.message for e in errors]}"
@@ -323,13 +326,13 @@ def test_tuple_predicate_matches_membership():
     )
     # Not applicable → no required-check fire.
     run_inactive = _blank_run(config={"physics": {"ionicModel": "TNNP"}})
-    assert validate_run(run_inactive, entries=[entry]) == []
+    assert validate_run(run_inactive, entries=[entry], driver_context=_CTX) == []
 
     # Applicable → required fires when value missing.
     run_active = _blank_run(config={"physics": {
         "ionicModel": "monodomainFDAManufactured",
     }})
-    errors = validate_run(run_active, entries=[entry])
+    errors = validate_run(run_active, entries=[entry], driver_context=_CTX)
     required_errors = [e for e in errors if "required" in e.message.lower()]
     assert len(required_errors) >= 1
 
@@ -411,7 +414,7 @@ def test_validate_run_accepts_default_entries_for_backward_compat():
     """When no entries kwarg is supplied, validate_run uses the live
     catalog (existing public API contract)."""
     run = _filled_run()
-    errors = [e for e in validate_run(run) if e.level == "error"]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if e.level == "error"]
     assert errors == []
 
 
@@ -463,7 +466,7 @@ def _coupling_run(myocardium: str, *,
 def test_solver_coupling_silent_when_no_purkinje_pairing():
     """No conductionSystemSolver in context → no coupling rules fire."""
     run = _coupling_run("monodomainSolver")
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     coupling_errors = [
         e for e in errors
         if "coupling" in e.message.lower() or "coupler" in e.message.lower()
@@ -479,7 +482,7 @@ def test_solver_coupling_valid_monodomain_pair_silent():
         purkinje="monodomain1DSolver",
         coupler="reactionDiffusionPvjCoupler",
     )
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     coupling_errors = [
         e for e in errors
         if "incompatible" in e.message.lower()
@@ -497,7 +500,7 @@ def test_solver_coupling_flags_incompatible_mono_eikonal_pair():
         purkinje="eikonalSolver",
         coupler="reactionDiffusionPvjCoupler",
     )
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     incompat = [e for e in errors if "incompatible" in e.message.lower()]
     assert len(incompat) >= 1, (
         f"expected incompatible-pair error, got: {[e.message for e in errors]}"
@@ -511,7 +514,7 @@ def test_solver_coupling_allows_bidomain_with_monodomain1D():
         purkinje="monodomain1DSolver",
         coupler="reactionDiffusionPvjCoupler",
     )
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     bidomain_errors = [
         e for e in errors
         if "bidomain" in e.message.lower() and "purkinje" in e.message.lower()
@@ -527,7 +530,7 @@ def test_solver_coupling_flags_wrong_coupler_for_valid_pair():
         purkinje="monodomain1DSolver",
         coupler="eikonalPvjCoupler",   # wrong; should be reactionDiffusionPvjCoupler
     )
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     coupler_errors = [
         e for e in errors
         if "reactiondiffusionpvjcoupler" in e.message.lower()
@@ -544,7 +547,7 @@ def test_solver_coupling_flags_wrong_coupler_for_valid_pair():
 def test_block_reference_silent_when_no_couplings():
     """No domainCouplings in context → no block-reference rules fire."""
     run = _coupling_run("monodomainSolver")
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     ref_errors = [e for e in errors if "reference" in e.message.lower()]
     assert ref_errors == []
 
@@ -559,7 +562,7 @@ def test_block_reference_silent_when_target_block_declared():
         network_name="purkinjeNet",
         coupling_name="lvCoupling",
     )
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     dangling_errors = [
         e for e in errors
         if "reference" in e.message.lower()
@@ -580,7 +583,7 @@ def test_block_reference_flags_dangling_target():
     ] = "ghostNet"   # never declared under conductionNetworkDomains.ghostNet.*
     run = RunDocument(id="r1", name="r", status="draft", config=config)
 
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     dangling = [
         e for e in errors
         if "ghostNet" in e.message
@@ -616,7 +619,7 @@ def test_dynamic_required_field_flags_missing_value_scoped_to_its_own_network():
     # networkB never needs purkinjeCV under this solver.
     run = RunDocument(id="r1", name="r", status="draft", config=config)
 
-    errors = validate_run(run, entries=[])
+    errors = validate_run(run, entries=[], driver_context=_CTX)
     cv_errors = [e for e in errors if "purkinjeCV" in e.message]
 
     assert any("networkA" in e.message for e in cv_errors), (
@@ -831,7 +834,7 @@ def test_representative_run_has_no_validator_errors(spec_label: str, run: RunDoc
     Warnings are permitted.  An error-level violation indicates an over-
     restrictive structured constraint.
     """
-    errors = [e for e in validate_run(run) if e.level == "error"]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if e.level == "error"]
     assert errors == [], (
         f"spec='{spec_label}': expected no validator errors for representative run, "
         f"got:\n" + "\n".join(f"  [{e.phase}] {e.field}: {e.message}" for e in errors)

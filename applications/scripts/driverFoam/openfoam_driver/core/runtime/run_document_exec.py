@@ -147,7 +147,7 @@ def build_execution_inputs(
     run_doc: RunDocument,
     *,
     utility_produces: dict[str, tuple[str, ...]] | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> tuple[RunDocumentExecutionInputs | None, tuple[dict[str, Any], ...]]:
     """Adapt ``run_doc`` into executor inputs.
 
@@ -159,7 +159,7 @@ def build_execution_inputs(
     """
     diagnostics: list[dict[str, Any]] = []
 
-    if driver_context is not None and run_doc.plugin is not None:
+    if run_doc.plugin is not None:
         planned = run_doc.plugin
         selected = driver_context.identity.to_json()
         mismatched = [

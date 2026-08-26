@@ -9,6 +9,10 @@ from openfoam_driver.core.specs.apply_overrides import (
     OverrideError,
 )
 from openfoam_driver.core.runtime.mutators import read_foam_entry
+from openfoam_driver.core.plugin_interface import driver_context as _driver_context
+from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
+
+_CTX = _driver_context(CardiacFoamPlugin(), source="test")
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
 SINGLE_CELL = REPO_ROOT / "tutorials" / "electrophysiologyProtocols" / "singleCell"
@@ -32,7 +36,7 @@ def _case(tmp_path: Path) -> Path:
 
 def test_validate_rejects_non_catalog_driver_path():
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "$ELECTRO_MODEL_COEFFS.notAKey", "value": "1"}])
+        validate_overrides([{"driver_path": "$ELECTRO_MODEL_COEFFS.notAKey", "value": "1"}], driver_context=_CTX)
     assert "notAKey" in str(exc.value)
 
 def test_validate_accepts_safe_file_paths():
@@ -40,21 +44,21 @@ def test_validate_accepts_safe_file_paths():
         {"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-6"},
         {"driver_path": "system/electro/fvSolution:solvers/V/tolerance", "value": "1e-6"},
         {"driver_path": "system/controlDict:deltaT", "value": "0.0001"},
-    ])
+    ], driver_context=_CTX)
 
 def test_validate_rejects_unsafe_file_paths():
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "constant/physicsProperties:type", "value": "electroModel"}])
+        validate_overrides([{"driver_path": "constant/physicsProperties:type", "value": "electroModel"}], driver_context=_CTX)
     assert "not a safe system/ path" in str(exc.value)
 
     with pytest.raises(OverrideError):
-        validate_overrides([{"driver_path": "system/../../etc/passwd:root", "value": "hack"}])
+        validate_overrides([{"driver_path": "system/../../etc/passwd:root", "value": "hack"}], driver_context=_CTX)
 
     with pytest.raises(OverrideError):
-        validate_overrides([{"driver_path": "/etc/passwd:root", "value": "hack"}])
+        validate_overrides([{"driver_path": "/etc/passwd:root", "value": "hack"}], driver_context=_CTX)
 
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "system/fvSolution:", "value": "1"}])
+        validate_overrides([{"driver_path": "system/fvSolution:", "value": "1"}], driver_context=_CTX)
     assert "missing an entry path" in str(exc.value)
 
 
@@ -67,7 +71,7 @@ def test_validate_accepts_control_and_electro():
         # read flat from the coeffs dict at ODESolver.C:70.
         {"driver_path": "$ELECTRO_MODEL_COEFFS.maxSteps", "value": "20000"},
         {"driver_path": "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude", "value": "80"},
-    ])
+    ], driver_context=_CTX)
 
 
 def test_validate_accepts_keys_at_the_scopes_that_actually_read_them():
@@ -86,7 +90,7 @@ def test_validate_accepts_keys_at_the_scopes_that_actually_read_them():
                         ".purkinjeGraphModelCoeffs.solver", "value": "RKF45"},
         {"driver_path": "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.LV"
                         ".purkinjeGraphModelCoeffs.maxSteps", "value": "1000"},
-    ])
+    ], driver_context=_CTX)
 
 
 def test_validate_accepts_purkinje_conduction_velocity_and_ode_tolerances():
@@ -107,7 +111,7 @@ def test_validate_accepts_purkinje_conduction_velocity_and_ode_tolerances():
         {"driver_path": f"{purkinje}.purkinjeCV", "value": "[0 1 -1 0 0 0 0] 4.2"},
         {"driver_path": f"{purkinje}.absTol", "value": "1e-8"},
         {"driver_path": f"{purkinje}.relTol", "value": "1e-6"},
-    ])
+    ], driver_context=_CTX)
 
 
 def test_validate_rejects_unknown_flat_controldict_key():
@@ -116,15 +120,15 @@ def test_validate_rejects_unknown_flat_controldict_key():
     # accepted and only discovered to be bogus (or worse, silently written) at
     # apply time.
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "notAKey", "value": "1"}])
+        validate_overrides([{"driver_path": "notAKey", "value": "1"}], driver_context=_CTX)
     assert "notAKey" in str(exc.value)
 
 
 def test_validate_rejects_malformed_payload():
     with pytest.raises(OverrideError):
-        validate_overrides({"driver_path": "deltaT", "value": "1"})   # not a list
+        validate_overrides({"driver_path": "deltaT", "value": "1"}, driver_context=_CTX)   # not a list
     with pytest.raises(OverrideError):
-        validate_overrides([{"driver_path": "deltaT"}])               # missing value
+        validate_overrides([{"driver_path": "deltaT"}], driver_context=_CTX)               # missing value
 
 
 def test_validate_rejects_placeholder_path():
@@ -132,28 +136,28 @@ def test_validate_rejects_placeholder_path():
         validate_overrides(
             [{"driver_path": "$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.scale.<AC_name>",
               "value": "1"}]
-        )
+        , driver_context=_CTX)
     assert "contains a placeholder" in str(exc.value)
 
 def test_validate_accepts_concrete_dynamic_path():
     validate_overrides(
         [{"driver_path": "$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.scale.myChannel",
           "value": "1"}]
-    )
+    , driver_context=_CTX)
 
 
 def test_validate_rejects_out_of_enum_value():
     with pytest.raises(OverrideError):
         validate_overrides(
             [{"driver_path": "$ELECTRO_MODEL_COEFFS.solutionAlgorithm", "value": "bogus"}]
-        )
+        , driver_context=_CTX)
 
 
 # --- application (exercises the real resolver + mutators) ------------------
 
 def test_apply_deltat_edits_control_dict(tmp_path):
     case = _case(tmp_path)
-    apply_overrides([{"driver_path": "deltaT", "value": "0.0005"}], case_root=case)
+    apply_overrides([{"driver_path": "deltaT", "value": "0.0005"}], case_root=case, driver_context=_CTX)
     assert "0.0005" in (case / "system" / "controlDict").read_text()
 
 
@@ -164,7 +168,7 @@ def test_apply_flat_electro_key_edits_solver_coeffs(tmp_path):
     apply_overrides(
         [{"driver_path": "$ELECTRO_MODEL_COEFFS.maxSteps", "value": "20000"}],
         case_root=case,
-    )
+     driver_context=_CTX,)
     assert_foam_entry(
         case / "constant" / "electroProperties",
         "maxSteps",
@@ -178,7 +182,7 @@ def test_apply_nested_electro_key_edits_nested_block(tmp_path):
     apply_overrides(
         [{"driver_path": "$ELECTRO_MODEL_COEFFS.singleCellStimulus.stim_amplitude", "value": "80"}],
         case_root=case,
-    )
+     driver_context=_CTX,)
     assert "80" in (case / "constant" / "electroProperties").read_text()
 
 
@@ -190,7 +194,7 @@ def test_apply_missing_control_dict_raises_override_error(tmp_path):
     )
     # no controlDict -> mutator FileNotFoundError must surface as OverrideError, not raw.
     with pytest.raises(OverrideError):
-        apply_overrides([{"driver_path": "deltaT", "value": "0.0005"}], case_root=tmp_path)
+        apply_overrides([{"driver_path": "deltaT", "value": "0.0005"}], case_root=tmp_path, driver_context=_CTX)
 
 
 def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
@@ -198,7 +202,7 @@ def test_apply_fvSolution_edits_file(tmp_path, monkeypatch):
     apply_overrides(
         [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
         case_root=case,
-    )
+     driver_context=_CTX,)
     fv_solution = case / "system" / "fvSolution"
     tolerance = read_foam_entry(fv_solution, "tolerance", scope=["solvers", "V"])
     assert float(tolerance) == pytest.approx(1e-6)
@@ -209,7 +213,7 @@ def test_apply_region_fvSolution_edits_file(tmp_path, monkeypatch):
     apply_overrides(
         [{"driver_path": "system/electro/fvSolution:solvers/V/tolerance", "value": "1e-6"}],
         case_root=case,
-    )
+     driver_context=_CTX,)
     electro_fv_solution = case / "system" / "electro" / "fvSolution"
     tolerance = read_foam_entry(electro_fv_solution, "tolerance", scope=["solvers", "V"])
     assert float(tolerance) == pytest.approx(1e-6)
@@ -231,7 +235,7 @@ def test_apply_system_file_override_works_without_foamdictionary(tmp_path):
     apply_overrides(
         [{"driver_path": "system/fvSolution:solvers/V/tolerance", "value": "1e-9"}],
         case_root=case,
-    )
+     driver_context=_CTX,)
     tolerance = read_foam_entry(
         case / "system" / "fvSolution", "tolerance", scope=["solvers", "V"]
     )
@@ -261,7 +265,7 @@ def test_validate_accepts_the_manufactured_solution_switches():
         {"driver_path": "$ELECTRO_MODEL_COEFFS.domainCouplings.pvj"
                         ".verificationModel.type",
          "value": "coupled1D3DMonodomainVerifier"},
-    ])
+    ], driver_context=_CTX)
 
 
 # --- override scopes are plugin-declared, not core-hardcoded ---------------
@@ -273,7 +277,7 @@ def test_validate_accepts_the_manufactured_solution_switches():
 
 def test_validate_rejects_an_unknown_scope_token():
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "$SOME_OTHER_PLUGIN.foo", "value": "1"}])
+        validate_overrides([{"driver_path": "$SOME_OTHER_PLUGIN.foo", "value": "1"}], driver_context=_CTX)
     assert "unknown scope token" in str(exc.value)
     assert "$SOME_OTHER_PLUGIN" in str(exc.value)
     assert "$ELECTRO_MODEL_COEFFS" in str(exc.value)  # the one scope that IS known
@@ -285,7 +289,7 @@ def test_apply_rejects_an_unknown_scope_token_before_any_write(tmp_path):
         apply_overrides(
             [{"driver_path": "$SOME_OTHER_PLUGIN.foo", "value": "1"}],
             case_root=case,
-        )
+         driver_context=_CTX,)
     assert "unknown scope token" in str(exc.value)
     # Nothing should have been touched.
     assert "foo" not in (case / "constant" / "electroProperties").read_text()
@@ -359,12 +363,12 @@ def test_cardiac_plugin_declares_the_myocardium_solver_regeneration_scope():
 def test_validate_accepts_a_bare_myocardium_solver_override_with_a_valid_enum_value():
     # Previously rejected outright: "not a known controlDict entry" (VERIFIED
     # FACT #1 in the task this test guards). Now routed to regeneration.
-    validate_overrides([{"driver_path": "myocardiumSolver", "value": "eikonalSolver"}])
+    validate_overrides([{"driver_path": "myocardiumSolver", "value": "eikonalSolver"}], driver_context=_CTX)
 
 
 def test_validate_rejects_a_bare_myocardium_solver_override_with_an_invalid_enum_value():
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "myocardiumSolver", "value": "notARealSolver"}])
+        validate_overrides([{"driver_path": "myocardiumSolver", "value": "notARealSolver"}], driver_context=_CTX)
     assert "not in enum" in str(exc.value)
 
 
@@ -376,7 +380,7 @@ def test_validate_still_rejects_other_bare_selector_keys_as_unknown_controlDict_
     $ELECTRO_MODEL_COEFFS.* key-patch route. A bare (un-scoped) override
     for one of them is still just an unrecognised controlDict entry."""
     with pytest.raises(OverrideError) as exc:
-        validate_overrides([{"driver_path": "ionicModel", "value": "TNNP"}])
+        validate_overrides([{"driver_path": "ionicModel", "value": "TNNP"}], driver_context=_CTX)
     assert "not a known controlDict entry" in str(exc.value)
 
 
@@ -415,9 +419,9 @@ def test_apply_regenerates_electro_properties_for_a_myocardium_solver_override(t
         {"driver_path": "$ELECTRO_MODEL_COEFFS.stimulusLocationMin", "value": "(1e6 1e6 1e6)"},
         {"driver_path": "$ELECTRO_MODEL_COEFFS.stimulusLocationMax", "value": "(1e6 1e6 1e6)"},
     ]
-    validate_overrides(overrides)
+    validate_overrides(overrides, driver_context=_CTX)
     with pytest.raises(OverrideError) as exc:
-        apply_overrides(overrides, case_root=tmp_path)
+        apply_overrides(overrides, case_root=tmp_path, driver_context=_CTX)
     message = str(exc.value)
     assert "eikonal" in message.lower()
     assert "reaction-diffusion" in message.lower()

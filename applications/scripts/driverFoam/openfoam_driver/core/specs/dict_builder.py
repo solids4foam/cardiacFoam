@@ -257,7 +257,7 @@ _PLACEHOLDER_RE = _re.compile(r"<[A-Za-z_][A-Za-z0-9_]*>")
 def is_known_override_driver_path(
     key: str,
     *,
-    driver_context=None,
+    driver_context,
 ) -> bool:
     """True if `key` matches a real dict-entry driver_path in the active
     plugin's catalog.
@@ -273,9 +273,6 @@ def is_known_override_driver_path(
     rather than silently accepting an override that has no matching entry
     anywhere and therefore no effect.
     """
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     normalized = slot_key(key)
     for entry in driver_context.capabilities.dictionaries.catalog().entries:
         entry_key = slot_key(entry.driver_path)

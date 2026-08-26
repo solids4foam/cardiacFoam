@@ -143,11 +143,8 @@ class OverrideError(ValueError):
 
 
 def _catalog_entries(
-    driver_context=None,
+    driver_context,
 ) -> tuple[set[str], dict[str, Any], tuple[OverrideScope, ...], tuple[RegenerationScope, ...]]:
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     catalog = driver_context.capabilities.dictionaries.catalog()
     scopes = driver_context.capabilities.override_scopes.scopes()
     regeneration_scopes = driver_context.capabilities.dict_regeneration.scopes()
@@ -193,7 +190,7 @@ def _scope_token(dp: str) -> str:
     return dp[1:].split(".", 1)[0]
 
 
-def validate_overrides(overrides: Any, *, driver_context=None) -> None:
+def validate_overrides(overrides: Any, *, driver_context) -> None:
     """Reject anything not safely applyable, *before* any write. Raises OverrideError."""
     if not isinstance(overrides, list):
         raise OverrideError(
@@ -276,16 +273,13 @@ def validate_overrides(overrides: Any, *, driver_context=None) -> None:
 
 
 def apply_overrides(
-    overrides: list[dict[str, Any]], *, case_root: Path, driver_context=None,
+    overrides: list[dict[str, Any]], *, case_root: Path, driver_context,
 ) -> None:
     """Apply validated overrides to the case dicts.
 
     Raises OverrideError on any mutator failure (caught at the CLI boundary). Not
     transactional: a mid-list failure can leave earlier overrides applied.
     """
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     scope_by_token = {
         scope.token: scope
         for scope in driver_context.capabilities.override_scopes.scopes()

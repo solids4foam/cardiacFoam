@@ -233,6 +233,7 @@ def build_electro_properties(
     *,
     overrides: dict[str, str] | None = None,
     typical_value_fallback: bool = True,
+    driver_context: "Any | None" = None,
 ) -> str:
     """Synthesise a complete `electroProperties` dict from intent.
 
@@ -269,8 +270,16 @@ def build_electro_properties(
     # does), so we don't pre-call `check_required` from the public builder
     # entry-point. `check_required` stays exported for callers that want
     # just the required-field subset.
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
     run = _populated_to_run(populated, entries)
-    errors = [e for e in validate_run(run, entries=entries) if e.level == "error"]
+    errors = [
+        e for e in validate_run(
+            run, entries=entries,
+            driver_context=resolve_public_driver_context(driver_context),
+        )
+        if e.level == "error"
+    ]
     if errors:
         raise ValueError(
             "build_electro_properties: validator rejected synthesised dict:\n  - "
@@ -826,6 +835,7 @@ def build_physics_properties(
     *,
     overrides: dict[str, str] | None = None,
     typical_value_fallback: bool = True,
+    driver_context: "Any | None" = None,
 ) -> str:
     """Synthesise a complete `physicsProperties` dict from intent.
 
@@ -855,8 +865,16 @@ def build_physics_properties(
         entries, context, typical_value_fallback=typical_value_fallback,
     )
 
+    from openfoam_driver.core.compatibility import resolve_public_driver_context
+
     run = _populated_to_run(populated, entries)
-    errors = [e for e in validate_run(run, entries=entries) if e.level == "error"]
+    errors = [
+        e for e in validate_run(
+            run, entries=entries,
+            driver_context=resolve_public_driver_context(driver_context),
+        )
+        if e.level == "error"
+    ]
     if errors:
         raise ValueError(
             "build_physics_properties: validator rejected synthesised dict:\n  - "
@@ -942,10 +960,10 @@ def build_and_launch(
         )
 
     electro_text = build_electro_properties(
-        electro_selectors, overrides=electro_overrides,
+        electro_selectors, overrides=electro_overrides, driver_context=driver_context,
     )
     physics_text = build_physics_properties(
-        physics_selectors, overrides=physics_overrides,
+        physics_selectors, overrides=physics_overrides, driver_context=driver_context,
     )
 
     constant_dir.mkdir(parents=True, exist_ok=True)

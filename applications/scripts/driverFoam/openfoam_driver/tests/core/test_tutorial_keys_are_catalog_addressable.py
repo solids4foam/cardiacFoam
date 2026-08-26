@@ -56,7 +56,11 @@ from pathlib import Path
 import pytest
 
 from openfoam_driver.core.specs.apply_overrides import OverrideError, validate_overrides
+from openfoam_driver.core.plugin_interface import driver_context as _driver_context
+from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
+
+_CTX = _driver_context(CardiacFoamPlugin(), source="test")
 
 pytestmark = skip_without_monorepo
 
@@ -142,7 +146,7 @@ def test_every_tutorial_dict_key_is_catalog_addressable() -> None:
     for driver_path in sorted(keys):
         concrete = driver_path.replace("<name>", "X")
         try:
-            validate_overrides([{"driver_path": concrete, "value": "1"}])
+            validate_overrides([{"driver_path": concrete, "value": "1"}], driver_context=_CTX)
         except OverrideError as exc:
             if "not catalog-addressable" in str(exc):
                 unaddressable.append(driver_path)

@@ -165,6 +165,7 @@ def _execute_step(
     tail_lines: int,
     execution_env: dict[str, str] | None = None,
     apply_overrides_path: str | None = None,
+    driver_context=None,
 ) -> int:
     """Run one workflow step, print the JSON payload, return the exit code.
 
@@ -189,8 +190,11 @@ def _execute_step(
     if apply_overrides_path is not None:
         try:
             overrides = json.loads(Path(apply_overrides_path).read_text())
-            validate_overrides(overrides)
-            apply_overrides(overrides, case_root=case_root)
+            from .core.compatibility import resolve_public_driver_context
+
+            resolved_driver_context = resolve_public_driver_context(driver_context)
+            validate_overrides(overrides, driver_context=resolved_driver_context)
+            apply_overrides(overrides, case_root=case_root, driver_context=resolved_driver_context)
         except (OSError, ValueError, OverrideError) as exc:
             print(json.dumps({
                 "status": "failed",
@@ -513,7 +517,7 @@ def _context_from_entry(
     )
 
 
-def _dispatch_context(args, context: _ExecutionContext) -> int:
+def _dispatch_context(args, context: _ExecutionContext, driver_context) -> int:
     blocked = _refuse_environment_errors(context, action=args.action)
     if blocked is not None:
         return blocked
@@ -541,6 +545,7 @@ def _dispatch_context(args, context: _ExecutionContext) -> int:
             tail_lines=args.tail_lines,
             execution_env=context.execution_env,
             apply_overrides_path=args.apply,
+            driver_context=driver_context,
         )
     return _execute_run(
         entry_label=context.entry_label,
@@ -561,7 +566,7 @@ def _run_document_dispatch(args, driver_context) -> int:
     context = _context_from_run_document(args, driver_context)
     if context is None:
         return 1
-    return _dispatch_context(args, context)
+    return _dispatch_context(args, context, driver_context)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -909,7 +914,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if context is None:
             return failure_code
-        return _dispatch_context(args, context)
+        return _dispatch_context(args, context, driver_context)
 
     if args.action == "run":
         if not (args.strict or args.run_document):
@@ -928,7 +933,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if context is None:
             return failure_code
-        return _dispatch_context(args, context)
+        return _dispatch_context(args, context, driver_context)
 
     if args.action == "sweep-plan":
         output_dir = args.output_dir or default_sweep_output_dir(args.spec)

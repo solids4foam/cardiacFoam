@@ -63,10 +63,7 @@ _PHASE_ORDER: tuple[Phase, ...] = get_args(Phase)
 
 
 from .validation_types import ValidationError
-def _all_entries(driver_context: "DriverContext | None" = None):
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
+def _all_entries(driver_context: "DriverContext"):
     yield from driver_context.capabilities.dictionaries.entries()
 
 
@@ -292,7 +289,7 @@ def _format_predicate(predicate: dict[str, Any]) -> str:
     return " and ".join(parts)
 
 
-def _all_entries_list(driver_context: "DriverContext | None" = None):
+def _all_entries_list(driver_context: "DriverContext"):
     return list(_all_entries(driver_context))
 
 
@@ -300,7 +297,7 @@ def validate_run(
     run,
     *,
     entries: Iterable[DictEntry] | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> list[ValidationError]:
     """Validate ``run`` against the dict-entry catalog.
 
@@ -312,7 +309,6 @@ def validate_run(
     error-level diagnostics and short-circuits the remaining checks (see
     :func:`_non_mapping_phase_errors`).
     """
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
     from openfoam_driver.core.plugin_capabilities import RunSemanticValidationRequest
 
     # 0) Shape guard. Every later step indexes phase slices as mappings;
@@ -321,7 +317,6 @@ def validate_run(
     if shape_errors:
         return shape_errors
 
-    driver_context = resolve_public_driver_context(driver_context)
     entry_list: list[DictEntry] = (
         list(entries) if entries is not None else _all_entries_list(driver_context)
     )

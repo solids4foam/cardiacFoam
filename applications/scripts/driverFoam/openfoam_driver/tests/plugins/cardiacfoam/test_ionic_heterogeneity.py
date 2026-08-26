@@ -42,6 +42,10 @@ from __future__ import annotations
 
 from openfoam_driver.core.runtime.run_model import RunDocument
 from openfoam_driver.core.specs.validation import validate_run
+from openfoam_driver.core.plugin_interface import driver_context as _driver_context
+from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
+
+_CTX = _driver_context(CardiacFoamPlugin(), source="test")
 
 _NATIVE_TISSUE_MODELS = ("BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl")
 _OVERRIDE_ONLY_TISSUE_MODELS = (
@@ -301,9 +305,9 @@ def test_heterogeneity_with_incapable_model_is_error():
         "ionicHeterogeneity.field": "t",
         "ionicHeterogeneity.mode": "transmuralBands",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "heterogeneity" in e.message.lower()]
-    assert len(errors) == 1, [e.message for e in validate_run(run)]
+    assert len(errors) == 1, [e.message for e in validate_run(run, driver_context=_CTX)]
 
 
 def test_heterogeneity_with_capable_model_no_het_error():
@@ -316,7 +320,7 @@ def test_heterogeneity_with_capable_model_no_het_error():
         "ionicHeterogeneity.endoMInterface": "0.3",
         "ionicHeterogeneity.mEpiInterface": "0.7",
     })
-    het_errors = [e for e in validate_run(run)
+    het_errors = [e for e in validate_run(run, driver_context=_CTX)
                   if e.level == "error" and "heterogeneity" in e.message.lower()]
     assert het_errors == []
 
@@ -330,7 +334,7 @@ def test_endoM_must_be_less_than_mEpi():
         "ionicHeterogeneity.endoMInterface": "0.8",
         "ionicHeterogeneity.mEpiInterface": "0.3",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "endoMInterface" in e.message]
     assert len(errors) == 1
 
@@ -344,7 +348,7 @@ def test_endoM_less_than_mEpi_is_silent():
         "ionicHeterogeneity.endoMInterface": "0.3",
         "ionicHeterogeneity.mEpiInterface": "0.7",
     })
-    errors = [e for e in validate_run(run) if "endoMInterface" in e.message]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if "endoMInterface" in e.message]
     assert errors == []
 
 
@@ -354,9 +358,9 @@ def test_tissue_incompatible_with_model_is_error():
         "ionicModel": "AlievPanfilovcompactBatched",   # myocyte-only (not yet wired for heterogeneity)
         "tissue": "epicardialCells",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "compatible tissues" in e.message]
-    assert len(errors) == 1, [e.message for e in validate_run(run)]
+    assert len(errors) == 1, [e.message for e in validate_run(run, driver_context=_CTX)]
 
 
 def test_tissue_compatible_with_model_is_silent():
@@ -365,7 +369,7 @@ def test_tissue_compatible_with_model_is_silent():
         "ionicModel": "BuenoOrovio",
         "tissue": "epicardialCells",
     })
-    issues = [e for e in validate_run(run) if "compatible tissues" in e.message]
+    issues = [e for e in validate_run(run, driver_context=_CTX) if "compatible tissues" in e.message]
     assert issues == []
 
 
@@ -381,9 +385,9 @@ def test_apex_base_with_incapable_model_is_error():
         "ionicHeterogeneity.apexBaseBands.field": "longitudinal",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "apex-to-base" in e.message]
-    assert len(errors) == 1, [e.message for e in validate_run(run)]
+    assert len(errors) == 1, [e.message for e in validate_run(run, driver_context=_CTX)]
 
 
 def test_apex_base_with_capable_model_no_error():
@@ -397,7 +401,7 @@ def test_apex_base_with_capable_model_no_error():
         "ionicHeterogeneity.apexBaseBands.scalingMax": "5.0",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    ab_errors = [e for e in validate_run(run)
+    ab_errors = [e for e in validate_run(run, driver_context=_CTX)
                  if e.level == "error" and "apex" in e.message.lower()]
     assert ab_errors == []
 
@@ -411,7 +415,7 @@ def test_apex_base_beta_must_be_positive():
         "ionicHeterogeneity.apexBaseBands.beta": "-1.0",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "beta" in e.message]
     assert len(errors) == 1
 
@@ -425,7 +429,7 @@ def test_apex_base_positive_beta_is_silent():
         "ionicHeterogeneity.apexBaseBands.beta": "3.0",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    errors = [e for e in validate_run(run) if "beta" in e.message]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if "beta" in e.message]
     assert errors == []
 
 
@@ -439,7 +443,7 @@ def test_apex_base_scalingMin_must_not_exceed_scalingMax():
         "ionicHeterogeneity.apexBaseBands.scalingMax": "2.0",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    errors = [e for e in validate_run(run)
+    errors = [e for e in validate_run(run, driver_context=_CTX)
               if e.level == "error" and "scalingMin" in e.message]
     assert len(errors) == 1
 
@@ -454,7 +458,7 @@ def test_apex_base_valid_scaling_range_is_silent():
         "ionicHeterogeneity.apexBaseBands.scalingMax": "5.0",
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
-    errors = [e for e in validate_run(run) if "scalingMin" in e.message]
+    errors = [e for e in validate_run(run, driver_context=_CTX) if "scalingMin" in e.message]
     assert errors == []
 
 
@@ -472,7 +476,7 @@ def test_transmural_and_apex_base_can_coexist():
         "ionicHeterogeneity.apexBaseBands.variables": "(g_Ks)",
     })
     het_errors = [
-        e for e in validate_run(run)
+        e for e in validate_run(run, driver_context=_CTX)
         if e.level == "error" and "heterogeneity" in e.message.lower()
     ]
     assert het_errors == []

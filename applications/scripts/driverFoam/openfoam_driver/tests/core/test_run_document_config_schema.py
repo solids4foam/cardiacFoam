@@ -106,7 +106,9 @@ def _ingest(config: dict) -> tuple[dict, ...]:
         path = Path(temp) / "run.json"
         path.write_text(json.dumps(_document_json(config)))
         run_doc = load_run_document(path)
-    _inputs, diagnostics = build_execution_inputs(run_doc)
+    _inputs, diagnostics = build_execution_inputs(
+        run_doc, driver_context=default_driver_context(),
+    )
     return diagnostics
 
 
