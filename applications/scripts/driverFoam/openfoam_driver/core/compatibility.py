@@ -1,9 +1,24 @@
-"""Named Plan-1 compatibility boundaries.
+"""Named compatibility boundaries: what a capability returns with no hook.
 
-These adapters intentionally preserve observable behavior.  They produce no
-warnings and make no policy changes.  Keeping them named and documented stops
-legacy decisions from being rediscovered deep inside solver-neutral code and
-gives Plan 2 explicit seams at which behaviour may later change.
+These adapters preserve observable behavior. They produce no warnings and make
+no policy changes. Keeping them named and documented stops legacy decisions
+from being rediscovered deep inside solver-neutral code, and gives the
+capability seams an explicit place at which behaviour may later change.
+
+**Every ``legacy_*`` below is now plugin-neutral.** Nineteen of them used to
+branch on ``plugin_id == "org.cardiacfoam"`` and import from
+``plugins/cardiacfoam/`` -- a string comparison that let core reach into one
+named plugin's package. Those branches were removed on 2026-08-26 once the
+cardiac plugin implemented all fifteen optional hooks itself, and only after
+instrumenting all nineteen and confirming across the full 1703-test suite that
+not one was reachable. Deleted on measured evidence, not on the argument that
+the "v1 plugin" population is empty.
+
+Two functions still name the cardiac plugin, both deliberately and both
+documented at their definitions: :func:`legacy_default_driver_context` encodes
+the product decision that cardiacFoam is the plugin you get when you name none,
+and :func:`legacy_generic_case_mutation` serves direct callers of core
+``make_spec``.
 """
 
 from __future__ import annotations
@@ -162,84 +177,67 @@ def legacy_generic_case_dict_file_aliases(
 
 @_instrumented
 def legacy_case_marker(plugin, case_root) -> bool:
-    """Plugins predating has_case_marker(). Only the built-in cardiac plugin
-    has authored filesystem evidence for its own cases; every other plugin
-    gets ``False`` and must declare its own marker.
+    """Whether a case folder belongs to this plugin, for a plugin that does not
+    implement ``has_case_marker()``.
 
-    Gating matters here even though ``False`` is also what the cardiac rule
-    returns for a case with no ``constant/electroProperties``: ungated, the
-    *reason* a non-cardiac case was rejected was that it failed a cardiac
-    test, so a non-cardiac case that happened to carry an
-    ``electroProperties`` file was claimed by whichever plugin was loaded."""
+    ``False``: absent filesystem evidence of its own, a plugin claims nothing.
+    Core then relies on an executable ``Allrun``, which is plugin-neutral."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.case_compatibility import has_case_marker
+    del plugin, case_root
 
-        return has_case_marker(case_root)
     return False
 
 
 @_instrumented
 def legacy_case_runnable_without_workflow(plugin, case_root) -> bool:
-    """Plugins predating is_case_runnable_without_workflow(). Same rule as
-    :func:`legacy_case_marker`: only the built-in cardiac plugin can judge an
-    uncontracted case runnable, because the judgement reads cardiac
-    dictionaries. Others get ``False`` -- core then falls back to an
-    executable ``Allrun``, which is plugin-neutral filesystem evidence."""
+    """Whether an uncontracted case is runnable, for a plugin that does not
+    implement ``is_case_runnable_without_workflow()``.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.case_compatibility import is_runnable_without_workflow
+    ``False``: core falls back to an executable ``Allrun``, which is
+    plugin-neutral filesystem evidence rather than a guess."""
 
-        return is_runnable_without_workflow(case_root)
+    del plugin, case_root
+
     return False
 
 
 @_instrumented
 def legacy_run_document_config(plugin, spec):
-    """Plugins predating build_run_document_config(). Only the built-in
-    cardiac plugin has an authored RunDocument config builder; others get an
-    empty config and no diagnostics -- they constrain nothing, exactly as
-    :func:`legacy_run_document_config_schema` hands them a fully open schema.
+    """The RunDocument ``config`` object for a plugin that does not implement
+    ``build_run_document_config()``.
 
-    The pre-gate return for a non-cardiac plugin was the cardiac *phase*
-    vocabulary (``anatomy``/``physics``/``stimulus``/``solver``). That
-    vocabulary is precisely what RunDocument v3 removed from core, where
-    ``config`` is an open object with no fixed phases, so returning it for a
-    plugin that never declared those phases contradicts the schema."""
+    An empty config and no diagnostics -- the plugin constrains nothing,
+    matching the fully open schema :func:`legacy_run_document_config_schema`
+    hands it. RunDocument v3 removed any fixed phase vocabulary from core, so
+    there is no shape to supply on a plugin's behalf."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.run_document_config import build_config
+    del plugin, spec
 
-        return build_config(spec)
     return {}, ()
 
 
 @_instrumented
 def legacy_run_document_config_schema(plugin) -> dict:
-    """v1 plugins predate get_run_document_config_schema(). Only the built-in
-    cardiac plugin has an authored config schema; other v1 plugins get a fully
-    open schema (no constraint) and must declare their own by migrating to v2."""
+    """The RunDocument ``config`` JSON Schema for a plugin that does not
+    implement ``get_run_document_config_schema()``.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.config_schema import get_run_document_config_schema
+    A fully open object: this plugin constrains nothing."""
 
-        return get_run_document_config_schema()
+    del plugin
+
     return {"type": "object", "additionalProperties": True}
 
 
 @_instrumented
 def legacy_nondimensional_case(plugin, spec) -> bool:
-    """Plugins predating is_nondimensional_case(). The cardiac exemption is
-    read out of ``constant/electroProperties`` (a singleCell or verification
-    model), so only the built-in cardiac plugin can answer it. Others get
-    ``False``: their meshes are dimensional until they say otherwise, which
-    is the conservative answer -- it keeps mesh-scale diagnostics ON rather
-    than silently exempting a case from them."""
+    """Whether SI mesh-scale diagnostics should be skipped, for a plugin that
+    does not implement ``is_nondimensional_case()``.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.planning_policy import is_nondimensional_case
+    ``False``, which keeps the diagnostics on. Silence is not the safe
+    default; a plugin that wants them skipped says so."""
 
-        return is_nondimensional_case(spec)
+    del plugin, spec
+
     return False
 
 
@@ -253,18 +251,11 @@ def legacy_route_sweep_case(plugin, *, base, resolved_axis_values, driver_contex
     The honest neutral is to refuse, naming the hook the plugin must
     implement.
 
-    The cardiac router validates axes against ``electroProperties``/
-    ``physicsProperties`` vocabulary, so ungated it rejected a non-cardiac
-    plugin's axes in cardiac terms -- or, worse, accepted them."""
+    Historically this delegated to the cardiac router, which validates axes
+    against ``electroProperties``/``physicsProperties`` vocabulary -- so
+    ungated it rejected a non-cardiac plugin's axes in cardiac terms, or,
+    worse, accepted them."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.sweep import route_case_values
-
-        return route_case_values(
-            base=base,
-            resolved_axis_values=resolved_axis_values,
-            driver_context=driver_context,
-        )
     from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
     raise SweepValidationError(
@@ -280,16 +271,12 @@ def legacy_materialize_sweep_case(plugin, *, case_dir, routed) -> None:
     """Plugins predating materialize_sweep_case(). Refuses for the same
     reason as :func:`legacy_route_sweep_case`.
 
-    This is the fallback with real teeth. The cardiac materializer writes an
-    ``Allrun`` containing a hardcoded ``cardiacFoam`` command, so ungated it
-    generated a case invoking the cardiacFoam binary under whichever plugin
-    was loaded (reproduced against GenericOpenFOAMPlugin, 2026-08-19)."""
+    This is the fallback with real teeth. It used to delegate to the cardiac
+    materializer, which writes an ``Allrun`` containing a hardcoded
+    ``cardiacFoam`` command -- so ungated it generated a case invoking the
+    cardiacFoam binary under whichever plugin was loaded (reproduced against
+    GenericOpenFOAMPlugin, 2026-08-19)."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.sweep import materialize_case
-
-        materialize_case(case_dir=case_dir, routed=routed)
-        return
     from openfoam_driver.core.sweep.sweep_expansion import SweepValidationError
 
     raise SweepValidationError(
@@ -302,104 +289,85 @@ def legacy_materialize_sweep_case(plugin, *, case_dir, routed) -> None:
 
 @_instrumented
 def legacy_solver_commands(plugin) -> frozenset[str]:
-    """v1 plugins predate get_solver_commands(). Only the built-in cardiac
-    plugin can be given a solver name; a third-party v1 plugin gets none and
-    must declare its commands by migrating to v2."""
+    """Solver binaries for a plugin that does not implement
+    ``get_solver_commands()``.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.command_authorization import solver_commands
+    Empty: core authorizes no binary it was not told about."""
 
-        return solver_commands()
+    del plugin
+
     return frozenset()
 
 
 @_instrumented
 def legacy_auxiliary_commands(plugin) -> frozenset[str]:
-    """v1 plugins predate get_auxiliary_commands(). Same rule as
-    :func:`legacy_solver_commands`: only the built-in cardiac plugin gets its
-    non-solver commands authorized."""
+    """Auxiliary binaries for a plugin that does not implement
+    ``get_auxiliary_commands()``.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.command_authorization import auxiliary_commands
+    Empty, for the same reason as :func:`legacy_solver_commands`."""
 
-        return auxiliary_commands()
+    del plugin
+
     return frozenset()
 
 
 @_instrumented
 def legacy_utility_manifests(plugin) -> dict:
-    """Preserve the cardiac utility catalog for plugins without the new hook."""
+    """Per-utility declarations for a plugin that does not implement
+    ``get_utility_manifests()``. Empty: no utility is pre-authorized."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.command_authorization import utility_manifests
+    del plugin
 
-        # Cached read-only view; copy so a caller cannot reach the shared cache.
-        return dict(utility_manifests())
     return {}
 
 
 @_instrumented
 def legacy_utility_roots(plugin) -> tuple:
-    """Preserve the cardiac utilities root for plugins without the new hook."""
+    """Utility source roots for a plugin that does not implement
+    ``get_utility_roots()``. Empty: nothing extra to fingerprint."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.command_authorization import utility_roots
+    del plugin
 
-        return utility_roots()
     return ()
 
 
 @_instrumented
 def legacy_resolve_case_models(plugin, case_root) -> dict:
-    """v1 plugins predate resolve_case_models(). Only the built-in cardiac
-    plugin can resolve a case's models; other v1 plugins get nothing and must
-    declare their own resolution by migrating to v2."""
+    """On-disk model selections for a plugin that does not implement
+    ``resolve_case_models()``. Empty: core reads no dictionary on its own."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.case_introspection import resolve_case_models
+    del plugin, case_root
 
-        return resolve_case_models(case_root)
     return {}
 
 
 @_instrumented
 def legacy_samplable_fields(plugin, resolved) -> dict:
-    """v1 plugins predate get_samplable_fields(). Same rule as
-    :func:`legacy_resolve_case_models`: only the built-in cardiac plugin
-    names any fields."""
+    """Samplable fields for a plugin that does not implement
+    ``get_samplable_fields()``. Empty: core invents no field names."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.case_introspection import samplable_fields
+    del plugin, resolved
 
-        return samplable_fields(resolved)
     return {}
 
 
 @_instrumented
 def legacy_override_schema(plugin, tutorial_name: str, make_spec_info: dict) -> dict:
-    """v1 plugins predate get_override_schema(). Only the built-in cardiac
-    plugin has an authored configuration vocabulary; other v1 plugins get an
-    empty schema and must declare their own by migrating to v2."""
+    """The ``--config`` override schema for a plugin that does not implement
+    ``get_override_schema()``. Empty: nothing is advertised as overridable."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.override_schema import config_schema
+    del plugin, tutorial_name, make_spec_info
 
-        return config_schema(tutorial_name, make_spec_info)
     return {}
 
 
 @_instrumented
 def legacy_dict_entry_catalog(plugin) -> dict:
-    """v1 plugins predate get_dict_entry_catalog(). Same rule as
-    :func:`legacy_override_schema`: only the built-in cardiac plugin knows the
-    electro/physics document shape."""
+    """Dictionary entries by document name, for a plugin that does not
+    implement ``get_dict_entry_catalog()``. Empty: core owns no vocabulary."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.override_schema import dict_entry_catalog
+    del plugin
 
-        return dict_entry_catalog(
-            plugin.get_dictionary_catalog(), plugin.get_dict_groups(),
-        )
     return {}
 
 
@@ -425,55 +393,47 @@ def legacy_report_catalog(plugin) -> tuple:
 
 @_instrumented
 def legacy_named_catalogs(plugin) -> dict:
-    """v1 plugins predate get_named_catalogs(). Same rule as
-    :func:`legacy_override_schema`: only the built-in cardiac plugin has
-    ionic-model/active-tension catalogs; other v1 plugins get none and must
-    declare their own by migrating to v2."""
+    """Plugin-chosen catalogs for a plugin that does not implement
+    ``get_named_catalogs()``. Empty: ``describe`` namespaces nothing extra."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.named_catalogs import named_catalogs
+    del plugin
 
-        return named_catalogs(plugin.get_capabilities())
     return {}
 
 
 @_instrumented
 def legacy_override_scopes(plugin) -> tuple:
-    """v1/v2 plugins predate get_override_scopes(). Only the built-in
-    cardiac plugin has an authored override scope ($ELECTRO_MODEL_COEFFS);
-    other plugins get none and must declare their own by implementing
-    get_override_scopes()."""
+    """``$TOKEN.`` override scopes for a plugin that does not implement
+    ``get_override_scopes()``. Empty: no scoped patch targets."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.overrides import electro_model_coeffs_scope
+    del plugin
 
-        return (electro_model_coeffs_scope(),)
     return ()
 
 
 @_instrumented
 def legacy_dict_regeneration_scopes(plugin) -> tuple:
-    """v1/v2 plugins predate get_regeneration_scopes(). Only the built-in
-    cardiac plugin has an authored regeneration scope (myocardiumSolver ->
-    constant/electroProperties); other plugins get none and must declare
-    their own by implementing get_regeneration_scopes()."""
+    """Regeneration scopes for a plugin that does not implement
+    ``get_regeneration_scopes()``. Empty: no override regenerates a dict."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.overrides import electro_properties_regeneration_scope
+    del plugin
 
-        return (electro_properties_regeneration_scope(),)
     return ()
 
 
 @_instrumented
 def legacy_phases(plugin) -> tuple[str, ...]:
-    """v1 plugins predate get_phases(). The built-in cardiac plugin's four
-    phases are ordered and load-bearing; any other plugin gets the phases its
-    own entries declare, sorted for determinism. Never cardiac's four for a
-    non-cardiac plugin -- that was the silent defect this replaces."""
+    """The dictionary phases for a plugin that does not implement
+    ``get_phases()``: those its own ``DictEntry`` values declare, sorted for
+    determinism.
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        return ("anatomy", "physics", "stimulus", "solver")
+    Sorted, not ordered -- and the order is the semantics, since
+    ``primary_phase()`` returns the first phase in it that an entry claims. A
+    plugin with multi-phase entries should implement ``get_phases()`` rather
+    than accept an alphabetical guess. What this must never do is hand back
+    cardiacFoam's four to a plugin that never declared them: that was the
+    silent defect this replaces."""
+
     declared: set[str] = set()
     for entry in plugin.get_dict_entries():
         declared.update(entry.phases)

@@ -138,3 +138,55 @@ def test_no_core_module_resolves_the_cardiac_default_during_a_cardiac_plan() -> 
         "core modules resolved an implicit cardiac context during a plan: "
         f"{core_offenders}"
     )
+
+
+def test_core_compatibility_names_only_the_two_documented_cardiac_seams() -> None:
+    """`core/compatibility.py` must not reach into a named plugin's package.
+
+    Nineteen `legacy_*` functions used to branch on
+    `plugin_id == "org.cardiacfoam"` and import from `plugins/cardiacfoam/`.
+    All nineteen were instrumented and shown unreachable across the full suite
+    before removal.
+
+    Exactly two references remain, both deliberate and documented at their
+    definitions: `legacy_default_driver_context` (cardiacFoam is the plugin you
+    get when you name none) and `legacy_generic_case_mutation` (direct callers
+    of core `make_spec`).
+    """
+    import pathlib
+
+    source = (
+        pathlib.Path(__file__).resolve().parents[2] / "core" / "compatibility.py"
+    ).read_text()
+    assert 'plugin_id", "") == "org.cardiacfoam"' not in source, (
+        "a cardiac-gated branch has come back into core/compatibility.py"
+    )
+
+    owners: list[str] = []
+    current = "<module>"
+    for line in source.split("\n"):
+        if line.startswith("def "):
+            current = line[4:].split("(")[0]
+        if "plugins.cardiacfoam" in line:
+            owners.append(current)
+    assert sorted(set(owners)) == [
+        "legacy_default_driver_context",
+        "legacy_generic_case_mutation",
+    ], f"unexpected cardiac reference in core/compatibility.py, from: {sorted(set(owners))}"
+
+
+def test_cardiac_reaches_no_capability_fallback() -> None:
+    """cardiacFoam implements every hook, so driving its capabilities must not
+    enter core's compatibility layer at all."""
+    ctx = driver_context(CardiacFoamPlugin(), source="test")
+
+    with compatibility.track_fallback_calls() as calls:
+        caps = ctx.capabilities
+        caps.dictionaries.entries()
+        caps.dictionaries.phases()
+        caps.report_catalog.reports()
+        caps.named_catalogs.catalogs()
+        caps.override_scopes.scopes()
+        fired = list(calls)
+
+    assert fired == [], f"cardiac plugin still reached fallbacks: {sorted(set(fired))}"
