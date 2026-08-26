@@ -47,6 +47,15 @@ To build a new plugin start from ``core/generic_plugin.py`` and follow
 ``.agents/skills/driverfoam-plugin-builder/SKILL.md``.
 """
 
+# REQUIRED, not stylistic. Several annotations below name types imported only
+# under ``if TYPE_CHECKING`` (DictEntry, TutorialSpec, TutorialDisplay,
+# DataArtifact, Path). Without lazy annotations those are evaluated when the
+# class body executes, so importing this module raises
+# ``NameError: name 'DictEntry' is not defined`` on every Python before 3.14 --
+# i.e. on 3.11/3.12/3.13, three of the four versions pyproject.toml supports.
+# Python 3.14's PEP 649 defers annotation evaluation and hides the bug, which is
+# why a 3.14 venv shows a fully green suite while CI on 3.12 cannot even collect.
+from __future__ import annotations
 
 import re
 from dataclasses import dataclass
