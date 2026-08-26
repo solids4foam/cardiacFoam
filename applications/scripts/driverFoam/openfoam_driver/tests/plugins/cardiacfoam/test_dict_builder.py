@@ -923,6 +923,39 @@ class TestParseElectroProperties(unittest.TestCase):
             "LandNiederer",
         )
 
+    def test_nested_dynamic_placeholders_survive_roundtrip(self) -> None:
+        """Expand both the tissue scope and constant-name placeholders.
+
+        A one-placeholder parser can discover ``global`` but then looks for
+        the literal ``<constant_name>`` key, silently dropping the override.
+        """
+        import tempfile
+        from pathlib import Path
+        from openfoam_driver.plugins.cardiacfoam.dict_builder import (
+            build_electro_properties,
+            parse_electro_properties,
+        )
+
+        driver_path = "$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.global.set.R"
+        text = build_electro_properties(
+            {
+                "myocardiumSolver": "monodomainSolver",
+                "ionicModel": "TNNP",
+                "tissue": "epicardialCells",
+            },
+            overrides={driver_path: "1.23"},
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "electroProperties"
+            path.write_text(text)
+            parsed = parse_electro_properties(path)
+
+        self.assertEqual(parsed["overrides"].get(driver_path), "1.23")
+        self.assertNotIn(
+            "$ELECTRO_MODEL_COEFFS.ionicConstantOverrides.<scope>.set.<constant_name>",
+            parsed["ignored_keys"],
+        )
+
     def test_active_tension_model_recovered_from_real_singlecell_tutorial(self) -> None:
         """The hand-authored singleCell tutorial dict declares
         'activeTensionModel LandNiederer;' as a flat entry — parsing it must

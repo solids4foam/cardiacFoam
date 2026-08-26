@@ -155,8 +155,9 @@ monodomainSolverCoeffs
         ECG
         {
             ecgSolver none;
-            manufactured
+            verificationModel
             {
+                type manufacturedPseudoECGVerifier;
                 enabled false;
                 dimension "3D";
                 referenceQuadratureOrder 1;
@@ -495,7 +496,7 @@ def test_tet_mesh_family_works_with_ecg_enabled(tmp_path):
     electro = case_root / "constant" / "electroProperties"
     ecg = ("monodomainSolverCoeffs", "ecgDomains", "ECG")
     assert_foam_entry(electro, "ecgSolver", "pseudoECG", scope=ecg)
-    assert_foam_entry(electro, "enabled", "yes", scope=ecg + ("manufactured",))
+    assert_foam_entry(electro, "enabled", "yes", scope=ecg + ("verificationModel",))
     assert_foam_entry(
         electro, "E3", "(1.2 0.23 0.61)", scope=ecg + ("electrodePositions",)
     )

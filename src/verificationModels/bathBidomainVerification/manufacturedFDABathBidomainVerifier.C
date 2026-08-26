@@ -101,7 +101,7 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
 {
     const dictionary& cfg = verificationDict();
 
-    // bidomainSolverCoeffs dict, not in verificationModel).
+    // k and alpha belong to the nested verificationModel dictionary.
     k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
     // Preferred key: selects which FDA bidomain-with-bath boundary variant is

@@ -96,6 +96,10 @@ RTST_BY_DRIVER_PATH: dict[str, tuple[str, str]] = {
         "ecgVerificationModel",
         "polymorphic",
     ),
+    "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.verificationModel.type": (
+        "ecgVerificationModel",
+        "polymorphic",
+    ),
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.coupling.electroDomainCoupler": (
         "electroDomainCoupler",
         "strict",
@@ -138,6 +142,7 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.timeCouplingScheme",
     "$ELECTRO_MODEL_COEFFS.domainCouplings.<name>.couplingMode",
     "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.manufactured.dimension",
+    "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.verificationModel.dimension",
     "$ELECTRO_MODEL_COEFFS.verificationModel.fdaBathVariant",
     "$ELECTRO_MODEL_COEFFS.manufacturedBidomain.fdaBathVariant",
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
@@ -197,10 +202,8 @@ INTERNAL_RTST_ALLOWLIST: frozenset[str] = frozenset({
     # `sequentialElectroMechanical` is the only option once that path is
     # taken; no driver-side enum needed yet).
     "electroMechanicalModel",
-    # `ecgVerificationModel` registers verifier types but the catalogue
-    # currently exposes only `manufactured.enabled` (boolean) — no
-    # ecg-side `type` selector yet.
-    "ecgVerificationModel",
+    # The legacy flat ecgVerificationModel selector remains catalogued for
+    # dictionaries that have not migrated to verificationModel.type.
     # Only one bath-potential implementation exists today. Users select it
     # by adding bathPotentialDomain, not by typing an electroStateDomain type.
     "electroStateDomain",

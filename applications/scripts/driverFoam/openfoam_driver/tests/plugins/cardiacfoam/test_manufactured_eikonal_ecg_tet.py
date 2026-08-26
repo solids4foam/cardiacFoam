@@ -28,8 +28,9 @@ eikonalSolverCoeffs
         ECG
         {
             ecgSolver none;
-            manufacturedEikonalECG
+            verificationModel
             {
+                type manufacturedEikonalECGVerifier;
                 enabled false;
                 referenceQuadratureOrder 1;
                 checkQuadratureOrders (1);

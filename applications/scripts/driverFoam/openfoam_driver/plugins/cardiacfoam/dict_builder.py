@@ -416,6 +416,56 @@ def _foamlib_child_names(
     return tuple(str(k) for k in node.keys() if k is not None)
 
 
+def _concrete_dynamic_paths(
+    electro_properties_path: "Any",
+    coeffs_scope: str,
+    driver_path: str,
+) -> tuple[str, ...]:
+    """Expand every placeholder in one catalog path against a file.
+
+    Dynamic entries are not limited to one instance name.  For example,
+    ``ionicConstantOverrides.<scope>.set.<constant_name>`` has a block-level
+    placeholder followed by a leaf-name placeholder.  Expanding only the
+    first one makes the parser look for a literal ``<constant_name>`` key and
+    silently loses an otherwise valid override during a round trip.
+
+    The expansion is structural: child names come from foamlib, while the
+    resulting values are still read by ``read_foam_entry`` so their source
+    spelling and directives remain untouched.
+    """
+    parts = slot_key(driver_path).split(".")
+    if not any(_PLACEHOLDER_RE.fullmatch(part) for part in parts):
+        return ()
+
+    partials: list[tuple[str, ...]] = [()]
+    for part in parts:
+        if _PLACEHOLDER_RE.fullmatch(part):
+            expanded: list[tuple[str, ...]] = []
+            for prefix in partials:
+                names = sorted(
+                    _foamlib_child_names(
+                        electro_properties_path,
+                        coeffs_scope,
+                        list(prefix),
+                    )
+                )
+                expanded.extend((*prefix, name) for name in names)
+            partials = expanded
+            if not partials:
+                return ()
+        else:
+            partials = [(*prefix, part) for prefix in partials]
+
+    paths: list[str] = []
+    for concrete_parts in partials:
+        concrete = driver_path
+        for template_part, part in zip(parts, concrete_parts):
+            if _PLACEHOLDER_RE.fullmatch(template_part):
+                concrete = _PLACEHOLDER_RE.sub(part, concrete, count=1)
+        paths.append(concrete)
+    return tuple(paths)
+
+
 def parse_electro_properties(
     electro_properties_path: "Any",
 ) -> dict[str, dict[str, str]]:
@@ -461,28 +511,19 @@ def parse_electro_properties(
 
     for entry in _all_electro_entries():
         if entry.dynamic_path:
-            sk = slot_key(entry.driver_path)
-            parts = sk.split(".")
-            placeholder_idx = next(
-                (i for i, p in enumerate(parts) if _PLACEHOLDER_RE.fullmatch(p)),
-                None,
-            )
-            if placeholder_idx is None:
+            if not _PLACEHOLDER_RE.search(entry.driver_path):
                 ignored_keys.append(entry.driver_path)
                 continue
 
-            instances = _foamlib_child_names(
-                electro_properties_path, coeffs_scope, parts[:placeholder_idx],
+            concrete_paths = _concrete_dynamic_paths(
+                electro_properties_path, coeffs_scope, entry.driver_path,
             )
-            if not instances:
+            if not concrete_paths:
                 ignored_keys.append(entry.driver_path)
                 continue
 
             expanded_any = False
-            for instance in instances:
-                concrete_driver_path = _PLACEHOLDER_RE.sub(
-                    instance, entry.driver_path, count=1,
-                )
+            for concrete_driver_path in concrete_paths:
                 scope_path, key = _entry_scope_and_key(concrete_driver_path, coeffs_scope)
                 value = read_foam_entry(electro_properties_path, key, scope=scope_path)
                 if value is None:

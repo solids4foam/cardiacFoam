@@ -65,7 +65,6 @@ eikonalECG::eikonalECG(const dictionary& dict)
         dict.found("manufacturedEikonalECG")
      || verifierType == "manufacturedEikonalECGVerifier"
      || verifierTypeModern == "manufacturedEikonalECGVerifier"
-     || verifierTypeModern == "manufacturedEikonalECGVerifier"
     )
     {
         useManufacturedTemplate_ = true;
