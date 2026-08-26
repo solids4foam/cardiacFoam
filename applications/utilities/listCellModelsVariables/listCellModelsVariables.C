@@ -70,7 +70,6 @@ dictionary electroModelDict(const IOdictionary& electroDict)
         return electroDict.subDict(coeffsName);
     }
 
-    // Retain the legacy selector after the canonical myocardiumSolver path.
     if (electroDict.found("electroModel"))
     {
         word electroModelName;
@@ -115,28 +114,11 @@ dictionary electroModelDict(const IOdictionary& electroDict)
 
 dictionary activeTensionDict(const dictionary& modelDict)
 {
-    // `activeTensionModel` has two legal shapes and this utility must accept
-    // both. The canonical one -- the only one activeTensionModel::New() itself
-    // reads (see src/activeTensionModels/activeTensionModel/activeTensionModel.C,
-    // `dict.lookup("activeTensionModel")`) -- is a plain word in the parent:
-    //
-    //     activeTensionModel LandNiederer;
-    //
-    // The other nests the selector alongside its coefficients:
-    //
-    //     activeTensionModel { activeTensionModel LandNiederer; ... }
-    //
-    // This function used to call subDict() unconditionally, so the canonical
-    // shape aborted with "primitiveEntry 'activeTensionModel' ... as a
-    // sub-dictionary" -- and the caller's `found()` guard cannot tell the two
-    // apart, since it is true for either.
     const dictionary* atSubDictPtr =
         modelDict.findDict("activeTensionModel", keyType::LITERAL);
 
     if (!atSubDictPtr)
     {
-        // Canonical shape: the selector and any <model>Coeffs block already
-        // live in modelDict, which is exactly what New() expects.
         return dictionary(modelDict);
     }
 
@@ -145,9 +127,6 @@ dictionary activeTensionDict(const dictionary& modelDict)
 
     dictionary atDict(atSubDict);
     atDict.merge(modelDict);
-
-    // merge(modelDict) injects the parent activeTensionModel sub-dictionary,
-    // which would otherwise replace this key with a dictionary entry.
     atDict.add("activeTensionModel", atModelType, true);
 
     return atDict;
