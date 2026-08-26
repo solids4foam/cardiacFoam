@@ -53,7 +53,20 @@ singleCellSolverCoeffs
     {
         ionic
         {
-            export (Vm cai nai ki AV_INa_INa AV_ICaL_ICaL AV_Ito_Ito AV_IKr_IKr AV_IKs_IKs AV_IK1_IK1 AV_INaCa_INaCa AV_INaK_INaK);
+            // Model-neutral baseline. There is no export list valid for
+            // every ionic model -- listCellModelsVariables confirms the state
+            // names differ per model (TWorld's voltage is `v`, Gaur's is
+            // `cell_v`), and the AV_* currents differ too: AV_Ito_Ito and
+            // AV_J_SRCarel exist in TWorld, AV_ITo_ITo and AV_Jrel do not.
+            // Those belong in a study's `ionic_export` override -- see
+            // setup/studies/tworldVsGaur -- not in the tutorial baseline.
+            //
+            // `Vm` is not an ionic state at all (zero hits in TWorld's
+            // inventory); it is the solver field, written regardless. It is
+            // listed so the predicted artifact manifest matches what the
+            // trace actually contains. `cai` is a real state in both TWorld
+            // and Gaur.
+            export (Vm cai);
             debug ();
         }
         activeTension
