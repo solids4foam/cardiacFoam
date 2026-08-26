@@ -1363,7 +1363,7 @@ plugin. The two sweep fallbacks cannot be neutral and refuse by hook name.
 | capability | protocol | adapts | consumed by | fallback | status |
 |---|---|---|---|---|---|
 | `tutorials` | `TutorialCatalogCapability` | `get_tutorial_catalog`, `get_tutorial_displays` | `openfoam_driver/core/runtime/registry.py`, `openfoam_driver/plugins/cardiacfoam/dict_builder.py` | none | mandatory |
-| `dictionaries` | `DictionaryCatalogCapability` | `get_dict_entries`, `get_dict_groups`, `get_dictionary_catalog` | `openfoam_driver/dict_entries.py`, `openfoam_driver/plugins/cardiacfoam/sweep.py`, `openfoam_driver/core/specs/apply_overrides.py`, `openfoam_driver/core/specs/dict_builder.py`, `openfoam_driver/core/specs/validation.py`, `openfoam_driver/core/strict_planning.py` | none | mandatory |
+| `dictionaries` | `DictionaryCatalogCapability` | `get_dict_entries`, `get_dict_groups`, `get_dictionary_catalog`, `get_phases` | `openfoam_driver/dict_entries.py`, `openfoam_driver/plugins/cardiacfoam/sweep.py`, `openfoam_driver/core/specs/apply_overrides.py`, `openfoam_driver/core/specs/dict_builder.py`, `openfoam_driver/core/specs/validation.py`, `openfoam_driver/core/strict_planning.py` | `legacy_phases` | mandatory |
 | `manifest` | `CapabilityManifestCapability` | `get_capabilities` | `openfoam_driver/dict_entries.py`, `openfoam_driver/core/introspection.py`, `openfoam_driver/core/strict_planning.py` | none | mandatory |
 | `configuration_validator` | `ConfigurationValidatorCapability` | `validate_configuration` | `openfoam_driver/core/strict_planning.py` | none | mandatory |
 | `run_semantic_validator` | `RunSemanticValidatorCapability` | `validate_run_semantics` | `openfoam_driver/core/specs/validation.py` | none | mandatory |

@@ -160,15 +160,16 @@ class DictionaryCatalogCapability(Protocol):
     keeps dictionary *syntax* knowledge (core's) apart from dictionary
     *meaning* (the plugin's).
 
-    :adapts: get_dict_entries, get_dict_groups, get_dictionary_catalog
+    :adapts: get_dict_entries, get_dict_groups, get_dictionary_catalog, get_phases
     :consumed-by: openfoam_driver/dict_entries.py, openfoam_driver/plugins/cardiacfoam/sweep.py, openfoam_driver/core/specs/apply_overrides.py, openfoam_driver/core/specs/dict_builder.py, openfoam_driver/core/specs/validation.py, openfoam_driver/core/strict_planning.py
-    :fallback: none
+    :fallback: legacy_phases
     :status: mandatory
     """
 
     def entries(self) -> tuple[Any, ...]: ...
     def catalog(self) -> Any: ...
     def groups(self) -> dict[str, tuple[Any, ...]]: ...
+    def phases(self) -> tuple[str, ...]: ...
 
 
 class CapabilityManifestCapability(Protocol):
@@ -649,6 +650,14 @@ class _DictionaryCatalogAdapter:
 
     def groups(self) -> dict[str, tuple[Any, ...]]:
         return self.plugin.get_dict_groups()
+
+    def phases(self) -> tuple[str, ...]:
+        hook = getattr(self.plugin, "get_phases", None)
+        if callable(hook):
+            return tuple(hook())
+        from .compatibility import legacy_phases
+
+        return legacy_phases(self.plugin)
 
 
 @dataclass(frozen=True)

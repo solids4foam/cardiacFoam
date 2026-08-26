@@ -359,6 +359,20 @@ class SolverPluginOptionalHooks(Protocol):
         by name rather than materialized by another plugin's writer."""
         ...
 
+    # -- DictionaryCatalogCapability ------------------------------------------
+    def get_phases(self) -> tuple[str, ...]:
+        """This plugin's dictionary editing phases, in order.
+
+        The ORDER is the semantics, not decoration: ``primary_phase()`` returns
+        the first phase in this tuple that an entry claims, and every other
+        phase the entry declares is a read-only mirror. These strings are also
+        the top-level keys of ``RunDocument.config``.
+
+        Absent -> the phases the plugin's own ``DictEntry`` values declare,
+        which is correct but unordered. Declare this hook if any entry is
+        multi-phase, because otherwise which phase is "primary" is arbitrary."""
+        ...
+
     # -- CaseFileContractCapability ------------------------------------------
     def get_config_resolution_description(self) -> str:
         """One human-readable sentence naming which files resolve into a valid

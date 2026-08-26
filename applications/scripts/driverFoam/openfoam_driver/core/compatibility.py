@@ -468,3 +468,18 @@ def legacy_dict_regeneration_scopes(plugin) -> tuple:
 
         return (electro_properties_regeneration_scope(),)
     return ()
+
+
+@_instrumented
+def legacy_phases(plugin) -> tuple[str, ...]:
+    """v1 plugins predate get_phases(). The built-in cardiac plugin's four
+    phases are ordered and load-bearing; any other plugin gets the phases its
+    own entries declare, sorted for determinism. Never cardiac's four for a
+    non-cardiac plugin -- that was the silent defect this replaces."""
+
+    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
+        return ("anatomy", "physics", "stimulus", "solver")
+    declared: set[str] = set()
+    for entry in plugin.get_dict_entries():
+        declared.update(entry.phases)
+    return tuple(sorted(declared))

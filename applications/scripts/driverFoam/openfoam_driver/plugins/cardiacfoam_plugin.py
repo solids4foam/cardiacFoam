@@ -97,6 +97,11 @@ class CardiacFoamPlugin:
 
         return configured_openfoam_bashrc(env)
         
+    def get_phases(self) -> tuple[str, ...]:
+        """This plugin's four editing phases, in the order the RunDocument
+        config and the validation slices use."""
+        return ("anatomy", "physics", "stimulus", "solver")
+
     def get_dict_groups(self) -> dict[str, tuple[DictEntry, ...]]:
         """
         Return the dictionary entries organized by logical group.
