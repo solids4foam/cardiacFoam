@@ -132,7 +132,7 @@ def test_unknown_model_is_not_an_error():
 def test_describe_entry_includes_capability_manifest():
     from openfoam_driver.core.introspection import describe_entry
 
-    payload = describe_entry("singleCell")
+    payload = describe_entry("singleCell", driver_context=default_driver_context())
     manifest = payload["capability_manifest"]
     assert "cardiacFoam" in manifest["allowed_commands"]["core"]
     assert "electro" in manifest["samplable_fields"]

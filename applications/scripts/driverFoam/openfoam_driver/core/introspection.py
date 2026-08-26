@@ -138,10 +138,7 @@ def _describe_spec(spec: TutorialSpec) -> dict[str, Any]:
     }
 
 
-def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
+def _dict_entry_catalog(driver_context: "DriverContext") -> dict[str, Any]:
     # The document names and their shape are plugin vocabulary; core only
     # serializes whatever structure the plugin declares.
     return _serialize(
@@ -149,10 +146,7 @@ def _dict_entry_catalog(driver_context: "DriverContext | None" = None) -> dict[s
     )
 
 
-def _plugin_catalogs(driver_context: "DriverContext | None" = None) -> dict[str, Any]:
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
+def _plugin_catalogs(driver_context: "DriverContext") -> dict[str, Any]:
     # The catalog names and their contents are plugin vocabulary (e.g. the
     # cardiac plugin's ionic_model_catalog/active_tension_catalog); core only
     # namespaces the whole mapping under this key and serializes it.
@@ -164,16 +158,13 @@ def _plugin_catalogs(driver_context: "DriverContext | None" = None) -> dict[str,
 def _describe_config_schema(
     tutorial_name: str,
     make_spec_info: dict[str, Any],
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
     """Return the plugin-authored config_schema payload for a tutorial.
 
     The vocabulary (override tokens, examples, document names) is solver
     knowledge and lives in the active plugin; core only routes the request.
     """
-    from openfoam_driver.core.compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     return driver_context.capabilities.override_schema.config_schema(
         tutorial_name, make_spec_info,
     )
@@ -241,11 +232,8 @@ def describe_entry(
     entry_kind: str | None = None,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
-    from .compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     resolution = resolve_entry(
         entry,
         entry_kind=entry_kind,
@@ -324,7 +312,7 @@ def describe_tutorial(
     *,
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> dict[str, Any]:
     return describe_entry(
         tutorial,
@@ -335,7 +323,7 @@ def describe_tutorial(
 
 
 def describe_launch_matrix(
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> list[dict[str, Any]]:
     """Return every registered entry. Alias kept for AGENT_GUIDE.md compatibility.
 

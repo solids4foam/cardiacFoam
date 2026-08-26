@@ -36,7 +36,10 @@ from pathlib import Path
 
 from openfoam_driver.cli import main
 from openfoam_driver.core.introspection import describe_tutorial
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
+
+_CTX = default_driver_context()
 
 
 def test_run_state_schema_does_not_advertise_unwritten_action_events_file():
@@ -60,6 +63,7 @@ class TestIntrospection(unittest.TestCase):
         payload = describe_tutorial(
             "singleCell",
             overrides={"tutorials_root": self.tutorials_root},
+            driver_context=_CTX,
         )
 
         self.assertEqual(payload["resolution"], "registered")
@@ -122,6 +126,7 @@ class TestIntrospection(unittest.TestCase):
         payload = describe_tutorial(
             "singleCell",
             overrides={"tutorials_root": self.tutorials_root},
+            driver_context=_CTX,
         )
 
         # P2.5/P2.6: the two cardiac-named catalogs now live nested under the
@@ -221,6 +226,7 @@ class TestIntrospection(unittest.TestCase):
             payload = describe_tutorial(
                 "randomCase",
                 overrides={"tutorials_root": tutorials_root},
+                driver_context=_CTX,
             )
 
             self.assertEqual(payload["resolution"], "case_folder")
@@ -290,6 +296,7 @@ class TestIntrospection(unittest.TestCase):
             payload = describe_tutorial(
                 "orderedCase",
                 overrides={"tutorials_root": tutorials_root},
+                driver_context=_CTX,
             )
 
             contract = payload["tutorial_contract"]
