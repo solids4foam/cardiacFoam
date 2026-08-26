@@ -225,14 +225,23 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
     if len(selected) < 2:
         selected = sorted(traces, key=lambda t: (abs(t.cl_ms - cl_ms), t.model))[:2]
 
-    fig, axes = plt.subplots(2, 1, figsize=(10, 7.5), sharex=True, constrained_layout=True)
+    background = "#42516F"
+    foreground = "#FFFFFF"
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(10, 7.5),
+        sharex=True,
+        constrained_layout=True,
+        facecolor=background,
+    )
     calcium_ax = axes[0].twinx()
-    colors = {"Gaur": "#b33c3c", "TWorld": "#2367a8"}
+    colors = {"Gaur": "#FF8A65", "TWorld": "#7DD3FC"}
     calcium_styles = {"Gaur": "--", "TWorld": ":"}
     for trace in selected:
         rel_time, mask = _last_beat(trace)
         label = f"{trace.species} / {trace.model}"
-        axes[0].plot(rel_time, trace.data["Vm"][mask], color=colors[trace.model], label=label)
+        axes[0].plot(rel_time, trace.data["Vm"][mask], color=colors[trace.model], label=f"{label} Vm")
         calcium_ax.plot(
             rel_time,
             trace.data["cai"][mask],
@@ -256,29 +265,40 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
                 tension[tension_mask],
                 color=colors[trace.model],
                 linestyle="-",
-                label=label,
+                label=f"{label} Ta",
             )
 
     axes[0].set_ylabel("Vm (mV)")
-    calcium_ax.set_ylabel("[Ca²⁺]i (mM)", color="#333333")
-    axes[1].set_ylabel("Ta (kPa)", color="#333333")
+    calcium_ax.set_ylabel("[Ca²⁺]i (mM)")
+    axes[1].set_ylabel("Ta (kPa)")
     axes[1].set_xlabel("Time from latest activation (ms)")
     axes[0].set_xlim(right=700.0)
     for axis in (axes[0], calcium_ax, axes[1]):
+        axis.set_facecolor(background)
+        axis.tick_params(axis="both", colors=foreground, labelcolor=foreground)
+        axis.xaxis.label.set_color(foreground)
+        axis.yaxis.label.set_color(foreground)
+        for spine in axis.spines.values():
+            spine.set_color(foreground)
         axis.yaxis.set_major_locator(LinearLocator(2))
     calcium_formatter = ScalarFormatter(useMathText=True)
     calcium_formatter.set_scientific(True)
     calcium_formatter.set_powerlimits((0, 0))
     calcium_ax.yaxis.set_major_formatter(calcium_formatter)
-    for ax, title in zip(axes, ("Membrane potential and cytosolic calcium", "Land–Niederer active tension")):
-        ax.set_title(title)
-        ax.grid(alpha=0.25)
+    for ax in axes:
+        ax.grid(color=foreground, alpha=0.16)
     voltage_handles, voltage_labels = axes[0].get_legend_handles_labels()
     calcium_handles, calcium_labels = calcium_ax.get_legend_handles_labels()
-    axes[0].legend(voltage_handles + calcium_handles, voltage_labels + calcium_labels, fontsize=9)
-    axes[1].legend(fontsize=9)
-    fig.suptitle(f"Pig/Gaur versus human/TWORLD: core electromechanical comparison (CL = {cl_ms:g} ms)")
-    fig.savefig(out, dpi=220)
+    axes[0].legend(
+        voltage_handles + calcium_handles,
+        voltage_labels + calcium_labels,
+        fontsize=9,
+        facecolor=background,
+        edgecolor=foreground,
+        labelcolor=foreground,
+    )
+    axes[1].legend(fontsize=9, facecolor=background, edgecolor=foreground, labelcolor=foreground)
+    fig.savefig(out, dpi=220, facecolor=background, edgecolor="none")
     plt.close(fig)
 
 
