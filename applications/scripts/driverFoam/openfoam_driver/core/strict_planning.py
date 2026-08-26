@@ -288,7 +288,7 @@ def _catalog_diagnostics(driver_context: "DriverContext") -> tuple[StrictDiagnos
     return tuple(diagnostics)
 
 
-def _is_nondimensional_entry(spec, driver_context=None) -> bool:
+def _is_nondimensional_entry(spec, driver_context: "DriverContext") -> bool:
     """Return True when the SI mesh-scale gate is not meaningful."""
     entry_name = ""
     family = ""
@@ -298,9 +298,6 @@ def _is_nondimensional_entry(spec, driver_context=None) -> bool:
     haystack = f"{entry_name} {family}".lower()
     if "manufactured" in haystack or "verification" in haystack:
         return True
-    from .compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     return driver_context.capabilities.mesh_diagnostic_policy.is_nondimensional(spec)
 
 
@@ -308,7 +305,7 @@ def _mesh_geometry_diagnostics(
     case_root: str | Path,
     *,
     exempt: bool = False,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> tuple[StrictDiagnostic, ...]:
     """Adapt mesh-scale detection into StrictDiagnostics for the report.
 
@@ -319,9 +316,6 @@ def _mesh_geometry_diagnostics(
     """
     if exempt or "SKIP_MESH_DIAGNOSTICS" in os.environ:
         return ()
-    from .compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     detected = list(_detect_mesh_geometry(Path(case_root)))
     detected.extend(
         driver_context.capabilities.mesh_diagnostic_policy.extra_geometry_diagnostics(
@@ -384,12 +378,9 @@ def strict_plan(
     overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     openfoam_bashrc: str | Path | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> StrictPlanReport:
     """Build a non-mutating strict simulation plan report."""
-    from .compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     spec = load_entry_spec(
         entry,
         entry_kind=entry_kind,

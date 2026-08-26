@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openfoam_driver.core.plugin_interface import generic_openfoam_context
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.strict_planning import strict_plan
 
 
@@ -14,6 +15,7 @@ def test_plain_allrun_case_plans_without_cardiac_dictionaries(tmp_path: Path) ->
     report = strict_plan(
         "plainOpenFoamCase",
         overrides={"tutorials_root": str(tmp_path)},
+        driver_context=default_driver_context(),
     )
 
     assert report.status == "ok"

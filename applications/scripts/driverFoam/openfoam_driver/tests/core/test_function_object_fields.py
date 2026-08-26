@@ -95,9 +95,10 @@ def test_missing_controldict_is_silent(tmp_path):
 
 def test_strict_plan_exposes_field_family_and_stays_ok(monkeypatch):
     monkeypatch.setenv("SKIP_ENV_DIAGNOSTICS", "1")
+    from openfoam_driver.core.plugin_interface import default_driver_context
     from openfoam_driver.core.strict_planning import strict_plan
 
-    report = strict_plan("singleCell").to_json()
+    report = strict_plan("singleCell", driver_context=default_driver_context()).to_json()
     assert "function_object_diagnostics" in report
     # A clean registered entry must not be pushed to failed by this family.
     assert report["status"] == "ok"

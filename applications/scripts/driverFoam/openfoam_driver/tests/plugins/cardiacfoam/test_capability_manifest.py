@@ -142,5 +142,7 @@ def test_strict_plan_carries_capability_manifest(monkeypatch):
     monkeypatch.setenv("SKIP_ENV_DIAGNOSTICS", "1")
     from openfoam_driver.core.strict_planning import strict_plan
 
-    report = strict_plan("singleCell").to_json()
+    report = strict_plan(
+        "singleCell", driver_context=default_driver_context()
+    ).to_json()
     assert "cardiacFoam" in report["capability_manifest"]["allowed_commands"]["core"]

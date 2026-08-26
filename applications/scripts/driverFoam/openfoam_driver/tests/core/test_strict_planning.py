@@ -47,6 +47,7 @@ from openfoam_driver.scripts._dict_keys_scanner import (
 from openfoam_driver.plugins.cardiacfoam_plugin import CardiacFoamPlugin
 from types import SimpleNamespace
 
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 from openfoam_driver.core.strict_planning import (
     StrictPlanReport,
@@ -109,7 +110,7 @@ def test_mesh_adapter_flags_non_si(tmp_path: Path) -> None:
     pm.joinpath("points").write_text(
         _FOAM_HEADER + "\n2\n(\n(0 0 0)\n(50 50 50)\n)\n"
     )
-    diags = _mesh_geometry_diagnostics(tmp_path)
+    diags = _mesh_geometry_diagnostics(tmp_path, driver_context=default_driver_context())
     codes = {d.code for d in diags}
     assert "mesh_not_si" in codes
     assert all(d.source == "mesh_geometry" for d in diags)
@@ -117,14 +118,15 @@ def test_mesh_adapter_flags_non_si(tmp_path: Path) -> None:
 
 def test_mesh_gate_skipped_by_env(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("SKIP_MESH_DIAGNOSTICS", "1")
-    assert _mesh_geometry_diagnostics(tmp_path) == ()
+    assert _mesh_geometry_diagnostics(tmp_path, driver_context=default_driver_context()) == ()
 
 
 def test_exempt_short_circuits_unit_domain(tmp_path: Path) -> None:
     # A [0,1] mesh would classify "mm", but an exempt case must not be flagged.
     _write_unit_mesh(tmp_path)
-    assert _mesh_geometry_diagnostics(tmp_path, exempt=False) != ()  # baseline
-    assert _mesh_geometry_diagnostics(tmp_path, exempt=True) == ()
+    context = default_driver_context()
+    assert _mesh_geometry_diagnostics(tmp_path, exempt=False, driver_context=context) != ()  # baseline
+    assert _mesh_geometry_diagnostics(tmp_path, exempt=True, driver_context=context) == ()
 
 
 def test_manufactured_entry_is_nondimensional(tmp_path: Path) -> None:
@@ -132,7 +134,7 @@ def test_manufactured_entry_is_nondimensional(tmp_path: Path) -> None:
         case_root=str(tmp_path),
         metadata={"entry_name": "manufacturedBidomain"},
     )
-    assert _is_nondimensional_entry(spec) is True
+    assert _is_nondimensional_entry(spec, default_driver_context()) is True
 
 
 def test_plain_entry_is_dimensional(tmp_path: Path) -> None:
@@ -140,11 +142,15 @@ def test_plain_entry_is_dimensional(tmp_path: Path) -> None:
         case_root=str(tmp_path),
         metadata={"entry_name": "singleCell", "workflow_family": "tutorial"},
     )
-    assert _is_nondimensional_entry(spec) is False
+    assert _is_nondimensional_entry(spec, default_driver_context()) is False
 
 
 def test_strict_plan_succeeds_for_single_cell() -> None:
-    report = strict_plan("singleCell", openfoam_bashrc="/no/such/openfoam/bashrc")
+    report = strict_plan(
+        "singleCell",
+        openfoam_bashrc="/no/such/openfoam/bashrc",
+        driver_context=default_driver_context(),
+    )
     payload = report.to_json()
 
     assert payload["status"] == "ok"
@@ -205,7 +211,7 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
 
 
 def test_strict_plan_succeeds_for_manufactured_tutorial() -> None:
-    report = strict_plan("manufacturedBidomain")
+    report = strict_plan("manufacturedBidomain", driver_context=default_driver_context())
     payload = report.to_json()
 
     assert payload["status"] == "ok"
@@ -249,7 +255,11 @@ def test_strict_plan_status_ignores_environment_only_errors(monkeypatch) -> None
         lambda name, *_, **__: f"/usr/bin/{name}" if name == "cardiacFoam" else None,
     )
 
-    report = strict_plan("singleCell", openfoam_bashrc="/no/such/openfoam/bashrc")
+    report = strict_plan(
+        "singleCell",
+        openfoam_bashrc="/no/such/openfoam/bashrc",
+        driver_context=default_driver_context(),
+    )
     payload = report.to_json()
 
     assert payload["status"] == "ok"
@@ -322,6 +332,7 @@ def test_strict_plan_fails_on_unknown_workflow_command() -> None:
             report = strict_plan(
                 "badCase",
                 overrides={"tutorials_root": str(tutorials_root)},
+                driver_context=default_driver_context(),
             )
 
     payload = report.to_json()
@@ -361,6 +372,7 @@ def test_strict_plan_fails_on_unknown_workflow_dependency() -> None:
             report = strict_plan(
                 "badDependency",
                 overrides={"tutorials_root": str(tutorials_root)},
+                driver_context=default_driver_context(),
             )
 
     payload = report.to_json()
@@ -400,6 +412,7 @@ def test_strict_plan_fails_when_artifact_prediction_is_empty() -> None:
         report = strict_plan(
             "missingArtifacts",
             overrides={"tutorials_root": str(tutorials_root)},
+            driver_context=default_driver_context(),
         )
 
     payload = report.to_json()

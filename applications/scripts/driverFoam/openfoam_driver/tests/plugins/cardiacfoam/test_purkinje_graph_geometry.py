@@ -241,10 +241,13 @@ class TestPurkinjeDiagnosticsReachTheStrictPlanner(unittest.TestCase):
     def test_plugin_hook_is_wired_into_mesh_geometry_diagnostics(self):
         # The move only holds if the plugin's checks still reach the report.
         from openfoam_driver.core.strict_planning import _mesh_geometry_diagnostics
+        from openfoam_driver.core.plugin_interface import default_driver_context
 
         with tempfile.TemporaryDirectory() as d:
             case = _make_case_with_graph(d, _SI, _MM_GRAPH)
-            diags = _mesh_geometry_diagnostics(case)
+            diags = _mesh_geometry_diagnostics(
+                case, driver_context=default_driver_context()
+            )
             codes = {x.code for x in diags}
             self.assertIn("graph_not_si", codes)
             self.assertTrue(all(x.source == "mesh_geometry" for x in diags))
