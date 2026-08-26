@@ -31,3 +31,25 @@ def test_cardiac_report_catalog_matches_baseline() -> None:
     actual = {"version": "1", "reports": [to_record(r) for r in reports]}
     expected = json.loads(_BASELINE.read_text())
     assert actual == expected
+
+
+def test_cardiac_implements_the_hooks_rather_than_relying_on_fallbacks() -> None:
+    plugin = CardiacFoamPlugin()
+    assert callable(getattr(plugin, "get_report_catalog", None))
+    assert callable(getattr(plugin, "get_config_resolution_description", None))
+
+
+def test_core_compatibility_no_longer_imports_cardiac_reports() -> None:
+    """The indirection the dev-tools inventory needed a page-long case study for.
+
+    `core/compatibility.py` reached into `plugins/cardiacfoam/reports.py` gated on
+    a string comparison of plugin_id, which is why reports.py looked orphaned to
+    every static trace. Once cardiac implements the hook, core has no reason to
+    know that module exists.
+    """
+    source = (
+        pathlib.Path(__file__).resolve().parents[2] / "core" / "compatibility.py"
+    ).read_text()
+    assert "cardiacfoam.reports" not in source, (
+        "core/compatibility.py still reaches into plugins/cardiacfoam/reports.py"
+    )

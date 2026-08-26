@@ -233,6 +233,21 @@ class CardiacFoamPlugin:
             self.get_dictionary_catalog(), self.get_dict_groups(),
         )
 
+    def get_report_catalog(self) -> tuple:
+        """This plugin's post-run report catalog. Core owns the machinery; the
+        catalog itself is plugin data, so it lives here instead of being fetched
+        by name from core's compatibility layer."""
+        from openfoam_driver.plugins.cardiacfoam.reports import CARDIAC_REPORTS
+
+        return CARDIAC_REPORTS
+
+    def get_config_resolution_description(self) -> str:
+        """Which case files resolve into a valid RunDocument config."""
+        return (
+            "physicsProperties and electroProperties resolve into a valid "
+            "RunDocument config."
+        )
+
     def get_named_catalogs(self) -> dict:
         """This plugin's own catalogs -- ionic models and active-tension
         models -- namespaced under introspection's generic

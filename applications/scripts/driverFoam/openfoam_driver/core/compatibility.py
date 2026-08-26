@@ -405,26 +405,21 @@ def legacy_dict_entry_catalog(plugin) -> dict:
 
 @_instrumented
 def legacy_describe_config_resolution(plugin) -> str:
-    """v1 plugins predate describe_config_resolution(). Only the built-in
-    cardiac plugin has an authored description; other v1 plugins get a
-    plugin-neutral sentence."""
+    """Plugins that do not implement get_config_resolution_description() get a
+    plugin-neutral sentence. The built-in cardiac plugin now implements the hook
+    itself, so no plugin is named here."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        return "physicsProperties and electroProperties resolve into a valid RunDocument config."
+    del plugin
     return "The plugin's configuration files resolve into a valid RunDocument config."
 
 
 @_instrumented
 def legacy_report_catalog(plugin) -> tuple:
-    """v1 plugins predate get_report_catalog(). Same rule as
-    :func:`legacy_override_schema`: only the built-in cardiac plugin has an
-    authored post-run report catalog; other v1 plugins get no reports and
-    must declare their own by migrating to v2."""
+    """Plugins that do not implement get_report_catalog() have no post-run
+    reports. The built-in cardiac plugin now implements the hook itself, so core
+    no longer imports any plugin's report module."""
 
-    if getattr(plugin, "plugin_id", "") == "org.cardiacfoam":
-        from ..plugins.cardiacfoam.reports import CARDIAC_REPORTS
-
-        return CARDIAC_REPORTS
+    del plugin
     return ()
 
 
