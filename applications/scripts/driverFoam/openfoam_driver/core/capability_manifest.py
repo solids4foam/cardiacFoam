@@ -33,29 +33,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Iterable
 
 from .runtime.workflow import (
     CASE_SCRIPT_COMMANDS,
     CORE_NEUTRAL_COMMANDS,
 )
-
-
-def resolve_case_models(
-    case_root: str | Path,
-) -> tuple[str | None, str | None, str | None]:
-    """Deprecated 3-tuple shim over the cardiac plugin's
-    ``CaseIntrospectionCapability.resolve_case_models``. ``(solver,
-    ionic_model, active_tension)``, any of which may be ``None``; never
-    raises. Kept for callers that imported this function directly before it
-    became plugin-owned; new code should go through
-    ``driver_context.capabilities.case_introspection`` instead."""
-    from .plugin_interface import default_driver_context
-
-    introspection = default_driver_context().capabilities.case_introspection
-    resolved = introspection.resolve_case_models(Path(case_root))
-    return resolved.get("solver"), resolved.get("ionic_model"), resolved.get("active_tension")
 
 
 def utility_produces(

@@ -129,12 +129,6 @@ def test_unknown_model_is_not_an_error():
     assert "Vm" in manifest["samplable_fields"]["electro"]
 
 
-def test_resolve_case_models_missing_file_is_none():
-    from openfoam_driver.core.capability_manifest import resolve_case_models
-
-    assert resolve_case_models("/nonexistent/case") == (None, None, None)
-
-
 def test_describe_entry_includes_capability_manifest():
     from openfoam_driver.core.introspection import describe_entry
 

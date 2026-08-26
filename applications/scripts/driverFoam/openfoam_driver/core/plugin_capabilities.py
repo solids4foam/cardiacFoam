@@ -400,7 +400,7 @@ class CaseIntrospectionCapability(Protocol):
     exposes no fields.
 
     :adapts: get_samplable_fields, resolve_case_models
-    :consumed-by: openfoam_driver/core/capability_manifest.py, openfoam_driver/core/runtime/provenance_inputs.py
+    :consumed-by: openfoam_driver/core/runtime/provenance_inputs.py
     :fallback: legacy_resolve_case_models, legacy_samplable_fields
     :status: optional
     """

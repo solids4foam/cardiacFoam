@@ -47,10 +47,3 @@ def test_no_active_tension_means_no_solid_region(tmp_path: Path) -> None:
     introspection = default_driver_context().capabilities.case_introspection
     resolved = introspection.resolve_case_models(_cardiac_case(tmp_path))
     assert introspection.samplable_fields(resolved)["solid"] == ()
-
-
-def test_deprecated_tuple_shim_still_returns_three_values(tmp_path: Path) -> None:
-    from openfoam_driver.core.capability_manifest import resolve_case_models
-
-    assert resolve_case_models("/nonexistent/case") == (None, None, None)
-    assert resolve_case_models(_cardiac_case(tmp_path))[0] == "monodomainSolver"
