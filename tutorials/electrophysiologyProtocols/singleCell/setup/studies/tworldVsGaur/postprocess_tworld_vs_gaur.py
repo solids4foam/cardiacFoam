@@ -236,7 +236,7 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
         facecolor=background,
     )
     calcium_ax = axes[0].twinx()
-    colors = {"Gaur": "#FF8A65", "TWorld": "#7DD3FC"}
+    colors = {"Gaur": "#FF8A65", "TWorld": "#90EE90"}
     calcium_styles = {"Gaur": "--", "TWorld": ":"}
     for trace in selected:
         rel_time, mask = _last_beat(trace)
@@ -247,7 +247,7 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
             trace.data["cai"][mask],
             color=colors[trace.model],
             linestyle=calcium_styles[trace.model],
-            alpha=0.45,
+            alpha=0.30,
             label=f"{label} Ca²⁺",
         )
 
