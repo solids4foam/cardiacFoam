@@ -7,7 +7,7 @@ this documented contract.
 
 ## Canonical tutorial cases
 
-`Driver entry` is the strict `foamctl` / `openfoam_driver` registry name. A dash
+`Driver entry` is the strict `driverFoam` / `openfoam_driver` registry name. A dash
 means that the folder can still be addressed as a generic case but has no
 dedicated registered spec. `Regression` means coverage by the cross-case
 `Alltest-regression` runner, not merely the presence of an `Allrun` script.

@@ -17,11 +17,15 @@ by hand-rolled bash.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/coupling/sweep_coupling_study.json --output-dir <scratch_dir>
-python3 setup/studies/coupling/summarize_coupling_study.py .
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json \
+    --output-dir .tmp/driverfoam/bathBidomain-coupling
+python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain
 ```
 
-Run the summarizer from the tutorial's case root (`tutorials/manufacturedSolutions/bathBidomain`), not from `setup/studies/coupling/`. `--output-dir` for `sweep-run` is required by the CLI but only holds run-tracking state (`sweep_manifest.json`, per-case `run_document.json`) — the actual OpenFOAM data lands in the case root itself, described next.
+Run the summarizer from the repository root. `--output-dir` holds run-tracking
+state (`sweep_manifest.json`, per-case `run_document.json`) while the actual
+OpenFOAM data lands in the case root itself, described next.
 
 ### Where the output actually lands (verified, not the naive reading of `archive_dir_name`)
 

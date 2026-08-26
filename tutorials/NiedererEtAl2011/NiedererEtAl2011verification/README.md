@@ -75,7 +75,7 @@ Manual:
 Driver-managed sweep:
 
 ```bash
-foamctl all --entry niederer2012
+applications/scripts/driverFoam/bin/driverFoam run --strict --entry niederer2012
 ```
 
 Driver sweeps are controlled by

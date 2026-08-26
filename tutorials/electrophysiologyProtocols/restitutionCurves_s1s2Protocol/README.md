@@ -64,7 +64,7 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-foamctl all --entry restitutionCurves
+applications/scripts/driverFoam/bin/driverFoam run --strict --entry restitutionCurves
 ```
 
 Driver defaults live in

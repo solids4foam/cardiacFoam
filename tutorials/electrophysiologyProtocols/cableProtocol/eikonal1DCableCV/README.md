@@ -96,11 +96,16 @@ The decomposition is defined in `system/decomposeParDict`.
 
 ## Driver convergence entry
 
-This case is also exposed as a registered driver sweep:
+This folder does not currently have a dedicated registered driver entry. The
+similarly named `cable1DCVConvergence` entry is registered, but the current
+registry resolves it to the *monodomain* cable case, not this eikonal folder:
 
 ```bash
-foamctl all --entry cable1DCVConvergence
+applications/scripts/driverFoam/bin/driverFoam describe --entry cable1DCVConvergence
 ```
+
+Use `Allrun` above for this eikonal case until a dedicated driver factory is
+added.
 
 The default sweep config is stored in:
 

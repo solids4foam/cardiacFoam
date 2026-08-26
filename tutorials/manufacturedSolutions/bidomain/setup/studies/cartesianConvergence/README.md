@@ -6,7 +6,19 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-Execute the sweep using `foamctl run --sweep sweep_hex_convergence.json` or by invoking the local runner script.
+From the repository root, plan and run the sweep with:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
+    --output-dir .tmp/driverfoam/bidomain-cartesian
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
+    --output-dir .tmp/driverfoam/bidomain-cartesian
+```
+
+Resolve the runtime preflight before expecting OpenFOAM execution; see
+`tutorials/manufacturedSolutions/README.md`.
 
 ## Tracking & Outputs
 

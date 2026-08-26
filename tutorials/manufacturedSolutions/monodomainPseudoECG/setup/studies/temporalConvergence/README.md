@@ -6,7 +6,17 @@ This study validates temporal convergence (timestep refinement) using the monodo
 
 ## Execution
 
-Execute the sweep using `foamctl run --sweep sweep_temporal_convergence.json` or by invoking the local runner script.
+From the repository root:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json \
+    --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
+```
+
+This spec currently fails during materialisation for the same temporal
+factory-cardinality issue as the bidomain temporal study. Repair the JSON or
+factory contract before using `sweep-run`.
 
 ## Tracking & Outputs
 

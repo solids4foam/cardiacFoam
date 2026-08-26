@@ -28,6 +28,14 @@ mkdir -p setup/studies/errorLocalisation/results
 python3 setup/studies/errorLocalisation/aggregate_bulk_boundary.py
 ```
 
+Current status: `sweep-plan` reaches case materialisation but fails before
+OpenFOAM because the spec asks the driver to write
+`eikonalSolverCoeffs.verificationModel.writeErrorField` and the current case
+dictionary does not contain that key. This is a stale spec/dictionary
+contract, not a solver runtime result; do not interpret the command above as
+verified until the key is added or the override is moved to the current
+dictionary scope.
+
 This writes `setup/results/eikonal_bulk_boundary_tet.csv`.
 
 ## Tracking & Outputs

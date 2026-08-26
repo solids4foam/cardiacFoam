@@ -99,7 +99,7 @@ The decomposition is defined in `system/decomposeParDict`.
 This case is also exposed as a registered driver sweep:
 
 ```bash
-foamctl all --entry cable1DCVConvergence
+applications/scripts/driverFoam/bin/driverFoam run --strict --entry cable1DCVConvergence
 ```
 
 The default sweep config is stored in:
@@ -119,13 +119,15 @@ model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
 This case is also exposed as a newly normalized S1-S2 restitution sweep:
 
 ```bash
-foamctl run --entry cableRestitutionCurves --strict
+applications/scripts/driverFoam/bin/driverFoam run --entry cable1DRestitution --strict
 ```
 
 Or you can sweep custom restitution intervals using a JSON config:
 
 ```bash
-foamctl sweep-run --spec sweep_restitution.json --output-dir validation_run
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/sweep.json \
+    --output-dir .tmp/driverfoam/cable-restitution
 ```
 
 The sweep logic and default S2 pacing intervals are fully centralized in:

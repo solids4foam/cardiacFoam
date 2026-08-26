@@ -83,7 +83,7 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across multi
 Spatial convergence (hex mesh):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/driver_config.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
 python3 applications/scripts/paperI_results/aggregate.py mono_spatial
 python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 ```
@@ -91,11 +91,16 @@ python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal1D_N640/config.json
-applications/scripts/driverFoam/bin/driverFoam all --entry manufacturedMonodomainPseudoECG --config tutorials/manufacturedSolutions/monodomainPseudoECG/setup/setup/temporal2D_N640/config.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
 ```
 
-Each temporal config holds a fixed fine mesh (`N = 640`) with a `dt` ladder `[1.121075e-3, 5.60538e-4, 2.80269e-4, 1.401345e-4]`, disables ECG post-processing, and isolates field temporal-order measurement.
+The temporal spec is intended to hold a fixed fine mesh (`N = 640`) with a
+`dt` ladder `[1.121075e-3, 5.60538e-4, 2.80269e-4, 1.401345e-4]`, disable ECG
+post-processing, and isolate field temporal-order measurement. Its current
+plan is blocked by the factory-cardinality issue described in the study
+README.
+
+The checked-in sweep JSON files are the source of truth for these studies.
 
 Tetrahedral mesh variant (example of running a study):
 
