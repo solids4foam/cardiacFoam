@@ -185,7 +185,14 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
         "failed",
         "skipped",
     ]
-    solve_step = payload["workflow_dag"]["steps"][0]
+    # Steps are located by id, never by position. This tutorial's DAG is free
+    # to gain a mesh step (or a decomposePar/reconstructPar pair, as
+    # manufacturedBidomain does) without that being a regression -- what this
+    # test means is "the SOLVE step runs cardiacFoam", not "the FIRST step
+    # does". Indexing [0] said the latter and only passed while singleCell
+    # happened to have exactly one step.
+    dag_steps = payload["workflow_dag"]["steps"]
+    solve_step = next(step for step in dag_steps if step["id"] == "solve")
     assert solve_step["command"] == "cardiacFoam"
     assert solve_step["args"] == []
     assert solve_step["cwd"] == "."
@@ -195,18 +202,25 @@ def test_strict_plan_succeeds_for_single_cell() -> None:
     )
     assert payload["run_document"]["workflowDag"] == payload["workflow_dag"]
     assert payload["workflow_state"]["status"] == "pending"
-    assert payload["workflow_state"]["current_step_id"] == "solve"
+    # A freshly planned run starts at the DAG's first step, whichever that is.
+    assert payload["workflow_state"]["current_step_id"] == dag_steps[0]["id"]
     assert payload["workflow_state"]["completed_steps"] == []
     assert payload["workflow_state"]["failed_step_id"] is None
-    assert payload["workflow_state"]["steps"][0]["step_id"] == "solve"
-    assert payload["workflow_state"]["steps"][0]["status"] == "pending"
-    assert payload["workflow_state"]["steps"][0]["attempt"] == 0
-    assert payload["workflow_state"]["steps"][0]["command"] == "cardiacFoam"
-    assert payload["workflow_state"]["steps"][0]["args"] == []
-    assert payload["workflow_state"]["steps"][0]["cwd"] == "."
-    assert payload["workflow_state"]["steps"][0]["exit_code"] is None
-    assert payload["workflow_state"]["steps"][0]["stdout_log"] is None
-    assert payload["workflow_state"]["steps"][0]["stderr_log"] is None
+
+    state_steps = payload["workflow_state"]["steps"]
+    assert [step["step_id"] for step in state_steps] == [
+        step["id"] for step in dag_steps
+    ]
+    assert all(step["status"] == "pending" for step in state_steps)
+    assert all(step["attempt"] == 0 for step in state_steps)
+    assert all(step["exit_code"] is None for step in state_steps)
+    assert all(step["stdout_log"] is None for step in state_steps)
+    assert all(step["stderr_log"] is None for step in state_steps)
+
+    solve_state = next(step for step in state_steps if step["step_id"] == "solve")
+    assert solve_state["command"] == "cardiacFoam"
+    assert solve_state["args"] == []
+    assert solve_state["cwd"] == "."
     assert payload["run_document"]["workflowState"] == payload["workflow_state"]
 
 
