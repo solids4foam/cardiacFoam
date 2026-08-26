@@ -13,9 +13,7 @@ authors = [
 ]
 dependencies = [
   "foamlib>=1.7.5,<2",
-  "gmsh>=4.15.2",
   "jsonschema>=4.0",
-  "numpy>=1.24",
   "PyYAML>=6.0",
 ]
 
@@ -24,8 +22,6 @@ post = [
   "matplotlib>=3.7",
   "pandas>=2.0",
   "plotly>=5.0",
-  "prompt-toolkit>=3.0",
-  "openpyxl>=3.1",
 ]
 [project.scripts]
 driverFoam = "openfoam_driver.cli:main"
