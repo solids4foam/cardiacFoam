@@ -45,25 +45,6 @@ namespace
 
 dictionary electroModelDict(const IOdictionary& electroDict)
 {
-    if (electroDict.found("electroModel"))
-    {
-        word electroModelName;
-        electroDict.lookup("electroModel") >> electroModelName;
-
-        const word coeffsName(electroModelName + "Coeffs");
-
-        if (!electroDict.found(coeffsName))
-        {
-            FatalErrorInFunction
-                << "Expected sub-dictionary '" << coeffsName
-                << "' in electroProperties for electroModel '"
-                << electroModelName << "'."
-                << exit(FatalError);
-        }
-
-        return electroDict.subDict(coeffsName);
-    }
-
     if (electroDict.found("myocardiumSolver"))
     {
         word myocardiumSolverName;

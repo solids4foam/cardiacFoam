@@ -70,33 +70,6 @@ dictionary electroModelDict(const IOdictionary& electroDict)
         return electroDict.subDict(coeffsName);
     }
 
-    if (electroDict.found("electroModel"))
-    {
-        word electroModelName;
-        electroDict.lookup("electroModel") >> electroModelName;
-
-        const word coeffsName(electroModelName + "Coeffs");
-
-        if (!electroDict.found(coeffsName))
-        {
-            FatalErrorInFunction
-                << "Expected sub-dictionary '" << coeffsName
-                << "' in electroProperties for electroModel '"
-                << electroModelName << "'." << nl
-                << "For example:" << nl
-                << "  electroModel " << electroModelName << ";" << nl
-                << "  " << coeffsName << nl
-                << "  {" << nl
-                << "      ionicModel TNNP;" << nl
-                << "      tissue endocardialCells;" << nl
-                << "      ..." << nl
-                << "  }" << nl
-                << exit(FatalError);
-        }
-
-        return electroDict.subDict(coeffsName);
-    }
-
     FatalErrorInFunction
         << "Expected 'myocardiumSolver' in electroProperties." << nl
         << "For example:" << nl
