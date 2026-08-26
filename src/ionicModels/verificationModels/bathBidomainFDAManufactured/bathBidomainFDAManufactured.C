@@ -52,16 +52,11 @@ Foam::bathBidomainFDAManufactured::bathBidomainFDAManufactured
     CONSTANTS_(BATH_BIDOMAIN_NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num),
-    k_
+    k_(dict.subOrEmptyDict("verificationModel").lookupOrDefault<scalar>
     (
-        dict.found("manufacturedBidomain")
-      ? dict.subDict("manufacturedBidomain").lookupOrDefault<scalar>
-        (
-            "k",
-            1.0/Foam::sqrt(2.0)
-        )
-      : dict.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0))
-    )
+        "k",
+        1.0/Foam::sqrt(2.0)
+    ))
 {
     setTissue(ionicSelector::selectDimension(dict, supportedDimensions()));
 

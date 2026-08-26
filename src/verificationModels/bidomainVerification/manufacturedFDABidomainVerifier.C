@@ -46,14 +46,14 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
     errorsReported_(false),
-    k_(0.5),
+    k_(1.0/Foam::sqrt(2.0)),
     phiEReferenceValue_(0.0),
     phiEReferencePoint_(point::zero)
 {
     const dictionary& coeffDict = this->dict();
     const dictionary& cfg = verificationDict();
 
-    k_ = cfg.lookupOrDefault<scalar>("k", 0.5);
+    k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
     // phiEReferenceValue and phiERefPoint are physics parameters that belong
     // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
     phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
