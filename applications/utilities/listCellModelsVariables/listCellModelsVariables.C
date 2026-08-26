@@ -115,7 +115,32 @@ dictionary electroModelDict(const IOdictionary& electroDict)
 
 dictionary activeTensionDict(const dictionary& modelDict)
 {
-    const dictionary& atSubDict = modelDict.subDict("activeTensionModel");
+    // `activeTensionModel` has two legal shapes and this utility must accept
+    // both. The canonical one -- the only one activeTensionModel::New() itself
+    // reads (see src/activeTensionModels/activeTensionModel/activeTensionModel.C,
+    // `dict.lookup("activeTensionModel")`) -- is a plain word in the parent:
+    //
+    //     activeTensionModel LandNiederer;
+    //
+    // The other nests the selector alongside its coefficients:
+    //
+    //     activeTensionModel { activeTensionModel LandNiederer; ... }
+    //
+    // This function used to call subDict() unconditionally, so the canonical
+    // shape aborted with "primitiveEntry 'activeTensionModel' ... as a
+    // sub-dictionary" -- and the caller's `found()` guard cannot tell the two
+    // apart, since it is true for either.
+    const dictionary* atSubDictPtr =
+        modelDict.findDict("activeTensionModel", keyType::LITERAL);
+
+    if (!atSubDictPtr)
+    {
+        // Canonical shape: the selector and any <model>Coeffs block already
+        // live in modelDict, which is exactly what New() expects.
+        return dictionary(modelDict);
+    }
+
+    const dictionary& atSubDict = *atSubDictPtr;
     const word atModelType(atSubDict.lookup("activeTensionModel"));
 
     dictionary atDict(atSubDict);
