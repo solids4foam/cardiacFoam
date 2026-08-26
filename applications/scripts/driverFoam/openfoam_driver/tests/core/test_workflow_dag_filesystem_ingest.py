@@ -38,6 +38,9 @@ from pathlib import Path
 import tempfile
 
 from openfoam_driver.core.runtime.registry import load_tutorial_spec, resolve_entry
+from openfoam_driver.core.plugin_interface import default_driver_context
+
+_CTX = default_driver_context()
 
 
 class TestFilesystemCaseWorkflowOwnership(unittest.TestCase):
@@ -62,6 +65,7 @@ class TestFilesystemCaseWorkflowOwnership(unittest.TestCase):
             spec = load_tutorial_spec(
                 "myCase",
                 overrides={"tutorials_root": tutorials_root},
+                driver_context=_CTX,
             )
 
             dag = spec.metadata.get("workflow_dag")
@@ -79,6 +83,7 @@ class TestFilesystemCaseWorkflowOwnership(unittest.TestCase):
             spec = load_tutorial_spec(
                 "bareCase",
                 overrides={"tutorials_root": tutorials_root},
+                driver_context=_CTX,
             )
 
             dag = spec.metadata.get("workflow_dag")
@@ -100,6 +105,7 @@ class TestFilesystemCaseWorkflowOwnership(unittest.TestCase):
             resolution = resolve_entry(
                 "variantCase",
                 overrides={"tutorials_root": tutorials_root},
+                driver_context=_CTX,
             )
 
             self.assertEqual(resolution["resolution"], "case_folder")

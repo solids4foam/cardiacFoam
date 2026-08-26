@@ -64,14 +64,12 @@ ENTRY_KIND_VALUES = (
 
 def _is_case_directory(
     path: Path,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> bool:
     if not path.is_dir() or path.name.startswith(".") or path.name == "__pycache__":
         return False
-    from ..compatibility import resolve_public_driver_context
     from ..plugin_capabilities import CaseCompatibilityRequest
 
-    driver_context = resolve_public_driver_context(driver_context)
     return (
         driver_context.capabilities.case_compatibility.has_case_marker(
             CaseCompatibilityRequest(path),
@@ -83,15 +81,13 @@ def _is_case_directory(
 def _case_is_runnable(
     case_root: Path,
     *,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> bool:
     if (case_root / "Allrun").is_file():
         return True
 
-    from ..compatibility import resolve_public_driver_context
     from ..plugin_capabilities import CaseCompatibilityRequest
 
-    driver_context = resolve_public_driver_context(driver_context)
     return driver_context.capabilities.case_compatibility.is_runnable_without_workflow(
         CaseCompatibilityRequest(case_root),
     )
@@ -179,11 +175,8 @@ def _classify_case_entry(
 
 def _entry_catalog_for_root(
     tutorials_root: Path,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> list[dict[str, object]]:
-    from ..compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
     entries: list[dict[str, object]] = [
         _registered_tutorial_entry(tutorial, tutorials_root, driver_context)
         for tutorial in list_tutorials(driver_context)
@@ -348,12 +341,10 @@ def resolve_entry(
     *,
     entry_kind: str | None = None,
     overrides: dict | None = None,
-    driver_context: "DriverContext | None" = None,
+    driver_context: "DriverContext",
 ) -> dict[str, object]:
-    from ..compatibility import resolve_public_driver_context
     from ..plugin_capabilities import CaseCompatibilityRequest
 
-    driver_context = resolve_public_driver_context(driver_context)
     key = name.strip()
     normalized_key = key.casefold()
     normalized_registry = _normalized_registry(driver_context)
@@ -444,16 +435,13 @@ def resolve_tutorial(
     return resolve_entry(name, overrides=overrides, driver_context=driver_context)
 
 
-def _get_plugin_tutorials(driver_context: "DriverContext | None" = None):
-    from ..compatibility import resolve_public_driver_context
-
-    driver_context = resolve_public_driver_context(driver_context)
+def _get_plugin_tutorials(driver_context: "DriverContext"):
     return driver_context.capabilities.tutorials.catalog()
 
-def _normalized_registry(driver_context: "DriverContext | None" = None) -> dict[str, object]:
+def _normalized_registry(driver_context: "DriverContext") -> dict[str, object]:
     spec_factories = _get_plugin_tutorials(driver_context).get("spec_factories", {})
     return {name.casefold(): factory for name, factory in spec_factories.items()}
 
-def list_tutorials(driver_context: "DriverContext | None" = None) -> list[str]:
+def list_tutorials(driver_context: "DriverContext") -> list[str]:
     registered = _get_plugin_tutorials(driver_context).get("registered_tutorials", ())
     return list(registered)

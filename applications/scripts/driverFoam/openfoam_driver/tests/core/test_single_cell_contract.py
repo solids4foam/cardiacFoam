@@ -32,6 +32,7 @@ import unittest
 from pathlib import Path
 
 from openfoam_driver.core.runtime.registry import load_tutorial_spec
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 
 
@@ -42,6 +43,7 @@ class TestSingleCellContract(unittest.TestCase):
         spec = load_tutorial_spec(
             "singleCell",
             overrides={"tutorials_root": monorepo_root / "tutorials"},  # type: ignore[operator]
+            driver_context=default_driver_context(),
         )
         cls.module_path = spec.setup_root / "singleCellinteractivePlots.py"
         cls.tree = ast.parse(cls.module_path.read_text())

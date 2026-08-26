@@ -53,9 +53,10 @@ from openfoam_driver.core.tutorials_display import to_record  # noqa: E402
 
 
 def build_catalog() -> dict:
-    plugin = default_driver_context().plugin
+    context = default_driver_context()
+    plugin = context.plugin
     display_ids = {t.id for t in plugin.get_tutorial_displays()}
-    registry_ids = set(list_tutorials())
+    registry_ids = set(list_tutorials(context))
 
     only_in_display = display_ids - registry_ids
     only_in_registry = registry_ids - display_ids
@@ -74,7 +75,7 @@ def build_catalog() -> dict:
     by_id = {t.id: t for t in plugin.get_tutorial_displays()}
     return {
         "version": "1",
-        "tutorials": [to_record(by_id[name]) for name in list_tutorials()],
+        "tutorials": [to_record(by_id[name]) for name in list_tutorials(context)],
     }
 
 

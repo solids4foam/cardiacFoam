@@ -5,6 +5,9 @@ from pathlib import Path
 import pytest
 
 from openfoam_driver.core.runtime.registry import list_entries
+from openfoam_driver.core.plugin_interface import default_driver_context
+
+_CTX = default_driver_context()
 
 
 def _touch(case_root: Path, relative: str) -> None:
@@ -45,7 +48,7 @@ def test_existing_case_discovery_and_runnability_matrix(
         _touch(case_root, relative)
 
     matches = [
-        entry for entry in list_entries(tmp_path)
+        entry for entry in list_entries(tmp_path, driver_context=_CTX)
         if entry["entry_name"] == "candidate"
     ]
     assert bool(matches) is discovered

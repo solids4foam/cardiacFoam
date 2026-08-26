@@ -570,6 +570,12 @@ def _run_document_dispatch(args, driver_context) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from openfoam_driver.core.compatibility import legacy_default_driver_context
+
+    # TODO(spec §10.2): this help string should not name any plugin's tutorials.
+    # Fixed in the Phase 5 plan; until then the default is explicit, not implicit.
+    _default_entries = list_tutorials(legacy_default_driver_context())
+
     parser = argparse.ArgumentParser(description="Generic OpenFOAM tutorial automation driver")
     parser.add_argument(
         "action",
@@ -594,7 +600,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         help=(
             "Entry name or relative workflow/case path to run "
-            f"({', '.join(list_tutorials())}, genericCase)"
+            f"({', '.join(_default_entries)}, genericCase)"
         ),
     )
     parser.add_argument(
@@ -729,7 +735,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _load_spec_overrides(config_path: str, entry: str) -> dict:
+def _load_spec_overrides(config_path: str, entry: str, driver_context) -> dict:
     payload = json.loads(Path(config_path).read_text())
     if not isinstance(payload, dict):
         raise ValueError("Config file must contain a JSON object")
@@ -742,7 +748,7 @@ def _load_spec_overrides(config_path: str, entry: str) -> dict:
             return _normalize_spec_overrides(value)
 
     known_tutorial_keys = {
-        *(name.casefold() for name in list_tutorials()),
+        *(name.casefold() for name in list_tutorials(driver_context)),
         "genericcase",
         "randomcase",
     }
@@ -856,7 +862,7 @@ def main(argv: list[str] | None = None) -> int:
 
     selected_entry = args.entry
 
-    overrides = _load_spec_overrides(args.config, selected_entry) if args.config else None
+    overrides = _load_spec_overrides(args.config, selected_entry, driver_context) if args.config else None
     if args.tutorials_root:
         if overrides is None:
             overrides = {}

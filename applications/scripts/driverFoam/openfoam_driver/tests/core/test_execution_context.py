@@ -34,8 +34,11 @@ from pathlib import Path
 
 from openfoam_driver.core.runtime.execution_context import resolve_execution_context
 from openfoam_driver.core.runtime.registry import load_entry_spec
+from openfoam_driver.core.plugin_interface import default_driver_context
 
 from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
+
+_CTX = default_driver_context()
 
 
 
@@ -43,7 +46,9 @@ from openfoam_driver.tests.conftest import monorepo_root, skip_without_monorepo
 class TestResolveExecutionContext(unittest.TestCase):
     def test_reports_case_setup_output_and_workflow_state_paths(self) -> None:
         tutorials_root = monorepo_root / "tutorials"  # type: ignore[operator]
-        spec = load_entry_spec("singleCell", overrides={"tutorials_root": str(tutorials_root)})
+        spec = load_entry_spec(
+            "singleCell", overrides={"tutorials_root": str(tutorials_root)}, driver_context=_CTX,
+        )
 
         context = resolve_execution_context(spec)
 
@@ -60,7 +65,9 @@ class TestResolveExecutionContext(unittest.TestCase):
         its own, unlike describe_launch (which strict_plan used to call a second
         time on the same entry purely to get these four paths)."""
         tutorials_root = monorepo_root / "tutorials"  # type: ignore[operator]
-        spec = load_entry_spec("singleCell", overrides={"tutorials_root": str(tutorials_root)})
+        spec = load_entry_spec(
+            "singleCell", overrides={"tutorials_root": str(tutorials_root)}, driver_context=_CTX,
+        )
 
         context = resolve_execution_context(spec)
 

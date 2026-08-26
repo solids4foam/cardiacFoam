@@ -80,10 +80,11 @@ def test_every_registered_tutorial_is_exported(tmp_path):
     factory does not exist, and cannot omit a registered tutorial.
     Either drift makes the catalog lie about what the backend can run."""
     from openfoam_driver.core.runtime.registry import list_tutorials, _normalized_registry
+    from openfoam_driver.core.plugin_interface import default_driver_context
 
     data = _run(tmp_path / "t.json")
     exported = {t["id"] for t in data["tutorials"]}
-    registered = set(list_tutorials())
+    registered = set(list_tutorials(default_driver_context()))
     assert exported == registered, (
         f"exported vs registered mismatch — only-in-exported: "
         f"{exported - registered}, only-in-registered: "

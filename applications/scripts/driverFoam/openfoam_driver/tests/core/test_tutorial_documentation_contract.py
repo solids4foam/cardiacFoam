@@ -33,6 +33,7 @@ from openfoam_driver.tests.conftest import skip_without_monorepo
 pytestmark = skip_without_monorepo
 
 from openfoam_driver.core.runtime.registry import list_tutorials, _normalized_registry
+from openfoam_driver.core.plugin_interface import default_driver_context
 
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
@@ -70,9 +71,10 @@ def _runner_cases() -> set[str]:
 
 
 def _registered_case_paths() -> dict[str, str]:
+    context = default_driver_context()
     paths = {}
-    for entry in list_tutorials():
-        spec = _normalized_registry()[entry.casefold()](tutorials_root=TUTORIALS_ROOT)
+    for entry in list_tutorials(context):
+        spec = _normalized_registry(context)[entry.casefold()](tutorials_root=TUTORIALS_ROOT)
         paths[entry] = str(Path(spec.case_root).relative_to(TUTORIALS_ROOT))
     return paths
 

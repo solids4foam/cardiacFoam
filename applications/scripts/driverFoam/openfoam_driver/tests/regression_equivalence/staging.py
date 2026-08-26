@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from openfoam_driver.core.plugin_interface import default_driver_context
 from openfoam_driver.core.runtime.registry import resolve_entry
 from openfoam_driver.tests.regression_equivalence.registry import RegressionCase
 
@@ -24,15 +25,16 @@ def resolve_generic(case: RegressionCase) -> dict[str, Any]:
     ambiguous; there we pin the case_folder kind. Cases with a single entry at
     their path resolve without a kind filter.
     """
+    context = default_driver_context()
     try:
-        return resolve_entry(case.case_dir)
+        return resolve_entry(case.case_dir, driver_context=context)
     except KeyError as exc:
         if "ambiguous" not in str(exc):
             raise
-        return resolve_entry(case.case_dir, entry_kind="case_folder")
+        return resolve_entry(case.case_dir, entry_kind="case_folder", driver_context=context)
 
 
 def resolve_strict(case: RegressionCase) -> dict[str, Any]:
     if not case.mapped:
         raise ValueError(f"{case.case_dir} has no registered entry")
-    return resolve_entry(case.entry_name)
+    return resolve_entry(case.entry_name, driver_context=default_driver_context())
