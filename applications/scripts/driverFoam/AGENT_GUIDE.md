@@ -256,6 +256,41 @@ objects:
 }
 ```
 
+### Recommended study organization
+
+Treat a sweep as a named study owned by the tutorial. Keep one sweep JSON and
+one post-processing module together under `setup/studies/<studyName>/`; keep
+generated cases and reports out of the source directory:
+
+```text
+tutorials/<case>/setup/studies/<studyName>/
+├── sweep_<study_name>.json
+├── postprocess_<study_name>.py
+└── results/
+    └── <run-name>/
+        ├── sweep_manifest.json
+        ├── cases/
+        │   ├── <case-id-1>/
+        │   └── <case-id-2>/
+        ├── comparison_waveforms.png
+        ├── rate_dependence.png
+        ├── metrics.csv
+        └── summary.md
+```
+
+Use a new descriptive `<run-name>` for each completed run, such as
+`2026-08-26_CL300-500-1000` or `run_001`. The run directory is the unit of
+reproducibility: its manifest records the sweep, `cases/` contains the raw
+OpenFOAM traces and per-case state, and the PNG/CSV/Markdown files are the
+audience-facing results. The `results/` directory is generated output and
+should be gitignored; commit the study JSON, postprocessor, and README instead.
+
+The TWORLD-versus-Gaur study is the worked example:
+`tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/`.
+It uses one JSON for the six model/species and pacing cases, one postprocessor
+for Vm, Ca²⁺, currents, SR fluxes, active tension, and rate dependence, and
+stores all outputs in a single run directory.
+
 Each resolved case's axis values route automatically into `build_and_launch`'s
 parameters: `myocardiumSolver`/`ionicModel`/`tissue` go to `electro_selectors`,
 `type` goes to `physics_selectors`, `deltaT`/`endTime` go to the dedicated

@@ -266,6 +266,9 @@ tutorials/**/*.png
 tutorials/**/results/
 tutorials/**/interfaceStudy/
 
+# Versioned audience-facing figures for the TWORLD/Gaur single-cell study
+!tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/*.png
+
 # Benchmarks and scripts output
 meluxinaScripts_GPU/benchmarkGPU_results_summary.*
 

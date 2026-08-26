@@ -41,6 +41,7 @@ from openfoam_driver.plugins.cardiacfoam.overrides import (
 from openfoam_driver.core.specs.common import (
     resolve_run_script_path,
     resolve_spec_paths,
+    set_end_time,
 )
 from openfoam_driver.core.runtime.models import CaseConfig, TutorialSpec
 
@@ -72,7 +73,14 @@ def _apply_case(
     stimulus_map: Mapping[str, float],
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: Path = defaults.ELECTRO_PROPERTIES_RELPATH,
+    control_dict_relpath: Path = Path("system/controlDict"),
     physics_properties_relpath: Path = Path("constant/physicsProperties"),
+    stim_start_ms: float | None = None,
+    s1_interval_ms: float | None = None,
+    n_s1: int | None = None,
+    end_time_buffer_s: float = 0.0,
+    write_after_time_s: float | None = None,
+    ionic_export: Sequence[str] | None = None,
     electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
 ) -> None:
@@ -83,12 +91,49 @@ def _apply_case(
         raise KeyError(f"Missing stimulus amplitude for ionic model '{ionic_model}'")
 
     electro_properties_file = case_root / electro_properties_relpath
+    control_dict_file = case_root / control_dict_relpath
     physics_properties_file = case_root / physics_properties_relpath
     case_overrides = {
         f"{electro_properties_scope}.tissue": tissue,
         f"{electro_properties_scope}.ionicModel": ionic_model,
         f"{electro_properties_scope}.singleCellStimulus.stim_amplitude": stimulus_map[ionic_model],
     }
+
+    # Optional pacing controls are deliberately opt-in so the established
+    # all-model singleCell sweep retains its authored protocol unchanged.
+    stimulus_overrides = {}
+    if stim_start_ms is not None:
+        stimulus_overrides[
+            f"{electro_properties_scope}.singleCellStimulus.stim_start"
+        ] = stim_start_ms
+    if s1_interval_ms is not None:
+        stimulus_overrides[
+            f"{electro_properties_scope}.singleCellStimulus.stim_period_S1"
+        ] = s1_interval_ms
+    if n_s1 is not None:
+        stimulus_overrides[
+            f"{electro_properties_scope}.singleCellStimulus.nstim1"
+        ] = n_s1
+
+    case_overrides.update(stimulus_overrides)
+
+    if s1_interval_ms is not None or n_s1 is not None or stim_start_ms is not None:
+        start_ms = 0.0 if stim_start_ms is None else float(stim_start_ms)
+        interval_ms = 0.0 if s1_interval_ms is None else float(s1_interval_ms)
+        beats = 1 if n_s1 is None else int(n_s1)
+        if interval_ms <= 0.0 or beats <= 0:
+            raise ValueError("comparison pacing requires a positive CL and n_s1")
+        set_end_time(
+            control_dict_file,
+            (start_ms + interval_ms * beats) / 1000.0 + end_time_buffer_s,
+        )
+
+    if write_after_time_s is not None:
+        case_overrides[f"{electro_properties_scope}.writeAfterTime"] = write_after_time_s
+    if ionic_export is not None:
+        case_overrides[
+            f"{electro_properties_scope}.outputVariables.ionic.export"
+        ] = "(" + " ".join(str(name) for name in ionic_export) + ")"
 
     apply_electro_property_overrides(electro_properties_file, case_overrides)
     apply_electro_property_overrides(electro_properties_file, electro_property_overrides)
@@ -109,6 +154,13 @@ def make_spec(
     electro_properties_scope: str = defaults.ELECTRO_PROPERTIES_SCOPE,
     electro_properties_relpath: str | Path = defaults.ELECTRO_PROPERTIES_RELPATH,
     physics_properties_relpath: str | Path = "constant/physicsProperties",
+    control_dict_relpath: str | Path = "system/controlDict",
+    stim_start_ms: float | None = None,
+    s1_interval_ms: float | None = None,
+    n_s1: int | None = None,
+    end_time_buffer_s: float = 0.0,
+    write_after_time_s: float | None = None,
+    ionic_export: Sequence[str] | None = None,
     electro_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     physics_property_overrides: Mapping[str, object] | Sequence[Mapping[str, object]] | None = None,
     run_script_relpath: str | Path = defaults.RUN_SCRIPT_RELPATH,
@@ -139,6 +191,7 @@ def make_spec(
 
     electro_properties_path = Path(electro_properties_relpath)
     physics_properties_path = Path(physics_properties_relpath)
+    control_dict_path = Path(control_dict_relpath)
     run_script_path = Path(run_script_relpath)
 
     default_output_dir_name = defaults.OUTPUT_DIR_NAME
@@ -165,7 +218,14 @@ def make_spec(
             stimulus_map=stimulus_map,
             electro_properties_scope=electro_properties_scope,
             electro_properties_relpath=electro_properties_path,
+            control_dict_relpath=control_dict_path,
             physics_properties_relpath=physics_properties_path,
+            stim_start_ms=stim_start_ms,
+            s1_interval_ms=s1_interval_ms,
+            n_s1=n_s1,
+            end_time_buffer_s=end_time_buffer_s,
+            write_after_time_s=write_after_time_s,
+            ionic_export=ionic_export,
             electro_property_overrides=electro_property_overrides,
             physics_property_overrides=physics_property_overrides,
         ),
@@ -174,12 +234,20 @@ def make_spec(
             "notes": "Single-cell sweep on ionic model and tissue types.",
             "workflow_dag": {
                 "steps": [
-                    {"id": "solve", "command": "cardiacFoam", "depends_on": []},
+                    {"id": "mesh", "command": "blockMesh", "depends_on": []},
+                    {"id": "solve", "command": "cardiacFoam", "depends_on": ["mesh"]},
                 ]
             },
             "ionic_models": ionic_models_list,
             "electro_properties_relpath": str(electro_properties_path),
             "physics_properties_relpath": str(physics_properties_path),
+            "control_dict_relpath": str(control_dict_path),
+            "stim_start_ms": stim_start_ms,
+            "s1_interval_ms": s1_interval_ms,
+            "n_s1": n_s1,
+            "end_time_buffer_s": end_time_buffer_s,
+            "write_after_time_s": write_after_time_s,
+            "ionic_export": list(ionic_export) if ionic_export is not None else None,
             "electro_properties_scope": electro_properties_scope,
             "run_script_relpath": str(run_script_path),
             "output_glob": output_glob,

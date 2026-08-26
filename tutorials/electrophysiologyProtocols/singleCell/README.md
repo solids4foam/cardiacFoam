@@ -62,6 +62,52 @@ singleCellSolverCoeffs
 
 Optional plotting is done by `plotVoltage` (skipped by default when `CF_SKIP_PLOTS=1`).
 
+## TWORLD versus Gaur species comparison
+
+The study is kept under `setup/studies/tworldVsGaur/`, following the repository
+study convention:
+
+```text
+setup/studies/tworldVsGaur/
+├── sweep_tworld_vs_gaur.json
+├── postprocess_tworld_vs_gaur.py
+└── results/                 # generated and gitignored
+```
+
+`sweep_tworld_vs_gaur.json` defines the focused comparison used for
+pig versus human ventricular cells:
+
+- Gaur / `myocyte` as the pig case;
+- TWORLD / `endocardialCells` as the human case;
+- pacing cycle lengths of 1000, 500, and 300 ms;
+- `activeTensionModel LandNiederer` for every case.
+
+The exported traces include Vm, `cai`, ICaL, Jrel/Jup (using each model's
+native names), IKr, IK1, Ito, and the Land--Niederer `AV_Ta` trace. Run the
+study from the repository root with:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
+    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
+applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
+    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
+python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/postprocess_tworld_vs_gaur.py \
+    --input-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun/cases \
+    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
+```
+
+This writes the focused 2×1 `species_comparison_waveforms.png`, the detailed
+`species_comparison_all_variables.png`,
+`species_comparison_rate_dependence.png`, and
+`species_comparison_metrics.csv` into the run directory. The waveform figure
+uses the 1000-ms beat and contains Vm with faded Ca²⁺ on the right-hand y-axis
+above, followed by Ta alone; the detailed figure also
+shows ICaL, SR fluxes, and repolarisation currents. The rate figure reports
+APD90 and peak Ca versus pacing cycle length. Keep each completed run in a
+separate `results/<run-name>/` directory.
+
 ## Run modes
 
 Manual:

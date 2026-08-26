@@ -242,8 +242,26 @@ def _ensure_build_manifest(
     if not solver.is_file():
         return None
 
-    if manifest_path.is_file() and manifest_path.stat().st_mtime >= solver.stat().st_mtime:
-        return None
+    if manifest_path.is_file():
+        manifest_mtime = manifest_path.stat().st_mtime
+        try:
+            manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest_payload = None
+        artifacts = manifest_payload.get("artifacts", ()) if isinstance(manifest_payload, dict) else ()
+        if artifacts:
+            # A library can be rebuilt without relinking the solver executable.
+            # Refresh when any recorded artifact is newer than the manifest.
+            artifacts_current = all(
+                isinstance(artifact, dict)
+                and (artifact_path := Path(str(artifact.get("path", "")))).is_file()
+                and artifact_path.stat().st_mtime <= manifest_mtime
+                for artifact in artifacts
+            )
+            if artifacts_current:
+                return None
+        elif manifest_mtime >= solver.stat().st_mtime:
+            return None
 
     linked = _linked_library_names(solver)
     if not linked:
