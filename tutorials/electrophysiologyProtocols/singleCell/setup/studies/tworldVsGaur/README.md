@@ -47,8 +47,9 @@ python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGa
 ```
 
 The study covers CL = 300, 500, and 1000 ms. The focused waveform PNG is a
-2×1 presentation figure: Vm with faded Ca²⁺ on the right-hand y-axis above,
-then Ta alone. The detailed PNG and raw traces also
+2×1 presentation figure: Vm alone above, then Ta alone. The separate
+transparent calcium overlay carries the Ca²⁺ curves and right-hand y-axis.
+The detailed PNG and raw traces also
 include ICaL, IKr, IK1, Ito, model-specific SR release, and SERCA fluxes.
 The transparent `species_comparison_calcium_overlay.png` contains only the
 faded Ca²⁺ curves and their right-hand axis for overlaying on another voltage

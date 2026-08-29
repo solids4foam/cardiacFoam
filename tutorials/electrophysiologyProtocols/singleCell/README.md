@@ -103,8 +103,9 @@ This writes the focused 2×1 `species_comparison_waveforms.png`, the detailed
 `species_comparison_rate_dependence.png`, and
 `species_comparison_calcium_overlay.png`, and
 `species_comparison_metrics.csv` into the run directory. The waveform figure
-uses the 1000-ms beat and contains Vm with faded Ca²⁺ on the right-hand y-axis
-above, followed by Ta alone; the detailed figure also
+uses the 1000-ms beat and contains Vm alone above, followed by Ta alone; the
+separate transparent calcium overlay carries the Ca²⁺ curves and right-hand
+y-axis. The detailed figure also
 shows ICaL, SR fluxes, and repolarisation currents. The transparent calcium
 overlay contains only the Ca²⁺ traces and their right-hand axis. The rate figure reports
 APD90 and peak Ca versus pacing cycle length. Keep each completed run in a

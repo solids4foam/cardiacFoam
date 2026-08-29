@@ -232,23 +232,14 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
         1,
         figsize=(10, 7.5),
         sharex=True,
-        constrained_layout=True,
         facecolor=background,
     )
-    calcium_ax = axes[0].twinx()
+    fig.subplots_adjust(left=0.08, right=0.94, top=0.98, bottom=0.09, hspace=0.16)
     colors = {"Gaur": "#FF8A65", "TWorld": "#90EE90"}
     for trace in selected:
         rel_time, mask = _last_beat(trace)
         label = f"{trace.species} / {trace.model}"
         axes[0].plot(rel_time, trace.data["Vm"][mask], color=colors[trace.model], label=f"{label} Vm")
-        calcium_ax.plot(
-            rel_time,
-            trace.data["cai"][mask],
-            color=colors[trace.model],
-            linestyle=":",
-            alpha=0.20,
-            label=f"{label} Ca²⁺",
-        )
 
         if trace.tension:
             tension = _find_column(trace.tension, "AV_Ta")
@@ -268,11 +259,10 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
             )
 
     axes[0].set_ylabel("Vm (mV)")
-    calcium_ax.set_ylabel("[Ca²⁺]i (mM)")
     axes[1].set_ylabel("Ta (kPa)")
     axes[1].set_xlabel("Time from latest activation (ms)")
-    axes[0].set_xlim(right=700.0)
-    for axis in (axes[0], calcium_ax, axes[1]):
+    axes[0].set_xlim(-80.0, 700.0)
+    for axis in (axes[0], axes[1]):
         axis.set_facecolor(background)
         axis.tick_params(axis="both", colors=foreground, labelcolor=foreground)
         axis.xaxis.label.set_color(foreground)
@@ -280,17 +270,12 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
         for spine in axis.spines.values():
             spine.set_color(foreground)
         axis.yaxis.set_major_locator(LinearLocator(2))
-    calcium_formatter = ScalarFormatter(useMathText=True)
-    calcium_formatter.set_scientific(True)
-    calcium_formatter.set_powerlimits((0, 0))
-    calcium_ax.yaxis.set_major_formatter(calcium_formatter)
     for ax in axes:
         ax.grid(color=foreground, alpha=0.16)
     voltage_handles, voltage_labels = axes[0].get_legend_handles_labels()
-    calcium_handles, calcium_labels = calcium_ax.get_legend_handles_labels()
     axes[0].legend(
-        voltage_handles + calcium_handles,
-        voltage_labels + calcium_labels,
+        voltage_handles,
+        voltage_labels,
         fontsize=9,
         facecolor=background,
         edgecolor=foreground,
@@ -314,9 +299,9 @@ def _plot_calcium_overlay(traces: list[Trace], out: Path, cl_ms: float = 1000.0)
         1,
         figsize=(10, 7.5),
         sharex=True,
-        constrained_layout=True,
         facecolor="none",
     )
+    fig.subplots_adjust(left=0.08, right=0.94, top=0.98, bottom=0.09, hspace=0.16)
     calcium_ax = axes[0].twinx()
     for trace in selected:
         rel_time, mask = _last_beat(trace)
@@ -325,11 +310,10 @@ def _plot_calcium_overlay(traces: list[Trace], out: Path, cl_ms: float = 1000.0)
             trace.data["cai"][mask],
             color=colors[trace.model],
             linestyle=":",
-            alpha=0.20,
             linewidth=2.0,
         )
 
-    axes[0].set_xlim(right=700.0)
+    axes[0].set_xlim(-80.0, 700.0)
     axes[0].set_facecolor("none")
     axes[1].set_visible(False)
     axes[0].tick_params(axis="both", bottom=False, left=False, labelbottom=False, labelleft=False)
