@@ -301,6 +301,59 @@ def _plot_core_waveforms(traces: list[Trace], out: Path, cl_ms: float = 1000.0) 
     plt.close(fig)
 
 
+def _plot_calcium_overlay(traces: list[Trace], out: Path, cl_ms: float = 1000.0) -> None:
+    """Plot only Ca²⁺ and its right-hand axis on a transparent overlay canvas."""
+    selected = [t for t in traces if np.isclose(t.cl_ms, cl_ms)]
+    if len(selected) < 2:
+        selected = sorted(traces, key=lambda t: (abs(t.cl_ms - cl_ms), t.model))[:2]
+
+    foreground = "#FFFFFF"
+    colors = {"Gaur": "#FF8A65", "TWorld": "#90EE90"}
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(10, 7.5),
+        sharex=True,
+        constrained_layout=True,
+        facecolor="none",
+    )
+    calcium_ax = axes[0].twinx()
+    for trace in selected:
+        rel_time, mask = _last_beat(trace)
+        calcium_ax.plot(
+            rel_time,
+            trace.data["cai"][mask],
+            color=colors[trace.model],
+            linestyle=":",
+            alpha=0.20,
+            linewidth=2.0,
+        )
+
+    axes[0].set_xlim(right=700.0)
+    axes[0].set_facecolor("none")
+    axes[1].set_visible(False)
+    axes[0].tick_params(axis="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+    axes[0].set_ylabel("")
+    for spine in axes[0].spines.values():
+        spine.set_visible(False)
+
+    calcium_ax.set_facecolor("none")
+    calcium_ax.set_ylabel("[Ca²⁺]i (mM)", color=foreground)
+    calcium_ax.tick_params(axis="y", colors=foreground, labelcolor=foreground, right=True, labelright=True)
+    calcium_ax.yaxis.set_major_locator(LinearLocator(2))
+    calcium_formatter = ScalarFormatter(useMathText=True)
+    calcium_formatter.set_scientific(True)
+    calcium_formatter.set_powerlimits((0, 0))
+    calcium_ax.yaxis.set_major_formatter(calcium_formatter)
+    for spine_name, spine in calcium_ax.spines.items():
+        spine.set_visible(spine_name == "right")
+        if spine_name == "right":
+            spine.set_color(foreground)
+    calcium_ax.tick_params(axis="x", bottom=False, labelbottom=False)
+    fig.savefig(out, dpi=220, transparent=True, edgecolor="none")
+    plt.close(fig)
+
+
 def _plot_rate(rows: list[dict[str, object]], out: Path) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), constrained_layout=True)
     colors = {"Pig": "#b33c3c", "Human": "#2367a8"}
@@ -341,6 +394,7 @@ def run_postprocessing(
         writer.writeheader()
         writer.writerows(rows)
     _plot_core_waveforms(traces, destination / "species_comparison_waveforms.png")
+    _plot_calcium_overlay(traces, destination / "species_comparison_calcium_overlay.png")
     _plot_waveforms(traces, destination / "species_comparison_all_variables.png")
     _plot_rate(rows, destination / "species_comparison_rate_dependence.png")
     return rows
