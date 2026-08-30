@@ -57,8 +57,6 @@ EXE_INC = \
     -IelectroCouplers/pvjCoupler/reactionDiffusion \
     -Icore \
     -Icore/verificationModels \
-    -IadvanceSchemes \
-    -IadvanceSchemes/staggered \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
