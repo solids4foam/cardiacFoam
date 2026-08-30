@@ -16,14 +16,14 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Self-contained ODE equations for the TWorld 2024 cardiac
+    Self-contained ODE equations for the TWorld 2025 cardiac
     cell model. Converted from CellML.
 
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#include "TWorld_2024Names.H"
+#include "TWorld_2025Names.H"
 #include "stimulusIO.H"
 
 static const char* TWorldSTATES_NAMES[NUM_STATES] = {

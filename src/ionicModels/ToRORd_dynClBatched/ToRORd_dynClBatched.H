@@ -19,7 +19,7 @@ Class
     Foam::ToRORd_dynClBatched
 
 Description
-    Batched / GPU-portable wrapper for the ToRORd_dynCl 2023 ionic model
+    Batched / GPU-portable wrapper for the ToRORd_dynCl 2020 ionic model
     (Tomek-O'Hara-Rudy with dynamic chloride).
 
     The class exposes the same compact-support architecture used by the
@@ -38,11 +38,11 @@ SourceFiles
 #define ToRORd_dynClBatched_H
 
 #include "configuredBatchedIonicModel.H"
-#include "ToRORd_dynCl_2023Batch.H"
+#include "ToRORd_dynCl_2020Batch.H"
 #include "StimulusProtocolPOD.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "ToRORd_dynCl_2023Names.H"
+#include "ToRORd_dynCl_2020Names.H"
 #include "overrideTypeName.H"
 
 #ifdef HAS_CUDA

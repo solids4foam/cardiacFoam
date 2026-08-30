@@ -35,7 +35,7 @@ Author
 #include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "Trovato_2019Names.H"
+#include "Trovato_2020Names.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

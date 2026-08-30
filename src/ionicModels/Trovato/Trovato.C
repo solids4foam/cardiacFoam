@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Trovato.H"
-#include "Trovato_2019.H"
+#include "Trovato_2020.H"
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"

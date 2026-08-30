@@ -23,7 +23,7 @@ Description
     included from both the OpenFOAM wrapper and any standalone C++ harness.
 
     The equations are extracted from the TWorld 2024 ionic model contraction
-    subsystem (src/ionicModels/TWorld/TWorld_2024.H, lines 1341-1358).
+    subsystem (src/ionicModels/TWorld/TWorld_2025.H, lines 1341-1358).
     The electrophysiology coupling is removed: the only external inputs are
       - ALGEBRAIC[AV_Cai]        : [Ca2+]_i  in mM   (set by caller)
       - ALGEBRAIC[AV_lambda]     : sarcomere stretch  (set by caller)

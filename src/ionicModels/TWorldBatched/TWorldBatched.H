@@ -19,7 +19,7 @@ Class
     Foam::TWorldBatched
 
 Description
-    Batched / GPU-portable wrapper for the TWorld 2024 ionic model.
+    Batched / GPU-portable wrapper for the TWorld 2025 ionic model.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -32,11 +32,11 @@ SourceFiles
 #define TWorldBatched_H
 
 #include "configuredBatchedIonicModel.H"
-#include "TWorld_2024Batch.H"
+#include "TWorld_2025Batch.H"
 #include "StimulusProtocolPOD.H"
 #include "OFstream.H"
 #include "volFields.H"
-#include "TWorld_2024Names.H"
+#include "TWorld_2025Names.H"
 #include "overrideTypeName.H"
 
 #ifdef HAS_CUDA

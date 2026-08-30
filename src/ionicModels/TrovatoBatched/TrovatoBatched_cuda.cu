@@ -6,7 +6,7 @@ License
 #include <cuda_runtime.h>
 #include <cstdio>
 
-#include "Trovato_2019Batch.H"
+#include "Trovato_2020Batch.H"
 
 // ---- file-local kernel error check ----------------------------------------
 #define CUDA_LAUNCH_CHECK()                                                    \

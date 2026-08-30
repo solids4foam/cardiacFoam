@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Self-contained ODE equations for the ToRORd-dynCl 2023
+    Self-contained ODE equations for the ToRORd-dynCl 2020
     ventricular model. Converted from CellML.
 
 Author
@@ -25,7 +25,7 @@ Author
 
 #pragma once
 
-#include "ToRORd_dynCl_2023Names.H"
+#include "ToRORd_dynCl_2020Names.H"
 #include <cmath>
 #include "stimulusIO.H"
 

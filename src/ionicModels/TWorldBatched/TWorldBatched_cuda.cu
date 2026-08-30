@@ -20,7 +20,7 @@ License
 #include <cuda_runtime.h>
 #include <cstdio>
 
-#include "TWorld_2024Batch.H"
+#include "TWorld_2025Batch.H"
 
 // ---- file-local kernel error check ----------------------------------------
 #define CUDA_LAUNCH_CHECK()                                                    \

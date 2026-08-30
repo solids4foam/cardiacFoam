@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Index enums and function prototypes for the TWorld 2024 model.
+    Index enums and function prototypes for the TWorld 2025 model.
 
 Author
     Simao Nieto de Castro, UCD.

@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Index enums and function prototypes for the ToRORd-dynCl 2023 model.
+    Index enums and function prototypes for the ToRORd-dynCl 2020 model.
 
 Author
     Simao Nieto de Castro, UCD.

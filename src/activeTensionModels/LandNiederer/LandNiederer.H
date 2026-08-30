@@ -45,7 +45,7 @@ Description
       the mouse heart. J Physiol, 595, 2547-2562.
 
     Equations extracted from:
-      src/ionicModels/TWorld/TWorld_2024.H (contraction block, lines 1341-1358)
+      src/ionicModels/TWorld/TWorld_2025.H (contraction block, lines 1341-1358)
     The TWorld electrophysiology is unchanged.
 
 Author

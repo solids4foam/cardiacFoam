@@ -19,7 +19,7 @@ Class
     Foam::TrovatoBatched
 
 Description
-    Batched GPU-oriented wrapper for the Trovato 2019 ionic model.
+    Batched GPU-oriented wrapper for the Trovato 2020 ionic model.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -32,7 +32,7 @@ SourceFiles
 #define TrovatoBatched_H
 
 #include "configuredBatchedIonicModel.H"
-#include "Trovato_2019Names.H"
+#include "Trovato_2020Names.H"
 #include "StimulusProtocolPOD.H"
 #include "overrideTypeName.H"
 #include "volFields.H"

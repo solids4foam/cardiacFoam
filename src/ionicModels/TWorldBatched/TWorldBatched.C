@@ -18,8 +18,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "TWorldBatched.H"
-#include "TWorld_2024Batch.H"
-#include "TWorld_2024.H"
+#include "TWorld_2025Batch.H"
+#include "TWorld_2025.H"
 #include "batchedRushLarsenEntry.H"
 #include <array>
 

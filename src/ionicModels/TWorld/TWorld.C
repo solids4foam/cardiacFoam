@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "TWorld.H"
-#include "TWorld_2024.H"
+#include "TWorld_2025.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
 #include "ionicModelIO.H"

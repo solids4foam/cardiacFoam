@@ -16,15 +16,15 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    State-major (SoA) batched evaluator for the ToRORd_dynCl 2023 ionic model.
+    State-major (SoA) batched evaluator for the ToRORd_dynCl 2020 ionic model.
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
 
-#include "ToRORd_dynCl_2023.H"
-#include "ToRORd_dynCl_2023Names.H"
+#include "ToRORd_dynCl_2020.H"
+#include "ToRORd_dynCl_2020Names.H"
 #include "StimulusProtocolPOD.H"
 #include <cmath>
 

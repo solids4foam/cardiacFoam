@@ -44,7 +44,7 @@ A 2026-08-11 audit established that no static rule describes the naming:
   verification models.
 * **Mixed within one model**: TWorld carries 273 ``AC_*`` constants and exactly
   one that is not -- ``gnalTissueScale``
-  (``src/ionicModels/TWorld/TWorld_2024.H:729``).
+  (``src/ionicModels/TWorld/TWorld_2025.H:729``).
 
 The split is by *provenance*: CellML-generated constants get ``AC_``,
 hand-added ones do not. So it grows whenever someone hand-adds a constant, and

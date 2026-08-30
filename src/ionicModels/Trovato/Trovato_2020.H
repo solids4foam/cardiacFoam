@@ -16,14 +16,14 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Self-contained ODE equations for the Trovato 2019 Purkinje
+    Self-contained ODE equations for the Trovato 2020 Purkinje
     cell model. Converted from CellML.
 
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#include "Trovato_2019Names.H"
+#include "Trovato_2020Names.H"
 #include "stimulusIO.H"
 
 static const char* TrovatoSTATES_NAMES[NUM_STATES] = {

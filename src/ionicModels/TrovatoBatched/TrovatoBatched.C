@@ -18,7 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "TrovatoBatched.H"
-#include "Trovato_2019Batch.H"
+#include "Trovato_2020Batch.H"
 #include "batchedRushLarsenEntry.H"
 #include <array>
 #include <cmath>

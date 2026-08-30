@@ -16,14 +16,14 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    State-major (SoA) batched evaluator for the TWorld 2024 ionic model.
+    State-major (SoA) batched evaluator for the TWorld 2025 ionic model.
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
 
-#include "TWorld_2024Names.H"
+#include "TWorld_2025Names.H"
 #include "StimulusProtocolPOD.H"
 #include <cmath>
 
