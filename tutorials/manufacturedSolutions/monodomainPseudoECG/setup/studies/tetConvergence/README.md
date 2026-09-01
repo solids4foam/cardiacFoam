@@ -4,6 +4,12 @@
 
 This study validates spatial convergence on unstructured tetrahedral meshes using the monodomainPseudoECG exact solution.
 
+It is the retained generic-Delaunay family: four resolutions for each of the
+axis-aligned/rotated conductivity tensors and Gauss--linear/least-squares
+gradient reconstructions.  The pseudo-ECG verifier is enabled at every level
+with the same reference quadrature as the Cartesian sweep.  No Frontal/Netgen
+duplicate is scheduled for this rerun.
+
 ## Execution
 
 From the repository root, use the current wrapper:

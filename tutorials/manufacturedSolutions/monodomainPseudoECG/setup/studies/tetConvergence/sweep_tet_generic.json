@@ -13,7 +13,9 @@
     "mesh_family": "tet",
     "numerics_profile": "monodomain_tet",
     "end_time": 0.2,
-    "ecg_enabled": false,
+    "ecg_enabled": true,
+    "ode_abs_tolerance": 1e-10,
+    "ode_rel_tolerance": 1e-08,
     "run_in_parallel": true,
     "postprocess_strict_artifacts": false,
     "archive_dir_name": "setup/studies/tetConvergence/results/sweepCases"

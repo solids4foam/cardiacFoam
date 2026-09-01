@@ -38,6 +38,7 @@ from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_
 from openfoam_driver.plugins.cardiacfoam.overrides import (
     apply_electro_property_overrides,
     apply_physics_property_overrides,
+    ensure_electro_property_entry,
     remove_electro_property_dict,
 )
 from openfoam_driver.core.specs.common import (
@@ -223,6 +224,8 @@ def _apply_case(
     phi_tolerance: float | None = None,
     n_outer_correctors: int | None = None,
     n_nonorthogonal_correctors: int | None = None,
+    ode_abs_tolerance: float | None = None,
+    ode_rel_tolerance: float | None = None,
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
@@ -323,6 +326,24 @@ def _apply_case(
             "nNonOrthogonalCorrectors", n_nonorthogonal_correctors,
             scope=["PIMPLE"], add_if_missing=True,
         )
+    # RKF45 reads these controls from the ionic-model dictionary.  They are
+    # deliberately explicit in verification sweeps: otherwise the effective
+    # adaptive-ODE accuracy is inherited from the OpenFOAM solver defaults and
+    # cannot be archived alongside a temporal or spatial result.
+    if ode_abs_tolerance is not None:
+        ensure_electro_property_entry(
+            electro_properties,
+            "absTol",
+            ode_abs_tolerance,
+            scope=electro_properties_scope,
+        )
+    if ode_rel_tolerance is not None:
+        ensure_electro_property_entry(
+            electro_properties,
+            "relTol",
+            ode_rel_tolerance,
+            scope=electro_properties_scope,
+        )
     for entry in fv_scheme_overrides or ():
         update_foam_entry(
             case_root / "system" / "fvSchemes", entry["key"], entry["value"],
@@ -390,6 +411,8 @@ def make_spec(
     phi_tolerance: float | None = None,
     n_outer_correctors: int | None = None,
     n_nonorthogonal_correctors: int | None = None,
+    ode_abs_tolerance: float | None = None,
+    ode_rel_tolerance: float | None = None,
     end_time: float | None = None,
     fv_scheme_overrides: Sequence[Mapping[str, object]] | None = None,
     fv_solution_overrides: Sequence[Mapping[str, object]] | None = None,
@@ -427,6 +450,14 @@ def make_spec(
         raise ValueError(f"grad_scheme must be one of: {known}; got {grad_scheme!r}")
     if phi_tolerance is not None and phi_tolerance <= 0:
         raise ValueError(f"phi_tolerance must be positive; got {phi_tolerance}")
+    if ode_abs_tolerance is not None and ode_abs_tolerance <= 0:
+        raise ValueError(
+            f"ode_abs_tolerance must be positive; got {ode_abs_tolerance}"
+        )
+    if ode_rel_tolerance is not None and ode_rel_tolerance <= 0:
+        raise ValueError(
+            f"ode_rel_tolerance must be positive; got {ode_rel_tolerance}"
+        )
     if numerics_profile is not None and numerics_profile not in _NUMERICS_PROFILES:
         known = ", ".join(sorted(_NUMERICS_PROFILES))
         raise ValueError(f"numerics_profile must be one of: {known}; got {numerics_profile!r}")
@@ -482,6 +513,8 @@ def make_spec(
             phi_tolerance=phi_tolerance,
             n_outer_correctors=n_outer_correctors,
             n_nonorthogonal_correctors=n_nonorthogonal_correctors,
+            ode_abs_tolerance=ode_abs_tolerance,
+            ode_rel_tolerance=ode_rel_tolerance,
             end_time=end_time,
             fv_scheme_overrides=fv_scheme_overrides,
             fv_solution_overrides=fv_solution_overrides,
@@ -519,6 +552,8 @@ def make_spec(
             "ecg_enabled": ecg_enabled,
             "ecg_reference_quadrature_order": ecg_reference_quadrature_order,
             "ecg_check_quadrature_orders": [int(value) for value in ecg_check_quadrature_orders],
+            "ode_abs_tolerance": ode_abs_tolerance,
+            "ode_rel_tolerance": ode_rel_tolerance,
             "postprocess_strict_artifacts": postprocess_strict_artifacts,
         },
     )

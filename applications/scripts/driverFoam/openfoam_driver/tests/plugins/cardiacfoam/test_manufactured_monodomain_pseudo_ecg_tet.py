@@ -475,6 +475,28 @@ def test_non_positive_phi_tolerance_is_rejected(tmp_path):
         _call_make_spec(tmp_path, mesh_family="tet", numerics_profile="monodomain_tet", phi_tolerance=-1e-6)
 
 
+def test_explicit_ode_tolerances_are_written_to_the_ionic_model_block(tmp_path):
+    case_root = _write_case(tmp_path)
+    spec = _call_make_spec(
+        tmp_path,
+        ode_abs_tolerance=1e-10,
+        ode_rel_tolerance=1e-8,
+    )
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    scope = "monodomainSolverCoeffs"
+    assert_foam_entry(case_root / "constant" / "electroProperties", "absTol", "1e-10", scope=scope)
+    assert_foam_entry(case_root / "constant" / "electroProperties", "relTol", "1e-08", scope=scope)
+
+
+@pytest.mark.parametrize("keyword", ["ode_abs_tolerance", "ode_rel_tolerance"])
+def test_non_positive_ode_tolerances_are_rejected(tmp_path, keyword):
+    _write_case(tmp_path)
+    with pytest.raises(ValueError, match=keyword):
+        _call_make_spec(tmp_path, **{keyword: 0})
+
+
 # --- ECG + tet interaction ---------------------------------------------------
 
 def test_tet_mesh_family_works_with_ecg_enabled(tmp_path):

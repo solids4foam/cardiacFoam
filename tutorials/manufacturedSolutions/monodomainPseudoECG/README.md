@@ -94,17 +94,38 @@ Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D
 applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
 ```
 
-The temporal spec is intended to hold a fixed fine mesh (`N = 640`) with a
-`dt` ladder `[1.121075e-3, 5.60538e-4, 2.80269e-4, 1.401345e-4]`, disable ECG
-post-processing, and isolate field temporal-order measurement. Its current
-plan is blocked by the factory-cardinality issue described in the study
-README.
+The temporal spec holds a fixed fine mesh (`N = 640` in 1D/2D and `N = 160`
+in 3D) while halving `dt`.  It retains pseudo-ECG outputs and uses explicit
+RKF45 baseline tolerances (`absTol=1e-10`, `relTol=1e-8`), so field and
+functional temporal effects can be compared from the same runs.
+
+The tetrahedral spatial paths use `dt ~ h^2` and are therefore combined
+space--time paths.  Their mesh-fixed `dt/2` controls live in
+`setup/studies/tetTemporalControl/`; do not label a tet slope as purely spatial
+unless the control change is smaller than the accepted field-error separation.
+
+The finest fixed-grid temporal level of every dimensional ladder is repeated
+with tighter RKF45 tolerances in `setup/studies/odeToleranceControl/`.  This
+is required to attribute the measured complete-advance temporal response to
+the configured Lie--Godunov/PDE path rather than an inherited ODE default.
 
 The checked-in sweep JSON files are the source of truth for these studies.
+
+RKF45 tolerance control (one finest fixed-grid temporal case per dimension):
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/odeToleranceControl/sweep_ode_tolerance.json --output-dir .tmp/driverfoam/monodomainPseudoECG-ode-control
+```
 
 Tetrahedral mesh variant (example of running a study):
 
 ```bash
 applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
 python3 applications/scripts/paperI_results/aggregate.py tet
+```
+
+Tetrahedral mesh-fixed timestep controls:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
 ```
