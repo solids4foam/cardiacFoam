@@ -41,7 +41,7 @@ Typical outputs include:
 
 #### Gradient-Scheme Convergence Sweep
 
-Runs both `Gauss linear` and `leastSquares` gradient reconstruction across `N = 10, 20, 40, 80` for the coupled `Vm`/`phiE` (gauge-shifted) bidomain system. `nOuterCorrectors` is left at this case's own default (2): the corrector study below already established that two outer sweeps are within 1% of the fully converged block, so the reported spatial order isn't iteration-error limited.
+Runs both `Gauss linear` and `leastSquares` gradient reconstruction across `N = 10, 20, 40, 80` for the coupled `Vm`/`phiE` (gauge-shifted) bidomain system. The primary ladder uses the case's two outer correctors with `1e-15` linear tolerance and explicit RKF45 controls. Its rates remain combined space--time evidence until the mesh-fixed `dt/2` controls show that the temporal perturbation is smaller than the resolved field-error separation.
 
 #### Corrector Study
 
@@ -50,7 +50,7 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across `N = 
 - an outer sweep, which repeats the coupled `phiE -> Vm` block
 - an equation-level non-orthogonal reassembly, which resolves each corrected equation before advancing to the next block
 
-The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the `N=10,20,40` Delaunay meshes -- a same-mesh, same-time-step iteration-sensitivity screen, not an additional spatial convergence study. See `setup/studies/corrector/README.md` for how the variants map to overrides.
+The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the `N=10,20,40` Delaunay meshes. `setup/studies/correctorN80/` repeats those variants at the finest level. Together these are same-mesh, same-time-step iteration-sensitivity controls, not additional spatial convergence studies.
 
 ## Usage
 
@@ -85,10 +85,16 @@ applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufa
 python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
 
 applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/odeToleranceControl/sweep_ode_tolerance.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
 ```
 
-Or run every registered experiment through the normalized registry:
-
-```bash
-./reproduce_verification.sh bidomain_cartesian bidomain_temporal bidomain_tet_generic
-```
+The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary
+tetrahedral reconstruction (8), fixed-grid temporal (8), ODE (2), loose
+`phiE|phiI` tolerance (4), mesh-fixed tetrahedral `dt/2` (4), and corrector
+controls (12 plus 4 at `N=80`). Run the listed driver-managed specifications;
+do not rely on an aggregate wrapper unless it has been versioned with the
+release.

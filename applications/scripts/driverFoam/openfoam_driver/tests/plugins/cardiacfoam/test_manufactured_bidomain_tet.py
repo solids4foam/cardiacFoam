@@ -28,6 +28,7 @@
 #----------------------------------------------------------------------------#
 
 from pathlib import Path
+from unittest import mock
 
 from openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bidomain import make_spec
 
@@ -81,3 +82,13 @@ def test_convergence_axis_is_forwarded_to_the_shared_factory(tmp_path):
     )
 
     assert spec.metadata["convergence_axis"] == "temporal"
+
+
+def test_ode_tolerances_are_forwarded_to_the_shared_factory():
+    with mock.patch(
+        "openfoam_driver.plugins.cardiacfoam.tutorials.manufactured_bidomain.make_base_spec"
+    ) as make_base_spec:
+        make_spec(ode_abs_tolerance=1e-10, ode_rel_tolerance=1e-8)
+
+    assert make_base_spec.call_args.kwargs["ode_abs_tolerance"] == 1e-10
+    assert make_base_spec.call_args.kwargs["ode_rel_tolerance"] == 1e-8

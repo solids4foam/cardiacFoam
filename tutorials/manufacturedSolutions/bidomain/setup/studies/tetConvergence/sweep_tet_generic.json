@@ -12,7 +12,9 @@
     "piecewise_sweep": true,
     "mesh_family": "tet",
     "numerics_profile": "bidomain_tet",
-    "phi_tolerance": 1e-06,
+    "phi_tolerance": 1e-15,
+    "ode_abs_tolerance": 1e-10,
+    "ode_rel_tolerance": 1e-08,
     "end_time": 0.2,
     "postprocess_strict_artifacts": false,
     "archive_dir_name": "sweepCases"

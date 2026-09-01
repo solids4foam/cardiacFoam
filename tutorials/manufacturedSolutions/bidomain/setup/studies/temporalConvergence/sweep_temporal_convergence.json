@@ -9,6 +9,8 @@
     "piecewise_sweep": false,
     "mesh_family": "hex",
     "postprocess_strict_artifacts": false,
+    "ode_abs_tolerance": 1e-10,
+    "ode_rel_tolerance": 1e-08,
     "archive_dir_name": "sweepCases",
     "convergence_axis": "temporal"
   },
@@ -17,29 +19,33 @@
     "independent": {
       "dimensions": [
         "1D",
+        "1D",
+        "1D",
+        "1D",
+        "2D",
+        "2D",
+        "2D",
         "2D"
       ],
       "number_cells": [
-        [
-          640
-        ],
-        [
-          640
-        ]
+        640,
+        640,
+        640,
+        640,
+        640,
+        640,
+        640,
+        640
       ],
       "dt_values": [
-        [
-          0.001121075,
-          0.000560538,
-          0.000280269,
-          0.0001401345
-        ],
-        [
-          0.001121075,
-          0.000560538,
-          0.000280269,
-          0.0001401345
-        ]
+        0.001121075,
+        0.000560538,
+        0.000280269,
+        0.0001401345,
+        0.001121075,
+        0.000560538,
+        0.000280269,
+        0.0001401345
       ]
     },
     "dependent": [
@@ -48,7 +54,8 @@
         "derive": "case_id_template",
         "of": [
           "dimensions",
-          "number_cells"
+          "number_cells",
+          "dt_values"
         ]
       },
       {
@@ -56,7 +63,8 @@
         "derive": "output_dir_name_template",
         "of": [
           "dimensions",
-          "number_cells"
+          "number_cells",
+          "dt_values"
         ]
       }
     ]

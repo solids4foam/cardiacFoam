@@ -14,10 +14,11 @@ applications/scripts/driverFoam/bin/driverFoam sweep-plan \
     --output-dir .tmp/driverfoam/bidomain-temporal
 ```
 
-This spec currently fails during materialisation because its temporal `dt`
-ladder is interpreted as four factory cases for each dimension, while the
-entry-based sweep contract requires one case per expanded axis combination.
-Repair that JSON/factory contract before using `sweep-run`.
+The eight cases are fixed-mesh timestep ladders: four levels at `N=640` in
+both 1D and 2D. The configured `sbdf2` coupling and adaptive RKF45 baseline
+controls (`absTol=1e-10`, `relTol=1e-8`) are archived for every case. The
+companion `odeToleranceControl` study repeats the finest level of each ladder
+with tighter ODE tolerances.
 
 ## Tracking & Outputs
 
