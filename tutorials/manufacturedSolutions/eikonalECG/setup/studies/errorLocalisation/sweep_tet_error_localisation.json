@@ -11,6 +11,7 @@
     ],
     "mesh_family": "tet",
     "numerics_profile": "eikonal_tet",
+    "error_localisation_analysis": true,
     "postprocess_strict_artifacts": false,
     "electro_property_overrides": {
       "eikonalSolverCoeffs.verificationModel.writeErrorField": true

@@ -12,29 +12,36 @@ bulk/boundary split convention (`manufacturedEikonalVerifier.C`'s
 `computeBoundaryBulkNorms`) as the standalone `gradientReconstructionOrder`
 utility's own decomposition (see `../gradientVerification/`).
 
+The workflow also writes the cellwise `activationTimeError` field, mesh-quality
+fields (`checkMesh -writeAllFields`), and cell centres after the solve. These
+are required inputs to the retained spatial-localisation analysis.
+
 Complementary to `../gradientVerification/run_error_localisation.sh`, which
 is a single-case (default `N=40`, `leastSquares`) spatial-correlation deep
 dive kept for direct/manual use -- see that script's header.
 
 ## Execution
 
-```bash
-cd tutorials/manufacturedSolutions/eikonalECG
-rm -rf setup/studies/errorLocalisation/results/sweepCases setup/studies/errorLocalisation/results/sweepRun
-mkdir -p setup/studies/errorLocalisation/results
-../../../applications/scripts/driverFoam/bin/driverFoam sweep-run \
-    --spec setup/studies/errorLocalisation/sweep_tet_error_localisation.json \
-    --output-dir setup/studies/errorLocalisation/results/sweepRun
-python3 setup/studies/errorLocalisation/aggregate_bulk_boundary.py
-```
+First materialize and inspect the eight driverFOAM cases:
 
-Current status: `sweep-plan` reaches case materialisation but fails before
-OpenFOAM because the spec asks the driver to write
-`eikonalSolverCoeffs.verificationModel.writeErrorField` and the current case
-dictionary does not contain that key. This is a stale spec/dictionary
-contract, not a solver runtime result; do not interpret the command above as
-verified until the key is added or the override is moved to the current
-dictionary scope.
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+
+Then run the same manifest:
+
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+
+After a successful sweep, run the in-repository bulk/boundary aggregation over
+the archived outputs:
+
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+
+For a selected completed case, the retained coordinate-based localisation
+analysis can then read the driver-generated `activationTimeError`, `Cx`, `Cy`,
+and `Cz` fields:
+
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/analyse_error_localisation.py
 
 This writes `setup/results/eikonal_bulk_boundary_tet.csv`.
 

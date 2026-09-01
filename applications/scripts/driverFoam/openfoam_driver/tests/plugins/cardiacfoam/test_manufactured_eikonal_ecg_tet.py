@@ -22,6 +22,7 @@ eikonalSolverCoeffs
     verificationModel
     {
         type manufacturedEikonalVerifier;
+        writeErrorField false;
     }
     ecgDomains
     {
@@ -80,6 +81,16 @@ _FVSOL = """FoamFile
 }
 solvers
 {
+}
+PIMPLE
+{
+    residualControl
+    {
+        activationTime
+        {
+            tolerance 1e-8;
+        }
+    }
 }
 """
 
@@ -180,6 +191,7 @@ def test_tet_workflow_dag_appends_write_cell_centres_after_solve(tmp_path):
     assert steps[-1]["command"] == "postProcess"
     assert steps[-1]["args"] == ["-func", "writeCellCentres", "-latestTime"]
     assert steps[-1]["depends_on"] == ["solve"]
+    assert steps[3]["args"] == ["-writeAllFields"]
 
 
 def test_tet_apply_case_renders_geo_installs_overlay_and_grad_scheme(tmp_path):
@@ -223,6 +235,52 @@ def test_tet_apply_case_forwards_conductivity_and_advection_approach(tmp_path):
     properties = (case_root / "constant" / "electroProperties").read_text()
     assert conductivity in properties
     assert "eikonalAdvectionDiffusionApproach    false;" in properties
+
+
+def test_tet_apply_case_forwards_verification_overrides(tmp_path):
+    case_root = _write_case(tmp_path)
+    spec = make_spec(
+        tutorials_root=tmp_path,
+        case_dir_name="manufacturedSolutions/eikonalECG",
+        dimensions=["3D"],
+        number_cells=[10],
+        mesh_family="tet",
+        run_in_parallel=False,
+        electro_property_overrides={
+            "eikonalSolverCoeffs.verificationModel.writeErrorField": True,
+        },
+    )
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    properties = (case_root / "constant" / "electroProperties").read_text()
+    assert "writeErrorField    yes;" in properties
+
+
+def test_tet_apply_case_applies_fv_solution_overrides(tmp_path):
+    case_root = _write_case(tmp_path)
+    spec = make_spec(
+        tutorials_root=tmp_path,
+        case_dir_name="manufacturedSolutions/eikonalECG",
+        dimensions=["3D"],
+        number_cells=[10],
+        mesh_family="tet",
+        numerics_profile="eikonal_tet",
+        run_in_parallel=False,
+        fv_solution_overrides=[
+            {
+                "key": "tolerance",
+                "value": "1e-10",
+                "scope": ["PIMPLE", "residualControl", "activationTime"],
+            }
+        ],
+    )
+
+    spec.apply_case(spec.case_root, spec.build_cases()[0])
+
+    fv_solution = (case_root / "system" / "fvSolution").read_text()
+    assert "tolerance    1e-10;" in fv_solution
+    assert "1e-8" not in fv_solution
 
 
 def test_tet_validation_rejects_invalid_options(tmp_path):

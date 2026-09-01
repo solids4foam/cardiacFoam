@@ -7,40 +7,37 @@
 #     from the tetrahedral-mesh eikonal MMS sweep into a single
 #     order-of-accuracy table. Unlike the monodomain verifier, the eikonal
 #     verifier's .dat has no "Grid spacing (dx)" line -- it only reports
-#     "Number of cells = N" -- so the effective spacing
-#     dx = 1/round(cbrt(nCells)) is computed here directly, same formula the
-#     monodomain summarizer uses for its unstructured mesh. Reuses
-#     checkmesh_parse for the non-orthogonality metric and adds max
-#     skewness, both reported alongside the rate so the mesh quality that
-#     the gradient scheme has to cope with is explicit.
+#     "Number of cells = N" -- so the unit-cube effective spacing is computed
+#     as h = nCells^(-1/3), without rounding the cube root. It reports the
+#     realised pairwise h ratio alongside every observed order, rather than
+#     assuming the nominal Gmsh lc ladder is exactly a factor of two. It also
+#     retains the requested N separately from the realised cell count.
 #----------------------------------------------------------------------------#
 
 from __future__ import annotations
 
 import argparse
 import csv
+import math
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[4] / "applications/scripts/paperI_results")
-)
-from checkmesh_parse import parse_checkmesh_log  # noqa: E402
-from schema import observed_order  # noqa: E402
 
 _NCELLS_RE = re.compile(r"Number of cells\s*=\s*(\d+)")
 _ACTIVATIONTIME_ROW_RE = re.compile(
     r"^activationTime\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)", re.MULTILINE
+)
+_NON_ORTHO_RE = re.compile(
+    r"Mesh non-orthogonality\s+Max:\s*([\d.eE+-]+)", re.IGNORECASE
 )
 _SKEW_RE = re.compile(r"Max skewness\s*=\s*([\d.eE+-]+)", re.IGNORECASE)
 
 
 @dataclass
 class Row:
-    n: int
-    dx: float
+    requested_n: int
+    n_cells: int
+    h_eff: float
     l2: float
     linf: float
     ecg_l2: float | None
@@ -49,16 +46,22 @@ class Row:
     max_skewness: float | None
 
 
-def parse_dat(path: Path) -> tuple[float, float, float]:
+def observed_order(
+    error_coarse: float, error_fine: float, h_coarse: float, h_fine: float
+) -> float:
+    return math.log(error_coarse / error_fine) / math.log(h_coarse / h_fine)
+
+
+def parse_dat(path: Path) -> tuple[int, float, float, float]:
     text = path.read_text()
     ncells = _NCELLS_RE.search(text)
     row = _ACTIVATIONTIME_ROW_RE.search(text)
     if not (ncells and row):
         raise ValueError(f"could not parse cell count/activationTime norms from {path}")
     n_cells = int(ncells.group(1))
-    dx = 1.0 / round(n_cells ** (1.0 / 3.0))
+    h_eff = n_cells ** (-1.0 / 3.0)
     # activationTime row is L1, L2, Linf
-    return dx, float(row.group(2)), float(row.group(3))
+    return n_cells, h_eff, float(row.group(2)), float(row.group(3))
 
 
 def parse_ecg_dat(path: Path) -> tuple[float, float] | None:
@@ -91,23 +94,27 @@ def parse_skewness(text: str) -> float | None:
     return float(m.group(1)) if m else None
 
 
+def parse_max_non_orthogonality(text: str) -> float | None:
+    m = _NON_ORTHO_RE.search(text)
+    return float(m.group(1)) if m else None
+
+
 def collect(results_dir: Path, resolutions: list[int]) -> list[Row]:
     rows: list[Row] = []
-    for n in resolutions:
-        d = results_dir / str(n)
-        dx, l2, linf = parse_dat(d / "summary.dat")
+    for requested_n in resolutions:
+        d = results_dir / str(requested_n)
+        n_cells, h_eff, l2, linf = parse_dat(d / "summary.dat")
         ecg = parse_ecg_dat(d / "pseudoECG_summary.dat")
         log = (d / "log.checkMesh").read_text()
-        cm = parse_checkmesh_log(log)
         rows.append(
             Row(
-                n, dx, l2, linf,
+                requested_n, n_cells, h_eff, l2, linf,
                 ecg[0] if ecg else None, ecg[1] if ecg else None,
-                cm.max_non_orthogonality, parse_skewness(log),
+                parse_max_non_orthogonality(log), parse_skewness(log),
             )
         )
-    # coarse -> fine (largest dx first) so orders read top-to-bottom
-    rows.sort(key=lambda r: r.dx, reverse=True)
+    # Coarse -> fine (largest realised h first) so orders read top-to-bottom.
+    rows.sort(key=lambda r: r.h_eff, reverse=True)
     return rows
 
 
@@ -123,7 +130,7 @@ def main() -> int:
     rows = collect(args.results_dir, args.resolutions)
 
     header = [
-        "N", "dx", "L2_activationTime", "p_L2", "Linf_activationTime", "p_Linf",
+        "N_requested", "nCells", "h_eff", "h_ratio", "L2_activationTime", "p_L2", "Linf_activationTime", "p_Linf",
         "ECG_L2", "p_ECG_L2", "ECG_Linf", "p_ECG_Linf",
         "maxNonOrtho_deg", "maxSkewness",
     ]
@@ -133,24 +140,27 @@ def main() -> int:
         w.writerow(header)
         for i, r in enumerate(rows):
             if i == 0:
-                p2 = pinf = pecg2 = pecginf = None
+                h_ratio = p2 = pinf = pecg2 = pecginf = None
             else:
                 prev = rows[i - 1]
-                p2 = observed_order(prev.l2, r.l2, prev.dx, r.dx)
-                pinf = observed_order(prev.linf, r.linf, prev.dx, r.dx)
+                h_ratio = prev.h_eff / r.h_eff
+                p2 = observed_order(prev.l2, r.l2, prev.h_eff, r.h_eff)
+                pinf = observed_order(prev.linf, r.linf, prev.h_eff, r.h_eff)
                 pecg2 = (
-                    observed_order(prev.ecg_l2, r.ecg_l2, prev.dx, r.dx)
+                    observed_order(prev.ecg_l2, r.ecg_l2, prev.h_eff, r.h_eff)
                     if prev.ecg_l2 is not None and r.ecg_l2 is not None
                     else None
                 )
                 pecginf = (
-                    observed_order(prev.ecg_linf, r.ecg_linf, prev.dx, r.dx)
+                    observed_order(prev.ecg_linf, r.ecg_linf, prev.h_eff, r.h_eff)
                     if prev.ecg_linf is not None and r.ecg_linf is not None
                     else None
                 )
             cells = [
-                r.n,
-                f"{r.dx:.6g}",
+                r.requested_n,
+                r.n_cells,
+                f"{r.h_eff:.9g}",
+                "--" if h_ratio is None else f"{h_ratio:.6g}",
                 f"{r.l2:.6e}",
                 "--" if p2 is None else f"{p2:.2f}",
                 f"{r.linf:.6e}",

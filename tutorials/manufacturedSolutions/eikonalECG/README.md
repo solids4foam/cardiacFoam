@@ -87,67 +87,67 @@ exact commands.
 
 ## Usage
 
-### Manual Execution
+### Driver-Managed Sweeps
 
-```bash
-blockMesh -dict system/blockMeshDict.3D
-./Allrun
-./regressionTest.sh
-```
-
-### Driver-Managed Sweeps (Suggested)
+Run this verification suite through driverFOAM. The study manifests below are
+the supported execution paths; historic direct OpenFOAM commands and the
+retired `reproduce_verification.sh` wrapper are not release procedures.
 
 Cartesian spatial convergence (1D/2D/3D):
 
-```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
-python3 applications/scripts/paperI_results/aggregate.py eikonal_cartesian
-```
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 
 Tet convergence:
 
-```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
-python3 applications/scripts/paperI_results/aggregate.py eikonal_tet_generic
-```
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+
+Nonlinear stopping-criterion control (least-squares tet cases; axis and both
+rotated configurations, N=10/20/40/80):
+
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
 
 Bulk/boundary error decomposition:
 
-```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
-```
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
 
 Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only):
 
-```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
-```
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
 
 Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table):
 
-```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
-```
-
-Or run every registered experiment through the normalized registry:
-
-```bash
-./reproduce_verification.sh eikonal_cartesian eikonal_tet_generic eikonal_gradient_tet eikonal_bulk_boundary_tet
-```
+    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
+    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
 
 ## Effective mesh spacing and observed order
 
-The manufactured verifier assumes a structured mesh and back-computes an
-*effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count.
-For an unstructured tet mesh of the unit cube this is the mean cell size, and
-it is the correct convergence abscissa. `setup/studies/tetConvergence/summarize_tet.py`
-therefore computes the observed order from consecutive `dx` values,
-`p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming a
-factor-of-two refinement, and reports it next to the `checkMesh` max
-non-orthogonality and max skewness so the mesh quality is explicit.
+For an unstructured unit-cube tet mesh, use the realised cell-count scale
+`h_eff = nCells^(-1/3)`. `setup/studies/tetConvergence/summarize_tet.py`
+therefore computes the observed order from consecutive realised scales,
+`p = log(e_coarse/e_fine) / log(h_coarse/h_fine)`, and reports each actual
+refinement ratio next to the requested N, realised cell count, maximum
+non-orthogonality, and maximum skewness. Do not assume a factor-of-two ratio
+from the nominal Gmsh length parameter alone.
 
 ## Error Calculation and Quadrature
 
