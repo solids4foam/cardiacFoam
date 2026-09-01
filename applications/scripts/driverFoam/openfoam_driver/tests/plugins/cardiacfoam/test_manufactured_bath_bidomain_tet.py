@@ -247,9 +247,13 @@ def test_tet_unclaimed_artifacts_are_credited_to_the_solve_step(tmp_path):
 
 def test_hex_workflow_dag_is_still_blockmesh_toposet_pipeline(tmp_path):
     spec = _make_spec(tmp_path)
-    assert [s["command"] for s in spec.metadata["workflow_dag"]["steps"]] == [
-        "Allclean", "blockMesh", "topoSet", "setTorsoOrganConductivityField", "cardiacFoam",
+    steps = spec.metadata["workflow_dag"]["steps"]
+    assert [s["command"] for s in steps] == [
+        "Allclean", "blockMesh", "topoSet", "setTorsoOrganConductivityField",
+        "cardiacFoam", "bathBidomainInterfaceMetrics",
     ]
+    assert steps[-1]["args"] == ["-latestTime"]
+    assert steps[-1]["depends_on"] == ["solve"]
 
 
 def test_tet_rejects_unsupported_options(tmp_path):

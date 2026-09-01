@@ -55,11 +55,11 @@ from typing import Any
 # commands.
 CARDIAC_SOLVER_COMMANDS = frozenset({"cardiacFoam"})
 
-# bathBidomainInterfaceMetrics is listed here rather than coming through
-# utility_manifests() because it ships no utility.manifest.toml, so
-# UTILITY_CATALOG does not contain it -- yet it is a live workflow step in the
-# manufacturedFDABathBidomain tutorial. It is post-processing: it reads the
-# reconstructed final-time solution the solver already wrote.
+# bathBidomainInterfaceMetrics also has a utility manifest, which declares its
+# CSV artifact.  It remains explicitly auxiliary here to document its role:
+# it is authorised to run but is not a solver and must never be credited with
+# the field artifacts written by cardiacFoam. It reads the reconstructed
+# final-time solution the solver already wrote.
 #
 # gradientReconstructionOrder (applications/test/gradientReconstructionOrder)
 # is the same shape of thing: no utility.manifest.toml, but a live workflow

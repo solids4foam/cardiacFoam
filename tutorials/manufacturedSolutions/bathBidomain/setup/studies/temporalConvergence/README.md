@@ -4,9 +4,10 @@
 
 This eight-case fixed-mesh time-step ladder measures the complete configured
 bath-bidomain advance, including its predictor--corrector interface workflow.
-It uses the explicitly archived `godunov` coupling at `N=640` in 1D and 2D,
-with four successive halvings of `dt` and fixed end time 0.02. It does not
-transfer temporal order from standalone monodomain or bidomain runs.
+It uses the explicitly archived `godunov` coupling and the Paper I
+`groundElectrode` boundary variant at `N=640` in 1D and 2D, with four
+successive halvings of `dt` and fixed end time 0.02. It does not transfer
+temporal order from standalone monodomain or bidomain runs.
 
 The companion tetrahedral `tetTemporalControl` repeats selected interface
 levels at `dt/2`; it asks whether temporal error contaminates the interface

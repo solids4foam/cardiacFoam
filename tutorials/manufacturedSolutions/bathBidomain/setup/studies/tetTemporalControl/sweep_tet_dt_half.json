@@ -13,7 +13,7 @@
     "run_in_parallel": true,
     "ecg_enabled": false,
     "bath_predictor_corrector": true,
-    "fda_bath_variant": "electrodePair",
+    "fda_bath_variant": "groundElectrode",
     "postprocess_strict_artifacts": false,
     "archive_dir_name": "setup/studies/tetTemporalControl/results/sweepCases",
     "electro_property_overrides": {

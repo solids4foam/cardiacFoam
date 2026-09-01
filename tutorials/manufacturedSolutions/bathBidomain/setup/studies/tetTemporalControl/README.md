@@ -4,10 +4,11 @@
 
 The distance-weighted-harmonic tetrahedral interface-current sequence uses
 `dt ~ h^2` with least-squares reconstruction and predictor--corrector bath
-coupling. These two controls hold the mesh, interface treatment, linear
-tolerance, end time, and coupling fixed while halving `dt` at `N=40` and
-`N=80`. They test whether temporal/splitting error contributes to the solved
-interface-current behaviour, including the finest-level anomaly.
+coupling. They retain the Paper I `groundElectrode` boundary variant. These two
+controls hold the mesh, interface treatment, linear tolerance, end time, and
+coupling fixed while halving `dt` at `N=40` and `N=80`. They test whether
+temporal/splitting error contributes to the solved interface-current behaviour,
+including the finest-level anomaly.
 
 This is a temporal-sensitivity control, not an unstructured temporal-order
 claim: the dedicated Cartesian fixed-mesh ladder supplies that measurement.

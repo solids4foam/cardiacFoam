@@ -210,14 +210,26 @@ def _workflow_dag_for(
             "depends_on": ["topoSet"],
         },
     ]
-    steps, _final_id = solve_steps(
+    steps, final_id = solve_steps(
         solve_id="solve",
         solve_command="cardiacFoam",
         depends_on=["setConductivity"],
         run_in_parallel=run_in_parallel,
         case_root=case_root,
     )
-    return {"steps": mesh_steps + steps}
+    # Use the same post-processing diagnostic on structured and tetrahedral
+    # bath cases.  It reads the reconstructed final state (when parallel) and
+    # records the regional fields, one-sided interface currents, assembled
+    # face-current errors, leakage, and exterior-current balance required by
+    # the Paper I bath evidence.  Running it after ``final_id`` prevents a
+    # parallel utility invocation against processor-local fields.
+    interface_metrics_step = {
+        "id": "interfaceMetrics",
+        "command": "bathBidomainInterfaceMetrics",
+        "args": ["-latestTime"],
+        "depends_on": [final_id],
+    }
+    return {"steps": mesh_steps + steps + [interface_metrics_step]}
 
 
 def _ensure_patch_entry(
