@@ -10,6 +10,7 @@ FDA bidomain-with-bath manufactured-solution verification.
 - ionic model: `bathBidomainFDAManufactured`
 - myocardium verifier: `manufacturedFDABathBidomainVerifier`
 - bath potential domain: `bidomainSolverCoeffs.bathPotentialDomain`
+- complete time coupling: explicit first-order `godunov` (Lie splitting)
 - ECG domains: disabled for convergence sweep
 
 ### Mesh Layout
@@ -51,11 +52,19 @@ Mesh generation, `checkMesh`, and the tet `electroProperties`/`fvSchemes` overla
 
 #### Predictor-Corrector Coupling Study
 
-`setup/studies/coupling/` compares the decoupled/baseline vs. predictor-corrector bath coupling at `N=10,20,40`. This is the source of the paperI `bath_bidomain_tet_conformal` experiment. See [`setup/studies/coupling/README.md`](setup/studies/coupling/README.md).
+`setup/studies/coupling/` compares the decoupled/baseline vs. predictor-corrector bath coupling at `N=10,20,40,80`. This is the source of the paperI `bath_bidomain_tet_conformal` experiment. See [`setup/studies/coupling/README.md`](setup/studies/coupling/README.md).
 
 #### Interface-Current (Assembled-Flux) Convergence Sweep
 
 Sweeps assembled-current rows for `@tbl-bath-bidomain-tet` at `N=10,20,40,80`, comparing `unweightedHarmonic` and `distanceWeightedHarmonic` interface-conductivity interpolation (`matchedSubmesh` assembly, committed `snGrad corrected` scheme). See [`setup/studies/interfaceCurrentConvergence/README.md`](setup/studies/interfaceCurrentConvergence/README.md).
+
+#### Temporal and Interface Time-Step Controls
+
+`setup/studies/temporalConvergence/` is the fixed-mesh 1D/2D temporal ladder
+for the configured bath workflow. `setup/studies/tetTemporalControl/` halves
+the time step at the interface-relevant `N=40` and `N=80` tet levels. These
+are intentionally separate from the spatial/interface sequence: `dt ~ h^2`
+alone is a combined space--time path.
 
 #### Gradient-Scheme Screen
 
@@ -92,6 +101,13 @@ Tetrahedral interface-current convergence:
 ```bash
 applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
 applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
+```
+
+Bath temporal convergence and tet time-step control:
+
+```bash
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json
+applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
 ```
 
 Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.

@@ -27,6 +27,10 @@ bidomainSolverCoeffs
     chi             [ 0 -1 0 0 0 0 0 ] 3;
     cm              [ -1 -4 4 0 0 2 0 ] 2;
     ionicModel      bathBidomainFDAManufactured;
+    // The complete bath workflow uses first-order Lie--Godunov splitting.
+    // Archive it explicitly: temporal verification must record the complete
+    // advance rather than infer its order from the PDE substep.
+    timeCouplingScheme godunov;
     outputVariables
     {
         ionic
