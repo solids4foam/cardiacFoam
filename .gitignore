@@ -155,6 +155,11 @@ tutorials/**/0/*
 # the eikonal solver now reads its boundary conditions from it
 # (MUST_READ), so it must be tracked like any constant/ or system/ dict.
 !tutorials/**/0/activationTime
+# ...and eikonalECGPersonalized's 0/t: a small (~5 KB), hand-authored,
+# per-case transmural-distance field driving ionicHeterogeneity -- not a
+# mesh-derived/regenerated anatomical export like the UVC/fibre fields this
+# block otherwise excludes.
+!tutorials/electrophysiologyProtocols/eikonalECGPersonalized/0/t
 
 # Large mesh / field exports under tutorials — git cannot handle these
 tutorials/**/*.vtp

@@ -1,0 +1,126 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Small, fast, real (non-manufactured) eikonalECG regression fixture that
+// exercises the opt-in personalizedTemplates block: a coarse 2 cm cube with
+// a real transmural gradient (constant/../0/t) drives ionicHeterogeneity,
+// which the eikonalECG personalizedTemplates generator reuses as-is to pace
+// three single cells (endo/mid/epi) of a real ionic model and build dynamic
+// action-potential templates, replacing the solver's fixed compiled-in
+// tissueTemplates.H traces.
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource uniform;
+    conductivity  [ -1 -3 3 0 0 2 0 ]  (0.1334 0 0 0.01761 0 0.01761);
+
+    chi           [ 0 -1 0 0 0 0 0 ]   140000;
+    cm            [ -1 -4 4 0 0 2 0 ]  0.01;
+    c0            [ 0 0 -0.5 0 0 0 0 ]  0.8;
+
+    eikonalAdvectionDiffusionApproach true;
+
+    // Activation origin: a small corner box.
+    stimulusLocationMin (0     0     0    );
+    stimulusLocationMax (0.002 0.002 0.002);
+
+    ionicHeterogeneity
+    {
+        field             t;
+        mode              transmuralBands;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0.1;
+        transitionMode    blend;
+        smoothing         smoothstep;
+    }
+
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver eikonalECG;
+
+            sampling
+            {
+                start  0;
+                end    0.6;
+                deltaT 1e-4;
+            }
+
+            personalizedTemplates
+            {
+                ionicModelConfig
+                {
+                    // NOTE: the personalizedTemplates spec's reference
+                    // example names TWorldcompactBatched, but that model's
+                    // batched CPU kernel crashes with SIGFPE inside
+                    // TWorldcomputeVariables() under this generator (verified
+                    // via a driverFOAM run of this case -- log.cardiacFoam
+                    // stack trace: eikonalECG::solve ->
+                    // generatePersonalizedTemplates ->
+                    // batchedIonicModel::solveODEImpl<TWorldcompactBatched>
+                    // -> TWorldcomputeVariables -> SIGFPE), independent of
+                    // this case's mesh/stimulus/heterogeneity parameters.
+                    // BuenoOroviocompactBatched is used instead: it is the
+                    // model Task 1/2's own test suites
+                    // (src/electroModels/tests/test_eikonal_template_generator.py,
+                    // test_eikonal_ecg_personalized_templates.py) exercise
+                    // and validate for exactly this generator, and it keeps
+                    // the same dict shape (ionicModelConfig.ionicModel is a
+                    // plain runtime-selected word).
+                    ionicModel BuenoOroviocompactBatched;
+                    tissue     endocardialCells;
+                    solver     RKF45;
+                    absTol     1e-6;
+                    relTol     1e-4;
+
+                    ionicConstantOverrides
+                    {
+                        global { }
+                    }
+
+                    singleCellStimulus
+                    {
+                        stim_start      20;    // ms
+                        stim_period_S1  1000;  // ms
+                        stim_duration   1;      // ms
+                        stim_amplitude  0.4;
+                        nstim1          10;     // overwritten to nBeats below
+                        nstim2          0;      // MUST be exactly 0
+                    }
+                }
+
+                nBeats   10;
+                duration 0.60;
+                dt       1e-4;
+            }
+
+            electrodePositions
+            {
+                E1 (0.03  0.01  0.01 );
+                E2 (-0.01 0.01  0.01 );
+                E3 (0.01  0.03  0.01 );
+                E4 (0.01  0.01  0.03 );
+            }
+        }
+    }
+}
+
+// ************************************************************************* //
