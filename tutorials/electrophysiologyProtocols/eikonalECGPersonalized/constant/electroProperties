@@ -69,27 +69,28 @@ eikonalSolverCoeffs
                 ionicModelConfig
                 {
                     // NOTE: the personalizedTemplates spec's reference
-                    // example names TWorldcompactBatched, but that model's
-                    // batched CPU kernel crashes with SIGFPE inside
-                    // TWorldcomputeVariables() under this generator (verified
-                    // via a driverFOAM run of this case -- log.cardiacFoam
-                    // stack trace: eikonalECG::solve ->
-                    // generatePersonalizedTemplates ->
-                    // batchedIonicModel::solveODEImpl<TWorldcompactBatched>
-                    // -> TWorldcomputeVariables -> SIGFPE), independent of
-                    // this case's mesh/stimulus/heterogeneity parameters.
-                    // BuenoOroviocompactBatched is used instead: it is the
-                    // model Task 1/2's own test suites
-                    // (src/electroModels/tests/test_eikonal_template_generator.py,
-                    // test_eikonal_ecg_personalized_templates.py) exercise
-                    // and validate for exactly this generator, and it keeps
-                    // the same dict shape (ionicModelConfig.ionicModel is a
-                    // plain runtime-selected word).
-                    ionicModel BuenoOroviocompactBatched;
+                    // example names TWorldcompactBatched. Its batched CPU
+                    // kernel previously crashed with SIGFPE inside
+                    // TWorldcomputeVariables() under this generator because
+                    // batchedSubsteps defaulted to 1 (see
+                    // src/ionicModels/ionicModel/batchedIonicModel.H:186),
+                    // forcing the outer dt=1e-4 to be used as a single
+                    // too-coarse fixed step for TWorld's stiffer dynamics.
+                    // Setting ionicModelConfig.batchedSubsteps below fixes
+                    // that. The singleCellStimulus.stim_amplitude value must
+                    // also be sized for TWorld's real-mV/real-current scale
+                    // (repo convention: 60.0, see
+                    // tutorials/electrophysiologyProtocols/singleCell/constant/electroProperties
+                    // and .../singleCell/setup/studies/tworldVsGaur/**/TWorld_*/constant/electroProperties);
+                    // the smaller BuenoOrovio-scale amplitude left a
+                    // TWorld cell under threshold, failing
+                    // eikonalTemplateGenerator.C's validateTemplate() amplitude check.
+                    ionicModel TWorldcompactBatched;
                     tissue     endocardialCells;
                     solver     RKF45;
                     absTol     1e-6;
                     relTol     1e-4;
+                    batchedSubsteps 100;
 
                     ionicConstantOverrides
                     {
@@ -101,7 +102,7 @@ eikonalSolverCoeffs
                         stim_start      20;    // ms
                         stim_period_S1  1000;  // ms
                         stim_duration   1;      // ms
-                        stim_amplitude  0.4;
+                        stim_amplitude  60.0;
                         nstim1          10;     // overwritten to nBeats below
                         nstim2          0;      // MUST be exactly 0
                     }
