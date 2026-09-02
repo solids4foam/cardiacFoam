@@ -151,9 +151,29 @@ TemplateTriplet generatePersonalizedTemplates
         transitionMode
     );
 
+    scalar tMid = 0.5*(endoMInterface + mEpiInterface);
+
+    if (transitionMode == "blend" && transitionWidth > SMALL)
+    {
+        const scalar endoMUpper = endoMInterface + transitionWidth;
+
+        if (endoMUpper >= mEpiInterface - SMALL)
+        {
+            FatalErrorInFunction
+                << "eikonalTemplateGenerator: transitionWidth ("
+                << transitionWidth << ") leaves no pure mid-myocardium "
+                << "region between endoMInterface+transitionWidth ("
+                << endoMUpper << ") and mEpiInterface (" << mEpiInterface
+                << "). Reduce transitionWidth or widen the mCells band."
+                << exit(FatalError);
+        }
+
+        tMid = 0.5*(endoMUpper + mEpiInterface);
+    }
+
     scalarField tPoints(3);
     tPoints[0] = 0.0;
-    tPoints[1] = 0.5*(endoMInterface + mEpiInterface);
+    tPoints[1] = tMid;
     tPoints[2] = 1.0;
 
     checkUnitInterval(tPoints[0], "endocardium");
@@ -214,7 +234,7 @@ TemplateTriplet generatePersonalizedTemplates
         t = tCapture;
     }
 
-    const label nSamples = label(std::ceil(captureDuration/dt)) + 1;
+    const label nSamples = label(std::ceil(captureDuration/dt - 1e-9)) + 1;
 
     TemplateTriplet result;
     DynamicTemplate* traces[3] = {&result.endo, &result.mid, &result.epi};

@@ -68,8 +68,58 @@ transitionMode   blend;
 smoothing        smoothstep;
 """
 
+# Regression fixture for Finding 1 (mid-myocardium reference point landing in
+# the blend zone). With endoMInterface=0.3, mEpiInterface=0.7, the pure
+# mid-myocardium region under blend mode is [endoMInterface+transitionWidth,
+# mEpiInterface]. transitionWidth=0.25 -> pure region [0.55, 0.7]; the old
+# buggy tPoints[1]=0.5*(endoM+mEpi)=0.5 formula landed inside the endo/mid
+# blend zone [0.3, 0.55) instead. transitionWidth=0.05 -> pure region
+# [0.35, 0.7], which the buggy midpoint 0.5 already happened to fall inside,
+# so under the OLD code both widths gave the same weighting for the "mid"
+# anchor; under the FIXED code both widths now correctly resolve to a point
+# in the pure mid-myocardium region, so their "mid" templates should match.
+_HETEROGENEITY_DICT_WIDE_TRANSITION = """\
+mode             transmuralBands;
+endoMInterface   0.3;
+mEpiInterface    0.7;
+transitionWidth  0.25;
+transitionMode   blend;
+smoothing        smoothstep;
+"""
 
-def _cpp_source(capture_duration: str) -> str:
+_HETEROGENEITY_DICT_NARROW_TRANSITION = """\
+mode             transmuralBands;
+endoMInterface   0.3;
+mEpiInterface    0.7;
+transitionWidth  0.05;
+transitionMode   blend;
+smoothing        smoothstep;
+"""
+
+# Fatal-path fixture for Finding 1's new guard: endoMInterface=0.3,
+# mEpiInterface=0.5, transitionWidth=0.2 makes endoMInterface+transitionWidth
+# exactly equal to mEpiInterface (0.3+0.2==0.5 is exact in IEEE754 double),
+# i.e. a zero-width pure mid-myocardium region. This is deliberately NOT the
+# same config that ionicHeterogeneity::validateTransmuralBandConfig already
+# rejects (that check is endoMInterface+transitionWidth > mEpiInterface+SMALL,
+# i.e. it only fires when the transition bands *overlap*; it does not fire on
+# a zero-width -- but non-overlapping -- pure region, which is the gap this
+# new guard closes). Verified empirically: endoMInterface=0.3,
+# mEpiInterface=0.7, transitionWidth=0.45 (as a naive "clearly too wide"
+# choice) actually still trips the pre-existing overlap check first, not the
+# new guard -- so this fixture was chosen specifically to isolate the new
+# guard's fatal path.
+_HETEROGENEITY_DICT_ZERO_WIDTH_MID = """\
+mode             transmuralBands;
+endoMInterface   0.3;
+mEpiInterface    0.5;
+transitionWidth  0.2;
+transitionMode   blend;
+smoothing        smoothstep;
+"""
+
+
+def _cpp_source(capture_duration: str, heterogeneity_dict: str = _HETEROGENEITY_DICT) -> str:
     return f'''\
 #include "eikonalTemplateGenerator.H"
 #include "IStringStream.H"
@@ -116,7 +166,7 @@ int main()
 {_quote_cpp_lines(_IONIC_MODEL_CONFIG)};
 
     const std::string heterogeneityDictText =
-{_quote_cpp_lines(_HETEROGENEITY_DICT)};
+{_quote_cpp_lines(heterogeneity_dict)};
 
     const dictionary ionicModelConfig(parseDict(ionicModelConfigText));
     const dictionary heterogeneityDict(parseDict(heterogeneityDictText));
@@ -188,7 +238,12 @@ def _compiler():
     return None
 
 
-def _build(tmp_path: Path, name: str, capture_duration: str) -> Path:
+def _build(
+    tmp_path: Path,
+    name: str,
+    capture_duration: str,
+    heterogeneity_dict: str = _HETEROGENEITY_DICT,
+) -> Path:
     env = _openfoam_build_env()
     if env is None:
         pytest.skip(
@@ -204,8 +259,12 @@ def _build(tmp_path: Path, name: str, capture_duration: str) -> Path:
     obj_file = tmp_path / f"{name}.o"
     exe_file = tmp_path / name
 
-    cpp_file.write_text(_cpp_source(capture_duration))
+    cpp_file.write_text(_cpp_source(capture_duration, heterogeneity_dict))
 
+    # These flags mirror src/electroModels/Make/options (and
+    # src/ionicModels/Make/options for library-specific flags such as
+    # -DWM_LABEL_SIZE=32 and the -l link list below). If those change,
+    # re-sync this list by hand -- there is no automated derivation here.
     compile_cmd = [
         compiler,
         "-std=c++17", "-m64", "-pthread", "-ftrapping-math",
@@ -311,3 +370,75 @@ def test_fatals_naming_the_anchor_when_capture_is_too_short(tmp_path):
         anchor in result.stderr
         for anchor in ("endocardium", "mid-myocardium", "epicardium")
     )
+
+
+def _mid_peak(exe: Path) -> float:
+    result = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
+    for line in result.stdout.strip().splitlines():
+        fields = line.split()
+        if fields[0] == "mid":
+            # fields: name n t0 tLast resting peak final
+            return float(fields[5])
+    raise AssertionError(f"no 'mid' line in stdout: {result.stdout!r}")
+
+
+def test_wide_transition_width_still_yields_a_pure_mid_myocardium_template(
+    tmp_path,
+):
+    # Regression test for Finding 1: eikonalTemplateGenerator.C used to place
+    # the mid-myocardium reference point at the plain midpoint
+    # 0.5*(endoMInterface+mEpiInterface), which can land inside the
+    # endo<->mid blend zone instead of the actual pure mid-myocardium region
+    # once transitionWidth is wide enough (see the
+    # _HETEROGENEITY_DICT_WIDE_TRANSITION / _NARROW_TRANSITION docstrings
+    # above for the exact interval arithmetic).
+    #
+    # Under the OLD buggy code, tPoints[1] was always exactly 0.5 regardless
+    # of transitionWidth, so widening transitionWidth from 0.05 to 0.25 moved
+    # that fixed point from the pure mid region into the blend zone, and the
+    # resulting "mid" anchor's simulated peak Vm would shift accordingly.
+    # Under the FIXED code, both widths resolve tPoints[1] into the pure mid
+    # region ([0.35, 0.7] and [0.55, 0.7] respectively), which the ionic
+    # model resolves to the identical mid-myocardium parameterization
+    # (transmuralBandWeights returns {0, 1, 0} anywhere in that band), so the
+    # two "mid" templates' peak Vm should match to numerical precision.
+    exe_wide = _build(
+        tmp_path,
+        "eikonal_template_generator_wide_transition",
+        "0.6",
+        _HETEROGENEITY_DICT_WIDE_TRANSITION,
+    )
+    exe_narrow = _build(
+        tmp_path,
+        "eikonal_template_generator_narrow_transition",
+        "0.6",
+        _HETEROGENEITY_DICT_NARROW_TRANSITION,
+    )
+
+    peak_wide = _mid_peak(exe_wide)
+    peak_narrow = _mid_peak(exe_narrow)
+
+    assert peak_wide == pytest.approx(peak_narrow, abs=1e-6)
+
+
+def test_fatals_when_transition_width_leaves_no_pure_mid_region(tmp_path):
+    # Regression test for Finding 1's new validation guard: endoMInterface=
+    # 0.3, mEpiInterface=0.5, transitionWidth=0.2 makes
+    # endoMInterface+transitionWidth exactly equal to mEpiInterface, i.e. a
+    # zero-width pure mid-myocardium region -- a configuration that
+    # ionicHeterogeneity::validateTransmuralBandConfig's overlap check does
+    # NOT catch (that check only fires once the transition bands actually
+    # overlap), so the new guard in eikonalTemplateGenerator.C is what must
+    # catch it.
+    exe = _build(
+        tmp_path,
+        "eikonal_template_generator_zero_width_mid",
+        "0.6",
+        _HETEROGENEITY_DICT_ZERO_WIDTH_MID,
+    )
+
+    result = subprocess.run([str(exe)], capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "transitionWidth" in result.stderr
+    assert "pure mid-myocardium region" in result.stderr
