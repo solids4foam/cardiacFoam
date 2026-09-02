@@ -108,6 +108,13 @@ _VIRTUAL_PRESENCE_TRIGGERS: tuple[tuple[str, str], ...] = (
     ("bathPotentialDomain.", "$bathPotentialDomain_configured"),
     ("ecgDomains.", "$ecgDomains_present"),
     ("conductionNetworkDomains.", "$conductionNetworkDomains_present"),
+    # eikonalECG's opt-in personalized-template generator: without any
+    # override under personalizedTemplates.*, its ionicModelConfig/nBeats/
+    # duration/dt sub-keys must not become falsely "required" just because
+    # ecgSolver=eikonalECG -- the block is opt-in, and a plain eikonalECG
+    # domain with no personalizedTemplates block is a legal, common case
+    # (falls back to the compiled tissueTemplates.H traces).
+    ("personalizedTemplates.", "$personalizedTemplates_present"),
     # A single-cell run with no stimulus is legal: stimulusIO.C:149-155
     # returns a no-op protocol when the sub-dict is absent. Gating the
     # stimulus family on presence rather than on myocardimSolver keeps the
