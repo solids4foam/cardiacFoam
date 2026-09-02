@@ -1,6 +1,45 @@
 from typing import Final, Any
 from openfoam_driver.core.contracts.dictionary import DictEntry, build_group
 
+
+class _AnyValuePresent:
+    """``required_when``/``applicable_when`` predicate value that matches
+    any present (non-``None``) sibling value.
+
+    The per-instance dynamic-path predicate matcher
+    (``plugins/cardiacfoam/validation.py:_evaluate_dynamic_required_fields``
+    and ``_instance_applicable``) resolves a template-relative predicate key
+    to a concrete sibling slot, skips it outright when that slot is absent
+    (``actual is None``), and otherwise compares the sibling's *value* for
+    equality/membership against whatever is declared here. There is no
+    presence-only predicate primitive: every existing template-scoped
+    condition in this catalog (e.g. ``ecgSolver`` == ``"eikonalECG"`` gating
+    ``sampling.*``) happens to be an equality check against a known enum
+    value, which is not available here -- ``personalizedTemplates``'s four
+    leaves (``ionicModelConfig.ionicModel``, ``nBeats``, ``duration``,
+    ``dt``) are open-ended word/integer/scalar fields with no fixed legal
+    set to enumerate.
+
+    This sentinel closes that gap without touching the shared matcher: its
+    ``__eq__`` always returns ``True``, so ``actual == _PRESENT`` is True for
+    whatever value a sibling leaf holds once ``actual is None`` has already
+    excluded "absent". Comparing against it is therefore equivalent to a
+    presence check, expressed through the equality operator the shared
+    matcher already uses -- not a new evaluation path.
+    """
+
+    def __eq__(self, other: object) -> bool:
+        return True
+
+    def __hash__(self) -> int:
+        return hash(_AnyValuePresent)
+
+    def __repr__(self) -> str:
+        return "<any value present>"
+
+
+_PRESENT: Final = _AnyValuePresent()
+
 HETEROGENEITY_MODELS: tuple[str, ...] = (
     "BuenoOrovio", "TNNP", "TWorld", "ToRORd_dynCl",
     "AlievPanfilov", "Courtemanche", "Fabbri", "Gaur",
@@ -894,7 +933,16 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             required=True,
             constraints=('Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.',),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
-            required_when={"$personalizedTemplates_present": True},
+            # Gated on presence of any OTHER personalizedTemplates.* leaf
+            # (not this entry's own slot -- a predicate can't detect its own
+            # absence) so the block is "present" from whichever leaf the
+            # agent set first; see `_AnyValuePresent` above for why value
+            # equality against a sentinel is the presence check.
+            required_when={
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.nBeats": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.duration": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.dt": _PRESENT,
+            },
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.nBeats',
@@ -907,7 +955,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value='10',
             constraints=('Must be >= 1.', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
-            required_when={"$personalizedTemplates_present": True},
+            required_when={
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.ionicModelConfig.ionicModel": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.duration": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.dt": _PRESENT,
+            },
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.duration',
@@ -921,7 +973,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value='0.6',
             constraints=('Must be > 0 and must not exceed one S1 period (1e-3*ionicModelConfig.singleCellStimulus.stim_period_S1 s).', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
-            required_when={"$personalizedTemplates_present": True},
+            required_when={
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.ionicModelConfig.ionicModel": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.nBeats": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.dt": _PRESENT,
+            },
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.dt',
@@ -935,7 +991,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             typical_value='1e-4',
             constraints=('Must be > 0.', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
-            required_when={"$personalizedTemplates_present": True},
+            required_when={
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.ionicModelConfig.ionicModel": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.nBeats": _PRESENT,
+                "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.personalizedTemplates.duration": _PRESENT,
+            },
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.reportElectrodeLookup',
