@@ -32,8 +32,10 @@ Author
 #include "OFstream.H"
 #include "Switch.H"
 #include "autoPtr.H"
+#include "dictionary.H"
 #include "overrideTypeName.H"
 #include "volFields.H"
+#include "eikonalTemplateGenerator.H"
 
 namespace Foam
 {
@@ -61,10 +63,34 @@ class eikonalECG
     scalarField wMid_;
     scalarField wEpi_;
 
+    //- Opt-in runtime-generated personalized action-potential templates.
+    //  See the "personalizedTemplates" sub-dictionary in the eikonalECG
+    //  domain dict (Configuration contract).
+    bool personalizedTemplatesEnabled_;
+    bool personalizedTemplatesGenerated_;
+    dictionary personalizedTemplatesDict_;
+    eikonalECG_templates::TemplateTriplet personalizedTemplates_;
+
     scalar manufacturedTemplateDerivative(scalar localTime) const;
+
+    //- Locate the active ionicHeterogeneity dictionary, checking
+    //  electroProperties' top level first and falling back to the active
+    //  myocardium solver's Coeffs dictionary. Shared by
+    //  calculateTransmuralWeights() and generatePersonalizedTemplates() so
+    //  both always agree on which dictionary is authoritative.
+    const dictionary* findHeterogeneityDict
+    (
+        const dictionary& electroProperties
+    ) const;
 
     void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
+
+    //- Generate the endo/mid/epi personalized templates once, from
+    //  personalizedTemplatesDict_'s ionicModelConfig and the case's active
+    //  ionicHeterogeneity dictionary. Only called when
+    //  personalizedTemplatesEnabled_ is true.
+    void generatePersonalizedTemplates(const ecgDomain& domain);
 
     //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient
     //  instead of numerically re-differentiating the reconstructed Vm field.

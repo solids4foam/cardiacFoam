@@ -28,6 +28,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "ionicHeterogeneity.H"
 #include "IOdictionary.H"
+#include "stimulusIO.H"
 #include "tissueTemplates.H"
 
 namespace Foam
@@ -49,7 +50,9 @@ eikonalECG::eikonalECG(const dictionary& dict)
     outputPtr_(),
     leadVectorsCalculated_(false),
     leadVectors_(),
-    weightsCalculated_(false)
+    weightsCalculated_(false),
+    personalizedTemplatesEnabled_(false),
+    personalizedTemplatesGenerated_(false)
 {
     const word verifierType =
         dict.lookupOrDefault<word>("ecgVerificationModel", word::null);
@@ -89,6 +92,98 @@ eikonalECG::eikonalECG(const dictionary& dict)
             << "sampling.start."
             << exit(FatalError);
     }
+
+    if (dict.found("personalizedTemplates"))
+    {
+        personalizedTemplatesDict_ = dict.subDict("personalizedTemplates");
+        personalizedTemplatesEnabled_ = true;
+
+        if (useManufacturedTemplate_)
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates cannot be combined "
+                << "with a manufactured ECG configuration "
+                << "(manufacturedEikonalECG / "
+                << "verificationModel.type == manufacturedEikonalECGVerifier)."
+                << exit(FatalError);
+        }
+
+        if (!personalizedTemplatesDict_.found("ionicModelConfig"))
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates requires an "
+                << "ionicModelConfig sub-dictionary: an eikonal-only case "
+                << "has no ionic model to inherit one from."
+                << exit(FatalError);
+        }
+
+        const dictionary& ionicModelConfig =
+            personalizedTemplatesDict_.subDict("ionicModelConfig");
+
+        if (!ionicModelConfig.found("ionicModel"))
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates.ionicModelConfig "
+                << "requires an 'ionicModel' entry."
+                << exit(FatalError);
+        }
+
+        if (!ionicModelConfig.found("singleCellStimulus"))
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates.ionicModelConfig "
+                << "requires a 'singleCellStimulus' sub-dictionary defining "
+                << "the S1 pacing protocol."
+                << exit(FatalError);
+        }
+
+        const label nBeats = personalizedTemplatesDict_.get<label>("nBeats");
+        const scalar duration =
+            personalizedTemplatesDict_.get<scalar>("duration");
+        const scalar generationDt =
+            personalizedTemplatesDict_.get<scalar>("dt");
+
+        if (nBeats < 1)
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates.nBeats must be >= 1; "
+                << "got " << nBeats << "."
+                << exit(FatalError);
+        }
+
+        if (duration <= 0.0 || generationDt <= 0.0)
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates.duration and .dt must "
+                << "both be positive; got duration=" << duration
+                << ", dt=" << generationDt << "."
+                << exit(FatalError);
+        }
+
+        const StimulusProtocol stim =
+            stimulusIO::loadStimulusProtocol(ionicModelConfig);
+
+        if (duration > 1e-3*stim.stimPeriodS1)
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates.duration (" << duration
+                << " s) must not exceed one S1 period ("
+                << 1e-3*stim.stimPeriodS1 << " s, from ionicModelConfig."
+                << "singleCellStimulus.stim_period_S1=" << stim.stimPeriodS1
+                << " ms): capture must stay within the final S1 beat."
+                << exit(FatalError);
+        }
+
+        if (stim.nStim2 != 0)
+        {
+            FatalErrorInFunction
+                << "eikonalECG personalizedTemplates does not support S2 "
+                << "pacing (ionicModelConfig.singleCellStimulus.nstim2 must "
+                << "be 0); capture must contain exactly one unambiguous "
+                << "final S1 response."
+                << exit(FatalError);
+        }
+    }
 }
 
 
@@ -120,6 +215,35 @@ void eikonalECG::reconstructGradVm
         if (useManufacturedTemplate_)
         {
             dUds = manufacturedTemplateDerivative(localTime);
+        }
+        else if (personalizedTemplatesEnabled_)
+        {
+            const scalar rawDUds =
+                wEndo_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+                (
+                    localTime,
+                    personalizedTemplates_.endo.times.cdata(),
+                    personalizedTemplates_.endo.valuesMv.cdata(),
+                    personalizedTemplates_.endo.times.size()
+                )
+              + wMid_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+                (
+                    localTime,
+                    personalizedTemplates_.mid.times.cdata(),
+                    personalizedTemplates_.mid.valuesMv.cdata(),
+                    personalizedTemplates_.mid.times.size()
+                )
+              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+                (
+                    localTime,
+                    personalizedTemplates_.epi.times.cdata(),
+                    personalizedTemplates_.epi.valuesMv.cdata(),
+                    personalizedTemplates_.epi.times.size()
+                );
+
+            // Dynamic values are mV, so convert dVm/dt to V/s before the
+            // chain rule.
+            dUds = rawDUds*1e-3;
         }
         else
         {
@@ -220,6 +344,30 @@ void eikonalECG::calculateLeadVectors(const ecgDomain& domain)
     leadVectorsCalculated_ = true;
 }
 
+const dictionary* eikonalECG::findHeterogeneityDict
+(
+    const dictionary& electroProperties
+) const
+{
+    const dictionary* hetDictPtr =
+        electroProperties.findDict("ionicHeterogeneity");
+
+    if (!hetDictPtr && electroProperties.found("myocardiumSolver"))
+    {
+        const word myocardiumSolver(electroProperties.lookup("myocardiumSolver"));
+        const dictionary* solverDictPtr =
+            electroProperties.findDict(myocardiumSolver + "Coeffs");
+
+        if (solverDictPtr)
+        {
+            hetDictPtr = solverDictPtr->findDict("ionicHeterogeneity");
+        }
+    }
+
+    return hetDictPtr;
+}
+
+
 void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
@@ -246,20 +394,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
         )
     );
 
-    const dictionary* hetDictPtr =
-        electroProperties.findDict("ionicHeterogeneity");
-
-    if (!hetDictPtr && electroProperties.found("myocardiumSolver"))
-    {
-        const word myocardiumSolver(electroProperties.lookup("myocardiumSolver"));
-        const dictionary* solverDictPtr =
-            electroProperties.findDict(myocardiumSolver + "Coeffs");
-
-        if (solverDictPtr)
-        {
-            hetDictPtr = solverDictPtr->findDict("ionicHeterogeneity");
-        }
-    }
+    const dictionary* hetDictPtr = findHeterogeneityDict(electroProperties);
 
     if (!hetDictPtr)
     {
@@ -348,6 +483,67 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 }
 
 
+void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
+{
+    const fvMesh& mesh = domain.mesh();
+
+    IOdictionary electroProperties
+    (
+        IOobject
+        (
+            "electroProperties",
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        )
+    );
+
+    const dictionary* hetDictPtr = findHeterogeneityDict(electroProperties);
+
+    if (!hetDictPtr)
+    {
+        FatalErrorInFunction
+            << "eikonalECG personalizedTemplates requires an "
+            << "ionicHeterogeneity block in electroProperties or the "
+            << "active myocardium solver Coeffs dictionary, but none was "
+            << "found."
+            << exit(FatalError);
+    }
+
+    const dictionary& hetDict = *hetDictPtr;
+    const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode != "transmuralBands")
+    {
+        FatalErrorInFunction
+            << "eikonalECG personalizedTemplates supports ionicHeterogeneity "
+            << "mode 'transmuralBands' only; mode '" << mode << "' cannot "
+            << "be used to generate the three anchor templates."
+            << exit(FatalError);
+    }
+
+    const dictionary& ionicModelConfig =
+        personalizedTemplatesDict_.subDict("ionicModelConfig");
+
+    const label nBeats = personalizedTemplatesDict_.get<label>("nBeats");
+    const scalar duration = personalizedTemplatesDict_.get<scalar>("duration");
+    const scalar generationDt = personalizedTemplatesDict_.get<scalar>("dt");
+
+    personalizedTemplates_ =
+        eikonalECG_templates::generatePersonalizedTemplates
+        (
+            ionicModelConfig,
+            hetDict,
+            nBeats,
+            duration,
+            generationDt
+        );
+
+    personalizedTemplatesGenerated_ = true;
+}
+
+
 void eikonalECG::solve
 (
     ecgDomain& domain,
@@ -368,6 +564,11 @@ void eikonalECG::solve
     if (!leadVectorsCalculated_)
     {
         calculateLeadVectors(domain);
+    }
+
+    if (personalizedTemplatesEnabled_ && !personalizedTemplatesGenerated_)
+    {
+        generatePersonalizedTemplates(domain);
     }
 
     if (!weightsCalculated_)
