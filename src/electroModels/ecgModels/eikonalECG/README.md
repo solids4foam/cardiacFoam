@@ -162,6 +162,19 @@ ecgDomains
                                                      // "TWorldBatched" has no
                                                      // dictionary constructor
                                                      // and fatals
+                tissue     endocardialCells;        // REQUIRED by every
+                                                     // ionicModel constructor
+                                                     // (ionicSelector::
+                                                     // selectTissue() fatals
+                                                     // without it) even
+                                                     // though this generator's
+                                                     // own configureIonicHeterogeneity()
+                                                     // call supersedes it per
+                                                     // anchor — the value here
+                                                     // is a required
+                                                     // placeholder, not a
+                                                     // meaningful per-anchor
+                                                     // selector
                 solver     RKF45;
                 absTol     1e-6;
                 relTol     1e-4;
@@ -226,15 +239,22 @@ your solver coefficients already configure is reused as-is (never
 re-parsed into a separate scheme) — but only for `mode transmuralBands`.
 `namedRegions`, `cellZoneRegions`, and `apexBaseBands` are not supported by
 this first implementation; using `personalizedTemplates` with any other
-mode is rejected at construction time.
+mode is rejected (see timing note below).
 
-**Rejected at construction** (before any case/mesh setup — so a
-misconfiguration fails immediately, not partway through a run):
-missing `ionicHeterogeneity`, or `mode` other than `transmuralBands`;
-a missing `ionicModelConfig.ionicModel` or `singleCellStimulus`; `nBeats
-< 1`; non-positive `duration`/`dt`; `duration` exceeding one S1 period
+**Rejected at `eikonalECG` construction** (before any case/mesh setup, so
+these specific misconfigurations fail immediately when the case's dict is
+first parsed, not partway through a run): a missing `ionicModelConfig` or
+its `ionicModel`/`singleCellStimulus`; `nBeats < 1`; non-positive
+`duration`/`dt`; `duration` exceeding one S1 period
 (`duration > 1e-3*stim_period_S1`); non-zero `nstim2`; and combining
 `personalizedTemplates` with a manufactured-ECG verification configuration.
+
+**Rejected at first `solve()`, not construction** (these two need the
+mesh and `constant/electroProperties`, which don't exist yet when the
+`eikonalECG` object is constructed): a missing `ionicHeterogeneity` block,
+and `mode` other than `transmuralBands`. A case with one of these problems
+will construct successfully and only fatal once the solver actually starts
+solving.
 
 **Without `personalizedTemplates`, nothing changes:** the compiled
 `tissueTemplates.H` arrays, `transmuralBands`-only weighting, and every
