@@ -952,7 +952,23 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             value_kind='integer',
             dynamic_path=True,
             required=True,
-            typical_value='10',
+            # No typical_value: dict-synthesis (`populate_values` in
+            # core/specs/dict_builder.py) ghost-fills any applicable
+            # dynamic-path leaf with a `typical_value` for EVERY active
+            # `<name>` instance sharing the template's placeholder prefix --
+            # it groups by `$ELECTRO_MODEL_COEFFS.ecgDomains.<name>` (the
+            # shared prefix with e.g. `ecgSolver`), not by whether this
+            # deeper `personalizedTemplates` block was actually configured.
+            # A `typical_value` here would therefore synthesize a ghost
+            # `nBeats` for every plain eikonalECG domain, which then
+            # satisfies `ionicModel`'s sibling-presence `required_when`
+            # (see `_PRESENT`) even though `personalizedTemplates` was never
+            # opted into -- `ionicModel` has no sensible case-independent
+            # default so it's never ghost-filled, and strict validation
+            # fatals demanding it. There is no case-independent value for
+            # nBeats that should ever be silently synthesized into a case
+            # that didn't ask for personalized templates, so this leaf
+            # matches `ionicModel` in carrying none.
             constraints=('Must be >= 1.', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
             required_when={
@@ -970,7 +986,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=True,
             unit='s',
-            typical_value='0.6',
+            # No typical_value: see the note on the sibling `nBeats` entry
+            # above -- a ghost-synthesized value here would spuriously
+            # satisfy `ionicModel`'s sibling-presence `required_when` for
+            # every plain eikonalECG domain, not just ones that configured
+            # `personalizedTemplates`.
             constraints=('Must be > 0 and must not exceed one S1 period (1e-3*ionicModelConfig.singleCellStimulus.stim_period_S1 s).', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
             required_when={
@@ -988,7 +1008,11 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             dynamic_path=True,
             required=True,
             unit='s',
-            typical_value='1e-4',
+            # No typical_value: see the note on the sibling `nBeats` entry
+            # above -- a ghost-synthesized value here would spuriously
+            # satisfy `ionicModel`'s sibling-presence `required_when` for
+            # every plain eikonalECG domain, not just ones that configured
+            # `personalizedTemplates`.
             constraints=('Must be > 0.', 'Only applicable when ecgSolver=eikonalECG and personalizedTemplates is present.'),
             applicable_when={"$ELECTRO_MODEL_COEFFS.ecgDomains.<name>.ecgSolver": "eikonalECG"},
             required_when={

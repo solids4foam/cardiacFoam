@@ -50,32 +50,27 @@
 #     when the full cardiacFoam monorepo tree is not present. A skip is not
 #     a pass -- see the skip reasons for exactly what to source/build.
 #
-#     KNOWN, PRE-EXISTING BUG (not introduced by this task, not fixed by
-#     this file -- see test_known_bug_plain_eikonal_ecg_domains_fail_strict_
-#     validation_due_to_personalized_templates_catalog_defect below): as of
-#     this file's authorship (commits 32cd2436..08a514d9 on
-#     ep-work-onto-main), `driverFoam plan --strict` / `driverFoam run
-#     --strict` incorrectly reports ecgDomains.<name>.personalizedTemplates.
-#     ionicModelConfig.ionicModel as "required" for ANY ecgSolver=eikonalECG
-#     domain, even one with no personalizedTemplates block at all -- because
-#     nBeats/duration/dt (but not ionicModel) carry a catalog typical_value,
-#     so the dict-synthesis path's typical-value fallback silently populates
-#     those three, making the fourth leaf's required_when siblings look
-#     "present" even when the user never configured personalizedTemplates.
-#     This reproduces on the pre-existing manufacturedEikonalECG tutorial
-#     (predates this task) via `driverFoam run --strict --entry
-#     manufacturedEikonalECG`, and via `driverFoam plan --strict` on a copy
-#     of eikonalECGPersonalized with the block stripped. It does NOT affect
-#     any case where personalizedTemplates is actually present (checks 2-5
-#     below), and the underlying simulation is unaffected -- `driverFoam run
-#     --run-document <the plan's own run_document>` still executes correctly
-#     even when `plan --strict`'s status is "failed" for this one reason,
-#     because run-document execution does not re-invoke the dict-synthesis
-#     validator. Checks 1 and 3 below use that fact (tolerating ONLY this
-#     one, exact, named diagnostic -- anything else still fails the test
-#     loudly) to reach the compiled-fallback path's real output. This bug
-#     lives entirely in dict_builder.py / dict_entries_catalog.py, which are
-#     out of this task's scope to fix.
+#     FIXED BUG (was "KNOWN, PRE-EXISTING BUG" as of this file's original
+#     authorship, commits 32cd2436..08a514d9 on ep-work-onto-main; fixed on
+#     top of 18d440d3): `driverFoam plan --strict` / `driverFoam run
+#     --strict` used to incorrectly report ecgDomains.<name>.
+#     personalizedTemplates.ionicModelConfig.ionicModel as "required" for
+#     ANY ecgSolver=eikonalECG domain, even one with no personalizedTemplates
+#     block at all -- because nBeats/duration/dt (but not ionicModel) carried
+#     a catalog typical_value, so the dict-synthesis path's typical-value
+#     fallback silently populated those three, making the fourth leaf's
+#     required_when siblings look "present" even when the user never
+#     configured personalizedTemplates. Fixed by removing typical_value from
+#     nBeats/duration/dt in dict_entries_catalog.py (matching ionicModel,
+#     which already had none) -- there is no case-independent default for
+#     those three that should ever be silently synthesized into a case that
+#     never opted into personalizedTemplates. `_plan_strict_tolerating_
+#     known_fallback_bug` below (used by `fallback_result`) now requires a
+#     clean "ok" plan like every other check in this file; the test that
+#     used to pin this bug
+#     (test_known_bug_plain_eikonal_ecg_domains_fail_strict_validation_due_
+#     to_personalized_templates_catalog_defect) has been removed now that
+#     the bug it pinned no longer reproduces.
 #
 # Author
 #     Simao Nieto de Castro, UCD.
@@ -171,40 +166,26 @@ def _plan_strict(tutorials_root: Path, entry: str, *, entry_kind: str | None = N
         )
 
 
-# The one, specific, pre-existing catalog diagnostic this file's fallback
-# paths are allowed to tolerate -- see the module docstring's "KNOWN,
-# PRE-EXISTING BUG" section. Anything else is a real failure.
-_KNOWN_FALLBACK_VALIDATION_BUG = re.compile(
-    r"ecgDomains\.\w+\.personalizedTemplates\.ionicModelConfig\.ionicModel "
-    r"is required for ecgDomains\.\w+ but has no value\."
-)
-
-
 def _plan_strict_tolerating_known_fallback_bug(tutorials_root: Path, entry: str) -> dict:
-    """`_plan_strict`, but permits ONLY the known personalizedTemplates-
-    catalog false positive (module docstring) to appear in
-    validation_diagnostics. Any other diagnostic still fails the test."""
+    """`_plan_strict`, tightened after the personalizedTemplates catalog
+    fix (see module docstring's "FIXED BUG" section). This used to tolerate
+    one specific false-positive diagnostic
+    (ecgDomains.<name>.personalizedTemplates.ionicModelConfig.ionicModel
+    spuriously "required" for a plain eikonalECG domain with no
+    personalizedTemplates block); now that dict_entries_catalog.py no
+    longer carries a typical_value on nBeats/duration/dt, dict-synthesis no
+    longer ghost-populates them for domains that never configured
+    personalizedTemplates, and that diagnostic no longer fires. This now
+    requires a clean "ok" plan, same as `_plan_strict` -- kept as a
+    separate name (rather than folded back into `_plan_strict`) so its
+    callers document that they used to need this leniency."""
     plan = _plan_strict(tutorials_root, entry)
-    if plan.get("status") == "ok":
-        return plan
-    diagnostics = plan.get("validation_diagnostics") or []
-    messages = [d.get("message", "") for d in diagnostics]
-    unexpected = [m for m in messages if not _KNOWN_FALLBACK_VALIDATION_BUG.search(m)]
-    other_diag_buckets = {
-        k: v
-        for k in (
-            "workflow_diagnostics", "catalog_coverage_errors",
-            "artifact_diagnostics", "environment_diagnostics",
-            "mesh_geometry_diagnostics",
-        )
-        if (v := plan.get(k))
-    }
-    if unexpected or other_diag_buckets or not messages:
-        pytest.fail(
-            "plan --strict failed for a reason other than the known "
-            f"personalizedTemplates catalog bug: messages={messages!r} "
-            f"other_diagnostics={other_diag_buckets!r}"
-        )
+    assert plan.get("status") == "ok", (
+        "plan --strict failed for the fallback (personalizedTemplates-"
+        "stripped) case -- this should now plan cleanly after the "
+        "personalizedTemplates catalog typical_value fix "
+        f"(dict_entries_catalog.py): {plan.get('validation_diagnostics')!r}"
+    )
     return plan
 
 
@@ -336,8 +317,9 @@ def personalized_result(tmp_path_factory) -> CaseResult:
 @pytest.fixture(scope="module")
 def fallback_result(tmp_path_factory) -> CaseResult:
     """Same tutorial with the personalizedTemplates block removed -> the
-    compiled tissueTemplates.H fallback path. Tolerates the one known,
-    pre-existing catalog bug documented in the module docstring."""
+    compiled tissueTemplates.H fallback path. Previously had to tolerate
+    one known catalog false-positive (module docstring's "FIXED BUG"
+    section); now requires a clean "ok" plan like every other case here."""
     return _drive_case(
         tmp_path_factory,
         tag="fallback",
@@ -386,45 +368,6 @@ def test_fallback_parity_existing_manufactured_eikonal_ecg_regression_still_repr
     assert result.status == "reproduced", (
         f"manufacturedEikonalECG regression no longer reproduces via the "
         f"generic driver: {result.detail}"
-    )
-
-
-def test_known_bug_plain_eikonal_ecg_domains_fail_strict_validation_due_to_personalized_templates_catalog_defect():
-    """Pins the pre-existing driverFOAM catalog bug described in the module
-    docstring, so it stays visible and tracked rather than being silently
-    routed around by `_plan_strict_tolerating_known_fallback_bug` above.
-
-    This is NOT one of the task brief's 5 required checks -- it exists so
-    that fixing dict_builder.py/dict_entries_catalog.py (out of this
-    task's scope) trips this assertion, forcing whoever fixes it to also
-    tighten `fallback_result`/`_plan_strict_tolerating_known_fallback_bug`
-    above to require a clean "ok" plan instead of tolerating this message.
-
-    Confirmed to predate this task: manufacturedEikonalECG's electroProperties
-    has no personalizedTemplates block and has not been touched by this
-    task's changes.
-
-    Uses `plan --strict` directly (not `regression_equivalence.dual_run.
-    verify_reproduction`, whose `ReproResult.detail` keeps only the last
-    ~1500 chars of subprocess output via `_tail()` -- too short to reliably
-    contain the validation_diagnostics message this test needs to pin,
-    which sits well before the end of a large strict-plan JSON report)."""
-    from openfoam_driver.tests.regression_equivalence.dual_run import solver_available
-
-    assert solver_available(), "cardiacFoam/WM_PROJECT_DIR unavailable despite requires_openfoam"
-
-    plan = _plan_strict(monorepo_root / "tutorials", "manufacturedEikonalECG")
-
-    assert plan.get("status") != "ok", (
-        "the known personalizedTemplates catalog bug appears to be fixed "
-        "(plan --strict succeeded for manufacturedEikonalECG) -- if so, "
-        "tighten _plan_strict_tolerating_known_fallback_bug and "
-        "fallback_result above to require status == 'ok', and delete this "
-        f"test. plan={plan!r}"
-    )
-    messages = [d.get("message", "") for d in (plan.get("validation_diagnostics") or [])]
-    assert any(_KNOWN_FALLBACK_VALIDATION_BUG.search(m) for m in messages), (
-        f"plan --strict failed for an unexpected reason: {messages!r}"
     )
 
 
