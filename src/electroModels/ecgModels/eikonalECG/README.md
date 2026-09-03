@@ -63,11 +63,14 @@ reference `singleCell` tutorial run when template provenance changes.
 Regenerate `tissueTemplates.H` if:
 
 - A new ionic model is adopted as the reference (current templates are
-  TNNP-based for human ventricular tissue).
+  TWorldcompactBatched-derived for human ventricular tissue).
 - Tissue properties (conductivity, chi, cm) change significantly enough
   to alter AP duration.
 
-For most production runs the existing templates are appropriate.
+For most production runs the existing templates are appropriate. If a run
+needs templates that reflect its *own* ionic parameterisation instead —
+drug effects, patient-specific overrides, a different ionic model entirely —
+see `personalizedTemplates` below rather than regenerating this file.
 
 ## electroProperties configuration
 
@@ -125,6 +128,119 @@ If `ionicHeterogeneity` is configured in the solver coefficients, the ECG
 model uses the same endo/mid/epi transmural weight field to blend between
 the three templates. Without heterogeneity all cells use the endocardial
 template.
+
+### Personalized templates (`personalizedTemplates`)
+
+By default the three templates above are the compiled, generic
+`tissueTemplates.H` arrays — the same for every case, regardless of that
+case's own ionic model or parameterisation. Adding a `personalizedTemplates`
+block replaces them with templates generated for *this* case: it paces
+three single cells (endocardial/mid-myocardial/epicardial anchors) with the
+case's own ionic model and captures their Vm(t) response, then uses those
+captured traces exactly where the compiled arrays would otherwise be used.
+
+```c++
+ecgDomains
+{
+    ECG
+    {
+        ecgSolver eikonalECG;
+
+        personalizedTemplates
+        {
+            // REQUIRED. An eikonal-only case has no ionic model of its own
+            // to inherit, so this authoritative single-cell parameterisation
+            // must be supplied explicitly. Keep it equal to the ionic model
+            // configuration (model, overrides, stimulus) the intended
+            // monodomain run would use, or the personalized ECG will not
+            // reflect that run's actual physiology.
+            ionicModelConfig
+            {
+                ionicModel TWorldcompactBatched;   // exact registered
+                                                     // runtime-selection-table
+                                                     // name — e.g. plain
+                                                     // "TWorldBatched" has no
+                                                     // dictionary constructor
+                                                     // and fatals
+                solver     RKF45;
+                absTol     1e-6;
+                relTol     1e-4;
+
+                // batchedSubsteps subdivides each outer `dt` step (below)
+                // into this many internal integration steps. Batched models
+                // default to 1 (no subdivision), which can be numerically
+                // unstable for stiffer ionic models at typical outer dt
+                // values — TWorld needs ~100 substeps at dt=1e-4s to avoid
+                // a SIGFPE, matching the ~1e-6s step size known to work
+                // elsewhere in this repo; BuenoOrovio tolerates dt=1e-4s
+                // with the default of 1. Tune per ionic model.
+                batchedSubsteps 100;
+
+                ionicConstantOverrides
+                {
+                    global { /* model constants, e.g. GKr 0.5; */ }
+                }
+
+                singleCellStimulus
+                {
+                    stim_start      20;    // ms
+                    stim_period_S1  1000;  // ms
+                    stim_duration   1;     // ms
+                    stim_amplitude  60.0;  // sized for the chosen ionic
+                                           // model's own scale — too weak
+                                           // an amplitude leaves the cell
+                                           // sub-threshold and fatals the
+                                           // generator's amplitude check
+                    nstim1          10;    // silently overwritten to match
+                                           // nBeats below
+                    nstim2          0;     // MUST be exactly 0 — capture
+                                           // needs one unambiguous final
+                                           // S1 response, not S2 pacing
+                }
+            }
+
+            nBeats   10;       // S1 beats (including the captured one) to
+                                // pace each anchor to steady state
+            duration 0.60;     // s, capture window from the final S1 onset
+            dt       1e-4;     // s, ODE integration/capture step
+        }
+
+        sampling { /* unchanged, see above */ }
+        electrodePositions { /* unchanged, see above */ }
+    }
+}
+```
+
+**Units, once, precisely:** `duration` and `dt` are SI seconds, matching
+`sampling`'s own units. `singleCellStimulus`'s timing keys (`stim_start`,
+`stim_period_S1`, `stim_duration`) are milliseconds, matching this
+codebase's general single-cell stimulus convention. Captured Vm templates
+are recorded in millivolts, matching the compiled `tissueTemplates.H`
+convention; the mV→V conversion happens exactly once, at the point the
+template derivative feeds the eikonal chain rule (mirroring the compiled
+path's own conversion) — nowhere else in the personalized path does a unit
+conversion occur.
+
+**Only `transmuralBands` is supported.** The `ionicHeterogeneity` block
+your solver coefficients already configure is reused as-is (never
+re-parsed into a separate scheme) — but only for `mode transmuralBands`.
+`namedRegions`, `cellZoneRegions`, and `apexBaseBands` are not supported by
+this first implementation; using `personalizedTemplates` with any other
+mode is rejected at construction time.
+
+**Rejected at construction** (before any case/mesh setup — so a
+misconfiguration fails immediately, not partway through a run):
+missing `ionicHeterogeneity`, or `mode` other than `transmuralBands`;
+a missing `ionicModelConfig.ionicModel` or `singleCellStimulus`; `nBeats
+< 1`; non-positive `duration`/`dt`; `duration` exceeding one S1 period
+(`duration > 1e-3*stim_period_S1`); non-zero `nstim2`; and combining
+`personalizedTemplates` with a manufactured-ECG verification configuration.
+
+**Without `personalizedTemplates`, nothing changes:** the compiled
+`tissueTemplates.H` arrays, `transmuralBands`-only weighting, and every
+other existing behavior of this solver are exactly as documented above —
+this is an opt-in, additive path with no effect on cases that don't
+configure it.
 
 ### Optional keys
 
