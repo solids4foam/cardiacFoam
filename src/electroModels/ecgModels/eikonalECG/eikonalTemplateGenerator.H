@@ -48,8 +48,7 @@ namespace Foam
 namespace eikonalECG_templates
 {
 
-//- A single generated action-potential trace, sampled at a fixed dt
-//  starting at the final S1 stimulus onset (local time zero).
+//- Local time zero is the final S1 stimulus onset.
 struct DynamicTemplate
 {
     scalarField times;      // s, starts exactly at final S1 onset
@@ -64,21 +63,8 @@ struct TemplateTriplet
     DynamicTemplate epi;
 };
 
-//- Generate endo/mid/epi action-potential templates by pacing three
-//  single cells (transmural coordinates 0.0, 0.5*(endoMInterface +
-//  mEpiInterface), 1.0) of the ionic model named in ionicModelConfig.
-//
-//  ionicModelConfig is the active solver's own ionicModel coefficients
-//  dictionary (must contain "ionicModel" and "singleCellStimulus").
-//  heterogeneityDict is the active solver's transmuralBands
-//  ionicHeterogeneity dictionary (endoMInterface, mEpiInterface,
-//  transitionWidth, smoothing, transitionMode). Neither is mutated.
-//
-//  nBeats S1 pulses are paced (singleCellStimulus's own nstim1 is
-//  overridden locally); captureDuration/dt of Vm are then recorded
-//  starting at the final S1 onset. Every returned trace is validated for
-//  finiteness, strictly increasing times, minimum amplitude, and
-//  end-of-capture recovery to rest before this function returns.
+//- nBeats overrides ionicModelConfig.singleCellStimulus.nstim1; neither
+//  dict is mutated.
 TemplateTriplet generatePersonalizedTemplates
 (
     const dictionary& ionicModelConfig,

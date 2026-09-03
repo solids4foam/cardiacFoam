@@ -241,8 +241,7 @@ void eikonalECG::reconstructGradVm
                     personalizedTemplates_.epi.times.size()
                 );
 
-            // Dynamic values are mV, so convert dVm/dt to V/s before the
-            // chain rule.
+            // Dynamic values are mV; convert to V/s before the chain rule.
             dUds = rawDUds*1e-3;
         }
         else

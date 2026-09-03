@@ -63,9 +63,7 @@ class eikonalECG
     scalarField wMid_;
     scalarField wEpi_;
 
-    //- Opt-in runtime-generated personalized action-potential templates.
-    //  See the "personalizedTemplates" sub-dictionary in the eikonalECG
-    //  domain dict (Configuration contract).
+    //- See the "personalizedTemplates" sub-dictionary, README.md.
     bool personalizedTemplatesEnabled_;
     bool personalizedTemplatesGenerated_;
     dictionary personalizedTemplatesDict_;
@@ -73,11 +71,8 @@ class eikonalECG
 
     scalar manufacturedTemplateDerivative(scalar localTime) const;
 
-    //- Locate the active ionicHeterogeneity dictionary, checking
-    //  electroProperties' top level first and falling back to the active
-    //  myocardium solver's Coeffs dictionary. Shared by
-    //  calculateTransmuralWeights() and generatePersonalizedTemplates() so
-    //  both always agree on which dictionary is authoritative.
+    //- Shared so calculateTransmuralWeights() and
+    //  generatePersonalizedTemplates() always agree on which dict is active.
     const dictionary* findHeterogeneityDict
     (
         const dictionary& electroProperties
@@ -86,10 +81,6 @@ class eikonalECG
     void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
 
-    //- Generate the endo/mid/epi personalized templates once, from
-    //  personalizedTemplatesDict_'s ionicModelConfig and the case's active
-    //  ionicHeterogeneity dictionary. Only called when
-    //  personalizedTemplatesEnabled_ is true.
     void generatePersonalizedTemplates(const ecgDomain& domain);
 
     //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient

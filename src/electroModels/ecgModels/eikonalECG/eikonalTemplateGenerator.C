@@ -201,8 +201,7 @@ TemplateTriplet generatePersonalizedTemplates
     const scalar tCapture =
         (stim.stimStart + scalar(nBeats - 1)*stim.stimPeriodS1)*1e-3;
 
-    // initialDeltaT is the model's native millisecond step, matching
-    // ionicHeterogeneityProbe.C; solveODE() below still takes SI seconds.
+    // initialDeltaT is milliseconds; solveODE() below takes seconds.
     autoPtr<ionicModel> modelPtr =
         ionicModel::New(modelDict, 3, dt*1000.0, true);
     ionicModel& model = modelPtr();
@@ -224,9 +223,7 @@ TemplateTriplet generatePersonalizedTemplates
         t += dt;
     }
 
-    // Split the final pre-capture step onto tCapture exactly: a nominal
-    // dt step that overshoots the last S1 onset would otherwise shift
-    // the whole recorded waveform by up to one integration step.
+    // Land exactly on tCapture, or the waveform shifts by up to one step.
     const scalar remainder = tCapture - t;
     if (remainder > SMALL)
     {
@@ -244,9 +241,7 @@ TemplateTriplet generatePersonalizedTemplates
         traces[p]->times.setSize(nSamples);
         traces[p]->valuesMv.setSize(nSamples);
         traces[p]->times[0] = 0.0;
-        // Direct signal() output in mV; converting to V for the eikonal
-        // chain-rule derivative is the caller's responsibility, not this
-        // generator's.
+        // mV, not V -- unit conversion is the caller's job.
         traces[p]->valuesMv[0] = model.signal(p, CouplingSignal::VM);
     }
 
