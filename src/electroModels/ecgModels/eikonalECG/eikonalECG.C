@@ -218,50 +218,44 @@ void eikonalECG::reconstructGradVm
         }
         else if (personalizedTemplatesEnabled_)
         {
-            const scalar rawDUds =
-                wEndo_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    personalizedTemplates_.endo.times.cdata(),
-                    personalizedTemplates_.endo.valuesMv.cdata(),
-                    personalizedTemplates_.endo.times.size()
-                )
-              + wMid_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    personalizedTemplates_.mid.times.cdata(),
-                    personalizedTemplates_.mid.valuesMv.cdata(),
-                    personalizedTemplates_.mid.times.size()
-                )
-              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    personalizedTemplates_.epi.times.cdata(),
-                    personalizedTemplates_.epi.valuesMv.cdata(),
-                    personalizedTemplates_.epi.times.size()
-                );
+            scalar rawDUds = 0.0;
+            forAll(personalizedTemplates_, i)
+            {
+                rawDUds +=
+                    regionWeights_[i][cellI]
+                   *eikonalECG_templates::evaluateTemplateDerivative
+                    (
+                        localTime,
+                        personalizedTemplates_[i].times.cdata(),
+                        personalizedTemplates_[i].valuesMv.cdata(),
+                        personalizedTemplates_[i].times.size()
+                    );
+            }
 
             // Dynamic values are mV; convert to V/s before the chain rule.
             dUds = rawDUds*1e-3;
         }
         else
         {
+            // Compiled fallback is always exactly 3 fixed curves in
+            // [endo, mid, epi] order, matching
+            // synthesizeTransmuralBandRegions()'s own fixed ordering.
             const scalar rawDUds =
-                wEndo_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+                regionWeights_[0][cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::endoTimes,
                     eikonalECG_templates::endoValues,
                     eikonalECG_templates::numEndoSamples
                 )
-              + wMid_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+              + regionWeights_[1][cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::midTimes,
                     eikonalECG_templates::midValues,
                     eikonalECG_templates::numMidSamples
                 )
-              + wEpi_[cellI] * eikonalECG_templates::evaluateTemplateDerivative
+              + regionWeights_[2][cellI] * eikonalECG_templates::evaluateTemplateDerivative
                 (
                     localTime,
                     eikonalECG_templates::epiTimes,
@@ -370,10 +364,6 @@ const dictionary* eikonalECG::findHeterogeneityDict
 void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
-
-    wEndo_.setSize(mesh.nCells(), 1.0);
-    wMid_.setSize(mesh.nCells(), 0.0);
-    wEpi_.setSize(mesh.nCells(), 0.0);
     weightsCalculated_ = true;
 
     if (useManufacturedTemplate_)
@@ -407,16 +397,49 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    if (mode != "transmuralBands")
+    const bool namedRegionsSupported =
+        mode == "namedRegions" && personalizedTemplatesEnabled_;
+
+    if (mode != "transmuralBands" && !namedRegionsSupported)
     {
         FatalErrorInFunction
             << "eikonalECG supports ionicHeterogeneity mode "
-            << "'transmuralBands' only; mode '" << mode
-            << "' cannot be represented by its three template weights."
+            << "'transmuralBands' always, or 'namedRegions' only when "
+            << "personalizedTemplates is also enabled (the fixed 3-curve "
+            << "compiled fallback cannot represent an arbitrary number of "
+            << "named regions); mode '" << mode << "' cannot be represented "
+            << "by per-region template weights here."
             << exit(FatalError);
     }
 
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
+    const scalar transitionWidth = hetDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+    const word smoothing = hetDict.lookupOrDefault<word>("smoothing", "smoothstep");
+
+    List<ionicHeterogeneity::NamedFieldRegion> regions;
+
+    if (mode == "transmuralBands")
+    {
+        const scalar endoMInterface = hetDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
+        const scalar mEpiInterface = hetDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
+
+        ionicHeterogeneity::validateTransmuralBandConfig
+        (
+            endoMInterface, mEpiInterface, transitionWidth, smoothing, transitionMode
+        );
+
+        regions = ionicHeterogeneity::synthesizeTransmuralBandRegions
+        (
+            endoMInterface, mEpiInterface
+        );
+    }
+    else
+    {
+        regions = ionicHeterogeneity::parseNamedFieldRegions
+        (
+            hetDict.subDict("regions")
+        );
+    }
 
     const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
     autoPtr<volScalarField> tReadPtr;
@@ -454,30 +477,41 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const scalar endoMInterface = hetDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface = hetDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    const scalar transitionWidth = hetDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-    const word smoothing = hetDict.lookupOrDefault<word>("smoothing", "smoothstep");
-
-    ionicHeterogeneity::validateTransmuralBandConfig
-    (
-        endoMInterface, mEpiInterface, transitionWidth, smoothing, transitionMode
-    );
-
     const scalarField& tField = tPtr->primitiveField();
+
+    const label nRegions = regions.size();
+    regionWeights_.setSize(nRegions);
+    forAll(regionWeights_, i)
+    {
+        regionWeights_[i].setSize(mesh.nCells(), 0.0);
+    }
+
+    // Small, fixed-size lookup built once, not per-cell.
+    List<word> regionNames(nRegions);
+    forAll(regions, i)
+    {
+        regionNames[i] = regions[i].name;
+    }
 
     forAll(tField, cellI)
     {
-        const ionicHeterogeneity::TransmuralBandWeights w =
-            ionicHeterogeneity::transmuralBandWeights
+        const List<ionicHeterogeneity::NamedRegionWeight> sparse =
+            ionicHeterogeneity::namedRegionWeightsAt
             (
-                tField[cellI], endoMInterface, mEpiInterface,
-                transitionWidth, smoothing, transitionMode
+                tField[cellI], regions, transitionWidth, smoothing, transitionMode
             );
 
-        wEndo_[cellI] = w.endo;
-        wMid_[cellI]  = w.mCell;
-        wEpi_[cellI]  = w.epi;
+        forAll(sparse, s)
+        {
+            forAll(regionNames, i)
+            {
+                if (regionNames[i] == sparse[s].name)
+                {
+                    regionWeights_[i][cellI] = sparse[s].weight;
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -513,12 +547,12 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
     const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    if (mode != "transmuralBands")
+    if (mode != "transmuralBands" && mode != "namedRegions")
     {
         FatalErrorInFunction
             << "eikonalECG personalizedTemplates supports ionicHeterogeneity "
-            << "mode 'transmuralBands' only; mode '" << mode << "' cannot "
-            << "be used to generate the three anchor templates."
+            << "mode 'transmuralBands' or 'namedRegions' only; mode '"
+            << mode << "' cannot be used to generate anchor templates."
             << exit(FatalError);
     }
 

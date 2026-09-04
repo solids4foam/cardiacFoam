@@ -58,16 +58,19 @@ class eikonalECG
     bool leadVectorsCalculated_;
     List<List<vector>> leadVectors_;
 
+    //- Index-aligned: regionWeights_[i] is the per-cell weight for
+    //  personalizedTemplates_[i] (personalized path) or for the i'th of
+    //  the 3 fixed compiled tissueTemplates.H curves, in
+    //  [endo, mid, epi] order (compiled/no-personalization path). Sized
+    //  and populated by calculateTransmuralWeights().
     bool weightsCalculated_;
-    scalarField wEndo_;
-    scalarField wMid_;
-    scalarField wEpi_;
+    List<scalarField> regionWeights_;
 
     //- See the "personalizedTemplates" sub-dictionary, README.md.
     bool personalizedTemplatesEnabled_;
     bool personalizedTemplatesGenerated_;
     dictionary personalizedTemplatesDict_;
-    eikonalECG_templates::TemplateTriplet personalizedTemplates_;
+    List<eikonalECG_templates::DynamicTemplate> personalizedTemplates_;
 
     scalar manufacturedTemplateDerivative(scalar localTime) const;
 
