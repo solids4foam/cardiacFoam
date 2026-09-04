@@ -171,6 +171,34 @@ Foam::scalar Foam::ionicHeterogeneity::apexBaseScale
 
 
 Foam::List<Foam::ionicHeterogeneity::NamedFieldRegion>
+Foam::ionicHeterogeneity::synthesizeTransmuralBandRegions
+(
+    const scalar endoMInterface,
+    const scalar mEpiInterface
+)
+{
+    List<NamedFieldRegion> regions(3);
+
+    regions[0].name = "endocardialCells";
+    regions[0].rangeMin = 0.0;
+    regions[0].rangeMax = endoMInterface;
+    regions[0].baseline = "endocardialCells";
+
+    regions[1].name = "mCells";
+    regions[1].rangeMin = endoMInterface;
+    regions[1].rangeMax = mEpiInterface;
+    regions[1].baseline = "mCells";
+
+    regions[2].name = "epicardialCells";
+    regions[2].rangeMin = mEpiInterface;
+    regions[2].rangeMax = 1.0;
+    regions[2].baseline = "epicardialCells";
+
+    return regions;
+}
+
+
+Foam::List<Foam::ionicHeterogeneity::NamedFieldRegion>
 Foam::ionicHeterogeneity::parseNamedFieldRegions
 (
     const dictionary& regionsDict

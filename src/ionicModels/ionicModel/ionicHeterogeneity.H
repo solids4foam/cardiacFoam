@@ -131,6 +131,22 @@ scalar apexBaseScale
     scalar scalingMax
 );
 
+//- Expand a transmuralBands (endoMInterface, mEpiInterface) configuration
+//  into the same three named regions
+//  (endocardialCells, mCells, epicardialCells) that mode namedRegions
+//  consumes directly, so callers that need a uniform List<NamedFieldRegion>
+//  view of either mode (e.g. eikonalECG's personalizedTemplates) can treat
+//  transmuralBands as the N=3 case of the same region-based machinery.
+//  Mirrors the inline construction in
+//  ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity();
+//  callers must not assume this list is used to change that orchestrator's
+//  own behavior, only to give a second consumer an equivalent view.
+List<NamedFieldRegion> synthesizeTransmuralBandRegions
+(
+    scalar endoMInterface,
+    scalar mEpiInterface
+);
+
 } // End namespace ionicHeterogeneity
 } // End namespace Foam
 
