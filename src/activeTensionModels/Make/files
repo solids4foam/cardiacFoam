@@ -13,6 +13,7 @@ LandNiedererTWorld/LandNiedererTWorld.C
 activeTensionModel/batchedActiveTensionModel.C
 GoktepeKuhlBatched/GoktepeKuhlBatched.C
 NashPanfilovBatched/NashPanfilovBatched.C
+LandNiedererBatched/LandNiedererBatched.C
 LandNiedererTWorldBatched/LandNiedererTWorldBatched.C
 
 

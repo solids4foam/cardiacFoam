@@ -105,10 +105,7 @@ bool LandNiedererTWorld::readRestartState(const fvMesh& mesh)
     {
         const tensor F(I + gradD[integrationPtI].T());
         const scalar lambda = mag(F & f0[integrationPtI]);
-        const scalar driveVal = provider().signal
-        (
-            integrationPtI, CouplingSignal::CAI
-        );
+        const scalar driveVal = coupledDriveSignal(integrationPtI);
 
         currentDriveSignal_ = driveVal;
         currentLambda_ = lambda;

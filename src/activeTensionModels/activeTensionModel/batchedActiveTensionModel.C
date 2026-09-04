@@ -184,7 +184,6 @@ void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
 {
     CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
     BatchedTensionBackend backend(*this);
-    const ElectromechanicalSignalProvider& p = provider();
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
@@ -194,7 +193,7 @@ void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
         (
             cellI,
             mesh.time().value(),
-            p.signal(cellI, driveSignal()),
+            coupledDriveSignal(cellI),
             1.0,
             scratch
         );
@@ -214,7 +213,6 @@ bool batchedActiveTensionModel::restartTension(scalarField& Ta) const
 
     CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
     BatchedTensionBackend backend(*this);
-    const ElectromechanicalSignalProvider& p = provider();
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
@@ -224,7 +222,7 @@ bool batchedActiveTensionModel::restartTension(scalarField& Ta) const
         (
             cellI,
             0.0,
-            p.signal(cellI, driveSignal()),
+            coupledDriveSignal(cellI),
             1.0,
             scratch
         );
@@ -258,9 +256,6 @@ void batchedActiveTensionModel::calculateTension
     // Assuming initial states were set into core_ or we sync from ioStates_
     // For safety, we trust core_ is the source of truth if we use batched.
 
-    const ElectromechanicalSignalProvider& p = provider();
-    const CouplingSignal sig = driveSignal();
-
     if (driveSignals_.size() != nCells_)
     {
         driveSignals_.setSize(nCells_);
@@ -270,7 +265,7 @@ void batchedActiveTensionModel::calculateTension
     // This avoids calling virtual functions inside OpenMP/CUDA kernels
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
-        driveSignals_[cellI] = p.signal(cellI, sig);
+        driveSignals_[cellI] = coupledDriveSignal(cellI);
     }
 
     // Prepare threads and scratch

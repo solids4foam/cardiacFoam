@@ -59,6 +59,7 @@ the table are the exact registered `activeTensionModel` dictionary selectors.
 | Phenomenological tension | `NashPanfilov` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Batched integration uses a different data path |
 | Phenomenological tension | `NashPanfilovBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
 | Biophysical tension | `LandNiederer` | scalar CPU; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |
+| Biophysical tension | `LandNiedererBatched` | SoA host, optional CUDA; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |
 | Biophysical tension | `LandNiedererTWorld` | scalar CPU; full EM workflows | TWorld six-state contraction subsystem | Applies resting-Cai preconditioning |
 | Biophysical tension | `LandNiedererTWorldBatched` | SoA host, optional CUDA; full EM workflows | TWorld batched backend | Uses explicit batched resting-Cai conditioning; scalar equivalence requires stated tolerances |
 | Electromechanical MMS | `ManufacturedElectromechanics` | scalar CPU; full EM verification | maintained verification implementation and Names metadata | Verification-only; not a physiological tension law |
@@ -66,6 +67,10 @@ the table are the exact registered `activeTensionModel` dictionary selectors.
 All production models select their driving electrophysiology signal from
 dictionary input (`couplingSignal`, normally `Vm` or `Cai`) and integrate with
 the `ElectromechanicalSignalProvider` interface used by `ionicModel`.
+The provider contract is `Vm` in mV and `Cai` in mM. Models consume those
+canonical values by default; `driveSignalScaleFactor()` handles a model-local
+input-unit conversion at the shared signal boundary. The original Land 2017
+models use it to convert `Cai` from mM to µM.
 Both scalar Land variants use `preconditioningTime` (default 1000 ms) and
 integrate to the resting steady state over a fixed 100 substeps.
 `LandNiedererTWorldBatched` advances its generated hot path, conditions one

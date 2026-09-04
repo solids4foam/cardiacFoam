@@ -161,6 +161,26 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         notes="Not the original Land et al. intact-human model.",
         aliases=("Land-Niederer TWorld",),
     ),
+    "LandNiedererBatched": ActiveTensionModelEntry(
+        states=("XS", "XW", "TRPN", "TmBlocked", "ZETAS", "ZETAW", "Cd"),
+        algebraic=(
+            "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
+            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_ca50",
+            "AV_Lfac", "AV_dCd_dt", "AV_Fd", "AV_F1", "AV_Ta", "AV_Tp", "AV_T",
+            "AV_Cai", "AV_lambda", "AV_lambda_rate",
+        ),
+        constants=(
+            "AC_perm50", "AC_TRPN_n", "AC_koff", "AC_dr", "AC_wfrac", "AC_TOT_A",
+            "AC_ktm_unblock", "AC_beta_1", "AC_beta_0", "AC_gamma", "AC_gamma_wu",
+            "AC_phi", "AC_nperm", "AC_ca50_ref", "AC_Tref", "AC_nu", "AC_mu",
+            "AC_par_k", "AC_b", "AC_eta_l", "AC_eta_s", "AC_passive_a",
+        ),
+        rates=("XS", "XW", "TRPN", "TmBlocked", "ZETAS", "ZETAW", "Cd"),
+        recommended_exports=("AV_Ta", "AV_Tp", "AV_T"),
+        description="Batched CPU/GPU variant of the original Land et al. model.",
+        notes="AV_Ta feeds active stress; AV_Tp and AV_T are diagnostic outputs.",
+        aliases=("Land-Niederer GPU", "Land2017 GPU"),
+    ),
     "LandNiedererTWorldBatched": ActiveTensionModelEntry(
         states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
         algebraic=(

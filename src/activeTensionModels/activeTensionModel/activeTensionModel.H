@@ -482,6 +482,26 @@ public:
     //  Active-tension feedback accepts Vm or Cai.
     virtual CouplingSignal driveSignal() const = 0;
 
+    //- Scale the canonical coupling signal for this model.
+    virtual scalar driveSignalScaleFactor() const
+    {
+        return 1.0;
+    }
+
+    scalar scaledDriveSignal(const scalar value) const
+    {
+        return value * driveSignalScaleFactor();
+    }
+
+    //- Read the model-scaled coupling signal.
+    scalar coupledDriveSignal(const label integrationPtI) const
+    {
+        return scaledDriveSignal
+        (
+            provider().signal(integrationPtI, driveSignal())
+        );
+    }
+
     //- Pre-condition the model to its resting steady state.
     //  Called by the coupling harness after the signal provider is wired,
     //  passing the ionic model's initial (resting) Ca_i in mM.
@@ -494,7 +514,7 @@ public:
     //  Derived classes must NOT call provider() directly — driveVal is already resolved.
     //
     //  i        : integration-point (cell) index
-    //  driveVal : coupling signal value at this cell (Vm / Cai)
+    //  driveVal : coupling signal in this model's declared input units
     //  lambda   : stretch at this cell (ignored by models that don't use it)
     //  Ta       : output — active tension at this cell
     virtual void solveAtPoint

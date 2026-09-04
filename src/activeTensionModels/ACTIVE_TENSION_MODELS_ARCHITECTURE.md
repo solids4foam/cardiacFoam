@@ -35,10 +35,14 @@ The base class depends on:
 
 This is how the model asks for signals such as:
 
-- `Vm`
-- `Cai`
+- `Vm` (canonical mV)
+- `Cai` (canonical mM)
 
-Current concrete models request `Vm`.
+`driveSignalScaleFactor()` is applied in the common scalar and batched
+signal-read paths. It defaults to `1.0`; a model can override it when its
+published equations require a different input unit without changing the
+provider contract. The original `LandNiederer` variants use `1000.0` to
+consume `Cai` in µM.
 
 ## Concrete models
 
@@ -60,6 +64,7 @@ Current concrete models request `Vm`.
 - original seven-state intact-human Land et al. (2017) model
 - reports active (`AV_Ta`), passive (`AV_Tp`), and total (`AV_T`) tension;
   only active tension is supplied to the active-stress interface
+- batched CPU/GPU runtime name: `LandNiedererBatched`
 
 ### `LandNiedererTWorld`
 

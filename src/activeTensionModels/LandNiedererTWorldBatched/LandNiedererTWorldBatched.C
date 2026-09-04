@@ -130,8 +130,6 @@ void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
     const volTensorField gradD(fvc::grad(D));
     CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
     BatchedTensionBackend backend(*this);
-    const ElectromechanicalSignalProvider& p = provider();
-
     lambdaRate_ = 0.0;
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
@@ -142,7 +140,7 @@ void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
         (
             cellI,
             mesh.time().value(),
-            p.signal(cellI, driveSignal()),
+            coupledDriveSignal(cellI),
             mag(F & f0[cellI]),
             scratch
         );

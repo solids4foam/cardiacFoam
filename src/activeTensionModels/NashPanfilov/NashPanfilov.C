@@ -56,7 +56,7 @@ void Foam::NashPanfilov::refreshRestartState(const fvMesh& mesh)
     {
         scalarField& rates = RATES_[i];
         scalarField& algebraic = ALGEBRAIC_[i];
-        const scalar drive = provider().signal(i, driveSignal());
+        const scalar drive = coupledDriveSignal(i);
         scalar u =
             (drive - CONSTANTS_[AC_Vr])
           / (CONSTANTS_[AC_Vp] - CONSTANTS_[AC_Vr]);

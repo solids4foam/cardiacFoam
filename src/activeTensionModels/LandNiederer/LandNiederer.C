@@ -185,7 +185,7 @@ void LandNiederer::preconditionToRestingState(const scalar restingCai)
         return;
     }
 
-    currentDriveSignal_ = restingCai;
+    currentDriveSignal_ = scaledDriveSignal(restingCai);
     currentLambda_ = 1.0;
     currentLambdaRate_ = 0.0;
 
@@ -209,7 +209,7 @@ void LandNiederer::derivatives
 ) const
 {
     scalarField algebraic(NUM_ALGEBRAIC, 0.0);
-    algebraic[AV_Cai] = currentDriveSignal_ * 1000.0;
+    algebraic[AV_Cai] = currentDriveSignal_;
     algebraic[AV_lambda] = currentLambda_;
     algebraic[AV_lambda_rate] = currentLambdaRate_ * 1.0e-3;
 
@@ -251,7 +251,7 @@ void LandNiederer::solveAtPoint
     {
         FatalErrorInFunction
             << "LandNiederer requires a non-negative Ca_i, got " << driveVal
-            << " mM at integration point " << i << '.' << exit(FatalError);
+            << " uM at integration point " << i << '.' << exit(FatalError);
     }
 
     scalar lambdaRate = 0.0;
@@ -269,7 +269,7 @@ void LandNiederer::solveAtPoint
     scalarField& algebraic = ALGEBRAIC_[i];
     scalarField& rates = RATES_[i];
 
-    algebraic[AV_Cai] = driveVal * 1000.0;
+    algebraic[AV_Cai] = driveVal;
     algebraic[AV_lambda] = lambda;
     algebraic[AV_lambda_rate] = lambdaRate * 1.0e-3;
 
@@ -287,8 +287,7 @@ void LandNiederer::solveAtPoint
         algebraic.data()
     );
 
-    // AV_Tp and AV_T are diagnostics of the original model.  The caller
-    // owns active stress only, so it must receive AV_Ta rather than AV_T.
+    // Expose active tension only.
     Ta = algebraic[AV_Ta];
 }
 
@@ -333,10 +332,10 @@ bool LandNiederer::readRestartState(const fvMesh& mesh)
     {
         const tensor F(I + gradD[integrationPtI].T());
         const scalar lambda = mag(F & f0[integrationPtI]);
-        const scalar cai = provider().signal(integrationPtI, CouplingSignal::CAI);
+        const scalar cai = coupledDriveSignal(integrationPtI);
         scalarField& algebraic = ALGEBRAIC_[integrationPtI];
 
-        algebraic[AV_Cai] = cai * 1000.0;
+        algebraic[AV_Cai] = cai;
         algebraic[AV_lambda] = lambda;
         algebraic[AV_lambda_rate] = 0.0;
         LandNiederer2017computeVariables

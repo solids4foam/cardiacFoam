@@ -11,19 +11,7 @@ Class
     Foam::LandNiederer
 
 Description
-    Wrapper for the original seven-state intact-human Land et al. (2017)
-    contraction and passive-viscoelasticity model.
-
-    The model receives intracellular calcium in mM and stretch-rate in s^-1
-    from cardiacFoam.  The coupling boundary converts these to the original
-    model units (uM and ms^-1).  AV_Ta is supplied to the active-stress
-    interface; AV_Tp and AV_T remain available for output and diagnostics.
-
-    The passive component must not be added to the solid passive constitutive
-    law through this interface.
-
-    Land S, Park-Holohan SJ, Smith NP, dos Remedios CG, Kentish JC,
-    Niederer SA (2017). J Mol Cell Cardiol 106, 68-83.
+    Original seven-state Land et al. (2017) active-tension model.
 
 SourceFiles
     LandNiederer.C
@@ -114,6 +102,11 @@ protected:
     virtual CouplingSignal driveSignal() const override
     {
         return CouplingSignal::CAI;
+    }
+
+    virtual scalar driveSignalScaleFactor() const override
+    {
+        return 1000.0;
     }
 
     virtual void solveAtPoint

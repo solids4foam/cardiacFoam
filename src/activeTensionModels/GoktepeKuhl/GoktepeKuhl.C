@@ -56,7 +56,7 @@ void Foam::GoktepeKuhl::refreshRestartState(const fvMesh& mesh)
     {
         scalarField& rates = RATES_[i];
         scalarField& algebraic = ALGEBRAIC_[i];
-        const scalar drive = provider().signal(i, driveSignal());
+        const scalar drive = coupledDriveSignal(i);
         scalar u = (drive - CONSTANTS_[AC_Vr])/100.0;
         u = max(scalar(0.0), min(u, scalar(1.0)));
         algebraic[AV_Vm] = drive;
