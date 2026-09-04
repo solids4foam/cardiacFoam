@@ -80,10 +80,10 @@ pig versus human ventricular cells:
 - Gaur / `myocyte` as the pig case;
 - TWORLD / `endocardialCells` as the human case;
 - pacing cycle lengths of 1000, 500, and 300 ms;
-- `activeTensionModel LandNiederer` for every case.
+- `activeTensionModel LandNiedererTWorld` for every case.
 
 The exported traces include Vm, `cai`, ICaL, Jrel/Jup (using each model's
-native names), IKr, IK1, Ito, and the Land--Niederer `AV_Ta` trace. Run the
+native names), IKr, IK1, Ito, and the TWorld contraction `AV_Ta` trace. Run the
 study from the repository root with:
 
 ```bash

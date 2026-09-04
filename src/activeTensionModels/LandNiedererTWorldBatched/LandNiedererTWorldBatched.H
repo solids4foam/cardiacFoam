@@ -16,32 +16,32 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::LandNiedererBatched
+    Foam::LandNiedererTWorldBatched
 
 Description
-    Land-Niederer 2017 active tension model implemented for batched GPU
-    execution.
+    TWorld's six-state Land-style tension subsystem implemented for batched
+    CPU/GPU execution.
 
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#ifndef LandNiedererBatched_H
-#define LandNiedererBatched_H
+#ifndef LandNiedererTWorldBatched_H
+#define LandNiedererTWorldBatched_H
 
 #include "batchedActiveTensionModel.H"
-#include "../LandNiederer/LandNiederer_2017Names.H"
+#include "../LandNiedererTWorld/LandNiedererTWorld_2025Names.H"
 #include "overrideTypeName.H"
 
 namespace Foam
 {
 
-class LandNiedererBatched
+class LandNiedererTWorldBatched
 :
     public batchedActiveTensionModel
 {
-    LandNiedererBatched(const LandNiedererBatched&) = delete;
-    void operator=(const LandNiedererBatched&) = delete;
+    LandNiedererTWorldBatched(const LandNiedererTWorldBatched&) = delete;
+    void operator=(const LandNiedererTWorldBatched&) = delete;
 
     mutable scalarField CONSTANTS_;
     mutable scalarField prevLambda_;
@@ -92,11 +92,11 @@ protected:
 
 public:
 
-    OverrideTypeName("LandNiedererBatched");
+    OverrideTypeName("LandNiedererTWorldBatched");
 
-    LandNiedererBatched(const dictionary& dict, const label num);
+    LandNiedererTWorldBatched(const dictionary& dict, const label num);
 
-    virtual ~LandNiedererBatched() = default;
+    virtual ~LandNiedererTWorldBatched() = default;
 
     virtual void preconditionToRestingState
     (

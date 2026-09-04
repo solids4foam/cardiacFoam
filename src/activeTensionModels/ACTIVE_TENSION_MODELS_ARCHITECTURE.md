@@ -57,7 +57,14 @@ Current concrete models request `Vm`.
 ### `LandNiederer`
 
 - runtime name: `LandNiederer`
-- biophysically detailed, in contrast to the two phenomenological models above
-- ships a GPU-batched variant, as do `GoktepeKuhl` and `NashPanfilov`
+- original seven-state intact-human Land et al. (2017) model
+- reports active (`AV_Ta`), passive (`AV_Tp`), and total (`AV_T`) tension;
+  only active tension is supplied to the active-stress interface
+
+### `LandNiedererTWorld`
+
+- runtime name: `LandNiedererTWorld`
+- six-state contraction subsystem extracted from TWorld
+- GPU-batched runtime name: `LandNiedererTWorldBatched`
 
 For the folder-level overview, see [`README.md`](./README.md).

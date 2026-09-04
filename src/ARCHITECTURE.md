@@ -129,9 +129,13 @@ Current concrete models:
 
 - `NashPanfilov`
 
-- `LandNiederer`
+- `LandNiederer` (the original seven-state intact-human model)
 
-Each ships a serial and a GPU-batched variant.
+- `LandNiedererTWorld`
+
+`LandNiedererTWorld` ships the matching GPU-batched variant. The original
+`LandNiederer` passive branch is diagnostic only because solid mechanics owns
+the passive constitutive response.
 
 ### `couplingModels`
 

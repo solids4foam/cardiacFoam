@@ -958,7 +958,7 @@ class TestParseElectroProperties(unittest.TestCase):
 
     def test_active_tension_model_recovered_from_real_singlecell_tutorial(self) -> None:
         """The hand-authored singleCell tutorial dict declares
-        'activeTensionModel LandNiederer;' as a flat entry — parsing it must
+        'activeTensionModel LandNiedererTWorld;' as a flat entry — parsing it must
         not silently drop that setting."""
         from openfoam_driver.plugins.cardiacfoam.dict_builder import parse_electro_properties
 
@@ -968,7 +968,7 @@ class TestParseElectroProperties(unittest.TestCase):
         result = parse_electro_properties(SINGLE_CELL_ELECTRO_PROPERTIES)
         self.assertEqual(
             result["overrides"].get("$ELECTRO_MODEL_COEFFS.activeTensionModel"),
-            "LandNiederer",
+            "LandNiedererTWorld",
         )
 
     def test_roundtrip_produces_equivalent_text(self) -> None:

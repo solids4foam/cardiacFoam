@@ -529,7 +529,7 @@ singleCellSolverCoeffs
     // ── Active tension (optional) ─────────────────────────────────────────
     // Flat keys, not a sub-block — this is the only solver that currently
     // constructs an activeTensionModel from electroProperties.
-    // activeTensionModel  LandNiederer;
+    // activeTensionModel  LandNiedererTWorld;
     // couplingSignal      Vm;
     // TaScale             1e3;
 }

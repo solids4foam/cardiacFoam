@@ -8,7 +8,7 @@ License
     option) any later version.
 
 Description
-    CUDA launch wrappers for LandNiederer batched tension model.
+    CUDA launch wrappers for the LandNiedererTWorld batched tension model.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -16,7 +16,7 @@ Author
 
 #include <cuda_runtime.h>
 #include <cstdio>
-#include "../LandNiederer/LandNiederer_2017.H"
+#include "../LandNiedererTWorld/LandNiedererTWorld_2025.H"
 
 #define CUDA_LAUNCH_CHECK()                                                    \
     do {                                                                       \
@@ -72,7 +72,7 @@ namespace
         localAlgebraics[AV_lambda_rate] *= 1e-3;
 
         // Compute using the standard biophysics core
-        LandNiederer2017computeVariables
+        LandNiedererTWorld2025computeVariables
         (
             0.0,
             const_cast<double*>(CONSTANTS),
@@ -104,7 +104,7 @@ namespace
     }
 }
 
-void launchLandNiedererBatchKernel
+void launchLandNiedererTWorldBatchKernel
 (
     const double* d_CONSTANTS,
     int N,
@@ -113,7 +113,7 @@ void launchLandNiedererBatchKernel
     double* d_ALGEBRAIC
 )
 {
-    // LandNiederer has NUM_STATES states and NUM_ALGEBRAIC algebraics.
+    // LandNiedererTWorld has NUM_STATES states and NUM_ALGEBRAIC algebraics.
     landNiedererBatchKernel<<<nBlocks(N), blockSize>>>
     (
         d_CONSTANTS,

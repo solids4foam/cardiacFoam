@@ -118,38 +118,30 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         aliases=("Nash-Panfilov GPU",),
     ),
     "LandNiederer": ActiveTensionModelEntry(
-        states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        states=("XS", "XW", "TRPN", "TmBlocked", "ZETAS", "ZETAW", "Cd"),
         algebraic=(
             "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
-            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_Ta",
-            "AV_d_Ca_TRPN", "AV_Cai", "AV_lambda", "AV_lambda_rate", "AV_Lfac",
-            "AV_ca50",
+            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_ca50",
+            "AV_Lfac", "AV_dCd_dt", "AV_Fd", "AV_F1", "AV_Ta", "AV_Tp", "AV_T",
+            "AV_Cai", "AV_lambda", "AV_lambda_rate",
         ),
-        # 21 user-facing (dict-overridable) parameters; 12 further derived
-        # constants (AC_A, AC_XSSS, AC_XWSS, AC_fPKA_TnI, AC_k_uw, AC_k_ws,
-        # AC_k_wu, AC_k_su, AC_cds, AC_cdw, AC_ktm_block, AC_PKAForceMultiplier)
-        # are computed in initConsts and are not set via the case dict.
         constants=(
-            "AC_TOT_A", "AC_TRPN_n", "AC_Tref", "AC_beta_0", "AC_beta_1", "AC_dr",
-            "AC_fracTnIpo", "AC_contraction_gamma", "AC_gamma_wu", "AC_koff",
-            "AC_ktm_unblock", "AC_lambda_max", "AC_lambda_min", "AC_mu", "AC_nperm",
-            "AC_nu", "AC_perm50", "AC_phi", "AC_wfrac", "AC_fMyBPC_PKA", "AC_fTnI_PKA",
+            "AC_perm50", "AC_TRPN_n", "AC_koff", "AC_dr", "AC_wfrac", "AC_TOT_A",
+            "AC_ktm_unblock", "AC_beta_1", "AC_beta_0", "AC_gamma", "AC_gamma_wu",
+            "AC_phi", "AC_nperm", "AC_ca50_ref", "AC_Tref", "AC_nu", "AC_mu",
+            "AC_par_k", "AC_b", "AC_eta_l", "AC_eta_s", "AC_passive_a",
         ),
-        rates=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
-        recommended_exports=("Ta",),
-        description=(
-            "Land-Niederer myofilament contraction model (2017): 6-state "
-            "crossbridge/tropomyosin system driven by intracellular Ca and "
-            "sarcomere stretch."
-        ),
+        rates=("XS", "XW", "TRPN", "TmBlocked", "ZETAS", "ZETAW", "Cd"),
+        recommended_exports=("AV_Ta", "AV_Tp", "AV_T"),
+        description="Original Land et al. intact-human contraction model (2017).",
         notes=(
-            "Length- and velocity-dependent active tension (Frank-Starling); "
-            "requires AV_Cai, AV_lambda, AV_lambda_rate to be supplied by the "
-            "caller. Dict also accepts 'preconditioningTime' (default 1000 ms)."
+            "AV_Ta feeds the active-stress interface. AV_Tp and AV_T are output "
+            "diagnostics because the solid solver owns passive stress; the wrapper "
+            "converts Cai from mM to uM and stretch rate from s^-1 to ms^-1."
         ),
         aliases=("Land-Niederer", "Land2017"),
     ),
-    "LandNiedererBatched": ActiveTensionModelEntry(
+    "LandNiedererTWorld": ActiveTensionModelEntry(
         states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
         algebraic=(
             "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
@@ -165,15 +157,29 @@ ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
         ),
         rates=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
         recommended_exports=("Ta",),
-        description=(
-            "Land-Niederer myofilament contraction model (2017) - GPU batched "
-            "implementation."
+        description="TWorld six-state Land-style contraction subsystem (2025).",
+        notes="Not the original Land et al. intact-human model.",
+        aliases=("Land-Niederer TWorld",),
+    ),
+    "LandNiedererTWorldBatched": ActiveTensionModelEntry(
+        states=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        algebraic=(
+            "AV_XU", "AV_gamma_rate", "AV_gamma_rate_w", "AV_xb_uw", "AV_xb_ws",
+            "AV_xb_su", "AV_xb_wu", "AV_xb_su_gamma", "AV_xb_wu_gamma", "AV_Ta",
+            "AV_d_Ca_TRPN", "AV_Cai", "AV_lambda", "AV_lambda_rate", "AV_Lfac",
+            "AV_ca50",
         ),
-        notes=(
-            "GPU batched variant of LandNiederer; same states/constants. Dict "
-            "also accepts 'preconditioningTime' (default 1000 ms)."
+        constants=(
+            "AC_TOT_A", "AC_TRPN_n", "AC_Tref", "AC_beta_0", "AC_beta_1", "AC_dr",
+            "AC_fracTnIpo", "AC_contraction_gamma", "AC_gamma_wu", "AC_koff",
+            "AC_ktm_unblock", "AC_lambda_max", "AC_lambda_min", "AC_mu", "AC_nperm",
+            "AC_nu", "AC_perm50", "AC_phi", "AC_wfrac", "AC_fMyBPC_PKA", "AC_fTnI_PKA",
         ),
-        aliases=("Land-Niederer GPU", "Land2017 GPU"),
+        rates=("Ca_TRPN", "TmBlocked", "XW", "XS", "ZETAS", "ZETAW"),
+        recommended_exports=("AV_Ta",),
+        description="GPU-batched variant of LandNiedererTWorld.",
+        notes="Uses explicit batched resting-Cai conditioning.",
+        aliases=("Land-Niederer TWorld GPU",),
     ),
     "ManufacturedElectromechanics": ActiveTensionModelEntry(
         states=("Ta",),

@@ -6,50 +6,35 @@ License
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
     option) any later version.
-
-    cardiacFoam is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
-
 \*---------------------------------------------------------------------------*/
 
 #include "LandNiederer.H"
+#include "LandNiederer_2017.H"
 #include "addToRunTimeSelectionTable.H"
 #include "error.H"
 #include "fvcGrad.H"
 #include "restartStateIO.H"
 
-#include "LandNiederer_2017.H"   // self-contained ODE equations
+#include <fstream>
 
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * //
-
 defineTypeNameAndDebug(LandNiederer, 0);
+addToRunTimeSelectionTable(activeTensionModel, LandNiederer, dictionary);
 
-addToRunTimeSelectionTable
-(
-    activeTensionModel,
-    LandNiederer,
-    dictionary
-);
-
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
 const char* const* LandNiederer::ioConstantNames() const
 {
     return LandNiedererCONSTANTS_NAMES;
 }
 
+
 const char* const* LandNiederer::ioStateNames() const
 {
     return LandNiedererSTATES_NAMES;
 }
+
 
 const char* const* LandNiederer::ioAlgebraicNames() const
 {
@@ -57,134 +42,52 @@ const char* const* LandNiederer::ioAlgebraicNames() const
 }
 
 
-bool LandNiederer::readRestartState(const fvMesh& mesh)
+void LandNiederer::updateDerivedConstants()
 {
-    const fileName statePath =
-        restartStateIO::path(mesh, "LandNiedererState");
+    CONSTANTS_[AC_k_ws] = 0.004 * CONSTANTS_[AC_mu];
+    CONSTANTS_[AC_k_uw] = 0.026 * CONSTANTS_[AC_nu];
 
-    if (!isFile(statePath))
-    {
-        return false;
-    }
+    CONSTANTS_[AC_cdw] =
+        CONSTANTS_[AC_phi]
+      * CONSTANTS_[AC_k_uw]
+      * (1.0 - CONSTANTS_[AC_dr])
+      * (1.0 - CONSTANTS_[AC_wfrac])
+      / ((1.0 - CONSTANTS_[AC_dr]) * CONSTANTS_[AC_wfrac]);
 
-    std::ifstream is(statePath.c_str(), std::ios::binary);
-    if (!is)
-    {
-        FatalErrorInFunction
-            << "Cannot read restart state file " << statePath
-            << exit(FatalError);
-    }
-    restartStateIO::validateHeader
-    (
-        "LandNiederer", NUM_STATES + 1, STATES_.size(), is, statePath
-    );
+    CONSTANTS_[AC_cds] =
+        CONSTANTS_[AC_phi]
+      * CONSTANTS_[AC_k_ws]
+      * (1.0 - CONSTANTS_[AC_dr])
+      * CONSTANTS_[AC_wfrac]
+      / CONSTANTS_[AC_dr];
 
-    forAll(STATES_, integrationPtI)
-    {
-        forAll(STATES_[integrationPtI], stateI)
-        {
-            STATES_[integrationPtI][stateI] =
-                restartStateIO::readScalar(is, statePath);
-            restartStateIO::checkValue
-            (
-                STATES_[integrationPtI][stateI], statePath
-            );
-        }
+    CONSTANTS_[AC_k_wu] =
+        CONSTANTS_[AC_k_uw]
+      * (1.0 / CONSTANTS_[AC_wfrac] - 1.0)
+      - CONSTANTS_[AC_k_ws];
 
-        prevLambda_[integrationPtI] =
-            restartStateIO::readScalar(is, statePath);
-        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
-    }
+    CONSTANTS_[AC_k_su] =
+        CONSTANTS_[AC_k_ws]
+      * (1.0 / CONSTANTS_[AC_dr] - 1.0)
+      * CONSTANTS_[AC_wfrac];
 
-    const volVectorField& D = mesh.lookupObject<volVectorField>("D");
-    const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
-    const volTensorField gradD(fvc::grad(D));
-    const scalar t = mesh.time().value()*1000.0;
+    CONSTANTS_[AC_A] =
+        (0.25 * CONSTANTS_[AC_TOT_A])
+      / ((1.0 - CONSTANTS_[AC_dr]) * CONSTANTS_[AC_wfrac]
+         + CONSTANTS_[AC_dr])
+      * (CONSTANTS_[AC_dr] / 0.25);
 
-    forAll(STATES_, integrationPtI)
-    {
-        const tensor F(I + gradD[integrationPtI].T());
-        const scalar lambda = mag(F & f0[integrationPtI]);
-        const scalar driveVal = provider().signal
-        (
-            integrationPtI, CouplingSignal::CAI
-        );
+    CONSTANTS_[AC_XSSS] = CONSTANTS_[AC_dr] * 0.5;
+    CONSTANTS_[AC_XWSS] =
+        (1.0 - CONSTANTS_[AC_dr]) * CONSTANTS_[AC_wfrac] * 0.5;
 
-        currentDriveSignal_ = driveVal;
-        currentLambda_ = lambda;
-        currentLambdaRate_ = 0.0;
-        ALGEBRAIC_[integrationPtI][AV_Cai] = driveVal;
-        ALGEBRAIC_[integrationPtI][AV_lambda] = lambda;
-        ALGEBRAIC_[integrationPtI][AV_lambda_rate] = 0.0;
-
-        LandNiederer2017computeVariables
-        (
-            t,
-            CONSTANTS_.data(),
-            RATES_[integrationPtI].data(),
-            STATES_[integrationPtI].data(),
-            ALGEBRAIC_[integrationPtI].data()
-        );
-    }
-
-    return true;
+    CONSTANTS_[AC_ktm_block] =
+        CONSTANTS_[AC_ktm_unblock]
+      * std::pow(CONSTANTS_[AC_perm50], CONSTANTS_[AC_nperm])
+      * 0.5
+      / (0.5 - CONSTANTS_[AC_XSSS] - CONSTANTS_[AC_XWSS]);
 }
 
-
-void LandNiederer::writeRestartState(const fvMesh& mesh) const
-{
-    const fileName statePath =
-        restartStateIO::path(mesh, "LandNiedererState");
-    std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
-    if (!os)
-    {
-        FatalErrorInFunction
-            << "Cannot write restart state file " << statePath
-            << exit(FatalError);
-    }
-    restartStateIO::writeHeader
-    (
-        "LandNiederer", NUM_STATES + 1, STATES_.size(), os
-    );
-
-    forAll(STATES_, integrationPtI)
-    {
-        forAll(STATES_[integrationPtI], stateI)
-        {
-            restartStateIO::checkValue
-            (
-                STATES_[integrationPtI][stateI], statePath
-            );
-            restartStateIO::writeScalar
-            (
-                os, STATES_[integrationPtI][stateI], statePath
-            );
-        }
-        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
-        restartStateIO::writeScalar(os, prevLambda_[integrationPtI], statePath);
-    }
-}
-
-
-bool LandNiederer::restartTension(scalarField& Ta) const
-{
-    if (Ta.size() != ALGEBRAIC_.size())
-    {
-        FatalErrorInFunction
-            << "Restart tension size mismatch"
-            << exit(FatalError);
-    }
-
-    forAll(Ta, integrationPtI)
-    {
-        Ta[integrationPtI] = ALGEBRAIC_[integrationPtI][AV_Ta];
-    }
-
-    return true;
-}
-
-
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * //
 
 LandNiederer::LandNiederer
 (
@@ -193,6 +96,7 @@ LandNiederer::LandNiederer
 )
 :
     activeTensionModel(dict, nIntegrationPoints),
+    odeSolver_(),
     STATES_(nIntegrationPoints),
     ALGEBRAIC_(nIntegrationPoints),
     RATES_(nIntegrationPoints),
@@ -201,7 +105,6 @@ LandNiederer::LandNiederer
     currentLambda_(1.0),
     currentLambdaRate_(0.0)
 {
-    // Initialise shared constants and prototype state values
     scalarField protoStates(NUM_STATES, 0.0);
     scalarField protoRates(NUM_STATES, 0.0);
 
@@ -212,202 +115,114 @@ LandNiederer::LandNiederer
         protoStates.data()
     );
 
-    // Allow the user to override individual constants from the dictionary
-    if (dict.found("constants"))
+    if (dict_.found("constants"))
     {
-        const dictionary& cDict = dict.subDict("constants");
-
-        for (label k = 0; k < NUM_CONSTANTS; ++k)
+        const dictionary& constants = dict_.subDict("constants");
+        for (label constantI = 0; constantI < NUM_CONSTANTS; ++constantI)
         {
-            const word name(LandNiedererCONSTANTS_NAMES[k]);
-            if (cDict.found(name))
+            const word name(LandNiedererCONSTANTS_NAMES[constantI]);
+            if (constants.found(name))
             {
-                CONSTANTS_[k] = cDict.get<scalar>(name);
+                CONSTANTS_[constantI] = constants.get<scalar>(name);
             }
         }
-
-        // Re-derive dependent constants after any user override
-        // (mirrors the dependency logic in LandNiederer2017initConsts)
-        CONSTANTS_[AC_fPKA_TnI] =
-            1.45
-          - 0.45 * (1.0 - CONSTANTS_[AC_fTnI_PKA])
-                 / (1.0 - CONSTANTS_[AC_fracTnIpo]);
-
-        CONSTANTS_[AC_XSSS] = CONSTANTS_[AC_dr] * 0.5;
-        CONSTANTS_[AC_XWSS] =
-            (1.0 - CONSTANTS_[AC_dr]) * CONSTANTS_[AC_wfrac] * 0.5;
-
-        CONSTANTS_[AC_A] =
-            CONSTANTS_[AC_TOT_A] * CONSTANTS_[AC_dr]
-          / (  (1.0 - CONSTANTS_[AC_dr]) * CONSTANTS_[AC_wfrac]
-             + CONSTANTS_[AC_dr]);
-
-        CONSTANTS_[AC_PKAForceMultiplier] =
-            1.0 + 0.26 * CONSTANTS_[AC_fMyBPC_PKA];
-
-        CONSTANTS_[AC_k_uw] = 0.026 * CONSTANTS_[AC_nu];
-
-        CONSTANTS_[AC_k_ws] =
-            0.004
-          * (1.0 + CONSTANTS_[AC_fMyBPC_PKA] / 2.0)
-          * CONSTANTS_[AC_mu];
-
-        CONSTANTS_[AC_k_wu] =
-            CONSTANTS_[AC_k_uw] * (1.0 / CONSTANTS_[AC_wfrac] - 1.0)
-          - CONSTANTS_[AC_k_ws];
-
-        CONSTANTS_[AC_k_su] =
-            CONSTANTS_[AC_k_ws]
-          * (1.0 / CONSTANTS_[AC_dr] - 1.0)
-          * CONSTANTS_[AC_wfrac];
-
-        CONSTANTS_[AC_cds] =
-            CONSTANTS_[AC_phi] * CONSTANTS_[AC_k_ws]
-          * CONSTANTS_[AC_wfrac] * (1.0 - CONSTANTS_[AC_dr])
-          / CONSTANTS_[AC_dr];
-
-        CONSTANTS_[AC_cdw] =
-            CONSTANTS_[AC_phi] * CONSTANTS_[AC_k_uw]
-          * (1.0 - CONSTANTS_[AC_wfrac]) / CONSTANTS_[AC_wfrac];
-
-        CONSTANTS_[AC_ktm_block] =
-            CONSTANTS_[AC_ktm_unblock]
-          * std::pow(CONSTANTS_[AC_perm50], CONSTANTS_[AC_nperm])
-          * 0.5
-          / (0.5 - CONSTANTS_[AC_XSSS] - CONSTANTS_[AC_XWSS]);
+        updateDerivedConstants();
     }
 
-    // Allow the user to override initial state values from the dictionary
-    if (dict.found("initialStates"))
+    if (dict_.found("initialStates"))
     {
-        const dictionary& sDict = dict.subDict("initialStates");
-
-        for (label k = 0; k < NUM_STATES; ++k)
+        const dictionary& initialStates = dict_.subDict("initialStates");
+        for (label stateI = 0; stateI < NUM_STATES; ++stateI)
         {
-            const word name(LandNiedererSTATES_NAMES[k]);
-            if (sDict.found(name))
+            const word name(LandNiedererSTATES_NAMES[stateI]);
+            if (initialStates.found(name))
             {
-                protoStates[k] = sDict.get<scalar>(name);
+                protoStates[stateI] = initialStates.get<scalar>(name);
             }
         }
     }
 
-    // Allocate and initialise per-integration-point storage
-    forAll(STATES_, i)
+    forAll(STATES_, integrationPtI)
     {
-        STATES_.set(i, new scalarField(protoStates));
-        ALGEBRAIC_.set(i, new scalarField(NUM_ALGEBRAIC, 0.0));
-        RATES_.set(i, new scalarField(NUM_STATES, 0.0));
+        STATES_.set(integrationPtI, new scalarField(protoStates));
+        ALGEBRAIC_.set
+        (
+            integrationPtI,
+            new scalarField(NUM_ALGEBRAIC, 0.0)
+        );
+        RATES_.set(integrationPtI, new scalarField(NUM_STATES, 0.0));
     }
 
-    // Build ODE solver
     const dictionary& solverDict =
-        dict.found("ODESolver")
-      ? dict.subDict("ODESolver")
-      : dict;                                  // fallback to outer dict
-
+        dict_.found("ODESolver") ? dict_.subDict("ODESolver") : dict_;
     odeSolver_ = ODESolver::New(*this, solverDict);
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * //
-
-void LandNiederer::preconditionToRestingState(const scalar restingCai)
-{
-    // Run the ODE for preconditioningTime ms at constant Ca_i=restingCai,
-    // lambda=1, lambda_rate=0 to drive all states to resting equilibrium.
-    //
-    // The Land-Niederer initial conditions (Ca_TRPN=0, XS=0) are the
-    // equilibrium at Ca_i=0.  At the ionic model's actual resting Ca_i
-    // (e.g. TNNP: 0.2 µM, TWorld: 0.097 µM, ToRORd: 0.075 µM) the true
-    // resting XS is non-zero, so starting from 0 produces a spurious global
-    // Ta transient in all cells simultaneously.
-    const scalar preconditioningTime =
-        dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
-
-    if (restingCai < 0)
-    {
-        FatalErrorInFunction
-            << "LandNiederer: resting Ca_i must be non-negative; got "
-            << restingCai << " mM. A negative resting calcium is unphysical "
-            << "and points to a misconfigured electromechanical signal "
-            << "provider." << exit(FatalError);
-    }
-
-    // A resting Ca_i at (or below) zero is already the equilibrium of the
-    // shipped initial conditions, so preconditioning would be a no-op.
-    if (preconditioningTime <= SMALL || restingCai <= SMALL)
-    {
-        return;
-    }
-
-    currentDriveSignal_ = restingCai;
-    currentLambda_      = 1.0;
-    currentLambdaRate_  = 0.0;
-
-    // Run a single-point ODE integration; all cells share the same resting IC.
-    scalarField precondStates(STATES_[0]);
-    scalar step = preconditioningTime / 100.0;
-    odeSolver_->solve(0.0, preconditioningTime, precondStates, step);
-
-    forAll(STATES_, i)
-    {
-        STATES_[i] = precondStates;
-    }
-
-    Info<< "    LandNiederer: pre-conditioned " << STATES_.size()
-        << " points to resting steady state" << nl
-        << "      restingCai = " << restingCai << " mM ("
-        << preconditioningTime << " ms integration)" << nl
-        << "      Ca_TRPN   = " << precondStates[Ca_TRPN] << nl
-        << "      TmBlocked = " << precondStates[TmBlocked] << nl
-        << "      XW        = " << precondStates[XW] << nl
-        << "      XS        = " << precondStates[XS] << nl
-        << endl;
 }
 
 
 activeTensionModel::Requirements LandNiederer::requirements() const
 {
-    Requirements req;
-    req.needCai     = true;
-    req.needVm      = false;
-    req.needsLambda = true;
-    return req;
+    Requirements requirements;
+    requirements.needCai = true;
+    requirements.needsLambda = true;
+    return requirements;
 }
 
 
-label LandNiederer::nEqns() const
+void LandNiederer::preconditionToRestingState(const scalar restingCai)
 {
-    return NUM_STATES;
+    const scalar preconditioningTime =
+        dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0);
+
+    if (restingCai < 0.0)
+    {
+        FatalErrorInFunction
+            << "LandNiederer requires a non-negative resting Ca_i, got "
+            << restingCai << " mM." << exit(FatalError);
+    }
+
+    if (preconditioningTime <= SMALL)
+    {
+        return;
+    }
+
+    currentDriveSignal_ = restingCai;
+    currentLambda_ = 1.0;
+    currentLambdaRate_ = 0.0;
+
+    scalarField preconditionedStates(STATES_[0]);
+    scalar step = preconditioningTime / 100.0;
+    odeSolver_->solve(0.0, preconditioningTime, preconditionedStates, step);
+
+    forAll(STATES_, integrationPtI)
+    {
+        STATES_[integrationPtI] = preconditionedStates;
+        prevLambda_[integrationPtI] = 1.0;
+    }
 }
 
 
 void LandNiederer::derivatives
 (
-    const scalar /*t*/,
+    const scalar t,
     const scalarField& y,
     scalarField& dydt
 ) const
 {
-    // Temporary algebraic storage for this sub-step
-    scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
+    scalarField algebraic(NUM_ALGEBRAIC, 0.0);
+    algebraic[AV_Cai] = currentDriveSignal_ * 1000.0;
+    algebraic[AV_lambda] = currentLambda_;
+    algebraic[AV_lambda_rate] = currentLambdaRate_ * 1.0e-3;
 
-    // Inject drive signal and stretch into temporary algebraics
-    ALGEBRAIC_TMP[AV_Cai]         = currentDriveSignal_;  // [Ca2+]_i, mM
-    ALGEBRAIC_TMP[AV_lambda]      = currentLambda_;
-    ALGEBRAIC_TMP[AV_lambda_rate] = currentLambdaRate_ * 1e-3; // convert s^-1 to ms^-1
-
-    // Compute algebraics and rates (writes into dydt via RATES argument)
     LandNiederer2017computeVariables
     (
-        0.0,
+        t,
         CONSTANTS_.data(),
         dydt.data(),
-        const_cast<double*>(y.cdata()),  // y is read-only within computeVariables
-        ALGEBRAIC_TMP.data()
+        const_cast<scalarField&>(y).data(),
+        algebraic.data()
     );
 }
+
 
 void LandNiederer::jacobian
 (
@@ -417,85 +232,169 @@ void LandNiederer::jacobian
     scalarSquareMatrix&
 ) const
 {
-    notImplemented("LandNiederer::jacobian — use an explicit ODE solver (e.g. RK45)");
+    notImplemented
+    (
+        "LandNiederer::jacobian — use an explicit ODE solver (for example RKF45)"
+    );
 }
 
 
 void LandNiederer::solveAtPoint
 (
-    label i,
-    scalar driveVal,
-    scalar lambda,
+    const label i,
+    const scalar driveVal,
+    const scalar lambda,
     scalar& Ta
 )
 {
-    // ------------------------------------------------------------------
-    // 1. Compute lambda_rate from previous stored value
-    // ------------------------------------------------------------------
-
-    scalar lambda_rate = 0.0;
-
-    if (currentDt_ > SMALL)
+    if (driveVal < 0.0)
     {
-        lambda_rate = (lambda - prevLambda_[i]) / currentDt_;
-
-        // Cap to a physiologically plausible range (Land 2017 calibrated at
-        // ~1 ms steps; rates beyond ±20 s^-1 indicate a predictor overshoot
-        // or first-activation transient, not real sarcomere dynamics).
-        lambda_rate = max(min(lambda_rate, scalar(20.0)), scalar(-20.0));
+        FatalErrorInFunction
+            << "LandNiederer requires a non-negative Ca_i, got " << driveVal
+            << " mM at integration point " << i << '.' << exit(FatalError);
     }
 
+    scalar lambdaRate = 0.0;
+    if (currentDt_ > SMALL)
+    {
+        lambdaRate = (lambda - prevLambda_[i])/currentDt_;
+    }
     prevLambda_[i] = lambda;
 
-    // ------------------------------------------------------------------
-    // 2. Store per-point quantities for use in derivatives() sub-steps
-    // ------------------------------------------------------------------
+    currentDriveSignal_ = driveVal;
+    currentLambda_ = lambda;
+    currentLambdaRate_ = lambdaRate;
 
-    currentDriveSignal_ = driveVal;   // base class member: [Ca2+]_i in mM
-    currentLambda_      = lambda;
-    currentLambdaRate_  = lambda_rate;
+    scalarField& states = STATES_[i];
+    scalarField& algebraic = ALGEBRAIC_[i];
+    scalarField& rates = RATES_[i];
 
-    // ------------------------------------------------------------------
-    // 3. Inject inputs into algebraic storage
-    // ------------------------------------------------------------------
+    algebraic[AV_Cai] = driveVal * 1000.0;
+    algebraic[AV_lambda] = lambda;
+    algebraic[AV_lambda_rate] = lambdaRate * 1.0e-3;
 
-    scalarField& ALGEBRAIC_i = ALGEBRAIC_[i];
-    ALGEBRAIC_i[AV_Cai]         = driveVal;
-    ALGEBRAIC_i[AV_lambda]      = lambda;
-    ALGEBRAIC_i[AV_lambda_rate] = lambda_rate * 1e-3; // convert s^-1 to ms^-1
-
-    // ------------------------------------------------------------------
-    // 4. Advance the ODE system over [currentT_, currentT_ + currentDt_]
-    // ------------------------------------------------------------------
-
-    scalarField& STATES_i = STATES_[i];
-
-    // The Land-Niederer biophysics core operates natively in ms, so we must
-    // scale the integration time limits by 1000 to solve the ODE in ms.
     const scalar tStart = currentT_ * 1000.0;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0;
-    scalar step         = currentDt_ * 1000.0;
-
-    odeSolver_->solve(tStart, tEnd, STATES_i, step);
-
-    // ------------------------------------------------------------------
-    // 5. Recompute final algebraic values (including Ta)
-    // ------------------------------------------------------------------
+    const scalar tEnd = (currentT_ + currentDt_) * 1000.0;
+    scalar step = currentDt_ * 1000.0;
+    odeSolver_->solve(tStart, tEnd, states, step);
 
     LandNiederer2017computeVariables
     (
         tEnd,
         CONSTANTS_.data(),
-        RATES_[i].data(),
-        STATES_i.data(),
-        ALGEBRAIC_i.data()
+        rates.data(),
+        states.data(),
+        algebraic.data()
     );
 
-    // ------------------------------------------------------------------
-    // 6. Extract active tension (algebraic output)
-    // ------------------------------------------------------------------
+    // AV_Tp and AV_T are diagnostics of the original model.  The caller
+    // owns active stress only, so it must receive AV_Ta rather than AV_T.
+    Ta = algebraic[AV_Ta];
+}
 
-    Ta = ALGEBRAIC_i[AV_Ta];
+
+bool LandNiederer::readRestartState(const fvMesh& mesh)
+{
+    const fileName statePath = restartStateIO::path(mesh, "LandNiedererState");
+    if (!isFile(statePath))
+    {
+        return false;
+    }
+
+    std::ifstream input(statePath.c_str(), std::ios::binary);
+    if (!input)
+    {
+        FatalErrorInFunction
+            << "Cannot read restart state file " << statePath << exit(FatalError);
+    }
+    restartStateIO::validateHeader
+    (
+        "LandNiederer", NUM_STATES + 1, STATES_.size(), input, statePath
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            STATES_[integrationPtI][stateI] =
+                restartStateIO::readScalar(input, statePath);
+            restartStateIO::checkValue(STATES_[integrationPtI][stateI], statePath);
+        }
+        prevLambda_[integrationPtI] = restartStateIO::readScalar(input, statePath);
+        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
+    }
+
+    const volVectorField& D = mesh.lookupObject<volVectorField>("D");
+    const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
+    const volTensorField gradD(fvc::grad(D));
+    const scalar t = mesh.time().value() * 1000.0;
+
+    forAll(STATES_, integrationPtI)
+    {
+        const tensor F(I + gradD[integrationPtI].T());
+        const scalar lambda = mag(F & f0[integrationPtI]);
+        const scalar cai = provider().signal(integrationPtI, CouplingSignal::CAI);
+        scalarField& algebraic = ALGEBRAIC_[integrationPtI];
+
+        algebraic[AV_Cai] = cai * 1000.0;
+        algebraic[AV_lambda] = lambda;
+        algebraic[AV_lambda_rate] = 0.0;
+        LandNiederer2017computeVariables
+        (
+            t,
+            CONSTANTS_.data(),
+            RATES_[integrationPtI].data(),
+            STATES_[integrationPtI].data(),
+            algebraic.data()
+        );
+    }
+
+    return true;
+}
+
+
+void LandNiederer::writeRestartState(const fvMesh& mesh) const
+{
+    const fileName statePath = restartStateIO::path(mesh, "LandNiedererState");
+    std::ofstream output(statePath.c_str(), std::ios::binary | std::ios::trunc);
+    if (!output)
+    {
+        FatalErrorInFunction
+            << "Cannot write restart state file " << statePath << exit(FatalError);
+    }
+    restartStateIO::writeHeader
+    (
+        "LandNiederer", NUM_STATES + 1, STATES_.size(), output
+    );
+
+    forAll(STATES_, integrationPtI)
+    {
+        forAll(STATES_[integrationPtI], stateI)
+        {
+            restartStateIO::checkValue(STATES_[integrationPtI][stateI], statePath);
+            restartStateIO::writeScalar
+            (
+                output, STATES_[integrationPtI][stateI], statePath
+            );
+        }
+        restartStateIO::checkValue(prevLambda_[integrationPtI], statePath);
+        restartStateIO::writeScalar(output, prevLambda_[integrationPtI], statePath);
+    }
+}
+
+
+bool LandNiederer::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != ALGEBRAIC_.size())
+    {
+        return false;
+    }
+
+    forAll(Ta, integrationPtI)
+    {
+        Ta[integrationPtI] = ALGEBRAIC_[integrationPtI][AV_Ta];
+    }
+    return true;
 }
 
 } // End namespace Foam

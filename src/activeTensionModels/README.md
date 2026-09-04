@@ -16,7 +16,8 @@ src/activeTensionModels/
 │   └── ManufacturedElectromechanics/ # Manufactured electromechanics verification model
 ├── GoktepeKuhl/          # Goktepe-Kuhl phenomenological active tension model
 ├── NashPanfilov/         # Nash-Panfilov phenomenological active tension model
-├── LandNiederer/         # Land-Niederer biophysical active tension model
+├── LandNiederer/         # Original Land et al. intact-human model
+├── LandNiedererTWorld/   # TWorld-derived six-state contraction subsystem
 ├── *Batched/             # GPU-ready Batched versions of the models (e.g. NashPanfilovBatched)
 ├── Make/
 ├── lnInclude/
@@ -57,16 +58,17 @@ the table are the exact registered `activeTensionModel` dictionary selectors.
 | Phenomenological tension | `GoktepeKuhlBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
 | Phenomenological tension | `NashPanfilov` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Batched integration uses a different data path |
 | Phenomenological tension | `NashPanfilovBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
-| Biophysical tension | `LandNiederer` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Applies resting-Cai preconditioning |
-| Biophysical tension | `LandNiedererBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Uses explicit batched resting-Cai conditioning; scalar equivalence requires stated tolerances |
+| Biophysical tension | `LandNiederer` | scalar CPU; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |
+| Biophysical tension | `LandNiedererTWorld` | scalar CPU; full EM workflows | TWorld six-state contraction subsystem | Applies resting-Cai preconditioning |
+| Biophysical tension | `LandNiedererTWorldBatched` | SoA host, optional CUDA; full EM workflows | TWorld batched backend | Uses explicit batched resting-Cai conditioning; scalar equivalence requires stated tolerances |
 | Electromechanical MMS | `ManufacturedElectromechanics` | scalar CPU; full EM verification | maintained verification implementation and Names metadata | Verification-only; not a physiological tension law |
 
 All production models select their driving electrophysiology signal from
 dictionary input (`couplingSignal`, normally `Vm` or `Cai`) and integrate with
 the `ElectromechanicalSignalProvider` interface used by `ionicModel`.
-Both Land-Niederer variants use `preconditioningTime` (default 1000 ms) and
+Both scalar Land variants use `preconditioningTime` (default 1000 ms) and
 integrate to the resting steady state over a fixed 100 substeps.
-`LandNiedererBatched` advances its generated hot path, conditions one
+`LandNiedererTWorldBatched` advances its generated hot path, conditions one
 representative state, and copies that state to every integration point.
 
 ### Generated and maintained boundaries

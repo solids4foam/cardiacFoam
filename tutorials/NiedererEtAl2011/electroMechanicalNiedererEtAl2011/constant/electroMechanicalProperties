@@ -21,9 +21,9 @@ sequentialElectroMechanicalCoeffs
     solidRegion     solid;
 
     // To enable GPU/OpenMP vectorization, switch the model to its 'Batched' variant:
-    // activeTensionModel  LandNiedererBatched;
+    // activeTensionModel  LandNiedererTWorldBatched;
     // activeTensionModel  NashPanfilovBatched;
-    activeTensionModel  LandNiederer;
+    activeTensionModel  LandNiedererTWorld;
 
     // Optional: override pre-conditioning time [ms] (default 1000).
     // Set to 0 to disable. The resting Ca_i is queried automatically from
@@ -35,7 +35,7 @@ sequentialElectroMechanicalCoeffs
     // batchedSubsteps       10;    // Number of explicit substeps per mechanics dt
     // batchedParallelCells  true;  // Enable OpenMP multi-threading on CPU
 
-    // ODE solver settings used by the scalar LandNiederer (ignored by Batched models).
+    // ODE solver settings used by scalar LandNiedererTWorld (ignored by Batched models).
     ODESolver
     {
         solver      RKF45;

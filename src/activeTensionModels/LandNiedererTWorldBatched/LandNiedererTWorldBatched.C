@@ -17,40 +17,45 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "LandNiedererBatched.H"
+#include "LandNiedererTWorldBatched.H"
 #include "addToRunTimeSelectionTable.H"
 #include "fvcGrad.H"
 #include "restartStateIO.H"
-#include "../LandNiederer/LandNiederer_2017Names.H"
-#include "../LandNiederer/LandNiederer_2017.H"
+#include "../LandNiedererTWorld/LandNiedererTWorld_2025Names.H"
+#include "../LandNiedererTWorld/LandNiedererTWorld_2025.H"
 
 #include <cmath>
 
 namespace Foam
 {
-    defineTypeNameAndDebug(LandNiedererBatched, 0);
-    addToRunTimeSelectionTable(activeTensionModel, LandNiedererBatched, dictionary);
+    defineTypeNameAndDebug(LandNiedererTWorldBatched, 0);
+    addToRunTimeSelectionTable
+    (
+        activeTensionModel,
+        LandNiedererTWorldBatched,
+        dictionary
+    );
 }
 
 // * * * * * * * * * * * * * * * * io* hooks  * * * * * * * * * * * * * * * //
 
-const char* const* Foam::LandNiedererBatched::ioStateNames() const
+const char* const* Foam::LandNiedererTWorldBatched::ioStateNames() const
 {
-    return LandNiedererSTATES_NAMES;
+    return LandNiedererTWorldSTATES_NAMES;
 }
 
-const char* const* Foam::LandNiedererBatched::ioConstantNames() const
+const char* const* Foam::LandNiedererTWorldBatched::ioConstantNames() const
 {
-    return LandNiedererCONSTANTS_NAMES;
+    return LandNiedererTWorldCONSTANTS_NAMES;
 }
 
-const char* const* Foam::LandNiedererBatched::ioAlgebraicNames() const
+const char* const* Foam::LandNiedererTWorldBatched::ioAlgebraicNames() const
 {
-    return LandNiedererALGEBRAIC_NAMES;
+    return LandNiedererTWorldALGEBRAIC_NAMES;
 }
 
 
-bool Foam::LandNiedererBatched::readRestartState(const fvMesh& mesh)
+bool Foam::LandNiedererTWorldBatched::readRestartState(const fvMesh& mesh)
 {
     const fileName statePath = restartStateIO::path(mesh, type() + "State");
     if (!isFile(statePath))
@@ -92,7 +97,7 @@ bool Foam::LandNiedererBatched::readRestartState(const fvMesh& mesh)
 }
 
 
-void Foam::LandNiedererBatched::writeRestartState(const fvMesh& mesh) const
+void Foam::LandNiedererTWorldBatched::writeRestartState(const fvMesh& mesh) const
 {
     const fileName statePath = restartStateIO::path(mesh, type() + "State");
     syncAllToIO();
@@ -118,7 +123,7 @@ void Foam::LandNiedererBatched::writeRestartState(const fvMesh& mesh) const
 }
 
 
-void Foam::LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
+void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
 {
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
@@ -149,7 +154,7 @@ void Foam::LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
 }
 
 
-bool Foam::LandNiedererBatched::restartTension(scalarField& Ta) const
+bool Foam::LandNiedererTWorldBatched::restartTension(scalarField& Ta) const
 {
     if (Ta.size() != nCells_)
     {
@@ -166,7 +171,7 @@ bool Foam::LandNiedererBatched::restartTension(scalarField& Ta) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::LandNiedererBatched::LandNiedererBatched
+Foam::LandNiedererTWorldBatched::LandNiedererTWorldBatched
 (
     const dictionary& dict,
     const label num
@@ -183,19 +188,18 @@ Foam::LandNiedererBatched::LandNiedererBatched
     if (!(requestedSignal == "Cai" || requestedSignal == "cai"))
     {
         FatalErrorInFunction
-            << "Unknown LandNiedererBatched 'couplingSignal' value: "
+            << "Unknown LandNiedererTWorldBatched 'couplingSignal' value: "
             << requestedSignal << nl
             << "Valid option is: Cai."
             << abort(FatalError);
     }
 
-    Info<< nl << "Initialize LandNiedererBatched constants:" << nl;
+    Info<< nl << "Initialize LandNiedererTWorldBatched constants:" << nl;
 
     scalarField protoStates(NUM_STATES, 0.0);
     scalarField protoRates(NUM_STATES, 0.0);
 
-    // Reuse the 2017 model init hook
-    LandNiederer2017initConsts
+    LandNiedererTWorld2025initConsts
     (
         CONSTANTS_.data(),
         protoRates.data(),
@@ -252,7 +256,7 @@ Foam::LandNiedererBatched::LandNiedererBatched
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::LandNiedererBatched::preconditionToRestingState
+void Foam::LandNiedererTWorldBatched::preconditionToRestingState
 (
     const scalar restingCai
 )
@@ -263,7 +267,7 @@ void Foam::LandNiedererBatched::preconditionToRestingState
     if (restingCai < 0)
     {
         FatalErrorInFunction
-            << "LandNiedererBatched: resting Ca_i must be non-negative; got "
+            << "LandNiedererTWorldBatched: resting Ca_i must be non-negative; got "
             << restingCai << " mM. A negative resting calcium is unphysical "
             << "and points to a misconfigured electromechanical signal "
             << "provider." << exit(FatalError);
@@ -276,7 +280,7 @@ void Foam::LandNiedererBatched::preconditionToRestingState
         return;
     }
 
-    // Match the scalar LandNiederer model: integrate to resting steady state
+    // Match the scalar LandNiedererTWorld model: integrate to resting steady state
     // over a fixed number of substeps rather than a dictionary-configurable
     // step size.
     const label nSteps = 100;
@@ -318,7 +322,7 @@ void Foam::LandNiedererBatched::preconditionToRestingState
     prevLambda_ = 1.0;
     lambdaRate_ = 0.0;
 
-    Info<< "    LandNiedererBatched: pre-conditioned " << nCells_
+    Info<< "    LandNiedererTWorldBatched: pre-conditioned " << nCells_
         << " points to resting steady state" << nl
         << "      restingCai = " << restingCai << " mM ("
         << preconditioningTime << " ms integration, "
@@ -330,7 +334,7 @@ void Foam::LandNiedererBatched::preconditionToRestingState
         << endl;
 }
 
-void Foam::LandNiedererBatched::calculateTension
+void Foam::LandNiedererTWorldBatched::calculateTension
 (
     const scalar t,
     const scalar dt,
@@ -357,7 +361,7 @@ void Foam::LandNiedererBatched::calculateTension
 }
 
 
-void Foam::LandNiedererBatched::evaluateHotPathStateForCell
+void Foam::LandNiedererTWorldBatched::evaluateHotPathStateForCell
 (
     const label cellI,
     const scalar modelTime,
@@ -374,7 +378,7 @@ void Foam::LandNiedererBatched::evaluateHotPathStateForCell
     algebraicValues[AV_lambda_rate] = lambdaRate_[cellI] * 1e-3; // convert s^-1 to ms^-1
 
     // Compute variables by casting to pointers
-    LandNiederer2017computeVariables
+    LandNiedererTWorld2025computeVariables
     (
         0.0,
         CONSTANTS_.data(),

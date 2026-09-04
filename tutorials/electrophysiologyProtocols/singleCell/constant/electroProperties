@@ -80,5 +80,5 @@ singleCellSolverCoeffs
         }
     }
 
-    activeTensionModel LandNiederer;
+    activeTensionModel LandNiedererTWorld;
 }

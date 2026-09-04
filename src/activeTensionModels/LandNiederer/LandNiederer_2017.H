@@ -1,41 +1,40 @@
 /*---------------------------------------------------------------------------*\
-License
-    This file is part of cardiacFoam.
-
-    cardiacFoam is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by the
-    Free Software Foundation, either version 3 of the License, or (at your
-    option) any later version.
-
-    cardiacFoam is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
-
 Description
-    Self-contained ODE equations for the Land-Niederer 2017 cardiac
-    myofilament contraction model.
+    Original full Land human cardiac contraction model translated into the
+    same self-contained C++ style used by the supplied cardiacFoam headers.
 
-    This file is intentionally free of OpenFOAM headers so that it can be
-    included from both the OpenFOAM wrapper and any standalone C++ harness.
+    This file intentionally preserves the released Land model conventions
+    rather than the TWorld coupling conventions.
 
-    The equations are extracted from the TWorld 2024 ionic model contraction
-    subsystem (src/ionicModels/TWorld/TWorld_2025.H, lines 1341-1358).
-    The electrophysiology coupling is removed: the only external inputs are
-      - ALGEBRAIC[AV_Cai]        : [Ca2+]_i  in mM   (set by caller)
-      - ALGEBRAIC[AV_lambda]     : sarcomere stretch  (set by caller)
-      - ALGEBRAIC[AV_lambda_rate]: d(lambda)/dt  [s^-1]  (set by caller)
+    IMPORTANT ORIGINAL UNITS
+      Time / ODE rates : ms
+      Cai              : uM
+      lambda           : dimensionless
+      lambda_rate      : ms^-1
+      tension          : kPa
 
-    Reference:
-      Land S, Wang YT, Vicente-Steijn R et al. (2017).
-      An analysis of deformation-dependent electromechanical coupling in
-      the mouse heart. J Physiol, 595, 2547-2562.
+    Therefore, if a 3-D mechanics solver provides lambda_rate in s^-1:
+        lambda_rate_for_Land = lambda_rate_3D / 1000.0;
 
-Author
-    Simao Nieto de Castro, UCD.
+    If an ionic model provides Cai in mM:
+        Cai_for_Land_uM = Cai_ionic_mM * 1000.0;
+
+    Those conversions belong at the coupling interface if the objective is
+    to keep this model itself identical in convention to the original.
+
+    Full state vector:
+      XS, XW, TRPN, TmBlocked, ZETAS, ZETAW, Cd
+
+    The seventh state Cd is the original passive viscoelastic distortion
+    state. Total tension is T = Ta + Tp.
+
+Reference
+    Land S, Park-Holohan SJ, Smith NP, dos Remedios CG, Kentish JC,
+    Niederer SA (2017).
+    A model of cardiac contraction based on novel measurements of tension
+    development in human cardiomyocytes.
+    Journal of Molecular and Cellular Cardiology 106:68-83.
+    DOI: 10.1016/j.yjmcc.2017.03.008
 \*---------------------------------------------------------------------------*/
 
 #ifndef LandNiederer_2017_H
@@ -46,18 +45,17 @@ Author
 
 #include "LandNiederer_2017Names.H"
 
-// State variable names (for I/O, matched to STATES_INDEX order)
 static const char* LandNiedererSTATES_NAMES[NUM_STATES] =
 {
-    "Ca_TRPN",
-    "TmBlocked",
-    "XW",
     "XS",
+    "XW",
+    "TRPN",
+    "TmBlocked",
     "ZETAS",
-    "ZETAW"
+    "ZETAW",
+    "Cd"
 };
 
-// Algebraic variable names (for I/O, matched to ALGEBRAIC_INDEX order)
 static const char* LandNiedererALGEBRAIC_NAMES[NUM_ALGEBRAIC] =
 {
     "AV_XU",
@@ -69,59 +67,55 @@ static const char* LandNiedererALGEBRAIC_NAMES[NUM_ALGEBRAIC] =
     "AV_xb_wu",
     "AV_xb_su_gamma",
     "AV_xb_wu_gamma",
+    "AV_ca50",
+    "AV_Lfac",
+    "AV_dCd_dt",
+    "AV_Fd",
+    "AV_F1",
     "AV_Ta",
-    "AV_d_Ca_TRPN",
+    "AV_Tp",
+    "AV_T",
     "AV_Cai",
     "AV_lambda",
-    "AV_lambda_rate",
-    "AV_Lfac",
-    "AV_ca50"
+    "AV_lambda_rate"
 };
 
-// Constant names (for I/O, matched to CONSTANTS_INDEX order)
 static const char* LandNiedererCONSTANTS_NAMES[NUM_CONSTANTS] =
 {
-    "AC_TOT_A",
-    "AC_TRPN_n",
-    "AC_Tref",
-    "AC_beta_0",
-    "AC_beta_1",
-    "AC_dr",
-    "AC_fracTnIpo",
-    "AC_contraction_gamma",
-    "AC_gamma_wu",
-    "AC_koff",
-    "AC_ktm_unblock",
-    "AC_lambda_max",
-    "AC_lambda_min",
-    "AC_mu",
-    "AC_nperm",
-    "AC_nu",
     "AC_perm50",
-    "AC_phi",
+    "AC_TRPN_n",
+    "AC_koff",
+    "AC_dr",
     "AC_wfrac",
-    "AC_fMyBPC_PKA",
-    "AC_fTnI_PKA",
+    "AC_TOT_A",
+    "AC_ktm_unblock",
+    "AC_beta_1",
+    "AC_beta_0",
+    "AC_gamma",
+    "AC_gamma_wu",
+    "AC_phi",
+    "AC_nperm",
+    "AC_ca50_ref",
+    "AC_Tref",
+    "AC_nu",
+    "AC_mu",
+    "AC_k_ws",
+    "AC_k_uw",
+    "AC_cdw",
+    "AC_cds",
+    "AC_k_wu",
+    "AC_k_su",
     "AC_A",
     "AC_XSSS",
     "AC_XWSS",
-    "AC_fPKA_TnI",
-    "AC_k_uw",
-    "AC_k_ws",
-    "AC_k_wu",
-    "AC_k_su",
-    "AC_cds",
-    "AC_cdw",
     "AC_ktm_block",
-    "AC_PKAForceMultiplier"
+    "AC_par_k",
+    "AC_b",
+    "AC_eta_l",
+    "AC_eta_s",
+    "AC_passive_a"
 };
 
-
-// =========================================================================
-//  initConsts
-//  Set default parameter values and initial state conditions.
-//  Called once per model instantiation.
-// =========================================================================
 inline void LandNiederer2017initConsts
 (
     double* CONSTANTS,
@@ -130,68 +124,56 @@ inline void LandNiederer2017initConsts
 )
 {
     // -----------------------------------------------------------------
-    // User-facing parameters
-    // (All values from the TWorld contraction block, Land 2017 defaults)
+    // Original Land active-model parameters
     // -----------------------------------------------------------------
-
-    CONSTANTS[AC_TOT_A]         = 25.0;
-    CONSTANTS[AC_TRPN_n]        = 1.65;
-    CONSTANTS[AC_Tref]          = 80.0;
-    CONSTANTS[AC_beta_0]        = 2.3;
-    CONSTANTS[AC_beta_1]        = -2.4;
-    CONSTANTS[AC_dr]            = 0.25;
-    CONSTANTS[AC_fracTnIpo]     = 0.0031;
-    CONSTANTS[AC_contraction_gamma] = 0.0085;
-    CONSTANTS[AC_gamma_wu]      = 0.615;
-    CONSTANTS[AC_koff]          = 0.07854;
-    CONSTANTS[AC_ktm_unblock]   = 0.02626;
-    CONSTANTS[AC_lambda_max]    = 1.2;
-    CONSTANTS[AC_lambda_min]    = 0.87;
-    CONSTANTS[AC_mu]            = 3.94046;
-    CONSTANTS[AC_nperm]         = 2.036;
-    CONSTANTS[AC_nu]            = 10.15996;
-    CONSTANTS[AC_perm50]        = 0.35;
-    CONSTANTS[AC_phi]           = 2.23;
-    CONSTANTS[AC_wfrac]         = 0.5;
-    CONSTANTS[AC_fMyBPC_PKA]    = 0.0;
-    CONSTANTS[AC_fTnI_PKA]      = 0.0;
+    CONSTANTS[AC_perm50]      = 0.35;
+    CONSTANTS[AC_TRPN_n]      = 2.0;
+    CONSTANTS[AC_koff]        = 0.1;
+    CONSTANTS[AC_dr]          = 0.25;
+    CONSTANTS[AC_wfrac]       = 0.5;
+    CONSTANTS[AC_TOT_A]       = 25.0;
+    CONSTANTS[AC_ktm_unblock] = 1.0;
+    CONSTANTS[AC_beta_1]      = -2.4;
+    CONSTANTS[AC_beta_0]      = 2.3;
+    CONSTANTS[AC_gamma]       = 0.0085;
+    CONSTANTS[AC_gamma_wu]    = 0.615;
+    CONSTANTS[AC_phi]         = 2.23;
 
     // -----------------------------------------------------------------
-    // Derived constants (computed once from user-facing parameters)
+    // Original INTACT human parameter branch
     // -----------------------------------------------------------------
+    CONSTANTS[AC_nperm]      = 5.0;
+    CONSTANTS[AC_ca50_ref]   = 0.805; // uM
+    CONSTANTS[AC_Tref]       = 120.0; // kPa
+    CONSTANTS[AC_nu]         = 7.0;
+    CONSTANTS[AC_mu]         = 3.0;
 
-    // fPKA_TnI: effective TnI phosphorylation factor
-    //   fPKA_TnI = 1.45 - 0.45 * (1 - fTnI_PKA) / (1 - fracTnIpo)
-    CONSTANTS[AC_fPKA_TnI] =
-        1.45
-      - 0.45 * (1.0 - CONSTANTS[AC_fTnI_PKA])
-             / (1.0 - CONSTANTS[AC_fracTnIpo]);
-
-    // Crossbridge geometry
-    CONSTANTS[AC_XSSS] = CONSTANTS[AC_dr] * 0.5;
-    CONSTANTS[AC_XWSS] =
-        (1.0 - CONSTANTS[AC_dr]) * CONSTANTS[AC_wfrac] * 0.5;
-
-    // Effective crossbridge amplitude
-    CONSTANTS[AC_A] =
-        CONSTANTS[AC_TOT_A] * CONSTANTS[AC_dr]
-      / (  (1.0 - CONSTANTS[AC_dr]) * CONSTANTS[AC_wfrac]
-         + CONSTANTS[AC_dr]);
-
-    // PKA-mediated force enhancement via MyBPC phosphorylation
-    CONSTANTS[AC_PKAForceMultiplier] =
-        1.0 + 0.26 * CONSTANTS[AC_fMyBPC_PKA];
-
-    // Crossbridge transition rates
-    CONSTANTS[AC_k_uw] = 0.026 * CONSTANTS[AC_nu];
-
+    // -----------------------------------------------------------------
+    // Derived active-model constants: same algebra as released MATLAB
+    // -----------------------------------------------------------------
     CONSTANTS[AC_k_ws] =
-        0.004
-      * (1.0 + CONSTANTS[AC_fMyBPC_PKA] / 2.0)
-      * CONSTANTS[AC_mu];
+        0.004 * CONSTANTS[AC_mu];
+
+    CONSTANTS[AC_k_uw] =
+        0.026 * CONSTANTS[AC_nu];
+
+    CONSTANTS[AC_cdw] =
+        CONSTANTS[AC_phi]
+      * CONSTANTS[AC_k_uw]
+      * (1.0 - CONSTANTS[AC_dr])
+      * (1.0 - CONSTANTS[AC_wfrac])
+      / ((1.0 - CONSTANTS[AC_dr]) * CONSTANTS[AC_wfrac]);
+
+    CONSTANTS[AC_cds] =
+        CONSTANTS[AC_phi]
+      * CONSTANTS[AC_k_ws]
+      * (1.0 - CONSTANTS[AC_dr])
+      * CONSTANTS[AC_wfrac]
+      / CONSTANTS[AC_dr];
 
     CONSTANTS[AC_k_wu] =
-        CONSTANTS[AC_k_uw] * (1.0 / CONSTANTS[AC_wfrac] - 1.0)
+        CONSTANTS[AC_k_uw]
+      * (1.0 / CONSTANTS[AC_wfrac] - 1.0)
       - CONSTANTS[AC_k_ws];
 
     CONSTANTS[AC_k_su] =
@@ -199,17 +181,20 @@ inline void LandNiederer2017initConsts
       * (1.0 / CONSTANTS[AC_dr] - 1.0)
       * CONSTANTS[AC_wfrac];
 
-    // Velocity-coupling constants
-    CONSTANTS[AC_cds] =
-        CONSTANTS[AC_phi] * CONSTANTS[AC_k_ws]
-      * CONSTANTS[AC_wfrac] * (1.0 - CONSTANTS[AC_dr])
-      / CONSTANTS[AC_dr];
+    CONSTANTS[AC_A] =
+        (0.25 * CONSTANTS[AC_TOT_A])
+      / ((1.0 - CONSTANTS[AC_dr]) * CONSTANTS[AC_wfrac]
+         + CONSTANTS[AC_dr])
+      * (CONSTANTS[AC_dr] / 0.25);
 
-    CONSTANTS[AC_cdw] =
-        CONSTANTS[AC_phi] * CONSTANTS[AC_k_uw]
-      * (1.0 - CONSTANTS[AC_wfrac]) / CONSTANTS[AC_wfrac];
+    CONSTANTS[AC_XSSS] =
+        CONSTANTS[AC_dr] * 0.5;
 
-    // Blocking rate (detailed-balance constraint)
+    CONSTANTS[AC_XWSS] =
+        (1.0 - CONSTANTS[AC_dr])
+      * CONSTANTS[AC_wfrac]
+      * 0.5;
+
     CONSTANTS[AC_ktm_block] =
         CONSTANTS[AC_ktm_unblock]
       * std::pow(CONSTANTS[AC_perm50], CONSTANTS[AC_nperm])
@@ -217,38 +202,30 @@ inline void LandNiederer2017initConsts
       / (0.5 - CONSTANTS[AC_XSSS] - CONSTANTS[AC_XWSS]);
 
     // -----------------------------------------------------------------
-    // Initial state conditions
-    //   At rest (zero tension, no crossbridges, Tm fully blocked)
-    //   Users may override these from the case dictionary.
+    // Original passive-model parameters
     // -----------------------------------------------------------------
+    CONSTANTS[AC_par_k]     = 7.0;
+    CONSTANTS[AC_b]         = 9.1;
+    CONSTANTS[AC_eta_l]     = 200.0;
+    CONSTANTS[AC_eta_s]     = 20.0;
+    CONSTANTS[AC_passive_a] = 2.1;
 
-    STATES[Ca_TRPN]   = 0.0;
-    STATES[TmBlocked] = 1.0;
-    STATES[XW]        = 0.0;
+    // Original reasonable initial condition:
+    // [XS XW TRPN TmBlocked ZETAS ZETAW Cd] = [0 0 0 1 0 0 0]
     STATES[XS]        = 0.0;
+    STATES[XW]        = 0.0;
+    STATES[TRPN]      = 0.0;
+    STATES[TmBlocked] = 1.0;
     STATES[ZETAS]     = 0.0;
     STATES[ZETAW]     = 0.0;
+    STATES[Cd]        = 0.0;
 
-    // Initialise rates to zero
     for (int i = 0; i < NUM_STATES; ++i)
     {
         RATES[i] = 0.0;
     }
 }
 
-
-// =========================================================================
-//  computeVariables
-//
-//  Compute all algebraic variables and ODE rates.
-//
-//  Pre-conditions (caller must set before invoking):
-//    ALGEBRAIC[AV_Cai]        = [Ca2+]_i  in mM
-//    ALGEBRAIC[AV_lambda]     = sarcomere stretch ratio  [-]
-//    ALGEBRAIC[AV_lambda_rate]= d(lambda)/dt  [s^-1]
-//
-//  VOI is unused (model has no explicit time dependence beyond the inputs).
-// =========================================================================
 #ifndef CARDIAC_HOST_DEVICE
 #define CARDIAC_HOST_DEVICE
 #endif
@@ -263,136 +240,83 @@ CARDIAC_HOST_DEVICE inline void LandNiederer2017computeVariables
 )
 {
     // -----------------------------------------------------------------
-    // 1.  Length-dependent quantities (updated every timestep)
+    // Inputs in ORIGINAL Land units
     // -----------------------------------------------------------------
+    const double Cai = ALGEBRAIC[AV_Cai];                 // uM
+    double lambda = ALGEBRAIC[AV_lambda];                 // -
+    const double dlambda_dt = ALGEBRAIC[AV_lambda_rate];  // ms^-1
 
-    // Clamp lambda from above at lambda_max
-    const double lambda  = ALGEBRAIC[AV_lambda];
-    const double lambda0 = (lambda <= CONSTANTS[AC_lambda_max])
-                         ? lambda
-                         : CONSTANTS[AC_lambda_max];
+    // Original code: lambda = min(1.2,lambda)
+    lambda = (lambda <= 1.2) ? lambda : 1.2;
 
-    // Effective minimum stretch for this sarcomere length
-    const double lambda0_min = (CONSTANTS[AC_lambda_min] <= lambda0)
-                             ? CONSTANTS[AC_lambda_min]
-                             : lambda0;
+    // Original state handling
+    const double xs =
+        (STATES[XS] >= 0.0) ? STATES[XS] : 0.0;
 
-    // Frank-Starling length-dependence factor
-    const double Lfac_val =
-        1.0 + CONSTANTS[AC_beta_0]
-            * (lambda0 + lambda0_min - (1.0 + CONSTANTS[AC_lambda_min]));
+    const double xw =
+        (STATES[XW] >= 0.0) ? STATES[XW] : 0.0;
 
-    ALGEBRAIC[AV_Lfac] = (Lfac_val >= 0.0) ? Lfac_val : 0.0;
+    const double trpn =
+        (STATES[TRPN] >= 0.0) ? STATES[TRPN] : 0.0;
 
-    // Effective half-activation concentration [µM] (length-sensitive)
-    const double dl = lambda - 1.0;
-    const double dl_clamped = (dl <= 0.2) ? dl : 0.2;
-
-    ALGEBRAIC[AV_ca50] =
-        CONSTANTS[AC_fPKA_TnI] * 0.7645
-      + CONSTANTS[AC_beta_1] * dl_clamped;
+    const double tmBlocked = STATES[TmBlocked];
+    const double zetas = STATES[ZETAS];
+    const double zetaw = STATES[ZETAW];
 
     // -----------------------------------------------------------------
-    // 2.  Ca-troponin ODE rate
-    //     Cai is in mM; ca50 is in µM → multiply Cai by 1000
+    // Length dependence
     // -----------------------------------------------------------------
+    const double lambda_min_087 =
+        (0.87 <= lambda) ? 0.87 : lambda;
 
-    const double cai_uM = ALGEBRAIC[AV_Cai] * 1000.0;   // mM → µM
+    ALGEBRAIC[AV_Lfac] =
+        1.0
+      + CONSTANTS[AC_beta_0]
+      * (lambda + lambda_min_087 - 1.87);
 
-    ALGEBRAIC[AV_d_Ca_TRPN] =
-        CONSTANTS[AC_koff]
-      * (  std::pow(cai_uM / ALGEBRAIC[AV_ca50], CONSTANTS[AC_TRPN_n])
-         * (1.0 - STATES[Ca_TRPN])
-         - STATES[Ca_TRPN]);
+    if (ALGEBRAIC[AV_Lfac] < 0.0)
+    {
+        ALGEBRAIC[AV_Lfac] = 0.0;
+    }
 
-    RATES[Ca_TRPN] = ALGEBRAIC[AV_d_Ca_TRPN];
-
-    // -----------------------------------------------------------------
-    // 3.  Tropomyosin blocking/unblocking ODE rate
-    // -----------------------------------------------------------------
-
-    // Unbound regulatory unit fraction
     ALGEBRAIC[AV_XU] =
-        1.0 - STATES[TmBlocked] - STATES[XW] - STATES[XS];
-
-    // Blocking flux: capped at 100 to guard against Ca_TRPN → 0
-    const double Ca_TRPN_safe = (STATES[Ca_TRPN] > 0.0)
-                               ? STATES[Ca_TRPN]
-                               : 1.0e-12;
-
-    const double blocking_Ca_factor =
-        std::pow(Ca_TRPN_safe, -CONSTANTS[AC_nperm] / 2.0);
-
-    const double blocking_Ca_capped =
-        (blocking_Ca_factor <= 100.0) ? blocking_Ca_factor : 100.0;
-
-    RATES[TmBlocked] =
-        CONSTANTS[AC_ktm_block]
-      * blocking_Ca_capped
-      * ALGEBRAIC[AV_XU]
-      - CONSTANTS[AC_ktm_unblock]
-      * std::pow(Ca_TRPN_safe, CONSTANTS[AC_nperm] / 2.0)
-      * STATES[TmBlocked];
+        (1.0 - tmBlocked) - xw - xs;
 
     // -----------------------------------------------------------------
-    // 4.  Velocity-dependent detachment rates
+    // Crossbridge model
     // -----------------------------------------------------------------
-
-    // Strong-XB velocity term: gamma * ZETAS  (for ZETAS>0 or ZETAS<-1)
-    if (STATES[ZETAS] > 0.0)
-    {
-        ALGEBRAIC[AV_gamma_rate] =
-            CONSTANTS[AC_contraction_gamma] * STATES[ZETAS];
-    }
-    else if (STATES[ZETAS] < -1.0)
-    {
-        ALGEBRAIC[AV_gamma_rate] =
-            CONSTANTS[AC_contraction_gamma] * (-STATES[ZETAS] - 1.0);
-    }
-    else
-    {
-        ALGEBRAIC[AV_gamma_rate] = 0.0;
-    }
-
-    // Weak-XB velocity term: gamma_wu * |ZETAW|
-    ALGEBRAIC[AV_gamma_rate_w] =
-        CONSTANTS[AC_gamma_wu] * std::fabs(STATES[ZETAW]);
-
-    // -----------------------------------------------------------------
-    // 5.  Crossbridge fluxes
-    // -----------------------------------------------------------------
+    ALGEBRAIC[AV_xb_ws] =
+        CONSTANTS[AC_k_ws] * xw;
 
     ALGEBRAIC[AV_xb_uw] =
-        CONSTANTS[AC_k_uw] * ALGEBRAIC[AV_XU]
-      * (1.0 + CONSTANTS[AC_fMyBPC_PKA] / 2.0);       // U → W
+        CONSTANTS[AC_k_uw] * ALGEBRAIC[AV_XU];
 
-    ALGEBRAIC[AV_xb_ws]       = CONSTANTS[AC_k_ws] * STATES[XW]; // W → S
-    ALGEBRAIC[AV_xb_su]       = CONSTANTS[AC_k_su] * STATES[XS]; // S → U
-    ALGEBRAIC[AV_xb_wu]       = CONSTANTS[AC_k_wu] * STATES[XW]; // W → U
-    ALGEBRAIC[AV_xb_su_gamma] = ALGEBRAIC[AV_gamma_rate] * STATES[XS];
-    ALGEBRAIC[AV_xb_wu_gamma] = ALGEBRAIC[AV_gamma_rate_w] * STATES[XW];
+    ALGEBRAIC[AV_xb_wu] =
+        CONSTANTS[AC_k_wu] * xw;
 
-    // -----------------------------------------------------------------
-    // 6.  Velocity-distortion ODEs (ZETAS, ZETAW)
-    //     lambda_rate must be supplied by the caller in s^-1.
-    //     The factors A, cds, cdw are already in ms^-1 units (from
-    //     TWorld), but here we are working in SI (s^-1).
-    //     The caller is responsible for unit consistency.
-    // -----------------------------------------------------------------
+    ALGEBRAIC[AV_xb_su] =
+        CONSTANTS[AC_k_su] * xs;
 
-    const double lambda_rate = ALGEBRAIC[AV_lambda_rate];
+    const double positive_branch =
+        (zetas > 0.0) ? zetas : 0.0;
 
-    RATES[ZETAS] =
-        CONSTANTS[AC_A] * lambda_rate
-      - CONSTANTS[AC_cds] * STATES[ZETAS];
+    const double negative_branch =
+        (zetas < -1.0) ? (-zetas - 1.0) : 0.0;
 
-    RATES[ZETAW] =
-        CONSTANTS[AC_A] * lambda_rate
-      - CONSTANTS[AC_cdw] * STATES[ZETAW];
+    ALGEBRAIC[AV_gamma_rate] =
+        CONSTANTS[AC_gamma]
+      * ((positive_branch >= negative_branch)
+         ? positive_branch
+         : negative_branch);
 
-    // -----------------------------------------------------------------
-    // 7.  Crossbridge population ODEs
-    // -----------------------------------------------------------------
+    ALGEBRAIC[AV_xb_su_gamma] =
+        ALGEBRAIC[AV_gamma_rate] * xs;
+
+    ALGEBRAIC[AV_gamma_rate_w] =
+        CONSTANTS[AC_gamma_wu] * std::fabs(zetaw);
+
+    ALGEBRAIC[AV_xb_wu_gamma] =
+        ALGEBRAIC[AV_gamma_rate_w] * xw;
 
     RATES[XS] =
         ALGEBRAIC[AV_xb_ws]
@@ -406,20 +330,110 @@ CARDIAC_HOST_DEVICE inline void LandNiederer2017computeVariables
       - ALGEBRAIC[AV_xb_wu_gamma];
 
     // -----------------------------------------------------------------
-    // 8.  Active tension (algebraic output)
-    //     Ta = Lfac * PKAForceMultiplier * Tref/dr
-    //          * [(ZETAS+1)*XS + ZETAW*XW]
+    // Calcium -> troponin
+    // Original intact human reference: ca50 = 0.805 uM
     // -----------------------------------------------------------------
+    const double dl =
+        lambda - 1.0;
 
+    const double dl_for_ca50 =
+        (dl <= 0.2) ? dl : 0.2;
+
+    ALGEBRAIC[AV_ca50] =
+        CONSTANTS[AC_ca50_ref]
+      + CONSTANTS[AC_beta_1] * dl_for_ca50;
+
+    RATES[TRPN] =
+        CONSTANTS[AC_koff]
+      * (std::pow(Cai / ALGEBRAIC[AV_ca50],
+                  CONSTANTS[AC_TRPN_n])
+         * (1.0 - trpn)
+         - trpn);
+
+    // -----------------------------------------------------------------
+    // Tropomyosin blocking/unblocking
+    // -----------------------------------------------------------------
+    // Original MATLAB: min(100, TRPN^(-nperm/2)).
+    // A positive floor only prevents undefined pow(0,negative); because of
+    // the subsequent cap it gives the same limiting factor of 100 at TRPN=0.
+    const double trpn_safe =
+        (trpn > 1.0e-15) ? trpn : 1.0e-15;
+
+    const double blocking_factor_raw =
+        std::pow(
+            trpn_safe,
+            -CONSTANTS[AC_nperm] / 2.0);
+
+    const double blocking_factor =
+        (blocking_factor_raw <= 100.0)
+        ? blocking_factor_raw
+        : 100.0;
+
+    RATES[TmBlocked] =
+        CONSTANTS[AC_ktm_block]
+      * blocking_factor
+      * ALGEBRAIC[AV_XU]
+      - CONSTANTS[AC_ktm_unblock]
+      * std::pow(
+            trpn_safe,
+            CONSTANTS[AC_nperm] / 2.0)
+      * tmBlocked;
+
+    // -----------------------------------------------------------------
+    // Velocity dependence
+    // ORIGINAL: dlambda_dt must already be in ms^-1
+    // -----------------------------------------------------------------
+    RATES[ZETAS] =
+        CONSTANTS[AC_A] * dlambda_dt
+      - CONSTANTS[AC_cds] * zetas;
+
+    RATES[ZETAW] =
+        CONSTANTS[AC_A] * dlambda_dt
+      - CONSTANTS[AC_cdw] * zetaw;
+
+    // -----------------------------------------------------------------
+    // Original passive viscoelastic model
+    // -----------------------------------------------------------------
+    const double C =
+        lambda - 1.0;
+
+    const double cd =
+        STATES[Cd];
+
+    const double eta =
+        ((C - cd) < 0.0)
+        ? CONSTANTS[AC_eta_s]
+        : CONSTANTS[AC_eta_l];
+
+    ALGEBRAIC[AV_dCd_dt] =
+        CONSTANTS[AC_par_k]
+      * (C - cd)
+      / eta;
+
+    RATES[Cd] =
+        ALGEBRAIC[AV_dCd_dt];
+
+    ALGEBRAIC[AV_Fd] =
+        eta * ALGEBRAIC[AV_dCd_dt];
+
+    ALGEBRAIC[AV_F1] =
+        std::exp(CONSTANTS[AC_b] * C) - 1.0;
+
+    ALGEBRAIC[AV_Tp] =
+        CONSTANTS[AC_passive_a]
+      * (ALGEBRAIC[AV_F1] + ALGEBRAIC[AV_Fd]);
+
+    // -----------------------------------------------------------------
+    // Active and total tension
+    // -----------------------------------------------------------------
     ALGEBRAIC[AV_Ta] =
         ALGEBRAIC[AV_Lfac]
-      * CONSTANTS[AC_PKAForceMultiplier]
-      * CONSTANTS[AC_Tref]
-      / CONSTANTS[AC_dr]
-      * (  (STATES[ZETAS] + 1.0) * STATES[XS]
-         + STATES[ZETAW] * STATES[XW]);
+      * (CONSTANTS[AC_Tref] / CONSTANTS[AC_dr])
+      * ((zetas + 1.0) * xs + zetaw * xw);
+
+    ALGEBRAIC[AV_T] =
+        ALGEBRAIC[AV_Ta]
+      + ALGEBRAIC[AV_Tp];
 }
 
 #endif
-
-// ************************************************************************* //
