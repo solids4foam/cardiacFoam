@@ -21,11 +21,14 @@ Namespace
 Description
     Standalone generator for personalized eikonalECG action-potential
     templates. eikonalECG reconstructs a pseudo-ECG as
-    Vm(x,t) = U(t - psi(x)), where U is one of three fixed, compiled-in
-    templates (endo/mid/epi) stored in tissueTemplates.H. This component
-    instead generates those three templates at runtime by pacing three
-    single cells of a real ionicModel with a case's own ionic
-    parameterisation (heterogeneity constants and S1 stimulus protocol).
+    Vm(x,t) = U(t - psi(x)), where U is one of several fixed, compiled-in
+    templates (endo/mid/epi) stored in tissueTemplates.H, or one of N
+    dynamically-generated ones. This component generates templates at
+    runtime by pacing single cells of a real ionicModel with a case's own
+    ionic parameterisation (heterogeneity constants and S1 stimulus
+    protocol): 3 anchors (endo/mid/epi) for ionicHeterogeneity.mode
+    transmuralBands, or N anchors (one per named region) for mode
+    namedRegions.
 
     This file does not wire the generated templates into eikonalECG; it is
     an independent, separately testable component.
@@ -42,6 +45,7 @@ Author
 
 #include "scalarField.H"
 #include "dictionary.H"
+#include "List.H"
 
 namespace Foam
 {
@@ -55,17 +59,13 @@ struct DynamicTemplate
     scalarField valuesMv;   // mV, direct ionicModel::signal(VM) output
 };
 
-//- The three transmural anchor templates eikonalECG selects between.
-struct TemplateTriplet
-{
-    DynamicTemplate endo;
-    DynamicTemplate mid;
-    DynamicTemplate epi;
-};
-
 //- nBeats overrides ionicModelConfig.singleCellStimulus.nstim1; neither
-//  dict is mutated.
-TemplateTriplet generatePersonalizedTemplates
+//  dict is mutated. Returns one template per anchor: 3 entries
+//  ([endo, mid, epi], in that order) for mode transmuralBands (the
+//  default), or one entry per region (sorted by rangeMin, matching
+//  ionicHeterogeneity::parseNamedFieldRegions()'s own order) for mode
+//  namedRegions. Fatals on any other heterogeneityDict.mode.
+List<DynamicTemplate> generatePersonalizedTemplates
 (
     const dictionary& ionicModelConfig,
     const dictionary& heterogeneityDict,

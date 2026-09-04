@@ -110,27 +110,16 @@ void validateTemplate(const DynamicTemplate& tpl, const word& anchor)
     }
 }
 
-} // End unnamed namespace
 
-
-TemplateTriplet generatePersonalizedTemplates
+//- tPoints/anchorNames for mode transmuralBands: unchanged from the
+//  original 3-anchor implementation.
+void transmuralBandAnchors
 (
-    const dictionary& ionicModelConfig,
     const dictionary& heterogeneityDict,
-    const label nBeats,
-    const scalar captureDuration,
-    const scalar dt
+    scalarField& tPoints,
+    wordList& anchorNames
 )
 {
-    if (nBeats < 1 || captureDuration <= 0.0 || dt <= 0.0)
-    {
-        FatalErrorInFunction
-            << "Invalid template generation controls: nBeats=" << nBeats
-            << ", captureDuration=" << captureDuration << ", dt=" << dt
-            << ". Require nBeats >= 1 and captureDuration, dt > 0."
-            << exit(FatalError);
-    }
-
     const scalar endoMInterface =
         heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
     const scalar mEpiInterface =
@@ -171,14 +160,131 @@ TemplateTriplet generatePersonalizedTemplates
         tMid = 0.5*(endoMUpper + mEpiInterface);
     }
 
-    scalarField tPoints(3);
+    tPoints.setSize(3);
     tPoints[0] = 0.0;
     tPoints[1] = tMid;
     tPoints[2] = 1.0;
 
-    checkUnitInterval(tPoints[0], "endocardium");
-    checkUnitInterval(tPoints[1], "mid-myocardium");
-    checkUnitInterval(tPoints[2], "epicardium");
+    anchorNames.setSize(3);
+    anchorNames[0] = "endocardium";
+    anchorNames[1] = "mid-myocardium";
+    anchorNames[2] = "epicardium";
+
+    checkUnitInterval(tPoints[0], anchorNames[0]);
+    checkUnitInterval(tPoints[1], anchorNames[1]);
+    checkUnitInterval(tPoints[2], anchorNames[2]);
+}
+
+
+//- tPoints/anchorNames for mode namedRegions: one anchor per region, at
+//  the midpoint of that region's "pure" sub-range (the part of its range
+//  not eaten into by a blend zone with the PREVIOUS region -- mirroring
+//  transmuralBandAnchors' own mid-band treatment, generalized to N
+//  regions). Region 0 has no left neighbour, so its pure range is its
+//  full range.
+void namedRegionAnchors
+(
+    const dictionary& heterogeneityDict,
+    scalarField& tPoints,
+    wordList& anchorNames
+)
+{
+    if (!heterogeneityDict.found("regions"))
+    {
+        FatalErrorInFunction
+            << "eikonalTemplateGenerator: ionicHeterogeneity mode "
+            << "namedRegions requires a 'regions' sub-dictionary."
+            << exit(FatalError);
+    }
+
+    const List<ionicHeterogeneity::NamedFieldRegion> regions =
+        ionicHeterogeneity::parseNamedFieldRegions
+        (
+            heterogeneityDict.subDict("regions")
+        );
+
+    const word transitionMode =
+        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
+    const scalar transitionWidth =
+        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+
+    const label nRegions = regions.size();
+    tPoints.setSize(nRegions);
+    anchorNames.setSize(nRegions);
+
+    forAll(regions, i)
+    {
+        anchorNames[i] = regions[i].name;
+
+        if (i == 0 || transitionMode != "blend" || transitionWidth <= SMALL)
+        {
+            tPoints[i] = 0.5*(regions[i].rangeMin + regions[i].rangeMax);
+            continue;
+        }
+
+        const scalar pureStart = regions[i].rangeMin + transitionWidth;
+
+        if (pureStart >= regions[i].rangeMax - SMALL)
+        {
+            FatalErrorInFunction
+                << "eikonalTemplateGenerator: transitionWidth ("
+                << transitionWidth << ") leaves no pure region for '"
+                << regions[i].name << "' (range " << regions[i].rangeMin
+                << " " << regions[i].rangeMax << "). Reduce transitionWidth "
+                << "or widen this region."
+                << exit(FatalError);
+        }
+
+        tPoints[i] = 0.5*(pureStart + regions[i].rangeMax);
+        checkUnitInterval(tPoints[i], anchorNames[i]);
+    }
+}
+
+} // End unnamed namespace
+
+
+List<DynamicTemplate> generatePersonalizedTemplates
+(
+    const dictionary& ionicModelConfig,
+    const dictionary& heterogeneityDict,
+    const label nBeats,
+    const scalar captureDuration,
+    const scalar dt
+)
+{
+    if (nBeats < 1 || captureDuration <= 0.0 || dt <= 0.0)
+    {
+        FatalErrorInFunction
+            << "Invalid template generation controls: nBeats=" << nBeats
+            << ", captureDuration=" << captureDuration << ", dt=" << dt
+            << ". Require nBeats >= 1 and captureDuration, dt > 0."
+            << exit(FatalError);
+    }
+
+    const word mode =
+        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    scalarField tPoints;
+    wordList anchorNames;
+
+    if (mode == "transmuralBands")
+    {
+        transmuralBandAnchors(heterogeneityDict, tPoints, anchorNames);
+    }
+    else if (mode == "namedRegions")
+    {
+        namedRegionAnchors(heterogeneityDict, tPoints, anchorNames);
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "eikonalTemplateGenerator supports ionicHeterogeneity mode "
+            << "'transmuralBands' or 'namedRegions' only; got '" << mode
+            << "'."
+            << exit(FatalError);
+    }
+
+    const label nPoints = tPoints.size();
 
     if (!ionicModelConfig.found("singleCellStimulus"))
     {
@@ -203,7 +309,7 @@ TemplateTriplet generatePersonalizedTemplates
 
     // initialDeltaT is milliseconds; solveODE() below takes seconds.
     autoPtr<ionicModel> modelPtr =
-        ionicModel::New(modelDict, 3, dt*1000.0, true);
+        ionicModel::New(modelDict, nPoints, dt*1000.0, true);
     ionicModel& model = modelPtr();
 
     model.configureIonicHeterogeneity
@@ -212,8 +318,8 @@ TemplateTriplet generatePersonalizedTemplates
         modelDict.subDict("ionicHeterogeneity")
     );
 
-    scalarField Vm(3, 0.0);
-    scalarField Im(3, 0.0);
+    scalarField Vm(nPoints, 0.0);
+    scalarField Im(nPoints, 0.0);
 
     scalar t = 0.0;
     const label nFullPreSteps = label(std::floor(tCapture/dt + 1e-9));
@@ -233,16 +339,15 @@ TemplateTriplet generatePersonalizedTemplates
 
     const label nSamples = label(std::ceil(captureDuration/dt - 1e-9)) + 1;
 
-    TemplateTriplet result;
-    DynamicTemplate* traces[3] = {&result.endo, &result.mid, &result.epi};
+    List<DynamicTemplate> result(nPoints);
 
-    for (label p = 0; p < 3; ++p)
+    for (label p = 0; p < nPoints; ++p)
     {
-        traces[p]->times.setSize(nSamples);
-        traces[p]->valuesMv.setSize(nSamples);
-        traces[p]->times[0] = 0.0;
+        result[p].times.setSize(nSamples);
+        result[p].valuesMv.setSize(nSamples);
+        result[p].times[0] = 0.0;
         // mV, not V -- unit conversion is the caller's job.
-        traces[p]->valuesMv[0] = model.signal(p, CouplingSignal::VM);
+        result[p].valuesMv[0] = model.signal(p, CouplingSignal::VM);
     }
 
     for (label k = 1; k < nSamples; ++k)
@@ -250,16 +355,17 @@ TemplateTriplet generatePersonalizedTemplates
         model.solveODE(t, dt, Vm, Im);
         t += dt;
 
-        for (label p = 0; p < 3; ++p)
+        for (label p = 0; p < nPoints; ++p)
         {
-            traces[p]->times[k] = scalar(k)*dt;
-            traces[p]->valuesMv[k] = model.signal(p, CouplingSignal::VM);
+            result[p].times[k] = scalar(k)*dt;
+            result[p].valuesMv[k] = model.signal(p, CouplingSignal::VM);
         }
     }
 
-    validateTemplate(result.endo, "endocardium");
-    validateTemplate(result.mid, "mid-myocardium");
-    validateTemplate(result.epi, "epicardium");
+    for (label p = 0; p < nPoints; ++p)
+    {
+        validateTemplate(result[p], anchorNames[p]);
+    }
 
     return result;
 }
