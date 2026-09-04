@@ -206,13 +206,16 @@ def _run_from_plan(plan: dict, run_doc_path: Path) -> dict:
 # --------------------------------------------------------------------------- #
 
 _TUTORIAL_REL = "electrophysiologyProtocols/eikonalECGPersonalized"
+_NAMED_REGIONS_TUTORIAL_REL = "electrophysiologyProtocols/eikonalECGPersonalizedNamedRegions"
 
 
-def _stage_case(tmp_path_factory, *, tag: str) -> tuple[Path, Path]:
+def _stage_case(
+    tmp_path_factory, *, tag: str, tutorial_rel: str = _TUTORIAL_REL,
+) -> tuple[Path, Path]:
     root = tmp_path_factory.mktemp(f"eikonalecg_{tag}") / "tutorials"
-    case_path = root / _TUTORIAL_REL
+    case_path = root / tutorial_rel
     case_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(monorepo_root / "tutorials" / _TUTORIAL_REL, case_path)
+    shutil.copytree(monorepo_root / "tutorials" / tutorial_rel, case_path)
     return root, case_path
 
 
@@ -271,16 +274,23 @@ class CaseResult:
 
 
 def _drive_case(
-    tmp_path_factory, *, tag: str, mutate=None, tolerate_known_bug: bool = False,
+    tmp_path_factory,
+    *,
+    tag: str,
+    mutate=None,
+    tolerate_known_bug: bool = False,
+    tutorial_rel: str = _TUTORIAL_REL,
 ) -> CaseResult:
-    tutorials_root, case_path = _stage_case(tmp_path_factory, tag=tag)
+    tutorials_root, case_path = _stage_case(
+        tmp_path_factory, tag=tag, tutorial_rel=tutorial_rel
+    )
     if mutate is not None:
         mutate(_electro_properties(case_path))
 
     if tolerate_known_bug:
-        plan = _plan_strict_tolerating_known_fallback_bug(tutorials_root, _TUTORIAL_REL)
+        plan = _plan_strict_tolerating_known_fallback_bug(tutorials_root, tutorial_rel)
     else:
-        plan = _plan_strict(tutorials_root, _TUTORIAL_REL)
+        plan = _plan_strict(tutorials_root, tutorial_rel)
         assert plan.get("status") == "ok", (
             f"plan --strict failed unexpectedly for {tag}: "
             f"{plan.get('validation_diagnostics')}"
@@ -325,6 +335,19 @@ def fallback_result(tmp_path_factory) -> CaseResult:
         tag="fallback",
         mutate=_strip_personalized_templates_block,
         tolerate_known_bug=True,
+    )
+
+
+@pytest.fixture(scope="module")
+def named_regions_result(tmp_path_factory) -> CaseResult:
+    """eikonalECGPersonalizedNamedRegions: identical mesh/stimulus/
+    personalizedTemplates config to `personalized_result`, but
+    ionicHeterogeneity.mode namedRegions with 3 regions reproducing
+    transmuralBands' 0/0.3/0.7/1 boundaries exactly."""
+    return _drive_case(
+        tmp_path_factory,
+        tag="named_regions",
+        tutorial_rel=_NAMED_REGIONS_TUTORIAL_REL,
     )
 
 
@@ -384,17 +407,28 @@ _GENERATOR_SOURCE = (
 def test_opt_in_smoke_completes_writes_finite_ecg_and_generates_exactly_three_templates(
     personalized_result,
 ):
-    # --- Static half: the generator's contract is fixed at exactly three
-    # named anchors, each gated behind validateTemplate() -- which raises a
-    # FatalError (aborting the whole run before any ECG sampling) if that
-    # anchor's generated trace is invalid. This only reads the three anchor
-    # names/count out of the real source; it does not reimplement or
-    # second-guess validateTemplate()'s own logic.
+    # --- Static half: for mode transmuralBands (this tutorial's mode), the
+    # generator's contract is fixed at exactly three named anchors -- now
+    # produced by transmuralBandAnchors() and validated generically in a
+    # loop over anchorNames[] (generalized to N anchors for mode
+    # namedRegions), rather than three separate hardcoded validateTemplate()
+    # calls as before namedRegions support was added. This checks
+    # transmuralBandAnchors() still names exactly these three anchors, in
+    # order, and that the loop calling validateTemplate() over every
+    # generated anchor is still present -- without reimplementing or
+    # second-guessing validateTemplate()'s own logic.
     source = _GENERATOR_SOURCE.read_text()
-    anchors = re.findall(r'validateTemplate\([^,]+,\s*"([^"]+)"\)', source)
-    assert anchors == ["endocardium", "mid-myocardium", "epicardium"], (
-        "eikonalTemplateGenerator.C's validated-anchor set changed from the "
-        "three this smoke test's 'exactly three templates' claim depends on"
+    anchor_assignments = re.findall(r'anchorNames\[\d\] = "([^"]+)";', source)
+    assert anchor_assignments == [
+        "endocardium", "mid-myocardium", "epicardium",
+    ], (
+        "eikonalTemplateGenerator.C's transmuralBandAnchors() anchor names "
+        "changed from the three this smoke test's 'exactly three templates' "
+        "claim depends on"
+    )
+    assert "validateTemplate(result[p], anchorNames[p]);" in source, (
+        "eikonalTemplateGenerator.C no longer validates every generated "
+        "anchor via the expected generic loop"
     )
 
     # --- Dynamic half: the run actually reached the post-generation ECG
@@ -413,6 +447,39 @@ def test_opt_in_smoke_completes_writes_finite_ecg_and_generates_exactly_three_te
     assert ecg.shape == (6001, 5)
     assert ecg[0, 0] == pytest.approx(0.0)
     assert ecg[-1, 0] == pytest.approx(0.6)
+
+
+# --------------------------------------------------------------------------- #
+# Check 2b -- namedRegions/transmuralBands N=3 equivalence.
+#
+# eikonalECGPersonalizedNamedRegions reproduces eikonalECGPersonalized's
+# transmuralBands boundaries (endoMInterface=0.3, mEpiInterface=0.7) as 3
+# namedRegions entries with identical ranges, transitionWidth, transitionMode
+# and smoothing. Both modes now flow through the same generalized
+# List<DynamicTemplate>/List<scalarField> storage and blend loop in
+# eikonalECG.C (transmuralBands via
+# ionicHeterogeneity::synthesizeTransmuralBandRegions(), namedRegions via
+# parseNamedFieldRegions() directly), so their pseudo-ECG output is expected
+# to be bit-identical, not merely close -- verified manually before writing
+# this test: both traces matched to max abs diff 0.0 / RMSE 0.0 across all
+# 6001 samples and 4 electrodes. This is the end-to-end counterpart of the
+# unit-level equivalence proved by
+# src/ionicModels/tests/test_ionic_heterogeneity_synthesize_transmural_regions.py.
+# --------------------------------------------------------------------------- #
+
+def test_named_regions_matches_transmural_bands_exactly(
+    personalized_result, named_regions_result,
+):
+    pers, named = personalized_result.ecg, named_regions_result.ecg
+    assert pers.shape == named.shape
+    assert np.array_equal(pers[:, 0], named[:, 0]), "time grids differ"
+
+    diff = np.abs(pers[:, 1:] - named[:, 1:])
+    assert diff.max() == 0.0, (
+        f"namedRegions and transmuralBands should be bit-identical for "
+        f"equivalent region boundaries, but max abs diff = {diff.max():.3g}"
+    )
+    assert np.isfinite(named).all()
 
 
 # --------------------------------------------------------------------------- #

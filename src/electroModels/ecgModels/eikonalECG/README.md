@@ -234,12 +234,17 @@ template derivative feeds the eikonal chain rule (mirroring the compiled
 path's own conversion) — nowhere else in the personalized path does a unit
 conversion occur.
 
-**Only `transmuralBands` is supported.** The `ionicHeterogeneity` block
-your solver coefficients already configure is reused as-is (never
-re-parsed into a separate scheme) — but only for `mode transmuralBands`.
-`namedRegions`, `cellZoneRegions`, and `apexBaseBands` are not supported by
-this first implementation; using `personalizedTemplates` with any other
-mode is rejected (see timing note below).
+**`transmuralBands` or `namedRegions` are supported.** The
+`ionicHeterogeneity` block your solver coefficients already configure is
+reused as-is (never re-parsed into a separate scheme). For
+`transmuralBands`, three templates are generated (endo/mid/epi), exactly as
+before. For `namedRegions`, one template is generated per entry in the
+mode's `regions` sub-dictionary, paced at each region's own representative
+field value, and blended per cell via the same `namedRegionWeightsAt()`
+weighting the monodomain path uses — with the same field name, transition
+width, mode, and smoothing keys `transmuralBands` already reads. `apexBaseBands`
+and `cellZoneRegions` are not supported by either mode; using
+`personalizedTemplates` with either is rejected (see timing note below).
 
 **Rejected at `eikonalECG` construction** (before any case/mesh setup, so
 these specific misconfigurations fail immediately when the case's dict is
@@ -252,9 +257,9 @@ its `ionicModel`/`singleCellStimulus`; `nBeats < 1`; non-positive
 **Rejected at first `solve()`, not construction** (these two need the
 mesh and `constant/electroProperties`, which don't exist yet when the
 `eikonalECG` object is constructed): a missing `ionicHeterogeneity` block,
-and `mode` other than `transmuralBands`. A case with one of these problems
-will construct successfully and only fatal once the solver actually starts
-solving.
+and `mode` other than `transmuralBands` or `namedRegions`. A case with one
+of these problems will construct successfully and only fatal once the
+solver actually starts solving.
 
 **Without `personalizedTemplates`, nothing changes:** the compiled
 `tissueTemplates.H` arrays, `transmuralBands`-only weighting, and every

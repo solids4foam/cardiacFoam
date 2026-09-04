@@ -68,7 +68,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "ionicHeterogeneity.field": {"type": "string"},
                 "ionicHeterogeneity.mode": {
                     "type": "string",
-                    "enum": ["transmuralBands"],
+                    "enum": ["transmuralBands", "namedRegions", "cellZoneRegions"],
                 },
                 "ionicHeterogeneity.endoMInterface": {"type": ["string", "number"]},
                 "ionicHeterogeneity.mEpiInterface": {"type": ["string", "number"]},
