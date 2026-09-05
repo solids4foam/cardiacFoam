@@ -1,0 +1,32 @@
+{
+  "base": {
+    "entry": "cable1DRestitution",
+    "archive_dir_name": "outputsStewartDI90BoundariesDt1e6",
+    "ionic_models": ["Stewart"],
+    "ionic_model_tissue_map": {"Stewart": ["myocyte"]},
+    "n_s1": 5,
+    "n_s2": 1,
+    "reference_repolarization90_s": 4.304086260869566,
+    "end_time_buffer_s": 1.0,
+    "parallel": true,
+    "electro_property_overrides": {
+      "$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug": "()"
+    }
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dt_values": [[0.001]],
+      "dx_values": [[0.1]],
+      "requested_di90_values_ms": [
+        [0.0],
+        [100.0],
+        [200.0],
+        [300.0],
+        [850.0],
+        [900.0],
+        [950.0]
+      ]
+    }
+  }
+}

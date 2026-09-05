@@ -1,5 +1,20 @@
 from __future__ import annotations
 
+
+def generate_spatial_stimulus_lists(
+    times_s: list[float], bounds_min: str, bounds_max: str,
+    duration_s: str, intensity: str,
+) -> dict[str, str]:
+    count = len(times_s)
+    return {
+        "stimulusStartTimeList": "(" + " ".join(f"{time:.12g}" for time in times_s) + ")",
+        "stimulusLocationMinList": "(" + " ".join([bounds_min] * count) + ")",
+        "stimulusLocationMaxList": "(" + " ".join([bounds_max] * count) + ")",
+        "stimulusDurationList": "(" + " ".join([duration_s] * count) + ")",
+        "stimulusIntensityList": "(" + " ".join([intensity] * count) + ")",
+    }
+
+
 def generate_spatial_s1_s2_stimulus_lists(
     s1_interval_ms: float, n_s1: int, s2_interval_ms: float, n_s2: int,
     bounds_min: str, bounds_max: str, duration_s: str, intensity: str
@@ -11,11 +26,6 @@ def generate_spatial_s1_s2_stimulus_lists(
     for i in range(n_s2):
         times.append(last_s1_time_s + (i + 1) * (s2_interval_ms / 1000.0))
     
-    count = len(times)
-    return {
-        "stimulusStartTimeList": "(" + " ".join(f"{t:.6g}" for t in times) + ")",
-        "stimulusLocationMinList": "(" + " ".join([bounds_min] * count) + ")",
-        "stimulusLocationMaxList": "(" + " ".join([bounds_max] * count) + ")",
-        "stimulusDurationList": "(" + " ".join([duration_s] * count) + ")",
-        "stimulusIntensityList": "(" + " ".join([intensity] * count) + ")",
-    }
+    return generate_spatial_stimulus_lists(
+        times, bounds_min, bounds_max, duration_s, intensity
+    )
