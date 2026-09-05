@@ -240,6 +240,44 @@ void namedRegionAnchors
     }
 }
 
+//- tPoints/anchorNames for mode cellZoneRegions: one anchor per region, no
+//  blending (this mode has no transitionWidth/smoothing/transitionMode at
+//  all in the monodomain path). Anchor i is given the synthetic coordinate
+//  scalar(i); ionicHeterogeneityOrchestrator::configureCellZoneRegionHeterogeneity
+//  resolves a cell's region via round(regionIndices[cellI]) used as a
+//  direct 0-based array index, so scalar(i) correctly selects regions[i].
+void cellZoneRegionAnchors
+(
+    const dictionary& heterogeneityDict,
+    scalarField& tPoints,
+    wordList& anchorNames
+)
+{
+    if (!heterogeneityDict.found("regions"))
+    {
+        FatalErrorInFunction
+            << "eikonalTemplateGenerator: ionicHeterogeneity mode "
+            << "cellZoneRegions requires a 'regions' sub-dictionary."
+            << exit(FatalError);
+    }
+
+    const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
+        ionicHeterogeneity::parseNamedCellZoneRegions
+        (
+            heterogeneityDict.subDict("regions")
+        );
+
+    const label nRegions = regions.size();
+    tPoints.setSize(nRegions);
+    anchorNames.setSize(nRegions);
+
+    forAll(regions, i)
+    {
+        tPoints[i] = scalar(i);
+        anchorNames[i] = regions[i].name;
+    }
+}
+
 } // End unnamed namespace
 
 
@@ -275,12 +313,16 @@ List<DynamicTemplate> generatePersonalizedTemplates
     {
         namedRegionAnchors(heterogeneityDict, tPoints, anchorNames);
     }
+    else if (mode == "cellZoneRegions")
+    {
+        cellZoneRegionAnchors(heterogeneityDict, tPoints, anchorNames);
+    }
     else
     {
         FatalErrorInFunction
             << "eikonalTemplateGenerator supports ionicHeterogeneity mode "
-            << "'transmuralBands' or 'namedRegions' only; got '" << mode
-            << "'."
+            << "'transmuralBands', 'namedRegions', or 'cellZoneRegions' "
+            << "only; got '" << mode << "'."
             << exit(FatalError);
     }
 
