@@ -397,19 +397,88 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    const bool namedRegionsSupported =
-        mode == "namedRegions" && personalizedTemplatesEnabled_;
+    const bool multiRegionModeSupported =
+        (mode == "namedRegions" || mode == "cellZoneRegions")
+     && personalizedTemplatesEnabled_;
 
-    if (mode != "transmuralBands" && !namedRegionsSupported)
+    if (mode != "transmuralBands" && !multiRegionModeSupported)
     {
         FatalErrorInFunction
             << "eikonalECG supports ionicHeterogeneity mode "
-            << "'transmuralBands' always, or 'namedRegions' only when "
-            << "personalizedTemplates is also enabled (the fixed 3-curve "
-            << "compiled fallback cannot represent an arbitrary number of "
-            << "named regions); mode '" << mode << "' cannot be represented "
-            << "by per-region template weights here."
+            << "'transmuralBands' always, or 'namedRegions'/"
+            << "'cellZoneRegions' only when personalizedTemplates is also "
+            << "enabled (the fixed 3-curve compiled fallback cannot "
+            << "represent an arbitrary number of regions); mode '" << mode
+            << "' cannot be represented by per-region template weights here."
             << exit(FatalError);
+    }
+
+    if (mode == "cellZoneRegions")
+    {
+        const List<ionicHeterogeneity::NamedCellZoneRegion> czRegions =
+            ionicHeterogeneity::parseNamedCellZoneRegions
+            (
+                hetDict.subDict("regions")
+            );
+
+        const label nCzRegions = czRegions.size();
+        regionWeights_.setSize(nCzRegions);
+        forAll(regionWeights_, i)
+        {
+            regionWeights_[i].setSize(mesh.nCells(), 0.0);
+        }
+
+        boolList claimed(mesh.nCells(), false);
+
+        forAll(czRegions, regionIndex)
+        {
+            const word& zoneName = czRegions[regionIndex].cellZone;
+            const label zoneId = mesh.cellZones().findZoneID(zoneName);
+
+            if (zoneId < 0)
+            {
+                FatalErrorInFunction
+                    << "eikonalECG personalizedTemplates: cellZone '"
+                    << zoneName << "' (region '"
+                    << czRegions[regionIndex].name << "') not found in "
+                    << "this mesh."
+                    << exit(FatalError);
+            }
+
+            const labelList& zoneCells = mesh.cellZones()[zoneId];
+
+            forAll(zoneCells, i)
+            {
+                const label cellI = zoneCells[i];
+
+                if (claimed[cellI])
+                {
+                    FatalErrorInFunction
+                        << "eikonalECG personalizedTemplates: cell " << cellI
+                        << " is claimed by more than one cellZoneRegions "
+                        << "entry."
+                        << exit(FatalError);
+                }
+
+                claimed[cellI] = true;
+                regionWeights_[regionIndex][cellI] = 1.0;
+            }
+        }
+
+        forAll(claimed, cellI)
+        {
+            if (!claimed[cellI])
+            {
+                FatalErrorInFunction
+                    << "eikonalECG personalizedTemplates: cell " << cellI
+                    << " is not claimed by any cellZoneRegions entry. "
+                    << "Every mesh cell must belong to exactly one named "
+                    << "cell zone."
+                    << exit(FatalError);
+            }
+        }
+
+        return;
     }
 
     const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
@@ -547,11 +616,17 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
     const dictionary& hetDict = *hetDictPtr;
     const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    if (mode != "transmuralBands" && mode != "namedRegions")
+    if
+    (
+        mode != "transmuralBands"
+     && mode != "namedRegions"
+     && mode != "cellZoneRegions"
+    )
     {
         FatalErrorInFunction
             << "eikonalECG personalizedTemplates supports ionicHeterogeneity "
-            << "mode 'transmuralBands' or 'namedRegions' only; mode '"
+            << "mode 'transmuralBands', 'namedRegions', or "
+            << "'cellZoneRegions' only; mode '"
             << mode << "' cannot be used to generate anchor templates."
             << exit(FatalError);
     }
