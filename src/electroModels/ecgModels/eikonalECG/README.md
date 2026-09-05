@@ -234,17 +234,22 @@ template derivative feeds the eikonal chain rule (mirroring the compiled
 path's own conversion) — nowhere else in the personalized path does a unit
 conversion occur.
 
-**`transmuralBands` or `namedRegions` are supported.** The
-`ionicHeterogeneity` block your solver coefficients already configure is
-reused as-is (never re-parsed into a separate scheme). For
+**`transmuralBands`, `namedRegions`, or `cellZoneRegions` are supported.**
+The `ionicHeterogeneity` block your solver coefficients already configure
+is reused as-is (never re-parsed into a separate scheme). For
 `transmuralBands`, three templates are generated (endo/mid/epi), exactly as
 before. For `namedRegions`, one template is generated per entry in the
 mode's `regions` sub-dictionary, paced at each region's own representative
 field value, and blended per cell via the same `namedRegionWeightsAt()`
 weighting the monodomain path uses — with the same field name, transition
-width, mode, and smoothing keys `transmuralBands` already reads. `apexBaseBands`
-and `cellZoneRegions` are not supported by either mode; using
-`personalizedTemplates` with either is rejected (see timing note below).
+width, mode, and smoothing keys `transmuralBands` already reads. For
+`cellZoneRegions`, one template is generated per entry in the mode's
+`regions` sub-dictionary (each naming a mesh `cellZone`), with a crisp
+(unblended) per-cell weight of 1.0 for cells in that zone — this mode has
+no `field`/`transitionWidth`/`smoothing`/`transitionMode` concept at all,
+matching how the monodomain path already treats it. `apexBaseBands` is not
+supported by any mode; using `personalizedTemplates` with it is rejected
+(see timing note below).
 
 **Rejected at `eikonalECG` construction** (before any case/mesh setup, so
 these specific misconfigurations fail immediately when the case's dict is
@@ -257,9 +262,13 @@ its `ionicModel`/`singleCellStimulus`; `nBeats < 1`; non-positive
 **Rejected at first `solve()`, not construction** (these two need the
 mesh and `constant/electroProperties`, which don't exist yet when the
 `eikonalECG` object is constructed): a missing `ionicHeterogeneity` block,
-and `mode` other than `transmuralBands` or `namedRegions`. A case with one
-of these problems will construct successfully and only fatal once the
-solver actually starts solving.
+and `mode` other than `transmuralBands`, `namedRegions`, or
+`cellZoneRegions`. For `cellZoneRegions` specifically, a mesh cell not
+claimed by exactly one region's `cellZone` (unclaimed, or claimed by more
+than one) also fatals here, since zone membership is a mesh property, not
+a dict property, and so cannot be checked earlier. A case with one of
+these problems will construct successfully and only fatal once the solver
+actually starts solving.
 
 **Without `personalizedTemplates`, nothing changes:** the compiled
 `tissueTemplates.H` arrays, `transmuralBands`-only weighting, and every

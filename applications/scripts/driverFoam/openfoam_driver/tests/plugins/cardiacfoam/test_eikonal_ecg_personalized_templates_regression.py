@@ -207,6 +207,7 @@ def _run_from_plan(plan: dict, run_doc_path: Path) -> dict:
 
 _TUTORIAL_REL = "electrophysiologyProtocols/eikonalECGPersonalized"
 _NAMED_REGIONS_TUTORIAL_REL = "electrophysiologyProtocols/eikonalECGPersonalizedNamedRegions"
+_CELLZONE_REGIONS_TUTORIAL_REL = "electrophysiologyProtocols/eikonalECGPersonalizedCellZoneRegions"
 
 
 def _stage_case(
@@ -352,6 +353,21 @@ def named_regions_result(tmp_path_factory) -> CaseResult:
 
 
 @pytest.fixture(scope="module")
+def cellzone_regions_result(tmp_path_factory) -> CaseResult:
+    """eikonalECGPersonalizedCellZoneRegions: identical mesh/stimulus/
+    personalizedTemplates config to `personalized_result`, but
+    ionicHeterogeneity.mode cellZoneRegions with 3 mesh cellZones (built
+    via topoSet in Allrun) whose cell-centered x-ranges reproduce
+    transmuralBands' 0/0.3/0.7/1 boundaries as closely as a crisp,
+    unblended whole-cell partition can."""
+    return _drive_case(
+        tmp_path_factory,
+        tag="cellzone_regions",
+        tutorial_rel=_CELLZONE_REGIONS_TUTORIAL_REL,
+    )
+
+
+@pytest.fixture(scope="module")
 def gkr_scaled_result(tmp_path_factory) -> CaseResult:
     """Same tutorial as `personalized_result`, but AC_GKr scaled to 30% in
     ionicConstantOverrides.global -- a real, verified-effective TWorld
@@ -480,6 +496,36 @@ def test_named_regions_matches_transmural_bands_exactly(
         f"equivalent region boundaries, but max abs diff = {diff.max():.3g}"
     )
     assert np.isfinite(named).all()
+
+
+# --------------------------------------------------------------------------- #
+# Check 2c -- cellZoneRegions smoke test.
+#
+# Unlike namedRegions (Check 2b), cellZoneRegions is NOT expected to
+# reproduce transmuralBands' output bit-for-bit: it is a crisp, unblended
+# per-cell assignment (no transitionWidth/smoothing/transitionMode at all),
+# whereas transmuralBands smoothly blends cells inside a transition zone
+# (here, the mesh's cell at x=0.00625, t=0.3125, falls inside the
+# [0.3, 0.4) endo/mid blend zone and gets a ~96%/4% endo/mid blend under
+# transmuralBands/namedRegions, vs. a pure 100% mid assignment under
+# cellZoneRegions' whole-cell partition). What IS already proven, at the
+# unit level (this session's scratchpad verification, not re-asserted
+# here), is that each baseline's generated template is identical regardless
+# of which mode reaches it. This check only asserts the crisp path
+# completes, produces a finite, correctly-shaped, non-degenerate ECG --
+# the same sanity bar Check 2 applies to transmuralBands/personalized.
+# --------------------------------------------------------------------------- #
+
+def test_cellzone_regions_completes_and_writes_finite_ecg(cellzone_regions_result):
+    assert "eikonalECG: wrote sampled ECG" in cellzone_regions_result.log_text
+
+    ecg = cellzone_regions_result.ecg
+    assert np.isfinite(ecg).all(), "eikonalECG.dat contains non-finite values"
+    assert ecg.shape == (6001, 5)
+    assert ecg[0, 0] == pytest.approx(0.0)
+    assert ecg[-1, 0] == pytest.approx(0.6)
+    # Not a flat/degenerate trace.
+    assert np.abs(ecg[:, 1:]).max() > 1e-6
 
 
 # --------------------------------------------------------------------------- #
