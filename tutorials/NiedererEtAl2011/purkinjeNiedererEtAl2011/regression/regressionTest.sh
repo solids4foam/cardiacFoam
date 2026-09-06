@@ -19,7 +19,7 @@ IFS=$'\n\t'
 # ============================================================
 
 REF_FILE="regression/purkinjeSlab.reference"
-END_TIME=0.02
+END_TIME=0.32
 DT=1e-5
 GRAPH_STEPS=2000
 BLOCKMESH_LOGFILE="log.blockMesh"
@@ -155,6 +155,22 @@ extractEikonalPurkinjeAT()
         postProcessing/purkinjeNetwork.dat
 }
 
+# Coupled monodomain case: graph node Vm written over time to
+# purkinjeNetwork.dat. Columns: 1 = time, 2..9 = pvj0..pvj7
+# IcouplingSource, 10 onwards = node0.._Vm_V (export order is
+# "IcouplingSource Vm"). Returns the first sample at or after ${atTime}.
+extractNodeVmAtTime()
+{
+    local nodeKey="$1"
+    local atTime="$2"
+    local nodeNum="${nodeKey#node}"
+    local column=$((nodeNum + 10))
+
+    awk -v col="${column}" -v t="${atTime}" \
+        '$1 !~ /^#/ && $1 >= t { print $col; exit }' \
+        postProcessing/purkinjeNetwork.dat
+}
+
 extractReferenceValue()
 {
     local kind="$1"
@@ -178,6 +194,9 @@ extractReferenceValue()
             ;;
         eikonalPurkinjeAT)
             extractEikonalPurkinjeAT "${key}"
+            ;;
+        coupledRootVm)
+            extractNodeVmAtTime "${key}" "${metric#at}"
             ;;
         *)
             return 1

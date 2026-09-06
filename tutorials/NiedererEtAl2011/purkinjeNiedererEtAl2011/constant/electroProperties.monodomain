@@ -62,10 +62,10 @@ monodomainSolverCoeffs
 
                 rootStimulus
                 {
-                    node      0;
-                    startTime 0.01;
-                    duration  0.002;
-                    intensity 500000.0;
+                    node          0;
+                    startTimeList (0.01 0.3);
+                    duration      0.002;
+                    intensity     500000.0;
                 }
 
                 solver         RKF45;
@@ -73,7 +73,7 @@ monodomainSolverCoeffs
 
                 outputVariables
                 {
-                    export ( IcouplingSource);
+                    export ( IcouplingSource Vm);
                     debug  ( IcouplingSource);
                 }
             }
