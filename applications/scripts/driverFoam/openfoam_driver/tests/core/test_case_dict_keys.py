@@ -124,12 +124,9 @@ def test_strict_plan_reports_a_misspelled_key_without_failing(tmp_path):
     case = tutorials_root / "case"
     shutil.copytree(_SINGLE_CELL, case)
     ep = case / "constant" / "electroProperties"
-    ep.write_text(
-        ep.read_text().replace(
-            "activeTensionModel LandNiederer;",
-            "activeTensionModl LandNiederer;",
-        )
-    )
+    original = ep.read_text()
+    assert original.count("activeTensionModel ") == 1
+    ep.write_text(original.replace("activeTensionModel ", "activeTensionModl ", 1))
 
     report = strict_plan(
         "case",

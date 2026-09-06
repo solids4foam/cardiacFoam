@@ -109,7 +109,7 @@ def main() -> None:
     catalog = build_catalog()
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(catalog, indent=2, sort_keys=True))
+    out_path.write_text(json.dumps(catalog, indent=2, sort_keys=True, default=repr))
 
 
 if __name__ == "__main__":

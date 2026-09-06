@@ -53,13 +53,18 @@ def test_readme_uses_registered_compact_batched_selectors():
         assert f"`{model}compactBatched`" in readme
 
 
-def test_eikonal_ecg_rejects_non_transmural_modes_before_weighting():
+def test_eikonal_ecg_rejects_unsupported_modes_before_weighting():
     source = (
         REPO_ROOT / "src/electroModels/ecgModels/eikonalECG/eikonalECG.C"
     ).read_text()
-    guard = 'if (mode != "transmuralBands")'
-    weighting = "ionicHeterogeneity::transmuralBandWeights"
+    guard = 'if (mode != "transmuralBands" && !multiRegionModeSupported)'
+    weighting = "ionicHeterogeneity::synthesizeTransmuralBandRegions"
     assert guard in source
     assert source.index(guard) < source.index(weighting)
-    assert "namedRegions" not in source
-    assert "cellZoneRegions" not in source
+
+    gate = (
+        '(mode == "namedRegions" || mode == "cellZoneRegions")\n'
+        "     && personalizedTemplatesEnabled_"
+    )
+    assert gate in source
+    assert source.index(gate) < source.index(guard)

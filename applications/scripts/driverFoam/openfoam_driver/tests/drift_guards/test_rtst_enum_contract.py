@@ -135,6 +135,13 @@ NON_RTST_DRIVER_PATHS: frozenset[str] = frozenset({
     "$ELECTRO_MODEL_COEFFS.conductionNetworkDomains.<name>"
     ".purkinjeGraphModelCoeffs.dimension",
     "$ELECTRO_MODEL_COEFFS.solver",                  # OpenFOAM ODESolver
+    # Same tissue and ODESolver selectors at eikonalECG personalizedTemplates
+    # scope: eikonalTemplateGenerator.C copies the nested ionicModelConfig
+    # dict into the ionic model, which reads them by their ordinary names.
+    "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>"
+    ".personalizedTemplates.ionicModelConfig.tissue",
+    "$ELECTRO_MODEL_COEFFS.ecgDomains.<name>"
+    ".personalizedTemplates.ionicModelConfig.solver",
     "$ELECTRO_MODEL_COEFFS.couplingSignal",
     # timeCouplingScheme is a plain lookupOrDefault<word> compared against two
     # literals in myocardiumDomain.C:359-365, with a FatalError otherwise --
