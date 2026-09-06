@@ -218,7 +218,7 @@ class TestConductionSystemSchemaContract(unittest.TestCase):
         )
 
     def test_root_stimulus_sub_entries_documented(self):
-        for sub in ("startTime", "duration", "intensity", "node"):
+        for sub in ("startTime", "startTimeList", "duration", "intensity", "node"):
             matching = [
                 p
                 for p in self.entries
