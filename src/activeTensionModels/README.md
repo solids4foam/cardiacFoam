@@ -70,7 +70,14 @@ the `ElectromechanicalSignalProvider` interface used by `ionicModel`.
 The provider contract is `Vm` in mV and `Cai` in mM. Models consume those
 canonical values by default; `driveSignalScaleFactor()` handles a model-local
 input-unit conversion at the shared signal boundary. The original Land 2017
-models use it to convert `Cai` from mM to µM.
+models use it to convert `Cai` from mM to µM. The TWorld variants leave it at
+`1.0` on purpose — their maths header converts mM→µM internally, so adding a
+scale factor there would double-convert.
+Time is handled by the sibling hook `timeScaleFactor()`, which is pure
+virtual: every model states how OpenFOAM seconds map onto its own time unit,
+even when the answer is `1.0`. See
+[ACTIVE_TENSION_MODELS_ARCHITECTURE.md](ACTIVE_TENSION_MODELS_ARCHITECTURE.md)
+for the per-model table.
 Both scalar Land variants use `preconditioningTime` (default 1000 ms) and
 integrate to the resting steady state over a fixed 100 substeps.
 `LandNiedererTWorldBatched` advances its generated hot path, conditions one

@@ -162,6 +162,17 @@ protected:
             return CouplingSignal::CAI;
         }
 
+        //- TWorld's tension subsystem is formulated in ms.
+        virtual scalar timeScaleFactor() const override
+        {
+            return 1000.0;
+        }
+
+        //- No driveSignalScaleFactor() override on purpose: unlike
+        //  LandNiederer, this model's kernel takes Ca_i in mM and converts to
+        //  uM itself (LandNiedererTWorld_2025.H, "cai_uM"). Adding a scale
+        //  here would double-convert.
+
         //- Advance ODE and compute active tension for integration point i.
         //  driveVal : [Ca2+]_i in mM
         //  lambda   : sarcomere stretch ratio
@@ -201,7 +212,7 @@ public:
         //  Called automatically by sequentialElectroMechanical after the
         //  ionic signal provider is wired, so that all integration points
         //  start from the correct resting equilibrium.
-        virtual void preconditionToRestingState(const scalar restingCai) override;
+        virtual void preconditionToRestingState(const scalarField& restingCai) override;
 
         //- Number of ODEs (= NUM_STATES = 6)
         virtual label nEqns() const override;

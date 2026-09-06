@@ -33,8 +33,32 @@ Author
 #include "batchedActiveTensionCore.H"
 #include "batchedActiveTensionExecution.H"
 
+#include <cmath>
+
 namespace Foam
 {
+
+// Shared Rush-Larsen relaxation formula for models with a single
+// exponentially-relaxing state driven towards a linear steady state
+// (Ta relaxing towards CONSTANTS_[AC_kTa]*algebraicValues[AV_u] at
+// rate algebraicValues[AV_e]). Callers pass their own model-specific
+// indices; this only centralises the arithmetic, not the enum layout.
+inline bool singleStateRelaxationRushLarsen
+(
+    const scalar rateFactor,
+    const scalar drivenSteadyState,
+    scalar& steadyState,
+    scalar& tau
+)
+{
+    if (rateFactor > VSMALL)
+    {
+        tau = 1.0 / rateFactor;
+        steadyState = drivenSteadyState;
+        return true;
+    }
+    return false;
+}
 
 class batchedActiveTensionModel
 :
@@ -49,6 +73,8 @@ protected:
         label nAlgebraics_;
         label nSubsteps_;
         bool persistAlgebraics_;
+        word integratorName_;
+        bool providesRushLarsenParameters_;
         bool useRushLarsen_;
         Switch parallelCellUpdates_;
         label parallelMinCells_;
@@ -101,7 +127,8 @@ protected:
             const dictionary& dict,
             const label nIntegrationPoints,
             const label nStates,
-            const label nAlgebraics
+            const label nAlgebraics,
+            const bool providesRushLarsenParameters = false
         );
 
         // Core Access
@@ -153,10 +180,8 @@ protected:
             const scalarUList& algebraicValues
         ) const = 0;
 
-        virtual scalar timeScaleFactor() const
-        {
-            return 1.0;
-        }
+        // timeScaleFactor() is declared pure virtual on activeTensionModel;
+        // every concrete model states its own scale.
 
         // Backend Bridge API for Executor
         friend class BatchedTensionBackend;
@@ -197,43 +222,25 @@ protected:
                 );
             }
 
-            void applyExplicitEulerStep(const scalar dtSubstep, CellScratch& scratch) const
-            {
-                forAll(scratch.stateValues, i)
-                {
-                    scratch.stateValues[i] += dtSubstep * scratch.rateValues[i];
-                }
-            }
-
-            void buildPredictorState(const label cellI, const scalar dtSubstep, CellScratch& scratch) const
+            void advanceSubstep(const label cellI, const scalar dtSubstep, CellScratch& scratch) const
             {
                 forAll(scratch.stateValues, stateI)
                 {
                     scalar steadyState = 0.0;
                     scalar tau = 0.0;
-                    bool useRL = model_.rushLarsenParametersForCell
-                    (
-                        cellI, stateI, scratch.stateValues, scratch.rateValues,
-                        scratch.algebraicValues, steadyState, tau
-                    );
+                    const bool useRL = model_.useRushLarsen_
+                        && model_.rushLarsenParametersForCell
+                           (
+                               cellI, stateI, scratch.stateValues, scratch.rateValues,
+                               scratch.algebraicValues, steadyState, tau
+                           )
+                        && tau > VSMALL
+                        && std::isfinite(steadyState)
+                        && std::isfinite(tau);
 
-                    scratch.predictorRLApplies[stateI] = useRL ? 1.0 : 0.0;
-                    if (useRL)
-                    {
-                        scratch.predictorStateValues[stateI] = steadyState + (scratch.stateValues[stateI] - steadyState) * std::exp(-dtSubstep/tau);
-                    }
-                    else
-                    {
-                        scratch.predictorStateValues[stateI] = scratch.stateValues[stateI] + dtSubstep * scratch.rateValues[stateI];
-                    }
-                }
-            }
-
-            void applyCorrectorState(CellScratch& scratch) const
-            {
-                forAll(scratch.stateValues, i)
-                {
-                    scratch.stateValues[i] = scratch.predictorStateValues[i];
+                    scratch.stateValues[stateI] = useRL
+                        ? steadyState + (scratch.stateValues[stateI] - steadyState)*std::exp(-dtSubstep/tau)
+                        : scratch.stateValues[stateI] + dtSubstep*scratch.rateValues[stateI];
                 }
             }
 
@@ -304,7 +311,15 @@ public:
     virtual label ioNumAlgebraic() const override { return nAlgebraics_; }
     virtual const PtrList<scalarField>* ioStatesPtr() const override { syncAllToIO(); return &ioStates_; }
     virtual const PtrList<scalarField>* ioRatesPtr() const override { syncAllToIO(); return &ioRates_; }
-    virtual const PtrList<scalarField>* ioAlgebraicPtr() const override { syncAllToIO(); return &ioAlgebraics_; }
+    virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
+    {
+        if (!persistAlgebraics_)
+        {
+            return nullptr;
+        }
+        syncAllToIO();
+        return &ioAlgebraics_;
+    }
 };
 
 } // End namespace Foam

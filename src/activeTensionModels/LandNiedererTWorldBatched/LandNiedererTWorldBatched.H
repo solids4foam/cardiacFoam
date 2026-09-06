@@ -100,7 +100,7 @@ public:
 
     virtual void preconditionToRestingState
     (
-        const scalar restingCai
+        const scalarField& restingCai
     ) override;
 
     virtual Requirements requirements() const override

@@ -99,7 +99,7 @@ bool LandNiedererTWorld::readRestartState(const fvMesh& mesh)
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));
-    const scalar t = mesh.time().value()*1000.0;
+    const scalar t = scaledTime(mesh.time().value());
 
     forAll(STATES_, integrationPtI)
     {
@@ -309,7 +309,7 @@ LandNiedererTWorld::LandNiedererTWorld
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * //
 
-void LandNiedererTWorld::preconditionToRestingState(const scalar restingCai)
+void LandNiedererTWorld::preconditionToRestingState(const scalarField& restingCai)
 {
     // Run the ODE for preconditioningTime ms at constant Ca_i=restingCai,
     // lambda=1, lambda_rate=0 to drive all states to resting equilibrium.
@@ -322,44 +322,57 @@ void LandNiedererTWorld::preconditionToRestingState(const scalar restingCai)
     const scalar preconditioningTime =
         dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
 
-    if (restingCai < 0)
+    if (restingCai.size() != STATES_.size())
+    {
+        FatalErrorInFunction
+            << "LandNiedererTWorld received " << restingCai.size()
+            << " resting Ca_i values for " << STATES_.size()
+            << " integration points." << exit(FatalError);
+    }
+
+    if (min(restingCai) < 0)
     {
         FatalErrorInFunction
             << "LandNiedererTWorld: resting Ca_i must be non-negative; got "
-            << restingCai << " mM. A negative resting calcium is unphysical "
+            << min(restingCai) << " mM. A negative resting calcium is unphysical "
             << "and points to a misconfigured electromechanical signal "
             << "provider." << exit(FatalError);
     }
 
     // A resting Ca_i at (or below) zero is already the equilibrium of the
     // shipped initial conditions, so preconditioning would be a no-op.
-    if (preconditioningTime <= SMALL || restingCai <= SMALL)
+    if (preconditioningTime <= SMALL || max(restingCai) <= SMALL)
     {
         return;
     }
 
-    currentDriveSignal_ = restingCai;
     currentLambda_      = 1.0;
     currentLambdaRate_  = 0.0;
 
-    // Run a single-point ODE integration; all cells share the same resting IC.
+    const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
     scalarField precondStates(STATES_[0]);
-    scalar step = preconditioningTime / 100.0;
-    odeSolver_->solve(0.0, preconditioningTime, precondStates, step);
 
     forAll(STATES_, i)
     {
+        if (!(uniform && i > 0))
+        {
+            currentDriveSignal_ = restingCai[i];
+            precondStates = STATES_[i];
+            scalar step = preconditioningTime / 100.0;
+            odeSolver_->solve(0.0, preconditioningTime, precondStates, step);
+        }
+
         STATES_[i] = precondStates;
     }
 
     Info<< "    LandNiedererTWorld: pre-conditioned " << STATES_.size()
         << " points to resting steady state" << nl
-        << "      restingCai = " << restingCai << " mM ("
-        << preconditioningTime << " ms integration)" << nl
-        << "      Ca_TRPN   = " << precondStates[Ca_TRPN] << nl
-        << "      TmBlocked = " << precondStates[TmBlocked] << nl
-        << "      XW        = " << precondStates[XW] << nl
-        << "      XS        = " << precondStates[XS] << nl
+        << "      restingCai = " << min(restingCai) << " .. " << max(restingCai)
+        << " mM (" << preconditioningTime << " ms integration)" << nl
+        << "      Ca_TRPN   = " << STATES_[0][Ca_TRPN] << nl
+        << "      TmBlocked = " << STATES_[0][TmBlocked] << nl
+        << "      XW        = " << STATES_[0][XW] << nl
+        << "      XS        = " << STATES_[0][XS] << nl
         << endl;
 }
 
@@ -472,9 +485,9 @@ void LandNiedererTWorld::solveAtPoint
 
     // The TWorld contraction subsystem operates natively in ms, so we must
     // scale the integration time limits by 1000 to solve the ODE in ms.
-    const scalar tStart = currentT_ * 1000.0;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0;
-    scalar step         = currentDt_ * 1000.0;
+    const scalar tStart = scaledTime(currentT_);
+    const scalar tEnd   = scaledTime(currentT_ + currentDt_);
+    scalar step         = scaledTime(currentDt_);
 
     odeSolver_->solve(tStart, tEnd, STATES_i, step);
 

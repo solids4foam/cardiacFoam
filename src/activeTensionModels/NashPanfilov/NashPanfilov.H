@@ -110,6 +110,12 @@ protected:
         return CouplingSignal::VM;
     }
 
+    //- Aliev-Panfilov dimensionless time: t* = t_ms / 12.9.
+    virtual scalar timeScaleFactor() const override
+    {
+        return 1000.0/12.9;
+    }
+
     virtual void solveAtPoint
     (
         label i,

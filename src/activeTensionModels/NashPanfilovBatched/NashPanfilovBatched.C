@@ -61,7 +61,7 @@ Foam::NashPanfilovBatched::NashPanfilovBatched
     const label num
 )
 :
-    batchedActiveTensionModel(dict, num, NUM_STATES, NUM_ALGEBRAIC),
+    batchedActiveTensionModel(dict, num, NUM_STATES, NUM_ALGEBRAIC, true),
     CONSTANTS_(NUM_CONSTANTS, 0.0)
 {
     const word requestedSignal = dict_.lookupOrDefault<word>("couplingSignal", "Vm");
@@ -156,13 +156,13 @@ bool Foam::NashPanfilovBatched::rushLarsenParametersForCell
 {
     if (stateI == ::Ta)
     {
-        const scalar eFactor = algebraicValues[::AV_e];
-        if (eFactor > VSMALL)
-        {
-            tau = 1.0 / eFactor;
-            steadyState = CONSTANTS_[AC_kTa] * algebraicValues[::AV_u];
-            return true;
-        }
+        return singleStateRelaxationRushLarsen
+        (
+            algebraicValues[::AV_e],
+            CONSTANTS_[AC_kTa] * algebraicValues[::AV_u],
+            steadyState,
+            tau
+        );
     }
     return false;
 }

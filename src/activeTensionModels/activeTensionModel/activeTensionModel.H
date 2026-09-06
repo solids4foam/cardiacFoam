@@ -483,6 +483,10 @@ public:
     virtual CouplingSignal driveSignal() const = 0;
 
     //- Scale the canonical coupling signal for this model.
+    //  Models whose kernel converts the signal internally leave this at 1.0;
+    //  models whose kernel expects the converted unit override it here. Both
+    //  are valid - see the input-convention block at the top of each model's
+    //  maths header for which contract that model follows.
     virtual scalar driveSignalScaleFactor() const
     {
         return 1.0;
@@ -491,6 +495,20 @@ public:
     scalar scaledDriveSignal(const scalar value) const
     {
         return value * driveSignalScaleFactor();
+    }
+
+    //- Multiplier converting OpenFOAM time (seconds) into this model's own
+    //  time unit, e.g. 1000 for a model formulated in ms.
+    //  Deliberately pure virtual, mirroring batchedIonicModel: a defaulted
+    //  1.0 cannot distinguish "this model runs on the OpenFOAM clock" from
+    //  "nobody thought about it", and that ambiguity has already cost us
+    //  once. Every model states its own scale, even when that scale is 1.0.
+    virtual scalar timeScaleFactor() const = 0;
+
+    //- Convert an OpenFOAM time or interval into model time.
+    scalar scaledTime(const scalar seconds) const
+    {
+        return seconds * timeScaleFactor();
     }
 
     //- Read the model-scaled coupling signal.
@@ -507,7 +525,7 @@ public:
     //  passing the ionic model's initial (resting) Ca_i in mM.
     //  Base implementation is a no-op; derived classes that need Ca_i
     //  preconditioning (e.g. LandNiederer) should override.
-    virtual void preconditionToRestingState(const scalar /*restingCai*/) {}
+    virtual void preconditionToRestingState(const scalarField& /*restingCai*/) {}
 
     //- Advance ODE and write active tension for a single integration point.
     //  Called by the base calculateTension() loop.

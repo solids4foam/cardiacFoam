@@ -6,6 +6,14 @@ License
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
     option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 \*---------------------------------------------------------------------------*/
 
 #include "LandNiederer.H"
@@ -168,16 +176,24 @@ activeTensionModel::Requirements LandNiederer::requirements() const
 }
 
 
-void LandNiederer::preconditionToRestingState(const scalar restingCai)
+void LandNiederer::preconditionToRestingState(const scalarField& restingCai)
 {
     const scalar preconditioningTime =
         dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0);
 
-    if (restingCai < 0.0)
+    if (restingCai.size() != STATES_.size())
+    {
+        FatalErrorInFunction
+            << "LandNiederer received " << restingCai.size()
+            << " resting Ca_i values for " << STATES_.size()
+            << " integration points." << exit(FatalError);
+    }
+
+    if (min(restingCai) < 0.0)
     {
         FatalErrorInFunction
             << "LandNiederer requires a non-negative resting Ca_i, got "
-            << restingCai << " mM." << exit(FatalError);
+            << min(restingCai) << " mM." << exit(FatalError);
     }
 
     if (preconditioningTime <= SMALL)
@@ -185,16 +201,22 @@ void LandNiederer::preconditionToRestingState(const scalar restingCai)
         return;
     }
 
-    currentDriveSignal_ = scaledDriveSignal(restingCai);
     currentLambda_ = 1.0;
     currentLambdaRate_ = 0.0;
 
+    const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
     scalarField preconditionedStates(STATES_[0]);
-    scalar step = preconditioningTime / 100.0;
-    odeSolver_->solve(0.0, preconditioningTime, preconditionedStates, step);
 
     forAll(STATES_, integrationPtI)
     {
+        if (!(uniform && integrationPtI > 0))
+        {
+            currentDriveSignal_ = scaledDriveSignal(restingCai[integrationPtI]);
+            preconditionedStates = STATES_[integrationPtI];
+            scalar step = preconditioningTime / 100.0;
+            odeSolver_->solve(0.0, preconditioningTime, preconditionedStates, step);
+        }
+
         STATES_[integrationPtI] = preconditionedStates;
         prevLambda_[integrationPtI] = 1.0;
     }
@@ -273,9 +295,9 @@ void LandNiederer::solveAtPoint
     algebraic[AV_lambda] = lambda;
     algebraic[AV_lambda_rate] = lambdaRate * 1.0e-3;
 
-    const scalar tStart = currentT_ * 1000.0;
-    const scalar tEnd = (currentT_ + currentDt_) * 1000.0;
-    scalar step = currentDt_ * 1000.0;
+    const scalar tStart = scaledTime(currentT_);
+    const scalar tEnd = scaledTime(currentT_ + currentDt_);
+    scalar step = scaledTime(currentDt_);
     odeSolver_->solve(tStart, tEnd, states, step);
 
     LandNiederer2017computeVariables
@@ -326,7 +348,7 @@ bool LandNiederer::readRestartState(const fvMesh& mesh)
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));
-    const scalar t = mesh.time().value() * 1000.0;
+    const scalar t = scaledTime(mesh.time().value());
 
     forAll(STATES_, integrationPtI)
     {

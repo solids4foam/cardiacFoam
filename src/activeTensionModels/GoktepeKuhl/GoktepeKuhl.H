@@ -111,6 +111,16 @@ protected:
         return CouplingSignal::VM;
     }
 
+    //- Runs on the OpenFOAM clock as currently parameterised. Note this
+    //  differs from NashPanfilov, which shares the same rate equation and
+    //  constants but rescales time by 1000/12.9; whether that difference is
+    //  correct is a question about the CellML/paper provenance of these
+    //  constants, not about this hook.
+    virtual scalar timeScaleFactor() const override
+    {
+        return 1.0;
+    }
+
     virtual void solveAtPoint
     (
         label i,

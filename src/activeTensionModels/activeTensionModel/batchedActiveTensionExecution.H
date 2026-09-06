@@ -41,21 +41,16 @@ struct BatchedTensionScratchT
     FieldBuffer stateValues;
     FieldBuffer rateValues;
     FieldBuffer algebraicValues;
-    FieldBuffer predictorStateValues;
-    FieldBuffer predictorRLApplies;
 
     BatchedTensionScratchT
     (
         const label nStates,
-        const label nAlgebraics,
-        const bool usePredictorState
+        const label nAlgebraics
     )
     :
         stateValues(nStates, 0.0),
         rateValues(nStates, 0.0),
-        algebraicValues(nAlgebraics, 0.0),
-        predictorStateValues(usePredictorState ? nStates : 0, 0.0),
-        predictorRLApplies(usePredictorState ? nStates : 0, 0.0)
+        algebraicValues(nAlgebraics, 0.0)
     {}
 
     void resetPrimary()
@@ -106,8 +101,9 @@ public:
     ) const
     {
         const label nSubsteps = backend_.nSubsteps();
-        const scalar dtSubstep = (dt / scalar(nSubsteps)) * backend_.timeScaleFactor();
-        const bool useRushLarsen = backend_.useRushLarsen();
+        const scalar timeScale = backend_.timeScaleFactor();
+        const scalar tModel = t*timeScale;
+        const scalar dtSubstep = (dt / scalar(nSubsteps)) * timeScale;
 
 #ifdef _OPENMP
 #pragma omp parallel for if (parallelCellLoops_)
@@ -122,7 +118,7 @@ public:
 
             for (label substep = 0; substep < nSubsteps; ++substep)
             {
-                const scalar substepTime = t + substep * dtSubstep;
+                const scalar substepTime = tModel + substep * dtSubstep;
 
                 scratch.resetPrimary();
 
@@ -135,16 +131,19 @@ public:
                     scratch
                 );
 
-                if (useRushLarsen)
-                {
-                    backend_.buildPredictorState(cellI, dtSubstep, scratch);
-                    backend_.applyCorrectorState(scratch);
-                }
-                else
-                {
-                    backend_.applyExplicitEulerStep(dtSubstep, scratch);
-                }
+                backend_.advanceSubstep(cellI, dtSubstep, scratch);
             }
+
+            scratch.resetPrimary();
+
+            backend_.evaluateScratchAtTime
+            (
+                cellI,
+                tModel + scalar(nSubsteps) * dtSubstep,
+                cellDrive,
+                cellLambda,
+                scratch
+            );
 
             backend_.scatterCellState(cellI, scratch.stateValues);
             backend_.syncEvaluatedOutputs(cellI, scratch);

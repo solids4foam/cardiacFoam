@@ -66,6 +66,12 @@ protected:
         return CouplingSignal::VM;
     }
 
+    //- Matches the scalar GoktepeKuhl; see the note there.
+    virtual scalar timeScaleFactor() const override
+    {
+        return 1.0;
+    }
+
     virtual void evaluateHotPathStateForCell
     (
         const label cellI,

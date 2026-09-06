@@ -37,7 +37,8 @@ batchedActiveTensionModel::batchedActiveTensionModel
     const dictionary& dict,
     const label nIntegrationPoints,
     const label nStates,
-    const label nAlgebraics
+    const label nAlgebraics,
+    const bool providesRushLarsenParameters
 )
 :
     activeTensionModel(dict, nIntegrationPoints),
@@ -45,8 +46,10 @@ batchedActiveTensionModel::batchedActiveTensionModel
     nStates_(nStates),
     nAlgebraics_(nAlgebraics),
     nSubsteps_(dict.lookupOrDefault<label>("batchedSubsteps", 1)),
-    persistAlgebraics_(dict.lookupOrDefault<Switch>("storeBatchedAlgebraics", false)),
-    useRushLarsen_(dict.lookupOrDefault<word>("batchedIntegrator", "euler") == "rushLarsen"),
+    persistAlgebraics_(dict.lookupOrDefault<Switch>("storeBatchedAlgebraics", true)),
+    integratorName_(dict.lookupOrDefault<word>("batchedIntegrator", "euler")),
+    providesRushLarsenParameters_(providesRushLarsenParameters),
+    useRushLarsen_(integratorName_ == "rushLarsen"),
     parallelCellUpdates_(dict.lookupOrDefault<Switch>("batchedParallelCells", false)),
     parallelMinCells_(dict.lookupOrDefault<label>("batchedParallelMinCells", 256)),
     core_(nIntegrationPoints, nStates, nAlgebraics),
@@ -71,6 +74,24 @@ batchedActiveTensionModel::batchedActiveTensionModel
         parallelCellUpdates_ = false;
     }
 #endif
+
+    if (integratorName_ != "euler" && integratorName_ != "rushLarsen")
+    {
+        FatalIOErrorInFunction(dict)
+            << "Unknown batchedIntegrator '" << integratorName_
+            << "'. Valid values are: euler, rushLarsen."
+            << exit(FatalIOError);
+    }
+
+    if (useRushLarsen_ && !providesRushLarsenParameters_)
+    {
+        FatalIOErrorInFunction(dict)
+            << "batchedIntegrator was set to rushLarsen but this active "
+            << "tension model provides no Rush-Larsen parameters, so every "
+            << "state would silently fall back to explicit Euler. "
+            << "Use batchedIntegrator euler."
+            << exit(FatalIOError);
+    }
 
     core_.setAlgebraicsStorageEnabled(persistAlgebraics_);
 
@@ -102,7 +123,7 @@ void batchedActiveTensionModel::prepareSolveScratch(const label nThreads) const
         solveScratch_.set
         (
             threadI,
-            new CellScratch(nStates_, nAlgebraics_, useRushLarsen_)
+            new CellScratch(nStates_, nAlgebraics_)
         );
     }
 
@@ -182,7 +203,7 @@ void batchedActiveTensionModel::writeRestartState(const fvMesh& mesh) const
 
 void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
 {
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
@@ -192,7 +213,7 @@ void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
         backend.evaluateScratchAtTime
         (
             cellI,
-            mesh.time().value(),
+            mesh.time().value()*timeScaleFactor(),
             coupledDriveSignal(cellI),
             1.0,
             scratch
@@ -211,7 +232,7 @@ bool batchedActiveTensionModel::restartTension(scalarField& Ta) const
         return false;
     }
 
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
 
     for (label cellI = 0; cellI < nCells_; ++cellI)

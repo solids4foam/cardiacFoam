@@ -64,7 +64,7 @@ void Foam::NashPanfilov::refreshRestartState(const fvMesh& mesh)
         algebraic[AV_u] = u;
         NashPanfilovcomputeVariables
         (
-            mesh.time().value()*1000.0/12.9,
+            scaledTime(mesh.time().value()),
             CONSTANTS_.data(),
             rates.data(),
             STATES_[i].data(),
@@ -191,9 +191,9 @@ void Foam::NashPanfilov::solveAtPoint
 
     // Nash-Panfilov ODE was derived in the same normalized time used by
     // Aliev-Panfilov (t* = t_ms / 12.9), so convert OpenFOAM seconds first.
-    const scalar tStart = currentT_ * 1000.0 / 12.9;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0 / 12.9;
-    scalar step         = currentDt_ * 1000.0 / 12.9;
+    const scalar tStart = scaledTime(currentT_);
+    const scalar tEnd   = scaledTime(currentT_ + currentDt_);
+    scalar step         = scaledTime(currentDt_);
 
     odeSolver_->solve(tStart, tEnd, STATESI, step);
 

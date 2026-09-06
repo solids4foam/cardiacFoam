@@ -109,6 +109,12 @@ protected:
             return CouplingSignal::VM;
         }
 
+        //- Manufactured solution is posed directly on the OpenFOAM clock.
+        virtual scalar timeScaleFactor() const override
+        {
+            return 1.0;
+        }
+
         virtual void solveAtPoint
         (
             label i,

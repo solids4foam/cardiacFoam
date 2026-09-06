@@ -159,7 +159,11 @@ sequentialElectroMechanical::sequentialElectroMechanical
      && !activeTensionRestarted
     )
     {
-        const scalar restingCai = prov->signal(0, CouplingSignal::CAI);
+        scalarField restingCai(electro().mesh().nCells());
+        forAll(restingCai, cellI)
+        {
+            restingCai[cellI] = prov->signal(cellI, CouplingSignal::CAI);
+        }
         activeTensionModel_->preconditionToRestingState(restingCai);
     }
 

@@ -128,7 +128,7 @@ void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
     lambdaRate_ = 0.0;
     for (label cellI = 0; cellI < nCells_; ++cellI)
@@ -139,7 +139,7 @@ void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
         backend.evaluateScratchAtTime
         (
             cellI,
-            mesh.time().value(),
+            mesh.time().value()*timeScaleFactor(),
             coupledDriveSignal(cellI),
             mag(F & f0[cellI]),
             scratch
@@ -256,24 +256,32 @@ Foam::LandNiedererTWorldBatched::LandNiedererTWorldBatched
 
 void Foam::LandNiedererTWorldBatched::preconditionToRestingState
 (
-    const scalar restingCai
+    const scalarField& restingCai
 )
 {
     const scalar preconditioningTime =
         dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0); // ms
 
-    if (restingCai < 0)
+    if (restingCai.size() != nCells_)
+    {
+        FatalErrorInFunction
+            << "LandNiedererTWorldBatched received " << restingCai.size()
+            << " resting Ca_i values for " << nCells_ << " cells."
+            << exit(FatalError);
+    }
+
+    if (min(restingCai) < 0)
     {
         FatalErrorInFunction
             << "LandNiedererTWorldBatched: resting Ca_i must be non-negative; got "
-            << restingCai << " mM. A negative resting calcium is unphysical "
+            << min(restingCai) << " mM. A negative resting calcium is unphysical "
             << "and points to a misconfigured electromechanical signal "
             << "provider." << exit(FatalError);
     }
 
     // A resting Ca_i at (or below) zero is already the equilibrium of the
     // shipped initial conditions, so preconditioning would be a no-op.
-    if (preconditioningTime <= SMALL || restingCai <= SMALL)
+    if (preconditioningTime <= SMALL || max(restingCai) <= SMALL)
     {
         return;
     }
@@ -283,38 +291,36 @@ void Foam::LandNiedererTWorldBatched::preconditionToRestingState
     // step size.
     const label nSteps = 100;
     const scalar step = preconditioningTime/scalar(nSteps);
+    const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
 
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
-    backend.gatherCellState(0, scratch.stateValues);
-
-    for (label stepI = 0; stepI < nSteps; ++stepI)
-    {
-        scratch.resetPrimary();
-        backend.evaluateScratchAtTime
-        (
-            0,
-            stepI*step,
-            restingCai,
-            1.0,
-            scratch
-        );
-
-        if (useRushLarsen_)
-        {
-            backend.buildPredictorState(0, step, scratch);
-            backend.applyCorrectorState(scratch);
-        }
-        else
-        {
-            backend.applyExplicitEulerStep(step, scratch);
-        }
-    }
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
+        if (!(uniform && cellI > 0))
+        {
+            backend.gatherCellState(cellI, scratch.stateValues);
+
+            for (label stepI = 0; stepI < nSteps; ++stepI)
+            {
+                scratch.resetPrimary();
+                backend.evaluateScratchAtTime
+                (
+                    cellI,
+                    stepI*step,
+                    restingCai[cellI],
+                    1.0,
+                    scratch
+                );
+
+                backend.advanceSubstep(cellI, step, scratch);
+            }
+        }
+
         core_.scatterCellState(cellI, scratch.stateValues);
     }
+
     core_.clearTransientSolveData(persistAlgebraics_);
     ioSynchronized_ = false;
     prevLambda_ = 1.0;
@@ -322,13 +328,13 @@ void Foam::LandNiedererTWorldBatched::preconditionToRestingState
 
     Info<< "    LandNiedererTWorldBatched: pre-conditioned " << nCells_
         << " points to resting steady state" << nl
-        << "      restingCai = " << restingCai << " mM ("
-        << preconditioningTime << " ms integration, "
+        << "      restingCai = " << min(restingCai) << " .. " << max(restingCai)
+        << " mM (" << preconditioningTime << " ms integration, "
         << nSteps << " steps)" << nl
-        << "      Ca_TRPN   = " << scratch.stateValues[Ca_TRPN] << nl
-        << "      TmBlocked = " << scratch.stateValues[TmBlocked] << nl
-        << "      XW        = " << scratch.stateValues[XW] << nl
-        << "      XS        = " << scratch.stateValues[XS] << nl
+        << "      Ca_TRPN   = " << state(0, Ca_TRPN) << nl
+        << "      TmBlocked = " << state(0, TmBlocked) << nl
+        << "      XW        = " << state(0, XW) << nl
+        << "      XS        = " << state(0, XS) << nl
         << endl;
 }
 

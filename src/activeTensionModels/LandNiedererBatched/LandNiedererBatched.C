@@ -6,6 +6,14 @@ License
     under the terms of the GNU General Public License as published by the
     Free Software Foundation, either version 3 of the License, or (at your
     option) any later version.
+
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 \*---------------------------------------------------------------------------*/
 
 #include "LandNiedererBatched.H"
@@ -157,15 +165,22 @@ LandNiedererBatched::LandNiedererBatched
 }
 
 
-void LandNiedererBatched::preconditionToRestingState(const scalar restingCai)
+void LandNiedererBatched::preconditionToRestingState(const scalarField& restingCai)
 {
     const scalar preconditioningTime =
         dict_.lookupOrDefault<scalar>("preconditioningTime", 1000.0);
-    if (restingCai < 0.0)
+    if (restingCai.size() != nCells_)
+    {
+        FatalErrorInFunction
+            << "LandNiedererBatched received " << restingCai.size()
+            << " resting Ca_i values for " << nCells_ << " cells."
+            << exit(FatalError);
+    }
+    if (min(restingCai) < 0.0)
     {
         FatalErrorInFunction
             << "LandNiedererBatched requires a non-negative resting Ca_i, got "
-            << restingCai << " mM." << exit(FatalError);
+            << min(restingCai) << " mM." << exit(FatalError);
     }
     if (preconditioningTime <= SMALL)
     {
@@ -174,33 +189,35 @@ void LandNiedererBatched::preconditionToRestingState(const scalar restingCai)
 
     const label nSteps = 100;
     const scalar dt = preconditioningTime / scalar(nSteps);
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
-    backend.gatherCellState(0, scratch.stateValues);
-
-    for (label stepI = 0; stepI < nSteps; ++stepI)
-    {
-        scratch.resetPrimary();
-        backend.evaluateScratchAtTime
-        (
-            0, stepI * dt, scaledDriveSignal(restingCai), 1.0, scratch
-        );
-
-        if (useRushLarsen_)
-        {
-            backend.buildPredictorState(0, dt, scratch);
-            backend.applyCorrectorState(scratch);
-        }
-        else
-        {
-            backend.applyExplicitEulerStep(dt, scratch);
-        }
-    }
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
+        if (!(uniform && cellI > 0))
+        {
+            backend.gatherCellState(cellI, scratch.stateValues);
+
+            for (label stepI = 0; stepI < nSteps; ++stepI)
+            {
+                scratch.resetPrimary();
+                backend.evaluateScratchAtTime
+                (
+                    cellI,
+                    stepI * dt,
+                    scaledDriveSignal(restingCai[cellI]),
+                    1.0,
+                    scratch
+                );
+
+                backend.advanceSubstep(cellI, dt, scratch);
+            }
+        }
+
         core_.scatterCellState(cellI, scratch.stateValues);
     }
+
     core_.clearTransientSolveData(persistAlgebraics_);
     ioSynchronized_ = false;
     prevLambda_ = 1.0;
@@ -321,7 +338,7 @@ void LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));
-    CellScratch scratch(nStates_, nAlgebraics_, useRushLarsen_);
+    CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
     lambdaRate_ = 0.0;
     for (label cellI = 0; cellI < nCells_; ++cellI)
@@ -332,7 +349,7 @@ void LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
         backend.evaluateScratchAtTime
         (
             cellI,
-            mesh.time().value() * 1000.0,
+            mesh.time().value()*timeScaleFactor(),
             coupledDriveSignal(cellI),
             mag(F & f0[cellI]),
             scratch
