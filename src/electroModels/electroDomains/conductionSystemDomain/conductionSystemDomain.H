@@ -45,6 +45,7 @@ Author
 #include "pointField.H"
 #include "purkinjeModelIO.H"
 #include "scalarField.H"
+#include "scalarList.H"
 #include "Switch.H"
 #include "PtrList.H"
 
@@ -70,7 +71,7 @@ class conductionSystemDomain
     pointField nodeLocations_;
     pointField terminalLocations_;
 
-    scalar rootStartTime_;
+    scalarList rootStartTimes_;
     scalar rootDuration_;
     scalar rootIntensity_;
 

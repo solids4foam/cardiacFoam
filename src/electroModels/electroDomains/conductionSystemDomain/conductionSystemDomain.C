@@ -231,9 +231,10 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
 
 void conductionSystemDomain::readRootStimulus(const dictionary& dict)
 {
+    rootStartTimes_.clear();
+
     if (!dict.found("rootStimulus"))
     {
-        rootStartTime_ = GREAT;
         rootDuration_ = 0.0;
         rootIntensity_ = 0.0;
         return;
@@ -241,7 +242,16 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
 
     const dictionary& rsDict = dict.subDict("rootStimulus");
 
-    rootStartTime_ = rsDict.get<scalar>("startTime");
+    if (rsDict.found("startTimeList"))
+    {
+        rsDict.lookup("startTimeList") >> rootStartTimes_;
+    }
+    else
+    {
+        rootStartTimes_.setSize(1);
+        rootStartTimes_[0] = rsDict.get<scalar>("startTime");
+    }
+
     rootDuration_ = rsDict.lookupOrDefault<scalar>("duration", 0.0);
     rootIntensity_ = rsDict.lookupOrDefault<scalar>("intensity", 0.0);
 
@@ -251,7 +261,8 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
     }
 
     Info<< "Purkinje root stimulus: node=" << rootNode_
-        << ", start=" << rootStartTime_
+        << ", firings=" << rootStartTimes_.size()
+        << ", startTimes=" << rootStartTimes_
         << ", duration=" << rootDuration_
         << ", intensity=" << rootIntensity_ << nl << endl;
 }
@@ -293,9 +304,21 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 
     scalarField initialActivationTime(graph_.nNodes, -1.0);
 
-    if (rootStartTime_ < GREAT && rootStartTime_ <= SMALL)
+    if (!rootStartTimes_.empty())
     {
-        initialActivationTime[rootNode_] = rootStartTime_;
+        scalar earliestRootStart = rootStartTimes_[0];
+        forAll(rootStartTimes_, beatI)
+        {
+            if (rootStartTimes_[beatI] < earliestRootStart)
+            {
+                earliestRootStart = rootStartTimes_[beatI];
+            }
+        }
+
+        if (earliestRootStart <= SMALL)
+        {
+            initialActivationTime[rootNode_] = earliestRootStart;
+        }
     }
 
     initialiseGraphStateField(activationTime_, initialActivationTime);
@@ -485,7 +508,7 @@ conductionSystemDomain::conductionSystemDomain
     terminalNodes_(),
     nodeLocations_(),
     terminalLocations_(),
-    rootStartTime_(GREAT),
+    rootStartTimes_(),
     rootDuration_(0.0),
     rootIntensity_(0.0),
     chi_(coeffsDict_.get<scalar>("chi")),
@@ -586,8 +609,15 @@ void conductionSystemDomain::assembleAppliedCurrent
 {
     appliedCurrent = 0.0;
 
-    if (t0 >= rootStartTime_ && t0 <= (rootStartTime_ + rootDuration_))
+    forAll(rootStartTimes_, beatI)
     {
+        const scalar tStart = rootStartTimes_[beatI];
+
+        if (t0 < tStart || t0 > (tStart + rootDuration_))
+        {
+            continue;
+        }
+
         appliedCurrent[rootNode_] += rootIntensity_;
     }
 
