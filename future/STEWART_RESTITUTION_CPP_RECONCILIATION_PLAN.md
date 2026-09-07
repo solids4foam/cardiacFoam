@@ -157,7 +157,7 @@ Without changing defaults:
    measured Stewart automaticity cycle.
 5. Correct the restart documentation: Vm/current fields alone do not preserve
    Stewart gating and concentration state.
-6. Apply the same wording to the driverFOAM dictionary catalog and template
+6. Apply the same wording to the dictionary catalog and template
    comments while retaining keys and defaults.
 
 ## Scientific changes that must wait for the refinement sweep
@@ -254,7 +254,7 @@ The Stewart wrapper initializes `STATES_`, `ALGEBRAIC_`, and `RATES_` in its
 constructor, while the current 4.25 s case directory contains only Vm, Vm_0,
 activation time, and current fields. Implement restart serialization/import for
 all state variables needed to continue the ODE exactly. Prove a continuous run
-and a restart branch agree before driverFOAM reuses conditioning checkpoints.
+and a restart branch agree before conditioning checkpoints are reused.
 
 ### Batch J: distributed graph execution
 

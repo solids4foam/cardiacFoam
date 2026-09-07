@@ -123,7 +123,7 @@ outputs*/
 docs/superpowers/
 .superpowers/
 
-# Generated driverFOAM run reports and artifacts
+# Generated case run reports and artifacts
 **/setup*/run_report.md
 **/setup*/action_events.jsonl
 **/setup*/artifacts_manifest.json
@@ -287,13 +287,3 @@ tutorials/manufacturedSolutions/eikonalECG/gradient_full_sweep.csv
 # Local-only open-issue working notes (kept on disk, never tracked)
 docs/issues/
 
-# driverFOAM strict-plan / CLI outputs written next to the package.
-# Generated artifacts: they drift silently against the dict catalog
-# (a stale reportSetup override survived in one of these until 2026-08-14).
-applications/scripts/driverFoam/*_plan.json
-applications/scripts/driverFoam/out.json
-applications/scripts/driverFoam/validation_run/
-
-# driverFOAM host-local runtime backend selection (mirrors
-# driverfoam-runtime.example.yaml; every host copies its own, never shared).
-applications/scripts/driverFoam/driverfoam-runtime.yaml

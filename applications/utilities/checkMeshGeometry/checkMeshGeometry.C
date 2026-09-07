@@ -92,9 +92,7 @@ int main(int argc, char* argv[])
     Info<< "Bounding box : " << bb << nl
         << "Max dimension: " << maxDim << " [raw units]" << nl << endl;
 
-    // Unit-detection thresholds. MUST mirror
-    // openfoam_driver/specs/mesh_geometry.py (guarded by
-    // test_mesh_geometry_contract.py). mmLower is 20 (not 1) so large SI
+    // Unit-detection thresholds. mmLower is 20 (not 1) so large SI
     // domains (whole-torso meshes, ~1-2 m) are not mis-detected as mm.
     const scalar mmLower = 20.0;
     const scalar umLower = 1000.0;

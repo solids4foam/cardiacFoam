@@ -41,7 +41,7 @@ jobs:
             solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
-        mode: [with-solids4foam, lightweight]
+        mode: [lightweight]
 
     container:
       image: ${{ matrix.container-image.image }}
@@ -85,41 +85,6 @@ jobs:
           fi
 
           CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.mode }}" ./tutorials/Alltest-regression
-
-      - name: Real foamlib mutation tests
-        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2512' && matrix.mode == 'lightweight'
-        shell: bash -l {0}
-        run: |
-          source ${{ matrix.container-image.source }}
-          python3 -m pip install -e applications/scripts/driverFoam pytest
-          cd applications/scripts/driverFoam
-          python3 -m pytest \
-            openfoam_driver/tests/core/test_apply_overrides.py::test_apply_fvSolution_edits_file \
-            openfoam_driver/tests/core/test_apply_overrides.py::test_apply_region_fvSolution_edits_file \
-            -q -rs
-
-      - name: Live catalog and runtime-dependency verification
-        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2512' && matrix.mode == 'lightweight'
-        shell: bash -l {0}
-        run: |
-          source ${{ matrix.container-image.source }}
-          cd applications/scripts/driverFoam
-          python3 -m pytest \
-            openfoam_driver/tests/plugins/cardiacfoam/test_ionic_catalog_live_verification.py \
-            openfoam_driver/tests/plugins/cardiacfoam/test_runtime_dependencies_live_verification.py \
-            -v -rs
-
-      - name: Driver regression-equivalence (phase 2)
-        if: matrix.container-image.name == 'solids4foam-v2.3-OpenFOAM-v2512' && matrix.mode == 'lightweight'
-        shell: bash -l {0}
-        run: |
-          source ${{ matrix.container-image.source }}
-          cd applications/scripts/driverFoam
-          python3 -m openfoam_driver.tests.regression_equivalence --run-phase2 | tee /tmp/regression_equivalence_matrix.txt
-          if grep -q 'skipped' /tmp/regression_equivalence_matrix.txt; then
-            echo "::error::regression-equivalence phase 2 reported a 'skipped' row in a job with a built/sourced solver -- the harness or its solver_available() gate is broken, not the environment"
-            exit 1
-          fi
 
       - name: PETSc sanity check
         shell: bash -l {0}

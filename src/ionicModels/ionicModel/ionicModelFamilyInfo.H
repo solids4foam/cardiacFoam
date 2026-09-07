@@ -17,7 +17,7 @@ License
 
 Description
     Per-family I/O metadata shared between the ionicModel base
-    and the driverFoam output layer.
+    and downstream output consumers.
 
 Author
     Simao Nieto de Castro, UCD.

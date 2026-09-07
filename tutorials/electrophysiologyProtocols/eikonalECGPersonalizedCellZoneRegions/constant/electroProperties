@@ -28,8 +28,7 @@ FoamFile
 // of a smooth weight. What IS expected to match exactly: each generated
 // per-region template's peak Vm, since endocardialCells/mCells/
 // epicardialCells baselines resolve to identical ionic constants
-// regardless of which mode reaches them (verified in the driverFOAM
-// regression suite).
+// regardless of which mode reaches them.
 
 myocardiumSolver eikonalSolver;
 

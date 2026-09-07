@@ -1,6 +1,6 @@
 # Purkinje S1-S2 Calibration and Restitution
 
-This document outlines the procedure, findings, and electrophysiological phenomena observed while calibrating the 1D Purkinje cable tutorial and extracting its functional S1-S2 restitution curve for use in `driverFOAM` eikonal sweeps.
+This document outlines the procedure, findings, and electrophysiological phenomena observed while calibrating the 1D Purkinje cable tutorial and extracting its functional S1-S2 restitution curve for use in eikonal sweeps.
 
 ## 1. Initial Calibration (Resting CV)
 

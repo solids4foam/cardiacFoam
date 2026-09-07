@@ -23,7 +23,6 @@ cardiacFoam/
 │   ├── solvers/cardiacFoam/    # Main solver executable
 │   ├── utilities/              # Pre/post-processing utilities (mesh, fibres, ECG, Purkinje, ...)
 │   └── scripts/
-│       ├── driverFoam/         # Python automation engine for tutorials and parameter sweeps
 │       └── cellML2foam/        # CellML → ionic model code generation pipeline
 ├── modules/
 │   ├── physicsModel/           # Lightweight physicsModel fallback (electro-only builds)
@@ -66,8 +65,6 @@ owns orchestration. See [`src/electroModels/ARCHITECTURE.md`](src/electroModels/
 **Electromechanical coupling** (`src/electroMechanicalModels/`, `src/couplingModels/`) — sequential operator-split coupling of the electro and solid solvers. Requires a solids4foam build. See [`src/electroMechanicalModels/README.md`](src/electroMechanicalModels/README.md).
 
 **Utilities** (`applications/utilities/`) — mesh and fibre setup, Purkinje graph runner, ECG recomputation, ionic heterogeneity probing, current sweep, VTK conversion, and more. Each utility has its own README.
-
-**Driver** (`applications/scripts/driverFoam/`) — a Python automation engine for running tutorials, parameter sweeps, and post-processing. Produces reproducible run and artifact manifests. See [`applications/scripts/driverFoam/openfoam_driver/README.md`](applications/scripts/driverFoam/openfoam_driver/README.md).
 
 **Tutorials** (`tutorials/`) — organised into three groups:
 

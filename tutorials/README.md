@@ -7,28 +7,26 @@ this documented contract.
 
 ## Canonical tutorial cases
 
-`Driver entry` is the strict `driverFoam` / `openfoam_driver` registry name. A dash
-means that the folder can still be addressed as a generic case but has no
-dedicated registered spec. `Regression` means coverage by the cross-case
-`Alltest-regression` runner, not merely the presence of an `Allrun` script.
+`Regression` means coverage by the cross-case `Alltest-regression` runner,
+not merely the presence of an `Allrun` script.
 
-| Canonical path | Purpose | Solver or workflow | Build mode | Driver entry | Regression | Principal outputs |
-| --- | --- | --- | --- | --- | --- | --- |
-| `electrophysiologyProtocols/singleCell` | Single-point action-potential runs and ionic-model sweeps | `singleCellSolver` | lightweight or full | `singleCell` | `Alltest-regression` | voltage traces under `postProcessing/` |
-| `electrophysiologyProtocols/ionicHeterogeneityProbe` | Probe transmural ionic heterogeneity without a tissue PDE | Bueno-Orovio probe and plotting workflow | lightweight or full | — | not covered | trace, AP-metric, and smoothness CSV files under `postProcessing/ionicHeterogeneityProbe/` |
-| `electrophysiologyProtocols/restitutionCurves_s1s2Protocol` | Generate S1-S2 action-potential-duration restitution curves | `singleCellSolver` pacing sweep | lightweight or full | `restitutionCurves` | not covered | per-run traces and restitution tables/plots |
-| `electrophysiologyProtocols/cableProtocol/monodomain1DCableCV` | Measure and refine 1D conduction velocity | `monodomainSolver` cable convergence workflow | lightweight or full | `cable1DCVConvergence` | not covered | activation probes, CV summaries, convergence CSV files and plots |
-| `electrophysiologyProtocols/cableProtocol/eikonal1DCableCV` | Compare eikonal 1D conduction velocity across resolutions | `eikonalSolver` cable workflow | lightweight or full | — | not covered | activation probes and CV summaries |
-| `electrophysiologyProtocols/rotorInstability` | Exercise sustained re-entry and activation-time behavior | monodomain rotor protocol | lightweight or full | — | `Alltest-regression` | probe traces and activation-time metrics |
-| `NiedererEtAl2011/NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `niederer2012` | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
-| `NiedererEtAl2011/purkinjeNiedererEtAl2011` | Couple a small 1D Purkinje graph to the Niederer slab | `monodomainSolver`, `monodomain1DSolver`, and PVJ coupling | lightweight or full | — | `Alltest-regression` | Purkinje graph data/VTK and PVJ activation-time checks |
-| `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` | Demonstrate sequential electrophysiology-solid coupling | `electroMechanicalModel` with monodomain electrophysiology | full only | — | `Alltest-regression` (expected skip in lightweight mode) | active-tension probes and coupled solid/electro fields |
-| `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `manufacturedMonodomainPseudoECG` | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
-| `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `manufacturedBidomain` | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
-| `manufacturedSolutions/bathBidomain` | Verify bidomain-with-bath fields and ECG ownership | `bathBidomainFDAManufactured` and optional `torsoECG` | lightweight or full | `manufacturedBathBidomain` | `Alltest-regression` | global bath fields and manufactured error/ECG summaries |
-| `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `manufacturedEikonalECG` | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
-| `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | `manufacturedMonodomain1D3D` | not covered | coupled convergence summaries under `outputs/` |
-| `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `manufacturedMonodomainTotalLagrangianEM` | not covered | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
+| Canonical path | Purpose | Solver or workflow | Build mode | Regression | Principal outputs |
+| --- | --- | --- | --- | --- | --- |
+| `electrophysiologyProtocols/singleCell` | Single-point action-potential runs and ionic-model sweeps | `singleCellSolver` | lightweight or full | `Alltest-regression` | voltage traces under `postProcessing/` |
+| `electrophysiologyProtocols/ionicHeterogeneityProbe` | Probe transmural ionic heterogeneity without a tissue PDE | Bueno-Orovio probe and plotting workflow | lightweight or full | not covered | trace, AP-metric, and smoothness CSV files under `postProcessing/ionicHeterogeneityProbe/` |
+| `electrophysiologyProtocols/restitutionCurves_s1s2Protocol` | Generate S1-S2 action-potential-duration restitution curves | `singleCellSolver` pacing sweep | lightweight or full | not covered | per-run traces and restitution tables/plots |
+| `electrophysiologyProtocols/cableProtocol/monodomain1DCableCV` | Measure and refine 1D conduction velocity | `monodomainSolver` cable convergence workflow | lightweight or full | not covered | activation probes, CV summaries, convergence CSV files and plots |
+| `electrophysiologyProtocols/cableProtocol/eikonal1DCableCV` | Compare eikonal 1D conduction velocity across resolutions | `eikonalSolver` cable workflow | lightweight or full | not covered | activation probes and CV summaries |
+| `electrophysiologyProtocols/rotorInstability` | Exercise sustained re-entry and activation-time behavior | monodomain rotor protocol | lightweight or full | `Alltest-regression` | probe traces and activation-time metrics |
+| `NiedererEtAl2011/NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
+| `NiedererEtAl2011/purkinjeNiedererEtAl2011` | Couple a small 1D Purkinje graph to the Niederer slab | `monodomainSolver`, `monodomain1DSolver`, and PVJ coupling | lightweight or full | `Alltest-regression` | Purkinje graph data/VTK and PVJ activation-time checks |
+| `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` | Demonstrate sequential electrophysiology-solid coupling | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | active-tension probes and coupled solid/electro fields |
+| `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
+| `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
+| `manufacturedSolutions/bathBidomain` | Verify bidomain-with-bath fields and ECG ownership | `bathBidomainFDAManufactured` and optional `torsoECG` | lightweight or full | `Alltest-regression` | global bath fields and manufactured error/ECG summaries |
+| `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
+| `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | not covered | coupled convergence summaries under `outputs/` |
+| `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | not covered | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
 
 ## Common script pattern
 
@@ -53,11 +51,3 @@ CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam ./tutorials/Alltest-regression
 
 The electromechanical Niederer regression is the only expected skip in
 lightweight mode. Any other exit-77 skip fails the aggregate run.
-
-## Python automation integration
-
-Registered driver specs reuse the same case roots, refinement patterns,
-dictionary mutations, output collection, and post-processing entrypoints shown
-above. Generic-case discovery can address other runnable folders, but discovery
-does not make a folder a dedicated registered tutorial or add it to the
-cross-case regression suite.

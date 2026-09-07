@@ -211,7 +211,6 @@ monodomainSolverCoeffs
     //   }
     //
     // Constant names: prefix "AC_" + the name listed in ionicModel_year.H
-    // (also available via openfoam_driver/ionic_model_catalog.py, field 'constants').
     //
     // Common pathology examples (TNNP model):
     //
