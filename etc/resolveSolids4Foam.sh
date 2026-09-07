@@ -71,8 +71,21 @@ else
     # lnInclude is populated (i.e. actually compiled) — this avoids silently
     # selecting an un-built source tree (e.g. a freshly checked-out submodule),
     # which otherwise fails the build with missing headers (solidModel.H, ...).
+    #
+    # The bundled submodule is tried FIRST, ahead of any out-of-tree checkout.
+    # When several built solids4foam trees exist on one machine they are not
+    # interchangeable: this repo's submodule carries local changes, so its
+    # solidModel has a different memory layout from an external checkout's.
+    # Picking external headers while $FOAM_USER_LIBBIN holds a
+    # libsolids4FoamModels.dylib built from the submodule (or vice versa)
+    # compiles and links without a single warning, then crashes at run time
+    # inside a constructor — e.g. sequentialElectroMechanical registering its
+    # Ta field via solid().mesh(), where solid() resolves to the wrong offset
+    # and the objectRegistry reference is garbage. Defaulting to the repo's own
+    # submodule makes the common case self-consistent; set SOLIDS4FOAM_INST_DIR
+    # explicitly to override.
     _s4fFound=""
-    for _cand in "$HOME/solids4foam" "$WM_PROJECT_USER_DIR/solids4foam" "$_bundledSolids4Foam"
+    for _cand in "$_bundledSolids4Foam" "$HOME/solids4foam" "$WM_PROJECT_USER_DIR/solids4foam"
     do
         if [ -n "$_cand" ] && [ -f "$_cand/$_s4fLnHeader" ]
         then
