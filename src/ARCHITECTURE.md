@@ -125,7 +125,6 @@ Runtime-selectable active-tension models driven by an upstream
 
 Current concrete models:
 
-
 - `NashPanfilov`
 
 - `LandNiederer` (the original seven-state intact-human model)
