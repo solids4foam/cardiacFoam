@@ -1,7 +1,9 @@
 # cardiacFoam first release: branch split design
 
 Date: 2026-09-07
-Status: approved, not yet executed
+Status: EXECUTED 2026-09-07. Landed on `ep-work-onto-main` as `aa47e7d2` and
+pushed to PR #24. This document is now a record, not a plan; the outcome
+section at the end says what actually happened and where it differed.
 Scope: the cardiacFoam repository only. Work belonging to omniDriver or
 solids4foam is named where it touches this plan, but is not part of it.
 
@@ -250,3 +252,50 @@ These are real and pre-existing. None blocks the strip; all predate it.
 The six build-matrix jobs on PR #24 have sat at `pending` with zero duration
 since 11:42. This is infrastructure, not code, but the merge cannot be called
 green until it is resolved.
+
+## Outcome
+
+Executed 2026-09-07. Differences from the plan as written, and results.
+
+**The strip landed as `aa47e7d2`** -- 356 files, +52 / -72,656. Verified after
+landing: zero driverFOAM references outside `tutorials/`; zero tracked files
+left under `applications/scripts/driverFoam/`; `Alltest-regression` and the
+submodule untouched; `./Allwmake` completed with "There were no build errors".
+
+**The CI matrix kept `mode` as a single-value dimension** (`[lightweight]`)
+rather than removing it, so the three `with-solids4foam` shell branches remain
+but are dead. Re-enabling the EM leg later is a one-word change instead of
+restoring deleted logic.
+
+**Three further files were reworded** beyond the planned list, because the grep
+sweep found references the plan had not enumerated:
+`future/STEWART_RESTITUTION_CPP_RECONCILIATION_PLAN.md`,
+`monodomain1DCableCV/Purkinje_S1_S2_Calibration.md`, and two case-dict comments.
+
+**Three defects were caught in review** and fixed before landing: `CLAUDE.md`
+contradicted itself (it forbade shell for running cases, but `Allrun` is shell
+-- the distinction is now between a tutorial's committed `Allrun` and a new
+ad-hoc script); a dict comment claimed verification by a suite that no longer
+verifies it; and a `tutorials/README.md` section documented the driver's
+registry semantics, which passed a keyword grep but described a mechanism no
+longer present.
+
+**The bidomain defect was fixed separately and landed first** (`5cb6346d`,
+`3c6b5e16`), removing 2,617 lines. It went further than the defects section
+above anticipated: rather than repointing a broken import, the whole inherited
+pseudo-ECG apparatus came out, on the rule that bidomain alone has nothing to
+do with ECG and that extracellular-potential-versus-ECG work belongs to
+bath-bidomain. `phiE` was preserved; ECG references are at zero. The strip was
+rebased onto that work, with no overlap between them.
+
+**`.tmp/` was deleted** -- 23 GB of driverFOAM sweep output. Two sweep specs
+that existed nowhere else were recovered onto `dev` first
+(`sweep_stewart_true_di90_late_dt1e-6.json`, and a pre-debug-suppression
+variant of the automaticity spec). The written analysis it also held --
+`results.md`, `RESULTS.md`, input-sha256 provenance -- was not preserved, a
+deliberate trade given the runs are to be redone.
+
+**`dev` became more than "main + driverFOAM".** It also carries both agent
+skills (one of which existed nowhere in git), 33 notes and design specs, the
+two recovered sweep specs, and the omniDriver migration notes. That was not in
+the plan; it followed from the decision to lose no local information.
