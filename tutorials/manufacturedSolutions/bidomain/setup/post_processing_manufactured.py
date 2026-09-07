@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import csv
-import json
 import math
-import os
 from pathlib import Path
 import re
-import shutil
 import sys
 
 try:
@@ -91,10 +88,6 @@ def _write_csv(rows, destination: Path, fieldnames) -> None:
             writer.writerow({field: row.get(field, "") for field in fieldnames})
 
 
-def _load_expected_filenames(output_dir):
-    return None
-
-
 def _field_linf(content: str, field_name: str) -> float:
     match = re.search(
         rf"^{re.escape(field_name)}\s+\S+\s+\S+\s+(\S+)",
@@ -106,42 +99,7 @@ def _field_linf(content: str, field_name: str) -> float:
     return float(match.group(1))
 
 
-def organize_dat_files(folder_name):
-    """
-    Move all .dat files from the parent directory into a subfolder
-    inside the parent directory.
-
-    Parameters:
-        folder_name (str): Name of the folder inside the parent directory.
-    """
-    # Absolute path of parent directory
-    parent_dir = os.path.abspath("..")
-    dest_dir = os.path.join(parent_dir, folder_name)
-    print(f"Looking for .dat files in parent directory: {parent_dir}")
-
-    # List all .dat files in parent directory
-    dat_files = [f for f in os.listdir(parent_dir) if f.endswith(".dat")]
-
-    if not dat_files:
-        print("No .dat files found in the parent directory.")
-        return
-
-    # Create destination folder inside parent directory
-    os.makedirs(dest_dir, exist_ok=True)
-
-    # Move each .dat file to the folder
-    for f in dat_files:
-        src = os.path.join(parent_dir, f)
-        dst = os.path.join(dest_dir, f)
-        shutil.move(src, dst)
-        print(f"Moved {f} -> {dest_dir}/")
-
-    print(f"\nAll {len(dat_files)} .dat files moved to '{dest_dir}'.")
-
-
-
-
-def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = None):
+def read_error_dat_files(folder_name):
     """
     Reads all .dat files in folder_name and extracts:
         - Dimension  (1D, 2D, 3D)
@@ -160,12 +118,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     if not files:
         print("No .dat files found in folder:", folder)
         return []
-
-    if expected_filenames is not None:
-        files = [f for f in files if f.name in expected_filenames]
-        if not files:
-            print("No expected .dat files found in folder:", folder)
-            return []
 
     data = []
 
@@ -398,61 +350,6 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str) -> bool:
     return plotted
 
 
-def plot_errors(rows,  *, save_path: str | Path | None = None, show: bool = True):
-    """
-    Plot Linf errors for Vm, phiE, u1, u2 vs N.
-    """
-    if not _has_matplotlib():
-        print("matplotlib is not available; skipping manufactured error plot.")
-        return None
-
-    configure_matplotlib_defaults()
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    for dimension in _unique_values(rows, "Dimension"):
-        dimension_rows = _filter_rows(rows, Dimension=dimension)
-
-        if not dimension_rows:
-            continue
-
-        ax.loglog(
-            [row["N"] for row in dimension_rows],
-            [row["Linf_V"] for row in dimension_rows],
-            marker="o",
-            label=f"Vm ({dimension})",
-        )
-        ax.loglog(
-            [row["N"] for row in dimension_rows],
-            [row["Linf_phiE"] for row in dimension_rows],
-            marker="s",
-            label=f"phiE ({dimension})",
-        )
-        ax.loglog(
-            [row["N"] for row in dimension_rows],
-            [row["Linf_u1"] for row in dimension_rows],
-            marker="^",
-            label=f"u1 ({dimension})",
-        )
-        ax.loglog(
-            [row["N"] for row in dimension_rows],
-            [row["Linf_u2"] for row in dimension_rows],
-            marker="d",
-            label=f"u2 ({dimension})",
-        )
-
-    title = "Manufactured-solution Linf errors"
-    style_matplotlib_axes(
-        ax,
-        title=title,
-        xlabel="Number of cells (N)",
-        ylabel="Linf Error",
-        grid_kwargs={"which": "both", "ls": "--"},
-    )
-    finalize_matplotlib_figure(fig, save_path=save_path, show=show, close=not show)
-    return Path(save_path) if save_path is not None else None
-
-
-
 def plot_Vm_across_dimensions(
     rows,
     *,
@@ -502,21 +399,8 @@ def plot_summary_dashboard(
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> list[dict]:
     del setup_root
     output_path = Path(output_dir)
-    expected_filenames = _load_expected_filenames(output_path)
-    if expected_filenames is not None:
-        available_filenames = {
-            path.name
-            for path in output_path.glob("*.dat")
-            if FILENAME_PATTERN.match(path.name)
-        }
-        unexpected = sorted(available_filenames - expected_filenames)
-        missing = sorted(expected_filenames - available_filenames)
-        if unexpected:
-            print("Ignoring stale manufactured outputs:", ", ".join(unexpected))
-        if missing:
-            print("Missing expected manufactured outputs:", ", ".join(missing))
 
-    error_rows = read_error_dat_files(output_dir, expected_filenames=expected_filenames)
+    error_rows = read_error_dat_files(output_dir)
     if not error_rows:
         print(f"No .dat files found to post-process in: {output_dir}")
         return []
