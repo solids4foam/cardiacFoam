@@ -59,6 +59,23 @@ def _write_spec(path: Path, models=("TNNP", "BuenoOrovio")):
     return spec
 
 
+def _fake_run_completing_case(cmd, **kwargs):
+    # Stands in for the `python -m openfoam_driver run --run-document ...`
+    # child process, which ultimately execs the case's Allrun (i.e. the
+    # cardiacFoam binary). Tests that assert completed_count must mock this
+    # or they silently become integration tests: with no built solver the
+    # child exits 127, sweep_run correctly records every case as failed, and
+    # the assertion fails for a reason that has nothing to do with the
+    # behaviour under test. sweep_run reads status from workflow_state.json
+    # when it exists (falling back to returncode), so writing that file is
+    # what makes a case "completed" -- see _workflow_state_path_from_run_document.
+    run_doc = json.loads(Path(cmd[cmd.index("--run-document") + 1]).read_text())
+    workflow_state_path = Path(run_doc["launch"]["outputDir"]) / "workflow_state.json"
+    workflow_state_path.parent.mkdir(parents=True, exist_ok=True)
+    workflow_state_path.write_text(json.dumps({"status": "completed"}))
+    return mock.Mock(returncode=0, stdout="", stderr="")
+
+
 def _write_entry_spec(path, entry="niederer2012", values=(0.5, 0.2)):
     spec = {
         "base": {"entry": entry},
@@ -222,7 +239,9 @@ def test_sweep_run_writes_case_record_json_for_every_case(tmp_path):
     _write_spec(spec_path)
     output_dir = tmp_path / "out"
 
-    result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run",
+                    side_effect=_fake_run_completing_case):
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     for case_id in ("TNNP", "BuenoOrovio"):
@@ -393,7 +412,9 @@ def test_sweep_run_archives_nothing_for_generic_case_folder_sweeps(tmp_path):
     _write_spec(spec_path)
     output_dir = tmp_path / "out"
 
-    result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
+    with mock.patch("openfoam_driver.core.runtime.sweep_runner.subprocess.run",
+                    side_effect=_fake_run_completing_case):
+        result = sweep_run(spec_path, output_dir=output_dir, driver_context=_CTX)
 
     assert result["completed_count"] == 2
     for case_id in ("TNNP", "BuenoOrovio"):
