@@ -64,26 +64,24 @@ is `1.0`.
 | `NashPanfilov`, `NashPanfilovBatched` | `1000/12.9` (Aliev-Panfilov dimensionless time) |
 | `LandNiederer`, `LandNiedererBatched` | `1000` (ms) |
 | `LandNiedererTWorld`, `LandNiedererTWorldBatched` | `1000` (ms) |
-| `GoktepeKuhl`, `GoktepeKuhlBatched` | `1.0` |
 | `ManufacturedElectromechanics` | `1.0` |
 
-`GoktepeKuhl` shares its rate equation and constants with `NashPanfilov` but
-does not rescale time. Whether that is correct is a question about the
-CellML/paper provenance of those constants, not about this hook.
+This table previously carried a `GoktepeKuhl` row at `1.0` with an open
+question about whether that was correct. It was not: the model's `eps`
+switch was parameterised in Göktepe & Kuhl's mV/ms units but evaluated on
+the normalised `u`, leaving it 100x slow with its switch effectively
+disabled. The model has been removed rather than repaired — see
+[`future/GOKTEPE_KUHL_REMOVAL.md`](../../future/GOKTEPE_KUHL_REMOVAL.md) for
+the analysis and for what to do differently if it is ever re-added.
 
 ## Concrete models
-
-### `GoktepeKuhl`
-
-- runtime name: `GoktepeKuhl`
-- integration-point ODE model
-- uses the shared base-class export and write machinery
 
 ### `NashPanfilov`
 
 - runtime name: `NashPanfilov`
 - integration-point ODE model
-- follows the same provider and I/O pattern as `GoktepeKuhl`
+- uses the shared base-class export and write machinery
+- faithful to Nash & Panfilov (2004) Eq. (22c)/(23) and Table 1
 
 ### `LandNiederer`
 

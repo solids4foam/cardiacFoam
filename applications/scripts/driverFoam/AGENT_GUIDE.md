@@ -831,7 +831,7 @@ These are real limitations; the agent must not assume them:
   disk space or output-directory writability. Set `SKIP_ENV_DIAGNOSTICS=1` to bypass
   the gate (used by the test suite).
 
-- **Active-tension models beyond NashPanfilov and GoktepeKuhl** are not in `active_tension_catalog.py`. Future C++ models must be registered there before artifact prediction will cover their state variables.
+- **Active-tension models beyond NashPanfilov** are not in `active_tension_catalog.py`. Future C++ models must be registered there before artifact prediction will cover their state variables.
 
 If your agent depends on any of these, expect failure and consider a workaround (e.g. starting from an existing tutorial template and overriding deltas rather than constructing from scratch).
 

@@ -5,13 +5,11 @@ activeTensionModel/activeTensionModel.C
 
 
 NashPanfilov/NashPanfilov.C
-GoktepeKuhl/GoktepeKuhl.C
 verificationModels/ManufacturedElectromechanics/ManufacturedElectromechanics.C
 /*NiedererHunterSmith/NiedererHunterSmith.C*/
 LandNiederer/LandNiederer.C
 LandNiedererTWorld/LandNiedererTWorld.C
 activeTensionModel/batchedActiveTensionModel.C
-GoktepeKuhlBatched/GoktepeKuhlBatched.C
 NashPanfilovBatched/NashPanfilovBatched.C
 LandNiedererBatched/LandNiedererBatched.C
 LandNiedererTWorldBatched/LandNiedererTWorldBatched.C

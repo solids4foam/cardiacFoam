@@ -879,17 +879,6 @@ class TestPredictorActiveTension(unittest.TestCase):
             trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
             self.assertIn("Ta", trace.variables)
 
-    def test_ta_artifact_included_in_single_cell_trace_for_goktepe_kuhl(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            tmp = Path(d)
-            self._write_single_cell_with_at(tmp, at_model="GoktepeKuhl", exports="Ta")
-            spec = _make_spec(tmp)
-            artifacts = predict_data_artifacts(tmp, spec, driver_context=_CTX)
-            ids = [a.artifact_id for a in artifacts]
-            self.assertNotIn("active_tension_Ta_series", ids)
-            trace = next(a for a in artifacts if a.artifact_id == "single_cell_trace")
-            self.assertIn("Ta", trace.variables)
-
     def test_no_at_artifacts_when_block_absent(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)

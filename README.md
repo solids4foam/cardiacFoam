@@ -61,7 +61,7 @@ owns orchestration. See [`src/electroModels/ARCHITECTURE.md`](src/electroModels/
 
 **Ionic models** (`src/ionicModels/`) — a library of human and animal cardiac cell models. Every model ships a serial variant and a GPU-batched variant for tissue-scale simulations. Manufactured-solution verification models are included for FDA-style solver validation. See [`src/ionicModels/README.md`](src/ionicModels/README.md).
 
-**Active tension models** (`src/activeTensionModels/`) — active stress generation models (Nash–Panfilov, Goktepe–Kuhl, Land–Niederer) with serial and GPU-batched variants, and a manufactured-solution verification layer for coupled electromechanics. See [`src/activeTensionModels/README.md`](src/activeTensionModels/README.md).
+**Active tension models** (`src/activeTensionModels/`) — active stress generation models (Nash–Panfilov, Land–Niederer) with serial and GPU-batched variants, and a manufactured-solution verification layer for coupled electromechanics. See [`src/activeTensionModels/README.md`](src/activeTensionModels/README.md).
 
 **Electromechanical coupling** (`src/electroMechanicalModels/`, `src/couplingModels/`) — sequential operator-split coupling of the electro and solid solvers. Requires a solids4foam build. See [`src/electroMechanicalModels/README.md`](src/electroMechanicalModels/README.md).
 

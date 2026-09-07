@@ -475,16 +475,6 @@ class TestDetectActiveTensionModelName(unittest.TestCase):
         )
         self.assertEqual(detect_active_tension_model_name(props), "NashPanfilov")
 
-    def test_detects_goktepe_kuhl(self) -> None:
-        from openfoam_driver.plugins.cardiacfoam.detection import detect_active_tension_model_name
-        props = self._write(
-            "myocardiumSolver singleCellSolver;\n"
-            "singleCellSolverCoeffs\n{\n"
-            "    activeTensionModel GoktepeKuhl;\n"
-            "}\n"
-        )
-        self.assertEqual(detect_active_tension_model_name(props), "GoktepeKuhl")
-
     def test_returns_none_when_block_absent(self) -> None:
         from openfoam_driver.plugins.cardiacfoam.detection import detect_active_tension_model_name
         props = self._write(

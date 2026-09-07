@@ -125,7 +125,6 @@ Runtime-selectable active-tension models driven by an upstream
 
 Current concrete models:
 
-- `GoktepeKuhl`
 
 - `NashPanfilov`
 

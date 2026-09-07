@@ -81,24 +81,6 @@ class ActiveTensionModelEntry:
 
 
 ACTIVE_TENSION_MODEL_CATALOG: Final[dict[str, ActiveTensionModelEntry]] = {
-    "GoktepeKuhl": ActiveTensionModelEntry(
-        states=("Ta",),
-        algebraic=("AV_e", "AV_Vm", "AV_u"),
-        constants=("AC_Vr", "AC_eInfty", "AC_e0", "AC_eXi", "AC_Vshift", "AC_kTa"),
-        rates=("Ta",),
-        recommended_exports=("Ta",),
-        description="Goktepe-Kuhl active tension model (2004).",
-        aliases=("Goktepe-Kuhl", "active stress model"),
-    ),
-    "GoktepeKuhlBatched": ActiveTensionModelEntry(
-        states=("Ta",),
-        algebraic=("AV_e", "AV_Vm", "AV_u"),
-        constants=("AC_Vr", "AC_eInfty", "AC_e0", "AC_eXi", "AC_Vshift", "AC_kTa"),
-        rates=("Ta",),
-        recommended_exports=("Ta",),
-        description="Goktepe-Kuhl active tension model (2004) - GPU batched implementation.",
-        aliases=("Goktepe-Kuhl GPU",),
-    ),
     "NashPanfilov": ActiveTensionModelEntry(
         states=("Ta",),
         algebraic=("AV_u", "AV_e"),
@@ -218,7 +200,7 @@ def get_active_tension_entry(name: str) -> ActiveTensionModelEntry:
     Return the catalog entry for the named active tension model.
 
     Args:
-        name: The active tension model name (e.g. 'GoktepeKuhl').
+        name: The active tension model name (e.g. 'NashPanfilov').
 
     Returns:
         The ActiveTensionModelEntry for that model.

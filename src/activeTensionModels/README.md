@@ -14,7 +14,6 @@ src/activeTensionModels/
 ├── activeTensionModel/   # Base class and runtime selection
 ├── verificationModels/
 │   └── ManufacturedElectromechanics/ # Manufactured electromechanics verification model
-├── GoktepeKuhl/          # Goktepe-Kuhl phenomenological active tension model
 ├── NashPanfilov/         # Nash-Panfilov phenomenological active tension model
 ├── LandNiederer/         # Original Land et al. intact-human model
 ├── LandNiedererTWorld/   # TWorld-derived six-state contraction subsystem
@@ -54,8 +53,6 @@ the table are the exact registered `activeTensionModel` dictionary selectors.
 
 | Purpose | Runtime name | Backend/build availability | Source boundary | Known equivalence limitation |
 |---|---|---|---|---|
-| Phenomenological tension | `GoktepeKuhl` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Batched integration uses a different data path |
-| Phenomenological tension | `GoktepeKuhlBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
 | Phenomenological tension | `NashPanfilov` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Batched integration uses a different data path |
 | Phenomenological tension | `NashPanfilovBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
 | Biophysical tension | `LandNiederer` | scalar CPU; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |

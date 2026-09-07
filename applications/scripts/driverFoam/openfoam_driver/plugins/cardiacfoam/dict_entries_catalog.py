@@ -341,7 +341,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         ),
     ),
     "batched_integrator": build_group(
-        defaults={"phases": frozenset({'solver'}), "applicable_when": {"ionicModel": ("AlievPanfilovcompactBatched", "BuenoOroviocompactBatched", "CourtemanchecompactBatched", "FabbricompactBatched", "GaurcompactBatched", "GrandicompactBatched", "PerisYaguecompactBatched", "StewartcompactBatched", "TNNPcompactBatched", "ToRORd_dynClcompactBatched", "TrovatocompactBatched", "TWorldcompactBatched"), "activeTensionModel": ("LandNiedererBatched", "LandNiedererTWorldBatched", "NashPanfilovBatched", "GoktepeKuhlBatched")}},
+        defaults={"phases": frozenset({'solver'}), "applicable_when": {"ionicModel": ("AlievPanfilovcompactBatched", "BuenoOroviocompactBatched", "CourtemanchecompactBatched", "FabbricompactBatched", "GaurcompactBatched", "GrandicompactBatched", "PerisYaguecompactBatched", "StewartcompactBatched", "TNNPcompactBatched", "ToRORd_dynClcompactBatched", "TrovatocompactBatched", "TWorldcompactBatched"), "activeTensionModel": ("LandNiedererBatched", "LandNiedererTWorldBatched", "NashPanfilovBatched")}},
         entries=(
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.batchedIntegrator',
@@ -387,7 +387,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.solver',
             description="ODE solver selector passed through to OpenFOAM's ODESolver factory.",
-            source_refs=('src/ionicModels/ionicModel/ionicModel.H', 'src/activeTensionModels/GoktepeKuhl/GoktepeKuhl.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C'),
+            source_refs=('src/ionicModels/ionicModel/ionicModel.H', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C'),
             notes='The repository source shows pass-through to ODESolver::New(*this, dict_). Additional ODESolver-specific keys may exist beyond the commonly used entries listed here.',
             value_kind='enum',
             enum_values=('RKF45', 'Euler'),
@@ -1594,24 +1594,24 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
             description="Active-tension model selector.",
             source_refs=('src/activeTensionModels/activeTensionModel/activeTensionModel.C', 'src/electroModels/myocardiumModels/singleCellSolver/singleCellSolver.C'),
             value_kind='enum',
-            enum_values=('GoktepeKuhl', 'NashPanfilov', 'LandNiederer', 'LandNiedererTWorld', 'GoktepeKuhlBatched', 'NashPanfilovBatched', 'LandNiedererBatched', 'LandNiedererTWorldBatched', 'ManufacturedElectromechanics'),
+            enum_values=('NashPanfilov', 'LandNiederer', 'LandNiedererTWorld', 'NashPanfilovBatched', 'LandNiedererBatched', 'LandNiedererTWorldBatched', 'ManufacturedElectromechanics'),
             constraints=('Only applicable for singleCellSolver.',),
             applicable_when={"myocardiumSolver": "singleCellSolver"},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.couplingSignal',
             description='Coupling signal requested by the active-tension model. Flat sibling of activeTensionModel inside <solver>Coeffs, not nested under it.',
-            source_refs=('src/activeTensionModels/GoktepeKuhl/GoktepeKuhl.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C'),
+            source_refs=('src/activeTensionModels/NashPanfilov/NashPanfilov.C',),
             value_kind='enum',
             enum_values=('Vm',),
             constraints=('Only applicable when activeTensionModel is configured.',),
-            applicable_when={"activeTensionModel": ("GoktepeKuhl", "NashPanfilov")},
+            applicable_when={"activeTensionModel": ("NashPanfilov",)},
         ),
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.constants.<constant_name>',
             description="Per-constant override for the selected active-tension model. Flat sibling of activeTensionModel inside <solver>Coeffs, not nested under it -- 'constants { <constant_name> <value>; ... }' directly at that level. <constant_name> must be exactly a name from that model's 'constants' list in active_tension_catalog.py; an unknown name is silently ignored (dict.found(name) check, no fatal error), not a solver error, unlike the ionicConstantOverrides equivalent.",
-            source_refs=('src/activeTensionModels/LandNiederer/LandNiederer.C', 'src/activeTensionModels/LandNiedererTWorld/LandNiedererTWorld.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C', 'src/activeTensionModels/GoktepeKuhl/GoktepeKuhl.C'),
-            notes="LandNiederer and LandNiedererTWorld re-derive kinetic constants after applying overrides. Overrides of derived constants are therefore silent no-ops; use the user-facing constants listed in active_tension_catalog.py. NashPanfilov/GoktepeKuhl do not re-derive constants.",
+            source_refs=('src/activeTensionModels/LandNiederer/LandNiederer.C', 'src/activeTensionModels/LandNiedererTWorld/LandNiedererTWorld.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C'),
+            notes="LandNiederer and LandNiedererTWorld re-derive kinetic constants after applying overrides. Overrides of derived constants are therefore silent no-ops; use the user-facing constants listed in active_tension_catalog.py. NashPanfilov does not re-derive constants.",
             value_kind='scalar',
             dynamic_path=True,
             constraints=('Only applicable when activeTensionModel is configured.',),
@@ -1620,7 +1620,7 @@ ELECTRO_PROPERTY_ENTRY_GROUPS: Final[dict[str, tuple[DictEntry, ...]]] = {
         DictEntry(
             driver_path='$ELECTRO_MODEL_COEFFS.initialStates.<state_name>',
             description="Per-state initial-value override for the selected active-tension model. Flat sibling of activeTensionModel inside <solver>Coeffs -- 'initialStates { <state_name> <value>; ... }' directly at that level. <state_name> must be exactly a name from that model's 'states' list in active_tension_catalog.py (e.g. LandNiederer: XS, XW, TRPN, TmBlocked, ZETAS, ZETAW, Cd).",
-            source_refs=('src/activeTensionModels/LandNiederer/LandNiederer.C', 'src/activeTensionModels/LandNiedererTWorld/LandNiedererTWorld.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C', 'src/activeTensionModels/GoktepeKuhl/GoktepeKuhl.C'),
+            source_refs=('src/activeTensionModels/LandNiederer/LandNiederer.C', 'src/activeTensionModels/LandNiedererTWorld/LandNiedererTWorld.C', 'src/activeTensionModels/NashPanfilov/NashPanfilov.C'),
             notes="Unknown state names are silently ignored (dict.found(name) check), not a fatal error.",
             value_kind='scalar',
             dynamic_path=True,
