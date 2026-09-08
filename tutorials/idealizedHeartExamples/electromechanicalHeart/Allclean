@@ -1,0 +1,26 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Allclean script for electro-mechanical coupling tutorial
+#-------------------------------------------------------------------------------
+
+cd "${0%/*}" || exit 1
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/CleanFunctions
+
+# Keep constant/polyMesh: it is the supplied source mesh, not generated output.
+cleanTimeDirectories
+cleanAuxiliary
+cleanDynamicCode
+cleanOptimisation
+cleanPostProcessing
+cleanFaMesh
+cleanSnappyFiles
+rm -rf constant/electro/polyMesh
+rm -rf constant/solid/polyMesh
+rm -rf processor*
+rm -f constant/electro/electroProperties.withDefaultValues
+
+# f0, sheet, tm, and Conductivity are copied in from ../mesh/0/ by Allrun,
+# not supplied source in this case directory - remove the copies.
+rm -f 0/solid/f0 0/solid/sheet 0/electro/tm 0/solid/tm 0/electro/Conductivity

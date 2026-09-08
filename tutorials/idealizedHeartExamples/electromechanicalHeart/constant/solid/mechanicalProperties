@@ -1,0 +1,34 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/solid";
+    object      mechanicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+planeStress     no;
+
+mechanical
+(
+    heartTissue
+    {
+        type            electroMechanicalLaw;
+        rho             rho [1 -3 0 0 0 0 0] 1060;
+
+        passiveMechanicalLaw
+        {
+            type            neoHookeanElastic;
+            E               E [1 -1 -2 0 0 0 0] 100e3;
+            nu              nu [0 0 0 0 0 0 0] 0.3;
+        }
+    }
+);
+
+// ************************************************************************* //
