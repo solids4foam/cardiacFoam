@@ -12,6 +12,12 @@ export _SOLIDS4FOAM_RESOLVED=1
 # Directory containing this script
 _thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Tracked file used to tell a populated solids4foam submodule apart from the
+# empty directory that a non-recursive clone or a fresh worktree leaves behind.
+# Deliberately not src/solids4FoamModels/Make/files: that is a link generated
+# by solids4foam's own build and is absent before the first build.
+_s4fMarker="src/solids4FoamModels/Make/files.openfoam"
+
 # Force lightweight mode if requested
 if [ "${FORCE_LIGHTWEIGHT_PHYSICSMODEL:-0}" = "1" ]
 then
@@ -34,14 +40,19 @@ then
     # Do nothing
     export USE_LIGHTWEIGHT_PHYSICSMODEL=0
     echo
-elif [ -d "$_thisDir/../modules/solids4foam" ]
+elif [ -f "$_thisDir/../modules/solids4foam/$_s4fMarker" ]
 then
     echo
     SOLIDS4FOAM_INST_DIR="$_thisDir/../modules/solids4foam"
     export USE_LIGHTWEIGHT_PHYSICSMODEL=0
 else
-    echo "NOTE: solids4foam not found."
-    echo "To us solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
+    if [ -d "$_thisDir/../modules/solids4foam" ]
+    then
+        echo "NOTE: modules/solids4foam exists but is not populated."
+    else
+        echo "NOTE: solids4foam not found."
+    fi
+    echo "To use solids4foam, set SOLIDS4FOAM_INST_DIR or initialise submodules:"
     echo "  git submodule update --init --recursive"
 
     # Use physicsModel from modules
