@@ -20,7 +20,15 @@ rm -rf constant/electro/polyMesh
 rm -rf constant/solid/polyMesh
 rm -rf processor*
 rm -f constant/electro/electroProperties.withDefaultValues
+rm -f constant/solid/solidProperties.withDefaultValues
+rm -f log.*
 
-# f0, sheet, tm, and Conductivity are copied in from ../mesh/0/ by Allrun,
-# not supplied source in this case directory - remove the copies.
-rm -f 0/solid/f0 0/solid/sheet 0/electro/tm 0/solid/tm 0/electro/Conductivity
+# Explicit fallback for solved time directories: cleanTimeDirectories has
+# been observed to silently no-op in some shell states, leaving solved
+# fields behind. These are solver output, never source data.
+find . -maxdepth 1 -regex '\./-?[0-9]+\(\.[0-9]+\)?' ! -name '0' -exec rm -rf {} +
+
+# f0, f0f, sheet, tm, and Conductivity are copied in from ../mesh/0/ by
+# Allrun, not supplied source in this case directory - remove the copies.
+# t is derived by setExprFields from tm, also not source.
+rm -f 0/solid/f0 0/solid/f0f 0/solid/sheet 0/electro/tm 0/solid/tm 0/electro/Conductivity 0/electro/t

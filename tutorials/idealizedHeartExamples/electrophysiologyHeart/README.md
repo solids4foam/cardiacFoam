@@ -47,6 +47,25 @@ preloading `tm` with `readFields`), and `ionicHeterogeneity` reads
 `field t;` with the standard thresholds `endoMInterface 0.3;` /
 `mEpiInterface 0.7;`.
 
+## Purkinje conduction network
+
+`constant/purkinjeGraph` (copied in by `Allrun` from `../mesh/constant/`)
+is a biventricular Purkinje tree grown on this mesh by
+`generatePurkinjeTree`, from UVC fields derived from `tm`/`tv`/`apicobasal`
+(`uvc_transmural = 1-tm`, `uvc_intraventricular = 2*tv-1`,
+`uvc_longitudinal = apicobasal`). Seeds were deduced from the AHA
+segmentation `setCardiacAnatomy` computes, using the nearest LV/RV
+endocardial point to the basal-septal AHA segments (`{2,3}` for LV, `21`
+for RV). `electroProperties`'s `conductionNetworkDomains.purkinjeNetwork`
+reads it via `graphFile purkinjeGraph;`.
+
+## ECG electrodes
+
+`ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
+reference heart's validated V1-V6 placement, not measured on this mesh — a
+normalized approximation, not patient-specific placement. 24-46mm from the
+epicardium, comparable to the reference case's own spread.
+
 ## Execution
 
 ```bash

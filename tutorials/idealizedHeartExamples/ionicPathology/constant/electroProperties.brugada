@@ -23,7 +23,7 @@ monodomainSolverCoeffs
     chi         [ 0 -1 0 0 0 0 0 ] 140000;
     cm          [ -1 -4 4 0 0 2 0 ] 0.01;
 
-    ionicModel  BuenoOrovio;
+    ionicModel  TNNP;
     tissue      epicardialCells;
 
     ionicHeterogeneity
@@ -35,6 +35,33 @@ monodomainSolverCoeffs
         transitionWidth   0;
         transitionMode    hard;
         smoothing         smoothstep;
+    }
+
+    // Brugada Syndrome parametrisation (Ten Tusscher-Noble-Noble-Panfilov
+    // 2004), same as tutorials/PATHOS/BrugadaSyndrome.
+    // SCN5A loss-of-function:  g_Na reduced 80 % across all tissue types.
+    // I_to gain-of-function:   g_to x6 in epicardium only.
+    // This tips the plateau past the bifurcation point, causing complete
+    // dome loss in epicardial cells and transmural dispersion of
+    // repolarisation.
+    // Reference values: Coronel et al. 2009, Shimizu & Antzelevitch 1999.
+    ionicConstantOverrides
+    {
+        global
+        {
+            scale
+            {
+                g_Na    0.2;
+            }
+        }
+        epicardialCells
+        {
+            scale
+            {
+                g_to    6.0;
+                g_CaL   0.5;
+            }
+        }
     }
 
     solutionAlgorithm explicit;

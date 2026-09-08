@@ -29,6 +29,7 @@ cp ../mesh/0/tm 0/tm
 cp ../mesh/0/tv 0/tv
 cp ../mesh/0/apicobasal 0/apicobasal
 cp ../mesh/0/Conductivity 0/Conductivity
+cp ../mesh/constant/purkinjeGraph constant/purkinjeGraph
 
 # tm is 0 at epicardium and 1 at endocardium in this mesh. The ionic
 # heterogeneity band lookup requires the opposite orientation (0 at

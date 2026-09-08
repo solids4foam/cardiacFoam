@@ -60,15 +60,21 @@ cp -a ../mesh/constant/polyMesh constant/solid/polyMesh
 
 # The shared fibre/sheet/tm/conductivity fields also live once in
 # ../mesh/0/, alongside the mesh. D is case-specific and stays committed
-# here.
+# here. f0f (the face-interpolated, unit-length companion of f0 that
+# electroMechanicalLaw requires) was precomputed once from f0 via
+# interpolateFibreField and committed alongside it, the same way f0
+# itself is precomputed rather than solved for at run time.
 cp ../mesh/0/fiber 0/solid/f0
+cp ../mesh/0/f0f 0/solid/f0f
 cp ../mesh/0/sheet 0/solid/sheet
 cp ../mesh/0/tm 0/electro/tm
 cp ../mesh/0/tm 0/solid/tm
 cp ../mesh/0/Conductivity 0/electro/Conductivity
 
-# This initial idealized case is spatially homogeneous: it deliberately does
-# not use the supplied, currently unvalidated transmural coordinate tm.
+# tm is 0 at epicardium and 1 at endocardium in this mesh. The ionic
+# heterogeneity band lookup requires the opposite orientation (0 at
+# endocardium, 1 at epicardium), so derive t = 1 - tm for it to read.
+runApplication -s electro setExprFields -region electro
 
 # -------------------------
 # Run solver
@@ -78,6 +84,8 @@ if $parallelRun; then
     runApplication -s electro decomposePar -region electro
     runApplication -s solid decomposePar -region solid
     runParallel cardiacFoam
+    runApplication -s electro reconstructPar -region electro
+    runApplication -s solid reconstructPar -region solid
 else
     runApplication cardiacFoam
 fi
