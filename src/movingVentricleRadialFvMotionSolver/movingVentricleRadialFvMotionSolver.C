@@ -9,20 +9,20 @@
     Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of cardiacFoam.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    cardiacFoam is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or (at your
+    option) any later version.
 
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
+    cardiacFoam is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+    along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
 
@@ -744,7 +744,7 @@ void Foam::movingVentricleRadialFvMotionSolver::solve()
         }
 
         scalar aNew = a - (V - targetVolume)/dV;
-            
+
         // Light damping: ensure residual decreases; at most 5 halvings
         scalar Vnew = evalVolume(aNew);
         label ls = 0;
@@ -760,7 +760,7 @@ void Foam::movingVentricleRadialFvMotionSolver::solve()
 
         a = aNew;
         V = Vnew;
-        
+
         // Update the residual
         res = mag(V - targetVolume);
 
