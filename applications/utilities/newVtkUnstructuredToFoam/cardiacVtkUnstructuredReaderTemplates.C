@@ -17,12 +17,12 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "vtkUnstructuredReader.H"
+#include "cardiacVtkUnstructuredReader.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::vtkUnstructuredReader::printFieldStats(const objectRegistry& obj)
+void Foam::cardiacVtkUnstructuredReader::printFieldStats(const objectRegistry& obj)
 {
     const UPtrList<const Type> fields(obj.csorted<Type>());
 

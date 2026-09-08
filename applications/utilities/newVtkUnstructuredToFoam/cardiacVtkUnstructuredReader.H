@@ -16,7 +16,7 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::vtkUnstructuredReader
+    Foam::cardiacVtkUnstructuredReader
 
 Description
     Reader for vtk UNSTRUCTURED_GRID legacy files.
@@ -34,11 +34,11 @@ Description
       in faces() back to vtk numbering.
 
 SourceFiles
-    vtkUnstructuredReader.C
+    cardiacVtkUnstructuredReader.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef vtkUnstructuredReader_H
-#define vtkUnstructuredReader_H
+#ifndef cardiacVtkUnstructuredReader_H
+#define cardiacVtkUnstructuredReader_H
 
 #include "foamVtkCore.H"
 #include "objectRegistry.H"
@@ -52,10 +52,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                     Class vtkUnstructuredReader Declaration
+                     Class cardiacVtkUnstructuredReader Declaration
 \*---------------------------------------------------------------------------*/
 
-class vtkUnstructuredReader
+class cardiacVtkUnstructuredReader
 {
 public:
 
@@ -207,19 +207,19 @@ private:
         void read(ISstream& inFile);
 
         //- No copy assignment
-        void operator=(const vtkUnstructuredReader&) = delete;
+        void operator=(const cardiacVtkUnstructuredReader&) = delete;
 
 
 public:
 
     //- Runtime type information
-    ClassName("vtkUnstructuredReader");
+    ClassName("cardiacVtkUnstructuredReader");
 
 
     // Constructors
 
         //- Construct from input stream, read all
-        vtkUnstructuredReader(const objectRegistry& obr, ISstream& is);
+        cardiacVtkUnstructuredReader(const objectRegistry& obr, ISstream& is);
 
 
     // Member Functions
@@ -349,7 +349,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "vtkUnstructuredReaderTemplates.C"
+    #include "cardiacVtkUnstructuredReaderTemplates.C"
 #endif
 
 

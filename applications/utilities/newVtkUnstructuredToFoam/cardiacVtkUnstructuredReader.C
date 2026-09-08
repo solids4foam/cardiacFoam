@@ -17,7 +17,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "vtkUnstructuredReader.H"
+#include "cardiacVtkUnstructuredReader.H"
 #include "labelIOField.H"
 #include "scalarIOField.H"
 #include "stringIOList.H"
@@ -31,14 +31,14 @@ License
 
 namespace Foam
 {
-    defineTypeNameAndDebug(vtkUnstructuredReader, 1);
+    defineTypeNameAndDebug(cardiacVtkUnstructuredReader, 1);
 }
 
 const Foam::Enum
 <
-    Foam::vtkUnstructuredReader::vtkDataType
+    Foam::cardiacVtkUnstructuredReader::vtkDataType
 >
-Foam::vtkUnstructuredReader::vtkDataTypeNames
+Foam::cardiacVtkUnstructuredReader::vtkDataTypeNames
 ({
     { vtkDataType::VTK_INT, "int" },
     // Not yet required: { vtkDataType::VTK_INT64, "vtktypeint64" },
@@ -54,9 +54,9 @@ Foam::vtkUnstructuredReader::vtkDataTypeNames
 
 const Foam::Enum
 <
-    Foam::vtkUnstructuredReader::vtkDataSetType
+    Foam::cardiacVtkUnstructuredReader::vtkDataSetType
 >
-Foam::vtkUnstructuredReader::vtkDataSetTypeNames
+Foam::cardiacVtkUnstructuredReader::vtkDataSetTypeNames
 ({
     { vtkDataSetType::VTK_FIELD, "FIELD" },
     { vtkDataSetType::VTK_SCALARS, "SCALARS" },
@@ -67,9 +67,9 @@ Foam::vtkUnstructuredReader::vtkDataSetTypeNames
 
 const Foam::Enum
 <
-    Foam::vtkUnstructuredReader::parseMode
+    Foam::cardiacVtkUnstructuredReader::parseMode
 >
-Foam::vtkUnstructuredReader::parseModeNames
+Foam::cardiacVtkUnstructuredReader::parseModeNames
 ({
     { parseMode::NOMODE, "NOMODE" },
     { parseMode::UNSTRUCTURED_GRID, "UNSTRUCTURED_GRID" },
@@ -100,7 +100,7 @@ static inline void readBlock(Istream& is, const label n, List<T>& list)
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-void Foam::vtkUnstructuredReader::warnUnhandledType
+void Foam::cardiacVtkUnstructuredReader::warnUnhandledType
 (
     const Istream& is,
     const label type,
@@ -117,7 +117,7 @@ void Foam::vtkUnstructuredReader::warnUnhandledType
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::vtkUnstructuredReader::readOffsetsConnectivity
+void Foam::cardiacVtkUnstructuredReader::readOffsetsConnectivity
 (
     ISstream& is,
     const char* entryName,
@@ -154,7 +154,7 @@ void Foam::vtkUnstructuredReader::readOffsetsConnectivity
 }
 
 
-void Foam::vtkUnstructuredReader::extractCells
+void Foam::cardiacVtkUnstructuredReader::extractCells
 (
     const Istream& is,
     const labelUList& cellTypes,
@@ -422,7 +422,7 @@ void Foam::vtkUnstructuredReader::extractCells
 }
 
 
-void Foam::vtkUnstructuredReader::readField
+void Foam::cardiacVtkUnstructuredReader::readField
 (
     ISstream& inFile,
     objectRegistry& obj,
@@ -511,7 +511,7 @@ void Foam::vtkUnstructuredReader::readField
 }
 
 
-Foam::wordList Foam::vtkUnstructuredReader::readFieldArray
+Foam::wordList Foam::cardiacVtkUnstructuredReader::readFieldArray
 (
     ISstream& inFile,
     objectRegistry& obj,
@@ -563,7 +563,7 @@ Foam::wordList Foam::vtkUnstructuredReader::readFieldArray
 }
 
 
-Foam::objectRegistry& Foam::vtkUnstructuredReader::selectRegistry
+Foam::objectRegistry& Foam::cardiacVtkUnstructuredReader::selectRegistry
 (
     const parseMode readMode
 )
@@ -583,7 +583,7 @@ Foam::objectRegistry& Foam::vtkUnstructuredReader::selectRegistry
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::vtkUnstructuredReader::vtkUnstructuredReader
+Foam::cardiacVtkUnstructuredReader::cardiacVtkUnstructuredReader
 (
     const objectRegistry& obr,
     ISstream& is
@@ -598,7 +598,7 @@ Foam::vtkUnstructuredReader::vtkUnstructuredReader
 }
 
 
-void Foam::vtkUnstructuredReader::read(ISstream& inFile)
+void Foam::cardiacVtkUnstructuredReader::read(ISstream& inFile)
 {
     inFile.getLine(header_);
     DebugInfo<< "Header   : " << header_ << nl;
