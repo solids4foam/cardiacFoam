@@ -1,0 +1,21 @@
+EXE_INC = \
+    -IaddModels \
+    -IgeomModels \
+    -IgeomModels/stlBased \
+    -IibInterpolation \
+    -IibInterpolation/lineInt \
+    -IibInterpolation/leastSquaresInt \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/surfMesh/lnInclude \
+    -I$(LIB_SRC)/fileFormats/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/dynamicFvMesh/lnInclude
+
+LIB_LIBS = \
+    -lfiniteVolume \
+    -lmeshTools \
+    -lsurfMesh \
+    -lfileFormats \
+    -ldynamicMesh \
+    -ldynamicFvMesh
