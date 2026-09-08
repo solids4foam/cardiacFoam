@@ -28,21 +28,32 @@ then
     . "$WM_PROJECT_DIR"/wmake/scripts/AllwmakeParseArguments
 fi
 
-# Compile libraries
-(cd src && ./Allwmake "$@" 2>&1 | tee log.Allwmake)
+# Track sub-build failures: the exit status of a "| tee" pipeline is tee's,
+# so PIPESTATUS[0] is needed to see whether the sub-Allwmake itself failed
+BUILD_FAILED=0
 
-# Compile solvers
-(cd applications && ./Allwmake "$@" 2>&1 | tee log.Allwmake)
+# Compile libraries
+(cd src && ./Allwmake "$@" 2>&1 | tee log.Allwmake; exit "${PIPESTATUS[0]}") \
+    || BUILD_FAILED=1
+
+# Compile solvers, but only if the libraries they link against were built
+if [[ $BUILD_FAILED -eq 0 ]]
+then
+    (cd applications && ./Allwmake "$@" 2>&1 | tee log.Allwmake; exit "${PIPESTATUS[0]}") \
+        || BUILD_FAILED=1
+else
+    echo; echo "Skipping the solver build: the library build failed"
+fi
 
 # Check if the build succeeded
 echo; echo "Checking if the installation was a success:"
-N_ERRORS_1=$(find . -name log.Allwmake -exec grep -h "Error " {} + 2>/dev/null | wc -l)
+N_ERRORS_1=$(find . -name log.Allwmake -exec grep -hE "Error[ :]" {} + 2>/dev/null | wc -l)
 N_ERRORS_2=$(find . -name log.Allwmake -exec grep -h "Stop." {} + 2>/dev/null | wc -l)
-if [[ $N_ERRORS_1 -gt 0 ]] || [[ $N_ERRORS_2 -gt 0 ]]
+if [[ $BUILD_FAILED -ne 0 ]] || [[ $N_ERRORS_1 -gt 0 ]] || [[ $N_ERRORS_2 -gt 0 ]]
 then
     echo "** BUILD ERROR **"
     echo "There were build errors in the following logs:"
-    find . -name 'log.*' -exec grep -l "Error " {} + 2>/dev/null
+    find . -name 'log.*' -exec grep -lE "Error[ :]" {} + 2>/dev/null
     find . -name 'log.*' -exec grep -l "Stop." {} + 2>/dev/null
     echo; echo "Please examine these logs for additional details"; echo
     exit 1

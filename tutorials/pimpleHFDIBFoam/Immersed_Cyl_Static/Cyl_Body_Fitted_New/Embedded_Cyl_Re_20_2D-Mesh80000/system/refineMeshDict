@@ -1,0 +1,26 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      refineMeshDict;
+}
+
+// Name of the cellSet created by topoSet
+set refineCells;
+
+// Refine only in x and y (keep 2D: do NOT refine z)
+coordinateSystem global;
+
+globalCoeffs
+{
+    tan1 (1 0 0);   // x direction
+    tan2 (0 1 0);   // y direction
+}
+
+directions      (tan1 tan2);
+
+useHexTopology  yes;
+geometricCut    no;
+writeMesh       no;

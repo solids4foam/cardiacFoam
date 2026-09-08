@@ -1,0 +1,26 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+|  \\    /   O peration     | Version:  8
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       pointVectorField;
+    location    "0";
+    object      pointDisplacement;
+}
+dimensions      [0 1 0 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    left  { type fixedValue; value uniform (0 0 0); }
+    right { type fixedValue; value uniform (0 0 0); }
+    up    { type slip; value uniform (0 0 0); }
+    down  { type slip; value uniform (0 0 0); }
+
+    frontAndBack { type empty; }
+}

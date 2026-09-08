@@ -1,4 +1,3 @@
-
 #!/bin/bash
 cd ${0%/*} || exit 1    # run from this directory
 
@@ -19,12 +18,19 @@ echo "SOLIDS4FOAM_INST_DIR = $SOLIDS4FOAM_INST_DIR"
 export WM_CXXFLAGS="$WM_CXXFLAGS -Wno-inconsistent-missing-override"
 
 
+# Stop at first error so a failed library is not silently skipped
+set -e
+
 wmake lnInclude couplingModels
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
 wmake $targetType libso verificationModels
 wmake $targetType libso activeTensionModels
 wmake $targetType libso electroModels
+wmake $targetType libso HFDIBDEM
+wmake $targetType libso prescribedSinusoidalMeshMotion
+wmake $targetType libso hemoMetrics
+wmake $targetType libso movingVentricleRadialFvMotionSolver
 
 if [ "$USE_LIGHTWEIGHT_PHYSICSMODEL" != "1" ]; then
     wmake $targetType libso electroMechanicalModels
