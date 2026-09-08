@@ -3,3 +3,12 @@ cd ${0%/*} || exit 1    # run from this directory
 
 wclean all solvers
 wclean all utilities
+
+# 1DgraphToFoam/Make/files compiles ../newVtkUnstructuredToFoam/vtkUnstructuredReader.C,
+# so wmake writes that object and its dependency file to
+# Make/newVtkUnstructuredToFoam/, i.e. outside any Make/$WM_OPTIONS platform
+# directory. wclean only removes the platform directory, so this residue
+# survives and still records absolute paths into the OpenFOAM version it was
+# built against; reusing the checkout under another version then fails with a
+# misleading "No rule to make target" for a header that version has removed.
+rm -rf utilities/1DgraphToFoam/Make/newVtkUnstructuredToFoam
