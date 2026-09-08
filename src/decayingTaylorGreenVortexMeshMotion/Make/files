@@ -1,3 +1,0 @@
-decayingTaylorGreenVortexMeshMotion.C
-
-LIB = $(FOAM_USER_LIBBIN)/libdecayingTaylorGreenVortexMeshMotion

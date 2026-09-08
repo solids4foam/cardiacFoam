@@ -18,7 +18,7 @@ libs
 (
     "libfvMotionSolvers.so"
     "libmeshTools.so"
-    "libdecayingTaylorGreenVortexMeshMotion.so"
+    "libprescribedSinusoidalMeshMotion.so"
 );
 
 application     pimpleHFDIBFoam;

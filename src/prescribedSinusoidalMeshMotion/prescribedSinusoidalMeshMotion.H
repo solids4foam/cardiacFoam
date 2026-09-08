@@ -24,31 +24,46 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::decayingTaylorGreenVortexMeshMotion
+    Foam::prescribedSinusoidalMeshMotion
 
 Group
     grpMeshMotionSolvers
 
 Description
-    Mesh motion solver which prescribes the mesh motion for the
-    decayingTaylorGreenVortex tutorial case. The purpose of this solver is for
-    testing the performance of a moving mesh fluid solver. The mesh motion is
-    given by
+    Mesh motion solver which prescribes a sinusoidal motion, in space and in
+    time, over a user-specified box in the x-y plane. The purpose of this
+    solver is for testing the performance of a moving mesh fluid solver.
 
-        x(x,y,t) = y(x,y,t) = A*sin(π*t/0.8)*sin(π*x)*sin(π*y)
+    The point displacement is given in terms of the normalised coordinates
 
-    where the scaling factor A defaults to 0.1 but can be supplied by the user.
+        xi  = (x - xMin)/(xMax - xMin)
+        eta = (y - yMin)/(yMax - yMin)
+
+    and the time factor
+
+        f(t) = scaleFactor*sin(2*pi*t/period)
+
+    as
+
+        d = f(t)*sin(pi*xi)*sin(pi*eta)*(1 1 0)
+
+    or, when orthogonalMeshMotion is enabled, as the orthogonal motion
+
+        d = f(t)*sin(pi*xi)*(1 0 0) + f(t)*sin(pi*eta)*(0 1 0)
+
+    All of scaleFactor, orthogonalMeshMotion, xMin, xMax, yMin, yMax and
+    period are required entries; none has a default.
 
 SourceFiles
-    decayingTaylorGreenVortexMeshMotion.C
+    prescribedSinusoidalMeshMotion.C
 
 Author
     Philip Cardiff, UCD.
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef decayingTaylorGreenVortexMeshMotion_H
-#define decayingTaylorGreenVortexMeshMotion_H
+#ifndef prescribedSinusoidalMeshMotion_H
+#define prescribedSinusoidalMeshMotion_H
 
 #include "displacementMotionSolver.H"
 #include "fvMotionSolver.H"
@@ -63,10 +78,10 @@ class motionInterpolation;
 class motionDiffusivity;
 
 /*---------------------------------------------------------------------------*\
-             Class decayingTaylorGreenVortexMeshMotion Declaration
+             Class prescribedSinusoidalMeshMotion Declaration
 \*---------------------------------------------------------------------------*/
 
-class decayingTaylorGreenVortexMeshMotion
+class prescribedSinusoidalMeshMotion
 :
     public displacementMotionSolver,
     public fvMotionSolver
@@ -90,32 +105,32 @@ class decayingTaylorGreenVortexMeshMotion
     // Private Member Functions
 
         //- No copy construct
-        decayingTaylorGreenVortexMeshMotion
+        prescribedSinusoidalMeshMotion
         (
-            const decayingTaylorGreenVortexMeshMotion&
+            const prescribedSinusoidalMeshMotion&
         ) = delete;
 
         //- No copy assignment
-        void operator=(const decayingTaylorGreenVortexMeshMotion&) = delete;
+        void operator=(const prescribedSinusoidalMeshMotion&) = delete;
 
 
 public:
 
     //- Runtime type information
-    TypeName("decayingTaylorGreenVortexMeshMotion");
+    TypeName("prescribedSinusoidalMeshMotion");
 
 
     // Constructors
 
         //- Construct from polyMesh and IOdictionary
-        decayingTaylorGreenVortexMeshMotion
+        prescribedSinusoidalMeshMotion
         (
             const polyMesh&,
             const IOdictionary&
         );
 
         //- Construct from components
-        decayingTaylorGreenVortexMeshMotion
+        prescribedSinusoidalMeshMotion
         (
             const polyMesh& mesh,
             const IOdictionary& dict,
@@ -125,7 +140,7 @@ public:
 
 
     //- Destructor
-    ~decayingTaylorGreenVortexMeshMotion();
+    ~prescribedSinusoidalMeshMotion();
 
 
     // Member Functions

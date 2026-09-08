@@ -9,7 +9,7 @@ wclean activeTensionModels
 wclean electroModels
 wclean electroMechanicalModels
 wclean HFDIBDEM
-wclean decayingTaylorGreenVortexMeshMotion
+wclean prescribedSinusoidalMeshMotion
 wclean hemoMetrics
 wclean movingVentricleRadialFvMotionSolver
 

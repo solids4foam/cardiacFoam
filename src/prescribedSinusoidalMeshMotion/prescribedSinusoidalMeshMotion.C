@@ -26,7 +26,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "decayingTaylorGreenVortexMeshMotion.H"
+#include "prescribedSinusoidalMeshMotion.H"
 #include "motionInterpolation.H"
 #include "motionDiffusivity.H"
 #include "fvmLaplacian.H"
@@ -41,19 +41,19 @@ License
 
 namespace Foam
 {
-    defineTypeNameAndDebug(decayingTaylorGreenVortexMeshMotion, 0);
+    defineTypeNameAndDebug(prescribedSinusoidalMeshMotion, 0);
 
     addToRunTimeSelectionTable
     (
         motionSolver,
-        decayingTaylorGreenVortexMeshMotion,
+        prescribedSinusoidalMeshMotion,
         dictionary
     );
 
     addToRunTimeSelectionTable
     (
         displacementMotionSolver,
-        decayingTaylorGreenVortexMeshMotion,
+        prescribedSinusoidalMeshMotion,
         displacement
     );
 }
@@ -61,7 +61,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
+Foam::prescribedSinusoidalMeshMotion::prescribedSinusoidalMeshMotion
 (
     const polyMesh& mesh,
     const IOdictionary& dict
@@ -73,20 +73,20 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("scaleFactor")
         )
     ),
     orthogonalMeshMotion_
     (
-        dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+        dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
             .lookup("orthogonalMeshMotion")
     ),
     xMin_
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("xMin")
         )
     ),
@@ -94,7 +94,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("xMax")
         )
     ),
@@ -102,7 +102,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("yMin")
         )
     ),
@@ -110,7 +110,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("yMax")
         )
     ),
@@ -118,14 +118,14 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("period")
         )
     )
 {}
 
 
-Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
+Foam::prescribedSinusoidalMeshMotion::prescribedSinusoidalMeshMotion
 (
     const polyMesh& mesh,
     const IOdictionary& dict,
@@ -139,20 +139,20 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("scaleFactor")
         )
     ),
     orthogonalMeshMotion_
     (
-        dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+        dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
             .lookup("orthogonalMeshMotion")
     ),
     xMin_
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("xMin")
         )
     ),
@@ -160,7 +160,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("xMax")
         )
     ),
@@ -168,7 +168,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("yMin")
         )
     ),
@@ -176,7 +176,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("yMax")
         )
     ),
@@ -184,7 +184,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
     (
         readScalar
         (
-            dict.subDict("decayingTaylorGreenVortexMeshMotionCoeffs")
+            dict.subDict("prescribedSinusoidalMeshMotionCoeffs")
                 .lookup("period")
         )
     )
@@ -193,15 +193,15 @@ Foam::decayingTaylorGreenVortexMeshMotion::decayingTaylorGreenVortexMeshMotion
 
 // * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * * //
 
-Foam::decayingTaylorGreenVortexMeshMotion::
-~decayingTaylorGreenVortexMeshMotion()
+Foam::prescribedSinusoidalMeshMotion::
+~prescribedSinusoidalMeshMotion()
 {}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 Foam::tmp<Foam::pointField>
-Foam::decayingTaylorGreenVortexMeshMotion::curPoints() const
+Foam::prescribedSinusoidalMeshMotion::curPoints() const
 {
     tmp<pointField> tcurPoints(points0() + pointDisplacement_.primitiveField());
     twoDCorrectPoints(tcurPoints.ref());
@@ -209,7 +209,7 @@ Foam::decayingTaylorGreenVortexMeshMotion::curPoints() const
 }
 
 
-void Foam::decayingTaylorGreenVortexMeshMotion::solve()
+void Foam::prescribedSinusoidalMeshMotion::solve()
 {
     // Update internal motion-solver state to current mesh position
     movePoints(fvMesh_.points());
@@ -250,7 +250,7 @@ void Foam::decayingTaylorGreenVortexMeshMotion::solve()
 }
 
 
-void Foam::decayingTaylorGreenVortexMeshMotion::updateMesh
+void Foam::prescribedSinusoidalMeshMotion::updateMesh
 (
     const mapPolyMesh& mpm
 )

@@ -17,12 +17,12 @@ dynamicFvMesh   dynamicMotionSolverFvMesh;
 motionSolverLibs
 (
     "libfvMotionSolvers.so"
-    "libdecayingTaylorGreenVortexMeshMotion.so"
+    "libprescribedSinusoidalMeshMotion.so"
 );
 
-solver          decayingTaylorGreenVortexMeshMotion;
+solver          prescribedSinusoidalMeshMotion;
 
-decayingTaylorGreenVortexMeshMotionCoeffs
+prescribedSinusoidalMeshMotionCoeffs
 {
     scaleFactor             0.15;
     orthogonalMeshMotion    no;
