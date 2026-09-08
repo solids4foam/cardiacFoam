@@ -31,6 +31,8 @@ REGRESSION_TESTS=(
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/bathBidomain"
     "electrophysiologyProtocols/rotorInstability"
+    "idealizedHeartExamples/electrophysiologyHeart"
+    "idealizedHeartExamples/conductionBlock"
 )
 
 failures=0
@@ -70,6 +72,18 @@ for testCase in "${REGRESSION_TESTS[@]}"; do
     rm -rf "${DST_CASE}"
     mkdir -p "$(dirname "${DST_CASE}")"
     cp -a "${SRC_CASE}" "${DST_CASE}"
+
+    # idealizedHeartExamples/* cases read their shared mesh and anatomy
+    # fields from a sibling ../mesh/ directory (not tracked per-case, to
+    # avoid committing the same ~10MB mesh twice - see
+    # tutorials/idealizedHeartExamples/README.md). That sibling isn't part
+    # of this single-directory copy, so bring it in once per sweep.
+    if [[ "${testCase}" == idealizedHeartExamples/* && "${testCase}" != "idealizedHeartExamples/mesh" ]]; then
+        MESH_DST="${REG_ROOT}/idealizedHeartExamples/mesh"
+        if [[ ! -d "${MESH_DST}" ]]; then
+            cp -a "${ROOT_DIR}/idealizedHeartExamples/mesh" "${MESH_DST}"
+        fi
+    fi
 
     cd "${DST_CASE}"
 

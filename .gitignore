@@ -259,6 +259,11 @@ tutorials/PATHOS/**/constant/purkinjeGraph*
 tutorials/heartSim3D-1D/**/constant/purkinjeGraph*
 tutorials/FiberAlignedAnisotropicMesh/**/constant/purkinjeGraph*
 
+# conductionBlock derives its healthy/lbbb/rbbb purkinjeGraph variants
+# fresh every Allrun (cheap, deterministic - see its README); the tracked
+# canonical copy lives only in idealizedHeartExamples/mesh/constant/.
+tutorials/idealizedHeartExamples/conductionBlock/constant/purkinjeGraph*
+
 # Post-processing output directories carry generated figures; the existing
 # rule only matched the exact name "postProcessing".
 tutorials/**/postProcessing*/
