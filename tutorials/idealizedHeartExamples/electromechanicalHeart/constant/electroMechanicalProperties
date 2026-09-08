@@ -1,0 +1,47 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroMechanicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroMechanicalModel  sequentialElectroMechanical;
+
+sequentialElectroMechanicalCoeffs
+{
+    electroRegion   electro;
+    solidRegion     solid;
+
+    // To enable GPU/OpenMP vectorization, switch the model to its 'Batched' variant:
+    // activeTensionModel  LandNiedererTWorldBatched;
+    // activeTensionModel  NashPanfilovBatched;
+    activeTensionModel  LandNiedererTWorld;
+
+    // Optional: override pre-conditioning time [ms] (default 1000).
+    // Set to 0 to disable. The resting Ca_i is queried automatically from
+    // the ionic model's initial state, so no manual restingCai entry is needed.
+    // preconditioningTime 1000;
+
+    // Optional settings for batched models (if a Batched model is selected above):
+    // batchedIntegrator     euler; // Default is explicit euler. Can also use rushLarsen if supported.
+    // batchedSubsteps       10;    // Number of explicit substeps per mechanics dt
+    // batchedParallelCells  true;  // Enable OpenMP multi-threading on CPU
+
+    // ODE solver settings used by scalar LandNiedererTWorld (ignored by Batched models).
+    ODESolver
+    {
+        solver      RKF45;
+        absTol      1e-8;
+        relTol      1e-6;
+    }
+}
+
+// ************************************************************************* //
