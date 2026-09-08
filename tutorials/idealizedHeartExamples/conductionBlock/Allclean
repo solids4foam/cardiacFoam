@@ -14,8 +14,10 @@ rm -f constant/electroProperties.withDefaultValues
 find . -maxdepth 1 -regex '\./-?[0-9]+\(\.[0-9]+\)?' ! -name '0' -exec rm -rf {} +
 
 # The mesh and anatomy fields are copied in from ../mesh/ by Allrun, not
-# supplied source in this case directory - remove the copies. t is
-# derived by setExprFields from tm, also not source.
+# supplied source in this case directory - remove the copies. t is derived
+# by setExprFields from tm, also not source. purkinjeGraph.healthy/.lbbb/
+# .rbbb are derived by Allrun; constant/purkinjeGraph is a symlink to
+# whichever variant was last selected.
 rm -rf constant/polyMesh
 rm -f 0/fiber 0/sheet 0/sheetNormal 0/tm 0/tv 0/apicobasal 0/Conductivity 0/t
-rm -f constant/purkinjeGraph
+rm -f constant/purkinjeGraph constant/purkinjeGraph.healthy constant/purkinjeGraph.lbbb constant/purkinjeGraph.rbbb

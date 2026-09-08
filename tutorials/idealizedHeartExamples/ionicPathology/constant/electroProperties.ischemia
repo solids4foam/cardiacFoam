@@ -23,7 +23,7 @@ monodomainSolverCoeffs
     chi         [ 0 -1 0 0 0 0 0 ] 140000;
     cm          [ -1 -4 4 0 0 2 0 ] 0.01;
 
-    ionicModel  BuenoOrovio;
+    ionicModel  TNNP;
     tissue      epicardialCells;
 
     ionicHeterogeneity
@@ -35,6 +35,32 @@ monodomainSolverCoeffs
         transitionWidth   0;
         transitionMode    hard;
         smoothing         smoothstep;
+    }
+
+    // Acute ischemia parametrisation — early ischemic zone (10-15 min),
+    // same as tutorials/PATHOS/AcuteIschemia.
+    // K_o elevated (hyperkalemia): 5.4 -> 8.0 mM.
+    // g_Na reduced 40 % (acidosis + fast Na+ channel depression).
+    // g_CaL reduced 40 % (acidosis + Ca2+ channel depression).
+    // g_K1 doubled (I_K1 increase from hyperkalemia).
+    // P_NaK halved (Na/K-ATPase inhibition from ATP depletion).
+    // References: Ferrero et al. 1996, Trenor et al. 2010, Rodriguez et al. 2006.
+    ionicConstantOverrides
+    {
+        global
+        {
+            set
+            {
+                K_o     8.0;
+            }
+            scale
+            {
+                g_Na    0.6;
+                g_CaL   0.6;
+                g_K1    2.0;
+                P_NaK   0.5;
+            }
+        }
     }
 
     solutionAlgorithm explicit;

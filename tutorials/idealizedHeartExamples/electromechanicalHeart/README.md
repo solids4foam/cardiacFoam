@@ -12,7 +12,7 @@ y = [-0.0040, 0.0020] m
 z = [0.0030, 0.0060] m
 ```
 
-This case does not use the supplied `tm` coordinate. Electrophysiology uses one homogeneous epicardial TNNP cell type.
+`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into `endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`, `mEpiInterface 0.7`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
 
 ## Mechanical boundary conditions
 
@@ -26,4 +26,4 @@ The inherited isotropic passive law (`E=100 kPa`, `nu=0.3`) is useful for a firs
 
 ## Run prerequisites
 
-This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the shared `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live once in the sibling `../mesh/` directory (shared with `electrophysiologyHeart`, to avoid tracking the same ~10MB mesh twice in git) and `Allrun` copies them in each run (the shared `fiber` field becomes this case's `f0`). `Allclean` removes those copies along with the generated regional meshes and run output.
+This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the shared `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live once in the sibling `../mesh/` directory (shared with `electrophysiologyHeart`, to avoid tracking the same ~10MB mesh twice in git) and `Allrun` copies them in each run (the shared `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.

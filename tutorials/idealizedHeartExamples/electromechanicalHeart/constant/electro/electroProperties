@@ -24,6 +24,17 @@ monodomainSolverCoeffs
     ionicModel    TNNP;
     tissue    epicardialCells;
 
+    ionicHeterogeneity
+    {
+        field             t;
+        mode              transmuralBands;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0;
+        transitionMode    hard;
+        smoothing         smoothstep;
+    }
+
     outputVariables
     {
         ionic

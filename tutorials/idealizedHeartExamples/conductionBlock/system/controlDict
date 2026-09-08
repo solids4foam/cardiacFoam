@@ -1,7 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| cardiacFoam: the OpenFOAM heart project                                     |
-| Version:     v0.1                                                           |
-| Web:         https://cardiacFoam.github.io                                  |
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -21,11 +23,11 @@ startTime       0;
 
 stopAt          endTime;
 
-// Run long enough to observe complete ventricular activation and the
-// electromechanical response.  The 5 ms write interval is retained.
-endTime         0.02;
+endTime    	0.7;
 
-deltaT          1e-05;
+deltaT    	2e-05;
+
+maxCo 		0.15;
 
 writeControl    runTime;
 
@@ -45,18 +47,8 @@ timePrecision   6;
 
 runTimeModifiable false;
 
-maxCo           0.02;
 
-functions
-{
-    Taprobes
-    {
-        #include "Taprobes"
-    }
-    CaiProbes
-    {
-        #include "CaiProbes"
-    }
-}
 
 // ************************************************************************* //
+
+
