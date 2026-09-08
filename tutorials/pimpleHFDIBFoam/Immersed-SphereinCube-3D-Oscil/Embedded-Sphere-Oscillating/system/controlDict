@@ -17,11 +17,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs
-(
-    "libcorrectedFvPatchVectorField.so"
-);
-
 application     solids4Foam;
 
 startFrom       startTime;
