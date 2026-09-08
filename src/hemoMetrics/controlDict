@@ -18,10 +18,8 @@ libs
 (
     "libfvMotionSolvers.so"
     "libmeshTools.so"
-    "libmovingVentricleFvMotionSolver.so"
+    "libmovingVentricleRadialFvMotionSolver.so"
 );
-
-application     pimpleFoam;
 
 startFrom       startTime;
 
