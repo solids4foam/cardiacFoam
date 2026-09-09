@@ -86,6 +86,7 @@ public:
     manufacturedEikonalECGVerifier
     (
         const electroStateProvider& stateProvider,
+        const word& domainName,
         const dictionary& dict,
         const wordList& electrodeNames,
         const List<vector>& electrodePositions

@@ -44,6 +44,7 @@ class manufacturedPseudoECGVerifier
 
     Switch enabled_;
     label dimension_;
+    Switch anisotropic_;
     label referenceQuadratureOrder_;
     List<label> checkQuadratureOrders_;
 
@@ -89,6 +90,7 @@ public:
     manufacturedPseudoECGVerifier
     (
         const electroStateProvider& stateProvider,
+        const word& domainName,
         const dictionary& dict,
         const wordList& electrodeNames,
         const List<vector>& electrodePositions

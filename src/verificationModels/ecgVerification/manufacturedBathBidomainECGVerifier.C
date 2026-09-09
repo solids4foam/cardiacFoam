@@ -160,12 +160,13 @@ void validateGroundedFDABathBoundarySetup
 manufacturedBathBidomainECGVerifier::manufacturedBathBidomainECGVerifier
 (
     const electroStateProvider& stateProvider,
+    const word& domainName,
     const dictionary& dict,
     const wordList& electrodeNames,
     const List<vector>& electrodePositions
 )
 :
-    ecgVerificationModel(stateProvider, electrodeNames, electrodePositions),
+    ecgVerificationModel(stateProvider, domainName, electrodeNames, electrodePositions),
     outputPtr_(),
     enabled_(true),
     k_(1.0/Foam::sqrt(2.0)),
@@ -218,7 +219,10 @@ void manufacturedBathBidomainECGVerifier::initialiseOutput()
     }
 
     outputPtr_ =
-        ecgModelIO::openTimeSeries(outDir, "manufacturedBathECG.dat", columns);
+        ecgModelIO::openTimeSeries
+        (
+            outDir, "manufacturedBathECG_" + domainName_ + ".dat", columns
+        );
 }
 
 
@@ -360,7 +364,8 @@ void manufacturedBathBidomainECGVerifier::writeSummary()
     const scalar count = max(scalar(1), scalar(sampleCount_));
     const fileName outputFile
     (
-        mesh_.time().globalPath() / "postProcessing" / "manufacturedBathECGSummary.dat"
+        mesh_.time().globalPath() / "postProcessing"
+      / ("manufacturedBathECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);
 

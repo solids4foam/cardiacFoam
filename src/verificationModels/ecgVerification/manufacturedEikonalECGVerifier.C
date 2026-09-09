@@ -40,12 +40,13 @@ addToRunTimeSelectionTable
 manufacturedEikonalECGVerifier::manufacturedEikonalECGVerifier
 (
     const electroStateProvider& stateProvider,
+    const word& domainName,
     const dictionary& dict,
     const wordList& electrodeNames,
     const List<vector>& electrodePositions
 )
 :
-    ecgVerificationModel(stateProvider, electrodeNames, electrodePositions),
+    ecgVerificationModel(stateProvider, domainName, electrodeNames, electrodePositions),
     outputPtr_(),
     enabled_(false),
     dimension_(max(label(1), min(mesh_.nGeometricD(), label(3)))),
@@ -168,7 +169,10 @@ void manufacturedEikonalECGVerifier::initialiseOutput()
     }
 
     outputPtr_ =
-        ecgModelIO::openTimeSeries(outDir, "manufacturedEikonalECG.dat", columns);
+        ecgModelIO::openTimeSeries
+        (
+            outDir, "manufacturedEikonalECG_" + domainName_ + ".dat", columns
+        );
 }
 
 
@@ -504,7 +508,7 @@ void manufacturedEikonalECGVerifier::writeSummary()
     (
         mesh_.time().globalPath()
       / "postProcessing"
-      / "manufacturedEikonalECGSummary.dat"
+      / ("manufacturedEikonalECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);
 

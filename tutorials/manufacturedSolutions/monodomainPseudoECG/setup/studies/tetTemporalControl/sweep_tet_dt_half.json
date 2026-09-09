@@ -3,15 +3,18 @@
     "entry": "manufacturedMonodomainPseudoECG",
     "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
     "setup_dir_name": "setup",
-    "dimensions": ["3D"],
-    "solver_types": ["implicit"],
+    "cases_root": "tutorials",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
     "piecewise_sweep": false,
     "mesh_family": "tet",
     "numerics_profile": "monodomain_tet",
     "end_time": 0.2,
     "ecg_enabled": true,
-    "ode_abs_tolerance": 1e-10,
-    "ode_rel_tolerance": 1e-08,
     "run_in_parallel": true,
     "postprocess_strict_artifacts": false,
     "archive_dir_name": "setup/studies/tetTemporalControl/results/sweepCases"
@@ -49,14 +52,37 @@
         "least_squares",
         "least_squares"
       ],
-      "number_cells": [40, 80, 40, 80, 40, 80, 40, 80],
-      "dt_values": [0.000280269, 0.000070087, 0.000280269, 0.000070087, 0.000280269, 0.000070087, 0.000280269, 0.000070087]
+      "number_cells": [
+        40,
+        80,
+        40,
+        80,
+        40,
+        80,
+        40,
+        80
+      ],
+      "dt_values": [
+        0.000280269,
+        7.0087e-05,
+        0.000280269,
+        7.0087e-05,
+        0.000280269,
+        7.0087e-05,
+        0.000280269,
+        7.0087e-05
+      ]
     },
     "dependent": [
       {
         "name": "output_dir_name",
         "derive": "output_dir_name_template",
-        "of": ["verification_model_type", "grad_scheme", "number_cells", "dt_values"]
+        "of": [
+          "verification_model_type",
+          "grad_scheme",
+          "number_cells",
+          "dt_values"
+        ]
       }
     ]
   }

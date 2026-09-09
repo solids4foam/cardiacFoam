@@ -58,6 +58,7 @@ class ecgDomain
     const electroStateProvider& stateProvider_;
     const fvMesh& mesh_;
 
+    word domainName_;
     word solverType_;
 
     //- Output stream for pseudoECG.dat or bathECG.dat

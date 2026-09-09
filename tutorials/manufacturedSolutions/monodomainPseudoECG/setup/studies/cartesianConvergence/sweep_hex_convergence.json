@@ -3,10 +3,9 @@
     "entry": "manufacturedMonodomainPseudoECG",
     "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
     "setup_dir_name": "setup",
+    "cases_root": "tutorials",
     "postprocess_strict_artifacts": false,
     "ecg_enabled": true,
-    "ode_abs_tolerance": 1e-10,
-    "ode_rel_tolerance": 1e-08,
     "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases"
   },
   "sweep": {

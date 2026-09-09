@@ -422,8 +422,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const fileName outputFile =
         outputDir
       / (
-            "bathBidomain_"
-          + word("bathBidomain_") + dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
+            dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
         );
 
     if (Pstream::master())

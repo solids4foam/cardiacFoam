@@ -413,7 +413,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
     (
         outputDir
       / (
-            word("rotatedAnisotropy_3D_") + Foam::name(nPerDirection) + "_cells.dat"
+            word("3D_") + Foam::name(nPerDirection) + "_cells.dat"
         )
     );
 

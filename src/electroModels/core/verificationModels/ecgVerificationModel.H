@@ -55,6 +55,7 @@ protected:
 
     const electroStateProvider& stateProvider_;
     const fvMesh& mesh_;
+    word domainName_;
     wordList electrodeNames_;
     List<vector> electrodePositions_;
 
@@ -77,16 +78,18 @@ public:
         dictionary,
         (
             const electroStateProvider& stateProvider,
+            const word& domainName,
             const dictionary& dict,
             const wordList& electrodeNames,
             const List<vector>& electrodePositions
         ),
-        (stateProvider, dict, electrodeNames, electrodePositions)
+        (stateProvider, domainName, dict, electrodeNames, electrodePositions)
     );
 
     ecgVerificationModel
     (
         const electroStateProvider& stateProvider,
+        const word& domainName,
         const wordList& electrodeNames,
         const List<vector>& electrodePositions
     );
@@ -96,6 +99,7 @@ public:
     static autoPtr<ecgVerificationModel> New
     (
         const electroStateProvider& stateProvider,
+        const word& domainName,
         const dictionary& dict,
         const wordList& electrodeNames,
         const List<vector>& electrodePositions

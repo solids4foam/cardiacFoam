@@ -59,16 +59,90 @@ monodomainSolverCoeffs
                 type    manufacturedPseudoECGVerifier;
                 enabled    yes;
                 dimension    "3D";
+                anisotropic    no;
                 referenceQuadratureOrder    96;
                 checkQuadratureOrders    (6 12 24 48);
             }
             electrodePositions
             {
+                // Legacy 5-point set, retained for continuity with the
+                // existing tet per-electrode table (tbl-tet-pseudoecg-electrodes).
                 E1    (-0.5 0.5 0.5);
                 E2    (1.5 0.5 0.5);
                 E3    (1.2 0.23 0.61);
                 E4    (1.35 0.74 0.28);
                 E5    (1.55 0.41 0.83);
+
+                // Distance-shell sweep: 7 standoffs (0.05, 0.1, 0.2, 0.35,
+                // 0.5, 0.75, 1.0 from the nearest cube surface point) x 8
+                // directions (+-x, +-y, +-z face-normal rays through the
+                // unit-cube [0,1]^3 face centres, plus a +-body-diagonal
+                // pair through a cube corner). Each shell contains 4
+                // antipodal pairs (S<k>_XP/S<k>_XM etc.): the manufactured
+                // field F is invariant under inversion through the cube
+                // centre (0.5,0.5,0.5) and grad(F) is odd under that same
+                // inversion, so the analytic reference ECG at an antipodal
+                // pair is identical by construction; on a genuinely
+                // unstructured (non-symmetric) tet mesh the *numeric* FV
+                // values at a pair need not match, so the pair spread is a
+                // free diagnostic of mesh-asymmetry-driven scatter,
+                // independent of the distance trend itself.
+                S1_XP    (1.050000 0.500000 0.500000);
+                S1_XM    (-0.050000 0.500000 0.500000);
+                S1_YP    (0.500000 1.050000 0.500000);
+                S1_YM    (0.500000 -0.050000 0.500000);
+                S1_ZP    (0.500000 0.500000 1.050000);
+                S1_ZM    (0.500000 0.500000 -0.050000);
+                S1_DP    (1.028868 1.028868 1.028868);
+                S1_DM    (-0.028868 -0.028868 -0.028868);
+                S2_XP    (1.100000 0.500000 0.500000);
+                S2_XM    (-0.100000 0.500000 0.500000);
+                S2_YP    (0.500000 1.100000 0.500000);
+                S2_YM    (0.500000 -0.100000 0.500000);
+                S2_ZP    (0.500000 0.500000 1.100000);
+                S2_ZM    (0.500000 0.500000 -0.100000);
+                S2_DP    (1.057735 1.057735 1.057735);
+                S2_DM    (-0.057735 -0.057735 -0.057735);
+                S3_XP    (1.200000 0.500000 0.500000);
+                S3_XM    (-0.200000 0.500000 0.500000);
+                S3_YP    (0.500000 1.200000 0.500000);
+                S3_YM    (0.500000 -0.200000 0.500000);
+                S3_ZP    (0.500000 0.500000 1.200000);
+                S3_ZM    (0.500000 0.500000 -0.200000);
+                S3_DP    (1.115470 1.115470 1.115470);
+                S3_DM    (-0.115470 -0.115470 -0.115470);
+                S4_XP    (1.350000 0.500000 0.500000);
+                S4_XM    (-0.350000 0.500000 0.500000);
+                S4_YP    (0.500000 1.350000 0.500000);
+                S4_YM    (0.500000 -0.350000 0.500000);
+                S4_ZP    (0.500000 0.500000 1.350000);
+                S4_ZM    (0.500000 0.500000 -0.350000);
+                S4_DP    (1.202073 1.202073 1.202073);
+                S4_DM    (-0.202073 -0.202073 -0.202073);
+                S5_XP    (1.500000 0.500000 0.500000);
+                S5_XM    (-0.500000 0.500000 0.500000);
+                S5_YP    (0.500000 1.500000 0.500000);
+                S5_YM    (0.500000 -0.500000 0.500000);
+                S5_ZP    (0.500000 0.500000 1.500000);
+                S5_ZM    (0.500000 0.500000 -0.500000);
+                S5_DP    (1.288675 1.288675 1.288675);
+                S5_DM    (-0.288675 -0.288675 -0.288675);
+                S6_XP    (1.750000 0.500000 0.500000);
+                S6_XM    (-0.750000 0.500000 0.500000);
+                S6_YP    (0.500000 1.750000 0.500000);
+                S6_YM    (0.500000 -0.750000 0.500000);
+                S6_ZP    (0.500000 0.500000 1.750000);
+                S6_ZM    (0.500000 0.500000 -0.750000);
+                S6_DP    (1.433013 1.433013 1.433013);
+                S6_DM    (-0.433013 -0.433013 -0.433013);
+                S7_XP    (2.000000 0.500000 0.500000);
+                S7_XM    (-1.000000 0.500000 0.500000);
+                S7_YP    (0.500000 2.000000 0.500000);
+                S7_YM    (0.500000 -1.000000 0.500000);
+                S7_ZP    (0.500000 0.500000 2.000000);
+                S7_ZM    (0.500000 0.500000 -1.000000);
+                S7_DP    (1.577350 1.577350 1.577350);
+                S7_DM    (-0.577350 -0.577350 -0.577350);
             }
         }
     }

@@ -31,12 +31,14 @@ defineRunTimeSelectionTable(ecgVerificationModel, dictionary);
 ecgVerificationModel::ecgVerificationModel
 (
     const electroStateProvider& stateProvider,
+    const word& domainName,
     const wordList& electrodeNames,
     const List<vector>& electrodePositions
 )
 :
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
+    domainName_(domainName),
     electrodeNames_(electrodeNames),
     electrodePositions_(electrodePositions)
 {}
@@ -61,6 +63,7 @@ word ecgVerificationModel::selectedType(const dictionary& dict)
 autoPtr<ecgVerificationModel> ecgVerificationModel::New
 (
     const electroStateProvider& stateProvider,
+    const word& domainName,
     const dictionary& dict,
     const wordList& electrodeNames,
     const List<vector>& electrodePositions
@@ -96,7 +99,7 @@ autoPtr<ecgVerificationModel> ecgVerificationModel::New
 
     autoPtr<ecgVerificationModel> verifier
     (
-        ctorPtr(stateProvider, dict, electrodeNames, electrodePositions)
+        ctorPtr(stateProvider, domainName, dict, electrodeNames, electrodePositions)
     );
     verifier->validateProvider();
     return verifier;

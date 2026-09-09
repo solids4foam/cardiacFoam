@@ -175,6 +175,91 @@ inline void computeAnisotropicManufacturedPdeSource
     }
 }
 
+inline vector pseudoECGManufacturedGradFAnisotropic
+(
+    const scalar x,
+    const scalar y,
+    const scalar z
+)
+{
+    const scalar pi = constant::mathematical::pi;
+
+    const scalar sx2 = Foam::sqr(Foam::sin(pi*x));
+    const scalar sy2 = Foam::sqr(Foam::sin(pi*y));
+    const scalar sz2 = Foam::sqr(Foam::sin(pi*z));
+
+    const scalar dx = pi*Foam::sin(2.0*pi*x);
+    const scalar dy = pi*Foam::sin(2.0*pi*y);
+    const scalar dz = pi*Foam::sin(2.0*pi*z);
+
+    return vector(dx*sy2*sz2, sx2*dy*sz2, sx2*sy2*dz);
+}
+
+
+inline scalar pseudoECGManufacturedIntegrandAnisotropic
+(
+    const scalar x,
+    const scalar y,
+    const scalar z,
+    const vector& electrodePosition,
+    const tensor& conductivity
+)
+{
+    const vector sigmaGradF =
+        conductivity & pseudoECGManufacturedGradFAnisotropic(x, y, z);
+
+    const scalar dx = x - electrodePosition.x();
+    const scalar dy = y - electrodePosition.y();
+    const scalar dz = z - electrodePosition.z();
+    const scalar rSq = dx*dx + dy*dy + dz*dz;
+
+    if (rSq <= VSMALL)
+    {
+        return 0.0;
+    }
+
+    return
+        (sigmaGradF.x()*dx + sigmaGradF.y()*dy + sigmaGradF.z()*dz)
+       /Foam::pow(rSq, 1.5);
+}
+
+
+inline scalar computeManufacturedPseudoECGSpatialReferenceAnisotropic
+(
+    const vector& electrodePosition,
+    const tensor& conductivity,
+    const UList<scalar>& nodes,
+    const UList<scalar>& weights
+)
+{
+    const scalar jacobian = 0.5;
+    scalar value = 0.0;
+
+    forAll(nodes, i)
+    {
+        const scalar x = jacobian*(nodes[i] + 1.0);
+        forAll(nodes, j)
+        {
+            const scalar y = jacobian*(nodes[j] + 1.0);
+            forAll(nodes, k)
+            {
+                const scalar z = jacobian*(nodes[k] + 1.0);
+                value += weights[i]*weights[j]*weights[k]
+                    * pseudoECGManufacturedIntegrandAnisotropic
+                    (
+                        x,
+                        y,
+                        z,
+                        electrodePosition,
+                        conductivity
+                    );
+            }
+        }
+    }
+
+    return jacobian*jacobian*jacobian*value;
+}
+
 } // End namespace Foam
 
 #endif

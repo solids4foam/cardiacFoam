@@ -24,6 +24,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "ecgModelIO.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
+#include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 
 namespace Foam
 {
@@ -40,15 +41,17 @@ addToRunTimeSelectionTable
 manufacturedPseudoECGVerifier::manufacturedPseudoECGVerifier
 (
     const electroStateProvider& stateProvider,
+    const word& domainName,
     const dictionary& dict,
     const wordList& electrodeNames,
     const List<vector>& electrodePositions
 )
 :
-    ecgVerificationModel(stateProvider, electrodeNames, electrodePositions),
+    ecgVerificationModel(stateProvider, domainName, electrodeNames, electrodePositions),
     outputPtr_(),
     enabled_(false),
     dimension_(max(label(1), min(mesh_.nGeometricD(), label(3)))),
+    anisotropic_(false),
     referenceQuadratureOrder_(96),
     checkQuadratureOrders_(),
     referenceSpatialValues_(electrodePositions_.size(), scalar(0)),
@@ -157,7 +160,10 @@ void manufacturedPseudoECGVerifier::initialiseOutput()
     }
 
     outputPtr_ =
-        ecgModelIO::openTimeSeries(outDir, "manufacturedPseudoECG.dat", columns);
+        ecgModelIO::openTimeSeries
+        (
+            outDir, "manufacturedPseudoECG_" + domainName_ + ".dat", columns
+        );
 }
 
 
@@ -208,8 +214,15 @@ void manufacturedPseudoECGVerifier::rebuildReferenceCache
     {
         forAll(checkQuadratureOrders_, checkI)
         {
-            checkSpatialValues_[checkI][electrodeI] =
-                computeManufacturedPseudoECGSpatialReference
+            checkSpatialValues_[checkI][electrodeI] = anisotropic_
+              ? computeManufacturedPseudoECGSpatialReferenceAnisotropic
+                (
+                    electrodePositions_[electrodeI],
+                    referenceConductivity,
+                    checkNodes[checkI],
+                    checkWeights[checkI]
+                )
+              : computeManufacturedPseudoECGSpatialReference
                 (
                     electrodePositions_[electrodeI],
                     referenceConductivity,
@@ -219,8 +232,15 @@ void manufacturedPseudoECGVerifier::rebuildReferenceCache
                 );
         }
 
-        referenceSpatialValues_[electrodeI] =
-            computeManufacturedPseudoECGSpatialReference
+        referenceSpatialValues_[electrodeI] = anisotropic_
+          ? computeManufacturedPseudoECGSpatialReferenceAnisotropic
+            (
+                electrodePositions_[electrodeI],
+                referenceConductivity,
+                referenceNodes,
+                referenceWeights
+            )
+          : computeManufacturedPseudoECGSpatialReference
             (
                 electrodePositions_[electrodeI],
                 referenceConductivity,
@@ -296,7 +316,8 @@ void manufacturedPseudoECGVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().globalPath() / "postProcessing" / "manufacturedPseudoECGSummary.dat"
+        mesh_.time().globalPath() / "postProcessing"
+      / ("manufacturedPseudoECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);
 
@@ -354,11 +375,13 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
 {
     const Switch wasEnabled = enabled_;
     const label previousDimension = dimension_;
+    const Switch previousAnisotropic = anisotropic_;
     const label previousReferenceQuadratureOrder = referenceQuadratureOrder_;
     const List<label> previousCheckQuadratureOrders = checkQuadratureOrders_;
 
     enabled_ = false;
     dimension_ = max(label(1), min(mesh_.nGeometricD(), label(3)));
+    anisotropic_ = false;
     referenceQuadratureOrder_ = 96;
     checkQuadratureOrders_.setSize(4);
     checkQuadratureOrders_[0] = 6;
@@ -392,6 +415,18 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
                 << dimensionName << "'. Expected one of 1D, 2D, or 3D."
                 << exit(FatalError);
         }
+    }
+
+    anisotropic_ = cfg.lookupOrDefault<Switch>("anisotropic", false);
+
+    if (anisotropic_ && dimension_ != 3)
+    {
+        FatalErrorInFunction
+            << "Manufactured pseudo-ECG 'anisotropic' reference is only "
+               "defined in 3D (the sin^2(pi x)*sin^2(pi y)*sin^2(pi z) "
+               "field has no 1D/2D variant), but dimension resolved to "
+            << dimension_ << "D."
+            << exit(FatalError);
     }
 
     referenceQuadratureOrder_ =
@@ -465,6 +500,7 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
     const bool configurationChanged =
         enabled_ != wasEnabled
      || dimension_ != previousDimension
+     || anisotropic_ != previousAnisotropic
      || referenceQuadratureOrder_ != previousReferenceQuadratureOrder
      || checkQuadratureOrders_ != previousCheckQuadratureOrders;
 
@@ -503,7 +539,8 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
             }
             Info << checkQuadratureOrders_[checkI];
         }
-        Info << "), dimension=" << dimension_ << "." << endl;
+        Info << "), dimension=" << dimension_
+             << ", anisotropic=" << anisotropic_ << "." << endl;
     }
     else
     {

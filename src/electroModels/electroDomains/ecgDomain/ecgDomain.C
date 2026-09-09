@@ -238,6 +238,7 @@ ecgDomain::ecgDomain
 :
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
+    domainName_(domainName),
     solverType_(selectedECGSolverType(dict)),
     outputPtr_(),
     solverPtr_(ecgSolver::New(dict)),
@@ -294,6 +295,7 @@ ecgDomain::ecgDomain
     verificationModelPtr_ = ecgVerificationModel::New
     (
         *this,
+        domainName_,
         verificationDict,
         electrodeNames_,
         electrodePositions_
@@ -397,6 +399,7 @@ bool ecgDomain::read(const dictionary& dict)
     verificationModelPtr_ = ecgVerificationModel::New
     (
         *this,
+        domainName_,
         verificationDict,
         electrodeNames_,
         electrodePositions_
