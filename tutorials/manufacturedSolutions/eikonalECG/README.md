@@ -95,47 +95,47 @@ retired `reproduce_verification.sh` wrapper are not release procedures.
 
 Cartesian spatial convergence (1D/2D/3D):
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 
 Tet convergence:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
 
 Nonlinear stopping-criterion control (least-squares tet cases; axis and both
 rotated configurations, N=10/20/40/80):
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
 
 Bulk/boundary error decomposition:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
     python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
 
 Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only):
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
     python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
 
 Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table):
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
     python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
 

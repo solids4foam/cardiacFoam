@@ -37,7 +37,7 @@ From the repository root, source the host OpenFOAM installation and run:
 source /Volumes/OpenFOAM-v2412/etc/bashrc
 export DRIVERFOAM_RUNTIME_CONFIG=/Users/simaocastro/omnidriver/driverfoam-runtime.yaml
 
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
     --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
 

@@ -24,12 +24,12 @@ dive kept for direct/manual use -- see that script's header.
 
 First materialize and inspect the eight driverFOAM cases:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
 
 Then run the same manifest:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
 
 After a successful sweep, run the in-repository bulk/boundary aggregation over

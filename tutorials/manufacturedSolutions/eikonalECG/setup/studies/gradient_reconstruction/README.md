@@ -3,7 +3,7 @@
 ## Purpose
 
 Canonical entry point for the registered `eikonal_gradient_tet` verification
-experiment (`applications/scripts/driverFoam/verification_experiments.json`):
+experiment (the driverFOAM add-on's `verification_experiments.json`):
 isolated `leastSquares` gradient reconstruction on the tet mesh across
 `N = 10, 20, 40, 80`.
 
@@ -17,7 +17,7 @@ paper's qualitative gaussLinear-vs-leastSquares discussion.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
 python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
 ```

@@ -49,7 +49,7 @@ runPurkinjeGraph -case .
 Example of running a graph convergence study via driverFOAM (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
 ```
 
 Writes:
@@ -62,19 +62,19 @@ Writes:
 Active coupling (bidirectional PVJ):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
 ```
 
 Bidirectional coupling:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_bidirectional.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_bidirectional.json
 ```
 
 Decoupled (negligible PVJ coupling with `rPvj=1e6`):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_decoupled.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_decoupled.json
 ```
 
 Coupled sweeps run `cardiacFoam` under joint 1D/3D refinement, copy verifier summaries, and write:

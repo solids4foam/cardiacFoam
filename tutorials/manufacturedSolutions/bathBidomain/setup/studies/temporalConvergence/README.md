@@ -17,7 +17,7 @@ unstructured mesh.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json \
     --output-dir .tmp/driverfoam/bathBidomain-temporal
 ```

@@ -85,29 +85,29 @@ blockMesh -dict system/blockMeshDict.1D
 Cartesian (1D/2D/3D) spatial convergence:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 python3 applications/scripts/paperI_results/aggregate.py bath_bidomain_cartesian
 ```
 
 Tetrahedral predictor-corrector coupling study:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json
 python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/results/sweepCases
 ```
 
 Tetrahedral interface-current convergence:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
 ```
 
 Bath temporal convergence and tet time-step control:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
 ```
 
 Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.

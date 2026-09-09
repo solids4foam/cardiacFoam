@@ -9,8 +9,8 @@ Replaces the former `setup/studies/tetConvergence/run_parallel_interface_sweep.s
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
+driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
+driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
 ```
 
 Each method is its own spec (rather than a single sweep with a `method` axis) because the sweep engine's `caseId`/`output_dir_name` templating can only reference scalar/list independent axes; `electro_property_overrides` (the mechanism that sets `interfaceConductivityInterpolation`) is a per-case dict and isn't safe to reference there, so it's fixed in each spec's `base` instead. Same pattern this tutorial already uses for `sweep_hex_electrodePair.json`/`sweep_hex_groundElectrode.json`.

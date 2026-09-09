@@ -9,10 +9,10 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 From the repository root, plan and run the sweep with:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
     --output-dir .tmp/driverfoam/bidomain-cartesian
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
     --output-dir .tmp/driverfoam/bidomain-cartesian
 ```

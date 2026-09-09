@@ -113,9 +113,9 @@ CV rather than setting `c0` directly to a velocity value.
 
 ## Utilities
 
-All cardiacFoam utilities are catalogued in
-`applications/scripts/driverFoam/openfoam_driver/utility_catalog.py`.
-Run any of them with `-case <path>` to operate on a specific case directory.
+All cardiacFoam utilities are catalogued in the driverFOAM add-on's
+utility catalog. Run any of them with `-case <path>` to operate on a
+specific case directory.
 
 ### Mesh preparation
 

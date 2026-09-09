@@ -17,17 +17,19 @@ by hand-rolled bash.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json \
     --output-dir .tmp/driverfoam/bathBidomain-coupling
 python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain
 ```
 
-Run the summarizer from the repository root. `--output-dir` holds run-tracking
-state (`sweep_manifest.json`, per-case `run_document.json`) while the actual
-OpenFOAM data lands in the case root itself, described next.
+`driverFoam` is the external orchestration add-on (not part of this repo;
+see the root `CLAUDE.md`). Run the summarizer from the repository root.
+`--output-dir` holds run-tracking state (`sweep_manifest.json`, per-case
+`run_document.json`) while the actual OpenFOAM data lands in the case root
+itself, described next.
 
-### Where the output actually lands (verified, not the naive reading of `archive_dir_name`)
+### Where the output actually lands
 
 Each case runs **in-place** in the shared case root (`tutorials/manufacturedSolutions/bathBidomain/`), and the sweep engine archives it to `<case_root>/<caseId>/<archive_dir_name>/`, where `<caseId>` comes from the spec's `case_id_template` (`"<number_cells>_<bath_predictor_corrector>"`, e.g. `10_False`, `10_True`) and `<archive_dir_name>` is this spec's own `setup/studies/coupling/results/sweepCases`. So a real N=10 run leaves:
 
@@ -42,9 +44,21 @@ This is *not* the same as `applications/scripts/paperI_results/aggregate.py`'s `
 
 ## Status
 
-Verified with a real `driverFoam sweep-run` at `N=10` (both `baseline` and `predictor`, 2026-08-19): both cases complete, and `summarize_coupling_study.py` correctly reads the archived output and reports a genuine physical difference (predictor-corrector coupling reduces `heartPhiE_L2`/`bathPhiE_L2` by roughly 50% at N=10 relative to baseline — sane and paper-consistent in direction). `N=20,40,80` are unrun in this session but use the identical mechanism. The `N=80` pair is required to distinguish a bath-coupling sensitivity from the separate finest-level interface-current anomaly. `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1` are left at this case's own tet-overlay defaults rather than force-set (the old script explicitly forced both to 1; the checked-in default already matches, per the top-level README).
+`N=10` (both `baseline` and `predictor`) runs to completion; `summarize_coupling_study.py`
+correctly reads the archived output and reports a genuine physical
+difference (predictor-corrector coupling reduces `heartPhiE_L2`/`bathPhiE_L2`
+by roughly 50% at N=10 relative to baseline — sane and paper-consistent in
+direction). `N=20,40,80` use the identical mechanism and have not been run.
+The `N=80` pair is required to distinguish a bath-coupling sensitivity from
+the separate finest-level interface-current anomaly. `nOuterCorrectors 1`/
+`nNonOrthogonalCorrectors 1` are left at this case's own tet-overlay
+defaults rather than force-set, matching the checked-in default (see the
+top-level README).
 
-This also required a fix: the checked-in `constant/electroProperties` and `setup/studies/tetConvergence/electroProperties (removed; see bathBidomain/README.md)` were both missing the `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant` key that `_apply_case` always writes — every driverFOAM sweep for this tutorial (tet or hex, old specs included) crashed with a `KeyError` before this was added.
+`constant/electroProperties` must set
+`bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
+— `_apply_case` always writes this key, and a driverFOAM sweep for this
+tutorial (tet or hex) fails with `KeyError` without it.
 
 ## Tracking & Outputs
 

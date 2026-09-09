@@ -26,10 +26,10 @@ Start with one normal strict entry to check the dictionaries and workflow for
 the selected manufactured tutorial:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam plan \
+driverFoam plan \
     --strict \
     --entry manufacturedMonodomainPseudoECG
-applications/scripts/driverFoam/bin/driverFoam run \
+driverFoam run \
     --strict \
     --entry manufacturedMonodomainPseudoECG
 ```
@@ -48,12 +48,12 @@ the directory contains the manifest and per-case state, so reusing one while
 another run is active can mix or resume state from the other run.
 
 Before running a case, configure the host-specific OpenFOAM/runtime file as
-described in `applications/scripts/driverFoam/openfoam_driver/README.md`, then
-check a sweep without launching OpenFOAM:
+described in the driverFOAM add-on's own README, then check a sweep
+without launching OpenFOAM:
 
 ```bash
 export DRIVERFOAM_RUNTIME_CONFIG=/absolute/path/driverfoam-runtime.yaml
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
     --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
 ```

@@ -63,7 +63,7 @@ The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbr
 Tetrahedral mesh convergence study via driverFOAM:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
@@ -83,7 +83,7 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across multi
 Spatial convergence (hex mesh):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
 python3 applications/scripts/paperI_results/aggregate.py mono_spatial
 python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 ```
@@ -91,7 +91,7 @@ python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
 ```
 
 The temporal spec holds a fixed fine mesh (`N = 640` in 1D/2D and `N = 160`
@@ -114,18 +114,18 @@ The checked-in sweep JSON files are the source of truth for these studies.
 RKF45 tolerance control (one finest fixed-grid temporal case per dimension):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/odeToleranceControl/sweep_ode_tolerance.json --output-dir .tmp/driverfoam/monodomainPseudoECG-ode-control
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/odeToleranceControl/sweep_ode_tolerance.json --output-dir .tmp/driverfoam/monodomainPseudoECG-ode-control
 ```
 
 Tetrahedral mesh variant (example of running a study):
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
 Tetrahedral mesh-fixed timestep controls:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
 ```

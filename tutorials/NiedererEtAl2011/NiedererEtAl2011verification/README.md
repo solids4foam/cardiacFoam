@@ -26,7 +26,7 @@ tutorials/NiedererEtAl2011/NiedererEtAl2011verification/
 │       ├── cache_postProcessing.py
 │       ├── line_postProcessing.py
 │       └── points_postProcessing.py
-├── NiedererEtAl2012.reference
+├── NiedererEtAl2011.reference
 ├── regressionTest.sh
 ├── Allrun
 ├── Allclean
@@ -75,11 +75,11 @@ Manual:
 Driver-managed sweep:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --strict --entry niederer2012
+driverFoam run --strict --entry niederer2012
 ```
 
-Driver sweeps are controlled by
-`applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/defaults/niederer_2012.py`.
+Driver sweeps are controlled by the driverFOAM add-on's `niederer_2012`
+cardiacFoam plugin defaults.
 
 ## Regression behavior
 

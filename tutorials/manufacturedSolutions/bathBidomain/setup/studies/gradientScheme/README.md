@@ -23,30 +23,29 @@ each spec's `base` rather than swept as an axis) — same reasoning as
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json
+driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json
+driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json
+driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json
+driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json
 ```
+
+`driverFoam` is the external orchestration add-on (not part of this repo;
+see the root `CLAUDE.md`).
 
 ## Status
 
-Verified with real `driverFoam sweep-run`s at `N=20` for `current` and
-`limitedCorrection` (2026-08-19): both complete, and the resulting
-`system/fvSchemes` carries the intended `default leastSquares` /
+`current` and `limitedCorrection` (`N=20`) run to completion; the
+resulting `system/fvSchemes` carries the intended `default leastSquares` /
 `Gauss linear limited 0.5` / `limited 0.5` triple for `limitedCorrection`,
 confirming `fv_scheme_overrides` actually lands. `gaussLinear` and
-`orthogonalControl` unrun in this session but use the identical mechanism.
+`orthogonalControl` use the identical mechanism and have not been run.
 See `setup/studies/coupling/README.md` for where sweep-run output actually
-lands (not the naive `archive_dir_name` reading) if you go on to aggregate
-these.
+lands if you go on to aggregate these.
 
-This also required a fix: the checked-in `constant/electroProperties` and
-`setup/studies/tetConvergence/electroProperties (removed; see bathBidomain/README.md)` were both missing the
+`constant/electroProperties` must set
 `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
-key that `_apply_case` always writes — every driverFOAM sweep for this
-tutorial (tet or hex, old specs included) crashed with a `KeyError` before
-this was added.
+— `_apply_case` always writes this key, and a driverFOAM sweep for this
+tutorial (tet or hex) fails with `KeyError` without it.
 
 ## Tracking & Outputs
 

@@ -87,10 +87,10 @@ native names), IKr, IK1, Ito, and the TWorld contraction `AV_Ta` trace. Run the
 study from the repository root with:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
     --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
     --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
 python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/postprocess_tworld_vs_gaur.py \
@@ -123,7 +123,7 @@ Manual:
 Driver-managed sweep:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --strict --entry singleCell
+driverFoam run --strict --entry singleCell
 ```
 
 The Python driver mutates ionic model, tissue, and stimulus amplitude for each case,

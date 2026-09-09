@@ -1,0 +1,63 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    //default         CrankNicolson 1.0;
+    default         backward; // 2nd order
+    //default         Euler; // 1st order
+}
+
+gradSchemes
+{
+    default         leastSquares;
+    // The eikonal variant builds its advection velocity directly from
+    // grad(activationTime) (see eikonalMyocardiumDomain.C); the original
+    // ported case used Gauss linear here, not leastSquares. The monodomain
+    // and hybrid variants never compute this gradient, so overriding it
+    // alone (not the default) is safe for them.
+    grad(activationTime)   Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+    div(phiU,psi)   Gauss linear;
+    // Upwind the eikonal variant's advection term (electroProperties.eikonal
+    // and .hybrid's restitutionEikonalSolver1D 3D coupling): keeps the
+    // matrix diagonally dominant and enforces causal wavefront-propagation
+    // direction. The monodomain variant never solves this term.
+    div(phiU,activationTime)   Gauss upwind;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+
+// ************************************************************************* //

@@ -16,7 +16,7 @@ claim: the dedicated Cartesian fixed-mesh ladder supplies that measurement.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
     --output-dir .tmp/driverfoam/bathBidomain-tet-dt-half
 ```

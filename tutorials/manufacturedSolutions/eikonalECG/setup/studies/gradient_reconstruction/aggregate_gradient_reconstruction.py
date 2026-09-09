@@ -2,7 +2,7 @@
 """Regenerate the registered "eikonal_gradient_tet" Paper I table.
 
 Canonical entry point for the registered `eikonal_gradient_tet` verification
-experiment (applications/scripts/driverFoam/verification_experiments.json):
+experiment (the driverFOAM add-on's `verification_experiments.json`):
 isolated `leastSquares` gradient reconstruction on the tet mesh across
 N = 10, 20, 40, 80.
 

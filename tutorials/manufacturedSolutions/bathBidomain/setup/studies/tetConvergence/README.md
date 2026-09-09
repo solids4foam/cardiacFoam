@@ -9,10 +9,10 @@ This study validates spatial convergence on unstructured tetrahedral meshes usin
 From the repository root, use the current wrapper:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetConvergence/sweep_tet_generic.json \
     --output-dir .tmp/driverfoam/bathBidomain-tet
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetConvergence/sweep_tet_generic.json \
     --output-dir .tmp/driverfoam/bathBidomain-tet
 ```

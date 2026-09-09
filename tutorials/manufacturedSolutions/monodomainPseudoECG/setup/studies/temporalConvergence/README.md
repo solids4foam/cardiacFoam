@@ -9,7 +9,7 @@ This study validates temporal convergence (timestep refinement) using the monodo
 From the repository root:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json \
     --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
 ```

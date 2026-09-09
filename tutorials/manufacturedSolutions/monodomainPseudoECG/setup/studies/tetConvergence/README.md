@@ -15,10 +15,10 @@ duplicate is scheduled for this rerun.
 From the repository root, use the current wrapper:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json \
     --output-dir .tmp/driverfoam/monodomainPseudoECG-tet
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json \
     --output-dir .tmp/driverfoam/monodomainPseudoECG-tet
 ```

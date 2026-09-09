@@ -67,29 +67,29 @@ blockMesh -dict system/blockMeshDict.1D
 Cartesian spatial convergence:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 python3 applications/scripts/paperI_results/aggregate.py bidomain_cartesian
 ```
 
 Temporal convergence:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json
 python3 applications/scripts/paperI_results/aggregate.py bidomain_temporal
 ```
 
 Tetrahedral gradient-scheme and corrector studies:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetConvergence/sweep_tet_generic.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetConvergence/sweep_tet_generic.json
 python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
 
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
 
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/odeToleranceControl/sweep_ode_tolerance.json
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/odeToleranceControl/sweep_ode_tolerance.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
 ```
 
 The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary

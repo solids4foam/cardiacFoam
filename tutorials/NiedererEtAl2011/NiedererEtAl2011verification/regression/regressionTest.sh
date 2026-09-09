@@ -8,7 +8,7 @@ IFS=$'\n\t'
 
 ACTIVATION_TOL=1e-4
 
-REF_FILE="regression/NiedererEtAl2012.reference"
+REF_FILE="regression/NiedererEtAl2011.reference"
 ALLRUN_LOGFILE="log.Allrun"
 
 echo "============================================================"

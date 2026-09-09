@@ -20,12 +20,12 @@ or the planned release reruns.
 
 First materialize and inspect the twelve driverFOAM cases:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
 
 Then execute the same manifest with driverFOAM:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
 
 Compare the archived activation-time and ECG metrics against the matching rows

@@ -12,7 +12,7 @@ spatial ladder.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json \
     --output-dir .tmp/driverfoam/bidomain-corrector-n80
 ```

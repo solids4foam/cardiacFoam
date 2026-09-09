@@ -9,7 +9,7 @@ This study validates temporal convergence (timestep refinement) using the bidoma
 From the repository root:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json \
     --output-dir .tmp/driverfoam/bidomain-temporal
 ```

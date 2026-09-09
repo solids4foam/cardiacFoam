@@ -64,11 +64,11 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --strict --entry restitutionCurves
+driverFoam run --strict --entry restitutionCurves
 ```
 
-Driver defaults live in
-`applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/defaults/restitution_curves.py`.
+Driver defaults live in the driverFOAM add-on's `restitution_curves`
+cardiacFoam plugin defaults.
 
 The driver mutates ionic model/tissue/stimulus values per case, updates end time,
 collects `.txt` outputs, and can generate per-case animations before post-processing.

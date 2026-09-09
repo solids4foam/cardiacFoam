@@ -7,7 +7,7 @@ This study validates the predictor-corrector inner loop convergence and stabilit
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
 ```
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,

@@ -8,12 +8,12 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 First materialize and inspect the 12 Cartesian cases:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 
 Then run the same manifest with driverFOAM:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
 
 Each case runs both the manufactured activation-time verifier and the

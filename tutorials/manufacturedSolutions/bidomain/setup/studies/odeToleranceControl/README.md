@@ -11,7 +11,7 @@ does not replace the fixed-grid temporal ladder.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/odeToleranceControl/sweep_ode_tolerance.json \
     --output-dir .tmp/driverfoam/bidomain-ode-control
 ```

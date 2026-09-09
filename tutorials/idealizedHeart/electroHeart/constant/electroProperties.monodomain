@@ -1,0 +1,140 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    conductivitySource field;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
+
+    ionicModel  BuenoOrovio;
+    tissue      epicardialCells;
+
+    ionicHeterogeneity
+    {
+        field             t;
+        mode              transmuralBands;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0.1;
+        transitionMode    blend;
+        smoothing         smoothstep;
+
+        // Apex-to-base APD gradient (composes with the transmural bands
+        // above): APD shorter at the apex, longer at the base, matching the
+        // consistently reported direction in the literature (e.g. Opthof
+        // et al., J Cardiovasc Electrophysiol; Sengupta et al., Circulation
+        // Cardiovasc Imaging). apicobasal follows the same 0=apex/1=base
+        // convention this tutorial already uses for Purkinje-tree UVCs (see
+        // README), so it is used directly as the distance field, no
+        // inversion needed. tauSi is the primary APD-determining time
+        // constant in the Bueno-Orovio-Cherry-Fenton minimal model;
+        // scalingMin/scalingMax were calibrated against single-cell APD90
+        // measurements (RKF45, S1 pacing) to target the ~20ms total
+        // apex-base gradient commonly used in simulation studies, not the
+        // library's generic wide-range defaults.
+        apexBaseBands
+        {
+            field       apicobasal;
+            beta        1.2;
+            scalingMin  0.97;
+            scalingMax  1.04;
+            variables   (tauSi);
+        }
+    }
+
+    solutionAlgorithm explicit;
+    solver            RKF45;
+    maxSteps          1000000000;
+
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver monodomain1DSolver;
+                graphFile              purkinjeGraph;
+
+                ionicModel             BuenoOrovio;
+                tissue                 epicardialCells;
+
+                chi                    14000;
+                cm                     0.01;
+                purkinjeConductivity   10.0;
+                vm1DRest               -0.084;
+
+                rootStimulus
+                {
+                    node      0;
+                    startTime 0.0;
+                    duration  0.002;
+                    intensity 500000.0;
+                }
+
+                solver         RKF45;
+                maxSteps       1000000000;
+
+                outputVariables
+                {
+                    export (Vm activationTime Icoupling);
+                    debug  (Vm Iion);
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            rPvj                    1000;
+            pvjRadius               2.5e-3;
+            couplingMode            unidirectional;
+            debugCoupling           true;
+        }
+    }
+
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver pseudoECG;
+            sigmaExtracellular 0.2;
+
+            electrodePositions
+            {
+                V1 (0.015716  0.005708  -0.073831);
+                V2 (0.033206 -0.023525  -0.056927);
+                V3 (0.052927 -0.027237  -0.044977);
+                V4 (0.070759 -0.041274  -0.018468);
+                V5 (0.073891 -0.055458   0.008801);
+                V6 (0.069582 -0.064013   0.029485);
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

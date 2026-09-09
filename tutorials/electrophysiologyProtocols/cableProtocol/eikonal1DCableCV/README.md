@@ -1,9 +1,9 @@
-# monodomain1DCableCV tutorial
+# eikonal1DCableCV tutorial
 
 This tutorial is the minimal tissue-scale conduction-velocity calibration case
 for `cardiacFoam`.
 
-- Electro model: `monodomainSolver`
+- Electro model: `eikonalSolver`
 - Geometry: 20 mm cable with a single-cell cross-section
 - Purpose: launch one paced wave, measure activation times at several stations,
   and compute a conduction velocity suitable for conductivity calibration
@@ -30,7 +30,7 @@ The intended workflow is:
 ## Folder structure
 
 ```text
-tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
+tutorials/electrophysiologyProtocols/cableProtocol/eikonal1DCableCV/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -101,7 +101,7 @@ similarly named `cable1DCVConvergence` entry is registered, but the current
 registry resolves it to the *monodomain* cable case, not this eikonal folder:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam describe --entry cable1DCVConvergence
+driverFoam describe --entry cable1DCVConvergence
 ```
 
 Use `Allrun` above for this eikonal case until a dedicated driver factory is
@@ -124,7 +124,7 @@ model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
 The primary CV tuning parameter in this case is:
 
 ```cpp
-monodomainSolverCoeffs
+eikonalSolverCoeffs
 {
     conductivity  ...
 }

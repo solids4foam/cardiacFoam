@@ -11,7 +11,7 @@ spatially dominated over the accepted levels.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
     --output-dir .tmp/driverfoam/bidomain-tet-dt-half
 ```

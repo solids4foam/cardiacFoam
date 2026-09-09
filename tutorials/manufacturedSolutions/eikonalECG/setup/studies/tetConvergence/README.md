@@ -13,12 +13,12 @@ eikonalECG exact solution.
 
 First materialize the 16 baseline cases and inspect the generated plans:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+    driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
 
 Then run the same manifest with driverFOAM:
 
-    applications/scripts/driverFoam/bin/driverFoam sweep-run \
+    driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
 
 The previous reference to applications/scripts/paperI_results/aggregate.py was

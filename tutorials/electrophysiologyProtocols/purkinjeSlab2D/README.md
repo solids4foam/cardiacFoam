@@ -19,8 +19,7 @@ It currently supports:
   `couplingMode bidirectional`. Kept for comparison only:
   `eikonalMyocardiumDomain::applyModelTimeControls` collapses the whole run
   to a single dimensionless step, so this variant cannot produce a
-  multi-step retrograde timeline (confirmed empirically, not just from
-  reading the code).
+  multi-step retrograde timeline.
 
 Run with:
 
@@ -31,8 +30,7 @@ Run with:
 
 ## Status / open findings
 
-This tutorial surfaced two real issues in the coupling code, found by running
-it, not by reading the code:
+This tutorial surfaced two real issues in the coupling code:
 
 1. **Fixed**: `myocardiumDomain::activationTime_` (monodomain tissue)
    defaulted to `dimensionedScalar(0.0)` instead of the `-1` "unactivated"

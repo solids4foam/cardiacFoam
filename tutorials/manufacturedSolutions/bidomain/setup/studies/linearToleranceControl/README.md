@@ -12,7 +12,7 @@ tolerance is a monitor, not an error estimate.
 ## Execution
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json \
     --output-dir .tmp/driverfoam/bidomain-linear-tolerance
 ```

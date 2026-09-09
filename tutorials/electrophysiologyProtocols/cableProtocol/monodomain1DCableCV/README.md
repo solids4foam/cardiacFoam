@@ -99,7 +99,7 @@ The decomposition is defined in `system/decomposeParDict`.
 This case is also exposed as a registered driver sweep:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --strict --entry cable1DCVConvergence
+driverFoam run --strict --entry cable1DCVConvergence
 ```
 
 The default sweep config is stored in:
@@ -119,22 +119,19 @@ model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
 This case is also exposed as a newly normalized S1-S2 restitution sweep:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --entry cable1DRestitution --strict
+driverFoam run --entry cable1DRestitution --strict
 ```
 
 Or you can sweep custom restitution intervals using a JSON config:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/sweep.json \
     --output-dir .tmp/driverfoam/cable-restitution
 ```
 
-The sweep logic and default S2 pacing intervals are fully centralized in:
-
-```text
-applications/scripts/driverFoam/openfoam_driver/plugins/cardiacfoam/tutorials/defaults/cable_1d_restitution.py
-```
+The sweep logic and default S2 pacing intervals are fully centralized in
+the driverFOAM add-on's `cable_1d_restitution` cardiacFoam plugin defaults.
 
 *Note:* Because multiple wavefronts are generated, the normalized post-processing step (`setup/postProcessing_cableRestitution.py`) parses the raw voltage traces to isolate the CV of the second (S2) wavefront.
 

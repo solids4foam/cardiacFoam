@@ -77,7 +77,7 @@ Local boundary-condition library is compiled from `src/` before case runs. Compi
 ### Driver-Managed Convergence Sweeps (Suggested)
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam run --strict --entry manufacturedMonodomainTotalLagrangianEM
+driverFoam run --strict --entry manufacturedMonodomainTotalLagrangianEM
 ```
 
 Refinement sweep follows monodomain manufactured pattern:

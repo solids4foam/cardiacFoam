@@ -1,0 +1,124 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Eikonal variant: both the 3D myocardium and the 1D Purkinje network are
+// eikonal (activation-time-only) solves - the cheapest of electroHeart's
+// three solver combinations. Ported from the former
+// tutorials/heartSim3D-1D/eikonalHeart onto this tutorial's shared mesh:
+// field/graphFile names and electrode positions follow this tutorial's own
+// convention (see ../electroProperties.monodomain), not the original
+// PATHOS-scale values that case was calibrated against.
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource field;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
+    c0          [ 0 0 -0.5 0 0 0 0 ] 60;
+
+    eikonalAdvectionDiffusionApproach true;
+    useGraphPrePopulation true;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    // No intramural box stimulus: activation is seeded exclusively through
+    // the Purkinje graph's rootStimulus below.
+    stimulusLocationMin (1e6 1e6 1e6);
+    stimulusLocationMax (1e6 1e6 1e6);
+
+    ionicHeterogeneity
+    {
+        field             t;
+        mode              transmuralBands;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0.1;
+        transitionMode    blend;
+        smoothing         smoothstep;
+    }
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver eikonalSolver1D;
+                graphFile              purkinjeGraph;
+
+                purkinjeCV  [ 0 1 -1 0 0 0 0 ] 4.2;
+                chi         14000;
+                cm          0.01;
+                vm1DRest    -0.084;
+
+                rootStimulus
+                {
+                    node      0;
+                    startTime 0.0;
+                }
+
+                outputVariables
+                {
+                    export (activationTime);
+                    debug  ();
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    eikonalPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            pvjRadius               2.5e-3;
+            couplingMode            unidirectional;
+        }
+    }
+
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver eikonalECG;
+            sigmaExtracellular 0.2;
+
+            sampling
+            {
+                start  0;
+                end    0.02;
+                deltaT 1e-4;
+            }
+
+            electrodePositions
+            {
+                V1 (0.015716  0.005708  -0.073831);
+                V2 (0.033206 -0.023525  -0.056927);
+                V3 (0.052927 -0.027237  -0.044977);
+                V4 (0.070759 -0.041274  -0.018468);
+                V5 (0.073891 -0.055458   0.008801);
+                V6 (0.069582 -0.064013   0.029485);
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

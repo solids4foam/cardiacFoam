@@ -9,10 +9,10 @@ This study validates spatial and/or temporal convergence for the coupled 1D-3D m
 From the repository root, use the current wrapper and one of the study specs:
 
 ```bash
-applications/scripts/driverFoam/bin/driverFoam sweep-plan \
+driverFoam sweep-plan \
     --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json \
     --output-dir .tmp/driverfoam/monodomain1D3D-active
-applications/scripts/driverFoam/bin/driverFoam sweep-run \
+driverFoam sweep-run \
     --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json \
     --output-dir .tmp/driverfoam/monodomain1D3D-active
 ```
