@@ -13,10 +13,34 @@ export _SOLIDS4FOAM_RESOLVED=1
 # resolve it with cd+pwd so the exported paths never contain a literal '..'
 # (a '..' segment makes $(abspath ...) in Make/options collapse the repo dir
 # name and mismatch CARDIACFOAM_LIGHTWEIGHT_ROOT, breaking the build).
-_thisDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#
+# ${BASH_SOURCE[0]} is empty when this script is sourced directly into a
+# zsh shell (BASH_SOURCE is a bash-only array; zsh never populates it) -
+# silently falling back to $0 in that case (zsh does set $0 to the sourced
+# file's own path, unlike bash). Without this fallback, dirname on an empty
+# string resolves _thisDir to the caller's cwd, which pushes _repoRoot one
+# directory too high (e.g. to $HOME instead of the repo) - the bundled
+# modules/solids4foam path then silently fails its existence check and this
+# script falls through to picking a DIFFERENT solids4foam tree than the one
+# other already-built libraries were compiled against. That mismatch is
+# the "two solids4foam trees" ABI hazard: everything compiles and links
+# without a single warning, then crashes at runtime.
+_thisDir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 _repoRoot="$(cd "$_thisDir/.." && pwd)"
 _bundledSolids4Foam="$_repoRoot/modules/solids4foam"
 _bundledPhysicsModel="$_repoRoot/modules/physicsModel"
+
+# Fail loudly, not silently, if the above still didn't land on the repo
+# root - e.g. some other shell/invocation pattern makes both
+# BASH_SOURCE[0] and $0 unreliable. Every path derived from _repoRoot
+# below depends on this being correct; a wrong value has no other
+# symptom until a build silently links against the wrong solids4foam tree.
+if [ ! -d "$_repoRoot/src/ionicModels" ]; then
+    echo "FATAL: resolveSolids4Foam.sh could not locate the cardiacFoam repo root." >&2
+    echo "  Computed _repoRoot='$_repoRoot' (missing src/ionicModels)." >&2
+    echo "  Source this script as 'etc/resolveSolids4Foam.sh' from the repo root." >&2
+    return 1 2>/dev/null || exit 1
+fi
 # solidModel.H only exists in the full solids4foam, never in the lightweight
 # physicsModel replacement — use it as a reliable discriminator.
 _solids4FoamHeader="src/solids4FoamModels/solidModels/solidModel/solidModel.H"
