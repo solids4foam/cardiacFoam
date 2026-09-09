@@ -31,7 +31,9 @@ sequentialElectroMechanicalCoeffs
     // preconditioningTime 1000;
 
     // Optional settings for batched models (if a Batched model is selected above):
-    // batchedIntegrator     euler; // Default is explicit euler. Can also use rushLarsen if supported.
+    // Batched active tension always integrates with explicit Euler: these
+    // states are not stiff (fastest time constant ~0.7 ms), so there is no
+    // batchedIntegrator key here. It belongs to the ionic model only.
     // batchedSubsteps       10;    // Number of explicit substeps per mechanics dt
     // batchedParallelCells  true;  // Enable OpenMP multi-threading on CPU
 

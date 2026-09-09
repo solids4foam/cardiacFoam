@@ -33,32 +33,8 @@ Author
 #include "batchedActiveTensionCore.H"
 #include "batchedActiveTensionExecution.H"
 
-#include <cmath>
-
 namespace Foam
 {
-
-// Shared Rush-Larsen relaxation formula for models with a single
-// exponentially-relaxing state driven towards a linear steady state
-// (Ta relaxing towards CONSTANTS_[AC_kTa]*algebraicValues[AV_u] at
-// rate algebraicValues[AV_e]). Callers pass their own model-specific
-// indices; this only centralises the arithmetic, not the enum layout.
-inline bool singleStateRelaxationRushLarsen
-(
-    const scalar rateFactor,
-    const scalar drivenSteadyState,
-    scalar& steadyState,
-    scalar& tau
-)
-{
-    if (rateFactor > VSMALL)
-    {
-        tau = 1.0 / rateFactor;
-        steadyState = drivenSteadyState;
-        return true;
-    }
-    return false;
-}
 
 class batchedActiveTensionModel
 :
@@ -73,9 +49,6 @@ protected:
         label nAlgebraics_;
         label nSubsteps_;
         bool persistAlgebraics_;
-        word integratorName_;
-        bool providesRushLarsenParameters_;
-        bool useRushLarsen_;
         Switch parallelCellUpdates_;
         label parallelMinCells_;
 
@@ -127,8 +100,7 @@ protected:
             const dictionary& dict,
             const label nIntegrationPoints,
             const label nStates,
-            const label nAlgebraics,
-            const bool providesRushLarsenParameters = false
+            const label nAlgebraics
         );
 
         // Core Access
@@ -159,20 +131,6 @@ protected:
             scalarUList& algebraicValues
         ) const = 0;
 
-        virtual bool rushLarsenParametersForCell
-        (
-            const label cellI,
-            const label stateI,
-            const scalarUList& stateValues,
-            const scalarUList& rateValues,
-            const scalarUList& algebraicValues,
-            scalar& steadyState,
-            scalar& tau
-        ) const
-        {
-            return false;
-        }
-
         virtual scalar activeTensionFromHotPath
         (
             const label cellI,
@@ -193,7 +151,6 @@ protected:
 
             label nCells() const { return model_.nCells_; }
             label nSubsteps() const { return model_.nSubsteps_; }
-            bool useRushLarsen() const { return model_.useRushLarsen_; }
             scalar timeScaleFactor() const { return model_.timeScaleFactor(); }
 
             void gatherCellState(const label cellI, scalarField& stateValues) const
@@ -224,23 +181,16 @@ protected:
 
             void advanceSubstep(const label cellI, const scalar dtSubstep, CellScratch& scratch) const
             {
+                // Explicit Euler. Active-tension states are not stiff: the
+                // fastest Land time constant is ~0.7 ms against a 0.01 ms
+                // timestep, so the Rush-Larsen machinery the ionic models
+                // need buys nothing here. batchedIntegrator is deliberately
+                // not read: it is an ionic-model key, and singleCellSolver
+                // hands both families the same dictionary.
                 forAll(scratch.stateValues, stateI)
                 {
-                    scalar steadyState = 0.0;
-                    scalar tau = 0.0;
-                    const bool useRL = model_.useRushLarsen_
-                        && model_.rushLarsenParametersForCell
-                           (
-                               cellI, stateI, scratch.stateValues, scratch.rateValues,
-                               scratch.algebraicValues, steadyState, tau
-                           )
-                        && tau > VSMALL
-                        && std::isfinite(steadyState)
-                        && std::isfinite(tau);
-
-                    scratch.stateValues[stateI] = useRL
-                        ? steadyState + (scratch.stateValues[stateI] - steadyState)*std::exp(-dtSubstep/tau)
-                        : scratch.stateValues[stateI] + dtSubstep*scratch.rateValues[stateI];
+                    scratch.stateValues[stateI] +=
+                        dtSubstep*scratch.rateValues[stateI];
                 }
             }
 

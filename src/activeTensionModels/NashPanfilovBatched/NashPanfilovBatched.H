@@ -82,17 +82,6 @@ protected:
         scalarUList& algebraicValues
     ) const override;
 
-    virtual bool rushLarsenParametersForCell
-    (
-        const label cellI,
-        const label stateI,
-        const scalarUList& stateValues,
-        const scalarUList& rateValues,
-        const scalarUList& algebraicValues,
-        scalar& steadyState,
-        scalar& tau
-    ) const override;
-
     virtual scalar activeTensionFromHotPath
     (
         const label cellI,
