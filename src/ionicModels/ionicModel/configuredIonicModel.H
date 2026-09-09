@@ -160,15 +160,15 @@ public:
         );
     }
 
-    virtual void configureApexBaseBandsHeterogeneity
+    virtual void configureGradientAxisHeterogeneity
     (
-        const scalarField& apexDist,
+        const scalarField& fieldValues,
         const dictionary& dict
     ) override
     {
-        ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
+        ionicHeterogeneityOrchestrator::configureGradientAxisHeterogeneity
         (
-            *this, apexDist, dict, HETEROGENEOUS_CONSTANTS_
+            *this, fieldValues, dict, HETEROGENEOUS_CONSTANTS_
         );
     }
 };
